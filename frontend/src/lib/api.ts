@@ -1,7 +1,7 @@
 /**
  * Thin typed client for the OpenCheck backend.
  *
- * Phase 0 surface only: /health, /sources, /search.
+ * Phase 1 surface: /health, /sources, /search, /stream (SSE), /deepen.
  */
 
 export type SearchKind = "entity" | "person";
@@ -35,6 +35,14 @@ export interface SearchResponse {
   errors: Record<string, string>;
 }
 
+export interface DeepenResponse {
+  source_id: string;
+  hit_id: string;
+  raw: Record<string, unknown>;
+  bods: Record<string, unknown>[];
+  bods_issues: string[];
+}
+
 const BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
   "http://localhost:8000";
@@ -57,4 +65,93 @@ export function search(
 ): Promise<SearchResponse> {
   const params = new URLSearchParams({ q, kind });
   return getJson(`/search?${params.toString()}`);
+}
+
+export function deepen(
+  source: string,
+  hitId: string
+): Promise<DeepenResponse> {
+  const params = new URLSearchParams({ source, hit_id: hitId });
+  return getJson(`/deepen?${params.toString()}`);
+}
+
+// ---------------------------------------------------------------------
+// SSE — /stream
+// ---------------------------------------------------------------------
+
+export interface SourceStartedEvent {
+  source_id: string;
+  source_name: string;
+}
+
+export interface SourceCompletedEvent {
+  source_id: string;
+  hit_count: number;
+}
+
+export interface SourceErrorEvent {
+  source_id: string;
+  error: string;
+}
+
+export interface DoneEvent {
+  query: string;
+  kind: SearchKind;
+}
+
+export type StreamHandlers = {
+  onSourceStarted?: (e: SourceStartedEvent) => void;
+  onHit?: (e: SourceHit) => void;
+  onSourceCompleted?: (e: SourceCompletedEvent) => void;
+  onSourceError?: (e: SourceErrorEvent) => void;
+  onDone?: (e: DoneEvent) => void;
+  onError?: (err: Event) => void;
+};
+
+/**
+ * Subscribe to the SSE search stream. Returns a cleanup function.
+ */
+export function streamSearch(
+  q: string,
+  kind: SearchKind,
+  handlers: StreamHandlers
+): () => void {
+  const params = new URLSearchParams({ q, kind });
+  const es = new EventSource(`${BASE_URL}/stream?${params.toString()}`);
+
+  const safeParse = <T>(raw: string): T | null => {
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return null;
+    }
+  };
+
+  es.addEventListener("source_started", (ev) => {
+    const data = safeParse<SourceStartedEvent>((ev as MessageEvent).data);
+    if (data) handlers.onSourceStarted?.(data);
+  });
+  es.addEventListener("hit", (ev) => {
+    const data = safeParse<SourceHit>((ev as MessageEvent).data);
+    if (data) handlers.onHit?.(data);
+  });
+  es.addEventListener("source_completed", (ev) => {
+    const data = safeParse<SourceCompletedEvent>((ev as MessageEvent).data);
+    if (data) handlers.onSourceCompleted?.(data);
+  });
+  es.addEventListener("source_error", (ev) => {
+    const data = safeParse<SourceErrorEvent>((ev as MessageEvent).data);
+    if (data) handlers.onSourceError?.(data);
+  });
+  es.addEventListener("done", (ev) => {
+    const data = safeParse<DoneEvent>((ev as MessageEvent).data);
+    if (data) handlers.onDone?.(data);
+    es.close();
+  });
+  es.onerror = (err) => {
+    handlers.onError?.(err);
+    es.close();
+  };
+
+  return () => es.close();
 }

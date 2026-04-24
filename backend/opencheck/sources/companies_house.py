@@ -1,20 +1,50 @@
-"""UK Companies House adapter — Phase 0 stub.
+"""UK Companies House adapter.
 
-Phase 1 will call the live API at
-<https://api.company-information.service.gov.uk>
-using the key in ``COMPANIES_HOUSE_API_KEY``.
+Live endpoints (Phase 1):
+
+* ``GET /search/companies?q=<query>`` — entity search
+* ``GET /search/officers?q=<query>`` — person search
+* ``GET /company/{number}`` — company profile
+* ``GET /company/{number}/officers`` — officers list
+* ``GET /company/{number}/persons-with-significant-control`` — PSCs
+
+Authentication: HTTP Basic with the API key as the username and an empty
+password (Companies House convention).
+
+Live calls are gated on ``allow_live=true`` AND a configured API key. When
+either is missing we fall back to the Phase 0 stub path. Every response is
+cached under ``data/cache/live/companies_house/...`` so repeated lookups are
+free and deterministic.
 """
 
 from __future__ import annotations
 
+import hashlib
 from typing import Any
+from urllib.parse import quote
 
+import httpx
+
+from ..cache import Cache
 from ..config import get_settings
+from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+
+_API_BASE = "https://api.company-information.service.gov.uk"
+_CACHE_NS = "companies_house"
+
+
+def _slug(text: str) -> str:
+    """Cache-safe slug for a free-text query."""
+    digest = hashlib.sha256(text.lower().strip().encode("utf-8")).hexdigest()[:16]
+    return digest
 
 
 class CompaniesHouseAdapter(SourceAdapter):
     id = "companies_house"
+
+    def __init__(self) -> None:
+        self._cache = Cache()
 
     @property
     def info(self) -> SourceInfo:
@@ -33,8 +63,152 @@ class CompaniesHouseAdapter(SourceAdapter):
             live_available=bool(settings.companies_house_api_key and settings.allow_live),
         )
 
+    # ------------------------------------------------------------------
+    # Search
+    # ------------------------------------------------------------------
+
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
-        # Phase 0: deterministic stub.
+        if not self.info.live_available:
+            return self._stub_search(query, kind)
+
+        if kind == SearchKind.ENTITY:
+            payload = await self._get(
+                f"/search/companies?q={quote(query)}&items_per_page=10",
+                cache_key=f"{_CACHE_NS}/search/companies/{_slug(query)}",
+            )
+            return [self._entity_hit(item) for item in payload.get("items", [])]
+
+        payload = await self._get(
+            f"/search/officers?q={quote(query)}&items_per_page=10",
+            cache_key=f"{_CACHE_NS}/search/officers/{_slug(query)}",
+        )
+        return [self._officer_hit(item) for item in payload.get("items", [])]
+
+    # ------------------------------------------------------------------
+    # Fetch
+    # ------------------------------------------------------------------
+
+    async def fetch(self, hit_id: str) -> dict[str, Any]:
+        """Return company profile + officers + PSCs for a company number.
+
+        For person (officer) hits the id is an appointment id — we return
+        whatever the search returned rather than trying to resolve
+        appointments server-side (that needs the appointments endpoint,
+        which is richer than we need for Phase 1).
+        """
+        if not self.info.live_available:
+            return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
+
+        # Heuristic: Companies House company numbers are 8 chars, often
+        # digits-only or a letter-prefixed variant. Anything else is
+        # treated as an officer/psc id.
+        if len(hit_id) == 8 and hit_id.replace(" ", "").isalnum():
+            return await self._fetch_company_bundle(hit_id)
+        return {
+            "source_id": self.id,
+            "hit_id": hit_id,
+            "note": "fetch not implemented for this id shape",
+        }
+
+    async def _fetch_company_bundle(self, number: str) -> dict[str, Any]:
+        profile = await self._get(
+            f"/company/{number}",
+            cache_key=f"{_CACHE_NS}/company/{number}",
+        )
+        officers = await self._get(
+            f"/company/{number}/officers",
+            cache_key=f"{_CACHE_NS}/company/{number}/officers",
+        )
+        pscs = await self._get(
+            f"/company/{number}/persons-with-significant-control",
+            cache_key=f"{_CACHE_NS}/company/{number}/pscs",
+        )
+        return {
+            "source_id": self.id,
+            "company_number": number,
+            "profile": profile,
+            "officers": officers,
+            "pscs": pscs,
+        }
+
+    # ------------------------------------------------------------------
+    # HTTP with caching
+    # ------------------------------------------------------------------
+
+    async def _get(self, path: str, *, cache_key: str) -> dict[str, Any]:
+        cached = self._cache.get_payload(cache_key)
+        if cached is not None:
+            return cached[0]  # unwrap (payload, tier)
+
+        settings = get_settings()
+        assert settings.companies_house_api_key, "live_available should have been false"
+
+        async with build_client() as client:
+            response = await client.get(
+                f"{_API_BASE}{path}",
+                auth=httpx.BasicAuth(settings.companies_house_api_key, ""),
+            )
+            response.raise_for_status()
+            payload = response.json()
+
+        self._cache.put(cache_key, payload)
+        return payload
+
+    # ------------------------------------------------------------------
+    # Hit factories (live)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _entity_hit(item: dict[str, Any]) -> SourceHit:
+        number = str(item.get("company_number", ""))
+        name = item.get("title", f"Company {number}")
+        status = item.get("company_status", "unknown")
+        address = item.get("address_snippet", "")
+        summary = f"Company {number} · {status}" + (f" · {address}" if address else "")
+        return SourceHit(
+            source_id="companies_house",
+            hit_id=number,
+            kind=SearchKind.ENTITY,
+            name=name,
+            summary=summary,
+            identifiers={"gb_coh": number},
+            raw=item,
+            is_stub=False,
+        )
+
+    @staticmethod
+    def _officer_hit(item: dict[str, Any]) -> SourceHit:
+        name = item.get("title", "Unknown officer")
+        appointment_count = item.get("appointment_count", 0)
+        summary = f"{appointment_count} appointment(s)"
+        date_of_birth = item.get("date_of_birth")
+        if isinstance(date_of_birth, dict) and "year" in date_of_birth:
+            summary += f" · born {date_of_birth.get('year')}"
+        # Officer self-links look like "/officers/<id>/appointments".
+        # Extract the id segment, not the trailing "appointments".
+        self_link = item.get("links", {}).get("self", "")
+        parts = [p for p in self_link.split("/") if p]
+        hit_id = (
+            parts[parts.index("officers") + 1]
+            if "officers" in parts and parts.index("officers") + 1 < len(parts)
+            else f"officer-{_slug(name)}"
+        )
+        return SourceHit(
+            source_id="companies_house",
+            hit_id=hit_id,
+            kind=SearchKind.PERSON,
+            name=name,
+            summary=summary,
+            identifiers={},
+            raw=item,
+            is_stub=False,
+        )
+
+    # ------------------------------------------------------------------
+    # Phase 0 stub path — preserved for allow_live=false
+    # ------------------------------------------------------------------
+
+    def _stub_search(self, query: str, kind: SearchKind) -> list[SourceHit]:
         if kind == SearchKind.ENTITY:
             return [
                 SourceHit(
@@ -42,7 +216,10 @@ class CompaniesHouseAdapter(SourceAdapter):
                     hit_id="00000000",
                     kind=kind,
                     name=f"{query} (stub)",
-                    summary="Stub company record — Companies House live adapter pending (Phase 1).",
+                    summary=(
+                        "Stub company record — set OPENCHECK_ALLOW_LIVE=true + "
+                        "COMPANIES_HOUSE_API_KEY to query live."
+                    ),
                     identifiers={"gb_coh": "00000000"},
                     raw={"company_number": "00000000", "title": f"{query} (stub)"},
                 )
@@ -53,11 +230,11 @@ class CompaniesHouseAdapter(SourceAdapter):
                 hit_id="officer-stub-0",
                 kind=kind,
                 name=f"{query} (stub)",
-                summary="Stub officer record — Companies House live adapter pending (Phase 1).",
+                summary=(
+                    "Stub officer record — set OPENCHECK_ALLOW_LIVE=true + "
+                    "COMPANIES_HOUSE_API_KEY to query live."
+                ),
                 identifiers={},
                 raw={"name": f"{query} (stub)", "kind": "officer"},
             )
         ]
-
-    async def fetch(self, hit_id: str) -> dict[str, Any]:
-        return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
