@@ -1,0 +1,41 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    container_name: opencheck-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENCHECK_ALLOW_LIVE=${OPENCHECK_ALLOW_LIVE:-false}
+      - OPENCHECK_CORS_ORIGIN=${OPENCHECK_CORS_ORIGIN:-http://localhost:5173}
+      - COMPANIES_HOUSE_API_KEY=${COMPANIES_HOUSE_API_KEY:-}
+      - OPENSANCTIONS_API_KEY=${OPENSANCTIONS_API_KEY:-}
+      - OPENALEPH_API_KEY=${OPENALEPH_API_KEY:-}
+      - WIKIDATA_SPARQL_ENDPOINT=${WIKIDATA_SPARQL_ENDPOINT:-https://query.wikidata.org/sparql}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+    command: uv run uvicorn opencheck.app:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: opencheck-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+    depends_on:
+      - backend
