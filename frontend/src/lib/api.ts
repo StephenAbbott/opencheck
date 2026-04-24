@@ -41,6 +41,8 @@ export interface DeepenResponse {
   raw: Record<string, unknown>;
   bods: Record<string, unknown>[];
   bods_issues: string[];
+  license: string;
+  license_notice: string | null;
 }
 
 const BASE_URL =

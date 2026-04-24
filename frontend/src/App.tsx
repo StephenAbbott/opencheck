@@ -294,6 +294,15 @@ function HitRow({ hit }: { hit: SourceHit }) {
 function DeepenBlock({ detail }: { detail: DeepenResponse }) {
   return (
     <div className="space-y-3">
+      {detail.license_notice && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-2">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="font-medium">License notice</span>
+            <LicenseChip license={detail.license} />
+          </div>
+          <p className="mt-1">{detail.license_notice}</p>
+        </div>
+      )}
       {detail.bods.length > 0 && (
         <section>
           <h4 className="font-medium text-slate-700 mb-1">

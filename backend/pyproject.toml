@@ -16,6 +16,7 @@ dependencies = [
     "pydantic-settings>=2.6",
     "python-dotenv>=1.0",
     "sse-starlette>=2.1",
+    "pycountry>=24.6",
 ]
 
 [project.optional-dependencies]

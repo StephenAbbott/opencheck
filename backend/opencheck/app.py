@@ -22,7 +22,14 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from . import __version__
-from .bods import map_companies_house, validate_shape
+from .bods import (
+    BODSBundle,
+    map_companies_house,
+    map_gleif,
+    map_openaleph,
+    map_opensanctions,
+    validate_shape,
+)
 from .config import get_settings
 from .sources import REGISTRY, SearchKind, SourceHit, SourceInfo
 
@@ -67,6 +74,8 @@ class DeepenResponse(BaseModel):
     raw: dict[str, Any]
     bods: list[dict[str, Any]]
     bods_issues: list[str]
+    license: str
+    license_notice: str | None = None
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -171,6 +180,18 @@ async def _stream_events(q: str, kind: SearchKind) -> AsyncIterator[dict[str, An
     yield {"event": "done", "data": json.dumps({"query": q, "kind": kind.value})}
 
 
+_MAPPERS = {
+    "companies_house": map_companies_house,
+    "gleif": map_gleif,
+    "opensanctions": map_opensanctions,
+    "openaleph": map_openaleph,
+}
+
+# Licenses that forbid commercial re-use. Anything in this set triggers
+# a license notice on /deepen so exporters / downstream consumers know.
+_NC_LICENSES = {"CC-BY-NC-4.0", "CC-BY-NC-SA-4.0"}
+
+
 @app.get("/deepen", response_model=DeepenResponse)
 async def deepen(
     source: str = Query(..., description="Adapter id, e.g. 'companies_house'"),
@@ -184,13 +205,17 @@ async def deepen(
 
     raw = await adapter.fetch(hit_id)
 
-    # Phase 1 mapper coverage: Companies House only.
+    # Phase 2 mapper coverage: CH, GLEIF, OpenSanctions, OpenAleph.
     bods: list[dict[str, Any]] = []
     issues: list[str] = []
-    if source == "companies_house" and not raw.get("is_stub"):
-        bundle = map_companies_house(raw)
+    mapper = _MAPPERS.get(source)
+    if mapper and not raw.get("is_stub"):
+        bundle: BODSBundle = mapper(raw)
         bods = list(bundle)
         issues = validate_shape(bods)
+
+    info = adapter.info
+    license_notice = _license_notice_for(info, raw)
 
     return DeepenResponse(
         source_id=source,
@@ -198,7 +223,41 @@ async def deepen(
         raw=raw,
         bods=bods,
         bods_issues=issues,
+        license=info.license,
+        license_notice=license_notice,
     )
+
+
+def _license_notice_for(
+    info: SourceInfo, raw: dict[str, Any]
+) -> str | None:
+    """Return a human-readable warning when the payload is NC-licensed.
+
+    Two cases:
+    * The adapter itself declares an NC license (OpenSanctions).
+    * OpenAleph — license is per-collection; we inspect the collection
+      metadata that was fetched alongside the entity.
+    """
+    if info.license in _NC_LICENSES:
+        return (
+            f"{info.name} is licensed under {info.license}. Commercial "
+            "re-use of this data is not permitted under the source license."
+        )
+    if info.id == "openaleph":
+        collection = raw.get("collection") or {}
+        license_ = (
+            collection.get("license")
+            or (collection.get("data") or {}).get("license")
+            or ""
+        ).upper().replace(" ", "-")
+        if license_ and any(nc in license_ for nc in ("NC", "NON-COMMERCIAL")):
+            label = collection.get("label") or collection.get("foreign_id") or "collection"
+            return (
+                f"OpenAleph collection '{label}' is licensed under "
+                f"{collection.get('license') or license_}. Commercial re-use "
+                "is not permitted under the source license."
+            )
+    return None
 
 
 # ----------------------------------------------------------------------

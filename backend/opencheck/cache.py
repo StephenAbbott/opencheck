@@ -58,18 +58,31 @@ class CacheHit:
 
 
 class Cache:
-    """Two-tier filesystem cache (demos → live)."""
+    """Two-tier filesystem cache (demos → live).
+
+    The root is re-resolved on every read/write so that environment
+    overrides (``OPENCHECK_DATA_ROOT``) take effect even when the cache
+    instance was constructed before the override was set — important for
+    long-lived adapter instances under test.
+    """
 
     def __init__(self, root: Path | None = None) -> None:
-        self._root = (root or data_root()) / "cache"
-        self._demos = self._root / "demos"
-        self._live = self._root / "live"
+        self._override_root = root
+
+    def _root(self) -> Path:
+        return (self._override_root or data_root()) / "cache"
+
+    def _demos(self) -> Path:
+        return self._root() / "demos"
+
+    def _live(self) -> Path:
+        return self._root() / "live"
 
     # ---- reads ----
 
     def get(self, key: str) -> CacheHit | None:
         """Return a cache hit from ``demos/`` first, else ``live/``."""
-        for tier, base in (("demos", self._demos), ("live", self._live)):
+        for tier, base in (("demos", self._demos()), ("live", self._live())):
             path = base / f"{key}.json"
             if path.is_file():
                 with path.open("r", encoding="utf-8") as fh:
@@ -85,7 +98,7 @@ class Cache:
 
     def put(self, key: str, payload: Any) -> Path:
         """Persist ``payload`` under ``live/<key>.json``. Returns the path."""
-        path = self._live / f"{key}.json"
+        path = self._live() / f"{key}.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("w", encoding="utf-8") as fh:
             json.dump(

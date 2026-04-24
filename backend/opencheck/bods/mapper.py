@@ -18,6 +18,8 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any, Iterable
 
+import pycountry
+
 # ----------------------------------------------------------------------
 # PSC "nature of control" → BODS v0.4 interest codelist
 # ----------------------------------------------------------------------
@@ -464,3 +466,568 @@ def _country_code(name: str | None) -> str:
         "british virgin islands": "VG",
     }
     return table.get(lowered, "")
+
+
+# ----------------------------------------------------------------------
+# GLEIF → BODS
+# ----------------------------------------------------------------------
+#
+# Mirrors OpenOwnership's canonical GLEIF → BODS pipeline
+# (https://github.com/openownership/bods-gleif-pipeline):
+#
+# * Subject entity: one ``registeredEntity`` statement, identified by LEI
+#   (``XI-LEI``) and by the GLEIF ``RegistrationAuthority`` scheme when
+#   the record carries a ``registeredAt.id`` (e.g. ``RA000585`` for UK
+#   Companies House).
+# * Each accounting consolidation parent (direct / ultimate) → one entity
+#   statement for the parent + one relationship statement with an
+#   ``otherInfluenceOrControl`` interest. ``beneficialOwnershipOrControl``
+#   is always ``false`` — LEI-RR captures accounting consolidation, not
+#   beneficial ownership.
+# * Reporting exceptions (``NO_LEI``, ``NATURAL_PERSONS``,
+#   ``NON_CONSOLIDATING`` etc.) produce a bridging statement
+#   (``anonymousEntity`` or ``unknownPerson``) plus a relationship whose
+#   interest ``details`` carry the GLEIF exception reason — so companies
+#   that report "my parent is a natural person" don't silently disappear.
+
+# Exception reason → (interested_party_type, person_type or entity_type,
+#                    human-readable details).
+_GLEIF_EXCEPTION_REASONS = {
+    "NATURAL_PERSONS": (
+        "person",
+        "unknownPerson",
+        "GLEIF reporting exception: parent is one or more natural persons",
+    ),
+    "NO_KNOWN_PERSON": (
+        "person",
+        "unknownPerson",
+        "GLEIF reporting exception: no known person can be identified",
+    ),
+    "NO_LEI": (
+        "entity",
+        "anonymousEntity",
+        "GLEIF reporting exception: parent exists but has no LEI",
+    ),
+    "NON_CONSOLIDATING": (
+        "entity",
+        "anonymousEntity",
+        "GLEIF reporting exception: parent does not consolidate the subject",
+    ),
+    "NON_PUBLIC": (
+        "entity",
+        "anonymousEntity",
+        "GLEIF reporting exception: parent is known but not publicly disclosable",
+    ),
+    "BINDING_LEGAL_COMMITMENTS": (
+        "entity",
+        "anonymousEntity",
+        "GLEIF reporting exception: binding legal commitments prevent disclosure",
+    ),
+}
+
+
+def map_gleif(bundle: dict[str, Any]) -> BODSBundle:
+    """Map a GLEIF adapter bundle to BODS v0.4 statements.
+
+    Input shape matches ``GleifAdapter.fetch`` output:
+
+        {
+          "lei": ...,
+          "record": {...},                            # Level 1 CDF
+          "direct_parent": {...} | None,              # Level 2 RR
+          "ultimate_parent": {...} | None,            # Level 2 RR
+          "direct_parent_exception": {...} | None,    # Reporting exception
+          "ultimate_parent_exception": {...} | None,  # Reporting exception
+        }
+    """
+    result = BODSBundle()
+
+    record = bundle.get("record") or {}
+    subject_attrs = record.get("attributes") or record
+    subject_entity_block = subject_attrs.get("entity") or {}
+    lei = (
+        bundle.get("lei")
+        or subject_attrs.get("lei")
+        or record.get("id")
+        or ""
+    )
+    if not lei:
+        return result
+
+    subject_url = f"https://www.gleif.org/lei/{lei}"
+    subject_statement = _gleif_entity_statement(lei, subject_entity_block, subject_url)
+    result.statements.append(subject_statement)
+    subject_sid = subject_statement["statementId"]
+
+    for kind, parent, exception in (
+        (
+            "direct",
+            bundle.get("direct_parent"),
+            bundle.get("direct_parent_exception"),
+        ),
+        (
+            "ultimate",
+            bundle.get("ultimate_parent"),
+            bundle.get("ultimate_parent_exception"),
+        ),
+    ):
+        if parent:
+            result.extend(_gleif_parent_statements(lei, subject_sid, kind, parent))
+        elif exception:
+            result.extend(
+                _gleif_exception_statements(lei, subject_sid, kind, exception)
+            )
+
+    return result
+
+
+def _gleif_parent_statements(
+    lei: str, subject_sid: str, kind: str, parent: dict[str, Any]
+) -> list[dict[str, Any]]:
+    parent_attrs = parent.get("attributes") or parent
+    parent_entity_block = parent_attrs.get("entity") or {}
+    parent_lei = parent_attrs.get("lei") or parent.get("id") or ""
+    if not parent_lei:
+        return []
+
+    parent_url = f"https://www.gleif.org/lei/{parent_lei}"
+    parent_statement = _gleif_entity_statement(
+        parent_lei, parent_entity_block, parent_url
+    )
+    rel = make_relationship_statement(
+        source_id="gleif",
+        local_id=f"{lei}:{kind}-parent:{parent_lei}",
+        subject_statement_id=subject_sid,
+        interested_party_statement_id=parent_statement["statementId"],
+        interested_party_type="entity",
+        interests=[
+            {
+                "type": "otherInfluenceOrControl",
+                "directOrIndirect": "direct" if kind == "direct" else "indirect",
+                "beneficialOwnershipOrControl": False,
+                "details": (
+                    f"GLEIF Level 2 {kind}-parent (accounting consolidation)"
+                ),
+            }
+        ],
+        source_url=parent_url,
+    )
+    return [parent_statement, rel]
+
+
+def _gleif_exception_statements(
+    lei: str, subject_sid: str, kind: str, exception: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Emit bridging anonymousEntity / unknownPerson + relationship for an exception."""
+    attrs = exception.get("attributes") or exception
+    reason = (attrs.get("exceptionReason") or "").upper()
+    ip_type, ip_subtype, details = _GLEIF_EXCEPTION_REASONS.get(
+        reason,
+        (
+            "entity",
+            "unknownEntity",
+            f"GLEIF reporting exception: {reason or 'unspecified reason'}",
+        ),
+    )
+
+    bridge_local_id = f"{lei}:{kind}-parent-exception:{reason or 'unspecified'}"
+    if ip_type == "person":
+        bridge = make_person_statement(
+            source_id="gleif",
+            local_id=bridge_local_id,
+            full_name="Unknown parent (GLEIF reporting exception)",
+            person_type=ip_subtype,
+            source_url=f"https://www.gleif.org/lei/{lei}",
+        )
+    else:
+        bridge = make_entity_statement(
+            source_id="gleif",
+            local_id=bridge_local_id,
+            name="Unknown parent (GLEIF reporting exception)",
+            entity_type=ip_subtype,
+            source_url=f"https://www.gleif.org/lei/{lei}",
+        )
+
+    rel = make_relationship_statement(
+        source_id="gleif",
+        local_id=f"{lei}:{kind}-parent-exception-rel:{reason or 'unspecified'}",
+        subject_statement_id=subject_sid,
+        interested_party_statement_id=bridge["statementId"],
+        interested_party_type=ip_type,
+        interests=[
+            {
+                "type": "otherInfluenceOrControl",
+                "directOrIndirect": "direct" if kind == "direct" else "indirect",
+                "beneficialOwnershipOrControl": False,
+                "details": details,
+            }
+        ],
+        source_url=f"https://www.gleif.org/lei/{lei}",
+    )
+    return [bridge, rel]
+
+
+def _gleif_entity_statement(
+    lei: str, entity_block: dict[str, Any], source_url: str
+) -> dict[str, Any]:
+    legal_name = (entity_block.get("legalName") or {}).get("name") or f"LEI {lei}"
+    jurisdiction_code = entity_block.get("jurisdiction")
+    jurisdiction: tuple[str, str] | None = None
+    if jurisdiction_code:
+        jurisdiction = _gleif_jurisdiction(jurisdiction_code)
+
+    identifiers: list[dict[str, str]] = [
+        {
+            "id": lei,
+            "scheme": "XI-LEI",
+            "schemeName": "Global Legal Entity Identifier Index",
+        }
+    ]
+
+    # GLEIF records the registration authority in ``entity.registeredAt``:
+    #   {"id": "RA000585", "other": null}   # standard scheme
+    #   {"id": "RA999999", "other": "My Authority"}   # free-text scheme
+    # OpenOwnership's pipeline preserves the RA code as ``scheme`` so the
+    # identifier can bridge to Companies House, OpenCorporates, etc.
+    registered_as = entity_block.get("registeredAs")
+    registered_at = entity_block.get("registeredAt") or {}
+    ra_id = registered_at.get("id")
+    ra_other = registered_at.get("other")
+    if registered_as and ra_id:
+        identifiers.append(
+            {
+                "id": registered_as,
+                "scheme": ra_id,
+                "schemeName": ra_other or f"GLEIF Registration Authority {ra_id}",
+            }
+        )
+
+    addresses = _gleif_addresses(entity_block)
+
+    return make_entity_statement(
+        source_id="gleif",
+        local_id=lei,
+        name=legal_name,
+        jurisdiction=jurisdiction,
+        identifiers=identifiers,
+        addresses=addresses,
+        source_url=source_url,
+    )
+
+
+def _gleif_jurisdiction(code: str) -> tuple[str, str]:
+    """Resolve a GLEIF jurisdiction code to ``(name, code)``.
+
+    GLEIF uses ISO 3166-1 alpha-2 codes at the country level and
+    ISO 3166-2 codes (e.g. ``GB-ENG``) at the subdivision level.
+    """
+    upper = code.upper()
+    alpha_2 = upper.split("-")[0]
+    country = pycountry.countries.get(alpha_2=alpha_2)
+    if not country:
+        return (code, code)
+    if "-" in upper:
+        subdivision = pycountry.subdivisions.get(code=upper)
+        if subdivision:
+            return (f"{subdivision.name}, {country.name}", upper)
+    return (country.name, alpha_2)
+
+
+def _gleif_addresses(entity_block: dict[str, Any]) -> list[dict[str, str]]:
+    addresses: list[dict[str, str]] = []
+    legal_address = entity_block.get("legalAddress")
+    if legal_address:
+        addresses.append(_gleif_address(legal_address, address_type="registered"))
+    hq_address = entity_block.get("headquartersAddress")
+    if hq_address:
+        addresses.append(_gleif_address(hq_address, address_type="business"))
+    return addresses
+
+
+def _gleif_address(block: dict[str, Any], *, address_type: str) -> dict[str, str]:
+    parts = [
+        *(block.get("addressLines") or []),
+        block.get("city"),
+        block.get("region"),
+        block.get("postalCode"),
+        block.get("country"),
+    ]
+    joined = ", ".join([p for p in parts if p])
+    return {
+        "type": address_type,
+        "address": joined,
+        "country": block.get("country", ""),
+    }
+
+
+# ----------------------------------------------------------------------
+# FtM (OpenSanctions / OpenAleph) → BODS
+# ----------------------------------------------------------------------
+#
+# FollowTheMoney (FtM) is the shared schema behind both OpenSanctions
+# and OpenAleph. For Phase 2 we map the search-time properties into a
+# single-statement BODS bundle: one entity or person statement with
+# whatever cross-identifiers FtM carried. Ownership relationships
+# embedded in richer FtM payloads (Ownership/Directorship interval
+# schemas) get picked up when their child entities are present via
+# ``related_entities``.
+
+# FtM schemas we treat as "entity-like" rather than "person-like".
+_FTM_ENTITY_SCHEMAS = {
+    "Company",
+    "Organization",
+    "LegalEntity",
+    "PublicBody",
+    "Asset",
+    "Airplane",
+    "Vessel",
+}
+_FTM_PERSON_SCHEMAS = {"Person"}
+
+# Map FtM topics to BODS interest semantics when they imply control
+# (e.g. sanction/pep on a person who is known to be a UBO).
+_FTM_TOPIC_DETAILS = {
+    "sanction": "Subject to sanctions per FtM topic",
+    "crime": "Linked to criminal activity per FtM topic",
+    "role.pep": "Politically exposed person per FtM topic",
+    "role.rca": "Relative or close associate of a PEP per FtM topic",
+}
+
+
+def map_ftm(
+    payload: dict[str, Any],
+    *,
+    source_id: str,
+    source_url_builder: Any = None,
+) -> BODSBundle:
+    """Map a FtM-shaped entity payload (OpenSanctions/OpenAleph) to BODS.
+
+    ``payload`` is the single FtM record (the ``entity`` block from the
+    adapter's ``fetch`` output, or a hit's ``raw``). ``source_url_builder``
+    is an optional callable ``(ftm_id) -> url`` for populating the BODS
+    source block.
+    """
+    result = BODSBundle()
+
+    subject = _ftm_statement(
+        payload, source_id=source_id, source_url_builder=source_url_builder
+    )
+    if subject is None:
+        return result
+    result.statements.append(subject)
+    subject_sid = subject["statementId"]
+    subject_type = "entity" if subject["recordType"] == "entity" else "person"
+
+    # FtM ownership-like properties can carry nested entities.
+    # We walk the canonical control-bearing properties and emit a
+    # relationship for each resolved child entity.
+    props = payload.get("properties") or {}
+    control_props = {
+        "ownersOf": "shareholding",
+        "owners": "shareholding",
+        "directorshipDirector": "appointmentOfBoard",
+        "directorshipOrganization": "appointmentOfBoard",
+        "associates": "otherInfluenceOrControl",
+    }
+    for key, interest_type in control_props.items():
+        for related in props.get(key) or []:
+            # FtM emits either string IDs or nested entity dicts.
+            if not isinstance(related, dict):
+                continue
+            related_stmt = _ftm_statement(
+                related,
+                source_id=source_id,
+                source_url_builder=source_url_builder,
+            )
+            if related_stmt is None:
+                continue
+            result.statements.append(related_stmt)
+            related_type = "entity" if related_stmt["recordType"] == "entity" else "person"
+
+            # When the FtM property expresses "owner of X", the related
+            # record is the *subject* and `payload` is the interested party.
+            if key in {"ownersOf", "directorshipOrganization"}:
+                rel_subject_sid = related_stmt["statementId"]
+                rel_ip_sid = subject_sid
+                rel_ip_type = subject_type
+            else:
+                rel_subject_sid = subject_sid
+                rel_ip_sid = related_stmt["statementId"]
+                rel_ip_type = related_type
+
+            rel = make_relationship_statement(
+                source_id=source_id,
+                local_id=f"{payload.get('id', '?')}:{key}:{related.get('id', '?')}",
+                subject_statement_id=rel_subject_sid,
+                interested_party_statement_id=rel_ip_sid,
+                interested_party_type=rel_ip_type,
+                interests=[
+                    {
+                        "type": interest_type,
+                        "directOrIndirect": "direct",
+                        "beneficialOwnershipOrControl": interest_type == "shareholding",
+                        "details": f"FtM property '{key}'",
+                    }
+                ],
+                source_url=subject.get("source", {}).get("url"),
+            )
+            result.statements.append(rel)
+
+    return result
+
+
+def _ftm_statement(
+    payload: dict[str, Any],
+    *,
+    source_id: str,
+    source_url_builder: Any,
+) -> dict[str, Any] | None:
+    ftm_id = payload.get("id")
+    if not ftm_id:
+        return None
+    schema = payload.get("schema") or ""
+    props = payload.get("properties") or {}
+
+    source_url = source_url_builder(ftm_id) if callable(source_url_builder) else None
+
+    if schema in _FTM_PERSON_SCHEMAS:
+        return _ftm_person_statement(payload, source_id, source_url)
+    # Everything else — including unknown schemas — becomes an entity.
+    if schema in _FTM_ENTITY_SCHEMAS or schema not in _FTM_PERSON_SCHEMAS:
+        return _ftm_entity_statement(payload, source_id, source_url)
+    # Defensive fallback (unreachable).
+    return None
+
+
+def _ftm_entity_statement(
+    payload: dict[str, Any], source_id: str, source_url: str | None
+) -> dict[str, Any]:
+    ftm_id = payload.get("id") or ""
+    props = payload.get("properties") or {}
+    name = (
+        (props.get("name") or [None])[0]
+        or payload.get("caption")
+        or f"Entity {ftm_id}"
+    )
+
+    jurisdiction = _ftm_jurisdiction(props)
+    identifiers = _ftm_identifiers(ftm_id, source_id, props)
+    addresses = _ftm_addresses(props)
+    founding_date = (props.get("incorporationDate") or [None])[0]
+
+    return make_entity_statement(
+        source_id=source_id,
+        local_id=ftm_id,
+        name=name,
+        jurisdiction=jurisdiction,
+        identifiers=identifiers,
+        addresses=addresses,
+        founding_date=founding_date,
+        source_url=source_url,
+    )
+
+
+def _ftm_person_statement(
+    payload: dict[str, Any], source_id: str, source_url: str | None
+) -> dict[str, Any]:
+    ftm_id = payload.get("id") or ""
+    props = payload.get("properties") or {}
+    full_name = (
+        (props.get("name") or [None])[0]
+        or payload.get("caption")
+        or f"Person {ftm_id}"
+    )
+    nationalities = [
+        {"name": n} for n in (props.get("nationality") or [])
+    ]
+    birth_date = (props.get("birthDate") or [None])[0]
+    addresses = _ftm_addresses(props)
+    identifiers = _ftm_identifiers(ftm_id, source_id, props)
+
+    return make_person_statement(
+        source_id=source_id,
+        local_id=ftm_id,
+        full_name=full_name,
+        nationalities=nationalities,
+        birth_date=birth_date,
+        addresses=addresses,
+        identifiers=identifiers,
+        source_url=source_url,
+    )
+
+
+def _ftm_jurisdiction(props: dict[str, Any]) -> tuple[str, str] | None:
+    jur = (props.get("jurisdiction") or props.get("country") or [None])[0]
+    if not jur:
+        return None
+    return (jur, jur if len(jur) == 2 else _country_code(jur))
+
+
+def _ftm_identifiers(
+    ftm_id: str, source_id: str, props: dict[str, Any]
+) -> list[dict[str, str]]:
+    scheme_name = "OpenSanctions" if source_id == "opensanctions" else "OpenAleph"
+    scheme_code = "OPENSANCTIONS" if source_id == "opensanctions" else "OPENALEPH"
+    identifiers: list[dict[str, str]] = [
+        {"id": ftm_id, "scheme": scheme_code, "schemeName": scheme_name}
+    ]
+    for key, scheme, name in (
+        ("leiCode", "XI-LEI", "Legal Entity Identifier"),
+        ("wikidataId", "WIKIDATA", "Wikidata"),
+        ("registrationNumber", "REG", "Local registry identifier"),
+        ("ogrnCode", "RU-OGRN", "Russian OGRN"),
+        ("innCode", "RU-INN", "Russian INN"),
+    ):
+        values = props.get(key) or []
+        if values:
+            identifiers.append(
+                {"id": values[0], "scheme": scheme, "schemeName": name}
+            )
+    return identifiers
+
+
+def _ftm_addresses(props: dict[str, Any]) -> list[dict[str, str]]:
+    raw = props.get("address") or props.get("addressEntity") or []
+    result: list[dict[str, str]] = []
+    for entry in raw:
+        if isinstance(entry, str):
+            result.append({"type": "registered", "address": entry, "country": ""})
+        elif isinstance(entry, dict):
+            p = entry.get("properties") or {}
+            parts = [
+                *(p.get("street") or []),
+                *(p.get("city") or []),
+                *(p.get("region") or []),
+                *(p.get("postalCode") or []),
+                *(p.get("country") or []),
+            ]
+            joined = ", ".join([str(x) for x in parts if x])
+            if joined:
+                result.append(
+                    {
+                        "type": "registered",
+                        "address": joined,
+                        "country": (p.get("country") or [""])[0],
+                    }
+                )
+    return result
+
+
+def map_opensanctions(bundle: dict[str, Any]) -> BODSBundle:
+    """Convenience wrapper: ``bundle`` is the adapter's fetch output."""
+    entity = bundle.get("entity") or bundle
+    return map_ftm(
+        entity,
+        source_id="opensanctions",
+        source_url_builder=lambda _id: f"https://www.opensanctions.org/entities/{_id}/",
+    )
+
+
+def map_openaleph(bundle: dict[str, Any]) -> BODSBundle:
+    """Convenience wrapper: ``bundle`` is the adapter's fetch output."""
+    entity = bundle.get("entity") or bundle
+    return map_ftm(
+        entity,
+        source_id="openaleph",
+        source_url_builder=lambda _id: f"https://search.openaleph.org/entities/{_id}",
+    )
