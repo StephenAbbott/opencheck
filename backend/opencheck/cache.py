@@ -94,6 +94,15 @@ class Cache:
                     )
         return None
 
+    def has(self, key: str) -> bool:
+        """Cheap presence check — used by adapters to decide whether to
+        fall back to the Phase 0 stub path. A demo fixture for ``key``
+        means we should serve it regardless of ``live_available``."""
+        for base in (self._demos(), self._live()):
+            if (base / f"{key}.json").is_file():
+                return True
+        return False
+
     # ---- writes ----
 
     def put(self, key: str, payload: Any) -> Path:

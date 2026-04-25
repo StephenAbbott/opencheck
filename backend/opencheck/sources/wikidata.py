@@ -95,7 +95,8 @@ class WikidataAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
-        if not self.info.live_available:
+        cache_key = f"{_CACHE_NS}/search/{kind.value}/{_slug(query)}"
+        if not self.info.live_available and not self._cache.has(cache_key):
             return self._stub_search(query, kind)
 
         payload = await self._mediawiki_get(
@@ -107,7 +108,7 @@ class WikidataAdapter(SourceAdapter):
                 "type": "item",
                 "limit": "10",
             },
-            cache_key=f"{_CACHE_NS}/search/{kind.value}/{_slug(query)}",
+            cache_key=cache_key,
         )
 
         hits: list[SourceHit] = []
@@ -123,10 +124,11 @@ class WikidataAdapter(SourceAdapter):
 
     async def fetch(self, hit_id: str) -> dict[str, Any]:
         """Return bindings + a normalised summary for a Q-ID."""
-        if not self.info.live_available:
+        qid = hit_id.strip().upper()
+        cache_key = f"{_CACHE_NS}/fetch/{qid}"
+        if not self.info.live_available and not self._cache.has(cache_key):
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
 
-        qid = hit_id.strip().upper()
         if not qid.startswith("Q") or not qid[1:].isdigit():
             # Defensively reject anything that isn't a Q-ID — prevents
             # SPARQL injection via the ``%(qid)s`` interpolation below.
@@ -138,7 +140,7 @@ class WikidataAdapter(SourceAdapter):
             }
 
         query = _FETCH_QUERY % {"qid": qid}
-        payload = await self._sparql(query, cache_key=f"{_CACHE_NS}/fetch/{qid}")
+        payload = await self._sparql(query, cache_key=cache_key)
         bindings = payload.get("results", {}).get("bindings", [])
 
         return {

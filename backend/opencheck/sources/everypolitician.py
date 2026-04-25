@@ -68,12 +68,13 @@ class EveryPoliticianAdapter(SourceAdapter):
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
         if kind != SearchKind.PERSON:
             return []
-        if not self.info.live_available:
+        cache_key = f"{_CACHE_NS}/search/{_slug(query)}"
+        if not self.info.live_available and not self._cache.has(cache_key):
             return self._stub_search(query)
 
         payload = await self._get(
             f"/search/{_DATASET}?q={quote(query)}&schema=Person&limit=10",
-            cache_key=f"{_CACHE_NS}/search/{_slug(query)}",
+            cache_key=cache_key,
         )
         return [self._hit(item) for item in payload.get("results", [])]
 
@@ -82,12 +83,13 @@ class EveryPoliticianAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     async def fetch(self, hit_id: str) -> dict[str, Any]:
-        if not self.info.live_available:
+        cache_key = f"{_CACHE_NS}/entity/{_slug(hit_id)}"
+        if not self.info.live_available and not self._cache.has(cache_key):
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
 
         payload = await self._get(
             f"/entities/{quote(hit_id)}",
-            cache_key=f"{_CACHE_NS}/entity/{_slug(hit_id)}",
+            cache_key=cache_key,
         )
         return {
             "source_id": self.id,

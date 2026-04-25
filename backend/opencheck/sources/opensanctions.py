@@ -65,13 +65,16 @@ class OpenSanctionsAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
-        if not self.info.live_available:
+        schema = _schema_for(kind)
+        cache_key = f"{_CACHE_NS}/search/{schema}/{_slug(query)}"
+        # A demo fixture for this query overrides the live_available check
+        # so the app can demo offline.
+        if not self.info.live_available and not self._cache.has(cache_key):
             return self._stub_search(query, kind)
 
-        schema = _schema_for(kind)
         payload = await self._get(
             f"/search/default?q={quote(query)}&schema={schema}&limit=10",
-            cache_key=f"{_CACHE_NS}/search/{schema}/{_slug(query)}",
+            cache_key=cache_key,
         )
         return [self._hit(item, kind) for item in payload.get("results", [])]
 
@@ -80,12 +83,13 @@ class OpenSanctionsAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     async def fetch(self, hit_id: str) -> dict[str, Any]:
-        if not self.info.live_available:
+        cache_key = f"{_CACHE_NS}/entity/{_slug(hit_id)}"
+        if not self.info.live_available and not self._cache.has(cache_key):
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
 
         payload = await self._get(
             f"/entities/{quote(hit_id)}",
-            cache_key=f"{_CACHE_NS}/entity/{_slug(hit_id)}",
+            cache_key=cache_key,
         )
         return {
             "source_id": self.id,

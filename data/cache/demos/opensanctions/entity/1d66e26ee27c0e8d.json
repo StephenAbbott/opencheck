@@ -1,0 +1,37 @@
+{
+  "_cached_at": 0,
+  "payload": {
+    "id": "Q7747-pep",
+    "schema": "Person",
+    "caption": "Vladimir Putin",
+    "properties": {
+      "name": [
+        "Vladimir Putin"
+      ],
+      "wikidataId": [
+        "Q7747"
+      ],
+      "topics": [
+        "role.pep",
+        "sanction"
+      ],
+      "birthDate": [
+        "1952-10-07"
+      ],
+      "position": [
+        "President of Russia"
+      ],
+      "country": [
+        "ru"
+      ]
+    },
+    "topics": [
+      "role.pep",
+      "sanction"
+    ],
+    "datasets": [
+      "peps",
+      "ru_rupep"
+    ]
+  }
+}

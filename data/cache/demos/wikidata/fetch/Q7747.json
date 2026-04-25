@@ -1,0 +1,102 @@
+{
+  "_cached_at": 0,
+  "payload": {
+    "head": {
+      "vars": [
+        "qid",
+        "label",
+        "description",
+        "instance",
+        "instanceLabel",
+        "dob",
+        "dod",
+        "citizenship",
+        "citizenshipLabel",
+        "position",
+        "positionLabel",
+        "positionStart",
+        "positionEnd"
+      ]
+    },
+    "results": {
+      "bindings": [
+        {
+          "qid": {
+            "type": "uri",
+            "value": "http://www.wikidata.org/entity/Q7747"
+          },
+          "label": {
+            "type": "literal",
+            "value": "Vladimir Putin"
+          },
+          "description": {
+            "type": "literal",
+            "value": "President of Russia"
+          },
+          "instance": {
+            "type": "uri",
+            "value": "http://www.wikidata.org/entity/Q5"
+          },
+          "instanceLabel": {
+            "type": "literal",
+            "value": "human"
+          },
+          "dob": {
+            "type": "literal",
+            "value": "1952-10-07T00:00:00Z"
+          },
+          "citizenship": {
+            "type": "uri",
+            "value": "http://www.wikidata.org/entity/Q159"
+          },
+          "citizenshipLabel": {
+            "type": "literal",
+            "value": "Russia"
+          },
+          "position": {
+            "type": "uri",
+            "value": "http://www.wikidata.org/entity/Q11696"
+          },
+          "positionLabel": {
+            "type": "literal",
+            "value": "President of Russia"
+          },
+          "positionStart": {
+            "type": "literal",
+            "value": "2012-05-07T00:00:00Z"
+          }
+        },
+        {
+          "qid": {
+            "type": "uri",
+            "value": "http://www.wikidata.org/entity/Q7747"
+          },
+          "label": {
+            "type": "literal",
+            "value": "Vladimir Putin"
+          },
+          "instance": {
+            "type": "uri",
+            "value": "http://www.wikidata.org/entity/Q5"
+          },
+          "position": {
+            "type": "uri",
+            "value": "http://www.wikidata.org/entity/Q899"
+          },
+          "positionLabel": {
+            "type": "literal",
+            "value": "Prime Minister of Russia"
+          },
+          "positionStart": {
+            "type": "literal",
+            "value": "2008-05-08T00:00:00Z"
+          },
+          "positionEnd": {
+            "type": "literal",
+            "value": "2012-05-07T00:00:00Z"
+          }
+        }
+      ]
+    }
+  }
+}

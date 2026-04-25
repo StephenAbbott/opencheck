@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import BODSGraph from "./components/BODSGraph";
 import {
   deepen,
   fetchSources,
@@ -10,6 +11,31 @@ import {
   type SearchKind,
   type SourceHit,
 } from "./lib/api";
+
+/**
+ * Curated demo subjects backed by fixtures under data/cache/demos.
+ * Clicking a pill kicks off a search with no API keys required.
+ */
+const DEMO_SUBJECTS: { label: string; query: string; kind: SearchKind; blurb: string }[] = [
+  {
+    label: "BP",
+    query: "BP",
+    kind: "entity",
+    blurb: "UK plc — clean cross-source story (LEI ↔ Companies House ↔ Wikidata)",
+  },
+  {
+    label: "Rosneft",
+    query: "Rosneft",
+    kind: "entity",
+    blurb: "Sanctioned + RU-incorporated → AMLA non-EU + sanctions signals",
+  },
+  {
+    label: "Vladimir Putin",
+    query: "Vladimir Putin",
+    kind: "person",
+    blurb: "Multi-source PEP — Q-ID bridges Wikidata, OpenSanctions, EveryPolitician",
+  },
+];
 
 /**
  * Phase 1 chat UI.
@@ -48,10 +74,10 @@ export default function App() {
     return () => cleanupRef.current?.();
   }, []);
 
-  function runSearch(e: React.FormEvent) {
-    e.preventDefault();
-    const q = query.trim();
-    if (!q) return;
+  function runSearchFor(q: string, k: SearchKind) {
+    if (!q.trim()) return;
+    setQuery(q);
+    setKind(k);
 
     cleanupRef.current?.();
     setBuckets({});
@@ -59,7 +85,7 @@ export default function App() {
     setRiskSignals([]);
     setRunning(true);
 
-    cleanupRef.current = streamSearch(q, kind, {
+    cleanupRef.current = streamSearch(q.trim(), k, {
       onSourceStarted: ({ source_id, source_name }) =>
         setBuckets((prev) => ({
           ...prev,
@@ -106,6 +132,11 @@ export default function App() {
     });
   }
 
+  function runSearch(e: React.FormEvent) {
+    e.preventDefault();
+    runSearchFor(query, kind);
+  }
+
   const bucketList = useMemo(() => Object.values(buckets), [buckets]);
   const totalHits = bucketList.reduce((n, b) => n + b.hits.length, 0);
 
@@ -143,6 +174,27 @@ export default function App() {
       </header>
 
       <main className="flex-1 px-6 py-8 max-w-5xl mx-auto w-full">
+        <section className="mb-4">
+          <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">
+            Try a demo (no API keys required)
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {DEMO_SUBJECTS.map((d) => (
+              <button
+                key={d.query}
+                type="button"
+                disabled={running}
+                onClick={() => runSearchFor(d.query, d.kind)}
+                title={d.blurb}
+                className="text-sm border border-slate-300 rounded-full px-3 py-1 bg-white hover:bg-slate-50 disabled:opacity-50"
+              >
+                <span className="font-medium">{d.label}</span>
+                <span className="text-slate-400 text-xs ml-1">· {d.kind}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
         <form onSubmit={runSearch} className="flex gap-2 mb-6">
           <select
             value={kind}
@@ -416,9 +468,16 @@ function DeepenBlock({ detail }: { detail: DeepenResponse }) {
               {detail.bods_issues.length === 1 ? "" : "s"}
             </p>
           )}
-          <pre className="max-h-96 overflow-auto bg-white border border-slate-200 rounded p-2">
-            {JSON.stringify(detail.bods, null, 2)}
-          </pre>
+          {/* Directed graph (via @openownership/bods-dagre). */}
+          <BODSGraph statements={detail.bods} />
+          <details className="mt-2">
+            <summary className="text-slate-500 cursor-pointer text-xs">
+              Show JSON statements
+            </summary>
+            <pre className="mt-1 max-h-96 overflow-auto bg-white border border-slate-200 rounded p-2">
+              {JSON.stringify(detail.bods, null, 2)}
+            </pre>
+          </details>
         </section>
       )}
       <section>

@@ -1,0 +1,33 @@
+{
+  "_cached_at": 0,
+  "payload": {
+    "results": [
+      {
+        "id": "NK-rosneft",
+        "schema": "Company",
+        "caption": "Rosneft Oil Company",
+        "properties": {
+          "name": [
+            "Rosneft Oil Company"
+          ],
+          "leiCode": [
+            "253400JSI04G42PAAS27"
+          ],
+          "wikidataId": [
+            "Q1141123"
+          ],
+          "jurisdiction": [
+            "ru"
+          ]
+        },
+        "topics": [
+          "sanction"
+        ],
+        "datasets": [
+          "us_ofac_sdn",
+          "eu_fsf"
+        ]
+      }
+    ]
+  }
+}

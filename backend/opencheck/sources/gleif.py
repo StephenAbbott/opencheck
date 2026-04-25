@@ -65,12 +65,13 @@ class GleifAdapter(SourceAdapter):
         if kind != SearchKind.ENTITY:
             return []
 
-        if not self.info.live_available:
+        cache_key = f"{_CACHE_NS}/search/{_slug(query)}"
+        if not self.info.live_available and not self._cache.has(cache_key):
             return self._stub_search(query)
 
         payload = await self._get(
             f"/lei-records?filter[fulltext]={quote(query)}&page[size]=10",
-            cache_key=f"{_CACHE_NS}/search/{_slug(query)}",
+            cache_key=cache_key,
         )
         return [self._entity_hit(item) for item in payload.get("data", [])]
 
@@ -87,13 +88,14 @@ class GleifAdapter(SourceAdapter):
         be surfaced in the BODS output (as anonymousEntity / unknownPerson
         bridging statements) instead of silently vanishing.
         """
-        if not self.info.live_available:
+        lei = hit_id.strip().upper()
+        cache_key = f"{_CACHE_NS}/lei/{lei}"
+        if not self.info.live_available and not self._cache.has(cache_key):
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
 
-        lei = hit_id.strip().upper()
         record = await self._get(
             f"/lei-records/{quote(lei)}",
-            cache_key=f"{_CACHE_NS}/lei/{lei}",
+            cache_key=cache_key,
         )
 
         direct_parent, direct_exception = await self._parent_or_exception(
@@ -154,10 +156,18 @@ class GleifAdapter(SourceAdapter):
     async def _get_optional(
         self, path: str, *, cache_key: str
     ) -> dict[str, Any] | None:
-        """Like ``_get`` but returns ``None`` on 404 (no relationship on file)."""
+        """Like ``_get`` but returns ``None`` on 404 (no relationship on file).
+
+        Offline demo behaviour: when ``live_available`` is false and the
+        cache has no entry, treat as "no relationship" rather than
+        firing a network call. This keeps demo fixtures focused on the
+        statements that actually matter.
+        """
         cached = self._cache.get_payload(cache_key)
         if cached is not None:
             return cached[0]
+        if not self.info.live_available:
+            return None
 
         try:
             async with build_client() as client:
@@ -195,10 +205,16 @@ class GleifAdapter(SourceAdapter):
             summary_bits.append(status.lower())
         identifiers: dict[str, str] = {"lei": lei}
 
-        # GLEIF often mirrors a local registry id in registeredAs.
+        # GLEIF often mirrors a local registry id in registeredAs. We
+        # surface that under both a generic key (for reference) and the
+        # well-known cross-source bridge key when one applies, so the
+        # reconciler can bridge GLEIF ↔ Companies House on the same UK
+        # company number.
         registered_as = entity.get("registeredAs")
         if registered_as and jurisdiction:
             identifiers[f"registered_as_{jurisdiction.lower()}"] = registered_as
+            if jurisdiction.upper() == "GB":
+                identifiers["gb_coh"] = registered_as
 
         return SourceHit(
             source_id="gleif",

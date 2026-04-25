@@ -1,0 +1,55 @@
+{
+  "_cached_at": 0,
+  "payload": {
+    "head": {
+      "vars": [
+        "qid",
+        "label",
+        "description",
+        "instance",
+        "instanceLabel",
+        "country",
+        "countryLabel",
+        "lei"
+      ]
+    },
+    "results": {
+      "bindings": [
+        {
+          "qid": {
+            "type": "uri",
+            "value": "http://www.wikidata.org/entity/Q1141123"
+          },
+          "label": {
+            "type": "literal",
+            "value": "Rosneft"
+          },
+          "description": {
+            "type": "literal",
+            "value": "Russian state-controlled oil company"
+          },
+          "instance": {
+            "type": "uri",
+            "value": "http://www.wikidata.org/entity/Q4830453"
+          },
+          "instanceLabel": {
+            "type": "literal",
+            "value": "business"
+          },
+          "country": {
+            "type": "uri",
+            "value": "http://www.wikidata.org/entity/Q159"
+          },
+          "countryLabel": {
+            "type": "literal",
+            "value": "Russia"
+          },
+          "lei": {
+            "type": "literal",
+            "value": "253400JSI04G42PAAS27"
+          }
+        }
+      ]
+    }
+  }
+}

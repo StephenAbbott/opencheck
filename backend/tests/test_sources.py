@@ -4,7 +4,18 @@ from __future__ import annotations
 
 import pytest
 
+from opencheck.config import get_settings
 from opencheck.sources import REGISTRY, SearchKind
+
+
+@pytest.fixture(autouse=True)
+def _isolated_data_root(monkeypatch, tmp_path):
+    """Point the cache at a tmp dir so the shipped demo fixtures
+    don't shadow the stub path under test."""
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 def test_registry_has_expected_sources() -> None:

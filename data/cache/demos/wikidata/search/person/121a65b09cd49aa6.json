@@ -1,0 +1,18 @@
+{
+  "_cached_at": 0,
+  "payload": {
+    "search": [
+      {
+        "id": "Q7747",
+        "title": "Q7747",
+        "label": "Vladimir Putin",
+        "description": "President of Russia",
+        "match": {
+          "type": "label",
+          "language": "en",
+          "text": "Vladimir Putin"
+        }
+      }
+    ]
+  }
+}

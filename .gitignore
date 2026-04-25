@@ -42,6 +42,8 @@ frontend/dist/
 frontend/.vite/
 # Vite drops these next to the config when esbuild jit-compiles it.
 frontend/vite.config.ts.timestamp-*.mjs
+# bods-dagre images are copied in by a vite plugin at build start.
+frontend/public/bods-dagre-images/
 *.local
 
 # ---- Editors / OS ----

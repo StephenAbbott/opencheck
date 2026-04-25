@@ -78,19 +78,21 @@ class CompaniesHouseAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
-        if not self.info.live_available:
+        bucket = "companies" if kind == SearchKind.ENTITY else "officers"
+        cache_key = f"{_CACHE_NS}/search/{bucket}/{_slug(query)}"
+        if not self.info.live_available and not self._cache.has(cache_key):
             return self._stub_search(query, kind)
 
         if kind == SearchKind.ENTITY:
             payload = await self._get(
                 f"/search/companies?q={quote(query)}&items_per_page=10",
-                cache_key=f"{_CACHE_NS}/search/companies/{_slug(query)}",
+                cache_key=cache_key,
             )
             return [self._entity_hit(item) for item in payload.get("items", [])]
 
         payload = await self._get(
             f"/search/officers?q={quote(query)}&items_per_page=10",
-            cache_key=f"{_CACHE_NS}/search/officers/{_slug(query)}",
+            cache_key=cache_key,
         )
         return [self._officer_hit(item) for item in payload.get("items", [])]
 
@@ -107,7 +109,13 @@ class CompaniesHouseAdapter(SourceAdapter):
         that aren't valid in company numbers (``_``, ``-``). We dispatch
         based on that shape.
         """
-        if not self.info.live_available:
+        # Pick the primary cache key based on dispatch shape so demo
+        # fixtures override the stub path when present.
+        if _looks_like_company_number(hit_id):
+            primary_key = f"{_CACHE_NS}/company/{hit_id}"
+        else:
+            primary_key = f"{_CACHE_NS}/officer/{hit_id}/appointments"
+        if not self.info.live_available and not self._cache.has(primary_key):
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
 
         if _looks_like_company_number(hit_id):

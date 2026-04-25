@@ -1,0 +1,16 @@
+{
+  "_cached_at": 0,
+  "payload": {
+    "company_number": "00102498",
+    "company_name": "BP P.L.C.",
+    "company_status": "active",
+    "type": "plc",
+    "date_of_creation": "1909-04-14",
+    "registered_office_address": {
+      "address_line_1": "1 St James's Square",
+      "locality": "London",
+      "postal_code": "SW1Y 4PD",
+      "country": "United Kingdom"
+    }
+  }
+}

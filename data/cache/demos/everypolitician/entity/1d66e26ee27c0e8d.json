@@ -1,0 +1,22 @@
+{
+  "_cached_at": 0,
+  "payload": {
+    "id": "Q7747-pep",
+    "schema": "Person",
+    "caption": "Vladimir Putin",
+    "properties": {
+      "name": [
+        "Vladimir Putin"
+      ],
+      "wikidataId": [
+        "Q7747"
+      ],
+      "position": [
+        "President of Russia"
+      ],
+      "birthDate": [
+        "1952-10-07"
+      ]
+    }
+  }
+}

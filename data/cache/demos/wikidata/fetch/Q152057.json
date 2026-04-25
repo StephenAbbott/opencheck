@@ -1,0 +1,62 @@
+{
+  "_cached_at": 0,
+  "payload": {
+    "head": {
+      "vars": [
+        "qid",
+        "label",
+        "description",
+        "instance",
+        "instanceLabel",
+        "country",
+        "countryLabel",
+        "lei",
+        "openCorporates",
+        "isin",
+        "inception"
+      ]
+    },
+    "results": {
+      "bindings": [
+        {
+          "qid": {
+            "type": "uri",
+            "value": "http://www.wikidata.org/entity/Q152057"
+          },
+          "label": {
+            "type": "literal",
+            "value": "BP"
+          },
+          "description": {
+            "type": "literal",
+            "value": "British multinational oil and gas company"
+          },
+          "instance": {
+            "type": "uri",
+            "value": "http://www.wikidata.org/entity/Q6881511"
+          },
+          "instanceLabel": {
+            "type": "literal",
+            "value": "enterprise"
+          },
+          "country": {
+            "type": "uri",
+            "value": "http://www.wikidata.org/entity/Q145"
+          },
+          "countryLabel": {
+            "type": "literal",
+            "value": "United Kingdom"
+          },
+          "lei": {
+            "type": "literal",
+            "value": "213800LBDB8WB3QGVN21"
+          },
+          "inception": {
+            "type": "literal",
+            "value": "+1909-04-14T00:00:00Z"
+          }
+        }
+      ]
+    }
+  }
+}

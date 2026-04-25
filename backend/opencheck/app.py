@@ -341,11 +341,31 @@ async def report(
                 }
             )
 
-    # Merge + dedupe risk signals (a hit might appear in both search and
-    # deepen rounds; e.g. OpenSanctions topics are present in both).
-    merged: dict[tuple[str, str, str], dict[str, Any]] = {}
+    # Merge + dedupe risk signals across the two rounds.
+    #
+    # Per-source signals (PEP / SANCTIONED / OFFSHORE_LEAKS / OPAQUE) are
+    # legitimately one-per-hit — a sanctioned record on OpenSanctions
+    # and a separately-sanctioned record on EveryPolitician are two
+    # distinct assertions. Dedupe key: (code, source_id, hit_id).
+    #
+    # Structural BODS signals (TRUST / NON_EU / NOMINEE / LAYERS /
+    # COMPLEX / OBFUSCATION) describe the merged ownership chain, not
+    # one source's view of it. Each deepened bundle re-asserts the same
+    # fact, which inflates the chip strip. Collapse those by code only.
+    structural_codes = {
+        "TRUST_OR_ARRANGEMENT",
+        "NON_EU_JURISDICTION",
+        "NOMINEE",
+        "COMPLEX_OWNERSHIP_LAYERS",
+        "COMPLEX_CORPORATE_STRUCTURE",
+        "POSSIBLE_OBFUSCATION",
+    }
+    merged: dict[tuple, dict[str, Any]] = {}
     for sig in search_signals + deepen_signals:
-        key = (sig["code"], sig["source_id"], sig["hit_id"])
+        if sig["code"] in structural_codes:
+            key: tuple = (sig["code"],)
+        else:
+            key = (sig["code"], sig["source_id"], sig["hit_id"])
         # Prefer deepen-derived (richer evidence) over search-derived.
         merged[key] = sig
     all_signals = list(merged.values())
