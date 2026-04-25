@@ -40,6 +40,16 @@ def _slug(text: str) -> str:
     return digest
 
 
+def _looks_like_company_number(value: str) -> bool:
+    """True for the 8-character alphanumeric Companies House number shape.
+
+    UK company numbers are 8 chars, alphanumeric (e.g. ``00102498``,
+    ``SC123456``, ``OC403762``). Officer ids are base64-shaped and
+    longer (typically 27 chars) — no overlap.
+    """
+    return len(value) == 8 and value.replace(" ", "").isalnum()
+
+
 class CompaniesHouseAdapter(SourceAdapter):
     id = "companies_house"
 
@@ -89,26 +99,20 @@ class CompaniesHouseAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     async def fetch(self, hit_id: str) -> dict[str, Any]:
-        """Return company profile + officers + PSCs for a company number.
+        """Return either a company bundle or an officer-appointments bundle.
 
-        For person (officer) hits the id is an appointment id — we return
-        whatever the search returned rather than trying to resolve
-        appointments server-side (that needs the appointments endpoint,
-        which is richer than we need for Phase 1).
+        Companies House officer ids look like
+        ``zS_RY9pRYlJ9XwGJEOFtkJgrf8s`` — base64-shaped, much longer than
+        the 8-char company-number space and usually containing characters
+        that aren't valid in company numbers (``_``, ``-``). We dispatch
+        based on that shape.
         """
         if not self.info.live_available:
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
 
-        # Heuristic: Companies House company numbers are 8 chars, often
-        # digits-only or a letter-prefixed variant. Anything else is
-        # treated as an officer/psc id.
-        if len(hit_id) == 8 and hit_id.replace(" ", "").isalnum():
+        if _looks_like_company_number(hit_id):
             return await self._fetch_company_bundle(hit_id)
-        return {
-            "source_id": self.id,
-            "hit_id": hit_id,
-            "note": "fetch not implemented for this id shape",
-        }
+        return await self._fetch_officer_bundle(hit_id)
 
     async def _fetch_company_bundle(self, number: str) -> dict[str, Any]:
         profile = await self._get(
@@ -129,6 +133,27 @@ class CompaniesHouseAdapter(SourceAdapter):
             "profile": profile,
             "officers": officers,
             "pscs": pscs,
+        }
+
+    async def _fetch_officer_bundle(self, officer_id: str) -> dict[str, Any]:
+        """Return appointments for a Companies House officer id.
+
+        Companies House does not expose a dedicated "officer profile"
+        endpoint — instead, ``/officers/{id}/appointments`` returns
+        every appointment for that officer along with that officer's
+        canonical name, DOB year/month, nationality, occupation, and
+        country of residence (encoded once on the appointment block).
+        We package that into a neutral bundle the BODS mapper can turn
+        into a ``personStatement`` plus one relationship per appointment.
+        """
+        appointments = await self._get(
+            f"/officers/{quote(officer_id)}/appointments",
+            cache_key=f"{_CACHE_NS}/officer/{officer_id}/appointments",
+        )
+        return {
+            "source_id": self.id,
+            "officer_id": officer_id,
+            "appointments": appointments,
         }
 
     # ------------------------------------------------------------------

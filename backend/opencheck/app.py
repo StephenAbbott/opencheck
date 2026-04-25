@@ -25,12 +25,16 @@ from . import __version__
 from .bods import (
     BODSBundle,
     map_companies_house,
+    map_everypolitician,
     map_gleif,
     map_openaleph,
     map_opensanctions,
+    map_wikidata,
     validate_shape,
 )
 from .config import get_settings
+from .reconcile import reconcile
+from .risk import RiskSignal, assess_bundle, assess_hits
 from .sources import REGISTRY, SearchKind, SourceHit, SourceInfo
 
 app = FastAPI(
@@ -66,6 +70,8 @@ class SearchResponse(BaseModel):
     kind: SearchKind
     hits: list[SourceHit]
     errors: dict[str, str]
+    cross_source_links: list[dict[str, Any]]
+    risk_signals: list[dict[str, Any]]
 
 
 class DeepenResponse(BaseModel):
@@ -76,6 +82,28 @@ class DeepenResponse(BaseModel):
     bods_issues: list[str]
     license: str
     license_notice: str | None = None
+    risk_signals: list[dict[str, Any]] = []
+
+
+class ReportResponse(BaseModel):
+    """Aggregate post-search synthesis for a single subject.
+
+    Pulls everything together: per-source hits, cross-source bridges,
+    risk signals (search-time + per-deepened-bundle), and the BODS
+    statements emitted along the way. The frontend uses this to render
+    the right-hand "report" panel — one tidy view of what every source
+    asserts about the same subject.
+    """
+
+    query: str
+    kind: SearchKind
+    hits: list[SourceHit]
+    errors: dict[str, str]
+    cross_source_links: list[dict[str, Any]]
+    risk_signals: list[dict[str, Any]]
+    bods: list[dict[str, Any]]
+    bods_issues: list[str]
+    license_notices: list[dict[str, str]]
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -102,7 +130,16 @@ async def search(
 
     results, errors = await _run_adapters(q, kind)
     hits = [hit for adapter_hits in results.values() for hit in adapter_hits]
-    return SearchResponse(query=q, kind=kind, hits=hits, errors=errors)
+    links = [link.to_dict() for link in reconcile(hits)]
+    signals = [s.to_dict() for s in assess_hits(hits)]
+    return SearchResponse(
+        query=q,
+        kind=kind,
+        hits=hits,
+        errors=errors,
+        cross_source_links=links,
+        risk_signals=signals,
+    )
 
 
 @app.get("/stream")
@@ -150,6 +187,7 @@ async def _stream_events(q: str, kind: SearchKind) -> AsyncIterator[dict[str, An
         }
 
     pending = {asyncio.create_task(run_one(sid, a)) for sid, a in adapters}
+    all_hits: list[SourceHit] = []
     while pending:
         done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
         for task in done:
@@ -170,12 +208,30 @@ async def _stream_events(q: str, kind: SearchKind) -> AsyncIterator[dict[str, An
                     "event": "hit",
                     "data": hit.model_dump_json(),
                 }
+                all_hits.append(hit)
             yield {
                 "event": "source_completed",
                 "data": json.dumps(
                     {"source_id": source_id, "hit_count": len(result)}
                 ),
             }
+
+    # Once every adapter has reported, run reconciliation and emit any
+    # cross-source bridges as a single event for the UI to render.
+    links = [link.to_dict() for link in reconcile(all_hits)]
+    if links:
+        yield {
+            "event": "cross_source_links",
+            "data": json.dumps({"links": links}),
+        }
+
+    # Risk signals derived from search-time data — surfaced as chips.
+    signals = [s.to_dict() for s in assess_hits(all_hits)]
+    if signals:
+        yield {
+            "event": "risk_signals",
+            "data": json.dumps({"signals": signals}),
+        }
 
     yield {"event": "done", "data": json.dumps({"query": q, "kind": kind.value})}
 
@@ -185,6 +241,8 @@ _MAPPERS = {
     "gleif": map_gleif,
     "opensanctions": map_opensanctions,
     "openaleph": map_openaleph,
+    "wikidata": map_wikidata,
+    "everypolitician": map_everypolitician,
 }
 
 # Licenses that forbid commercial re-use. Anything in this set triggers
@@ -216,6 +274,7 @@ async def deepen(
 
     info = adapter.info
     license_notice = _license_notice_for(info, raw)
+    signals = [s.to_dict() for s in assess_bundle(source, raw, bods)]
 
     return DeepenResponse(
         source_id=source,
@@ -225,7 +284,108 @@ async def deepen(
         bods_issues=issues,
         license=info.license,
         license_notice=license_notice,
+        risk_signals=signals,
     )
+
+
+@app.get("/report", response_model=ReportResponse)
+async def report(
+    q: str = Query(..., min_length=1),
+    kind: SearchKind = Query(SearchKind.ENTITY),
+    deepen_top: int = Query(
+        3, ge=0, le=10, description="How many top hits to deepen+map+assess."
+    ),
+) -> ReportResponse:
+    """One-shot synthesis: search, reconcile, deepen top N, assess risk.
+
+    Designed for the report panel and for headless callers (e.g. a CLI
+    or a future export). All four phases run concurrently where it's
+    safe to do so — the deepen phase is parallelised across the top N
+    hits, but only after search has resolved (we need the hits first).
+    """
+    results, errors = await _run_adapters(q, kind)
+    hits = [hit for adapter_hits in results.values() for hit in adapter_hits]
+    links = [link.to_dict() for link in reconcile(hits)]
+    search_signals = [s.to_dict() for s in assess_hits(hits)]
+
+    # Deepen the top N hits (skipping stubs) and run BODS + risk on each.
+    deep_hits = [h for h in hits if not h.is_stub][:deepen_top]
+    bods_all: list[dict[str, Any]] = []
+    bods_issues: list[str] = []
+    deepen_signals: list[dict[str, Any]] = []
+    license_notices: list[dict[str, str]] = []
+
+    deepen_tasks = {
+        (h.source_id, h.hit_id): asyncio.create_task(
+            _safe_deepen(h.source_id, h.hit_id)
+        )
+        for h in deep_hits
+    }
+    for (source_id, hit_id), task in deepen_tasks.items():
+        try:
+            bundle = await task
+        except Exception as exc:  # noqa: BLE001
+            errors.setdefault(source_id, f"{type(exc).__name__}: {exc}")
+            continue
+        if bundle is None:
+            continue
+        bods_all.extend(bundle["bods"])
+        bods_issues.extend(bundle["bods_issues"])
+        deepen_signals.extend(bundle["risk_signals"])
+        if bundle.get("license_notice"):
+            license_notices.append(
+                {
+                    "source_id": source_id,
+                    "hit_id": hit_id,
+                    "notice": bundle["license_notice"],
+                }
+            )
+
+    # Merge + dedupe risk signals (a hit might appear in both search and
+    # deepen rounds; e.g. OpenSanctions topics are present in both).
+    merged: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for sig in search_signals + deepen_signals:
+        key = (sig["code"], sig["source_id"], sig["hit_id"])
+        # Prefer deepen-derived (richer evidence) over search-derived.
+        merged[key] = sig
+    all_signals = list(merged.values())
+
+    return ReportResponse(
+        query=q,
+        kind=kind,
+        hits=hits,
+        errors=errors,
+        cross_source_links=links,
+        risk_signals=all_signals,
+        bods=bods_all,
+        bods_issues=bods_issues,
+        license_notices=license_notices,
+    )
+
+
+async def _safe_deepen(source_id: str, hit_id: str) -> dict[str, Any] | None:
+    """Internal helper used by /report — does what /deepen does, but
+    returns a plain dict and swallows nothing (caller handles errors)."""
+    adapter = REGISTRY.get(source_id)
+    if adapter is None:
+        return None
+    raw = await adapter.fetch(hit_id)
+    bods: list[dict[str, Any]] = []
+    issues: list[str] = []
+    mapper = _MAPPERS.get(source_id)
+    if mapper and not raw.get("is_stub"):
+        bundle: BODSBundle = mapper(raw)
+        bods = list(bundle)
+        issues = validate_shape(bods)
+    license_notice = _license_notice_for(adapter.info, raw)
+    signals = [s.to_dict() for s in assess_bundle(source_id, raw, bods)]
+    return {
+        "raw": raw,
+        "bods": bods,
+        "bods_issues": issues,
+        "license_notice": license_notice,
+        "risk_signals": signals,
+    }
 
 
 def _license_notice_for(

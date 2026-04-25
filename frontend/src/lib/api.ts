@@ -28,11 +28,30 @@ export interface SourceHit {
   is_stub: boolean;
 }
 
+export interface CrossSourceLink {
+  key: string;
+  key_value: string;
+  confidence: "strong" | "possible";
+  hits: { source_id: string; hit_id: string; name: string }[];
+}
+
+/** A single risk signal — see backend opencheck/risk.py for the rule list. */
+export interface RiskSignal {
+  code: string;
+  confidence: "high" | "medium" | "low";
+  summary: string;
+  source_id: string;
+  hit_id: string;
+  evidence: Record<string, unknown>;
+}
+
 export interface SearchResponse {
   query: string;
   kind: SearchKind;
   hits: SourceHit[];
   errors: Record<string, string>;
+  cross_source_links: CrossSourceLink[];
+  risk_signals: RiskSignal[];
 }
 
 export interface DeepenResponse {
@@ -43,6 +62,7 @@ export interface DeepenResponse {
   bods_issues: string[];
   license: string;
   license_notice: string | null;
+  risk_signals: RiskSignal[];
 }
 
 const BASE_URL =
@@ -101,11 +121,21 @@ export interface DoneEvent {
   kind: SearchKind;
 }
 
+export interface CrossSourceLinksEvent {
+  links: CrossSourceLink[];
+}
+
+export interface RiskSignalsEvent {
+  signals: RiskSignal[];
+}
+
 export type StreamHandlers = {
   onSourceStarted?: (e: SourceStartedEvent) => void;
   onHit?: (e: SourceHit) => void;
   onSourceCompleted?: (e: SourceCompletedEvent) => void;
   onSourceError?: (e: SourceErrorEvent) => void;
+  onCrossSourceLinks?: (e: CrossSourceLinksEvent) => void;
+  onRiskSignals?: (e: RiskSignalsEvent) => void;
   onDone?: (e: DoneEvent) => void;
   onError?: (err: Event) => void;
 };
@@ -144,6 +174,14 @@ export function streamSearch(
   es.addEventListener("source_error", (ev) => {
     const data = safeParse<SourceErrorEvent>((ev as MessageEvent).data);
     if (data) handlers.onSourceError?.(data);
+  });
+  es.addEventListener("cross_source_links", (ev) => {
+    const data = safeParse<CrossSourceLinksEvent>((ev as MessageEvent).data);
+    if (data) handlers.onCrossSourceLinks?.(data);
+  });
+  es.addEventListener("risk_signals", (ev) => {
+    const data = safeParse<RiskSignalsEvent>((ev as MessageEvent).data);
+    if (data) handlers.onRiskSignals?.(data);
   });
   es.addEventListener("done", (ev) => {
     const data = safeParse<DoneEvent>((ev as MessageEvent).data);

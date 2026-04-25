@@ -256,11 +256,22 @@ class BODSBundle:
 
 
 def map_companies_house(bundle: dict[str, Any]) -> BODSBundle:
-    """Map a Companies House company bundle (profile + officers + PSCs) to BODS.
+    """Map a Companies House bundle to BODS.
 
-    Input shape matches ``CompaniesHouseAdapter._fetch_company_bundle`` output:
-    ``{"company_number": ..., "profile": {...}, "officers": {...}, "pscs": {...}}``.
+    Two dispatch shapes:
+
+    * ``{"company_number": ..., "profile": ..., "officers": ..., "pscs": ...}``
+      — produced by ``_fetch_company_bundle``. Yields the company entity
+      + a personStatement / entityStatement per active PSC, plus an
+      ownership-or-control relationship per PSC.
+    * ``{"officer_id": ..., "appointments": {...}}`` — produced by
+      ``_fetch_officer_bundle``. Yields the officer as a
+      personStatement, plus a "boardMember" relationship for every
+      appointment (both current and historical).
     """
+    if "officer_id" in bundle:
+        return _map_companies_house_officer(bundle)
+
     result = BODSBundle()
 
     number = str(bundle.get("company_number", ""))
@@ -408,6 +419,135 @@ def _map_individual_psc(
         addresses=addresses,
         source_url=source_url,
     )
+
+
+def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
+    """Map a Companies House officer-appointments bundle to BODS.
+
+    The officer becomes a single ``personStatement``; each appointment
+    becomes an ``entityStatement`` (the company appointed-to) plus a
+    ``relationship`` statement with a ``boardMember`` interest. Resigned
+    appointments carry ``endDate`` so consumers can distinguish current
+    from historical board membership.
+
+    The Companies House appointments endpoint returns the officer's
+    canonical name + DOB + nationality + occupation + country of
+    residence on the *appointments envelope* — those fields are used
+    for the personStatement; the per-appointment block carries
+    appointment-specific data.
+    """
+    result = BODSBundle()
+
+    officer_id = str(bundle.get("officer_id", ""))
+    appointments = bundle.get("appointments") or {}
+    items = appointments.get("items") or []
+
+    full_name = appointments.get("name") or "Unknown officer"
+    dob = appointments.get("date_of_birth")
+    birth_date = None
+    if isinstance(dob, dict) and "year" in dob:
+        if "month" in dob:
+            birth_date = f"{dob['year']:04d}-{dob['month']:02d}"
+        else:
+            birth_date = f"{dob['year']:04d}"
+
+    nationalities: list[dict[str, str]] = []
+    nationality = appointments.get("nationality")
+    if nationality:
+        nationalities.append({"name": nationality})
+
+    person_url = (
+        f"https://find-and-update.company-information.service.gov.uk/officers/"
+        f"{officer_id}/appointments"
+    )
+
+    person = make_person_statement(
+        source_id="companies_house",
+        local_id=f"officer:{officer_id}",
+        full_name=full_name,
+        person_type="knownPerson",
+        nationalities=nationalities,
+        birth_date=birth_date,
+        identifiers=[
+            {
+                "id": officer_id,
+                "scheme": "GB-COH-OFFICER",
+                "schemeName": "Companies House officer id",
+            }
+        ],
+        source_url=person_url,
+    )
+    result.statements.append(person)
+    person_sid = person["statementId"]
+
+    for idx, appointment in enumerate(items):
+        appointed_to = appointment.get("appointed_to") or {}
+        company_number = str(appointed_to.get("company_number") or f"unknown-{idx}")
+        company_name = (
+            appointed_to.get("company_name")
+            or f"Company {company_number}"
+        )
+        company_url = (
+            f"https://find-and-update.company-information.service.gov.uk/company/"
+            f"{company_number}"
+        )
+
+        entity = make_entity_statement(
+            source_id="companies_house",
+            local_id=f"officer:{officer_id}:co:{company_number}",
+            name=company_name,
+            jurisdiction=("United Kingdom", "GB"),
+            identifiers=[
+                {
+                    "id": company_number,
+                    "scheme": "GB-COH",
+                    "schemeName": "Companies House",
+                }
+            ],
+            source_url=company_url,
+        )
+        result.statements.append(entity)
+        entity_sid = entity["statementId"]
+
+        # Map the officer role to a BODS interest. Directors and
+        # secretaries become boardMember; LLP members are otherInfluence
+        # (no board) — but everyone gets the appointment surfaced.
+        role = (appointment.get("officer_role") or "").lower()
+        if "director" in role:
+            interest_type = "boardMember"
+        elif "chair" in role:
+            interest_type = "boardChair"
+        else:
+            interest_type = "otherInfluenceOrControl"
+
+        details_bits = [appointment.get("officer_role") or "appointment"]
+        if appointment.get("appointed_on"):
+            details_bits.append(f"from {appointment['appointed_on']}")
+        if appointment.get("resigned_on"):
+            details_bits.append(f"to {appointment['resigned_on']}")
+
+        interest: dict[str, Any] = {
+            "type": interest_type,
+            "directOrIndirect": "direct",
+            "details": " ".join(details_bits),
+        }
+        if appointment.get("appointed_on"):
+            interest["startDate"] = appointment["appointed_on"]
+        if appointment.get("resigned_on"):
+            interest["endDate"] = appointment["resigned_on"]
+
+        rel = make_relationship_statement(
+            source_id="companies_house",
+            local_id=f"officer-rel:{officer_id}:{company_number}:{idx}",
+            subject_statement_id=entity_sid,
+            interested_party_statement_id=person_sid,
+            interested_party_type="person",
+            interests=[interest],
+            source_url=person_url,
+        )
+        result.statements.append(rel)
+
+    return result
 
 
 def _map_corporate_psc(
@@ -1031,3 +1171,160 @@ def map_openaleph(bundle: dict[str, Any]) -> BODSBundle:
         source_id="openaleph",
         source_url_builder=lambda _id: f"https://search.openaleph.org/entities/{_id}",
     )
+
+
+def map_everypolitician(bundle: dict[str, Any]) -> BODSBundle:
+    """Convenience wrapper for EveryPolitician — same FtM shape as OpenSanctions.
+
+    Politicians never carry ownership data, so the mapper simply emits
+    a single ``personStatement``. ``positions held`` is intentionally
+    *not* converted to BODS interests — those are PEP signals, surfaced
+    separately by the risk engine.
+    """
+    entity = bundle.get("entity") or bundle
+    return map_ftm(
+        entity,
+        source_id="everypolitician",
+        source_url_builder=lambda _id: f"https://www.opensanctions.org/entities/{_id}/",
+    )
+
+
+# ----------------------------------------------------------------------
+# Wikidata → BODS
+# ----------------------------------------------------------------------
+
+
+def map_wikidata(bundle: dict[str, Any]) -> BODSBundle:
+    """Map a Wikidata fetch bundle to a single BODS person or entity statement.
+
+    Wikidata's role in OpenCheck is identifier-bridging — its records
+    rarely contain ownership relationships in a useful form, so we
+    emit one statement (person or entity, decided by P31) carrying:
+
+    * ``WIKIDATA`` as a primary scheme identifier (the Q-ID itself).
+    * Cross-source bridge identifiers (``XI-LEI``, ``OPENCORPORATES``,
+      ``ISIN``) when present, so reconcilers downstream can match.
+    * Birth date / death date for persons (no narrative).
+    * Citizenships → ``nationalities``.
+    * Country (P17) → ``incorporatedInJurisdiction`` for entities.
+    * Inception (P571) → ``foundingDate``.
+
+    Positions held (``positions``) are intentionally not converted to
+    BODS interests — they are PEP signals, surfaced separately by the
+    risk engine.
+    """
+    summary = bundle.get("summary") or {}
+    qid = summary.get("qid") or bundle.get("qid") or "Q0"
+    label = summary.get("label") or qid
+    source_url = f"https://www.wikidata.org/wiki/{qid}"
+
+    base_identifiers: list[dict[str, str]] = [
+        {
+            "id": qid,
+            "scheme": "WIKIDATA",
+            "schemeName": "Wikidata Q identifier",
+            "uri": f"https://www.wikidata.org/wiki/{qid}",
+        }
+    ]
+    cross_ids = summary.get("identifiers") or {}
+    if cross_ids.get("lei"):
+        base_identifiers.append(
+            {
+                "id": cross_ids["lei"],
+                "scheme": "XI-LEI",
+                "schemeName": "Global Legal Entity Identifier Index",
+            }
+        )
+    if cross_ids.get("opencorporates"):
+        base_identifiers.append(
+            {
+                "id": cross_ids["opencorporates"],
+                "scheme": "OPENCORPORATES",
+                "schemeName": "OpenCorporates company identifier",
+            }
+        )
+    if cross_ids.get("isin"):
+        base_identifiers.append(
+            {
+                "id": cross_ids["isin"],
+                "scheme": "ISIN",
+                "schemeName": "International Securities Identification Number",
+            }
+        )
+
+    result = BODSBundle()
+
+    if summary.get("is_person"):
+        nationalities: list[dict[str, str]] = []
+        for citizenship in summary.get("citizenships") or []:
+            country_qid = citizenship.get("qid")
+            country_label = citizenship.get("label") or country_qid
+            if country_qid and country_label:
+                nationalities.append(
+                    {"name": country_label, "code": country_qid}
+                )
+
+        person = make_person_statement(
+            source_id="wikidata",
+            local_id=qid,
+            full_name=label,
+            nationalities=nationalities,
+            birth_date=_normalise_wikidata_date(summary.get("dob")),
+            identifiers=base_identifiers,
+            source_url=source_url,
+        )
+        result.statements.append(person)
+        return result
+
+    # Anything that's not a Q5 we treat as an entity. If P31 was empty
+    # entirely (rare for live data) we still emit an entity statement —
+    # the BODS validator accepts ``unknownEntity`` as the entityType for
+    # such cases.
+    entity_type = "registeredEntity" if summary.get("is_entity") else "unknownEntity"
+    jurisdiction = _wikidata_jurisdiction(summary.get("country") or {})
+    entity = make_entity_statement(
+        source_id="wikidata",
+        local_id=qid,
+        name=label,
+        jurisdiction=jurisdiction,
+        identifiers=base_identifiers,
+        founding_date=_normalise_wikidata_date(summary.get("inception")),
+        entity_type=entity_type,
+        source_url=source_url,
+    )
+    result.statements.append(entity)
+    return result
+
+
+def _normalise_wikidata_date(value: str | None) -> str | None:
+    """Convert ``+1952-10-07T00:00:00Z`` → ``1952-10-07``.
+
+    Wikidata's SPARQL service returns dates as XSD dateTime strings
+    (sometimes with a ``+`` sign prefix); BODS expects ISO date.
+    """
+    if not value:
+        return None
+    cleaned = value.lstrip("+")
+    if "T" in cleaned:
+        cleaned = cleaned.split("T", 1)[0]
+    return cleaned or None
+
+
+def _wikidata_jurisdiction(country: dict[str, Any]) -> tuple[str, str] | None:
+    """Resolve a Wikidata ``country`` object to a ``(name, ISO code)`` tuple.
+
+    Wikidata's P17 returns a Q-ID — we use the country's English label
+    and pass it through pycountry to recover the alpha-2 code so the
+    BODS jurisdiction block carries an ISO code (matching every other
+    source). When the lookup fails we fall back to the raw label/Q-ID.
+    """
+    if not country:
+        return None
+    name = country.get("label")
+    if not name:
+        return None
+    try:
+        match = pycountry.countries.lookup(name)
+    except LookupError:
+        return (name, country.get("qid", name))
+    return (match.name, match.alpha_2)

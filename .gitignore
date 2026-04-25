@@ -40,6 +40,8 @@ pnpm-debug.log*
 # Vite / build output
 frontend/dist/
 frontend/.vite/
+# Vite drops these next to the config when esbuild jit-compiles it.
+frontend/vite.config.ts.timestamp-*.mjs
 *.local
 
 # ---- Editors / OS ----

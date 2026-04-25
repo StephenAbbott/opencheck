@@ -4,7 +4,9 @@ import {
   deepen,
   fetchSources,
   streamSearch,
+  type CrossSourceLink,
   type DeepenResponse,
+  type RiskSignal,
   type SearchKind,
   type SourceHit,
 } from "./lib/api";
@@ -32,6 +34,8 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<SearchKind>("entity");
   const [buckets, setBuckets] = useState<Record<string, SourceBucket>>({});
+  const [crossSourceLinks, setCrossSourceLinks] = useState<CrossSourceLink[]>([]);
+  const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
   const [running, setRunning] = useState(false);
   const cleanupRef = useRef<(() => void) | null>(null);
 
@@ -51,6 +55,8 @@ export default function App() {
 
     cleanupRef.current?.();
     setBuckets({});
+    setCrossSourceLinks([]);
+    setRiskSignals([]);
     setRunning(true);
 
     cleanupRef.current = streamSearch(q, kind, {
@@ -93,6 +99,8 @@ export default function App() {
             },
           };
         }),
+      onCrossSourceLinks: ({ links }) => setCrossSourceLinks(links),
+      onRiskSignals: ({ signals }) => setRiskSignals(signals),
       onDone: () => setRunning(false),
       onError: () => setRunning(false),
     });
@@ -100,6 +108,30 @@ export default function App() {
 
   const bucketList = useMemo(() => Object.values(buckets), [buckets]);
   const totalHits = bucketList.reduce((n, b) => n + b.hits.length, 0);
+
+  // Index risk signals by `${source_id}:${hit_id}` so cards/rows can
+  // pull their own chips without re-scanning the whole list.
+  const riskByHit = useMemo(() => {
+    const out: Record<string, RiskSignal[]> = {};
+    for (const sig of riskSignals) {
+      const k = `${sig.source_id}:${sig.hit_id}`;
+      (out[k] = out[k] ?? []).push(sig);
+    }
+    return out;
+  }, [riskSignals]);
+
+  // Distinct codes — used for the top-level summary chip strip.
+  const aggregatedCodes = useMemo(() => {
+    const seen = new Map<string, RiskSignal>();
+    for (const sig of riskSignals) {
+      const existing = seen.get(sig.code);
+      // Keep the highest-confidence signal per code for the summary tooltip.
+      if (!existing || rank(sig.confidence) > rank(existing.confidence)) {
+        seen.set(sig.code, sig);
+      }
+    }
+    return Array.from(seen.values());
+  }, [riskSignals]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -136,6 +168,36 @@ export default function App() {
           </button>
         </form>
 
+        {aggregatedCodes.length > 0 && (
+          <section className="mb-6">
+            <h2 className="text-sm font-medium text-slate-500 uppercase tracking-wide mb-2">
+              Risk signals
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {aggregatedCodes.map((sig) => (
+                <RiskChip key={sig.code} signal={sig} />
+              ))}
+            </div>
+            <p className="text-xs text-slate-400 mt-2">
+              Hover a chip for the rule that fired. Signals derived from open
+              data; AMLA-aligned chips read BODS v0.4 statements.
+            </p>
+          </section>
+        )}
+
+        {crossSourceLinks.length > 0 && (
+          <section className="mb-8 bg-white border border-slate-200 rounded p-4">
+            <h2 className="text-sm font-medium text-slate-500 uppercase tracking-wide mb-2">
+              Cross-source links
+            </h2>
+            <ul className="space-y-2">
+              {crossSourceLinks.map((link, i) => (
+                <CrossSourceLinkRow key={`${link.key}:${link.key_value}:${i}`} link={link} />
+              ))}
+            </ul>
+          </section>
+        )}
+
         {bucketList.length > 0 && (
           <section className="space-y-4 mb-10">
             <h2 className="text-sm font-medium text-slate-500 uppercase tracking-wide">
@@ -143,7 +205,11 @@ export default function App() {
               {bucketList.length} source{bucketList.length === 1 ? "" : "s"}
             </h2>
             {bucketList.map((b) => (
-              <SourceBucketCard key={b.sourceId} bucket={b} />
+              <SourceBucketCard
+                key={b.sourceId}
+                bucket={b}
+                riskByHit={riskByHit}
+              />
             ))}
           </section>
         )}
@@ -188,7 +254,13 @@ export default function App() {
 // Source bucket card
 // ---------------------------------------------------------------------
 
-function SourceBucketCard({ bucket }: { bucket: SourceBucket }) {
+function SourceBucketCard({
+  bucket,
+  riskByHit,
+}: {
+  bucket: SourceBucket;
+  riskByHit: Record<string, RiskSignal[]>;
+}) {
   const stateLabel = {
     pending: "queued",
     streaming: "searching…",
@@ -217,7 +289,11 @@ function SourceBucketCard({ bucket }: { bucket: SourceBucket }) {
       )}
       <ul className="divide-y divide-slate-100">
         {bucket.hits.map((hit) => (
-          <HitRow key={`${hit.source_id}:${hit.hit_id}`} hit={hit} />
+          <HitRow
+            key={`${hit.source_id}:${hit.hit_id}`}
+            hit={hit}
+            riskSignals={riskByHit[`${hit.source_id}:${hit.hit_id}`] ?? []}
+          />
         ))}
       </ul>
     </article>
@@ -228,7 +304,13 @@ function SourceBucketCard({ bucket }: { bucket: SourceBucket }) {
 // Hit row + drill-down
 // ---------------------------------------------------------------------
 
-function HitRow({ hit }: { hit: SourceHit }) {
+function HitRow({
+  hit,
+  riskSignals,
+}: {
+  hit: SourceHit;
+  riskSignals: RiskSignal[];
+}) {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<DeepenResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -271,6 +353,13 @@ function HitRow({ hit }: { hit: SourceHit }) {
                 .join(" · ")}
             </p>
           )}
+          {riskSignals.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {riskSignals.map((sig, i) => (
+                <RiskChip key={`${sig.code}-${i}`} signal={sig} compact />
+              ))}
+            </div>
+          )}
         </div>
         <button
           onClick={toggle}
@@ -302,6 +391,18 @@ function DeepenBlock({ detail }: { detail: DeepenResponse }) {
           </div>
           <p className="mt-1">{detail.license_notice}</p>
         </div>
+      )}
+      {detail.risk_signals.length > 0 && (
+        <section>
+          <h4 className="font-medium text-slate-700 mb-1">
+            Risk signals (deepen-time)
+          </h4>
+          <div className="flex flex-wrap gap-1">
+            {detail.risk_signals.map((sig, i) => (
+              <RiskChip key={`${sig.code}-${i}`} signal={sig} />
+            ))}
+          </div>
+        </section>
       )}
       {detail.bods.length > 0 && (
         <section>
@@ -345,5 +446,121 @@ function LicenseChip({ license }: { license: string }) {
     >
       {license}
     </span>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Risk chips and cross-source link row
+// ---------------------------------------------------------------------
+
+/**
+ * Map a risk signal code to a colour palette + short display label.
+ * Codes are stable strings from the backend ``opencheck.risk`` module.
+ */
+const RISK_PRESENTATION: Record<
+  string,
+  { label: string; classes: string }
+> = {
+  PEP: {
+    label: "PEP",
+    classes: "bg-violet-50 text-violet-700 border-violet-200",
+  },
+  SANCTIONED: {
+    label: "Sanctioned",
+    classes: "bg-rose-50 text-rose-700 border-rose-200",
+  },
+  OFFSHORE_LEAKS: {
+    label: "Offshore leaks",
+    classes: "bg-amber-50 text-amber-800 border-amber-200",
+  },
+  OPAQUE_OWNERSHIP: {
+    label: "Opaque ownership",
+    classes: "bg-slate-100 text-slate-700 border-slate-300",
+  },
+  // AMLA CDD RTS chips — distinct palette so reviewers can spot
+  // BODS-derived signals at a glance.
+  TRUST_OR_ARRANGEMENT: {
+    label: "Trust / arrangement",
+    classes: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  },
+  NON_EU_JURISDICTION: {
+    label: "Non-EU jurisdiction",
+    classes: "bg-orange-50 text-orange-700 border-orange-200",
+  },
+  NOMINEE: {
+    label: "Nominee",
+    classes: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200",
+  },
+  COMPLEX_OWNERSHIP_LAYERS: {
+    label: "≥3 layers",
+    classes: "bg-sky-50 text-sky-700 border-sky-200",
+  },
+  COMPLEX_CORPORATE_STRUCTURE: {
+    label: "Complex corporate structure (AMLA)",
+    classes: "bg-red-50 text-red-700 border-red-300 font-semibold",
+  },
+  POSSIBLE_OBFUSCATION: {
+    label: "Possible obfuscation (advisory)",
+    classes: "bg-yellow-50 text-yellow-800 border-yellow-300",
+  },
+};
+
+const CONFIDENCE_DOT: Record<string, string> = {
+  high: "●",
+  medium: "◐",
+  low: "○",
+};
+
+function rank(confidence: string): number {
+  return confidence === "high" ? 3 : confidence === "medium" ? 2 : 1;
+}
+
+function RiskChip({
+  signal,
+  compact = false,
+}: {
+  signal: RiskSignal;
+  compact?: boolean;
+}) {
+  const presentation =
+    RISK_PRESENTATION[signal.code] ?? {
+      label: signal.code,
+      classes: "bg-slate-100 text-slate-700 border-slate-200",
+    };
+  const padding = compact ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-0.5 text-xs";
+  return (
+    <span
+      title={`${signal.summary}\n\nSource: ${signal.source_id}/${signal.hit_id}\nConfidence: ${signal.confidence}`}
+      className={`inline-flex items-baseline gap-1 border rounded ${padding} ${presentation.classes}`}
+    >
+      <span aria-hidden>{CONFIDENCE_DOT[signal.confidence] ?? "•"}</span>
+      <span>{presentation.label}</span>
+    </span>
+  );
+}
+
+function CrossSourceLinkRow({ link }: { link: CrossSourceLink }) {
+  const confidenceClasses =
+    link.confidence === "strong"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+      : "bg-slate-100 text-slate-600 border-slate-200";
+  return (
+    <li className="flex flex-wrap items-baseline gap-2 text-sm">
+      <span
+        className={`text-[11px] border rounded px-1.5 py-0.5 font-mono ${confidenceClasses}`}
+      >
+        {link.confidence}
+      </span>
+      <span className="font-mono text-slate-700">
+        {link.key} = {link.key_value}
+      </span>
+      <span className="text-slate-400">→</span>
+      <span className="text-slate-600">
+        {link.hits.map((h) => h.source_id).join(" · ")}
+      </span>
+      <span className="text-slate-400 text-xs italic">
+        ({link.hits.map((h) => h.name).join(" / ")})
+      </span>
+    </li>
   );
 }

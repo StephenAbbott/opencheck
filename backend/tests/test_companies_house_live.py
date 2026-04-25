@@ -117,6 +117,37 @@ async def test_fetch_company_bundle_returns_profile_officers_pscs(
     assert "pscs" in bundle
 
 
+async def test_fetch_officer_bundle_returns_appointments(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """Officer ids dispatch to /officers/{id}/appointments."""
+    officer_id = "zS_RY9pRYlJ9XwGJEOFtkJgrf8s"
+    httpx_mock.add_response(
+        url=f"{_API}/officers/{officer_id}/appointments",
+        json={
+            "name": "Jane SMITH",
+            "date_of_birth": {"year": 1975, "month": 8},
+            "items": [
+                {
+                    "appointed_to": {
+                        "company_name": "ACME LTD",
+                        "company_number": "00102498",
+                    },
+                    "officer_role": "director",
+                    "appointed_on": "2020-01-15",
+                }
+            ],
+        },
+    )
+
+    adapter = CompaniesHouseAdapter()
+    bundle = await adapter.fetch(officer_id)
+
+    assert bundle["officer_id"] == officer_id
+    assert bundle["appointments"]["name"] == "Jane SMITH"
+    assert len(bundle["appointments"]["items"]) == 1
+
+
 async def test_stub_path_when_allow_live_false(monkeypatch) -> None:
     monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
     get_settings.cache_clear()

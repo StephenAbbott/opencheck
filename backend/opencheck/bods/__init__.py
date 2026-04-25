@@ -13,10 +13,12 @@ from .mapper import (
     make_person_statement,
     make_relationship_statement,
     map_companies_house,
+    map_everypolitician,
     map_ftm,
     map_gleif,
     map_openaleph,
     map_opensanctions,
+    map_wikidata,
 )
 from .validator import validate_shape, ValidationError
 
@@ -26,10 +28,12 @@ __all__ = [
     "make_person_statement",
     "make_relationship_statement",
     "map_companies_house",
+    "map_everypolitician",
     "map_ftm",
     "map_gleif",
     "map_opensanctions",
     "map_openaleph",
+    "map_wikidata",
     "validate_shape",
     "ValidationError",
 ]

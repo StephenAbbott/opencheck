@@ -43,6 +43,20 @@ class Settings(BaseSettings):
     # --- Optional LLM ---
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
 
+    # --- AMLA risk-rule tuning ---
+    # Codes added to the built-in EU+EEA set. Comma-separated ISO 3166-1
+    # alpha-2 codes — e.g. ``GB,CH,US`` to suppress NON_EU_JURISDICTION
+    # for those jurisdictions.
+    amla_equivalent_jurisdictions: str = Field(
+        default="", alias="OPENCHECK_AMLA_EQUIVALENT_JURISDICTIONS"
+    )
+    # When set, replaces the entire EU+EEA default. Use sparingly — most
+    # users will prefer the additive variable above. Useful only when
+    # someone wants strict AMLA EU-only (no EEA) or a totally custom set.
+    amla_eu_eea_override: str | None = Field(
+        default=None, alias="OPENCHECK_AMLA_EU_EEA_OVERRIDE"
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:
