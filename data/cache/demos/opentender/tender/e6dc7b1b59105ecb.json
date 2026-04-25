@@ -1,0 +1,79 @@
+{
+  "_cached_at": 0,
+  "payload": {
+    "id": "OT-DE-2024-RU-IMPORT",
+    "title": "Crude oil import framework (illustrative)",
+    "country": "DE",
+    "procedureType": "OPEN",
+    "supplyType": "SUPPLIES",
+    "isAwarded": true,
+    "awardDecisionDate": "2024-03-15",
+    "buyers": [
+      {
+        "name": "Bundesamt f\u00fcr Energie (illustrative)",
+        "address": {
+          "street": "Behrenstr. 65",
+          "city": "Berlin",
+          "postcode": "10117",
+          "country": "DE"
+        },
+        "bodyIds": [
+          {
+            "id": "DE324523002",
+            "type": "VAT",
+            "scope": "EU"
+          }
+        ]
+      }
+    ],
+    "lots": [
+      {
+        "lotId": "OT-DE-2024-RU-IMPORT-1",
+        "lotNumber": 1,
+        "title": "Crude oil supply (illustrative)",
+        "isAwarded": true,
+        "awardDecisionDate": "2024-03-15",
+        "bids": [
+          {
+            "bidId": "OT-DE-2024-RU-IMPORT-1-1",
+            "isWinning": true,
+            "price": {
+              "netAmount": 12500000,
+              "currency": "EUR",
+              "vat": 19
+            },
+            "bidders": [
+              {
+                "name": "Rosneft Oil Company",
+                "address": {
+                  "street": "Sofiyskaya nab., 26/1",
+                  "city": "Moscow",
+                  "postcode": "115035",
+                  "country": "RU"
+                },
+                "bodyIds": [
+                  {
+                    "id": "RU7706107510",
+                    "type": "VAT",
+                    "scope": "RU"
+                  },
+                  {
+                    "id": "253400JSI04G42PAAS27",
+                    "type": "ETALON_ID",
+                    "scope": "GLOBAL"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "publications": [
+      {
+        "humanReadableURL": "https://opentender.eu/de/tender/OT-DE-2024-RU-IMPORT",
+        "language": "DE"
+      }
+    ]
+  }
+}

@@ -18,6 +18,7 @@ from .mapper import (
     map_gleif,
     map_openaleph,
     map_opensanctions,
+    map_opentender,
     map_wikidata,
 )
 from .validator import validate_shape, ValidationError
@@ -33,6 +34,7 @@ __all__ = [
     "map_gleif",
     "map_opensanctions",
     "map_openaleph",
+    "map_opentender",
     "map_wikidata",
     "validate_shape",
     "ValidationError",

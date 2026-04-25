@@ -13,6 +13,7 @@ from .everypolitician import EveryPoliticianAdapter
 from .gleif import GleifAdapter
 from .openaleph import OpenAlephAdapter
 from .opensanctions import OpenSanctionsAdapter
+from .opentender import OpenTenderAdapter
 from .wikidata import WikidataAdapter
 
 REGISTRY: dict[str, SourceAdapter] = {
@@ -22,6 +23,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "openaleph": OpenAlephAdapter(),
     "everypolitician": EveryPoliticianAdapter(),
     "wikidata": WikidataAdapter(),
+    "opentender": OpenTenderAdapter(),
 }
 
 __all__ = [

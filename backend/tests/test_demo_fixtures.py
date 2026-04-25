@@ -48,20 +48,30 @@ def test_bp_demo_bridges_companies_house_and_gleif() -> None:
 
 
 def test_rosneft_demo_lights_up_amla_pipeline() -> None:
-    """Rosneft — sanctioned + RU jurisdiction → AMLA non-EU + sanction."""
+    """Rosneft — sanctioned + RU jurisdiction + procurement bridge.
+
+    The fixture set should now include OpenTender as well, so the LEI
+    bridge spans GLEIF + OpenSanctions + OpenTender — the exact
+    procurement / sanctions / BO triangle the AMLA story argues for.
+    """
     client = TestClient(app)
     r = client.get("/report", params={"q": "Rosneft", "kind": "entity"}).json()
 
     sources = {h["source_id"] for h in _real_hits(r)}
-    assert {"opensanctions", "gleif", "wikidata"}.issubset(sources)
+    assert {"opensanctions", "gleif", "wikidata", "opentender"}.issubset(sources)
 
     codes = {sig["code"] for sig in r["risk_signals"]}
     assert "SANCTIONED" in codes
     assert "NON_EU_JURISDICTION" in codes
 
-    # OpenSanctions/Wikidata bridged on Q-ID; GLEIF/OS bridged on LEI.
+    # OpenSanctions/Wikidata bridge on Q-ID; GLEIF/OS/OpenTender bridge on LEI.
     link_keys = {link["key"] for link in r["cross_source_links"]}
     assert {"wikidata_qid", "lei"}.issubset(link_keys)
+    lei_link = next(link for link in r["cross_source_links"] if link["key"] == "lei")
+    bridged = {h["source_id"] for h in lei_link["hits"]}
+    assert {"gleif", "opensanctions", "opentender"}.issubset(bridged), (
+        f"LEI should bridge procurement to BO/sanctions data, got {bridged}"
+    )
 
 
 def test_putin_demo_shows_multi_source_pep() -> None:

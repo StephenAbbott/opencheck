@@ -54,6 +54,7 @@ from opencheck.sources.everypolitician import _slug as ep_slug
 from opencheck.sources.gleif import _slug as gleif_slug
 from opencheck.sources.openaleph import _slug as al_slug  # noqa: F401
 from opencheck.sources.opensanctions import _slug as os_slug
+from opencheck.sources.opentender import _slug as ot_slug
 from opencheck.sources.wikidata import _slug as wd_slug
 
 
@@ -405,12 +406,19 @@ def seed_putin() -> list[Path]:
 
 
 def seed_rosneft() -> list[Path]:
-    """Rosneft Oil Company — sanctioned, RU-incorporated."""
+    """Rosneft Oil Company — sanctioned, RU-incorporated.
+
+    Also seeds a synthetic OpenTender record where Rosneft appears as
+    a winning bidder on a public contract, so the procurement chain
+    bridges to the GLEIF / OpenSanctions / Wikidata story via shared
+    LEI / VAT identifiers.
+    """
     written: list[Path] = []
 
     lei = "253400JSI04G42PAAS27"
     qid = "Q1141123"
     os_id = "NK-rosneft"
+    rosneft_vat = "RU7706107510"  # Russian INN/VAT for Rosneft (real number)
 
     # GLEIF search + record (RU jurisdiction → AMLA NON_EU_JURISDICTION)
     written.append(
@@ -540,6 +548,99 @@ def seed_rosneft() -> list[Path]:
                     ]
                 },
             },
+        )
+    )
+
+    # OpenTender — Rosneft as a winning bidder on a (synthetic) EU
+    # member-state public works tender. The buyer's VAT bridges to
+    # GLEIF / OS via the shared identifier scheme.
+    tender_id = "OT-DE-2024-RU-IMPORT"
+    tender = {
+        "id": tender_id,
+        "title": "Crude oil import framework (illustrative)",
+        "country": "DE",
+        "procedureType": "OPEN",
+        "supplyType": "SUPPLIES",
+        "isAwarded": True,
+        "awardDecisionDate": "2024-03-15",
+        "buyers": [
+            {
+                "name": "Bundesamt für Energie (illustrative)",
+                "address": {
+                    "street": "Behrenstr. 65",
+                    "city": "Berlin",
+                    "postcode": "10117",
+                    "country": "DE",
+                },
+                "bodyIds": [
+                    {
+                        "id": "DE324523002",
+                        "type": "VAT",
+                        "scope": "EU",
+                    }
+                ],
+            }
+        ],
+        "lots": [
+            {
+                "lotId": "OT-DE-2024-RU-IMPORT-1",
+                "lotNumber": 1,
+                "title": "Crude oil supply (illustrative)",
+                "isAwarded": True,
+                "awardDecisionDate": "2024-03-15",
+                "bids": [
+                    {
+                        "bidId": "OT-DE-2024-RU-IMPORT-1-1",
+                        "isWinning": True,
+                        "price": {
+                            "netAmount": 12500000,
+                            "currency": "EUR",
+                            "vat": 19,
+                        },
+                        "bidders": [
+                            {
+                                "name": "Rosneft Oil Company",
+                                "address": {
+                                    "street": "Sofiyskaya nab., 26/1",
+                                    "city": "Moscow",
+                                    "postcode": "115035",
+                                    "country": "RU",
+                                },
+                                "bodyIds": [
+                                    {
+                                        "id": rosneft_vat,
+                                        "type": "VAT",
+                                        "scope": "RU",
+                                    },
+                                    {
+                                        "id": lei,
+                                        "type": "ETALON_ID",
+                                        "scope": "GLOBAL",
+                                    },
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+        "publications": [
+            {
+                "humanReadableURL": "https://opentender.eu/de/tender/OT-DE-2024-RU-IMPORT",
+                "language": "DE",
+            }
+        ],
+    }
+    written.append(
+        _write(
+            f"opentender/search/{ot_slug('Rosneft')}",
+            {"tenders": [tender]},
+        )
+    )
+    written.append(
+        _write(
+            f"opentender/tender/{ot_slug(tender_id)}",
+            tender,
         )
     )
 

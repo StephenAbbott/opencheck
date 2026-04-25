@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import BODSGraph from "./components/BODSGraph";
 import {
   deepen,
+  exportUrl,
   fetchSources,
   streamSearch,
   type CrossSourceLink,
@@ -63,6 +64,10 @@ export default function App() {
   const [crossSourceLinks, setCrossSourceLinks] = useState<CrossSourceLink[]>([]);
   const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
   const [running, setRunning] = useState(false);
+  // The query/kind a download should target — locked at search time so the
+  // export reflects the displayed results, not whatever the user has since
+  // typed into the search input.
+  const [activeSearch, setActiveSearch] = useState<{ q: string; kind: SearchKind } | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
 
   const sourcesQuery = useQuery({
@@ -75,9 +80,11 @@ export default function App() {
   }, []);
 
   function runSearchFor(q: string, k: SearchKind) {
-    if (!q.trim()) return;
+    const trimmed = q.trim();
+    if (!trimmed) return;
     setQuery(q);
     setKind(k);
+    setActiveSearch({ q: trimmed, kind: k });
 
     cleanupRef.current?.();
     setBuckets({});
@@ -248,6 +255,22 @@ export default function App() {
               ))}
             </ul>
           </section>
+        )}
+
+        {activeSearch && totalHits > 0 && (
+          <ExportPanel
+            search={activeSearch}
+            sourceLicenses={
+              sourcesQuery.data
+                ? Object.fromEntries(
+                    sourcesQuery.data.sources.map((s) => [s.id, s.license])
+                  )
+                : {}
+            }
+            contributingSourceIds={bucketList
+              .filter((b) => b.hits.some((h) => !h.is_stub))
+              .map((b) => b.sourceId)}
+          />
         )}
 
         {bucketList.length > 0 && (
@@ -595,6 +618,85 @@ function RiskChip({
       <span aria-hidden>{CONFIDENCE_DOT[signal.confidence] ?? "•"}</span>
       <span>{presentation.label}</span>
     </span>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Export panel
+// ---------------------------------------------------------------------
+
+/**
+ * Download button + format selector that points at /export.
+ *
+ * Renders an in-place NC-license warning when any contributing source
+ * carries a CC BY-NC clause — so users see the obligation BEFORE they
+ * hit Download, not buried in LICENSES.md inside the zip.
+ */
+function ExportPanel({
+  search,
+  sourceLicenses,
+  contributingSourceIds,
+}: {
+  search: { q: string; kind: SearchKind };
+  sourceLicenses: Record<string, string>;
+  contributingSourceIds: string[];
+}) {
+  const [format, setFormat] = useState<"zip" | "json" | "jsonl">("zip");
+
+  const ncSources = contributingSourceIds.filter((id) =>
+    (sourceLicenses[id] ?? "").toLowerCase().includes("nc")
+  );
+
+  const href = exportUrl(search.q, search.kind, format);
+
+  return (
+    <section className="mb-8 bg-slate-50 border border-slate-200 rounded p-4">
+      <div className="flex items-baseline justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-sm font-medium text-slate-700">
+            Download BODS bundle
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">
+            Reproducible export for query{" "}
+            <span className="font-mono">{search.q}</span>. Includes BODS
+            v0.4 statements, manifest, and per-source license notes.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={format}
+            onChange={(e) =>
+              setFormat(e.target.value as "zip" | "json" | "jsonl")
+            }
+            className="border border-slate-300 rounded px-2 py-1 text-sm bg-white"
+          >
+            <option value="zip">ZIP (bods + manifest + licenses)</option>
+            <option value="json">JSON (BODS array)</option>
+            <option value="jsonl">JSONL (newline-delimited)</option>
+          </select>
+          <a
+            href={href}
+            // The `download` attr asks the browser to honour the
+            // server's Content-Disposition filename rather than
+            // opening the URL inline.
+            download
+            className="bg-slate-900 text-white text-sm rounded px-3 py-1.5 hover:bg-slate-700 inline-block"
+          >
+            Download
+          </a>
+        </div>
+      </div>
+      {ncSources.length > 0 && (
+        <p className="mt-3 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded px-2 py-1.5">
+          <span className="font-medium">License notice.</span> This bundle
+          will include data from {ncSources.join(", ")} (CC BY-NC). The
+          combined dataset inherits the non-commercial restriction —
+          re-publication or commercial use is not permitted under the
+          source license. See <span className="font-mono">LICENSES.md</span>{" "}
+          inside the zip for details.
+        </p>
+      )}
+    </section>
   );
 }
 

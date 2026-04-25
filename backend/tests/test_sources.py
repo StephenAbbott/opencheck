@@ -26,6 +26,7 @@ def test_registry_has_expected_sources() -> None:
         "openaleph",
         "everypolitician",
         "wikidata",
+        "opentender",
     }
 
 

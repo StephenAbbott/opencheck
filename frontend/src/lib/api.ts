@@ -65,9 +65,23 @@ export interface DeepenResponse {
   risk_signals: RiskSignal[];
 }
 
-const BASE_URL =
+export const BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
   "http://localhost:8000";
+
+/**
+ * Build a URL to the /export endpoint that browsers can hit directly
+ * via an <a download> link. The backend's Content-Disposition header
+ * carries the canonical filename — we just hand the browser the URL.
+ */
+export function exportUrl(
+  q: string,
+  kind: SearchKind,
+  format: "json" | "jsonl" | "zip"
+): string {
+  const params = new URLSearchParams({ q, kind, format });
+  return `${BASE_URL}/export?${params.toString()}`;
+}
 
 async function getJson<T>(path: string): Promise<T> {
   const r = await fetch(`${BASE_URL}${path}`);

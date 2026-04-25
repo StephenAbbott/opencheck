@@ -1328,3 +1328,205 @@ def _wikidata_jurisdiction(country: dict[str, Any]) -> tuple[str, str] | None:
     except LookupError:
         return (name, country.get("qid", name))
     return (match.name, match.alpha_2)
+
+
+# ----------------------------------------------------------------------
+# OpenTender (DIGIWHIST) → BODS
+# ----------------------------------------------------------------------
+
+
+# DIGIWHIST BodyIdentifier.type → (BODS scheme code, schemeName) mapping.
+# The list mirrors the strong-bridge identifier scheme used elsewhere in
+# OpenCheck — VAT / LEI / GB-COH / OpenCorporates — so the reconciler
+# can bridge a procurement supplier to its GLEIF / Companies House /
+# OpenSanctions presence on the same identifier.
+_DIGIWHIST_ID_SCHEMES = {
+    "VAT": ("EU-VAT", "EU VAT identifier"),
+    "BVD_ID": ("BVD", "Bureau van Dijk identifier"),
+    "ETALON_ID": ("ETALON", "Etalon registry id"),
+    "HEADER_ICO": ("REG", "Local registry identifier"),
+    "TAX_ID": ("TAX", "National tax identifier"),
+    "TRADE_REGISTER": ("REG", "Local registry identifier"),
+    "STATISTICAL": ("STAT", "National statistical id"),
+    "ORGANIZATION_ID": ("ORG", "National organisation id"),
+}
+
+
+def map_opentender(bundle: dict[str, Any]) -> BODSBundle:
+    """Map an OpenTender (DIGIWHIST) tender bundle to BODS v0.4.
+
+    Procurement records are not beneficial-ownership records, but the
+    *parties* to the procurement are. We surface every Body — buyer,
+    bidder, subcontractor — as an entityStatement so the reconciler
+    can bridge them to GLEIF / Companies House / OpenSanctions on
+    shared identifiers (VAT, registration_number, GB-COH).
+
+    Each *winning* bid produces a relationshipStatement linking the
+    winning bidder (interestedParty) to the buyer (subject) with an
+    ``otherInfluenceOrControl`` interest annotated with the tender id,
+    award decision date, and final price. ``beneficialOwnershipOrControl``
+    is set to false: this is a commercial engagement, not ownership.
+    """
+    result = BODSBundle()
+    tender = bundle.get("tender") or bundle
+    tender_id = (
+        bundle.get("tender_id")
+        or tender.get("id")
+        or tender.get("persistentId")
+        or ""
+    )
+    if not tender_id:
+        return result
+
+    tender_url = tender.get("publications", [{}])[0].get("humanReadableURL") or (
+        f"https://opentender.eu/{tender.get('country', '').lower()}/tender/{tender_id}"
+    )
+
+    # ---- Buyers ----
+    buyer_sids: list[str] = []
+    for buyer in tender.get("buyers") or []:
+        sid = _opentender_body_statement(
+            buyer, source_id="opentender", local_prefix=f"{tender_id}:buyer", url=tender_url
+        )
+        if sid is None:
+            continue
+        result.statements.append(sid)
+        buyer_sids.append(sid["statementId"])
+
+    # ---- Bidders (lots → bids → bidders) ----
+    for lot in tender.get("lots") or []:
+        award_date = lot.get("awardDecisionDate") or tender.get("awardDecisionDate")
+        for bid in lot.get("bids") or []:
+            is_winning = bool(bid.get("isWinning"))
+            price = bid.get("price")
+            for bidder in bid.get("bidders") or []:
+                stmt = _opentender_body_statement(
+                    bidder,
+                    source_id="opentender",
+                    local_prefix=f"{tender_id}:bidder",
+                    url=tender_url,
+                )
+                if stmt is None:
+                    continue
+                result.statements.append(stmt)
+                if not is_winning:
+                    continue
+                # Emit a relationship per (winning bidder, buyer) pair.
+                for buyer_sid in buyer_sids:
+                    result.statements.append(
+                        make_relationship_statement(
+                            source_id="opentender",
+                            local_id=f"{tender_id}:award:{stmt['statementId']}:{buyer_sid}",
+                            subject_statement_id=buyer_sid,
+                            interested_party_statement_id=stmt["statementId"],
+                            interested_party_type="entity",
+                            interests=[
+                                {
+                                    "type": "otherInfluenceOrControl",
+                                    "directOrIndirect": "direct",
+                                    "beneficialOwnershipOrControl": False,
+                                    "details": _format_award_details(
+                                        tender_id=tender_id,
+                                        title=tender.get("title", ""),
+                                        award_date=award_date,
+                                        price=price,
+                                    ),
+                                    **(
+                                        {"startDate": award_date} if award_date else {}
+                                    ),
+                                }
+                            ],
+                            source_url=tender_url,
+                        )
+                    )
+
+    return result
+
+
+def _opentender_body_statement(
+    body: dict[str, Any], *, source_id: str, local_prefix: str, url: str | None
+) -> dict[str, Any] | None:
+    """Render a DIGIWHIST ``Body`` as a BODS entityStatement (or None)."""
+    name = body.get("name")
+    if not name:
+        return None
+
+    # Stable local id: prefer a body identifier, else hash the name.
+    local_keys = [
+        ident.get("id")
+        for ident in (body.get("bodyIds") or [])
+        if ident.get("id")
+    ]
+    local_seed = local_keys[0] if local_keys else name
+    local_id = f"{local_prefix}:{local_seed}"
+
+    identifiers: list[dict[str, str]] = []
+    for ident in body.get("bodyIds") or []:
+        scheme = _DIGIWHIST_ID_SCHEMES.get(
+            (ident.get("type") or "").upper()
+        )
+        if scheme is None:
+            continue
+        scope = (ident.get("scope") or "").upper()
+        scheme_code, scheme_name = scheme
+        # Country-scope ETALON / HEADER_ICO is more useful with the
+        # country prefix to disambiguate (DE-REG vs CZ-REG).
+        if scope and len(scope) == 2 and scheme_code in {"REG", "TAX", "STAT", "ORG"}:
+            scheme_code = f"{scope}-{scheme_code}"
+        identifiers.append(
+            {"id": str(ident.get("id")), "scheme": scheme_code, "schemeName": scheme_name}
+        )
+
+    address = body.get("address") or {}
+    addresses: list[dict[str, str]] = []
+    parts = [
+        address.get("street"),
+        address.get("city"),
+        address.get("postcode"),
+    ]
+    addr_str = ", ".join(p for p in parts if p)
+    if addr_str:
+        addresses.append(
+            {
+                "type": "registered",
+                "address": addr_str,
+                "country": (address.get("country") or "").upper(),
+            }
+        )
+
+    jurisdiction = None
+    country_code = (address.get("country") or "").upper()
+    if country_code:
+        try:
+            match = pycountry.countries.lookup(country_code)
+            jurisdiction = (match.name, match.alpha_2)
+        except LookupError:
+            jurisdiction = (country_code, country_code)
+
+    return make_entity_statement(
+        source_id=source_id,
+        local_id=local_id,
+        name=name,
+        jurisdiction=jurisdiction,
+        identifiers=identifiers,
+        addresses=addresses,
+        entity_type="registeredEntity",
+        source_url=url,
+    )
+
+
+def _format_award_details(
+    *,
+    tender_id: str,
+    title: str,
+    award_date: str | None,
+    price: dict[str, Any] | None,
+) -> str:
+    parts = [f"Awarded contract under tender {tender_id}"]
+    if title:
+        parts.append(f'"{title}"')
+    if award_date:
+        parts.append(f"on {award_date}")
+    if price and price.get("netAmount") and price.get("currency"):
+        parts.append(f"value {price['netAmount']} {price['currency']}")
+    return ", ".join(parts) + "."
