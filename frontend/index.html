@@ -19,6 +19,15 @@
   </head>
   <body class="bg-oo-bg text-oo-ink antialiased font-body">
     <div id="root"></div>
+    <!--
+      @openownership/bods-dagre is a UMD bundle that assigns to a
+      global ``var BODSDagre``. Its package.json declares
+      ``"type": "module"``, so Vite imports it as ESM and the ``var``
+      ends up module-scoped instead of global. We side-step that by
+      loading it as a classic (non-module) script — the file is copied
+      into ``public/`` by the vite plugin in ``vite.config.ts``.
+    -->
+    <script src="/bods-dagre.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
