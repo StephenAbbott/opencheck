@@ -1,10 +1,12 @@
 # OpenCheck
 
-Customer due diligence risk checks driven by the LEI and open data.
+Customer due diligence risk checks driven by the Legal Entity Identifier (LEI) and open data.
 
-You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, Wikidata Q-ID, etc.), and uses those bridges to fan out across UK Companies House, OpenSanctions, OpenAleph, EveryPolitician, Wikidata, and OpenTender. Everything maps into [BODS v0.4](https://standard.openownership.org/en/0.4.0/), the cross-source links + risk signals are computed deterministically, and the whole bundle is one click away from a downloadable shareable export.
+You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, Wikidata Q-ID, etc.), and uses those bridges to fan out across UK Companies House, OpenSanctions, OpenAleph, EveryPolitician, Wikidata, and OpenTender. 
 
-The risk-signal layer mirrors the [AMLA CDD RTS](https://www.amla.europa.eu/policy/public-consultations/consultation-draft-rts-customer-due-diligence_en) draft conditions for "complex corporate structures" — trust/arrangement, non-EU jurisdiction, nominee, ≥3 ownership layers, plus the composite threshold rule and an advisory mirror of the subjective obfuscation condition.
+Everything maps into [version 0.4 of the Beneficial Ownership Data Standard (BODS)](https://standard.openownership.org/en/0.4.0/), the cross-source links + risk signals are computed deterministically, and the whole bundle is one click away from a downloadable shareable export.
+
+The risk-signal layer mirrors the [draft customer due diligence regulatory technical standards from the EU's Anti-Money Laundering Authority (AMLA)](https://www.amla.europa.eu/policy/public-consultations/consultation-draft-rts-customer-due-diligence_en) draft conditions for "complex corporate structures" — trust/arrangement, non-EU jurisdiction, nominee, ≥3 ownership layers, plus the composite threshold rule and an advisory mirror of the subjective obfuscation condition.
 
 ## Status
 
