@@ -11,16 +11,20 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .companies_house import CompaniesHouseAdapter
 from .everypolitician import EveryPoliticianAdapter
 from .gleif import GleifAdapter
-from .openaleph import OpenAlephAdapter
+from .openaleph import OpenAlephAdapter  # noqa: F401  -- kept for re-enablement
 from .opensanctions import OpenSanctionsAdapter
 from .opentender import OpenTenderAdapter
 from .wikidata import WikidataAdapter
 
+# OpenAleph is intentionally excluded from the registry while the LEI
+# flow is the supported entry point — its API is name-keyed rather than
+# identifier-keyed, so it doesn't bridge cleanly off an LEI yet.
+# Re-enable by adding ``"openaleph": OpenAlephAdapter()`` below once we
+# have a curated set of subjects to demo it against.
 REGISTRY: dict[str, SourceAdapter] = {
     "companies_house": CompaniesHouseAdapter(),
     "gleif": GleifAdapter(),
     "opensanctions": OpenSanctionsAdapter(),
-    "openaleph": OpenAlephAdapter(),
     "everypolitician": EveryPoliticianAdapter(),
     "wikidata": WikidataAdapter(),
     "opentender": OpenTenderAdapter(),

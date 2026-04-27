@@ -119,7 +119,8 @@ def test_lookup_drives_full_synthesis_for_a_gb_lei(
         },
     )
     _mock_wikidata_lei_lookup_empty(httpx_mock, lei)
-    _mock_openaleph_search_empty(httpx_mock, lei)
+    # OpenAleph is currently disabled in REGISTRY, so /lookup never
+    # dispatches to it. Don't mock it.
     # Companies House + OpenSanctions need API keys we haven't set, so
     # they return stubs without making network calls.
 
@@ -159,7 +160,8 @@ def test_lookup_lower_case_lei_is_normalised(
         },
     )
     _mock_wikidata_lei_lookup_empty(httpx_mock, lei)
-    _mock_openaleph_search_empty(httpx_mock, lei)
+    # OpenAleph is currently disabled in REGISTRY, so /lookup never
+    # dispatches to it. Don't mock it.
 
     # Pass it lower-cased; backend should uppercase before the GLEIF call.
     r = client.get("/lookup", params={"lei": lei.lower()})

@@ -23,7 +23,6 @@ def test_registry_has_expected_sources() -> None:
         "companies_house",
         "gleif",
         "opensanctions",
-        "openaleph",
         "everypolitician",
         "wikidata",
         "opentender",

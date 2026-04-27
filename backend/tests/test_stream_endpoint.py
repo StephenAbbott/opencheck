@@ -22,7 +22,7 @@ def test_stream_emits_source_started_hits_completed_and_done() -> None:
     assert "event: done" in body
 
     # Every stub adapter that supports entity should have emitted started + completed.
-    for source in ("companies_house", "gleif", "opensanctions", "openaleph", "wikidata"):
+    for source in ("companies_house", "gleif", "opensanctions", "wikidata"):
         assert source in body
 
 

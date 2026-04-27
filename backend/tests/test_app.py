@@ -30,7 +30,6 @@ def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
         "companies_house",
         "gleif",
         "opensanctions",
-        "openaleph",
         "everypolitician",
         "wikidata",
         "opentender",

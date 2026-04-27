@@ -113,30 +113,11 @@ def test_deepen_opensanctions_live_flags_nc_license(
     assert body["bods"][0]["recordType"] == "entity"
 
 
-def test_deepen_openaleph_flags_nc_collection(
-    monkeypatch, httpx_mock: HTTPXMock
-) -> None:
-    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
-    get_settings.cache_clear()
-
-    httpx_mock.add_response(
-        url=f"{_AL}/entities/aleph-nc",
-        json={
-            "id": "aleph-nc",
-            "schema": "Company",
-            "properties": {"name": ["NC Collection Co"]},
-            "collection": {"id": "99"},
-        },
-    )
-    httpx_mock.add_response(
-        url=f"{_AL}/collections/99",
-        json={"id": 99, "label": "Restricted leaks", "license": "CC BY-NC 4.0"},
-    )
-
+def test_deepen_rejects_disabled_openaleph_source() -> None:
+    """OpenAleph was removed from the registry while the LEI flow is
+    the supported entry point — /deepen should 404 cleanly rather than
+    leak the adapter's response."""
     client = TestClient(app)
     r = client.get("/deepen", params={"source": "openaleph", "hit_id": "aleph-nc"})
-    assert r.status_code == 200
-    body = r.json()
-    assert body["license"] == "per-collection"
-    assert body["license_notice"] is not None
-    assert "Restricted leaks" in body["license_notice"]
+    assert r.status_code == 404
+    assert "unknown source" in r.json()["detail"].lower()

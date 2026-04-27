@@ -38,6 +38,10 @@ export default function App() {
   const [result, setResult] = useState<LookupResponse | null>(null);
   const [looking, setLooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // ``main`` shows the LEI form + lookup result; ``sources`` shows the
+  // source inventory page. Kept as state rather than a router so we
+  // don't pull in react-router for two views.
+  const [view, setView] = useState<"main" | "sources">("main");
 
   const sourcesQuery = useQuery({
     queryKey: ["sources"],
@@ -148,20 +152,36 @@ export default function App() {
         }}
       >
         <div className="max-w-oo-page mx-auto relative">
-          <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-light">
-            Customer due diligence
-          </p>
-          <h1 className="mt-2 font-head font-bold text-white leading-tight text-[clamp(1.6rem,4vw,2.4rem)]">
-            OpenCheck
-          </h1>
-          <p className="mt-3 max-w-xl text-[15px] font-light leading-[1.65] text-white/70">
-            Customer due diligence risk checks driven by the LEI and open
-            data — mapped to BODS v0.4.
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-light">
+                Customer due diligence
+              </p>
+              <h1 className="mt-2 font-head font-bold text-white leading-tight text-[clamp(1.6rem,4vw,2.4rem)]">
+                OpenCheck
+              </h1>
+            </div>
+            <nav>
+              <button
+                type="button"
+                onClick={() => setView(view === "main" ? "sources" : "main")}
+                className="text-[12px] font-mono text-oo-light hover:text-white underline underline-offset-4 whitespace-nowrap"
+              >
+                {view === "main" ? "About the sources →" : "← Back to lookup"}
+              </button>
+            </nav>
+          </div>
+          <p className="mt-3 max-w-2xl text-[15px] font-light leading-[1.65] text-white/70">
+            Customer due diligence risk checks driven by the Legal
+            Entity Identifier (LEI) and open data — mapped to version
+            0.4 of the Beneficial Ownership Data Standard.
           </p>
         </div>
       </header>
 
       <main className="flex-1 px-6 sm:px-10 lg:px-16 py-12 max-w-oo-page mx-auto w-full">
+        {view === "main" && (
+        <>
         <form
           onSubmit={runLookup}
           className="mb-8 bg-white border border-oo-rule rounded-oo p-6"
@@ -268,53 +288,64 @@ export default function App() {
             </div>
           </section>
         )}
+        </>
+        )}
 
-        <section>
-          <SectionLabel>Sources</SectionLabel>
-          {sourcesQuery.isLoading && (
-            <p className="text-oo-muted">Loading…</p>
-          )}
-          {sourcesQuery.data && (
-            <ul
-              className="grid gap-6"
-              // 480px min as per the BO design library card grid spec.
-              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 480px), 1fr))" }}
-            >
-              {sourcesQuery.data.sources.map((s, i) => (
-                <li
-                  key={s.id}
-                  className="bg-white border border-oo-rule rounded-oo p-6 text-sm transition-shadow hover:shadow-oo-card"
-                >
-                  <div className="flex items-baseline gap-3 mb-1">
-                    <span className="font-mono text-[11px] tracking-wider text-oo-blue">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <a
-                      href={s.homepage}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-head text-[17px] font-bold text-oo-ink leading-tight hover:underline underline-offset-2"
-                    >
-                      {s.name}
-                    </a>
-                    <span className="ml-auto">
-                      <LicenseChip license={s.license} />
-                    </span>
-                  </div>
-                  {s.description && (
-                    <p className="text-[13.5px] leading-[1.7] text-oo-muted mt-2">
-                      {s.description}
+        {view === "sources" && (
+          <section>
+            <SectionLabel>About the sources</SectionLabel>
+            <p className="text-[14px] leading-[1.7] text-oo-muted mb-6 max-w-2xl">
+              OpenCheck queries the open-data sources below. GLEIF is
+              the entry point — its Legal Entity Identifier (LEI) acts
+              as a connector across the rest. Each source ships its
+              data under its own license; non-commercial sources
+              propagate that obligation through the export bundle.
+            </p>
+            {sourcesQuery.isLoading && (
+              <p className="text-oo-muted">Loading…</p>
+            )}
+            {sourcesQuery.data && (
+              <ul
+                className="grid gap-6"
+                // 480px min as per the BO design library card grid spec.
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 480px), 1fr))" }}
+              >
+                {sourcesQuery.data.sources.map((s, i) => (
+                  <li
+                    key={s.id}
+                    className="bg-white border border-oo-rule rounded-oo p-6 text-sm transition-shadow hover:shadow-oo-card"
+                  >
+                    <div className="flex items-baseline gap-3 mb-1">
+                      <span className="font-mono text-[11px] tracking-wider text-oo-blue">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <a
+                        href={s.homepage}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-head text-[17px] font-bold text-oo-ink leading-tight hover:underline underline-offset-2"
+                      >
+                        {s.name}
+                      </a>
+                      <span className="ml-auto">
+                        <LicenseChip license={s.license} />
+                      </span>
+                    </div>
+                    {s.description && (
+                      <p className="text-[13.5px] leading-[1.7] text-oo-muted mt-2">
+                        {s.description}
+                      </p>
+                    )}
+                    <p className="text-[11px] font-mono mt-3 text-oo-muted">
+                      Supports: {s.supports.join(", ")} ·{" "}
+                      {s.live_available ? "live ready" : "stub"}
                     </p>
-                  )}
-                  <p className="text-[11px] font-mono mt-3 text-oo-muted">
-                    Supports: {s.supports.join(", ")} ·{" "}
-                    {s.live_available ? "live ready" : "stub"}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
       </main>
 
       <footer className="border-t border-oo-rule bg-white px-6 sm:px-10 lg:px-16 py-6 text-[12px] text-oo-muted">
