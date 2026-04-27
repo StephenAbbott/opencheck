@@ -2,6 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root {
+/*
+ * Beneficial Ownership design-system tokens.
+ *
+ * The same colour values are mirrored as Tailwind theme colours under
+ * the `oo` namespace (see tailwind.config.js) so component code can
+ * pick whichever vehicle is more readable. Raw CSS access via
+ * `var(--oo-*)` is mostly used for inline `style` attributes and
+ * gradients that Tailwind utilities don't reach cleanly.
+ */
+:root {
+  --oo-navy: #191d23;
+  --oo-burst: #363f4e;
+  --oo-blue: #3d30d4;
+  --oo-light: #dceeff;
+  --oo-green: #25cb55;
+  --oo-ink: #191d23;
+  --oo-muted: #757575;
+  --oo-rule: #e5e5e5;
+  --oo-bg: #f3f3f5;
+
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-head: "Bitter", Georgia, serif;
+  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+html,
+body,
+#root {
   height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+}
+
+/*
+ * Headings default to the display serif (Bitter). Components can
+ * override per-instance with `font-mono` / `font-body` utility classes
+ * where the design system explicitly switches face (e.g. card index
+ * numbers in DM Mono).
+ */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-head);
+  color: var(--oo-ink);
 }

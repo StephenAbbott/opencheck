@@ -133,24 +133,46 @@ export default function App() {
   const crossSourceLinks: CrossSourceLink[] = result?.cross_source_links ?? [];
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b border-slate-200 bg-white px-6 py-4">
-        <h1 className="text-xl font-semibold">OpenCheck</h1>
-        <p className="text-sm text-slate-500">
-          Customer due diligence risk checks driven by the LEI and open
-          data · mapped to BODS v0.4
-        </p>
+    <div className="min-h-screen flex flex-col bg-oo-bg">
+      {/*
+       * Header — full-width dark banner, BO design system.
+       * Decorative blue radial gradient sits top-right (rgba 61,48,212,0.28)
+       * fading to transparent. Inline style because Tailwind doesn't
+       * have a clean utility for offset radial gradients.
+       */}
+      <header
+        className="relative overflow-hidden bg-oo-navy text-white px-6 sm:px-10 lg:px-16 py-10 sm:py-12"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle 500px at calc(100% + 80px) -80px, rgba(61, 48, 212, 0.28), transparent)",
+        }}
+      >
+        <div className="max-w-oo-page mx-auto relative">
+          <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-light">
+            Customer due diligence
+          </p>
+          <h1 className="mt-2 font-head font-bold text-white leading-tight text-[clamp(1.6rem,4vw,2.4rem)]">
+            OpenCheck
+          </h1>
+          <p className="mt-3 max-w-xl text-[15px] font-light leading-[1.65] text-white/70">
+            Customer due diligence risk checks driven by the LEI and open
+            data — mapped to BODS v0.4.
+          </p>
+        </div>
       </header>
 
-      <main className="flex-1 px-6 py-8 max-w-5xl mx-auto w-full">
-        <form onSubmit={runLookup} className="mb-6">
+      <main className="flex-1 px-6 sm:px-10 lg:px-16 py-12 max-w-oo-page mx-auto w-full">
+        <form
+          onSubmit={runLookup}
+          className="mb-8 bg-white border border-oo-rule rounded-oo p-6"
+        >
           <label
             htmlFor="lei-input"
-            className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1"
+            className="block text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2"
           >
             Legal Entity Identifier
           </label>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <input
               id="lei-input"
               type="text"
@@ -159,18 +181,18 @@ export default function App() {
               placeholder="e.g. 213800LH1BZH3DI6G760"
               spellCheck={false}
               autoComplete="off"
-              className="flex-1 border border-slate-300 rounded px-3 py-2 font-mono uppercase"
+              className="flex-1 border border-oo-rule rounded px-3 py-2.5 font-mono uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
               maxLength={20}
             />
             <button
               type="submit"
               disabled={looking || !leiInput.trim()}
-              className="bg-slate-900 text-white rounded px-4 py-2 hover:bg-slate-700 disabled:opacity-50"
+              className="bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
             >
               {looking ? "Looking up…" : "Look up"}
             </button>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
             Look up an entity by its 20-character LEI. We query GLEIF
             first, then use the LEI to bridge to Companies House,
             OpenSanctions, OpenAleph, Wikidata, OpenTender, and (soon)
@@ -179,7 +201,7 @@ export default function App() {
         </form>
 
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded p-3 text-sm">
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
             {error}
           </div>
         )}
@@ -187,27 +209,23 @@ export default function App() {
         {result && <SubjectCard result={result} />}
 
         {aggregatedCodes.length > 0 && (
-          <section className="mb-6">
-            <h2 className="text-sm font-medium text-slate-500 uppercase tracking-wide mb-2">
-              Risk signals
-            </h2>
+          <section className="mb-8">
+            <SectionLabel>Risk signals</SectionLabel>
             <div className="flex flex-wrap gap-2">
               {aggregatedCodes.map((sig) => (
                 <RiskChip key={sig.code} signal={sig} />
               ))}
             </div>
-            <p className="text-xs text-slate-400 mt-2">
-              Hover a chip for the rule that fired. Signals derived from open
-              data; AMLA-aligned chips read BODS v0.4 statements.
+            <p className="text-[12px] text-oo-muted mt-3">
+              Hover a chip for the rule that fired. Signals derived from
+              open data; AMLA-aligned chips read BODS v0.4 statements.
             </p>
           </section>
         )}
 
         {crossSourceLinks.length > 0 && (
-          <section className="mb-8 bg-white border border-slate-200 rounded p-4">
-            <h2 className="text-sm font-medium text-slate-500 uppercase tracking-wide mb-2">
-              Cross-source links
-            </h2>
+          <section className="mb-8 bg-white border border-oo-rule rounded-oo p-5">
+            <SectionLabel>Cross-source links</SectionLabel>
             <ul className="space-y-2">
               {crossSourceLinks.map((link, i) => (
                 <CrossSourceLinkRow key={`${link.key}:${link.key_value}:${i}`} link={link} />
@@ -234,50 +252,61 @@ export default function App() {
         )}
 
         {bucketList.length > 0 && (
-          <section className="space-y-4 mb-10">
-            <h2 className="text-sm font-medium text-slate-500 uppercase tracking-wide">
+          <section className="mb-12">
+            <SectionLabel>
               {totalHits} hit{totalHits === 1 ? "" : "s"} across{" "}
               {bucketList.length} source{bucketList.length === 1 ? "" : "s"}
-            </h2>
-            {bucketList.map((b) => (
-              <SourceBucketCard
-                key={b.sourceId}
-                bucket={b}
-                riskByHit={riskByHit}
-              />
-            ))}
+            </SectionLabel>
+            <div className="space-y-4">
+              {bucketList.map((b) => (
+                <SourceBucketCard
+                  key={b.sourceId}
+                  bucket={b}
+                  riskByHit={riskByHit}
+                />
+              ))}
+            </div>
           </section>
         )}
 
         <section>
-          <h2 className="text-sm font-medium text-slate-500 uppercase tracking-wide mb-3">
-            Sources
-          </h2>
-          {sourcesQuery.isLoading && <p className="text-slate-500">Loading…</p>}
+          <SectionLabel>Sources</SectionLabel>
+          {sourcesQuery.isLoading && (
+            <p className="text-oo-muted">Loading…</p>
+          )}
           {sourcesQuery.data && (
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {sourcesQuery.data.sources.map((s) => (
+            <ul
+              className="grid gap-6"
+              // 480px min as per the BO design library card grid spec.
+              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 480px), 1fr))" }}
+            >
+              {sourcesQuery.data.sources.map((s, i) => (
                 <li
                   key={s.id}
-                  className="bg-white border border-slate-200 rounded p-3 text-sm"
+                  className="bg-white border border-oo-rule rounded-oo p-6 text-sm transition-shadow hover:shadow-oo-card"
                 >
-                  <div className="flex justify-between items-baseline">
+                  <div className="flex items-baseline gap-3 mb-1">
+                    <span className="font-mono text-[11px] tracking-wider text-oo-blue">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
                     <a
                       href={s.homepage}
                       target="_blank"
                       rel="noreferrer"
-                      className="font-medium hover:underline underline-offset-2"
+                      className="font-head text-[17px] font-bold text-oo-ink leading-tight hover:underline underline-offset-2"
                     >
                       {s.name}
                     </a>
-                    <LicenseChip license={s.license} />
+                    <span className="ml-auto">
+                      <LicenseChip license={s.license} />
+                    </span>
                   </div>
                   {s.description && (
-                    <p className="text-xs text-slate-600 mt-1">
+                    <p className="text-[13.5px] leading-[1.7] text-oo-muted mt-2">
                       {s.description}
                     </p>
                   )}
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-[11px] font-mono mt-3 text-oo-muted">
                     Supports: {s.supports.join(", ")} ·{" "}
                     {s.live_available ? "live ready" : "stub"}
                   </p>
@@ -288,35 +317,54 @@ export default function App() {
         </section>
       </main>
 
-      <footer className="border-t border-slate-200 bg-white px-6 py-3 text-xs text-slate-500">
-        <a
-          href="https://github.com/StephenAbbott/opencheck"
-          target="_blank"
-          rel="noreferrer"
-          className="underline underline-offset-2 hover:text-slate-700"
-        >
-          OpenCheck
-        </a>{" "}
-        ·{" "}
-        <a
-          href="https://github.com/StephenAbbott/opencheck?tab=License-1-ov-file"
-          target="_blank"
-          rel="noreferrer"
-          className="underline underline-offset-2 hover:text-slate-700"
-        >
-          MIT license
-        </a>{" "}
-        · third-party data licensed per source — see{" "}
-        <a
-          href="https://github.com/StephenAbbott/opencheck/blob/main/ATTRIBUTIONS.md"
-          target="_blank"
-          rel="noreferrer"
-          className="underline underline-offset-2 hover:text-slate-700"
-        >
-          ATTRIBUTIONS.md
-        </a>
+      <footer className="border-t border-oo-rule bg-white px-6 sm:px-10 lg:px-16 py-6 text-[12px] text-oo-muted">
+        <div className="max-w-oo-page mx-auto text-center">
+          <a
+            href="https://github.com/StephenAbbott/opencheck"
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-oo-blue hover:text-oo-burst"
+          >
+            OpenCheck
+          </a>{" "}
+          ·{" "}
+          <a
+            href="https://github.com/StephenAbbott/opencheck?tab=License-1-ov-file"
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-oo-blue hover:text-oo-burst"
+          >
+            MIT license
+          </a>{" "}
+          · third-party data licensed per source — see{" "}
+          <a
+            href="https://github.com/StephenAbbott/opencheck/blob/main/ATTRIBUTIONS.md"
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-oo-blue hover:text-oo-burst"
+          >
+            ATTRIBUTIONS.md
+          </a>
+        </div>
       </footer>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Small layout primitives — design system "eyebrow" labels & dividers
+// ---------------------------------------------------------------------
+
+/**
+ * Small uppercase section heading per BO design system: 10–11px,
+ * weight 600, letter-spacing 0.12em, muted grey, with a hairline
+ * bottom border that lines up the section visually.
+ */
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted border-b border-oo-rule pb-2 mb-4">
+      {children}
+    </h2>
   );
 }
 
@@ -334,21 +382,27 @@ function SourceBucketCard({
   const stateLabel = bucket.error
     ? "error"
     : `${bucket.hits.length} result${bucket.hits.length === 1 ? "" : "s"}`;
-  const stateColor = bucket.error ? "text-red-600" : "text-slate-600";
+  const stateColor = bucket.error
+    ? "text-red-700"
+    : "text-oo-muted";
 
   return (
-    <article className="bg-white border border-slate-200 rounded">
-      <header className="px-4 py-2 border-b border-slate-100 flex items-baseline justify-between">
-        <h3 className="font-medium">{bucket.sourceName}</h3>
-        <span className={`text-xs ${stateColor}`}>{stateLabel}</span>
+    <article className="bg-white border border-oo-rule rounded-oo">
+      <header className="px-5 py-3 border-b border-oo-rule flex items-baseline justify-between">
+        <h3 className="font-head font-bold text-[15px] text-oo-ink">
+          {bucket.sourceName}
+        </h3>
+        <span className={`text-[11px] font-mono ${stateColor}`}>
+          {stateLabel}
+        </span>
       </header>
       {bucket.error && (
-        <p className="px-4 py-2 text-sm text-red-600">{bucket.error}</p>
+        <p className="px-5 py-3 text-[13px] text-red-700">{bucket.error}</p>
       )}
       {bucket.hits.length === 0 && !bucket.error && (
-        <p className="px-4 py-3 text-sm text-slate-400">No hits.</p>
+        <p className="px-5 py-3 text-[13px] text-oo-muted">No hits.</p>
       )}
-      <ul className="divide-y divide-slate-100">
+      <ul className="divide-y divide-oo-rule">
         {bucket.hits.map((hit) => (
           <HitRow
             key={`${hit.source_id}:${hit.hit_id}`}
@@ -368,27 +422,27 @@ function SourceBucketCard({
 function SubjectCard({ result }: { result: LookupResponse }) {
   const ids = Object.entries(result.derived_identifiers);
   return (
-    <section className="mb-6 bg-white border border-slate-200 rounded p-5">
-      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+    <section className="mb-8 bg-white border border-oo-rule rounded-oo p-7 transition-shadow hover:shadow-oo-card">
+      <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-blue">
         Subject
       </p>
-      <h2 className="text-xl font-semibold mt-1">
+      <h2 className="font-head font-bold text-oo-ink mt-2 leading-tight text-[clamp(1.25rem,2.5vw,1.6rem)]">
         {result.legal_name || `LEI ${result.lei}`}
       </h2>
-      <p className="text-xs text-slate-500 font-mono mt-1">
+      <p className="text-[12px] font-mono text-oo-muted mt-2">
         LEI {result.lei}
         {result.jurisdiction && ` · ${result.jurisdiction}`}
       </p>
       {ids.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-4 flex flex-wrap gap-1.5">
           {ids.map(([k, v]) => (
             <span
               key={k}
               title={`${k} (derived via GLEIF + Wikidata for cross-source matching)`}
-              className="inline-flex gap-1 text-xs border border-slate-200 rounded px-2 py-0.5 font-mono bg-slate-50"
+              className="inline-flex gap-1 text-[12px] border border-oo-rule rounded px-2 py-0.5 font-mono bg-oo-bg"
             >
-              <span className="text-slate-500">{k}=</span>
-              <span className="text-slate-800">{v}</span>
+              <span className="text-oo-muted">{k}=</span>
+              <span className="text-oo-ink">{v}</span>
             </span>
           ))}
         </div>
@@ -431,20 +485,22 @@ function HitRow({
   }
 
   return (
-    <li className="px-4 py-3">
-      <div className="flex justify-between items-baseline">
-        <div>
-          <div className="font-medium">
+    <li className="px-5 py-4">
+      <div className="flex justify-between items-baseline gap-4">
+        <div className="min-w-0">
+          <div className="font-head font-bold text-[15px] text-oo-ink leading-snug">
             {hit.name}
             {hit.is_stub && (
-              <span className="ml-2 text-xs bg-amber-100 text-amber-800 rounded px-1">
+              <span className="ml-2 text-[11px] font-mono bg-amber-50 text-amber-800 border border-amber-200 rounded px-1.5 py-0.5">
                 stub
               </span>
             )}
           </div>
-          <p className="text-sm text-slate-600">{hit.summary}</p>
+          <p className="text-[13px] text-oo-muted mt-1 leading-[1.6]">
+            {hit.summary}
+          </p>
           {Object.keys(hit.identifiers).length > 0 && (
-            <p className="text-xs text-slate-500 mt-1 font-mono">
+            <p className="text-[11px] text-oo-muted mt-1.5 font-mono break-all">
               {Object.entries(hit.identifiers)
                 .map(([k, v]) => `${k}=${v}`)
                 .join(" · ")}
@@ -460,16 +516,16 @@ function HitRow({
         </div>
         <button
           onClick={toggle}
-          className="text-sm text-slate-700 hover:text-slate-900 underline underline-offset-2"
+          className="text-[12px] font-mono text-oo-blue hover:text-oo-burst whitespace-nowrap"
         >
-          {open ? "Hide" : "Go deeper"}
+          {open ? "Hide" : "Go deeper →"}
         </button>
       </div>
 
       {open && (
-        <div className="mt-3 bg-slate-50 rounded p-3 text-xs">
-          {loading && <p className="text-slate-500">Fetching…</p>}
-          {error && <p className="text-red-600">{error}</p>}
+        <div className="mt-4 bg-oo-bg rounded-oo p-4 text-[12px]">
+          {loading && <p className="text-oo-muted">Fetching…</p>}
+          {error && <p className="text-red-700">{error}</p>}
           {detail && <DeepenBlock detail={detail} />}
         </div>
       )}
@@ -479,19 +535,19 @@ function HitRow({
 
 function DeepenBlock({ detail }: { detail: DeepenResponse }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {detail.license_notice && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-2">
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-oo p-3">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="font-medium">License notice</span>
+            <span className="font-head font-bold text-[13px]">License notice</span>
             <LicenseChip license={detail.license} />
           </div>
-          <p className="mt-1">{detail.license_notice}</p>
+          <p className="mt-1 leading-[1.6]">{detail.license_notice}</p>
         </div>
       )}
       {detail.risk_signals.length > 0 && (
         <section>
-          <h4 className="font-medium text-slate-700 mb-1">
+          <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
             Risk signals (deepen-time)
           </h4>
           <div className="flex flex-wrap gap-1">
@@ -503,12 +559,12 @@ function DeepenBlock({ detail }: { detail: DeepenResponse }) {
       )}
       {detail.bods.length > 0 && (
         <section>
-          <h4 className="font-medium text-slate-700 mb-1">
+          <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
             BODS v0.4 · {detail.bods.length} statement
             {detail.bods.length === 1 ? "" : "s"}
           </h4>
           {detail.bods_issues.length > 0 && (
-            <p className="text-amber-700 mb-2">
+            <p className="text-amber-800 mb-2">
               {detail.bods_issues.length} validation issue
               {detail.bods_issues.length === 1 ? "" : "s"}
             </p>
@@ -516,18 +572,20 @@ function DeepenBlock({ detail }: { detail: DeepenResponse }) {
           {/* Directed graph (via @openownership/bods-dagre). */}
           <BODSGraph statements={detail.bods} />
           <details className="mt-2">
-            <summary className="text-slate-500 cursor-pointer text-xs">
+            <summary className="text-oo-muted cursor-pointer text-[11px] font-mono">
               Show JSON statements
             </summary>
-            <pre className="mt-1 max-h-96 overflow-auto bg-white border border-slate-200 rounded p-2">
+            <pre className="mt-1 max-h-96 overflow-auto bg-white border border-oo-rule rounded-oo p-3">
               {JSON.stringify(detail.bods, null, 2)}
             </pre>
           </details>
         </section>
       )}
       <section>
-        <h4 className="font-medium text-slate-700 mb-1">Raw source payload</h4>
-        <pre className="max-h-96 overflow-auto bg-white border border-slate-200 rounded p-2">
+        <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
+          Raw source payload
+        </h4>
+        <pre className="max-h-96 overflow-auto bg-white border border-oo-rule rounded-oo p-3">
           {JSON.stringify(detail.raw, null, 2)}
         </pre>
       </section>
@@ -542,11 +600,11 @@ function DeepenBlock({ detail }: { detail: DeepenResponse }) {
 function LicenseChip({ license }: { license: string }) {
   const nc = license.toLowerCase().includes("nc");
   const classes = nc
-    ? "bg-amber-50 text-amber-700 border-amber-200"
+    ? "bg-amber-50 text-amber-800 border-amber-200"
     : "bg-emerald-50 text-emerald-700 border-emerald-200";
   return (
     <span
-      className={`text-xs border rounded px-1.5 py-0.5 font-mono ${classes}`}
+      className={`text-[11px] border rounded px-1.5 py-0.5 font-mono ${classes}`}
     >
       {license}
     </span>
@@ -674,13 +732,13 @@ function ExportPanel({
   const href = exportUrl(lei, format);
 
   return (
-    <section className="mb-8 bg-slate-50 border border-slate-200 rounded p-4">
+    <section className="mb-8 bg-white border border-oo-rule rounded-oo p-5">
       <div className="flex items-baseline justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="text-sm font-medium text-slate-700">
+        <div className="min-w-0">
+          <h2 className="font-head font-bold text-[15px] text-oo-ink">
             Download BODS bundle
           </h2>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-[13px] text-oo-muted mt-1 leading-[1.6]">
             Reproducible export for{" "}
             {legalName ? <span>{legalName} (</span> : null}
             <span className="font-mono">{lei}</span>
@@ -694,7 +752,7 @@ function ExportPanel({
             onChange={(e) =>
               setFormat(e.target.value as "zip" | "json" | "jsonl")
             }
-            className="border border-slate-300 rounded px-2 py-1 text-sm bg-white"
+            className="border border-oo-rule rounded px-2 py-1.5 text-[13px] bg-white"
           >
             <option value="zip">ZIP (bods + manifest + licenses)</option>
             <option value="json">JSON (BODS array)</option>
@@ -706,20 +764,21 @@ function ExportPanel({
             // server's Content-Disposition filename rather than
             // opening the URL inline.
             download
-            className="bg-slate-900 text-white text-sm rounded px-3 py-1.5 hover:bg-slate-700 inline-block"
+            className="bg-oo-blue text-white text-[13px] font-medium rounded px-4 py-1.5 hover:bg-oo-burst transition-colors inline-block"
           >
             Download
           </a>
         </div>
       </div>
       {ncSources.length > 0 && (
-        <p className="mt-3 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded px-2 py-1.5">
-          <span className="font-medium">License notice.</span> This bundle
-          will include data from {ncSources.join(", ")} (CC BY-NC). The
-          combined dataset inherits the non-commercial restriction —
-          re-publication or commercial use is not permitted under the
-          source license. See <span className="font-mono">LICENSES.md</span>{" "}
-          inside the zip for details.
+        <p className="mt-3 text-[12px] bg-amber-50 border border-amber-200 text-amber-900 rounded-oo px-3 py-2 leading-[1.6]">
+          <span className="font-head font-bold">License notice.</span>{" "}
+          This bundle will include data from {ncSources.join(", ")} (CC
+          BY-NC). The combined dataset inherits the non-commercial
+          restriction — re-publication or commercial use is not
+          permitted under the source license. See{" "}
+          <span className="font-mono">LICENSES.md</span> inside the zip
+          for details.
         </p>
       )}
     </section>
@@ -730,22 +789,22 @@ function CrossSourceLinkRow({ link }: { link: CrossSourceLink }) {
   const confidenceClasses =
     link.confidence === "strong"
       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-      : "bg-slate-100 text-slate-600 border-slate-200";
+      : "bg-oo-bg text-oo-muted border-oo-rule";
   return (
-    <li className="flex flex-wrap items-baseline gap-2 text-sm">
+    <li className="flex flex-wrap items-baseline gap-2 text-[13px]">
       <span
         className={`text-[11px] border rounded px-1.5 py-0.5 font-mono ${confidenceClasses}`}
       >
         {link.confidence}
       </span>
-      <span className="font-mono text-slate-700">
+      <span className="font-mono text-oo-ink">
         {link.key} = {link.key_value}
       </span>
-      <span className="text-slate-400">→</span>
-      <span className="text-slate-600">
+      <span className="text-oo-muted">→</span>
+      <span className="text-oo-ink">
         {link.hits.map((h) => h.source_id).join(" · ")}
       </span>
-      <span className="text-slate-400 text-xs italic">
+      <span className="text-oo-muted italic">
         ({link.hits.map((h) => h.name).join(" / ")})
       </span>
     </li>
