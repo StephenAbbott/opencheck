@@ -53,6 +53,10 @@ class OpenSanctionsAdapter(SourceAdapter):
             id=self.id,
             name="OpenSanctions",
             homepage="https://www.opensanctions.org/",
+            description=(
+                "The open-source database of sanctions, watchlists, and "
+                "politically exposed persons."
+            ),
             license="CC-BY-NC-4.0",
             attribution="Data from OpenSanctions.org, licensed CC BY-NC 4.0.",
             supports=[SearchKind.ENTITY, SearchKind.PERSON],

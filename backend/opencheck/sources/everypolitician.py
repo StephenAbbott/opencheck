@@ -47,12 +47,17 @@ class EveryPoliticianAdapter(SourceAdapter):
         settings = get_settings()
         return SourceInfo(
             id=self.id,
-            name="EveryPolitician (via OpenSanctions / Poliloom)",
+            name="EveryPolitician",
             homepage="https://everypolitician.org/",
+            description=(
+                "EveryPolitician is a global database of political "
+                "office-holders, from rulers, law-makers to judges and "
+                "more."
+            ),
             license="CC-BY-NC-4.0",
             attribution=(
-                "EveryPolitician data, maintained by OpenSanctions. "
-                "Licensed CC BY-NC 4.0."
+                "EveryPolitician data, served via the OpenSanctions PEPs "
+                "dataset. Licensed CC BY-NC 4.0."
             ),
             supports=[SearchKind.PERSON],
             requires_api_key=True,  # shares OPENSANCTIONS_API_KEY

@@ -63,8 +63,9 @@ class OpenTenderAdapter(SourceAdapter):
         settings = get_settings()
         return SourceInfo(
             id=self.id,
-            name="OpenTender (DIGIWHIST)",
-            homepage="https://opentender.eu/",
+            name="OpenTender",
+            homepage="https://opentender.eu/all/download",
+            description="Search and analyse tender data from 35 jurisdictions.",
             license="CC-BY-NC-SA-4.0",
             attribution=(
                 "Procurement data from OpenTender (DIGIWHIST), "

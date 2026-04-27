@@ -48,8 +48,12 @@ class GleifAdapter(SourceAdapter):
         settings = get_settings()
         return SourceInfo(
             id=self.id,
-            name="GLEIF — Global Legal Entity Identifier Foundation",
-            homepage="https://www.gleif.org/",
+            name="GLEIF",
+            homepage="https://search.gleif.org/#/search/",
+            description=(
+                "Legal entity information from the Global Legal Entity "
+                "Identifier Foundation."
+            ),
             license="CC0-1.0",
             attribution="Contains LEI data from GLEIF, available under CC0 1.0.",
             supports=[SearchKind.ENTITY],

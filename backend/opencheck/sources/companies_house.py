@@ -63,6 +63,10 @@ class CompaniesHouseAdapter(SourceAdapter):
             id=self.id,
             name="UK Companies House",
             homepage="https://find-and-update.company-information.service.gov.uk/",
+            description=(
+                "Legal and beneficial ownership information from the UK "
+                "corporate registry."
+            ),
             license="OGL-3.0",
             attribution=(
                 "Contains public sector information licensed under the "

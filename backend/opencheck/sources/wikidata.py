@@ -20,9 +20,14 @@ User-Agent, which our shared ``build_client()`` already sets.
 from __future__ import annotations
 
 import hashlib
+import re
 from typing import Any
 
 import httpx
+
+# 20-char ISO 17442 LEI — same shape as ``opentender._LEI_SHAPE`` but
+# kept local so wikidata can be imported without pulling in opentender.
+_LEI_SHAPE = re.compile(r"^[A-Z0-9]{20}$")
 
 from ..cache import Cache
 from ..config import get_settings
@@ -82,7 +87,11 @@ class WikidataAdapter(SourceAdapter):
         return SourceInfo(
             id=self.id,
             name="Wikidata",
-            homepage="https://www.wikidata.org/",
+            homepage="https://www.wikidata.org/wiki/Wikidata:Main_Page",
+            description=(
+                "A free and open knowledge base that can be read and "
+                "edited by both humans and machines."
+            ),
             license="CC0-1.0",
             attribution="Wikidata structured data, CC0 1.0.",
             supports=[SearchKind.ENTITY, SearchKind.PERSON],
@@ -117,6 +126,40 @@ class WikidataAdapter(SourceAdapter):
             if hit is not None:
                 hits.append(hit)
         return hits
+
+    # ------------------------------------------------------------------
+    # LEI → Q-ID lookup (used by the LEI-anchored /lookup endpoint)
+    # ------------------------------------------------------------------
+
+    async def find_qid_by_lei(self, lei: str) -> str | None:
+        """Find the Wikidata Q-ID for an entity carrying a given LEI.
+
+        Wikidata stores LEIs under property P1278. We run a tiny SPARQL
+        query and return the first matching Q-ID — or ``None`` when
+        Wikidata has no LEI/QID mapping for this entity yet.
+
+        Result is cached under ``wikidata/by_lei/<LEI>`` so repeat
+        lookups for the same LEI don't hit the SPARQL endpoint.
+        """
+        lei = lei.strip().upper()
+        if not _LEI_SHAPE.match(lei):
+            return None
+
+        cache_key = f"{_CACHE_NS}/by_lei/{lei}"
+        if not self.info.live_available and not self._cache.has(cache_key):
+            return None
+
+        query = (
+            'SELECT ?item WHERE { ?item wdt:P1278 "%s" } LIMIT 1' % lei
+        )
+        payload = await self._sparql(query, cache_key=cache_key)
+        bindings = payload.get("results", {}).get("bindings") or []
+        if not bindings:
+            return None
+        item_uri = bindings[0].get("item", {}).get("value", "")
+        # The binding is a full Wikidata URI; the QID is the last segment.
+        qid = item_uri.rsplit("/", 1)[-1] if item_uri else ""
+        return qid or None
 
     # ------------------------------------------------------------------
     # Fetch

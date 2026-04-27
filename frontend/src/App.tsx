@@ -1,231 +1,190 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import BODSGraph from "./components/BODSGraph";
 import {
   deepen,
   exportUrl,
   fetchSources,
-  streamSearch,
+  isValidLei,
+  lookup,
   type CrossSourceLink,
   type DeepenResponse,
+  type LookupResponse,
   type RiskSignal,
-  type SearchKind,
   type SourceHit,
 } from "./lib/api";
 
-/**
- * Curated demo subjects backed by fixtures under data/cache/demos.
- * Clicking a pill kicks off a search with no API keys required.
- */
-const DEMO_SUBJECTS: { label: string; query: string; kind: SearchKind; blurb: string }[] = [
-  {
-    label: "BP",
-    query: "BP",
-    kind: "entity",
-    blurb: "UK plc — clean cross-source story (LEI ↔ Companies House ↔ Wikidata)",
-  },
-  {
-    label: "Rosneft",
-    query: "Rosneft",
-    kind: "entity",
-    blurb: "Sanctioned + RU-incorporated → AMLA non-EU + sanctions signals",
-  },
-  {
-    label: "Vladimir Putin",
-    query: "Vladimir Putin",
-    kind: "person",
-    blurb: "Multi-source PEP — Q-ID bridges Wikidata, OpenSanctions, EveryPolitician",
-  },
-];
 
 /**
- * Phase 1 chat UI.
+ * OpenCheck — LEI-anchored customer due diligence UI.
  *
- * - Single query input → SSE fan-out across adapters
- * - Progressive source cards (pending / streaming / complete / error)
- * - "Go deeper" drill-down on each hit: full raw payload + BODS v0.4 statements
- * - Source inventory panel with license chip per adapter
+ * Workflow:
+ *   1. User pastes a Legal Entity Identifier (ISO 17442, 20 chars).
+ *   2. Backend hits GLEIF for the canonical record, derives bridge ids
+ *      (UK CH number, Wikidata Q-ID), and dispatches to every other
+ *      source using whichever identifier they understand.
+ *   3. We render a single subject view on top of the unified result.
  */
-
-type SourceState = "pending" | "streaming" | "complete" | "error";
 
 interface SourceBucket {
   sourceId: string;
   sourceName: string;
-  state: SourceState;
   hits: SourceHit[];
   error?: string;
 }
 
 export default function App() {
-  const [query, setQuery] = useState("");
-  const [kind, setKind] = useState<SearchKind>("entity");
-  const [buckets, setBuckets] = useState<Record<string, SourceBucket>>({});
-  const [crossSourceLinks, setCrossSourceLinks] = useState<CrossSourceLink[]>([]);
-  const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
-  const [running, setRunning] = useState(false);
-  // The query/kind a download should target — locked at search time so the
-  // export reflects the displayed results, not whatever the user has since
-  // typed into the search input.
-  const [activeSearch, setActiveSearch] = useState<{ q: string; kind: SearchKind } | null>(null);
-  const cleanupRef = useRef<(() => void) | null>(null);
+  const [leiInput, setLeiInput] = useState("");
+  const [result, setResult] = useState<LookupResponse | null>(null);
+  const [looking, setLooking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const sourcesQuery = useQuery({
     queryKey: ["sources"],
     queryFn: () => fetchSources(),
   });
 
-  useEffect(() => {
-    return () => cleanupRef.current?.();
-  }, []);
-
-  function runSearchFor(q: string, k: SearchKind) {
-    const trimmed = q.trim();
-    if (!trimmed) return;
-    setQuery(q);
-    setKind(k);
-    setActiveSearch({ q: trimmed, kind: k });
-
-    cleanupRef.current?.();
-    setBuckets({});
-    setCrossSourceLinks([]);
-    setRiskSignals([]);
-    setRunning(true);
-
-    cleanupRef.current = streamSearch(q.trim(), k, {
-      onSourceStarted: ({ source_id, source_name }) =>
-        setBuckets((prev) => ({
-          ...prev,
-          [source_id]: {
-            sourceId: source_id,
-            sourceName: source_name,
-            state: "streaming",
-            hits: [],
-          },
-        })),
-      onHit: (hit) =>
-        setBuckets((prev) => {
-          const bucket = prev[hit.source_id];
-          if (!bucket) return prev;
-          return {
-            ...prev,
-            [hit.source_id]: { ...bucket, hits: [...bucket.hits, hit] },
-          };
-        }),
-      onSourceCompleted: ({ source_id }) =>
-        setBuckets((prev) => {
-          const bucket = prev[source_id];
-          if (!bucket) return prev;
-          return { ...prev, [source_id]: { ...bucket, state: "complete" } };
-        }),
-      onSourceError: ({ source_id, error }) =>
-        setBuckets((prev) => {
-          const bucket = prev[source_id];
-          return {
-            ...prev,
-            [source_id]: {
-              sourceId: source_id,
-              sourceName: bucket?.sourceName ?? source_id,
-              state: "error",
-              hits: bucket?.hits ?? [],
-              error,
-            },
-          };
-        }),
-      onCrossSourceLinks: ({ links }) => setCrossSourceLinks(links),
-      onRiskSignals: ({ signals }) => setRiskSignals(signals),
-      onDone: () => setRunning(false),
-      onError: () => setRunning(false),
-    });
-  }
-
-  function runSearch(e: React.FormEvent) {
+  async function runLookup(e: React.FormEvent) {
     e.preventDefault();
-    runSearchFor(query, kind);
+    const lei = leiInput.trim().toUpperCase();
+    if (!isValidLei(lei)) {
+      setError(
+        "Enter a 20-character ISO 17442 LEI " +
+          "(e.g. 213800LH1BZH3DI6G760)."
+      );
+      return;
+    }
+    setLooking(true);
+    setError(null);
+    setResult(null);
+    try {
+      const data = await lookup(lei);
+      setResult(data);
+      setLeiInput(lei); // canonicalise the input on success
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLooking(false);
+    }
   }
 
-  const bucketList = useMemo(() => Object.values(buckets), [buckets]);
+  // Group hits by source_id for the per-source bucket cards. With the
+  // LEI flow the result arrives in one shot — no streaming state.
+  const bucketList = useMemo<SourceBucket[]>(() => {
+    if (!result) return [];
+    const byId = new Map<string, SourceBucket>();
+    const adapterIndex: Record<string, string> = sourcesQuery.data
+      ? Object.fromEntries(
+          sourcesQuery.data.sources.map((s) => [s.id, s.name])
+        )
+      : {};
+    for (const hit of result.hits) {
+      const existing = byId.get(hit.source_id);
+      if (existing) {
+        existing.hits.push(hit);
+      } else {
+        byId.set(hit.source_id, {
+          sourceId: hit.source_id,
+          sourceName: adapterIndex[hit.source_id] ?? hit.source_id,
+          hits: [hit],
+          error: result.errors[hit.source_id],
+        });
+      }
+    }
+    // Surface adapters that errored even when they returned no hits.
+    for (const [source_id, errMsg] of Object.entries(result.errors)) {
+      if (!byId.has(source_id)) {
+        byId.set(source_id, {
+          sourceId: source_id,
+          sourceName: adapterIndex[source_id] ?? source_id,
+          hits: [],
+          error: errMsg,
+        });
+      }
+    }
+    return Array.from(byId.values());
+  }, [result, sourcesQuery.data]);
+
   const totalHits = bucketList.reduce((n, b) => n + b.hits.length, 0);
 
   // Index risk signals by `${source_id}:${hit_id}` so cards/rows can
   // pull their own chips without re-scanning the whole list.
   const riskByHit = useMemo(() => {
     const out: Record<string, RiskSignal[]> = {};
-    for (const sig of riskSignals) {
+    for (const sig of result?.risk_signals ?? []) {
       const k = `${sig.source_id}:${sig.hit_id}`;
       (out[k] = out[k] ?? []).push(sig);
     }
     return out;
-  }, [riskSignals]);
+  }, [result]);
 
   // Distinct codes — used for the top-level summary chip strip.
   const aggregatedCodes = useMemo(() => {
     const seen = new Map<string, RiskSignal>();
-    for (const sig of riskSignals) {
+    for (const sig of result?.risk_signals ?? []) {
       const existing = seen.get(sig.code);
-      // Keep the highest-confidence signal per code for the summary tooltip.
       if (!existing || rank(sig.confidence) > rank(existing.confidence)) {
         seen.set(sig.code, sig);
       }
     }
     return Array.from(seen.values());
-  }, [riskSignals]);
+  }, [result]);
+
+  const crossSourceLinks: CrossSourceLink[] = result?.cross_source_links ?? [];
 
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-slate-200 bg-white px-6 py-4">
         <h1 className="text-xl font-semibold">OpenCheck</h1>
         <p className="text-sm text-slate-500">
-          Chatbot-style corporate intelligence over open data · mapped to BODS v0.4
+          Customer due diligence risk checks driven by the LEI and open
+          data · mapped to BODS v0.4
         </p>
       </header>
 
       <main className="flex-1 px-6 py-8 max-w-5xl mx-auto w-full">
-        <section className="mb-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">
-            Try a demo (no API keys required)
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {DEMO_SUBJECTS.map((d) => (
-              <button
-                key={d.query}
-                type="button"
-                disabled={running}
-                onClick={() => runSearchFor(d.query, d.kind)}
-                title={d.blurb}
-                className="text-sm border border-slate-300 rounded-full px-3 py-1 bg-white hover:bg-slate-50 disabled:opacity-50"
-              >
-                <span className="font-medium">{d.label}</span>
-                <span className="text-slate-400 text-xs ml-1">· {d.kind}</span>
-              </button>
-            ))}
+        <form onSubmit={runLookup} className="mb-6">
+          <label
+            htmlFor="lei-input"
+            className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1"
+          >
+            Legal Entity Identifier
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="lei-input"
+              type="text"
+              value={leiInput}
+              onChange={(e) => setLeiInput(e.target.value)}
+              placeholder="e.g. 213800LH1BZH3DI6G760"
+              spellCheck={false}
+              autoComplete="off"
+              className="flex-1 border border-slate-300 rounded px-3 py-2 font-mono uppercase"
+              maxLength={20}
+            />
+            <button
+              type="submit"
+              disabled={looking || !leiInput.trim()}
+              className="bg-slate-900 text-white rounded px-4 py-2 hover:bg-slate-700 disabled:opacity-50"
+            >
+              {looking ? "Looking up…" : "Look up"}
+            </button>
           </div>
-        </section>
-
-        <form onSubmit={runSearch} className="flex gap-2 mb-6">
-          <select
-            value={kind}
-            onChange={(e) => setKind(e.target.value as SearchKind)}
-            className="border border-slate-300 rounded px-3 py-2 bg-white"
-          >
-            <option value="entity">Entity</option>
-            <option value="person">Person</option>
-          </select>
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search a company or person (e.g. Rosneft, BP, Jane Smith)…"
-            className="flex-1 border border-slate-300 rounded px-3 py-2"
-          />
-          <button
-            type="submit"
-            disabled={running}
-            className="bg-slate-900 text-white rounded px-4 py-2 hover:bg-slate-700 disabled:opacity-50"
-          >
-            {running ? "Searching…" : "Search"}
-          </button>
+          <p className="text-xs text-slate-500 mt-1">
+            Look up an entity by its 20-character LEI. We query GLEIF
+            first, then use the LEI to bridge to Companies House,
+            OpenSanctions, OpenAleph, Wikidata, OpenTender, and (soon)
+            OpenCorporates.
+          </p>
         </form>
+
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded p-3 text-sm">
+            {error}
+          </div>
+        )}
+
+        {result && <SubjectCard result={result} />}
 
         {aggregatedCodes.length > 0 && (
           <section className="mb-6">
@@ -257,9 +216,10 @@ export default function App() {
           </section>
         )}
 
-        {activeSearch && totalHits > 0 && (
+        {result && totalHits > 0 && (
           <ExportPanel
-            search={activeSearch}
+            lei={result.lei}
+            legalName={result.legal_name}
             sourceLicenses={
               sourcesQuery.data
                 ? Object.fromEntries(
@@ -302,10 +262,21 @@ export default function App() {
                   className="bg-white border border-slate-200 rounded p-3 text-sm"
                 >
                   <div className="flex justify-between items-baseline">
-                    <span className="font-medium">{s.name}</span>
+                    <a
+                      href={s.homepage}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium hover:underline underline-offset-2"
+                    >
+                      {s.name}
+                    </a>
                     <LicenseChip license={s.license} />
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">{s.attribution}</p>
+                  {s.description && (
+                    <p className="text-xs text-slate-600 mt-1">
+                      {s.description}
+                    </p>
+                  )}
                   <p className="text-xs text-slate-400 mt-1">
                     Supports: {s.supports.join(", ")} ·{" "}
                     {s.live_available ? "live ready" : "stub"}
@@ -318,8 +289,32 @@ export default function App() {
       </main>
 
       <footer className="border-t border-slate-200 bg-white px-6 py-3 text-xs text-slate-500">
-        OpenCheck · MIT code · third-party data licensed per source — see
-        ATTRIBUTIONS.md
+        <a
+          href="https://github.com/StephenAbbott/opencheck"
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2 hover:text-slate-700"
+        >
+          OpenCheck
+        </a>{" "}
+        ·{" "}
+        <a
+          href="https://github.com/StephenAbbott/opencheck?tab=License-1-ov-file"
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2 hover:text-slate-700"
+        >
+          MIT license
+        </a>{" "}
+        · third-party data licensed per source — see{" "}
+        <a
+          href="https://github.com/StephenAbbott/opencheck/blob/main/ATTRIBUTIONS.md"
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2 hover:text-slate-700"
+        >
+          ATTRIBUTIONS.md
+        </a>
       </footer>
     </div>
   );
@@ -336,19 +331,10 @@ function SourceBucketCard({
   bucket: SourceBucket;
   riskByHit: Record<string, RiskSignal[]>;
 }) {
-  const stateLabel = {
-    pending: "queued",
-    streaming: "searching…",
-    complete: `${bucket.hits.length} result${bucket.hits.length === 1 ? "" : "s"}`,
-    error: "error",
-  }[bucket.state];
-
-  const stateColor = {
-    pending: "text-slate-400",
-    streaming: "text-blue-600",
-    complete: "text-slate-600",
-    error: "text-red-600",
-  }[bucket.state];
+  const stateLabel = bucket.error
+    ? "error"
+    : `${bucket.hits.length} result${bucket.hits.length === 1 ? "" : "s"}`;
+  const stateColor = bucket.error ? "text-red-600" : "text-slate-600";
 
   return (
     <article className="bg-white border border-slate-200 rounded">
@@ -359,7 +345,7 @@ function SourceBucketCard({
       {bucket.error && (
         <p className="px-4 py-2 text-sm text-red-600">{bucket.error}</p>
       )}
-      {bucket.hits.length === 0 && bucket.state === "complete" && (
+      {bucket.hits.length === 0 && !bucket.error && (
         <p className="px-4 py-3 text-sm text-slate-400">No hits.</p>
       )}
       <ul className="divide-y divide-slate-100">
@@ -372,6 +358,42 @@ function SourceBucketCard({
         ))}
       </ul>
     </article>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Subject card — top-of-page summary of the LEI lookup
+// ---------------------------------------------------------------------
+
+function SubjectCard({ result }: { result: LookupResponse }) {
+  const ids = Object.entries(result.derived_identifiers);
+  return (
+    <section className="mb-6 bg-white border border-slate-200 rounded p-5">
+      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+        Subject
+      </p>
+      <h2 className="text-xl font-semibold mt-1">
+        {result.legal_name || `LEI ${result.lei}`}
+      </h2>
+      <p className="text-xs text-slate-500 font-mono mt-1">
+        LEI {result.lei}
+        {result.jurisdiction && ` · ${result.jurisdiction}`}
+      </p>
+      {ids.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {ids.map(([k, v]) => (
+            <span
+              key={k}
+              title={`${k} (derived via GLEIF + Wikidata for cross-source matching)`}
+              className="inline-flex gap-1 text-xs border border-slate-200 rounded px-2 py-0.5 font-mono bg-slate-50"
+            >
+              <span className="text-slate-500">{k}=</span>
+              <span className="text-slate-800">{v}</span>
+            </span>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -633,11 +655,13 @@ function RiskChip({
  * hit Download, not buried in LICENSES.md inside the zip.
  */
 function ExportPanel({
-  search,
+  lei,
+  legalName,
   sourceLicenses,
   contributingSourceIds,
 }: {
-  search: { q: string; kind: SearchKind };
+  lei: string;
+  legalName: string | null;
   sourceLicenses: Record<string, string>;
   contributingSourceIds: string[];
 }) {
@@ -647,7 +671,7 @@ function ExportPanel({
     (sourceLicenses[id] ?? "").toLowerCase().includes("nc")
   );
 
-  const href = exportUrl(search.q, search.kind, format);
+  const href = exportUrl(lei, format);
 
   return (
     <section className="mb-8 bg-slate-50 border border-slate-200 rounded p-4">
@@ -657,9 +681,11 @@ function ExportPanel({
             Download BODS bundle
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Reproducible export for query{" "}
-            <span className="font-mono">{search.q}</span>. Includes BODS
-            v0.4 statements, manifest, and per-source license notes.
+            Reproducible export for{" "}
+            {legalName ? <span>{legalName} (</span> : null}
+            <span className="font-mono">{lei}</span>
+            {legalName ? <span>)</span> : null}. Includes BODS v0.4
+            statements, manifest, and per-source license notes.
           </p>
         </div>
         <div className="flex items-center gap-2">

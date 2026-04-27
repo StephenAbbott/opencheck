@@ -51,7 +51,12 @@ class OpenAlephAdapter(SourceAdapter):
         return SourceInfo(
             id=self.id,
             name="OpenAleph",
-            homepage="https://search.openaleph.org/",
+            homepage="https://openaleph.org/",
+            description=(
+                "The open source platform that securely stores large "
+                "amounts of data and makes it searchable for easy "
+                "collaboration."
+            ),
             license="per-collection",
             attribution=(
                 "Data from OpenAleph — per-collection license; see each "

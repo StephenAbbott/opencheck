@@ -1,5 +1,9 @@
 import { useEffect, useRef } from "react";
-import { draw } from "@openownership/bods-dagre";
+// Side-effect import only — the library is a UMD-shaped webpack bundle
+// that pollutes the global scope with ``window.BODSDagre`` and exports
+// nothing as ESM. We read the global inside the effect, so the import
+// just guarantees the module has been evaluated by then.
+import "@openownership/bods-dagre";
 
 /**
  * Renders a BODS v0.4 statement bundle as a directed ownership graph
@@ -24,10 +28,19 @@ export default function BODSGraph({
     if (statements.length === 0) return;
 
     try {
+      const lib = window.BODSDagre;
+      if (!lib?.draw) {
+        el.innerHTML = `<p class="text-xs text-red-600 p-2">
+          BODS visualisation library failed to load. Run
+          <code>npm install</code> in the frontend directory and
+          reload the page.
+        </p>`;
+        return;
+      }
       // The third arg is the URL prefix where the library finds its
       // bundled flag + icon SVGs. The vite plugin copies those into
       // ``public/bods-dagre-images`` at build start.
-      draw(statements, el, "/bods-dagre-images");
+      lib.draw(statements, el, "/bods-dagre-images");
     } catch (err) {
       // The library throws when it doesn't recognise a statement
       // shape. Surface the error in-place rather than crashing the app.

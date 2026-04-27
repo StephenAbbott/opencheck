@@ -39,6 +39,13 @@ class SourceInfo(BaseModel):
     id: str = Field(description="Stable adapter identifier, e.g. 'companies_house'.")
     name: str = Field(description="Human-readable source name.")
     homepage: str = Field(description="Canonical source homepage URL.")
+    description: str = Field(
+        default="",
+        description=(
+            "Short user-facing one-liner describing what the source is. "
+            "Distinct from ``attribution``, which is the credit line."
+        ),
+    )
     license: str = Field(description="Short license identifier (e.g. 'OGL-3.0', 'CC0', 'CC-BY-NC-4.0').")
     attribution: str = Field(description="Attribution string to display alongside data.")
     supports: list[SearchKind] = Field(

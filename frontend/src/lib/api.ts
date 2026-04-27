@@ -10,6 +10,7 @@ export interface SourceInfo {
   id: string;
   name: string;
   homepage: string;
+  description: string;
   license: string;
   attribution: string;
   supports: SearchKind[];
@@ -54,6 +55,22 @@ export interface SearchResponse {
   risk_signals: RiskSignal[];
 }
 
+export interface LookupResponse {
+  lei: string;
+  legal_name: string | null;
+  jurisdiction: string | null;
+  derived_identifiers: Record<string, string>;
+  query: string;
+  kind: SearchKind;
+  hits: SourceHit[];
+  errors: Record<string, string>;
+  cross_source_links: CrossSourceLink[];
+  risk_signals: RiskSignal[];
+  bods: Record<string, unknown>[];
+  bods_issues: string[];
+  license_notices: { source_id: string; hit_id: string; notice: string }[];
+}
+
 export interface DeepenResponse {
   source_id: string;
   hit_id: string;
@@ -73,13 +90,16 @@ export const BASE_URL =
  * Build a URL to the /export endpoint that browsers can hit directly
  * via an <a download> link. The backend's Content-Disposition header
  * carries the canonical filename — we just hand the browser the URL.
+ *
+ * The LEI-anchored export reuses the same /export endpoint with the
+ * ``lei`` parameter; backend dispatches to the LEI synthesis path
+ * (not the free-text /report one).
  */
 export function exportUrl(
-  q: string,
-  kind: SearchKind,
+  lei: string,
   format: "json" | "jsonl" | "zip"
 ): string {
-  const params = new URLSearchParams({ q, kind, format });
+  const params = new URLSearchParams({ lei, format });
   return `${BASE_URL}/export?${params.toString()}`;
 }
 
@@ -93,6 +113,33 @@ async function getJson<T>(path: string): Promise<T> {
 
 export function fetchSources(): Promise<{ sources: SourceInfo[] }> {
   return getJson("/sources");
+}
+
+/**
+ * Drive the LEI-anchored lookup: GLEIF → cross-source bridges →
+ * unified subject view. Throws an Error with the backend's detail
+ * message when the LEI is malformed (400) or unknown to GLEIF (404).
+ */
+export async function lookup(lei: string): Promise<LookupResponse> {
+  const params = new URLSearchParams({ lei });
+  const r = await fetch(`${BASE_URL}/lookup?${params.toString()}`);
+  if (!r.ok) {
+    let detail = `${r.status} ${r.statusText}`;
+    try {
+      const body = await r.json();
+      if (body?.detail) detail = body.detail;
+    } catch {
+      /* fall through */
+    }
+    throw new Error(detail);
+  }
+  return (await r.json()) as LookupResponse;
+}
+
+/** ISO 17442 LEI: 20-char alphanumeric. */
+export const LEI_PATTERN = /^[A-Z0-9]{20}$/;
+export function isValidLei(lei: string): boolean {
+  return LEI_PATTERN.test(lei.trim().toUpperCase());
 }
 
 export function search(

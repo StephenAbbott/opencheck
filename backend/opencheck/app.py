@@ -4,10 +4,15 @@ Surface:
 
 * ``GET /health`` — liveness probe.
 * ``GET /sources`` — inventory of registered source adapters with live/stub status.
-* ``GET /search?q=<query>&kind=<entity|person>`` — fan-out search, returns all hits at once.
+* ``GET /lookup?lei=<LEI>`` — **primary entry point**. Driven by the
+  Legal Entity Identifier: GLEIF first, then dispatch to every other
+  source using the LEI (and any cross-references GLEIF carries).
+* ``GET /search?q=<query>&kind=<entity|person>`` — free-text fan-out
+  search. Kept as a power-user / debugging endpoint; the LEI-driven
+  flow is the supported UX.
 * ``GET /stream?q=<query>&kind=<entity|person>`` — same fan-out, streamed as SSE.
 * ``GET /deepen?source=<id>&hit_id=<id>`` — "Go deeper" on a specific hit.
-* ``GET /report?q=<query>&kind=<entity|person>`` — synthesised report.
+* ``GET /report?q=<query>&kind=<entity|person>`` — free-text synthesis.
 * ``GET /export?q=<query>&kind=<...>&format=<json|jsonl|zip>`` — downloadable BODS bundle.
 """
 
@@ -48,8 +53,8 @@ app = FastAPI(
     title="OpenCheck",
     version=__version__,
     description=(
-        "Chatbot-style corporate intelligence over open data. "
-        "Maps every source into BODS v0.4."
+        "Customer due diligence risk checks driven by the LEI and "
+        "open data. Maps every source into BODS v0.4."
     ),
 )
 
@@ -402,6 +407,250 @@ async def _build_report(
 
 
 # ----------------------------------------------------------------------
+# /lookup — LEI-anchored lookup (the primary entry point)
+# ----------------------------------------------------------------------
+
+# 20-char ISO 17442 LEI, alphanumeric uppercase.
+_LEI_SHAPE = re.compile(r"^[A-Z0-9]{20}$")
+
+
+class LookupResponse(ReportResponse):
+    """Same shape as /report, with the LEI echoed back and the GLEIF
+    bundle surfaced separately so the UI doesn't have to dig for it.
+
+    The bridge fields (``derived_identifiers``) tell the caller exactly
+    which secondary identifiers GLEIF (and Wikidata) gave us, so a user
+    can see *why* each downstream source got hit.
+    """
+
+    lei: str
+    legal_name: str | None = None
+    jurisdiction: str | None = None
+    derived_identifiers: dict[str, str] = {}
+
+
+@app.get("/lookup", response_model=LookupResponse)
+async def lookup(
+    lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),
+    deepen_top: int = Query(5, ge=0, le=10),
+) -> LookupResponse:
+    """Driver endpoint: LEI in, full cross-source synthesis out.
+
+    Workflow:
+
+    1. Validate the LEI shape (20-char alphanumeric).
+    2. ``GLEIF.fetch(lei)`` — primary source. We need the legal name,
+       jurisdiction, and any registered-as identifier (e.g. UK CH
+       number when jurisdiction=GB).
+    3. Look up Wikidata Q-ID via SPARQL on property P1278.
+    4. Dispatch to every other adapter using the LEI as the query
+       (OpenSanctions, OpenAleph, OpenTender), or via the derived
+       identifier (Companies House gets the GB-COH directly,
+       Wikidata gets the resolved Q-ID).
+    5. Map each result through BODS, run the cross-source reconciler,
+       run the risk-signal service, and return everything.
+
+    Bypasses the Phase 0 ``/search`` / ``/report`` free-text path
+    entirely — this is the supported, deterministic flow.
+    """
+    lei = lei.strip().upper()
+    if not _LEI_SHAPE.match(lei):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"{lei!r} is not a valid LEI. ISO 17442 LEIs are "
+                "20-character alphanumeric strings (e.g. "
+                "213800LH1BZH3DI6G760)."
+            ),
+        )
+
+    gleif = REGISTRY["gleif"]
+    gleif_bundle = await gleif.fetch(lei)
+    if gleif_bundle.get("is_stub") or not gleif_bundle.get("record"):
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"No GLEIF record found for {lei}. Either the LEI is "
+                "not registered, or live mode is disabled and there is "
+                "no demo fixture for it."
+            ),
+        )
+
+    # Pull what we need out of the GLEIF record for the response + dispatch.
+    record_attrs = (gleif_bundle.get("record") or {}).get("attributes") or {}
+    entity_block = record_attrs.get("entity") or {}
+    legal_name = (entity_block.get("legalName") or {}).get("name") or ""
+    jurisdiction = entity_block.get("jurisdiction") or ""
+    registered_as = entity_block.get("registeredAs") or ""
+
+    derived: dict[str, str] = {"lei": lei}
+    if jurisdiction.upper() == "GB" and registered_as:
+        derived["gb_coh"] = registered_as
+
+    # Wikidata Q-ID from LEI (P1278).
+    wikidata_adapter = REGISTRY["wikidata"]
+    qid = None
+    if hasattr(wikidata_adapter, "find_qid_by_lei"):
+        qid = await wikidata_adapter.find_qid_by_lei(lei)  # type: ignore[attr-defined]
+    if qid:
+        derived["wikidata_qid"] = qid
+
+    # Now dispatch to every other source. We collect SourceHit objects
+    # so the existing reconciler / risk pipeline can consume them.
+    hits: list[SourceHit] = []
+    errors: dict[str, str] = {}
+    deepened_bundles: list[tuple[str, str]] = []  # (source_id, hit_id)
+
+    # GLEIF: we already fetched the record; surface it as a hit.
+    gleif_hit = SourceHit(
+        source_id="gleif",
+        hit_id=lei,
+        kind=SearchKind.ENTITY,
+        name=legal_name or f"LEI {lei}",
+        summary=f"LEI {lei} · {jurisdiction}",
+        identifiers={
+            "lei": lei,
+            **({"gb_coh": registered_as} if "gb_coh" in derived else {}),
+            **({"wikidata_qid": qid} if qid else {}),
+        },
+        raw=gleif_bundle.get("record") or {},
+        is_stub=False,
+    )
+    hits.append(gleif_hit)
+    deepened_bundles.append(("gleif", lei))
+
+    # Companies House — direct fetch by company number when GB.
+    if "gb_coh" in derived:
+        try:
+            ch_bundle = await REGISTRY["companies_house"].fetch(derived["gb_coh"])
+            if not ch_bundle.get("is_stub"):
+                profile = ch_bundle.get("profile") or {}
+                hits.append(
+                    SourceHit(
+                        source_id="companies_house",
+                        hit_id=derived["gb_coh"],
+                        kind=SearchKind.ENTITY,
+                        name=profile.get("company_name", legal_name or ""),
+                        summary=f"GB-COH {derived['gb_coh']}",
+                        identifiers={
+                            "gb_coh": derived["gb_coh"],
+                            "lei": lei,
+                            **({"wikidata_qid": qid} if qid else {}),
+                        },
+                        raw=profile,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("companies_house", derived["gb_coh"]))
+        except Exception as exc:  # noqa: BLE001
+            errors["companies_house"] = f"{type(exc).__name__}: {exc}"
+
+    # Wikidata — direct fetch when we resolved a Q-ID.
+    if qid:
+        try:
+            wd_bundle = await wikidata_adapter.fetch(qid)
+            if not wd_bundle.get("is_stub"):
+                summary = wd_bundle.get("summary") or {}
+                hits.append(
+                    SourceHit(
+                        source_id="wikidata",
+                        hit_id=qid,
+                        kind=SearchKind.ENTITY,
+                        name=summary.get("label") or qid,
+                        summary=summary.get("description") or "",
+                        identifiers={
+                            "wikidata_qid": qid,
+                            "lei": lei,
+                            **({"gb_coh": registered_as} if "gb_coh" in derived else {}),
+                        },
+                        raw=summary,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("wikidata", qid))
+        except Exception as exc:  # noqa: BLE001
+            errors["wikidata"] = f"{type(exc).__name__}: {exc}"
+
+    # OpenSanctions, OpenAleph, OpenTender — search by LEI.
+    for source_id in ("opensanctions", "openaleph", "opentender"):
+        adapter = REGISTRY.get(source_id)
+        if adapter is None or SearchKind.ENTITY not in adapter.info.supports:
+            continue
+        try:
+            adapter_hits = await adapter.search(lei, SearchKind.ENTITY)
+            for hit in adapter_hits:
+                if hit.is_stub:
+                    continue
+                hits.append(hit)
+                deepened_bundles.append((source_id, hit.hit_id))
+        except Exception as exc:  # noqa: BLE001
+            errors[source_id] = f"{type(exc).__name__}: {exc}"
+
+    # Reconcile + run risk over search-time data.
+    links = [link.to_dict() for link in reconcile(hits)]
+    search_signals = [s.to_dict() for s in assess_hits(hits)]
+
+    # Deepen up to N of the gathered hits and run BODS + risk.
+    bods_all: list[dict[str, Any]] = []
+    bods_issues: list[str] = []
+    deepen_signals: list[dict[str, Any]] = []
+    license_notices: list[dict[str, str]] = []
+
+    for source_id, hit_id in deepened_bundles[:deepen_top]:
+        try:
+            deep = await _safe_deepen(source_id, hit_id)
+        except Exception as exc:  # noqa: BLE001
+            errors.setdefault(source_id, f"{type(exc).__name__}: {exc}")
+            continue
+        if deep is None:
+            continue
+        bods_all.extend(deep["bods"])
+        bods_issues.extend(deep["bods_issues"])
+        deepen_signals.extend(deep["risk_signals"])
+        if deep.get("license_notice"):
+            license_notices.append(
+                {
+                    "source_id": source_id,
+                    "hit_id": hit_id,
+                    "notice": deep["license_notice"],
+                }
+            )
+
+    # Same merge logic as /report — collapse structural BODS signals
+    # by code, keep per-source signals scoped.
+    structural_codes = {
+        "TRUST_OR_ARRANGEMENT",
+        "NON_EU_JURISDICTION",
+        "NOMINEE",
+        "COMPLEX_OWNERSHIP_LAYERS",
+        "COMPLEX_CORPORATE_STRUCTURE",
+        "POSSIBLE_OBFUSCATION",
+    }
+    merged: dict[tuple, dict[str, Any]] = {}
+    for sig in search_signals + deepen_signals:
+        key = (sig["code"],) if sig["code"] in structural_codes else (
+            sig["code"], sig["source_id"], sig["hit_id"]
+        )
+        merged[key] = sig
+
+    return LookupResponse(
+        query=lei,
+        kind=SearchKind.ENTITY,
+        hits=hits,
+        errors=errors,
+        cross_source_links=links,
+        risk_signals=list(merged.values()),
+        bods=bods_all,
+        bods_issues=bods_issues,
+        license_notices=license_notices,
+        lei=lei,
+        legal_name=legal_name or None,
+        jurisdiction=jurisdiction or None,
+        derived_identifiers=derived,
+    )
+
+
+# ----------------------------------------------------------------------
 # /export — downloadable BODS bundle
 # ----------------------------------------------------------------------
 
@@ -411,7 +660,21 @@ _EXPORT_FORMATS = {"json", "jsonl", "zip"}
 
 @app.get("/export")
 async def export(
-    q: str = Query(..., min_length=1),
+    lei: str | None = Query(
+        None,
+        description=(
+            "ISO 17442 LEI. When provided the export uses the same "
+            "LEI-anchored synthesis as /lookup; ``q`` is ignored."
+        ),
+    ),
+    q: str | None = Query(
+        None,
+        min_length=1,
+        description=(
+            "Free-text query; only used when ``lei`` is absent. Kept "
+            "for backward compatibility."
+        ),
+    ),
     kind: SearchKind = Query(SearchKind.ENTITY),
     deepen_top: int = Query(3, ge=0, le=10),
     format: str = Query(
@@ -422,7 +685,8 @@ async def export(
 ) -> Response:
     """Download a BODS v0.4 bundle for a subject.
 
-    The ``zip`` form is the canonical shareable artefact: it includes
+    Two entry shapes — ``lei`` (the supported flow) or ``q`` (free-text
+    fallback). The ``zip`` form is the canonical shareable artefact:
     ``bods.json`` (pretty array), ``bods.jsonl`` (newline-delimited —
     the BODS v0.4 idiomatic shape for large datasets), ``manifest.json``
     (provenance: query, source list with licenses, cross-source links,
@@ -432,9 +696,23 @@ async def export(
     """
     if format not in _EXPORT_FORMATS:  # FastAPI validates via pattern but be explicit
         raise HTTPException(status_code=400, detail=f"Unknown format {format!r}")
+    if lei is None and (q is None or not q.strip()):
+        raise HTTPException(
+            status_code=400,
+            detail="Provide either ?lei=<LEI> or ?q=<free-text query>.",
+        )
 
-    payload = await _build_report(q, kind, deepen_top)
-    slug = _filename_slug(q)
+    if lei is not None:
+        # Reuse the /lookup synthesis so the export contains the same
+        # LEI-anchored cross-source data the user just saw on screen.
+        payload = await lookup(lei, deepen_top)
+        slug = _filename_slug(payload.lei)
+        export_query = payload.lei
+    else:
+        assert q is not None
+        payload = await _build_report(q, kind, deepen_top)
+        slug = _filename_slug(q)
+        export_query = q
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d")
 
     if format == "json":
@@ -462,7 +740,9 @@ async def export(
         )
 
     # format == "zip"
-    body = _build_export_zip(payload, q=q, kind=kind, slug=slug, stamp=stamp)
+    body = _build_export_zip(
+        payload, q=export_query, kind=kind, slug=slug, stamp=stamp
+    )
     return Response(
         content=body,
         media_type="application/zip",
