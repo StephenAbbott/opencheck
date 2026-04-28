@@ -33,6 +33,31 @@ interface SourceBucket {
   error?: string;
 }
 
+/**
+ * Curated demo subjects that have a pre-extracted Open Ownership BODS
+ * bundle on disk (``data/cache/bods_data/``) — clicking any of them
+ * resolves entirely offline. The list is small + opinionated; users
+ * can paste any other LEI into the input.
+ */
+interface ExampleLei {
+  lei: string;
+  name: string;
+  hint?: string;
+}
+
+const EXAMPLE_LEIS: ExampleLei[] = [
+  { lei: "4OFD47D73QFJ1T1MOF29", name: "Daily Mail and General Trust", hint: "UK-listed media holding" },
+  { lei: "213800LH1BZH3DI6G760", name: "BP P.L.C.", hint: "UK oil major" },
+  { lei: "253400JT3MQWNDKMJE44", name: "Rosneft", hint: "Russian state oil — sanctions" },
+  { lei: "2138008KTNTDICZU8L25", name: "Bank Saderat PLC", hint: "Iran-linked UK bank — sanctions" },
+  { lei: "2138008RB4WDK7HYYS91", name: "Biffa PLC", hint: "UK waste management" },
+  { lei: "2138002S3XGZ38WN5Q72", name: "Hornsea 1 Limited", hint: "UK offshore wind" },
+  { lei: "213800DBE5Y9ZM58PN63", name: "Care UK Social Care", hint: "UK care provider" },
+  { lei: "213800E11LI1SCETU492", name: "Taqa Bratani Limited", hint: "UAE-owned UK oil & gas" },
+  { lei: "213800AG2V6YE68H5N63", name: "Newcastle United FC", hint: "Saudi-owned football club" },
+  { lei: "213800BC4TEGCCQH9V07", name: "Melli Bank PLC", hint: "Iran-linked UK bank — sanctions" },
+];
+
 export default function App() {
   const [leiInput, setLeiInput] = useState("");
   const [result, setResult] = useState<LookupResponse | null>(null);
@@ -48,9 +73,10 @@ export default function App() {
     queryFn: () => fetchSources(),
   });
 
-  async function runLookup(e: React.FormEvent) {
-    e.preventDefault();
-    const lei = leiInput.trim().toUpperCase();
+  async function lookupLei(rawLei: string) {
+    const lei = rawLei.trim().toUpperCase();
+    setLeiInput(lei);
+    setView("main");
     if (!isValidLei(lei)) {
       setError(
         "Enter a 20-character ISO 17442 LEI " +
@@ -64,12 +90,16 @@ export default function App() {
     try {
       const data = await lookup(lei);
       setResult(data);
-      setLeiInput(lei); // canonicalise the input on success
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLooking(false);
     }
+  }
+
+  async function runLookup(e: React.FormEvent) {
+    e.preventDefault();
+    await lookupLei(leiInput);
   }
 
   // Group hits by source_id for the per-source bucket cards. With the
@@ -224,6 +254,10 @@ export default function App() {
           <div className="mb-6 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
             {error}
           </div>
+        )}
+
+        {!result && !looking && !error && (
+          <ExampleLeiPicker onPick={lookupLei} disabled={looking} />
         )}
 
         {result && <SubjectCard result={result} />}
@@ -449,6 +483,54 @@ function SourceBucketCard({
 // ---------------------------------------------------------------------
 // Subject card — top-of-page summary of the LEI lookup
 // ---------------------------------------------------------------------
+
+function ExampleLeiPicker({
+  onPick,
+  disabled,
+}: {
+  onPick: (lei: string) => void;
+  disabled: boolean;
+}) {
+  return (
+    <section className="mb-10">
+      <SectionLabel>Try a curated example</SectionLabel>
+      <p className="text-[13px] leading-[1.7] text-oo-muted mb-4 max-w-2xl">
+        Each subject below has a pre-extracted Open Ownership BODS
+        bundle on disk, so the lookup resolves entirely offline. Use
+        the search box above for any other LEI.
+      </p>
+      <ul
+        className="grid gap-3"
+        // 280px min keeps three subjects per row at desktop widths,
+        // stacks on narrow viewports.
+        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))" }}
+      >
+        {EXAMPLE_LEIS.map((ex) => (
+          <li key={ex.lei}>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => onPick(ex.lei)}
+              className="w-full text-left bg-white border border-oo-rule rounded-oo p-4 transition-shadow hover:shadow-oo-card disabled:opacity-50"
+            >
+              <div className="font-head text-[14px] font-bold text-oo-ink leading-tight">
+                {ex.name}
+              </div>
+              {ex.hint && (
+                <div className="text-[12px] text-oo-muted mt-0.5">
+                  {ex.hint}
+                </div>
+              )}
+              <div className="font-mono text-[10.5px] text-oo-blue mt-2 break-all">
+                {ex.lei}
+              </div>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 function SubjectCard({ result }: { result: LookupResponse }) {
   const ids = Object.entries(result.derived_identifiers);

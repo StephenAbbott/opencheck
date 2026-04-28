@@ -141,6 +141,52 @@ def test_lookup_drives_full_synthesis_for_a_gb_lei(
     assert all(s["recordType"] in {"entity", "person", "relationship"} for s in body["bods"])
 
 
+def test_lookup_uses_bundle_when_no_live_mode(
+    client: TestClient, monkeypatch, tmp_path
+) -> None:
+    """When a bods-data bundle exists for an LEI, /lookup reads the
+    legal name + jurisdiction from it and skips the live GLEIF call —
+    so the demo subjects work fully offline.
+    """
+    import json
+
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.delenv("OPENCHECK_ALLOW_LIVE", raising=False)
+    get_settings.cache_clear()
+
+    lei = "213800LH1BZH3DI6G760"
+    target = tmp_path / "cache" / "bods_data" / "gleif" / f"{lei}.jsonl"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        json.dumps(
+            {
+                "statementId": "e-subject",
+                "recordType": "entity",
+                "recordDetails": {
+                    "name": "Bundle Co P.L.C.",
+                    "incorporatedInJurisdiction": {"name": "United Kingdom", "code": "GB"},
+                    "identifiers": [
+                        {"id": lei, "scheme": "XI-LEI"},
+                        {"id": "12345678", "scheme": "GB-COH"},
+                    ],
+                },
+            }
+        )
+        + "\n"
+    )
+
+    r = client.get("/lookup", params={"lei": lei})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["legal_name"] == "Bundle Co P.L.C."
+    assert body["jurisdiction"] == "GB"
+    assert body["derived_identifiers"]["gb_coh"] == "12345678"
+    # The override bundle drives the BODS list — at least the subject
+    # statement should be present.
+    statement_ids = {s["statementId"] for s in body["bods"]}
+    assert "e-subject" in statement_ids
+
+
 def test_lookup_lower_case_lei_is_normalised(
     client: TestClient, monkeypatch, httpx_mock: HTTPXMock
 ) -> None:

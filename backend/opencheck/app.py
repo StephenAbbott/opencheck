@@ -490,23 +490,52 @@ async def lookup(
         )
 
     gleif = REGISTRY["gleif"]
-    gleif_bundle = await gleif.fetch(lei)
-    if gleif_bundle.get("is_stub") or not gleif_bundle.get("record"):
-        raise HTTPException(
-            status_code=404,
-            detail=(
-                f"No GLEIF record found for {lei}. Either the LEI is "
-                "not registered, or live mode is disabled and there is "
-                "no demo fixture for it."
-            ),
-        )
 
-    # Pull what we need out of the GLEIF record for the response + dispatch.
-    record_attrs = (gleif_bundle.get("record") or {}).get("attributes") or {}
-    entity_block = record_attrs.get("entity") or {}
-    legal_name = (entity_block.get("legalName") or {}).get("name") or ""
-    jurisdiction = entity_block.get("jurisdiction") or ""
-    registered_as = entity_block.get("registeredAs") or ""
+    # If we have a pre-extracted Open Ownership bundle for this LEI,
+    # skip the live GLEIF fetch entirely and read the subject metadata
+    # straight from the bundle. That makes the demo subjects work
+    # offline (no API keys, no network) once the extraction script
+    # has populated ``data/cache/bods_data/gleif/<LEI>.jsonl``.
+    override_bundle = bods_data.gleif_bundle_for_lei(lei)
+    legal_name = ""
+    jurisdiction = ""
+    registered_as = ""
+    gleif_bundle: dict[str, Any] = {}
+
+    if override_bundle:
+        legal_name, jurisdiction, registered_as = _subject_metadata_from_bundle(
+            override_bundle, lei
+        )
+        if not legal_name:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"Found a BODS bundle for {lei} but couldn't locate "
+                    "the subject entity statement. Re-run the extraction "
+                    "script."
+                ),
+            )
+        # Synthesise a minimal GLEIF "raw" bundle so the rest of the
+        # pipeline (deepen / mapping / hit construction) sees the same
+        # shape it would on a live fetch.
+        gleif_bundle = {"source_id": "gleif", "lei": lei, "_from_bundle": True}
+    else:
+        gleif_bundle = await gleif.fetch(lei)
+        if gleif_bundle.get("is_stub") or not gleif_bundle.get("record"):
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"No GLEIF record found for {lei}. Either the LEI is "
+                    "not registered, live mode is disabled, or no Open "
+                    "Ownership bundle has been extracted for this LEI "
+                    "(see backend/scripts/extract_bods_subgraphs.py)."
+                ),
+            )
+        record_attrs = (gleif_bundle.get("record") or {}).get("attributes") or {}
+        entity_block = record_attrs.get("entity") or {}
+        legal_name = (entity_block.get("legalName") or {}).get("name") or ""
+        jurisdiction = entity_block.get("jurisdiction") or ""
+        registered_as = entity_block.get("registeredAs") or ""
 
     derived: dict[str, str] = {"lei": lei}
     if jurisdiction.upper() == "GB" and registered_as:
@@ -909,6 +938,46 @@ def _build_licenses_md(
         "the `source.description` field) before commercial use."
     )
     return "\n".join(lines) + "\n"
+
+
+def _subject_metadata_from_bundle(
+    bundle: list[dict[str, Any]], lei: str
+) -> tuple[str, str, str]:
+    """Extract ``(legal_name, jurisdiction_code, registered_as)`` from
+    the entity statement in ``bundle`` whose identifiers list carries
+    the given LEI under ``XI-LEI``.
+
+    Returns ``("", "", "")`` if the bundle has no matching subject —
+    the caller raises 404 in that case.
+    """
+    target = lei.strip().upper()
+    for stmt in bundle:
+        if (stmt.get("recordType") or "") != "entity":
+            continue
+        rd = stmt.get("recordDetails") or {}
+        ids = rd.get("identifiers") or []
+        has_lei = any(
+            (i.get("scheme") == "XI-LEI" and (i.get("id") or "").upper() == target)
+            for i in ids
+            if isinstance(i, dict)
+        )
+        if not has_lei:
+            continue
+        legal_name = rd.get("name") or ""
+        jur = rd.get("incorporatedInJurisdiction") or {}
+        jurisdiction = (jur.get("code") or "").upper() if isinstance(jur, dict) else ""
+        # Pull GB-COH (or analogous registered-as for other jurisdictions)
+        # off the same identifier list.
+        registered_as = ""
+        for i in ids:
+            if not isinstance(i, dict):
+                continue
+            scheme = (i.get("scheme") or "").upper()
+            if scheme == "GB-COH":
+                registered_as = i.get("id") or ""
+                break
+        return legal_name, jurisdiction, registered_as
+    return "", "", ""
 
 
 def _bods_data_override(source_id: str, hit_id: str) -> list[dict[str, Any]] | None:

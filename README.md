@@ -10,7 +10,7 @@ The risk-signal layer mirrors the [draft customer due diligence regulatory techn
 
 ## Status
 
-OpenCheck has shipped through six phases (latest commit on `main` is the source of truth):
+OpenCheck has shipped through eleven phases (latest commit on `main` is the source of truth):
 
 | Phase | Headline |
 |------:|----------|
@@ -21,8 +21,13 @@ OpenCheck has shipped through six phases (latest commit on `main` is the source 
 | 4 | Cache-first dispatch + bods-dagre visualisation |
 | 5 | Export endpoint (JSON / JSONL / ZIP) + OpenTender (DIGIWHIST) procurement source |
 | 6 | LEI-anchored `/lookup` flow + BO design system + bods-dagre fix |
+| 7 | BO design system applied to the frontend (Bitter / DM Sans / DM Mono, navy banner, card grid) |
+| 8 | Acronyms spelled out, OpenAleph disabled, sources moved to a separate page, README refresh |
+| 9 | Tooling fixes — `@vitejs/plugin-react` v5 / vite 8 alignment, README phase recap |
+| 10 | Open Ownership processed BODS bundles for UK PSC + GLEIF as the canonical source |
+| 11 | Cross-check related-party names against OpenSanctions + EveryPolitician — `RELATED_PEP` / `RELATED_SANCTIONED` |
 
-Test suite: 183 backend tests across the seven phases. Frontend type-checks clean.
+Test suite: 206 backend tests across the eleven phases. Frontend type-checks clean.
 
 ## Quick start
 
@@ -63,29 +68,48 @@ The first frontend build copies bundled images for `@openownership/bods-dagre` i
 Paste a 20-character ISO 17442 LEI — for example `213800LH1BZH3DI6G760` (BP) or `253400JT3MQWNDKMJE44` (Rosneft) — and the backend:
 
 1. Validates the LEI shape.
-2. Calls **GLEIF** first. We need the legal name, jurisdiction, and `registeredAs` for cross-source bridging.
+2. **Subject metadata.** If a pre-extracted Open Ownership bundle exists at `data/cache/bods_data/gleif/<LEI>.jsonl`, the legal name + jurisdiction are read directly from it (no live GLEIF call needed). Otherwise GLEIF is queried live.
 3. Looks up the **Wikidata Q-ID** via SPARQL on property `P1278`.
 4. Dispatches to every other adapter using whichever identifier they understand:
-   - UK Companies House — direct fetch by company number when GLEIF says jurisdiction = GB.
-   - OpenSanctions / OpenAleph / OpenTender — search by the LEI string.
+   - UK Companies House — direct fetch by company number when jurisdiction = GB. The Open Ownership processed UK PSC bundle (`data/cache/bods_data/uk/<GB-COH>.jsonl`) is the canonical answer when present; otherwise falls back to the live API.
+   - OpenSanctions / OpenTender — search by the LEI string.
    - Wikidata — direct SPARQL fetch on the resolved Q-ID.
-5. Maps each source's payload into BODS v0.4 statements, runs the cross-source reconciler, runs the risk-signal service, and returns one unified report.
+5. Maps each source's payload into BODS v0.4 statements, runs the cross-source reconciler, runs the risk-signal service, and **cross-checks every related person and entity in the BODS bundle against OpenSanctions + EveryPolitician by name** — fuzzy-matched with optional birth-year compatibility — to surface scoped `RELATED_PEP` / `RELATED_SANCTIONED` signals on the matching node.
+6. Returns one unified report.
 
-The frontend renders that report as a single subject card at the top (legal name, jurisdiction, derived identifiers as chips), an aggregated risk-chip strip, a cross-source links panel, an export button with format selector, and per-source "bucket" cards with a `Go deeper` drill-down per hit.
+The frontend renders that report as a single subject card at the top (legal name, jurisdiction, derived identifiers as chips), an aggregated risk-chip strip, a cross-source links panel, an export button with format selector, and per-source "bucket" cards with a `Go deeper` drill-down per hit. A separate **About the sources** page (linked from the header) shows the source inventory.
+
+### Open Ownership BODS bundles
+
+Our live GLEIF / Companies House mappers produce a thin slice of BODS — the live APIs don't expose multi-layer ownership chains in a single response. Open Ownership publish the *processed* UK PSC and GLEIF datasets at [`bods-data.openownership.org`](https://bods-data.openownership.org/) with proper interconnected `subject` ↔ `interestedParty` relationships. We pre-extract per-subject subgraphs from the local SQLite dumps and ship them as JSON-Lines under `data/cache/bods_data/`. When a bundle exists for an LEI / company number, it overrides the live mapper output entirely.
+
+The extraction tool ships in `backend/scripts/extract_bods_subgraphs.py`. Download the SQLite dumps once from the bods-data pages, then run for example:
+
+```bash
+cd backend
+python scripts/extract_bods_subgraphs.py \
+  --gleif /path/to/gleif_version_0_4.db \
+  --uk /path/to/uk_version_0_4.db \
+  --leis 213800LH1BZH3DI6G760 253400JT3MQWNDKMJE44 \
+  --max-hops 3
+```
+
+`--max-hops` controls how many ownership layers to walk out from each LEI. The `COMPLEX_OWNERSHIP_LAYERS` AMLA rule needs ≥3, so 3 is the practical floor; 5 captures deeper offshore structures at the cost of bigger bundle files.
 
 ## Sources
 
-Seven adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
+Six active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
 
 | ID | Name | License | Description |
 |----|------|---------|-------------|
 | `companies_house` | UK Companies House | OGL-3.0 | Legal and beneficial ownership information from the UK corporate registry |
 | `gleif` | GLEIF | CC0-1.0 | Legal entity information from the Global Legal Entity Identifier Foundation |
 | `opensanctions` | OpenSanctions | CC BY-NC 4.0 | The open-source database of sanctions, watchlists, and politically exposed persons |
-| `openaleph` | OpenAleph | per-collection | The open-source platform that securely stores large amounts of data and makes it searchable |
 | `everypolitician` | EveryPolitician | CC BY-NC 4.0 | Global database of political office-holders (served via OpenSanctions PEPs dataset) |
 | `wikidata` | Wikidata | CC0-1.0 | A free and open knowledge base that can be read and edited by both humans and machines |
 | `opentender` | OpenTender (DIGIWHIST) | CC BY-NC-SA 4.0 | Search and analyse tender data from 35 jurisdictions |
+
+The OpenAleph adapter is implemented but currently disabled in `REGISTRY` — its API is name-keyed rather than identifier-keyed, which doesn't fit the LEI flow cleanly yet. Re-enable in `backend/opencheck/sources/__init__.py` once we have a curated demo set for it.
 
 OpenCorporates is on the roadmap and will land once an API key arrives.
 
@@ -93,23 +117,38 @@ NC-licensed sources propagate their share-alike / non-commercial obligations thr
 
 ## Risk signals
 
-Ten codes, all deterministic — every fire is documented with a `summary`, `confidence` (`high` / `medium` / `low`), and an `evidence` payload citing the underlying topic / collection / BODS statement IDs.
+Twelve codes, all deterministic — every fire is documented with a `summary`, `confidence` (`high` / `medium` / `low`), and an `evidence` payload citing the underlying topic / collection / BODS statement IDs that triggered it.
 
-Source-derived (search-time):
+Risk signals fall into three groups:
+
+1. **Source-derived** — read straight off a single source's payload at search time.
+2. **AMLA CDD RTS** — derived from the assembled BODS v0.4 bundle, mirroring the objective conditions in [the EU AMLA draft customer due diligence regulatory technical standards](https://www.amla.europa.eu/policy/public-consultations/consultation-draft-rts-customer-due-diligence_en) for "complex corporate structures".
+3. **Cross-source name match** — for every related person and entity inside the BODS bundle, search OpenSanctions and EveryPolitician by name (with optional birth-year compatibility) and surface a scoped signal on the matching node.
+
+### Source-derived
 
 - `PEP` — OpenSanctions `role.pep`-family topic, every EveryPolitician hit, or a Wikidata person with a currently-held position (P39 with no P582 end qualifier).
 - `SANCTIONED` — OpenSanctions topic starting with `sanction`.
-- `OFFSHORE_LEAKS` — OpenAleph hit in an ICIJ-family collection (Panama / Paradise / Pandora / Bahamas / Offshore Leaks).
+- `OFFSHORE_LEAKS` — OpenAleph hit in an ICIJ-family collection (Panama / Paradise / Pandora / Bahamas / Offshore Leaks). _OpenAleph is currently disabled in `REGISTRY` so this rule won't fire until the adapter is re-enabled._
 - `OPAQUE_OWNERSHIP` — BODS bundle contains a `personStatement` with `personType=unknownPerson` or an `entityStatement` with `entityType=anonymousEntity`.
 
-AMLA CDD RTS (BODS v0.4 derived):
+### AMLA CDD RTS (BODS v0.4 derived)
 
 - `TRUST_OR_ARRANGEMENT` — entity with `entityType=arrangement` or a legal-form keyword (`trust`, `Stiftung`, `Anstalt`, `fideicomiso`, `Treuhand`, `foundation`). AMLA condition (a).
 - `NON_EU_JURISDICTION` — any entity statement's `incorporatedInJurisdiction.code` outside the EU+EEA. AMLA condition (b). Configurable via `OPENCHECK_AMLA_EQUIVALENT_JURISDICTIONS` (additive, e.g. `GB,CH`) or `OPENCHECK_AMLA_EU_EEA_OVERRIDE` (full replace).
 - `NOMINEE` — relationship interest type/details mentions nominee (English / French / camelCase variants), or person record mentions nominee. AMLA condition (c).
-- `COMPLEX_OWNERSHIP_LAYERS` — DFS over the BODS relationship graph finds an entity-only chain ≥3 nodes (cycle-safe).
+- `COMPLEX_OWNERSHIP_LAYERS` — DFS over the BODS relationship graph finds an entity-only chain ≥3 nodes (cycle-safe). Made meaningfully detectable by the Phase 10 Open Ownership bundles, which carry full multi-layer chains.
 - `COMPLEX_CORPORATE_STRUCTURE` — composite (high), fires when `COMPLEX_OWNERSHIP_LAYERS` AND ≥1 of {trust, non-EU, nominee} both fire — the AMLA threshold rule end-to-end.
 - `POSSIBLE_OBFUSCATION` — advisory (low) mirror of AMLA's subjective condition; explicitly notes the legitimate-economic-rationale caveat.
+
+### Cross-source name match (Phase 11)
+
+For every `personStatement` and `entityStatement` in the assembled BODS bundle, OpenCheck searches OpenSanctions (and EveryPolitician for persons) by name. Matches above a similarity threshold of 0.88 — with optional birth-year compatibility (±1 year, only when both sides supply a DOB) — produce **scoped** signals attached to the matching related-party's `statementId` (in `evidence.subject_statement_id`), not the subject. That means a sanctioned PSC behind an otherwise clean shell company surfaces on the right node in the graph.
+
+- `RELATED_PEP` — a related person matches an OpenSanctions PEP record or appears in EveryPolitician.
+- `RELATED_SANCTIONED` — a related person or entity matches an OpenSanctions `sanction*` record.
+
+The normaliser folds standalone non-ASCII letters (Polish `ł`, Norwegian `ø`, German `ß`, Icelandic `ð`/`þ`, French `œ`) so transliterated and native spellings match. Bounded at `max_targets=25` per lookup to keep the OpenSanctions request volume sane on large PSC chains. The cross-check is a no-op when live mode is off or no OpenSanctions API key is configured.
 
 ## API surface
 
@@ -147,7 +186,7 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 
 ```bash
 cd backend
-uv run pytest             # 183 tests, ~6s
+uv run pytest             # 206 tests, ~5s
 ```
 
 Frontend type check:
@@ -166,20 +205,24 @@ opencheck/
   backend/
     opencheck/
       app.py              FastAPI entry — /lookup, /search, /report, /export, /deepen, /stream
-      sources/            One module per source adapter (7 adapters)
+      sources/            One module per source adapter (7 implemented; 6 active in REGISTRY)
       bods/               BODS v0.4 mappers + validator
+      bods_data.py        Open Ownership processed-bundle override layer (Phase 10)
+      cross_check.py      Related-party name cross-check against OS + EveryPolitician (Phase 11)
       reconcile.py        Cross-source reconciler (LEI / Q-ID / GB-COH / OS-id bridges)
-      risk.py             Risk-signal rules (10 codes incl. AMLA CDD RTS)
+      risk.py             Risk-signal rules — 10 deterministic codes incl. AMLA CDD RTS
       cache.py            Two-tier cache (demos/ → live/)
       config.py           Pydantic settings; env vars listed above
-    tests/                pytest suite (183 tests)
+    scripts/
+      extract_bods_subgraphs.py   Walk local SQLite dumps to build per-LEI BODS bundles
+    tests/                pytest suite (206 tests)
   frontend/               React + Vite + TypeScript + Tailwind + BO design system
     src/
-      App.tsx             LEI input, subject card, risk chips, export panel
+      App.tsx             LEI input, subject card, risk chips, export panel, sources page
       components/         BODSGraph wraps @openownership/bods-dagre
       lib/api.ts          Typed client for the FastAPI surface
   docs/plan.md            Phase plan + design notes
-  data/cache/             Two-tier cache root (live/ is gitignored)
+  data/cache/             Two-tier cache root (live/ + bods_data/ gitignored)
   ATTRIBUTIONS.md         Per-source licensing
   LICENSE                 MIT (own code only — see ATTRIBUTIONS for source data)
 ```
@@ -202,7 +245,9 @@ The frontend also uses the [Beneficial Ownership Visualisation System](https://w
 
 - **OpenCorporates adapter** once the API key arrives — adds another LEI / company-number bridge.
 - **Live opentender.eu integration** — the adapter is wired but `live_available=False` for now.
+- **Surface `RELATED_*` signals on the BODS dagre graph** — currently they appear in the chip strip; ideally they'd render an OpenSanctions / EveryPolitician icon next to the matching node in the visualisation.
 - **A "complex offshore" demo subject** that fires every AMLA chip simultaneously, for the consultation-friendly headline shot.
+- **Re-enable OpenAleph** with an LEI-friendly entry path, once we have a curated demo set for it.
 - **BODS RDF / SPARQL backbone** via Oxigraph — load the assembled BODS bundle into a triple store, expose `/sparql` for the published Open Ownership red-flag queries.
 
 Open issues and discussion live in the [GitHub repo](https://github.com/StephenAbbott/opencheck).
