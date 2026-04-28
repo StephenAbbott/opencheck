@@ -176,21 +176,27 @@ def has_table(conn: sqlite3.Connection, name: str) -> bool:
 # ---------------------------------------------------------------------
 
 
-def find_entity_link_by_identifier(
+def find_entity_recordid_by_identifier(
     conn: sqlite3.Connection, value: str, scheme: str
 ) -> str | None:
+    """Resolve an LEI / GB-COH lookup to the entity's ``recordid``.
+
+    Open Ownership's BODS dump stores the relationship endpoints as
+    ``recordId`` strings (e.g. ``GB-COH-00102498`` /
+    ``GB-COH-PER-00102498-<hash>``), not as statementId UUIDs — so the
+    walk needs to key on recordId. We resolve the search identifier
+    via ``entity_recordDetails_identifiers`` and join through to
+    ``entity_statement.recordid``.
+    """
     cur = conn.execute(
-        "SELECT _link_entity_statement FROM entity_recordDetails_identifiers "
-        "WHERE id = ? AND scheme = ? LIMIT 1",
+        """
+        SELECT es.recordid
+        FROM entity_recordDetails_identifiers ei
+        JOIN entity_statement es ON es._link = ei._link_entity_statement
+        WHERE ei.id = ? AND ei.scheme = ?
+        LIMIT 1
+        """,
         (value, scheme),
-    )
-    row = cur.fetchone()
-    return row[0] if row else None
-
-
-def get_entity_statementid(conn: sqlite3.Connection, link: str) -> str | None:
-    cur = conn.execute(
-        "SELECT statementid FROM entity_statement WHERE _link = ?", (link,)
     )
     row = cur.fetchone()
     return row[0] if row else None
@@ -198,13 +204,17 @@ def get_entity_statementid(conn: sqlite3.Connection, link: str) -> str | None:
 
 def get_gb_coh_for_lei(conn: sqlite3.Connection, lei: str) -> str | None:
     """If the GLEIF subject is UK-domiciled, return its GB-COH number."""
-    link = find_entity_link_by_identifier(conn, lei, LEI_SCHEME)
-    if link is None:
-        return None
     cur = conn.execute(
-        "SELECT id FROM entity_recordDetails_identifiers "
-        "WHERE _link_entity_statement = ? AND scheme = ? LIMIT 1",
-        (link, GB_COH_SCHEME),
+        """
+        SELECT i2.id
+        FROM entity_recordDetails_identifiers i1
+        JOIN entity_recordDetails_identifiers i2
+          ON i1._link_entity_statement = i2._link_entity_statement
+        WHERE i1.id = ? AND i1.scheme = ?
+          AND i2.scheme = ?
+        LIMIT 1
+        """,
+        (lei, LEI_SCHEME, GB_COH_SCHEME),
     )
     row = cur.fetchone()
     return row[0] if row else None
@@ -216,25 +226,46 @@ def get_gb_coh_for_lei(conn: sqlite3.Connection, lei: str) -> str | None:
 
 
 def walk_subgraph(
-    conn: sqlite3.Connection, root_link: str, *, max_hops: int = 3
-) -> tuple[set[str], set[str], set[str]]:
-    """BFS over the relationship graph starting from a root entity.
+    conn: sqlite3.Connection, root_recordid: str, *, max_hops: int = 3
+) -> tuple[set[str], set[str], set[str], dict[str, str]]:
+    """BFS over the relationship graph starting from a root recordId.
 
-    Returns ``(entity_links, person_links, relationship_links)`` where
-    each set holds the SQLite ``_link`` primary keys of the matching
-    rows. Persons are leaves — we don't walk past them (a person can't
-    own a person in BODS).
+    Open Ownership's processed BODS dump stores the relationship
+    endpoints as **recordIds** (``GB-COH-00102498`` for entities,
+    ``GB-COH-PER-<num>-<hash>`` for persons), so the walk keys on
+    recordIds throughout. To produce spec-compliant BODS output we
+    also build a ``recordId → statementId`` map for use during
+    reconstruction (so ``subject.describedByEntityStatement`` and
+    ``interestedParty.describedByEntityStatement`` reference the
+    right UUIDs).
+
+    Returns ``(entity_links, person_links, relationship_links,
+    record_to_statement)`` where each ``*_links`` set holds the SQLite
+    ``_link`` primary keys for reconstruction, and the map keys are
+    recordIds, values are statementIds. Persons are leaves — we don't
+    walk past them.
     """
-    entity_links: set[str] = {root_link}
+    entity_links: set[str] = set()
     person_links: set[str] = set()
     relationship_links: set[str] = set()
-
-    root_sid = get_entity_statementid(conn, root_link)
-    if root_sid is None:
-        return entity_links, person_links, relationship_links
+    record_to_statement: dict[str, str] = {}
 
     has_persons = has_table(conn, "person_statement")
-    frontier: set[str] = {root_sid}
+
+    # Seed: every entity_statement matching the root recordId.
+    seen_entity_recordids: set[str] = set()
+    seen_person_recordids: set[str] = set()
+    for row in conn.execute(
+        "SELECT _link, statementid FROM entity_statement WHERE recordid = ?",
+        (root_recordid,),
+    ).fetchall():
+        entity_links.add(row[0])
+        record_to_statement[root_recordid] = row[1]
+    if not entity_links:
+        return entity_links, person_links, relationship_links, record_to_statement
+    seen_entity_recordids.add(root_recordid)
+
+    frontier: set[str] = {root_recordid}
 
     for _hop in range(max_hops):
         if not frontier:
@@ -258,29 +289,34 @@ def walk_subgraph(
                 continue
             relationship_links.add(rel_link)
             for other in (subject, ip):
-                if not other or other in frontier:
+                if not other or other in seen_entity_recordids or other in seen_person_recordids:
                     continue
                 # Try entity first.
-                e = conn.execute(
-                    "SELECT _link FROM entity_statement WHERE statementid = ?",
+                e_rows = conn.execute(
+                    "SELECT _link, statementid FROM entity_statement WHERE recordid = ?",
                     (other,),
-                ).fetchone()
-                if e is not None:
-                    if e[0] not in entity_links:
-                        entity_links.add(e[0])
-                        next_frontier.add(other)
+                ).fetchall()
+                if e_rows:
+                    seen_entity_recordids.add(other)
+                    for er in e_rows:
+                        entity_links.add(er[0])
+                        record_to_statement[other] = er[1]
+                    next_frontier.add(other)
                     continue
                 # Fall through to person (only UK PSC).
                 if has_persons:
-                    p = conn.execute(
-                        "SELECT _link FROM person_statement WHERE statementid = ?",
+                    p_rows = conn.execute(
+                        "SELECT _link, statementid FROM person_statement WHERE recordid = ?",
                         (other,),
-                    ).fetchone()
-                    if p is not None:
-                        person_links.add(p[0])
+                    ).fetchall()
+                    if p_rows:
+                        seen_person_recordids.add(other)
+                        for pr in p_rows:
+                            person_links.add(pr[0])
+                            record_to_statement[other] = pr[1]
         frontier = next_frontier
 
-    return entity_links, person_links, relationship_links
+    return entity_links, person_links, relationship_links, record_to_statement
 
 
 # ---------------------------------------------------------------------
@@ -466,8 +502,21 @@ def reconstruct_person_statement(
 
 
 def reconstruct_relationship_statement(
-    conn: sqlite3.Connection, link: str
-) -> dict[str, Any]:
+    conn: sqlite3.Connection,
+    link: str,
+    *,
+    record_to_statement: dict[str, str] | None = None,
+    person_recordid_prefixes: tuple[str, ...] = ("GB-COH-PER-",),
+) -> dict[str, Any] | None:
+    """Reconstruct a relationship statement, translating recordIds in
+    ``recorddetails_subject`` / ``recorddetails_interestedparty`` into
+    spec-compliant statementIds via ``record_to_statement``.
+
+    Returns ``None`` if either endpoint can't be resolved (the
+    relationship points outside the walked subgraph). The caller drops
+    those — they'd render as orphan edges in the visualisation.
+    """
+    record_to_statement = record_to_statement or {}
     r = _row_dict(
         conn.execute(
             "SELECT * FROM relationship_statement WHERE _link = ?", (link,)
@@ -517,18 +566,34 @@ def reconstruct_relationship_statement(
         if interest:
             interests.append(interest)
 
+    # Translate recordIds → statementIds. Endpoints that don't resolve
+    # are out-of-bundle (one hop past the walk boundary); we drop the
+    # whole relationship rather than ship a dangling edge that the
+    # visualiser would have to filter out anyway.
+    subject_record = r.get("recorddetails_subject")
+    interested_record = r.get("recorddetails_interestedparty")
+    subject_sid = (
+        record_to_statement.get(subject_record) if subject_record else None
+    )
+    interested_sid = (
+        record_to_statement.get(interested_record) if interested_record else None
+    )
+    if not subject_sid:
+        return None
     rd: dict[str, Any] = {
-        "subject": {"describedByEntityStatement": r["recorddetails_subject"]},
+        "subject": {"describedByEntityStatement": subject_sid},
     }
-    # interestedParty can be entity, person, or anonymous/unknown by reason.
-    if r.get("recorddetails_interestedparty"):
-        # We don't always know if the target is an entity or person from
-        # this row alone. Mark as describedByEntityStatement; consumers
-        # can re-resolve. The runtime loader patches this when it sees
-        # the target appears in person_statement.
-        rd["interestedParty"] = {
-            "describedByEntityStatement": r["recorddetails_interestedparty"]
-        }
+    if interested_sid:
+        # Decide entity vs. person based on the recordId convention
+        # — Open Ownership UK PSC uses the ``GB-COH-PER-`` prefix for
+        # persons, everything else is an entity.
+        ip_record = interested_record or ""
+        ip_key = (
+            "describedByPersonStatement"
+            if any(ip_record.startswith(p) for p in person_recordid_prefixes)
+            else "describedByEntityStatement"
+        )
+        rd["interestedParty"] = {ip_key: interested_sid}
     elif r.get("recorddetails_interestedparty_reason"):
         rd["interestedParty"] = {
             "unspecifiedReason": r["recorddetails_interestedparty_reason"],
@@ -538,6 +603,10 @@ def reconstruct_relationship_statement(
                 else {}
             ),
         }
+    else:
+        # Has neither a resolvable target nor an unspecifiedReason —
+        # nothing useful to render. Drop.
+        return None
 
     if interests:
         rd["interests"] = interests
@@ -590,17 +659,22 @@ def patch_relationship_targets(
 
 
 def extract_for_root(
-    conn: sqlite3.Connection, root_link: str, *, max_hops: int
+    conn: sqlite3.Connection, root_recordid: str, *, max_hops: int
 ) -> list[dict[str, Any]]:
-    e_links, p_links, r_links = walk_subgraph(conn, root_link, max_hops=max_hops)
+    e_links, p_links, r_links, record_to_statement = walk_subgraph(
+        conn, root_recordid, max_hops=max_hops
+    )
     statements: list[dict[str, Any]] = []
     for link in sorted(e_links):
         statements.append(reconstruct_entity_statement(conn, link))
     for link in sorted(p_links):
         statements.append(reconstruct_person_statement(conn, link))
     for link in sorted(r_links):
-        statements.append(reconstruct_relationship_statement(conn, link))
-    patch_relationship_targets(conn, statements)
+        rel = reconstruct_relationship_statement(
+            conn, link, record_to_statement=record_to_statement
+        )
+        if rel is not None:
+            statements.append(rel)
     return statements
 
 
@@ -678,33 +752,40 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\n=== {lei} ===")
 
         # GLEIF subgraph.
-        gleif_link = find_entity_link_by_identifier(gleif_conn, lei, LEI_SCHEME)
-        if gleif_link is None:
+        gleif_recordid = find_entity_recordid_by_identifier(
+            gleif_conn, lei, LEI_SCHEME
+        )
+        if gleif_recordid is None:
             print("  GLEIF: no entity statement found")
         else:
             statements = extract_for_root(
-                gleif_conn, gleif_link, max_hops=args.max_hops
+                gleif_conn, gleif_recordid, max_hops=args.max_hops
             )
             out_path = args.output / "gleif" / f"{lei}.jsonl"
             write_jsonl(out_path, statements)
             print(
-                f"  GLEIF: {len(statements)} statements → {out_path.relative_to(args.output.parent.parent.parent)}"
+                f"  GLEIF: {len(statements)} statements (root recordId={gleif_recordid}) "
+                f"→ {out_path.relative_to(args.output.parent.parent.parent)}"
             )
 
         # UK PSC subgraph (only if jurisdiction = GB).
         if uk_conn is None:
             continue
         gb_coh = (
-            get_gb_coh_for_lei(gleif_conn, lei) if gleif_link is not None else None
+            get_gb_coh_for_lei(gleif_conn, lei)
+            if gleif_recordid is not None
+            else None
         )
         if not gb_coh:
             print("  UK PSC: skipped (no GB-COH on GLEIF record)")
             continue
-        uk_link = find_entity_link_by_identifier(uk_conn, gb_coh, GB_COH_SCHEME)
-        if uk_link is None:
+        uk_recordid = find_entity_recordid_by_identifier(
+            uk_conn, gb_coh, GB_COH_SCHEME
+        )
+        if uk_recordid is None:
             print(f"  UK PSC: no entity statement for GB-COH {gb_coh}")
             continue
-        statements = extract_for_root(uk_conn, uk_link, max_hops=args.max_hops)
+        statements = extract_for_root(uk_conn, uk_recordid, max_hops=args.max_hops)
         out_path = args.output / "uk" / f"{gb_coh}.jsonl"
         write_jsonl(out_path, statements)
         print(
