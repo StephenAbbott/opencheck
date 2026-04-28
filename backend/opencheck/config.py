@@ -2,10 +2,36 @@
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _resolved_env_files() -> tuple[str, ...]:
+    """Locations we check for a ``.env`` file.
+
+    pydantic-settings interprets relative paths as CWD-relative, which
+    breaks when uvicorn is launched from ``backend/`` while the actual
+    ``.env`` lives at the repo root. We resolve both candidates to
+    absolute paths so the lookup works regardless of CWD.
+
+    Tests set ``OPENCHECK_DISABLE_DOTENV=1`` so monkeypatched env vars
+    (and the absence of optional ones) aren't shadowed by whatever the
+    developer happens to have in their real ``.env``.
+    """
+    if os.environ.get("OPENCHECK_DISABLE_DOTENV"):
+        return ()
+    here = Path(__file__).resolve()
+    backend_dir = here.parents[1]   # backend/
+    project_root = here.parents[2]  # repo root
+    return (
+        str(project_root / ".env"),
+        str(backend_dir / ".env"),
+        ".env",  # final CWD-relative fallback for older setups
+    )
 
 
 class Settings(BaseSettings):
@@ -17,7 +43,7 @@ class Settings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_resolved_env_files(),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,

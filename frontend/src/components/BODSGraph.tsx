@@ -52,6 +52,28 @@ export default function BODSGraph({
       return;
     }
 
+    // Defensive sanitiser for the bods-dagre input.
+    //
+    // The Open Ownership extraction script ships subgraphs walked out
+    // to ``--max-hops`` from each subject. That naturally produces
+    // relationship statements whose ``subject`` or ``interestedParty``
+    // points at an entity sitting just past the walk boundary — those
+    // dangling references make dagre throw
+    // ``Invalid argument expected string``.
+    //
+    // We:
+    //   1. Drop statements without a ``statementId`` (or non-string).
+    //   2. Build the set of valid entity / person statement ids.
+    //   3. Drop relationships whose ``subject`` or
+    //      ``interestedParty`` doesn't reference an in-bundle id.
+    const sanitised = sanitiseBundle(statements);
+    if (sanitised.length === 0) {
+      el.innerHTML = `<p class="text-xs text-oo-muted p-2">
+        Bundle has no statements safe to visualise.
+      </p>`;
+      return;
+    }
+
     // Defer until after the next paint so ``clientWidth`` is settled.
     let cancelled = false;
     const handle = requestAnimationFrame(() => {
@@ -72,8 +94,8 @@ export default function BODSGraph({
         // ``selectedData`` defaults to the same array — without it
         // internal code reads ``undefined.something`` later.
         lib.draw({
-          data: statements,
-          selectedData: statements,
+          data: sanitised,
+          selectedData: sanitised,
           container: el,
           imagesPath: "/bods-dagre-images",
           rankDir: "TB",
@@ -164,4 +186,58 @@ function escapeHtml(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/**
+ * Defensive sanitiser for BODS bundles before they reach bods-dagre.
+ *
+ * dagre uses statementIds as graph node ids. If any node id is
+ * ``undefined`` or non-string — or if a relationship references a
+ * node id that isn't in the bundle (for example, an entity statement
+ * that sits one ``--max-hops`` past the walked subject) — dagre
+ * throws ``Invalid argument expected string``. We strip those before
+ * draw() to keep the visualisation rendering whatever's whole.
+ */
+function sanitiseBundle(input: unknown[]): unknown[] {
+  // First pass: filter to statements with a string statementId.
+  const wellTyped: Record<string, unknown>[] = [];
+  for (const raw of input) {
+    if (!raw || typeof raw !== "object") continue;
+    const stmt = raw as Record<string, unknown>;
+    if (typeof stmt.statementId === "string" && stmt.statementId.length > 0) {
+      wellTyped.push(stmt);
+    }
+  }
+
+  // Build the set of in-bundle node ids — entities + persons only;
+  // relationships are edges, not nodes.
+  const nodeIds = new Set<string>();
+  for (const stmt of wellTyped) {
+    const recordType = stmt.recordType ?? stmt.statementType;
+    if (recordType === "entity" || recordType === "person") {
+      nodeIds.add(stmt.statementId as string);
+    }
+  }
+
+  // Second pass: drop relationship statements that point outside the
+  // bundle. Keep entity / person statements untouched.
+  return wellTyped.filter((stmt) => {
+    const recordType = stmt.recordType ?? stmt.statementType;
+    if (recordType !== "relationship") return true;
+    const rd = (stmt.recordDetails as Record<string, unknown> | undefined) ?? {};
+    const subject = rd.subject as Record<string, unknown> | undefined;
+    const interested = rd.interestedParty as Record<string, unknown> | undefined;
+    const subjectId =
+      (subject?.describedByEntityStatement as string | undefined) ??
+      (subject?.describedByPersonStatement as string | undefined);
+    const interestedId =
+      (interested?.describedByEntityStatement as string | undefined) ??
+      (interested?.describedByPersonStatement as string | undefined);
+    // Subject and interestedParty must both resolve to a node we have.
+    // ``unspecifiedReason`` interestedParties (BODS placeholders) are
+    // dropped — they'd render as orphan edges with no target.
+    if (!subjectId || !nodeIds.has(subjectId)) return false;
+    if (!interestedId || !nodeIds.has(interestedId)) return false;
+    return true;
+  });
 }

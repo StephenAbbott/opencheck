@@ -187,9 +187,20 @@ export default function App() {
               <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-light">
                 Customer due diligence
               </p>
-              <h1 className="mt-2 font-head font-bold text-white leading-tight text-[clamp(1.6rem,4vw,2.4rem)]">
+              <button
+                type="button"
+                onClick={() => {
+                  // Click the title to return to a fresh homepage state.
+                  setView("main");
+                  setResult(null);
+                  setError(null);
+                  setLeiInput("");
+                }}
+                aria-label="Back to homepage"
+                className="mt-2 font-head font-bold text-white leading-tight text-[clamp(1.6rem,4vw,2.4rem)] hover:text-oo-light transition-colors text-left"
+              >
                 OpenCheck
-              </h1>
+              </button>
             </div>
             <nav>
               <button

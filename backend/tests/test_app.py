@@ -6,6 +6,19 @@ import pytest
 from fastapi.testclient import TestClient
 
 from opencheck.app import app
+from opencheck.config import get_settings
+
+
+@pytest.fixture(autouse=True)
+def _isolated_data_root(monkeypatch, tmp_path):
+    """Isolate from any real cache the developer's machine has under
+    ``data/cache/live/``. Without this, adapters can short-circuit to
+    cached real-API responses that don't match what the smoke-tests
+    assume (Phase 0 stubs)."""
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 @pytest.fixture
