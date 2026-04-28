@@ -44,6 +44,7 @@ from .bods import (
     map_wikidata,
     validate_shape,
 )
+from . import bods_data
 from .config import get_settings
 from .reconcile import reconcile
 from .risk import RiskSignal, assess_bundle, assess_hits
@@ -279,14 +280,20 @@ async def deepen(
 
     raw = await adapter.fetch(hit_id)
 
-    # Phase 2 mapper coverage: CH, GLEIF, OpenSanctions, OpenAleph.
+    # Consult the Open Ownership override bundle for GLEIF / CH before
+    # the live mapper. Same shared helper as /lookup uses.
+    override = _bods_data_override(source, hit_id)
     bods: list[dict[str, Any]] = []
     issues: list[str] = []
-    mapper = _MAPPERS.get(source)
-    if mapper and not raw.get("is_stub"):
-        bundle: BODSBundle = mapper(raw)
-        bods = list(bundle)
+    if override is not None:
+        bods = override
         issues = validate_shape(bods)
+    else:
+        mapper = _MAPPERS.get(source)
+        if mapper and not raw.get("is_stub"):
+            bundle: BODSBundle = mapper(raw)
+            bods = list(bundle)
+            issues = validate_shape(bods)
 
     info = adapter.info
     license_notice = _license_notice_for(info, raw)
@@ -873,20 +880,50 @@ def _build_licenses_md(
     return "\n".join(lines) + "\n"
 
 
+def _bods_data_override(source_id: str, hit_id: str) -> list[dict[str, Any]] | None:
+    """Return the Open Ownership canonical BODS bundle for this
+    ``(source_id, hit_id)`` pair, if one is on disk under
+    ``data/cache/bods_data/``.
+
+    Used by both ``/deepen`` and ``/lookup`` to override the live
+    mapper output. Open Ownership's processed bundles carry
+    interconnected subject ↔ interestedParty relationships that the
+    live transformation under-produces — important for the dagre
+    visualisation and the AMLA layer-counting rule.
+    """
+    if source_id == "gleif":
+        return bods_data.gleif_bundle_for_lei(hit_id)
+    if source_id == "companies_house":
+        # ``hit_id`` may be either a company number (which is what the
+        # UK PSC bundles index on) or an officer-appointments id; only
+        # the company-number shape has a UK PSC override.
+        if hit_id.isalnum() and len(hit_id) == 8:
+            return bods_data.uk_bundle_for_company_number(hit_id)
+    return None
+
+
 async def _safe_deepen(source_id: str, hit_id: str) -> dict[str, Any] | None:
     """Internal helper used by /report — does what /deepen does, but
-    returns a plain dict and swallows nothing (caller handles errors)."""
+    returns a plain dict and swallows nothing (caller handles errors).
+    """
     adapter = REGISTRY.get(source_id)
     if adapter is None:
         return None
     raw = await adapter.fetch(hit_id)
+
+    override = _bods_data_override(source_id, hit_id)
     bods: list[dict[str, Any]] = []
     issues: list[str] = []
-    mapper = _MAPPERS.get(source_id)
-    if mapper and not raw.get("is_stub"):
-        bundle: BODSBundle = mapper(raw)
-        bods = list(bundle)
+    if override is not None:
+        bods = override
         issues = validate_shape(bods)
+    else:
+        mapper = _MAPPERS.get(source_id)
+        if mapper and not raw.get("is_stub"):
+            bundle: BODSBundle = mapper(raw)
+            bods = list(bundle)
+            issues = validate_shape(bods)
+
     license_notice = _license_notice_for(adapter.info, raw)
     signals = [s.to_dict() for s in assess_bundle(source_id, raw, bods)]
     return {
