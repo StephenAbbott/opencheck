@@ -219,6 +219,21 @@ function sanitiseBundle(input: unknown[]): unknown[] {
     }
   }
 
+  // bods-dagre runs ``compare-versions`` on each statement's
+  // ``publicationDetails.bodsVersion``, which throws
+  // ``TypeError: Invalid argument expected string`` when the value
+  // isn't a string. SQLite stores ``0.4`` as a REAL by default, so
+  // bundles produced by the extractor sometimes carry a number here.
+  // Normalise every occurrence to a string up front.
+  for (const stmt of wellTyped) {
+    const pub = stmt.publicationDetails as
+      | Record<string, unknown>
+      | undefined;
+    if (pub && pub.bodsVersion !== undefined && pub.bodsVersion !== null) {
+      pub.bodsVersion = String(pub.bodsVersion);
+    }
+  }
+
   // Second pass: drop relationship statements that point outside the
   // bundle. Keep entity / person statements untouched.
   return wellTyped.filter((stmt) => {

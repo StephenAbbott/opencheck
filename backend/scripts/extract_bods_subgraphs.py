@@ -300,13 +300,21 @@ def _publication_block(row: dict[str, Any]) -> dict[str, Any]:
         ("publicationdetails_license", "license"),
     ):
         v = row.get(src)
-        if v:
-            pub[dst] = v
+        if v is None or v == "":
+            continue
+        # SQLite is loose about column types — ``bodsversion`` in
+        # particular can come back as a REAL (e.g. 0.4) when the
+        # importer parsed the JSON number directly. BODS specifies it
+        # as a string, and downstream consumers (notably bods-dagre's
+        # compare-versions check) throw ``TypeError: Invalid argument
+        # expected string`` if they see anything else. Coerce all
+        # publication-detail strings up front.
+        pub[dst] = str(v)
     publisher: dict[str, str] = {}
     if row.get("publicationdetails_publisher_name"):
-        publisher["name"] = row["publicationdetails_publisher_name"]
+        publisher["name"] = str(row["publicationdetails_publisher_name"])
     if row.get("publicationdetails_publisher_url"):
-        publisher["url"] = row["publicationdetails_publisher_url"]
+        publisher["url"] = str(row["publicationdetails_publisher_url"])
     if publisher:
         pub["publisher"] = publisher
     return pub
