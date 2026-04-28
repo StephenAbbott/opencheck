@@ -696,6 +696,16 @@ const RISK_PRESENTATION: Record<
     label: "Possible obfuscation (advisory)",
     classes: "bg-yellow-50 text-yellow-800 border-yellow-300",
   },
+  // Cross-source name match against OpenSanctions / EveryPolitician —
+  // scoped to a related party inside the BODS bundle, not the subject.
+  RELATED_PEP: {
+    label: "Related PEP",
+    classes: "bg-violet-50 text-violet-700 border-violet-300",
+  },
+  RELATED_SANCTIONED: {
+    label: "Related sanctioned",
+    classes: "bg-rose-50 text-rose-700 border-rose-300 font-semibold",
+  },
 };
 
 const CONFIDENCE_DOT: Record<string, string> = {

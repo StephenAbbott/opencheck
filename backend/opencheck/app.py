@@ -46,6 +46,7 @@ from .bods import (
 )
 from . import bods_data
 from .config import get_settings
+from .cross_check import assess_cross_source_names
 from .reconcile import reconcile
 from .risk import RiskSignal, assess_bundle, assess_hits
 from .sources import REGISTRY, SearchKind, SourceHit, SourceInfo
@@ -383,6 +384,13 @@ async def _build_report(
     # COMPLEX / OBFUSCATION) describe the merged ownership chain, not
     # one source's view of it. Each deepened bundle re-asserts the same
     # fact, which inflates the chip strip. Collapse those by code only.
+    # Cross-check related-party names against OpenSanctions and
+    # EveryPolitician — emits RELATED_PEP / RELATED_SANCTIONED scoped
+    # to the matching person/entity statement.
+    cross_signals = [
+        s.to_dict() for s in await assess_cross_source_names(bods_all)
+    ]
+
     structural_codes = {
         "TRUST_OR_ARRANGEMENT",
         "NON_EU_JURISDICTION",
@@ -392,9 +400,18 @@ async def _build_report(
         "POSSIBLE_OBFUSCATION",
     }
     merged: dict[tuple, dict[str, Any]] = {}
-    for sig in search_signals + deepen_signals:
+    for sig in search_signals + deepen_signals + cross_signals:
         if sig["code"] in structural_codes:
             key: tuple = (sig["code"],)
+        elif sig["code"] in {"RELATED_PEP", "RELATED_SANCTIONED"}:
+            # Scoped to (code, source_id, hit_id, subject_statement_id) —
+            # one chip per matched record + related party combination.
+            key = (
+                sig["code"],
+                sig["source_id"],
+                sig["hit_id"],
+                sig.get("evidence", {}).get("subject_statement_id", ""),
+            )
         else:
             key = (sig["code"], sig["source_id"], sig["hit_id"])
         # Prefer deepen-derived (richer evidence) over search-derived.
@@ -624,8 +641,14 @@ async def lookup(
                 }
             )
 
+    # Cross-check related-party names against OpenSanctions / EP.
+    cross_signals = [
+        s.to_dict() for s in await assess_cross_source_names(bods_all)
+    ]
+
     # Same merge logic as /report — collapse structural BODS signals
-    # by code, keep per-source signals scoped.
+    # by code, keep per-source signals scoped, and scope RELATED_*
+    # signals to the matched related party.
     structural_codes = {
         "TRUST_OR_ARRANGEMENT",
         "NON_EU_JURISDICTION",
@@ -635,10 +658,18 @@ async def lookup(
         "POSSIBLE_OBFUSCATION",
     }
     merged: dict[tuple, dict[str, Any]] = {}
-    for sig in search_signals + deepen_signals:
-        key = (sig["code"],) if sig["code"] in structural_codes else (
-            sig["code"], sig["source_id"], sig["hit_id"]
-        )
+    for sig in search_signals + deepen_signals + cross_signals:
+        if sig["code"] in structural_codes:
+            key: tuple = (sig["code"],)
+        elif sig["code"] in {"RELATED_PEP", "RELATED_SANCTIONED"}:
+            key = (
+                sig["code"],
+                sig["source_id"],
+                sig["hit_id"],
+                sig.get("evidence", {}).get("subject_statement_id", ""),
+            )
+        else:
+            key = (sig["code"], sig["source_id"], sig["hit_id"])
         merged[key] = sig
 
     return LookupResponse(
