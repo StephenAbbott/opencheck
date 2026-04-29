@@ -306,6 +306,24 @@ export default function App() {
           </section>
         )}
 
+        {bucketList.length > 0 && (
+          <section className="mb-8">
+            <SectionLabel>
+              {totalHits} hit{totalHits === 1 ? "" : "s"} across{" "}
+              {bucketList.length} source{bucketList.length === 1 ? "" : "s"}
+            </SectionLabel>
+            <div className="space-y-4">
+              {bucketList.map((b) => (
+                <SourceBucketCard
+                  key={b.sourceId}
+                  bucket={b}
+                  riskByHit={riskByHit}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
         {result && totalHits > 0 && (
           <ExportPanel
             lei={result.lei}
@@ -321,24 +339,6 @@ export default function App() {
               .filter((b) => b.hits.some((h) => !h.is_stub))
               .map((b) => b.sourceId)}
           />
-        )}
-
-        {bucketList.length > 0 && (
-          <section className="mb-12">
-            <SectionLabel>
-              {totalHits} hit{totalHits === 1 ? "" : "s"} across{" "}
-              {bucketList.length} source{bucketList.length === 1 ? "" : "s"}
-            </SectionLabel>
-            <div className="space-y-4">
-              {bucketList.map((b) => (
-                <SourceBucketCard
-                  key={b.sourceId}
-                  bucket={b}
-                  riskByHit={riskByHit}
-                />
-              ))}
-            </div>
-          </section>
         )}
         </>
         )}
