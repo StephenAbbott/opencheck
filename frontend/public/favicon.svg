@@ -1,0 +1,46 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="lens-clip">
+      <circle cx="80" cy="80" r="63"/>
+    </clipPath>
+  </defs>
+
+  <!-- Magnifying glass handle (behind ring) -->
+  <line x1="127" y1="127" x2="186" y2="186" stroke="#0d1b3e" stroke-width="14" stroke-linecap="round"/>
+
+  <!-- Magnifying glass ring -->
+  <circle cx="80" cy="80" r="70" fill="none" stroke="#0d1b3e" stroke-width="13"/>
+
+  <!-- Building silhouette (clipped to lens interior) -->
+  <g clip-path="url(#lens-clip)">
+    <!-- Main tower -->
+    <rect x="90" y="16" width="22" height="108" fill="#0d1b3e"/>
+    <!-- Annex building -->
+    <rect x="108" y="42" width="18" height="82" fill="#0d1b3e"/>
+    <!-- Windows — main tower -->
+    <rect x="93" y="24" width="6" height="6" fill="white"/>
+    <rect x="103" y="24" width="6" height="6" fill="white"/>
+    <rect x="93" y="35" width="6" height="6" fill="white"/>
+    <rect x="103" y="35" width="6" height="6" fill="white"/>
+    <rect x="93" y="46" width="6" height="6" fill="white"/>
+    <rect x="103" y="46" width="6" height="6" fill="white"/>
+    <!-- Windows — annex -->
+    <rect x="112" y="50" width="5" height="5" fill="white"/>
+    <rect x="112" y="61" width="5" height="5" fill="white"/>
+    <!-- Door -->
+    <rect x="96" y="94" width="10" height="30" fill="white"/>
+  </g>
+
+  <!-- Ownership network — edges (light blue) -->
+  <line x1="48" y1="28" x2="18" y2="76" stroke="#93c5fd" stroke-width="4.5" stroke-linecap="round"/>
+  <line x1="18" y1="76" x2="48" y2="124" stroke="#93c5fd" stroke-width="4.5" stroke-linecap="round"/>
+  <line x1="48" y1="28" x2="48" y2="124" stroke="#93c5fd" stroke-width="4.5" stroke-linecap="round"/>
+
+  <!-- Central right-pointing arrow (data flows toward the subject entity) -->
+  <polygon points="34,55 34,99 76,77" fill="#0d1b3e"/>
+
+  <!-- Ownership network — nodes -->
+  <circle cx="48" cy="28"  r="11" fill="#22c55e"/>  <!-- green  (top)    -->
+  <circle cx="18" cy="76"  r="11" fill="#3b82f6"/>  <!-- blue   (left)   -->
+  <circle cx="48" cy="124" r="11" fill="#7c3aed"/>  <!-- purple (bottom) -->
+</svg>

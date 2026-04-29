@@ -654,6 +654,71 @@ def patch_relationship_targets(
 
 
 # ---------------------------------------------------------------------
+# Deduplication helpers
+# ---------------------------------------------------------------------
+
+
+def _deduplicate_by_recordid(
+    conn: sqlite3.Connection, links: set[str], table: str
+) -> set[str]:
+    """For a set of ``_link`` values from ``table``, keep only the most-recent
+    statement per ``recordId`` (highest ``statementdate``; ties broken by
+    lowest ``_link`` for determinism).
+
+    Statements without a ``recordId`` are kept as-is — they're singletons
+    that don't participate in temporal versioning.
+    """
+    if not links:
+        return links
+    placeholders = ",".join("?" for _ in links)
+    rows = conn.execute(
+        f"SELECT _link, recordid, statementdate FROM {table} "
+        f"WHERE _link IN ({placeholders})",
+        list(links),
+    ).fetchall()
+
+    # Group by recordId; track (statementdate, _link) so we pick the latest.
+    best: dict[str, tuple[str, str]] = {}  # recordid -> (_link, statementdate)
+    no_record_links: set[str] = set()
+
+    for link, recordid, statementdate in rows:
+        if not recordid:
+            no_record_links.add(link)
+            continue
+        date_str = statementdate or ""
+        if recordid not in best or date_str > best[recordid][1]:
+            best[recordid] = (link, date_str)
+
+    return {v[0] for v in best.values()} | no_record_links
+
+
+def _rebuild_record_to_statement(
+    conn: sqlite3.Connection, e_links: set[str], p_links: set[str]
+) -> dict[str, str]:
+    """Rebuild the ``recordId → statementId`` map from deduplicated link sets.
+
+    This must be called *after* deduplication so the map is consistent with
+    the entity/person statements that will actually be written to the bundle.
+    Relationship reconstruction uses this map to fill in
+    ``describedByEntityStatement`` / ``describedByPersonStatement`` — if the
+    map doesn't match the emitted statements the frontend sanitiser will drop
+    the relationship as a dangling edge.
+    """
+    result: dict[str, str] = {}
+    for links, table in ((e_links, "entity_statement"), (p_links, "person_statement")):
+        if not links:
+            continue
+        placeholders = ",".join("?" for _ in links)
+        for row in conn.execute(
+            f"SELECT recordid, statementid FROM {table} WHERE _link IN ({placeholders})",
+            list(links),
+        ).fetchall():
+            if row[0]:
+                result[row[0]] = row[1]
+    return result
+
+
+# ---------------------------------------------------------------------
 # Top-level extraction
 # ---------------------------------------------------------------------
 
@@ -661,9 +726,27 @@ def patch_relationship_targets(
 def extract_for_root(
     conn: sqlite3.Connection, root_recordid: str, *, max_hops: int
 ) -> list[dict[str, Any]]:
-    e_links, p_links, r_links, record_to_statement = walk_subgraph(
+    e_links, p_links, r_links, _record_to_statement = walk_subgraph(
         conn, root_recordid, max_hops=max_hops
     )
+
+    # Keep only the most-recent statement per recordId.  The walk collects
+    # *all* historical versions of every entity/person/relationship because
+    # they share a recordId and the BFS query returns every matching row.
+    # Older versions are never referenced by relationship endpoints (those
+    # always point to the current statementId), so they show up as
+    # disconnected orphan nodes in the visualisation.  Deduplicate here
+    # before reconstruction.
+    e_links = _deduplicate_by_recordid(conn, e_links, "entity_statement")
+    if p_links:
+        p_links = _deduplicate_by_recordid(conn, p_links, "person_statement")
+    r_links = _deduplicate_by_recordid(conn, r_links, "relationship_statement")
+
+    # Rebuild the recordId→statementId map from the deduplicated link sets so
+    # that relationship endpoints resolve to statements that are actually in
+    # the bundle.
+    record_to_statement = _rebuild_record_to_statement(conn, e_links, p_links)
+
     statements: list[dict[str, Any]] = []
     for link in sorted(e_links):
         statements.append(reconstruct_entity_statement(conn, link))

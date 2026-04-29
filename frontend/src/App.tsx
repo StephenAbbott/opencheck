@@ -58,6 +58,58 @@ const EXAMPLE_LEIS: ExampleLei[] = [
   { lei: "213800BC4TEGCCQH9V07", name: "Melli Bank PLC", hint: "Iran-linked UK bank — sanctions" },
 ];
 
+/**
+ * OpenCheck magnifying-glass icon — white variant for use on the dark
+ * navy header. Sized via className (e.g. ``h-9 w-auto``).
+ */
+function OpenCheckIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 200 200"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <defs>
+        <clipPath id="oc-icon-lens">
+          <circle cx="80" cy="80" r="63" />
+        </clipPath>
+      </defs>
+      {/* Handle */}
+      <line x1="127" y1="127" x2="186" y2="186" stroke="white" strokeWidth="14" strokeLinecap="round" />
+      {/* Ring */}
+      <circle cx="80" cy="80" r="70" fill="none" stroke="white" strokeWidth="13" />
+      {/* Building silhouette */}
+      <g clipPath="url(#oc-icon-lens)">
+        <rect x="90" y="16" width="22" height="108" fill="white" />
+        <rect x="108" y="42" width="18" height="82" fill="white" />
+        {/* Windows */}
+        <rect x="93" y="24" width="6" height="6" fill="#1e3a8a" />
+        <rect x="103" y="24" width="6" height="6" fill="#1e3a8a" />
+        <rect x="93" y="35" width="6" height="6" fill="#1e3a8a" />
+        <rect x="103" y="35" width="6" height="6" fill="#1e3a8a" />
+        <rect x="93" y="46" width="6" height="6" fill="#1e3a8a" />
+        <rect x="103" y="46" width="6" height="6" fill="#1e3a8a" />
+        <rect x="112" y="50" width="5" height="5" fill="#1e3a8a" />
+        <rect x="112" y="61" width="5" height="5" fill="#1e3a8a" />
+        {/* Door */}
+        <rect x="96" y="94" width="10" height="30" fill="#1e3a8a" />
+      </g>
+      {/* Ownership network — edges */}
+      <line x1="48" y1="28" x2="18" y2="76" stroke="#93c5fd" strokeWidth="4.5" strokeLinecap="round" />
+      <line x1="18" y1="76" x2="48" y2="124" stroke="#93c5fd" strokeWidth="4.5" strokeLinecap="round" />
+      <line x1="48" y1="28" x2="48" y2="124" stroke="#93c5fd" strokeWidth="4.5" strokeLinecap="round" />
+      {/* Central arrow */}
+      <polygon points="34,55 34,99 76,77" fill="white" />
+      {/* Nodes */}
+      <circle cx="48" cy="28" r="11" fill="#22c55e" />
+      <circle cx="18" cy="76" r="11" fill="#3b82f6" />
+      <circle cx="48" cy="124" r="11" fill="#7c3aed" />
+    </svg>
+  );
+}
+
 export default function App() {
   const [leiInput, setLeiInput] = useState("");
   const [result, setResult] = useState<LookupResponse | null>(null);
@@ -187,7 +239,7 @@ export default function App() {
               <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-light">
                 Customer due diligence
               </p>
-              <div className="flex items-baseline gap-3 mt-2">
+              <div className="flex items-center gap-3 mt-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -198,9 +250,12 @@ export default function App() {
                     setLeiInput("");
                   }}
                   aria-label="Back to homepage"
-                  className="font-head font-bold text-white leading-tight text-[clamp(1.6rem,4vw,2.4rem)] hover:text-oo-light transition-colors text-left"
+                  className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left"
                 >
-                  OpenCheck
+                  <OpenCheckIcon className="h-[clamp(2rem,4vw,2.6rem)] w-auto flex-shrink-0" />
+                  <span className="font-head font-bold text-white leading-tight text-[clamp(1.6rem,4vw,2.4rem)]">
+                    Open<span className="text-[#93c5fd]">Check</span>
+                  </span>
                 </button>
                 <span className="text-[11px] font-semibold tracking-oo-eyebrow uppercase bg-white/15 text-white/90 rounded px-2 py-0.5 border border-white/25">
                   Beta

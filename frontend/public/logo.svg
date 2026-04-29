@@ -1,0 +1,65 @@
+<svg viewBox="0 0 560 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="logo-lens-clip">
+      <circle cx="60" cy="60" r="47"/>
+    </clipPath>
+  </defs>
+
+  <!-- ── Icon (scaled to 120 × 120) ── -->
+
+  <!-- Handle -->
+  <line x1="95" y1="95" x2="138" y2="138" stroke="#0d1b3e" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- Ring -->
+  <circle cx="60" cy="60" r="52" fill="none" stroke="#0d1b3e" stroke-width="10"/>
+
+  <!-- Building silhouette -->
+  <g clip-path="url(#logo-lens-clip)">
+    <rect x="67" y="12" width="17" height="81" fill="#0d1b3e"/>
+    <rect x="81" y="31" width="13" height="62" fill="#0d1b3e"/>
+    <!-- Windows -->
+    <rect x="70" y="18" width="5" height="5" fill="white"/>
+    <rect x="78" y="18" width="5" height="5" fill="white"/>
+    <rect x="70" y="27" width="5" height="5" fill="white"/>
+    <rect x="78" y="27" width="5" height="5" fill="white"/>
+    <rect x="70" y="36" width="5" height="5" fill="white"/>
+    <rect x="78" y="36" width="5" height="5" fill="white"/>
+    <rect x="84" y="38" width="4" height="4" fill="white"/>
+    <rect x="84" y="46" width="4" height="4" fill="white"/>
+    <!-- Door -->
+    <rect x="72" y="71" width="8" height="22" fill="white"/>
+  </g>
+
+  <!-- Network edges -->
+  <line x1="36" y1="21" x2="14" y2="57" stroke="#93c5fd" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="14" y1="57" x2="36" y2="93" stroke="#93c5fd" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="36" y1="21" x2="36" y2="93" stroke="#93c5fd" stroke-width="3.5" stroke-linecap="round"/>
+
+  <!-- Central arrow -->
+  <polygon points="26,41 26,74 57,58" fill="#0d1b3e"/>
+
+  <!-- Network nodes -->
+  <circle cx="36" cy="21" r="8.5" fill="#22c55e"/>
+  <circle cx="14" cy="57" r="8.5" fill="#3b82f6"/>
+  <circle cx="36" cy="93" r="8.5" fill="#7c3aed"/>
+
+  <!-- ── Wordmark ── -->
+  <!-- "Open" — dark navy -->
+  <text
+    x="155" y="83"
+    font-family="'DM Sans', 'Segoe UI', system-ui, Arial, sans-serif"
+    font-weight="700"
+    font-size="68"
+    letter-spacing="-1"
+    fill="#0d1b3e"
+  >Open</text>
+  <!-- "Check" — vivid blue -->
+  <text
+    x="355" y="83"
+    font-family="'DM Sans', 'Segoe UI', system-ui, Arial, sans-serif"
+    font-weight="700"
+    font-size="68"
+    letter-spacing="-1"
+    fill="#2563eb"
+  >Check</text>
+</svg>
