@@ -23,6 +23,14 @@ COPY backend/ ./
 # Install the project itself.
 RUN uv sync
 
+# Copy pre-extracted BODS bundles and demo fixtures so the app works
+# without a mounted volume (needed on Render and other container hosts).
+# The live/ cache directory is gitignored and will be created at runtime
+# by the cache layer when live API calls are made.
+COPY data/ /app/data/
+
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "opencheck.app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use $PORT so the process binds to whatever port the host assigns
+# (Render injects PORT; falls back to 8000 for local docker-compose).
+CMD ["sh", "-c", "uv run uvicorn opencheck.app:app --host 0.0.0.0 --port ${PORT:-8000}"]

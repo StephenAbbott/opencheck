@@ -1,0 +1,72 @@
+# Render deployment configuration for OpenCheck.
+#
+# Two services:
+#   opencheck-api  — FastAPI backend (Docker web service)
+#   opencheck      — Vite/React frontend (static site)
+#
+# Deploy steps:
+#   1. Push this repo to GitHub (or connect it to Render directly).
+#   2. In Render dashboard → New → Blueprint, point at this repo.
+#      Render will create both services automatically.
+#   3. Set the secret env vars below in the Render dashboard:
+#        COMPANIES_HOUSE_API_KEY
+#        OPENSANCTIONS_API_KEY
+#        OPENCORPORATES_API_KEY
+#        OPENALEPH_API_KEY  (optional)
+#   4. Once the backend service is deployed, copy its URL
+#      (e.g. https://opencheck-api.onrender.com) and set it as
+#      VITE_API_BASE_URL on the frontend static site, then trigger
+#      a redeploy of the frontend.
+
+services:
+  # ------------------------------------------------------------------ #
+  # Backend — FastAPI served via uvicorn inside Docker                  #
+  # ------------------------------------------------------------------ #
+  - type: web
+    name: opencheck-api
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: OPENCHECK_ALLOW_LIVE
+        value: "true"
+      # Allow all origins so the static frontend can call the API.
+      # Restrict to your Render frontend URL after deployment if desired.
+      - key: OPENCHECK_CORS_ORIGIN
+        value: "*"
+      - key: WIKIDATA_SPARQL_ENDPOINT
+        value: https://query.wikidata.org/sparql
+      # --- Secret keys: set these in the Render dashboard, not here ---
+      - key: COMPANIES_HOUSE_API_KEY
+        sync: false
+      - key: OPENSANCTIONS_API_KEY
+        sync: false
+      - key: OPENCORPORATES_API_KEY
+        sync: false
+      - key: OPENALEPH_API_KEY
+        sync: false
+
+  # ------------------------------------------------------------------ #
+  # Frontend — Vite build served as a static site                       #
+  # ------------------------------------------------------------------ #
+  - type: web
+    name: opencheck
+    env: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+    routes:
+      # Single-page app: all paths fall back to index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Set this to your backend URL after the backend service is deployed.
+      # Example: https://opencheck-api.onrender.com
+      - key: VITE_API_BASE_URL
+        sync: false

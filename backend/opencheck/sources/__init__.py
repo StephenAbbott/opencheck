@@ -12,6 +12,7 @@ from .companies_house import CompaniesHouseAdapter
 from .everypolitician import EveryPoliticianAdapter
 from .gleif import GleifAdapter
 from .openaleph import OpenAlephAdapter  # noqa: F401  -- kept for re-enablement
+from .opencorporates import OpenCorporatesAdapter
 from .opensanctions import OpenSanctionsAdapter
 from .opentender import OpenTenderAdapter
 from .wikidata import WikidataAdapter
@@ -24,6 +25,7 @@ from .wikidata import WikidataAdapter
 REGISTRY: dict[str, SourceAdapter] = {
     "companies_house": CompaniesHouseAdapter(),
     "gleif": GleifAdapter(),
+    "opencorporates": OpenCorporatesAdapter(),
     "opensanctions": OpenSanctionsAdapter(),
     "everypolitician": EveryPoliticianAdapter(),
     "wikidata": WikidataAdapter(),

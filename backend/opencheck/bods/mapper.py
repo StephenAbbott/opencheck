@@ -219,13 +219,15 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
     source_names = {
         "companies_house": "UK Companies House",
         "gleif": "GLEIF",
+        "opencorporates": "OpenCorporates",
         "opensanctions": "OpenSanctions",
         "openaleph": "OpenAleph",
         "everypolitician": "EveryPolitician",
         "wikidata": "Wikidata",
     }
+    _official_registers = {"companies_house", "opencorporates"}
     block: dict[str, Any] = {
-        "type": "officialRegister" if source_id == "companies_house" else "thirdParty",
+        "type": "officialRegister" if source_id in _official_registers else "thirdParty",
         "description": source_names.get(source_id, source_id),
         "retrievedAt": datetime.utcnow().isoformat(timespec="seconds") + "Z",
     }
@@ -1530,3 +1532,146 @@ def _format_award_details(
     if price and price.get("netAmount") and price.get("currency"):
         parts.append(f"value {price['netAmount']} {price['currency']}")
     return ", ".join(parts) + "."
+
+
+# ----------------------------------------------------------------------
+# OpenCorporates → BODS
+# ----------------------------------------------------------------------
+
+
+def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
+    """Map an OpenCorporates fetch bundle to BODS v0.4 statements.
+
+    Produces:
+    * One entity statement for the company itself.
+    * One person statement + relationship per officer where the
+      officer is a natural person and has a current position.
+
+    Officers are entered via the ``/companies/{j}/{n}/officers``
+    endpoint and carry a ``position`` string (e.g. "director",
+    "secretary") plus optional start/end dates.
+    """
+    result = BODSBundle()
+    company = bundle.get("company") or {}
+    ocid = bundle.get("ocid") or bundle.get("hit_id") or ""
+    officers = bundle.get("officers") or []
+
+    if not company:
+        return result
+
+    # --- Entity statement for the company --------------------------------
+
+    name = company.get("name") or "Unknown company"
+    jurisdiction_code = (company.get("jurisdiction_code") or "").upper()
+    company_number = company.get("company_number") or ""
+    incorporation_date = company.get("incorporation_date")
+    company_type = company.get("company_type") or ""
+    status = company.get("current_status") or ""
+    oc_url = company.get("opencorporates_url") or (
+        f"https://opencorporates.com/companies/{ocid}" if ocid else None
+    )
+
+    # Resolve jurisdiction tuple (alpha-2, display name)
+    jurisdiction: tuple[str, str] | None = None
+    if jurisdiction_code:
+        # OC jurisdiction codes are ISO 3166-1 alpha-2 (lower), with
+        # sub-national variants like "us_de". We use the top-level code.
+        # Tuple convention (matches make_entity_statement): (name, code).
+        top_code = jurisdiction_code.split("_")[0].upper()
+        try:
+            country = pycountry.countries.get(alpha_2=top_code)
+            country_name = country.name if country else top_code
+            jurisdiction = (country_name, top_code)
+        except Exception:  # noqa: BLE001
+            jurisdiction = (top_code, top_code)
+
+    identifiers: list[dict[str, str]] = []
+    if ocid:
+        identifiers.append(
+            {
+                "id": ocid,
+                "scheme": "OPENCORPORATES",
+                "schemeName": "OpenCorporates company identifier",
+                "uri": oc_url or "",
+            }
+        )
+    if company_number and jurisdiction_code:
+        identifiers.append(
+            {
+                "id": company_number,
+                "scheme": f"OC-{jurisdiction_code.upper()}",
+                "schemeName": f"OpenCorporates {jurisdiction_code.upper()} company number",
+            }
+        )
+
+    subject_stmt = make_entity_statement(
+        source_id="opencorporates",
+        local_id=ocid or company_number,
+        name=name,
+        jurisdiction=jurisdiction,
+        identifiers=identifiers,
+        founding_date=incorporation_date,
+        entity_type="registeredEntity",
+        source_url=oc_url,
+    )
+    subject_stmt_id: str = subject_stmt["statementId"]
+    result.extend([subject_stmt])
+
+    # --- Officer statements -----------------------------------------------
+    # OC officers carry a ``position`` string (e.g. "director"), optional
+    # ``start_date`` / ``end_date``, and a nested ``officer`` sub-object.
+    # We only surface current officers (no end_date set).
+    for officer_item in officers:
+        officer_data = officer_item.get("officer") or officer_item
+        position = (officer_data.get("position") or "").strip()
+        end_date = officer_data.get("end_date")
+        if end_date:
+            continue  # skip resigned officers
+
+        officer_name = officer_data.get("name") or ""
+        if not officer_name:
+            continue
+
+        officer_id = str(officer_data.get("id") or officer_data.get("uid") or "")
+        local_key = f"{ocid}/{officer_id or _stable_id('oc', 'officer', officer_name)}"
+
+        person_stmt = make_person_statement(
+            source_id="opencorporates",
+            local_id=local_key,
+            full_name=officer_name,
+            source_url=oc_url,
+        )
+        person_stmt_id: str = person_stmt["statementId"]
+
+        # Map OC position to a BODS interest type.
+        position_lower = position.lower()
+        if "director" in position_lower or "chair" in position_lower:
+            interest_type = "appointmentOfBoard"
+        elif "secretary" in position_lower:
+            interest_type = "appointmentOfBoard"
+        else:
+            interest_type = "otherInfluenceOrControl"
+
+        start_date = officer_data.get("start_date")
+        interest_entry: dict[str, Any] = {
+            "type": interest_type,
+            "details": position or "officer",
+            "directOrIndirect": "direct",
+            "beneficialOwnershipOrControl": False,
+        }
+        if start_date:
+            interest_entry["startDate"] = start_date
+
+        rel_stmt = make_relationship_statement(
+            source_id="opencorporates",
+            local_id=f"rel/{local_key}",
+            subject_statement_id=subject_stmt_id,
+            interested_party_statement_id=person_stmt_id,
+            interested_party_type="person",
+            interests=[interest_entry],
+            source_url=oc_url,
+        )
+
+        result.extend([person_stmt, rel_stmt])
+
+    return result

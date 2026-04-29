@@ -18,6 +18,14 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **License:** [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/)
 - **Attribution:** "Contains LEI data from GLEIF, available under CC0 1.0."
 
+## OpenCorporates
+
+- **Data:** global company registry data — company profiles, registered addresses, officer appointments
+- **API:** <https://api.opencorporates.com/>
+- **License:** [OpenCorporates Terms and Conditions](https://opencorporates.com/info/terms-and-conditions) — free tier for non-commercial use; requires attribution
+- **Attribution:** "Company data from OpenCorporates (opencorporates.com)."
+- **Note:** OpenCheck reaches OpenCorporates via the `ocid` field on GLEIF Level 1 records, which uses the format `jurisdiction/company_number` (e.g. `gb/00102498`). This bridges the LEI namespace directly to the OpenCorporates REST API.
+
 ## OpenSanctions
 
 - **Data:** sanctions lists, PEPs, crime-linked entities, cross-dataset references (including the OpenOwnership dataset and the GEM energy ownership dataset)

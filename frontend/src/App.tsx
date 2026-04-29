@@ -256,8 +256,7 @@ export default function App() {
           <p className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
             Look up an entity by its 20-character LEI. We query GLEIF
             first, then use the LEI to bridge to Companies House,
-            OpenSanctions, OpenAleph, Wikidata, OpenTender, and (soon)
-            OpenCorporates.
+            OpenCorporates, OpenSanctions, OpenAleph, Wikidata, and OpenTender.
           </p>
         </form>
 
@@ -392,6 +391,44 @@ export default function App() {
           </section>
         )}
       </main>
+
+      {/* GODIN ribbon — attribution banner. */}
+      <aside
+        className="px-6 sm:px-10 lg:px-16 py-4 text-white/90 text-[13px] leading-[1.6]"
+        style={{
+          background:
+            "linear-gradient(90deg, rgb(7, 116, 95) 0%, rgb(12, 213, 173) 100%)",
+        }}
+      >
+        <div className="max-w-oo-page mx-auto flex flex-wrap items-center gap-x-4 gap-y-2">
+          <a
+            href="https://godin.gleif.org/"
+            target="_blank"
+            rel="noreferrer"
+            title="Global Open Data Integration Network"
+          >
+            <img
+              src="https://godin.gleif.org/images/512/14456540/GODINRGBColourWide.png"
+              alt="GODIN"
+              className="h-8 w-auto"
+              style={{ filter: "brightness(0) invert(1)" }}
+            />
+          </a>
+          <p className="flex-1 min-w-0">
+            OpenCheck is built on open data and open standards from{" "}
+            <a
+              href="https://godin.gleif.org/"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 font-medium hover:text-white"
+            >
+              GODIN members
+            </a>{" "}
+            and others, and demonstrates the kind of interoperability GODIN
+            exists to enable.
+          </p>
+        </div>
+      </aside>
 
       <footer className="border-t border-oo-rule bg-white px-6 sm:px-10 lg:px-16 py-6 text-[12px] text-oo-muted">
         <div className="max-w-oo-page mx-auto text-center">
@@ -544,7 +581,6 @@ function ExampleLeiPicker({
 }
 
 function SubjectCard({ result }: { result: LookupResponse }) {
-  const ids = Object.entries(result.derived_identifiers);
   return (
     <section className="mb-8 bg-white border border-oo-rule rounded-oo p-7 transition-shadow hover:shadow-oo-card">
       <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-blue">
@@ -557,20 +593,6 @@ function SubjectCard({ result }: { result: LookupResponse }) {
         LEI {result.lei}
         {result.jurisdiction && ` · ${result.jurisdiction}`}
       </p>
-      {ids.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-1.5">
-          {ids.map(([k, v]) => (
-            <span
-              key={k}
-              title={`${k} (derived via GLEIF + Wikidata for cross-source matching)`}
-              className="inline-flex gap-1 text-[12px] border border-oo-rule rounded px-2 py-0.5 font-mono bg-oo-bg"
-            >
-              <span className="text-oo-muted">{k}=</span>
-              <span className="text-oo-ink">{v}</span>
-            </span>
-          ))}
-        </div>
-      )}
     </section>
   );
 }
@@ -823,13 +845,17 @@ function RiskChip({
       label: signal.code,
       classes: "bg-slate-100 text-slate-700 border-slate-200",
     };
-  const padding = compact ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-0.5 text-xs";
+  // Normal chips are deliberately larger so risk flags are hard to miss;
+  // compact variant (inside hit rows) is slightly smaller but still readable.
+  const padding = compact
+    ? "px-2 py-0.5 text-[12px] font-medium"
+    : "px-3 py-1 text-[13px] font-semibold";
   return (
     <span
       title={`${signal.summary}\n\nSource: ${signal.source_id}/${signal.hit_id}\nConfidence: ${signal.confidence}`}
-      className={`inline-flex items-baseline gap-1 border rounded ${padding} ${presentation.classes}`}
+      className={`inline-flex items-center gap-1.5 border rounded-full shadow-sm ${padding} ${presentation.classes}`}
     >
-      <span aria-hidden>{CONFIDENCE_DOT[signal.confidence] ?? "•"}</span>
+      <span aria-hidden className="text-[10px]">{CONFIDENCE_DOT[signal.confidence] ?? "•"}</span>
       <span>{presentation.label}</span>
     </span>
   );

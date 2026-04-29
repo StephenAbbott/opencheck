@@ -2,7 +2,7 @@
 
 Customer due diligence risk checks driven by the Legal Entity Identifier (LEI), open data and open standards.
 
-You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, Wikidata Q-ID, etc.), and uses those bridges to fan out across UK Companies House, OpenSanctions, OpenAleph, EveryPolitician, Wikidata, and OpenTender. 
+You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, OpenCorporates ID, Wikidata Q-ID, etc.), and uses those bridges to fan out across UK Companies House, OpenCorporates, OpenSanctions, OpenAleph, EveryPolitician, Wikidata, and OpenTender. 
 
 Everything maps into [version 0.4 of the Beneficial Ownership Data Standard (BODS)](https://standard.openownership.org/en/0.4.0/), the cross-source links + risk signals are computed deterministically, and the whole bundle is one click away from a downloadable shareable export.
 
@@ -10,7 +10,7 @@ The risk-signal layer mirrors the [draft customer due diligence regulatory techn
 
 ## Status
 
-OpenCheck has shipped through eleven phases (latest commit on `main` is the source of truth):
+OpenCheck has shipped through sixteen phases (latest commit on `main` is the source of truth):
 
 | Phase | Headline |
 |------:|----------|
@@ -26,8 +26,13 @@ OpenCheck has shipped through eleven phases (latest commit on `main` is the sour
 | 9 | Tooling fixes — `@vitejs/plugin-react` v5 / vite 8 alignment, README phase recap |
 | 10 | Open Ownership processed BODS bundles for UK PSC + GLEIF as the canonical source |
 | 11 | Cross-check related-party names against OpenSanctions + EveryPolitician — `RELATED_PEP` / `RELATED_SANCTIONED` |
+| 12 | OO bundle as LEI lookup entry point + example LEI picker |
+| 13 | `.env` loading from project root + BODS graph statement sanitiser + title/homepage link |
+| 14 | bods-dagre `Invalid argument expected string` fix |
+| 15 | Extraction script walks by `recordId` (not `statementId`) for correct subgraph extraction |
+| 16 | OpenCorporates adapter (OCID-bridged via GLEIF) + BODS dagre relationship-edge fix + GODIN ribbon + Render deployment |
 
-Test suite: 206 backend tests across the eleven phases. Frontend type-checks clean.
+Test suite: 201 backend tests across the sixteen phases. Frontend type-checks clean.
 
 ## Quick start
 
@@ -72,6 +77,7 @@ Paste a 20-character ISO 17442 LEI — for example `213800LH1BZH3DI6G760` (BP) o
 3. Looks up the **Wikidata Q-ID** via SPARQL on property `P1278`.
 4. Dispatches to every other adapter using whichever identifier they understand:
    - UK Companies House — direct fetch by company number when jurisdiction = GB. The Open Ownership processed UK PSC bundle (`data/cache/bods_data/uk/<GB-COH>.jsonl`) is the canonical answer when present; otherwise falls back to the live API.
+   - OpenCorporates — fetched by `ocid` (e.g. `gb/00102498`), a field GLEIF returns on Level 1 records; delivers company profile + current officers as BODS statements.
    - OpenSanctions / OpenTender — search by the LEI string.
    - Wikidata — direct SPARQL fetch on the resolved Q-ID.
 5. Maps each source's payload into BODS v0.4 statements, runs the cross-source reconciler, runs the risk-signal service, and **cross-checks every related person and entity in the BODS bundle against OpenSanctions + EveryPolitician by name** — fuzzy-matched with optional birth-year compatibility — to surface scoped `RELATED_PEP` / `RELATED_SANCTIONED` signals on the matching node.
@@ -98,20 +104,19 @@ python scripts/extract_bods_subgraphs.py \
 
 ## Sources
 
-Six active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
+Seven active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
 
 | ID | Name | License | Description |
 |----|------|---------|-------------|
 | `companies_house` | UK Companies House | OGL-3.0 | Legal and beneficial ownership information from the UK corporate registry |
 | `gleif` | GLEIF | CC0-1.0 | Legal entity information from the Global Legal Entity Identifier Foundation |
+| `opencorporates` | OpenCorporates | OC Terms | Global company database, reached via the `ocid` field on GLEIF Level 1 records — adds company profile and current officers as BODS statements |
 | `opensanctions` | OpenSanctions | CC BY-NC 4.0 | The open-source database of sanctions, watchlists, and politically exposed persons |
 | `everypolitician` | EveryPolitician | CC BY-NC 4.0 | Global database of political office-holders (served via OpenSanctions PEPs dataset) |
 | `wikidata` | Wikidata | CC0-1.0 | A free and open knowledge base that can be read and edited by both humans and machines |
 | `opentender` | OpenTender (DIGIWHIST) | CC BY-NC-SA 4.0 | Search and analyse tender data from 35 jurisdictions |
 
 The OpenAleph adapter is implemented but currently disabled in `REGISTRY` — its API is name-keyed rather than identifier-keyed, which doesn't fit the LEI flow cleanly yet. Re-enable in `backend/opencheck/sources/__init__.py` once we have a curated demo set for it.
-
-OpenCorporates is on the roadmap and will land once an API key arrives.
 
 NC-licensed sources propagate their share-alike / non-commercial obligations through `/deepen` and `/export`. The exported `LICENSES.md` warns reviewers before they re-publish.
 
@@ -174,6 +179,7 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 | `OPENCHECK_ALLOW_LIVE` | Master switch. `true` enables live HTTP calls for adapters whose key is set. |
 | `OPENCHECK_CORS_ORIGIN` | CORS origin for the frontend dev server. |
 | `COMPANIES_HOUSE_API_KEY` | UK Companies House API key (free; <https://developer.company-information.service.gov.uk/>). |
+| `OPENCORPORATES_API_KEY` | OpenCorporates API key — unlocks live company + officer data via the OC REST API. |
 | `OPENSANCTIONS_API_KEY` | OpenSanctions API key (also unlocks the EveryPolitician PEPs dataset). |
 | `OPENALEPH_API_KEY` | OpenAleph API key (optional — unlocks restricted collections). |
 | `WIKIDATA_SPARQL_ENDPOINT` | Override the default Wikidata Query Service endpoint. |
@@ -186,7 +192,7 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 
 ```bash
 cd backend
-uv run pytest             # 206 tests, ~5s
+uv run pytest             # 201 tests, ~5s
 ```
 
 Frontend type check:
@@ -205,7 +211,7 @@ opencheck/
   backend/
     opencheck/
       app.py              FastAPI entry — /lookup, /search, /report, /export, /deepen, /stream
-      sources/            One module per source adapter (7 implemented; 6 active in REGISTRY)
+      sources/            One module per source adapter (8 implemented; 7 active in REGISTRY)
       bods/               BODS v0.4 mappers + validator
       bods_data.py        Open Ownership processed-bundle override layer (Phase 10)
       cross_check.py      Related-party name cross-check against OS + EveryPolitician (Phase 11)
@@ -243,7 +249,6 @@ The frontend also uses the [Beneficial Ownership Visualisation System](https://w
 
 ## Roadmap
 
-- **OpenCorporates adapter** once the API key arrives — adds another LEI / company-number bridge.
 - **Live opentender.eu integration** — the adapter is wired but `live_available=False` for now.
 - **Surface `RELATED_*` signals on the BODS dagre graph** — currently they appear in the chip strip; ideally they'd render an OpenSanctions / EveryPolitician icon next to the matching node in the visualisation.
 - **A "complex offshore" demo subject** that fires every AMLA chip simultaneously, for the consultation-friendly headline shot.
@@ -251,3 +256,18 @@ The frontend also uses the [Beneficial Ownership Visualisation System](https://w
 - **BODS RDF / SPARQL backbone** via Oxigraph — load the assembled BODS bundle into a triple store, expose `/sparql` for the published Open Ownership red-flag queries.
 
 Open issues and discussion live in the [GitHub repo](https://github.com/StephenAbbott/opencheck).
+
+## Deployment
+
+A `render.yaml` blueprint is included for one-click deployment to [Render](https://render.com):
+
+1. Push the repo to GitHub.
+2. In the Render dashboard → **New → Blueprint**, point at the repo. Render creates both services automatically.
+3. Set the secret env vars in the Render dashboard (under each service's **Environment** tab):
+   - `COMPANIES_HOUSE_API_KEY`
+   - `OPENCORPORATES_API_KEY`
+   - `OPENSANCTIONS_API_KEY`
+   - `OPENALEPH_API_KEY` (optional)
+4. Once the backend service is live, copy its URL (e.g. `https://opencheck-api.onrender.com`) and set it as `VITE_API_BASE_URL` on the frontend static site, then trigger a redeploy of the frontend.
+
+The backend runs as a Docker Web Service (uvicorn + Python 3.11); the frontend builds as a Render Static Site (Vite). Both use the free tier. The backend image bundles the pre-extracted BODS demo fixtures from `data/cache/` so the demo subjects work without a mounted volume.

@@ -66,6 +66,11 @@ class Settings(BaseSettings):
         alias="WIKIDATA_SPARQL_ENDPOINT",
     )
 
+    # --- OpenCorporates ---
+    opencorporates_api_key: str | None = Field(
+        default=None, alias="OPENCORPORATES_API_KEY"
+    )
+
     # --- Optional LLM ---
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
 

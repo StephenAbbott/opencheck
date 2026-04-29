@@ -39,6 +39,7 @@ from .bods import (
     map_everypolitician,
     map_gleif,
     map_openaleph,
+    map_opencorporates,
     map_opensanctions,
     map_opentender,
     map_wikidata,
@@ -61,10 +62,13 @@ app = FastAPI(
     ),
 )
 
+_cors_origin = get_settings().cors_origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[get_settings().cors_origin],
-    allow_credentials=True,
+    # When the env var is "*" (e.g. Render public demo), allow all origins
+    # and disable allow_credentials — browsers reject wildcard + credentials.
+    allow_origins=["*"] if _cors_origin == "*" else [_cors_origin],
+    allow_credentials=(_cors_origin != "*"),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -254,6 +258,7 @@ async def _stream_events(q: str, kind: SearchKind) -> AsyncIterator[dict[str, An
 _MAPPERS = {
     "companies_house": map_companies_house,
     "gleif": map_gleif,
+    "opencorporates": map_opencorporates,
     "opensanctions": map_opensanctions,
     "openaleph": map_openaleph,
     "wikidata": map_wikidata,
@@ -541,6 +546,28 @@ async def lookup(
     if jurisdiction.upper() == "GB" and registered_as:
         derived["gb_coh"] = registered_as
 
+    # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
+    # (format: ``{jurisdiction_code}/{company_number}``).
+    # When the lookup used a pre-extracted BODS bundle, ``gleif_bundle``
+    # doesn't carry the API response. We fetch the GLEIF Level 1 record
+    # separately in that case; the result is cached so the call is free
+    # on subsequent lookups.
+    ocid: str | None = None
+    if gleif.info.live_available:
+        try:
+            _gleif_src = (
+                gleif_bundle
+                if not gleif_bundle.get("_from_bundle")
+                else await gleif.fetch(lei)
+            )
+            if not _gleif_src.get("is_stub"):
+                _attrs = (_gleif_src.get("record") or {}).get("attributes") or {}
+                ocid = _attrs.get("ocid") or None
+        except Exception:  # noqa: BLE001
+            pass
+    if ocid:
+        derived["ocid"] = ocid
+
     # Wikidata Q-ID from LEI (P1278).
     wikidata_adapter = REGISTRY["wikidata"]
     qid = None
@@ -598,6 +625,32 @@ async def lookup(
                 deepened_bundles.append(("companies_house", derived["gb_coh"]))
         except Exception as exc:  # noqa: BLE001
             errors["companies_house"] = f"{type(exc).__name__}: {exc}"
+
+    # OpenCorporates — direct fetch by ocid derived from GLEIF.
+    if ocid:
+        try:
+            oc_bundle = await REGISTRY["opencorporates"].fetch(ocid)
+            if not oc_bundle.get("is_stub"):
+                company = oc_bundle.get("company") or {}
+                hits.append(
+                    SourceHit(
+                        source_id="opencorporates",
+                        hit_id=ocid,
+                        kind=SearchKind.ENTITY,
+                        name=company.get("name") or legal_name or "",
+                        summary=f"OC {ocid} · {company.get('current_status', '')}",
+                        identifiers={
+                            "ocid": ocid,
+                            "lei": lei,
+                            **({"gb_coh": derived["gb_coh"]} if "gb_coh" in derived else {}),
+                        },
+                        raw=company,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("opencorporates", ocid))
+        except Exception as exc:  # noqa: BLE001
+            errors["opencorporates"] = f"{type(exc).__name__}: {exc}"
 
     # Wikidata — direct fetch when we resolved a Q-ID.
     if qid:

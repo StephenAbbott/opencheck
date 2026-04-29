@@ -234,25 +234,66 @@ function sanitiseBundle(input: unknown[]): unknown[] {
     }
   }
 
-  // Second pass: drop relationship statements that point outside the
-  // bundle. Keep entity / person statements untouched.
-  return wellTyped.filter((stmt) => {
+  // Second pass: normalise and filter.
+  //
+  // For RELATIONSHIP statements:
+  //   - Drop those whose subject or interestedParty points outside the bundle.
+  //   - bods-dagre v0.4 path expects recordDetails.subject and
+  //     recordDetails.interestedParty as *string* statementIds, but the
+  //     Open Ownership extraction pipeline emits them as objects:
+  //       { describedByEntityStatement: "<uuid>" }
+  //     We flatten them here so bods-dagre actually draws edges.
+  //
+  // For ENTITY statements:
+  //   - bods-dagre reads ``recordDetails.jurisdiction.code`` to render
+  //     country flags, but BODS v0.4 data uses ``incorporatedInJurisdiction``.
+  //     We copy the field so flags appear.
+  const normalised: unknown[] = [];
+  for (const stmt of wellTyped) {
     const recordType = stmt.recordType ?? stmt.statementType;
-    if (recordType !== "relationship") return true;
-    const rd = (stmt.recordDetails as Record<string, unknown> | undefined) ?? {};
-    const subject = rd.subject as Record<string, unknown> | undefined;
-    const interested = rd.interestedParty as Record<string, unknown> | undefined;
-    const subjectId =
-      (subject?.describedByEntityStatement as string | undefined) ??
-      (subject?.describedByPersonStatement as string | undefined);
-    const interestedId =
-      (interested?.describedByEntityStatement as string | undefined) ??
-      (interested?.describedByPersonStatement as string | undefined);
-    // Subject and interestedParty must both resolve to a node we have.
-    // ``unspecifiedReason`` interestedParties (BODS placeholders) are
-    // dropped — they'd render as orphan edges with no target.
-    if (!subjectId || !nodeIds.has(subjectId)) return false;
-    if (!interestedId || !nodeIds.has(interestedId)) return false;
-    return true;
-  });
+
+    if (recordType === "relationship") {
+      const rd =
+        (stmt.recordDetails as Record<string, unknown> | undefined) ?? {};
+      const subject = rd.subject as Record<string, unknown> | undefined;
+      const interested = rd.interestedParty as
+        | Record<string, unknown>
+        | undefined;
+      const subjectId =
+        (subject?.describedByEntityStatement as string | undefined) ??
+        (subject?.describedByPersonStatement as string | undefined);
+      const interestedId =
+        (interested?.describedByEntityStatement as string | undefined) ??
+        (interested?.describedByPersonStatement as string | undefined);
+
+      // Drop dangling references — they'd produce orphan edges.
+      if (!subjectId || !nodeIds.has(subjectId)) continue;
+      if (!interestedId || !nodeIds.has(interestedId)) continue;
+
+      // Flatten to strings so bods-dagre draws the edge.
+      normalised.push({
+        ...stmt,
+        recordDetails: {
+          ...rd,
+          subject: subjectId,
+          interestedParty: interestedId,
+        },
+      });
+    } else if (recordType === "entity") {
+      const rd =
+        (stmt.recordDetails as Record<string, unknown> | undefined) ?? {};
+      // Copy incorporatedInJurisdiction → jurisdiction for flag display.
+      if (rd.incorporatedInJurisdiction && !rd.jurisdiction) {
+        normalised.push({
+          ...stmt,
+          recordDetails: { ...rd, jurisdiction: rd.incorporatedInJurisdiction },
+        });
+      } else {
+        normalised.push(stmt);
+      }
+    } else {
+      normalised.push(stmt);
+    }
+  }
+  return normalised;
 }
