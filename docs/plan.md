@@ -1,6 +1,6 @@
 # OpenCheck — Project Plan
 
-A chatbot-style corporate intelligence tool that checks entities and people against open data sources, surfaces risk signals, and turns any ownership information it finds into BODS so users can download it, visualise it, and take it into other tools.
+A corporate intelligence tool that checks entities against open data sources, surfaces risk signals and turns any ownership information it finds into BODS so users can download it, visualise it, and take it into other tools.
 
 > **Status:** draft project plan. All design decisions here are provisional and up for revision once prototyping begins.
 > **Owner:** Stephen Abbott Pugh (Understand Beneficial Ownership; GODIN co-organiser).
@@ -10,11 +10,11 @@ A chatbot-style corporate intelligence tool that checks entities and people agai
 
 ## 1. Vision & positioning
 
-**OpenCheck** is a conversational corporate-intelligence tool, powered entirely by open data. You ask it about a company or a person. It looks them up in a curated set of open datasets — UK Companies House, GLEIF, OpenSanctions, OpenAleph, EveryPolitician, and Wikidata — and returns a useful intelligence report: who the person or entity is, which sources have records on them, what risk signals (sanctions, PEP status, offshore leaks, unusual ownership structures) are present, and how the ownership/control relationships look when drawn as a graph.
+You paste in a Legal Entity Identifier. OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, Wikidata Q-ID, etc.), and uses those bridges to fan out across UK Companies House, OpenSanctions, OpenAleph, EveryPolitician, Wikidata, and OpenTender.
 
-Every hit is explicitly attributed to its source and license. Users can go deeper on any finding — expanding a single source's record in full, and seeing how that record maps and links to equivalent records in the other datasets.
+Everything maps into version 0.4 of the Beneficial Ownership Data Standard (BODS), the cross-source links + risk signals are computed deterministically, and the whole bundle is one click away from a downloadable shareable export.
 
-Beneath the UI, OpenCheck converts every ownership or control relationship it discovers into the **Beneficial Ownership Data Standard (BODS) v0.4**, then uses the author's existing BODS adapter ecosystem (`bods-ftm`, `bods-neo4j`, `bods-xml`, `bods-gql`, `bods-aml-ai`) to let users take their results into other tools and formats.
+The risk-signal layer mirrors the draft customer due diligence regulatory technical standards from the EU's Anti-Money Laundering Authority (AMLA) draft conditions for "complex corporate structures" — trust/arrangement, non-EU jurisdiction, nominee, ≥3 ownership layers, plus the composite threshold rule and an advisory mirror of the subjective obfuscation condition.
 
 ### Why it earns its keep
 
@@ -39,19 +39,11 @@ Beneath the UI, OpenCheck converts every ownership or control relationship it di
 
 **Secondary user:** a developer or data integrator evaluating BODS who wants to see a working example of how heterogeneous open data can be normalised into BODS and used downstream.
 
-**Tertiary user:** the author themselves, using it as a reference implementation and a demo surface for consultancy conversations, conference talks, and workshops.
-
-### Representative queries
-
-- "Is Kaspersky Lab on any sanctions lists?"
-- "Show me what you have on Viktor Vekselberg."
-- "Who owns or controls Scottish Limited Partnership SL023456?"
-- "Does the director of [company] appear on any PEP or sanctions lists?"
-- "Tell me more about the ownership structure of [company] — and give me the BODS data for it."
+**Tertiary user:** the author themselves, using it as a reference implementation and a demo surface for consultancy conversations, conference talks and workshops.
 
 ### Explicit non-goals
 
-- Not a replacement for Sayari, Kyckr, Dow Jones, Refinitiv, or paid screening tools.
+- Not a replacement for Sayari, Kyckr, Dow Jones, Refinitiv or paid screening tools.
 - Not a KYC system of record — it explicitly shows that "no hit" in these sources does not mean "clean."
 - Not a universal search over all open data in the world — scope is fixed to the named sources for v1.
 - No automated risk scoring or machine-generated guilt inference. It surfaces signals; the human decides.
@@ -62,7 +54,7 @@ Beneath the UI, OpenCheck converts every ownership or control relationship it di
 
 ### In scope for v1
 
-- Chatbot-style interface accepting free-text queries that are resolved to either an **entity** (company, trust, other legal person) or an **individual**.
+- Search interface accepting an LEI which is used to look up information on the entity in question
 - Entity lookups against: **Companies House (UK)**, **GLEIF**, **OpenSanctions**, **OpenAleph**.
 - Individual lookups against: **Companies House (UK)**, **OpenSanctions**, **EveryPolitician**, **Wikidata**, **OpenAleph**.
 - Hybrid data model: curated cached demo records for a set of known-interesting entities/people, with live API calls as a fallback.
@@ -78,14 +70,14 @@ Beneath the UI, OpenCheck converts every ownership or control relationship it di
 - User accounts, saved reports, collaboration.
 - Uploading one's own data for screening against the open sources.
 - Full-text search over OpenAleph document collections beyond what its API returns for a given entity.
-- Non-UK corporate registers (Norway, France, Nigeria, Latvia, Slovakia, etc.) — acknowledged as high-value v2 additions; entry point is via OpenOwnership's BODS data explorer and national APIs.
+- Non-UK corporate registers (Norway, France, Nigeria, Latvia, Slovakia, etc.) — acknowledged as high-value v2 additions; entry point is via Open Ownership's BODS data explorer and national APIs.
 - AI-generated narrative risk summaries beyond deterministic templating. (Optional v1.1 addition; see §7.)
 
 ---
 
 ## 4. Data sources, licensing and attribution
 
-For each source, the plan records: what we query it for, how we query it, what license applies, and how attribution is surfaced in-product. Where a source requires API keys, those are held server-side and never exposed to the client.
+For each source, the plan records: what we query it for, how we query it, what license applies and how attribution is surfaced in-product. Where a source requires API keys, those are held server-side and never exposed to the client.
 
 ### 4.1 UK Companies House
 
@@ -182,10 +174,6 @@ data/
 - **Entity: an entity with an ICIJ Offshore Leaks presence** (exercises `bods-icij-offshoreleaks` mapping and Aleph).
 - **Entity: an EITI-listed SOE** (exercises state-body BODS mapping, EITI SOE database).
 - **Entity: a publicly listed company with an LEI** (exercises GLEIF Level 1+2).
-- **Person: a sanctioned individual with complex corporate networks** (exercises cross-source linking).
-- **Person: a current head of state or cabinet minister** (exercises Wikidata + OpenSanctions PEP + EveryPolitician).
-- **Person: a PSC of multiple UK companies** (exercises Companies House officer appointments + PSC).
-- **Person: a figure with strong Aleph / ICIJ presence** (exercises Aleph + Offshore Leaks mapping).
 
 Each demo is stored as a pre-computed bundle: raw per-source responses (so the source cards render exactly as they would live), a pre-built BODS dataset, and a pre-rendered graph layout. This means the demo UX is reliable and fast, and demo day doesn't depend on any live service.
 
@@ -197,17 +185,11 @@ For an entity:
 - **UK company number** (GB-COH from [org-id.guide](https://org-id.guide)) for UK-registered companies.
 - **Wikidata Q-ID** as the secondary bridge, especially for entities without an LEI.
 
-For a person:
-
-- **Wikidata Q-ID** is the primary bridge.
-- **Date of birth + country of citizenship + normalised name** is the fallback for weak matches, flagged as `possibly-same-as` rather than `same-as` (borrowing Sayari's terminology).
-- OpenCheck **does not** fuzzy-merge automatically; candidate matches are shown to the user with a confidence band and a "confirm this is the same person" control.
 
 ### 5.4 Live fallback behaviour
 
 When a user queries something not in the demo corpus:
 
-- The chat UI shows a "searching live sources…" status with a per-source progress strip.
 - Each source adapter runs concurrently with a short timeout (5–8s) and a circuit breaker.
 - Results are cached in `data/cache/live/{source}/{query-hash}.json` with a short TTL (1–24h depending on source) so repeated queries during a demo session are instantaneous.
 - Any source that fails, rate-limits, or errors is shown with its specific error state rather than being silently hidden ("OpenSanctions did not respond — click to retry").
@@ -224,17 +206,9 @@ This is a commitment to the honesty the project requires: we never let a cached 
 
 ---
 
-## 6. Conversation UX and report format
+## 6. Report format
 
-### 6.1 Interaction model
-
-**Turn 1 — the query.** User types a free-text message. An intent/entity classifier (a small rules-plus-LLM hybrid; see §7.1) extracts: the name being searched, whether it's a person or entity (or asks the user to disambiguate), and any qualifiers (jurisdiction, context).
-
-**Turn 2 — the report.** OpenCheck responds with a structured intelligence report as a single chat message. The report is not a wall of text; it is a composed set of widgets inside the message (summary banner, risk chips, source cards, graph pane). The report is the artefact the user works with.
-
-**Turn N — progressive disclosure.** The user interacts with the report: clicking a source card expands it; clicking a risk chip pins it; typing "tell me more about their involvement with X" runs a new query scoped to the current subject. The conversation feels ongoing but every drill-down is explicit, sourced, and reversible.
-
-### 6.2 Report structure
+### 6.1 Report structure
 
 A report is composed of these sections:
 
@@ -245,7 +219,7 @@ A report is composed of these sections:
 5. **Cross-source links.** A small panel showing which sources we believe describe the same real-world entity/person, and why (shared LEI, shared Q-ID, name+DOB match, etc.).
 6. **Export & download.** Buttons for: BODS JSON, BODS JSONL, FtM JSON (via `bods-ftm`), Neo4j CSV (via `bods-neo4j`), XML (via `bods-xml`), BigQuery CSV + GQL schema (via `bods-gql`), AML AI NDJSON (via `bods-aml-ai`), plus a shareable/printable intelligence report (Markdown and PDF).
 
-### 6.3 Risk signals — deterministic rules
+### 6.2 Risk signals — deterministic rules
 
 Signals are derived by rules, not inference. Examples:
 
@@ -256,7 +230,7 @@ Signals are derived by rules, not inference. Examples:
 - *Opaque ownership* fires if BODS output contains `unknownPersons`, `anonymousEntity`, or component statements with missing leaves.
 - *No risk signals found* fires only when every check ran successfully and none fired — this is a meaningful UX state, distinct from "we didn't check."
 
-### 6.4 "Go deeper" progressive disclosure
+### 6.3 "Go deeper" progressive disclosure
 
 Clicking *View full record* on a source card switches the card into a full-screen pane showing:
 
@@ -264,16 +238,6 @@ Clicking *View full record* on a source card switches the card into a full-scree
 - A map of how each field in that record maps to BODS (where applicable) — this is where the BODS-as-spine narrative becomes visible.
 - Cross-source mappings: "this OpenSanctions entity is also matched to …" with a confidence band and the matching key.
 - Per-record export buttons, scoped to just that source's data.
-
-### 6.5 A note on the LLM in the loop
-
-The LLM's role is deliberately minimal. It handles:
-
-- Intent/entity extraction from free-text queries (classifying person vs entity, extracting names and jurisdictions).
-- Disambiguation when a name returns multiple candidates ("Did you mean…?").
-- A short human-language summary under the risk banner (strictly templated, fed from deterministic data; the LLM's only freedom is phrasing).
-
-The LLM never *decides* what's a risk. It never fabricates sources. Every source card and every risk chip is driven by deterministic data from the source adapters.
 
 ---
 
@@ -336,10 +300,7 @@ BODS is not a feature of OpenCheck. It is the internal data model that every sou
 
 When adapters produce BODS statements describing the same real-world entity, OpenCheck:
 
-- Merges by matching identifier (LEI, CH number, Q-ID) where present — emits a single `entityStatement` / `personStatement` with a union of names and identifiers.
-- Does not merge on name alone. Candidate matches on name+DOB / name+jurisdiction are surfaced as a separate "cross-source links" panel with a human-reviewable confidence band.
-- Uses `replacesStatements[]` where a newer record supersedes an older one from the same source (e.g. successive Companies House snapshots).
-- Flags missing BO (`unknownPersons`, `anonymousEntity`, chains terminating in unknown parties) in line with BODS conventions — these feed the *Opaque ownership* risk chip.
+- Merges by matching LEI
 
 ### 7.4 Validation
 
@@ -475,7 +436,7 @@ opencheck/
 
 GODIN is a core audience, not an afterthought. Specific, concrete hooks:
 
-- **A GODIN ribbon in the UI.** A small but permanent banner explaining: "OpenCheck is built on open data from GODIN members — GLEIF, OpenOwnership (BODS), OpenSanctions — and others, and demonstrates the kind of interoperability GODIN exists to enable." Links to [godin.gleif.org](https://godin.gleif.org/).
+- **A GODIN ribbon in the UI.** A small but permanent banner explaining: "OpenCheck is built on open data from GODIN members — GLEIF, Open Ownership (BODS), OpenSanctions — and others, and demonstrates the kind of interoperability GODIN exists to enable." Links to [godin.gleif.org](https://godin.gleif.org/).
 - **Identifier-bridge visualisation.** The "cross-source links" panel (§6.2) visualises exactly what GODIN's Transparency Fabric does — each bridge is attributed, with a hover card explaining which identifier made the match. This makes GODIN's value proposition concrete every time a user runs a query.
 - **A dedicated "Behind the scenes" page.** Explains the architecture, the sources, BODS as the spine, and links to GODIN, the Transparency Fabric, the BODS standard, and the author's adapter repos.
 - **Source cards that name GODIN members.** Where a source is a GODIN member, the card carries a small GODIN chip linking to that member's GODIN profile.
