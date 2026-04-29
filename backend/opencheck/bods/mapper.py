@@ -257,15 +257,25 @@ class BODSBundle:
         return len(self.statements)
 
 
+# Country strings Companies House uses in PSC identification blocks to
+# indicate a UK-registered entity (mirrors the set in the CH source adapter).
+_CH_UK_COUNTRY_STRINGS: frozenset[str] = frozenset({
+    "united kingdom", "england", "scotland", "wales", "northern ireland", "gb", "uk",
+})
+
+
 def map_companies_house(bundle: dict[str, Any]) -> BODSBundle:
     """Map a Companies House bundle to BODS.
 
     Two dispatch shapes:
 
-    * ``{"company_number": ..., "profile": ..., "officers": ..., "pscs": ...}``
+    * ``{"company_number": ..., "profile": ..., "officers": ..., "pscs": ...,
+         "related_companies": {...}}``
       — produced by ``_fetch_company_bundle``. Yields the company entity
       + a personStatement / entityStatement per active PSC, plus an
-      ownership-or-control relationship per PSC.
+      ownership-or-control relationship per PSC. UK corporate PSC chains
+      (up to ``max_depth`` hops, fetched recursively by the adapter) are
+      emitted from ``related_companies``.
     * ``{"officer_id": ..., "appointments": {...}}`` — produced by
       ``_fetch_officer_bundle``. Yields the officer as a
       personStatement, plus a "boardMember" relationship for every
@@ -275,12 +285,33 @@ def map_companies_house(bundle: dict[str, Any]) -> BODSBundle:
         return _map_companies_house_officer(bundle)
 
     result = BODSBundle()
+    # Track statement IDs emitted so far to avoid duplicates when a UK
+    # corporate PSC appears both as a PSC reference and as a related company.
+    seen_sids: set[str] = set()
 
+    _emit_company_statements(bundle, result, seen_sids)
+
+    for sub_bundle in (bundle.get("related_companies") or {}).values():
+        _emit_company_statements(sub_bundle, result, seen_sids)
+
+    return result
+
+
+def _emit_company_statements(
+    bundle: dict[str, Any],
+    result: BODSBundle,
+    seen_sids: set[str],
+) -> None:
+    """Emit entity + PSC statements for one company bundle into *result*.
+
+    *seen_sids* is updated in place; statements whose ``statementId`` is
+    already present are silently skipped so the same entity/relationship is
+    never duplicated across the root + related-company passes.
+    """
     number = str(bundle.get("company_number", ""))
     profile = bundle.get("profile") or {}
     pscs = (bundle.get("pscs") or {}).get("items") or []
 
-    # --- Subject entity ---
     company_url = (
         f"https://find-and-update.company-information.service.gov.uk/company/{number}"
     )
@@ -296,10 +327,11 @@ def map_companies_house(bundle: dict[str, Any]) -> BODSBundle:
         addresses=_profile_addresses(profile),
         source_url=company_url,
     )
-    result.statements.append(entity)
     entity_sid = entity["statementId"]
+    if entity_sid not in seen_sids:
+        result.statements.append(entity)
+        seen_sids.add(entity_sid)
 
-    # --- PSCs (individuals + corporate PSCs) ---
     for psc in pscs:
         if psc.get("ceased_on"):
             # Skip ceased PSCs in Phase 1 — future work: emit a closed record.
@@ -307,7 +339,22 @@ def map_companies_house(bundle: dict[str, Any]) -> BODSBundle:
         psc_kind = (psc.get("kind") or "").lower()
 
         if "corporate-entity" in psc_kind or "legal-person" in psc_kind:
-            ip = _map_corporate_psc(number, psc, company_url)
+            # Detect UK CH registration numbers so the entity statementId
+            # produced here aligns with the statementId the related-company
+            # pass emits for the same company (both use local_id = reg_no).
+            ident = psc.get("identification") or {}
+            reg_no = (ident.get("registration_number") or "").strip()
+            reg_country = (ident.get("country_registered") or "").lower().strip()
+            uk_number = (
+                reg_no
+                if (
+                    len(reg_no) == 8
+                    and reg_no.isalnum()
+                    and reg_country in _CH_UK_COUNTRY_STRINGS
+                )
+                else None
+            )
+            ip = _map_corporate_psc(number, psc, company_url, uk_number=uk_number)
             ip_type = "entity"
         elif "individual" in psc_kind:
             ip = _map_individual_psc(number, psc, company_url)
@@ -323,7 +370,10 @@ def map_companies_house(bundle: dict[str, Any]) -> BODSBundle:
             )
             ip_type = "person"
 
-        result.statements.append(ip)
+        ip_sid = ip["statementId"]
+        if ip_sid not in seen_sids:
+            result.statements.append(ip)
+            seen_sids.add(ip_sid)
 
         natures = psc.get("natures_of_control") or []
         interests = [_parse_nature(n) for n in natures] or [
@@ -336,16 +386,17 @@ def map_companies_house(bundle: dict[str, Any]) -> BODSBundle:
 
         rel = make_relationship_statement(
             source_id="companies_house",
-            local_id=f"{number}:{ip['statementId']}",
+            local_id=f"{number}:{ip_sid}",
             subject_statement_id=entity_sid,
-            interested_party_statement_id=ip["statementId"],
+            interested_party_statement_id=ip_sid,
             interested_party_type=ip_type,
             interests=interests,
             source_url=company_url,
         )
-        result.statements.append(rel)
-
-    return result
+        rel_sid = rel["statementId"]
+        if rel_sid not in seen_sids:
+            result.statements.append(rel)
+            seen_sids.add(rel_sid)
 
 
 def _profile_addresses(profile: dict[str, Any]) -> list[dict[str, str]]:
@@ -553,8 +604,20 @@ def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
 
 
 def _map_corporate_psc(
-    company_number: str, psc: dict[str, Any], source_url: str
+    company_number: str,
+    psc: dict[str, Any],
+    source_url: str,
+    *,
+    uk_number: str | None = None,
 ) -> dict[str, Any]:
+    """Map a corporate / legal-person PSC to a BODS entityStatement.
+
+    When *uk_number* is provided it is used as the ``local_id`` so that the
+    ``statementId`` produced here matches the one emitted when the same
+    company is processed as a related-company root (both sides use
+    ``local_id = company_number``).  Without this alignment, the dagre
+    visualiser can't connect the PSC node to the full ownership subgraph.
+    """
     identification = psc.get("identification") or {}
     identifiers: list[dict[str, str]] = []
     reg_number = identification.get("registration_number")
@@ -582,8 +645,14 @@ def _map_corporate_psc(
             }
         )
 
-    etag = psc.get("etag") or psc.get("name", "")
-    local_id = f"{company_number}:psc-corp:{etag}"
+    # Use the UK company number as local_id when available so that the
+    # statementId here aligns with the entity statement emitted by the
+    # related-company pass for the same company.
+    if uk_number:
+        local_id = uk_number
+    else:
+        etag = psc.get("etag") or psc.get("name", "")
+        local_id = f"{company_number}:psc-corp:{etag}"
 
     return make_entity_statement(
         source_id="companies_house",

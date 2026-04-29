@@ -33,6 +33,13 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 _API_BASE = "https://api.company-information.service.gov.uk"
 _CACHE_NS = "companies_house"
 
+# Country strings that Companies House uses in PSC identification blocks to
+# indicate a UK-registered entity.  Used to detect corporate PSCs that can
+# be followed up the chain with another CH API call.
+_UK_COUNTRY_STRINGS: frozenset[str] = frozenset({
+    "united kingdom", "england", "scotland", "wales", "northern ireland", "gb", "uk",
+})
+
 
 def _slug(text: str) -> str:
     """Cache-safe slug for a free-text query."""
@@ -127,6 +134,31 @@ class CompaniesHouseAdapter(SourceAdapter):
         return await self._fetch_officer_bundle(hit_id)
 
     async def _fetch_company_bundle(self, number: str) -> dict[str, Any]:
+        visited: set[str] = set()
+        related: dict[str, dict[str, Any]] = {}
+        root = await self._fetch_company_data(
+            number, visited=visited, related=related, depth=0
+        )
+        root["related_companies"] = related
+        return root
+
+    async def _fetch_company_data(
+        self,
+        number: str,
+        *,
+        visited: set[str],
+        related: dict[str, dict[str, Any]],
+        depth: int,
+        max_depth: int = 3,
+    ) -> dict[str, Any]:
+        """Recursively fetch a company bundle, following UK corporate PSC chains.
+
+        Up to *max_depth* hops are followed. Already-visited company numbers
+        are skipped to break cycles. Only active (not ``ceased_on``) corporate
+        / legal-person PSCs with a UK Companies House registration number are
+        followed.
+        """
+        visited.add(number)
         profile = await self._get(
             f"/company/{number}",
             cache_key=f"{_CACHE_NS}/company/{number}",
@@ -139,6 +171,37 @@ class CompaniesHouseAdapter(SourceAdapter):
             f"/company/{number}/persons-with-significant-control",
             cache_key=f"{_CACHE_NS}/company/{number}/pscs",
         )
+
+        if depth < max_depth:
+            for psc in pscs.get("items") or []:
+                if psc.get("ceased_on"):
+                    continue
+                kind = (psc.get("kind") or "").lower()
+                if "corporate" not in kind and "legal-person" not in kind:
+                    continue
+                ident = psc.get("identification") or {}
+                reg_no = (ident.get("registration_number") or "").strip()
+                reg_country = (ident.get("country_registered") or "").lower().strip()
+                if (
+                    not _looks_like_company_number(reg_no)
+                    or reg_country not in _UK_COUNTRY_STRINGS
+                    or reg_no in visited
+                    or reg_no in related
+                ):
+                    continue
+                # Only recurse if we have cached data or live is available.
+                sub_key = f"{_CACHE_NS}/company/{reg_no}"
+                if not self.info.live_available and not self._cache.has(sub_key):
+                    continue
+                sub = await self._fetch_company_data(
+                    reg_no,
+                    visited=visited,
+                    related=related,
+                    depth=depth + 1,
+                    max_depth=max_depth,
+                )
+                related[reg_no] = sub
+
         return {
             "source_id": self.id,
             "company_number": number,

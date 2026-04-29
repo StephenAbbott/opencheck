@@ -197,3 +197,90 @@ def test_ceased_pscs_are_skipped() -> None:
     # One active PSC left (the corporate one) + the subject entity + one relationship.
     types = [s["recordType"] for s in bundle]
     assert types.count("relationship") == 1
+
+
+# ---------------------------------------------------------------------
+# Multi-hop related_companies depth
+# ---------------------------------------------------------------------
+
+
+def _make_related_bundle(number: str, name: str, psc_items: list) -> dict:
+    """Helper: minimal company bundle suitable for use as a related_companies entry."""
+    return {
+        "source_id": "companies_house",
+        "company_number": number,
+        "profile": {"company_number": number, "company_name": name},
+        "officers": {"items": []},
+        "pscs": {"items": psc_items},
+    }
+
+
+def test_related_companies_connected_statementids() -> None:
+    """The corporate PSC entity statementId in the root bundle must match the
+    entity statementId emitted for the same company in related_companies."""
+    root = _sample_bundle()
+    # The corporate PSC in _sample_bundle has registration_number "12345678".
+    # Add it as a related company with its own PSC.
+    root["related_companies"] = {
+        "12345678": _make_related_bundle(
+            "12345678",
+            "Acme Holdings Ltd",
+            [
+                {
+                    "kind": "individual-person-with-significant-control",
+                    "name": "Bob JONES",
+                    "etag": "bj001",
+                    "natures_of_control": ["ownership-of-shares-75-to-100-percent"],
+                }
+            ],
+        )
+    }
+
+    bundle = map_companies_house(root)
+    statements = list(bundle)
+
+    # Collect entity statementIds and the interestedParty refs in relationships.
+    entity_sids = {s["statementId"] for s in statements if s["recordType"] == "entity"}
+    ip_refs = {
+        s["recordDetails"]["interestedParty"].get("describedByEntityStatement")
+        for s in statements
+        if s["recordType"] == "relationship"
+        and "describedByEntityStatement" in s["recordDetails"]["interestedParty"]
+    }
+
+    # Every entity interestedParty ref must point to a real entity statement.
+    assert ip_refs <= entity_sids, (
+        f"Dangling entity refs (graph disconnected): {ip_refs - entity_sids}"
+    )
+
+    # Specifically: the relationship from "00102498" → "12345678" must resolve.
+    # The corporate PSC entity statement (local_id="12345678") should appear
+    # exactly once (no duplicate from root vs. related pass).
+    from opencheck.bods.mapper import _stable_id
+    acme_sid = _stable_id("companies_house", "entity", "12345678")
+    assert acme_sid in entity_sids, "Acme Holdings entity statement missing"
+    assert sum(1 for s in statements if s["statementId"] == acme_sid) == 1, (
+        "Duplicate entity statement for Acme Holdings"
+    )
+
+
+def test_related_companies_no_duplicates() -> None:
+    """No statement should appear more than once when related_companies is present."""
+    root = _sample_bundle()
+    root["related_companies"] = {
+        "12345678": _make_related_bundle("12345678", "Acme Holdings Ltd", [])
+    }
+    bundle = map_companies_house(root)
+    sids = [s["statementId"] for s in bundle]
+    assert len(sids) == len(set(sids)), f"Duplicate statementIds: {[s for s in sids if sids.count(s) > 1]}"
+
+
+def test_related_companies_empty_is_backward_compatible() -> None:
+    """Bundles without related_companies (old shape) still map correctly."""
+    root = _sample_bundle()
+    # No related_companies key at all.
+    bundle = map_companies_house(root)
+    types = [s["recordType"] for s in bundle]
+    assert types.count("entity") == 2
+    assert types.count("person") == 1
+    assert types.count("relationship") == 2
