@@ -14,7 +14,7 @@ The risk-signal layer mirrors the [draft customer due diligence regulatory techn
 
 ## Status
 
-OpenCheck has shipped through sixteen phases (latest commit on `main` is the source of truth):
+OpenCheck has shipped through seventeen phases (latest commit on `main` is the source of truth):
 
 | Phase | Headline |
 |------:|----------|
@@ -35,6 +35,7 @@ OpenCheck has shipped through sixteen phases (latest commit on `main` is the sou
 | 14 | bods-dagre `Invalid argument expected string` fix |
 | 15 | Extraction script walks by `recordId` (not `statementId`) for correct subgraph extraction |
 | 16 | OpenCorporates adapter (OCID-bridged via GLEIF) + BODS dagre relationship-edge fix + GODIN ribbon + Render deployment |
+| 17 | FATF black/grey-list jurisdiction signals (`FATF_BLACK_LIST` / `FATF_GREY_LIST`) derived from BODS entity statements |
 
 Test suite: 201 backend tests across the sixteen phases. Frontend type-checks clean.
 
@@ -149,6 +150,15 @@ Risk signals fall into three groups:
 - `COMPLEX_OWNERSHIP_LAYERS` — DFS over the BODS relationship graph finds an entity-only chain ≥3 nodes (cycle-safe). Made meaningfully detectable by the Phase 10 Open Ownership bundles, which carry full multi-layer chains.
 - `COMPLEX_CORPORATE_STRUCTURE` — composite (high), fires when `COMPLEX_OWNERSHIP_LAYERS` AND ≥1 of {trust, non-EU, nominee} both fire — the AMLA threshold rule end-to-end.
 - `POSSIBLE_OBFUSCATION` — advisory (low) mirror of AMLA's subjective condition; explicitly notes the legitimate-economic-rationale caveat.
+
+### FATF jurisdiction signals (BODS v0.4 derived)
+
+For every `entityStatement` in the assembled BODS bundle, OpenCheck checks `incorporatedInJurisdiction.code` against the FATF lists current as of February 2026 (refreshed each FATF plenary: typically February, June, and October). Two independent signals, with different confidence levels reflecting FATF's own severity distinction:
+
+- `FATF_BLACK_LIST` — `high` — entity in the FATF High-Risk Jurisdictions (Call for Action) list: **Democratic People's Republic of Korea (KP), Iran (IR), Myanmar (MM)**.
+- `FATF_GREY_LIST` — `medium` — entity in the FATF Jurisdictions under Increased Monitoring list: Algeria, Angola, Bolivia, Bulgaria, Cameroon, Côte d'Ivoire, Democratic Republic of Congo, Haiti, Kenya, Kuwait, Laos, Lebanon, Monaco, Namibia, Nepal, Papua New Guinea, South Sudan, Syria, Venezuela, Vietnam, British Virgin Islands, Yemen.
+
+Both signals are derived purely from the BODS jurisdiction codes — they fire independently of the AMLA CDD RTS composite rule and require no additional source calls. The country code sets live in `risk.py` (`FATF_BLACK_LIST_CODES` / `FATF_GREY_LIST_CODES`) and should be updated after each FATF plenary.
 
 ### Cross-source name match (Phase 11)
 

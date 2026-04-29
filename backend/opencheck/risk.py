@@ -97,6 +97,10 @@ COMPLEX_OWNERSHIP_LAYERS = "COMPLEX_OWNERSHIP_LAYERS"
 COMPLEX_CORPORATE_STRUCTURE = "COMPLEX_CORPORATE_STRUCTURE"
 POSSIBLE_OBFUSCATION = "POSSIBLE_OBFUSCATION"
 
+# Codes — FATF jurisdiction lists (BODS-derived)
+FATF_BLACK_LIST = "FATF_BLACK_LIST"
+FATF_GREY_LIST = "FATF_GREY_LIST"
+
 
 # Default EU + EEA member states (ISO 3166-1 alpha-2). The AMLA RTS
 # scopes "outside the European Union" — we extend with EEA (NO/IS/LI)
@@ -147,6 +151,43 @@ def _eu_eea_codes() -> frozenset[str]:
     if not extras:
         return DEFAULT_EU_EEA_COUNTRY_CODES
     return frozenset(DEFAULT_EU_EEA_COUNTRY_CODES | extras)
+
+# FATF High-Risk Jurisdictions subject to a Call for Action ("black list")
+# as of February 2026 — Democratic People's Republic of Korea, Iran, Myanmar.
+# Source: https://www.fatf-gafi.org/en/countries/black-and-grey-lists.html
+FATF_BLACK_LIST_CODES: frozenset[str] = frozenset({"KP", "IR", "MM"})
+
+# FATF Jurisdictions under Increased Monitoring ("grey list") as of
+# February 2026.  Note that Bulgaria (BG) is an EU member-state — if
+# NON_EU_JURISDICTION is suppressed via OPENCHECK_AMLA_EQUIVALENT_JURISDICTIONS,
+# FATF_GREY_LIST will still fire for it.
+# Source: https://www.fatf-gafi.org/en/countries/black-and-grey-lists.html
+FATF_GREY_LIST_CODES: frozenset[str] = frozenset(
+    {
+        "DZ",  # Algeria
+        "AO",  # Angola
+        "BO",  # Bolivia
+        "BG",  # Bulgaria
+        "CM",  # Cameroon
+        "CI",  # Côte d'Ivoire
+        "CD",  # Democratic Republic of Congo
+        "HT",  # Haiti
+        "KE",  # Kenya
+        "KW",  # Kuwait
+        "LA",  # Laos (Lao PDR)
+        "LB",  # Lebanon
+        "MC",  # Monaco
+        "NA",  # Namibia
+        "NP",  # Nepal
+        "PG",  # Papua New Guinea
+        "SS",  # South Sudan
+        "SY",  # Syria
+        "VE",  # Venezuela
+        "VN",  # Vietnam
+        "VG",  # British Virgin Islands
+        "YE",  # Yemen
+    }
+)
 
 # Free-text fragments that signal a trust / non-corporate arrangement
 # in legal-form / details fields. Lower-cased.
@@ -619,6 +660,9 @@ def assess_amla(
         if sig is not None:
             out.append(sig)
 
+    # FATF jurisdiction signals — independent of the AMLA composite rule.
+    out.extend(_fatf_jurisdiction_signals(source_id, hit_id, bods))
+
     # AMLA "complex corporate structure" = ≥3 layers AND ≥1 of
     # {trust/arrangement, non-EU, nominee}.
     if layers_signal is not None and (
@@ -870,6 +914,82 @@ def _layers_signal(
         hit_id=hit_id,
         evidence={"layers": longest, "longest_path": longest_path},
     )
+
+
+def _fatf_jurisdiction_signals(
+    source_id: str, hit_id: str, bods: list[dict[str, Any]]
+) -> list[RiskSignal]:
+    """Fire FATF_BLACK_LIST / FATF_GREY_LIST when any entity in the BODS
+    bundle is incorporated in a FATF-listed jurisdiction.
+
+    Two separate signals — one per list — so the UI can present them with
+    different severities.  Both can fire on the same bundle (e.g. an entity
+    that is itself grey-listed but has an owner in a black-listed jurisdiction).
+
+    Lists current as of February 2026. Update ``FATF_BLACK_LIST_CODES`` and
+    ``FATF_GREY_LIST_CODES`` at each FATF plenary (typically February, June,
+    October) when the lists are refreshed.
+    """
+    black_hits: list[dict[str, str]] = []
+    grey_hits: list[dict[str, str]] = []
+
+    for stmt in bods:
+        if _stmt_kind(stmt) != "entity":
+            continue
+        j = _entity_jurisdiction(stmt)
+        if not j:
+            continue
+        code = (j.get("code") or "").upper()
+        name = j.get("name") or ""
+        if not code:
+            continue
+        entry = {"statement_id": _statement_id(stmt), "code": code, "name": name}
+        if code in FATF_BLACK_LIST_CODES:
+            black_hits.append(entry)
+        elif code in FATF_GREY_LIST_CODES:
+            grey_hits.append(entry)
+
+    out: list[RiskSignal] = []
+
+    if black_hits:
+        codes = sorted({h["code"] for h in black_hits})
+        names = sorted({h["name"] for h in black_hits if h["name"]})
+        label = ", ".join(names) if names else ", ".join(codes)
+        out.append(
+            RiskSignal(
+                code=FATF_BLACK_LIST,
+                confidence="high",
+                summary=(
+                    f"Ownership chain reaches into {label}, "
+                    "a jurisdiction on the FATF High-Risk list "
+                    "(Call for Action / black list, February 2026)."
+                ),
+                source_id=source_id,
+                hit_id=hit_id,
+                evidence={"jurisdictions": black_hits, "list": "black"},
+            )
+        )
+
+    if grey_hits:
+        codes = sorted({h["code"] for h in grey_hits})
+        names = sorted({h["name"] for h in grey_hits if h["name"]})
+        label = ", ".join(names) if names else ", ".join(codes)
+        out.append(
+            RiskSignal(
+                code=FATF_GREY_LIST,
+                confidence="medium",
+                summary=(
+                    f"Ownership chain reaches into {label}, "
+                    "a jurisdiction under FATF Increased Monitoring "
+                    "(grey list, February 2026)."
+                ),
+                source_id=source_id,
+                hit_id=hit_id,
+                evidence={"jurisdictions": grey_hits, "list": "grey"},
+            )
+        )
+
+    return out
 
 
 def _possible_obfuscation_signal(

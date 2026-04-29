@@ -888,6 +888,16 @@ const RISK_PRESENTATION: Record<
     label: "Related sanctioned",
     classes: "bg-rose-50 text-rose-700 border-rose-300 font-semibold",
   },
+  // FATF jurisdiction signals — derived from incorporatedInJurisdiction
+  // codes on entity statements in the assembled BODS bundle.
+  FATF_BLACK_LIST: {
+    label: "FATF black list",
+    classes: "bg-red-100 text-red-800 border-red-400 font-semibold",
+  },
+  FATF_GREY_LIST: {
+    label: "FATF grey list",
+    classes: "bg-orange-50 text-orange-800 border-orange-400",
+  },
 };
 
 const CONFIDENCE_DOT: Record<string, string> = {
