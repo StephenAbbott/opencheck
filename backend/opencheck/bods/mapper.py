@@ -560,11 +560,25 @@ def _map_corporate_psc(
     reg_number = identification.get("registration_number")
     reg_country = identification.get("country_registered")
     if reg_number:
+        alpha2 = _country_code(reg_country)
+        place = (identification.get("place_registered") or "").lower()
+        # Map well-known registries to their canonical BODS scheme codes;
+        # fall back to REG-{alpha2} (2-letter, not the old 3-letter truncation)
+        # so reconcilers can bridge to other sources on the same identifier.
+        if alpha2 == "GB" and ("companies house" in place or not place):
+            scheme = "GB-COH"
+            scheme_name = "UK Companies House"
+        elif alpha2:
+            scheme = f"REG-{alpha2}"
+            scheme_name = identification.get("place_registered") or f"{alpha2} company register"
+        else:
+            scheme = "REG"
+            scheme_name = identification.get("place_registered") or "Company register"
         identifiers.append(
             {
                 "id": reg_number,
-                "scheme": "OC-OPENCORPORATES" if not reg_country else f"REG-{reg_country.upper()[:3]}",
-                "schemeName": identification.get("place_registered") or "Registering authority",
+                "scheme": scheme,
+                "schemeName": scheme_name,
             }
         )
 
@@ -586,28 +600,35 @@ def _map_corporate_psc(
 
 
 def _country_code(name: str | None) -> str:
+    """Resolve a free-text country name to an ISO 3166-1 alpha-2 code.
+
+    Uses pycountry for the bulk of lookups (handles ~250 countries and
+    many common aliases such as "Cayman Islands", "British Virgin Islands",
+    "Isle of Man", etc.).  A small overrides dict handles names that
+    pycountry cannot resolve — primarily UK constituent nations and common
+    abbreviations that companies registries use but that aren't in ISO 3166-1.
+    """
     if not name:
         return ""
-    # Phase 1: one-liner mapping — full country table deferred.
-    lowered = name.lower()
-    table = {
-        "united kingdom": "GB",
+    stripped = name.strip()
+    # Already a two-letter code — pass through normalised.
+    if len(stripped) == 2 and stripped.isalpha():
+        return stripped.upper()
+    # Overrides for names pycountry can't look up.
+    _OVERRIDES: dict[str, str] = {
         "england": "GB",
         "scotland": "GB",
         "wales": "GB",
         "northern ireland": "GB",
-        "united states": "US",
-        "usa": "US",
-        "jersey": "JE",
-        "guernsey": "GG",
-        "isle of man": "IM",
-        "ireland": "IE",
-        "luxembourg": "LU",
-        "netherlands": "NL",
-        "cayman islands": "KY",
-        "british virgin islands": "VG",
+        "uae": "AE",
     }
-    return table.get(lowered, "")
+    override = _OVERRIDES.get(stripped.lower())
+    if override:
+        return override
+    try:
+        return pycountry.countries.lookup(stripped).alpha_2
+    except LookupError:
+        return ""
 
 
 # ----------------------------------------------------------------------
