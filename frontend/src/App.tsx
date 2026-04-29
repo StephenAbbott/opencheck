@@ -187,20 +187,25 @@ export default function App() {
               <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-light">
                 Customer due diligence
               </p>
-              <button
-                type="button"
-                onClick={() => {
-                  // Click the title to return to a fresh homepage state.
-                  setView("main");
-                  setResult(null);
-                  setError(null);
-                  setLeiInput("");
-                }}
-                aria-label="Back to homepage"
-                className="mt-2 font-head font-bold text-white leading-tight text-[clamp(1.6rem,4vw,2.4rem)] hover:text-oo-light transition-colors text-left"
-              >
-                OpenCheck
-              </button>
+              <div className="flex items-baseline gap-3 mt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Click the title to return to a fresh homepage state.
+                    setView("main");
+                    setResult(null);
+                    setError(null);
+                    setLeiInput("");
+                  }}
+                  aria-label="Back to homepage"
+                  className="font-head font-bold text-white leading-tight text-[clamp(1.6rem,4vw,2.4rem)] hover:text-oo-light transition-colors text-left"
+                >
+                  OpenCheck
+                </button>
+                <span className="text-[11px] font-semibold tracking-oo-eyebrow uppercase bg-white/15 text-white/90 rounded px-2 py-0.5 border border-white/25">
+                  Beta
+                </span>
+              </div>
             </div>
             <nav>
               <button
@@ -267,7 +272,10 @@ export default function App() {
         )}
 
         {!result && !looking && !error && (
-          <ExampleLeiPicker onPick={lookupLei} disabled={looking} />
+          <>
+            <ExampleLeiPicker onPick={lookupLei} disabled={looking} />
+            <HowItWorks />
+          </>
         )}
 
         {result && <SubjectCard result={result} />}
@@ -580,6 +588,69 @@ function ExampleLeiPicker({
   );
 }
 
+function HowItWorks() {
+  return (
+    <section className="mb-10 bg-white border border-oo-rule rounded-oo p-7">
+      <SectionLabel>How it works</SectionLabel>
+      <div className="text-[14px] leading-[1.75] text-oo-ink max-w-3xl space-y-4">
+        <p>
+          You give OpenCheck an LEI and, thanks to{" "}
+          <a
+            href="https://www.gleif.org/en/newsroom/blog/transforming-data-into-opportunities-metric-of-the-month-mapping-network"
+            target="_blank"
+            rel="noreferrer"
+            className="text-oo-blue underline underline-offset-2 hover:text-oo-burst"
+          >
+            LEI mappings
+          </a>
+          , it uses the global identifier to look up details in a{" "}
+          <a
+            href="https://github.com/StephenAbbott/opencheck#sources"
+            target="_blank"
+            rel="noreferrer"
+            className="text-oo-blue underline underline-offset-2 hover:text-oo-burst"
+          >
+            curated set of open datasets
+          </a>{" "}
+          - UK Companies House, GLEIF, OpenSanctions, OpenCorporates,
+          OpenAleph, EveryPolitician, and Wikidata - before returning a
+          useful intelligence report.
+        </p>
+        <p>
+          Everything maps into{" "}
+          <a
+            href="https://standard.openownership.org/en/0.4.0/"
+            target="_blank"
+            rel="noreferrer"
+            className="text-oo-blue underline underline-offset-2 hover:text-oo-burst font-medium"
+          >
+            version 0.4 of the Beneficial Ownership Data Standard (BODS)
+          </a>
+          , the cross-source links and risk signals are computed
+          deterministically, and the whole bundle is one click away from a
+          downloadable shareable export.
+        </p>
+        <p>
+          The risk-signal layer mirrors the{" "}
+          <a
+            href="https://www.amla.europa.eu/policy/public-consultations/consultation-draft-rts-customer-due-diligence_en"
+            target="_blank"
+            rel="noreferrer"
+            className="text-oo-blue underline underline-offset-2 hover:text-oo-burst font-medium"
+          >
+            draft customer due diligence regulatory technical standards from
+            the EU's Anti-Money Laundering Authority (AMLA)
+          </a>{" "}
+          conditions for "complex corporate structures" — trust/arrangement,
+          non-EU jurisdiction, nominee, ≥3 ownership layers, plus the
+          composite threshold rule and an advisory mirror of the subjective
+          obfuscation condition.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 function SubjectCard({ result }: { result: LookupResponse }) {
   return (
     <section className="mb-8 bg-white border border-oo-rule rounded-oo p-7 transition-shadow hover:shadow-oo-card">
@@ -589,10 +660,6 @@ function SubjectCard({ result }: { result: LookupResponse }) {
       <h2 className="font-head font-bold text-oo-ink mt-2 leading-tight text-[clamp(1.25rem,2.5vw,1.6rem)]">
         {result.legal_name || `LEI ${result.lei}`}
       </h2>
-      <p className="text-[12px] font-mono text-oo-muted mt-2">
-        LEI {result.lei}
-        {result.jurisdiction && ` · ${result.jurisdiction}`}
-      </p>
     </section>
   );
 }
