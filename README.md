@@ -1,3 +1,5 @@
+<img width="898" height="331" alt="image" src="https://github.com/user-attachments/assets/cd7bea0c-ff06-4508-84d4-e420dba345fa" />
+
 # OpenCheck
 
 Customer due diligence risk checks driven by the Legal Entity Identifier (LEI), open data and open standards.
