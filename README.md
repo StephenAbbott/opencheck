@@ -1,6 +1,6 @@
 # OpenCheck
 
-Customer due diligence risk checks driven by the Legal Entity Identifier (LEI) and open data.
+Customer due diligence risk checks driven by the Legal Entity Identifier (LEI), open data and open standards.
 
 You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, Wikidata Q-ID, etc.), and uses those bridges to fan out across UK Companies House, OpenSanctions, OpenAleph, EveryPolitician, Wikidata, and OpenTender. 
 
