@@ -1016,14 +1016,9 @@ _FTM_ENTITY_SCHEMAS = {
 }
 _FTM_PERSON_SCHEMAS = {"Person"}
 
-# Map FtM topics to BODS interest semantics when they imply control
-# (e.g. sanction/pep on a person who is known to be a UBO).
-_FTM_TOPIC_DETAILS = {
-    "sanction": "Subject to sanctions per FtM topic",
-    "crime": "Linked to criminal activity per FtM topic",
-    "role.pep": "Politically exposed person per FtM topic",
-    "role.rca": "Relative or close associate of a PEP per FtM topic",
-}
+# FtM topics (sanction, role.pep, etc.) are intentionally NOT converted into
+# BODS interests here — they are risk signals handled by the risk engine, not
+# ownership or control relationships.
 
 
 def map_ftm(
@@ -1125,10 +1120,7 @@ def _ftm_statement(
     if schema in _FTM_PERSON_SCHEMAS:
         return _ftm_person_statement(payload, source_id, source_url)
     # Everything else — including unknown schemas — becomes an entity.
-    if schema in _FTM_ENTITY_SCHEMAS or schema not in _FTM_PERSON_SCHEMAS:
-        return _ftm_entity_statement(payload, source_id, source_url)
-    # Defensive fallback (unreachable).
-    return None
+    return _ftm_entity_statement(payload, source_id, source_url)
 
 
 def _ftm_entity_statement(
@@ -1169,9 +1161,7 @@ def _ftm_person_statement(
         or payload.get("caption")
         or f"Person {ftm_id}"
     )
-    nationalities = [
-        {"name": n} for n in (props.get("nationality") or [])
-    ]
+    nationalities = [_ftm_resolve_nationality(n) for n in (props.get("nationality") or [])]
     birth_date = (props.get("birthDate") or [None])[0]
     addresses = _ftm_addresses(props)
     identifiers = _ftm_identifiers(ftm_id, source_id, props)
@@ -1188,11 +1178,36 @@ def _ftm_person_statement(
     )
 
 
+def _ftm_resolve_nationality(raw: str) -> dict[str, str]:
+    """Resolve a FtM nationality string (ISO code or full name) to a BODS entry.
+
+    Returns ``{"name": ..., "code": ...}`` when pycountry can resolve the
+    value, or ``{"name": raw}`` as a safe fallback.
+    """
+    try:
+        country = pycountry.countries.lookup(raw.strip())
+        return {"name": country.name, "code": country.alpha_2}
+    except LookupError:
+        return {"name": raw.strip()}
+
+
 def _ftm_jurisdiction(props: dict[str, Any]) -> tuple[str, str] | None:
+    """Resolve a FtM jurisdiction/country property array to ``(name, alpha-2)``.
+
+    FtM stores jurisdiction as an array of strings that may be ISO 3166-1
+    alpha-2 codes (``"RU"``), lowercase codes (``"ru"``), or full country
+    names. We resolve all forms via pycountry so the BODS
+    ``incorporatedInJurisdiction.name`` is always a human-readable string.
+    """
     jur = (props.get("jurisdiction") or props.get("country") or [None])[0]
     if not jur:
         return None
-    return (jur, jur if len(jur) == 2 else _country_code(jur))
+    try:
+        country = pycountry.countries.lookup(jur.strip())
+        return (country.name, country.alpha_2)
+    except LookupError:
+        # Unknown/custom jurisdiction — surface as-is so it's not silently lost.
+        return (jur.strip(), _country_code(jur) or jur.strip())
 
 
 def _ftm_identifiers(
@@ -1203,10 +1218,24 @@ def _ftm_identifiers(
     identifiers: list[dict[str, str]] = [
         {"id": ftm_id, "scheme": scheme_code, "schemeName": scheme_name}
     ]
+
+    # Resolve jurisdiction so registrationNumber gets a country-qualified scheme
+    # (e.g. "REG-RU" instead of the generic "REG") when the entity's
+    # jurisdiction is known. This lets reconcilers bridge to other sources on
+    # the same identifier without guessing the registry.
+    jur_raw = (props.get("jurisdiction") or props.get("country") or [None])[0]
+    reg_scheme = "REG"
+    if jur_raw:
+        try:
+            alpha2 = pycountry.countries.lookup(jur_raw.strip()).alpha_2
+            reg_scheme = f"REG-{alpha2}"
+        except LookupError:
+            pass
+
     for key, scheme, name in (
         ("leiCode", "XI-LEI", "Legal Entity Identifier"),
         ("wikidataId", "WIKIDATA", "Wikidata"),
-        ("registrationNumber", "REG", "Local registry identifier"),
+        ("registrationNumber", reg_scheme, "Local registry identifier"),
         ("ogrnCode", "RU-OGRN", "Russian OGRN"),
         ("innCode", "RU-INN", "Russian INN"),
     ):

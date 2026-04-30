@@ -326,3 +326,88 @@ def test_map_openaleph_entity() -> None:
     entity = next(iter(bundle))
     schemes = {i["scheme"] for i in entity["recordDetails"]["identifiers"]}
     assert {"OPENALEPH", "XI-LEI"}.issubset(schemes)
+
+
+# ---------------------------------------------------------------------
+# FtM field-quality fixes
+# ---------------------------------------------------------------------
+
+
+def test_ftm_nationality_resolved_to_full_name_and_code() -> None:
+    """ISO alpha-2 nationality codes (e.g. 'ru') should resolve to full name + code."""
+    payload = {
+        "entity": {
+            "id": "NK-putin",
+            "schema": "Person",
+            "properties": {"name": ["Vladimir Putin"], "nationality": ["ru"]},
+        }
+    }
+    bundle = map_opensanctions(payload)
+    person = next(iter(bundle))
+    nats = person["recordDetails"]["nationalities"]
+    assert nats == [{"name": "Russian Federation", "code": "RU"}]
+
+
+def test_ftm_jurisdiction_uppercase_code_resolves_to_full_name() -> None:
+    """Jurisdiction 'RU' should produce name='Russian Federation', code='RU'."""
+    payload = {
+        "entity": {
+            "id": "NK-co",
+            "schema": "Company",
+            "properties": {"name": ["Rosneft"], "jurisdiction": ["RU"]},
+        }
+    }
+    bundle = map_opensanctions(payload)
+    entity = next(iter(bundle))
+    jur = entity["recordDetails"]["incorporatedInJurisdiction"]
+    assert jur == {"name": "Russian Federation", "code": "RU"}
+
+
+def test_ftm_jurisdiction_lowercase_code_resolves() -> None:
+    """Lowercase 'ru' should resolve identically to uppercase 'RU'."""
+    payload = {
+        "entity": {
+            "id": "NK-co2",
+            "schema": "Company",
+            "properties": {"name": ["Test Co"], "jurisdiction": ["ru"]},
+        }
+    }
+    bundle = map_opensanctions(payload)
+    entity = next(iter(bundle))
+    jur = entity["recordDetails"]["incorporatedInJurisdiction"]
+    assert jur == {"name": "Russian Federation", "code": "RU"}
+
+
+def test_ftm_registration_number_scheme_qualified_when_jurisdiction_known() -> None:
+    """registrationNumber should use 'REG-{alpha2}' when jurisdiction is present."""
+    payload = {
+        "entity": {
+            "id": "NK-co3",
+            "schema": "Company",
+            "properties": {
+                "name": ["Test Co"],
+                "jurisdiction": ["RU"],
+                "registrationNumber": ["1027700139019"],
+            },
+        }
+    }
+    bundle = map_opensanctions(payload)
+    entity = next(iter(bundle))
+    schemes = {i["scheme"] for i in entity["recordDetails"]["identifiers"]}
+    assert "REG-RU" in schemes
+    assert "REG" not in schemes  # bare REG should not appear when jurisdiction known
+
+
+def test_ftm_registration_number_falls_back_to_reg_without_jurisdiction() -> None:
+    """registrationNumber without a jurisdiction should stay as generic 'REG'."""
+    payload = {
+        "entity": {
+            "id": "NK-co4",
+            "schema": "Company",
+            "properties": {"name": ["Unknown Co"], "registrationNumber": ["ABC123"]},
+        }
+    }
+    bundle = map_opensanctions(payload)
+    entity = next(iter(bundle))
+    schemes = {i["scheme"] for i in entity["recordDetails"]["identifiers"]}
+    assert "REG" in schemes
