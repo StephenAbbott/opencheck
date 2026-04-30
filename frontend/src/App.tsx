@@ -314,9 +314,17 @@ export default function App() {
             </button>
           </div>
           <p className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
-            Look up an entity by its 20-character LEI. We query GLEIF
-            first, then use the LEI to bridge to Companies House,
-            OpenCorporates, OpenSanctions, OpenAleph, Wikidata, and OpenTender.
+            <a
+              href="https://search.gleif.org/#/search/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-oo-ink transition-colors"
+            >
+              Look up an entity
+            </a>{" "}
+            by its 20-character LEI. We query GLEIF first, then use the LEI to
+            bridge to Companies House, OpenCorporates, OpenSanctions, OpenAleph,
+            Wikidata, and OpenTender.
           </p>
         </form>
 
