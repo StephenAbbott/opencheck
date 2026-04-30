@@ -381,6 +381,7 @@ export default function App() {
                   key={b.sourceId}
                   bucket={b}
                   riskByHit={riskByHit}
+                  entitySignals={aggregatedCodes}
                 />
               ))}
             </div>
@@ -559,9 +560,11 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function SourceBucketCard({
   bucket,
   riskByHit,
+  entitySignals = [],
 }: {
   bucket: SourceBucket;
   riskByHit: Record<string, RiskSignal[]>;
+  entitySignals?: RiskSignal[];
 }) {
   const stateLabel = bucket.error
     ? "error"
@@ -570,18 +573,12 @@ function SourceBucketCard({
     ? "text-red-700"
     : "text-oo-muted";
 
-  // Collect unique risk signals across all hits in this bucket (dedup by code).
-  const bucketSignals: RiskSignal[] = [];
-  const seenCodes = new Set<string>();
-  for (const hit of bucket.hits) {
-    const key = `${hit.source_id}:${hit.hit_id}`;
-    for (const sig of riskByHit[key] ?? []) {
-      if (!seenCodes.has(sig.code)) {
-        seenCodes.add(sig.code);
-        bucketSignals.push(sig);
-      }
-    }
-  }
+  // Show entity-level signals (aggregated across all sources) in the card
+  // header so every source card surfaces the same risk picture without
+  // requiring the user to click "Go deeper" or scroll to the risk strip.
+  // Source-specific signals from riskByHit are a subset of entitySignals,
+  // so using entitySignals gives consistent coverage for all sources.
+  const headerSignals = entitySignals;
 
   return (
     <article className="bg-white border border-oo-rule rounded-oo">
@@ -590,9 +587,9 @@ function SourceBucketCard({
           <h3 className="font-head font-bold text-[15px] text-oo-ink">
             {bucket.sourceName}
           </h3>
-          {bucketSignals.length > 0 && (
+          {headerSignals.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1">
-              {bucketSignals.map((sig, i) => (
+              {headerSignals.map((sig, i) => (
                 <RiskChip key={`${sig.code}-${i}`} signal={sig} compact />
               ))}
             </div>
