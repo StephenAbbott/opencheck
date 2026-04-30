@@ -1663,45 +1663,363 @@ def _format_award_details(
 # OpenCorporates → BODS
 # ----------------------------------------------------------------------
 
+# Mapping from OpenCorporates officer position strings (lowercased) to BODS
+# interest types.  Derived from the bods-opencorporates reference implementation
+# (https://github.com/StephenAbbott/bods-opencorporates).  Matched
+# case-insensitively; substring matching is used as a fallback.
+_OC_POSITION_TO_INTEREST_TYPE: dict[str, str] = {
+    # Board-level appointments
+    "director": "appointmentOfBoard",
+    "managing director": "appointmentOfBoard",
+    "executive director": "appointmentOfBoard",
+    "non-executive director": "appointmentOfBoard",
+    "alternate director": "appointmentOfBoard",
+    "shadow director": "appointmentOfBoard",
+    "de facto director": "appointmentOfBoard",
+    "deputy director": "appointmentOfBoard",
+    "associate director": "appointmentOfBoard",
+    "joint director": "appointmentOfBoard",
+    "directeur": "appointmentOfBoard",
+    "directeur general": "appointmentOfBoard",
+    "geschaeftsfuehrer": "appointmentOfBoard",
+    "direktor": "appointmentOfBoard",
+    "bestuurder": "appointmentOfBoard",
+    "amministratore": "appointmentOfBoard",
+    "administrador": "appointmentOfBoard",
+    # Board membership (non-chair)
+    "board member": "boardMember",
+    "member of the board": "boardMember",
+    "supervisory board member": "boardMember",
+    "aufsichtsratsmitglied": "boardMember",
+    "bestuurslid": "boardMember",
+    "vice president": "boardMember",
+    "vorsitzender": "boardMember",
+    "voorzitter": "boardMember",
+    "presidente": "boardMember",
+    # Board chair (BODS v0.4 has a separate boardChair type)
+    "chairman": "boardChair",
+    "chairwoman": "boardChair",
+    "chairperson": "boardChair",
+    "chair": "boardChair",
+    "president": "boardChair",
+    "vice chairman": "boardChair",
+    "deputy chairman": "boardChair",
+    # Senior management / officers
+    "secretary": "seniorManagingOfficial",
+    "company secretary": "seniorManagingOfficial",
+    "corporate secretary": "seniorManagingOfficial",
+    "assistant secretary": "seniorManagingOfficial",
+    "joint secretary": "seniorManagingOfficial",
+    "chief executive": "seniorManagingOfficial",
+    "chief executive officer": "seniorManagingOfficial",
+    "ceo": "seniorManagingOfficial",
+    "chief financial officer": "seniorManagingOfficial",
+    "cfo": "seniorManagingOfficial",
+    "chief operating officer": "seniorManagingOfficial",
+    "coo": "seniorManagingOfficial",
+    "chief technology officer": "seniorManagingOfficial",
+    "cto": "seniorManagingOfficial",
+    "treasurer": "seniorManagingOfficial",
+    "manager": "seniorManagingOfficial",
+    "general manager": "seniorManagingOfficial",
+    "partner": "seniorManagingOfficial",
+    "general partner": "seniorManagingOfficial",
+    "limited partner": "seniorManagingOfficial",
+    "managing partner": "seniorManagingOfficial",
+    "member": "seniorManagingOfficial",
+    "managing member": "seniorManagingOfficial",
+    "liquidator": "seniorManagingOfficial",
+    "receiver": "seniorManagingOfficial",
+    "administrator": "seniorManagingOfficial",
+    "gerant": "seniorManagingOfficial",
+    # Nominees / agents
+    "nominee": "nominee",
+    "nominee director": "nominee",
+    "nominee shareholder": "nominee",
+    "nominee secretary": "nominee",
+    "agent": "otherInfluenceOrControl",
+    "authorized representative": "otherInfluenceOrControl",
+    "authorised representative": "otherInfluenceOrControl",
+    "representative": "otherInfluenceOrControl",
+    "legal representative": "otherInfluenceOrControl",
+    "proxy": "otherInfluenceOrControl",
+    "power of attorney": "otherInfluenceOrControl",
+    # Trust roles
+    "trustee": "trustee",
+    "co-trustee": "trustee",
+    "settlor": "settlor",
+    "protector": "protector",
+    "beneficiary": "beneficiaryOfLegalArrangement",
+    "guardian": "otherInfluenceOrControl",
+    # Ownership
+    "shareholder": "shareholding",
+    "owner": "shareholding",
+    "subscriber": "shareholding",
+    "incorporator": "otherInfluenceOrControl",
+    "founder": "otherInfluenceOrControl",
+}
+
+# Relationship types from the OC Relationships Supplement → BODS interest type.
+_OC_RELATIONSHIP_TYPE_TO_INTEREST: dict[str, str] = {
+    "control_statement": "otherInfluenceOrControl",
+    "control": "otherInfluenceOrControl",
+    "subsidiary": "shareholding",
+    "parent": "shareholding",
+    "branch": "otherInfluenceOrControl",
+    "share_parcel": "shareholding",
+    "share": "shareholding",
+}
+
+
+def _oc_match_position(position: str) -> str:
+    """Map an OC officer position string to a BODS interestType.
+
+    Strategy: exact match → substring match → regex patterns → default.
+    Officer positions never carry beneficialOwnershipOrControl=True
+    (they represent governance roles, not ownership claims).
+    """
+    if not position:
+        return "otherInfluenceOrControl"
+    norm = position.strip().lower()
+    if norm in _OC_POSITION_TO_INTEREST_TYPE:
+        return _OC_POSITION_TO_INTEREST_TYPE[norm]
+    for known, itype in _OC_POSITION_TO_INTEREST_TYPE.items():
+        if known in norm:
+            return itype
+    # Regex fallbacks for multilingual variants
+    import re as _re
+    if _re.search(r"\bdirect(or|eur|ör)\b", norm):
+        return "appointmentOfBoard"
+    if _re.search(r"\bsecretar", norm):
+        return "seniorManagingOfficial"
+    if _re.search(r"\bmanag", norm):
+        return "seniorManagingOfficial"
+    if _re.search(r"\bchair", norm):
+        return "boardChair"
+    if _re.search(r"\btrustee", norm):
+        return "trustee"
+    if _re.search(r"\bnominee", norm):
+        return "nominee"
+    return "otherInfluenceOrControl"
+
+
+def _oc_parse_network_relationships(
+    network: dict[str, Any],
+    focal_ocid: str,
+) -> list[dict[str, Any]]:
+    """Extract a list of normalised relationship dicts from a raw OC network payload.
+
+    The OC ``/network`` endpoint (Relationships Supplement) is a premium
+    API product.  Its exact JSON shape is not publicly documented, so we
+    probe multiple plausible structures and normalise to a common internal
+    dict::
+
+        {
+          "relationship_type": str,
+          "source": {"name": str, "jurisdiction_code": str, "company_number": str},
+          "target": {"name": str, "jurisdiction_code": str, "company_number": str},
+          "percentage_min_share_ownership": float | None,
+          "percentage_max_share_ownership": float | None,
+          "percentage_min_voting_rights": float | None,
+          "percentage_max_voting_rights": float | None,
+          "start_date": str | None,
+          "end_date": str | None,
+        }
+
+    Relationships with ``end_date`` set are skipped (historical only).
+    """
+
+    def _extract_company(obj: dict[str, Any]) -> dict[str, str]:
+        """Unwrap a possibly-nested company dict → {name, jurisdiction_code, company_number}."""
+        if "company" in obj and isinstance(obj["company"], dict):
+            obj = obj["company"]
+        return {
+            "name": str(obj.get("name") or ""),
+            "jurisdiction_code": str(obj.get("jurisdiction_code") or ""),
+            "company_number": str(obj.get("company_number") or ""),
+        }
+
+    def _float_or_none(val: Any) -> float | None:
+        try:
+            return float(val) if val is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    results: list[dict[str, Any]] = []
+
+    # --- Try to locate the relationships list inside the network payload ---
+    # Possible structures:
+    #   A) network["relationships"] → list of {"relationship": {...}}
+    #   B) network["network"] → list of {"relationship": {...}} or flat dicts
+    #   C) network["edges"] → list of flat relationship dicts
+    #   D) network is itself a list
+    candidates: list[Any] = []
+    if isinstance(network, list):
+        candidates = network
+    elif isinstance(network, dict):
+        for key in ("relationships", "network", "edges"):
+            val = network.get(key)
+            if isinstance(val, list):
+                candidates = val
+                break
+
+    for item in candidates:
+        # Unwrap {"relationship": {...}} wrapper if present
+        rel = item.get("relationship", item) if isinstance(item, dict) else item
+        if not isinstance(rel, dict):
+            continue
+
+        end_date = rel.get("end_date")
+        if end_date:
+            continue  # skip historical relationships
+
+        rel_type = (rel.get("relationship_type") or rel.get("type") or "").strip()
+
+        # Source / target — OC may use source/target, subject/object, or from/to
+        src_raw = (
+            rel.get("source")
+            or rel.get("subject")
+            or rel.get("from")
+            or {}
+        )
+        tgt_raw = (
+            rel.get("target")
+            or rel.get("object")
+            or rel.get("to")
+            or {}
+        )
+
+        # For endpoints that return a flat list of related companies (no
+        # explicit source/target), the focal company is always the subject.
+        if not src_raw and not tgt_raw:
+            tgt_raw = rel  # the item itself is the related company
+            jc, num = focal_ocid.split("/", 1) if "/" in focal_ocid else ("", focal_ocid)
+            src_raw = {"jurisdiction_code": jc, "company_number": num, "name": ""}
+
+        results.append({
+            "relationship_type": rel_type,
+            "source": _extract_company(src_raw) if isinstance(src_raw, dict) else {},
+            "target": _extract_company(tgt_raw) if isinstance(tgt_raw, dict) else {},
+            "percentage_min_share_ownership": _float_or_none(
+                rel.get("percentage_min_share_ownership")
+                or rel.get("percentage_min")
+                or rel.get("min_percentage")
+            ),
+            "percentage_max_share_ownership": _float_or_none(
+                rel.get("percentage_max_share_ownership")
+                or rel.get("percentage_max")
+                or rel.get("max_percentage")
+            ),
+            "percentage_min_voting_rights": _float_or_none(
+                rel.get("percentage_min_voting_rights")
+            ),
+            "percentage_max_voting_rights": _float_or_none(
+                rel.get("percentage_max_voting_rights")
+            ),
+            "start_date": rel.get("start_date"),
+            "end_date": end_date,
+        })
+
+    return results
+
+
+def _oc_build_interests_from_relationship(rel: dict[str, Any]) -> list[dict[str, Any]]:
+    """Produce a BODS interests list from a normalised OC network relationship dict."""
+    interests: list[dict[str, Any]] = []
+    pmin_own = rel.get("percentage_min_share_ownership")
+    pmax_own = rel.get("percentage_max_share_ownership")
+    pmin_vot = rel.get("percentage_min_voting_rights")
+    pmax_vot = rel.get("percentage_max_voting_rights")
+    start = rel.get("start_date")
+
+    def _share_obj(mn: float | None, mx: float | None) -> dict[str, float]:
+        if mn is not None and mx is not None:
+            return {"exact": mn} if mn == mx else {"minimum": mn, "maximum": mx}
+        if mn is not None:
+            return {"minimum": mn}
+        if mx is not None:
+            return {"maximum": mx}
+        return {}
+
+    if pmin_own is not None or pmax_own is not None:
+        entry: dict[str, Any] = {
+            "type": "shareholding",
+            "directOrIndirect": "direct",
+            "beneficialOwnershipOrControl": True,
+            "share": _share_obj(pmin_own, pmax_own),
+        }
+        if start:
+            entry["startDate"] = start
+        interests.append(entry)
+
+    if pmin_vot is not None or pmax_vot is not None:
+        entry = {
+            "type": "votingRights",
+            "directOrIndirect": "direct",
+            "beneficialOwnershipOrControl": True,
+            "share": _share_obj(pmin_vot, pmax_vot),
+        }
+        if start:
+            entry["startDate"] = start
+        interests.append(entry)
+
+    # Fallback: no percentage data — use the relationship type to pick an interest
+    if not interests:
+        rel_type = rel.get("relationship_type", "")
+        interest_type = _OC_RELATIONSHIP_TYPE_TO_INTEREST.get(
+            rel_type.lower(), "otherInfluenceOrControl"
+        )
+        entry = {
+            "type": interest_type,
+            "directOrIndirect": "direct",
+            "beneficialOwnershipOrControl": interest_type in ("shareholding", "votingRights"),
+            "details": f"OpenCorporates relationship: {rel_type}" if rel_type else "OpenCorporates network relationship",
+        }
+        if start:
+            entry["startDate"] = start
+        interests.append(entry)
+
+    return interests
+
 
 def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
     """Map an OpenCorporates fetch bundle to BODS v0.4 statements.
 
     Produces:
     * One entity statement for the company itself.
-    * One person statement + relationship per officer where the
-      officer is a natural person and has a current position.
+    * One person or entity statement + relationship per current officer.
+    * When the ``network`` key is present (OC Relationships Supplement),
+      additional entity statements for related companies and ownership-or-
+      control relationship statements for each active network relationship.
 
-    Officers are entered via the ``/companies/{j}/{n}/officers``
-    endpoint and carry a ``position`` string (e.g. "director",
-    "secretary") plus optional start/end dates.
+    Officers are sourced from ``/companies/{j}/{n}/officers`` (``position``,
+    optional start/end dates).  Network relationships come from the premium
+    ``/companies/{j}/{n}/network`` endpoint and cover ``control_statement``,
+    ``subsidiary``, ``branch``, and ``share_parcel`` types.
     """
     result = BODSBundle()
     company = bundle.get("company") or {}
     ocid = bundle.get("ocid") or bundle.get("hit_id") or ""
     officers = bundle.get("officers") or []
+    network_raw = bundle.get("network")  # None when Supplement not available
 
     if not company:
         return result
 
-    # --- Entity statement for the company --------------------------------
+    # --- Entity statement for the focal company ---------------------------
 
     name = company.get("name") or "Unknown company"
     jurisdiction_code = (company.get("jurisdiction_code") or "").upper()
     company_number = company.get("company_number") or ""
     incorporation_date = company.get("incorporation_date")
-    company_type = company.get("company_type") or ""
-    status = company.get("current_status") or ""
     oc_url = company.get("opencorporates_url") or (
         f"https://opencorporates.com/companies/{ocid}" if ocid else None
     )
 
-    # Resolve jurisdiction tuple (alpha-2, display name)
     jurisdiction: tuple[str, str] | None = None
     if jurisdiction_code:
-        # OC jurisdiction codes are ISO 3166-1 alpha-2 (lower), with
-        # sub-national variants like "us_de". We use the top-level code.
-        # Tuple convention (matches make_entity_statement): (name, code).
+        # OC uses ISO 3166-1 alpha-2 lower, with sub-national variants like
+        # "us_de".  Use the top-level alpha-2 code for display.
         top_code = jurisdiction_code.split("_")[0].upper()
         try:
             country = pycountry.countries.get(alpha_2=top_code)
@@ -1742,6 +2060,10 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
     subject_stmt_id: str = subject_stmt["statementId"]
     result.extend([subject_stmt])
 
+    # Track emitted entity statementIds to avoid duplicates across officers
+    # and network relationships.
+    seen_entity_sids: set[str] = {subject_stmt_id}
+
     # --- Officer statements -----------------------------------------------
     # OC officers carry a ``position`` string (e.g. "director"), optional
     # ``start_date`` / ``end_date``, and a nested ``officer`` sub-object.
@@ -1760,30 +2082,43 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
         officer_id = str(officer_data.get("id") or officer_data.get("uid") or "")
         local_key = f"{ocid}/{officer_id or _stable_id('oc', 'officer', officer_name)}"
 
-        person_stmt = make_person_statement(
-            source_id="opencorporates",
-            local_id=local_key,
-            full_name=officer_name,
-            source_url=oc_url,
-        )
-        person_stmt_id: str = person_stmt["statementId"]
+        officer_type = (officer_data.get("type") or "").lower()
+        is_corporate = officer_type == "company"
 
-        # Map OC position to a BODS interest type.
-        position_lower = position.lower()
-        if "director" in position_lower or "chair" in position_lower:
-            interest_type = "appointmentOfBoard"
-        elif "secretary" in position_lower:
-            interest_type = "appointmentOfBoard"
+        if is_corporate:
+            # Corporate officer → entity statement
+            corp_stmt = make_entity_statement(
+                source_id="opencorporates",
+                local_id=local_key,
+                name=officer_name,
+                source_url=oc_url,
+            )
+            ip_sid: str = corp_stmt["statementId"]
+            if ip_sid not in seen_entity_sids:
+                result.extend([corp_stmt])
+                seen_entity_sids.add(ip_sid)
+            ip_type = "entity"
         else:
-            interest_type = "otherInfluenceOrControl"
+            # Natural person → person statement
+            person_stmt = make_person_statement(
+                source_id="opencorporates",
+                local_id=local_key,
+                full_name=officer_name,
+                source_url=oc_url,
+            )
+            ip_sid = person_stmt["statementId"]
+            result.extend([person_stmt])
+            ip_type = "person"
 
+        interest_type = _oc_match_position(position)
         start_date = officer_data.get("start_date")
         interest_entry: dict[str, Any] = {
             "type": interest_type,
-            "details": position or "officer",
             "directOrIndirect": "direct",
-            "beneficialOwnershipOrControl": False,
+            "beneficialOwnershipOrControl": False,  # officer roles ≠ ownership
         }
+        if interest_type == "otherInfluenceOrControl" and position:
+            interest_entry["details"] = f"Officer position: {position}"
         if start_date:
             interest_entry["startDate"] = start_date
 
@@ -1791,12 +2126,90 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
             source_id="opencorporates",
             local_id=f"rel/{local_key}",
             subject_statement_id=subject_stmt_id,
-            interested_party_statement_id=person_stmt_id,
-            interested_party_type="person",
+            interested_party_statement_id=ip_sid,
+            interested_party_type=ip_type,
             interests=[interest_entry],
             source_url=oc_url,
         )
+        result.extend([rel_stmt])
 
-        result.extend([person_stmt, rel_stmt])
+    # --- Network relationship statements ----------------------------------
+    # These come from the OC Relationships Supplement (premium API tier).
+    # Absent when the API key does not have access.
+    if network_raw:
+        parsed_rels = _oc_parse_network_relationships(network_raw, focal_ocid=ocid)
+        for rel in parsed_rels:
+            src = rel["source"]
+            tgt = rel["target"]
+
+            def _entity_for_company(co: dict[str, str]) -> dict[str, Any] | None:
+                co_number = co.get("company_number") or ""
+                co_jur = co.get("jurisdiction_code") or ""
+                co_name = co.get("name") or "Unknown entity"
+                if not co_number and not co_jur:
+                    return None
+                co_ocid = f"{co_jur}/{co_number}" if co_jur and co_number else co_number
+                co_url = f"https://opencorporates.com/companies/{co_ocid}" if co_ocid else None
+                co_jur_upper = co_jur.upper().split("_")[0]
+                co_jurisdiction: tuple[str, str] | None = None
+                if co_jur_upper:
+                    try:
+                        c = pycountry.countries.get(alpha_2=co_jur_upper)
+                        co_jurisdiction = (c.name if c else co_jur_upper, co_jur_upper)
+                    except Exception:  # noqa: BLE001
+                        co_jurisdiction = (co_jur_upper, co_jur_upper)
+                co_ids: list[dict[str, str]] = []
+                if co_ocid:
+                    co_ids.append({
+                        "id": co_ocid,
+                        "scheme": "OPENCORPORATES",
+                        "schemeName": "OpenCorporates company identifier",
+                        "uri": co_url or "",
+                    })
+                return make_entity_statement(
+                    source_id="opencorporates",
+                    local_id=co_ocid or co_number,
+                    name=co_name,
+                    jurisdiction=co_jurisdiction,
+                    identifiers=co_ids,
+                    entity_type="registeredEntity",
+                    source_url=co_url,
+                )
+
+            src_stmt = _entity_for_company(src)
+            tgt_stmt = _entity_for_company(tgt)
+            if not src_stmt or not tgt_stmt:
+                continue
+
+            # In BODS, the relationship is: subject (the company being
+            # controlled/owned) ← interestedParty (the owner/controller).
+            # OC relationship direction: source controls/owns target.
+            # → subject = target, interestedParty = source.
+            subj_sid = tgt_stmt["statementId"]
+            party_sid = src_stmt["statementId"]
+
+            if subj_sid not in seen_entity_sids:
+                result.extend([tgt_stmt])
+                seen_entity_sids.add(subj_sid)
+            if party_sid not in seen_entity_sids:
+                result.extend([src_stmt])
+                seen_entity_sids.add(party_sid)
+
+            interests = _oc_build_interests_from_relationship(rel)
+            rel_local_id = (
+                f"network-rel/{src.get('company_number','?')}/"
+                f"{tgt.get('company_number','?')}/"
+                f"{rel.get('relationship_type','?')}"
+            )
+            network_rel_stmt = make_relationship_statement(
+                source_id="opencorporates",
+                local_id=rel_local_id,
+                subject_statement_id=subj_sid,
+                interested_party_statement_id=party_sid,
+                interested_party_type="entity",
+                interests=interests,
+                source_url=oc_url,
+            )
+            result.extend([network_rel_stmt])
 
     return result

@@ -120,6 +120,14 @@ class OpenCorporatesAdapter(SourceAdapter):
             cache_key=officers_cache_key,
         )
 
+        # Network relationships — requires the OC Relationships Supplement
+        # (a premium API tier). Returns None if not available (403/404).
+        network_cache_key = f"{_CACHE_NS}/network/{_slug(ocid)}"
+        network_data = await self._get_optional(
+            f"/companies{path}/network",
+            cache_key=network_cache_key,
+        )
+
         return {
             "source_id": self.id,
             "hit_id": ocid,
@@ -128,6 +136,9 @@ class OpenCorporatesAdapter(SourceAdapter):
             "officers": (
                 ((officers_data or {}).get("results") or {}).get("officers") or []
             ),
+            # Raw network payload from the Relationships Supplement.
+            # Present only when the API key has access to that tier.
+            "network": (network_data.get("results") or {}) if network_data else None,
             "raw_company": company_data,
             "raw_officers": officers_data,
         }
@@ -172,7 +183,9 @@ class OpenCorporatesAdapter(SourceAdapter):
                 response = await client.get(
                     f"{_API_BASE}{path}", params=params
                 )
-                if response.status_code == 404:
+                if response.status_code in (402, 403, 404):
+                    # 402/403: endpoint requires a premium API tier.
+                    # 404:     no data for this company.
                     self._cache.put(cache_key, None)
                     return None
                 response.raise_for_status()

@@ -27,11 +27,22 @@ _VALID_ENTITY_TYPES = {
     "stateBody",
 }
 _VALID_PERSON_TYPES = {"knownPerson", "anonymousPerson", "unknownPerson"}
+# Complete BODS v0.4 interestType codelist.
+# Source: https://raw.githubusercontent.com/openownership/data-standard/main/schema/codelists/interestType.csv
 _VALID_INTEREST_TYPES = {
     "shareholding",
     "votingRights",
     "appointmentOfBoard",
     "otherInfluenceOrControl",
+    "seniorManagingOfficial",
+    "settlor",
+    "trustee",
+    "protector",
+    "beneficiaryOfLegalArrangement",
+    "rightsToSurplusAssetsOnDissolution",
+    "rightsToProfitOrIncome",
+    "rightsGrantedByContract",
+    "conditionalRightsGrantedByContract",
     "controlViaCompanyRulesOrArticles",
     "controlByLegalFramework",
     "boardMember",
@@ -40,6 +51,8 @@ _VALID_INTEREST_TYPES = {
     "unpublishedInterest",
     "enjoymentAndUseOfAssets",
     "rightToProfitOrIncomeFromAssets",
+    "nominee",
+    "nominator",
 }
 
 
