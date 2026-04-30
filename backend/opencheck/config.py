@@ -70,6 +70,18 @@ class Settings(BaseSettings):
     opencorporates_api_key: str | None = Field(
         default=None, alias="OPENCORPORATES_API_KEY"
     )
+    # Path to the OpenCorporates Relationships bulk CSV file.
+    # When set, the OpenCorporates adapter will look up ownership relationships
+    # from this file instead of (or in addition to) the live /network API
+    # endpoint.  Leave unset (default) to disable bulk-file lookup entirely.
+    # The file must match the OC Relationships CSV schema (columns:
+    # relationship_type, oc_relationship_identifier, subject_entity_name,
+    # subject_entity_company_number, subject_entity_jurisdiction_code,
+    # object_entity_name, object_entity_company_number,
+    # object_entity_jurisdiction_code, percentage_min_share_ownership, …).
+    opencorporates_relationships_file: str | None = Field(
+        default=None, alias="OPENCORPORATES_RELATIONSHIPS_FILE"
+    )
 
     # --- Optional LLM ---
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")

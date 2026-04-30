@@ -31,6 +31,7 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .oc_relationships import get_bulk_lookup_for_settings
 
 _API_BASE = "https://api.opencorporates.com/v0.4"
 _CACHE_NS = "opencorporates"
@@ -120,13 +121,30 @@ class OpenCorporatesAdapter(SourceAdapter):
             cache_key=officers_cache_key,
         )
 
-        # Network relationships — requires the OC Relationships Supplement
-        # (a premium API tier). Returns None if not available (403/404).
-        network_cache_key = f"{_CACHE_NS}/network/{_slug(ocid)}"
-        network_data = await self._get_optional(
-            f"/companies{path}/network",
-            cache_key=network_cache_key,
-        )
+        # Network relationships — two possible sources, in priority order:
+        #
+        # 1. Bulk CSV file (OPENCORPORATES_RELATIONSHIPS_FILE env var).
+        #    When configured, this takes precedence over the live API call.
+        #    NOT activated unless the env var is set.
+        #
+        # 2. Live /network API endpoint (OC Relationships Supplement, premium
+        #    tier). Used when the bulk file is not configured.
+        #    Returns None gracefully on 402/403/404.
+        network_data: dict | None = None
+
+        bulk_lookup = get_bulk_lookup_for_settings()
+        if bulk_lookup is not None:
+            # Bulk file is configured — look up by jurisdiction + company number.
+            jc, num = (ocid.split("/", 1) + [""])[:2]
+            network_data = bulk_lookup.get_network(jc, num)
+        else:
+            # Fall back to live API endpoint.
+            network_cache_key = f"{_CACHE_NS}/network/{_slug(ocid)}"
+            raw_network = await self._get_optional(
+                f"/companies{path}/network",
+                cache_key=network_cache_key,
+            )
+            network_data = (raw_network.get("results") or {}) if raw_network else None
 
         return {
             "source_id": self.id,
@@ -136,9 +154,9 @@ class OpenCorporatesAdapter(SourceAdapter):
             "officers": (
                 ((officers_data or {}).get("results") or {}).get("officers") or []
             ),
-            # Raw network payload from the Relationships Supplement.
-            # Present only when the API key has access to that tier.
-            "network": (network_data.get("results") or {}) if network_data else None,
+            # Network payload — from bulk file or live API; None when neither
+            # is available.
+            "network": network_data if network_data else None,
             "raw_company": company_data,
             "raw_officers": officers_data,
         }
