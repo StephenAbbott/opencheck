@@ -570,13 +570,35 @@ function SourceBucketCard({
     ? "text-red-700"
     : "text-oo-muted";
 
+  // Collect unique risk signals across all hits in this bucket (dedup by code).
+  const bucketSignals: RiskSignal[] = [];
+  const seenCodes = new Set<string>();
+  for (const hit of bucket.hits) {
+    const key = `${hit.source_id}:${hit.hit_id}`;
+    for (const sig of riskByHit[key] ?? []) {
+      if (!seenCodes.has(sig.code)) {
+        seenCodes.add(sig.code);
+        bucketSignals.push(sig);
+      }
+    }
+  }
+
   return (
     <article className="bg-white border border-oo-rule rounded-oo">
-      <header className="px-5 py-3 border-b border-oo-rule flex items-baseline justify-between">
-        <h3 className="font-head font-bold text-[15px] text-oo-ink">
-          {bucket.sourceName}
-        </h3>
-        <span className={`text-[11px] font-mono ${stateColor}`}>
+      <header className="px-5 py-3 border-b border-oo-rule flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-head font-bold text-[15px] text-oo-ink">
+            {bucket.sourceName}
+          </h3>
+          {bucketSignals.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {bucketSignals.map((sig, i) => (
+                <RiskChip key={`${sig.code}-${i}`} signal={sig} compact />
+              ))}
+            </div>
+          )}
+        </div>
+        <span className={`text-[11px] font-mono shrink-0 ${stateColor}`}>
           {stateLabel}
         </span>
       </header>
