@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [draft customer due diligence regulatory techn
 
 ## Status
 
-OpenCheck has shipped through seventeen phases (latest commit on `main` is the source of truth):
+OpenCheck has shipped through twenty phases (latest commit on `main` is the source of truth):
 
 | Phase | Headline |
 |------:|----------|
@@ -38,8 +38,11 @@ OpenCheck has shipped through seventeen phases (latest commit on `main` is the s
 | 15 | Extraction script walks by `recordId` (not `statementId`) for correct subgraph extraction |
 | 16 | OpenCorporates adapter (OCID-bridged via GLEIF) + BODS dagre relationship-edge fix + GODIN ribbon + Render deployment |
 | 17 | FATF black/grey-list jurisdiction signals (`FATF_BLACK_LIST` / `FATF_GREY_LIST`) derived from BODS entity statements |
+| 18 | OpenCorporates officer mapping (full BODS v0.4 interestType codelist), network relationship support, OC Relationships bulk-file infrastructure; GLEIF exception field-name fix (`reason` / `exceptionReason`); BODS validator completed to full 24-code codelist |
+| 19 | BrightQuery / OpenData.org adapter — 185k+ US entities with LEIs; extraction + diagnostic scripts; entity-level risk signals shown on all source card headers |
+| 20 | UI: risk signals visible on every source card header without clicking Go deeper; deepen panel de-duplicated |
 
-Test suite: 201 backend tests across the sixteen phases. Frontend type-checks clean.
+Test suite: 285 backend tests. Frontend type-checks clean.
 
 ## Quick start
 
@@ -84,7 +87,8 @@ Paste a 20-character ISO 17442 LEI — for example `213800LH1BZH3DI6G760` (BP) o
 3. Looks up the **Wikidata Q-ID** via SPARQL on property `P1278`.
 4. Dispatches to every other adapter using whichever identifier they understand:
    - UK Companies House — direct fetch by company number when jurisdiction = GB. The Open Ownership processed UK PSC bundle (`data/cache/bods_data/uk/<GB-COH>.jsonl`) is the canonical answer when present; otherwise falls back to the live API.
-   - OpenCorporates — fetched by `ocid` (e.g. `gb/00102498`), a field GLEIF returns on Level 1 records; delivers company profile + current officers as BODS statements.
+   - OpenCorporates — fetched by `ocid` (e.g. `gb/00102498`), a field GLEIF returns on Level 1 records; delivers company profile, current officers, and network relationships (from the live API or the OC Relationships bulk file) as BODS statements.
+   - BrightQuery — direct fetch by LEI from a local SQLite database (built from OpenData.org bulk data). Covers 185,000+ US entities; adds executive contacts as `otherInfluenceOrControl` relationships. Activated when `BRIGHTQUERY_DB_FILE` is set.
    - OpenSanctions / OpenTender — search by the LEI string.
    - Wikidata — direct SPARQL fetch on the resolved Q-ID.
 5. Maps each source's payload into BODS v0.4 statements, runs the cross-source reconciler, runs the risk-signal service, and **cross-checks every related person and entity in the BODS bundle against OpenSanctions + EveryPolitician by name** — fuzzy-matched with optional birth-year compatibility — to surface scoped `RELATED_PEP` / `RELATED_SANCTIONED` signals on the matching node.
@@ -111,17 +115,18 @@ python scripts/extract_bods_subgraphs.py \
 
 ## Sources
 
-Seven active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
+Eight active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
 
-| ID | Name | License | Description |
-|----|------|---------|-------------|
-| `companies_house` | UK Companies House | OGL-3.0 | Legal and beneficial ownership information from the UK corporate registry |
-| `gleif` | GLEIF | CC0-1.0 | Legal entity information from the Global Legal Entity Identifier Foundation |
-| `opencorporates` | OpenCorporates | OC Terms | Global company database, reached via the `ocid` field on GLEIF Level 1 records — adds company profile and current officers as BODS statements |
-| `opensanctions` | OpenSanctions | CC BY-NC 4.0 | The open-source database of sanctions, watchlists, and politically exposed persons |
-| `everypolitician` | EveryPolitician | CC BY-NC 4.0 | Global database of political office-holders (served via OpenSanctions PEPs dataset) |
-| `wikidata` | Wikidata | CC0-1.0 | A free and open knowledge base that can be read and edited by both humans and machines |
-| `opentender` | OpenTender (DIGIWHIST) | CC BY-NC-SA 4.0 | Search and analyse tender data from 35 jurisdictions |
+| ID | Name | License | Entry point | Description |
+|----|------|---------|-------------|-------------|
+| `companies_house` | UK Companies House | OGL-3.0 | `gb_coh` from GLEIF | Legal and beneficial ownership information from the UK corporate registry |
+| `gleif` | GLEIF | CC0-1.0 | LEI | Legal entity information from the Global Legal Entity Identifier Foundation |
+| `opencorporates` | OpenCorporates | OC Terms | `ocid` from GLEIF | Global company database — company profile, current officers, and network relationships as BODS statements |
+| `brightquery` | BrightQuery (OpenData.org) | ODC-By | LEI | Open US company and executive data from BrightQuery, covering 185,000+ US entities with LEIs. Activated via `BRIGHTQUERY_DB_FILE` (see below) |
+| `opensanctions` | OpenSanctions | CC BY-NC 4.0 | LEI search | The open-source database of sanctions, watchlists, and politically exposed persons |
+| `everypolitician` | EveryPolitician | CC BY-NC 4.0 | LEI search | Global database of political office-holders (served via OpenSanctions PEPs dataset) |
+| `wikidata` | Wikidata | CC0-1.0 | Q-ID via SPARQL | A free and open knowledge base that can be read and edited by both humans and machines |
+| `opentender` | OpenTender (DIGIWHIST) | CC BY-NC-SA 4.0 | LEI search | Search and analyse tender data from 35 jurisdictions |
 
 The OpenAleph adapter is implemented but currently disabled in `REGISTRY` — its API is name-keyed rather than identifier-keyed, which doesn't fit the LEI flow cleanly yet. Re-enable in `backend/opencheck/sources/__init__.py` once we have a curated demo set for it.
 
@@ -196,6 +201,8 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 | `OPENCHECK_CORS_ORIGIN` | CORS origin for the frontend dev server. |
 | `COMPANIES_HOUSE_API_KEY` | UK Companies House API key (free; <https://developer.company-information.service.gov.uk/>). |
 | `OPENCORPORATES_API_KEY` | OpenCorporates API key — unlocks live company + officer data via the OC REST API. |
+| `OPENCORPORATES_RELATIONSHIPS_FILE` | Path to the OC Relationships bulk CSV file. When set, network relationship data is read from this file instead of the live `/network` API endpoint (which requires a premium tier). |
+| `BRIGHTQUERY_DB_FILE` | Path to the SQLite database built by `scripts/extract_brightquery.py`. When set, the BrightQuery adapter provides LEI-keyed lookup of US entities and their executives from OpenData.org bulk data. |
 | `OPENSANCTIONS_API_KEY` | OpenSanctions API key (also unlocks the EveryPolitician PEPs dataset). |
 | `OPENALEPH_API_KEY` | OpenAleph API key (optional — unlocks restricted collections). |
 | `WIKIDATA_SPARQL_ENDPOINT` | Override the default Wikidata Query Service endpoint. |
@@ -208,7 +215,7 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 
 ```bash
 cd backend
-uv run pytest             # 201 tests, ~5s
+uv run pytest             # 285 tests, ~5s
 ```
 
 Frontend type check:
@@ -227,20 +234,25 @@ opencheck/
   backend/
     opencheck/
       app.py              FastAPI entry — /lookup, /search, /report, /export, /deepen, /stream
-      sources/            One module per source adapter (8 implemented; 7 active in REGISTRY)
-      bods/               BODS v0.4 mappers + validator
+      sources/            One module per source adapter (9 implemented; 8 active in REGISTRY)
+        brightquery.py    BrightQuery / OpenData.org — LEI-keyed US entity + executive data
+        opencorporates.py OpenCorporates — company profile, officers, network relationships
+        oc_relationships.py  OC Relationships bulk-file lookup (indexed by jurisdiction/number)
+      bods/               BODS v0.4 mappers + validator (full 24-code interestType codelist)
       bods_data.py        Open Ownership processed-bundle override layer (Phase 10)
       cross_check.py      Related-party name cross-check against OS + EveryPolitician (Phase 11)
       reconcile.py        Cross-source reconciler (LEI / Q-ID / GB-COH / OS-id bridges)
-      risk.py             Risk-signal rules — 10 deterministic codes incl. AMLA CDD RTS
+      risk.py             Risk-signal rules — 12 deterministic codes incl. AMLA CDD RTS + FATF
       cache.py            Two-tier cache (demos/ → live/)
       config.py           Pydantic settings; env vars listed above
     scripts/
-      extract_bods_subgraphs.py   Walk local SQLite dumps to build per-LEI BODS bundles
-    tests/                pytest suite (206 tests)
+      extract_bods_subgraphs.py    Walk local OO SQLite dumps → per-LEI BODS bundles
+      extract_brightquery.py       Walk BrightQuery bulk files → SQLite DB indexed by LEI
+      diagnose_brightquery.py      Inspect BrightQuery file format before extraction
+    tests/                pytest suite (285 tests)
   frontend/               React + Vite + TypeScript + Tailwind + BO design system
     src/
-      App.tsx             LEI input, subject card, risk chips, export panel, sources page
+      App.tsx             LEI input, subject card, risk chips (on every source card), export panel
       components/         BODSGraph wraps @openownership/bods-dagre
       lib/api.ts          Typed client for the FastAPI surface
   docs/plan.md            Phase plan + design notes
