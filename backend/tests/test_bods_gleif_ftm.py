@@ -210,6 +210,145 @@ def test_map_gleif_emits_anonymous_entity_for_no_lei_exception() -> None:
 
 
 # ---------------------------------------------------------------------
+# GLEIF Reporting Exceptions — live API field names
+# ---------------------------------------------------------------------
+
+
+def test_map_gleif_exception_live_api_field_names_natural_persons() -> None:
+    """Live GLEIF API uses 'reason'/'category' not 'exceptionReason'/'exceptionCategory'.
+    Mapper must read the live field names correctly."""
+    payload = {
+        "lei": "LEI00000000000000010",
+        "record": {
+            "id": "LEI00000000000000010",
+            "attributes": {
+                "lei": "LEI00000000000000010",
+                "entity": {
+                    "legalName": {"name": "Live Exception Co Ltd"},
+                    "jurisdiction": "GB",
+                },
+            },
+        },
+        "direct_parent": None,
+        "direct_parent_exception": {
+            "attributes": {
+                # Live API field names (not the OO SQLite dump names).
+                "category": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT",
+                "reason": "NATURAL_PERSONS",
+            }
+        },
+        "ultimate_parent": None,
+        "ultimate_parent_exception": None,
+    }
+    bundle = map_gleif(payload)
+    types = [s["recordType"] for s in bundle]
+    assert types == ["entity", "person", "relationship"]
+    person = next(s for s in bundle if s["recordType"] == "person")
+    assert person["recordDetails"]["personType"] == "unknownPerson"
+    assert validate_shape(bundle) == []
+
+
+def test_map_gleif_exception_live_api_no_lei() -> None:
+    """Live 'reason': 'NO_LEI' (ultimate) should emit an anonymousEntity bridge."""
+    payload = {
+        "lei": "LEI00000000000000011",
+        "record": {
+            "id": "LEI00000000000000011",
+            "attributes": {
+                "lei": "LEI00000000000000011",
+                "entity": {
+                    "legalName": {"name": "No-LEI Parent Co"},
+                    "jurisdiction": "DE",
+                },
+            },
+        },
+        "direct_parent": None,
+        "direct_parent_exception": None,
+        "ultimate_parent": None,
+        "ultimate_parent_exception": {
+            "attributes": {
+                "category": "ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT",
+                "reason": "NO_LEI",
+            }
+        },
+    }
+    bundle = map_gleif(payload)
+    entities = [s for s in bundle if s["recordType"] == "entity"]
+    assert len(entities) == 2
+    bridge = next(
+        e for e in entities
+        if e["recordDetails"]["entityType"]["type"] == "anonymousEntity"
+    )
+    assert "reporting exception" in bridge["recordDetails"]["name"].lower()
+    assert validate_shape(bundle) == []
+
+
+def test_map_gleif_exception_live_api_no_known_person() -> None:
+    """Live 'reason': 'NO_KNOWN_PERSON' should emit unknownPerson bridge."""
+    payload = {
+        "lei": "LEI00000000000000012",
+        "record": {
+            "id": "LEI00000000000000012",
+            "attributes": {
+                "lei": "LEI00000000000000012",
+                "entity": {
+                    "legalName": {"name": "Mystery Holdings"},
+                    "jurisdiction": "KY",
+                },
+            },
+        },
+        "direct_parent": None,
+        "direct_parent_exception": {
+            "attributes": {
+                "category": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT",
+                "reason": "NO_KNOWN_PERSON",
+            }
+        },
+        "ultimate_parent": None,
+        "ultimate_parent_exception": None,
+    }
+    bundle = map_gleif(payload)
+    person = next(s for s in bundle if s["recordType"] == "person")
+    assert person["recordDetails"]["personType"] == "unknownPerson"
+    rel = next(s for s in bundle if s["recordType"] == "relationship")
+    assert "no known person" in rel["recordDetails"]["interests"][0]["details"].lower()
+    assert validate_shape(bundle) == []
+
+
+def test_map_gleif_exception_both_old_and_new_field_names_work() -> None:
+    """Backward-compatibility: OO SQLite dump uses 'exceptionReason', both must work."""
+    def _make_payload(field_name: str) -> dict:
+        return {
+            "lei": "LEI00000000000000013",
+            "record": {
+                "id": "LEI00000000000000013",
+                "attributes": {
+                    "lei": "LEI00000000000000013",
+                    "entity": {
+                        "legalName": {"name": "Compat Test Co"},
+                        "jurisdiction": "US",
+                    },
+                },
+            },
+            "direct_parent": None,
+            "direct_parent_exception": {
+                "attributes": {field_name: "NON_CONSOLIDATING"}
+            },
+            "ultimate_parent": None,
+            "ultimate_parent_exception": None,
+        }
+
+    for field in ("reason", "exceptionReason"):
+        bundle = map_gleif(_make_payload(field))
+        rel = next(s for s in bundle if s["recordType"] == "relationship")
+        details = rel["recordDetails"]["interests"][0]["details"]
+        assert "non_consolidating" in details.lower() or "consolidat" in details.lower(), (
+            f"field '{field}' did not resolve to NON_CONSOLIDATING: {details}"
+        )
+        assert validate_shape(bundle) == []
+
+
+# ---------------------------------------------------------------------
 # FtM — OpenSanctions
 # ---------------------------------------------------------------------
 

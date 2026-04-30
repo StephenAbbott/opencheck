@@ -755,6 +755,11 @@ _GLEIF_EXCEPTION_REASONS = {
         "anonymousEntity",
         "GLEIF reporting exception: binding legal commitments prevent disclosure",
     ),
+    "DETRIMENT_NOT_EXCLUDED": (
+        "entity",
+        "anonymousEntity",
+        "GLEIF reporting exception: detriment to parent not excluded by law",
+    ),
 }
 
 
@@ -852,7 +857,8 @@ def _gleif_exception_statements(
 ) -> list[dict[str, Any]]:
     """Emit bridging anonymousEntity / unknownPerson + relationship for an exception."""
     attrs = exception.get("attributes") or exception
-    reason = (attrs.get("exceptionReason") or "").upper()
+    # Live GLEIF API uses "reason"; OO SQLite dump uses "exceptionReason".
+    reason = (attrs.get("reason") or attrs.get("exceptionReason") or "").upper()
     ip_type, ip_subtype, details = _GLEIF_EXCEPTION_REASONS.get(
         reason,
         (
