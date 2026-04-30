@@ -35,6 +35,7 @@ from sse_starlette.sse import EventSourceResponse
 from . import __version__
 from .bods import (
     BODSBundle,
+    map_brightquery,
     map_companies_house,
     map_everypolitician,
     map_gleif,
@@ -259,6 +260,7 @@ _MAPPERS = {
     "companies_house": map_companies_house,
     "gleif": map_gleif,
     "opencorporates": map_opencorporates,
+    "brightquery": map_brightquery,
     "opensanctions": map_opensanctions,
     "openaleph": map_openaleph,
     "wikidata": map_wikidata,
@@ -677,6 +679,33 @@ async def lookup(
                 deepened_bundles.append(("wikidata", qid))
         except Exception as exc:  # noqa: BLE001
             errors["wikidata"] = f"{type(exc).__name__}: {exc}"
+
+    # BrightQuery — direct fetch by LEI (US entities from OpenData.org).
+    bq_adapter = REGISTRY.get("brightquery")
+    if bq_adapter and bq_adapter.info.live_available:
+        try:
+            bq_bundle = await bq_adapter.fetch(lei)
+            if not bq_bundle.get("is_stub"):
+                hits.append(
+                    SourceHit(
+                        source_id="brightquery",
+                        hit_id=lei,
+                        kind=SearchKind.ENTITY,
+                        name=bq_bundle.get("name") or legal_name or "",
+                        summary=(
+                            f"BrightQuery US entity · BQ ID {bq_bundle.get('bq_id', '')}"
+                        ),
+                        identifiers={
+                            "lei": lei,
+                            **({"bq_id": bq_bundle["bq_id"]} if bq_bundle.get("bq_id") else {}),
+                        },
+                        raw=bq_bundle.get("company") or {},
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("brightquery", lei))
+        except Exception as exc:  # noqa: BLE001
+            errors["brightquery"] = f"{type(exc).__name__}: {exc}"
 
     # OpenSanctions, OpenAleph, OpenTender — search by LEI.
     for source_id in ("opensanctions", "openaleph", "opentender"):

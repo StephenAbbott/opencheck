@@ -8,6 +8,7 @@ by the FastAPI app.
 from __future__ import annotations
 
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .brightquery import BrightQueryAdapter
 from .companies_house import CompaniesHouseAdapter
 from .everypolitician import EveryPoliticianAdapter
 from .gleif import GleifAdapter
@@ -26,6 +27,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "companies_house": CompaniesHouseAdapter(),
     "gleif": GleifAdapter(),
     "opencorporates": OpenCorporatesAdapter(),
+    "brightquery": BrightQueryAdapter(),
     "opensanctions": OpenSanctionsAdapter(),
     "everypolitician": EveryPoliticianAdapter(),
     "wikidata": WikidataAdapter(),

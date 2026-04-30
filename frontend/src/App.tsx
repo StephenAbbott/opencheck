@@ -840,18 +840,6 @@ function DeepenBlock({ detail }: { detail: DeepenResponse }) {
           <p className="mt-1 leading-[1.6]">{detail.license_notice}</p>
         </div>
       )}
-      {detail.risk_signals.length > 0 && (
-        <section>
-          <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
-            Risk signals (deepen-time)
-          </h4>
-          <div className="flex flex-wrap gap-1">
-            {detail.risk_signals.map((sig, i) => (
-              <RiskChip key={`${sig.code}-${i}`} signal={sig} />
-            ))}
-          </div>
-        </section>
-      )}
       {detail.bods.length > 0 && (
         <section>
           <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">

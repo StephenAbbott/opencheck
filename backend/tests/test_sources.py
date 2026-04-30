@@ -22,6 +22,8 @@ def test_registry_has_expected_sources() -> None:
     assert set(REGISTRY.keys()) == {
         "companies_house",
         "gleif",
+        "opencorporates",
+        "brightquery",
         "opensanctions",
         "everypolitician",
         "wikidata",
@@ -40,7 +42,16 @@ def test_source_info_fields_are_populated() -> None:
         assert info.supports, f"{adapter.id} declares no supported kinds"
 
 
-@pytest.mark.parametrize("source_id", list(REGISTRY.keys()))
+# Adapters that are entered via a specific identifier (e.g. LEI, ocid) rather
+# than free-text search. Their search() method intentionally returns [] because
+# they are called directly via fetch() in the LEI-lookup flow (app.py).
+_IDENTIFIER_KEYED = {"opencorporates", "brightquery"}
+
+
+@pytest.mark.parametrize(
+    "source_id",
+    [sid for sid in REGISTRY if sid not in _IDENTIFIER_KEYED],
+)
 async def test_adapter_search_returns_stubs_for_supported_kinds(source_id: str) -> None:
     adapter = REGISTRY[source_id]
     for kind in adapter.info.supports:
