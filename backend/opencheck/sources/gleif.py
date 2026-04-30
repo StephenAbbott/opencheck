@@ -32,6 +32,24 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 _API_BASE = "https://api.gleif.org/api/v1"
 _CACHE_NS = "gleif"
 
+# GLEIF Registration Authority codes for Companies House sub-registries.
+# Used to disambiguate local company numbers that may coincidentally exist
+# in multiple registries (e.g. NI000001 in both NI and England & Wales).
+# Full list: https://www.gleif.org/en/about-lei/code-lists/gleif-registration-authorities-list
+_CH_RA_CODES: dict[str, str] = {
+    "SC": "RA000586",  # Scotland
+    "NI": "RA000591",  # Northern Ireland
+}
+_CH_RA_DEFAULT = "RA000585"  # England & Wales (the large majority)
+
+# GLEIF filter fields for reverse lookup (local-id → LEI).
+# Tried in order; the first that returns results wins.
+_LOCAL_ID_FILTER_FIELDS = [
+    "filter[entity.registeredAs]",
+    "filter[registration.validatedAs]",
+    "filter[registration.otherValidationAuthorities.validatedAs]",
+]
+
 
 def _slug(text: str) -> str:
     return hashlib.sha256(text.lower().strip().encode("utf-8")).hexdigest()[:16]
@@ -230,6 +248,61 @@ class GleifAdapter(SourceAdapter):
             raw=item,
             is_stub=False,
         )
+
+    # ------------------------------------------------------------------
+    # Reverse lookup: local registry ID → LEI
+    # ------------------------------------------------------------------
+
+    async def search_by_local_id(
+        self,
+        local_id: str,
+        ra_code: str = "",
+    ) -> list[SourceHit]:
+        """Find LEI records by a local registry identifier.
+
+        The GLEIF API exposes three fields that may carry local IDs:
+
+        * ``entity.registeredAs`` — the primary local registry number,
+          e.g. the UK Companies House number or German Handelsregister number.
+        * ``registration.validatedAs`` — the identifier used by the
+          Validation Agent when validating the LEI application.
+        * ``registration.otherValidationAuthorities.validatedAs`` — same
+          as above but for additional validation authorities (can be null
+          or occur multiple times on the same LEI record).
+
+        All three are queried in sequence; hits are deduplicated by LEI.
+
+        ``ra_code`` should be the GLEIF Registration Authority code for the
+        issuing registry (e.g. ``"RA000585"`` for Companies House England &
+        Wales).  Including it avoids false positives when multiple registries
+        share the same local number format.  Pass ``""`` to skip the filter.
+
+        Returns an empty list when live mode is disabled.
+        """
+        if not self.info.live_available:
+            return []
+
+        seen_leis: set[str] = set()
+        hits: list[SourceHit] = []
+
+        for field in _LOCAL_ID_FILTER_FIELDS:
+            params = f"page[size]=5&{field}={quote(local_id)}"
+            if ra_code:
+                params += f"&filter[entity.registeredAt]={quote(ra_code)}"
+            cache_key = f"{_CACHE_NS}/by-local-id/{_slug(params)}"
+
+            try:
+                payload = await self._get(f"/lei-records?{params}", cache_key=cache_key)
+                for item in payload.get("data") or []:
+                    attrs = item.get("attributes") or {}
+                    lei = attrs.get("lei") or item.get("id") or ""
+                    if lei and lei not in seen_leis:
+                        seen_leis.add(lei)
+                        hits.append(self._entity_hit(item))
+            except Exception:  # noqa: BLE001
+                pass
+
+        return hits
 
     # ------------------------------------------------------------------
     # Stub path

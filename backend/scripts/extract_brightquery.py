@@ -98,44 +98,32 @@ def _open_file(path: Path):
     return path.open(encoding="utf-8", errors="replace")
 
 
-def _load_records(path: Path) -> list[dict]:
-    """Parse one file; tolerate JSON object, JSON array, and JSONL formats."""
-    records: list[dict] = []
+def _iter_records(path: Path):
+    """Stream records one at a time from a JSONL file (or JSON object/array).
+
+    Reads line-by-line so multi-GB JSONL files never load fully into RAM.
+    Each line is expected to be a complete JSON object (JSONL format).
+    Lines that fail to parse as JSON are silently skipped.
+    """
     try:
         with _open_file(path) as fh:
-            content = fh.read()
-
-        if not content.strip():
-            return []
-
-        # --- Try as a single JSON value (object or array) ---
-        try:
-            data = json.loads(content)
-            if isinstance(data, dict):
-                return [data]
-            if isinstance(data, list):
-                return [r for r in data if isinstance(r, dict)]
-        except json.JSONDecodeError:
-            pass
-
-        # --- Try as JSONL (one JSON object per line) ---
-        for line in content.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                obj = json.loads(line)
-                if isinstance(obj, dict):
-                    records.append(obj)
-            except json.JSONDecodeError:
-                pass
-
-        if records:
-            return records
-
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                    if isinstance(obj, dict):
+                        yield obj
+                    elif isinstance(obj, list):
+                        # Handle rare case where a line contains a JSON array
+                        for item in obj:
+                            if isinstance(item, dict):
+                                yield item
+                except json.JSONDecodeError:
+                    pass
     except Exception as exc:
         logger.debug("Skipping %s (%s)", path.name, exc)
-    return []
 
 
 def _iter_files(directory: Path):
@@ -240,17 +228,12 @@ def extract_companies(org_dir: Path, conn: sqlite3.Connection) -> set[str]:
             batch.clear()
 
     for path in _iter_files(org_dir):
-        records = _load_records(path)
         files_scanned += 1
+        file_had_records = False
 
-        if not records:
-            files_empty += 1
-            if files_empty <= 3:
-                logger.debug("Empty or unparseable: %s", path.name)
-            continue
-
-        for record in records:
+        for record in _iter_records(path):
             total += 1
+            file_had_records = True
             lei = _find_lei(record)
             if not lei:
                 skipped += 1
@@ -266,7 +249,12 @@ def extract_companies(org_dir: Path, conn: sqlite3.Connection) -> set[str]:
             if len(batch) >= _BATCH_SIZE:
                 _flush()
 
-        if files_scanned % 5_000 == 0:
+        if not file_had_records:
+            files_empty += 1
+            if files_empty <= 3:
+                logger.debug("Empty or unparseable: %s", path.name)
+
+        if files_scanned % 50 == 0:
             logger.info(
                 "  Orgs  : files %-7d  records %-7d  with LEI %-6d  no-LEI %d",
                 files_scanned, total, len(extracted), skipped,
@@ -314,7 +302,7 @@ def extract_people(
 
     for path in _iter_files(people_dir):
         files_scanned += 1
-        for record in _load_records(path):
+        for record in _iter_records(path):
             total += 1
             feats = _features(record)
             org_bq_id = _find_org_bq_id(feats)
@@ -326,7 +314,7 @@ def extract_people(
             if len(batch) >= _BATCH_SIZE:
                 _flush()
 
-        if files_scanned % 5_000 == 0:
+        if files_scanned % 50 == 0:
             logger.info(
                 "  People: files %-7d  records %-7d  matched %d",
                 files_scanned, total, matched,

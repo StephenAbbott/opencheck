@@ -236,6 +236,44 @@ async def _stream_events(q: str, kind: SearchKind) -> AsyncIterator[dict[str, An
                 ),
             }
 
+    # ── GLEIF bridge (CH → LEI reverse lookup) ────────────────────────────
+    # For entity searches: any Companies House hit that doesn't already
+    # have a matching GLEIF hit gets a reverse lookup via GLEIF's
+    # filter[entity.registeredAs] / filter[registration.validatedAs] /
+    # filter[registration.otherValidationAuthorities.validatedAs] API.
+    # This means users who search by name get GLEIF Level 1 + Level 2
+    # data automatically — no need to search GLEIF separately.
+    if kind == SearchKind.ENTITY:
+        gleif_adapter = REGISTRY.get("gleif")
+        if gleif_adapter and hasattr(gleif_adapter, "search_by_local_id") and gleif_adapter.info.live_available:
+            existing_leis = {
+                h.identifiers.get("lei")
+                for h in all_hits
+                if h.identifiers.get("lei")
+            }
+            ch_hits = [h for h in all_hits if h.source_id == "companies_house"]
+            for ch_hit in ch_hits:
+                ra_code = _ch_ra_code(ch_hit.hit_id)
+                try:
+                    bridge_hits = await gleif_adapter.search_by_local_id(  # type: ignore[attr-defined]
+                        ch_hit.hit_id, ra_code=ra_code
+                    )
+                    for bh in bridge_hits:
+                        lei = bh.identifiers.get("lei", "")
+                        if not lei or lei in existing_leis:
+                            continue
+                        existing_leis.add(lei)
+                        # Attach gb_coh so the reconciler can bridge GLEIF ↔ CH
+                        bridged = bh.model_copy(
+                            update={
+                                "identifiers": {**bh.identifiers, "gb_coh": ch_hit.hit_id}
+                            }
+                        )
+                        all_hits.append(bridged)
+                        yield {"event": "hit", "data": bridged.model_dump_json()}
+                except Exception:  # noqa: BLE001
+                    pass
+
     # Once every adapter has reported, run reconciliation and emit any
     # cross-source bridges as a single event for the UI to render.
     links = [link.to_dict() for link in reconcile(all_hits)]
@@ -254,6 +292,24 @@ async def _stream_events(q: str, kind: SearchKind) -> AsyncIterator[dict[str, An
         }
 
     yield {"event": "done", "data": json.dumps({"query": q, "kind": kind.value})}
+
+
+def _ch_ra_code(company_number: str) -> str:
+    """Return the GLEIF Registration Authority code for a Companies House number.
+
+    The prefix of the company number identifies which sub-registry issued it:
+    ``SC`` → Scotland (RA000586), ``NI`` → Northern Ireland (RA000591),
+    anything else → England & Wales (RA000585, the large majority).
+
+    Passing the correct RA code to GLEIF prevents false positives when
+    different registries share the same local number format.
+    """
+    upper = (company_number or "").strip().upper()
+    if upper.startswith("SC"):
+        return "RA000586"
+    if upper.startswith("NI"):
+        return "RA000591"
+    return "RA000585"
 
 
 _MAPPERS = {
