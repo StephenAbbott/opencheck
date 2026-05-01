@@ -193,13 +193,23 @@ export default function App() {
 
   const totalHits = bucketList.reduce((n, b) => n + b.hits.length, 0);
 
-  // Index risk signals by `${source_id}:${hit_id}` so cards/rows can
+  // Index risk signals by `${source_id}:${hit_id}` so hit rows can
   // pull their own chips without re-scanning the whole list.
   const riskByHit = useMemo(() => {
     const out: Record<string, RiskSignal[]> = {};
     for (const sig of result?.risk_signals ?? []) {
       const k = `${sig.source_id}:${sig.hit_id}`;
       (out[k] = out[k] ?? []).push(sig);
+    }
+    return out;
+  }, [result]);
+
+  // Index risk signals by source_id so each source card shows only the
+  // signals attributed to that source — not all entity-level signals.
+  const riskBySource = useMemo(() => {
+    const out: Record<string, RiskSignal[]> = {};
+    for (const sig of result?.risk_signals ?? []) {
+      (out[sig.source_id] = out[sig.source_id] ?? []).push(sig);
     }
     return out;
   }, [result]);
@@ -381,7 +391,7 @@ export default function App() {
                   key={b.sourceId}
                   bucket={b}
                   riskByHit={riskByHit}
-                  entitySignals={aggregatedCodes}
+                  sourceSignals={riskBySource[b.sourceId] ?? []}
                 />
               ))}
             </div>
@@ -560,11 +570,11 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function SourceBucketCard({
   bucket,
   riskByHit,
-  entitySignals = [],
+  sourceSignals = [],
 }: {
   bucket: SourceBucket;
   riskByHit: Record<string, RiskSignal[]>;
-  entitySignals?: RiskSignal[];
+  sourceSignals?: RiskSignal[];
 }) {
   const stateLabel = bucket.error
     ? "error"
@@ -573,12 +583,10 @@ function SourceBucketCard({
     ? "text-red-700"
     : "text-oo-muted";
 
-  // Show entity-level signals (aggregated across all sources) in the card
-  // header so every source card surfaces the same risk picture without
-  // requiring the user to click "Go deeper" or scroll to the risk strip.
-  // Source-specific signals from riskByHit are a subset of entitySignals,
-  // so using entitySignals gives consistent coverage for all sources.
-  const headerSignals = entitySignals;
+  // Show only signals attributed to this specific source in the card header.
+  // Entity-level signals across all sources are shown in the top-level
+  // "Risk signals" strip above the source cards.
+  const headerSignals = sourceSignals;
 
   return (
     <article className="bg-white border border-oo-rule rounded-oo">
