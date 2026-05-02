@@ -2001,7 +2001,11 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
     result = BODSBundle()
     company = bundle.get("company") or {}
     ocid = bundle.get("ocid") or bundle.get("hit_id") or ""
-    officers = bundle.get("officers") or []
+    # The dedicated /officers endpoint requires a premium API tier and returns
+    # null (402/403) for standard keys. Fall back to the officers list embedded
+    # in the company profile endpoint response, which is available on all tiers
+    # (typically up to 50 officers, wrapped as {"officer": {...}} items).
+    officers = bundle.get("officers") or company.get("officers") or []
     network_raw = bundle.get("network")  # None when Supplement not available
 
     if not company:
@@ -2100,11 +2104,23 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
                 seen_entity_sids.add(ip_sid)
             ip_type = "entity"
         else:
-            # Natural person → person statement
+            # Natural person → person statement.
+            # OC returns date_of_birth as "YYYY-MM" from the company profile
+            # endpoint. Extract it so the cross-check's birth-year filter
+            # can disambiguate common names against OpenSanctions / EP records.
+            dob_raw = officer_data.get("date_of_birth") or ""
+            birth_date: str | None = dob_raw if dob_raw else None
+
+            # Nationality comes back as a plain string (e.g. "ITALIAN").
+            nationality_str = (officer_data.get("nationality") or "").strip().title()
+            nationalities = [{"name": nationality_str}] if nationality_str else []
+
             person_stmt = make_person_statement(
                 source_id="opencorporates",
                 local_id=local_key,
                 full_name=officer_name,
+                birth_date=birth_date,
+                nationalities=nationalities,
                 source_url=oc_url,
             )
             ip_sid = person_stmt["statementId"]
