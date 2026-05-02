@@ -761,6 +761,16 @@ _GLEIF_EXCEPTION_REASONS = {
         "anonymousEntity",
         "GLEIF reporting exception: detriment to parent not excluded by law",
     ),
+    "AUTHORITIES_DISCRETION": (
+        "entity",
+        "anonymousEntity",
+        "GLEIF reporting exception: regulatory authority has exercised discretion not to require disclosure",
+    ),
+    "CONSENT_NOT_OBTAINED": (
+        "entity",
+        "anonymousEntity",
+        "GLEIF reporting exception: consent of parent entity not obtained",
+    ),
 }
 
 
