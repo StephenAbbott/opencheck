@@ -68,6 +68,7 @@ def validate_shape(statements: Iterable[dict[str, Any]]) -> list[str]:
     """
     statements = list(statements)
     known_ids = {s.get("statementId") for s in statements if s.get("statementId")}
+    known_record_ids = {s.get("recordId") for s in statements if s.get("recordId")}
     issues: list[str] = []
 
     for i, s in enumerate(statements):
@@ -105,14 +106,18 @@ def validate_shape(statements: Iterable[dict[str, Any]]) -> list[str]:
                 issues.append(f"{prefix}: person missing names[0].fullName")
 
         elif rt == "relationship":
-            subject_sid = (rd.get("subject") or {}).get("describedByEntityStatement")
-            if subject_sid not in known_ids:
-                issues.append(f"{prefix}: subject references unknown statement {subject_sid!r}")
+            # BODS v0.4: subject and interestedParty are plain recordId strings,
+            # not v0.3-style {"describedByEntityStatement": ...} wrapper objects.
+            subject_rid = rd.get("subject")
+            if not isinstance(subject_rid, str) or subject_rid not in known_record_ids:
+                issues.append(f"{prefix}: subject references unknown recordId {subject_rid!r}")
 
-            ip = rd.get("interestedParty") or {}
-            ip_sid = ip.get("describedByPersonStatement") or ip.get("describedByEntityStatement")
-            if ip_sid not in known_ids:
-                issues.append(f"{prefix}: interestedParty references unknown statement {ip_sid!r}")
+            ip_rid = rd.get("interestedParty")
+            if isinstance(ip_rid, dict):
+                # Unspecified-party object (e.g. {"unspecified": {"reason": ...}}) — valid
+                pass
+            elif not isinstance(ip_rid, str) or ip_rid not in known_record_ids:
+                issues.append(f"{prefix}: interestedParty references unknown recordId {ip_rid!r}")
 
             interests = rd.get("interests") or []
             for j, interest in enumerate(interests):

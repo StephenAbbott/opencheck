@@ -66,6 +66,7 @@ def _entity(sid: str, *, entity_type: str = "registeredEntity",
         rd["legalForm"] = legal_form
     return {
         "statementId": sid,
+        "recordId": sid,  # BODS v0.4: recordId used in relationship references
         "recordType": "entity",
         "recordDetails": rd,
     }
@@ -75,6 +76,7 @@ def _person(sid: str, *, person_type: str = "knownPerson",
             full_name: str = "Jane Smith") -> dict:
     return {
         "statementId": sid,
+        "recordId": sid,  # BODS v0.4: recordId used in relationship references
         "recordType": "person",
         "recordDetails": {
             "personType": person_type,
@@ -85,13 +87,14 @@ def _person(sid: str, *, person_type: str = "knownPerson",
 
 def _rel(sid: str, subject: str, ip: str, *, ip_kind: str = "entity",
          interests: list | None = None) -> dict:
-    ip_key = "describedByEntityStatement" if ip_kind == "entity" else "describedByPersonStatement"
+    # BODS v0.4: subject and interestedParty are plain recordId strings
     return {
         "statementId": sid,
+        "recordId": sid,
         "recordType": "relationship",
         "recordDetails": {
-            "subject": {"describedByEntityStatement": subject},
-            "interestedParty": {ip_key: ip},
+            "subject": subject,
+            "interestedParty": ip,
             "interests": interests or [
                 {"type": "shareholding", "directOrIndirect": "direct"}
             ],
