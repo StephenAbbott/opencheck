@@ -44,8 +44,10 @@ from .bods import (
     map_opensanctions,
     map_opentender,
     map_wikidata,
+    map_zefix,
     validate_shape,
 )
+from .sources.zefix import CH_RA_CODES as _ZEFIX_RA_CODES, normalise_uid as _zefix_normalise_uid
 from . import bods_data
 from .config import get_settings
 from .cross_check import assess_cross_source_names
@@ -322,6 +324,7 @@ _MAPPERS = {
     "wikidata": map_wikidata,
     "everypolitician": map_everypolitician,
     "opentender": map_opentender,
+    "zefix": map_zefix,
 }
 
 # Licenses that forbid commercial re-use. Anything in this set triggers
@@ -563,6 +566,7 @@ async def lookup(
     legal_name = ""
     jurisdiction = ""
     registered_as = ""
+    registered_at_id = ""
     gleif_bundle: dict[str, Any] = {}
 
     if override_bundle:
@@ -599,10 +603,13 @@ async def lookup(
         legal_name = (entity_block.get("legalName") or {}).get("name") or ""
         jurisdiction = entity_block.get("jurisdiction") or ""
         registered_as = entity_block.get("registeredAs") or ""
+        registered_at_id = (entity_block.get("registeredAt") or {}).get("id") or ""
 
     derived: dict[str, str] = {"lei": lei}
     if jurisdiction.upper() == "GB" and registered_as:
         derived["gb_coh"] = registered_as
+    if registered_at_id in _ZEFIX_RA_CODES and registered_as:
+        derived["che_uid"] = _zefix_normalise_uid(registered_as)
 
     # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
     # (format: ``{jurisdiction_code}/{company_number}``).
@@ -650,6 +657,7 @@ async def lookup(
         identifiers={
             "lei": lei,
             **({"gb_coh": registered_as} if "gb_coh" in derived else {}),
+            **({"che_uid": derived["che_uid"]} if "che_uid" in derived else {}),
             **({"wikidata_qid": qid} if qid else {}),
         },
         raw=gleif_bundle.get("record") or {},
@@ -683,6 +691,31 @@ async def lookup(
                 deepened_bundles.append(("companies_house", derived["gb_coh"]))
         except Exception as exc:  # noqa: BLE001
             errors["companies_house"] = f"{type(exc).__name__}: {exc}"
+
+    # Zefix — direct fetch by CHE UID when Swiss entity (RA000548 / RA000549).
+    if "che_uid" in derived:
+        try:
+            zefix_bundle = await REGISTRY["zefix"].fetch(derived["che_uid"])
+            if not zefix_bundle.get("is_stub"):
+                company = zefix_bundle.get("company") or {}
+                hits.append(
+                    SourceHit(
+                        source_id="zefix",
+                        hit_id=derived["che_uid"],
+                        kind=SearchKind.ENTITY,
+                        name=company.get("name") or legal_name or "",
+                        summary=f"CHE {derived['che_uid']}",
+                        identifiers={
+                            "che_uid": derived["che_uid"],
+                            "lei": lei,
+                        },
+                        raw=company,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("zefix", derived["che_uid"]))
+        except Exception as exc:  # noqa: BLE001
+            errors["zefix"] = f"{type(exc).__name__}: {exc}"
 
     # OpenCorporates — direct fetch by ocid derived from GLEIF.
     if ocid:
