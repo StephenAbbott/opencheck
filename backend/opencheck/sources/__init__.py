@@ -12,6 +12,7 @@ from .brightquery import BrightQueryAdapter
 from .companies_house import CompaniesHouseAdapter
 from .everypolitician import EveryPoliticianAdapter
 from .gleif import GleifAdapter
+from .kvk import KvKAdapter
 from .openaleph import OpenAlephAdapter  # noqa: F401  -- kept for re-enablement
 from .opencorporates import OpenCorporatesAdapter
 from .opensanctions import OpenSanctionsAdapter
@@ -27,6 +28,7 @@ from .zefix import ZefixAdapter
 REGISTRY: dict[str, SourceAdapter] = {
     "companies_house": CompaniesHouseAdapter(),
     "gleif": GleifAdapter(),
+    "kvk": KvKAdapter(),
     "opencorporates": OpenCorporatesAdapter(),
     "brightquery": BrightQueryAdapter(),
     "opensanctions": OpenSanctionsAdapter(),

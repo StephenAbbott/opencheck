@@ -44,9 +44,11 @@ from .bods import (
     map_opensanctions,
     map_opentender,
     map_wikidata,
+    map_kvk,
     map_zefix,
     validate_shape,
 )
+from .sources.kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
 from .sources.zefix import CH_RA_CODES as _ZEFIX_RA_CODES, normalise_uid as _zefix_normalise_uid
 from . import bods_data
 from .config import get_settings
@@ -323,6 +325,7 @@ _MAPPERS = {
     "openaleph": map_openaleph,
     "wikidata": map_wikidata,
     "everypolitician": map_everypolitician,
+    "kvk": map_kvk,
     "opentender": map_opentender,
     "zefix": map_zefix,
 }
@@ -610,6 +613,8 @@ async def lookup(
         derived["gb_coh"] = registered_as
     if registered_at_id in _ZEFIX_RA_CODES and registered_as:
         derived["che_uid"] = _zefix_normalise_uid(registered_as)
+    if registered_at_id == _KVK_RA_CODE and registered_as:
+        derived["kvk_number"] = _normalise_kvk(registered_as)
 
     # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
     # (format: ``{jurisdiction_code}/{company_number}``).
@@ -658,6 +663,7 @@ async def lookup(
             "lei": lei,
             **({"gb_coh": registered_as} if "gb_coh" in derived else {}),
             **({"che_uid": derived["che_uid"]} if "che_uid" in derived else {}),
+            **({"kvk_number": derived["kvk_number"]} if "kvk_number" in derived else {}),
             **({"wikidata_qid": qid} if qid else {}),
         },
         raw=gleif_bundle.get("record") or {},
@@ -716,6 +722,33 @@ async def lookup(
                 deepened_bundles.append(("zefix", derived["che_uid"]))
         except Exception as exc:  # noqa: BLE001
             errors["zefix"] = f"{type(exc).__name__}: {exc}"
+
+    # KvK — direct fetch by KvK number when Dutch entity (RA000463).
+    if "kvk_number" in derived:
+        try:
+            kvk_bundle = await REGISTRY["kvk"].fetch(
+                derived["kvk_number"], legal_name=legal_name
+            )
+            if not kvk_bundle.get("is_stub"):
+                company = kvk_bundle.get("company") or {}
+                hits.append(
+                    SourceHit(
+                        source_id="kvk",
+                        hit_id=derived["kvk_number"],
+                        kind=SearchKind.ENTITY,
+                        name=legal_name or "",
+                        summary=f"KvK {derived['kvk_number']}",
+                        identifiers={
+                            "kvk_number": derived["kvk_number"],
+                            "lei": lei,
+                        },
+                        raw=company,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("kvk", derived["kvk_number"]))
+        except Exception as exc:  # noqa: BLE001
+            errors["kvk"] = f"{type(exc).__name__}: {exc}"
 
     # OpenCorporates — direct fetch by ocid derived from GLEIF.
     if ocid:

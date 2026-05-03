@@ -224,14 +224,17 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
     source_names = {
         "companies_house": "UK Companies House",
         "gleif": "GLEIF",
+        "kvk": "KvK — Netherlands Chamber of Commerce",
         "opencorporates": "OpenCorporates",
         "brightquery": "BrightQuery / OpenData.org",
         "opensanctions": "OpenSanctions",
         "openaleph": "OpenAleph",
         "everypolitician": "EveryPolitician",
         "wikidata": "Wikidata",
+        "zefix": "Zefix — Swiss Commercial Registry",
+        "opentender": "OpenTender",
     }
-    _official_registers = {"companies_house", "opencorporates"}
+    _official_registers = {"companies_house", "kvk", "opencorporates", "zefix"}
     block: dict[str, Any] = {
         "type": "officialRegister" if source_id in _official_registers else "thirdParty",
         "description": source_names.get(source_id, source_id),
@@ -1143,6 +1146,84 @@ def _zefix_address(block: dict[str, Any]) -> list[dict[str, str]]:
     if not joined:
         return []
     return [{"type": "registered", "address": joined, "country": "CH"}]
+
+
+# ----------------------------------------------------------------------
+# KvK (Netherlands Chamber of Commerce) → BODS
+# ----------------------------------------------------------------------
+#
+# The KvK open-data endpoint returns limited fields: registration status,
+# legal form code (rechtsvormCode), SBI activity codes, start date, and a
+# 2-digit postal-code region.  Company name is NOT available from this API
+# tier; it is passed via bundle["legal_name"] (sourced from GLEIF).
+#
+# Identifier scheme: "NL-KVK"  (follows the GB-COH / CH-UID pattern)
+# Jurisdiction: Netherlands ("NL")
+# Source: https://developers.kvk.nl/nl/documentation/open-dataset-basis-bedrijfsgegevens-api
+
+
+def map_kvk(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map a KvK fetch bundle to a BODS v0.4 entity statement.
+
+    Returns an empty iterable for stub bundles, missing company data,
+    or missing entity name.  KvK open data does not expose natural
+    persons, so only entity statements are emitted.
+
+    Bundle shape (as returned by KvKAdapter.fetch):
+
+    .. code-block:: python
+
+        {
+            "source_id": "kvk",
+            "kvk_number": "96332751",
+            "company": {          # raw KvK open-data API response
+                "datumAanvang": "20250202",
+                "actief": "J",
+                "rechtsvormCode": "BV",
+                "postcodeRegio": 10,
+                "activiteiten": [{"sbiCode": "6201", "soortActiviteit": "Hoofdactiviteit"}],
+                "lidstaat": "NL",
+            },
+            "legal_name": "Splitty B.V.",   # from GLEIF, may be empty
+            "is_stub": False,
+        }
+    """
+    if not bundle or bundle.get("is_stub"):
+        return
+
+    company: dict[str, Any] = bundle.get("company") or {}
+    if not company:
+        return
+
+    kvk_number: str = bundle.get("kvk_number") or ""
+    name: str = bundle.get("legal_name") or ""
+    if not kvk_number or not name:
+        return
+
+    # Founding date: datumAanvang is YYYYMMDD — convert to ISO format.
+    raw_date = str(company.get("datumAanvang") or "").strip()
+    founding_date: str | None = None
+    if len(raw_date) == 8 and raw_date.isdigit():
+        founding_date = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:]}"
+
+    identifiers: list[dict[str, str]] = [
+        {
+            "id": kvk_number,
+            "scheme": "NL-KVK",
+            "schemeName": "Netherlands Chamber of Commerce (KvK) registration number",
+        }
+    ]
+
+    entity = make_entity_statement(
+        source_id="kvk",
+        local_id=kvk_number,
+        name=name,
+        jurisdiction=("Netherlands", "NL"),
+        identifiers=identifiers,
+        founding_date=founding_date,
+        source_url=f"https://www.kvk.nl/zoeken/handelsnaam/?q={kvk_number}",
+    )
+    yield entity
 
 
 # ----------------------------------------------------------------------

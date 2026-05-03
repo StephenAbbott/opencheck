@@ -28,6 +28,7 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
 from .zefix import CH_RA_CODES as _ZEFIX_RA_CODES, format_uid as _zefix_format_uid
 
 _API_BASE = "https://api.gleif.org/api/v1"
@@ -243,6 +244,10 @@ class GleifAdapter(SourceAdapter):
             # GLEIF ↔ Zefix on the same CHE number.
             if registered_at_id in _ZEFIX_RA_CODES:
                 identifiers["che_uid"] = _zefix_format_uid(registered_as)
+            # Dutch KvK number — expose as ``kvk_number`` so the reconciler
+            # can bridge GLEIF ↔ KvK on the same registration number.
+            if registered_at_id == _KVK_RA_CODE:
+                identifiers["kvk_number"] = _normalise_kvk(registered_as)
 
         return SourceHit(
             source_id="gleif",
