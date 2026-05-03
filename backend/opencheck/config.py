@@ -91,6 +91,11 @@ class Settings(BaseSettings):
         default=None, alias="BRIGHTQUERY_DB_FILE"
     )
 
+    # --- Zefix (Swiss Federal Commercial Registry) ---
+    # HTTP Basic credentials — request via zefix@bj.admin.ch.
+    zefix_username: str | None = Field(default=None, alias="ZEFIX_USERNAME")
+    zefix_password: str | None = Field(default=None, alias="ZEFIX_PASSWORD")
+
     # --- Optional LLM ---
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
 

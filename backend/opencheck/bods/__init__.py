@@ -22,6 +22,7 @@ from .mapper import (
     map_opensanctions,
     map_opentender,
     map_wikidata,
+    map_zefix,
 )
 from .validator import validate_shape, ValidationError
 
@@ -40,6 +41,7 @@ __all__ = [
     "map_openaleph",
     "map_opentender",
     "map_wikidata",
+    "map_zefix",
     "validate_shape",
     "ValidationError",
 ]

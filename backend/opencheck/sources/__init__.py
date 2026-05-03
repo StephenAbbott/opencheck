@@ -17,6 +17,7 @@ from .opencorporates import OpenCorporatesAdapter
 from .opensanctions import OpenSanctionsAdapter
 from .opentender import OpenTenderAdapter
 from .wikidata import WikidataAdapter
+from .zefix import ZefixAdapter
 
 # OpenAleph is intentionally excluded from the registry while the LEI
 # flow is the supported entry point — its API is name-keyed rather than
@@ -32,6 +33,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "everypolitician": EveryPoliticianAdapter(),
     "wikidata": WikidataAdapter(),
     "opentender": OpenTenderAdapter(),
+    "zefix": ZefixAdapter(),
 }
 
 __all__ = [

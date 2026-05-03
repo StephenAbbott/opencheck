@@ -28,6 +28,7 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .zefix import CH_RA_CODES as _ZEFIX_RA_CODES, format_uid as _zefix_format_uid
 
 _API_BASE = "https://api.gleif.org/api/v1"
 _CACHE_NS = "gleif"
@@ -233,10 +234,15 @@ class GleifAdapter(SourceAdapter):
         # reconciler can bridge GLEIF ↔ Companies House on the same UK
         # company number.
         registered_as = entity.get("registeredAs")
+        registered_at_id = (entity.get("registeredAt") or {}).get("id") or ""
         if registered_as and jurisdiction:
             identifiers[f"registered_as_{jurisdiction.lower()}"] = registered_as
             if jurisdiction.upper() == "GB":
                 identifiers["gb_coh"] = registered_as
+            # Swiss UID — expose as ``che_uid`` so the reconciler can bridge
+            # GLEIF ↔ Zefix on the same CHE number.
+            if registered_at_id in _ZEFIX_RA_CODES:
+                identifiers["che_uid"] = _zefix_format_uid(registered_as)
 
         return SourceHit(
             source_id="gleif",
