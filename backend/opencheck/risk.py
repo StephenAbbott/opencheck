@@ -607,37 +607,23 @@ def _statement_id(stmt: dict[str, Any]) -> str:
     return stmt.get("statementId") or stmt.get("statement_id") or ""
 
 
-def _relationship_endpoints(
-    stmt: dict[str, Any],
-    record_id_to_type: dict[str, str] | None = None,
-) -> tuple[str, str, str]:
-    """Return (subject_record_id, ip_record_id, ip_kind) for a relationship statement.
+def _relationship_endpoints(stmt: dict[str, Any]) -> tuple[str, str, str]:
+    """Return (subject_id, ip_id, ip_kind) for a relationship statement.
 
     ``ip_kind`` is ``"entity"``, ``"person"`` or ``""`` (unknown).
-
-    BODS v0.4: ``subject`` and ``interestedParty`` in ``recordDetails`` are
-    plain ``recordId`` strings.  Pass ``record_id_to_type`` (a mapping from
-    ``recordId`` to ``recordType``) so that ``ip_kind`` can be resolved.
     """
     rd = _record_details(stmt)
-    subj = rd.get("subject") or ""
-    if not isinstance(subj, str):
-        subj = ""
-
-    ip_val = rd.get("interestedParty")
-    if not isinstance(ip_val, str):
-        # dict means unspecified/anonymous party — not a resolvable entity/person
-        return subj, "", ""
-
-    ip_kind = ""
-    if record_id_to_type:
-        rt = record_id_to_type.get(ip_val, "")
-        if rt == "entity":
-            ip_kind = "entity"
-        elif rt == "person":
-            ip_kind = "person"
-
-    return subj, ip_val, ip_kind
+    subj = (rd.get("subject") or {}).get("describedByEntityStatement") or ""
+    ip = rd.get("interestedParty") or {}
+    if "describedByEntityStatement" in ip:
+        return subj, ip["describedByEntityStatement"], "entity"
+    if "describedByPersonStatement" in ip:
+        return subj, ip["describedByPersonStatement"], "person"
+    if "describedByAnonymousEntityStatement" in ip:
+        # Some BODS implementations carry this as a distinct key —
+        # treat it as an entity for chain-counting purposes.
+        return subj, ip["describedByAnonymousEntityStatement"], "entity"
+    return subj, "", ""
 
 
 def _interests(stmt: dict[str, Any]) -> list[dict[str, Any]]:
@@ -870,16 +856,13 @@ def _layers_signal(
     track the longest simple path (cycles guarded via per-path visited
     set).
     """
-    # Map recordId -> recordType for resolving relationship endpoints.
-    record_id_to_type: dict[str, str] = {}
+    # Map statementId -> entity type to filter to entity nodes.
     entity_ids: set[str] = set()
     for stmt in bods:
-        rid = stmt.get("recordId") or ""
-        rt = _stmt_kind(stmt)
-        if rid and rt:
-            record_id_to_type[rid] = rt
-        if rt == "entity" and rid:
-            entity_ids.add(rid)
+        if _stmt_kind(stmt) == "entity":
+            sid = _statement_id(stmt)
+            if sid:
+                entity_ids.add(sid)
 
     # Build adjacency: ip -> {subject1, subject2, ...} restricted to
     # entity nodes (ignore person interestedParties because they end
@@ -888,7 +871,7 @@ def _layers_signal(
     for stmt in bods:
         if _stmt_kind(stmt) != "relationship":
             continue
-        subj, ip, ip_kind = _relationship_endpoints(stmt, record_id_to_type)
+        subj, ip, ip_kind = _relationship_endpoints(stmt)
         if not subj or not ip or ip_kind != "entity":
             continue
         if subj not in entity_ids or ip not in entity_ids:

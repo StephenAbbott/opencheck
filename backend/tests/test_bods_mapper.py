@@ -74,8 +74,8 @@ def test_relationship_statement_shape() -> None:
     rel = make_relationship_statement(
         source_id="companies_house",
         local_id="00102498:p1",
-        subject_record_id=entity["recordId"],
-        interested_party_record_id=person["recordId"],
+        subject_statement_id=entity["statementId"],
+        interested_party_statement_id=person["statementId"],
         interests=[
             {
                 "type": "shareholding",
@@ -86,9 +86,8 @@ def test_relationship_statement_shape() -> None:
         ],
     )
     rd = rel["recordDetails"]
-    # BODS v0.4: subject and interestedParty are plain recordId strings
-    assert rd["subject"] == entity["recordId"]
-    assert rd["interestedParty"] == person["recordId"]
+    assert rd["subject"]["describedByEntityStatement"] == entity["statementId"]
+    assert rd["interestedParty"]["describedByPersonStatement"] == person["statementId"]
     assert rd["interests"][0]["type"] == "shareholding"
 
 
@@ -163,16 +162,16 @@ def test_individual_psc_shareholding_interest() -> None:
     bundle = map_companies_house(_sample_bundle())
     rels = [s for s in bundle if s["recordType"] == "relationship"]
     # Find the relationship pointing at the individual Jane Smith.
-    # BODS v0.4: interestedParty is a plain recordId string.
     people = {
-        s["recordId"]
+        s["statementId"]
         for s in bundle
         if s["recordType"] == "person"
     }
     jane_rel = next(
         r
         for r in rels
-        if r["recordDetails"]["interestedParty"] in people
+        if r["recordDetails"]["interestedParty"].get("describedByPersonStatement")
+        in people
     )
 
     interest_types = [i["type"] for i in jane_rel["recordDetails"]["interests"]]
