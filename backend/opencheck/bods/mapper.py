@@ -110,7 +110,12 @@ def make_entity_statement(
     source_url: str | None = None,
 ) -> dict[str, Any]:
     statement_id = _stable_id(source_id, "entity", local_id)
-    record_id = _stable_id(source_id, "entity-record", local_id)
+    # bods-dagre v0.4 resolves graph edges by matching the relationship's
+    # referenced statementId against each entity/person statement's recordId.
+    # Using statementId == recordId ensures that lookup succeeds without
+    # breaking BODS semantics: we never version records in opencheck so the
+    # distinction between "statement id" and "record id" doesn't apply.
+    record_id = statement_id
 
     record_details: dict[str, Any] = {
         "entityType": {"type": entity_type},
@@ -152,7 +157,7 @@ def make_person_statement(
     source_url: str | None = None,
 ) -> dict[str, Any]:
     statement_id = _stable_id(source_id, "person", local_id)
-    record_id = _stable_id(source_id, "person-record", local_id)
+    record_id = statement_id  # see make_entity_statement for reasoning
 
     record_details: dict[str, Any] = {
         "personType": person_type,

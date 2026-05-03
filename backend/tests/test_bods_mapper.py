@@ -36,7 +36,12 @@ def test_entity_statement_shape() -> None:
     assert s["recordDetails"]["name"] == "BP P.L.C."
     assert s["statementId"].startswith("opencheck-")
     assert s["recordId"].startswith("opencheck-")
-    assert s["statementId"] != s["recordId"]
+    # statementId == recordId by design: bods-dagre v0.4 resolves graph edges
+    # by looking up the relationship's referenced id against each node's recordId.
+    # Since BODS relationships reference by statementId, the two must be equal
+    # for the lookup to succeed.  Opencheck never versions records so the
+    # semantic distinction doesn't apply.
+    assert s["statementId"] == s["recordId"]
 
 
 def test_person_statement_shape() -> None:

@@ -244,10 +244,18 @@ function sanitiseBundle(input: unknown[]): unknown[] {
   //       { describedByEntityStatement: "<uuid>" }
   //     We flatten them here so bods-dagre actually draws edges.
   //
-  // For ENTITY statements:
-  //   - bods-dagre reads ``recordDetails.jurisdiction.code`` to render
-  //     country flags, but BODS v0.4 data uses ``incorporatedInJurisdiction``.
-  //     We copy the field so flags appear.
+  // For ENTITY and PERSON statements:
+  //   - bods-dagre v0.4 resolves graph edges with:
+  //       data.find(d => d.recordId === edgeSource)
+  //     where edgeSource is the statementId extracted from the relationship's
+  //     describedByEntityStatement / describedByPersonStatement.  If statementId
+  //     and recordId differ (as they do in Open Ownership's extraction pipeline),
+  //     the lookup returns undefined and bods-dagre replaces the real node with
+  //     an "Unknown" placeholder.  We normalise recordId = statementId here so
+  //     the lookup always succeeds regardless of source.
+  //   - bods-dagre reads ``recordDetails.jurisdiction.code`` to render country
+  //     flags, but BODS v0.4 data uses ``incorporatedInJurisdiction``.  We copy
+  //     the field so flags appear.
   const normalised: unknown[] = [];
   for (const stmt of wellTyped) {
     const recordType = stmt.recordType ?? stmt.statementType;
@@ -282,15 +290,18 @@ function sanitiseBundle(input: unknown[]): unknown[] {
     } else if (recordType === "entity") {
       const rd =
         (stmt.recordDetails as Record<string, unknown> | undefined) ?? {};
-      // Copy incorporatedInJurisdiction → jurisdiction for flag display.
-      if (rd.incorporatedInJurisdiction && !rd.jurisdiction) {
-        normalised.push({
-          ...stmt,
-          recordDetails: { ...rd, jurisdiction: rd.incorporatedInJurisdiction },
-        });
-      } else {
-        normalised.push(stmt);
-      }
+      // Ensure recordId === statementId (needed for bods-dagre lookup) and
+      // copy incorporatedInJurisdiction → jurisdiction for flag display.
+      normalised.push({
+        ...stmt,
+        recordId: stmt.statementId,
+        recordDetails: rd.incorporatedInJurisdiction && !rd.jurisdiction
+          ? { ...rd, jurisdiction: rd.incorporatedInJurisdiction }
+          : rd,
+      });
+    } else if (recordType === "person" || recordType === "personStatement") {
+      // Ensure recordId === statementId for bods-dagre lookup.
+      normalised.push({ ...stmt, recordId: stmt.statementId });
     } else {
       normalised.push(stmt);
     }
