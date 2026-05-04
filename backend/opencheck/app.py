@@ -762,12 +762,11 @@ async def lookup(
             inpi_bundle = await REGISTRY["inpi"].fetch(derived["siren"])
             if not inpi_bundle.get("is_stub"):
                 inpi_company = inpi_bundle.get("company") or {}
-                inpi_content = inpi_company.get("content") or {}
-                inpi_pm = inpi_content.get("personneMorale") or {}
+                # Name is at the top-level identite block in live RNE responses.
                 inpi_name = (
-                    (inpi_pm.get("identite") or {})
-                    .get("entreprise") or {}
-                ).get("denomination") or legal_name or ""
+                    ((inpi_company.get("identite") or {}).get("entreprise") or {})
+                    .get("denomination") or legal_name or ""
+                )
                 hits.append(
                     SourceHit(
                         source_id="inpi",

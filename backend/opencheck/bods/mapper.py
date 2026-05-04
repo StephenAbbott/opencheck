@@ -1254,30 +1254,33 @@ def map_inpi(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     Returns an empty iterable for stub bundles (including non-diffusable
     companies), missing company data, or missing entity name.
 
-    Bundle shape (as returned by InpiAdapter.fetch):
+    The RNE API response wraps the rich company data under ``formality.content``
+    and exposes a condensed ``identite`` block at the top level.  Actual
+    structure (abbreviated):
 
     .. code-block:: python
 
         {
             "source_id": "inpi",
             "siren": "055804124",
-            "company": {          # raw RNE API response
+            "company": {
                 "diffusionINSEE": "O",
-                "siren": "055804124",
-                "content": {
-                    "personneMorale": {
-                        "identite": {
-                            "entreprise": {"denomination": "BOLLORÉ SE", ...},
-                            ...
+                "identite": {               # top-level condensed block
+                    "entreprise": {"denomination": "BOLLORE SE", ...}
+                },
+                "formality": {
+                    "content": {
+                        "personneMorale": {
+                            "adresseEntreprise": {
+                                "adresse": {
+                                    "typeVoie": "QUAI", "voie": "DE DION BOUTON",
+                                    "numVoie": "31", "codePostal": "92800",
+                                    "commune": "PUTEAUX", ...
+                                }
+                            },
                         },
-                        "adresseEntreprise": {
-                            "adresse": {
-                                "typeVoie": "AV", "libelleVoie": "DE BRETAGNE",
-                                "commune": "PARIS", "codePostal": "75008", ...
-                            }
-                        },
-                    },
-                    "natureCreation": {"dateCreation": "1906-07-07", ...},
+                        "natureCreation": {"dateCreation": "1990-09-13", ...},
+                    }
                 },
             },
             "is_stub": False,
@@ -1296,15 +1299,22 @@ def map_inpi(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     if not siren:
         return
 
-    content: dict[str, Any] = company.get("content") or {}
+    # The RNE API nests the full company data under formality.content.
+    formality: dict[str, Any] = company.get("formality") or {}
+    content: dict[str, Any] = formality.get("content") or {}
     pm: dict[str, Any] = content.get("personneMorale") or {}
     if not pm:
         # personnePhysique (sole trader) — out of scope for Phase 1.
         return
 
-    identite: dict[str, Any] = pm.get("identite") or {}
-    entreprise: dict[str, Any] = identite.get("entreprise") or {}
-    name: str = entreprise.get("denomination") or ""
+    # Company name — prefer the top-level identite block (condensed but stable),
+    # fall back to the nested personneMorale.identite path.
+    top_identite: dict[str, Any] = company.get("identite") or {}
+    name: str = (
+        (top_identite.get("entreprise") or {}).get("denomination")
+        or (pm.get("identite") or {}).get("entreprise", {}).get("denomination")
+        or ""
+    )
     if not name:
         return
 
@@ -1343,14 +1353,18 @@ def map_inpi(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
 
 def _inpi_address(block: dict[str, Any]) -> list[dict[str, str]]:
-    """Build a BODS address list from a raw RNE adresse block."""
+    """Build a BODS address list from a raw RNE adresse block.
+
+    The actual API field for the street name is ``voie``, not ``libelleVoie``
+    (which was documented but not present in live responses).
+    """
     if not block:
         return []
     parts = [
         block.get("numVoie"),
         block.get("indiceRepetition"),
         block.get("typeVoie"),
-        block.get("libelleVoie"),
+        block.get("voie") or block.get("libelleVoie"),  # live field is "voie"
         block.get("complementLocalisation"),
         block.get("codePostal"),
         block.get("commune") or block.get("libelleCommune"),

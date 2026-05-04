@@ -12,46 +12,48 @@ from opencheck.sources.inpi import INPI_RA_CODE, normalise_siren
 # ---------------------------------------------------------------------------
 
 _COMPANY_BOLLORE = {
+    # Actual RNE API structure: denomination is at top-level identite,
+    # company data is nested under formality.content.
     "diffusionINSEE": "O",
     "siren": "055804124",
-    "content": {
-        "personneMorale": {
-            "identite": {
-                "entreprise": {
-                    "denomination": "BOLLORÉ SE",
-                    "sigle": "BOLLORÉ",
-                },
-                "description": {
-                    "datePremiereCloture": "1905-12-31",
-                    "formeJuridique": {"libelle": "SE", "code": "5800"},
-                },
-            },
-            "adresseEntreprise": {
-                "adresse": {
-                    "numVoie": "31",
-                    "typeVoie": "RUE",
-                    "libelleVoie": "DE MIROMESNIL",
-                    "codePostal": "75008",
-                    "commune": "PARIS",
-                }
-            },
-            "composition": {
-                "pouvoirs": [
-                    {
-                        "typeDePersonne": "INDIVIDU",
-                        "beneficiaireEffectif": False,
-                        "individu": {
-                            "descriptionPersonne": {
-                                "nom": "DOE",
-                                "prenoms": ["JANE"],
-                            }
-                        },
+    "identite": {
+        "entreprise": {
+            "siren": "055804124",
+            "denomination": "BOLLORE SE",
+            "formeJuridique": "5800",
+        }
+    },
+    "formality": {
+        "siren": "055804124",
+        "content": {
+            "personneMorale": {
+                "adresseEntreprise": {
+                    "adresse": {
+                        "numVoie": "31",
+                        "typeVoie": "QUAI",
+                        "voie": "DE DION BOUTON",
+                        "codePostal": "92800",
+                        "commune": "PUTEAUX",
                     }
-                ]
+                },
+                "composition": {
+                    "pouvoirs": [
+                        {
+                            "typeDePersonne": "INDIVIDU",
+                            "beneficiaireEffectif": False,
+                            "individu": {
+                                "descriptionPersonne": {
+                                    "nom": "DOE",
+                                    "prenoms": ["JANE"],
+                                }
+                            },
+                        }
+                    ]
+                },
             },
-        },
-        "natureCreation": {
-            "dateCreation": "1906-07-07",
+            "natureCreation": {
+                "dateCreation": "1906-07-07",
+            },
         },
     },
 }
@@ -59,30 +61,33 @@ _COMPANY_BOLLORE = {
 _COMPANY_NO_DATE = {
     "diffusionINSEE": "O",
     "siren": "123456789",
-    "content": {
-        "personneMorale": {
-            "identite": {
-                "entreprise": {"denomination": "ACME FRANCE SAS"},
+    "identite": {
+        "entreprise": {"denomination": "ACME FRANCE SAS"},
+    },
+    "formality": {
+        "content": {
+            "personneMorale": {
+                "adresseEntreprise": {},
+                "composition": {"pouvoirs": []},
             },
-            "adresseEntreprise": {},
-            "composition": {"pouvoirs": []},
-        },
-        "natureCreation": {},
+            "natureCreation": {},
+        }
     },
 }
 
 _COMPANY_NON_DIFFUSABLE = {
     "diffusionINSEE": "N",
     "siren": "999999999",
-    "content": {},
 }
 
 _COMPANY_SOLE_TRADER = {
     "diffusionINSEE": "O",
     "siren": "111111111",
-    "content": {
-        "personnePhysique": {
-            "identite": {"nom": "DUPONT", "prenoms": ["JEAN"]},
+    "formality": {
+        "content": {
+            "personnePhysique": {
+                "identite": {"nom": "DUPONT", "prenoms": ["JEAN"]},
+            }
         }
     },
 }
@@ -134,7 +139,7 @@ def test_map_inpi_produces_one_entity() -> None:
 
 def test_map_inpi_entity_name() -> None:
     stmts = list(map_inpi(_bundle()))
-    assert stmts[0]["recordDetails"]["name"] == "BOLLORÉ SE"
+    assert stmts[0]["recordDetails"]["name"] == "BOLLORE SE"
 
 
 def test_map_inpi_entity_jurisdiction() -> None:
@@ -183,8 +188,8 @@ def test_map_inpi_address_present() -> None:
     addrs = stmts[0]["recordDetails"].get("addresses", [])
     assert len(addrs) == 1
     assert addrs[0]["country"] == "FR"
-    assert "MIROMESNIL" in addrs[0]["address"]
-    assert "75008" in addrs[0]["address"]
+    assert "DION BOUTON" in addrs[0]["address"]
+    assert "92800" in addrs[0]["address"]
 
 
 def test_map_inpi_address_absent_when_empty() -> None:
