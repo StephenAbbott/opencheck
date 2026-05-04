@@ -57,6 +57,7 @@ from .sources.zefix import CH_RA_CODES as _ZEFIX_RA_CODES, normalise_uid as _zef
 from . import bods_data
 from .config import get_settings
 from .cross_check import assess_cross_source_names
+from .icij_check import assess_icij_names
 from .reconcile import reconcile
 from .risk import RiskSignal, assess_bundle, assess_hits
 from .sources import REGISTRY, SearchKind, SourceHit, SourceInfo
@@ -448,6 +449,20 @@ async def _build_report(
                 }
             )
 
+    # Cross-check related-party names against OpenSanctions and
+    # EveryPolitician — emits RELATED_PEP / RELATED_SANCTIONED scoped
+    # to the matching person/entity statement.
+    cross_signals = [
+        s.to_dict() for s in await assess_cross_source_names(bods_all)
+    ]
+
+    # Cross-check entity and officer names against the ICIJ Offshore Leaks
+    # reconciliation API — emits OFFSHORE_LEAKS signals scoped to the
+    # matching statement, no API key required.
+    icij_signals = [
+        s.to_dict() for s in await assess_icij_names(bods_all)
+    ]
+
     # Merge + dedupe risk signals across the two rounds.
     #
     # Per-source signals (PEP / SANCTIONED / OFFSHORE_LEAKS / OPAQUE) are
@@ -459,13 +474,10 @@ async def _build_report(
     # COMPLEX / OBFUSCATION) describe the merged ownership chain, not
     # one source's view of it. Each deepened bundle re-asserts the same
     # fact, which inflates the chip strip. Collapse those by code only.
-    # Cross-check related-party names against OpenSanctions and
-    # EveryPolitician — emits RELATED_PEP / RELATED_SANCTIONED scoped
-    # to the matching person/entity statement.
-    cross_signals = [
-        s.to_dict() for s in await assess_cross_source_names(bods_all)
-    ]
-
+    #
+    # RELATED_* and ICIJ OFFSHORE_LEAKS signals are scoped to the matched
+    # statement — include subject_statement_id in the dedup key so a single
+    # ICIJ node matched against two different statements produces two chips.
     structural_codes = {
         "TRUST_OR_ARRANGEMENT",
         "NON_EU_JURISDICTION",
@@ -474,11 +486,14 @@ async def _build_report(
         "COMPLEX_CORPORATE_STRUCTURE",
         "POSSIBLE_OBFUSCATION",
     }
+    _statement_scoped = {"RELATED_PEP", "RELATED_SANCTIONED"}
     merged: dict[tuple, dict[str, Any]] = {}
-    for sig in search_signals + deepen_signals + cross_signals:
+    for sig in search_signals + deepen_signals + cross_signals + icij_signals:
         if sig["code"] in structural_codes:
             key: tuple = (sig["code"],)
-        elif sig["code"] in {"RELATED_PEP", "RELATED_SANCTIONED"}:
+        elif sig["code"] in _statement_scoped or (
+            sig["code"] == "OFFSHORE_LEAKS" and sig.get("source_id") == "icij"
+        ):
             # Scoped to (code, source_id, hit_id, subject_statement_id) —
             # one chip per matched record + related party combination.
             key = (
@@ -962,9 +977,14 @@ async def lookup(
         s.to_dict() for s in await assess_cross_source_names(bods_all)
     ]
 
+    # Cross-check entity and officer names against ICIJ Offshore Leaks.
+    icij_signals = [
+        s.to_dict() for s in await assess_icij_names(bods_all)
+    ]
+
     # Same merge logic as /report — collapse structural BODS signals
     # by code, keep per-source signals scoped, and scope RELATED_*
-    # signals to the matched related party.
+    # and ICIJ OFFSHORE_LEAKS signals to the matched statement.
     structural_codes = {
         "TRUST_OR_ARRANGEMENT",
         "NON_EU_JURISDICTION",
@@ -973,11 +993,14 @@ async def lookup(
         "COMPLEX_CORPORATE_STRUCTURE",
         "POSSIBLE_OBFUSCATION",
     }
+    _statement_scoped = {"RELATED_PEP", "RELATED_SANCTIONED"}
     merged: dict[tuple, dict[str, Any]] = {}
-    for sig in search_signals + deepen_signals + cross_signals:
+    for sig in search_signals + deepen_signals + cross_signals + icij_signals:
         if sig["code"] in structural_codes:
             key: tuple = (sig["code"],)
-        elif sig["code"] in {"RELATED_PEP", "RELATED_SANCTIONED"}:
+        elif sig["code"] in _statement_scoped or (
+            sig["code"] == "OFFSHORE_LEAKS" and sig.get("source_id") == "icij"
+        ):
             key = (
                 sig["code"],
                 sig["source_id"],

@@ -87,6 +87,15 @@ def _mock_wikidata_lei_lookup_empty(
     )
 
 
+def _mock_icij_empty(httpx_mock: HTTPXMock) -> None:
+    """Register an ICIJ reconciliation endpoint that returns no matches."""
+    httpx_mock.add_response(
+        url="https://offshoreleaks.icij.org/reconcile",
+        method="POST",
+        json={},
+    )
+
+
 def _mock_openaleph_search_empty(httpx_mock: HTTPXMock, lei: str) -> None:
     import urllib.parse
     url = (
@@ -119,6 +128,7 @@ def test_lookup_drives_full_synthesis_for_a_gb_lei(
         },
     )
     _mock_wikidata_lei_lookup_empty(httpx_mock, lei)
+    _mock_icij_empty(httpx_mock)
     # OpenAleph is currently disabled in REGISTRY, so /lookup never
     # dispatches to it. Don't mock it.
     # Companies House + OpenSanctions need API keys we haven't set, so
@@ -206,6 +216,7 @@ def test_lookup_lower_case_lei_is_normalised(
         },
     )
     _mock_wikidata_lei_lookup_empty(httpx_mock, lei)
+    _mock_icij_empty(httpx_mock)
     # OpenAleph is currently disabled in REGISTRY, so /lookup never
     # dispatches to it. Don't mock it.
 

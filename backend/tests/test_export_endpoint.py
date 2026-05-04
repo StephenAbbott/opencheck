@@ -76,6 +76,15 @@ def _mock_lei_record_chain(httpx_mock: HTTPXMock, lei: str) -> None:
         )
 
 
+def _mock_icij_empty(httpx_mock: HTTPXMock) -> None:
+    """Register an ICIJ reconciliation endpoint that returns no matches."""
+    httpx_mock.add_response(
+        url="https://offshoreleaks.icij.org/reconcile",
+        method="POST",
+        json={},
+    )
+
+
 def _mock_wikidata_lei_lookup_empty(httpx_mock: HTTPXMock, lei: str) -> None:
     query = 'SELECT ?item WHERE { ?item wdt:P1278 "%s" } LIMIT 1' % lei
     url = (
@@ -93,6 +102,7 @@ def test_export_json_returns_bods_array(
 ) -> None:
     _mock_lei_record_chain(httpx_mock, _LEI)
     _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
+    _mock_icij_empty(httpx_mock)
 
     r = client.get("/export", params={"lei": _LEI, "format": "json"})
     assert r.status_code == 200
@@ -115,6 +125,7 @@ def test_export_jsonl_emits_one_statement_per_line(
 ) -> None:
     _mock_lei_record_chain(httpx_mock, _LEI)
     _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
+    _mock_icij_empty(httpx_mock)
 
     r = client.get("/export", params={"lei": _LEI, "format": "jsonl"})
     assert r.status_code == 200
@@ -132,6 +143,7 @@ def test_export_zip_contains_full_bundle(
 ) -> None:
     _mock_lei_record_chain(httpx_mock, _LEI)
     _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
+    _mock_icij_empty(httpx_mock)
 
     r = client.get("/export", params={"lei": _LEI, "format": "zip"})
     assert r.status_code == 200
@@ -159,6 +171,7 @@ def test_export_zip_licenses_md_lists_gleif(
     """LICENSES.md should always carry the GLEIF entry + re-use guidance."""
     _mock_lei_record_chain(httpx_mock, _LEI)
     _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
+    _mock_icij_empty(httpx_mock)
 
     r = client.get("/export", params={"lei": _LEI, "format": "zip"})
     with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
