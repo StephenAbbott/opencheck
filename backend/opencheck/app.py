@@ -35,6 +35,7 @@ from sse_starlette.sse import EventSourceResponse
 from . import __version__
 from .bods import (
     BODSBundle,
+    map_bolagsverket,
     map_brightquery,
     map_companies_house,
     map_everypolitician,
@@ -49,6 +50,7 @@ from .bods import (
     map_zefix,
     validate_shape,
 )
+from .sources.bolagsverket import BV_RA_CODE as _BV_RA_CODE, normalise_org_number as _normalise_org_number
 from .sources.inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
 from .sources.kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
 from .sources.zefix import CH_RA_CODES as _ZEFIX_RA_CODES, normalise_uid as _zefix_normalise_uid
@@ -319,6 +321,7 @@ def _ch_ra_code(company_number: str) -> str:
 
 
 _MAPPERS = {
+    "bolagsverket": map_bolagsverket,
     "companies_house": map_companies_house,
     "gleif": map_gleif,
     "inpi": map_inpi,
@@ -620,6 +623,11 @@ async def lookup(
         derived["kvk_number"] = _normalise_kvk(registered_as)
     if registered_at_id == _INPI_RA_CODE and registered_as:
         derived["siren"] = _normalise_siren(registered_as)
+    if registered_at_id == _BV_RA_CODE and registered_as:
+        try:
+            derived["se_org_number"] = _normalise_org_number(registered_as)
+        except ValueError:
+            pass
 
     # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
     # (format: ``{jurisdiction_code}/{company_number}``).
@@ -670,6 +678,7 @@ async def lookup(
             **({"che_uid": derived["che_uid"]} if "che_uid" in derived else {}),
             **({"kvk_number": derived["kvk_number"]} if "kvk_number" in derived else {}),
             **({"siren": derived["siren"]} if "siren" in derived else {}),
+            **({"se_org_number": derived["se_org_number"]} if "se_org_number" in derived else {}),
             **({"wikidata_qid": qid} if qid else {}),
         },
         raw=gleif_bundle.get("record") or {},
@@ -785,6 +794,44 @@ async def lookup(
                 deepened_bundles.append(("inpi", derived["siren"]))
         except Exception as exc:  # noqa: BLE001
             errors["inpi"] = f"{type(exc).__name__}: {exc}"
+
+    # Bolagsverket — direct fetch by org number when Swedish entity (RA000544).
+    if "se_org_number" in derived:
+        try:
+            bv_bundle = await REGISTRY["bolagsverket"].fetch(
+                derived["se_org_number"], legal_name=legal_name
+            )
+            if not bv_bundle.get("is_stub"):
+                bv_company = bv_bundle.get("company") or {}
+                bv_name = (
+                    bv_company.get("namn")
+                    or bv_company.get("name")
+                    or legal_name
+                    or ""
+                )
+                org_display = (
+                    f"{derived['se_org_number'][:6]}-{derived['se_org_number'][6:]}"
+                    if len(derived["se_org_number"]) == 10
+                    else derived["se_org_number"]
+                )
+                hits.append(
+                    SourceHit(
+                        source_id="bolagsverket",
+                        hit_id=derived["se_org_number"],
+                        kind=SearchKind.ENTITY,
+                        name=bv_name,
+                        summary=f"SE-BLV {org_display}",
+                        identifiers={
+                            "se_org_number": derived["se_org_number"],
+                            "lei": lei,
+                        },
+                        raw=bv_company,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("bolagsverket", derived["se_org_number"]))
+        except Exception as exc:  # noqa: BLE001
+            errors["bolagsverket"] = f"{type(exc).__name__}: {exc}"
 
     # OpenCorporates — direct fetch by ocid derived from GLEIF.
     if ocid:

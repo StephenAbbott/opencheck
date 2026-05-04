@@ -102,6 +102,11 @@ class Settings(BaseSettings):
     inpi_username: str | None = Field(default=None, alias="INPI_USERNAME")
     inpi_password: str | None = Field(default=None, alias="INPI_PASSWORD")
 
+    # --- Bolagsverket (Swedish Companies Registration Office) ---
+    # API key auth: Authorization: Bearer <key>
+    # Request access at https://portal.api.bolagsverket.se/
+    bolagsverket_api_key: str | None = Field(default=None, alias="BOLAGSVERKET_API_KEY")
+
     # --- Optional LLM ---
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
 

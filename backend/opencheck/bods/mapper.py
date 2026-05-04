@@ -222,6 +222,7 @@ def make_relationship_statement(
 
 def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
     source_names = {
+        "bolagsverket": "Bolagsverket — Swedish Companies Registration Office",
         "companies_house": "UK Companies House",
         "gleif": "GLEIF",
         "inpi": "INPI — Registre National des Entreprises",
@@ -235,7 +236,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "zefix": "Zefix — Swiss Commercial Registry",
         "opentender": "OpenTender",
     }
-    _official_registers = {"companies_house", "inpi", "kvk", "opencorporates", "zefix"}
+    _official_registers = {"bolagsverket", "companies_house", "inpi", "kvk", "opencorporates", "zefix"}
     block: dict[str, Any] = {
         "type": "officialRegister" if source_id in _official_registers else "thirdParty",
         "description": source_names.get(source_id, source_id),
@@ -1373,6 +1374,222 @@ def _inpi_address(block: dict[str, Any]) -> list[dict[str, str]]:
     if not joined:
         return []
     return [{"type": "registered", "address": joined, "country": "FR"}]
+
+
+# ----------------------------------------------------------------------
+# Bolagsverket (Swedish Companies Registration Office) → BODS
+# ----------------------------------------------------------------------
+#
+# Bolagsverket publishes company information via a WSO2 API gateway.
+# The register is fully public for officer/board data — unlike INPI,
+# there is no BO restriction; board members, CEO, and signatories are
+# safe to republish as BODS person statements.
+#
+# Identifier scheme: "SE-BLV"  (follows GB-COH / CH-UID / NL-KVK / FR-SIREN)
+# Jurisdiction: Sweden ("SE")
+# Source: https://www.bolagsverket.se/
+#
+# NOTE: The response shape below is based on the expected Bolagsverket API
+# design. Field names will be verified and corrected once an API key
+# has been granted and live responses can be inspected. The mapper is
+# intentionally defensive — missing fields produce empty output rather
+# than errors.
+#
+# Expected bundle shape (from BolagsverketAdapter.fetch):
+#
+#   {
+#     "source_id": "bolagsverket",
+#     "org_number": "5560160680",          # 10-digit normalised
+#     "company": {
+#       "organisationsnummer": "556016-0680",
+#       "namn": "Telefonaktiebolaget LM Ericsson",
+#       "status": "Aktiv",
+#       "juridiskForm": {"kod": "AB", "klartext": "Aktiebolag"},
+#       "registreringsdatum": "1918-08-18",
+#       "adress": {
+#         "gatuadress": "Torshamnsgatan 21",
+#         "postnummer": "164 83",
+#         "postort": "STOCKHOLM",
+#       },
+#       "foretradare": [          # officers / representatives
+#         {
+#           "roll": "Styrelseledamot",   # or VD, Firmatecknare, etc.
+#           "namn": "BORJE EKHOLM",
+#           "fodelsedat": "1963",        # birth year (or YYYY-MM-DD)
+#           "postort": "STOCKHOLM",
+#         }
+#       ],
+#     },
+#     "legal_name": "Telefonaktiebolaget LM Ericsson",  # from GLEIF fallback
+#     "is_stub": False,
+#   }
+
+
+# Swedish officer role → BODS interest type
+_BV_ROLE_TO_INTEREST: dict[str, str] = {
+    "styrelseledamot": "boardMember",
+    "styrelsesuppleant": "boardMember",  # alternate board member
+    "styrelseordförande": "boardChair",
+    "ordförande": "boardChair",
+    "verkställande direktör": "otherInfluenceOrControl",
+    "vd": "otherInfluenceOrControl",
+    "firmatecknare": "otherInfluenceOrControl",
+    "revisor": "otherInfluenceOrControl",
+    "lekmannarevisor": "otherInfluenceOrControl",
+}
+
+
+def _bv_interest_type(role: str) -> str:
+    """Map a Swedish officer role string to a BODS interest type."""
+    return _BV_ROLE_TO_INTEREST.get(role.lower().strip(), "otherInfluenceOrControl")
+
+
+def map_bolagsverket(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map a Bolagsverket fetch bundle to BODS v0.4 statements.
+
+    Emits one entity statement for the registered company, then one
+    person statement + one relationship statement per officer
+    (styrelseledamöter, VD, firmatecknare, etc.).
+
+    Returns an empty iterable for stub bundles or missing company data.
+
+    NOTE: Field names in the company dict are based on the expected
+    Bolagsverket API response structure and will be updated once live
+    API access is available. The mapper is intentionally defensive.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return
+
+    company: dict[str, Any] = bundle.get("company") or {}
+    if not company:
+        return
+
+    org_number: str = bundle.get("org_number") or ""
+    if not org_number:
+        return
+
+    # Company name — prefer what the API returns, fall back to GLEIF name.
+    name: str = (
+        company.get("namn")
+        or company.get("name")
+        or bundle.get("legal_name")
+        or ""
+    )
+    if not name:
+        return
+
+    # Format org number for display: NNNNNN-NNNN
+    org_display = f"{org_number[:6]}-{org_number[6:]}" if len(org_number) == 10 else org_number
+
+    # Founding / registration date. Bolagsverket uses ISO 8601 (YYYY-MM-DD).
+    founding_date: str | None = (
+        company.get("registreringsdatum")
+        or company.get("registrationDate")
+        or None
+    )
+    # Guard against non-ISO strings
+    if founding_date and len(founding_date) != 10:
+        founding_date = None
+
+    identifiers: list[dict[str, str]] = [
+        {
+            "id": org_display,
+            "scheme": "SE-BLV",
+            "schemeName": "Bolagsverket — Swedish Companies Registration Office",
+        }
+    ]
+
+    # Address
+    addr_block: dict[str, Any] = company.get("adress") or company.get("address") or {}
+    addresses = _bv_address(addr_block)
+
+    source_url = (
+        f"https://www.bolagsverket.se/foretag/foretagsformer-och-foretagsregistrering/"
+        f"aktiebolag/anmal-andring-i-aktiebolag.html"
+    )
+
+    entity = make_entity_statement(
+        source_id="bolagsverket",
+        local_id=org_number,
+        name=name,
+        jurisdiction=("Sweden", "SE"),
+        identifiers=identifiers,
+        founding_date=founding_date,
+        addresses=addresses,
+        source_url=source_url,
+    )
+    yield entity
+    entity_sid = entity["statementId"]
+
+    # Officer / representative statements
+    officers: list[dict[str, Any]] = company.get("foretradare") or company.get("representatives") or []
+    for idx, officer in enumerate(officers):
+        officer_name: str = (
+            officer.get("namn")
+            or officer.get("name")
+            or officer.get("fullName")
+            or ""
+        ).strip()
+        if not officer_name:
+            continue
+
+        role_raw: str = officer.get("roll") or officer.get("role") or ""
+        interest_type = _bv_interest_type(role_raw)
+
+        # Birth date / year — Bolagsverket may expose only the birth year.
+        birth_raw: str = str(officer.get("fodelsedat") or officer.get("birthDate") or "").strip()
+        birth_date: str | None = None
+        if len(birth_raw) == 10:  # YYYY-MM-DD
+            birth_date = birth_raw
+        elif len(birth_raw) == 4 and birth_raw.isdigit():  # birth year only
+            birth_date = None  # BODS birthDate requires a full date; skip year-only
+
+        person = make_person_statement(
+            source_id="bolagsverket",
+            local_id=f"{org_number}:officer:{idx}:{officer_name}",
+            full_name=officer_name,
+            birth_date=birth_date,
+            source_url=source_url,
+        )
+        yield person
+
+        details_parts = [role_raw] if role_raw else []
+        interest: dict[str, Any] = {
+            "type": interest_type,
+            "directOrIndirect": "direct",
+            "beneficialOwnershipOrControl": False,  # commercial register data only
+            "details": " — ".join(details_parts) if details_parts else role_raw or "officer",
+        }
+
+        rel = make_relationship_statement(
+            source_id="bolagsverket",
+            local_id=f"{org_number}:officer-rel:{idx}:{officer_name}",
+            subject_statement_id=entity_sid,
+            interested_party_statement_id=person["statementId"],
+            interested_party_type="person",
+            interests=[interest],
+            source_url=source_url,
+        )
+        yield rel
+
+
+def _bv_address(block: dict[str, Any]) -> list[dict[str, str]]:
+    """Build a BODS address list from a Bolagsverket adress block."""
+    if not block:
+        return []
+    parts = [
+        block.get("gatuadress") or block.get("street"),
+        block.get("postnummer") or block.get("postCode"),
+        block.get("postort") or block.get("city"),
+        block.get("land") or block.get("country"),
+    ]
+    joined = ", ".join(p for p in parts if p)
+    if not joined:
+        return []
+    # Country is always SE for Bolagsverket registered addresses unless
+    # the API carries a foreign registered address (uncommon).
+    country = block.get("land") or block.get("country") or "SE"
+    return [{"type": "registered", "address": joined, "country": country}]
 
 
 # ----------------------------------------------------------------------

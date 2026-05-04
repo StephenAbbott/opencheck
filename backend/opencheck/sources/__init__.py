@@ -8,6 +8,7 @@ by the FastAPI app.
 from __future__ import annotations
 
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .bolagsverket import BolagsverketAdapter
 from .brightquery import BrightQueryAdapter
 from .companies_house import CompaniesHouseAdapter
 from .everypolitician import EveryPoliticianAdapter
@@ -27,6 +28,7 @@ from .zefix import ZefixAdapter
 # Re-enable by adding ``"openaleph": OpenAlephAdapter()`` below once we
 # have a curated set of subjects to demo it against.
 REGISTRY: dict[str, SourceAdapter] = {
+    "bolagsverket": BolagsverketAdapter(),
     "companies_house": CompaniesHouseAdapter(),
     "gleif": GleifAdapter(),
     "inpi": InpiAdapter(),
