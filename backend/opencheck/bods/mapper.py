@@ -224,6 +224,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
     source_names = {
         "companies_house": "UK Companies House",
         "gleif": "GLEIF",
+        "inpi": "INPI — Registre National des Entreprises",
         "kvk": "KvK — Netherlands Chamber of Commerce",
         "opencorporates": "OpenCorporates",
         "brightquery": "BrightQuery / OpenData.org",
@@ -234,7 +235,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "zefix": "Zefix — Swiss Commercial Registry",
         "opentender": "OpenTender",
     }
-    _official_registers = {"companies_house", "kvk", "opencorporates", "zefix"}
+    _official_registers = {"companies_house", "inpi", "kvk", "opencorporates", "zefix"}
     block: dict[str, Any] = {
         "type": "officialRegister" if source_id in _official_registers else "thirdParty",
         "description": source_names.get(source_id, source_id),
@@ -1224,6 +1225,140 @@ def map_kvk(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         source_url=f"https://www.kvk.nl/zoeken/handelsnaam/?q={kvk_number}",
     )
     yield entity
+
+
+# ----------------------------------------------------------------------
+# INPI (France — Registre National des Entreprises) → BODS
+# ----------------------------------------------------------------------
+#
+# The RNE API returns a rich JSON document keyed under ``content``.
+# Only ``personneMorale`` companies are handled here; ``personnePhysique``
+# (sole traders / auto-entrepreneurs) are out of scope for Phase 1.
+#
+# Identifier scheme: "FR-SIREN"  (follows GB-COH / CH-UID / NL-KVK pattern)
+# Jurisdiction: France ("FR")
+# Source: https://registre-national-entreprises.inpi.fr/
+#
+# ⚠️  Person statements are deliberately NOT emitted.  Any entry in
+# ``content.personneMorale.composition.pouvoirs[]`` that carries
+# ``beneficiaireEffectif: true`` is a beneficial-ownership record whose
+# redistribution requires legitimate-interest authorisation under French
+# law (Loi Sapin II / décret 2017-1094).  To avoid violating that
+# restriction we map entity data only and ignore the dirigeants array
+# entirely in Phase 1.
+
+
+def map_inpi(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map an INPI RNE fetch bundle to a BODS v0.4 entity statement.
+
+    Returns an empty iterable for stub bundles (including non-diffusable
+    companies), missing company data, or missing entity name.
+
+    Bundle shape (as returned by InpiAdapter.fetch):
+
+    .. code-block:: python
+
+        {
+            "source_id": "inpi",
+            "siren": "055804124",
+            "company": {          # raw RNE API response
+                "diffusionINSEE": "O",
+                "siren": "055804124",
+                "content": {
+                    "personneMorale": {
+                        "identite": {
+                            "entreprise": {"denomination": "BOLLORÉ SE", ...},
+                            ...
+                        },
+                        "adresseEntreprise": {
+                            "adresse": {
+                                "typeVoie": "AV", "libelleVoie": "DE BRETAGNE",
+                                "commune": "PARIS", "codePostal": "75008", ...
+                            }
+                        },
+                    },
+                    "natureCreation": {"dateCreation": "1906-07-07", ...},
+                },
+            },
+            "is_stub": False,
+        }
+    """
+    if not bundle or bundle.get("is_stub"):
+        return
+
+    company: dict[str, Any] = bundle.get("company") or {}
+    if not company:
+        return
+
+    # The normalised SIREN is always put in the bundle by InpiAdapter.fetch;
+    # do not fall back to company["siren"] so that the early-exit is reliable.
+    siren: str = bundle.get("siren") or ""
+    if not siren:
+        return
+
+    content: dict[str, Any] = company.get("content") or {}
+    pm: dict[str, Any] = content.get("personneMorale") or {}
+    if not pm:
+        # personnePhysique (sole trader) — out of scope for Phase 1.
+        return
+
+    identite: dict[str, Any] = pm.get("identite") or {}
+    entreprise: dict[str, Any] = identite.get("entreprise") or {}
+    name: str = entreprise.get("denomination") or ""
+    if not name:
+        return
+
+    # Founding date — dateCreation is ISO 8601 (YYYY-MM-DD) from the RNE.
+    nature_creation: dict[str, Any] = content.get("natureCreation") or {}
+    founding_date: str | None = nature_creation.get("dateCreation") or None
+
+    # Identifier: FR-SIREN
+    identifiers: list[dict[str, str]] = [
+        {
+            "id": siren,
+            "scheme": "FR-SIREN",
+            "schemeName": "INSEE — Système d'Identification du Répertoire des Entreprises",
+        }
+    ]
+
+    # Address from the first registered address block.
+    addr_block: dict[str, Any] = (pm.get("adresseEntreprise") or {}).get("adresse") or {}
+    addresses = _inpi_address(addr_block)
+
+    source_url = (
+        f"https://registre-national-entreprises.inpi.fr/api/companies/{siren}"
+    )
+
+    entity = make_entity_statement(
+        source_id="inpi",
+        local_id=siren,
+        name=name,
+        jurisdiction=("France", "FR"),
+        identifiers=identifiers,
+        founding_date=founding_date,
+        addresses=addresses,
+        source_url=source_url,
+    )
+    yield entity
+
+
+def _inpi_address(block: dict[str, Any]) -> list[dict[str, str]]:
+    """Build a BODS address list from a raw RNE adresse block."""
+    if not block:
+        return []
+    parts = [
+        block.get("numVoie"),
+        block.get("indiceRepetition"),
+        block.get("typeVoie"),
+        block.get("libelleVoie"),
+        block.get("complementLocalisation"),
+        block.get("codePostal"),
+        block.get("commune") or block.get("libelleCommune"),
+    ]
+    joined = " ".join(p for p in parts if p)
+    if not joined:
+        return []
+    return [{"type": "registered", "address": joined, "country": "FR"}]
 
 
 # ----------------------------------------------------------------------

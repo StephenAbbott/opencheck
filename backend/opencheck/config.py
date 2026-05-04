@@ -96,6 +96,12 @@ class Settings(BaseSettings):
     zefix_username: str | None = Field(default=None, alias="ZEFIX_USERNAME")
     zefix_password: str | None = Field(default=None, alias="ZEFIX_PASSWORD")
 
+    # --- INPI (Institut National de la Propriété Industrielle) ---
+    # Bearer token auth: POST /api/sso/login with username + password.
+    # Request access at https://registre-national-entreprises.inpi.fr/
+    inpi_username: str | None = Field(default=None, alias="INPI_USERNAME")
+    inpi_password: str | None = Field(default=None, alias="INPI_PASSWORD")
+
     # --- Optional LLM ---
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
 

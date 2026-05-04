@@ -28,6 +28,7 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
 from .kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
 from .zefix import CH_RA_CODES as _ZEFIX_RA_CODES, format_uid as _zefix_format_uid
 
@@ -248,6 +249,10 @@ class GleifAdapter(SourceAdapter):
             # can bridge GLEIF ↔ KvK on the same registration number.
             if registered_at_id == _KVK_RA_CODE:
                 identifiers["kvk_number"] = _normalise_kvk(registered_as)
+            # French SIREN — expose as ``siren`` so the reconciler can bridge
+            # GLEIF ↔ INPI on the same registration number.
+            if registered_at_id == _INPI_RA_CODE:
+                identifiers["siren"] = _normalise_siren(registered_as)
 
         return SourceHit(
             source_id="gleif",

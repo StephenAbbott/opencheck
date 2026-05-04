@@ -333,8 +333,8 @@ export default function App() {
               Look up an entity
             </a>{" "}
             by its 20-character LEI. We query GLEIF first, then use the LEI to
-            bridge to Companies House, OpenCorporates, OpenSanctions, OpenAleph,
-            Wikidata, and OpenTender.
+            bridge to national company registries, OpenCorporates, OpenSanctions,
+            OpenAleph, Wikidata, and OpenTender.
           </p>
         </form>
 

@@ -42,6 +42,7 @@ def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
     assert ids == {
         "companies_house",
         "gleif",
+        "inpi",
         "opencorporates",
         "brightquery",
         "opensanctions",

@@ -39,6 +39,7 @@ from .bods import (
     map_companies_house,
     map_everypolitician,
     map_gleif,
+    map_inpi,
     map_openaleph,
     map_opencorporates,
     map_opensanctions,
@@ -48,6 +49,7 @@ from .bods import (
     map_zefix,
     validate_shape,
 )
+from .sources.inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
 from .sources.kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
 from .sources.zefix import CH_RA_CODES as _ZEFIX_RA_CODES, normalise_uid as _zefix_normalise_uid
 from . import bods_data
@@ -319,6 +321,7 @@ def _ch_ra_code(company_number: str) -> str:
 _MAPPERS = {
     "companies_house": map_companies_house,
     "gleif": map_gleif,
+    "inpi": map_inpi,
     "opencorporates": map_opencorporates,
     "brightquery": map_brightquery,
     "opensanctions": map_opensanctions,
@@ -615,6 +618,8 @@ async def lookup(
         derived["che_uid"] = _zefix_normalise_uid(registered_as)
     if registered_at_id == _KVK_RA_CODE and registered_as:
         derived["kvk_number"] = _normalise_kvk(registered_as)
+    if registered_at_id == _INPI_RA_CODE and registered_as:
+        derived["siren"] = _normalise_siren(registered_as)
 
     # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
     # (format: ``{jurisdiction_code}/{company_number}``).
@@ -664,6 +669,7 @@ async def lookup(
             **({"gb_coh": registered_as} if "gb_coh" in derived else {}),
             **({"che_uid": derived["che_uid"]} if "che_uid" in derived else {}),
             **({"kvk_number": derived["kvk_number"]} if "kvk_number" in derived else {}),
+            **({"siren": derived["siren"]} if "siren" in derived else {}),
             **({"wikidata_qid": qid} if qid else {}),
         },
         raw=gleif_bundle.get("record") or {},
@@ -749,6 +755,37 @@ async def lookup(
                 deepened_bundles.append(("kvk", derived["kvk_number"]))
         except Exception as exc:  # noqa: BLE001
             errors["kvk"] = f"{type(exc).__name__}: {exc}"
+
+    # INPI — direct fetch by SIREN when French entity (RA000189).
+    if "siren" in derived:
+        try:
+            inpi_bundle = await REGISTRY["inpi"].fetch(derived["siren"])
+            if not inpi_bundle.get("is_stub"):
+                inpi_company = inpi_bundle.get("company") or {}
+                inpi_content = inpi_company.get("content") or {}
+                inpi_pm = inpi_content.get("personneMorale") or {}
+                inpi_name = (
+                    (inpi_pm.get("identite") or {})
+                    .get("entreprise") or {}
+                ).get("denomination") or legal_name or ""
+                hits.append(
+                    SourceHit(
+                        source_id="inpi",
+                        hit_id=derived["siren"],
+                        kind=SearchKind.ENTITY,
+                        name=inpi_name,
+                        summary=f"FR-SIREN {derived['siren']}",
+                        identifiers={
+                            "siren": derived["siren"],
+                            "lei": lei,
+                        },
+                        raw=inpi_company,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("inpi", derived["siren"]))
+        except Exception as exc:  # noqa: BLE001
+            errors["inpi"] = f"{type(exc).__name__}: {exc}"
 
     # OpenCorporates — direct fetch by ocid derived from GLEIF.
     if ocid:
