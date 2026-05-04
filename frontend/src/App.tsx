@@ -702,8 +702,8 @@ function HowItWorks() {
           >
             curated set of open datasets
           </a>{" "}
-          - UK Companies House, GLEIF, OpenSanctions, OpenCorporates,
-          OpenAleph, EveryPolitician, and Wikidata - before returning a
+          - National corporate registries, GLEIF, OpenSanctions,
+          OpenCorporates, EveryPolitician, and Wikidata - before returning a
           useful intelligence report.
         </p>
         <p>
@@ -734,7 +734,9 @@ function HowItWorks() {
           conditions for "complex corporate structures" — trust/arrangement,
           non-EU jurisdiction, nominee, ≥3 ownership layers, plus the
           composite threshold rule and an advisory mirror of the subjective
-          obfuscation condition.
+          obfuscation condition. But OpenCheck goes further, signalling risks
+          such as links to blacklisted jurisdictions, leaked data and offshore
+          jurisdictions.
         </p>
       </div>
     </section>

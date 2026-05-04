@@ -8,7 +8,7 @@ Try the demo version at https://opencheck.onrender.com/
 
 ## What is OpenCheck?
 
-You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, OpenCorporates ID, Wikidata Q-ID, etc.), and uses those bridges to fan out across UK Companies House, OpenCorporates, OpenSanctions, OpenAleph, EveryPolitician, Wikidata, and OpenTender. 
+You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, OpenCorporates ID, Wikidata Q-ID, etc.), and uses those bridges to fan out across national corporate registries (UK, France, the Netherlands, Sweden, Switzerland), OpenCorporates, OpenSanctions, EveryPolitician, Wikidata, and OpenTender. 
 
 Everything maps into [version 0.4 of the Beneficial Ownership Data Standard (BODS)](https://standard.openownership.org/en/0.4.0/), the cross-source links + risk signals are computed deterministically, and the whole bundle is one click away from a downloadable shareable export.
 
@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [draft customer due diligence regulatory techn
 
 ## Status
 
-OpenCheck has shipped through twenty phases (latest commit on `main` is the source of truth):
+OpenCheck has shipped through twenty-two phases (latest commit on `main` is the source of truth):
 
 | Phase | Headline |
 |------:|----------|
@@ -41,8 +41,10 @@ OpenCheck has shipped through twenty phases (latest commit on `main` is the sour
 | 18 | OpenCorporates officer mapping (full BODS v0.4 interestType codelist), network relationship support, OC Relationships bulk-file infrastructure; GLEIF exception field-name fix (`reason` / `exceptionReason`); BODS validator completed to full 24-code codelist |
 | 19 | BrightQuery / OpenData.org adapter — 185k+ US entities with LEIs; extraction + diagnostic scripts; entity-level risk signals shown on all source card headers |
 | 20 | UI: risk signals visible on every source card header without clicking Go deeper; deepen panel de-duplicated |
+| 21 | National corporate registry adapters — INPI (France, `fr_siren`), KvK (Netherlands, `nl_kvk`), Bolagsverket (Sweden, `se_org_number`), Zefix (Switzerland, `ch_uid`) — each with full BODS v0.4 officer mapping |
+| 22 | ICIJ Offshore Leaks name cross-check — batched reconciliation API, `OFFSHORE_LEAKS` signals scoped to matching BODS statement; no API key required |
 
-Test suite: 285 backend tests. Frontend type-checks clean.
+Test suite: 429 backend tests. Frontend type-checks clean.
 
 ## Quick start
 
@@ -86,12 +88,16 @@ Paste a 20-character ISO 17442 LEI — for example `213800LH1BZH3DI6G760` (BP) o
 2. **Subject metadata.** If a pre-extracted Open Ownership bundle exists at `data/cache/bods_data/gleif/<LEI>.jsonl`, the legal name + jurisdiction are read directly from it (no live GLEIF call needed). Otherwise GLEIF is queried live.
 3. Looks up the **Wikidata Q-ID** via SPARQL on property `P1278`.
 4. Dispatches to every other adapter using whichever identifier they understand:
-   - UK Companies House — direct fetch by company number when jurisdiction = GB. The Open Ownership processed UK PSC bundle (`data/cache/bods_data/uk/<GB-COH>.jsonl`) is the canonical answer when present; otherwise falls back to the live API.
-   - OpenCorporates — fetched by `ocid` (e.g. `gb/00102498`), a field GLEIF returns on Level 1 records; delivers company profile, current officers, and network relationships (from the live API or the OC Relationships bulk file) as BODS statements.
-   - BrightQuery — direct fetch by LEI from a local SQLite database (built from OpenData.org bulk data). Covers 185,000+ US entities; adds executive contacts as `otherInfluenceOrControl` relationships. Activated when `BRIGHTQUERY_DB_FILE` is set.
-   - OpenSanctions / OpenTender — search by the LEI string.
-   - Wikidata — direct SPARQL fetch on the resolved Q-ID.
-5. Maps each source's payload into BODS v0.4 statements, runs the cross-source reconciler, runs the risk-signal service, and **cross-checks every related person and entity in the BODS bundle against OpenSanctions + EveryPolitician by name** — fuzzy-matched with optional birth-year compatibility — to surface scoped `RELATED_PEP` / `RELATED_SANCTIONED` signals on the matching node.
+   - **UK Companies House** — direct fetch by `gb_coh` when jurisdiction = GB. The Open Ownership processed UK PSC bundle (`data/cache/bods_data/uk/<GB-COH>.jsonl`) is the canonical answer when present; otherwise falls back to the live API.
+   - **INPI (France)** — fetched by `fr_siren` (derived from GLEIF RA code `R0006200`); delivers company profile and officers as BODS statements via the Registre National des Entreprises API.
+   - **KvK (Netherlands)** — fetched by `nl_kvk` (derived from GLEIF RA code `RA000463`); delivers company details and authorised representatives via the Kamer van Koophandel Handelsregister API.
+   - **Bolagsverket (Sweden)** — fetched by `se_org_number` (derived from GLEIF RA code `RA000544`); delivers company profile and board-level officers via the Swedish Companies Registration Office API.
+   - **Zefix (Switzerland)** — fetched by `ch_uid` (derived from GLEIF RA code `RA000412`); delivers company profile and authorised signatories from the Zefix central business name index.
+   - **OpenCorporates** — fetched by `ocid` (e.g. `gb/00102498`), a field GLEIF returns on Level 1 records; delivers company profile, current officers, and network relationships (from the live API or the OC Relationships bulk file) as BODS statements.
+   - **BrightQuery** — direct fetch by LEI from a local SQLite database (built from OpenData.org bulk data). Covers 185,000+ US entities; adds executive contacts as `otherInfluenceOrControl` relationships. Activated when `BRIGHTQUERY_DB_FILE` is set.
+   - **OpenSanctions / OpenTender** — search by the LEI string.
+   - **Wikidata** — direct SPARQL fetch on the resolved Q-ID.
+5. Maps each source's payload into BODS v0.4 statements, runs the cross-source reconciler, runs the risk-signal service, **cross-checks every related person and entity in the BODS bundle against OpenSanctions + EveryPolitician by name** — fuzzy-matched with optional birth-year compatibility — to surface scoped `RELATED_PEP` / `RELATED_SANCTIONED` signals, and **cross-checks all names against the ICIJ Offshore Leaks reconciliation API** to surface `OFFSHORE_LEAKS` signals for any Panama Papers / Pandora Papers / Paradise Papers matches.
 6. Returns one unified report.
 
 The frontend renders that report as a single subject card at the top (legal name, jurisdiction, derived identifiers as chips), an aggregated risk-chip strip, a cross-source links panel, an export button with format selector, and per-source "bucket" cards with a `Go deeper` drill-down per hit. A separate **About the sources** page (linked from the header) shows the source inventory.
@@ -115,12 +121,16 @@ python scripts/extract_bods_subgraphs.py \
 
 ## Sources
 
-Eight active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
+Twelve active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
 
 | ID | Name | License | Entry point | Description |
 |----|------|---------|-------------|-------------|
-| `companies_house` | UK Companies House | OGL-3.0 | `gb_coh` from GLEIF | Legal and beneficial ownership information from the UK corporate registry |
 | `gleif` | GLEIF | CC0-1.0 | LEI | Legal entity information from the Global Legal Entity Identifier Foundation |
+| `companies_house` | UK Companies House | OGL-3.0 | `gb_coh` from GLEIF | Legal and beneficial ownership information from the UK corporate registry |
+| `inpi` | INPI — Registre National des Entreprises | Open (PSI) | `fr_siren` from GLEIF | French national business registry — company profile and officers via the RNE API |
+| `kvk` | KvK — Handelsregister | Open (PSI) | `nl_kvk` from GLEIF | Netherlands Chamber of Commerce commercial register — company details and authorised representatives |
+| `bolagsverket` | Bolagsverket | Open (PSI) | `se_org_number` from GLEIF | Swedish Companies Registration Office — company profile and board-level officers |
+| `zefix` | Zefix | Open (PSI) | `ch_uid` from GLEIF | Switzerland central business name index — company profile and authorised signatories |
 | `opencorporates` | OpenCorporates | OC Terms | `ocid` from GLEIF | Global company database — company profile, current officers, and network relationships as BODS statements |
 | `brightquery` | BrightQuery (OpenData.org) | ODC-By | LEI | Open US company and executive data from BrightQuery, covering 185,000+ US entities with LEIs. Activated via `BRIGHTQUERY_DB_FILE` (see below) |
 | `opensanctions` | OpenSanctions | CC BY-NC 4.0 | LEI search | The open-source database of sanctions, watchlists, and politically exposed persons |
@@ -146,7 +156,7 @@ Risk signals fall into three groups:
 
 - `PEP` — OpenSanctions `role.pep`-family topic, every EveryPolitician hit, or a Wikidata person with a currently-held position (P39 with no P582 end qualifier).
 - `SANCTIONED` — OpenSanctions topic starting with `sanction`.
-- `OFFSHORE_LEAKS` — OpenAleph hit in an ICIJ-family collection (Panama / Paradise / Pandora / Bahamas / Offshore Leaks). _OpenAleph is currently disabled in `REGISTRY` so this rule won't fire until the adapter is re-enabled._
+- `OFFSHORE_LEAKS` — a name in the BODS bundle matches a record in the ICIJ Offshore Leaks database (Panama Papers, Paradise Papers, Pandora Papers, Bahamas Leaks, Offshore Leaks) via the ICIJ reconciliation API; or an OpenAleph hit in an ICIJ-family collection (OpenAleph is currently disabled in `REGISTRY` but this signal also fires via the ICIJ name cross-check, which requires no API key).
 - `OPAQUE_OWNERSHIP` — BODS bundle contains a `personStatement` with `personType=unknownPerson` or an `entityStatement` with `entityType=anonymousEntity`.
 
 ### AMLA CDD RTS (BODS v0.4 derived)
@@ -176,12 +186,20 @@ For every `personStatement` and `entityStatement` in the assembled BODS bundle, 
 
 The normaliser folds standalone non-ASCII letters (Polish `ł`, Norwegian `ø`, German `ß`, Icelandic `ð`/`þ`, French `œ`) so transliterated and native spellings match. Bounded at `max_targets=25` per lookup to keep the OpenSanctions request volume sane on large PSC chains. The cross-check is a no-op when live mode is off or no OpenSanctions API key is configured.
 
+### ICIJ Offshore Leaks name cross-check (Phase 22)
+
+For every `personStatement` and `entityStatement` in the assembled BODS bundle, OpenCheck posts each name to the [ICIJ Offshore Leaks reconciliation API](https://offshoreleaks.icij.org/docs/reconciliation) in batches of 10. The API covers roughly 800,000 offshore entities and associated individuals across the Panama Papers, Paradise Papers, Pandora Papers, Bahamas Leaks, and the original Offshore Leaks dataset.
+
+- `OFFSHORE_LEAKS` — a name matches an ICIJ Offshore Leaks record. Confidence is `high` when ICIJ's own `match: true` flag is set; `medium` when the score ≥ 70 without the ICIJ match flag.
+
+A secondary token-overlap similarity check (≥ 0.45 Jaccard) guards against false positives when the ICIJ index blends multiple transliterations of the same name. Signals are scoped to the matching BODS `statementId` (in `evidence.subject_statement_id`) — the same deduplication logic as `RELATED_PEP` / `RELATED_SANCTIONED`. No API key is required; the check runs in live mode automatically. Bounded at `max_targets=30`.
+
 ## API surface
 
 | Endpoint | Description |
 |----------|-------------|
 | `GET /health` | Liveness probe. |
-| `GET /sources` | Inventory of the 7 source adapters with license, description, live status. |
+| `GET /sources` | Inventory of the 12 source adapters with license, description, live status. |
 | `GET /lookup?lei=<LEI>` | **Primary entry point**. LEI-anchored synthesis. |
 | `GET /search?q=<q>&kind=<entity\|person>` | Free-text fan-out search. Power-user / debugging. |
 | `GET /stream?q=<q>&kind=<...>` | Same fan-out, streamed as SSE. |
@@ -200,6 +218,12 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 | `OPENCHECK_ALLOW_LIVE` | Master switch. `true` enables live HTTP calls for adapters whose key is set. |
 | `OPENCHECK_CORS_ORIGIN` | CORS origin for the frontend dev server. |
 | `COMPANIES_HOUSE_API_KEY` | UK Companies House API key (free; <https://developer.company-information.service.gov.uk/>). |
+| `INPI_USERNAME` | INPI (France) API username for the Registre National des Entreprises. |
+| `INPI_PASSWORD` | INPI (France) API password. |
+| `KVK_API_KEY` | KvK (Netherlands) Handelsregister API key. |
+| `BOLAGSVERKET_API_KEY` | Bolagsverket (Sweden) API key for the company information portal. |
+| `ZEFIX_USERNAME` | Zefix (Switzerland) API username. |
+| `ZEFIX_PASSWORD` | Zefix (Switzerland) API password. |
 | `OPENCORPORATES_API_KEY` | OpenCorporates API key — unlocks live company + officer data via the OC REST API. |
 | `OPENCORPORATES_RELATIONSHIPS_FILE` | Path to the OC Relationships bulk CSV file. When set, network relationship data is read from this file instead of the live `/network` API endpoint (which requires a premium tier). |
 | `BRIGHTQUERY_DB_FILE` | Path to the SQLite database built by `scripts/extract_brightquery.py`. When set, the BrightQuery adapter provides LEI-keyed lookup of US entities and their executives from OpenData.org bulk data. |
@@ -215,7 +239,7 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 
 ```bash
 cd backend
-uv run pytest             # 285 tests, ~5s
+uv run pytest             # 429 tests, ~5s
 ```
 
 Frontend type check:
@@ -234,13 +258,14 @@ opencheck/
   backend/
     opencheck/
       app.py              FastAPI entry — /lookup, /search, /report, /export, /deepen, /stream
-      sources/            One module per source adapter (9 implemented; 8 active in REGISTRY)
+      sources/            One module per source adapter (13 implemented; 12 active in REGISTRY)
         brightquery.py    BrightQuery / OpenData.org — LEI-keyed US entity + executive data
         opencorporates.py OpenCorporates — company profile, officers, network relationships
         oc_relationships.py  OC Relationships bulk-file lookup (indexed by jurisdiction/number)
       bods/               BODS v0.4 mappers + validator (full 24-code interestType codelist)
       bods_data.py        Open Ownership processed-bundle override layer (Phase 10)
       cross_check.py      Related-party name cross-check against OS + EveryPolitician (Phase 11)
+      icij_check.py       ICIJ Offshore Leaks name cross-check via reconciliation API (Phase 22)
       reconcile.py        Cross-source reconciler (LEI / Q-ID / GB-COH / OS-id bridges)
       risk.py             Risk-signal rules — 12 deterministic codes incl. AMLA CDD RTS + FATF
       cache.py            Two-tier cache (demos/ → live/)
@@ -249,7 +274,7 @@ opencheck/
       extract_bods_subgraphs.py    Walk local OO SQLite dumps → per-LEI BODS bundles
       extract_brightquery.py       Walk BrightQuery bulk files → SQLite DB indexed by LEI
       diagnose_brightquery.py      Inspect BrightQuery file format before extraction
-    tests/                pytest suite (285 tests)
+    tests/                pytest suite (429 tests)
   frontend/               React + Vite + TypeScript + Tailwind + BO design system
     src/
       App.tsx             LEI input, subject card, risk chips (on every source card), export panel
