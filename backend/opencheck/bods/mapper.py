@@ -942,7 +942,7 @@ def _gleif_entity_statement(
     publishes via its LEI Mapping programme:
 
     * ``ocid``  — OpenCorporates identifier (e.g. ``"gb/00102498"``)
-    * ``qcc``   — Quick Company Comparison code (e.g. ``"QGBVC89DTN"``)
+    * ``qcc``   — QCC Global Enterprise Identifier / QCC Code (e.g. ``"QGBVC89DTN"``)
     * ``mic``   — Market Identifier Code ISO 10383 (e.g. ``"XLON"``)
     * ``bic``   — Bank Identifier Code ISO 9362 (e.g. ``"BARCGB22"``)
 
@@ -1000,8 +1000,8 @@ def _gleif_entity_statement(
             identifiers.append(
                 {
                     "id": qcc,
-                    "scheme": "GLEIF-QCC",
-                    "schemeName": "GLEIF Quick Company Comparison identifier",
+                    "scheme": "QCC Code",
+                    "schemeName": "QCC Global Enterprise Identifier (QCC Code)",
                 }
             )
 

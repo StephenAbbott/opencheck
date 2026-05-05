@@ -421,10 +421,10 @@ def test_gleif_lei_mapping_ocid_included() -> None:
 
 
 def test_gleif_lei_mapping_qcc_included() -> None:
-    """qcc present in attributes → GLEIF-QCC identifier in entity statement."""
+    """qcc present in attributes → QCC Code identifier in entity statement."""
     subj = _subject_entity(_gleif_bundle_with_lei_mappings())
     qcc = next(
-        (i for i in subj["recordDetails"]["identifiers"] if i["scheme"] == "GLEIF-QCC"),
+        (i for i in subj["recordDetails"]["identifiers"] if i["scheme"] == "QCC Code"),
         None,
     )
     assert qcc is not None
@@ -460,7 +460,7 @@ def test_gleif_lei_mapping_null_values_excluded() -> None:
     subj = _subject_entity(_gleif_bundle_with_null_lei_mappings())
     schemes = {i["scheme"] for i in subj["recordDetails"]["identifiers"]}
     assert "OPENCORPORATES" not in schemes
-    assert "GLEIF-QCC" not in schemes
+    assert "QCC Code" not in schemes
     assert "ISO-10383" not in schemes
     assert "ISO-9362" not in schemes
 
