@@ -406,9 +406,10 @@ export default function App() {
             >
               Look up an entity
             </a>{" "}
-            by its 20-character LEI. We query GLEIF first, then use the LEI to
-            bridge to national company registries, OpenCorporates, OpenSanctions,
-            OpenAleph, Wikidata, and OpenTender.
+            by its 20-character LEI. We query the Global Legal Entity Identifier
+            Foundation (GLEIF) first, then use the LEI to bridge to national
+            company registries, OpenCorporates, OpenSanctions, OpenAleph,
+            Wikidata, and OpenTender.
           </p>
         </form>
 
@@ -715,9 +716,9 @@ function ExampleLeiPicker({
     <section className="mb-10">
       <SectionLabel>Try a curated example</SectionLabel>
       <p className="text-[13px] leading-[1.7] text-oo-muted mb-4 max-w-2xl">
-        Each subject has a pre-extracted Open Ownership BODS bundle on
-        disk, so the lookup resolves entirely offline. Risk flags are
-        pre-computed from the cached bundle. Use the search box above
+        Each subject has a pre-extracted Beneficial Ownership Data Standard
+        (BODS) bundle on disk, so the lookup resolves entirely offline. Risk
+        flags are pre-computed from the cached bundle. Use the search box above
         for any other LEI.
       </p>
       <ul
@@ -785,7 +786,7 @@ const HOW_IT_WORKS_STEPS = [
           rel="noreferrer"
           className="text-oo-blue underline underline-offset-2 hover:text-oo-burst"
         >
-          ISO 17442 LEI
+          LEI
         </a>{" "}
         — OpenCheck's single entry point for any legal entity worldwide.
       </>
@@ -855,10 +856,12 @@ const HOW_IT_WORKS_STEPS = [
     title: "Risk signals + shareable BODS bundle",
     body: (
       <>
-        AMLA CDD RTS–aligned risk signals are computed deterministically across
-        the assembled statements — sanctions, FATF jurisdictions, complex
-        corporate structures, and more. The full bundle is one click away as
-        BODS v0.4 JSON, JSONL, or a ZIP with manifest and license notes.
+        Risk signals aligned with draft customer due diligence standards from
+        the EU's Anti-Money Laundering Authority are computed deterministically
+        across the assembled statements — checking for sanctions, flagged
+        jurisdictions, complex corporate structures and more. The full bundle is
+        one click away as BODS v0.4 JSON, JSONL or a ZIP with manifest and
+        license notes.
       </>
     ),
     badges: null,
