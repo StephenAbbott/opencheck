@@ -2,52 +2,57 @@
 
 Bolagsverket operates the Swedish Handelsregistret (Companies Register),
 Föreningsregistret (Cooperative Register), and other registers. This
-adapter uses the "API for valuable datasets" (Öppna data / PSI-data),
-which is free to use but requires a registered API key via the developer
-portal at https://portal.api.bolagsverket.se/
+adapter uses the "API for valuable datasets" (Öppna data / PSI-data /
+värdefulla datamängder), which is free to use but requires OAuth2
+client credentials issued via the developer portal.
 
 The register data includes:
-* Entity information: company name, organisation number, status, legal form
+* Entity information: company name, organisation number, legal form
 * Registered address
-* Officers: board members (styrelseledamöter), CEO (VD), signatories
-  (firmatecknare), auditors (revisorer), and similar roles.
+* Company status (active / deregistered) and deregistration reason
 
-Unlike INPI, officer data in the Swedish commercial register is entirely
-public and PSI-compliant — it is safe to republish and map to BODS
-person statements.
+Note: Officer/board member data (foretradare) is NOT returned by the
+/organisationer endpoint. This endpoint covers the EU high-value company
+dataset (värdefulla datamängder) only.
 
 The flow with GLEIF:
   1. GLEIF returns ``registeredAt.id == "RA000544"`` (Bolagsverket RA code)
      and ``registeredAs = "<10-digit org number>"`` for Swedish entities.
   2. app.py extracts ``derived["se_org_number"]`` and calls ``fetch()``
      here.
-  3. We hit Bolagsverket's API and map the result to BODS entity +
-     person statements.
+  3. We POST the org number to Bolagsverket's /organisationer endpoint
+     and map the result to a BODS entity statement.
 
-Authentication: Bearer token using the API key from the developer portal.
-Portal: https://portal.api.bolagsverket.se/
-API docs: https://portal.api.bolagsverket.se/ (requires portal login)
+Authentication: OAuth2 Client Credentials Grant.
+  Token endpoint: https://portal.api.bolagsverket.se/oauth2/token
+  BOLAGSVERKET_API_KEY       → OAuth2 client_id  (Consumer Key)
+  BOLAGSVERKET_CLIENT_SECRET → OAuth2 client_secret (Consumer Secret)
+
+Both values are issued via the Bolagsverket developer portal:
+  https://portal.api.bolagsverket.se/
 
 GLEIF RA code: RA000544
 
 Organisation number format: 10-digit number, canonically displayed as
 ``NNNNNN-NNNN`` (e.g. ``556016-0680`` for Telefonaktiebolaget LM Ericsson).
-The API accepts either the hyphenated or raw 10-digit form.
+The API accepts the raw 10-digit form in the POST body.
+
+API endpoint: POST /vardefulla-datamangder/v1/organisationer
+  Request body: {"identitetsbeteckning": "<10-digit-org-number>"}
+  Required OAuth2 scope: vardefulla-datamangder:read
+Gateway host: gw.api.bolagsverket.se
 
 License: PSI-compliant open data. Bolagsverket publishes this data under
 Swedish public sector information legislation (PSI-lagen), consistent with
 the EU Open Data Directive. Attribution required.
-
-NOTE: The exact endpoint paths and response shape below are based on the
-documented API design from the Bolagsverket developer portal. The
-``_API_BASE`` constant and the JSON field names in ``fetch()`` /
-``map_bolagsverket()`` will need to be verified and adjusted once an API
-key has been granted and live responses can be inspected.
 """
 
 from __future__ import annotations
 
+import base64
+import json
 import re
+import time
 from typing import Any
 
 from ..cache import Cache
@@ -55,21 +60,27 @@ from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 
-# Base URL for the Bolagsverket API gateway (WSO2 APIM).
-# This will be confirmed once the API key is granted and the portal
-# can be navigated to find the exact path. The pattern below mirrors
-# what is documented on the Bolagsverket developer portal landing page.
-_API_BASE = "https://portal.api.bolagsverket.se/foretagsinformation/v1"
+# Gateway and token endpoints — production environment (confirmed).
+# Token endpoint confirmed: OAuth2 Client Credentials Grant returns a
+# valid JWT with scope="default". The gateway returns 403 scope error
+# until Bolagsverket grants the application access to /organisationer
+# in the WSO2 developer portal (subscription scope configuration).
+_GATEWAY_BASE = "https://gw.api.bolagsverket.se/vardefulla-datamangder/v1"
+_ORGANISATIONER_URL = f"{_GATEWAY_BASE}/organisationer"
+_TOKEN_URL = "https://portal.api.bolagsverket.se/oauth2/token"
+
 _CACHE_NS = "bolagsverket"
 
 # GLEIF Registration Authority code for Bolagsverket.
-# Confirmed via GLEIF fulltext search for Swedish entities (Ericsson,
-# Volvo, etc.) — all carry registeredAt.id == "RA000544".
+# All Swedish entities in GLEIF carry registeredAt.id == "RA000544".
 BV_RA_CODE: str = "RA000544"
 
 # Swedish organisation number: 10 digits, optionally with a hyphen after
 # the sixth digit (e.g. ``556016-0680`` or ``5560160680``).
 _ORG_NUMBER_RE = re.compile(r"^(\d{6})-?(\d{4})$")
+
+# In-memory token cache: (access_token, expires_at_epoch)
+_token_cache: tuple[str, float] | None = None
 
 
 def normalise_org_number(org_number: str) -> str:
@@ -102,6 +113,41 @@ def format_org_number(org_number: str) -> str:
     return f"{raw[:6]}-{raw[6:]}"
 
 
+async def _get_access_token(client_id: str, client_secret: str) -> str:
+    """Obtain a Bearer token via OAuth2 Client Credentials Grant.
+
+    The token is cached in-process until 60 seconds before expiry.
+    WSO2 tokens typically have a 3600-second TTL.
+    """
+    global _token_cache
+    now = time.monotonic()
+    if _token_cache is not None:
+        token, expires_at = _token_cache
+        if now < expires_at:
+            return token
+
+    credentials = base64.b64encode(
+        f"{client_id}:{client_secret}".encode()
+    ).decode()
+
+    async with build_client() as client:
+        response = await client.post(
+            _TOKEN_URL,
+            headers={
+                "Authorization": f"Basic {credentials}",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            content="grant_type=client_credentials&scope=vardefulla-datamangder%3Aread",
+        )
+        response.raise_for_status()
+        data = response.json()
+
+    token = data["access_token"]
+    expires_in = int(data.get("expires_in", 3600))
+    _token_cache = (token, now + expires_in - 60)  # 60s safety margin
+    return token
+
+
 class BolagsverketAdapter(SourceAdapter):
     """Source adapter for Bolagsverket — Swedish Companies Registration Office."""
 
@@ -113,14 +159,19 @@ class BolagsverketAdapter(SourceAdapter):
     @property
     def info(self) -> SourceInfo:
         settings = get_settings()
-        live = settings.allow_live and bool(settings.bolagsverket_api_key)
+        live = (
+            settings.allow_live
+            and bool(settings.bolagsverket_api_key)
+            and bool(settings.bolagsverket_client_secret)
+        )
         return SourceInfo(
             id=self.id,
             name="Bolagsverket — Swedish Companies Registration Office",
             homepage="https://www.bolagsverket.se/",
             description=(
-                "Swedish company data from Bolagsverket's open data API, "
-                "including entity details and board-level officer information."
+                "Swedish company data from Bolagsverket's open data API "
+                "(värdefulla datamängder), including entity details and "
+                "registered address."
             ),
             license="SE-PSI",
             attribution=(
@@ -155,8 +206,7 @@ class BolagsverketAdapter(SourceAdapter):
         (``556016-0680``). It is normalised before the API call.
 
         Pass ``legal_name`` (from GLEIF) as a fallback when the API does
-        not return the company name (shouldn't happen but guards against
-        it gracefully).
+        not return the company name.
         """
         try:
             org_number = normalise_org_number(hit_id)
@@ -184,13 +234,28 @@ class BolagsverketAdapter(SourceAdapter):
             }
         else:
             settings = get_settings()
+            token = await _get_access_token(
+                settings.bolagsverket_api_key,
+                settings.bolagsverket_client_secret,
+            )
             async with build_client() as client:
-                response = await client.get(
-                    f"{_API_BASE}/{format_org_number(org_number)}",
-                    headers={"Authorization": f"Bearer {settings.bolagsverket_api_key}"},
+                # POST /organisationer with a JSON object containing the
+                # organisation number as identitetsbeteckning.
+                # Response: {"organisationer": [{...}, ...]}
+                response = await client.post(
+                    _ORGANISATIONER_URL,
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "Content-Type": "application/json",
+                    },
+                    content=json.dumps({"identitetsbeteckning": org_number}),
                 )
                 response.raise_for_status()
-                data = response.json()
+                raw = response.json()
+
+            # We posted a single org number so take the first element.
+            organisationer = raw.get("organisationer") or []
+            data = organisationer[0] if organisationer else {}
             self._cache.put(cache_key, data)
 
         return {

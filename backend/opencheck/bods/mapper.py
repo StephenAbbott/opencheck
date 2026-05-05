@@ -1389,73 +1389,60 @@ def _inpi_address(block: dict[str, Any]) -> list[dict[str, str]]:
 # Jurisdiction: Sweden ("SE")
 # Source: https://www.bolagsverket.se/
 #
-# NOTE: The response shape below is based on the expected Bolagsverket API
-# design. Field names will be verified and corrected once an API key
-# has been granted and live responses can be inspected. The mapper is
-# intentionally defensive — missing fields produce empty output rather
-# than errors.
+# Response shape confirmed from Bolagsverket API documentation.
+# POST /organisationer → {"organisationer": [{...}]}
+# The mapper receives the first element of that array as bundle["company"].
 #
-# Expected bundle shape (from BolagsverketAdapter.fetch):
+# Confirmed bundle shape:
 #
 #   {
 #     "source_id": "bolagsverket",
-#     "org_number": "5560160680",          # 10-digit normalised
+#     "org_number": "5299999994",
 #     "company": {
-#       "organisationsnummer": "556016-0680",
-#       "namn": "Telefonaktiebolaget LM Ericsson",
-#       "status": "Aktiv",
-#       "juridiskForm": {"kod": "AB", "klartext": "Aktiebolag"},
-#       "registreringsdatum": "1918-08-18",
-#       "adress": {
-#         "gatuadress": "Torshamnsgatan 21",
-#         "postnummer": "164 83",
-#         "postort": "STOCKHOLM",
+#       "organisationsidentitet": {"identitetsbeteckning": "5299999994"},
+#       "organisationsnamn": {
+#         "organisationsnamnLista": [
+#           {"namn": "Cykelbolaget AB", "registreringsdatum": "2024-03-15"}
+#         ]
 #       },
-#       "foretradare": [          # officers / representatives
-#         {
-#           "roll": "Styrelseledamot",   # or VD, Firmatecknare, etc.
-#           "namn": "BORJE EKHOLM",
-#           "fodelsedat": "1963",        # birth year (or YYYY-MM-DD)
-#           "postort": "STOCKHOLM",
+#       "organisationsdatum": {"registreringsdatum": "2000-01-23"},
+#       "organisationsform": {"kod": "AB", "klartext": "Aktiebolag"},
+#       "juridiskForm": {"kod": "49", "klartext": "Övriga aktiebolag"},
+#       "postadressOrganisation": {
+#         "postadress": {
+#           "utdelningsadress": "Jobbstigen 2",
+#           "postnummer": "12345",
+#           "postort": "Grönköping",
+#           "land": "Sverige",
+#           "coAdress": "C/o Annat företag"
 #         }
-#       ],
+#       },
+#       "verksamhetsbeskrivning": {"beskrivning": "Handel med skor"},
+#       "verksamOrganisation": {"kod": "JA"},   # JA = active
+#       "avregistreradOrganisation": {"avregistreringsdatum": "2023-05-05T..."},
+#       "avregistreringsorsak": {"klartext": "Likvidation"},
+#       "pagaendeAvvecklingsEllerOmstruktureringsforfarande": {
+#         "pagaendeAvvecklingsEllerOmstruktureringsforfarandeLista": [
+#           {"kod": "KK", "klartext": "Konkurs", "fromDatum": "..."}
+#         ]
+#       }
 #     },
-#     "legal_name": "Telefonaktiebolaget LM Ericsson",  # from GLEIF fallback
+#     "legal_name": "Cykelbolaget AB",
 #     "is_stub": False,
 #   }
-
-
-# Swedish officer role → BODS interest type
-_BV_ROLE_TO_INTEREST: dict[str, str] = {
-    "styrelseledamot": "boardMember",
-    "styrelsesuppleant": "boardMember",  # alternate board member
-    "styrelseordförande": "boardChair",
-    "ordförande": "boardChair",
-    "verkställande direktör": "otherInfluenceOrControl",
-    "vd": "otherInfluenceOrControl",
-    "firmatecknare": "otherInfluenceOrControl",
-    "revisor": "otherInfluenceOrControl",
-    "lekmannarevisor": "otherInfluenceOrControl",
-}
-
-
-def _bv_interest_type(role: str) -> str:
-    """Map a Swedish officer role string to a BODS interest type."""
-    return _BV_ROLE_TO_INTEREST.get(role.lower().strip(), "otherInfluenceOrControl")
+#
+# Note: Officer/board member data is NOT returned by /organisationer.
+# This endpoint covers the EU high-value company dataset only.
 
 
 def map_bolagsverket(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a Bolagsverket fetch bundle to BODS v0.4 statements.
 
-    Emits one entity statement for the registered company, then one
-    person statement + one relationship statement per officer
-    (styrelseledamöter, VD, firmatecknare, etc.).
+    Emits one entity statement for the registered company. Officer data
+    is not available from the /organisationer endpoint so no person or
+    relationship statements are emitted.
 
     Returns an empty iterable for stub bundles or missing company data.
-
-    NOTE: Field names in the company dict are based on the expected
-    Bolagsverket API response structure and will be updated once live
-    API access is available. The mapper is intentionally defensive.
     """
     if not bundle or bundle.get("is_stub"):
         return
@@ -1468,26 +1455,29 @@ def map_bolagsverket(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     if not org_number:
         return
 
-    # Company name — prefer what the API returns, fall back to GLEIF name.
-    name: str = (
-        company.get("namn")
-        or company.get("name")
-        or bundle.get("legal_name")
-        or ""
+    # Company name: organisationsnamn.organisationsnamnLista[0].namn
+    # Fall back to the GLEIF-supplied legal_name if missing.
+    namn_lista: list[dict[str, Any]] = (
+        (company.get("organisationsnamn") or {}).get("organisationsnamnLista") or []
     )
+    name: str = ""
+    if namn_lista:
+        # The list may contain multiple names (trading names, historical).
+        # Take the first entry — the API returns the current registered name first.
+        name = (namn_lista[0].get("namn") or "").strip()
+    if not name:
+        name = (bundle.get("legal_name") or "").strip()
     if not name:
         return
 
     # Format org number for display: NNNNNN-NNNN
     org_display = f"{org_number[:6]}-{org_number[6:]}" if len(org_number) == 10 else org_number
 
-    # Founding / registration date. Bolagsverket uses ISO 8601 (YYYY-MM-DD).
+    # Founding / registration date: organisationsdatum.registreringsdatum (YYYY-MM-DD)
     founding_date: str | None = (
-        company.get("registreringsdatum")
-        or company.get("registrationDate")
-        or None
+        (company.get("organisationsdatum") or {}).get("registreringsdatum") or None
     )
-    # Guard against non-ISO strings
+    # Guard against non-ISO or timestamp strings
     if founding_date and len(founding_date) != 10:
         founding_date = None
 
@@ -1499,14 +1489,13 @@ def map_bolagsverket(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         }
     ]
 
-    # Address
-    addr_block: dict[str, Any] = company.get("adress") or company.get("address") or {}
+    # Address: postadressOrganisation.postadress
+    addr_block: dict[str, Any] = (
+        (company.get("postadressOrganisation") or {}).get("postadress") or {}
+    )
     addresses = _bv_address(addr_block)
 
-    source_url = (
-        f"https://www.bolagsverket.se/foretag/foretagsformer-och-foretagsregistrering/"
-        f"aktiebolag/anmal-andring-i-aktiebolag.html"
-    )
+    source_url = "https://www.bolagsverket.se/"
 
     entity = make_entity_statement(
         source_id="bolagsverket",
@@ -1519,76 +1508,28 @@ def map_bolagsverket(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         source_url=source_url,
     )
     yield entity
-    entity_sid = entity["statementId"]
-
-    # Officer / representative statements
-    officers: list[dict[str, Any]] = company.get("foretradare") or company.get("representatives") or []
-    for idx, officer in enumerate(officers):
-        officer_name: str = (
-            officer.get("namn")
-            or officer.get("name")
-            or officer.get("fullName")
-            or ""
-        ).strip()
-        if not officer_name:
-            continue
-
-        role_raw: str = officer.get("roll") or officer.get("role") or ""
-        interest_type = _bv_interest_type(role_raw)
-
-        # Birth date / year — Bolagsverket may expose only the birth year.
-        birth_raw: str = str(officer.get("fodelsedat") or officer.get("birthDate") or "").strip()
-        birth_date: str | None = None
-        if len(birth_raw) == 10:  # YYYY-MM-DD
-            birth_date = birth_raw
-        elif len(birth_raw) == 4 and birth_raw.isdigit():  # birth year only
-            birth_date = None  # BODS birthDate requires a full date; skip year-only
-
-        person = make_person_statement(
-            source_id="bolagsverket",
-            local_id=f"{org_number}:officer:{idx}:{officer_name}",
-            full_name=officer_name,
-            birth_date=birth_date,
-            source_url=source_url,
-        )
-        yield person
-
-        details_parts = [role_raw] if role_raw else []
-        interest: dict[str, Any] = {
-            "type": interest_type,
-            "directOrIndirect": "direct",
-            "beneficialOwnershipOrControl": False,  # commercial register data only
-            "details": " — ".join(details_parts) if details_parts else role_raw or "officer",
-        }
-
-        rel = make_relationship_statement(
-            source_id="bolagsverket",
-            local_id=f"{org_number}:officer-rel:{idx}:{officer_name}",
-            subject_statement_id=entity_sid,
-            interested_party_statement_id=person["statementId"],
-            interested_party_type="person",
-            interests=[interest],
-            source_url=source_url,
-        )
-        yield rel
 
 
 def _bv_address(block: dict[str, Any]) -> list[dict[str, str]]:
-    """Build a BODS address list from a Bolagsverket adress block."""
+    """Build a BODS address list from a Bolagsverket postadress block.
+
+    Field names confirmed from API documentation:
+    utdelningsadress (street), postnummer, postort (city), land (country),
+    coAdress (c/o line).
+    """
     if not block:
         return []
     parts = [
-        block.get("gatuadress") or block.get("street"),
-        block.get("postnummer") or block.get("postCode"),
-        block.get("postort") or block.get("city"),
-        block.get("land") or block.get("country"),
+        block.get("coAdress"),
+        block.get("utdelningsadress"),
+        block.get("postnummer"),
+        block.get("postort"),
+        block.get("land"),
     ]
     joined = ", ".join(p for p in parts if p)
     if not joined:
         return []
-    # Country is always SE for Bolagsverket registered addresses unless
-    # the API carries a foreign registered address (uncommon).
-    country = block.get("land") or block.get("country") or "SE"
+    country = block.get("land") or "SE"
     return [{"type": "registered", "address": joined, "country": country}]
 
 

@@ -103,9 +103,14 @@ class Settings(BaseSettings):
     inpi_password: str | None = Field(default=None, alias="INPI_PASSWORD")
 
     # --- Bolagsverket (Swedish Companies Registration Office) ---
-    # API key auth: Authorization: Bearer <key>
-    # Request access at https://portal.api.bolagsverket.se/
+    # OAuth2 Client Credentials Grant. The client_id and client_secret are
+    # issued via the developer portal. Request access at:
+    #   https://portal.api.bolagsverket.se/ (production)
+    #   https://portal-accept2.api.bolagsverket.se/ (test/accept2)
+    # BOLAGSVERKET_API_KEY is the OAuth2 client_id (Consumer Key).
+    # BOLAGSVERKET_CLIENT_SECRET is the OAuth2 client_secret (Consumer Secret).
     bolagsverket_api_key: str | None = Field(default=None, alias="BOLAGSVERKET_API_KEY")
+    bolagsverket_client_secret: str | None = Field(default=None, alias="BOLAGSVERKET_CLIENT_SECRET")
 
     # --- Optional LLM ---
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
