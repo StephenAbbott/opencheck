@@ -6,11 +6,26 @@ OpenAleph (the open-source successor to the Aleph project operated at
 single "OpenAleph license". We surface each matching collection's
 license on the source card so users know what they're looking at.
 
-Live endpoints (Phase 2):
+Live endpoints used:
 
-* ``GET /api/2/entities?q=<query>&filter:schema=<Company|Person>`` — search.
+* ``GET /api/2/entities?filter:properties.leiCode=<LEI>`` — LEI-keyed lookup.
+* ``GET /api/2/entities?filter:properties.registrationNumber=<n>&filter:properties.jurisdiction=<cc>``
+  — national registration number lookup (fallback).
+* ``GET /api/2/entities?q=<query>&filter:schema=<Company|Person>`` — free-text search
+  (used by the /search / /report paths; not the LEI-anchored /lookup flow).
 * ``GET /api/2/entities/{entity_id}`` — single FtM entity with properties + collection.
 * ``GET /api/2/collections/{collection_id}`` — collection metadata (for license).
+
+LEI-anchored lookup strategy (used in /lookup flow):
+  1. ``fetch_by_lei(lei)``  — filter on ``leiCode`` (FtM identifier type, exact-match).
+  2. ``fetch_by_oc_url(ocid)`` — filter on ``opencorporatesUrl`` (GLEIF-derived OC ID).
+  3. ``fetch_by_registration(jurisdiction, reg_number)`` — filter on ``registrationNumber``
+     + ``jurisdiction`` for any of the derived national IDs (gb_coh, siren, kvk_number,
+     se_org_number, che_uid). Tried in order; stops at first non-empty result.
+
+The ``leiCode`` and ``registrationNumber`` FtM properties are of type ``identifier``,
+which Aleph indexes as keywords and supports exact-match via ``filter:properties.*``.
+``opencorporatesUrl`` is type ``url`` — also keyword-indexed in Aleph.
 
 API keys are optional and per-user; when set, they unlock additional
 collections.
@@ -82,6 +97,78 @@ class OpenAlephAdapter(SourceAdapter):
             cache_key=cache_key,
         )
         return [self._hit(item, kind) for item in payload.get("results", [])]
+
+    # ------------------------------------------------------------------
+    # Identifier-keyed lookups (LEI-anchored flow)
+    # ------------------------------------------------------------------
+
+    async def fetch_by_lei(self, lei: str) -> list[SourceHit]:
+        """Return OpenAleph hits whose ``leiCode`` property exactly matches ``lei``.
+
+        Uses ``filter:properties.leiCode=<lei>`` — exact-match on the FtM
+        ``identifier``-type field, bypassing free-text scoring noise.
+        Returns an empty list when the instance is a stub or no results found.
+        """
+        cache_key = f"{_CACHE_NS}/lei/{_slug(lei)}"
+        if not self.info.live_available and not self._cache.has(cache_key):
+            return []
+        payload = await self._get(
+            f"/entities?filter:properties.leiCode={quote(lei)}"
+            f"&filter:schema=LegalEntity&limit=5",
+            cache_key=cache_key,
+        )
+        return [
+            self._hit(item, SearchKind.ENTITY)
+            for item in payload.get("results", [])
+        ]
+
+    async def fetch_by_oc_url(self, ocid: str) -> list[SourceHit]:
+        """Return OpenAleph hits whose ``opencorporatesUrl`` matches the OC URL.
+
+        Constructs ``https://opencorporates.com/companies/<ocid>`` and filters
+        on the ``opencorporatesUrl`` FtM property (type: url, keyword-indexed).
+        Returns an empty list when the instance is a stub or no results found.
+        """
+        oc_url = f"https://opencorporates.com/companies/{ocid}"
+        cache_key = f"{_CACHE_NS}/oc/{_slug(ocid)}"
+        if not self.info.live_available and not self._cache.has(cache_key):
+            return []
+        payload = await self._get(
+            f"/entities?filter:properties.opencorporatesUrl={quote(oc_url)}"
+            f"&filter:schema=LegalEntity&limit=5",
+            cache_key=cache_key,
+        )
+        return [
+            self._hit(item, SearchKind.ENTITY)
+            for item in payload.get("results", [])
+        ]
+
+    async def fetch_by_registration(
+        self, jurisdiction: str, registration_number: str
+    ) -> list[SourceHit]:
+        """Return OpenAleph hits matching a national registration number + jurisdiction.
+
+        Uses ``filter:properties.registrationNumber=<n>`` and
+        ``filter:properties.jurisdiction=<cc>`` together (both FtM identifier/
+        country-type fields, keyword-indexed).
+
+        ``jurisdiction`` should be an ISO 3166-1 alpha-2 lowercase code
+        (e.g. ``"gb"``, ``"fr"``, ``"nl"``, ``"se"``, ``"ch"``).
+        Returns an empty list when the instance is a stub or no results found.
+        """
+        cache_key = f"{_CACHE_NS}/reg/{_slug(jurisdiction + ':' + registration_number)}"
+        if not self.info.live_available and not self._cache.has(cache_key):
+            return []
+        payload = await self._get(
+            f"/entities?filter:properties.registrationNumber={quote(registration_number)}"
+            f"&filter:properties.jurisdiction={quote(jurisdiction.lower())}"
+            f"&filter:schema=LegalEntity&limit=5",
+            cache_key=cache_key,
+        )
+        return [
+            self._hit(item, SearchKind.ENTITY)
+            for item in payload.get("results", [])
+        ]
 
     # ------------------------------------------------------------------
     # Fetch

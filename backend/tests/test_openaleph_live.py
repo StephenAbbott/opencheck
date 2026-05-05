@@ -100,3 +100,161 @@ async def test_stub_path_when_allow_live_false(monkeypatch) -> None:
     hits = await adapter.search("anything", SearchKind.ENTITY)
     assert len(hits) == 1
     assert hits[0].is_stub is True
+
+
+# ---------------------------------------------------------------------------
+# fetch_by_lei
+# ---------------------------------------------------------------------------
+
+_ERICSSON_ENTITY = {
+    "id": "aleph-ericsson-001",
+    "schema": "Company",
+    "caption": "Ericsson AB",
+    "properties": {
+        "name": ["Ericsson AB"],
+        "leiCode": ["549300MLH00Y3BN4HD49"],
+        "jurisdiction": ["se"],
+        "registrationNumber": ["556056-6258"],
+    },
+    "collection": {"id": 7, "foreign_id": "orbis", "label": "Bureau van Dijk Orbis"},
+}
+
+
+async def test_fetch_by_lei_returns_hits(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(
+        url=f"{_API}/entities?filter:properties.leiCode=549300MLH00Y3BN4HD49"
+            f"&filter:schema=LegalEntity&limit=5",
+        json={"results": [_ERICSSON_ENTITY]},
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_lei("549300MLH00Y3BN4HD49")
+    assert len(hits) == 1
+    assert hits[0].hit_id == "aleph-ericsson-001"
+    assert hits[0].name == "Ericsson AB"
+    assert hits[0].is_stub is False
+    assert hits[0].identifiers["lei"] == "549300MLH00Y3BN4HD49"
+
+
+async def test_fetch_by_lei_empty_result(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(
+        url=f"{_API}/entities?filter:properties.leiCode=UNKNOWNLEI00000000XX"
+            f"&filter:schema=LegalEntity&limit=5",
+        json={"results": []},
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_lei("UNKNOWNLEI00000000XX")
+    assert hits == []
+
+
+async def test_fetch_by_lei_stub_when_live_disabled(monkeypatch) -> None:
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
+    get_settings.cache_clear()
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_lei("549300MLH00Y3BN4HD49")
+    assert hits == []
+
+
+# ---------------------------------------------------------------------------
+# fetch_by_oc_url
+# ---------------------------------------------------------------------------
+
+
+async def test_fetch_by_oc_url_returns_hits(httpx_mock: HTTPXMock) -> None:
+    from urllib.parse import quote
+    oc_url = "https://opencorporates.com/companies/se/556056-6258"
+    httpx_mock.add_response(
+        url=f"{_API}/entities?filter:properties.opencorporatesUrl={quote(oc_url)}"
+            f"&filter:schema=LegalEntity&limit=5",
+        json={"results": [_ERICSSON_ENTITY]},
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_oc_url("se/556056-6258")
+    assert len(hits) == 1
+    assert hits[0].hit_id == "aleph-ericsson-001"
+
+
+async def test_fetch_by_oc_url_empty_result(httpx_mock: HTTPXMock) -> None:
+    from urllib.parse import quote
+    oc_url = "https://opencorporates.com/companies/gb/99999999"
+    httpx_mock.add_response(
+        url=f"{_API}/entities?filter:properties.opencorporatesUrl={quote(oc_url)}"
+            f"&filter:schema=LegalEntity&limit=5",
+        json={"results": []},
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_oc_url("gb/99999999")
+    assert hits == []
+
+
+async def test_fetch_by_oc_url_stub_when_live_disabled(monkeypatch) -> None:
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
+    get_settings.cache_clear()
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_oc_url("se/556056-6258")
+    assert hits == []
+
+
+# ---------------------------------------------------------------------------
+# fetch_by_registration
+# ---------------------------------------------------------------------------
+
+
+async def test_fetch_by_registration_returns_hits(httpx_mock: HTTPXMock) -> None:
+    from urllib.parse import quote
+    httpx_mock.add_response(
+        url=(
+            f"{_API}/entities"
+            f"?filter:properties.registrationNumber={quote('556056-6258')}"
+            f"&filter:properties.jurisdiction={quote('se')}"
+            f"&filter:schema=LegalEntity&limit=5"
+        ),
+        json={"results": [_ERICSSON_ENTITY]},
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_registration("se", "556056-6258")
+    assert len(hits) == 1
+    assert hits[0].hit_id == "aleph-ericsson-001"
+    assert hits[0].name == "Ericsson AB"
+
+
+async def test_fetch_by_registration_uppercases_jurisdiction_lowercased(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """Jurisdiction is always sent lowercase regardless of caller input."""
+    from urllib.parse import quote
+    httpx_mock.add_response(
+        url=(
+            f"{_API}/entities"
+            f"?filter:properties.registrationNumber={quote('00102498')}"
+            f"&filter:properties.jurisdiction={quote('gb')}"
+            f"&filter:schema=LegalEntity&limit=5"
+        ),
+        json={"results": []},
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_registration("GB", "00102498")
+    assert hits == []
+
+
+async def test_fetch_by_registration_empty_result(httpx_mock: HTTPXMock) -> None:
+    from urllib.parse import quote
+    httpx_mock.add_response(
+        url=(
+            f"{_API}/entities"
+            f"?filter:properties.registrationNumber={quote('ZZZZZZZZ')}"
+            f"&filter:properties.jurisdiction={quote('fr')}"
+            f"&filter:schema=LegalEntity&limit=5"
+        ),
+        json={"results": []},
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_registration("fr", "ZZZZZZZZ")
+    assert hits == []
+
+
+async def test_fetch_by_registration_stub_when_live_disabled(monkeypatch) -> None:
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
+    get_settings.cache_clear()
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_registration("se", "556056-6258")
+    assert hits == []

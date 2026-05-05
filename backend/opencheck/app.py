@@ -927,8 +927,8 @@ async def lookup(
         except Exception as exc:  # noqa: BLE001
             errors["brightquery"] = f"{type(exc).__name__}: {exc}"
 
-    # OpenSanctions, OpenAleph, OpenTender — search by LEI.
-    for source_id in ("opensanctions", "openaleph", "opentender"):
+    # OpenSanctions, OpenTender — search by LEI (free-text, LEI is indexed).
+    for source_id in ("opensanctions", "opentender"):
         adapter = REGISTRY.get(source_id)
         if adapter is None or SearchKind.ENTITY not in adapter.info.supports:
             continue
@@ -941,6 +941,47 @@ async def lookup(
                 deepened_bundles.append((source_id, hit.hit_id))
         except Exception as exc:  # noqa: BLE001
             errors[source_id] = f"{type(exc).__name__}: {exc}"
+
+    # OpenAleph — identifier-keyed lookup (LEI-anchored flow).
+    # Tries three progressively broader strategies and stops at the first
+    # that returns results, avoiding the noise of free-text name search:
+    #   1. leiCode exact-match (most precise)
+    #   2. opencorporatesUrl exact-match (GLEIF-derived ocid)
+    #   3. registrationNumber + jurisdiction for each derived national ID
+    oa_adapter = REGISTRY.get("openaleph")
+    if oa_adapter is not None:
+        try:
+            oa_hits: list[SourceHit] = []
+
+            # Strategy 1: leiCode filter
+            oa_hits = await oa_adapter.fetch_by_lei(lei)  # type: ignore[attr-defined]
+
+            # Strategy 2: opencorporatesUrl filter (GLEIF ocid → full OC URL)
+            if not oa_hits and "ocid" in derived:
+                oa_hits = await oa_adapter.fetch_by_oc_url(derived["ocid"])  # type: ignore[attr-defined]
+
+            # Strategy 3: registrationNumber + jurisdiction for each national ID
+            if not oa_hits:
+                _reg_candidates = [
+                    ("gb", derived.get("gb_coh")),
+                    ("fr", derived.get("siren")),
+                    ("nl", derived.get("kvk_number")),
+                    ("se", derived.get("se_org_number")),
+                    ("ch", derived.get("che_uid")),
+                ]
+                for _jur, _reg in _reg_candidates:
+                    if _reg:
+                        oa_hits = await oa_adapter.fetch_by_registration(_jur, _reg)  # type: ignore[attr-defined]
+                        if oa_hits:
+                            break
+
+            for hit in oa_hits:
+                if hit.is_stub:
+                    continue
+                hits.append(hit)
+                deepened_bundles.append(("openaleph", hit.hit_id))
+        except Exception as exc:  # noqa: BLE001
+            errors["openaleph"] = f"{type(exc).__name__}: {exc}"
 
     # Reconcile + run risk over search-time data.
     links = [link.to_dict() for link in reconcile(hits)]
