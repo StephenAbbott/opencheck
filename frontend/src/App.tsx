@@ -130,15 +130,6 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
     ],
   },
-  {
-    lei: "213800BC4TEGCCQH9V07",
-    name: "Melli Bank PLC",
-    hint: "Iran-linked UK bank",
-    signals: [
-      { code: "SANCTIONED", confidence: "high" },
-      { code: "FATF_BLACK_LIST", confidence: "high" },
-    ],
-  },
 ];
 
 /**
