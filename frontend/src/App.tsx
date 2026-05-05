@@ -38,24 +38,107 @@ interface SourceBucket {
  * bundle on disk (``data/cache/bods_data/``) — clicking any of them
  * resolves entirely offline. The list is small + opinionated; users
  * can paste any other LEI into the input.
+ *
+ * ``signals`` are pre-computed from the cached BODS bundles so the
+ * picker cards show representative risk flags before the user clicks.
+ * Confidence: high = definitively flagged; medium = structurally likely.
  */
+interface ExampleSignal {
+  code: string;
+  confidence: "high" | "medium" | "low";
+}
+
 interface ExampleLei {
   lei: string;
   name: string;
   hint?: string;
+  signals?: ExampleSignal[];
 }
 
 const EXAMPLE_LEIS: ExampleLei[] = [
-  { lei: "4OFD47D73QFJ1T1MOF29", name: "Daily Mail and General Trust", hint: "UK-listed media holding" },
-  { lei: "213800LH1BZH3DI6G760", name: "BP P.L.C.", hint: "UK oil major" },
-  { lei: "253400JT3MQWNDKMJE44", name: "Rosneft", hint: "Russian state oil — sanctions" },
-  { lei: "2138008KTNTDICZU8L25", name: "Bank Saderat PLC", hint: "Iran-linked UK bank — sanctions" },
-  { lei: "2138008RB4WDK7HYYS91", name: "Biffa PLC", hint: "UK waste management" },
-  { lei: "2138002S3XGZ38WN5Q72", name: "Hornsea 1 Limited", hint: "UK offshore wind" },
-  { lei: "213800DBE5Y9ZM58PN63", name: "Care UK Social Care", hint: "UK care provider" },
-  { lei: "213800E11LI1SCETU492", name: "Taqa Bratani Limited", hint: "UAE-owned UK oil & gas" },
-  { lei: "213800AG2V6YE68H5N63", name: "Newcastle United FC", hint: "Saudi-owned football club" },
-  { lei: "213800BC4TEGCCQH9V07", name: "Melli Bank PLC", hint: "Iran-linked UK bank — sanctions" },
+  {
+    lei: "4OFD47D73QFJ1T1MOF29",
+    name: "Daily Mail and General Trust",
+    hint: "UK-listed media holding",
+    signals: [
+      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
+    ],
+  },
+  {
+    lei: "213800LH1BZH3DI6G760",
+    name: "BP P.L.C.",
+    hint: "UK oil major",
+    signals: [
+      { code: "NON_EU_JURISDICTION", confidence: "high" },
+      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
+    ],
+  },
+  {
+    lei: "253400JT3MQWNDKMJE44",
+    name: "Rosneft",
+    hint: "Russian state oil",
+    signals: [
+      { code: "SANCTIONED", confidence: "high" },
+      { code: "FATF_GREY_LIST", confidence: "high" },
+    ],
+  },
+  {
+    lei: "2138008KTNTDICZU8L25",
+    name: "Bank Saderat PLC",
+    hint: "Iran-linked UK bank",
+    signals: [
+      { code: "SANCTIONED", confidence: "high" },
+      { code: "FATF_BLACK_LIST", confidence: "high" },
+    ],
+  },
+  {
+    lei: "2138008RB4WDK7HYYS91",
+    name: "Biffa PLC",
+    hint: "UK waste management",
+    signals: [],
+  },
+  {
+    lei: "2138002S3XGZ38WN5Q72",
+    name: "Hornsea 1 Limited",
+    hint: "UK offshore wind",
+    signals: [
+      { code: "NON_EU_JURISDICTION", confidence: "high" },
+    ],
+  },
+  {
+    lei: "213800DBE5Y9ZM58PN63",
+    name: "Care UK Social Care",
+    hint: "UK care provider",
+    signals: [
+      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
+    ],
+  },
+  {
+    lei: "213800E11LI1SCETU492",
+    name: "Taqa Bratani Limited",
+    hint: "UAE-owned UK oil & gas",
+    signals: [
+      { code: "NON_EU_JURISDICTION", confidence: "high" },
+    ],
+  },
+  {
+    lei: "213800AG2V6YE68H5N63",
+    name: "Newcastle United FC",
+    hint: "Saudi-owned football club",
+    signals: [
+      { code: "NON_EU_JURISDICTION", confidence: "high" },
+      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
+    ],
+  },
+  {
+    lei: "213800BC4TEGCCQH9V07",
+    name: "Melli Bank PLC",
+    hint: "Iran-linked UK bank",
+    signals: [
+      { code: "SANCTIONED", confidence: "high" },
+      { code: "FATF_BLACK_LIST", confidence: "high" },
+    ],
+  },
 ];
 
 /**
@@ -641,9 +724,10 @@ function ExampleLeiPicker({
     <section className="mb-10">
       <SectionLabel>Try a curated example</SectionLabel>
       <p className="text-[13px] leading-[1.7] text-oo-muted mb-4 max-w-2xl">
-        Each subject below has a pre-extracted Open Ownership BODS
-        bundle on disk, so the lookup resolves entirely offline. Use
-        the search box above for any other LEI.
+        Each subject has a pre-extracted Open Ownership BODS bundle on
+        disk, so the lookup resolves entirely offline. Risk flags are
+        pre-computed from the cached bundle. Use the search box above
+        for any other LEI.
       </p>
       <ul
         className="grid gap-3"
@@ -667,6 +751,24 @@ function ExampleLeiPicker({
                   {ex.hint}
                 </div>
               )}
+              {ex.signals && ex.signals.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {ex.signals.map((sig) => (
+                    <RiskChip
+                      key={sig.code}
+                      signal={{
+                        code: sig.code,
+                        confidence: sig.confidence,
+                        source_id: "",
+                        hit_id: "",
+                        summary: RISK_PRESENTATION[sig.code]?.label ?? sig.code,
+                        evidence: {},
+                      }}
+                      compact
+                    />
+                  ))}
+                </div>
+              )}
               <div className="font-mono text-[10.5px] text-oo-blue mt-2 break-all">
                 {ex.lei}
               </div>
@@ -678,66 +780,149 @@ function ExampleLeiPicker({
   );
 }
 
+const HOW_IT_WORKS_STEPS = [
+  {
+    num: "1",
+    accent: "#191d23" as const,
+    title: "Paste a Legal Entity Identifier",
+    body: (
+      <>
+        You supply a 20-character{" "}
+        <a
+          href="https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei"
+          target="_blank"
+          rel="noreferrer"
+          className="text-oo-blue underline underline-offset-2 hover:text-oo-burst"
+        >
+          ISO 17442 LEI
+        </a>{" "}
+        — OpenCheck's single entry point for any legal entity worldwide.
+      </>
+    ),
+    badges: null,
+  },
+  {
+    num: "2",
+    accent: "#3d30d4" as const,
+    title: "GLEIF bridges to national identifiers",
+    body: (
+      <>
+        The LEI record carries{" "}
+        <a
+          href="https://www.gleif.org/en/newsroom/blog/transforming-data-into-opportunities-metric-of-the-month-mapping-network"
+          target="_blank"
+          rel="noreferrer"
+          className="text-oo-blue underline underline-offset-2 hover:text-oo-burst"
+        >
+          registration data
+        </a>{" "}
+        that OpenCheck uses to derive bridging identifiers for each downstream
+        source.
+      </>
+    ),
+    badges: [
+      "UK CH number",
+      "OpenCorporates ID",
+      "SIREN",
+      "KvK number",
+      "SE org number",
+    ],
+  },
+  {
+    num: "3",
+    accent: "#3d30d4" as const,
+    title: "Parallel queries to open sources",
+    body: (
+      <>
+        Each source is queried using the right identifier for that dataset.
+        Results are normalised into{" "}
+        <a
+          href="https://standard.openownership.org/en/0.4.0/"
+          target="_blank"
+          rel="noreferrer"
+          className="text-oo-blue underline underline-offset-2 hover:text-oo-burst"
+        >
+          BODS v0.4
+        </a>{" "}
+        statements.
+      </>
+    ),
+    badges: [
+      "GLEIF",
+      "OpenSanctions",
+      "OpenCorporates",
+      "Companies House",
+      "Bolagsverket",
+      "OpenAleph",
+      "Wikidata",
+      "OpenTender",
+    ],
+  },
+  {
+    num: "4",
+    accent: "#191d23" as const,
+    title: "Risk signals + shareable BODS bundle",
+    body: (
+      <>
+        AMLA CDD RTS–aligned risk signals are computed deterministically across
+        the assembled statements — sanctions, FATF jurisdictions, complex
+        corporate structures, and more. The full bundle is one click away as
+        BODS v0.4 JSON, JSONL, or a ZIP with manifest and license notes.
+      </>
+    ),
+    badges: null,
+  },
+] as const;
+
 function HowItWorks() {
   return (
     <section className="mb-10 bg-white border border-oo-rule rounded-oo p-7">
       <SectionLabel>How it works</SectionLabel>
-      <div className="text-[14px] leading-[1.75] text-oo-ink max-w-3xl space-y-4">
-        <p>
-          You give OpenCheck an LEI and, thanks to{" "}
-          <a
-            href="https://www.gleif.org/en/newsroom/blog/transforming-data-into-opportunities-metric-of-the-month-mapping-network"
-            target="_blank"
-            rel="noreferrer"
-            className="text-oo-blue underline underline-offset-2 hover:text-oo-burst"
-          >
-            LEI mappings
-          </a>
-          , it uses the global identifier to look up details in a{" "}
-          <a
-            href="https://github.com/StephenAbbott/opencheck#sources"
-            target="_blank"
-            rel="noreferrer"
-            className="text-oo-blue underline underline-offset-2 hover:text-oo-burst"
-          >
-            curated set of open datasets
-          </a>{" "}
-          - National corporate registries, GLEIF, OpenSanctions,
-          OpenCorporates, EveryPolitician, and Wikidata - before returning a
-          useful intelligence report.
-        </p>
-        <p>
-          Everything maps into{" "}
-          <a
-            href="https://standard.openownership.org/en/0.4.0/"
-            target="_blank"
-            rel="noreferrer"
-            className="text-oo-blue underline underline-offset-2 hover:text-oo-burst font-medium"
-          >
-            version 0.4 of the Beneficial Ownership Data Standard (BODS)
-          </a>
-          , the cross-source links and risk signals are computed
-          deterministically, and the whole bundle is one click away from a
-          downloadable shareable export.
-        </p>
-        <p>
-          The risk-signal layer mirrors the{" "}
-          <a
-            href="https://www.amla.europa.eu/policy/public-consultations/consultation-draft-rts-customer-due-diligence_en"
-            target="_blank"
-            rel="noreferrer"
-            className="text-oo-blue underline underline-offset-2 hover:text-oo-burst font-medium"
-          >
-            draft customer due diligence regulatory technical standards from
-            the EU's Anti-Money Laundering Authority (AMLA)
-          </a>{" "}
-          conditions for "complex corporate structures" — trust/arrangement,
-          non-EU jurisdiction, nominee, ≥3 ownership layers, plus the
-          composite threshold rule and an advisory mirror of the subjective
-          obfuscation condition. But OpenCheck goes further, signalling risks
-          such as links to blacklisted jurisdictions, leaked data and offshore
-          jurisdictions.
-        </p>
+      <div className="mt-2 max-w-2xl">
+        {HOW_IT_WORKS_STEPS.map((step, i) => {
+          const isLast = i === HOW_IT_WORKS_STEPS.length - 1;
+          return (
+            <div key={step.num} className="flex gap-5">
+              {/* Left rail — circle node + connector line */}
+              <div className="flex flex-col items-center flex-shrink-0" style={{ width: 28 }}>
+                <div
+                  className="flex items-center justify-center rounded-full font-mono text-[11px] font-bold text-white flex-shrink-0"
+                  style={{ width: 28, height: 28, background: step.accent }}
+                >
+                  {step.num}
+                </div>
+                {!isLast && (
+                  <div
+                    className="w-px flex-1 mt-1"
+                    style={{ background: "#e2e5ea", minHeight: 20 }}
+                  />
+                )}
+              </div>
+
+              {/* Right content */}
+              <div className={isLast ? "pb-0" : "pb-6"} style={{ paddingTop: 3 }}>
+                <p className="font-head font-bold text-[14px] text-oo-ink leading-snug">
+                  {step.title}
+                </p>
+                <p className="text-[13px] leading-[1.65] text-oo-muted mt-1.5">
+                  {step.body}
+                </p>
+                {step.badges && (
+                  <div className="flex flex-wrap gap-1.5 mt-2.5">
+                    {step.badges.map((b) => (
+                      <span
+                        key={b}
+                        className="font-mono text-[10.5px] px-2 py-0.5 rounded border border-oo-rule bg-oo-bg text-oo-muted"
+                      >
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
