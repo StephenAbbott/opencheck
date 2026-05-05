@@ -966,18 +966,18 @@ def _gleif_entity_statement(
     # GLEIF records the registration authority in ``entity.registeredAt``:
     #   {"id": "RA000585", "other": null}   # standard scheme
     #   {"id": "RA999999", "other": "My Authority"}   # free-text scheme
-    # OpenOwnership's pipeline preserves the RA code as ``scheme`` so the
-    # identifier can bridge to Companies House, OpenCorporates, etc.
+    # The GLEIF Registration Authorities List (RAL) is not on org-id.guide so
+    # per BODS guidance on real-world entity identifiers we leave ``scheme``
+    # blank and use ``schemeName`` to identify the list instead.
     registered_as = entity_block.get("registeredAs")
     registered_at = entity_block.get("registeredAt") or {}
     ra_id = registered_at.get("id")
-    ra_other = registered_at.get("other")
     if registered_as and ra_id:
         identifiers.append(
             {
                 "id": registered_as,
-                "scheme": ra_id,
-                "schemeName": ra_other or f"GLEIF Registration Authority {ra_id}",
+                "scheme": "",
+                "schemeName": "GLEIF Registration Authorities List",
             }
         )
 

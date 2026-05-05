@@ -70,17 +70,18 @@ def test_map_gleif_subject_has_lei_identifier() -> None:
 
 
 def test_map_gleif_uses_registration_authority_scheme() -> None:
-    """Subject picks up the GLEIF RA code (e.g. RA000585) as identifier scheme."""
+    """Subject includes a GLEIF RAL identifier with blank scheme and correct schemeName."""
     bundle = map_gleif(_gleif_bundle_with_direct_parent())
     subject = next(
         s for s in bundle
         if s["recordType"] == "entity" and s["recordDetails"]["name"] == "BP P.L.C."
     )
     ra = next(
-        i for i in subject["recordDetails"]["identifiers"] if i["scheme"] == "RA000585"
+        i for i in subject["recordDetails"]["identifiers"]
+        if i.get("schemeName") == "GLEIF Registration Authorities List"
     )
     assert ra["id"] == "00102498"
-    assert "Registration Authority" in ra["schemeName"]
+    assert ra["scheme"] == ""
 
 
 def test_map_gleif_resolves_jurisdiction_name() -> None:
