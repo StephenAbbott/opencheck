@@ -813,7 +813,9 @@ def map_gleif(bundle: dict[str, Any]) -> BODSBundle:
         return result
 
     subject_url = f"https://www.gleif.org/lei/{lei}"
-    subject_statement = _gleif_entity_statement(lei, subject_entity_block, subject_url)
+    subject_statement = _gleif_entity_statement(
+        lei, subject_entity_block, subject_url, attrs=subject_attrs
+    )
     result.statements.append(subject_statement)
     subject_sid = subject_statement["statementId"]
 
@@ -850,7 +852,7 @@ def _gleif_parent_statements(
 
     parent_url = f"https://www.gleif.org/lei/{parent_lei}"
     parent_statement = _gleif_entity_statement(
-        parent_lei, parent_entity_block, parent_url
+        parent_lei, parent_entity_block, parent_url, attrs=parent_attrs
     )
     rel = make_relationship_statement(
         source_id="gleif",
@@ -927,8 +929,26 @@ def _gleif_exception_statements(
 
 
 def _gleif_entity_statement(
-    lei: str, entity_block: dict[str, Any], source_url: str
+    lei: str,
+    entity_block: dict[str, Any],
+    source_url: str,
+    *,
+    attrs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Build a BODS entity statement from a GLEIF Level 1 entity block.
+
+    ``attrs`` is the full ``record.attributes`` dict (one level above
+    ``entity``). It carries the cross-reference identifiers that GLEIF
+    publishes via its LEI Mapping programme:
+
+    * ``ocid``  — OpenCorporates identifier (e.g. ``"gb/00102498"``)
+    * ``qcc``   — Quick Company Comparison code (e.g. ``"QGBVC89DTN"``)
+    * ``mic``   — Market Identifier Code ISO 10383 (e.g. ``"XLON"``)
+    * ``bic``   — Bank Identifier Code ISO 9362 (e.g. ``"BARCGB22"``)
+
+    These are mapped to BODS identifiers when non-null, enabling
+    downstream adapters to use them for additional cross-source queries.
+    """
     legal_name = (entity_block.get("legalName") or {}).get("name") or f"LEI {lei}"
     jurisdiction_code = entity_block.get("jurisdiction")
     jurisdiction: tuple[str, str] | None = None
@@ -960,6 +980,50 @@ def _gleif_entity_statement(
                 "schemeName": ra_other or f"GLEIF Registration Authority {ra_id}",
             }
         )
+
+    # GLEIF LEI Mapping cross-reference identifiers (from ``record.attributes``).
+    # Each is only included when the GLEIF API returns a non-null value.
+    if attrs:
+        ocid = attrs.get("ocid")
+        if ocid:
+            identifiers.append(
+                {
+                    "id": ocid,
+                    "scheme": "OPENCORPORATES",
+                    "schemeName": "OpenCorporates company identifier",
+                    "uri": f"https://opencorporates.com/companies/{ocid}",
+                }
+            )
+
+        qcc = attrs.get("qcc")
+        if qcc:
+            identifiers.append(
+                {
+                    "id": qcc,
+                    "scheme": "GLEIF-QCC",
+                    "schemeName": "GLEIF Quick Company Comparison identifier",
+                }
+            )
+
+        mic = attrs.get("mic")
+        if mic:
+            identifiers.append(
+                {
+                    "id": mic,
+                    "scheme": "ISO-10383",
+                    "schemeName": "Market Identifier Code (ISO 10383)",
+                }
+            )
+
+        bic = attrs.get("bic")
+        if bic:
+            identifiers.append(
+                {
+                    "id": bic,
+                    "scheme": "ISO-9362",
+                    "schemeName": "Bank Identifier Code (ISO 9362)",
+                }
+            )
 
     addresses = _gleif_addresses(entity_block)
 

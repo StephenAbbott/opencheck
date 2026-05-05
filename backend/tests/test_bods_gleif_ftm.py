@@ -349,6 +349,148 @@ def test_map_gleif_exception_both_old_and_new_field_names_work() -> None:
 
 
 # ---------------------------------------------------------------------
+# GLEIF LEI Mapping cross-reference identifiers (ocid, qcc, mic, bic)
+# ---------------------------------------------------------------------
+
+
+def _gleif_bundle_with_lei_mappings() -> dict:
+    """Bundle that includes all four GLEIF LEI Mapping identifiers."""
+    return {
+        "lei": "549300MLH00Y3BN4HD49",
+        "record": {
+            "id": "549300MLH00Y3BN4HD49",
+            "attributes": {
+                "lei": "549300MLH00Y3BN4HD49",
+                "entity": {
+                    "legalName": {"name": "Ericsson AB"},
+                    "jurisdiction": "SE",
+                    "registeredAs": "556056-6258",
+                    "registeredAt": {"id": "RA000544", "other": None},
+                },
+                "ocid": "se/556056-6258",
+                "qcc": "QSEVC89DTN",
+                "mic": "XSTO",
+                "bic": "SWEDSESS",
+            },
+        },
+        "direct_parent": None,
+        "ultimate_parent": None,
+    }
+
+
+def _gleif_bundle_with_null_lei_mappings() -> dict:
+    """Bundle where all four GLEIF LEI Mapping fields are null."""
+    return {
+        "lei": "213800NULLNULLNULLXX",
+        "record": {
+            "id": "213800NULLNULLNULLXX",
+            "attributes": {
+                "lei": "213800NULLNULLNULLXX",
+                "entity": {
+                    "legalName": {"name": "No Mappings Ltd"},
+                    "jurisdiction": "GB",
+                },
+                "ocid": None,
+                "qcc": None,
+                "mic": None,
+                "bic": None,
+            },
+        },
+        "direct_parent": None,
+        "ultimate_parent": None,
+    }
+
+
+def _subject_entity(bundle: dict) -> dict:
+    """Return the subject entity statement from a mapped GLEIF bundle."""
+    stmts = list(map_gleif(bundle))
+    return next(s for s in stmts if s["recordType"] == "entity")
+
+
+def test_gleif_lei_mapping_ocid_included() -> None:
+    """ocid present in attributes → OPENCORPORATES identifier in entity statement."""
+    subj = _subject_entity(_gleif_bundle_with_lei_mappings())
+    oc = next(
+        (i for i in subj["recordDetails"]["identifiers"] if i["scheme"] == "OPENCORPORATES"),
+        None,
+    )
+    assert oc is not None
+    assert oc["id"] == "se/556056-6258"
+    assert "OpenCorporates" in oc["schemeName"]
+    assert oc["uri"] == "https://opencorporates.com/companies/se/556056-6258"
+
+
+def test_gleif_lei_mapping_qcc_included() -> None:
+    """qcc present in attributes → GLEIF-QCC identifier in entity statement."""
+    subj = _subject_entity(_gleif_bundle_with_lei_mappings())
+    qcc = next(
+        (i for i in subj["recordDetails"]["identifiers"] if i["scheme"] == "GLEIF-QCC"),
+        None,
+    )
+    assert qcc is not None
+    assert qcc["id"] == "QSEVC89DTN"
+
+
+def test_gleif_lei_mapping_mic_included() -> None:
+    """mic present in attributes → ISO-10383 identifier in entity statement."""
+    subj = _subject_entity(_gleif_bundle_with_lei_mappings())
+    mic = next(
+        (i for i in subj["recordDetails"]["identifiers"] if i["scheme"] == "ISO-10383"),
+        None,
+    )
+    assert mic is not None
+    assert mic["id"] == "XSTO"
+    assert "Market Identifier" in mic["schemeName"]
+
+
+def test_gleif_lei_mapping_bic_included() -> None:
+    """bic present in attributes → ISO-9362 identifier in entity statement."""
+    subj = _subject_entity(_gleif_bundle_with_lei_mappings())
+    bic = next(
+        (i for i in subj["recordDetails"]["identifiers"] if i["scheme"] == "ISO-9362"),
+        None,
+    )
+    assert bic is not None
+    assert bic["id"] == "SWEDSESS"
+    assert "Bank Identifier" in bic["schemeName"]
+
+
+def test_gleif_lei_mapping_null_values_excluded() -> None:
+    """Null ocid/qcc/mic/bic must not produce empty identifier entries."""
+    subj = _subject_entity(_gleif_bundle_with_null_lei_mappings())
+    schemes = {i["scheme"] for i in subj["recordDetails"]["identifiers"]}
+    assert "OPENCORPORATES" not in schemes
+    assert "GLEIF-QCC" not in schemes
+    assert "ISO-10383" not in schemes
+    assert "ISO-9362" not in schemes
+
+
+def test_gleif_lei_mapping_absent_attrs_safe() -> None:
+    """Bundle with no attrs key at all (e.g. older cached bundles) must not raise."""
+    bundle = {
+        "lei": "213800NOATTRSXXXXXXX",
+        "record": {
+            "id": "213800NOATTRSXXXXXXX",
+            "attributes": {
+                "lei": "213800NOATTRSXXXXXXX",
+                "entity": {"legalName": {"name": "No Attrs Co"}, "jurisdiction": "DE"},
+                # no ocid/qcc/mic/bic keys at all
+            },
+        },
+        "direct_parent": None,
+        "ultimate_parent": None,
+    }
+    stmts = list(map_gleif(bundle))
+    assert any(s["recordType"] == "entity" for s in stmts)
+
+
+def test_gleif_lei_mapping_passes_validator() -> None:
+    """Full bundle with all four mappings must pass the BODS shape validator."""
+    issues = validate_shape(map_gleif(_gleif_bundle_with_lei_mappings()))
+    assert issues == [], issues
+
+
+# ---------------------------------------------------------------------
 # FtM — OpenSanctions
 # ---------------------------------------------------------------------
 
