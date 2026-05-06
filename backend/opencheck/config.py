@@ -112,6 +112,12 @@ class Settings(BaseSettings):
     bolagsverket_api_key: str | None = Field(default=None, alias="BOLAGSVERKET_API_KEY")
     bolagsverket_client_secret: str | None = Field(default=None, alias="BOLAGSVERKET_CLIENT_SECRET")
 
+    # --- Estonian e-Business Register (ariregister) ---
+    # Pre-built SQLite index. Build with: python scripts/extract_ariregister.py
+    # Source: https://avaandmed.ariregister.rik.ee/en/downloading-open-data
+    # License: CC BY 4.0 — no API key required, only the local DB file.
+    ariregister_db_file: str | None = Field(default=None, alias="ARIREGISTER_DB_FILE")
+
     # --- Optional LLM ---
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
 

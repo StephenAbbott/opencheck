@@ -65,10 +65,17 @@ docker-compose.override.yml
 data/cache/live/
 data/cache/*.tmp
 
+# Pre-built source adapter databases (large local files, built by scripts/extract_*.py)
+data/*.db
+
 # Exports generated at runtime
 exports/
 *.export.json
 *.export.zip
+
+# ---- TypeScript build info ----
+tsconfig.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
 
 # ---- Logs ----
 *.log
