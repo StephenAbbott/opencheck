@@ -95,7 +95,11 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     lei: "2138008RB4WDK7HYYS91",
     name: "Biffa PLC",
     hint: "UK waste management",
-    signals: [],
+    signals: [
+      { code: "NON_EU_JURISDICTION", confidence: "high" },
+      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
+      { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
+    ],
   },
   {
     lei: "2138002S3XGZ38WN5Q72",
