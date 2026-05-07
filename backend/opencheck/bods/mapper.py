@@ -106,6 +106,7 @@ def make_entity_statement(
     identifiers: Iterable[dict[str, str]] = (),
     founding_date: str | None = None,
     addresses: Iterable[dict[str, str]] = (),
+    alternate_names: Iterable[str] = (),
     entity_type: str = "registeredEntity",
     source_url: str | None = None,
 ) -> dict[str, Any]:
@@ -132,6 +133,9 @@ def make_entity_statement(
     addresses = list(addresses)
     if addresses:
         record_details["addresses"] = addresses
+    alternate_names = list(alternate_names)
+    if alternate_names:
+        record_details["alternateNames"] = alternate_names
 
     return {
         "statementId": statement_id,
@@ -1028,6 +1032,19 @@ def _gleif_entity_statement(
 
     addresses = _gleif_addresses(entity_block)
 
+    # Collect alternate names from otherNames and transliteratedOtherNames,
+    # deduplicating and excluding the primary legal name.
+    seen_names: set[str] = {legal_name}
+    alternate_names: list[str] = []
+    for name_block in (
+        *(entity_block.get("otherNames") or []),
+        *(entity_block.get("transliteratedOtherNames") or []),
+    ):
+        n = (name_block.get("name") or "").strip()
+        if n and n not in seen_names:
+            seen_names.add(n)
+            alternate_names.append(n)
+
     return make_entity_statement(
         source_id="gleif",
         local_id=lei,
@@ -1035,6 +1052,7 @@ def _gleif_entity_statement(
         jurisdiction=jurisdiction,
         identifiers=identifiers,
         addresses=addresses,
+        alternate_names=alternate_names,
         source_url=source_url,
     )
 
