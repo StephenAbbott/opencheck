@@ -1640,11 +1640,15 @@ _EE_OFFICER_ROLE_MAP: dict[str, tuple[str, str]] = {
     "FV":     ("seniorManagingOfficial",   "Fund manager (fondivalitseja)"),
 }
 
-_EE_BO_CONTROL_MAP: dict[str, str] = {
-    "O": "Direct participation",
-    "K": "Indirect participation",
-    "H": "Through voting rights",
-    "M": "Other means",
+# Maps Estonian BO control-mechanism code → (BODS interest type, human-readable detail).
+# BODS v0.4 does not have a "beneficialOwner" interest type; BO is expressed via
+# beneficialOwnershipOrControl=True on a typed interest.
+_EE_BO_CONTROL_MAP: dict[str, tuple[str, str]] = {
+    "O": ("shareholding",            "Direct participation"),
+    "K": ("otherInfluenceOrControl", "Indirect participation"),
+    "H": ("votingRights",            "Through voting rights"),
+    "M": ("otherInfluenceOrControl", "Other means"),
+    "F": ("otherInfluenceOrControl", "Other means of control or influence"),
 }
 
 
@@ -1927,15 +1931,21 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         start_date = _ee_date(bo.get("algus_kpv"))
         end_date = _ee_date(bo.get("lopp_kpv"))
         control_code = bo.get("kontrolli_teostamise_viis") or ""
-        control_label = _EE_BO_CONTROL_MAP.get(control_code, "")
+        interest_type, control_label = _EE_BO_CONTROL_MAP.get(
+            control_code, ("otherInfluenceOrControl", "")
+        )
 
-        interests: list[dict[str, Any]] = [{"type": "beneficialOwner"}]
+        interest: dict[str, Any] = {
+            "type": interest_type,
+            "beneficialOwnershipOrControl": True,
+        }
         if control_label:
-            interests[0]["details"] = control_label
+            interest["details"] = control_label
         if start_date:
-            interests[0]["startDate"] = start_date
+            interest["startDate"] = start_date
         if end_date:
-            interests[0]["endDate"] = end_date
+            interest["endDate"] = end_date
+        interests: list[dict[str, Any]] = [interest]
 
         first = (bo.get("eesnimi") or "").strip()
         last = (bo.get("nimi") or "").strip()
