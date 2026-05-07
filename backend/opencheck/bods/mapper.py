@@ -738,6 +738,39 @@ def _country_code(name: str | None) -> str:
 #   interest ``details`` carry the GLEIF exception reason — so companies
 #   that report "my parent is a natural person" don't silently disappear.
 
+# ---------------------------------------------------------------------------
+# RA code → org-id.guide scheme code
+#
+# Maps GLEIF Registration Authority codes to org-id.guide list identifiers so
+# that national company numbers are emitted with a proper ``scheme`` in BODS
+# entity statements rather than with ``scheme: ""``.
+#
+# Source of truth for RA codes: https://api.gleif.org/api/v1/registration-authorities/<RA>
+# Source of truth for org-id codes: https://org-id.guide
+#
+# Extend this dict as further jurisdictions are confirmed.  Unknown RA codes
+# fall through to a blank scheme with schemeName "GLEIF Registration Authorities List".
+# ---------------------------------------------------------------------------
+_GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
+    # Estonia — Centre of Registers and Information Systems (RIK)
+    "RA000181": ("EE-RIK", "Centre of Registers and Information Systems (Estonia)"),
+    # France — Sirene (INSEE)
+    "RA000189": ("FR-SIREN", "Sirene — Institut National de la Statistique et des Études Économiques (France)"),
+    # Netherlands — Kamer van Koophandel (KvK)
+    "RA000463": ("NL-KVK", "Netherlands Chamber of Commerce (KvK)"),
+    # Sweden — Bolagsverket (Swedish Companies Registration Office)
+    "RA000544": ("SE-ON", "Swedish Companies Registration Office (Bolagsverket)"),
+    # Switzerland — Federal Statistical Office UID Register (uid.admin.ch)
+    "RA000548": ("CH-FDJP", "Swiss Commercial Register (Federal Office of Justice)"),
+    # Switzerland — Handelsregister / ZEFIX (Federal Office of Justice)
+    "RA000549": ("CH-FDJP", "Swiss Commercial Register (Federal Office of Justice)"),
+    # United Kingdom — Companies House (England & Wales)
+    "RA000585": ("GB-COH", "Companies House"),
+    # United Kingdom — Companies House (Northern Ireland)
+    "RA000586": ("GB-COH", "Companies House"),
+    # RA000591 = The Pensions Regulator (UK) — not a company registry; no org-id code.
+}
+
 # Exception reason → (interested_party_type, person_type or entity_type,
 #                    human-readable details).
 _GLEIF_EXCEPTION_REASONS = {
@@ -969,20 +1002,21 @@ def _gleif_entity_statement(
     ]
 
     # GLEIF records the registration authority in ``entity.registeredAt``:
-    #   {"id": "RA000585", "other": null}   # standard scheme
+    #   {"id": "RA000585", "other": null}   # standard scheme (RA code)
     #   {"id": "RA999999", "other": "My Authority"}   # free-text scheme
-    # The GLEIF Registration Authorities List (RAL) is not on org-id.guide so
-    # per BODS guidance on real-world entity identifiers we leave ``scheme``
-    # blank and use ``schemeName`` to identify the list instead.
+    # Where the RA code maps to an org-id.guide list we use the proper scheme.
+    # For unknown RA codes we leave ``scheme`` blank and use ``schemeName``
+    # "GLEIF Registration Authorities List" as a fallback.
     registered_as = entity_block.get("registeredAs")
     registered_at = entity_block.get("registeredAt") or {}
     ra_id = registered_at.get("id")
     if registered_as and ra_id:
+        org_id_scheme, org_id_name = _GLEIF_RA_TO_ORG_ID.get(ra_id, ("", "GLEIF Registration Authorities List"))
         identifiers.append(
             {
                 "id": registered_as,
-                "scheme": "",
-                "schemeName": "GLEIF Registration Authorities List",
+                "scheme": org_id_scheme,
+                "schemeName": org_id_name,
             }
         )
 
