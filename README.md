@@ -8,7 +8,7 @@ Try the demo version at https://opencheck.onrender.com/
 
 ## What is OpenCheck?
 
-You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, OpenCorporates ID, Wikidata Q-ID, etc.), and uses those bridges to fan out across national corporate registries (UK, France, the Netherlands, Sweden, Switzerland), OpenCorporates, OpenSanctions, EveryPolitician, Wikidata, and OpenTender. 
+You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, Estonian registry code, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, OpenCorporates ID, Wikidata Q-ID, etc.), and uses those bridges to fan out across national corporate registries (UK, Estonia, France, the Netherlands, Sweden, Switzerland), OpenCorporates, OpenSanctions, EveryPolitician, Wikidata, and OpenTender. 
 
 Everything maps into [version 0.4 of the Beneficial Ownership Data Standard (BODS)](https://standard.openownership.org/en/0.4.0/), the cross-source links + risk signals are computed deterministically, and the whole bundle is one click away from a downloadable shareable export.
 
@@ -43,6 +43,7 @@ OpenCheck has shipped through twenty-two phases (latest commit on `main` is the 
 | 20 | UI: risk signals visible on every source card header without clicking Go deeper; deepen panel de-duplicated |
 | 21 | National corporate registry adapters — INPI (France, `fr_siren`), KvK (Netherlands, `nl_kvk`), Bolagsverket (Sweden, `se_org_number`), Zefix (Switzerland, `ch_uid`) — each with full BODS v0.4 officer mapping |
 | 22 | ICIJ Offshore Leaks name cross-check — batched reconciliation API, `OFFSHORE_LEAKS` signals scoped to matching BODS statement; no API key required |
+| 23 | Estonian e-Business Register (Ariregister) adapter — full open data: entity basics, shareholders, officers, beneficial owners, all mapped to BODS v0.4; national registry code emitted with `EE-RIK` scheme |
 
 Test suite: 429 backend tests. Frontend type-checks clean.
 
@@ -89,7 +90,8 @@ Paste a 20-character ISO 17442 LEI — for example `213800LH1BZH3DI6G760` (BP) o
 3. Looks up the **Wikidata Q-ID** via SPARQL on property `P1278`.
 4. Dispatches to every other adapter using whichever identifier they understand:
    - **UK Companies House** — direct fetch by `gb_coh` when jurisdiction = GB. The Open Ownership processed UK PSC bundle (`data/cache/bods_data/uk/<GB-COH>.jsonl`) is the canonical answer when present; otherwise falls back to the live API.
-   - **INPI (France)** — fetched by `fr_siren` (derived from GLEIF RA code `R0006200`); delivers company profile and officers as BODS statements via the Registre National des Entreprises API.
+   - **Ariregister (Estonia)** — fetched by the Estonian registry code (derived from GLEIF RA code `RA000181`); delivers entity basics, shareholders, officers, and beneficial owners from a local SQLite database built from the e-Business Register open data bulk files. Activated when `ARIREGISTER_DB_FILE` is set.
+   - **INPI (France)** — fetched by `fr_siren` (derived from GLEIF RA code `RA000189`); delivers company profile and officers as BODS statements via the Registre National des Entreprises API.
    - **KvK (Netherlands)** — fetched by `nl_kvk` (derived from GLEIF RA code `RA000463`); delivers company details and authorised representatives via the Kamer van Koophandel Handelsregister API.
    - **Bolagsverket (Sweden)** — fetched by `se_org_number` (derived from GLEIF RA code `RA000544`); delivers company profile and board-level officers via the Swedish Companies Registration Office API.
    - **Zefix (Switzerland)** — fetched by `ch_uid` (derived from GLEIF RA code `RA000412`); delivers company profile and authorised signatories from the Zefix central business name index.
@@ -121,12 +123,13 @@ python scripts/extract_bods_subgraphs.py \
 
 ## Sources
 
-Twelve active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
+Thirteen active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
 
 | ID | Name | License | Entry point | Description |
 |----|------|---------|-------------|-------------|
 | `gleif` | GLEIF | CC0-1.0 | LEI | Legal entity information from the Global Legal Entity Identifier Foundation |
 | `companies_house` | UK Companies House | OGL-3.0 | `gb_coh` from GLEIF | Legal and beneficial ownership information from the UK corporate registry |
+| `ariregister` | Estonian e-Business Register (Ariregister) | Open (PSI) | registry code from GLEIF (`RA000181`) | Estonian commercial register — entity basics, shareholders, officers, and beneficial owners from the RIK open data bulk files. Activated via `ARIREGISTER_DB_FILE` |
 | `inpi` | INPI — Registre National des Entreprises | Open (PSI) | `fr_siren` from GLEIF | French national business registry — company profile and officers via the RNE API |
 | `kvk` | KvK — Handelsregister | Open (PSI) | `nl_kvk` from GLEIF | Netherlands Chamber of Commerce commercial register — company details and authorised representatives |
 | `bolagsverket` | Bolagsverket | Open (PSI) | `se_org_number` from GLEIF | Swedish Companies Registration Office — company profile and board-level officers |
@@ -226,6 +229,7 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 | `ZEFIX_PASSWORD` | Zefix (Switzerland) API password. |
 | `OPENCORPORATES_API_KEY` | OpenCorporates API key — unlocks live company + officer data via the OC REST API. |
 | `OPENCORPORATES_RELATIONSHIPS_FILE` | Path to the OC Relationships bulk CSV file. When set, network relationship data is read from this file instead of the live `/network` API endpoint (which requires a premium tier). |
+| `ARIREGISTER_DB_FILE` | Path to the SQLite database built by `scripts/extract_ariregister.py`. When set, the Ariregister adapter provides registry-code-keyed lookup of Estonian entities, shareholders, officers, and beneficial owners from the RIK open data bulk files. |
 | `BRIGHTQUERY_DB_FILE` | Path to the SQLite database built by `scripts/extract_brightquery.py`. When set, the BrightQuery adapter provides LEI-keyed lookup of US entities and their executives from OpenData.org bulk data. |
 | `OPENSANCTIONS_API_KEY` | OpenSanctions API key (also unlocks the EveryPolitician PEPs dataset). |
 | `OPENALEPH_API_KEY` | OpenAleph API key (optional — unlocks restricted collections). |
@@ -272,6 +276,7 @@ opencheck/
       config.py           Pydantic settings; env vars listed above
     scripts/
       extract_bods_subgraphs.py    Walk local OO SQLite dumps → per-LEI BODS bundles
+      extract_ariregister.py       Walk Estonian e-Business Register bulk files → SQLite DB
       extract_brightquery.py       Walk BrightQuery bulk files → SQLite DB indexed by LEI
       diagnose_brightquery.py      Inspect BrightQuery file format before extraction
     tests/                pytest suite (429 tests)
