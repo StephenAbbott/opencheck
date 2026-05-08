@@ -210,7 +210,7 @@ def test_parse_filing_xml_returns_none_on_missing_structure():
 
 async def test_search_returns_company_hits(httpx_mock: HTTPXMock) -> None:
     search_url = (
-        f"{_BROWSE}?company=Rush+Street+Interactive%2C+Inc.&CIK=&type=SCHEDULE+13D"
+        f"{_BROWSE}?company=Rush+Street+Interactive%2C+Inc.&CIK=&type="
         f"&dateb=&owner=include&count=20&search_text=&action=getcompany&output=atom"
     )
     httpx_mock.add_response(url=search_url, text=_COMPANY_SEARCH_ATOM)
@@ -234,19 +234,19 @@ async def test_search_returns_empty_for_person_kind() -> None:
 async def test_fetch_parses_filings(httpx_mock: HTTPXMock) -> None:
     subject_cik = "1793659"
 
-    # Atom feed for SCHEDULE 13D
+    # Atom feed for SC 13D
     httpx_mock.add_response(
         url=(
             f"{_BROWSE}?action=getcompany&CIK={subject_cik}"
-            f"&type=SCHEDULE+13D&dateb=&owner=include&count=20&search_text=&output=atom"
+            f"&type=SC+13D&dateb=&owner=include&count=20&search_text=&output=atom"
         ),
         text=_FILINGS_ATOM_13D,
     )
-    # Atom feed for SCHEDULE 13G (empty)
+    # Atom feed for SC 13G (empty)
     httpx_mock.add_response(
         url=(
             f"{_BROWSE}?action=getcompany&CIK={subject_cik}"
-            f"&type=SCHEDULE+13G&dateb=&owner=include&count=20&search_text=&output=atom"
+            f"&type=SC+13G&dateb=&owner=include&count=20&search_text=&output=atom"
         ),
         text=_FILINGS_ATOM_13G,
     )
@@ -312,11 +312,11 @@ async def test_fetch_deduplicates_by_reporter_cik(httpx_mock: HTTPXMock) -> None
     )
 
     httpx_mock.add_response(
-        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SCHEDULE+13D&dateb=&owner=include&count=20&search_text=&output=atom",
+        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13D&dateb=&owner=include&count=20&search_text=&output=atom",
         text=older_filing_atom,
     )
     httpx_mock.add_response(
-        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SCHEDULE+13G&dateb=&owner=include&count=20&search_text=&output=atom",
+        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13G&dateb=&owner=include&count=20&search_text=&output=atom",
         text=newer_filing_atom,
     )
     # Older filing XML

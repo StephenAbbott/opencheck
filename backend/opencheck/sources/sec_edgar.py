@@ -342,7 +342,7 @@ class SecEdgarAdapter(SourceAdapter):
             return self._stub_search(query)
 
         url = (
-            f"{_BROWSE_BASE}?company={quote(query)}&CIK=&type=SCHEDULE+13D"
+            f"{_BROWSE_BASE}?company={quote(query)}&CIK=&type="
             f"&dateb=&owner=include&count=20&search_text=&action=getcompany&output=atom"
         )
         atom_xml = await self._get_text(url, cache_key=cache_key)
@@ -410,7 +410,7 @@ class SecEdgarAdapter(SourceAdapter):
         """
         raw_records: list[dict[str, Any]] = []
 
-        for form_slug in ("SCHEDULE+13D", "SCHEDULE+13G"):
+        for form_slug in ("SC+13D", "SC+13G"):
             url = (
                 f"{_BROWSE_BASE}?action=getcompany&CIK={subject_cik}"
                 f"&type={form_slug}&dateb=&owner=include"
