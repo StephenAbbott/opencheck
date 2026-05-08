@@ -965,7 +965,9 @@ async def lookup(
     # SEC EDGAR — search by legal name for US-jurisdiction entities.
     # 13D/13G filings are mandatory XML since December 2024 and expose
     # major shareholders (>5 %) of US-listed companies.
-    if jurisdiction.upper() == "US" and legal_name:
+    # GLEIF jurisdiction codes for US entities are state-level (e.g. US-DE,
+    # US-CA) so we match on the "US" prefix rather than an exact string.
+    if jurisdiction.upper().startswith("US") and legal_name:
         se_adapter = REGISTRY.get("sec_edgar")
         if se_adapter and se_adapter.info.live_available:
             try:
