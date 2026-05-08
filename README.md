@@ -8,7 +8,7 @@ Try the demo version at https://opencheck.onrender.com/
 
 ## What is OpenCheck?
 
-You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, Estonian registry code, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, OpenCorporates ID, Wikidata Q-ID, etc.), and uses those bridges to fan out across national corporate registries (UK, Estonia, France, the Netherlands, Sweden, Switzerland), OpenCorporates, OpenSanctions, EveryPolitician, Wikidata, and OpenTender. 
+You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, Estonian registry code, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, OpenCorporates ID, Wikidata Q-ID, etc.), and uses those bridges to fan out across national corporate registries (UK, Estonia, France, the Netherlands, Sweden, Switzerland), OpenCorporates, SEC EDGAR (major shareholders of US-listed companies), OpenSanctions, EveryPolitician, Wikidata, and OpenTender. 
 
 Everything maps into [version 0.4 of the Beneficial Ownership Data Standard (BODS)](https://standard.openownership.org/en/0.4.0/), the cross-source links + risk signals are computed deterministically, and the whole bundle is one click away from a downloadable shareable export.
 
@@ -44,8 +44,9 @@ OpenCheck has shipped through twenty-two phases (latest commit on `main` is the 
 | 21 | National corporate registry adapters — INPI (France, `fr_siren`), KvK (Netherlands, `nl_kvk`), Bolagsverket (Sweden, `se_org_number`), Zefix (Switzerland, `ch_uid`) — each with full BODS v0.4 officer mapping |
 | 22 | ICIJ Offshore Leaks name cross-check — batched reconciliation API, `OFFSHORE_LEAKS` signals scoped to matching BODS statement; no API key required |
 | 23 | Estonian e-Business Register (Ariregister) adapter — full open data: entity basics, shareholders, officers, beneficial owners, all mapped to BODS v0.4; national registry code emitted with `EE-RIK` scheme |
+| 24 | SEC EDGAR Schedule 13D/13G adapter — major shareholders (>5 %) of US-listed companies from mandatory XML filings (December 2024 onward); no API key required |
 
-Test suite: 429 backend tests. Frontend type-checks clean.
+Test suite: 465 backend tests. Frontend type-checks clean.
 
 ## Quick start
 
@@ -97,6 +98,7 @@ Paste a 20-character ISO 17442 LEI — for example `213800LH1BZH3DI6G760` (BP) o
    - **Zefix (Switzerland)** — fetched by `ch_uid` (derived from GLEIF RA code `RA000412`); delivers company profile and authorised signatories from the Zefix central business name index.
    - **OpenCorporates** — fetched by `ocid` (e.g. `gb/00102498`), a field GLEIF returns on Level 1 records; delivers company profile, current officers, and network relationships (from the live API or the OC Relationships bulk file) as BODS statements.
    - **BrightQuery** — direct fetch by LEI from a local SQLite database (built from OpenData.org bulk data). Covers 185,000+ US entities; adds executive contacts as `otherInfluenceOrControl` relationships. Activated when `BRIGHTQUERY_DB_FILE` is set.
+   - **SEC EDGAR** — for US-jurisdiction entities, searches by legal name via the EDGAR company-search atom feed to find the subject company's CIK, then retrieves the most recent Schedule 13D and 13G filings (major shareholders reporting >5 % of any registered equity class, mandatory XML format since December 2024) as BODS statements. No API key required.
    - **OpenSanctions / OpenTender** — search by the LEI string.
    - **Wikidata** — direct SPARQL fetch on the resolved Q-ID.
 5. Maps each source's payload into BODS v0.4 statements, runs the cross-source reconciler, runs the risk-signal service, **cross-checks every related person and entity in the BODS bundle against OpenSanctions + EveryPolitician by name** — fuzzy-matched with optional birth-year compatibility — to surface scoped `RELATED_PEP` / `RELATED_SANCTIONED` signals, and **cross-checks all names against the ICIJ Offshore Leaks reconciliation API** to surface `OFFSHORE_LEAKS` signals for any Panama Papers / Pandora Papers / Paradise Papers matches.
@@ -123,7 +125,7 @@ python scripts/extract_bods_subgraphs.py \
 
 ## Sources
 
-Thirteen active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
+Fourteen active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
 
 | ID | Name | License | Entry point | Description |
 |----|------|---------|-------------|-------------|
@@ -136,6 +138,7 @@ Thirteen active adapters, each implementing the same `SourceAdapter` protocol (`
 | `zefix` | Zefix | Open (PSI) | `ch_uid` from GLEIF | Switzerland central business name index — company profile and authorised signatories |
 | `opencorporates` | OpenCorporates | OC Terms | `ocid` from GLEIF | Global company database — company profile, current officers, and network relationships as BODS statements |
 | `brightquery` | BrightQuery (OpenData.org) | ODC-By | LEI | Open US company and executive data from BrightQuery, covering 185,000+ US entities with LEIs. Activated via `BRIGHTQUERY_DB_FILE` (see below) |
+| `sec_edgar` | SEC EDGAR (Schedule 13D/13G) | Public Domain | legal name search for US-jurisdiction entities | Major shareholders (>5 %) of US-listed companies from mandatory Schedule 13D and 13G XML filings. No API key required; coverage limited to filings from December 2024 onward |
 | `opensanctions` | OpenSanctions | CC BY-NC 4.0 | LEI search | The open-source database of sanctions, watchlists, and politically exposed persons |
 | `everypolitician` | EveryPolitician | CC BY-NC 4.0 | LEI search | Global database of political office-holders (served via OpenSanctions PEPs dataset) |
 | `wikidata` | Wikidata | CC0-1.0 | Q-ID via SPARQL | A free and open knowledge base that can be read and edited by both humans and machines |
@@ -202,7 +205,7 @@ A secondary token-overlap similarity check (≥ 0.45 Jaccard) guards against fal
 | Endpoint | Description |
 |----------|-------------|
 | `GET /health` | Liveness probe. |
-| `GET /sources` | Inventory of the 12 source adapters with license, description, live status. |
+| `GET /sources` | Inventory of the 14 source adapters with license, description, live status. |
 | `GET /lookup?lei=<LEI>` | **Primary entry point**. LEI-anchored synthesis. |
 | `GET /search?q=<q>&kind=<entity\|person>` | Free-text fan-out search. Power-user / debugging. |
 | `GET /stream?q=<q>&kind=<...>` | Same fan-out, streamed as SSE. |
@@ -243,7 +246,7 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 
 ```bash
 cd backend
-uv run pytest             # 429 tests, ~5s
+uv run pytest             # 465 tests, ~5s
 ```
 
 Frontend type check:
@@ -262,10 +265,11 @@ opencheck/
   backend/
     opencheck/
       app.py              FastAPI entry — /lookup, /search, /report, /export, /deepen, /stream
-      sources/            One module per source adapter (13 implemented; 12 active in REGISTRY)
+      sources/            One module per source adapter (14 implemented; 14 active in REGISTRY)
         brightquery.py    BrightQuery / OpenData.org — LEI-keyed US entity + executive data
         opencorporates.py OpenCorporates — company profile, officers, network relationships
         oc_relationships.py  OC Relationships bulk-file lookup (indexed by jurisdiction/number)
+        sec_edgar.py      SEC EDGAR — Schedule 13D/13G major-shareholder filings for US-listed companies
       bods/               BODS v0.4 mappers + validator (full 24-code interestType codelist)
       bods_data.py        Open Ownership processed-bundle override layer (Phase 10)
       cross_check.py      Related-party name cross-check against OS + EveryPolitician (Phase 11)
