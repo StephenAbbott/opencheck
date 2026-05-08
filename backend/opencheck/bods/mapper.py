@@ -772,6 +772,78 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     # RA000591 = The Pensions Regulator (UK) — not a company registry; no org-id code.
 }
 
+# ---------------------------------------------------------------------------
+# US state company registries
+#
+# org-id.guide does not carry per-state entries for US company registries.
+# GLEIF uses state-level ISO 3166-2 subdivision codes as jurisdiction codes
+# (e.g. "US-DE" for Delaware) and assigns a separate RA code to each state
+# registry (e.g. RA000602 for Delaware Division of Corporations).
+#
+# Rather than enumerate all 50+ GLEIF RA codes in _GLEIF_RA_TO_ORG_ID, we
+# resolve US-jurisdiction entities by cross-referencing the entity's
+# ``jurisdiction`` field: when the RA code is unknown and the jurisdiction
+# starts with "US-", we use the ISO 3166-2 subdivision code itself as the
+# BODS identifier ``scheme`` and look up the official registry name here.
+#
+# Scheme example:  {"id": "3954875", "scheme": "US-DE",
+#                   "schemeName": "Delaware Division of Corporations"}
+# ---------------------------------------------------------------------------
+_US_STATE_REGISTRY_NAMES: dict[str, str] = {
+    "US-AL": "Alabama Secretary of State",
+    "US-AK": "Alaska Division of Corporations, Business & Professional Licensing",
+    "US-AZ": "Arizona Corporation Commission",
+    "US-AR": "Arkansas Secretary of State",
+    "US-CA": "California Secretary of State",
+    "US-CO": "Colorado Secretary of State",
+    "US-CT": "Connecticut Secretary of State",
+    "US-DC": "District of Columbia Department of Licensing and Consumer Protection",
+    "US-DE": "Delaware Division of Corporations",
+    "US-FL": "Florida Division of Corporations",
+    "US-GA": "Georgia Secretary of State",
+    "US-HI": "Hawaii Department of Commerce and Consumer Affairs",
+    "US-ID": "Idaho Secretary of State",
+    "US-IL": "Illinois Secretary of State",
+    "US-IN": "Indiana Secretary of State",
+    "US-IA": "Iowa Secretary of State",
+    "US-KS": "Kansas Secretary of State",
+    "US-KY": "Kentucky Secretary of State",
+    "US-LA": "Louisiana Secretary of State",
+    "US-ME": "Maine Secretary of State",
+    "US-MD": "Maryland Department of Assessments and Taxation",
+    "US-MA": "Massachusetts Secretary of State",
+    "US-MI": "Michigan Department of Licensing and Regulatory Affairs",
+    "US-MN": "Minnesota Secretary of State",
+    "US-MS": "Mississippi Secretary of State",
+    "US-MO": "Missouri Secretary of State",
+    "US-MT": "Montana Secretary of State",
+    "US-NE": "Nebraska Secretary of State",
+    "US-NV": "Nevada Secretary of State",
+    "US-NH": "New Hampshire Secretary of State",
+    "US-NJ": "New Jersey Division of Revenue and Enterprise Services",
+    "US-NM": "New Mexico Secretary of State",
+    "US-NY": "New York Department of State",
+    "US-NC": "North Carolina Secretary of State",
+    "US-ND": "North Dakota Secretary of State",
+    "US-OH": "Ohio Secretary of State",
+    "US-OK": "Oklahoma Secretary of State",
+    "US-OR": "Oregon Secretary of State",
+    "US-PA": "Pennsylvania Department of State",
+    "US-PR": "Puerto Rico Department of State",
+    "US-RI": "Rhode Island Department of State",
+    "US-SC": "South Carolina Secretary of State",
+    "US-SD": "South Dakota Secretary of State",
+    "US-TN": "Tennessee Secretary of State",
+    "US-TX": "Texas Secretary of State",
+    "US-UT": "Utah Division of Corporations and Commercial Code",
+    "US-VT": "Vermont Secretary of State",
+    "US-VA": "Virginia State Corporation Commission",
+    "US-WA": "Washington Secretary of State",
+    "US-WV": "West Virginia Secretary of State",
+    "US-WI": "Wisconsin Department of Financial Institutions",
+    "US-WY": "Wyoming Secretary of State",
+}
+
 # Exception reason → (interested_party_type, person_type or entity_type,
 #                    human-readable details).
 _GLEIF_EXCEPTION_REASONS = {
@@ -1003,16 +1075,31 @@ def _gleif_entity_statement(
     ]
 
     # GLEIF records the registration authority in ``entity.registeredAt``:
-    #   {"id": "RA000585", "other": null}   # standard scheme (RA code)
-    #   {"id": "RA999999", "other": "My Authority"}   # free-text scheme
-    # Where the RA code maps to an org-id.guide list we use the proper scheme.
-    # For unknown RA codes we leave ``scheme`` blank and use ``schemeName``
-    # "GLEIF Registration Authorities List" as a fallback.
+    #   {"id": "RA000585", "other": null}   # standard RA code
+    #   {"id": "RA999999", "other": "My Authority"}   # free-text authority
+    #
+    # Resolution priority:
+    #  1. Known RA code in _GLEIF_RA_TO_ORG_ID → use the mapped org-id scheme.
+    #  2. Unknown RA code + US-* jurisdiction → use the ISO 3166-2 subdivision
+    #     code as scheme (e.g. "US-DE") and look up the registry name in
+    #     _US_STATE_REGISTRY_NAMES.  org-id.guide has no per-state US entries
+    #     but ISO 3166-2 codes are unambiguous and machine-readable.
+    #  3. Anything else → blank scheme, "GLEIF Registration Authorities List".
     registered_as = entity_block.get("registeredAs")
     registered_at = entity_block.get("registeredAt") or {}
     ra_id = registered_at.get("id")
     if registered_as and ra_id:
-        org_id_scheme, org_id_name = _GLEIF_RA_TO_ORG_ID.get(ra_id, ("", "GLEIF Registration Authorities List"))
+        if ra_id in _GLEIF_RA_TO_ORG_ID:
+            org_id_scheme, org_id_name = _GLEIF_RA_TO_ORG_ID[ra_id]
+        elif jurisdiction_code and jurisdiction_code.upper().startswith("US-"):
+            state_code = jurisdiction_code.upper()
+            org_id_scheme = state_code
+            org_id_name = _US_STATE_REGISTRY_NAMES.get(
+                state_code,
+                f"{state_code} company registry",
+            )
+        else:
+            org_id_scheme, org_id_name = "", "GLEIF Registration Authorities List"
         identifiers.append(
             {
                 "id": registered_as,
