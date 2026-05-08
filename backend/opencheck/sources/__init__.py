@@ -20,6 +20,7 @@ from .openaleph import OpenAlephAdapter  # noqa: F401  -- kept for re-enablement
 from .opencorporates import OpenCorporatesAdapter
 from .opensanctions import OpenSanctionsAdapter
 from .opentender import OpenTenderAdapter
+from .sec_edgar import SecEdgarAdapter
 from .wikidata import WikidataAdapter
 from .zefix import ZefixAdapter
 
@@ -41,6 +42,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "everypolitician": EveryPoliticianAdapter(),
     "wikidata": WikidataAdapter(),
     "opentender": OpenTenderAdapter(),
+    "sec_edgar": SecEdgarAdapter(),
     "zefix": ZefixAdapter(),
 }
 

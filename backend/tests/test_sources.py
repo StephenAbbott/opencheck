@@ -29,6 +29,7 @@ def test_registry_has_expected_sources() -> None:
         "brightquery",
         "opensanctions",
         "everypolitician",
+        "sec_edgar",
         "wikidata",
         "opentender",
         "zefix",

@@ -46,6 +46,7 @@ from .bods import (
     map_opencorporates,
     map_opensanctions,
     map_opentender,
+    map_sec_edgar,
     map_wikidata,
     map_kvk,
     map_zefix,
@@ -333,6 +334,7 @@ _MAPPERS = {
     "brightquery": map_brightquery,
     "opensanctions": map_opensanctions,
     "openaleph": map_openaleph,
+    "sec_edgar": map_sec_edgar,
     "wikidata": map_wikidata,
     "everypolitician": map_everypolitician,
     "kvk": map_kvk,
@@ -959,6 +961,35 @@ async def lookup(
                 deepened_bundles.append(("brightquery", lei))
         except Exception as exc:  # noqa: BLE001
             errors["brightquery"] = f"{type(exc).__name__}: {exc}"
+
+    # SEC EDGAR — search by legal name for US-jurisdiction entities.
+    # 13D/13G filings are mandatory XML since December 2024 and expose
+    # major shareholders (>5 %) of US-listed companies.
+    if jurisdiction.upper() == "US" and legal_name:
+        se_adapter = REGISTRY.get("sec_edgar")
+        if se_adapter and se_adapter.info.live_available:
+            try:
+                se_hits = await se_adapter.search(legal_name, SearchKind.ENTITY)
+                if se_hits:
+                    se_hit = se_hits[0]
+                    hits.append(
+                        SourceHit(
+                            source_id="sec_edgar",
+                            hit_id=se_hit.hit_id,
+                            kind=SearchKind.ENTITY,
+                            name=se_hit.name,
+                            summary=se_hit.summary,
+                            identifiers={
+                                "edgar_cik": se_hit.hit_id,
+                                "lei": lei,
+                            },
+                            raw=se_hit.raw,
+                            is_stub=False,
+                        )
+                    )
+                    deepened_bundles.append(("sec_edgar", se_hit.hit_id))
+            except Exception as exc:  # noqa: BLE001
+                errors["sec_edgar"] = f"{type(exc).__name__}: {exc}"
 
     # OpenSanctions, OpenTender — search by LEI (free-text, LEI is indexed).
     for source_id in ("opensanctions", "opentender"):

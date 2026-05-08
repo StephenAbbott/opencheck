@@ -25,6 +25,7 @@ from .mapper import (
     map_opencorporates,
     map_opensanctions,
     map_opentender,
+    map_sec_edgar,
     map_wikidata,
     map_zefix,
 )
@@ -48,6 +49,7 @@ __all__ = [
     "map_opensanctions",
     "map_openaleph",
     "map_opentender",
+    "map_sec_edgar",
     "map_wikidata",
     "map_zefix",
     "validate_shape",
