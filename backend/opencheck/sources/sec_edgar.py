@@ -313,7 +313,7 @@ class SecEdgarAdapter(SourceAdapter):
         return SourceInfo(
             id=self.id,
             name="SEC EDGAR (Schedule 13D/13G)",
-            homepage="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&type=SCHEDULE+13D",
+            homepage="https://www.sec.gov/search-filings",
             description=(
                 "Major shareholders (>5 % beneficial owners) of US-listed companies "
                 "from mandatory SEC Schedule 13D and 13G filings. Coverage is limited "
