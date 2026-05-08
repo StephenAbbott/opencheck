@@ -126,7 +126,7 @@ def test_map_opencorporates_entity_identifiers() -> None:
     statements = list(map_opencorporates(bundle))
     entity = next(s for s in statements if s["recordType"] == "entity")
     schemes = {i["scheme"] for i in entity["recordDetails"]["identifiers"]}
-    assert "OPENCORPORATES" in schemes
+    assert "OpenCorporates" in schemes
     assert "OC-GB" in schemes
 
 

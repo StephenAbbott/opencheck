@@ -1029,8 +1029,8 @@ def _gleif_entity_statement(
             identifiers.append(
                 {
                     "id": ocid,
-                    "scheme": "OPENCORPORATES",
-                    "schemeName": "OpenCorporates company identifier",
+                    "scheme": "OpenCorporates",
+                    "schemeName": "OpenCorporates company ID",
                     "uri": f"https://opencorporates.com/companies/{ocid}",
                 }
             )
@@ -2428,8 +2428,8 @@ def map_wikidata(bundle: dict[str, Any]) -> BODSBundle:
         base_identifiers.append(
             {
                 "id": cross_ids["opencorporates"],
-                "scheme": "OPENCORPORATES",
-                "schemeName": "OpenCorporates company identifier",
+                "scheme": "OpenCorporates",
+                "schemeName": "OpenCorporates company ID",
             }
         )
     if cross_ids.get("isin"):
@@ -3099,8 +3099,8 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
         identifiers.append(
             {
                 "id": ocid,
-                "scheme": "OPENCORPORATES",
-                "schemeName": "OpenCorporates company identifier",
+                "scheme": "OpenCorporates",
+                "schemeName": "OpenCorporates company ID",
                 "uri": oc_url or "",
             }
         )
@@ -3240,8 +3240,8 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
                 if co_ocid:
                     co_ids.append({
                         "id": co_ocid,
-                        "scheme": "OPENCORPORATES",
-                        "schemeName": "OpenCorporates company identifier",
+                        "scheme": "OpenCorporates",
+                        "schemeName": "OpenCorporates company ID",
                         "uri": co_url or "",
                     })
                 return make_entity_statement(

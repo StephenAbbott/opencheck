@@ -132,7 +132,7 @@ def test_map_wikidata_entity_carries_lei_and_opencorporates_bridges() -> None:
     bundle = map_wikidata(_entity_bundle())
     entity = next(iter(bundle))
     schemes = {i["scheme"] for i in entity["recordDetails"]["identifiers"]}
-    assert {"WIKIDATA", "XI-LEI", "OPENCORPORATES"}.issubset(schemes)
+    assert {"WIKIDATA", "XI-LEI", "OpenCorporates"}.issubset(schemes)
 
 
 def test_map_wikidata_entity_resolves_jurisdiction_to_iso_code() -> None:
