@@ -906,6 +906,24 @@ async def lookup(
                     )
                 )
                 deepened_bundles.append(("opencorporates", ocid))
+
+                # Extract EDGAR CIK from OC data (present for US listed companies
+                # as a "SEC Edgar entry" datum with description "register id: XXXXXXXXX").
+                # Storing it in derived["edgar_cik"] lets the EDGAR block below skip
+                # the unreliable company-name search and jump straight to filing fetch.
+                _oc_data = company.get("data") or {}
+                for _entry in (_oc_data.get("most_recent") or []):
+                    _datum = (_entry.get("datum") or {}) if isinstance(_entry, dict) else {}
+                    if (
+                        _datum.get("title") == "SEC Edgar entry"
+                        and _datum.get("description")
+                    ):
+                        _desc: str = _datum["description"]
+                        if "register id:" in _desc:
+                            _raw_cik = _desc.split("register id:")[-1].strip()
+                            if _raw_cik.isdigit():
+                                derived["edgar_cik"] = _raw_cik.lstrip("0") or "0"
+                        break
         except Exception as exc:  # noqa: BLE001
             errors["opencorporates"] = f"{type(exc).__name__}: {exc}"
 
@@ -962,34 +980,55 @@ async def lookup(
         except Exception as exc:  # noqa: BLE001
             errors["brightquery"] = f"{type(exc).__name__}: {exc}"
 
-    # SEC EDGAR — search by legal name for US-jurisdiction entities.
-    # 13D/13G filings are mandatory XML since December 2024 and expose
-    # major shareholders (>5 %) of US-listed companies.
-    # GLEIF jurisdiction codes for US entities are state-level (e.g. US-DE,
-    # US-CA) so we match on the "US" prefix rather than an exact string.
-    if jurisdiction.upper().startswith("US") and legal_name:
+    # SEC EDGAR — 13D/13G filings expose major shareholders (>5 %) of US-listed
+    # companies (mandatory XML from December 2024 onward).
+    # GLEIF jurisdiction codes for US entities are state-level (e.g. US-DE).
+    #
+    # Preferred path: use the EDGAR CIK extracted from OpenCorporates data above
+    # (stored in derived["edgar_cik"]).  This avoids an unreliable name-search
+    # round-trip and is unambiguous.
+    # Fallback: name-based EDGAR company search if no CIK was derived.
+    _edgar_cik = derived.get("edgar_cik")
+    if jurisdiction.upper().startswith("US") and (_edgar_cik or legal_name):
         se_adapter = REGISTRY.get("sec_edgar")
         if se_adapter and se_adapter.info.live_available:
             try:
-                se_hits = await se_adapter.search(legal_name, SearchKind.ENTITY)
-                if se_hits:
-                    se_hit = se_hits[0]
+                if _edgar_cik:
+                    # Direct CIK — no search round-trip needed.
                     hits.append(
                         SourceHit(
                             source_id="sec_edgar",
-                            hit_id=se_hit.hit_id,
+                            hit_id=_edgar_cik,
                             kind=SearchKind.ENTITY,
-                            name=se_hit.name,
-                            summary=se_hit.summary,
-                            identifiers={
-                                "edgar_cik": se_hit.hit_id,
-                                "lei": lei,
-                            },
-                            raw=se_hit.raw,
+                            name=legal_name or "",
+                            summary=f"CIK {_edgar_cik} · US listed company",
+                            identifiers={"edgar_cik": _edgar_cik, "lei": lei},
+                            raw={"cik": _edgar_cik, "name": legal_name or ""},
                             is_stub=False,
                         )
                     )
-                    deepened_bundles.append(("sec_edgar", se_hit.hit_id))
+                    deepened_bundles.append(("sec_edgar", _edgar_cik))
+                else:
+                    # Fallback: search by company name.
+                    se_hits = await se_adapter.search(legal_name, SearchKind.ENTITY)
+                    if se_hits:
+                        se_hit = se_hits[0]
+                        hits.append(
+                            SourceHit(
+                                source_id="sec_edgar",
+                                hit_id=se_hit.hit_id,
+                                kind=SearchKind.ENTITY,
+                                name=se_hit.name,
+                                summary=se_hit.summary,
+                                identifiers={
+                                    "edgar_cik": se_hit.hit_id,
+                                    "lei": lei,
+                                },
+                                raw=se_hit.raw,
+                                is_stub=False,
+                            )
+                        )
+                        deepened_bundles.append(("sec_edgar", se_hit.hit_id))
             except Exception as exc:  # noqa: BLE001
                 errors["sec_edgar"] = f"{type(exc).__name__}: {exc}"
 

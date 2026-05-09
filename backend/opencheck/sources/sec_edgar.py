@@ -479,6 +479,10 @@ class SecEdgarAdapter(SourceAdapter):
         email = get_settings().edgar_contact_email
         return {
             "User-Agent": f"OpenCheck {email}",
+            # EDGAR returns atom/XML for company-search and filing-list endpoints.
+            # The base httpx client sets Accept: application/json which causes
+            # EDGAR to respond with HTML instead of atom+xml — override it here.
+            "Accept": "application/atom+xml, text/xml, application/xml, */*",
             "Accept-Encoding": "gzip, deflate",
             "Host": "www.sec.gov",
         }
