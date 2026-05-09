@@ -8,7 +8,7 @@ Try the demo version at https://opencheck.onrender.com/
 
 ## What is OpenCheck?
 
-You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, Estonian registry code, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, OpenCorporates ID, Wikidata Q-ID, etc.), and uses those bridges to fan out across national corporate registries (UK, Estonia, France, the Netherlands, Sweden, Switzerland), OpenCorporates, SEC EDGAR (major shareholders of US-listed companies), OpenSanctions, EveryPolitician, Wikidata, and OpenTender. 
+You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, Norwegian organisation number, Irish company registration number, Estonian registry code, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, OpenCorporates ID, Wikidata Q-ID, etc.), and uses those bridges to fan out across national corporate registries (UK, Norway, Ireland, Estonia, France, the Netherlands, Sweden, Switzerland), OpenCorporates, SEC EDGAR (major shareholders of US-listed companies), OpenSanctions, EveryPolitician, Wikidata, and OpenTender. 
 
 Everything maps into [version 0.4 of the Beneficial Ownership Data Standard (BODS)](https://standard.openownership.org/en/0.4.0/), the cross-source links + risk signals are computed deterministically, and the whole bundle is one click away from a downloadable shareable export.
 
@@ -45,8 +45,10 @@ OpenCheck has shipped through twenty-two phases (latest commit on `main` is the 
 | 22 | ICIJ Offshore Leaks name cross-check — batched reconciliation API, `OFFSHORE_LEAKS` signals scoped to matching BODS statement; no API key required |
 | 23 | Estonian e-Business Register (Ariregister) adapter — full open data: entity basics, shareholders, officers, beneficial owners, all mapped to BODS v0.4; national registry code emitted with `EE-RIK` scheme |
 | 24 | SEC EDGAR Schedule 13D/13G adapter — major shareholders (>5 %) of US-listed companies from mandatory XML filings (December 2024 onward); no API key required |
+| 25 | Brønnøysundregistrene (Norway) adapter — entity data and role-holders (CEO, board, officers) from the public Enhetsregisteret API; BODS v0.4 role mapping; NLOD 2.0; no API key required |
+| 26 | Companies Registration Office Ireland (CRO) adapter — entity data from the CRO Open Data Portal CKAN API; CC BY 4.0; no API key required |
 
-Test suite: 465 backend tests. Frontend type-checks clean.
+Test suite: 446 backend tests. Frontend type-checks clean.
 
 ## Quick start
 
@@ -91,6 +93,8 @@ Paste a 20-character ISO 17442 LEI — for example `213800LH1BZH3DI6G760` (BP) o
 3. Looks up the **Wikidata Q-ID** via SPARQL on property `P1278`.
 4. Dispatches to every other adapter using whichever identifier they understand:
    - **UK Companies House** — direct fetch by `gb_coh` when jurisdiction = GB. The Open Ownership processed UK PSC bundle (`data/cache/bods_data/uk/<GB-COH>.jsonl`) is the canonical answer when present; otherwise falls back to the live API.
+   - **Brreg — Brønnøysundregistrene (Norway)** — fetched by `no_orgnr` (derived from GLEIF RA code `RA000270`); delivers company profile and role-holders (CEO, board chair, board members, deputies, and other officers) as BODS statements via the public Enhetsregisteret REST API. No API key required; licensed NLOD 2.0.
+   - **CRO — Companies Registration Office Ireland** — fetched by `ie_crn` (derived from GLEIF RA code `RA000402`); delivers company profile (status, type, registration date, address) from the CRO Open Data Portal CKAN API. No API key required; licensed CC BY 4.0.
    - **Ariregister (Estonia)** — fetched by the Estonian registry code (derived from GLEIF RA code `RA000181`); delivers entity basics, shareholders, officers, and beneficial owners from a local SQLite database built from the e-Business Register open data bulk files. Activated when `ARIREGISTER_DB_FILE` is set.
    - **INPI (France)** — fetched by `fr_siren` (derived from GLEIF RA code `RA000189`); delivers company profile and officers as BODS statements via the Registre National des Entreprises API.
    - **KvK (Netherlands)** — fetched by `nl_kvk` (derived from GLEIF RA code `RA000463`); delivers company details and authorised representatives via the Kamer van Koophandel Handelsregister API.
@@ -125,12 +129,14 @@ python scripts/extract_bods_subgraphs.py \
 
 ## Sources
 
-Fourteen active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
+Sixteen active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
 
 | ID | Name | License | Entry point | Description |
 |----|------|---------|-------------|-------------|
 | `gleif` | GLEIF | CC0-1.0 | LEI | Legal entity information from the Global Legal Entity Identifier Foundation |
 | `companies_house` | UK Companies House | OGL-3.0 | `gb_coh` from GLEIF | Legal and beneficial ownership information from the UK corporate registry |
+| `brreg` | Brønnøysundregistrene (Norway) | NLOD-2.0 | `no_orgnr` from GLEIF (`RA000270`) | Norwegian central business register — company profile and role-holders (CEO, board, officers) from the public Enhetsregisteret REST API; no API key required |
+| `cro` | Companies Registration Office Ireland | CC-BY-4.0 | `ie_crn` from GLEIF (`RA000402`) | Irish company register — entity details (status, type, registration date, address) from the CRO Open Data Portal CKAN API; no API key required |
 | `ariregister` | Estonian e-Business Register (Ariregister) | Open (PSI) | registry code from GLEIF (`RA000181`) | Estonian commercial register — entity basics, shareholders, officers, and beneficial owners from the RIK open data bulk files. Activated via `ARIREGISTER_DB_FILE` |
 | `inpi` | INPI — Registre National des Entreprises | Open (PSI) | `fr_siren` from GLEIF | French national business registry — company profile and officers via the RNE API |
 | `kvk` | KvK — Handelsregister | Open (PSI) | `nl_kvk` from GLEIF | Netherlands Chamber of Commerce commercial register — company details and authorised representatives |
@@ -205,7 +211,7 @@ A secondary token-overlap similarity check (≥ 0.45 Jaccard) guards against fal
 | Endpoint | Description |
 |----------|-------------|
 | `GET /health` | Liveness probe. |
-| `GET /sources` | Inventory of the 14 source adapters with license, description, live status. |
+| `GET /sources` | Inventory of the 16 source adapters with license, description, live status. |
 | `GET /lookup?lei=<LEI>` | **Primary entry point**. LEI-anchored synthesis. |
 | `GET /search?q=<q>&kind=<entity\|person>` | Free-text fan-out search. Power-user / debugging. |
 | `GET /stream?q=<q>&kind=<...>` | Same fan-out, streamed as SSE. |
@@ -246,7 +252,7 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 
 ```bash
 cd backend
-uv run pytest             # 465 tests, ~5s
+uv run pytest             # 446 tests, ~5s
 ```
 
 Frontend type check:
@@ -265,7 +271,7 @@ opencheck/
   backend/
     opencheck/
       app.py              FastAPI entry — /lookup, /search, /report, /export, /deepen, /stream
-      sources/            One module per source adapter (14 implemented; 14 active in REGISTRY)
+      sources/            One module per source adapter (16 implemented; 16 active in REGISTRY)
         brightquery.py    BrightQuery / OpenData.org — LEI-keyed US entity + executive data
         opencorporates.py OpenCorporates — company profile, officers, network relationships
         oc_relationships.py  OC Relationships bulk-file lookup (indexed by jurisdiction/number)
@@ -283,7 +289,7 @@ opencheck/
       extract_ariregister.py       Walk Estonian e-Business Register bulk files → SQLite DB
       extract_brightquery.py       Walk BrightQuery bulk files → SQLite DB indexed by LEI
       diagnose_brightquery.py      Inspect BrightQuery file format before extraction
-    tests/                pytest suite (429 tests)
+    tests/                pytest suite (446 tests)
   frontend/               React + Vite + TypeScript + Tailwind + BO design system
     src/
       App.tsx             LEI input, subject card, risk chips (on every source card), export panel
