@@ -38,6 +38,7 @@ from .bods import (
     map_ariregister,
     map_bolagsverket,
     map_brightquery,
+    map_brreg,
     map_companies_house,
     map_everypolitician,
     map_gleif,
@@ -54,6 +55,7 @@ from .bods import (
 )
 from .sources.ariregister import EE_RA_CODE as _EE_RA_CODE
 from .sources.bolagsverket import BV_RA_CODE as _BV_RA_CODE, normalise_org_number as _normalise_org_number
+from .sources.brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_orgnr
 from .sources.inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
 from .sources.kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
 from .sources.zefix import CH_RA_CODES as _ZEFIX_RA_CODES, normalise_uid as _zefix_normalise_uid
@@ -352,6 +354,7 @@ def _ch_ra_code(company_number: str) -> str:
 _MAPPERS = {
     "ariregister": map_ariregister,
     "bolagsverket": map_bolagsverket,
+    "brreg": map_brreg,
     "companies_house": map_companies_house,
     "gleif": map_gleif,
     "inpi": map_inpi,
@@ -676,6 +679,9 @@ async def lookup(
     if registered_at_id == _EE_RA_CODE and registered_as:
         # Estonian registry code — 8-digit numeric string (e.g. "14064835")
         derived["ee_registry_code"] = registered_as.strip().zfill(8)
+    if registered_at_id == _BRREG_RA_CODE and registered_as:
+        # Norwegian organisation number — 9-digit string (e.g. "923609016")
+        derived["no_orgnr"] = _normalise_orgnr(registered_as)
 
     # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
     # (format: ``{jurisdiction_code}/{company_number}``).
@@ -728,6 +734,7 @@ async def lookup(
             **({"siren": derived["siren"]} if "siren" in derived else {}),
             **({"se_org_number": derived["se_org_number"]} if "se_org_number" in derived else {}),
             **({"ee_registry_code": derived["ee_registry_code"]} if "ee_registry_code" in derived else {}),
+            **({"no_orgnr": derived["no_orgnr"]} if "no_orgnr" in derived else {}),
             **({"wikidata_qid": qid} if qid else {}),
         },
         raw=gleif_bundle.get("record") or {},
@@ -907,6 +914,34 @@ async def lookup(
                 deepened_bundles.append(("ariregister", derived["ee_registry_code"]))
         except Exception as exc:  # noqa: BLE001
             errors["ariregister"] = f"{type(exc).__name__}: {exc}"
+
+    # Brreg — direct fetch by org number when Norwegian entity (RA000270).
+    if "no_orgnr" in derived:
+        try:
+            brreg_bundle = await REGISTRY["brreg"].fetch(
+                derived["no_orgnr"], legal_name=legal_name
+            )
+            if not brreg_bundle.get("is_stub"):
+                brreg_entity = brreg_bundle.get("entity") or {}
+                brreg_name = brreg_entity.get("navn") or legal_name or ""
+                hits.append(
+                    SourceHit(
+                        source_id="brreg",
+                        hit_id=derived["no_orgnr"],
+                        kind=SearchKind.ENTITY,
+                        name=brreg_name,
+                        summary=f"NO-ORGNR {derived['no_orgnr']}",
+                        identifiers={
+                            "no_orgnr": derived["no_orgnr"],
+                            "lei": lei,
+                        },
+                        raw=brreg_entity,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("brreg", derived["no_orgnr"]))
+        except Exception as exc:  # noqa: BLE001
+            errors["brreg"] = f"{type(exc).__name__}: {exc}"
 
     # OpenCorporates — direct fetch by ocid derived from GLEIF.
     if ocid:
