@@ -245,8 +245,22 @@ def _parse_filing_xml(xml_text: str, source_url: str = "") -> dict[str, Any] | N
     issuer_cik = _xml_text(issuer_cik_el).lstrip("0") or ""
     issuer_name = _xml_text(issuer_info.find(ntag("issuerName")))
 
-    cusip_el = issuer_info.find(f".//{ntag('issuerCusipNumber')}")
-    issuer_cusip = _xml_text(cusip_el) if cusip_el is not None else ""
+    # CUSIP is a flat child of issuerInfo in both schemas:
+    #   13D: issuerCUSIP  (per SEC XML spec / John Friedman's columnar mapping)
+    #   13G: issuerCusip
+    # The old nested path issuerCusips/issuerCusipNumber was wrong.
+    cusip_el = issuer_info.find(ntag("issuerCUSIP"))
+    if cusip_el is None:
+        cusip_el = issuer_info.find(ntag("issuerCusip"))
+    issuer_cusip = _xml_text(cusip_el)
+
+    # filerCik — the entity that submitted this document
+    # (headerData/filerInfo/filer/filerCredentials/cik).
+    # When filerCik == issuerCik the subject company filed the 13D itself
+    # (e.g. GameStop reporting its own stake in eBay); otherwise a third
+    # party is reporting ownership of the subject company.
+    filer_cik_el = root.find(f".//{ntag('filerCredentials')}/{ntag('cik')}")
+    filer_cik = _xml_text(filer_cik_el).lstrip("0") if filer_cik_el is not None else ""
 
     issuer: dict[str, Any] = {
         "cik": issuer_cik,
@@ -271,7 +285,12 @@ def _parse_filing_xml(xml_text: str, source_url: str = "") -> dict[str, Any] | N
                 if reporter:
                     reporters.append(reporter)
 
-    return {"issuer": issuer, "reporters": reporters, "source_url": source_url}
+    return {
+        "issuer": issuer,
+        "reporters": reporters,
+        "filer_cik": filer_cik,
+        "source_url": source_url,
+    }
 
 
 def _parse_reporter_element(elem: ET.Element) -> dict[str, Any] | None:
@@ -547,6 +566,7 @@ class SecEdgarAdapter(SourceAdapter):
                     {
                         "reporter": reporter,
                         "issuer": parsed.get("issuer", {}),
+                        "filer_cik": parsed.get("filer_cik", ""),
                         "filing_url": xml_url,
                         "form_type": ref["form_type"],
                         "filed": ref["filed"],
