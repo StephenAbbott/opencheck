@@ -206,7 +206,12 @@ class WikidataAdapter(SourceAdapter):
 
         async with build_client() as client:
             response = await client.get(_SEARCH_API, params=params)
-            response.raise_for_status()
+            if not response.is_success:
+                import logging
+                logging.getLogger(__name__).warning(
+                    "Wikidata MediaWiki API returned %s — skipping", response.status_code
+                )
+                return {}
             payload = response.json()
 
         self._cache.put(cache_key, payload)
@@ -215,6 +220,13 @@ class WikidataAdapter(SourceAdapter):
     async def _sparql(
         self, query: str, *, cache_key: str
     ) -> dict[str, Any]:
+        """Run a SPARQL query against the Wikidata Query Service.
+
+        Returns an empty dict (rather than raising) on any HTTP error so
+        that a Wikidata rate-limit or outage doesn't crash the entire
+        /lookup response.  A 429 ("1 req / min") is the most common
+        failure mode on the free Render tier.
+        """
         cached = self._cache.get_payload(cache_key)
         if cached is not None:
             return cached[0]
@@ -226,7 +238,14 @@ class WikidataAdapter(SourceAdapter):
                 params={"query": query},
                 headers={"Accept": "application/sparql-results+json"},
             )
-            response.raise_for_status()
+            if not response.is_success:
+                import logging
+                logging.getLogger(__name__).warning(
+                    "Wikidata SPARQL returned %s — skipping (url=%s)",
+                    response.status_code,
+                    response.url,
+                )
+                return {}
             payload = response.json()
 
         self._cache.put(cache_key, payload)

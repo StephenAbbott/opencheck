@@ -91,20 +91,24 @@ app.add_middleware(
 async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch-all for unhandled exceptions.
 
-    Without this, uvicorn catches the exception and returns a plain-text 500
-    *before* the CORSMiddleware can add ``Access-Control-Allow-Origin``.
-    Browsers then block the cross-origin response, and Safari reports the
-    opaque network failure as "Load failed" instead of a useful message.
-
-    By handling the exception inside FastAPI we ensure the response goes
-    through the full middleware stack (including CORS), so the browser can
-    read the 500 and the frontend can display the actual error text.
+    Handles two problems:
+    1. Without this, uvicorn catches the exception and returns a plain-text 500
+       *before* the CORSMiddleware can add ``Access-Control-Allow-Origin``.
+       Browsers block the cross-origin response; iOS/Safari reports it as
+       "Load failed" rather than a useful error message.
+    2. CORSMiddleware does not reliably add ACAO to 500 responses produced
+       by @app.exception_handler, so we add the header explicitly here.
     """
     import logging
     logging.getLogger(__name__).exception("Unhandled exception in %s %s", request.method, request.url)
+    # Explicitly add CORS header — CORSMiddleware doesn't reliably forward
+    # it for error responses, and without it browsers silently block the 500.
+    origin = request.headers.get("origin")
+    extra_headers: dict[str, str] = {"access-control-allow-origin": "*"} if origin else {}
     return JSONResponse(
         status_code=500,
         content={"detail": f"Internal server error: {exc}"},
+        headers=extra_headers,
     )
 
 
