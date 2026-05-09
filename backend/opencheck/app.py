@@ -922,7 +922,7 @@ async def lookup(
         except Exception as exc:  # noqa: BLE001
             errors["ariregister"] = f"{type(exc).__name__}: {exc}"
 
-    # Brreg — direct fetch by org number when Norwegian entity (RA000270).
+    # Brreg — direct fetch by org number when Norwegian entity (RA000472).
     if "no_orgnr" in derived:
         try:
             brreg_bundle = await REGISTRY["brreg"].fetch(

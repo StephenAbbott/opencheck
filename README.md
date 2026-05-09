@@ -93,7 +93,7 @@ Paste a 20-character ISO 17442 LEI — for example `213800LH1BZH3DI6G760` (BP) o
 3. Looks up the **Wikidata Q-ID** via SPARQL on property `P1278`.
 4. Dispatches to every other adapter using whichever identifier they understand:
    - **UK Companies House** — direct fetch by `gb_coh` when jurisdiction = GB. The Open Ownership processed UK PSC bundle (`data/cache/bods_data/uk/<GB-COH>.jsonl`) is the canonical answer when present; otherwise falls back to the live API.
-   - **Brreg — Brønnøysundregistrene (Norway)** — fetched by `no_orgnr` (derived from GLEIF RA code `RA000270`); delivers company profile and role-holders (CEO, board chair, board members, deputies, and other officers) as BODS statements via the public Enhetsregisteret REST API. No API key required; licensed NLOD 2.0.
+   - **Brreg — Brønnøysundregistrene (Norway)** — fetched by `no_orgnr` (derived from GLEIF RA code `RA000472`); delivers company profile and role-holders (CEO, board chair, board members, deputies, and other officers) as BODS statements via the public Enhetsregisteret REST API. No API key required; licensed NLOD 2.0.
    - **CRO — Companies Registration Office Ireland** — fetched by `ie_crn` (derived from GLEIF RA code `RA000402`); delivers company profile (status, type, registration date, address) from the CRO Open Data Portal CKAN API. No API key required; licensed CC BY 4.0.
    - **Ariregister (Estonia)** — fetched by the Estonian registry code (derived from GLEIF RA code `RA000181`); delivers entity basics, shareholders, officers, and beneficial owners from a local SQLite database built from the e-Business Register open data bulk files. Activated when `ARIREGISTER_DB_FILE` is set.
    - **INPI (France)** — fetched by `fr_siren` (derived from GLEIF RA code `RA000189`); delivers company profile and officers as BODS statements via the Registre National des Entreprises API.
@@ -135,7 +135,7 @@ Sixteen active adapters, each implementing the same `SourceAdapter` protocol (`s
 |----|------|---------|-------------|-------------|
 | `gleif` | GLEIF | CC0-1.0 | LEI | Legal entity information from the Global Legal Entity Identifier Foundation |
 | `companies_house` | UK Companies House | OGL-3.0 | `gb_coh` from GLEIF | Legal and beneficial ownership information from the UK corporate registry |
-| `brreg` | Brønnøysundregistrene (Norway) | NLOD-2.0 | `no_orgnr` from GLEIF (`RA000270`) | Norwegian central business register — company profile and role-holders (CEO, board, officers) from the public Enhetsregisteret REST API; no API key required |
+| `brreg` | Brønnøysundregistrene (Norway) | NLOD-2.0 | `no_orgnr` from GLEIF (`RA000472`) | Norwegian central business register — company profile and role-holders (CEO, board, officers) from the public Enhetsregisteret REST API; no API key required |
 | `cro` | Companies Registration Office Ireland | CC-BY-4.0 | `ie_crn` from GLEIF (`RA000402`) | Irish company register — entity details (status, type, registration date, address) from the CRO Open Data Portal CKAN API; no API key required |
 | `ariregister` | Estonian e-Business Register (Ariregister) | Open (PSI) | registry code from GLEIF (`RA000181`) | Estonian commercial register — entity basics, shareholders, officers, and beneficial owners from the RIK open data bulk files. Activated via `ARIREGISTER_DB_FILE` |
 | `inpi` | INPI — Registre National des Entreprises | Open (PSI) | `fr_siren` from GLEIF | French national business registry — company profile and officers via the RNE API |

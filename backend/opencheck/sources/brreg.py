@@ -20,7 +20,7 @@ This adapter therefore maps only the publicly available entity and role data.
 
 The flow with GLEIF:
 
-  1. GLEIF returns ``registeredAt.id == "RA000270"`` (Brreg RA code) and
+  1. GLEIF returns ``registeredAt.id == "RA000472"`` (Brreg RA code) and
      ``registeredAs = "9XXXXXXXX"`` (9-digit orgnr) for Norwegian entities.
   2. app.py extracts ``derived["no_orgnr"]`` and calls ``fetch()`` here.
   3. We fetch entity + roles and map both to BODS statements.
@@ -48,9 +48,11 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 _API_BASE = "https://data.brreg.no/enhetsregisteret/api"
 _CACHE_NS = "brreg"
 
-# GLEIF Registration Authority code for Brønnøysundregistrene.
-# All Norwegian entities in GLEIF carry registeredAt.id == "RA000270".
-NO_RA_CODE: str = "RA000270"
+# GLEIF Registration Authority code for the Norwegian Business Register
+# (Enhetsregisteret / Foretaksregisteret).
+# All Norwegian entities in GLEIF carry registeredAt.id == "RA000472".
+# (RA000270 is a different, legacy code — not used by GLEIF for NO entities.)
+NO_RA_CODE: str = "RA000472"
 
 # Norwegian organisation number: exactly 9 digits.
 _ORGNR_RE = re.compile(r"^\d{9}$")
