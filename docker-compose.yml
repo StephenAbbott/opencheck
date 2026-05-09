@@ -33,7 +33,11 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_BASE_URL=http://localhost:8000
+      # Used by Vite's server-side proxy (not baked into the browser bundle).
+      # Must use the Docker service name so the proxy can reach the backend
+      # container — "localhost" inside the frontend container is itself, not
+      # the backend.
+      - VITE_API_BASE_URL=http://backend:8000
     volumes:
       - ./frontend:/app
       - /app/node_modules

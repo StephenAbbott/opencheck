@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { copyFileSync, cpSync, existsSync, statSync } from "fs";
 import { resolve } from "path";
@@ -58,10 +58,35 @@ function copyBodsDagreAssets(): Plugin {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), copyBodsDagreAssets()],
-  server: {
-    port: 5173,
-    host: true,
-  },
+export default defineConfig(({ mode }) => {
+  // ``VITE_API_BASE_URL`` doubles as the server-side proxy target so that
+  // the browser can call relative paths like ``/lookup`` regardless of
+  // which device or network it's on.  Precedence:
+  //   1. OS env var (set by docker-compose or CI)
+  //   2. .env.local / .env file via loadEnv
+  //   3. Fallback to local default
+  const fileEnv = loadEnv(mode, process.cwd(), "");
+  const backendTarget =
+    process.env.VITE_API_BASE_URL ??
+    fileEnv.VITE_API_BASE_URL ??
+    "http://localhost:8000";
+
+  // All backend routes that the browser must be able to reach.
+  // Vite proxies each one server-side so the browser always uses a
+  // same-origin relative URL and never touches the backend port directly.
+  const proxyTarget = { target: backendTarget, changeOrigin: true };
+  const proxy: Record<string, typeof proxyTarget> = Object.fromEntries(
+    ["/lookup", "/sources", "/search", "/deepen", "/export", "/health", "/stream"].map(
+      (p) => [p, proxyTarget]
+    )
+  );
+
+  return {
+    plugins: [react(), copyBodsDagreAssets()],
+    server: {
+      port: 5173,
+      host: true,
+      proxy,
+    },
+  };
 });

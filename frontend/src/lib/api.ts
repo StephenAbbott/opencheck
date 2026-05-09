@@ -82,9 +82,12 @@ export interface DeepenResponse {
   risk_signals: RiskSignal[];
 }
 
-export const BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
-  "http://localhost:8000";
+// Always use relative paths. Vite's dev-server proxy (vite.config.ts)
+// forwards /lookup, /sources, etc. to the backend — meaning the browser
+// never needs to know the backend's port or hostname directly. This also
+// makes it trivial to test from phones, VMs, or any device that can
+// reach the frontend server.
+export const BASE_URL = "";
 
 /**
  * Build a URL to the /export endpoint that browsers can hit directly
