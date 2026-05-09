@@ -23,6 +23,7 @@ Coverage is limited to publicly-traded US companies whose shareholders hold
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import xml.etree.ElementTree as ET
 from typing import Any
@@ -35,8 +36,10 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _EDGAR_BASE = "https://www.sec.gov"
 _BROWSE_BASE = f"{_EDGAR_BASE}/cgi-bin/browse-edgar"
+_SUBMISSIONS_BASE = "https://data.sec.gov/submissions"
 _CACHE_NS = "sec_edgar"
 _NS_13D = "http://www.sec.gov/edgar/schedule13D"
+_NS_13G = "http://www.sec.gov/edgar/schedule13g"  # lowercase g — different schema
 _NS_ATOM = "http://www.w3.org/2005/Atom"
 
 # Maximum filings retrieved per form type per subject company.
@@ -204,6 +207,10 @@ def _parse_filing_refs_from_atom(atom_xml: str) -> list[dict[str, str]]:
 def _parse_filing_xml(xml_text: str, source_url: str = "") -> dict[str, Any] | None:
     """Parse a SCHEDULE 13D/G XML document → normalised dict.
 
+    Handles both the 13D namespace (``http://www.sec.gov/edgar/schedule13D``)
+    and the 13G namespace (``http://www.sec.gov/edgar/schedule13g``) which
+    differ in casing and element names.
+
     Returns ``None`` if the document is empty, unparseable, or missing
     the required structural elements.
     """
@@ -214,48 +221,55 @@ def _parse_filing_xml(xml_text: str, source_url: str = "") -> dict[str, Any] | N
     except ET.ParseError:
         return None
 
-    cover_header = root.find(f".//{_ns('coverPageHeader')}")
+    # Detect namespace from the root element tag.
+    ns = _NS_13D
+    if "{" in root.tag:
+        ns = root.tag.split("}")[0][1:]
+    is_13g = "schedule13g" in ns.lower()
+
+    def ntag(tag: str) -> str:
+        return f"{{{ns}}}{tag}"
+
+    cover_header = root.find(f".//{ntag('coverPageHeader')}")
     if cover_header is None:
         return None
 
-    issuer_info = cover_header.find(_ns("issuerInfo"))
+    issuer_info = cover_header.find(ntag("issuerInfo"))
     if issuer_info is None:
         return None
 
-    # Issuer (subject company)
-    issuer_cik = _xml_text(issuer_info.find(_ns("issuerCIK"))).lstrip("0") or ""
-    issuer_name = _xml_text(issuer_info.find(_ns("issuerName")))
+    # 13D uses issuerCIK (uppercase K); 13G uses issuerCik (lowercase k).
+    issuer_cik_el = issuer_info.find(ntag("issuerCIK"))
+    if issuer_cik_el is None:
+        issuer_cik_el = issuer_info.find(ntag("issuerCik"))
+    issuer_cik = _xml_text(issuer_cik_el).lstrip("0") or ""
+    issuer_name = _xml_text(issuer_info.find(ntag("issuerName")))
 
-    cusips_el = issuer_info.find(_ns("issuerCusips"))
-    issuer_cusip = ""
-    if cusips_el is not None:
-        cusip_el = cusips_el.find(_ns("issuerCusipNumber"))
-        if cusip_el is not None:
-            issuer_cusip = _xml_text(cusip_el)
-
-    addr_raw: dict[str, str] = {}
-    addr_el = issuer_info.find(_ns("address"))
-    if addr_el is not None:
-        addr_raw = {
-            k: _xml_text(addr_el.find(_ns(k)))
-            for k in ("street1", "street2", "city", "stateOrCountry", "zipCode")
-        }
+    cusip_el = issuer_info.find(f".//{ntag('issuerCusipNumber')}")
+    issuer_cusip = _xml_text(cusip_el) if cusip_el is not None else ""
 
     issuer: dict[str, Any] = {
         "cik": issuer_cik,
         "name": issuer_name,
         "cusip": issuer_cusip,
-        "address": addr_raw,
     }
 
-    # Reporting persons
     reporters: list[dict[str, Any]] = []
-    reporting_el = root.find(f".//{_ns('reportingPersons')}")
-    if reporting_el is not None:
-        for person_el in reporting_el.findall(_ns("reportingPersonInfo")):
-            reporter = _parse_reporter_element(person_el)
+    if is_13g:
+        # 13G: each reporting person is in a coverPageHeaderReportingPersonDetails
+        # element (may appear multiple times under formData).
+        for details_el in root.findall(f".//{ntag('coverPageHeaderReportingPersonDetails')}"):
+            reporter = _parse_13g_reporter_element(details_el, ns)
             if reporter:
                 reporters.append(reporter)
+    else:
+        # 13D: reporters nested under reportingPersons/reportingPersonInfo.
+        reporting_el = root.find(f".//{ntag('reportingPersons')}")
+        if reporting_el is not None:
+            for person_el in reporting_el.findall(ntag("reportingPersonInfo")):
+                reporter = _parse_reporter_element(person_el)
+                if reporter:
+                    reporters.append(reporter)
 
     return {"issuer": issuer, "reporters": reporters, "source_url": source_url}
 
@@ -291,6 +305,71 @@ def _parse_reporter_element(elem: ET.Element) -> dict[str, Any] | None:
         "sole_voting_power": _float("soleVotingPower"),
         "shared_voting_power": _float("sharedVotingPower"),
         "aggregate_amount_owned": _float("aggregateAmountOwned"),
+    }
+
+
+def _parse_13g_reporter_element(
+    elem: ET.Element, ns: str
+) -> dict[str, Any] | None:
+    """Parse a 13G ``coverPageHeaderReportingPersonDetails`` element.
+
+    The 13G schema differs from 13D: share counts are nested under
+    ``reportingPersonBeneficiallyOwnedNumberOfShares``, the ownership
+    percentage field is ``classPercent``, and the aggregate is
+    ``reportingPersonBeneficiallyOwnedAggregateNumberOfShares``.
+    """
+
+    def ntag(tag: str) -> str:
+        return f"{{{ns}}}{tag}"
+
+    name = _xml_text(elem.find(ntag("reportingPersonName")))
+    if not name:
+        return None
+
+    reporter_cik = _xml_text(elem.find(ntag("reportingPersonCIK"))).lstrip("0") or ""
+    type_code = _xml_text(elem.find(ntag("typeOfReportingPerson")))
+    citizenship_raw = _xml_text(elem.find(ntag("citizenshipOrOrganization")))
+    citizenship_iso = _EDGAR_CITIZENSHIP_TO_ISO.get(citizenship_raw.upper(), "")
+
+    def _float_direct(tag_name: str) -> float | None:
+        el = elem.find(ntag(tag_name))
+        raw = _xml_text(el)
+        if not raw:
+            return None
+        try:
+            return float(raw)
+        except ValueError:
+            return None
+
+    # Voting / dispositive power is nested inside reportingPersonBeneficiallyOwnedNumberOfShares.
+    shares_el = elem.find(ntag("reportingPersonBeneficiallyOwnedNumberOfShares"))
+
+    def _float_nested(tag_name: str) -> float | None:
+        parent = shares_el
+        if parent is None:
+            return None
+        el = parent.find(ntag(tag_name))
+        raw = _xml_text(el)
+        if not raw:
+            return None
+        try:
+            return float(raw)
+        except ValueError:
+            return None
+
+    return {
+        "reporter_cik": reporter_cik,
+        "name": name,
+        "type_code": type_code,
+        "citizenship_raw": citizenship_raw,
+        "citizenship_iso": citizenship_iso,
+        "is_individual": type_code in _INDIVIDUAL_CODES,
+        "percent_of_class": _float_direct("classPercent"),
+        "sole_voting_power": _float_nested("soleVotingPower"),
+        "shared_voting_power": _float_nested("sharedVotingPower"),
+        "aggregate_amount_owned": _float_direct(
+            "reportingPersonBeneficiallyOwnedAggregateNumberOfShares"
+        ),
     }
 
 
@@ -408,48 +487,73 @@ class SecEdgarAdapter(SourceAdapter):
     ) -> list[dict[str, Any]]:
         """Retrieve and parse recent 13D/13G filings for a subject company.
 
-        Queries both SCHEDULE 13D and SCHEDULE 13G feeds, downloads the
-        XML primary document for each filing, parses the structured data,
-        then deduplicates by reporter CIK — retaining the most-recently-
-        dated filing where two filings share the same reporter.
+        Uses the EDGAR submissions index (data.sec.gov/submissions/CIK{n}.json)
+        to list all 13D/13G filings associated with the company — both where it
+        is the issuer (subject) and where it is the reporting person (filer).
+        Only filings from 18 December 2024 onward are fetched (mandatory XML era).
+
+        Primary XML documents are archived under the subject company's own CIK,
+        not under the filer's CIK, at the root of each accession directory.
+
+        After parsing, results are deduplicated per reporter CIK, retaining the
+        most-recently-dated filing per reporter.
         """
-        raw_records: list[dict[str, Any]] = []
+        padded_cik = subject_cik.zfill(10)
+        submissions_url = f"{_SUBMISSIONS_BASE}/CIK{padded_cik}.json"
+        sub_cache_key = f"{_CACHE_NS}/submissions/{subject_cik}"
+        submissions_text = await self._get_text(submissions_url, cache_key=sub_cache_key)
+        if not submissions_text:
+            return []
 
-        for form_slug in ("SC+13D", "SC+13G"):
-            url = (
-                f"{_BROWSE_BASE}?action=getcompany&CIK={subject_cik}"
-                f"&type={form_slug}&dateb=&owner=include"
-                f"&count={_MAX_FILINGS}&search_text=&output=atom"
-            )
-            atom_cache_key = f"{_CACHE_NS}/filings/{subject_cik}/{form_slug}"
-            atom_xml = await self._get_text(url, cache_key=atom_cache_key)
+        try:
+            submissions_data = json.loads(submissions_text)
+        except (json.JSONDecodeError, ValueError):
+            return []
 
-            for ref in _parse_filing_refs_from_atom(atom_xml):
-                filer_cik = ref["filer_cik"]
-                accession = ref["accession"]
-                xml_url = (
-                    f"{_EDGAR_BASE}/Archives/edgar/data/"
-                    f"{filer_cik}/{accession}/primary_doc.xml"
+        recent = submissions_data.get("filings", {}).get("recent", {})
+        forms = recent.get("form", [])
+        dates = recent.get("filingDate", [])
+        accessions = recent.get("accessionNumber", [])
+
+        # Collect 13D/13G entries filed since XML became mandatory.
+        eligible: list[dict[str, str]] = []
+        for i, form in enumerate(forms):
+            if ("13D" in form or "13G" in form) and dates[i] >= "2024-12-18":
+                eligible.append(
+                    {
+                        "accession": accessions[i],
+                        "form_type": form,
+                        "filed": dates[i],
+                    }
                 )
-                xml_cache_key = f"{_CACHE_NS}/filing/{filer_cik}/{accession}"
-                xml_text = await self._get_text(xml_url, cache_key=xml_cache_key)
-                parsed = _parse_filing_xml(xml_text, source_url=xml_url)
-                if not parsed:
-                    continue
 
-                for reporter in parsed.get("reporters") or []:
-                    raw_records.append(
-                        {
-                            "reporter": reporter,
-                            "issuer": parsed.get("issuer", {}),
-                            "filing_url": xml_url,
-                            "form_type": ref.get("form_type", ""),
-                            "filed": ref.get("filed", ""),
-                        }
-                    )
+        raw_records: list[dict[str, Any]] = []
+        for ref in eligible[:_MAX_FILINGS]:
+            accession_nodashes = ref["accession"].replace("-", "")
+            # EDGAR archives primary_doc.xml under the subject (issuer) company's
+            # CIK, regardless of which entity filed the document.
+            xml_url = (
+                f"{_EDGAR_BASE}/Archives/edgar/data/{subject_cik}"
+                f"/{accession_nodashes}/primary_doc.xml"
+            )
+            xml_cache_key = f"{_CACHE_NS}/filing/{subject_cik}/{accession_nodashes}"
+            xml_text = await self._get_text(xml_url, cache_key=xml_cache_key)
+            parsed = _parse_filing_xml(xml_text, source_url=xml_url)
+            if not parsed:
+                continue
 
-        # Deduplicate: per reporter CIK, keep the record with the highest
-        # (most recent) filed date.  Records without a CIK are kept as-is.
+            for reporter in parsed.get("reporters") or []:
+                raw_records.append(
+                    {
+                        "reporter": reporter,
+                        "issuer": parsed.get("issuer", {}),
+                        "filing_url": xml_url,
+                        "form_type": ref["form_type"],
+                        "filed": ref["filed"],
+                    }
+                )
+
+        # Deduplicate: per reporter CIK, keep the most-recently-dated filing.
         best: dict[str, dict[str, Any]] = {}
         no_cik: list[dict[str, Any]] = []
         for rec in raw_records:
@@ -479,12 +583,16 @@ class SecEdgarAdapter(SourceAdapter):
         email = get_settings().edgar_contact_email
         return {
             "User-Agent": f"OpenCheck {email}",
-            # EDGAR returns atom/XML for company-search and filing-list endpoints.
             # The base httpx client sets Accept: application/json which causes
-            # EDGAR to respond with HTML instead of atom+xml — override it here.
-            "Accept": "application/atom+xml, text/xml, application/xml, */*",
+            # EDGAR to respond with HTML instead of atom+xml for company-search
+            # endpoints.  Broadening the Accept header fixes this and works for
+            # JSON (submissions API) and raw XML (primary_doc.xml) too.
+            # Note: no Host header — we use both www.sec.gov and data.sec.gov.
+            "Accept": (
+                "application/json, application/atom+xml, "
+                "text/xml, application/xml, */*"
+            ),
             "Accept-Encoding": "gzip, deflate",
-            "Host": "www.sec.gov",
         }
 
     async def _get_text(self, url: str, *, cache_key: str) -> str:
