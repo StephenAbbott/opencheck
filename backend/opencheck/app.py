@@ -26,9 +26,9 @@ import zipfile
 from datetime import datetime, timezone
 from typing import Any, AsyncIterator
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
@@ -85,6 +85,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all for unhandled exceptions.
+
+    Without this, uvicorn catches the exception and returns a plain-text 500
+    *before* the CORSMiddleware can add ``Access-Control-Allow-Origin``.
+    Browsers then block the cross-origin response, and Safari reports the
+    opaque network failure as "Load failed" instead of a useful message.
+
+    By handling the exception inside FastAPI we ensure the response goes
+    through the full middleware stack (including CORS), so the browser can
+    read the 500 and the frontend can display the actual error text.
+    """
+    import logging
+    logging.getLogger(__name__).exception("Unhandled exception in %s %s", request.method, request.url)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {exc}"},
+    )
 
 
 class HealthResponse(BaseModel):
