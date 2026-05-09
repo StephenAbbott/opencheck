@@ -144,30 +144,32 @@ const EXAMPLE_LEIS: ExampleLei[] = [
 ];
 
 /**
- * GLEIF logo-style icon — globe outline with meridian arc.
- * Used next to the "Search by company name" tab.
+ * GLEIF LEI API search icon — pill-shaped search box with a magnifying
+ * glass and a green cursor with click-spark lines. Matches the icon
+ * shown on https://ai.gleif.org/connect-ai.
  */
-function GleifIcon({ className }: { className?: string }) {
+function GleifIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
     <svg
-      viewBox="0 0 24 24"
+      viewBox="0 0 88 40"
       className={className}
+      style={style}
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
       focusable="false"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
     >
-      {/* Globe ring */}
-      <circle cx="12" cy="12" r="9.5" />
-      {/* Meridian lines */}
-      <path d="M12 2.5C9.5 6 8 9 8 12s1.5 6 4 9.5" />
-      <path d="M12 2.5C14.5 6 16 9 16 12s-1.5 6-4 9.5" />
-      {/* Latitude lines */}
-      <path d="M2.5 9h19M2.5 15h19" />
+      {/* Pill — white fill, dark teal border */}
+      <rect x="1" y="4" width="62" height="32" rx="16" fill="white" stroke="#1b3d4f" strokeWidth="2.5" />
+      {/* Magnifying glass ring */}
+      <circle cx="19" cy="20" r="7" fill="none" stroke="#1b3d4f" strokeWidth="2.5" />
+      {/* Magnifying glass handle */}
+      <line x1="24" y1="25" x2="29" y2="30" stroke="#1b3d4f" strokeWidth="2.5" strokeLinecap="round" />
+      {/* Three spark / click lines between pill and cursor */}
+      <line x1="68" y1="10" x2="72" y2="7"  stroke="#34d399" strokeWidth="2" strokeLinecap="round" />
+      <line x1="70" y1="18" x2="75" y2="18" stroke="#34d399" strokeWidth="2" strokeLinecap="round" />
+      <line x1="68" y1="26" x2="72" y2="29" stroke="#34d399" strokeWidth="2" strokeLinecap="round" />
+      {/* Arrow cursor — filled green */}
+      <polygon points="77,12 77,34 81,27 86,35 88,33 83,25 88,25" fill="#34d399" />
     </svg>
   );
 }
@@ -477,7 +479,7 @@ export default function App() {
                   : "text-oo-muted bg-oo-bg hover:text-oo-ink"
               }`}
             >
-              <GleifIcon className="h-[14px] w-[14px] flex-shrink-0" />
+              <GleifIcon className="flex-shrink-0" style={{ height: "1.15em", width: "auto" }} />
               Search by company name
             </button>
             <button
@@ -521,8 +523,8 @@ export default function App() {
                     {nameSearching ? "Searching…" : "Search"}
                   </button>
                 </div>
-                <p className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl flex items-center gap-1.5">
-                  <GleifIcon className="h-[14px] w-[14px] flex-shrink-0 text-oo-blue" />
+                <p className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
+                  <GleifIcon className="inline-block align-middle mr-1.5" style={{ height: "1.2em", width: "auto" }} />
                   Powered by the{" "}
                   <a
                     href="https://www.gleif.org/"
@@ -530,7 +532,7 @@ export default function App() {
                     rel="noopener noreferrer"
                     className="underline hover:text-oo-ink transition-colors"
                   >
-                    GLEIF
+                    Global Legal Entity Identifier Foundation (GLEIF)
                   </a>{" "}
                   LEI registry via the{" "}
                   <a
