@@ -511,7 +511,7 @@ export default function App() {
                     type="text"
                     value={nameQuery}
                     onChange={(e) => setNameQuery(e.target.value)}
-                    placeholder="e.g. BP P.L.C."
+                    placeholder="e.g. Unilever PLC"
                     autoComplete="off"
                     className="flex-1 border border-oo-rule rounded px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
                   />
