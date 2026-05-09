@@ -33,6 +33,13 @@ interface SourceBucket {
   error?: string;
 }
 
+interface GleifSearchResult {
+  lei: string;
+  legalName: string;
+  country: string;
+  status: string;
+}
+
 /**
  * Curated demo subjects that have a pre-extracted Open Ownership BODS
  * bundle on disk (``data/cache/bods_data/``) — clicking any of them
@@ -137,6 +144,35 @@ const EXAMPLE_LEIS: ExampleLei[] = [
 ];
 
 /**
+ * GLEIF logo-style icon — globe outline with meridian arc.
+ * Used next to the "Search by company name" tab.
+ */
+function GleifIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      focusable="false"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* Globe ring */}
+      <circle cx="12" cy="12" r="9.5" />
+      {/* Meridian lines */}
+      <path d="M12 2.5C9.5 6 8 9 8 12s1.5 6 4 9.5" />
+      <path d="M12 2.5C14.5 6 16 9 16 12s-1.5 6-4 9.5" />
+      {/* Latitude lines */}
+      <path d="M2.5 9h19M2.5 15h19" />
+    </svg>
+  );
+}
+
+/**
  * OpenCheck magnifying-glass icon — white variant for use on the dark
  * navy header. Sized via className (e.g. ``h-9 w-auto``).
  */
@@ -198,6 +234,13 @@ export default function App() {
   // don't pull in react-router for two views.
   const [view, setView] = useState<"main" | "sources">("main");
 
+  // Two-mode search: "name" = GLEIF company-name search; "lei" = paste LEI.
+  const [searchMode, setSearchMode] = useState<"name" | "lei">("name");
+  const [nameQuery, setNameQuery] = useState("");
+  const [nameResults, setNameResults] = useState<GleifSearchResult[] | null>(null);
+  const [nameSearching, setNameSearching] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+
   const sourcesQuery = useQuery({
     queryKey: ["sources"],
     queryFn: () => fetchSources(),
@@ -230,6 +273,52 @@ export default function App() {
   async function runLookup(e: React.FormEvent) {
     e.preventDefault();
     await lookupLei(leiInput);
+  }
+
+  /**
+   * Search GLEIF by company name using the public REST API.
+   * On success, populates ``nameResults`` for the user to pick from.
+   * After selection the standard ``lookupLei`` flow takes over.
+   */
+  async function searchByName(e: React.FormEvent) {
+    e.preventDefault();
+    const q = nameQuery.trim();
+    if (!q) return;
+    setNameSearching(true);
+    setNameError(null);
+    setNameResults(null);
+    try {
+      const url =
+        `https://api.gleif.org/api/v1/lei-records` +
+        `?filter[entity.legalName]=${encodeURIComponent(q)}` +
+        `&page[size]=10`;
+      const resp = await fetch(url, { headers: { Accept: "application/vnd.api+json" } });
+      if (!resp.ok) throw new Error(`GLEIF API returned ${resp.status}`);
+      const json = await resp.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const items: GleifSearchResult[] = (json.data ?? []).map((item: any) => {
+        const attrs = item.attributes ?? {};
+        const entity = attrs.entity ?? {};
+        const reg = attrs.registration ?? {};
+        return {
+          lei: attrs.lei as string,
+          legalName:
+            (entity.legalName?.name as string) ??
+            (entity.legalName as string) ??
+            attrs.lei,
+          country: entity.legalAddress?.country ?? "—",
+          status: reg.status ?? "—",
+        };
+      });
+      setNameResults(items);
+      if (items.length === 0) {
+        setNameError("No entities found. Try a shorter or different spelling.");
+      }
+    } catch (err) {
+      setNameError(err instanceof Error ? err.message : "Search failed");
+    } finally {
+      setNameSearching(false);
+    }
   }
 
   // Group hits by source_id for the per-source bucket cards. With the
@@ -336,6 +425,10 @@ export default function App() {
                     setResult(null);
                     setError(null);
                     setLeiInput("");
+                    setNameQuery("");
+                    setNameResults(null);
+                    setNameError(null);
+                    setSearchMode("name");
                   }}
                   aria-label="Back to homepage"
                   className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left"
@@ -371,51 +464,174 @@ export default function App() {
       <main className="flex-1 px-6 sm:px-10 lg:px-16 py-12 max-w-oo-page mx-auto w-full">
         {view === "main" && (
         <>
-        <form
-          onSubmit={runLookup}
-          className="mb-8 bg-white border border-oo-rule rounded-oo p-6"
-        >
-          <label
-            htmlFor="lei-input"
-            className="block text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2"
-          >
-            Legal Entity Identifier
-          </label>
-          <div className="flex gap-3">
-            <input
-              id="lei-input"
-              type="text"
-              value={leiInput}
-              onChange={(e) => setLeiInput(e.target.value)}
-              placeholder="e.g. 213800LH1BZH3DI6G760"
-              spellCheck={false}
-              autoComplete="off"
-              className="flex-1 border border-oo-rule rounded px-3 py-2.5 font-mono uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
-              maxLength={20}
-            />
+        {/* ── Search panel — two-tab design ── */}
+        <div className="mb-8 bg-white border border-oo-rule rounded-oo overflow-hidden">
+          {/* Tab bar */}
+          <div className="flex border-b border-oo-rule">
             <button
-              type="submit"
-              disabled={looking || !leiInput.trim()}
-              className="bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
+              type="button"
+              onClick={() => setSearchMode("name")}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-[13px] font-medium transition-colors ${
+                searchMode === "name"
+                  ? "text-oo-ink border-b-2 border-oo-blue bg-white"
+                  : "text-oo-muted bg-oo-bg hover:text-oo-ink"
+              }`}
             >
-              {looking ? "Looking up…" : "Look up"}
+              <GleifIcon className="h-[14px] w-[14px] flex-shrink-0" />
+              Search by company name
+            </button>
+            <button
+              type="button"
+              onClick={() => setSearchMode("lei")}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-[13px] font-medium transition-colors border-l border-oo-rule ${
+                searchMode === "lei"
+                  ? "text-oo-ink border-b-2 border-oo-blue bg-white"
+                  : "text-oo-muted bg-oo-bg hover:text-oo-ink"
+              }`}
+            >
+              Paste an LEI
             </button>
           </div>
-          <p className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
-            <a
-              href="https://search.gleif.org/#/search/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-oo-ink transition-colors"
-            >
-              Look up an entity
-            </a>{" "}
-            by its 20-character LEI. We query the Global Legal Entity Identifier
-            Foundation (GLEIF) first, then use the LEI to bridge to national
-            company registries, OpenCorporates, OpenSanctions, OpenAleph,
-            Wikidata, and OpenTender.
-          </p>
-        </form>
+
+          {/* ── Name search panel ── */}
+          {searchMode === "name" && (
+            <div className="p-6">
+              <form onSubmit={searchByName}>
+                <label
+                  htmlFor="name-input"
+                  className="block text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2"
+                >
+                  Company name
+                </label>
+                <div className="flex gap-3">
+                  <input
+                    id="name-input"
+                    type="text"
+                    value={nameQuery}
+                    onChange={(e) => setNameQuery(e.target.value)}
+                    placeholder="e.g. BP P.L.C."
+                    autoComplete="off"
+                    className="flex-1 border border-oo-rule rounded px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
+                  />
+                  <button
+                    type="submit"
+                    disabled={nameSearching || !nameQuery.trim()}
+                    className="bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
+                  >
+                    {nameSearching ? "Searching…" : "Search"}
+                  </button>
+                </div>
+                <p className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl flex items-center gap-1.5">
+                  <GleifIcon className="h-[14px] w-[14px] flex-shrink-0 text-oo-blue" />
+                  Powered by the{" "}
+                  <a
+                    href="https://www.gleif.org/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-oo-ink transition-colors"
+                  >
+                    GLEIF
+                  </a>{" "}
+                  LEI registry via the{" "}
+                  <a
+                    href="https://mcp.gleif.org/gleif-api/mcp"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-oo-ink transition-colors"
+                  >
+                    GLEIF MCP server
+                  </a>
+                  .
+                </p>
+              </form>
+
+              {nameError && (
+                <div className="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
+                  {nameError}
+                </div>
+              )}
+
+              {nameResults && nameResults.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-3">
+                    {nameResults.length} result{nameResults.length === 1 ? "" : "s"} — click to look up
+                  </p>
+                  <ul className="divide-y divide-oo-rule border border-oo-rule rounded-oo overflow-hidden">
+                    {nameResults.map((r) => (
+                      <li key={r.lei}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNameResults(null);
+                            setNameQuery("");
+                            lookupLei(r.lei);
+                          }}
+                          className="w-full text-left px-4 py-3 hover:bg-oo-bg transition-colors"
+                        >
+                          <div className="font-head font-bold text-[14px] text-oo-ink leading-snug">
+                            {r.legalName}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="font-mono text-[11px] text-oo-blue">
+                              {r.lei}
+                            </span>
+                            <span className="text-[11px] text-oo-muted">{r.country}</span>
+                            <span
+                              className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                                r.status === "ISSUED"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : "bg-oo-bg text-oo-muted border-oo-rule"
+                              }`}
+                            >
+                              {r.status}
+                            </span>
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── LEI paste panel ── */}
+          {searchMode === "lei" && (
+            <form onSubmit={runLookup} className="p-6">
+              <label
+                htmlFor="lei-input"
+                className="block text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2"
+              >
+                Legal Entity Identifier
+              </label>
+              <div className="flex gap-3">
+                <input
+                  id="lei-input"
+                  type="text"
+                  value={leiInput}
+                  onChange={(e) => setLeiInput(e.target.value)}
+                  placeholder="e.g. 213800LH1BZH3DI6G760"
+                  spellCheck={false}
+                  autoComplete="off"
+                  className="flex-1 border border-oo-rule rounded px-3 py-2.5 font-mono uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
+                  maxLength={20}
+                />
+                <button
+                  type="submit"
+                  disabled={looking || !leiInput.trim()}
+                  className="bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
+                >
+                  {looking ? "Looking up…" : "Look up"}
+                </button>
+              </div>
+              <p className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
+                Enter a 20-character ISO 17442 LEI to query GLEIF and bridge to
+                national company registries, OpenCorporates, OpenSanctions,
+                OpenAleph, Wikidata, and OpenTender.
+              </p>
+            </form>
+          )}
+        </div>
 
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
@@ -423,7 +639,7 @@ export default function App() {
           </div>
         )}
 
-        {!result && !looking && !error && (
+        {!result && !looking && !error && !nameResults && !nameSearching && (
           <>
             <ExampleLeiPicker onPick={lookupLei} disabled={looking} />
             <HowItWorks />
