@@ -230,6 +230,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "bolagsverket": "Bolagsverket — Swedish Companies Registration Office",
         "brreg": "Brønnøysundregistrene — Norwegian Register Centre",
         "companies_house": "UK Companies House",
+        "cro": "CRO — Companies Registration Office Ireland",
         "gleif": "GLEIF",
         "inpi": "INPI — Registre National des Entreprises",
         "kvk": "KvK — Netherlands Chamber of Commerce",
@@ -243,7 +244,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "opentender": "OpenTender",
         "sec_edgar": "SEC EDGAR — U.S. Securities and Exchange Commission",
     }
-    _official_registers = {"ariregister", "bolagsverket", "brreg", "companies_house", "inpi", "kvk", "opencorporates", "zefix", "sec_edgar"}
+    _official_registers = {"ariregister", "bolagsverket", "brreg", "companies_house", "cro", "inpi", "kvk", "opencorporates", "zefix", "sec_edgar"}
     block: dict[str, Any] = {
         "type": "officialRegister" if source_id in _official_registers else "thirdParty",
         "description": source_names.get(source_id, source_id),
@@ -3856,6 +3857,123 @@ def _brreg_full_name(person: dict[str, Any]) -> str:
 
 def _company_url_brreg(orgnr: str) -> str:
     return f"https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr={orgnr}"
+
+
+# ----------------------------------------------------------------------
+# CRO (Companies Registration Office Ireland) → BODS
+# ----------------------------------------------------------------------
+#
+# The CRO Open Data Portal provides entity-level data only — no
+# officer or director records are available from the free tier. We
+# therefore emit a single entityStatement per company. The Open
+# Services API (key-gated) can extend this with officers in future.
+
+# CRO company_type values → BODS entityType
+# https://core.cro.ie (type codes seen in practice)
+_CRO_ENTITY_TYPES: dict[str, str] = {
+    # Registered entities (limited liability companies)
+    "LTD": "registeredEntity",
+    "DAC": "registeredEntity",
+    "PLC": "registeredEntity",
+    "UC":  "registeredEntity",     # Unlimited company
+    "CLG": "registeredEntity",     # Company limited by guarantee
+    "EEIG": "registeredEntity",    # European Economic Interest Grouping
+    "SE":  "registeredEntity",     # Societas Europaea
+    "ICAV": "registeredEntity",    # Investment limited partnership
+    "ILP": "registeredEntity",
+}
+
+
+def _cro_entity_type(company_type: str) -> str:
+    """Map a CRO company type string to a BODS entityType."""
+    # The company_type field carries a full description, e.g.
+    # "PLC - Public Limited Company" or "LTD - Private company limited by shares".
+    # Extract the leading abbreviation.
+    code = (company_type or "").split("-")[0].strip().split("(")[0].strip().upper()
+    for prefix, bods_type in _CRO_ENTITY_TYPES.items():
+        if code.startswith(prefix):
+            return bods_type
+    return "registeredEntity"
+
+
+def _cro_address(rec: dict[str, Any]) -> dict[str, str] | None:
+    """Build a BODS address dict from CRO company_address_1..4 fields."""
+    lines = [
+        (rec.get(f"company_address_{i}") or "").strip()
+        for i in range(1, 5)
+    ]
+    non_empty = [l for l in lines if l]
+    if not non_empty:
+        return None
+    eircode = (rec.get("eircode") or "").strip()
+    if eircode:
+        non_empty.append(eircode)
+    return {
+        "type": "registered",
+        "address": ", ".join(non_empty),
+        "country": "IE",
+    }
+
+
+def map_cro(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map a CroAdapter fetch bundle to a single BODS v0.4 entity statement.
+
+    Only entity data is available from the CRO Open Data Portal. When the
+    CRO Open Services API key is configured (future enhancement), officer
+    records will be added here as person + relationship statements.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return
+
+    crn: str = str(bundle.get("crn") or "")
+    company: dict[str, Any] = bundle.get("company") or {}
+
+    name: str = (
+        (company.get("company_name") or "").strip()
+        or bundle.get("legal_name")
+        or f"IE-CRN {crn}"
+    )
+    if not crn or not name:
+        return
+
+    source_url = f"https://core.cro.ie/company/{crn}"
+
+    # Registration date comes as "1996-06-05T00:00:00" — take the date part.
+    reg_date_raw = company.get("company_reg_date") or ""
+    founding_date = reg_date_raw[:10] if reg_date_raw else None
+
+    company_type = (company.get("company_type") or "").strip()
+    entity_type = _cro_entity_type(company_type)
+
+    identifiers: list[dict[str, str]] = [
+        {
+            "id": crn,
+            "scheme": "IE-CRO",
+            "schemeName": "Companies Registration Office Ireland",
+        }
+    ]
+
+    nace = (company.get("nace_v2_code") or "").strip()
+    if nace:
+        identifiers.append({
+            "id": nace,
+            "scheme": "NACE2",
+            "schemeName": "NACE Rev. 2 activity code",
+        })
+
+    address = _cro_address(company)
+
+    yield make_entity_statement(
+        source_id="cro",
+        local_id=crn,
+        name=name,
+        jurisdiction=("Ireland", "IE"),
+        identifiers=identifiers,
+        founding_date=founding_date,
+        addresses=[address] if address else [],
+        entity_type=entity_type,
+        source_url=source_url,
+    )
 
 
 def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:

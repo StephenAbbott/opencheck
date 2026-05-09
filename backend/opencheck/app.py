@@ -40,6 +40,7 @@ from .bods import (
     map_brightquery,
     map_brreg,
     map_companies_house,
+    map_cro,
     map_everypolitician,
     map_gleif,
     map_inpi,
@@ -56,6 +57,7 @@ from .bods import (
 from .sources.ariregister import EE_RA_CODE as _EE_RA_CODE
 from .sources.bolagsverket import BV_RA_CODE as _BV_RA_CODE, normalise_org_number as _normalise_org_number
 from .sources.brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_orgnr
+from .sources.cro import IE_RA_CODE as _CRO_RA_CODE, normalise_crn as _normalise_crn
 from .sources.inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
 from .sources.kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
 from .sources.zefix import CH_RA_CODES as _ZEFIX_RA_CODES, normalise_uid as _zefix_normalise_uid
@@ -356,6 +358,7 @@ _MAPPERS = {
     "bolagsverket": map_bolagsverket,
     "brreg": map_brreg,
     "companies_house": map_companies_house,
+    "cro": map_cro,
     "gleif": map_gleif,
     "inpi": map_inpi,
     "opencorporates": map_opencorporates,
@@ -682,6 +685,9 @@ async def lookup(
     if registered_at_id == _BRREG_RA_CODE and registered_as:
         # Norwegian organisation number — 9-digit string (e.g. "923609016")
         derived["no_orgnr"] = _normalise_orgnr(registered_as)
+    if registered_at_id == _CRO_RA_CODE and registered_as:
+        # Irish company registration number (e.g. "249885")
+        derived["ie_crn"] = _normalise_crn(registered_as)
 
     # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
     # (format: ``{jurisdiction_code}/{company_number}``).
@@ -735,6 +741,7 @@ async def lookup(
             **({"se_org_number": derived["se_org_number"]} if "se_org_number" in derived else {}),
             **({"ee_registry_code": derived["ee_registry_code"]} if "ee_registry_code" in derived else {}),
             **({"no_orgnr": derived["no_orgnr"]} if "no_orgnr" in derived else {}),
+            **({"ie_crn": derived["ie_crn"]} if "ie_crn" in derived else {}),
             **({"wikidata_qid": qid} if qid else {}),
         },
         raw=gleif_bundle.get("record") or {},
@@ -942,6 +949,38 @@ async def lookup(
                 deepened_bundles.append(("brreg", derived["no_orgnr"]))
         except Exception as exc:  # noqa: BLE001
             errors["brreg"] = f"{type(exc).__name__}: {exc}"
+
+    # CRO — direct fetch by company registration number when Irish entity (RA000402).
+    if "ie_crn" in derived:
+        try:
+            cro_bundle = await REGISTRY["cro"].fetch(
+                derived["ie_crn"], legal_name=legal_name
+            )
+            if not cro_bundle.get("is_stub"):
+                cro_company = cro_bundle.get("company") or {}
+                cro_name = (
+                    (cro_company.get("company_name") or "").strip()
+                    or legal_name
+                    or ""
+                )
+                hits.append(
+                    SourceHit(
+                        source_id="cro",
+                        hit_id=derived["ie_crn"],
+                        kind=SearchKind.ENTITY,
+                        name=cro_name,
+                        summary=f"IE-CRN {derived['ie_crn']}",
+                        identifiers={
+                            "ie_crn": derived["ie_crn"],
+                            "lei": lei,
+                        },
+                        raw=cro_company,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("cro", derived["ie_crn"]))
+        except Exception as exc:  # noqa: BLE001
+            errors["cro"] = f"{type(exc).__name__}: {exc}"
 
     # OpenCorporates — direct fetch by ocid derived from GLEIF.
     if ocid:

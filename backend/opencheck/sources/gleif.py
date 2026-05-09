@@ -30,6 +30,7 @@ from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .bolagsverket import BV_RA_CODE as _BV_RA_CODE, normalise_org_number as _normalise_org_number
 from .brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_orgnr
+from .cro import IE_RA_CODE as _CRO_RA_CODE, normalise_crn as _normalise_crn
 from .inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
 from .kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
 from .zefix import CH_RA_CODES as _ZEFIX_RA_CODES, format_uid as _zefix_format_uid
@@ -266,6 +267,10 @@ class GleifAdapter(SourceAdapter):
             # the reconciler can bridge GLEIF ↔ Brreg.
             if registered_at_id == _BRREG_RA_CODE:
                 identifiers["no_orgnr"] = _normalise_orgnr(registered_as)
+            # Irish company registration number — expose as ``ie_crn`` so
+            # the reconciler can bridge GLEIF ↔ CRO.
+            if registered_at_id == _CRO_RA_CODE:
+                identifiers["ie_crn"] = _normalise_crn(registered_as)
 
         return SourceHit(
             source_id="gleif",

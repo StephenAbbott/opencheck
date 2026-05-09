@@ -13,6 +13,7 @@ from .bolagsverket import BolagsverketAdapter
 from .brightquery import BrightQueryAdapter
 from .brreg import BrregAdapter
 from .companies_house import CompaniesHouseAdapter
+from .cro import CroAdapter
 from .everypolitician import EveryPoliticianAdapter
 from .gleif import GleifAdapter
 from .inpi import InpiAdapter
@@ -35,6 +36,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "bolagsverket": BolagsverketAdapter(),
     "brreg": BrregAdapter(),
     "companies_house": CompaniesHouseAdapter(),
+    "cro": CroAdapter(),
     "gleif": GleifAdapter(),
     "inpi": InpiAdapter(),
     "kvk": KvKAdapter(),

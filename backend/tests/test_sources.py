@@ -24,6 +24,7 @@ def test_registry_has_expected_sources() -> None:
         "bolagsverket",
         "brreg",
         "companies_house",
+        "cro",
         "gleif",
         "inpi",
         "opencorporates",

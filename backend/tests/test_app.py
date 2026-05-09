@@ -44,6 +44,7 @@ def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
         "bolagsverket",
         "brreg",
         "companies_house",
+        "cro",
         "gleif",
         "inpi",
         "opencorporates",
