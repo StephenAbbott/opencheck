@@ -345,6 +345,9 @@ class SecEdgarAdapter(SourceAdapter):
             f"{_BROWSE_BASE}?company={quote(query)}&CIK=&type="
             f"&dateb=&owner=include&count=20&search_text=&action=getcompany&output=atom"
         )
+        # _get_text raises RuntimeError on 403/429/network failure so that
+        # the /lookup endpoint captures it in errors["sec_edgar"] rather
+        # than silently producing an empty hit list.
         atom_xml = await self._get_text(url, cache_key=cache_key)
         return _parse_company_hits_from_atom(atom_xml)
 
@@ -384,6 +387,8 @@ class SecEdgarAdapter(SourceAdapter):
         if cached is not None:
             return cached[0]
 
+        # _fetch_filings_for_subject → _get_text raises RuntimeError on
+        # HTTP errors so the caller sees a real error, not empty filings.
         filings = await self._fetch_filings_for_subject(cik)
         result: dict[str, Any] = {
             "source_id": self.id,
@@ -462,12 +467,29 @@ class SecEdgarAdapter(SourceAdapter):
     # HTTP with caching
     # ------------------------------------------------------------------
 
+    def _edgar_headers(self) -> dict[str, str]:
+        """Return HTTP headers that satisfy SEC EDGAR's fair-use policy.
+
+        EDGAR requires a User-Agent that identifies the application and
+        includes a contact e-mail so SEC staff can reach the operator if
+        automated access causes problems.  Requests from cloud hosting IPs
+        (such as Render) that omit a contact e-mail are silently blocked
+        with 403.  See https://www.sec.gov/os/webmaster-faq#developers.
+        """
+        email = get_settings().edgar_contact_email
+        return {
+            "User-Agent": f"OpenCheck {email}",
+            "Accept-Encoding": "gzip, deflate",
+            "Host": "www.sec.gov",
+        }
+
     async def _get_text(self, url: str, *, cache_key: str) -> str:
         """Fetch any URL and return raw text; cache the result.
 
-        Returns ``""`` on 404 or network errors for optional resources
-        (filing XMLs); raises on other HTTP errors for required resources
-        (search / filings atom).
+        Returns ``""`` on 404 or for optional resources (individual filing
+        XMLs) that may not exist.  Raises ``RuntimeError`` on 403/429/5xx
+        so callers can propagate the failure rather than silently producing
+        empty results.
         """
         cached = self._cache.get_payload(cache_key)
         if cached is not None:
@@ -475,14 +497,24 @@ class SecEdgarAdapter(SourceAdapter):
 
         try:
             async with build_client() as client:
-                resp = await client.get(url)
+                resp = await client.get(url, headers=self._edgar_headers())
                 if resp.status_code == 404:
                     self._cache.put(cache_key, "")
                     return ""
+                if resp.status_code == 403:
+                    raise RuntimeError(
+                        "SEC EDGAR returned 403 — check OPENCHECK_EDGAR_CONTACT_EMAIL "
+                        "is set to a valid address in your environment"
+                    )
+                if resp.status_code == 429:
+                    raise RuntimeError("SEC EDGAR rate-limited this request (429)")
                 resp.raise_for_status()
                 text = resp.text
-        except Exception:
-            return ""
+        except RuntimeError:
+            raise
+        except Exception as exc:
+            # Network-level failure (timeout, DNS, SSL) — treat as transient.
+            raise RuntimeError(f"SEC EDGAR request failed: {exc}") from exc
 
         self._cache.put(cache_key, text)
         return text

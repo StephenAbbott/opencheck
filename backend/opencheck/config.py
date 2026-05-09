@@ -118,6 +118,16 @@ class Settings(BaseSettings):
     # License: CC BY 4.0 — no API key required, only the local DB file.
     ariregister_db_file: str | None = Field(default=None, alias="ARIREGISTER_DB_FILE")
 
+    # --- SEC EDGAR fair-use contact ---
+    # SEC EDGAR's automated-access policy requires a contact e-mail in the
+    # User-Agent string so they can reach you if your tool misbehaves.
+    # Without this, requests from cloud-hosting IPs are likely to be silently
+    # blocked with a 403.  Set to any working e-mail address.
+    # See: https://www.sec.gov/os/webmaster-faq#developers
+    edgar_contact_email: str = Field(
+        default="opencheck@example.com", alias="OPENCHECK_EDGAR_CONTACT_EMAIL"
+    )
+
     # --- Optional LLM ---
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
 
