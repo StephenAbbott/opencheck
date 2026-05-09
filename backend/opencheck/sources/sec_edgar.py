@@ -1,30 +1,35 @@
 """SEC EDGAR adapter — Schedule 13D/13G beneficial ownership filings.
 
 Surfaces major shareholders (>5 % beneficial owners) of US-listed companies
-from the mandatory structured XML filings that became the standard from
-December 18 2024 onward (form types "SCHEDULE 13D" / "SCHEDULE 13G").
+from the mandatory structured XML filings introduced on December 18 2024.
 
 Search strategy
     EDGAR company-search atom feed (browse-edgar?company=<name>&output=atom)
     → one hit per matching subject company (the issuer), keyed by CIK.
+    In practice the CIK is usually sourced directly from OpenCorporates data
+    so the name-search fallback is rarely used.
 
 Fetch strategy
-    browse-edgar filings atom for both SCHEDULE 13D and SCHEDULE 13G
-    → parse primary_doc.xml for each filing
-    → deduplicate per reporting-person CIK, retaining the most recent filing.
+    data.sec.gov/submissions/CIK{padded}.json lists all 13D/13G filings
+    associated with the company (as issuer or as filer).  For each eligible
+    accession (filed ≥ 2024-12-18), primary_doc.xml is fetched from:
+        /Archives/edgar/data/{issuer_cik}/{accession_nodashes}/primary_doc.xml
+    Files are archived under the subject company's CIK, not the filer's CIK.
+    Results are deduplicated per reporter, retaining the most recent filing.
 
-No API key is required — EDGAR is publicly accessible; the User-Agent header
-already set by ``http.build_client()`` satisfies EDGAR's fair-access policy.
+No API key is required — EDGAR is publicly accessible.  The User-Agent header
+must identify the application and include a contact e-mail (set via the
+OPENCHECK_EDGAR_CONTACT_EMAIL env var) or cloud-hosted requests will be
+silently blocked with 403.  See https://www.sec.gov/os/webmaster-faq#developers
 
-Coverage is limited to publicly-traded US companies whose shareholders hold
->5 % of a registered equity class and have filed since December 18 2024.
+Coverage is limited to publicly-traded US companies with shareholders holding
+>5 % of a registered equity class who have filed since December 18 2024.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
-import re
 import xml.etree.ElementTree as ET
 from typing import Any
 from urllib.parse import quote
@@ -64,10 +69,6 @@ _EDGAR_CITIZENSHIP_TO_ISO: dict[str, str] = {
 # typeOfReportingPerson codes that indicate a natural person.
 _INDIVIDUAL_CODES: frozenset[str] = frozenset({"IN"})
 
-# Extracts (filer_cik, accession_nodashes) from EDGAR archive hrefs.
-# Matches: /Archives/edgar/data/{cik}/{accession}/
-_ARCHIVE_URL_RE = re.compile(r"/Archives/edgar/data/(\d+)/(\d+)/")
-
 
 # ----------------------------------------------------------------------
 # Small helpers
@@ -100,17 +101,6 @@ def _parse_company_cik(entry_id: str) -> str:
         raw = entry_id.split("company=")[-1]
         return raw.lstrip("0") or "0"
     return ""
-
-
-def _parse_accession_link(href: str) -> tuple[str, str]:
-    """Extract (filer_cik, accession_nodashes) from an EDGAR archive href.
-
-    Returns ("", "") if the URL does not match the expected pattern.
-    """
-    m = _ARCHIVE_URL_RE.search(href)
-    if not m:
-        return "", ""
-    return m.group(1), m.group(2)
 
 
 # ----------------------------------------------------------------------
@@ -156,47 +146,6 @@ def _parse_company_hits_from_atom(atom_xml: str) -> list[SourceHit]:
             )
         )
     return hits
-
-
-def _parse_filing_refs_from_atom(atom_xml: str) -> list[dict[str, str]]:
-    """Parse EDGAR filings atom → list of filing references.
-
-    Each reference is a dict with keys:
-    ``filer_cik``, ``accession`` (no dashes), ``form_type``, ``filed``.
-    """
-    if not atom_xml:
-        return []
-    try:
-        root = ET.fromstring(atom_xml)
-    except ET.ParseError:
-        return []
-
-    ns = {"atom": _NS_ATOM}
-    refs: list[dict[str, str]] = []
-    for entry in root.findall("atom:entry", ns):
-        link_el = entry.find("atom:link", ns)
-        if link_el is None:
-            continue
-        href = link_el.get("href", "")
-        filer_cik, accession = _parse_accession_link(href)
-        if not filer_cik or not accession:
-            continue
-
-        category_el = entry.find("atom:category", ns)
-        form_type = category_el.get("term", "") if category_el is not None else ""
-
-        updated_el = entry.find("atom:updated", ns)
-        filed = _xml_text(updated_el)[:10] if updated_el is not None else ""
-
-        refs.append(
-            {
-                "filer_cik": filer_cik,
-                "accession": accession,
-                "form_type": form_type,
-                "filed": filed,
-            }
-        )
-    return refs
 
 
 # ----------------------------------------------------------------------
@@ -574,10 +523,17 @@ class SecEdgarAdapter(SourceAdapter):
                 )
 
         # Deduplicate: per reporter CIK, keep the most-recently-dated filing.
+        # 13G filings rarely include reportingPersonCIK inside the reporter
+        # details element — it's absent from the SEC schema for that block.
+        # Fall back to filer_cik (from headerData) which IS the reporter's
+        # CIK for single-filer 13G documents.
         best: dict[str, dict[str, Any]] = {}
         no_cik: list[dict[str, Any]] = []
         for rec in raw_records:
-            reporter_cik = (rec["reporter"] or {}).get("reporter_cik", "")
+            reporter_cik = (
+                (rec["reporter"] or {}).get("reporter_cik", "")
+                or rec.get("filer_cik", "")
+            )
             if not reporter_cik:
                 no_cik.append(rec)
                 continue
