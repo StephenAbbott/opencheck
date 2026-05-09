@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [draft customer due diligence regulatory techn
 
 ## Status
 
-OpenCheck has shipped through twenty-two phases (latest commit on `main` is the source of truth):
+OpenCheck has shipped through twenty six phases (latest commit on `main` is the source of truth):
 
 | Phase | Headline |
 |------:|----------|
