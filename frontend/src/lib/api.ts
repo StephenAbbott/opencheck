@@ -82,12 +82,18 @@ export interface DeepenResponse {
   risk_signals: RiskSignal[];
 }
 
-// Always use relative paths. Vite's dev-server proxy (vite.config.ts)
-// forwards /lookup, /sources, etc. to the backend — meaning the browser
-// never needs to know the backend's port or hostname directly. This also
-// makes it trivial to test from phones, VMs, or any device that can
-// reach the frontend server.
-export const BASE_URL = "";
+// In dev the Vite dev-server proxy (vite.config.ts) intercepts these paths
+// server-side and forwards them to the backend, so the browser only ever
+// sees the same origin — which means relative URLs work from any device
+// (phones, VMs, etc.) without CORS issues.
+//
+// In production (static build on Render / any CDN) there is no proxy, so we
+// bake in the absolute backend URL at build time via the VITE_API_BASE_URL
+// environment variable.  The Render dashboard sets this to the backend
+// service URL (e.g. https://opencheck-api.onrender.com).
+export const BASE_URL: string = import.meta.env.DEV
+  ? ""
+  : ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "");
 
 /**
  * Build a URL to the /export endpoint that browsers can hit directly
