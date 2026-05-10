@@ -40,6 +40,14 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **License:** per-collection (CC BY, CC BY-SA, or restricted). OpenCheck reads each collection's license metadata from the API and surfaces it on the source card.
 - **Attribution:** per-collection, e.g. "Data from [collection name] in OpenAleph, licensed [license]."
 
+## PRH — Patentti- ja rekisterihallitus (Finnish Patent and Registration Office)
+
+- **Data:** entity records for all organisations registered in Finland, via the YTJ (Yritys- ja yhteisötietojärjestelmä) Open Data API
+- **API:** <https://avoindata.prh.fi/en/ytj/swagger-ui>
+- **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **Attribution:** "Contains data from Patentti- ja rekisterihallitus (PRH) / Finnish Patent and Registration Office, via the YTJ Open Data API (avoindata.prh.fi), licensed under CC BY 4.0."
+- **Note:** Beneficial ownership / officer data from PRH is not publicly accessible. The paid Virre Information Service ([prh.fi/virre](https://www.prh.fi/en/companiesandorganisations/tietopalvelut/virre.html)) provides role-holder records; OpenCheck currently maps entity data only.
+
 ## EveryPolitician
 
 - **Data:** current politicians and positions across 258 countries and territories, maintained by the OpenSanctions team via the Poliloom crowdsourcing tool

@@ -34,6 +34,7 @@ def test_registry_has_expected_sources() -> None:
         "sec_edgar",
         "wikidata",
         "opentender",
+        "prh",
         "zefix",
         "kvk",
     }

@@ -33,6 +33,7 @@ from .brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_o
 from .cro import IE_RA_CODE as _CRO_RA_CODE, normalise_crn as _normalise_crn
 from .inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
 from .kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
+from .prh import FI_RA_CODE as _PRH_RA_CODE, normalise_ytunnus as _normalise_ytunnus
 from .zefix import CH_RA_CODES as _ZEFIX_RA_CODES, format_uid as _zefix_format_uid
 
 _API_BASE = "https://api.gleif.org/api/v1"
@@ -271,6 +272,10 @@ class GleifAdapter(SourceAdapter):
             # the reconciler can bridge GLEIF ↔ CRO.
             if registered_at_id == _CRO_RA_CODE:
                 identifiers["ie_crn"] = _normalise_crn(registered_as)
+            # Finnish Business ID (Y-tunnus) — expose as ``fi_ytunnus`` so
+            # the reconciler can bridge GLEIF ↔ PRH.
+            if registered_at_id == _PRH_RA_CODE:
+                identifiers["fi_ytunnus"] = _normalise_ytunnus(registered_as)
 
         return SourceHit(
             source_id="gleif",

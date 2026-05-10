@@ -48,6 +48,7 @@ from .bods import (
     map_opencorporates,
     map_opensanctions,
     map_opentender,
+    map_prh,
     map_sec_edgar,
     map_wikidata,
     map_kvk,
@@ -58,6 +59,7 @@ from .sources.ariregister import EE_RA_CODE as _EE_RA_CODE
 from .sources.bolagsverket import BV_RA_CODE as _BV_RA_CODE, normalise_org_number as _normalise_org_number
 from .sources.brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_orgnr
 from .sources.cro import IE_RA_CODE as _CRO_RA_CODE, normalise_crn as _normalise_crn
+from .sources.prh import FI_RA_CODE as _PRH_RA_CODE, normalise_ytunnus as _normalise_ytunnus
 from .sources.inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
 from .sources.kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
 from .sources.zefix import CH_RA_CODES as _ZEFIX_RA_CODES, normalise_uid as _zefix_normalise_uid
@@ -370,6 +372,7 @@ _MAPPERS = {
     "everypolitician": map_everypolitician,
     "kvk": map_kvk,
     "opentender": map_opentender,
+    "prh": map_prh,
     "zefix": map_zefix,
 }
 
@@ -688,6 +691,9 @@ async def lookup(
     if registered_at_id == _CRO_RA_CODE and registered_as:
         # Irish company registration number (e.g. "249885")
         derived["ie_crn"] = _normalise_crn(registered_as)
+    if registered_at_id == _PRH_RA_CODE and registered_as:
+        # Finnish Business ID / Y-tunnus (e.g. "0112038-9")
+        derived["fi_ytunnus"] = _normalise_ytunnus(registered_as)
 
     # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
     # (format: ``{jurisdiction_code}/{company_number}``).
@@ -742,6 +748,7 @@ async def lookup(
             **({"ee_registry_code": derived["ee_registry_code"]} if "ee_registry_code" in derived else {}),
             **({"no_orgnr": derived["no_orgnr"]} if "no_orgnr" in derived else {}),
             **({"ie_crn": derived["ie_crn"]} if "ie_crn" in derived else {}),
+            **({"fi_ytunnus": derived["fi_ytunnus"]} if "fi_ytunnus" in derived else {}),
             **({"wikidata_qid": qid} if qid else {}),
         },
         raw=gleif_bundle.get("record") or {},
@@ -981,6 +988,41 @@ async def lookup(
                 deepened_bundles.append(("cro", derived["ie_crn"]))
         except Exception as exc:  # noqa: BLE001
             errors["cro"] = f"{type(exc).__name__}: {exc}"
+
+    # PRH — direct fetch by Y-tunnus when Finnish entity (RA000188).
+    if "fi_ytunnus" in derived:
+        try:
+            prh_bundle = await REGISTRY["prh"].fetch(
+                derived["fi_ytunnus"], legal_name=legal_name
+            )
+            if not prh_bundle.get("is_stub"):
+                prh_company = prh_bundle.get("company") or {}
+                # Extract current primary name from the names array.
+                prh_names = prh_company.get("names") or []
+                prh_name = ""
+                for _n in prh_names:
+                    if not _n.get("endDate") and _n.get("order") == 0:
+                        prh_name = (_n.get("name") or "").strip()
+                        break
+                prh_name = prh_name or legal_name or ""
+                hits.append(
+                    SourceHit(
+                        source_id="prh",
+                        hit_id=derived["fi_ytunnus"],
+                        kind=SearchKind.ENTITY,
+                        name=prh_name,
+                        summary=f"FI-YTUNNUS {derived['fi_ytunnus']}",
+                        identifiers={
+                            "fi_ytunnus": derived["fi_ytunnus"],
+                            "lei": lei,
+                        },
+                        raw=prh_company,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("prh", derived["fi_ytunnus"]))
+        except Exception as exc:  # noqa: BLE001
+            errors["prh"] = f"{type(exc).__name__}: {exc}"
 
     # OpenCorporates — direct fetch by ocid derived from GLEIF.
     if ocid:

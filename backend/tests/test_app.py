@@ -54,6 +54,7 @@ def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
         "sec_edgar",
         "wikidata",
         "opentender",
+        "prh",
         "zefix",
         "kvk",
     }
