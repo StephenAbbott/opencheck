@@ -610,19 +610,33 @@ def _statement_id(stmt: dict[str, Any]) -> str:
 def _relationship_endpoints(stmt: dict[str, Any]) -> tuple[str, str, str]:
     """Return (subject_id, ip_id, ip_kind) for a relationship statement.
 
+    Handles both the BODS v0.4 bare-string format (``subject: "id"``) and the
+    older wrapped format (``subject: {"describedByEntityStatement": "id"}``).
     ``ip_kind`` is ``"entity"``, ``"person"`` or ``""`` (unknown).
     """
     rd = _record_details(stmt)
-    subj = (rd.get("subject") or {}).get("describedByEntityStatement") or ""
-    ip = rd.get("interestedParty") or {}
-    if "describedByEntityStatement" in ip:
-        return subj, ip["describedByEntityStatement"], "entity"
-    if "describedByPersonStatement" in ip:
-        return subj, ip["describedByPersonStatement"], "person"
-    if "describedByAnonymousEntityStatement" in ip:
-        # Some BODS implementations carry this as a distinct key —
-        # treat it as an entity for chain-counting purposes.
-        return subj, ip["describedByAnonymousEntityStatement"], "entity"
+
+    # BODS v0.4: subject is a bare string record-id.
+    raw_subj = rd.get("subject") or {}
+    if isinstance(raw_subj, str):
+        subj = raw_subj
+    else:
+        subj = raw_subj.get("describedByEntityStatement") or ""
+
+    # BODS v0.4: interestedParty is a bare string record-id.
+    raw_ip = rd.get("interestedParty") or {}
+    if isinstance(raw_ip, str):
+        # For bare string we can't determine ip_kind from the key name alone;
+        # resolve it later via statement lookup.  Return "" for ip_kind.
+        return subj, raw_ip, ""
+
+    # Legacy wrapped format.
+    if "describedByEntityStatement" in raw_ip:
+        return subj, raw_ip["describedByEntityStatement"], "entity"
+    if "describedByPersonStatement" in raw_ip:
+        return subj, raw_ip["describedByPersonStatement"], "person"
+    if "describedByAnonymousEntityStatement" in raw_ip:
+        return subj, raw_ip["describedByAnonymousEntityStatement"], "entity"
     return subj, "", ""
 
 
@@ -872,7 +886,12 @@ def _layers_signal(
         if _stmt_kind(stmt) != "relationship":
             continue
         subj, ip, ip_kind = _relationship_endpoints(stmt)
-        if not subj or not ip or ip_kind != "entity":
+        if not subj or not ip:
+            continue
+        # BODS v0.4 bare-string format: ip_kind is "" — resolve from entity_ids.
+        if ip_kind == "":
+            ip_kind = "entity" if ip in entity_ids else "person"
+        if ip_kind != "entity":
             continue
         if subj not in entity_ids or ip not in entity_ids:
             continue

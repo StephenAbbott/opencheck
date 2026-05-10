@@ -1,0 +1,612 @@
+{
+  "2138008RB4WDK7HYYS91": {
+    "label": "Biffa PLC (UK)",
+    "statement_count": 5,
+    "statistics": {
+      "count_entity_statements": 1,
+      "count_entity_statements_types": {
+        "registeredEntity": 1,
+        "legalEntity": 0,
+        "arrangement": 0,
+        "anonymousEntity": 0,
+        "unknownEntity": 0,
+        "state": 0,
+        "stateBody": 0
+      },
+      "count_entity_statements_types_with_any_identifier": {
+        "registeredEntity": 1,
+        "legalEntity": 0,
+        "arrangement": 0,
+        "anonymousEntity": 0,
+        "unknownEntity": 0,
+        "state": 0,
+        "stateBody": 0
+      },
+      "count_entity_statements_types_with_any_identifier_with_id_and_scheme": {
+        "registeredEntity": 1,
+        "legalEntity": 0,
+        "arrangement": 0,
+        "anonymousEntity": 0,
+        "unknownEntity": 0,
+        "state": 0,
+        "stateBody": 0
+      },
+      "count_person_statements": 2,
+      "count_person_statements_types": {
+        "anonymousPerson": 0,
+        "unknownPerson": 2,
+        "knownPerson": 0
+      },
+      "count_ownership_or_control_statement": 2,
+      "count_ownership_or_control_statement_interested_party_with_person": 2,
+      "count_ownership_or_control_statement_interested_party_with_entity": 0,
+      "count_ownership_or_control_statement_interested_party_with_unspecified": 0,
+      "count_ownership_or_control_statement_interested_party": 2,
+      "count_ownership_or_control_statement_interest_statement_types": {
+        "shareholding": 0,
+        "votingRights": 0,
+        "appointmentOfBoard": 0,
+        "otherInfluenceOrControl": 2,
+        "seniorManagingOfficial": 0,
+        "settlor": 0,
+        "trustee": 0,
+        "protector": 0,
+        "beneficiaryOfLegalArrangement": 0,
+        "rightsToSurplusAssetsOnDissolution": 0,
+        "rightsToProfitOrIncome": 0,
+        "rightsGrantedByContract": 0,
+        "conditionalRightsGrantedByContract": 0,
+        "controlViaCompanyRulesOrArticles": 0,
+        "controlByLegalFramework": 0,
+        "boardMember": 0,
+        "boardChair": 0,
+        "unknownInterest": 0,
+        "unpublishedInterest": 0,
+        "enjoymentAndUseOfAssets": 0,
+        "rightToProfitOrIncomeFromAssets": 0,
+        "nominee": 0,
+        "nominator": 0
+      },
+      "count_ownership_or_control_statement_by_year": {
+        "2026": 2
+      },
+      "count_ownership_or_control_statement_subject_by_year": {
+        "2026": 1
+      },
+      "count_ownership_or_control_statement_interested_party_by_year": {
+        "2026": 2
+      },
+      "count_addresses": 2,
+      "count_addresses_with_postcode": 0,
+      "count_addresses_with_country": 2,
+      "count_addresses_with_postcode_duplicated_in_address": 0,
+      "count_ownership_or_control_statement_interest_direct_or_indirect": {
+        "direct": 1,
+        "indirect": 1,
+        "unknown": 0
+      },
+      "count_ownership_or_control_statement_with_at_least_one_interest_beneficial": 0,
+      "count_declaration_subjects": 3,
+      "count_records_current": 5,
+      "count_new_records_missing": 0,
+      "count_person_statements_have_pep_status": 0,
+      "count_person_statements_have_pep_status_statuses": {
+        "isPep": 0,
+        "isNotPep": 0,
+        "unknown": 0
+      }
+    },
+    "schema_errors": [],
+    "additional_checks": [
+      {
+        "type": "entity_identifiers_not_known_scheme",
+        "statement_type": null,
+        "statement": "opencheck-772307d2d1ab2b22ef9c60de",
+        "scheme": "OpenCorporates"
+      },
+      {
+        "type": "entity_identifiers_not_known_scheme",
+        "statement_type": null,
+        "statement": "opencheck-772307d2d1ab2b22ef9c60de",
+        "scheme": "QCC Code"
+      }
+    ],
+    "schema_error_count": 0,
+    "additional_error_count": 0,
+    "additional_warning_count": 0
+  },
+  "5967007LIEEXZX8ZW078": {
+    "label": "Avinor AS (Norway)",
+    "statement_count": 30,
+    "statistics": {
+      "count_entity_statements": 4,
+      "count_entity_statements_types": {
+        "registeredEntity": 2,
+        "legalEntity": 0,
+        "arrangement": 0,
+        "anonymousEntity": 2,
+        "unknownEntity": 0,
+        "state": 0,
+        "stateBody": 0
+      },
+      "count_entity_statements_types_with_any_identifier": {
+        "registeredEntity": 2,
+        "legalEntity": 0,
+        "arrangement": 0,
+        "anonymousEntity": 0,
+        "unknownEntity": 0,
+        "state": 0,
+        "stateBody": 0
+      },
+      "count_entity_statements_types_with_any_identifier_with_id_and_scheme": {
+        "registeredEntity": 2,
+        "legalEntity": 0,
+        "arrangement": 0,
+        "anonymousEntity": 0,
+        "unknownEntity": 0,
+        "state": 0,
+        "stateBody": 0
+      },
+      "count_person_statements": 12,
+      "count_person_statements_types": {
+        "anonymousPerson": 0,
+        "unknownPerson": 0,
+        "knownPerson": 12
+      },
+      "count_ownership_or_control_statement": 14,
+      "count_ownership_or_control_statement_interested_party_with_person": 12,
+      "count_ownership_or_control_statement_interested_party_with_entity": 2,
+      "count_ownership_or_control_statement_interested_party_with_unspecified": 0,
+      "count_ownership_or_control_statement_interested_party": 14,
+      "count_ownership_or_control_statement_interest_statement_types": {
+        "shareholding": 0,
+        "votingRights": 0,
+        "appointmentOfBoard": 0,
+        "otherInfluenceOrControl": 3,
+        "seniorManagingOfficial": 0,
+        "settlor": 0,
+        "trustee": 0,
+        "protector": 0,
+        "beneficiaryOfLegalArrangement": 0,
+        "rightsToSurplusAssetsOnDissolution": 0,
+        "rightsToProfitOrIncome": 0,
+        "rightsGrantedByContract": 0,
+        "conditionalRightsGrantedByContract": 0,
+        "controlViaCompanyRulesOrArticles": 0,
+        "controlByLegalFramework": 0,
+        "boardMember": 10,
+        "boardChair": 1,
+        "unknownInterest": 0,
+        "unpublishedInterest": 0,
+        "enjoymentAndUseOfAssets": 0,
+        "rightToProfitOrIncomeFromAssets": 0,
+        "nominee": 0,
+        "nominator": 0
+      },
+      "count_ownership_or_control_statement_by_year": {
+        "2026": 14
+      },
+      "count_ownership_or_control_statement_subject_by_year": {
+        "2026": 2
+      },
+      "count_ownership_or_control_statement_interested_party_by_year": {
+        "2026": 14
+      },
+      "count_addresses": 3,
+      "count_addresses_with_postcode": 0,
+      "count_addresses_with_country": 3,
+      "count_addresses_with_postcode_duplicated_in_address": 0,
+      "count_ownership_or_control_statement_interest_direct_or_indirect": {
+        "direct": 13,
+        "indirect": 1,
+        "unknown": 0
+      },
+      "count_ownership_or_control_statement_with_at_least_one_interest_beneficial": 0,
+      "count_declaration_subjects": 16,
+      "count_records_current": 30,
+      "count_new_records_missing": 0,
+      "count_person_statements_have_pep_status": 0,
+      "count_person_statements_have_pep_status_statuses": {
+        "isPep": 0,
+        "isNotPep": 0,
+        "unknown": 0
+      }
+    },
+    "schema_errors": [],
+    "additional_checks": [
+      {
+        "type": "entity_identifiers_not_known_scheme",
+        "statement_type": null,
+        "statement": "opencheck-bb8e832d863fc577ff399395",
+        "scheme": ""
+      },
+      {
+        "type": "entity_identifiers_not_known_scheme",
+        "statement_type": null,
+        "statement": "opencheck-bb8e832d863fc577ff399395",
+        "scheme": "OpenCorporates"
+      },
+      {
+        "type": "entity_identifiers_not_known_scheme",
+        "statement_type": null,
+        "statement": "opencheck-bb8e832d863fc577ff399395",
+        "scheme": "QCC Code"
+      },
+      {
+        "type": "entity_identifiers_not_known_scheme",
+        "statement_type": null,
+        "statement": "opencheck-d8051e468076ed8b1a8ae35f",
+        "scheme": "NO-BRREG"
+      }
+    ],
+    "schema_error_count": 0,
+    "additional_error_count": 0,
+    "additional_warning_count": 0
+  },
+  "213800DJRB539Q1EMW75": {
+    "label": "Latvenergo AS (Latvia)",
+    "statement_count": 16,
+    "statistics": {
+      "count_entity_statements": 4,
+      "count_entity_statements_types": {
+        "registeredEntity": 2,
+        "legalEntity": 0,
+        "arrangement": 0,
+        "anonymousEntity": 2,
+        "unknownEntity": 0,
+        "state": 0,
+        "stateBody": 0
+      },
+      "count_entity_statements_types_with_any_identifier": {
+        "registeredEntity": 2,
+        "legalEntity": 0,
+        "arrangement": 0,
+        "anonymousEntity": 0,
+        "unknownEntity": 0,
+        "state": 0,
+        "stateBody": 0
+      },
+      "count_entity_statements_types_with_any_identifier_with_id_and_scheme": {
+        "registeredEntity": 2,
+        "legalEntity": 0,
+        "arrangement": 0,
+        "anonymousEntity": 0,
+        "unknownEntity": 0,
+        "state": 0,
+        "stateBody": 0
+      },
+      "count_person_statements": 5,
+      "count_person_statements_types": {
+        "anonymousPerson": 0,
+        "unknownPerson": 0,
+        "knownPerson": 5
+      },
+      "count_ownership_or_control_statement": 7,
+      "count_ownership_or_control_statement_interested_party_with_person": 5,
+      "count_ownership_or_control_statement_interested_party_with_entity": 2,
+      "count_ownership_or_control_statement_interested_party_with_unspecified": 0,
+      "count_ownership_or_control_statement_interested_party": 7,
+      "count_ownership_or_control_statement_interest_statement_types": {
+        "shareholding": 0,
+        "votingRights": 0,
+        "appointmentOfBoard": 0,
+        "otherInfluenceOrControl": 2,
+        "seniorManagingOfficial": 0,
+        "settlor": 0,
+        "trustee": 0,
+        "protector": 0,
+        "beneficiaryOfLegalArrangement": 0,
+        "rightsToSurplusAssetsOnDissolution": 0,
+        "rightsToProfitOrIncome": 0,
+        "rightsGrantedByContract": 0,
+        "conditionalRightsGrantedByContract": 0,
+        "controlViaCompanyRulesOrArticles": 0,
+        "controlByLegalFramework": 0,
+        "boardMember": 5,
+        "boardChair": 0,
+        "unknownInterest": 0,
+        "unpublishedInterest": 0,
+        "enjoymentAndUseOfAssets": 0,
+        "rightToProfitOrIncomeFromAssets": 0,
+        "nominee": 0,
+        "nominator": 0
+      },
+      "count_ownership_or_control_statement_by_year": {
+        "2026": 7
+      },
+      "count_ownership_or_control_statement_subject_by_year": {
+        "2026": 2
+      },
+      "count_ownership_or_control_statement_interested_party_by_year": {
+        "2026": 7
+      },
+      "count_addresses": 3,
+      "count_addresses_with_postcode": 0,
+      "count_addresses_with_country": 3,
+      "count_addresses_with_postcode_duplicated_in_address": 0,
+      "count_ownership_or_control_statement_interest_direct_or_indirect": {
+        "direct": 6,
+        "indirect": 1,
+        "unknown": 0
+      },
+      "count_ownership_or_control_statement_with_at_least_one_interest_beneficial": 0,
+      "count_declaration_subjects": 9,
+      "count_records_current": 16,
+      "count_new_records_missing": 0,
+      "count_person_statements_have_pep_status": 0,
+      "count_person_statements_have_pep_status_statuses": {
+        "isPep": 0,
+        "isNotPep": 0,
+        "unknown": 0
+      }
+    },
+    "schema_errors": [],
+    "additional_checks": [
+      {
+        "type": "entity_identifiers_not_known_scheme",
+        "statement_type": null,
+        "statement": "opencheck-ed15053b58bdbbdd4adaed35",
+        "scheme": ""
+      },
+      {
+        "type": "entity_identifiers_not_known_scheme",
+        "statement_type": null,
+        "statement": "opencheck-ed15053b58bdbbdd4adaed35",
+        "scheme": "OpenCorporates"
+      },
+      {
+        "type": "entity_identifiers_not_known_scheme",
+        "statement_type": null,
+        "statement": "opencheck-ed15053b58bdbbdd4adaed35",
+        "scheme": "QCC Code"
+      },
+      {
+        "type": "entity_identifiers_not_known_scheme",
+        "statement_type": null,
+        "statement": "opencheck-1dbfdb1091745a93f32a7fff",
+        "scheme": "LV-UR"
+      },
+      {
+        "type": "entity_identifiers_not_known_scheme",
+        "statement_type": null,
+        "statement": "opencheck-1dbfdb1091745a93f32a7fff",
+        "scheme": "LV-SEPA"
+      }
+    ],
+    "schema_error_count": 0,
+    "additional_error_count": 0,
+    "additional_warning_count": 0
+  },
+  "5493005044RTLQ5RZU70": {
+    "label": "Eesti Energia AS (Estonia)",
+    "statement_count": 5,
+    "statistics": {
+      "count_entity_statements": 3,
+      "count_entity_statements_types": {
+        "registeredEntity": 1,
+        "legalEntity": 0,
+        "arrangement": 0,
+        "anonymousEntity": 2,
+        "unknownEntity": 0,
+        "state": 0,
+        "stateBody": 0
+      },
+      "count_entity_statements_types_with_any_identifier": {
+        "registeredEntity": 1,
+        "legalEntity": 0,
+        "arrangement": 0,
+        "anonymousEntity": 0,
+        "unknownEntity": 0,
+        "state": 0,
+        "stateBody": 0
+      },
+      "count_entity_statements_types_with_any_identifier_with_id_and_scheme": {
+        "registeredEntity": 1,
+        "legalEntity": 0,
+        "arrangement": 0,
+        "anonymousEntity": 0,
+        "unknownEntity": 0,
+        "state": 0,
+        "stateBody": 0
+      },
+      "count_person_statements": 0,
+      "count_person_statements_types": {
+        "anonymousPerson": 0,
+        "unknownPerson": 0,
+        "knownPerson": 0
+      },
+      "count_ownership_or_control_statement": 2,
+      "count_ownership_or_control_statement_interested_party_with_person": 0,
+      "count_ownership_or_control_statement_interested_party_with_entity": 2,
+      "count_ownership_or_control_statement_interested_party_with_unspecified": 0,
+      "count_ownership_or_control_statement_interested_party": 2,
+      "count_ownership_or_control_statement_interest_statement_types": {
+        "shareholding": 0,
+        "votingRights": 0,
+        "appointmentOfBoard": 0,
+        "otherInfluenceOrControl": 2,
+        "seniorManagingOfficial": 0,
+        "settlor": 0,
+        "trustee": 0,
+        "protector": 0,
+        "beneficiaryOfLegalArrangement": 0,
+        "rightsToSurplusAssetsOnDissolution": 0,
+        "rightsToProfitOrIncome": 0,
+        "rightsGrantedByContract": 0,
+        "conditionalRightsGrantedByContract": 0,
+        "controlViaCompanyRulesOrArticles": 0,
+        "controlByLegalFramework": 0,
+        "boardMember": 0,
+        "boardChair": 0,
+        "unknownInterest": 0,
+        "unpublishedInterest": 0,
+        "enjoymentAndUseOfAssets": 0,
+        "rightToProfitOrIncomeFromAssets": 0,
+        "nominee": 0,
+        "nominator": 0
+      },
+      "count_ownership_or_control_statement_by_year": {
+        "2026": 2
+      },
+      "count_ownership_or_control_statement_subject_by_year": {
+        "2026": 1
+      },
+      "count_ownership_or_control_statement_interested_party_by_year": {
+        "2026": 2
+      },
+      "count_addresses": 2,
+      "count_addresses_with_postcode": 0,
+      "count_addresses_with_country": 2,
+      "count_addresses_with_postcode_duplicated_in_address": 0,
+      "count_ownership_or_control_statement_interest_direct_or_indirect": {
+        "direct": 1,
+        "indirect": 1,
+        "unknown": 0
+      },
+      "count_ownership_or_control_statement_with_at_least_one_interest_beneficial": 0,
+      "count_declaration_subjects": 3,
+      "count_records_current": 5,
+      "count_new_records_missing": 0,
+      "count_person_statements_have_pep_status": 0,
+      "count_person_statements_have_pep_status_statuses": {
+        "isPep": 0,
+        "isNotPep": 0,
+        "unknown": 0
+      }
+    },
+    "schema_errors": [],
+    "additional_checks": [
+      {
+        "type": "entity_identifiers_not_known_scheme",
+        "statement_type": null,
+        "statement": "opencheck-3885f777107974d6c0b7c00e",
+        "scheme": "QCC Code"
+      }
+    ],
+    "schema_error_count": 0,
+    "additional_error_count": 0,
+    "additional_warning_count": 0
+  },
+  "29DX7H14B9S6O3FD6V18": {
+    "label": "Costco Wholesale Corporation (US)",
+    "statement_count": 5,
+    "statistics": {
+      "count_entity_statements": 1,
+      "count_entity_statements_types": {
+        "registeredEntity": 1,
+        "legalEntity": 0,
+        "arrangement": 0,
+        "anonymousEntity": 0,
+        "unknownEntity": 0,
+        "state": 0,
+        "stateBody": 0
+      },
+      "count_entity_statements_types_with_any_identifier": {
+        "registeredEntity": 1,
+        "legalEntity": 0,
+        "arrangement": 0,
+        "anonymousEntity": 0,
+        "unknownEntity": 0,
+        "state": 0,
+        "stateBody": 0
+      },
+      "count_entity_statements_types_with_any_identifier_with_id_and_scheme": {
+        "registeredEntity": 1,
+        "legalEntity": 0,
+        "arrangement": 0,
+        "anonymousEntity": 0,
+        "unknownEntity": 0,
+        "state": 0,
+        "stateBody": 0
+      },
+      "count_person_statements": 2,
+      "count_person_statements_types": {
+        "anonymousPerson": 0,
+        "unknownPerson": 2,
+        "knownPerson": 0
+      },
+      "count_ownership_or_control_statement": 2,
+      "count_ownership_or_control_statement_interested_party_with_person": 2,
+      "count_ownership_or_control_statement_interested_party_with_entity": 0,
+      "count_ownership_or_control_statement_interested_party_with_unspecified": 0,
+      "count_ownership_or_control_statement_interested_party": 2,
+      "count_ownership_or_control_statement_interest_statement_types": {
+        "shareholding": 0,
+        "votingRights": 0,
+        "appointmentOfBoard": 0,
+        "otherInfluenceOrControl": 2,
+        "seniorManagingOfficial": 0,
+        "settlor": 0,
+        "trustee": 0,
+        "protector": 0,
+        "beneficiaryOfLegalArrangement": 0,
+        "rightsToSurplusAssetsOnDissolution": 0,
+        "rightsToProfitOrIncome": 0,
+        "rightsGrantedByContract": 0,
+        "conditionalRightsGrantedByContract": 0,
+        "controlViaCompanyRulesOrArticles": 0,
+        "controlByLegalFramework": 0,
+        "boardMember": 0,
+        "boardChair": 0,
+        "unknownInterest": 0,
+        "unpublishedInterest": 0,
+        "enjoymentAndUseOfAssets": 0,
+        "rightToProfitOrIncomeFromAssets": 0,
+        "nominee": 0,
+        "nominator": 0
+      },
+      "count_ownership_or_control_statement_by_year": {
+        "2026": 2
+      },
+      "count_ownership_or_control_statement_subject_by_year": {
+        "2026": 1
+      },
+      "count_ownership_or_control_statement_interested_party_by_year": {
+        "2026": 2
+      },
+      "count_addresses": 2,
+      "count_addresses_with_postcode": 0,
+      "count_addresses_with_country": 2,
+      "count_addresses_with_postcode_duplicated_in_address": 0,
+      "count_ownership_or_control_statement_interest_direct_or_indirect": {
+        "direct": 1,
+        "indirect": 1,
+        "unknown": 0
+      },
+      "count_ownership_or_control_statement_with_at_least_one_interest_beneficial": 0,
+      "count_declaration_subjects": 3,
+      "count_records_current": 5,
+      "count_new_records_missing": 0,
+      "count_person_statements_have_pep_status": 0,
+      "count_person_statements_have_pep_status_statuses": {
+        "isPep": 0,
+        "isNotPep": 0,
+        "unknown": 0
+      }
+    },
+    "schema_errors": [],
+    "additional_checks": [
+      {
+        "type": "entity_identifiers_not_known_scheme",
+        "statement_type": null,
+        "statement": "opencheck-b17194f9182b356adf9a2cb3",
+        "scheme": "US-WA"
+      },
+      {
+        "type": "entity_identifiers_not_known_scheme",
+        "statement_type": null,
+        "statement": "opencheck-b17194f9182b356adf9a2cb3",
+        "scheme": "OpenCorporates"
+      },
+      {
+        "type": "entity_identifiers_not_known_scheme",
+        "statement_type": null,
+        "statement": "opencheck-b17194f9182b356adf9a2cb3",
+        "scheme": "ISO-9362"
+      }
+    ],
+    "schema_error_count": 0,
+    "additional_error_count": 0,
+    "additional_warning_count": 0
+  }
+}

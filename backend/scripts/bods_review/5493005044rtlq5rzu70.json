@@ -1,0 +1,170 @@
+[
+  {
+    "statementId": "opencheck-3885f777107974d6c0b7c00e",
+    "recordId": "opencheck-3885f777107974d6c0b7c00e",
+    "declarationSubject": "opencheck-3885f777107974d6c0b7c00e",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "EESTI ENERGIA AS",
+      "identifiers": [
+        {
+          "id": "5493005044RTLQ5RZU70",
+          "scheme": "XI-LEI",
+          "schemeName": "Global Legal Entity Identifier Index"
+        },
+        {
+          "id": "10421629",
+          "scheme": "EE-RIK",
+          "schemeName": "Centre of Registers and Information Systems (Estonia)"
+        },
+        {
+          "id": "QEER9DCGMM",
+          "scheme": "QCC Code",
+          "schemeName": "QCC Global Enterprise Identifier (QCC Code)"
+        }
+      ],
+      "incorporatedInJurisdiction": {
+        "name": "Estonia",
+        "code": "EE"
+      },
+      "addresses": [
+        {
+          "type": "registered",
+          "address": "Lelle tn 22, Kesklinna linnaosa, Tallinn, EE-37, 11318, EE",
+          "country": {
+            "name": "Estonia",
+            "code": "EE"
+          }
+        },
+        {
+          "type": "business",
+          "address": "Lelle tn 22, Kesklinna linnaosa, Tallinn, EE-37, 11318, EE",
+          "country": {
+            "name": "Estonia",
+            "code": "EE"
+          }
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/5493005044RTLQ5RZU70"
+    }
+  },
+  {
+    "statementId": "opencheck-34dc213692b740bb9234ee36",
+    "recordId": "opencheck-34dc213692b740bb9234ee36",
+    "declarationSubject": "opencheck-34dc213692b740bb9234ee36",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "anonymousEntity"
+      },
+      "name": "Unknown parent (GLEIF reporting exception)",
+      "identifiers": []
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/5493005044RTLQ5RZU70"
+    }
+  },
+  {
+    "statementId": "opencheck-0e7ad41979a2f97bc1813655",
+    "recordId": "opencheck-61529a4faa959d22ac230879",
+    "declarationSubject": "opencheck-3885f777107974d6c0b7c00e",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-3885f777107974d6c0b7c00e",
+      "interestedParty": "opencheck-34dc213692b740bb9234ee36",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF reporting exception: parent does not consolidate the subject"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/5493005044RTLQ5RZU70"
+    }
+  },
+  {
+    "statementId": "opencheck-9be0fd0161c1dede56eafb8d",
+    "recordId": "opencheck-9be0fd0161c1dede56eafb8d",
+    "declarationSubject": "opencheck-9be0fd0161c1dede56eafb8d",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "anonymousEntity"
+      },
+      "name": "Unknown parent (GLEIF reporting exception)",
+      "identifiers": []
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/5493005044RTLQ5RZU70"
+    }
+  },
+  {
+    "statementId": "opencheck-1d3012549e0e4001b0588d16",
+    "recordId": "opencheck-b3aa8f2555f261a52bfa42d3",
+    "declarationSubject": "opencheck-3885f777107974d6c0b7c00e",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-3885f777107974d6c0b7c00e",
+      "interestedParty": "opencheck-9be0fd0161c1dede56eafb8d",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "indirect",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF reporting exception: parent does not consolidate the subject"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/5493005044RTLQ5RZU70"
+    }
+  }
+]

@@ -92,6 +92,82 @@ def _today() -> str:
     return date.today().isoformat()
 
 
+def _country_obj(code: str) -> dict[str, str] | None:
+    """Return a BODS-compliant country object ``{"name": ..., "code": ...}`` or
+    ``None`` if *code* is empty.
+
+    Accepts ISO 3166-1 alpha-2 codes, alpha-3 codes, or full country names in
+    any language supported by pycountry.  Falls back gracefully: if pycountry
+    can't resolve the string we still emit an object with the raw value so
+    nothing is silently lost.
+    """
+    if not code:
+        return None
+    stripped = code.strip()
+    upper = stripped.upper()
+    # Direct alpha-2 lookup.
+    c = pycountry.countries.get(alpha_2=upper)
+    if c:
+        return {"name": c.name, "code": c.alpha_2}
+    # Try alpha-3 (some sources emit 3-letter codes).
+    c = pycountry.countries.get(alpha_3=upper)
+    if c:
+        return {"name": c.name, "code": c.alpha_2}
+    # Try pycountry name/common-name lookup (handles many language variants).
+    try:
+        c = pycountry.countries.lookup(stripped)
+        return {"name": c.name, "code": c.alpha_2}
+    except LookupError:
+        pass
+    # Overrides for native-language names pycountry can't resolve.
+    # Mainly needed for Bolagsverket (Swedish API), but covers other sources too.
+    _NATIVE_NAMES: dict[str, str] = {
+        "Sverige": "SE",
+        "SVERIGE": "SE",
+        "Norge": "NO",
+        "NORGE": "NO",
+        "Danmark": "DK",
+        "DANMARK": "DK",
+        "Finland": "FI",
+        "FINLAND": "FI",
+        "Suomi": "FI",
+        "SUOMI": "FI",
+        "Deutschland": "DE",
+        "DEUTSCHLAND": "DE",
+        "Frankreich": "FR",
+        "Österreich": "AT",
+        "Schweiz": "CH",
+        "SCHWEIZ": "CH",
+        "Pays-Bas": "NL",
+        "España": "ES",
+        "ESPAÑA": "ES",
+        "Italia": "IT",
+        "ITALIA": "IT",
+        "Polska": "PL",
+        "POLSKA": "PL",
+    }
+    alpha2 = _NATIVE_NAMES.get(stripped) or _NATIVE_NAMES.get(upper)
+    if alpha2:
+        c = pycountry.countries.get(alpha_2=alpha2)
+        if c:
+            return {"name": c.name, "code": c.alpha_2}
+    # Unknown value — preserve as-is so nothing is silently lost.
+    return {"name": stripped, "code": upper}
+
+
+def _addr(type_: str, address: str, country_code: str = "") -> dict[str, Any]:
+    """Build a single BODS address dict with an optional country object.
+
+    ``country_code`` should be an ISO 3166-1 alpha-2 string; if absent or
+    unresolvable the ``country`` key is omitted so the address still validates.
+    """
+    d: dict[str, Any] = {"type": type_, "address": address}
+    co = _country_obj(country_code)
+    if co:
+        d["country"] = co
+    return d
+
+
 # ----------------------------------------------------------------------
 # Statement factories
 # ----------------------------------------------------------------------
@@ -119,6 +195,7 @@ def make_entity_statement(
     record_id = statement_id
 
     record_details: dict[str, Any] = {
+        "isComponent": False,
         "entityType": {"type": entity_type},
         "name": name,
         "identifiers": list(identifiers),
@@ -140,6 +217,7 @@ def make_entity_statement(
     return {
         "statementId": statement_id,
         "recordId": record_id,
+        "declarationSubject": record_id,
         "recordType": "entity",
         "recordStatus": "new",
         "statementDate": _today(),
@@ -164,8 +242,9 @@ def make_person_statement(
     record_id = statement_id  # see make_entity_statement for reasoning
 
     record_details: dict[str, Any] = {
+        "isComponent": False,
         "personType": person_type,
-        "names": [{"type": "individual", "fullName": full_name}],
+        "names": [{"type": "legal", "fullName": full_name}],
     }
     identifiers = list(identifiers)
     if identifiers:
@@ -182,6 +261,7 @@ def make_person_statement(
     return {
         "statementId": statement_id,
         "recordId": record_id,
+        "declarationSubject": record_id,
         "recordType": "person",
         "recordStatus": "new",
         "statementDate": _today(),
@@ -203,21 +283,17 @@ def make_relationship_statement(
     statement_id = _stable_id(source_id, "relationship", local_id)
     record_id = _stable_id(source_id, "relationship-record", local_id)
 
-    interested_party_key = (
-        "describedByPersonStatement"
-        if interested_party_type == "person"
-        else "describedByEntityStatement"
-    )
-
     return {
         "statementId": statement_id,
         "recordId": record_id,
+        "declarationSubject": subject_statement_id,
         "recordType": "relationship",
         "recordStatus": "new",
         "statementDate": _today(),
         "recordDetails": {
-            "subject": {"describedByEntityStatement": subject_statement_id},
-            "interestedParty": {interested_party_key: interested_party_statement_id},
+            "isComponent": False,
+            "subject": subject_statement_id,
+            "interestedParty": interested_party_statement_id,
             "interests": list(interests),
         },
         "source": _source_block(source_id, source_url),
@@ -247,7 +323,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
     }
     _official_registers = {"ariregister", "bolagsverket", "brreg", "companies_house", "cro", "inpi", "kvk", "opencorporates", "zefix", "sec_edgar", "ur_latvia"}
     block: dict[str, Any] = {
-        "type": "officialRegister" if source_id in _official_registers else "thirdParty",
+        "type": ["officialRegister"] if source_id in _official_registers else ["thirdParty"],
         "description": source_names.get(source_id, source_id),
         "retrievedAt": datetime.utcnow().isoformat(timespec="seconds") + "Z",
     }
@@ -436,7 +512,7 @@ def _profile_addresses(profile: dict[str, Any]) -> list[dict[str, str]]:
     joined = ", ".join([p for p in parts if p])
     if not joined:
         return []
-    return [{"type": "registered", "address": joined, "country": ra.get("country", "")}]
+    return [_addr("registered", joined, ra.get("country", ""))]
 
 
 def _map_individual_psc(
@@ -475,9 +551,7 @@ def _map_individual_psc(
         ]
         joined = ", ".join([p for p in parts if p])
         if joined:
-            addresses.append(
-                {"type": "service", "address": joined, "country": address_block.get("country", "")}
-            )
+            addresses.append(_addr("service", joined, address_block.get("country", "")))
 
     etag = psc.get("etag") or psc.get("name", "")
     local_id = f"{company_number}:psc:{etag}"
@@ -1147,9 +1221,11 @@ def _gleif_entity_statement(
 
         bic = attrs.get("bic")
         if bic:
+            # GLEIF API sometimes returns bic as a list; take the first element.
+            bic_val: str = bic[0] if isinstance(bic, list) else bic
             identifiers.append(
                 {
-                    "id": bic,
+                    "id": bic_val,
                     "scheme": "ISO-9362",
                     "schemeName": "Bank Identifier Code (ISO 9362)",
                 }
@@ -1211,7 +1287,7 @@ def _gleif_addresses(entity_block: dict[str, Any]) -> list[dict[str, str]]:
     return addresses
 
 
-def _gleif_address(block: dict[str, Any], *, address_type: str) -> dict[str, str]:
+def _gleif_address(block: dict[str, Any], *, address_type: str) -> dict[str, Any]:
     parts = [
         *(block.get("addressLines") or []),
         block.get("city"),
@@ -1220,11 +1296,7 @@ def _gleif_address(block: dict[str, Any], *, address_type: str) -> dict[str, str
         block.get("country"),
     ]
     joined = ", ".join([p for p in parts if p])
-    return {
-        "type": address_type,
-        "address": joined,
-        "country": block.get("country", ""),
-    }
+    return _addr(address_type, joined, block.get("country", ""))
 
 
 # ----------------------------------------------------------------------
@@ -1355,7 +1427,7 @@ def _zefix_address(block: dict[str, Any]) -> list[dict[str, str]]:
     joined = ", ".join([p for p in parts if p])
     if not joined:
         return []
-    return [{"type": "registered", "address": joined, "country": "CH"}]
+    return [_addr("registered", joined, "CH")]
 
 
 # ----------------------------------------------------------------------
@@ -1581,7 +1653,7 @@ def _inpi_address(block: dict[str, Any]) -> list[dict[str, str]]:
     joined = " ".join(p for p in parts if p)
     if not joined:
         return []
-    return [{"type": "registered", "address": joined, "country": "FR"}]
+    return [_addr("registered", joined, "FR")]
 
 
 # ----------------------------------------------------------------------
@@ -1738,7 +1810,7 @@ def _bv_address(block: dict[str, Any]) -> list[dict[str, str]]:
     if not joined:
         return []
     country = block.get("land") or "SE"
-    return [{"type": "registered", "address": joined, "country": country}]
+    return [_addr("registered", joined, country)]
 
 
 # ----------------------------------------------------------------------
@@ -1871,7 +1943,7 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
     address_str = bundle.get("address") or ""
     addresses = (
-        [{"type": "registered", "address": address_str, "country": "EE"}]
+        [_addr("registered", address_str, "EE")]
         if address_str
         else []
     )
@@ -2111,7 +2183,7 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             else []
         )
         addresses = (
-            [{"type": "residence", "address": "", "country": res_country}]
+            [_addr("residence", "", res_country)]
             if res_country
             else []
         )
@@ -2405,12 +2477,13 @@ def _ftm_identifiers(
     return identifiers
 
 
-def _ftm_addresses(props: dict[str, Any]) -> list[dict[str, str]]:
+def _ftm_addresses(props: dict[str, Any]) -> list[dict[str, Any]]:
     raw = props.get("address") or props.get("addressEntity") or []
-    result: list[dict[str, str]] = []
+    result: list[dict[str, Any]] = []
     for entry in raw:
         if isinstance(entry, str):
-            result.append({"type": "registered", "address": entry, "country": ""})
+            # No country available — omit country key.
+            result.append({"type": "registered", "address": entry})
         elif isinstance(entry, dict):
             p = entry.get("properties") or {}
             parts = [
@@ -2423,11 +2496,7 @@ def _ftm_addresses(props: dict[str, Any]) -> list[dict[str, str]]:
             joined = ", ".join([str(x) for x in parts if x])
             if joined:
                 result.append(
-                    {
-                        "type": "registered",
-                        "address": joined,
-                        "country": (p.get("country") or [""])[0],
-                    }
+                    _addr("registered", joined, (p.get("country") or [""])[0])
                 )
     return result
 
@@ -2765,13 +2834,7 @@ def _opentender_body_statement(
     ]
     addr_str = ", ".join(p for p in parts if p)
     if addr_str:
-        addresses.append(
-            {
-                "type": "registered",
-                "address": addr_str,
-                "country": (address.get("country") or "").upper(),
-            }
-        )
+        addresses.append(_addr("registered", addr_str, (address.get("country") or "").upper()))
 
     jurisdiction = None
     country_code = (address.get("country") or "").upper()
@@ -3516,7 +3579,7 @@ def map_brightquery(bundle: dict[str, Any]) -> BODSBundle:
             # Normalise "USA" → "US" for BODS country field.
             if country.upper() == "USA":
                 country = "US"
-            addresses.append({"type": "registered", "address": joined, "country": country})
+            addresses.append(_addr("registered", joined, country))
 
     entity = make_entity_statement(
         source_id="brightquery",
@@ -3677,9 +3740,7 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
         ]
         address_str = ", ".join(p for p in parts if p)
         if address_str:
-            issuer_addresses = [
-                {"type": "registered", "address": address_str, "country": "US"}
-            ]
+            issuer_addresses = [_addr("registered", address_str, "US")]
 
     subject_url = (
         f"https://www.sec.gov/cgi-bin/browse-edgar"
@@ -3828,11 +3889,7 @@ def _brreg_address(block: dict[str, Any] | None) -> dict[str, str] | None:
         parts.append(f"{postnummer} {poststed}")
     elif poststed:
         parts.append(poststed)
-    return {
-        "type": "registered",
-        "address": ", ".join(parts),
-        "country": block.get("landkode") or "NO",
-    }
+    return _addr("registered", ", ".join(parts), block.get("landkode") or "NO")
 
 
 def _brreg_person_local_id(person: dict[str, Any], idx: int) -> str:
@@ -3909,11 +3966,7 @@ def _cro_address(rec: dict[str, Any]) -> dict[str, str] | None:
     eircode = (rec.get("eircode") or "").strip()
     if eircode:
         non_empty.append(eircode)
-    return {
-        "type": "registered",
-        "address": ", ".join(non_empty),
-        "country": "IE",
-    }
+    return _addr("registered", ", ".join(non_empty), "IE")
 
 
 def map_cro(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
@@ -4149,11 +4202,7 @@ def _prh_address(company: dict[str, Any]) -> dict[str, str] | None:
             ]
             non_empty = [p for p in parts if p]
             if non_empty:
-                return {
-                    "type": "registered",
-                    "address": " ".join(non_empty),
-                    "country": "FI",
-                }
+                return _addr("registered", " ".join(non_empty), "FI")
     return None
 
 
@@ -4336,7 +4385,7 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     # Address — pre-formatted string from the business register.
     raw_address: str = (entity_rec.get("address") or "").strip()
     addresses: list[dict[str, Any]] = (
-        [{"type": "registered", "address": raw_address, "country": "LV"}]
+        [_addr("registered", raw_address, "LV")]
         if raw_address
         else []
     )

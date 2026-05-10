@@ -91,8 +91,8 @@ def test_relationship_statement_shape() -> None:
         ],
     )
     rd = rel["recordDetails"]
-    assert rd["subject"]["describedByEntityStatement"] == entity["statementId"]
-    assert rd["interestedParty"]["describedByPersonStatement"] == person["statementId"]
+    assert rd["subject"] == entity["statementId"]
+    assert rd["interestedParty"] == person["statementId"]
     assert rd["interests"][0]["type"] == "shareholding"
 
 
@@ -175,8 +175,7 @@ def test_individual_psc_shareholding_interest() -> None:
     jane_rel = next(
         r
         for r in rels
-        if r["recordDetails"]["interestedParty"].get("describedByPersonStatement")
-        in people
+        if r["recordDetails"]["interestedParty"] in people
     )
 
     interest_types = [i["type"] for i in jane_rel["recordDetails"]["interests"]]
@@ -245,17 +244,22 @@ def test_related_companies_connected_statementids() -> None:
     statements = list(bundle)
 
     # Collect entity statementIds and the interestedParty refs in relationships.
+    # In BODS v0.4, subject/interestedParty are bare strings; resolve entity refs
+    # by cross-referencing against the known entity statement IDs.
     entity_sids = {s["statementId"] for s in statements if s["recordType"] == "entity"}
-    ip_refs = {
-        s["recordDetails"]["interestedParty"].get("describedByEntityStatement")
+    person_sids = {s["statementId"] for s in statements if s["recordType"] == "person"}
+    entity_ip_refs = {
+        s["recordDetails"]["interestedParty"]
         for s in statements
         if s["recordType"] == "relationship"
-        and "describedByEntityStatement" in s["recordDetails"]["interestedParty"]
+        and isinstance(s["recordDetails"].get("interestedParty"), str)
+        # Exclude person IPs — only check entity→entity links are connected.
+        and s["recordDetails"]["interestedParty"] not in person_sids
     }
 
     # Every entity interestedParty ref must point to a real entity statement.
-    assert ip_refs <= entity_sids, (
-        f"Dangling entity refs (graph disconnected): {ip_refs - entity_sids}"
+    assert entity_ip_refs <= entity_sids, (
+        f"Dangling entity refs (graph disconnected): {entity_ip_refs - entity_sids}"
     )
 
     # Specifically: the relationship from "00102498" → "12345678" must resolve.

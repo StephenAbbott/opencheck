@@ -85,13 +85,13 @@ def _person(sid: str, *, person_type: str = "knownPerson",
 
 def _rel(sid: str, subject: str, ip: str, *, ip_kind: str = "entity",
          interests: list | None = None) -> dict:
-    ip_key = "describedByEntityStatement" if ip_kind == "entity" else "describedByPersonStatement"
     return {
         "statementId": sid,
         "recordType": "relationship",
         "recordDetails": {
-            "subject": {"describedByEntityStatement": subject},
-            "interestedParty": {ip_key: ip},
+            "isComponent": False,
+            "subject": subject,
+            "interestedParty": ip,
             "interests": interests or [
                 {"type": "shareholding", "directOrIndirect": "direct"}
             ],

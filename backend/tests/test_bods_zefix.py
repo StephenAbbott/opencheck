@@ -181,7 +181,7 @@ def test_map_zefix_address() -> None:
     assert len(addrs) == 1
     assert "Hans-von-Matt Weg" in addrs[0]["address"]
     assert "Stans" in addrs[0]["address"]
-    assert addrs[0]["country"] == "CH"
+    assert addrs[0]["country"] == {"name": "Switzerland", "code": "CH"}
 
 
 def test_map_zefix_empty_address_omitted() -> None:

@@ -1,0 +1,180 @@
+[
+  {
+    "statementId": "opencheck-772307d2d1ab2b22ef9c60de",
+    "recordId": "opencheck-772307d2d1ab2b22ef9c60de",
+    "declarationSubject": "opencheck-772307d2d1ab2b22ef9c60de",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "BIFFA PLC",
+      "identifiers": [
+        {
+          "id": "2138008RB4WDK7HYYS91",
+          "scheme": "XI-LEI",
+          "schemeName": "Global Legal Entity Identifier Index"
+        },
+        {
+          "id": "10336040",
+          "scheme": "GB-COH",
+          "schemeName": "Companies House"
+        },
+        {
+          "id": "gb/10336040",
+          "scheme": "OpenCorporates",
+          "schemeName": "OpenCorporates company ID",
+          "uri": "https://opencorporates.com/companies/gb/10336040"
+        },
+        {
+          "id": "QGB1G2HVQT",
+          "scheme": "QCC Code",
+          "schemeName": "QCC Global Enterprise Identifier (QCC Code)"
+        }
+      ],
+      "incorporatedInJurisdiction": {
+        "name": "United Kingdom",
+        "code": "GB"
+      },
+      "addresses": [
+        {
+          "type": "registered",
+          "address": "CORONATION ROAD, CRESSEX, HIGH WYCOMBE, GB-BKM, HP12 3TZ, GB",
+          "country": {
+            "name": "United Kingdom",
+            "code": "GB"
+          }
+        },
+        {
+          "type": "business",
+          "address": "CORONATION ROAD, CRESSEX, HIGH WYCOMBE, GB-BKM, HP12 3TZ, GB",
+          "country": {
+            "name": "United Kingdom",
+            "code": "GB"
+          }
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/2138008RB4WDK7HYYS91"
+    }
+  },
+  {
+    "statementId": "opencheck-bcd93066e1e98c44064b0dc5",
+    "recordId": "opencheck-bcd93066e1e98c44064b0dc5",
+    "declarationSubject": "opencheck-bcd93066e1e98c44064b0dc5",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "unknownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Unknown parent (GLEIF reporting exception)"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/2138008RB4WDK7HYYS91"
+    }
+  },
+  {
+    "statementId": "opencheck-7f4e411e76ddeab657a5acb8",
+    "recordId": "opencheck-400a3d964184e95ccaed4f85",
+    "declarationSubject": "opencheck-772307d2d1ab2b22ef9c60de",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-772307d2d1ab2b22ef9c60de",
+      "interestedParty": "opencheck-bcd93066e1e98c44064b0dc5",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF reporting exception: no known person can be identified"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/2138008RB4WDK7HYYS91"
+    }
+  },
+  {
+    "statementId": "opencheck-0d627b8064a2cda7db59779f",
+    "recordId": "opencheck-0d627b8064a2cda7db59779f",
+    "declarationSubject": "opencheck-0d627b8064a2cda7db59779f",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "unknownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Unknown parent (GLEIF reporting exception)"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/2138008RB4WDK7HYYS91"
+    }
+  },
+  {
+    "statementId": "opencheck-64e6cc157d7a1ea533aff5cb",
+    "recordId": "opencheck-e529b38cab9730d68ebce9ec",
+    "declarationSubject": "opencheck-772307d2d1ab2b22ef9c60de",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-772307d2d1ab2b22ef9c60de",
+      "interestedParty": "opencheck-0d627b8064a2cda7db59779f",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "indirect",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF reporting exception: no known person can be identified"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/2138008RB4WDK7HYYS91"
+    }
+  }
+]

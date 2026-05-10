@@ -240,7 +240,8 @@ def test_map_bolagsverket_address_present() -> None:
 def test_map_bolagsverket_address_country() -> None:
     stmts = list(map_bolagsverket(_bundle()))
     addrs = stmts[0]["recordDetails"].get("addresses", [])
-    assert addrs[0]["country"] == "Sverige"
+    # "Sverige" (Swedish for Sweden) is resolved to the BODS country object.
+    assert addrs[0]["country"] == {"name": "Sweden", "code": "SE"}
 
 
 def test_map_bolagsverket_address_includes_co_address() -> None:
@@ -328,7 +329,7 @@ def test_map_bolagsverket_no_name_at_all_returns_empty() -> None:
 def test_map_bolagsverket_source_type_official_register() -> None:
     stmts = list(map_bolagsverket(_bundle()))
     source = stmts[0].get("source") or {}
-    assert source.get("type") == "officialRegister"
+    assert source.get("type") == ["officialRegister"]
 
 
 # ---------------------------------------------------------------------------

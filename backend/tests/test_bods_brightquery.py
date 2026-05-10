@@ -167,7 +167,7 @@ def test_map_brightquery_address_country_normalised() -> None:
     stmts = list(map_brightquery(_bundle()))
     entity = next(s for s in stmts if s["recordType"] == "entity")
     addrs = entity["recordDetails"].get("addresses", [])
-    assert addrs[0]["country"] == "US"
+    assert addrs[0]["country"] == {"name": "United States", "code": "US"}
 
 
 def test_map_brightquery_empty_company_returns_empty() -> None:
@@ -217,8 +217,8 @@ def test_map_brightquery_relationship_links_entity_to_person() -> None:
     entity = next(s for s in stmts if s["recordType"] == "entity")
     person = next(s for s in stmts if s["recordType"] == "person")
     rel = next(s for s in stmts if s["recordType"] == "relationship")
-    assert rel["recordDetails"]["subject"]["describedByEntityStatement"] == entity["statementId"]
-    assert rel["recordDetails"]["interestedParty"]["describedByPersonStatement"] == person["statementId"]
+    assert rel["recordDetails"]["subject"] == entity["statementId"]
+    assert rel["recordDetails"]["interestedParty"] == person["statementId"]
 
 
 def test_map_brightquery_nameless_person_skipped() -> None:

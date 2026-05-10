@@ -187,7 +187,7 @@ def test_map_inpi_address_present() -> None:
     stmts = list(map_inpi(_bundle()))
     addrs = stmts[0]["recordDetails"].get("addresses", [])
     assert len(addrs) == 1
-    assert addrs[0]["country"] == "FR"
+    assert addrs[0]["country"] == {"name": "France", "code": "FR"}
     assert "DION BOUTON" in addrs[0]["address"]
     assert "92800" in addrs[0]["address"]
 
@@ -284,7 +284,7 @@ def test_map_inpi_source_url_contains_siren() -> None:
 def test_map_inpi_source_type_official_register() -> None:
     stmts = list(map_inpi(_bundle()))
     source = stmts[0].get("source") or {}
-    assert source.get("type") == "officialRegister"
+    assert source.get("type") == ["officialRegister"]
 
 
 # ---------------------------------------------------------------------------

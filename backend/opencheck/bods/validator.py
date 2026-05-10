@@ -105,12 +105,21 @@ def validate_shape(statements: Iterable[dict[str, Any]]) -> list[str]:
                 issues.append(f"{prefix}: person missing names[0].fullName")
 
         elif rt == "relationship":
-            subject_sid = (rd.get("subject") or {}).get("describedByEntityStatement")
+            # BODS v0.4: subject/interestedParty are bare strings.
+            # Legacy wrapped format: {"describedByEntityStatement": "id"}.
+            raw_subj = rd.get("subject") or {}
+            subject_sid = (
+                raw_subj if isinstance(raw_subj, str)
+                else raw_subj.get("describedByEntityStatement")
+            )
             if subject_sid not in known_ids:
                 issues.append(f"{prefix}: subject references unknown statement {subject_sid!r}")
 
-            ip = rd.get("interestedParty") or {}
-            ip_sid = ip.get("describedByPersonStatement") or ip.get("describedByEntityStatement")
+            raw_ip = rd.get("interestedParty") or {}
+            ip_sid = (
+                raw_ip if isinstance(raw_ip, str)
+                else (raw_ip.get("describedByPersonStatement") or raw_ip.get("describedByEntityStatement"))
+            )
             if ip_sid not in known_ids:
                 issues.append(f"{prefix}: interestedParty references unknown statement {ip_sid!r}")
 

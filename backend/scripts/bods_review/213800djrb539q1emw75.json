@@ -1,0 +1,516 @@
+[
+  {
+    "statementId": "opencheck-ed15053b58bdbbdd4adaed35",
+    "recordId": "opencheck-ed15053b58bdbbdd4adaed35",
+    "declarationSubject": "opencheck-ed15053b58bdbbdd4adaed35",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "Akciju sabiedrība \"Latvenergo\"",
+      "identifiers": [
+        {
+          "id": "213800DJRB539Q1EMW75",
+          "scheme": "XI-LEI",
+          "schemeName": "Global Legal Entity Identifier Index"
+        },
+        {
+          "id": "40003032949",
+          "scheme": "",
+          "schemeName": "GLEIF Registration Authorities List"
+        },
+        {
+          "id": "lv/40003032949",
+          "scheme": "OpenCorporates",
+          "schemeName": "OpenCorporates company ID",
+          "uri": "https://opencorporates.com/companies/lv/40003032949"
+        },
+        {
+          "id": "QLVWWUMK8M",
+          "scheme": "QCC Code",
+          "schemeName": "QCC Global Enterprise Identifier (QCC Code)"
+        }
+      ],
+      "incorporatedInJurisdiction": {
+        "name": "Latvia",
+        "code": "LV"
+      },
+      "addresses": [
+        {
+          "type": "registered",
+          "address": "Pulkveža Brieža iela 12, Rīga, LV-1010, LV",
+          "country": {
+            "name": "Latvia",
+            "code": "LV"
+          }
+        },
+        {
+          "type": "business",
+          "address": "Pulkveža Brieža iela 12, Rīga, LV-1010, LV",
+          "country": {
+            "name": "Latvia",
+            "code": "LV"
+          }
+        }
+      ],
+      "alternateNames": [
+        "Akciju sabiedriba \"Latvenergo\""
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/213800DJRB539Q1EMW75"
+    }
+  },
+  {
+    "statementId": "opencheck-4b17891ae59f78d7dbed55a2",
+    "recordId": "opencheck-4b17891ae59f78d7dbed55a2",
+    "declarationSubject": "opencheck-4b17891ae59f78d7dbed55a2",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "anonymousEntity"
+      },
+      "name": "Unknown parent (GLEIF reporting exception)",
+      "identifiers": []
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/213800DJRB539Q1EMW75"
+    }
+  },
+  {
+    "statementId": "opencheck-cc1053bdeeed1cb2f6593a27",
+    "recordId": "opencheck-e3ca268e26f5d307c2cbb3a3",
+    "declarationSubject": "opencheck-ed15053b58bdbbdd4adaed35",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-ed15053b58bdbbdd4adaed35",
+      "interestedParty": "opencheck-4b17891ae59f78d7dbed55a2",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF reporting exception: parent does not consolidate the subject"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/213800DJRB539Q1EMW75"
+    }
+  },
+  {
+    "statementId": "opencheck-0ac3faa8d4f2f837585551b1",
+    "recordId": "opencheck-0ac3faa8d4f2f837585551b1",
+    "declarationSubject": "opencheck-0ac3faa8d4f2f837585551b1",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "anonymousEntity"
+      },
+      "name": "Unknown parent (GLEIF reporting exception)",
+      "identifiers": []
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/213800DJRB539Q1EMW75"
+    }
+  },
+  {
+    "statementId": "opencheck-45ccd8210eac97c65d0d6571",
+    "recordId": "opencheck-cbc09e5f17c7e53e7b295d64",
+    "declarationSubject": "opencheck-ed15053b58bdbbdd4adaed35",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-ed15053b58bdbbdd4adaed35",
+      "interestedParty": "opencheck-0ac3faa8d4f2f837585551b1",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "indirect",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF reporting exception: parent does not consolidate the subject"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/213800DJRB539Q1EMW75"
+    }
+  },
+  {
+    "statementId": "opencheck-1dbfdb1091745a93f32a7fff",
+    "recordId": "opencheck-1dbfdb1091745a93f32a7fff",
+    "declarationSubject": "opencheck-1dbfdb1091745a93f32a7fff",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "Akciju sabiedrība \"Latvenergo\"",
+      "identifiers": [
+        {
+          "id": "40003032949",
+          "scheme": "LV-UR",
+          "schemeName": "Latvian Register of Enterprises (UR)"
+        },
+        {
+          "id": "LV61ZZZ40003032949",
+          "scheme": "LV-SEPA",
+          "schemeName": "Latvian SEPA Account Identifier"
+        }
+      ],
+      "incorporatedInJurisdiction": {
+        "name": "Latvia",
+        "code": "LV"
+      },
+      "foundingDate": "1991-10-08",
+      "addresses": [
+        {
+          "type": "registered",
+          "address": "Rīga, Pulkveža Brieža iela 12",
+          "country": {
+            "name": "Latvia",
+            "code": "LV"
+          }
+        }
+      ],
+      "alternateNames": [
+        "Valsts akciju sabiedrība \"LATVENERGO\"",
+        "Privatizējamā valsts akciju sabiedrība \"LATVENERGO\"",
+        "Valsts akciju sabiedrība \"LATVENERGO\"",
+        "Valsts akciju sabiedrība \"Latvenergo\"",
+        "Valsts uzņēmums \"LATVENERGO\""
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "UR — Latvian Register of Enterprises (data.gov.lv)",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.ur.gov.lv/lv/registri/komercregistrs/40003032949/"
+    }
+  },
+  {
+    "statementId": "opencheck-491afd83361b05a7af4364c9",
+    "recordId": "opencheck-491afd83361b05a7af4364c9",
+    "declarationSubject": "opencheck-491afd83361b05a7af4364c9",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Čakste Mārtiņš"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "UR — Latvian Register of Enterprises (data.gov.lv)",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.ur.gov.lv/lv/registri/komercregistrs/40003032949/"
+    }
+  },
+  {
+    "statementId": "opencheck-7e87b9e5280d704c3ba0aace",
+    "recordId": "opencheck-9704aa84b2be2304dbd7f549",
+    "declarationSubject": "opencheck-1dbfdb1091745a93f32a7fff",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-1dbfdb1091745a93f32a7fff",
+      "interestedParty": "opencheck-491afd83361b05a7af4364c9",
+      "interests": [
+        {
+          "type": "boardMember",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "CHAIR_OF_BOARD, Executive Board",
+          "startDate": "2021-12-16"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "UR — Latvian Register of Enterprises (data.gov.lv)",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.ur.gov.lv/lv/registri/komercregistrs/40003032949/"
+    }
+  },
+  {
+    "statementId": "opencheck-4e112272e613acef31bdb375",
+    "recordId": "opencheck-4e112272e613acef31bdb375",
+    "declarationSubject": "opencheck-4e112272e613acef31bdb375",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Teteris Harijs"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "UR — Latvian Register of Enterprises (data.gov.lv)",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.ur.gov.lv/lv/registri/komercregistrs/40003032949/"
+    }
+  },
+  {
+    "statementId": "opencheck-545e5d76f710bea1b0873c0b",
+    "recordId": "opencheck-c40d51a69243cfa5641351a7",
+    "declarationSubject": "opencheck-1dbfdb1091745a93f32a7fff",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-1dbfdb1091745a93f32a7fff",
+      "interestedParty": "opencheck-4e112272e613acef31bdb375",
+      "interests": [
+        {
+          "type": "boardMember",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "BOARD_MEMBER, Executive Board",
+          "startDate": "2021-12-16"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "UR — Latvian Register of Enterprises (data.gov.lv)",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.ur.gov.lv/lv/registri/komercregistrs/40003032949/"
+    }
+  },
+  {
+    "statementId": "opencheck-b0a7a5f17f13740ca9cf1c1e",
+    "recordId": "opencheck-b0a7a5f17f13740ca9cf1c1e",
+    "declarationSubject": "opencheck-b0a7a5f17f13740ca9cf1c1e",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Juskovecs Dmitrijs"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "UR — Latvian Register of Enterprises (data.gov.lv)",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.ur.gov.lv/lv/registri/komercregistrs/40003032949/"
+    }
+  },
+  {
+    "statementId": "opencheck-4995342be544aa291de3c8c2",
+    "recordId": "opencheck-14f503400cb8fee0f76564d5",
+    "declarationSubject": "opencheck-1dbfdb1091745a93f32a7fff",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-1dbfdb1091745a93f32a7fff",
+      "interestedParty": "opencheck-b0a7a5f17f13740ca9cf1c1e",
+      "interests": [
+        {
+          "type": "boardMember",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "BOARD_MEMBER, Executive Board",
+          "startDate": "2021-12-16"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "UR — Latvian Register of Enterprises (data.gov.lv)",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.ur.gov.lv/lv/registri/komercregistrs/40003032949/"
+    }
+  },
+  {
+    "statementId": "opencheck-37f4f27cce3efb1118b46470",
+    "recordId": "opencheck-37f4f27cce3efb1118b46470",
+    "declarationSubject": "opencheck-37f4f27cce3efb1118b46470",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Boreiko Ilvija"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "UR — Latvian Register of Enterprises (data.gov.lv)",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.ur.gov.lv/lv/registri/komercregistrs/40003032949/"
+    }
+  },
+  {
+    "statementId": "opencheck-4058e7a4ca133ae96cf8fd5e",
+    "recordId": "opencheck-5ad82431c27670fb59d77225",
+    "declarationSubject": "opencheck-1dbfdb1091745a93f32a7fff",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-1dbfdb1091745a93f32a7fff",
+      "interestedParty": "opencheck-37f4f27cce3efb1118b46470",
+      "interests": [
+        {
+          "type": "boardMember",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "BOARD_MEMBER, Executive Board",
+          "startDate": "2024-02-05"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "UR — Latvian Register of Enterprises (data.gov.lv)",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.ur.gov.lv/lv/registri/komercregistrs/40003032949/"
+    }
+  },
+  {
+    "statementId": "opencheck-82b1fdcd76d780c3d1f1642d",
+    "recordId": "opencheck-82b1fdcd76d780c3d1f1642d",
+    "declarationSubject": "opencheck-82b1fdcd76d780c3d1f1642d",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Baļčūns Guntars"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "UR — Latvian Register of Enterprises (data.gov.lv)",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.ur.gov.lv/lv/registri/komercregistrs/40003032949/"
+    }
+  },
+  {
+    "statementId": "opencheck-3f1122d9349bc9c40935b848",
+    "recordId": "opencheck-c2dbe3bd622bad67b050d373",
+    "declarationSubject": "opencheck-1dbfdb1091745a93f32a7fff",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-1dbfdb1091745a93f32a7fff",
+      "interestedParty": "opencheck-82b1fdcd76d780c3d1f1642d",
+      "interests": [
+        {
+          "type": "boardMember",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "BOARD_MEMBER, Executive Board",
+          "startDate": "2026-02-11"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "UR — Latvian Register of Enterprises (data.gov.lv)",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.ur.gov.lv/lv/registri/komercregistrs/40003032949/"
+    }
+  }
+]

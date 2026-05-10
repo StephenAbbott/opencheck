@@ -163,8 +163,8 @@ def test_deepen_gleif_uses_override_bundle_instead_of_live_mapper(
                 "recordType": "relationship",
                 "statementId": "r-1",
                 "recordDetails": {
-                    "subject": {"describedByEntityStatement": "e-subject"},
-                    "interestedParty": {"describedByEntityStatement": "e-parent"},
+                    "subject": "e-subject",
+                    "interestedParty": "e-parent",
                 },
             },
         ],
@@ -203,8 +203,8 @@ def test_deepen_companies_house_uses_uk_override_bundle(tmp_path: Path) -> None:
                 "recordType": "relationship",
                 "statementId": "uk-r-1",
                 "recordDetails": {
-                    "subject": {"describedByEntityStatement": "uk-e-1"},
-                    "interestedParty": {"describedByPersonStatement": "uk-p-1"},
+                    "subject": "uk-e-1",
+                    "interestedParty": "uk-p-1",
                 },
             },
         ],

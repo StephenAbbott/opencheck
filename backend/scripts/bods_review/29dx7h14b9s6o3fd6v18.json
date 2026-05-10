@@ -1,0 +1,183 @@
+[
+  {
+    "statementId": "opencheck-b17194f9182b356adf9a2cb3",
+    "recordId": "opencheck-b17194f9182b356adf9a2cb3",
+    "declarationSubject": "opencheck-b17194f9182b356adf9a2cb3",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "COSTCO WHOLESALE CORPORATION",
+      "identifiers": [
+        {
+          "id": "29DX7H14B9S6O3FD6V18",
+          "scheme": "XI-LEI",
+          "schemeName": "Global Legal Entity Identifier Index"
+        },
+        {
+          "id": "601 024 674",
+          "scheme": "US-WA",
+          "schemeName": "Washington Secretary of State"
+        },
+        {
+          "id": "us_wa/601024674",
+          "scheme": "OpenCorporates",
+          "schemeName": "OpenCorporates company ID",
+          "uri": "https://opencorporates.com/companies/us_wa/601024674"
+        },
+        {
+          "id": "COWOUS6IXXX",
+          "scheme": "ISO-9362",
+          "schemeName": "Bank Identifier Code (ISO 9362)"
+        }
+      ],
+      "incorporatedInJurisdiction": {
+        "name": "Washington, United States",
+        "code": "US-WA"
+      },
+      "addresses": [
+        {
+          "type": "registered",
+          "address": "C/O JOHN SULLIVAN, 999 LAKE DR, ISSAQUAH, US-WA, 98027-8990, US",
+          "country": {
+            "name": "United States",
+            "code": "US"
+          }
+        },
+        {
+          "type": "business",
+          "address": "C/O John Sullivan, 999 Lake Drive, Issaquah, US-WA, 98027, US",
+          "country": {
+            "name": "United States",
+            "code": "US"
+          }
+        }
+      ],
+      "alternateNames": [
+        "Costco Companies Inc"
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/29DX7H14B9S6O3FD6V18"
+    }
+  },
+  {
+    "statementId": "opencheck-f3a5ecdf527ddc6dd2ab1ad6",
+    "recordId": "opencheck-f3a5ecdf527ddc6dd2ab1ad6",
+    "declarationSubject": "opencheck-f3a5ecdf527ddc6dd2ab1ad6",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "unknownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Unknown parent (GLEIF reporting exception)"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/29DX7H14B9S6O3FD6V18"
+    }
+  },
+  {
+    "statementId": "opencheck-ae18094a98485460fc032cbd",
+    "recordId": "opencheck-a03042a5570c746c352a5ae1",
+    "declarationSubject": "opencheck-b17194f9182b356adf9a2cb3",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-b17194f9182b356adf9a2cb3",
+      "interestedParty": "opencheck-f3a5ecdf527ddc6dd2ab1ad6",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF reporting exception: no known person can be identified"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/29DX7H14B9S6O3FD6V18"
+    }
+  },
+  {
+    "statementId": "opencheck-79785cbc92c14ce997e61ebe",
+    "recordId": "opencheck-79785cbc92c14ce997e61ebe",
+    "declarationSubject": "opencheck-79785cbc92c14ce997e61ebe",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "unknownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Unknown parent (GLEIF reporting exception)"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/29DX7H14B9S6O3FD6V18"
+    }
+  },
+  {
+    "statementId": "opencheck-40a66ee4a853d571ee6404a6",
+    "recordId": "opencheck-731ca4a52ade3a01eba0d4f5",
+    "declarationSubject": "opencheck-b17194f9182b356adf9a2cb3",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-b17194f9182b356adf9a2cb3",
+      "interestedParty": "opencheck-79785cbc92c14ce997e61ebe",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "indirect",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF reporting exception: no known person can be identified"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/29DX7H14B9S6O3FD6V18"
+    }
+  }
+]

@@ -1,0 +1,893 @@
+[
+  {
+    "statementId": "opencheck-bb8e832d863fc577ff399395",
+    "recordId": "opencheck-bb8e832d863fc577ff399395",
+    "declarationSubject": "opencheck-bb8e832d863fc577ff399395",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "AVINOR AS",
+      "identifiers": [
+        {
+          "id": "5967007LIEEXZX8ZW078",
+          "scheme": "XI-LEI",
+          "schemeName": "Global Legal Entity Identifier Index"
+        },
+        {
+          "id": "985 198 292",
+          "scheme": "",
+          "schemeName": "GLEIF Registration Authorities List"
+        },
+        {
+          "id": "no/985198292",
+          "scheme": "OpenCorporates",
+          "schemeName": "OpenCorporates company ID",
+          "uri": "https://opencorporates.com/companies/no/985198292"
+        },
+        {
+          "id": "QNOX23CXE7",
+          "scheme": "QCC Code",
+          "schemeName": "QCC Global Enterprise Identifier (QCC Code)"
+        }
+      ],
+      "incorporatedInJurisdiction": {
+        "name": "Norway",
+        "code": "NO"
+      },
+      "addresses": [
+        {
+          "type": "registered",
+          "address": "Dronning Eufemias gate 6A, Oslo, NO-03, 0191, NO",
+          "country": {
+            "name": "Norway",
+            "code": "NO"
+          }
+        },
+        {
+          "type": "business",
+          "address": "Dronning Eufemias gate 6A, Oslo, NO-03, 0191, NO",
+          "country": {
+            "name": "Norway",
+            "code": "NO"
+          }
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/5967007LIEEXZX8ZW078"
+    }
+  },
+  {
+    "statementId": "opencheck-1eb9a606dbf6abcf07290ea3",
+    "recordId": "opencheck-1eb9a606dbf6abcf07290ea3",
+    "declarationSubject": "opencheck-1eb9a606dbf6abcf07290ea3",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "anonymousEntity"
+      },
+      "name": "Unknown parent (GLEIF reporting exception)",
+      "identifiers": []
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/5967007LIEEXZX8ZW078"
+    }
+  },
+  {
+    "statementId": "opencheck-065c9b440cde5c709adb7fa6",
+    "recordId": "opencheck-af7f69820998cccfa40309fe",
+    "declarationSubject": "opencheck-bb8e832d863fc577ff399395",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-bb8e832d863fc577ff399395",
+      "interestedParty": "opencheck-1eb9a606dbf6abcf07290ea3",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF reporting exception: parent does not consolidate the subject"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/5967007LIEEXZX8ZW078"
+    }
+  },
+  {
+    "statementId": "opencheck-75d8b6982d627541d852039e",
+    "recordId": "opencheck-75d8b6982d627541d852039e",
+    "declarationSubject": "opencheck-75d8b6982d627541d852039e",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "anonymousEntity"
+      },
+      "name": "Unknown parent (GLEIF reporting exception)",
+      "identifiers": []
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/5967007LIEEXZX8ZW078"
+    }
+  },
+  {
+    "statementId": "opencheck-92aec0d54974f74afa3e87fd",
+    "recordId": "opencheck-2de1b87c60e4f3b592a4b063",
+    "declarationSubject": "opencheck-bb8e832d863fc577ff399395",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-bb8e832d863fc577ff399395",
+      "interestedParty": "opencheck-75d8b6982d627541d852039e",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "indirect",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF reporting exception: parent does not consolidate the subject"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://www.gleif.org/lei/5967007LIEEXZX8ZW078"
+    }
+  },
+  {
+    "statementId": "opencheck-d8051e468076ed8b1a8ae35f",
+    "recordId": "opencheck-d8051e468076ed8b1a8ae35f",
+    "declarationSubject": "opencheck-d8051e468076ed8b1a8ae35f",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "AVINOR AS",
+      "identifiers": [
+        {
+          "id": "985198292",
+          "scheme": "NO-BRREG",
+          "schemeName": "Brønnøysundregistrene Enhetsregisteret"
+        }
+      ],
+      "incorporatedInJurisdiction": {
+        "name": "Norway",
+        "code": "NO"
+      },
+      "foundingDate": "2002-12-12",
+      "addresses": [
+        {
+          "type": "registered",
+          "address": "Dronning Eufemias gate 6A, 0191 OSLO",
+          "country": {
+            "name": "Norway",
+            "code": "NO"
+          }
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-41293f97257899bceefd1aa5",
+    "recordId": "opencheck-41293f97257899bceefd1aa5",
+    "declarationSubject": "opencheck-41293f97257899bceefd1aa5",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Abraham Foss"
+        }
+      ],
+      "birthDate": "1964-04-17"
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-19ed31924f2a25ee5f3f464f",
+    "recordId": "opencheck-08ea00def7782f07cb346fd6",
+    "declarationSubject": "opencheck-d8051e468076ed8b1a8ae35f",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-d8051e468076ed8b1a8ae35f",
+      "interestedParty": "opencheck-41293f97257899bceefd1aa5",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Daglig leder"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-4ed7c95bf3c675dc0ad3ed4a",
+    "recordId": "opencheck-4ed7c95bf3c675dc0ad3ed4a",
+    "declarationSubject": "opencheck-4ed7c95bf3c675dc0ad3ed4a",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Tone Wille"
+        }
+      ],
+      "birthDate": "1963-05-19"
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-56f33ac980841d6ad3e361fc",
+    "recordId": "opencheck-eb298e44adebe7ff79823389",
+    "declarationSubject": "opencheck-d8051e468076ed8b1a8ae35f",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-d8051e468076ed8b1a8ae35f",
+      "interestedParty": "opencheck-4ed7c95bf3c675dc0ad3ed4a",
+      "interests": [
+        {
+          "type": "boardChair",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Styrets leder"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-54299fca0c876edcabb4b21a",
+    "recordId": "opencheck-54299fca0c876edcabb4b21a",
+    "declarationSubject": "opencheck-54299fca0c876edcabb4b21a",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Rolf Gunnar Roverud"
+        }
+      ],
+      "birthDate": "1958-02-08"
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-18606a23bfde96d3dea8e0f1",
+    "recordId": "opencheck-867030772a53958be5c6833e",
+    "declarationSubject": "opencheck-d8051e468076ed8b1a8ae35f",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-d8051e468076ed8b1a8ae35f",
+      "interestedParty": "opencheck-54299fca0c876edcabb4b21a",
+      "interests": [
+        {
+          "type": "boardMember",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Styremedlem"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-af1acd143f9965e2bb020ed9",
+    "recordId": "opencheck-af1acd143f9965e2bb020ed9",
+    "declarationSubject": "opencheck-af1acd143f9965e2bb020ed9",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Inger Lise Strøm"
+        }
+      ],
+      "birthDate": "1971-05-11"
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-b32d37e176bfd879cf9a9dce",
+    "recordId": "opencheck-49bc6af6bef19968294279a3",
+    "declarationSubject": "opencheck-d8051e468076ed8b1a8ae35f",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-d8051e468076ed8b1a8ae35f",
+      "interestedParty": "opencheck-af1acd143f9965e2bb020ed9",
+      "interests": [
+        {
+          "type": "boardMember",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Styremedlem"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-6be4e7867affd6fbbc8d2669",
+    "recordId": "opencheck-6be4e7867affd6fbbc8d2669",
+    "declarationSubject": "opencheck-6be4e7867affd6fbbc8d2669",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Mari Halvorsen Sundgot"
+        }
+      ],
+      "birthDate": "1988-11-04"
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-8e17356a9bb9df62235b8dc2",
+    "recordId": "opencheck-ae0e04714cf09dfd03cc2b0c",
+    "declarationSubject": "opencheck-d8051e468076ed8b1a8ae35f",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-d8051e468076ed8b1a8ae35f",
+      "interestedParty": "opencheck-6be4e7867affd6fbbc8d2669",
+      "interests": [
+        {
+          "type": "boardMember",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Styremedlem"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-0013d12dba879ab97467ad55",
+    "recordId": "opencheck-0013d12dba879ab97467ad55",
+    "declarationSubject": "opencheck-0013d12dba879ab97467ad55",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Sverre Ivar Elsbak"
+        }
+      ],
+      "birthDate": "1975-03-30"
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-c54f3717acf79ed0620358ec",
+    "recordId": "opencheck-f1eefa78a922aefff840748b",
+    "declarationSubject": "opencheck-d8051e468076ed8b1a8ae35f",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-d8051e468076ed8b1a8ae35f",
+      "interestedParty": "opencheck-0013d12dba879ab97467ad55",
+      "interests": [
+        {
+          "type": "boardMember",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Styremedlem"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-7546a73bee44070111b1ed12",
+    "recordId": "opencheck-7546a73bee44070111b1ed12",
+    "declarationSubject": "opencheck-7546a73bee44070111b1ed12",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Fridtjof Berents"
+        }
+      ],
+      "birthDate": "1972-09-19"
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-90518b824dfd1693b601a690",
+    "recordId": "opencheck-cd2d5cf877eef7c90239b451",
+    "declarationSubject": "opencheck-d8051e468076ed8b1a8ae35f",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-d8051e468076ed8b1a8ae35f",
+      "interestedParty": "opencheck-7546a73bee44070111b1ed12",
+      "interests": [
+        {
+          "type": "boardMember",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Styremedlem"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-c04223c1b15a8a645f180fec",
+    "recordId": "opencheck-c04223c1b15a8a645f180fec",
+    "declarationSubject": "opencheck-c04223c1b15a8a645f180fec",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Ola Henrik Strand"
+        }
+      ],
+      "birthDate": "1957-09-03"
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-17a8cd3589763ae91dcece4c",
+    "recordId": "opencheck-67633f9dff017ebdfe3afde1",
+    "declarationSubject": "opencheck-d8051e468076ed8b1a8ae35f",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-d8051e468076ed8b1a8ae35f",
+      "interestedParty": "opencheck-c04223c1b15a8a645f180fec",
+      "interests": [
+        {
+          "type": "boardMember",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Styremedlem"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-d5294648f9baf92ca2aea108",
+    "recordId": "opencheck-d5294648f9baf92ca2aea108",
+    "declarationSubject": "opencheck-d5294648f9baf92ca2aea108",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Mike Antonsen"
+        }
+      ],
+      "birthDate": "1974-05-19"
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-2154b88886e23fa7d318b672",
+    "recordId": "opencheck-7232b6caf3cc8721cf16da8c",
+    "declarationSubject": "opencheck-d8051e468076ed8b1a8ae35f",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-d8051e468076ed8b1a8ae35f",
+      "interestedParty": "opencheck-d5294648f9baf92ca2aea108",
+      "interests": [
+        {
+          "type": "boardMember",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Styremedlem"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-31901ed15f5378b0d9d59b58",
+    "recordId": "opencheck-31901ed15f5378b0d9d59b58",
+    "declarationSubject": "opencheck-31901ed15f5378b0d9d59b58",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Christian Berge"
+        }
+      ],
+      "birthDate": "1978-02-24"
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-412c2dae42245d18d3de1595",
+    "recordId": "opencheck-7141894eeeebfd53d1d2e3b5",
+    "declarationSubject": "opencheck-d8051e468076ed8b1a8ae35f",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-d8051e468076ed8b1a8ae35f",
+      "interestedParty": "opencheck-31901ed15f5378b0d9d59b58",
+      "interests": [
+        {
+          "type": "boardMember",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Varamedlem"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-299bcf6274282f52242b4a23",
+    "recordId": "opencheck-299bcf6274282f52242b4a23",
+    "declarationSubject": "opencheck-299bcf6274282f52242b4a23",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Morten Mikalsen"
+        }
+      ],
+      "birthDate": "1961-03-13"
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-b9ba50b0b9d1f0745ba80c6e",
+    "recordId": "opencheck-1b98ce5cec67757c6ea65275",
+    "declarationSubject": "opencheck-d8051e468076ed8b1a8ae35f",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-d8051e468076ed8b1a8ae35f",
+      "interestedParty": "opencheck-299bcf6274282f52242b4a23",
+      "interests": [
+        {
+          "type": "boardMember",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Varamedlem"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-86d86ba16e0c6583cc965904",
+    "recordId": "opencheck-86d86ba16e0c6583cc965904",
+    "declarationSubject": "opencheck-86d86ba16e0c6583cc965904",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Heidi Anette Sørum"
+        }
+      ],
+      "birthDate": "1967-02-13"
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  },
+  {
+    "statementId": "opencheck-6b05d791561f724ccca9e613",
+    "recordId": "opencheck-9402ae7036f883f72eae6d7e",
+    "declarationSubject": "opencheck-d8051e468076ed8b1a8ae35f",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-10",
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-d8051e468076ed8b1a8ae35f",
+      "interestedParty": "opencheck-86d86ba16e0c6583cc965904",
+      "interests": [
+        {
+          "type": "boardMember",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Varamedlem"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "Brønnøysundregistrene — Norwegian Register Centre",
+      "retrievedAt": "2026-05-10T19:55:37Z",
+      "url": "https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=985198292"
+    }
+  }
+]
