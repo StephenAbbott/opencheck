@@ -10,7 +10,7 @@ Try the demo version at https://opencheck.onrender.com/
 
 You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, Norwegian organisation number, Irish company registration number, Estonian registry code, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, OpenCorporates ID, Wikidata Q-ID, etc.), and uses those bridges to fan out across national corporate registries (UK, Norway, Ireland, Estonia, France, the Netherlands, Sweden, Switzerland), OpenCorporates, SEC EDGAR (major shareholders of US-listed companies), OpenSanctions, EveryPolitician, Wikidata, and OpenTender. 
 
-Everything maps into [version 0.4 of the Beneficial Ownership Data Standard (BODS)](https://standard.openownership.org/en/0.4.0/), the cross-source links + risk signals are computed deterministically, and the whole bundle is one click away from a downloadable shareable export.
+Everything maps into the [Beneficial Ownership Data Standard (BODS)](https://standard.openownership.org/en/0.4.0/), the cross-source links + risk signals are computed deterministically, and the whole bundle is one click away from a downloadable shareable export.
 
 The risk-signal layer mirrors the [draft customer due diligence regulatory technical standards from the EU's Anti-Money Laundering Authority (AMLA)](https://www.amla.europa.eu/policy/public-consultations/consultation-draft-rts-customer-due-diligence_en) draft conditions for "complex corporate structures" — trust/arrangement, non-EU jurisdiction, nominee, ≥3 ownership layers, plus the composite threshold rule and an advisory mirror of the subjective obfuscation condition.
 
@@ -309,7 +309,7 @@ The frontend also uses the [Beneficial Ownership Visualisation System](https://w
 
 ## Related projects and reading
 
-- [Beneficial Ownership Data Standard (BODS) v0.4](https://standard.openownership.org/en/0.4.0/)
+- [Beneficial Ownership Data Standard (BODS)](https://standard.openownership.org/en/0.4.0/)
 - [BODS RDF vocabulary 0.4](https://vocab.openownership.org/) — the alternative serialisation; the AMLA risk rules in `risk.py` are designed to be portable to a SPARQL/Oxigraph backbone.
 - [GODIN — Global Open Data Integration Network](https://godin.gleif.org/) — the LEI-as-connector vision OpenCheck is built around.
 - [AMLA draft CDD RTS public consultation](https://www.amla.europa.eu/policy/public-consultations/consultation-draft-rts-customer-due-diligence_en).

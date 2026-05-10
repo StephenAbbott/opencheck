@@ -74,8 +74,8 @@ app = FastAPI(
     version=__version__,
     description=(
         "Customer due diligence risk checks driven by the Legal Entity "
-        "Identifier (LEI) and open data — mapped to version 0.4 of the "
-        "Beneficial Ownership Data Standard."
+        "Identifier (LEI) and open data — mapped to the "
+        "Beneficial Ownership Data Standard (BODS)."
     ),
 )
 

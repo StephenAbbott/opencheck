@@ -57,7 +57,7 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 
 ## BODS — Beneficial Ownership Data Standard
 
-Exports conform to [BODS v0.4](https://standard.openownership.org/en/0.4.0/), a project of Open Ownership.
+Exports conform to the [Beneficial Ownership Data Standard (BODS)](https://standard.openownership.org/en/0.4.0/), a project of Open Ownership.
 
 ---
 

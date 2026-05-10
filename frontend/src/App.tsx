@@ -660,7 +660,7 @@ export default function App() {
             </div>
             <p className="text-[12px] text-oo-muted mt-3">
               Hover a chip for the rule that fired. Signals derived from
-              open data; AMLA-aligned chips read BODS v0.4 statements.
+              open data; AMLA-aligned chips read BODS statements.
             </p>
           </section>
         )}
@@ -1056,7 +1056,7 @@ const HOW_IT_WORKS_STEPS = [
           rel="noreferrer"
           className="text-oo-blue underline underline-offset-2 hover:text-oo-burst"
         >
-          BODS v0.4
+          the Beneficial Ownership Data Standard
         </a>{" "}
         statements.
       </>
@@ -1082,7 +1082,7 @@ const HOW_IT_WORKS_STEPS = [
         the EU's Anti-Money Laundering Authority are computed deterministically
         across the assembled statements — checking for sanctions, flagged
         jurisdictions, complex corporate structures and more. The full bundle is
-        one click away as BODS v0.4 JSON, JSONL or a ZIP with manifest and
+        one click away as JSON, JSONL or a ZIP with manifest and
         license notes.
       </>
     ),
@@ -1254,7 +1254,7 @@ function DeepenBlock({ detail }: { detail: DeepenResponse }) {
       {detail.bods.length > 0 && (
         <section>
           <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
-            BODS v0.4 · {detail.bods.length} statement
+            BODS · {detail.bods.length} statement
             {detail.bods.length === 1 ? "" : "s"}
           </h4>
           {detail.bods_issues.length > 0 && (
@@ -1460,7 +1460,7 @@ function ExportPanel({
             Reproducible export for{" "}
             {legalName ? <span>{legalName} (</span> : null}
             <span className="font-mono">{lei}</span>
-            {legalName ? <span>)</span> : null}. Includes BODS v0.4
+            {legalName ? <span>)</span> : null}. Includes BODS
             statements, manifest, and per-source license notes.
           </p>
         </div>
