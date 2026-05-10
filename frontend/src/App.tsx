@@ -457,8 +457,8 @@ export default function App() {
           </div>
           <p className="mt-3 max-w-2xl text-[15px] font-light leading-[1.65] text-white/70">
             Customer due diligence risk checks driven by the Legal
-            Entity Identifier (LEI) and open data — mapped to version
-            0.4 of the Beneficial Ownership Data Standard.
+            Entity Identifier (LEI) and open data — mapped to the
+            Beneficial Ownership Data Standard.
           </p>
         </div>
       </header>
@@ -1049,16 +1049,7 @@ const HOW_IT_WORKS_STEPS = [
     body: (
       <>
         Each source is queried using the right identifier for that dataset.
-        Results are normalised into{" "}
-        <a
-          href="https://standard.openownership.org/en/0.4.0/"
-          target="_blank"
-          rel="noreferrer"
-          className="text-oo-blue underline underline-offset-2 hover:text-oo-burst"
-        >
-          the Beneficial Ownership Data Standard
-        </a>{" "}
-        statements.
+        Results are normalised into BODS statements.
       </>
     ),
     badges: [
