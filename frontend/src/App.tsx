@@ -718,11 +718,11 @@ export default function App() {
           <section>
             <SectionLabel>About the sources</SectionLabel>
             <p className="text-[14px] leading-[1.7] text-oo-muted mb-6 max-w-2xl">
-              OpenCheck queries the open-data sources below. GLEIF is
-              the entry point — its Legal Entity Identifier (LEI) acts
-              as a connector across the rest. Each source ships its
-              data under its own license; non-commercial sources
-              propagate that obligation through the export bundle.
+              OpenCheck queries the open data sources below. GLEIF is
+              the entry point — the LEI acts as a connector across the
+              rest. Each source ships its data under its own license;
+              non-commercial sources propagate that obligation through
+              the export bundle.
             </p>
             {sourcesQuery.isLoading && (
               <p className="text-oo-muted">Loading…</p>

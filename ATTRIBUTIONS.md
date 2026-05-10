@@ -4,13 +4,6 @@ OpenCheck retrieves data from the open data sources listed below. Each source ha
 
 OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 
-## UK Companies House
-
-- **Data:** company profiles, officers, Persons with Significant Control (PSC)
-- **API:** <https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference>
-- **License:** [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/)
-- **Attribution:** "Contains public sector information licensed under the Open Government Licence v3.0 (Companies House)."
-
 ## GLEIF — Global Legal Entity Identifier Foundation
 
 - **Data:** LEI-CDF (Level 1) entity records; RR-CDF (Level 2) relationship records and reporting exceptions
@@ -18,35 +11,113 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **License:** [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/)
 - **Attribution:** "Contains LEI data from GLEIF, available under CC0 1.0."
 
-## OpenCorporates
+## UK Companies House
 
-- **Data:** global company registry data — company profiles, registered addresses, officer appointments
-- **API:** <https://api.opencorporates.com/>
-- **License:** [OpenCorporates Terms and Conditions](https://opencorporates.com/info/terms-and-conditions) — free tier for non-commercial use; requires attribution
-- **Attribution:** "Company data from OpenCorporates (opencorporates.com)."
-- **Note:** OpenCheck reaches OpenCorporates via the `ocid` field on GLEIF Level 1 records, which uses the format `jurisdiction/company_number` (e.g. `gb/00102498`). This bridges the LEI namespace directly to the OpenCorporates REST API.
+- **Data:** company profiles, officers, Persons with Significant Control (PSC)
+- **API:** <https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference>
+- **License:** [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/)
+- **Attribution:** "Contains public sector information licensed under the Open Government Licence v3.0 (Companies House)."
+- **Entry point:** `gb_coh` derived from GLEIF `registeredAs` field
 
-## OpenSanctions
+## Brønnøysundregistrene — Norwegian Register Centre (Brreg)
 
-- **Data:** sanctions lists, PEPs, crime-linked entities, cross-dataset references (including the OpenOwnership dataset and the GEM energy ownership dataset)
-- **API:** <https://api.opensanctions.org/>
-- **License:** [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
-- **Attribution:** "Data from OpenSanctions.org, licensed CC BY-NC 4.0."
+- **Data:** company profiles and role-holders (board members, daily managers, contact persons, and other officers) from the Enhetsregisteret (Central Coordinating Register for Legal Entities)
+- **API:** <https://data.brreg.no/enhetsregisteret/api/docs>
+- **License:** [NLOD 2.0 — Norwegian Licence for Open Government Data](https://data.norge.no/nlod/en/2.0)
+- **Attribution:** "Contains data from Brønnøysundregistrene via the Enhetsregisteret, licensed under NLOD 2.0."
+- **Entry point:** `no_orgnr` (9-digit organisation number) derived from GLEIF RA code `RA000472`
+- **Note:** Beneficial ownership data (reelle rettighetshavere) is restricted to users in Norway with legitimate interest and is not available via the public API.
 
-## OpenAleph
+## Companies Registration Office Ireland (CRO)
 
-- **Data:** investigative data collections (company registries, leaks, sanctions lists, court records)
-- **Endpoint:** <https://search.openaleph.org/>
-- **License:** per-collection (CC BY, CC BY-SA, or restricted). OpenCheck reads each collection's license metadata from the API and surfaces it on the source card.
-- **Attribution:** per-collection, e.g. "Data from [collection name] in OpenAleph, licensed [license]."
+- **Data:** company profiles (name, status, type, registration date, address, NACE code) from the CRO Open Data Portal
+- **Portal:** <https://opendata.cro.ie/>
+- **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **Attribution:** "Contains data from the Companies Registration Office of Ireland, available under CC BY 4.0 via the CRO Open Data Portal (opendata.cro.ie)."
+- **Entry point:** `ie_crn` (company registration number) derived from GLEIF RA code `RA000402`
+- **Note:** Officer and director data is not available from the Open Data Portal tier. The CRO Open Services API (`services.cro.ie/cws`) provides richer data including officers, but requires an API key issued by the CRO.
 
 ## PRH — Patentti- ja rekisterihallitus (Finnish Patent and Registration Office)
 
-- **Data:** entity records for all organisations registered in Finland, via the YTJ (Yritys- ja yhteisötietojärjestelmä) Open Data API
+- **Data:** entity records for all organisations registered in Finland, via the YTJ (Yritys- ja yhteisötietojärjestelmä / Business Information System) Open Data API
 - **API:** <https://avoindata.prh.fi/en/ytj/swagger-ui>
 - **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 - **Attribution:** "Contains data from Patentti- ja rekisterihallitus (PRH) / Finnish Patent and Registration Office, via the YTJ Open Data API (avoindata.prh.fi), licensed under CC BY 4.0."
-- **Note:** Beneficial ownership / officer data from PRH is not publicly accessible. The paid Virre Information Service ([prh.fi/virre](https://www.prh.fi/en/companiesandorganisations/tietopalvelut/virre.html)) provides role-holder records; OpenCheck currently maps entity data only.
+- **Entry point:** `fi_ytunnus` (Y-tunnus / Finnish Business ID, format `XXXXXXX-X`) derived from GLEIF RA code `RA000188`
+- **Note:** Beneficial ownership and officer data are not publicly available from PRH. The paid Virre Information Service provides role-holder records; OpenCheck currently maps entity data only.
+
+## Ariregister — Estonian e-Business Register
+
+- **Data:** company profiles, shareholders, officers, and beneficial owners from the e-Business Register (äriregister) open data bulk files
+- **Portal:** <https://avaandmed.ariregister.rik.ee/en>
+- **License:** Open Data (PSI Directive / Estonian Public Information Act)
+- **Attribution:** "Contains data from the Estonian e-Business Register (Äriregister), open data published by the Centre of Registers and Information Systems (RIK)."
+- **Entry point:** Estonian registry code (8-digit) derived from GLEIF RA code `RA000181`
+- **Note:** OpenCheck loads a local SQLite database built from the RIK bulk files. Activated when `ARIREGISTER_DB_FILE` is set.
+
+## INPI — Registre National des Entreprises (France)
+
+- **Data:** company profiles and officers from the French national business registry (Registre National des Entreprises / RNE)
+- **API:** <https://api.inpi.fr/> (Infogreffe / INPI RNE API)
+- **License:** Open (PSI Directive / Licence Ouverte Etalab)
+- **Attribution:** "Contains data from the Registre National des Entreprises (INPI / Infogreffe), open data."
+- **Entry point:** `siren` (9-digit SIREN number) derived from GLEIF RA code `RA000189`
+
+## KvK — Kamer van Koophandel (Netherlands)
+
+- **Data:** company details and authorised representatives from the Dutch Chamber of Commerce Handelsregister
+- **API:** <https://developers.kvk.nl/>
+- **License:** Open (PSI Directive / Dutch open data policy)
+- **Attribution:** "Contains data from the Kamer van Koophandel (KvK) Handelsregister, open data."
+- **Entry point:** `kvk_number` derived from GLEIF RA code `RA000463`
+
+## Bolagsverket (Sweden)
+
+- **Data:** company profiles and board-level officers from the Swedish Companies Registration Office
+- **API:** <https://bolagsverket.se/apierochoppnadata>
+- **License:** Open (PSI Directive / Swedish open data policy)
+- **Attribution:** "Contains data from Bolagsverket (Swedish Companies Registration Office), open data."
+- **Entry point:** `se_org_number` (10-digit Swedish organisation number) derived from GLEIF RA code `RA000544`
+
+## Zefix — Central Business Name Index (Switzerland)
+
+- **Data:** company profiles and authorised signatories from the Swiss central business name index
+- **API:** <https://www.zefix.admin.ch/en/search/entity/welcome>
+- **License:** Open (Swiss open government data)
+- **Attribution:** "Contains data from Zefix (Swiss Federal Commercial Registry Office), open data."
+- **Entry point:** `che_uid` (Swiss UID, format `CHE-XXX.XXX.XXX`) derived from GLEIF RA codes `RA000412` / `RA000548` / `RA000549`
+
+## OpenCorporates
+
+- **Data:** global company registry data — company profiles, registered addresses, officer appointments, and network relationships
+- **API:** <https://api.opencorporates.com/>
+- **License:** [OpenCorporates Terms and Conditions](https://opencorporates.com/info/terms-and-conditions) — free tier for non-commercial use; requires attribution
+- **Attribution:** "Company data from OpenCorporates (opencorporates.com)."
+- **Entry point:** `ocid` field on GLEIF Level 1 records, format `jurisdiction/company_number` (e.g. `gb/00102498`)
+
+## BrightQuery (OpenData.org)
+
+- **Data:** US company and executive data covering 185,000+ entities with LEIs
+- **Source:** <https://opendata.org/>
+- **License:** [ODC Attribution License (ODC-By)](https://opendatacommons.org/licenses/by/)
+- **Attribution:** "Contains data from BrightQuery / OpenData.org, licensed under ODC-By."
+- **Entry point:** LEI direct lookup from a local SQLite database. Activated when `BRIGHTQUERY_DB_FILE` is set.
+
+## SEC EDGAR (Schedule 13D / 13G)
+
+- **Data:** major shareholders (>5 %) of US-listed companies from mandatory Schedule 13D and 13G XML filings (December 2024 onward)
+- **Portal:** <https://www.sec.gov/cgi-bin/browse-edgar>
+- **License:** Public Domain (US government works)
+- **Attribution:** "Contains data from SEC EDGAR (U.S. Securities and Exchange Commission), public domain."
+- **Entry point:** legal name search for US-jurisdiction entities; no API key required
+
+## OpenSanctions
+
+- **Data:** sanctions lists, PEPs, crime-linked entities, and cross-dataset references (including the OpenOwnership dataset and the GEM energy ownership dataset)
+- **API:** <https://api.opensanctions.org/>
+- **License:** [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
+- **Attribution:** "Data from OpenSanctions.org, licensed CC BY-NC 4.0."
+- **Entry point:** LEI string search
 
 ## EveryPolitician
 
@@ -55,6 +126,7 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Poliloom launch article:** <https://www.opensanctions.org/articles/2026-03-24-poliloom/>
 - **License:** [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
 - **Attribution:** "EveryPolitician data, maintained by OpenSanctions. Licensed CC BY-NC 4.0."
+- **Entry point:** name cross-check against BODS person statements derived from other sources
 
 ## Wikidata
 
@@ -62,6 +134,25 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **API:** <https://query.wikidata.org/> (SPARQL) and <https://www.wikidata.org/w/api.php>
 - **License:** [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) for structured data
 - **Attribution:** "Wikidata structured data, CC0 1.0."
+- **Entry point:** Q-ID resolved via SPARQL on property P1278 (LEI)
+
+## OpenTender (DIGIWHIST)
+
+- **Data:** public procurement tender data from 35 jurisdictions
+- **Portal:** <https://opentender.eu/>
+- **License:** [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+- **Attribution:** "Procurement data from OpenTender (DIGIWHIST), licensed CC BY-NC-SA 4.0."
+- **Entry point:** LEI string search
+
+## OpenAleph
+
+- **Data:** investigative data collections (company registries, leaks, sanctions lists, court records)
+- **Endpoint:** <https://search.openaleph.org/>
+- **License:** per-collection (CC BY, CC BY-SA, or restricted). OpenCheck reads each collection's license metadata from the API and surfaces it on the source card.
+- **Attribution:** per-collection, e.g. "Data from [collection name] in OpenAleph, licensed [license]."
+- **Note:** The OpenAleph adapter is implemented but currently disabled in the registry. Its API is name-keyed rather than identifier-keyed, which does not fit the LEI-anchored flow cleanly yet.
+
+---
 
 ## BODS — Beneficial Ownership Data Standard
 
@@ -69,4 +160,4 @@ Exports conform to the [Beneficial Ownership Data Standard (BODS)](https://stand
 
 ---
 
-If you export OpenCheck data that includes content derived from any CC BY-NC source (OpenSanctions, EveryPolitician, some OpenAleph collections), your use of that data is constrained by the non-commercial license. OpenCheck warns you about this at export time.
+If you export OpenCheck data that includes content derived from any CC BY-NC source (OpenSanctions, EveryPolitician, some OpenAleph collections) or the CC BY-NC-SA source (OpenTender), your use of that data is constrained by the non-commercial (and, for OpenTender, share-alike) license. OpenCheck warns you about this at export time.
