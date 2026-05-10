@@ -238,24 +238,23 @@ function sanitiseBundle(input: unknown[]): unknown[] {
   //
   // For RELATIONSHIP statements:
   //   - Drop those whose subject or interestedParty points outside the bundle.
-  //   - bods-dagre v0.4 path expects recordDetails.subject and
-  //     recordDetails.interestedParty as *string* statementIds, but the
-  //     Open Ownership extraction pipeline emits them as objects:
-  //       { describedByEntityStatement: "<uuid>" }
-  //     We flatten them here so bods-dagre actually draws edges.
+  //   - bods-dagre expects recordDetails.subject and recordDetails.interestedParty
+  //     as *string* statementIds.
+  //   - BODS v0.4 (OpenCheck mapper): bare strings already — pass through as-is.
+  //   - Legacy / Open Ownership extraction: objects like
+  //       { describedByEntityStatement: "<id>" }
+  //     — flatten to strings so bods-dagre draws the edge.
   //
   // For ENTITY and PERSON statements:
   //   - bods-dagre v0.4 resolves graph edges with:
   //       data.find(d => d.recordId === edgeSource)
-  //     where edgeSource is the statementId extracted from the relationship's
-  //     describedByEntityStatement / describedByPersonStatement.  If statementId
-  //     and recordId differ (as they do in Open Ownership's extraction pipeline),
-  //     the lookup returns undefined and bods-dagre replaces the real node with
-  //     an "Unknown" placeholder.  We normalise recordId = statementId here so
-  //     the lookup always succeeds regardless of source.
-  //   - bods-dagre reads ``recordDetails.jurisdiction.code`` to render country
-  //     flags, but BODS v0.4 data uses ``incorporatedInJurisdiction``.  We copy
-  //     the field so flags appear.
+  //     where edgeSource is the relationship's subject/interestedParty string.
+  //     If statementId and recordId differ, the lookup returns undefined and
+  //     bods-dagre shows "Unknown" placeholders. We normalise recordId =
+  //     statementId so the lookup always succeeds.
+  //   - bods-dagre reads ``recordDetails.jurisdiction.code`` for flags, but
+  //     BODS v0.4 uses ``incorporatedInJurisdiction``. Copy the field so flags
+  //     appear.
   const normalised: unknown[] = [];
   for (const stmt of wellTyped) {
     const recordType = stmt.recordType ?? stmt.statementType;
@@ -263,22 +262,32 @@ function sanitiseBundle(input: unknown[]): unknown[] {
     if (recordType === "relationship") {
       const rd =
         (stmt.recordDetails as Record<string, unknown> | undefined) ?? {};
-      const subject = rd.subject as Record<string, unknown> | undefined;
-      const interested = rd.interestedParty as
-        | Record<string, unknown>
-        | undefined;
-      const subjectId =
-        (subject?.describedByEntityStatement as string | undefined) ??
-        (subject?.describedByPersonStatement as string | undefined);
-      const interestedId =
-        (interested?.describedByEntityStatement as string | undefined) ??
-        (interested?.describedByPersonStatement as string | undefined);
+
+      // Resolve subject — bare string (v0.4) or wrapped object (legacy).
+      const rawSubject = rd.subject;
+      const subjectId: string | undefined =
+        typeof rawSubject === "string"
+          ? rawSubject
+          : typeof rawSubject === "object" && rawSubject !== null
+          ? ((rawSubject as Record<string, unknown>).describedByEntityStatement as string | undefined) ??
+            ((rawSubject as Record<string, unknown>).describedByPersonStatement as string | undefined)
+          : undefined;
+
+      // Resolve interestedParty — bare string (v0.4) or wrapped object (legacy).
+      const rawIP = rd.interestedParty;
+      const interestedId: string | undefined =
+        typeof rawIP === "string"
+          ? rawIP
+          : typeof rawIP === "object" && rawIP !== null
+          ? ((rawIP as Record<string, unknown>).describedByEntityStatement as string | undefined) ??
+            ((rawIP as Record<string, unknown>).describedByPersonStatement as string | undefined)
+          : undefined;
 
       // Drop dangling references — they'd produce orphan edges.
       if (!subjectId || !nodeIds.has(subjectId)) continue;
       if (!interestedId || !nodeIds.has(interestedId)) continue;
 
-      // Flatten to strings so bods-dagre draws the edge.
+      // Ensure bare-string format so bods-dagre draws the edge.
       normalised.push({
         ...stmt,
         recordDetails: {
