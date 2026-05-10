@@ -8,7 +8,7 @@ Try the demo version at https://opencheck.onrender.com/
 
 ## What is OpenCheck?
 
-You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, Norwegian organisation number, Irish company registration number, Finnish Business ID (Y-tunnus), Estonian registry code, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, OpenCorporates ID, Wikidata Q-ID, etc.), and uses those bridges to fan out across national corporate registries (UK, Norway, Ireland, Finland, Estonia, France, the Netherlands, Sweden, Switzerland), OpenCorporates, SEC EDGAR (major shareholders of US-listed companies), OpenSanctions, EveryPolitician, Wikidata, and OpenTender. 
+You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries GLEIF first, derives every cross-source identifier it can (UK Companies House number, Norwegian organisation number, Irish company registration number, Finnish Business ID (Y-tunnus), Latvian registration number, Estonian registry code, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, OpenCorporates ID, Wikidata Q-ID, etc.), and uses those bridges to fan out across national corporate registries (UK, Norway, Ireland, Finland, Latvia, Estonia, France, the Netherlands, Sweden, Switzerland), OpenCorporates, SEC EDGAR (major shareholders of US-listed companies), OpenSanctions, EveryPolitician, Wikidata, and OpenTender. 
 
 Everything maps into the [Beneficial Ownership Data Standard (BODS)](https://standard.openownership.org/en/0.4.0/), the cross-source links + risk signals are computed deterministically, and the whole bundle is one click away from a downloadable shareable export.
 
@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [draft customer due diligence regulatory techn
 
 ## Status
 
-OpenCheck has shipped through twenty seven phases (latest commit on `main` is the source of truth):
+OpenCheck has shipped through twenty eight phases (latest commit on `main` is the source of truth):
 
 | Phase | Headline |
 |------:|----------|
@@ -48,8 +48,9 @@ OpenCheck has shipped through twenty seven phases (latest commit on `main` is th
 | 25 | Brønnøysundregistrene (Norway) adapter — entity data and role-holders (CEO, board, officers) from the public Enhetsregisteret API; BODS v0.4 role mapping; NLOD 2.0; no API key required |
 | 26 | Companies Registration Office Ireland (CRO) adapter — entity data from the CRO Open Data Portal CKAN API; CC BY 4.0; no API key required |
 | 27 | PRH (Finland) adapter — entity data from the YTJ Open Data API; CC BY 4.0; no API key required |
+| 28 | UR Latvia adapter — entity profiles, beneficial owners, officers, and shareholders from Latvia's Register of Enterprises via the CKAN Datastore API on data.gov.lv; open government data; no API key required |
 
-Test suite: 447 backend tests. Frontend type-checks clean.
+Test suite: 448 backend tests. Frontend type-checks clean.
 
 ## Quick start
 
@@ -97,6 +98,7 @@ Paste a 20-character ISO 17442 LEI — for example `213800LH1BZH3DI6G760` (BP) o
    - **Brreg — Brønnøysundregistrene (Norway)** — fetched by `no_orgnr` (derived from GLEIF RA code `RA000472`); delivers company profile and role-holders (CEO, board chair, board members, deputies, and other officers) as BODS statements via the public Enhetsregisteret REST API. No API key required; licensed NLOD 2.0.
    - **CRO — Companies Registration Office Ireland** — fetched by `ie_crn` (derived from GLEIF RA code `RA000402`); delivers company profile (status, type, registration date, address) from the CRO Open Data Portal CKAN API. No API key required; licensed CC BY 4.0.
    - **PRH — Finnish Patent and Registration Office** — fetched by `fi_ytunnus` (Y-tunnus, derived from GLEIF RA code `RA000188`); delivers entity details from the YTJ (Business Information System) Open Data API. Officer data is not publicly available (the paid Virre service covers it). No API key required; licensed CC BY 4.0.
+   - **UR Latvia — Latvian Register of Enterprises** — fetched by `lv_regcode` (11-digit registration number, derived from GLEIF RA code `RA000423`); queries the CKAN Datastore API on data.gov.lv to join five open datasets: the business register (entity profile), beneficial owners (UBO declarations from the Latvian BO register), officers (executive/supervisory board members, liquidators, and other representatives), SIA shareholders (LLC share-register entries), and historical names. All five tables are live-queryable via the CKAN Datastore API without downloading the bulk CSVs. Maps the full dataset to BODS v0.4 entity, person, and ownership-or-control statements. No API key required; open government data.
    - **Ariregister (Estonia)** — fetched by the Estonian registry code (derived from GLEIF RA code `RA000181`); delivers entity basics, shareholders, officers, and beneficial owners from a local SQLite database built from the e-Business Register open data bulk files. Activated when `ARIREGISTER_DB_FILE` is set.
    - **INPI (France)** — fetched by `fr_siren` (derived from GLEIF RA code `RA000189`); delivers company profile and officers as BODS statements via the Registre National des Entreprises API.
    - **KvK (Netherlands)** — fetched by `nl_kvk` (derived from GLEIF RA code `RA000463`); delivers company details and authorised representatives via the Kamer van Koophandel Handelsregister API.
@@ -131,7 +133,7 @@ python scripts/extract_bods_subgraphs.py \
 
 ## Sources
 
-Seventeen active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
+Eighteen active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
 
 | ID | Name | License | Entry point | Description |
 |----|------|---------|-------------|-------------|
@@ -140,6 +142,7 @@ Seventeen active adapters, each implementing the same `SourceAdapter` protocol (
 | `brreg` | Brønnøysundregistrene (Norway) | NLOD-2.0 | `no_orgnr` from GLEIF (`RA000472`) | Norwegian central business register — company profile and role-holders (CEO, board, officers) from the public Enhetsregisteret REST API; no API key required |
 | `cro` | Companies Registration Office Ireland | CC-BY-4.0 | `ie_crn` from GLEIF (`RA000402`) | Irish company register — entity details (status, type, registration date, address) from the CRO Open Data Portal CKAN API; no API key required |
 | `prh` | PRH — Finnish Patent and Registration Office | CC-BY-4.0 | `fi_ytunnus` from GLEIF (`RA000188`) | Finnish company register — entity details from the YTJ Open Data API; officer data requires the paid Virre service; no API key required |
+| `ur_latvia` | UR — Latvian Register of Enterprises | Open Government Data (PSI) | `lv_regcode` from GLEIF (`RA000423`) | Latvian business register — entity profile, beneficial owners, officers, shareholders, and historical names via the CKAN Datastore API on data.gov.lv; no API key required |
 | `ariregister` | Estonian e-Business Register (Ariregister) | Open (PSI) | registry code from GLEIF (`RA000181`) | Estonian commercial register — entity basics, shareholders, officers, and beneficial owners from the RIK open data bulk files. Activated via `ARIREGISTER_DB_FILE` |
 | `inpi` | INPI — Registre National des Entreprises | Open (PSI) | `fr_siren` from GLEIF | French national business registry — company profile and officers via the RNE API |
 | `kvk` | KvK — Handelsregister | Open (PSI) | `nl_kvk` from GLEIF | Netherlands Chamber of Commerce commercial register — company details and authorised representatives |

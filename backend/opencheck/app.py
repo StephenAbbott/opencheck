@@ -50,6 +50,7 @@ from .bods import (
     map_opentender,
     map_prh,
     map_sec_edgar,
+    map_ur_latvia,
     map_wikidata,
     map_kvk,
     map_zefix,
@@ -60,6 +61,7 @@ from .sources.bolagsverket import BV_RA_CODE as _BV_RA_CODE, normalise_org_numbe
 from .sources.brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_orgnr
 from .sources.cro import IE_RA_CODE as _CRO_RA_CODE, normalise_crn as _normalise_crn
 from .sources.prh import FI_RA_CODE as _PRH_RA_CODE, normalise_ytunnus as _normalise_ytunnus
+from .sources.ur_latvia import LV_RA_CODE as _LV_RA_CODE, normalise_regcode as _normalise_lv_regcode
 from .sources.inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
 from .sources.kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
 from .sources.zefix import CH_RA_CODES as _ZEFIX_RA_CODES, normalise_uid as _zefix_normalise_uid
@@ -373,6 +375,7 @@ _MAPPERS = {
     "kvk": map_kvk,
     "opentender": map_opentender,
     "prh": map_prh,
+    "ur_latvia": map_ur_latvia,
     "zefix": map_zefix,
 }
 
@@ -694,6 +697,9 @@ async def lookup(
     if registered_at_id == _PRH_RA_CODE and registered_as:
         # Finnish Business ID / Y-tunnus (e.g. "0112038-9")
         derived["fi_ytunnus"] = _normalise_ytunnus(registered_as)
+    if registered_at_id == _LV_RA_CODE and registered_as:
+        # Latvian registration number — 11-digit string (e.g. "40003521600")
+        derived["lv_regcode"] = _normalise_lv_regcode(registered_as)
 
     # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
     # (format: ``{jurisdiction_code}/{company_number}``).
@@ -749,6 +755,7 @@ async def lookup(
             **({"no_orgnr": derived["no_orgnr"]} if "no_orgnr" in derived else {}),
             **({"ie_crn": derived["ie_crn"]} if "ie_crn" in derived else {}),
             **({"fi_ytunnus": derived["fi_ytunnus"]} if "fi_ytunnus" in derived else {}),
+            **({"lv_regcode": derived["lv_regcode"]} if "lv_regcode" in derived else {}),
             **({"wikidata_qid": qid} if qid else {}),
         },
         raw=gleif_bundle.get("record") or {},
@@ -1023,6 +1030,34 @@ async def lookup(
                 deepened_bundles.append(("prh", derived["fi_ytunnus"]))
         except Exception as exc:  # noqa: BLE001
             errors["prh"] = f"{type(exc).__name__}: {exc}"
+
+    # UR Latvia — direct fetch by Latvian registration number when RA000423.
+    if "lv_regcode" in derived:
+        try:
+            lv_bundle = await REGISTRY["ur_latvia"].fetch(
+                derived["lv_regcode"], legal_name=legal_name
+            )
+            if not lv_bundle.get("is_stub"):
+                lv_entity = lv_bundle.get("entity") or {}
+                lv_name = (lv_entity.get("name") or "").strip() or legal_name or ""
+                hits.append(
+                    SourceHit(
+                        source_id="ur_latvia",
+                        hit_id=derived["lv_regcode"],
+                        kind=SearchKind.ENTITY,
+                        name=lv_name,
+                        summary=f"LV-UR {derived['lv_regcode']}",
+                        identifiers={
+                            "lv_regcode": derived["lv_regcode"],
+                            "lei": lei,
+                        },
+                        raw=lv_entity,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("ur_latvia", derived["lv_regcode"]))
+        except Exception as exc:  # noqa: BLE001
+            errors["ur_latvia"] = f"{type(exc).__name__}: {exc}"
 
     # OpenCorporates — direct fetch by ocid derived from GLEIF.
     if ocid:

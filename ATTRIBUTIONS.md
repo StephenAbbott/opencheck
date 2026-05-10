@@ -46,6 +46,22 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `fi_ytunnus` (Y-tunnus / Finnish Business ID, format `XXXXXXX-X`) derived from GLEIF RA code `RA000188`
 - **Note:** Beneficial ownership and officer data are not publicly available from PRH. The paid Virre Information Service provides role-holder records; OpenCheck currently maps entity data only.
 
+## UR — Latvian Register of Enterprises (Uzņēmumu reģistrs)
+
+- **Data:** entity profiles, beneficial owner declarations, officers (executive/supervisory board members, liquidators, and other representatives), SIA shareholders (LLC share-register entries), and historical names — sourced from five open datasets published on Latvia's national open data portal (data.gov.lv) by the Register of Enterprises (UR)
+- **Portal:** <https://data.gov.lv/dati/lv/organization/ur>
+- **API:** CKAN Datastore API on data.gov.lv (`https://data.gov.lv/dati/api/3/action/`) — all five datasets are live-queryable row-by-row without downloading the bulk CSV files
+- **Resource IDs:**
+  - Business register: `25e80bf3-f107-4ab4-89ef-251b5b9374e9`
+  - Beneficial owners: `20a9b26d-d056-4dbb-ae18-9ff23c87bdee`
+  - Historical names: `ad772b8b-76e4-4334-83d9-3beadf513aa6`
+  - Officers: `e665114a-73c2-4375-9470-55874b4cfa6b`
+  - Members (SIA shareholders): `837b451a-4833-4fd1-bfdd-b45b35a994fd`
+- **License:** Open Government Data (PSI Directive / Latvian Public Information Law)
+- **Attribution:** "Contains data from the Latvian Register of Enterprises (UR), open data published on data.gov.lv."
+- **Entry point:** `lv_regcode` (11-digit Latvian registration number) derived from GLEIF RA code `RA000423`
+- **Note:** Latvia was the first country to publish its national beneficial ownership data in BODS format (BODS v0.2, 2021); that historical dataset is available at <https://data.gov.lv/dati/lv/dataset/plg-bods>. The current live datasets do not carry percentage thresholds for beneficial owners — they record the declared UBO without specifying the interest mechanism. Individual identity numbers are partially masked (`DDMMYY-*****`).
+
 ## Ariregister — Estonian e-Business Register
 
 - **Data:** company profiles, shareholders, officers, and beneficial owners from the e-Business Register (äriregister) open data bulk files

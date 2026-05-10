@@ -29,6 +29,7 @@ from .mapper import (
     map_opentender,
     map_prh,
     map_sec_edgar,
+    map_ur_latvia,
     map_wikidata,
     map_zefix,
 )
@@ -56,6 +57,7 @@ __all__ = [
     "map_opentender",
     "map_prh",
     "map_sec_edgar",
+    "map_ur_latvia",
     "map_wikidata",
     "map_zefix",
     "validate_shape",

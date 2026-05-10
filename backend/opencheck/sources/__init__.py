@@ -24,6 +24,7 @@ from .opensanctions import OpenSanctionsAdapter
 from .opentender import OpenTenderAdapter
 from .prh import PrhAdapter
 from .sec_edgar import SecEdgarAdapter
+from .ur_latvia import UrLatviaAdapter
 from .wikidata import WikidataAdapter
 from .zefix import ZefixAdapter
 
@@ -49,6 +50,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "opentender": OpenTenderAdapter(),
     "prh": PrhAdapter(),
     "sec_edgar": SecEdgarAdapter(),
+    "ur_latvia": UrLatviaAdapter(),
     "zefix": ZefixAdapter(),
 }
 
