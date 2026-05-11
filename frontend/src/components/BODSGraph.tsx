@@ -136,6 +136,18 @@ export default function BODSGraph({
     <div className="bg-white border border-oo-rule rounded-oo">
       {/* Optional UI controls the library wires up by ID lookup. */}
       <div className="flex items-center justify-end gap-1 px-2 py-1 border-b border-oo-rule">
+        {/*
+          bods-dagre 0.4.x unconditionally calls
+          document.querySelector("#slider-container").style.display = …
+          during draw() — it crashes with TypeError if the element is
+          absent.  We render it here (hidden by default) so the library
+          can show/hide it as needed when the bundle spans multiple
+          statement dates.
+        */}
+        <div
+          id="slider-container"
+          className="hidden text-xs text-oo-muted mr-auto"
+        />
         <button
           id="zoom_out"
           type="button"
