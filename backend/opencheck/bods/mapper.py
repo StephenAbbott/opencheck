@@ -779,11 +779,19 @@ def _country_code(name: str | None) -> str:
         return stripped.upper()
     # Overrides for names pycountry can't look up.
     _OVERRIDES: dict[str, str] = {
+        # UK constituent nations and common CH sub-jurisdiction strings.
         "england": "GB",
+        "england and wales": "GB",
+        "england & wales": "GB",
         "scotland": "GB",
         "wales": "GB",
         "northern ireland": "GB",
+        "great britain": "GB",
+        "united kingdom": "GB",
+        # Common abbreviations.
         "uae": "AE",
+        "usa": "US",
+        "us": "US",
     }
     override = _OVERRIDES.get(stripped.lower())
     if override:
