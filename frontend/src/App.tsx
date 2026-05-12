@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import BODSGraph from "./components/BODSGraph";
+import SearchLoadingGrid from "./components/SearchLoadingGrid";
 import {
   deepen,
   exportUrl,
@@ -639,6 +640,10 @@ export default function App() {
           <div className="mb-6 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
             {error}
           </div>
+        )}
+
+        {looking && (
+          <SearchLoadingGrid sources={sourcesQuery.data?.sources ?? []} />
         )}
 
         {!result && !looking && !error && !nameResults && !nameSearching && (
