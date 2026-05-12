@@ -155,6 +155,26 @@ class OpenAlephAdapter(SourceAdapter):
             for item in payload.get("results", [])
         ]
 
+    async def fetch_by_name(self, legal_name: str) -> list[SourceHit]:
+        """Return OpenAleph hits whose name closely matches ``legal_name``.
+
+        Used as a last-resort fallback when all identifier-keyed strategies
+        return no results (e.g. entities indexed without leiCode or
+        registrationNumber).  Results are limited to ``LegalEntity`` schema
+        to minimise false positives.
+        """
+        cache_key = f"{_CACHE_NS}/name/{_slug(legal_name)}"
+        if not self.info.live_available and not self._cache.has(cache_key):
+            return []
+        payload = await self._get(
+            f"/entities?q={quote(legal_name)}&filter:schema=LegalEntity&limit=5",
+            cache_key=cache_key,
+        )
+        return [
+            self._hit(item, SearchKind.ENTITY)
+            for item in payload.get("results", [])
+        ]
+
     async def fetch_by_registration(
         self, jurisdiction: str, registration_number: str
     ) -> list[SourceHit]:

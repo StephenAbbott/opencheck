@@ -120,6 +120,16 @@ def _mock_openaleph_reg_lookup_empty(
     httpx_mock.add_response(url=url, json={"results": []})
 
 
+def _mock_openaleph_name_lookup_empty(httpx_mock: HTTPXMock, name: str) -> None:
+    """Mock the OpenAleph fetch_by_name (strategy 4) call to return no results."""
+    from urllib.parse import quote
+    url = (
+        "https://search.openaleph.org/api/2/entities?"
+        f"q={quote(name)}&filter:schema=LegalEntity&limit=5"
+    )
+    httpx_mock.add_response(url=url, json={"results": []})
+
+
 def test_lookup_drives_full_synthesis_for_a_gb_lei(
     client: TestClient, monkeypatch, httpx_mock: HTTPXMock
 ) -> None:
@@ -144,9 +154,10 @@ def test_lookup_drives_full_synthesis_for_a_gb_lei(
     )
     _mock_wikidata_lei_lookup_empty(httpx_mock, lei)
     _mock_icij_empty(httpx_mock)
-    # OpenAleph: strategy 1 (leiCode) returns empty; strategy 3 (gb_coh) also empty.
+    # OpenAleph: all four strategies return empty.
     _mock_openaleph_lei_lookup_empty(httpx_mock, lei)
     _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
+    _mock_openaleph_name_lookup_empty(httpx_mock, "Demo Company P.L.C.")
     # Companies House + OpenSanctions need API keys we haven't set, so
     # they return stubs without making network calls.
 
@@ -233,8 +244,9 @@ def test_lookup_lower_case_lei_is_normalised(
     )
     _mock_wikidata_lei_lookup_empty(httpx_mock, lei)
     _mock_icij_empty(httpx_mock)
-    # OpenAleph: only strategy 1 (leiCode) fires — no registeredAs in this fixture.
+    # OpenAleph: strategies 1 (leiCode) and 4 (name) fire; no registeredAs in fixture.
     _mock_openaleph_lei_lookup_empty(httpx_mock, lei)
+    _mock_openaleph_name_lookup_empty(httpx_mock, "Demo Co")
 
     # Pass it lower-cased; backend should uppercase before the GLEIF call.
     r = client.get("/lookup", params={"lei": lei.lower()})

@@ -258,3 +258,39 @@ async def test_fetch_by_registration_stub_when_live_disabled(monkeypatch) -> Non
     adapter = OpenAlephAdapter()
     hits = await adapter.fetch_by_registration("se", "556056-6258")
     assert hits == []
+
+
+# ---------------------------------------------------------------------------
+# fetch_by_name (strategy 4 — name-based fallback)
+# ---------------------------------------------------------------------------
+
+async def test_fetch_by_name_returns_hits(httpx_mock: HTTPXMock) -> None:
+    from urllib.parse import quote
+    httpx_mock.add_response(
+        url=f"{_API}/entities?q={quote('Ericsson AB')}&filter:schema=LegalEntity&limit=5",
+        json={"results": [_ERICSSON_ENTITY]},
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_name("Ericsson AB")
+    assert len(hits) == 1
+    assert hits[0].hit_id == "aleph-ericsson-001"
+    assert hits[0].name == "Ericsson AB"
+
+
+async def test_fetch_by_name_empty_result(httpx_mock: HTTPXMock) -> None:
+    from urllib.parse import quote
+    httpx_mock.add_response(
+        url=f"{_API}/entities?q={quote('Nonexistent Corp')}&filter:schema=LegalEntity&limit=5",
+        json={"results": []},
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_name("Nonexistent Corp")
+    assert hits == []
+
+
+async def test_fetch_by_name_stub_when_live_disabled(monkeypatch) -> None:
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
+    get_settings.cache_clear()
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_name("Ericsson AB")
+    assert hits == []

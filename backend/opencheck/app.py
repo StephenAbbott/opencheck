@@ -1256,6 +1256,12 @@ async def lookup(
                         if oa_hits:
                             break
 
+            # Strategy 4: legal name search (last resort — fuzzy, may return
+            # multiple entities; useful for companies without identifier
+            # properties in OpenAleph, e.g. procurement transparency entries).
+            if not oa_hits and legal_name:
+                oa_hits = await oa_adapter.fetch_by_name(legal_name)  # type: ignore[attr-defined]
+
             for hit in oa_hits:
                 if hit.is_stub:
                     continue
