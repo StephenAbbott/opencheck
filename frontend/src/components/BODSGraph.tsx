@@ -101,6 +101,34 @@ export default function BODSGraph({
           rankDir: "TB",
           useTippy: true,
         });
+
+        // Post-render fix for NaN edge paths.
+        //
+        // bods-dagre's Dr/Pr functions (ownership/control edge decorators)
+        // hide the original dagre edge (opacity:0) and insert a styled clone
+        // whose path is computed via SVGtoBeziers(...).offset(). When all edge
+        // control points share the same x-coordinate (collinear, which is
+        // typical for a simple 2-node TB graph), the bezier degenerates to a
+        // straight line and BezierJS .offset() produces NaN — so the clone's
+        // <path d="MNaN,NaN ..."> is invisible.
+        //
+        // We detect this by checking whether any clone path's ``d`` attribute
+        // contains NaN, and if so: remove the clone and restore the original
+        // dagre edge's visibility so at least the ownership/control connection
+        // is shown, even without the BOVS-styled offset.
+        el.querySelectorAll<SVGGElement>(
+          "g.edgePath.own, g.edgePath.control"
+        ).forEach((clone) => {
+          const path = clone.querySelector("path");
+          if (path && path.getAttribute("d")?.includes("NaN")) {
+            // Find the preceding sibling — the original edge that Dr/Pr hid.
+            const original = clone.previousElementSibling as SVGGElement | null;
+            if (original?.classList.contains("edgePath")) {
+              original.style.opacity = "1";
+            }
+            clone.remove();
+          }
+        });
       } catch (err) {
         // The library throws when it doesn't recognise a statement
         // shape, or when popper hits an undefined ancestor. Surface
@@ -148,6 +176,13 @@ export default function BODSGraph({
           id="slider-container"
           className="hidden text-xs text-oo-muted mr-auto"
         />
+        {/*
+          bods-dagre when useTippy:true unconditionally calls
+          document.querySelector("#disclosure-widget").innerHTML = ""
+          after draw() completes — crashes with TypeError if absent.
+          We render it hidden so the library can write to it safely.
+        */}
+        <div id="disclosure-widget" className="hidden" />
         <button
           id="zoom_out"
           type="button"
