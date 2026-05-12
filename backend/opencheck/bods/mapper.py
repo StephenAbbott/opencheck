@@ -2590,19 +2590,21 @@ def map_everypolitician(bundle: dict[str, Any]) -> BODSBundle:
 
 
 def map_wikidata(bundle: dict[str, Any]) -> BODSBundle:
-    """Map a Wikidata fetch bundle to a single BODS person or entity statement.
+    """Map a Wikidata fetch bundle to BODS statements.
 
     Wikidata's role in OpenCheck is identifier-bridging — its records
-    rarely contain ownership relationships in a useful form, so we
-    emit one statement (person or entity, decided by P31) carrying:
+    carry cross-source identifiers and, for well-documented entities,
+    declared parent organisations.  We emit:
 
-    * ``WIKIDATA`` as a primary scheme identifier (the Q-ID itself).
-    * Cross-source bridge identifiers (``XI-LEI``, ``OPENCORPORATES``,
-      ``ISIN``) when present, so reconcilers downstream can match.
-    * Birth date / death date for persons (no narrative).
-    * Citizenships → ``nationalities``.
-    * Country (P17) → ``incorporatedInJurisdiction`` for entities.
-    * Inception (P571) → ``foundingDate``.
+    * One person or entity statement (decided by P31) for the subject,
+      carrying ``WIKIDATA`` as the primary scheme identifier plus any
+      cross-source bridge identifiers (``XI-LEI``, ``OPENCORPORATES``,
+      ``ISIN``).
+    * For entity subjects only: one stub entity statement per distinct
+      parent declared via P749 (parent organization) or P127 (owned by),
+      plus one ``relationship`` statement linking the subject to each
+      parent with an ``otherInfluenceOrControl`` interest and
+      ``beneficialOwnershipOrControl: false``.
 
     Positions held (``positions``) are intentionally not converted to
     BODS interests — they are PEP signals, surfaced separately by the
@@ -2688,6 +2690,53 @@ def map_wikidata(bundle: dict[str, Any]) -> BODSBundle:
         source_url=source_url,
     )
     result.statements.append(entity)
+
+    # Emit stub entity + relationship statements for each declared parent
+    # organisation (P749 / P127).  These are best-effort — we have only the
+    # parent's Q-ID and label from the SPARQL result, so the parent entity
+    # statement carries ``unknownEntity`` type and a WIKIDATA identifier.
+    subject_statement_id: str = entity["statementId"]
+    for parent in summary.get("parent_orgs") or []:
+        parent_qid = parent.get("qid") or ""
+        parent_name = parent.get("label") or parent_qid
+        if not parent_qid:
+            continue
+
+        parent_identifiers = [
+            {
+                "id": parent_qid,
+                "scheme": "WIKIDATA",
+                "schemeName": "Wikidata Q identifier",
+                "uri": f"https://www.wikidata.org/wiki/{parent_qid}",
+            }
+        ]
+        parent_entity = make_entity_statement(
+            source_id="wikidata",
+            local_id=parent_qid,
+            name=parent_name,
+            identifiers=parent_identifiers,
+            entity_type="unknownEntity",
+            source_url=f"https://www.wikidata.org/wiki/{parent_qid}",
+        )
+        result.statements.append(parent_entity)
+
+        relationship = make_relationship_statement(
+            source_id="wikidata",
+            local_id=f"{qid}-parent-{parent_qid}",
+            subject_statement_id=subject_statement_id,
+            interested_party_statement_id=parent_entity["statementId"],
+            interested_party_type="entity",
+            interests=[
+                {
+                    "type": "otherInfluenceOrControl",
+                    "beneficialOwnershipOrControl": False,
+                    "details": "Parent organisation declared on Wikidata (P749/P127)",
+                }
+            ],
+            source_url=source_url,
+        )
+        result.statements.append(relationship)
+
     return result
 
 

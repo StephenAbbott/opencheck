@@ -64,6 +64,35 @@ def _entity_bundle() -> dict:
             "dob": None,
             "dod": None,
             "inception": "1909-04-14T00:00:00Z",
+            "parent_orgs": [],
+        },
+    }
+
+
+def _entity_with_parent_bundle() -> dict:
+    """An entity that declares a parent organisation via P749/P127."""
+    return {
+        "source_id": "wikidata",
+        "qid": "Q61788",
+        "summary": {
+            "qid": "Q61788",
+            "label": "Ericsson AB",
+            "description": "Swedish telecommunications company, subsidiary of Telefonaktiebolaget LM Ericsson",
+            "is_person": False,
+            "is_entity": True,
+            "instance_of": [{"qid": "Q891723", "label": "public company"}],
+            "citizenships": [],
+            "positions": [],
+            "identifiers": {
+                "lei": "549300MLH00Y3BN4HD49",
+            },
+            "country": {"qid": "Q34", "label": "Sweden"},
+            "dob": None,
+            "dod": None,
+            "inception": "1876-01-01T00:00:00Z",
+            "parent_orgs": [
+                {"qid": "Q204119", "label": "Telefonaktiebolaget LM Ericsson"},
+            ],
         },
     }
 
@@ -155,6 +184,71 @@ def test_map_wikidata_entity_passes_validator() -> None:
     bundle = map_wikidata(_entity_bundle())
     issues = validate_shape(bundle)
     assert issues == [], issues
+
+
+# ---------------------------------------------------------------------
+# P749 / P127 parent organisation relationships
+# ---------------------------------------------------------------------
+
+
+def test_map_wikidata_entity_with_parent_emits_three_statements() -> None:
+    """Subject entity + parent stub entity + relationship = 3 statements."""
+    bundle = map_wikidata(_entity_with_parent_bundle())
+    statements = list(bundle)
+    assert len(statements) == 3
+
+
+def test_map_wikidata_entity_with_parent_has_correct_record_types() -> None:
+    bundle = map_wikidata(_entity_with_parent_bundle())
+    statements = list(bundle)
+    record_types = [s["recordType"] for s in statements]
+    assert record_types == ["entity", "entity", "relationship"]
+
+
+def test_map_wikidata_entity_with_parent_relationship_links_subject_to_parent() -> None:
+    bundle = map_wikidata(_entity_with_parent_bundle())
+    statements = list(bundle)
+    subject_entity = statements[0]
+    parent_entity = statements[1]
+    rel = statements[2]
+
+    assert rel["recordDetails"]["subject"] == subject_entity["statementId"]
+    assert rel["recordDetails"]["interestedParty"] == parent_entity["statementId"]
+
+
+def test_map_wikidata_entity_with_parent_interest_type() -> None:
+    bundle = map_wikidata(_entity_with_parent_bundle())
+    rel = list(bundle)[2]
+    interests = rel["recordDetails"]["interests"]
+    assert len(interests) == 1
+    assert interests[0]["type"] == "otherInfluenceOrControl"
+    assert interests[0]["beneficialOwnershipOrControl"] is False
+
+
+def test_map_wikidata_entity_with_parent_stub_carries_wikidata_identifier() -> None:
+    bundle = map_wikidata(_entity_with_parent_bundle())
+    parent_entity = list(bundle)[1]
+    schemes = {i["scheme"] for i in parent_entity["recordDetails"]["identifiers"]}
+    assert "WIKIDATA" in schemes
+    wd_id = next(
+        i for i in parent_entity["recordDetails"]["identifiers"]
+        if i["scheme"] == "WIKIDATA"
+    )
+    assert wd_id["id"] == "Q204119"
+
+
+def test_map_wikidata_entity_with_parent_passes_validator() -> None:
+    bundle = map_wikidata(_entity_with_parent_bundle())
+    issues = validate_shape(bundle)
+    assert issues == [], issues
+
+
+def test_map_wikidata_entity_no_parents_still_emits_one_statement() -> None:
+    """Entities without parent_orgs continue to emit exactly one statement."""
+    bundle = map_wikidata(_entity_bundle())
+    statements = list(bundle)
+    assert len(statements) == 1
+    assert statements[0]["recordType"] == "entity"
 
 
 # ---------------------------------------------------------------------

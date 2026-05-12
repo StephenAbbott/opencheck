@@ -41,12 +41,19 @@ _CACHE_NS = "wikidata"
 # personal details, corporate identifiers, and incorporation info in one
 # round-trip. OPTIONAL blocks mean rows are produced per combination of
 # present values — the caller groups them client-side.
+#
+# P749 (parent organization) and P127 (owned by) are included so that the
+# BODS mapper can emit lightweight relationship statements for entity subjects
+# that declare a corporate parent on Wikidata.  Both are treated as "owning /
+# controlling entity" relationships; the mapper emits ``otherInfluenceOrControl``
+# interests with ``beneficialOwnershipOrControl: false``.
 _FETCH_QUERY = """
 SELECT ?label ?description ?instance ?instanceLabel
        ?dob ?dod ?citizenship ?citizenshipLabel
        ?position ?positionLabel ?positionStart ?positionEnd
        ?lei ?openCorporates ?isin
        ?country ?countryLabel ?inception
+       ?parentOrg ?parentOrgLabel ?ownedBy ?ownedByLabel
 WHERE {
   BIND(wd:%(qid)s AS ?qid)
   OPTIONAL { ?qid rdfs:label ?label FILTER(LANG(?label) = "en") }
@@ -66,6 +73,8 @@ WHERE {
   OPTIONAL { ?qid wdt:P946 ?isin }
   OPTIONAL { ?qid wdt:P17 ?country }
   OPTIONAL { ?qid wdt:P571 ?inception }
+  OPTIONAL { ?qid wdt:P749 ?parentOrg }
+  OPTIONAL { ?qid wdt:P127 ?ownedBy }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
 """
@@ -347,6 +356,7 @@ def _summarise_bindings(qid: str, bindings: list[dict[str, Any]]) -> dict[str, A
             "dob": None,
             "dod": None,
             "inception": None,
+            "parent_orgs": [],
         }
 
     label = None
@@ -361,6 +371,7 @@ def _summarise_bindings(qid: str, bindings: list[dict[str, Any]]) -> dict[str, A
     citizenships: dict[str, str] = {}
     positions: dict[str, dict[str, Any]] = {}
     identifiers: dict[str, str] = {}
+    parent_orgs: dict[str, str] = {}  # qid → label, merged from P749 + P127
 
     for row in bindings:
         label = label or _bv(row, "label")
@@ -413,6 +424,21 @@ def _summarise_bindings(qid: str, bindings: list[dict[str, Any]]) -> dict[str, A
             if value and scheme not in identifiers:
                 identifiers[scheme] = value
 
+        # P749 (parent organization) and P127 (owned by) — merged into one
+        # deduplicated collection keyed by QID so we emit one stub entity +
+        # one relationship statement per distinct parent regardless of which
+        # property contributed it.
+        for parent_key, label_key in (
+            ("parentOrg", "parentOrgLabel"),
+            ("ownedBy", "ownedByLabel"),
+        ):
+            parent_uri = _bv(row, parent_key)
+            if parent_uri:
+                parent_qid = _qid_from_uri(parent_uri)
+                if parent_qid and parent_qid not in parent_orgs:
+                    parent_label = _bv(row, label_key) or parent_qid
+                    parent_orgs[parent_qid] = parent_label
+
     is_person = "Q5" in instance_of
     # "is_entity" is true for everything that's not a natural person —
     # companies, organisations, government bodies, geographic places,
@@ -440,4 +466,7 @@ def _summarise_bindings(qid: str, bindings: list[dict[str, Any]]) -> dict[str, A
         "dob": dob,
         "dod": dod,
         "inception": inception,
+        "parent_orgs": [
+            {"qid": p, "label": lbl} for p, lbl in parent_orgs.items()
+        ],
     }
