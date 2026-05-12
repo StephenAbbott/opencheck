@@ -219,8 +219,27 @@ class OpenAlephAdapter(SourceAdapter):
         if settings.openaleph_api_key:
             headers["Authorization"] = f"ApiKey {settings.openaleph_api_key}"
 
+        url = f"{_API_BASE}{path}"
         async with build_client() as client:
-            response = await client.get(f"{_API_BASE}{path}", headers=headers)
+            # Disable httpx's built-in redirect following so we can manually
+            # re-attach the Authorization header on cross-host redirects.
+            # httpx strips Authorization on redirects to a different host (a
+            # security default), which breaks the Anubis bot-protection layer
+            # deployed in front of search.openaleph.org: Anubis responds with
+            # a 3xx to anubis.openaleph.org, and without the API key in that
+            # follow-up request it returns 401 Unauthorized.
+            response = await client.get(url, headers=headers, follow_redirects=False)
+
+            followed = 0
+            while response.is_redirect and followed < 5:
+                location = response.headers.get("location", "")
+                if not location:
+                    break
+                response = await client.get(
+                    location, headers=headers, follow_redirects=False
+                )
+                followed += 1
+
             response.raise_for_status()
             payload = response.json()
 

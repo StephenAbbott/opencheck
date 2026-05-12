@@ -17,6 +17,10 @@ dependencies = [
     "python-dotenv>=1.0",
     "sse-starlette>=2.1",
     "pycountry>=24.6",
+    # OpenAleph Python client — provides a requests-based AlephAPI class useful
+    # for write operations (bulk entity ingest, collection management) beyond
+    # what our async read adapter covers.
+    "openaleph-client>=1.1",
 ]
 
 [project.optional-dependencies]
