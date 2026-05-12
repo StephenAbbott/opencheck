@@ -12,6 +12,7 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .bolagsverket import BolagsverketAdapter
 from .brightquery import BrightQueryAdapter
 from .brreg import BrregAdapter
+from .climatetrace import ClimateTRACEAdapter
 from .companies_house import CompaniesHouseAdapter
 from .cro import CroAdapter
 from .everypolitician import EveryPoliticianAdapter
@@ -32,6 +33,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "ariregister": AriregisterAdapter(),
     "bolagsverket": BolagsverketAdapter(),
     "brreg": BrregAdapter(),
+    "climatetrace": ClimateTRACEAdapter(),
     "companies_house": CompaniesHouseAdapter(),
     "cro": CroAdapter(),
     "gleif": GleifAdapter(),

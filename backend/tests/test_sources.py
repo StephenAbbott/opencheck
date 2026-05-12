@@ -23,6 +23,7 @@ def test_registry_has_expected_sources() -> None:
         "ariregister",
         "bolagsverket",
         "brreg",
+        "climatetrace",
         "companies_house",
         "cro",
         "gleif",

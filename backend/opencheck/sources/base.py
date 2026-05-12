@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -56,6 +56,13 @@ class SourceInfo(BaseModel):
     )
     live_available: bool = Field(
         description="Whether live mode is available right now (key present AND allow_live=true)."
+    )
+    category: Literal["cdd", "esg"] = Field(
+        default="cdd",
+        description=(
+            "Broad purpose category. 'cdd' = customer due diligence / compliance; "
+            "'esg' = environmental, social and governance data."
+        ),
     )
 
 

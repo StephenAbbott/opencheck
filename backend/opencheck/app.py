@@ -39,6 +39,7 @@ from .bods import (
     map_bolagsverket,
     map_brightquery,
     map_brreg,
+    map_climatetrace,
     map_companies_house,
     map_cro,
     map_everypolitician,
@@ -361,6 +362,7 @@ _MAPPERS = {
     "ariregister": map_ariregister,
     "bolagsverket": map_bolagsverket,
     "brreg": map_brreg,
+    "climatetrace": map_climatetrace,
     "companies_house": map_companies_house,
     "cro": map_cro,
     "gleif": map_gleif,
@@ -1269,6 +1271,45 @@ async def lookup(
                 deepened_bundles.append(("openaleph", hit.hit_id))
         except Exception as exc:  # noqa: BLE001
             errors["openaleph"] = f"{type(exc).__name__}: {exc}"
+
+    # Climate TRACE / GEM — ESG emissions data keyed by LEI.
+    ct_adapter = REGISTRY.get("climatetrace")
+    if ct_adapter is not None and hasattr(ct_adapter, "fetch_by_lei"):
+        try:
+            ct_bundle = await ct_adapter.fetch_by_lei(lei)  # type: ignore[attr-defined]
+            if ct_bundle and not ct_bundle.get("is_stub"):
+                entity_id = ct_bundle.get("entity_id") or lei
+                emissions = ct_bundle.get("emissions") or {}
+                total_co2e = emissions.get("total_co2e_tonnes")
+                summary_parts = [f"GEM entity {entity_id}"]
+                if total_co2e is not None:
+                    # Express in Mt (megatonnes) for display if large enough.
+                    if total_co2e >= 1_000_000:
+                        summary_parts.append(
+                            f"{total_co2e / 1_000_000:.1f} Mt CO₂e (2024)"
+                        )
+                    else:
+                        summary_parts.append(
+                            f"{total_co2e:,.0f} t CO₂e (2024)"
+                        )
+                hits.append(
+                    SourceHit(
+                        source_id="climatetrace",
+                        hit_id=entity_id,
+                        kind=SearchKind.ENTITY,
+                        name=ct_bundle.get("entity_name") or legal_name or entity_id,
+                        summary=" · ".join(summary_parts),
+                        identifiers={
+                            "gem_entity_id": entity_id,
+                            "lei": lei,
+                        },
+                        raw=ct_bundle,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("climatetrace", entity_id))
+        except Exception as exc:  # noqa: BLE001
+            errors["climatetrace"] = f"{type(exc).__name__}: {exc}"
 
     # Reconcile + run risk over search-time data.
     links = [link.to_dict() for link in reconcile(hits)]

@@ -337,6 +337,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "bolagsverket": "Bolagsverket — Swedish Companies Registration Office",
         "brreg": "Brønnøysundregistrene — Norwegian Register Centre",
         "companies_house": "UK Companies House",
+        "climatetrace": "Global Energy Monitor / Climate TRACE",
         "cro": "CRO — Companies Registration Office Ireland",
         "gleif": "GLEIF",
         "inpi": "INPI — Registre National des Entreprises",
@@ -4714,3 +4715,121 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interests=[interest],
             source_url=source_url,
         )
+
+
+# ----------------------------------------------------------------------
+# Climate TRACE / Global Energy Monitor → BODS
+# ----------------------------------------------------------------------
+
+
+def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
+    """Map a Climate TRACE / GEM fetch bundle to BODS statements.
+
+    Emits:
+    * One entity statement for the subject company (GEM entity identifier).
+    * For each declared GEM parent: one stub entity statement + one
+      ``otherInfluenceOrControl`` relationship (``beneficialOwnershipOrControl``
+      is ``False`` — parent declarations in GEM are corporate structure data,
+      not beneficial ownership assertions).
+
+    Emissions data is attached as an annotation via ``source.description``
+    rather than as a BODS interest — BODS v0.4 has no concept of an
+    "emissions interest" and the data is ESG context rather than ownership
+    or control.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return BODSBundle()
+
+    result = BODSBundle()
+
+    entity_id: str = bundle.get("entity_id") or ""
+    entity_name: str = bundle.get("entity_name") or entity_id
+    lei: str = (bundle.get("lei") or "").strip().upper()
+
+    if not entity_id:
+        return result
+
+    source_url = f"https://globalenergymonitor.org/"
+
+    # Build identifiers list.
+    identifiers: list[dict[str, str]] = [
+        {
+            "id": entity_id,
+            "scheme": "GEM-ENTITY",
+            "schemeName": "Global Energy Monitor Entity ID",
+            "uri": f"https://globalenergymonitor.org/",
+        }
+    ]
+    if len(lei) == 20:
+        identifiers.append(
+            {
+                "id": lei,
+                "scheme": "XI-LEI",
+                "schemeName": "Global Legal Entity Identifier Index",
+            }
+        )
+
+    # Determine jurisdiction from GEM row if available.
+    gem_row: dict[str, str] = bundle.get("gem_row") or {}
+    country_raw: str = (gem_row.get("Country") or gem_row.get("country") or "").strip()
+    jurisdiction = _country_obj(country_raw) if country_raw else None
+    jur_tuple: tuple[str, str] | None = (
+        (jurisdiction["name"], jurisdiction["code"]) if jurisdiction else None
+    )
+
+    entity = make_entity_statement(
+        source_id="climatetrace",
+        local_id=entity_id,
+        name=entity_name,
+        jurisdiction=jur_tuple,
+        identifiers=identifiers,
+        entity_type="registeredEntity",
+        source_url=source_url,
+    )
+    result.statements.append(entity)
+    subject_statement_id: str = entity["statementId"]
+
+    # Emit stub entity + relationship for each declared parent.
+    for parent in bundle.get("parents") or []:
+        parent_eid = (parent.get("entity_id") or "").strip()
+        parent_name = (parent.get("name") or parent_eid).strip()
+        if not parent_eid:
+            continue
+
+        parent_entity = make_entity_statement(
+            source_id="climatetrace",
+            local_id=parent_eid,
+            name=parent_name,
+            identifiers=[
+                {
+                    "id": parent_eid,
+                    "scheme": "GEM-ENTITY",
+                    "schemeName": "Global Energy Monitor Entity ID",
+                }
+            ],
+            entity_type="unknownEntity",
+            source_url=source_url,
+        )
+        result.statements.append(parent_entity)
+
+        relationship = make_relationship_statement(
+            source_id="climatetrace",
+            local_id=f"{entity_id}-parent-{parent_eid}",
+            subject_statement_id=subject_statement_id,
+            interested_party_statement_id=parent_entity["statementId"],
+            interested_party_type="entity",
+            interests=[
+                {
+                    "type": "otherInfluenceOrControl",
+                    "beneficialOwnershipOrControl": False,
+                    "details": (
+                        "Parent organisation declared in GEM ownership tracker "
+                        "(not a beneficial ownership assertion)"
+                    ),
+                }
+            ],
+            source_url=source_url,
+        )
+        result.statements.append(relationship)
+
+    return result
