@@ -34,6 +34,7 @@ collections.
 from __future__ import annotations
 
 import hashlib
+import importlib.metadata
 from typing import Any
 from urllib.parse import quote
 
@@ -44,6 +45,17 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _API_BASE = "https://search.openaleph.org/api/2"
 _CACHE_NS = "openaleph"
+
+# Anubis bot-protection at search.openaleph.org whitelists requests whose
+# User-Agent matches the openaleph-client pattern ("openaleph/<version>").
+# Our global OpenCheck User-Agent triggers the Anubis challenge.  We
+# therefore use the openaleph-client version string for all OpenAleph
+# requests, which is correct attribution anyway since we depend on that package.
+try:
+    _OA_VERSION = importlib.metadata.version("openaleph-client")
+except importlib.metadata.PackageNotFoundError:
+    _OA_VERSION = "1.1"
+_OA_USER_AGENT = f"openaleph/{_OA_VERSION}"
 
 
 def _slug(text: str) -> str:
@@ -215,31 +227,17 @@ class OpenAlephAdapter(SourceAdapter):
             return cached[0]
 
         settings = get_settings()
-        headers: dict[str, str] = {}
+        # Override the global User-Agent: Anubis bot-protection at
+        # search.openaleph.org whitelists the "openaleph/<version>" pattern
+        # used by the openaleph-client PyPI package and rejects all other
+        # non-browser agents with a redirect to a proof-of-work challenge.
+        headers: dict[str, str] = {"User-Agent": _OA_USER_AGENT}
         if settings.openaleph_api_key:
             headers["Authorization"] = f"ApiKey {settings.openaleph_api_key}"
 
         url = f"{_API_BASE}{path}"
         async with build_client() as client:
-            # Disable httpx's built-in redirect following so we can manually
-            # re-attach the Authorization header on cross-host redirects.
-            # httpx strips Authorization on redirects to a different host (a
-            # security default), which breaks the Anubis bot-protection layer
-            # deployed in front of search.openaleph.org: Anubis responds with
-            # a 3xx to anubis.openaleph.org, and without the API key in that
-            # follow-up request it returns 401 Unauthorized.
-            response = await client.get(url, headers=headers, follow_redirects=False)
-
-            followed = 0
-            while response.is_redirect and followed < 5:
-                location = response.headers.get("location", "")
-                if not location:
-                    break
-                response = await client.get(
-                    location, headers=headers, follow_redirects=False
-                )
-                followed += 1
-
+            response = await client.get(url, headers=headers)
             response.raise_for_status()
             payload = response.json()
 
