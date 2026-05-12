@@ -173,6 +173,31 @@ def _addr(type_: str, address: str, country_code: str = "") -> dict[str, Any]:
 # ----------------------------------------------------------------------
 
 
+def _publication_details_block(publication_date: str | None = None) -> dict[str, Any]:
+    """Build a BODS v0.4 ``publicationDetails`` block.
+
+    ``bodsVersion`` and ``publisher`` are required by the schema.
+    ``publicationDate`` is optional — include it only when the source
+    provides an unambiguous date on which the information was published to
+    the original register or filing system (not the company founding date,
+    not OpenCheck's retrieval time).
+
+    Semantics (per BODS dates guidance):
+      publicationDate  — the date the information was added to the public
+                         registry or made available via an API.  For PSC
+                         registers this is the notification date; for SEC
+                         filings it is the filing date; for GLEIF it is
+                         the LEI record's last-update date.
+    """
+    block: dict[str, Any] = {
+        "bodsVersion": "0.4",
+        "publisher": {"name": "OpenCheck"},
+    }
+    if publication_date:
+        block["publicationDate"] = publication_date
+    return block
+
+
 def make_entity_statement(
     *,
     source_id: str,
@@ -185,6 +210,7 @@ def make_entity_statement(
     alternate_names: Iterable[str] = (),
     entity_type: str = "registeredEntity",
     source_url: str | None = None,
+    publication_date: str | None = None,
 ) -> dict[str, Any]:
     statement_id = _stable_id(source_id, "entity", local_id)
     # bods-dagre v0.4 resolves graph edges by matching the relationship's
@@ -221,6 +247,7 @@ def make_entity_statement(
         "recordType": "entity",
         "recordStatus": "new",
         "statementDate": _today(),
+        "publicationDetails": _publication_details_block(publication_date),
         "recordDetails": record_details,
         "source": _source_block(source_id, source_url),
     }
@@ -237,6 +264,7 @@ def make_person_statement(
     addresses: Iterable[dict[str, str]] = (),
     identifiers: Iterable[dict[str, str]] = (),
     source_url: str | None = None,
+    publication_date: str | None = None,
 ) -> dict[str, Any]:
     statement_id = _stable_id(source_id, "person", local_id)
     record_id = statement_id  # see make_entity_statement for reasoning
@@ -265,6 +293,7 @@ def make_person_statement(
         "recordType": "person",
         "recordStatus": "new",
         "statementDate": _today(),
+        "publicationDetails": _publication_details_block(publication_date),
         "recordDetails": record_details,
         "source": _source_block(source_id, source_url),
     }
@@ -279,6 +308,7 @@ def make_relationship_statement(
     interested_party_type: str = "person",
     interests: Iterable[dict[str, Any]] = (),
     source_url: str | None = None,
+    publication_date: str | None = None,
 ) -> dict[str, Any]:
     statement_id = _stable_id(source_id, "relationship", local_id)
     record_id = _stable_id(source_id, "relationship-record", local_id)
@@ -290,6 +320,7 @@ def make_relationship_statement(
         "recordType": "relationship",
         "recordStatus": "new",
         "statementDate": _today(),
+        "publicationDetails": _publication_details_block(publication_date),
         "recordDetails": {
             "isComponent": False,
             "subject": subject_statement_id,
@@ -488,6 +519,7 @@ def _emit_company_statements(
             interested_party_type=ip_type,
             interests=interests,
             source_url=company_url,
+            publication_date=psc.get("notified_on") or None,
         )
         rel_sid = rel["statementId"]
         if rel_sid not in seen_sids:
@@ -1254,6 +1286,12 @@ def _gleif_entity_statement(
             seen_names.add(n)
             alternate_names.append(n)
 
+    # GLEIF registration.lastUpdateDate is ISO 8601 with time component
+    # (e.g. "2023-03-31T07:01:00Z") — take the date portion only.
+    registration = (attrs or {}).get("registration") or {}
+    last_update = registration.get("lastUpdateDate") or ""
+    gleif_publication_date = last_update[:10] or None
+
     return make_entity_statement(
         source_id="gleif",
         local_id=lei,
@@ -1263,6 +1301,7 @@ def _gleif_entity_statement(
         addresses=addresses,
         alternate_names=alternate_names,
         source_url=source_url,
+        publication_date=gleif_publication_date,
     )
 
 
@@ -3843,6 +3882,7 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
             interested_party_type=party_type,
             interests=[shareholding],
             source_url=filing_url,
+            publication_date=filing.get("filed") or None,
         )
         result.statements.append(rel_stmt)
 
