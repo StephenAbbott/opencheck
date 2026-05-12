@@ -18,7 +18,7 @@ from .everypolitician import EveryPoliticianAdapter
 from .gleif import GleifAdapter
 from .inpi import InpiAdapter
 from .kvk import KvKAdapter
-from .openaleph import OpenAlephAdapter  # noqa: F401  -- kept for re-enablement
+from .openaleph import OpenAlephAdapter
 from .opencorporates import OpenCorporatesAdapter
 from .opensanctions import OpenSanctionsAdapter
 from .opentender import OpenTenderAdapter
@@ -28,11 +28,6 @@ from .ur_latvia import UrLatviaAdapter
 from .wikidata import WikidataAdapter
 from .zefix import ZefixAdapter
 
-# OpenAleph is intentionally excluded from the registry while the LEI
-# flow is the supported entry point — its API is name-keyed rather than
-# identifier-keyed, so it doesn't bridge cleanly off an LEI yet.
-# Re-enable by adding ``"openaleph": OpenAlephAdapter()`` below once we
-# have a curated set of subjects to demo it against.
 REGISTRY: dict[str, SourceAdapter] = {
     "ariregister": AriregisterAdapter(),
     "bolagsverket": BolagsverketAdapter(),
@@ -44,6 +39,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "kvk": KvKAdapter(),
     "opencorporates": OpenCorporatesAdapter(),
     "brightquery": BrightQueryAdapter(),
+    "openaleph": OpenAlephAdapter(),
     "opensanctions": OpenSanctionsAdapter(),
     "everypolitician": EveryPoliticianAdapter(),
     "wikidata": WikidataAdapter(),

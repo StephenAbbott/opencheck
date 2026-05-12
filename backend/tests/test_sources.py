@@ -27,6 +27,7 @@ def test_registry_has_expected_sources() -> None:
         "cro",
         "gleif",
         "inpi",
+        "openaleph",
         "opencorporates",
         "brightquery",
         "opensanctions",

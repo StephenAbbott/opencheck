@@ -113,11 +113,13 @@ def test_deepen_opensanctions_live_flags_nc_license(
     assert body["bods"][0]["recordType"] == "entity"
 
 
-def test_deepen_rejects_disabled_openaleph_source() -> None:
-    """OpenAleph was removed from the registry while the LEI flow is
-    the supported entry point — /deepen should 404 cleanly rather than
-    leak the adapter's response."""
+def test_deepen_openaleph_stub_returns_empty_bods() -> None:
+    """OpenAleph is in the registry; in stub mode (OPENCHECK_ALLOW_LIVE=false)
+    fetch() returns is_stub=True so the mapper is skipped and bods is empty."""
     client = TestClient(app)
     r = client.get("/deepen", params={"source": "openaleph", "hit_id": "aleph-nc"})
-    assert r.status_code == 404
-    assert "unknown source" in r.json()["detail"].lower()
+    assert r.status_code == 200
+    body = r.json()
+    assert body["source_id"] == "openaleph"
+    assert body["bods"] == []
+    assert body["raw"]["is_stub"] is True

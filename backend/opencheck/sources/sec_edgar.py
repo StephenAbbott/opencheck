@@ -148,6 +148,81 @@ def _parse_company_hits_from_atom(atom_xml: str) -> list[SourceHit]:
     return hits
 
 
+def _parse_filing_refs_from_atom(atom_xml: str) -> list[dict[str, str]]:
+    """Parse an EDGAR filing-search atom feed → list of filing reference dicts.
+
+    EDGAR exposes a per-company filing-search atom at:
+        /cgi-bin/browse-edgar?action=getcompany&CIK=<cik>&type=SC+13&output=atom
+
+    Each entry in the feed corresponds to one filing.  This helper extracts
+    the metadata needed to locate the primary XML document:
+
+    - ``filer_cik``  — EDGAR CIK of the filer (from the link href)
+    - ``accession``  — 18-digit accession number, dashes removed
+    - ``form_type``  — e.g. ``"SCHEDULE 13D"`` (from the ``<category>`` term)
+    - ``filed``      — ISO date string e.g. ``"2026-04-15"``
+
+    Only entries whose ``form_type`` contains ``"13D"`` or ``"13G"`` are
+    returned; an empty feed (no entries) returns ``[]``.
+    """
+    if not atom_xml:
+        return []
+    try:
+        root = ET.fromstring(atom_xml)
+    except ET.ParseError:
+        return []
+
+    ns = {"atom": _NS_ATOM}
+    refs: list[dict[str, str]] = []
+    for entry in root.findall("atom:entry", ns):
+        # Form type — <category scheme="…" term="SCHEDULE 13D"/>
+        cat_el = entry.find("atom:category", ns)
+        form_type = (cat_el.get("term") or "").strip() if cat_el is not None else ""
+        if not ("13D" in form_type or "13G" in form_type):
+            continue
+
+        # Accession — <id>urn:tag:sec.gov,2008:accession-number=0001104659-26-057435</id>
+        id_el = entry.find("atom:id", ns)
+        id_text = _xml_text(id_el)
+        if "accession-number=" not in id_text:
+            continue
+        raw_accession = id_text.split("accession-number=")[-1].strip()
+        accession = raw_accession.replace("-", "")
+
+        # Filer CIK — extracted from the link href:
+        #   /Archives/edgar/data/{cik}/{accession_nodashes}/…-index.htm
+        link_el = entry.find("atom:link", ns)
+        href = (link_el.get("href") or "") if link_el is not None else ""
+        filer_cik = ""
+        if "/Archives/edgar/data/" in href:
+            tail = href.split("/Archives/edgar/data/")[-1]
+            cik_candidate = tail.split("/")[0]
+            filer_cik = cik_candidate.lstrip("0") or cik_candidate
+
+        # Filed date — prefer <summary>Filed: 2026-04-15</summary>;
+        # fall back to the date prefix of <updated>.
+        filed = ""
+        summary_el = entry.find("atom:summary", ns)
+        if summary_el is not None:
+            summary_text = _xml_text(summary_el)
+            if "Filed:" in summary_text:
+                filed = summary_text.split("Filed:")[-1].strip()
+        if not filed:
+            updated_el = entry.find("atom:updated", ns)
+            if updated_el is not None:
+                filed = _xml_text(updated_el)[:10]
+
+        refs.append(
+            {
+                "filer_cik": filer_cik,
+                "accession": accession,
+                "form_type": form_type,
+                "filed": filed,
+            }
+        )
+    return refs
+
+
 # ----------------------------------------------------------------------
 # Filing XML parser
 # ----------------------------------------------------------------------
@@ -211,10 +286,20 @@ def _parse_filing_xml(xml_text: str, source_url: str = "") -> dict[str, Any] | N
     filer_cik_el = root.find(f".//{ntag('filerCredentials')}/{ntag('cik')}")
     filer_cik = _xml_text(filer_cik_el).lstrip("0") if filer_cik_el is not None else ""
 
+    # Address block (optional — present in most 13D filings).
+    addr_el = issuer_info.find(ntag("address"))
+    issuer_address: dict[str, str] = {}
+    if addr_el is not None:
+        for field in ("street1", "street2", "city", "stateOrCountry", "zipCode"):
+            val = _xml_text(addr_el.find(ntag(field)))
+            if val:
+                issuer_address[field] = val
+
     issuer: dict[str, Any] = {
         "cik": issuer_cik,
         "name": issuer_name,
         "cusip": issuer_cusip,
+        "address": issuer_address,
     }
 
     reporters: list[dict[str, Any]] = []
@@ -455,78 +540,59 @@ class SecEdgarAdapter(SourceAdapter):
     ) -> list[dict[str, Any]]:
         """Retrieve and parse recent 13D/13G filings for a subject company.
 
-        Uses the EDGAR submissions index (data.sec.gov/submissions/CIK{n}.json)
-        to list all 13D/13G filings associated with the company — both where it
-        is the issuer (subject) and where it is the reporting person (filer).
-        Only filings from 18 December 2024 onward are fetched (mandatory XML era).
+        Uses the EDGAR filing-search atom feed (browse-edgar?action=getcompany&
+        CIK=<cik>&type=SC+13D/13G&output=atom) to list filings where the given
+        company is the issuer (subject).  One atom request is made per form type.
 
-        Primary XML documents are archived under the subject company's own CIK,
-        not under the filer's CIK, at the root of each accession directory.
+        Primary XML documents are archived under the filer's CIK (extracted from
+        the atom entry link href), at the root of each accession directory:
+            /Archives/edgar/data/{filer_cik}/{accession_nodashes}/primary_doc.xml
 
         After parsing, results are deduplicated per reporter CIK, retaining the
         most-recently-dated filing per reporter.
         """
-        padded_cik = subject_cik.zfill(10)
-        submissions_url = f"{_SUBMISSIONS_BASE}/CIK{padded_cik}.json"
-        sub_cache_key = f"{_CACHE_NS}/submissions/{subject_cik}"
-        submissions_text = await self._get_text(submissions_url, cache_key=sub_cache_key)
-        if not submissions_text:
-            return []
-
-        try:
-            submissions_data = json.loads(submissions_text)
-        except (json.JSONDecodeError, ValueError):
-            return []
-
-        recent = submissions_data.get("filings", {}).get("recent", {})
-        forms = recent.get("form", [])
-        dates = recent.get("filingDate", [])
-        accessions = recent.get("accessionNumber", [])
-
-        # Collect 13D/13G entries filed since XML became mandatory.
-        eligible: list[dict[str, str]] = []
-        for i, form in enumerate(forms):
-            if ("13D" in form or "13G" in form) and dates[i] >= "2024-12-18":
-                eligible.append(
-                    {
-                        "accession": accessions[i],
-                        "form_type": form,
-                        "filed": dates[i],
-                    }
-                )
-
         raw_records: list[dict[str, Any]] = []
-        for ref in eligible[:_MAX_FILINGS]:
-            accession_nodashes = ref["accession"].replace("-", "")
-            # EDGAR archives primary_doc.xml under the subject (issuer) company's
-            # CIK, regardless of which entity filed the document.
-            xml_url = (
-                f"{_EDGAR_BASE}/Archives/edgar/data/{subject_cik}"
-                f"/{accession_nodashes}/primary_doc.xml"
+
+        for form_type_param in ("SC+13D", "SC+13G"):
+            atom_url = (
+                f"{_BROWSE_BASE}?action=getcompany&CIK={subject_cik}"
+                f"&type={form_type_param}&dateb=&owner=include"
+                f"&count={_MAX_FILINGS}&search_text=&output=atom"
             )
-            xml_cache_key = f"{_CACHE_NS}/filing/{subject_cik}/{accession_nodashes}"
-            xml_text = await self._get_text(xml_url, cache_key=xml_cache_key)
-            parsed = _parse_filing_xml(xml_text, source_url=xml_url)
-            if not parsed:
+            atom_cache_key = f"{_CACHE_NS}/filings/{subject_cik}/{form_type_param}"
+            atom_text = await self._get_text(atom_url, cache_key=atom_cache_key)
+            if not atom_text:
                 continue
 
-            for reporter in parsed.get("reporters") or []:
-                raw_records.append(
-                    {
-                        "reporter": reporter,
-                        "issuer": parsed.get("issuer", {}),
-                        "filer_cik": parsed.get("filer_cik", ""),
-                        "filing_url": xml_url,
-                        "form_type": ref["form_type"],
-                        "filed": ref["filed"],
-                    }
+            refs = _parse_filing_refs_from_atom(atom_text)
+            for ref in refs:
+                filer_cik = ref.get("filer_cik") or subject_cik
+                accession = ref["accession"]
+                xml_url = (
+                    f"{_EDGAR_BASE}/Archives/edgar/data/{filer_cik}"
+                    f"/{accession}/primary_doc.xml"
                 )
+                xml_cache_key = f"{_CACHE_NS}/filing/{filer_cik}/{accession}"
+                xml_text = await self._get_text(xml_url, cache_key=xml_cache_key)
+                parsed = _parse_filing_xml(xml_text, source_url=xml_url)
+                if not parsed:
+                    continue
+
+                for reporter in parsed.get("reporters") or []:
+                    raw_records.append(
+                        {
+                            "reporter": reporter,
+                            "issuer": parsed.get("issuer", {}),
+                            "filer_cik": parsed.get("filer_cik", ""),
+                            "filing_url": xml_url,
+                            "form_type": ref["form_type"],
+                            "filed": ref["filed"],
+                        }
+                    )
 
         # Deduplicate: per reporter CIK, keep the most-recently-dated filing.
-        # 13G filings rarely include reportingPersonCIK inside the reporter
-        # details element — it's absent from the SEC schema for that block.
-        # Fall back to filer_cik (from headerData) which IS the reporter's
-        # CIK for single-filer 13G documents.
+        # Fall back to filer_cik (from headerData) for 13G filings that omit
+        # reportingPersonCIK inside the reporter details element.
         best: dict[str, dict[str, Any]] = {}
         no_cik: list[dict[str, Any]] = []
         for rec in raw_records:

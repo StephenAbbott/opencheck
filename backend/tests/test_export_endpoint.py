@@ -97,12 +97,37 @@ def _mock_wikidata_lei_lookup_empty(httpx_mock: HTTPXMock, lei: str) -> None:
     )
 
 
+def _mock_openaleph_lei_lookup_empty(httpx_mock: HTTPXMock, lei: str) -> None:
+    """Mock the OpenAleph fetch_by_lei call to return no results."""
+    url = (
+        "https://search.openaleph.org/api/2/entities?"
+        f"filter:properties.leiCode={urllib.parse.quote(lei)}"
+        "&filter:schema=LegalEntity&limit=5"
+    )
+    httpx_mock.add_response(url=url, json={"results": []})
+
+
+def _mock_openaleph_reg_lookup_empty(
+    httpx_mock: HTTPXMock, jurisdiction: str, reg_number: str
+) -> None:
+    """Mock the OpenAleph fetch_by_registration call to return no results."""
+    url = (
+        "https://search.openaleph.org/api/2/entities?"
+        f"filter:properties.registrationNumber={urllib.parse.quote(reg_number)}"
+        f"&filter:properties.jurisdiction={urllib.parse.quote(jurisdiction.lower())}"
+        "&filter:schema=LegalEntity&limit=5"
+    )
+    httpx_mock.add_response(url=url, json={"results": []})
+
+
 def test_export_json_returns_bods_array(
     client: TestClient, httpx_mock: HTTPXMock
 ) -> None:
     _mock_lei_record_chain(httpx_mock, _LEI)
     _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
     _mock_icij_empty(httpx_mock)
+    _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
+    _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
 
     r = client.get("/export", params={"lei": _LEI, "format": "json"})
     assert r.status_code == 200
@@ -126,6 +151,8 @@ def test_export_jsonl_emits_one_statement_per_line(
     _mock_lei_record_chain(httpx_mock, _LEI)
     _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
     _mock_icij_empty(httpx_mock)
+    _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
+    _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
 
     r = client.get("/export", params={"lei": _LEI, "format": "jsonl"})
     assert r.status_code == 200
@@ -144,6 +171,8 @@ def test_export_zip_contains_full_bundle(
     _mock_lei_record_chain(httpx_mock, _LEI)
     _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
     _mock_icij_empty(httpx_mock)
+    _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
+    _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
 
     r = client.get("/export", params={"lei": _LEI, "format": "zip"})
     assert r.status_code == 200
@@ -172,6 +201,8 @@ def test_export_zip_licenses_md_lists_gleif(
     _mock_lei_record_chain(httpx_mock, _LEI)
     _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
     _mock_icij_empty(httpx_mock)
+    _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
+    _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
 
     r = client.get("/export", params={"lei": _LEI, "format": "zip"})
     with zipfile.ZipFile(io.BytesIO(r.content)) as zf:

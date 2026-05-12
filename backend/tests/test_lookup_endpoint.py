@@ -96,11 +96,26 @@ def _mock_icij_empty(httpx_mock: HTTPXMock) -> None:
     )
 
 
-def _mock_openaleph_search_empty(httpx_mock: HTTPXMock, lei: str) -> None:
-    import urllib.parse
+def _mock_openaleph_lei_lookup_empty(httpx_mock: HTTPXMock, lei: str) -> None:
+    """Mock the OpenAleph fetch_by_lei call to return no results."""
+    from urllib.parse import quote
     url = (
         "https://search.openaleph.org/api/2/entities?"
-        f"q={urllib.parse.quote(lei)}&filter:schema=LegalEntity&limit=10"
+        f"filter:properties.leiCode={quote(lei)}&filter:schema=LegalEntity&limit=5"
+    )
+    httpx_mock.add_response(url=url, json={"results": []})
+
+
+def _mock_openaleph_reg_lookup_empty(
+    httpx_mock: HTTPXMock, jurisdiction: str, reg_number: str
+) -> None:
+    """Mock the OpenAleph fetch_by_registration call to return no results."""
+    from urllib.parse import quote
+    url = (
+        "https://search.openaleph.org/api/2/entities?"
+        f"filter:properties.registrationNumber={quote(reg_number)}"
+        f"&filter:properties.jurisdiction={quote(jurisdiction.lower())}"
+        "&filter:schema=LegalEntity&limit=5"
     )
     httpx_mock.add_response(url=url, json={"results": []})
 
@@ -129,8 +144,9 @@ def test_lookup_drives_full_synthesis_for_a_gb_lei(
     )
     _mock_wikidata_lei_lookup_empty(httpx_mock, lei)
     _mock_icij_empty(httpx_mock)
-    # OpenAleph is currently disabled in REGISTRY, so /lookup never
-    # dispatches to it. Don't mock it.
+    # OpenAleph: strategy 1 (leiCode) returns empty; strategy 3 (gb_coh) also empty.
+    _mock_openaleph_lei_lookup_empty(httpx_mock, lei)
+    _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
     # Companies House + OpenSanctions need API keys we haven't set, so
     # they return stubs without making network calls.
 
@@ -217,8 +233,8 @@ def test_lookup_lower_case_lei_is_normalised(
     )
     _mock_wikidata_lei_lookup_empty(httpx_mock, lei)
     _mock_icij_empty(httpx_mock)
-    # OpenAleph is currently disabled in REGISTRY, so /lookup never
-    # dispatches to it. Don't mock it.
+    # OpenAleph: only strategy 1 (leiCode) fires — no registeredAs in this fixture.
+    _mock_openaleph_lei_lookup_empty(httpx_mock, lei)
 
     # Pass it lower-cased; backend should uppercase before the GLEIF call.
     r = client.get("/lookup", params={"lei": lei.lower()})

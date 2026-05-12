@@ -93,9 +93,7 @@ _FILING_XML = """\
     <coverPageHeader>
       <issuerInfo>
         <issuerCIK>0001793659</issuerCIK>
-        <issuerCusips>
-          <issuerCusipNumber>233253103</issuerCusipNumber>
-        </issuerCusips>
+        <issuerCUSIP>233253103</issuerCUSIP>
         <issuerName>Rush Street Interactive, Inc.</issuerName>
         <address>
           <street1>900 N. Michigan Avenue</street1>
@@ -481,7 +479,7 @@ def test_map_sec_edgar_source_block():
     bundle = map_sec_edgar(_make_bundle())
     for stmt in bundle:
         src = stmt["source"]
-        assert src["type"] == "officialRegister"
+        assert src["type"] == ["officialRegister"]
         assert "SEC EDGAR" in src["description"]
 
 
@@ -498,5 +496,6 @@ def test_map_sec_edgar_relationship_links_correct_entities():
         s["statementId"] for s in stmts
         if s["recordType"] == "entity" and "Rush Street Interactive, Inc." in s["recordDetails"]["name"]
     )
+    # In BODS v0.4, subject is a plain statementId string, not a nested dict.
     for rel in (s for s in stmts if s["recordType"] == "relationship"):
-        assert rel["recordDetails"]["subject"]["describedByEntityStatement"] == issuer_sid
+        assert rel["recordDetails"]["subject"] == issuer_sid

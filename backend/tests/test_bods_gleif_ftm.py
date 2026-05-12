@@ -70,7 +70,11 @@ def test_map_gleif_subject_has_lei_identifier() -> None:
 
 
 def test_map_gleif_uses_registration_authority_scheme() -> None:
-    """Subject includes a GLEIF RAL identifier with blank scheme and correct schemeName."""
+    """Subject includes a registration-authority-resolved identifier.
+
+    RA000585 is UK Companies House — mapped to GB-COH in _GLEIF_RA_TO_ORG_ID,
+    so the identifier should carry scheme="GB-COH" and schemeName="Companies House".
+    """
     bundle = map_gleif(_gleif_bundle_with_direct_parent())
     subject = next(
         s for s in bundle
@@ -78,10 +82,10 @@ def test_map_gleif_uses_registration_authority_scheme() -> None:
     )
     ra = next(
         i for i in subject["recordDetails"]["identifiers"]
-        if i.get("schemeName") == "GLEIF Registration Authorities List"
+        if i.get("scheme") == "GB-COH"
     )
     assert ra["id"] == "00102498"
-    assert ra["scheme"] == ""
+    assert ra["schemeName"] == "Companies House"
 
 
 def test_map_gleif_resolves_jurisdiction_name() -> None:
@@ -409,10 +413,10 @@ def _subject_entity(bundle: dict) -> dict:
 
 
 def test_gleif_lei_mapping_ocid_included() -> None:
-    """ocid present in attributes → OPENCORPORATES identifier in entity statement."""
+    """ocid present in attributes → OpenCorporates identifier in entity statement."""
     subj = _subject_entity(_gleif_bundle_with_lei_mappings())
     oc = next(
-        (i for i in subj["recordDetails"]["identifiers"] if i["scheme"] == "OPENCORPORATES"),
+        (i for i in subj["recordDetails"]["identifiers"] if i["scheme"] == "OpenCorporates"),
         None,
     )
     assert oc is not None
