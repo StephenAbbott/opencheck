@@ -1763,7 +1763,7 @@ function ClimateTRACECard({ hit }: { hit: SourceHit }) {
  *
  * Any source adapter with ``category="esg"`` is routed here —
  * not just Climate TRACE. The visual language (green border,
- * leaf icon, "Environmental & ESG Data" heading) signals clearly
+ * leaf icon, "Environmental, Social, and Governance (ESG) Data" heading) signals clearly
  * that this is climate / ESG context, not a compliance check.
  */
 function EsgPanel({ buckets }: { buckets: SourceBucket[] }) {
@@ -1778,7 +1778,7 @@ function EsgPanel({ buckets }: { buckets: SourceBucket[] }) {
         <div className="flex items-center gap-2 text-emerald-700">
           <LeafIcon className="w-4 h-4" />
           <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase">
-            Environmental &amp; ESG Data
+            Environmental, Social, and Governance (ESG) Data
           </span>
         </div>
         <div className="flex-1 h-px bg-emerald-200" />
@@ -1796,7 +1796,7 @@ function EsgPanel({ buckets }: { buckets: SourceBucket[] }) {
             <LeafIcon className="w-4 h-4 text-emerald-600 shrink-0" />
             <div>
               <span className="font-head font-bold text-[14px] text-emerald-950">
-                Environmental &amp; ESG Data
+                Environmental, Social, and Governance (ESG) Data
               </span>
               <span className="ml-2 text-[11px] font-mono text-emerald-600/70">
                 {hitCount} result{hitCount === 1 ? "" : "s"} · {buckets.length} source{buckets.length === 1 ? "" : "s"}

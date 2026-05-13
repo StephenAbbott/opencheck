@@ -170,7 +170,7 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **License (Climate TRACE):** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 - **Attribution:** "Fossil-fuel asset ownership data from Global Energy Monitor, CC BY 4.0. Emissions estimates from Climate TRACE, CC BY 4.0."
 - **Entry point:** LEI matched against the GEM ownership index; Climate TRACE API queried for entities found in that index
-- **Category:** ESG — this data is surfaced in a separate Environmental & ESG panel in the OpenCheck UI, distinct from the customer due diligence sources above
+- **Category:** ESG — this data is surfaced in a separate Environmental, Social, and Governance (ESG) Data panel in the OpenCheck UI, distinct from the customer due diligence sources above
 - **Note:** OpenCheck uses the GEM ownership data directly under its CC BY 4.0 licence. The OpenSanctions GEM dataset is **not** used, as OpenSanctions applies a CC BY-NC 4.0 licence to all its datasets (including the GEM-derived one), which would restrict commercial use. The source file is re-downloaded on each server start because Render's filesystem is ephemeral.
 
 ## OpenAleph
