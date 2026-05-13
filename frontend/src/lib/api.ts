@@ -16,6 +16,8 @@ export interface SourceInfo {
   supports: SearchKind[];
   requires_api_key: boolean;
   live_available: boolean;
+  /** "cdd" = customer due diligence / compliance; "esg" = environmental, social and governance. */
+  category: "cdd" | "esg";
 }
 
 export interface SourceHit {

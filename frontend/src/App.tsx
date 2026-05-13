@@ -324,6 +324,16 @@ export default function App() {
     }
   }
 
+  // Build a set of source IDs that are categorised as ESG.
+  const esgSourceIds = useMemo<Set<string>>(() => {
+    if (!sourcesQuery.data) return new Set();
+    return new Set(
+      sourcesQuery.data.sources
+        .filter((s) => s.category === "esg")
+        .map((s) => s.id)
+    );
+  }, [sourcesQuery.data]);
+
   // Group hits by source_id for the per-source bucket cards. With the
   // LEI flow the result arrives in one shot — no streaming state.
   const bucketList = useMemo<SourceBucket[]>(() => {
@@ -361,7 +371,17 @@ export default function App() {
     return Array.from(byId.values());
   }, [result, sourcesQuery.data]);
 
-  const totalHits = bucketList.reduce((n, b) => n + b.hits.length, 0);
+  // Partition into CDD and ESG buckets.
+  const cddBuckets = useMemo(
+    () => bucketList.filter((b) => !esgSourceIds.has(b.sourceId)),
+    [bucketList, esgSourceIds]
+  );
+  const esgBuckets = useMemo(
+    () => bucketList.filter((b) => esgSourceIds.has(b.sourceId)),
+    [bucketList, esgSourceIds]
+  );
+
+  const totalHits = cddBuckets.reduce((n, b) => n + b.hits.length, 0);
 
   // Index risk signals by `${source_id}:${hit_id}` so hit rows can
   // pull their own chips without re-scanning the whole list.
@@ -681,14 +701,14 @@ export default function App() {
           </section>
         )}
 
-        {bucketList.length > 0 && (
+        {cddBuckets.length > 0 && (
           <section className="mb-8">
             <SectionLabel>
               {totalHits} hit{totalHits === 1 ? "" : "s"} across{" "}
-              {bucketList.length} source{bucketList.length === 1 ? "" : "s"}
+              {cddBuckets.length} source{cddBuckets.length === 1 ? "" : "s"}
             </SectionLabel>
             <div className="space-y-4">
-              {bucketList.map((b) => (
+              {cddBuckets.map((b) => (
                 <SourceBucketCard
                   key={b.sourceId}
                   bucket={b}
@@ -698,6 +718,10 @@ export default function App() {
               ))}
             </div>
           </section>
+        )}
+
+        {esgBuckets.length > 0 && (
+          <EsgPanel buckets={esgBuckets} />
         )}
 
         {result && totalHits > 0 && (
@@ -711,7 +735,7 @@ export default function App() {
                   )
                 : {}
             }
-            contributingSourceIds={bucketList
+            contributingSourceIds={[...cddBuckets, ...esgBuckets]
               .filter((b) => b.hits.some((h) => !h.is_stub))
               .map((b) => b.sourceId)}
           />
@@ -741,9 +765,13 @@ export default function App() {
                 {sourcesQuery.data.sources.map((s, i) => (
                   <li
                     key={s.id}
-                    className="bg-white border border-oo-rule rounded-oo p-6 text-sm transition-shadow hover:shadow-oo-card"
+                    className={`bg-white border rounded-oo p-6 text-sm transition-shadow hover:shadow-oo-card ${
+                      s.category === "esg"
+                        ? "border-emerald-200"
+                        : "border-oo-rule"
+                    }`}
                   >
-                    <div className="flex items-baseline gap-3 mb-1">
+                    <div className="flex items-baseline gap-3 mb-1 flex-wrap">
                       <span className="font-mono text-[11px] tracking-wider text-oo-blue">
                         {String(i + 1).padStart(2, "0")}
                       </span>
@@ -755,9 +783,14 @@ export default function App() {
                       >
                         {s.name}
                       </a>
-                      <span className="ml-auto">
+                      <div className="ml-auto flex items-center gap-2">
+                        {s.category === "esg" && (
+                          <span className="text-[10px] font-semibold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200 rounded px-1.5 py-0.5">
+                            ESG
+                          </span>
+                        )}
                         <LicenseChip license={s.license} />
-                      </span>
+                      </div>
                     </div>
                     {s.description && (
                       <p className="text-[13.5px] leading-[1.7] text-oo-muted mt-2">
@@ -1495,6 +1528,344 @@ function ExportPanel({
           for details.
         </p>
       )}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------
+// ESG Panel — separate environmental / ESG data section
+// ---------------------------------------------------------------------
+
+/**
+ * Leaf icon for the ESG panel header. Rendered inline in SVG so no icon
+ * library dependency is needed.
+ */
+function LeafIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M12 2C6.5 2 2 7 2 12c0 1.8.5 3.5 1.4 4.9L12 22l8.6-5.1A10 10 0 0 0 22 12C22 7 17.5 2 12 2z"
+        fill="currentColor"
+        opacity="0.15"
+      />
+      <path
+        d="M12 2C6.5 2 2 7 2 12c0 1.8.5 3.5 1.4 4.9L12 22l8.6-5.1A10 10 0 0 0 22 12C22 7 17.5 2 12 2z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 22V12M12 12C9 9 5 9 5 9"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Format a CO₂e tonnage figure for display.
+ * ≥ 1 Mt → "X.X Mt"; ≥ 1 kt → "X,XXX kt"; otherwise "X,XXX t"
+ */
+function formatCo2e(tonnes: number): { value: string; unit: string } {
+  if (tonnes >= 1_000_000) {
+    return { value: (tonnes / 1_000_000).toFixed(1), unit: "Mt CO₂e" };
+  }
+  if (tonnes >= 1_000) {
+    return { value: Math.round(tonnes / 1_000).toLocaleString(), unit: "kt CO₂e" };
+  }
+  return { value: Math.round(tonnes).toLocaleString(), unit: "t CO₂e" };
+}
+
+/**
+ * Inline horizontal bar chart for sector emissions breakdown.
+ * Max-bar width = 100%; each bar proportional to the top sector.
+ */
+function SectorBars({
+  bySector,
+  totalCo2e,
+}: {
+  bySector: Record<string, number>;
+  totalCo2e: number;
+}) {
+  if (!bySector || Object.keys(bySector).length === 0) return null;
+  const maxVal = Math.max(...Object.values(bySector));
+  const sorted = Object.entries(bySector).sort((a, b) => b[1] - a[1]);
+  return (
+    <div className="mt-4 space-y-2">
+      {sorted.map(([sector, value]) => {
+        const pct = maxVal > 0 ? (value / maxVal) * 100 : 0;
+        const shareOfTotal = totalCo2e > 0 ? ((value / totalCo2e) * 100).toFixed(0) : "—";
+        const fmt = formatCo2e(value);
+        return (
+          <div key={sector}>
+            <div className="flex items-baseline justify-between mb-1">
+              <span className="text-[11px] text-emerald-900/70 capitalize font-medium">
+                {sector.replace(/-/g, " ")}
+              </span>
+              <span className="text-[11px] font-mono text-emerald-900/60">
+                {fmt.value} {fmt.unit} · {shareOfTotal}%
+              </span>
+            </div>
+            <div className="h-1.5 rounded-full bg-emerald-100 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-all"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Card for a Climate TRACE / GEM hit. Shows:
+ * - Entity name + GEM entity ID
+ * - Total CO₂e in large type (from option 1 aesthetic)
+ * - Year of estimate + unit
+ * - Sector breakdown inline bar chart
+ * - GEM parents (if any)
+ * - Raw payload drill-down (same pattern as HitRow)
+ */
+function ClimateTRACECard({ hit }: { hit: SourceHit }) {
+  const [open, setOpen] = useState(false);
+  const [detail, setDetail] = useState<DeepenResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Pull emissions data out of the raw bundle the adapter returned.
+  const raw = hit.raw as Record<string, unknown>;
+  const emissions = (raw.emissions ?? {}) as {
+    total_co2e_tonnes?: number;
+    unit?: string;
+    year?: number;
+    by_sector?: Record<string, number>;
+  };
+  const parents = (raw.parents ?? []) as { entity_id: string; name: string }[];
+  const totalCo2e = emissions.total_co2e_tonnes ?? 0;
+  const bySector = emissions.by_sector ?? {};
+  const year = emissions.year ?? 2024;
+  const formatted = totalCo2e > 0 ? formatCo2e(totalCo2e) : null;
+
+  async function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && !detail && !loading) {
+      setLoading(true);
+      setFetchError(null);
+      try {
+        const data = await deepen(hit.source_id, hit.hit_id);
+        setDetail(data);
+      } catch (e) {
+        setFetchError(String(e));
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  return (
+    <div className="rounded-oo border border-emerald-200 bg-emerald-50/40 overflow-hidden">
+      {/* Card header */}
+      <div className="px-5 pt-4 pb-3 border-b border-emerald-200/60">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
+              {hit.name}
+              {hit.is_stub && (
+                <span className="ml-2 text-[11px] font-mono bg-amber-50 text-amber-800 border border-amber-200 rounded px-1.5 py-0.5">
+                  stub
+                </span>
+              )}
+            </div>
+            <div className="text-[11px] font-mono text-emerald-700/70 mt-0.5">
+              GEM entity {hit.identifiers.gem_entity_id}
+            </div>
+          </div>
+          <button
+            onClick={toggle}
+            className="text-[12px] font-mono text-emerald-700 hover:text-emerald-900 whitespace-nowrap shrink-0"
+          >
+            {open ? "Hide" : "Go deeper →"}
+          </button>
+        </div>
+
+        {/* Large CO₂e metric */}
+        {formatted && (
+          <div className="mt-4 flex items-end gap-3">
+            <span className="font-head font-bold leading-none text-[2.6rem] text-emerald-800 tabular-nums">
+              {formatted.value}
+            </span>
+            <div className="pb-1">
+              <div className="text-[13px] font-semibold text-emerald-700">
+                {formatted.unit}
+              </div>
+              <div className="text-[11px] text-emerald-600/70">
+                {year} · direct assets
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!formatted && !hit.is_stub && (
+          <p className="mt-3 text-[13px] text-emerald-700/60 italic">
+            Emissions data not available for this entity.
+          </p>
+        )}
+
+        {/* Sector breakdown */}
+        {Object.keys(bySector).length > 0 && (
+          <SectorBars bySector={bySector} totalCo2e={totalCo2e} />
+        )}
+
+        {/* GEM parents */}
+        {parents.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-emerald-200/60">
+            <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-700/60 mr-2">
+              GEM parent{parents.length === 1 ? "" : "s"}
+            </span>
+            {parents.map((p) => (
+              <span
+                key={p.entity_id}
+                className="inline-block text-[11px] font-mono text-emerald-900/70 bg-emerald-100 border border-emerald-200 rounded px-1.5 py-0.5 mr-1"
+              >
+                {p.name}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Drill-down */}
+      {open && (
+        <div className="px-5 py-4 bg-white/60 text-[12px]">
+          {loading && <p className="text-emerald-700">Fetching…</p>}
+          {fetchError && <p className="text-red-700">{fetchError}</p>}
+          {detail && <DeepenBlock detail={detail} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Collapsible ESG panel. Sits below the CDD source cards.
+ *
+ * Any source adapter with ``category="esg"`` is routed here —
+ * not just Climate TRACE. The visual language (green border,
+ * leaf icon, "Environmental & ESG Data" heading) signals clearly
+ * that this is climate / ESG context, not a compliance check.
+ */
+function EsgPanel({ buckets }: { buckets: SourceBucket[] }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const hitCount = buckets.reduce((n, b) => n + b.hits.length, 0);
+
+  return (
+    <section className="mb-8">
+      {/* Section divider */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex-1 h-px bg-emerald-200" />
+        <div className="flex items-center gap-2 text-emerald-700">
+          <LeafIcon className="w-4 h-4" />
+          <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase">
+            Environmental &amp; ESG Data
+          </span>
+        </div>
+        <div className="flex-1 h-px bg-emerald-200" />
+      </div>
+
+      {/* Panel */}
+      <div className="rounded-oo border border-emerald-200 bg-white overflow-hidden">
+        {/* Panel header */}
+        <button
+          type="button"
+          onClick={() => setCollapsed((c) => !c)}
+          className="w-full flex items-center justify-between px-5 py-3 border-b border-emerald-200 bg-emerald-50/60 hover:bg-emerald-50 transition-colors text-left"
+        >
+          <div className="flex items-center gap-2.5">
+            <LeafIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div>
+              <span className="font-head font-bold text-[14px] text-emerald-950">
+                Environmental &amp; ESG Data
+              </span>
+              <span className="ml-2 text-[11px] font-mono text-emerald-600/70">
+                {hitCount} result{hitCount === 1 ? "" : "s"} · {buckets.length} source{buckets.length === 1 ? "" : "s"}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-[11px] text-emerald-600/60 hidden sm:inline">
+              ESG / climate risk · not a KYC source
+            </span>
+            <span className="text-[12px] font-mono text-emerald-700">
+              {collapsed ? "Show ↓" : "Hide ↑"}
+            </span>
+          </div>
+        </button>
+
+        {!collapsed && (
+          <div className="p-5 space-y-4">
+            {/* Disclaimer */}
+            <p className="text-[12px] leading-[1.65] text-emerald-800/70 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">
+              <span className="font-semibold">ESG context only.</span> Data
+              from{" "}
+              <a
+                href="https://globalenergymonitor.org/"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2 hover:text-emerald-900"
+              >
+                Global Energy Monitor
+              </a>{" "}
+              (CC BY 4.0) and{" "}
+              <a
+                href="https://climatetrace.org/"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2 hover:text-emerald-900"
+              >
+                Climate TRACE
+              </a>{" "}
+              (CC BY 4.0). Emissions are satellite-derived estimates for
+              directly owned assets — not a beneficial ownership or
+              sanctions check.
+            </p>
+
+            {/* Cards — one per ESG source bucket */}
+            {buckets.map((bucket) =>
+              bucket.hits.map((hit) => (
+                <ClimateTRACECard
+                  key={`${hit.source_id}:${hit.hit_id}`}
+                  hit={hit}
+                />
+              ))
+            )}
+
+            {/* Error state */}
+            {buckets
+              .filter((b) => b.error && b.hits.length === 0)
+              .map((b) => (
+                <div
+                  key={b.sourceId}
+                  className="rounded-oo border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700"
+                >
+                  <span className="font-semibold">{b.sourceName}:</span>{" "}
+                  {b.error}
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
