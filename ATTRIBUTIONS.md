@@ -160,6 +160,19 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Attribution:** "Procurement data from OpenTender (DIGIWHIST), licensed CC BY-NC-SA 4.0."
 - **Entry point:** LEI string search
 
+## Global Energy Monitor (GEM) / Climate TRACE
+
+- **Data (GEM):** Ownership of fossil-fuel infrastructure assets worldwide — power plants, oil and gas fields, coal mines, pipelines, and related facilities. The ownership tracker (`all_entities.csv` and related files inside `ownership.zip`) maps facility owners to named legal entities with LEI codes where known. OpenCheck downloads this file at startup and uses it to bridge LEI → GEM entity ID, enabling ESG screening by LEI.
+- **Data (Climate TRACE):** Satellite- and sensor-derived greenhouse gas emissions estimates per asset and per owner. OpenCheck queries the Climate TRACE API v7 to retrieve aggregate CO₂e (GWP 100-year) totals and sector-level breakdowns for any entity found in the GEM ownership index.
+- **GEM ownership data:** <https://globalenergymonitor.org/> — `ownership.zip` published at <https://github.com/climatetracecoalition/climate-trace-tools/tree/main/climate_trace_tools/data/ownership>
+- **Climate TRACE API:** <https://api.climatetrace.org/> — documentation at <https://api.climatetrace.org/docs>
+- **License (GEM):** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **License (Climate TRACE):** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **Attribution:** "Fossil-fuel asset ownership data from Global Energy Monitor, CC BY 4.0. Emissions estimates from Climate TRACE, CC BY 4.0."
+- **Entry point:** LEI matched against the GEM ownership index; Climate TRACE API queried for entities found in that index
+- **Category:** ESG — this data is surfaced in a separate Environmental & ESG panel in the OpenCheck UI, distinct from the customer due diligence sources above
+- **Note:** OpenCheck uses the GEM ownership data directly under its CC BY 4.0 licence. The OpenSanctions GEM dataset is **not** used, as OpenSanctions applies a CC BY-NC 4.0 licence to all its datasets (including the GEM-derived one), which would restrict commercial use. The source file is re-downloaded on each server start because Render's filesystem is ephemeral.
+
 ## OpenAleph
 
 - **Data:** investigative data collections (company registries, leaks, sanctions lists, court records)
