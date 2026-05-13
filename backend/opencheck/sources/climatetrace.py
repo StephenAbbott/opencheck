@@ -65,13 +65,16 @@ _GEM_ZIP_URL = (
 _CT_API = "https://api.climatetrace.org"
 _CACHE_NS = "climatetrace"
 
-# Column names in the GEM ownership CSVs (as of 2024 release).
-_ENTITY_CSV = "all_entities.csv"
+# Column names in the GEM ownership CSVs.
+# The zip filename changes with each release (e.g. ownership_all_entities_020626.csv)
+# so we match by substring rather than exact suffix.
+_ENTITY_CSV_SUBSTR = "all_entities"
 _LEI_COL = "Global Legal Entity Identifier Index"
 _ENTITY_ID_COL = "Entity ID"
-_ENTITY_NAME_COL = "Entity Name"
+_ENTITY_NAME_COL = "Full Name"          # was "Entity Name" in earlier schema
 _PARENT_IDS_COL = "Gem parents IDs"
 _PARENT_NAMES_COL = "Gem parents"
+_COUNTRY_COL = "Headquarters Country"  # ISO 3166-1 alpha-3
 
 # Module-level singletons — built lazily on first access so import is cheap.
 _lei_index: dict[str, str] | None = None          # LEI → GEM entity ID
@@ -122,15 +125,26 @@ def _load_gem_indexes() -> tuple[dict[str, str], dict[str, dict[str, str]]]:
 
     try:
         with zipfile.ZipFile(path) as zf:
-            # The ZIP may contain the CSV at the root or inside a subdirectory.
+            # The ZIP filename changes with each GEM release, e.g.:
+            #   "all_entities.csv"                     (2024 release)
+            #   "ownership_all_entities_020626.csv"    (Feb 2026 release)
+            # Match by substring; skip __MACOSX metadata entries.
             candidates = [
-                n for n in zf.namelist() if n.endswith(_ENTITY_CSV)
+                n for n in zf.namelist()
+                if _ENTITY_CSV_SUBSTR in n
+                and not n.startswith("__MACOSX")
+                and n.endswith(".csv")
             ]
             if not candidates:
-                log.warning("Could not find %s inside GEM zip", _ENTITY_CSV)
+                log.warning(
+                    "Could not find a CSV matching %r inside GEM zip",
+                    _ENTITY_CSV_SUBSTR,
+                )
                 return lei_idx, ent_idx
             with zf.open(candidates[0]) as raw:
-                text = raw.read().decode("utf-8", errors="replace")
+                # Decode with utf-8-sig to strip the BOM that GEM CSVs include;
+                # falling back to replacement chars for any non-UTF-8 bytes.
+                text = raw.read().decode("utf-8-sig", errors="replace")
 
         reader = csv.DictReader(io.StringIO(text))
         for row in reader:

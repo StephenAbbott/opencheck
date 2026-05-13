@@ -32,9 +32,9 @@ def _make_gem_zip(tmp_path: Path, rows: list[dict]) -> Path:
 
     fieldnames = [
         "Entity ID",
-        "Entity Name",
+        "Full Name",
         "Global Legal Entity Identifier Index",
-        "Country",
+        "Headquarters Country",
         "Gem parents IDs",
         "Gem parents",
     ]
@@ -45,7 +45,8 @@ def _make_gem_zip(tmp_path: Path, rows: list[dict]) -> Path:
         writer.writerow({f: row.get(f, "") for f in fieldnames})
 
     with zipfile.ZipFile(zip_path, "w") as zf:
-        zf.writestr("all_entities.csv", buf.getvalue())
+        # Use a dated filename like real GEM releases (e.g. ownership_all_entities_020626.csv)
+        zf.writestr("ownership_all_entities_test.csv", buf.getvalue())
 
     return zip_path
 
@@ -126,7 +127,7 @@ def test_parse_parents_empty_returns_empty_list() -> None:
 def test_stub_bundle_shape() -> None:
     bundle = _stub_bundle(
         entity_id="E100000001096",
-        gem_row={"Entity Name": "BP p.l.c.", "Gem parents IDs": "", "Gem parents": ""},
+        gem_row={"Full Name": "BP p.l.c.", "Gem parents IDs": "", "Gem parents": ""},
         lei="213800LH1BZH3DI6G760",
     )
     assert bundle["source_id"] == "climatetrace"
@@ -198,9 +199,9 @@ def test_fetch_by_lei_returns_stub_when_live_disabled(tmp_path, monkeypatch) -> 
         [
             {
                 "Entity ID": "E100000001096",
-                "Entity Name": "BP p.l.c.",
+                "Full Name": "BP p.l.c.",
                 "Global Legal Entity Identifier Index": "213800LH1BZH3DI6G760",
-                "Country": "United Kingdom",
+                "Headquarters Country": "GBR",
                 "Gem parents IDs": "",
                 "Gem parents": "",
             }
@@ -240,17 +241,17 @@ def test_gem_index_maps_multiple_leis(tmp_path, monkeypatch) -> None:
         [
             {
                 "Entity ID": "E100000000001",
-                "Entity Name": "Alpha Energy Ltd",
+                "Full Name": "Alpha Energy Ltd",
                 "Global Legal Entity Identifier Index": "AAAABBBBCCCCDDDDEEEE",
-                "Country": "Germany",
+                "Headquarters Country": "DEU",
                 "Gem parents IDs": "",
                 "Gem parents": "",
             },
             {
                 "Entity ID": "E100000000002",
-                "Entity Name": "Beta Coal Inc",
+                "Full Name": "Beta Coal Inc",
                 "Global Legal Entity Identifier Index": "FFFFGGGGHHHHIIIIJJJJ",
-                "Country": "United States",
+                "Headquarters Country": "USA",
                 "Gem parents IDs": "",
                 "Gem parents": "",
             },
@@ -292,9 +293,9 @@ def test_gem_index_skips_not_found_lei(tmp_path, monkeypatch) -> None:
         [
             {
                 "Entity ID": "E100000000099",
-                "Entity Name": "Mystery Corp",
+                "Full Name": "Mystery Corp",
                 "Global Legal Entity Identifier Index": "not found",
-                "Country": "France",
+                "Headquarters Country": "FRA",
                 "Gem parents IDs": "",
                 "Gem parents": "",
             }

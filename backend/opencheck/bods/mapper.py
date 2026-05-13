@@ -4771,7 +4771,13 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
 
     # Determine jurisdiction from GEM row if available.
     gem_row: dict[str, str] = bundle.get("gem_row") or {}
-    country_raw: str = (gem_row.get("Country") or gem_row.get("country") or "").strip()
+    # GEM CSV uses "Headquarters Country" (ISO 3166-1 alpha-3), not "Country".
+    country_raw: str = (
+        gem_row.get("Headquarters Country")
+        or gem_row.get("Registration Country")
+        or gem_row.get("Country")
+        or ""
+    ).strip()
     jurisdiction = _country_obj(country_raw) if country_raw else None
     jur_tuple: tuple[str, str] | None = (
         (jurisdiction["name"], jurisdiction["code"]) if jurisdiction else None

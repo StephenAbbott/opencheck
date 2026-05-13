@@ -19,9 +19,9 @@ def _entity_bundle() -> dict:
         "lei": "213800LH1BZH3DI6G760",
         "gem_row": {
             "Entity ID": "E100000001096",
-            "Entity Name": "BP p.l.c.",
+            "Full Name": "BP p.l.c.",
             "Global Legal Entity Identifier Index": "213800LH1BZH3DI6G760",
-            "Country": "United Kingdom",
+            "Headquarters Country": "GBR",
             "Gem parents IDs": "",
             "Gem parents": "",
         },
@@ -46,9 +46,9 @@ def _entity_with_parent_bundle() -> dict:
         "lei": "AAAAAAAAAAAAAAAAAA01",
         "gem_row": {
             "Entity ID": "E100000002000",
-            "Entity Name": "BP Exploration (Alaska) Inc.",
+            "Full Name": "BP Exploration (Alaska) Inc.",
             "Global Legal Entity Identifier Index": "AAAAAAAAAAAAAAAAAA01",
-            "Country": "United States",
+            "Headquarters Country": "USA",
             "Gem parents IDs": "E100000001096",
             "Gem parents": "BP p.l.c.",
         },
@@ -216,7 +216,7 @@ def test_map_climatetrace_no_lei_omits_lei_identifier() -> None:
 
 def test_map_climatetrace_no_country_omits_jurisdiction() -> None:
     b = _entity_bundle()
-    b["gem_row"]["Country"] = ""
+    b["gem_row"]["Headquarters Country"] = ""
     bundle = map_climatetrace(b)
     entity = next(iter(bundle))
     assert "incorporatedInJurisdiction" not in entity["recordDetails"]
