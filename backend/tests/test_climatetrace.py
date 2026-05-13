@@ -56,7 +56,46 @@ def _make_gem_zip(tmp_path: Path, rows: list[dict]) -> Path:
 # ---------------------------------------------------------------------------
 
 
-def test_parse_emissions_list_of_rows() -> None:
+def test_parse_emissions_v7_structured_response() -> None:
+    """Primary path: real Climate TRACE v7 API shape."""
+    payload = {
+        "totals": {
+            "summaries": [
+                {"gas": "co2e_100yr", "emissionsQuantity": 345_183_438.27, "percentage": 100}
+            ]
+        },
+        "sectors": {
+            "summaries": [
+                {"sector": "fossil-fuel-operations", "gas": "co2e_100yr", "emissionsQuantity": 333_224_762.65},
+                {"sector": "power", "gas": "co2e_100yr", "emissionsQuantity": 1_386_099.9},
+                {"sector": "manufacturing", "gas": "co2e_100yr", "emissionsQuantity": 10_572_575.71},
+            ]
+        },
+    }
+    result = _parse_emissions(payload)
+    assert result["total_co2e_tonnes"] == pytest.approx(345_183_438.27)
+    assert result["by_sector"]["fossil-fuel-operations"] == pytest.approx(333_224_762.65)
+    assert result["by_sector"]["power"] == pytest.approx(1_386_099.9)
+    assert result["year"] == 2024
+
+
+def test_parse_emissions_v7_ignores_non_co2e_summaries() -> None:
+    """Only the co2e_100yr gas summary is used for the total."""
+    payload = {
+        "totals": {
+            "summaries": [
+                {"gas": "ch4", "emissionsQuantity": 9_999_999},
+                {"gas": "co2e_100yr", "emissionsQuantity": 500_000},
+            ]
+        },
+        "sectors": {"summaries": []},
+    }
+    result = _parse_emissions(payload)
+    assert result["total_co2e_tonnes"] == pytest.approx(500_000)
+
+
+def test_parse_emissions_legacy_list_of_rows() -> None:
+    """Fallback: pre-v7 flat-list shape still works."""
     rows = [
         {"emissions_quantity": "1000000", "sector": "oil-and-gas"},
         {"emissions_quantity": "500000", "sector": "coal"},
@@ -68,7 +107,7 @@ def test_parse_emissions_list_of_rows() -> None:
     assert result["year"] == 2024
 
 
-def test_parse_emissions_dict_with_emissions_key() -> None:
+def test_parse_emissions_legacy_dict_with_emissions_key() -> None:
     payload = {
         "emissions": [
             {"emissions_quantity": "200000", "sector": "power"},

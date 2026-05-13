@@ -396,39 +396,75 @@ class ClimateTRACEAdapter(SourceAdapter):
 
 
 def _parse_emissions(payload: Any) -> dict[str, Any]:
-    """Normalise the Climate TRACE emissions response to a flat summary.
+    """Normalise the Climate TRACE v7 emissions response to a flat summary.
 
-    The ``/v7/sources/emissions`` response can be a list of sector
-    rows or a dict with a ``sources`` or ``emissions`` key.  We sum
-    across all rows to produce a total CO2e figure plus a per-sector
-    breakdown.
+    Climate TRACE API v7 ``/v7/sources/emissions`` response shape::
+
+        {
+            "totals": {
+                "summaries": [{"gas": "co2e_100yr", "emissionsQuantity": 345183438.27, ...}],
+                ...
+            },
+            "sectors": {
+                "summaries": [{"sector": "fossil-fuel-operations", "gas": "co2e_100yr",
+                               "emissionsQuantity": 333224762.65, ...}],
+                ...
+            },
+            ...
+        }
+
+    Falls back to the older flat-list shape (``emissions_quantity`` / ``co2e_100yr``
+    fields per row) in case of cached pre-v7 responses.
     """
-    rows: list[dict[str, Any]] = []
-    if isinstance(payload, list):
-        rows = payload
-    elif isinstance(payload, dict):
-        rows = payload.get("emissions") or payload.get("sources") or []
-
     total_co2e: float = 0.0
     by_sector: dict[str, float] = {}
 
-    for row in rows:
-        # Normalise: different API versions use different field names.
-        value_raw = (
-            row.get("emissions_quantity")
-            or row.get("co2e_100yr")
-            or row.get("emissions")
-            or 0
-        )
-        try:
-            value = float(value_raw)
-        except (TypeError, ValueError):
-            value = 0.0
+    if isinstance(payload, dict) and "totals" in payload:
+        # ── v7 structured response ──────────────────────────────────────────
+        totals = payload.get("totals") or {}
+        for summary in totals.get("summaries") or []:
+            if summary.get("gas") == "co2e_100yr":
+                try:
+                    total_co2e = float(summary.get("emissionsQuantity") or 0)
+                except (TypeError, ValueError):
+                    pass
+                break
 
-        total_co2e += value
+        sectors = payload.get("sectors") or {}
+        for sec in sectors.get("summaries") or []:
+            if sec.get("gas") != "co2e_100yr":
+                continue
+            sector_name = sec.get("sector") or "unknown"
+            try:
+                value = float(sec.get("emissionsQuantity") or 0)
+            except (TypeError, ValueError):
+                value = 0.0
+            by_sector[sector_name] = by_sector.get(sector_name, 0.0) + value
 
-        sector = row.get("sector") or row.get("subsector") or "unknown"
-        by_sector[sector] = by_sector.get(sector, 0.0) + value
+    else:
+        # ── legacy / flat-list fallback ─────────────────────────────────────
+        rows: list[dict[str, Any]] = []
+        if isinstance(payload, list):
+            rows = payload
+        elif isinstance(payload, dict):
+            rows = payload.get("emissions") or payload.get("sources") or []
+
+        for row in rows:
+            value_raw = (
+                row.get("emissions_quantity")
+                or row.get("emissionsQuantity")
+                or row.get("co2e_100yr")
+                or row.get("emissions")
+                or 0
+            )
+            try:
+                value = float(value_raw)
+            except (TypeError, ValueError):
+                value = 0.0
+
+            total_co2e += value
+            sector = row.get("sector") or row.get("subsector") or "unknown"
+            by_sector[sector] = by_sector.get(sector, 0.0) + value
 
     return {
         "total_co2e_tonnes": total_co2e,
