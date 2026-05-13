@@ -102,10 +102,16 @@ def _ensure_gem_data() -> None:
 def _load_gem_indexes() -> tuple[dict[str, str], dict[str, dict[str, str]]]:
     """Parse GEM ownership.zip and build LEI and entity indexes.
 
+    Downloads the GEM ownership.zip from GitHub if it is not already on disk
+    (Render and other ephemeral-filesystem hosts start with a clean slate on
+    every deploy, so the download must happen at runtime, not build time).
+
     Returns ``(lei_index, entity_index)`` where:
     * ``lei_index`` maps a normalised LEI string → GEM entity ID.
     * ``entity_index`` maps a GEM entity ID → the full CSV row dict.
     """
+    _ensure_gem_data()  # no-op if the file already exists
+
     lei_idx: dict[str, str] = {}
     ent_idx: dict[str, dict[str, str]] = {}
 

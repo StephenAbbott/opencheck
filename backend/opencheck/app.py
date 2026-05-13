@@ -1277,12 +1277,18 @@ async def lookup(
     if ct_adapter is not None and hasattr(ct_adapter, "fetch_by_lei"):
         try:
             ct_bundle = await ct_adapter.fetch_by_lei(lei)  # type: ignore[attr-defined]
-            if ct_bundle and not ct_bundle.get("is_stub"):
+            # Surface the hit whenever the LEI was found in the GEM index —
+            # both live bundles (with emissions data) and GEM-only stubs
+            # (LEI matched but live=false or emissions unavailable).
+            # Stubs still show the entity name and GEM ID in the ESG panel;
+            # the frontend renders the large CO₂e metric only when the
+            # emissions dict is populated.
+            if ct_bundle and ct_bundle.get("entity_id"):
                 entity_id = ct_bundle.get("entity_id") or lei
                 emissions = ct_bundle.get("emissions") or {}
                 total_co2e = emissions.get("total_co2e_tonnes")
                 summary_parts = [f"GEM entity {entity_id}"]
-                if total_co2e is not None:
+                if total_co2e is not None and total_co2e > 0:
                     # Express in Mt (megatonnes) for display if large enough.
                     if total_co2e >= 1_000_000:
                         summary_parts.append(
@@ -1292,6 +1298,7 @@ async def lookup(
                         summary_parts.append(
                             f"{total_co2e:,.0f} t CO₂e (2024)"
                         )
+                is_stub = bool(ct_bundle.get("is_stub"))
                 hits.append(
                     SourceHit(
                         source_id="climatetrace",
@@ -1304,7 +1311,7 @@ async def lookup(
                             "lei": lei,
                         },
                         raw=ct_bundle,
-                        is_stub=False,
+                        is_stub=is_stub,
                     )
                 )
                 deepened_bundles.append(("climatetrace", entity_id))
