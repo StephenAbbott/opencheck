@@ -105,13 +105,13 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 
 ## Firmenbuch — Austrian Commercial Register
 
-- **Data:** company profiles, officers (managing directors, supervisory board members, authorised signatories, liquidators, and other Funktionen), and shareholders (individual and corporate) from the Austrian commercial register (Firmenbuch), available as a High-Value Dataset (HVD) under EU open data legislation
-- **API:** Firmenbuch HVD SOAP 1.2 API (`https://services.firmenbuch.gv.at/FirmenbuchService`) — requires a free API key issued by Justiz Online
+- **Data:** company name, business address, and entity status from the Austrian commercial register (Firmenbuch), available as a High-Value Dataset (HVD) under EU open data legislation (EU Implementing Regulation 2023/138, Annex 5)
+- **API:** Firmenbuch HVD SOAP 1.2 API at `https://justizonline.gv.at/jop/api/at.gv.justiz.fbw/ws` — requires a free API key issued by Justiz Online
 - **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 - **Attribution:** "Contains data from the Austrian commercial register (Firmenbuch), open data under CC BY 4.0, provided by the Austrian Federal Ministry of Justice."
 - **Entry point:** `at_fn` (Firmenbuchnummer, e.g. `123456a`) derived from GLEIF RA code `RA000017`
 - **Key registration:** Free API key available at <https://justizonline.gv.at/jop/web/iwg/register>. Set the `FIRMENBUCH_API_KEY` environment variable to enable live data. Without it, the adapter returns a stub entry.
-- **Note:** Austrian company UBO declarations (wirtschaftliche Eigentümer) are held in the separate Wirtschaftliche Eigentümer Register (WiEReG); that data is not yet integrated.
+- **Note — data scope:** The free HVD API key only supports `UMFANG=Kurzinformation`, which returns company name and business address only. Officer and shareholder data (available via `UMFANG=Auszug`) requires a paid Justiz Online subscription; OpenCheck's parser is implemented for those DKZ sections and will surface the data automatically if a paid key is configured in future. Austrian UBO declarations (wirtschaftliche Eigentümer) are held in the separate WiEReG register and are not yet integrated.
 
 ## OpenCorporates
 

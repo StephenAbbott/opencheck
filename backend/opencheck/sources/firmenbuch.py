@@ -12,17 +12,25 @@ API characteristics:
   - Key registration: https://justizonline.gv.at/jop/web/iwg/register
 
 Operations used by this adapter:
-  * SUCHEFIRMAREQUEST  — name search → list of matches with FIRMA_ID
-  * AUSZUGREQUEST      — full extract for a FIRMA_ID (entity, officers,
-                         shareholders, address)
-  * VERAENDERUNGENFIRMAREQUEST — change history (used for temporal metadata)
+  * SUCHEFIRMAREQUEST   — name search → list of matches
+  * AUSZUG_V2_REQUEST   — entity extract (UMFANG=Kurzinformation)
+  * VERAENDERUNGENFIRMAREQUEST — change history (future use)
 
-Data scope:
-  - Entity details (name, FN number, legal form, address, founding date)
-  - Officers: Geschäftsführer, Vorstand, Prokuristen (managing directors,
-    board members, authorised signatories)
-  - Shareholders (Gesellschafter) for GmbH, KG, OG with capital amounts
-    (from which percentage can be computed)
+Data scope (HVD free tier — UMFANG=Kurzinformation only):
+  - Company name (FI_DKZ02 / BEZEICHNUNG)
+  - Business address (FI_DKZ03)
+  - Entity status (AUFRECHT attribute on FI_DKZ02)
+  - FN number (FNR attribute on the response element)
+
+NOT available on the free HVD API key:
+  - Officers (Geschäftsführer, Prokuristen, Vorstand, Aufsichtsrat)
+  - Shareholders (Gesellschafter, Komplementäre, Kommanditisten)
+  - Registered capital / Stammkapital
+  - Founding date
+  These require UMFANG=Auszug/Vollzug, which is a paid Justiz Online
+  subscription.  The parser is written to handle those DKZ sections if
+  the data is ever present (e.g. a future paid tier), but they will be
+  empty lists under the current free key.
 
 Intentional exclusion:
   - WiEReG beneficial ownership data (restricted since ECJ 2022 ruling;
@@ -154,8 +162,14 @@ def _extract_request_xml(fn: str) -> str:
 
     ``fn`` is passed directly as ``<aus:FNR>`` — the v2 operation accepts the
     FN (e.g. "659195f") directly, no internal FIRMA_ID resolution needed.
-    ``UMFANG=Auszug`` requests the full current extract including officers and
-    shareholders.  ``STICHTAG`` (today's date) is required by the API.
+
+    ``UMFANG=Kurzinformation`` is the only value supported by the free HVD
+    API key.  It returns name (FI_DKZ02) and business address (FI_DKZ03) only.
+    The richer modes (``Auszug``, ``Vollzug``, ``Vollinhalt``) cause HTTP 500
+    on the free tier — they require a paid Justiz Online subscription.
+
+    ``STICHTAG`` (today's date in ISO format YYYY-MM-DD) is required by the
+    API; omitting it causes HTTP 400.
     """
     esc = _xml_escape(fn)
     today = datetime.date.today().isoformat()  # YYYY-MM-DD, required by the API
@@ -165,7 +179,7 @@ def _extract_request_xml(fn: str) -> str:
         f"<aus:AUSZUG_V2_REQUEST>"
         f"<aus:FNR>{esc}</aus:FNR>"
         f"<aus:STICHTAG>{today}</aus:STICHTAG>"
-        f"<aus:UMFANG>Auszug</aus:UMFANG>"
+        f"<aus:UMFANG>Kurzinformation</aus:UMFANG>"
         f"</aus:AUSZUG_V2_REQUEST>",
     )
 
