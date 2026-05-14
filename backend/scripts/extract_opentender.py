@@ -167,13 +167,27 @@ def _iter_ndjson_gz(fh: io.IOBase) -> Iterator[dict]:
             logger.debug("JSON decode error (skipping line): %s", exc)
 
 
-def _iter_source(path: Path) -> Iterator[dict]:
+_FILENAME_YEAR_RE = re.compile(r"-(\d{4})(?:\.ndjson|\.ndjson\.gz)$", re.IGNORECASE)
+
+
+def _filename_year(name: str) -> int | None:
+    """Extract the year from a DIGIWHIST filename like ``data-at-2024.ndjson``."""
+    m = _FILENAME_YEAR_RE.search(name)
+    return int(m.group(1)) if m else None
+
+
+def _iter_source(path: Path, *, from_year: int | None = None) -> Iterator[dict]:
     """Yield tender dicts from a path.
 
     Supports:
-    - .zip containing .ndjson.gz or .ndjson files
+    - .zip containing .ndjson.gz or .ndjson files (e.g. data-at-2024.ndjson)
     - .ndjson.gz
     - .ndjson
+
+    When *from_year* is set, files whose year (parsed from the filename) is
+    before that threshold are skipped entirely — much faster than inspecting
+    individual tender records.  Files with no year in their name are always
+    read.
     """
     suffix = path.suffix.lower()
 
@@ -181,10 +195,15 @@ def _iter_source(path: Path) -> Iterator[dict]:
         with zipfile.ZipFile(path) as zf:
             for name in sorted(zf.namelist()):
                 name_lower = name.lower()
-                if name_lower.endswith(".ndjson.gz") or name_lower.endswith(".ndjson"):
-                    logger.info("  → reading %s from %s", name, path.name)
-                    with zf.open(name) as member:
-                        yield from _iter_ndjson_gz(member)
+                if not (name_lower.endswith(".ndjson.gz") or name_lower.endswith(".ndjson")):
+                    continue
+                file_year = _filename_year(name)
+                if from_year is not None and file_year is not None and file_year < from_year:
+                    logger.info("  → skipping %s (year %d < %d)", name, file_year, from_year)
+                    continue
+                logger.info("  → reading %s from %s", name, path.name)
+                with zf.open(name) as member:
+                    yield from _iter_ndjson_gz(member)
     elif suffix == ".gz" or path.name.lower().endswith(".ndjson.gz"):
         with open(path, "rb") as fh:
             yield from _iter_ndjson_gz(fh)
@@ -281,20 +300,12 @@ def _insert_tender(
     cur: sqlite3.Cursor,
     tender: dict,
     *,
-    from_year: int | None = None,
     dry_run: bool = False,
 ) -> bool:
     """Insert one tender into all tables. Returns True if inserted/updated."""
     persistent_id = (tender.get("persistentId") or tender.get("id") or "").strip()
     if not persistent_id:
         return False
-
-    # Date filter: skip tenders whose year is known and before from_year.
-    # Undated tenders (year=None) are always included.
-    if from_year is not None:
-        year = _tender_year(tender)
-        if year is not None and year < from_year:
-            return False
 
     country_raw = (tender.get("country") or "").upper()
     country = _norm_country(country_raw)
@@ -386,9 +397,9 @@ def build(
         logger.info("Processing %s …", path)
         batch_count = 0
 
-        for tender in _iter_source(path):
+        for tender in _iter_source(path, from_year=from_year):
             try:
-                inserted = _insert_tender(cur, tender, from_year=from_year, dry_run=dry_run)
+                inserted = _insert_tender(cur, tender, dry_run=dry_run)
                 if inserted:
                     total += 1
                     batch_count += 1
