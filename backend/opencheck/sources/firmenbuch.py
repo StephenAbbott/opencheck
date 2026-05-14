@@ -575,9 +575,10 @@ class FirmenbuchAdapter(SourceAdapter):
             name="Firmenbuch — Austrian Commercial Register",
             homepage="https://justizonline.gv.at/jop/web/firmenbuchabfrage",
             description=(
-                "Austrian company data from the Firmenbuch (commercial register), "
-                "including entity details, officers, and shareholders for GmbH, KG "
-                "and OG entities, via the BMJ High Value Dataset API."
+                "Austrian company name, address, and status from the Firmenbuch "
+                "(commercial register), via the BMJ High Value Dataset API. "
+                "Officer and shareholder data requires a paid Justiz Online "
+                "subscription and is not currently available."
             ),
             license="CC-BY-4.0",
             attribution=(

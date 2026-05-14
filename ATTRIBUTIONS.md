@@ -111,7 +111,7 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Attribution:** "Contains data from the Austrian commercial register (Firmenbuch), open data under CC BY 4.0, provided by the Austrian Federal Ministry of Justice."
 - **Entry point:** `at_fn` (Firmenbuchnummer, e.g. `123456a`) derived from GLEIF RA code `RA000017`
 - **Key registration:** Free API key available at <https://justizonline.gv.at/jop/web/iwg/register>. Set the `FIRMENBUCH_API_KEY` environment variable to enable live data. Without it, the adapter returns a stub entry.
-- **Note — data scope:** The free HVD API key only supports `UMFANG=Kurzinformation`, which returns company name and business address only. Officer and shareholder data (available via `UMFANG=Auszug`) requires a paid Justiz Online subscription; OpenCheck's parser is implemented for those DKZ sections and will surface the data automatically if a paid key is configured in future. Austrian UBO declarations (wirtschaftliche Eigentümer) are held in the separate WiEReG register and are not yet integrated.
+- **Note — data scope:** The free HVD API key only supports `UMFANG=Kurzinformation`, which returns company name and business address only. Officer and shareholder data requires `UMFANG=aktueller Auszug` or `historischer Auszug`, both of which need a paid Justiz Online subscription — OpenCheck does not currently support this. Austrian UBO declarations (wirtschaftliche Eigentümer) are held in the separate WiEReG register and are also not available via this API.
 
 ## OpenCorporates
 
