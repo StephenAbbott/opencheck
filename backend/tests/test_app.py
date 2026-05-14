@@ -46,6 +46,7 @@ def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
         "climatetrace",
         "companies_house",
         "cro",
+        "firmenbuch",
         "gleif",
         "inpi",
         "openaleph",

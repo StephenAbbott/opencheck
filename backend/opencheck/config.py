@@ -118,6 +118,12 @@ class Settings(BaseSettings):
     # License: CC BY 4.0 — no API key required, only the local DB file.
     ariregister_db_file: str | None = Field(default=None, alias="ARIREGISTER_DB_FILE")
 
+    # --- Austrian Firmenbuch (commercial register) HVD API ---
+    # Register for a key at: https://justizonline.gv.at/jop/web/iwg/register
+    # WSDL: https://justizonline.gv.at/jop/api/at.gv.justiz.fbw/ws/fbw.wsdl
+    # License: CC BY 4.0 (High Value Dataset, EU Implementing Regulation 2023/138)
+    firmenbuch_api_key: str | None = Field(default=None, alias="FIRMENBUCH_API_KEY")
+
     # --- SEC EDGAR fair-use contact ---
     # SEC EDGAR's automated-access policy requires a contact e-mail in the
     # User-Agent string so they can reach you if your tool misbehaves.
