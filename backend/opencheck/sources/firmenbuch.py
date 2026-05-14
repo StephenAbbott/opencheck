@@ -152,11 +152,13 @@ def _extract_request_xml(fn: str) -> str:
     ``STICHTAG`` is omitted — it is optional and the default is current date.
     """
     esc = _xml_escape(fn)
+    today = datetime.date.today().isoformat()  # YYYY-MM-DD, required by the API
     return _soap_envelope(
         "aus",
         _NS_AUSZUG,
         f"<aus:AUSZUG_V2_REQUEST>"
         f"<aus:FNR>{esc}</aus:FNR>"
+        f"<aus:STICHTAG>{today}</aus:STICHTAG>"
         f"<aus:UMFANG>Kurzinformation</aus:UMFANG>"
         f"</aus:AUSZUG_V2_REQUEST>",
     )
