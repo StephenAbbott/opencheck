@@ -5,6 +5,10 @@ Covers:
   - SOAP response XML parsers (search + extract)
   - map_firmenbuch: entity, officer, and shareholder statement shapes
   - BODS validator compliance for all fixture combinations
+
+Fixtures use the real namespace-prefixed DKZ (Datenkennzeichen) XML structure
+returned by the Firmenbuch HVD SOAP API, with namespace prefixes stripped by
+_strip_namespaces() before ElementTree parsing.
 """
 
 from __future__ import annotations
@@ -43,9 +47,20 @@ def test_normalise_fn_already_normalised() -> None:
     assert normalise_fn("473888w") == "473888w"
 
 
+def test_normalise_fn_strips_space_before_suffix() -> None:
+    """API returns FNR with a space before the letter, e.g. '229831 m'."""
+    assert normalise_fn("229831 m") == "229831m"
+    assert normalise_fn("473888 W") == "473888w"
+
+
 def test_is_valid_fn_typical() -> None:
     assert is_valid_fn("473888w")
     assert is_valid_fn("366715m")
+
+
+def test_is_valid_fn_with_space_format() -> None:
+    """Space-separated form from API ('229831 m') should be valid after normalisation."""
+    assert is_valid_fn("229831 m")
 
 
 def test_is_valid_fn_rejects_digits_only() -> None:
@@ -62,34 +77,42 @@ def test_at_fb_ra_code() -> None:
 
 # ---------------------------------------------------------------------------
 # SOAP search response parser
+#
+# The real search response uses namespace-prefixed elements.  After namespace
+# stripping the parser looks for TREFFER elements with FNR attribute and
+# BEZEICHNUNG children.
 # ---------------------------------------------------------------------------
 
 _SEARCH_XML = """<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope">
-  <soapenv:Body>
-    <SUCHERESPONSE>
-      <FIRMA>
-        <FIRMA_ID>473888w</FIRMA_ID>
-        <FIRMENWORTLAUT>Muster GmbH</FIRMENWORTLAUT>
-        <FN>473888w</FN>
-        <STATUS>AKTIV</STATUS>
-        <RECHTSFORM>GmbH</RECHTSFORM>
-      </FIRMA>
-      <FIRMA>
-        <FIRMA_ID>366715m</FIRMA_ID>
-        <FIRMENWORTLAUT>Beispiel KG</FIRMENWORTLAUT>
-        <FN>366715m</FN>
-        <STATUS>AKTIV</STATUS>
-        <RECHTSFORM>KG</RECHTSFORM>
-      </FIRMA>
-    </SUCHERESPONSE>
-  </soapenv:Body>
-</soapenv:Envelope>"""
+<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
+  <env:Header/>
+  <env:Body>
+    <ns14:SUCHEFIRMARESPONSE
+        xmlns:ns14="ns://firmenbuch.justiz.gv.at/Abfrage/SucheFirmaResponse">
+      <ns14:TREFFERLISTE>
+        <ns14:TREFFER ns14:FNR="473888 w" ns14:AUFRECHT="true">
+          <ns14:BEZEICHNUNG>Muster GmbH</ns14:BEZEICHNUNG>
+          <ns14:RECHTSFORM>GmbH</ns14:RECHTSFORM>
+        </ns14:TREFFER>
+        <ns14:TREFFER ns14:FNR="366715 m" ns14:AUFRECHT="true">
+          <ns14:BEZEICHNUNG>Beispiel KG</ns14:BEZEICHNUNG>
+          <ns14:RECHTSFORM>KG</ns14:RECHTSFORM>
+        </ns14:TREFFER>
+      </ns14:TREFFERLISTE>
+    </ns14:SUCHEFIRMARESPONSE>
+  </env:Body>
+</env:Envelope>"""
 
 _SEARCH_XML_EMPTY = """<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope">
-  <soapenv:Body><SUCHERESPONSE /></soapenv:Body>
-</soapenv:Envelope>"""
+<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
+  <env:Header/>
+  <env:Body>
+    <ns14:SUCHEFIRMARESPONSE
+        xmlns:ns14="ns://firmenbuch.justiz.gv.at/Abfrage/SucheFirmaResponse">
+      <ns14:TREFFERLISTE/>
+    </ns14:SUCHEFIRMARESPONSE>
+  </env:Body>
+</env:Envelope>"""
 
 _SEARCH_XML_MALFORMED = "this is not XML"
 
@@ -104,11 +127,12 @@ def test_parse_search_response_first_hit_name() -> None:
     assert hits[0]["name"] == "Muster GmbH"
 
 
-def test_parse_search_response_firma_ids() -> None:
+def test_parse_search_response_fn_keys() -> None:
+    """Parser now returns 'fn', not 'firma_id'."""
     hits = _parse_search_response(_SEARCH_XML)
-    ids = [h["firma_id"] for h in hits]
-    assert "473888w" in ids
-    assert "366715m" in ids
+    fns = [h["fn"] for h in hits]
+    assert "473888w" in fns
+    assert "366715m" in fns
 
 
 def test_parse_search_response_empty_returns_empty_list() -> None:
@@ -121,133 +145,130 @@ def test_parse_search_response_malformed_returns_empty_list() -> None:
 
 # ---------------------------------------------------------------------------
 # SOAP extract response parser
+#
+# Real API format: AUSZUG_V2_RESPONSE with namespace-prefixed DKZ elements.
+#   FI_DKZ02  name (BEZEICHNUNG children)
+#   FI_DKZ03  address
+#   FI_DKZ06  registered capital (BETRAG child)
+#   FI_DKZ07  GmbH shareholders
+#   FI_DKZ08  Geschäftsführer (AUFRECHT=false → terminated, skip)
+#   FI_DKZ09  Prokuristen
+#   FI_DKZ12  Komplementäre (general partners, KG)
+#   FI_DKZ13  Kommanditisten (limited partners, KG)
+#
+# Note: founding_date and UID are not available in the Auszug response.
 # ---------------------------------------------------------------------------
 
+# GmbH with 2 active officers, 1 terminated officer, 2 shareholders.
+# Officers use Max+Anna; shareholders use Leopold+Brigitte (no overlap).
 _EXTRACT_XML_GMBH = """<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope">
-  <soapenv:Body>
-    <AUSZUGRESPONSE>
-      <FIRMENWORTLAUT>Muster GmbH</FIRMENWORTLAUT>
-      <FN>473888w</FN>
-      <UID>ATU12345678</UID>
-      <RECHTSFORM>GmbH</RECHTSFORM>
-      <STATUS>AKTIV</STATUS>
-      <GRUENDUNGSDATUM>15.03.1995</GRUENDUNGSDATUM>
-      <STAMMKAPITAL>35000</STAMMKAPITAL>
-      <GESCHAEFTSANSCHRIFT>
-        <STRASSE>Musterstraße</STRASSE>
-        <HAUSNUMMER>1</HAUSNUMMER>
-        <PLZ>1010</PLZ>
-        <ORT>Wien</ORT>
-      </GESCHAEFTSANSCHRIFT>
-      <FUN>
-        <FUNKTION_CODE>GF</FUNKTION_CODE>
-        <FUNKTION_TEXT>Geschäftsführer</FUNKTION_TEXT>
-        <EINTRITTSDATUM>01.01.2010</EINTRITTSDATUM>
-        <PERSON>
-          <VORNAME>Max</VORNAME>
-          <NACHNAME>Mustermann</NACHNAME>
-          <GEBURTSDATUM>15.06.1970</GEBURTSDATUM>
-        </PERSON>
-      </FUN>
-      <FUN>
-        <FUNKTION_CODE>PK</FUNKTION_CODE>
-        <FUNKTION_TEXT>Prokurist</FUNKTION_TEXT>
-        <EINTRITTSDATUM>01.06.2015</EINTRITTSDATUM>
-        <PERSON>
-          <VORNAME>Anna</VORNAME>
-          <NACHNAME>Musterfrau</NACHNAME>
-        </PERSON>
-      </FUN>
-      <FUN>
-        <FUNKTION_CODE>GF</FUNKTION_CODE>
-        <FUNKTION_TEXT>Geschäftsführer</FUNKTION_TEXT>
-        <EINTRITTSDATUM>01.01.2005</EINTRITTSDATUM>
-        <LOESCHDATUM>31.12.2020</LOESCHDATUM>
-        <PERSON>
-          <VORNAME>Former</VORNAME>
-          <NACHNAME>Director</NACHNAME>
-        </PERSON>
-      </FUN>
-      <GESELLSCHAFTER>
-        <PERSON>
-          <VORNAME>Max</VORNAME>
-          <NACHNAME>Mustermann</NACHNAME>
-          <GEBURTSDATUM>15.06.1970</GEBURTSDATUM>
-        </PERSON>
-        <STAMMEINLAGE>17500</STAMMEINLAGE>
-      </GESELLSCHAFTER>
-      <GESELLSCHAFTER>
-        <PERSON>
-          <VORNAME>Anna</VORNAME>
-          <NACHNAME>Musterfrau</NACHNAME>
-        </PERSON>
-        <STAMMEINLAGE>17500</STAMMEINLAGE>
-      </GESELLSCHAFTER>
-    </AUSZUGRESPONSE>
-  </soapenv:Body>
-</soapenv:Envelope>"""
+<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
+  <env:Header/>
+  <env:Body>
+    <ns6:AUSZUG_V2_RESPONSE
+        xmlns:ns6="ns://firmenbuch.justiz.gv.at/Abfrage/v2/AuszugResponse"
+        ns6:FNR="473888 w"
+        ns6:STICHTAG="2026-01-01"
+        ns6:UMFANG="Auszug">
+      <ns6:FIRMA>
+        <ns6:FI_DKZ02 ns6:AUFRECHT="true" ns6:VNR="001">
+          <ns6:BEZEICHNUNG>Muster GmbH</ns6:BEZEICHNUNG>
+        </ns6:FI_DKZ02>
+        <ns6:FI_DKZ03 ns6:AUFRECHT="true">
+          <ns6:STRASSE>Musterstraße</ns6:STRASSE>
+          <ns6:HAUSNUMMER>1</ns6:HAUSNUMMER>
+          <ns6:PLZ>1010</ns6:PLZ>
+          <ns6:ORT>Wien</ns6:ORT>
+        </ns6:FI_DKZ03>
+        <ns6:FI_DKZ06>
+          <ns6:BETRAG>35000</ns6:BETRAG>
+        </ns6:FI_DKZ06>
+        <ns6:FI_DKZ08 ns6:AUFRECHT="true">
+          <ns6:VORNAME>Max</ns6:VORNAME>
+          <ns6:NACHNAME>Mustermann</ns6:NACHNAME>
+          <ns6:GEBURTSDATUM>1970-06-15</ns6:GEBURTSDATUM>
+        </ns6:FI_DKZ08>
+        <ns6:FI_DKZ09 ns6:AUFRECHT="true">
+          <ns6:VORNAME>Anna</ns6:VORNAME>
+          <ns6:NACHNAME>Musterfrau</ns6:NACHNAME>
+        </ns6:FI_DKZ09>
+        <ns6:FI_DKZ08 ns6:AUFRECHT="false">
+          <ns6:VORNAME>Former</ns6:VORNAME>
+          <ns6:NACHNAME>Director</ns6:NACHNAME>
+        </ns6:FI_DKZ08>
+        <ns6:FI_DKZ07 ns6:AUFRECHT="true">
+          <ns6:VORNAME>Leopold</ns6:VORNAME>
+          <ns6:NACHNAME>Gesellschafter</ns6:NACHNAME>
+          <ns6:STAMMEINLAGE>17500</ns6:STAMMEINLAGE>
+        </ns6:FI_DKZ07>
+        <ns6:FI_DKZ07 ns6:AUFRECHT="true">
+          <ns6:VORNAME>Brigitte</ns6:VORNAME>
+          <ns6:NACHNAME>Gesellschafterin</ns6:NACHNAME>
+          <ns6:STAMMEINLAGE>17500</ns6:STAMMEINLAGE>
+        </ns6:FI_DKZ07>
+      </ns6:FIRMA>
+    </ns6:AUSZUG_V2_RESPONSE>
+  </env:Body>
+</env:Envelope>"""
 
+# GmbH with a single corporate shareholder linking to another Firmenbuch entry.
 _EXTRACT_XML_CORPORATE_SHAREHOLDER = """<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope">
-  <soapenv:Body>
-    <AUSZUGRESPONSE>
-      <FIRMENWORTLAUT>Holding GmbH</FIRMENWORTLAUT>
-      <FN>100000a</FN>
-      <RECHTSFORM>GmbH</RECHTSFORM>
-      <STATUS>AKTIV</STATUS>
-      <STAMMKAPITAL>100000</STAMMKAPITAL>
-      <FUN>
-        <FUNKTION_CODE>GF</FUNKTION_CODE>
-        <FUNKTION_TEXT>Geschäftsführer</FUNKTION_TEXT>
-        <PERSON>
-          <VORNAME>Hans</VORNAME>
-          <NACHNAME>Investor</NACHNAME>
-        </PERSON>
-      </FUN>
-      <GESELLSCHAFTER>
-        <GESELLSCHAFT>
-          <FIRMENWORTLAUT>Muttergesellschaft AG</FIRMENWORTLAUT>
-        </GESELLSCHAFT>
-        <FN>200000b</FN>
-        <STAMMEINLAGE>100000</STAMMEINLAGE>
-      </GESELLSCHAFTER>
-    </AUSZUGRESPONSE>
-  </soapenv:Body>
-</soapenv:Envelope>"""
+<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
+  <env:Header/>
+  <env:Body>
+    <ns6:AUSZUG_V2_RESPONSE
+        xmlns:ns6="ns://firmenbuch.justiz.gv.at/Abfrage/v2/AuszugResponse"
+        ns6:FNR="100000 a"
+        ns6:STICHTAG="2026-01-01"
+        ns6:UMFANG="Auszug">
+      <ns6:FIRMA>
+        <ns6:FI_DKZ02 ns6:AUFRECHT="true" ns6:VNR="001">
+          <ns6:BEZEICHNUNG>Holding GmbH</ns6:BEZEICHNUNG>
+        </ns6:FI_DKZ02>
+        <ns6:FI_DKZ06>
+          <ns6:BETRAG>100000</ns6:BETRAG>
+        </ns6:FI_DKZ06>
+        <ns6:FI_DKZ08 ns6:AUFRECHT="true">
+          <ns6:VORNAME>Hans</ns6:VORNAME>
+          <ns6:NACHNAME>Investor</ns6:NACHNAME>
+        </ns6:FI_DKZ08>
+        <ns6:FI_DKZ07 ns6:AUFRECHT="true" ns6:FNR="200000 b">
+          <ns6:BEZEICHNUNG>Muttergesellschaft AG</ns6:BEZEICHNUNG>
+          <ns6:STAMMEINLAGE>100000</ns6:STAMMEINLAGE>
+        </ns6:FI_DKZ07>
+      </ns6:FIRMA>
+    </ns6:AUSZUG_V2_RESPONSE>
+  </env:Body>
+</env:Envelope>"""
 
+# KG with a general partner (Komplementär, FI_DKZ12 → officer) and a limited
+# partner (Kommanditist, FI_DKZ13 → shareholder).
 _EXTRACT_XML_KG = """<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope">
-  <soapenv:Body>
-    <AUSZUGRESPONSE>
-      <FIRMENWORTLAUT>Muster KG</FIRMENWORTLAUT>
-      <FN>999999z</FN>
-      <RECHTSFORM>KG</RECHTSFORM>
-      <STATUS>AKTIV</STATUS>
-      <FUN>
-        <FUNKTION_CODE>GF</FUNKTION_CODE>
-        <FUNKTION_TEXT>Geschäftsführender Komplementär</FUNKTION_TEXT>
-        <PERSON>
-          <VORNAME>Klaus</VORNAME>
-          <NACHNAME>Komplementaer</NACHNAME>
-        </PERSON>
-      </FUN>
-      <KOMPLEMENTAER>
-        <PERSON>
-          <VORNAME>Klaus</VORNAME>
-          <NACHNAME>Komplementaer</NACHNAME>
-        </PERSON>
-      </KOMPLEMENTAER>
-      <KOMMANDITIST>
-        <PERSON>
-          <VORNAME>Maria</VORNAME>
-          <NACHNAME>Kommanditistin</NACHNAME>
-        </PERSON>
-        <EINLAGE>50000</EINLAGE>
-      </KOMMANDITIST>
-    </AUSZUGRESPONSE>
-  </soapenv:Body>
-</soapenv:Envelope>"""
+<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
+  <env:Header/>
+  <env:Body>
+    <ns6:AUSZUG_V2_RESPONSE
+        xmlns:ns6="ns://firmenbuch.justiz.gv.at/Abfrage/v2/AuszugResponse"
+        ns6:FNR="999999 z"
+        ns6:STICHTAG="2026-01-01"
+        ns6:UMFANG="Auszug">
+      <ns6:FIRMA>
+        <ns6:FI_DKZ02 ns6:AUFRECHT="true" ns6:VNR="001">
+          <ns6:BEZEICHNUNG>Muster KG</ns6:BEZEICHNUNG>
+        </ns6:FI_DKZ02>
+        <ns6:FI_DKZ12 ns6:AUFRECHT="true">
+          <ns6:VORNAME>Klaus</ns6:VORNAME>
+          <ns6:NACHNAME>Komplementaer</ns6:NACHNAME>
+        </ns6:FI_DKZ12>
+        <ns6:FI_DKZ13 ns6:AUFRECHT="true">
+          <ns6:VORNAME>Maria</ns6:VORNAME>
+          <ns6:NACHNAME>Kommanditistin</ns6:NACHNAME>
+          <ns6:EINLAGE>50000</ns6:EINLAGE>
+        </ns6:FI_DKZ13>
+      </ns6:FIRMA>
+    </ns6:AUSZUG_V2_RESPONSE>
+  </env:Body>
+</env:Envelope>"""
 
 
 def test_parse_extract_name() -> None:
@@ -260,15 +281,10 @@ def test_parse_extract_fn() -> None:
     assert ext["fn"] == "473888w"
 
 
-def test_parse_extract_uid() -> None:
+def test_parse_extract_founding_date_not_in_auszug() -> None:
+    """founding_date is not available in the Auszug response; parser returns None."""
     ext = _parse_extract_response(_EXTRACT_XML_GMBH)
-    assert ext["uid"] == "ATU12345678"
-
-
-def test_parse_extract_founding_date_raw() -> None:
-    ext = _parse_extract_response(_EXTRACT_XML_GMBH)
-    # Parser returns raw; date normalisation happens in the mapper
-    assert ext["founding_date"] == "15.03.1995"
+    assert ext["founding_date"] is None
 
 
 def test_parse_extract_stamm_kapital() -> None:
@@ -283,7 +299,7 @@ def test_parse_extract_address() -> None:
 
 
 def test_parse_extract_officers_count() -> None:
-    """Terminated officer (LOESCHDATUM set) should be excluded."""
+    """Terminated officer (AUFRECHT=false) should be excluded."""
     ext = _parse_extract_response(_EXTRACT_XML_GMBH)
     assert len(ext["officers"]) == 2
 
@@ -357,7 +373,7 @@ def test_map_firmenbuch_no_fn_returns_empty() -> None:
 
 
 def test_map_firmenbuch_statement_count_gmbh() -> None:
-    """GmbH with 2 officers + 2 shareholders → 1 entity + 4 person + 4 rel = 9."""
+    """GmbH with 2 officers + 2 shareholders (no overlap) → 1 entity + 4 person + 4 rel = 9."""
     stmts = list(map_firmenbuch(_bundle()))
     assert len(stmts) == 9
 
@@ -391,18 +407,6 @@ def test_map_firmenbuch_identifier_fn_value() -> None:
     assert fn_id == "473888w"
 
 
-def test_map_firmenbuch_identifier_uid() -> None:
-    stmts = list(map_firmenbuch(_bundle()))
-    schemes = {i["scheme"] for i in stmts[0]["recordDetails"]["identifiers"]}
-    assert "AT-UID" in schemes
-
-
-def test_map_firmenbuch_founding_date_normalised() -> None:
-    """15.03.1995 should be normalised to 1995-03-15."""
-    stmts = list(map_firmenbuch(_bundle()))
-    assert stmts[0]["recordDetails"]["foundingDate"] == "1995-03-15"
-
-
 def test_map_firmenbuch_address_present() -> None:
     stmts = list(map_firmenbuch(_bundle()))
     addrs = stmts[0]["recordDetails"].get("addresses") or []
@@ -418,7 +422,7 @@ def test_map_firmenbuch_address_present() -> None:
 def test_map_firmenbuch_officer_person_statements() -> None:
     stmts = list(map_firmenbuch(_bundle()))
     persons = [s for s in stmts if s["recordType"] == "person"]
-    assert len(persons) == 4  # 2 officers + 2 shareholders (no overlap in fixture)
+    assert len(persons) == 4  # 2 officers + 2 shareholders (different people)
 
 
 def test_map_firmenbuch_officer_relationship_statements() -> None:
@@ -440,7 +444,7 @@ def test_map_firmenbuch_officer_interest_type_gf() -> None:
 
 
 def test_map_firmenbuch_officer_not_beneficial_owner() -> None:
-    """Officers should have beneficialOwnershipOrControl=False."""
+    """All Firmenbuch relationships should have beneficialOwnershipOrControl=False."""
     stmts = list(map_firmenbuch(_bundle()))
     rels = [s for s in stmts if s["recordType"] == "relationship"]
     for rel in rels:

@@ -77,14 +77,21 @@ _NS_VERAEND_FIRMA = "ns://firmenbuch.justiz.gv.at/Abfrage/VeraenderungenFirmaReq
 def normalise_fn(fn: str) -> str:
     """Normalise a Firmenbuchnummer: strip whitespace, lowercase suffix letter.
 
+    The Firmenbuch API returns FNR with a space before the suffix letter
+    (e.g. ``"229831 m"``).  We collapse that to the canonical form without
+    space (``"229831m"``).
+
     Examples:
-        "473888 W" → "473888w"
+        "473888 W"  → "473888w"
+        "229831 m"  → "229831m"
         " FN 366715m " → "366715m"  (strips "FN " prefix if present)
     """
     cleaned = fn.strip()
     # Remove optional "FN " prefix (common in Austrian documents)
     if cleaned.upper().startswith("FN "):
         cleaned = cleaned[3:].strip()
+    # Collapse space between digits and trailing letter (API format: "12345 a")
+    cleaned = re.sub(r"(\d+)\s+([a-zA-Z])$", r"\1\2", cleaned)
     return cleaned.lower()
 
 
@@ -147,9 +154,8 @@ def _extract_request_xml(fn: str) -> str:
 
     ``fn`` is passed directly as ``<aus:FNR>`` — the v2 operation accepts the
     FN (e.g. "659195f") directly, no internal FIRMA_ID resolution needed.
-    ``UMFANG=Kurzinformation`` is the only documented value in the reference
-    Postman collection; update once we know the enum for a full extract.
-    ``STICHTAG`` is omitted — it is optional and the default is current date.
+    ``UMFANG=Auszug`` requests the full current extract including officers and
+    shareholders.  ``STICHTAG`` (today's date) is required by the API.
     """
     esc = _xml_escape(fn)
     today = datetime.date.today().isoformat()  # YYYY-MM-DD, required by the API
@@ -159,7 +165,7 @@ def _extract_request_xml(fn: str) -> str:
         f"<aus:AUSZUG_V2_REQUEST>"
         f"<aus:FNR>{esc}</aus:FNR>"
         f"<aus:STICHTAG>{today}</aus:STICHTAG>"
-        f"<aus:UMFANG>Kurzinformation</aus:UMFANG>"
+        f"<aus:UMFANG>Auszug</aus:UMFANG>"
         f"</aus:AUSZUG_V2_REQUEST>",
     )
 
@@ -191,194 +197,270 @@ def _xml_escape(s: str) -> str:
 # SOAP response parsers
 # ---------------------------------------------------------------------------
 
+def _strip_namespaces(xml_text: str) -> str:
+    """Remove XML namespace prefixes and declarations so ElementTree can use
+    simple local-name paths.
+
+    The Firmenbuch API response prefixes every element and attribute with a
+    namespace (e.g. ``ns6:FIRMA``, ``ns6:FNR="..."``) and embeds 19 namespace
+    declarations on the root element.  Stripping them lets the rest of the
+    parser use plain ``find``/``iter`` calls.
+    """
+    import re as _re
+    # Remove xmlns:prefix="uri" declarations
+    text = _re.sub(r'\s+xmlns(?::\w+)?="[^"]*"', "", xml_text)
+    # Remove namespace prefix from element names: <ns6:FOO → <FOO, </ns6:FOO → </FOO
+    text = _re.sub(r"<(/?)\w+:(\w)", r"<\1\2", text)
+    # Remove namespace prefix from attribute names: ns6:FOO= → FOO=
+    text = _re.sub(r"\s\w+:(\w+=)", r" \1", text)
+    return text
+
+
 def _parse_search_response(xml_text: str) -> list[dict[str, Any]]:
-    """Parse a SUCHEFIRMAREQUEST response into a list of hit dicts."""
+    """Parse a SUCHEFIRMAREQUEST response into a list of hit dicts.
+
+    The search response wraps results in TREFFERLISTE/TREFFER elements, each
+    carrying FNR, BEZEICHNUNG (name parts), RECHTSFORM, STATUS, and GERICHT.
+    """
     try:
-        root = ET.fromstring(xml_text)
+        root = ET.fromstring(_strip_namespaces(xml_text))
     except ET.ParseError:
         return []
 
     hits: list[dict[str, Any]] = []
-    # The response contains FIRMA elements with FIRMA_ID, FIRMENWORTLAUT, FN, STATUS
-    for firma in root.iter("FIRMA"):
-        firma_id = _text(firma, "FIRMA_ID")
-        name = _text(firma, "FIRMENWORTLAUT")
-        fn = _text(firma, "FN")
-        status = _text(firma, "STATUS")
-        rechtsform = _text(firma, "RECHTSFORM")
-        if firma_id and name:
+    for treffer in root.iter("TREFFER"):
+        fn = (treffer.get("FNR") or _text(treffer, "FNR") or "").strip()
+        # Name may span multiple BEZEICHNUNG children — join them
+        bezeichnungen = [b.text.strip() for b in treffer.iter("BEZEICHNUNG") if b.text]
+        name = " ".join(bezeichnungen).strip()
+        rechtsform = _text(treffer, "RECHTSFORM") or treffer.get("RECHTSFORM") or ""
+        status_raw = treffer.get("AUFRECHT") or _text(treffer, "STATUS") or ""
+        status = "aktiv" if status_raw.lower() == "true" else (status_raw or "")
+        if fn or name:
             hits.append({
-                "firma_id": firma_id,
+                "fn": normalise_fn(fn) if fn else "",
                 "name": name,
-                "fn": fn,
-                "status": status,
                 "rechtsform": rechtsform,
+                "status": status,
             })
     return hits
 
 
 def _parse_extract_response(xml_text: str) -> dict[str, Any]:
-    """Parse an AUSZUGREQUEST response into a structured dict.
+    """Parse an AUSZUG_V2_RESPONSE into a structured dict.
 
-    Returns a dict with keys:
-      name, fn, uid, rechtsform, status, address, founding_date,
-      officers (list), shareholders (list), stamm_kapital
+    The response uses DKZ (Datenkennzeichen) codes to identify sections:
+      FI_DKZ02 — company name (one or more BEZEICHNUNG children, join them)
+      FI_DKZ03 — business address (STRASSE, HAUSNUMMER, PLZ, ORT)
+      FI_DKZ06 — registered capital / Stammkapital (BETRAG attribute or child)
+      FI_DKZ07 — GmbH shareholders / Gesellschafter
+      FI_DKZ08 — managing directors / Geschäftsführer
+      FI_DKZ09 — authorised signatories / Prokuristen
+      FI_DKZ10 — supervisory board / Aufsichtsrat
+      FI_DKZ12 — general partners / Komplementäre (KG)
+      FI_DKZ13 — limited partners / Kommanditisten (KG)
+      FI_DKZ14 — board members / Vorstand (AG/SE)
+      FI_DKZ16 — liquidators / Liquidatoren
+
+    The FN and status are read from attributes on the AUSZUG_V2_RESPONSE
+    element itself: FNR="229831 m", and from FI_DKZ02 AUFRECHT="true".
     """
     try:
-        root = ET.fromstring(xml_text)
+        root = ET.fromstring(_strip_namespaces(xml_text))
     except ET.ParseError:
         return {}
 
-    # Top-level entity fields
-    name = _text(root, ".//FIRMENWORTLAUT")
-    fn = _text(root, ".//FN")
-    uid = _text(root, ".//UID")
-    rechtsform = _text(root, ".//RECHTSFORM")
-    status = _text(root, ".//STATUS")
-    founding_date = _text(root, ".//GRUENDUNGSDATUM") or _text(root, ".//EINTRAGEDATUM")
+    # The response element sits inside Envelope/Body
+    resp_el = root.find(".//AUSZUG_V2_RESPONSE") or root
+    fn_raw = (resp_el.get("FNR") or "").strip()
+    fn = normalise_fn(fn_raw) if fn_raw else ""
 
-    # Address — prefer Geschäftsanschrift (business address)
-    address = _parse_address(root)
+    firma_el = resp_el.find(".//FIRMA") or resp_el
 
-    # Stammkapital (registered capital) — for GmbH, used to compute share %
-    stamm_kapital_str = _text(root, ".//STAMMKAPITAL") or ""
-    try:
-        stamm_kapital = float(stamm_kapital_str.replace(",", ".")) if stamm_kapital_str else None
-    except ValueError:
-        stamm_kapital = None
+    # ── Name ──────────────────────────────────────────────────────────────
+    # FI_DKZ02: one entry per active name variant; join BEZEICHNUNG children.
+    name_parts: list[str] = []
+    for dkz02 in firma_el.iter("FI_DKZ02"):
+        if dkz02.get("AUFRECHT", "true").lower() == "false":
+            continue
+        parts = [b.text.strip() for b in dkz02.iter("BEZEICHNUNG") if b.text]
+        if parts:
+            name_parts = parts  # take the last / most recent active block
+    name = " ".join(name_parts).strip()
 
-    # Officers — FUN elements
-    officers = _parse_officers(root)
+    # Status from the first FI_DKZ02 AUFRECHT attribute
+    first_dkz02 = firma_el.find(".//FI_DKZ02")
+    is_active = (first_dkz02 is not None and
+                 first_dkz02.get("AUFRECHT", "true").lower() != "false")
+    status = "aktiv" if is_active else "gelöscht"
 
-    # Shareholders — GESELLSCHAFTER or KOMMANDITISTEN / KOMPLEMENTAERE elements
-    shareholders = _parse_shareholders(root)
+    # ── Address (FI_DKZ03) ────────────────────────────────────────────────
+    address = _parse_address(firma_el)
+
+    # ── Registered capital (FI_DKZ06) ─────────────────────────────────────
+    stamm_kapital: float | None = None
+    dkz06 = firma_el.find(".//FI_DKZ06")
+    if dkz06 is not None:
+        raw_cap = (dkz06.get("BETRAG") or _text(dkz06, "BETRAG") or
+                   _text(dkz06, "STAMMKAPITAL") or "").replace(",", ".")
+        try:
+            stamm_kapital = float(raw_cap) if raw_cap else None
+        except ValueError:
+            pass
+
+    # ── Officers and shareholders ──────────────────────────────────────────
+    officers = _parse_officers(firma_el)
+    shareholders = _parse_shareholders(firma_el, stamm_kapital)
 
     return {
         "name": name,
         "fn": fn,
-        "uid": uid,
-        "rechtsform": rechtsform,
+        "uid": _text(firma_el, ".//UID"),
+        "rechtsform": "",  # encoded in name suffix for Austrian entities
         "status": status,
         "address": address,
-        "founding_date": founding_date,
+        "founding_date": None,  # not in Auszug response; available via Vollzug
         "stamm_kapital": stamm_kapital,
         "officers": officers,
         "shareholders": shareholders,
     }
 
 
-def _parse_address(root: ET.Element) -> str:
-    """Extract a formatted address string from the XML tree."""
-    # Try GESCHAEFTSANSCHRIFT first, then SITZ
-    for tag in ("GESCHAEFTSANSCHRIFT", "SITZ", "ANSCHRIFT"):
-        addr_el = root.find(f".//{tag}")
-        if addr_el is not None:
-            parts = [
-                _text(addr_el, "STRASSE"),
-                _text(addr_el, "HAUSNUMMER"),
-                _text(addr_el, "STIEGE"),
-                _text(addr_el, "ORT"),
-                _text(addr_el, "PLZ"),
-            ]
-            non_empty = [p for p in parts if p]
-            if non_empty:
-                return " ".join(non_empty)
+def _parse_address(firma_el: ET.Element) -> str:
+    """Extract a formatted address string from a FIRMA element.
+
+    Prefers FI_DKZ03 (Geschäftsanschrift / business address); falls back
+    to FI_DKZ04 (Sitz / registered office).
+    """
+    for tag in ("FI_DKZ03", "FI_DKZ04"):
+        addr_el = firma_el.find(f".//{tag}")
+        if addr_el is None:
+            continue
+        parts = [
+            _text(addr_el, "STRASSE"),
+            _text(addr_el, "HAUSNUMMER"),
+            _text(addr_el, "STIEGE"),
+            _text(addr_el, "PLZ"),
+            _text(addr_el, "ORT"),
+        ]
+        non_empty = [p for p in parts if p]
+        if non_empty:
+            return " ".join(non_empty)
     return ""
 
 
-def _parse_officers(root: ET.Element) -> list[dict[str, Any]]:
-    """Extract officer records (FUN = Funktion elements)."""
+def _parse_person(el: ET.Element) -> tuple[str, str, str, str]:
+    """Extract (given_name, family_name, full_name, dob) from a DKZ element.
+
+    Firmenbuch person records store names in VORNAME / NACHNAME children.
+    The date of birth (Geburtsdatum) appears as GEBURTSDATUM.
+    """
+    given = _text(el, "VORNAME") or ""
+    family = _text(el, "NACHNAME") or _text(el, "NAME") or ""
+    full = " ".join(filter(None, [given, family])).strip()
+    dob = _text(el, "GEBURTSDATUM") or el.get("GEBURTSDATUM") or ""
+    return given, family, full, dob
+
+
+def _parse_officers(firma_el: ET.Element) -> list[dict[str, Any]]:
+    """Extract officer records from DKZ sections.
+
+    DKZ → role mapping:
+      FI_DKZ08  Geschäftsführer / managing directors
+      FI_DKZ09  Prokuristen / authorised signatories
+      FI_DKZ10  Aufsichtsrat / supervisory board
+      FI_DKZ12  Komplementäre / general partners (KG)
+      FI_DKZ14  Vorstand / management board (AG/SE)
+      FI_DKZ16  Liquidatoren / liquidators
+
+    Each section may contain one or more person blocks.  Terminated entries
+    have ``AUFRECHT="false"`` and are skipped.
+    """
+    _DKZ_ROLES: dict[str, tuple[str, str]] = {
+        "FI_DKZ08": ("GF",    "Geschäftsführer"),
+        "FI_DKZ09": ("PK",    "Prokurist"),
+        "FI_DKZ10": ("AR",    "Aufsichtsratsmitglied"),
+        "FI_DKZ12": ("KOMPL", "Komplementär"),
+        "FI_DKZ14": ("VW",    "Vorstandsmitglied"),
+        "FI_DKZ16": ("LI",    "Liquidator"),
+    }
     officers: list[dict[str, Any]] = []
-    for fun in root.iter("FUN"):
-        role_code = _text(fun, "FUNKTION_CODE") or _text(fun, "FUNKTION")
-        role_name = _text(fun, "FUNKTION_TEXT") or role_code or ""
-        start_date = _text(fun, "EINTRITTSDATUM") or _text(fun, "EINTRAGUNGSDATUM")
-        end_date = _text(fun, "AUSTRITTSDATUM") or _text(fun, "LOESCHDATUM")
-
-        # Skip terminated roles
-        if end_date:
-            continue
-
-        # Person details — may be under PERSON or directly on FUN
-        person_el = fun.find("PERSON") or fun
-        given_name = _text(person_el, "VORNAME") or ""
-        family_name = _text(person_el, "NACHNAME") or _text(person_el, "NAME") or ""
-        full_name = " ".join(filter(None, [given_name, family_name])).strip()
-        dob = _text(person_el, "GEBURTSDATUM")
-
-        if not full_name:
-            continue
-
-        officers.append({
-            "full_name": full_name,
-            "given_name": given_name,
-            "family_name": family_name,
-            "role_code": role_code or "",
-            "role_name": role_name,
-            "start_date": start_date,
-            "dob": dob,
-        })
+    for dkz_tag, (role_code, role_name) in _DKZ_ROLES.items():
+        for dkz_el in firma_el.iter(dkz_tag):
+            if dkz_el.get("AUFRECHT", "true").lower() == "false":
+                continue
+            given, family, full, dob = _parse_person(dkz_el)
+            if not full:
+                continue
+            officers.append({
+                "full_name": full,
+                "given_name": given,
+                "family_name": family,
+                "role_code": role_code,
+                "role_name": role_name,
+                "start_date": dkz_el.get("EINTRAGUNGSDATUM") or dkz_el.get("EINTRITTSDATUM") or "",
+                "dob": dob,
+            })
     return officers
 
 
-def _parse_shareholders(root: ET.Element) -> list[dict[str, Any]]:
-    """Extract shareholder/partner records.
+def _parse_shareholders(
+    firma_el: ET.Element,
+    stamm_kapital: float | None,
+) -> list[dict[str, Any]]:
+    """Extract shareholder / partner records.
 
-    Covers:
-      - GESELLSCHAFTER (GmbH shareholders)
-      - KOMMANDITISTEN (KG limited partners)
-      - KOMPLEMENTAERE (KG general partners)
+    DKZ → role mapping:
+      FI_DKZ07  GmbH Gesellschafter / shareholders
+      FI_DKZ13  KG Kommanditisten / limited partners
+
+    Share percentage is computed from STAMMEINLAGE / stamm_kapital when both
+    are available.  Corporate shareholders may carry a FNR attribute that
+    links to another Firmenbuch entry.
     """
     shareholders: list[dict[str, Any]] = []
 
-    def _extract(tag: str, kind: str) -> None:
-        for el in root.iter(tag):
-            end_date = _text(el, "AUSTRITTSDATUM") or _text(el, "LOESCHDATUM")
-            if end_date:
+    def _extract(dkz_tag: str, kind: str) -> None:
+        for dkz_el in firma_el.iter(dkz_tag):
+            if dkz_el.get("AUFRECHT", "true").lower() == "false":
                 continue
-
-            person_el = el.find("PERSON") or el
-            entity_el = el.find("GESELLSCHAFT") or el.find("FIRMA")
-
-            # Determine if shareholder is a person or entity
-            given_name = _text(person_el, "VORNAME") or ""
-            family_name = _text(person_el, "NACHNAME") or _text(person_el, "NAME") or ""
-            company_name = (
-                _text(entity_el, "FIRMENWORTLAUT") or _text(el, "FIRMENWORTLAUT")
-                if entity_el is not None else ""
-            ) or ""
-
-            full_name = " ".join(filter(None, [given_name, family_name])).strip()
-            is_person = bool(full_name)
-            display_name = full_name if is_person else company_name
-
-            if not display_name:
+            given, family, full, dob = _parse_person(dkz_el)
+            # Corporate shareholder: name in BEZEICHNUNG children
+            if not full:
+                bez = [b.text.strip() for b in dkz_el.iter("BEZEICHNUNG") if b.text]
+                full = " ".join(bez).strip()
+            if not full:
                 continue
+            is_person = bool(given or family)
 
-            # Capital contribution → use to compute share %
-            einlage_str = _text(el, "STAMMEINLAGE") or _text(el, "EINLAGE") or ""
+            einlage_raw = (_text(dkz_el, "STAMMEINLAGE") or _text(dkz_el, "EINLAGE") or
+                           dkz_el.get("STAMMEINLAGE") or "").replace(",", ".")
             try:
-                einlage = float(einlage_str.replace(",", ".")) if einlage_str else None
+                einlage: float | None = float(einlage_raw) if einlage_raw else None
             except ValueError:
                 einlage = None
 
-            dob = _text(person_el, "GEBURTSDATUM") if is_person else None
-            fn_shareholder = _text(el, "FN") or ""  # If the shareholder is a registered entity
+            pct: float | None = None
+            if einlage is not None and stamm_kapital:
+                try:
+                    pct = round(einlage / stamm_kapital * 100, 4)
+                except ZeroDivisionError:
+                    pass
 
             shareholders.append({
-                "display_name": display_name,
+                "display_name": full,
                 "is_person": is_person,
-                "given_name": given_name,
-                "family_name": family_name,
-                "dob": dob,
+                "given_name": given,
+                "family_name": family,
+                "dob": dob if is_person else None,
                 "einlage": einlage,
-                "fn": fn_shareholder,
+                "share_pct": pct,
+                "fn": dkz_el.get("FNR") or "",
                 "kind": kind,
             })
 
-    _extract("GESELLSCHAFTER", "gesellschafter")
-    _extract("KOMMANDITIST", "kommanditist")
-    _extract("KOMPLEMENTAER", "komplementaer")
+    _extract("FI_DKZ07", "gesellschafter")
+    _extract("FI_DKZ13", "kommanditist")
     return shareholders
 
 
@@ -500,7 +582,7 @@ class FirmenbuchAdapter(SourceAdapter):
             return []
 
         hits_raw = _parse_search_response(xml_response)
-        return [self._entity_hit(h) for h in hits_raw if h.get("firma_id")]
+        return [self._entity_hit(h) for h in hits_raw if h.get("fn")]
 
     # ------------------------------------------------------------------
     # Fetch
@@ -603,10 +685,6 @@ class FirmenbuchAdapter(SourceAdapter):
             )
             return None
 
-        import logging as _logging
-        _logging.getLogger(__name__).warning(
-            "Firmenbuch raw response (cache_key=%s): %.2000s", cache_key, xml_text
-        )
         self._cache.put(cache_key, xml_text)
         return xml_text
 
