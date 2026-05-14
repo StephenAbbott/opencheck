@@ -195,6 +195,40 @@ def _iter_source(path: Path) -> Iterator[dict]:
 
 
 # ------------------------------------------------------------------
+# Date filtering
+# ------------------------------------------------------------------
+
+_YEAR_RE = re.compile(r"^(\d{4})")
+
+
+def _tender_year(tender: dict) -> int | None:
+    """Return the best available year for a tender, or None if undated.
+
+    Checks (in order):
+      1. awardDecisionDate at tender level
+      2. awardDecisionDate on any lot
+      3. publicationDate at tender level
+
+    Returns None when no date can be found — callers treat None as
+    "include" so undated records are never silently dropped.
+    """
+    for date_str in [
+        tender.get("awardDecisionDate"),
+        *(
+            lot.get("awardDecisionDate")
+            for lot in (tender.get("lots") or [])
+            if lot.get("awardDecisionDate")
+        ),
+        tender.get("publicationDate"),
+    ]:
+        if date_str:
+            m = _YEAR_RE.match(str(date_str))
+            if m:
+                return int(m.group(1))
+    return None
+
+
+# ------------------------------------------------------------------
 # Insertion helpers
 # ------------------------------------------------------------------
 
@@ -232,12 +266,20 @@ def _insert_tender(
     cur: sqlite3.Cursor,
     tender: dict,
     *,
+    from_year: int | None = None,
     dry_run: bool = False,
 ) -> bool:
     """Insert one tender into all tables. Returns True if inserted/updated."""
     persistent_id = (tender.get("persistentId") or tender.get("id") or "").strip()
     if not persistent_id:
         return False
+
+    # Date filter: skip tenders whose year is known and before from_year.
+    # Undated tenders (year=None) are always included.
+    if from_year is not None:
+        year = _tender_year(tender)
+        if year is not None and year < from_year:
+            return False
 
     country_raw = (tender.get("country") or "").upper()
     country = _norm_country(country_raw)
@@ -306,6 +348,7 @@ def build(
     inputs: list[Path],
     output: Path | str,
     *,
+    from_year: int | None = None,
     dry_run: bool = False,
     batch_size: int = 500,
 ) -> int:
@@ -330,7 +373,7 @@ def build(
 
         for tender in _iter_source(path):
             try:
-                inserted = _insert_tender(cur, tender, dry_run=dry_run)
+                inserted = _insert_tender(cur, tender, from_year=from_year, dry_run=dry_run)
                 if inserted:
                     total += 1
                     batch_count += 1
@@ -381,6 +424,17 @@ def main() -> None:
         help="Output SQLite path (default: opentender.db).",
     )
     parser.add_argument(
+        "--from-year",
+        type=int,
+        default=2024,
+        metavar="YEAR",
+        help=(
+            "Only include tenders with an award or publication date >= YEAR "
+            "(default: 2024). Undated tenders are always included. "
+            "Pass 0 to disable the filter and include all years."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Parse inputs and count records without writing to the database.",
@@ -412,9 +466,16 @@ def main() -> None:
             logger.error("Input file not found: %s", p)
         sys.exit(1)
 
+    from_year = args.from_year if args.from_year > 0 else None
+    if from_year:
+        logger.info("Date filter: including tenders from %d onwards.", from_year)
+    else:
+        logger.info("Date filter: disabled — including all years.")
+
     total = build(
         inputs,
         output=args.output,
+        from_year=from_year,
         dry_run=args.dry_run,
         batch_size=args.batch_size,
     )
