@@ -202,30 +202,45 @@ _YEAR_RE = re.compile(r"^(\d{4})")
 
 
 def _tender_year(tender: dict) -> int | None:
-    """Return the best available year for a tender, or None if undated.
+    """Return the most recent year found across all date fields, or None if undated.
 
-    Checks (in order):
-      1. awardDecisionDate at tender level
-      2. awardDecisionDate on any lot
-      3. publicationDate at tender level
+    We take the LATEST year across every date field so that a tender is only
+    excluded when ALL of its dates pre-date from_year. Using the latest year
+    also means a re-published or re-awarded tender isn't accidentally dropped.
+
+    Fields checked (DIGIWHIST PPDS):
+      - awardDecisionDate          (tender level)
+      - contractSignatureDate      (tender level)
+      - publicationDate            (tender level — not always populated)
+      - publications[].publicationDate  (per-notice date, most reliably present)
+      - lots[].awardDecisionDate
+      - lots[].contractSignatureDate
 
     Returns None when no date can be found — callers treat None as
     "include" so undated records are never silently dropped.
     """
-    for date_str in [
-        tender.get("awardDecisionDate"),
-        *(
-            lot.get("awardDecisionDate")
-            for lot in (tender.get("lots") or [])
-            if lot.get("awardDecisionDate")
-        ),
-        tender.get("publicationDate"),
-    ]:
+    candidate_years: list[int] = []
+
+    def _extract(date_str: object) -> None:
         if date_str:
             m = _YEAR_RE.match(str(date_str))
             if m:
-                return int(m.group(1))
-    return None
+                candidate_years.append(int(m.group(1)))
+
+    _extract(tender.get("awardDecisionDate"))
+    _extract(tender.get("contractSignatureDate"))
+    _extract(tender.get("publicationDate"))
+
+    for pub in tender.get("publications") or []:
+        if isinstance(pub, dict):
+            _extract(pub.get("publicationDate"))
+
+    for lot in tender.get("lots") or []:
+        if isinstance(lot, dict):
+            _extract(lot.get("awardDecisionDate"))
+            _extract(lot.get("contractSignatureDate"))
+
+    return max(candidate_years) if candidate_years else None
 
 
 # ------------------------------------------------------------------
