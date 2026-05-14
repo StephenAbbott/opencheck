@@ -43,6 +43,7 @@ Open-source reference implementation:
 
 from __future__ import annotations
 
+import datetime
 import re
 import xml.etree.ElementTree as ET
 from typing import Any
@@ -57,8 +58,7 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 # Constants
 # ---------------------------------------------------------------------------
 
-_SOAP_ENDPOINT = "https://justizonline.gv.at/jop/api/at.gv.justiz.fbw/ws/fbw"
-_WSDL_URL = "https://justizonline.gv.at/jop/api/at.gv.justiz.fbw/ws/fbw.wsdl"
+_SOAP_ENDPOINT = "https://justizonline.gv.at/jop/api/at.gv.justiz.fbw/ws"
 _CACHE_NS = "firmenbuch"
 
 # GLEIF Registration Authority code for the Austrian Firmenbuch.
@@ -67,9 +67,11 @@ AT_FB_RA_CODE: str = "RA000017"
 # Firmenbuchnummer format: digits followed by a letter (e.g. "473888w", "366715m").
 _FN_RE = re.compile(r"^\d+[a-z]$", re.IGNORECASE)
 
-# SOAP 1.2 namespace
+# SOAP 1.2 envelope namespace + per-operation namespaces (from Postman reference collection).
 _SOAP_NS = "http://www.w3.org/2003/05/soap-envelope"
-_FBW_NS = "http://at.gv.justiz.fbw.webservice/"
+_NS_SUCHE_FIRMA = "ns://firmenbuch.justiz.gv.at/Abfrage/SucheFirmaRequest"
+_NS_AUSZUG = "ns://firmenbuch.justiz.gv.at/Abfrage/v2/AuszugRequest"
+_NS_VERAEND_FIRMA = "ns://firmenbuch.justiz.gv.at/Abfrage/VeraenderungenFirmaRequest"
 
 
 def normalise_fn(fn: str) -> str:
@@ -100,12 +102,17 @@ def _company_url(fn: str) -> str:
 # SOAP request builders
 # ---------------------------------------------------------------------------
 
-def _soap_envelope(body_xml: str) -> str:
-    """Wrap *body_xml* in a SOAP 1.2 envelope."""
+def _soap_envelope(ns_prefix: str, ns_uri: str, body_xml: str) -> str:
+    """Wrap *body_xml* in a SOAP 1.2 envelope with a per-operation namespace.
+
+    The Firmenbuch API requires a ``<soap:Header/>`` element and a blank
+    ``SOAPAction`` header (``""``).  Each operation has its own namespace URI.
+    """
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'
         f'<soap:Envelope xmlns:soap="{_SOAP_NS}" '
-        f'xmlns:fbw="{_FBW_NS}">'
+        f'xmlns:{ns_prefix}="{ns_uri}">'
+        "<soap:Header/>"
         "<soap:Body>"
         f"{body_xml}"
         "</soap:Body>"
@@ -114,35 +121,57 @@ def _soap_envelope(body_xml: str) -> str:
 
 
 def _search_request_xml(query: str) -> str:
-    """Build a SUCHEFIRMAREQUEST SOAP body for a name query."""
+    """Build a SUCHEFIRMAREQUEST SOAP body for a name search.
+
+    Uses the correct namespace and field structure from the reference Postman
+    collection (Lukhers-dev/firmenbuch-HVD).
+    """
     esc = _xml_escape(query)
     return _soap_envelope(
-        f"<fbw:SUCHEFIRMAREQUEST>"
-        f"<fbw:SUCHBEGRIFF>{esc}</fbw:SUCHBEGRIFF>"
-        f"<fbw:SUCHE_NACH>NAME</fbw:SUCHE_NACH>"
-        f"<fbw:ERGEBNIS_ANZAHL>10</fbw:ERGEBNIS_ANZAHL>"
-        f"</fbw:SUCHEFIRMAREQUEST>"
+        "suc",
+        _NS_SUCHE_FIRMA,
+        f"<suc:SUCHEFIRMAREQUEST>"
+        f"<suc:FIRMENWORTLAUT>{esc}</suc:FIRMENWORTLAUT>"
+        f"<suc:EXAKTESUCHE>false</suc:EXAKTESUCHE>"
+        f"<suc:SUCHBEREICH>1</suc:SUCHBEREICH>"
+        f"<suc:GERICHT></suc:GERICHT>"
+        f"<suc:RECHTSFORM></suc:RECHTSFORM>"
+        f"<suc:RECHTSEIGENSCHAFT></suc:RECHTSEIGENSCHAFT>"
+        f"<suc:ORTNR></suc:ORTNR>"
+        f"</suc:SUCHEFIRMAREQUEST>",
     )
 
 
-def _extract_request_xml(firma_id: str, variante: str = "VOLLZUG") -> str:
-    """Build an AUSZUGREQUEST SOAP body for a FIRMA_ID."""
-    esc = _xml_escape(firma_id)
+def _extract_request_xml(fn: str) -> str:
+    """Build an AUSZUG_V2_REQUEST SOAP body for a Firmenbuchnummer.
+
+    ``fn`` is passed directly as ``<aus:FNR>`` — the v2 operation accepts the
+    FN (e.g. "659195f") directly, no internal FIRMA_ID resolution needed.
+    ``UMFANG=Vollinhalt`` requests the full extract (officers + shareholders).
+    ``STICHTAG`` is today's date so we always get the current register state.
+    """
+    esc = _xml_escape(fn)
+    today = datetime.date.today().isoformat()
     return _soap_envelope(
-        f"<fbw:AUSZUGREQUEST>"
-        f"<fbw:FIRMA_ID>{esc}</fbw:FIRMA_ID>"
-        f"<fbw:VARIANTE>{variante}</fbw:VARIANTE>"
-        f"</fbw:AUSZUGREQUEST>"
+        "aus",
+        _NS_AUSZUG,
+        f"<aus:AUSZUG_V2_REQUEST>"
+        f"<aus:FNR>{esc}</aus:FNR>"
+        f"<aus:STICHTAG>{today}</aus:STICHTAG>"
+        f"<aus:UMFANG>Vollinhalt</aus:UMFANG>"
+        f"</aus:AUSZUG_V2_REQUEST>",
     )
 
 
-def _changes_request_xml(firma_id: str) -> str:
-    """Build a VERAENDERUNGENFIRMAREQUEST SOAP body."""
-    esc = _xml_escape(firma_id)
+def _changes_request_xml(von: str, bis: str) -> str:
+    """Build a VERAENDERUNGENFIRMAREQUEST SOAP body for a date range."""
     return _soap_envelope(
-        f"<fbw:VERAENDERUNGENFIRMAREQUEST>"
-        f"<fbw:FIRMA_ID>{esc}</fbw:FIRMA_ID>"
-        f"</fbw:VERAENDERUNGENFIRMAREQUEST>"
+        "ver",
+        _NS_VERAEND_FIRMA,
+        f"<ver:VERAENDERUNGENFIRMAREQUEST>"
+        f"<ver:VON>{_xml_escape(von)}</ver:VON>"
+        f"<ver:BIS>{_xml_escape(bis)}</ver:BIS>"
+        f"</ver:VERAENDERUNGENFIRMAREQUEST>",
     )
 
 
@@ -465,7 +494,6 @@ class FirmenbuchAdapter(SourceAdapter):
         xml_response = await self._soap_call(
             _search_request_xml(query),
             cache_key=cache_key,
-            action="SUCHEFIRMAREQUEST",
         )
         if not xml_response:
             return []
@@ -502,11 +530,9 @@ class FirmenbuchAdapter(SourceAdapter):
                 "is_stub": True,
             }
 
-        # The SOAP API accepts the FN directly as the FIRMA_ID.
         xml_response = await self._soap_call(
             _extract_request_xml(fn),
             cache_key=cache_key,
-            action="AUSZUGREQUEST",
         )
         if not xml_response:
             return {
@@ -539,11 +565,13 @@ class FirmenbuchAdapter(SourceAdapter):
         body: str,
         *,
         cache_key: str,
-        action: str,
     ) -> str | None:
         """Send a SOAP 1.2 request and return the raw XML response string.
 
         Results are cached by *cache_key*. Returns None on error.
+
+        The Firmenbuch API uses a blank SOAPAction (``""``), not the operation
+        name. The ``X-Api-Key`` header carries the HVD API key.
         """
         cached = self._cache.get_payload(cache_key)
         if cached is not None:
@@ -558,9 +586,9 @@ class FirmenbuchAdapter(SourceAdapter):
                     _SOAP_ENDPOINT,
                     content=body.encode("utf-8"),
                     headers={
-                        "Content-Type": "application/soap+xml; charset=utf-8",
-                        "X-API-KEY": api_key,
-                        "SOAPAction": action,
+                        "Content-Type": "application/soap+xml;charset=UTF-8",
+                        "SOAPAction": '""',
+                        "X-Api-Key": api_key,
                     },
                 )
                 response.raise_for_status()
@@ -568,8 +596,7 @@ class FirmenbuchAdapter(SourceAdapter):
         except Exception:
             import logging
             logging.getLogger(__name__).warning(
-                "Firmenbuch SOAP call failed (action=%s, cache_key=%s)",
-                action,
+                "Firmenbuch SOAP call failed (cache_key=%s)",
                 cache_key,
                 exc_info=True,
             )
