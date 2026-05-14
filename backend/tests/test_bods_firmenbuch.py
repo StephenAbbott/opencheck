@@ -78,28 +78,38 @@ def test_at_fb_ra_code() -> None:
 # ---------------------------------------------------------------------------
 # SOAP search response parser
 #
-# The real search response uses namespace-prefixed elements.  After namespace
-# stripping the parser looks for TREFFER elements with FNR attribute and
-# BEZEICHNUNG children.
+# The real search response uses ERGEBNIS elements (confirmed from the official
+# HVD interface description v1.3, page 11).  After namespace stripping the
+# parser looks for ERGEBNIS elements with FNR and NAME child elements.
 # ---------------------------------------------------------------------------
 
 _SEARCH_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
   <env:Header/>
   <env:Body>
-    <ns14:SUCHEFIRMARESPONSE
-        xmlns:ns14="ns://firmenbuch.justiz.gv.at/Abfrage/SucheFirmaResponse">
-      <ns14:TREFFERLISTE>
-        <ns14:TREFFER ns14:FNR="473888 w" ns14:AUFRECHT="true">
-          <ns14:BEZEICHNUNG>Muster GmbH</ns14:BEZEICHNUNG>
-          <ns14:RECHTSFORM>GmbH</ns14:RECHTSFORM>
-        </ns14:TREFFER>
-        <ns14:TREFFER ns14:FNR="366715 m" ns14:AUFRECHT="true">
-          <ns14:BEZEICHNUNG>Beispiel KG</ns14:BEZEICHNUNG>
-          <ns14:RECHTSFORM>KG</ns14:RECHTSFORM>
-        </ns14:TREFFER>
-      </ns14:TREFFERLISTE>
-    </ns14:SUCHEFIRMARESPONSE>
+    <ns13:SUCHEFIRMARESPONSE
+        xmlns:ns13="ns://firmenbuch.justiz.gv.at/Abfrage/SucheFirmaResponse">
+      <ns13:ERGEBNIS>
+        <ns13:FNR>473888 w</ns13:FNR>
+        <ns13:STATUS/>
+        <ns13:NAME>Muster GmbH</ns13:NAME>
+        <ns13:SITZ>Wien</ns13:SITZ>
+        <ns13:RECHTSFORM>
+          <ns13:CODE>GmbH</ns13:CODE>
+          <ns13:TEXT>Gesellschaft mit beschränkter Haftung</ns13:TEXT>
+        </ns13:RECHTSFORM>
+      </ns13:ERGEBNIS>
+      <ns13:ERGEBNIS>
+        <ns13:FNR>366715 m</ns13:FNR>
+        <ns13:STATUS/>
+        <ns13:NAME>Beispiel KG</ns13:NAME>
+        <ns13:SITZ>Graz</ns13:SITZ>
+        <ns13:RECHTSFORM>
+          <ns13:CODE>KG</ns13:CODE>
+          <ns13:TEXT>Kommanditgesellschaft</ns13:TEXT>
+        </ns13:RECHTSFORM>
+      </ns13:ERGEBNIS>
+    </ns13:SUCHEFIRMARESPONSE>
   </env:Body>
 </env:Envelope>"""
 
@@ -107,10 +117,9 @@ _SEARCH_XML_EMPTY = """<?xml version="1.0" encoding="UTF-8"?>
 <env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
   <env:Header/>
   <env:Body>
-    <ns14:SUCHEFIRMARESPONSE
-        xmlns:ns14="ns://firmenbuch.justiz.gv.at/Abfrage/SucheFirmaResponse">
-      <ns14:TREFFERLISTE/>
-    </ns14:SUCHEFIRMARESPONSE>
+    <ns13:SUCHEFIRMARESPONSE
+        xmlns:ns13="ns://firmenbuch.justiz.gv.at/Abfrage/SucheFirmaResponse">
+    </ns13:SUCHEFIRMARESPONSE>
   </env:Body>
 </env:Envelope>"""
 
@@ -327,6 +336,51 @@ def test_parse_extract_shareholder_einlage() -> None:
     ext = _parse_extract_response(_EXTRACT_XML_GMBH)
     einlagen = [sh["einlage"] for sh in ext["shareholders"]]
     assert all(e == 17500.0 for e in einlagen)
+
+
+# ---------------------------------------------------------------------------
+# STELLE address format (Kurzinformation)
+#
+# The official HVD interface description v1.3 (page 6) shows that
+# Kurzinformation responses use STELLE for the address rather than
+# STRASSE + HAUSNUMMER.  The XSD confirms this is a xs:choice.
+# ---------------------------------------------------------------------------
+
+_EXTRACT_XML_STELLE_ADDRESS = """<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
+  <env:Header/>
+  <env:Body>
+    <ns6:AUSZUG_V2_RESPONSE
+        xmlns:ns6="ns://firmenbuch.justiz.gv.at/Abfrage/v2/AuszugResponse"
+        ns6:FNR="229831 m"
+        ns6:STICHTAG="2026-05-14"
+        ns6:UMFANG="Kurzinformation">
+      <ns6:FIRMA>
+        <ns6:FI_DKZ02 ns6:AUFRECHT="true" ns6:VNR="001">
+          <ns6:BEZEICHNUNG>Kärntner Handels GmbH</ns6:BEZEICHNUNG>
+        </ns6:FI_DKZ02>
+        <ns6:FI_DKZ03 ns6:AUFRECHT="true">
+          <ns6:STELLE>Kärntner Straße 337</ns6:STELLE>
+          <ns6:PLZ>1010</ns6:PLZ>
+          <ns6:ORT>Wien</ns6:ORT>
+        </ns6:FI_DKZ03>
+      </ns6:FIRMA>
+    </ns6:AUSZUG_V2_RESPONSE>
+  </env:Body>
+</env:Envelope>"""
+
+
+def test_parse_extract_stelle_address_parsed() -> None:
+    """STELLE free-text address (Kurzinformation format) should be returned."""
+    ext = _parse_extract_response(_EXTRACT_XML_STELLE_ADDRESS)
+    assert "Kärntner Straße 337" in ext["address"]
+    assert "Wien" in ext["address"]
+
+
+def test_parse_extract_stelle_address_no_strasse_prefix() -> None:
+    """STELLE result should not contain a spurious 'None' or empty prefix."""
+    ext = _parse_extract_response(_EXTRACT_XML_STELLE_ADDRESS)
+    assert ext["address"].startswith("Kärntner")
 
 
 # ---------------------------------------------------------------------------

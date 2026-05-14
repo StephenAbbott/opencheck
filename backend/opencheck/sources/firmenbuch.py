@@ -233,8 +233,13 @@ def _strip_namespaces(xml_text: str) -> str:
 def _parse_search_response(xml_text: str) -> list[dict[str, Any]]:
     """Parse a SUCHEFIRMAREQUEST response into a list of hit dicts.
 
-    The search response wraps results in TREFFERLISTE/TREFFER elements, each
-    carrying FNR, BEZEICHNUNG (name parts), RECHTSFORM, STATUS, and GERICHT.
+    The real search response wraps results in ERGEBNIS elements (confirmed
+    from the official HVD interface description v1.3, page 11), each with:
+      FNR           child element (not attribute) — Firmenbuchnummer
+      NAME          child element — company name
+      STATUS        child element — may be empty
+      SITZ          child element — registered seat / city
+      RECHTSFORM/TEXT child subtree — legal form description
     """
     try:
         root = ET.fromstring(_strip_namespaces(xml_text))
@@ -242,20 +247,20 @@ def _parse_search_response(xml_text: str) -> list[dict[str, Any]]:
         return []
 
     hits: list[dict[str, Any]] = []
-    for treffer in root.iter("TREFFER"):
-        fn = (treffer.get("FNR") or _text(treffer, "FNR") or "").strip()
-        # Name may span multiple BEZEICHNUNG children — join them
-        bezeichnungen = [b.text.strip() for b in treffer.iter("BEZEICHNUNG") if b.text]
-        name = " ".join(bezeichnungen).strip()
-        rechtsform = _text(treffer, "RECHTSFORM") or treffer.get("RECHTSFORM") or ""
-        status_raw = treffer.get("AUFRECHT") or _text(treffer, "STATUS") or ""
-        status = "aktiv" if status_raw.lower() == "true" else (status_raw or "")
+    for ergebnis in root.iter("ERGEBNIS"):
+        fn = _text(ergebnis, "FNR").strip()
+        name = _text(ergebnis, "NAME").strip()
+        rechtsform_el = ergebnis.find("RECHTSFORM")
+        rechtsform = _text(rechtsform_el, "TEXT") if rechtsform_el is not None else ""
+        status = _text(ergebnis, "STATUS")
+        sitz = _text(ergebnis, "SITZ")
         if fn or name:
             hits.append({
                 "fn": normalise_fn(fn) if fn else "",
                 "name": name,
                 "rechtsform": rechtsform,
                 "status": status,
+                "sitz": sitz,
             })
     return hits
 
@@ -345,19 +350,32 @@ def _parse_address(firma_el: ET.Element) -> str:
 
     Prefers FI_DKZ03 (Geschäftsanschrift / business address); falls back
     to FI_DKZ04 (Sitz / registered office).
+
+    DKZ03 address type is a ``xs:choice`` (per the official XSD):
+      STELLE        — free-text combined address line (used in Kurzinformation)
+      STRASSE + HAUSNUMMER + STIEGE — structured (may appear in paid Auszug)
+
+    The official HVD interface description v1.3 (page 6) shows STELLE format
+    in the Kurzinformation example response; structured fields may appear when
+    a paid subscription key is configured.
     """
     for tag in ("FI_DKZ03", "FI_DKZ04"):
         addr_el = firma_el.find(f".//{tag}")
         if addr_el is None:
             continue
-        parts = [
-            _text(addr_el, "STRASSE"),
-            _text(addr_el, "HAUSNUMMER"),
-            _text(addr_el, "STIEGE"),
-            _text(addr_el, "PLZ"),
-            _text(addr_el, "ORT"),
-        ]
-        non_empty = [p for p in parts if p]
+        # Primary path: STELLE (free-text, Kurzinformation responses)
+        stellen = [s.text.strip() for s in addr_el.findall("STELLE") if s.text]
+        if stellen:
+            street_parts = stellen
+        else:
+            # Fallback: structured address fields (paid Auszug responses)
+            street_parts = [p for p in [
+                _text(addr_el, "STRASSE"),
+                _text(addr_el, "HAUSNUMMER"),
+                _text(addr_el, "STIEGE"),
+            ] if p]
+        location_parts = [p for p in [_text(addr_el, "PLZ"), _text(addr_el, "ORT")] if p]
+        non_empty = street_parts + location_parts
         if non_empty:
             return " ".join(non_empty)
     return ""
