@@ -602,6 +602,10 @@ class FirmenbuchAdapter(SourceAdapter):
             )
             return None
 
+        import logging as _logging
+        _logging.getLogger(__name__).warning(
+            "Firmenbuch raw response (cache_key=%s): %.2000s", cache_key, xml_text
+        )
         self._cache.put(cache_key, xml_text)
         return xml_text
 
