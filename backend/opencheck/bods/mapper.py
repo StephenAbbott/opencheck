@@ -2797,6 +2797,9 @@ _DIGIWHIST_ID_SCHEMES = {
     "ORGANIZATION_ID": ("ORG", "National organisation id"),
 }
 
+# DIGIWHIST uses "UK" as its internal country code; ISO 3166-1 (and BODS) use "GB".
+_DIGIWHIST_COUNTRY_MAP: dict[str, str] = {"UK": "GB"}
+
 
 def map_opentender(bundle: dict[str, Any]) -> BODSBundle:
     """Map an OpenTender (DIGIWHIST) tender bundle to BODS v0.4.
@@ -2914,13 +2917,27 @@ def _opentender_body_statement(
         if scheme is None:
             continue
         scope = (ident.get("scope") or "").upper()
+        # Normalise DIGIWHIST's "UK" scope to ISO "GB" so it maps correctly.
+        scope = _DIGIWHIST_COUNTRY_MAP.get(scope, scope)
         scheme_code, scheme_name = scheme
         # Country-scope ETALON / HEADER_ICO is more useful with the
         # country prefix to disambiguate (DE-REG vs CZ-REG).
+        # For ORGANIZATION_ID with scope "UNKNOWN" (common in UK DIGIWHIST
+        # data where the publisher didn't set a scope), we infer GB scope
+        # from the tender country context passed in via body_country.
+        if scope == "UNKNOWN" and scheme_code == "ORG":
+            # Treat ambiguous ORGANIZATION_ID as GB-ORG — the UK is the
+            # only jurisdiction in the DIGIWHIST dataset that routinely
+            # publishes ORGANIZATION_ID without a country scope.
+            scope = "GB"
         if scope and len(scope) == 2 and scheme_code in {"REG", "TAX", "STAT", "ORG"}:
             scheme_code = f"{scope}-{scheme_code}"
+        id_value = str(ident.get("id") or "")
+        # DIGIWHIST strips leading zeros from CH numbers; restore 8-digit format.
+        if scheme_code == "GB-ORG" and id_value.isdigit() and len(id_value) < 8:
+            id_value = id_value.zfill(8)
         identifiers.append(
-            {"id": str(ident.get("id")), "scheme": scheme_code, "schemeName": scheme_name}
+            {"id": id_value, "scheme": scheme_code, "schemeName": scheme_name}
         )
 
     address = body.get("address") or {}
@@ -2931,11 +2948,14 @@ def _opentender_body_statement(
         address.get("postcode"),
     ]
     addr_str = ", ".join(p for p in parts if p)
+    raw_country = (address.get("country") or "").upper()
+    # Map DIGIWHIST-internal country codes to ISO 3166-1 alpha-2.
+    iso_country = _DIGIWHIST_COUNTRY_MAP.get(raw_country, raw_country)
     if addr_str:
-        addresses.append(_addr("registered", addr_str, (address.get("country") or "").upper()))
+        addresses.append(_addr("registered", addr_str, iso_country))
 
     jurisdiction = None
-    country_code = (address.get("country") or "").upper()
+    country_code = iso_country
     if country_code:
         try:
             match = pycountry.countries.lookup(country_code)

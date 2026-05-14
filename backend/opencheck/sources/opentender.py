@@ -29,8 +29,15 @@ Mapping into BODS v0.4 (see ``bods/mapper.map_opentender``):
   relationship makes procurement data composable with the existing
   reconciler and risk service.
 
-Live integration is parked behind ``allow_live`` + a future env var.
-For now the adapter ships demo fixtures only.
+Live integration
+----------------
+Set ``OPENTENDER_DB_FILE`` to a local SQLite path built by
+``scripts/extract_opentender.py`` to enable live search and fetch.
+
+On Render (ephemeral filesystem), upload the DB to S3 and set
+``OPENTENDER_S3_URL``; the adapter downloads it at first connection.
+
+Without the DB the adapter falls back to fixture-cache and demo stubs.
 
 .. _https://opentender.eu: https://opentender.eu/
 """
@@ -38,12 +45,20 @@ For now the adapter ships demo fixtures only.
 from __future__ import annotations
 
 import hashlib
+import json
+import logging
 import re
+import sqlite3
+from pathlib import Path
 from typing import Any
+
+import httpx
 
 from ..cache import Cache
 from ..config import get_settings
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+
+logger = logging.getLogger(__name__)
 
 _CACHE_NS = "opentender"
 
@@ -57,15 +72,22 @@ class OpenTenderAdapter(SourceAdapter):
 
     def __init__(self) -> None:
         self._cache = Cache()
+        self._db: sqlite3.Connection | None = None
 
     @property
     def info(self) -> SourceInfo:
         settings = get_settings()
+        db_path = settings.opentender_db_file
+        live = bool(db_path and Path(db_path).exists())
         return SourceInfo(
             id=self.id,
             name="OpenTender",
             homepage="https://opentender.eu/all/download",
-            description="Search and analyse tender data from 35 jurisdictions.",
+            description=(
+                "Public procurement tender data from 35 jurisdictions, "
+                "covering buyers, bidders, award values, and integrity scores. "
+                "Search surfaces winning suppliers and contracting authorities."
+            ),
             license="CC-BY-NC-SA-4.0",
             attribution=(
                 "Procurement data from OpenTender (DIGIWHIST), "
@@ -73,11 +95,50 @@ class OpenTenderAdapter(SourceAdapter):
             ),
             supports=[SearchKind.ENTITY],
             requires_api_key=False,
-            # Live mode is not wired yet — the adapter currently serves
-            # only demo fixtures. Toggling allow_live alone won't enable
-            # network calls until the live HTTP path lands.
-            live_available=False,
+            live_available=live,
         )
+
+    # ------------------------------------------------------------------
+    # SQLite connection (lazy, with optional S3 bootstrap)
+    # ------------------------------------------------------------------
+
+    def _conn(self) -> sqlite3.Connection | None:
+        settings = get_settings()
+        db_path = settings.opentender_db_file
+        if not db_path:
+            return None
+        if self._db is not None:
+            return self._db
+
+        path = Path(db_path)
+
+        # If the DB doesn't exist locally and an S3 URL is configured,
+        # download it now (blocking; happens once at first request).
+        if not path.exists():
+            s3_url = settings.opentender_s3_url
+            if s3_url:
+                logger.info(
+                    "opentender: DB not found at %s, downloading from S3 …", db_path
+                )
+                try:
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    with httpx.stream("GET", s3_url, follow_redirects=True) as r:
+                        r.raise_for_status()
+                        with open(path, "wb") as fh:
+                            for chunk in r.iter_bytes(chunk_size=1 << 20):
+                                fh.write(chunk)
+                    logger.info("opentender: DB downloaded (%s bytes)", path.stat().st_size)
+                except Exception as exc:
+                    logger.warning("opentender: S3 download failed: %s", exc)
+                    return None
+            else:
+                logger.warning("opentender: DB file not found at %s", db_path)
+                return None
+
+        conn = sqlite3.connect(str(path), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        self._db = conn
+        return self._db
 
     # ------------------------------------------------------------------
     # Search
@@ -87,6 +148,11 @@ class OpenTenderAdapter(SourceAdapter):
         if kind != SearchKind.ENTITY:
             return []
 
+        conn = self._conn()
+        if conn is not None:
+            return self._db_search(conn, query)
+
+        # Fixture-cache path (demo mode)
         cache_key = f"{_CACHE_NS}/search/{_slug(query)}"
         if not self._cache.has(cache_key):
             return self._stub_search(query)
@@ -97,11 +163,59 @@ class OpenTenderAdapter(SourceAdapter):
 
         return [self._tender_hit(item) for item in payload.get("tenders", [])]
 
+    def _db_search(self, conn: sqlite3.Connection, query: str) -> list[SourceHit]:
+        """FTS5 search over body names (buyers + bidders)."""
+        # Escape FTS5 special characters.
+        safe_q = re.sub(r'["\']', " ", query.strip())
+        fts_query = f'"{safe_q}"'
+
+        cur = conn.execute(
+            """
+            SELECT DISTINCT t.persistent_id, t.data
+            FROM body_names_fts f
+            JOIN tenders t ON t.persistent_id = f.persistent_id
+            WHERE body_names_fts MATCH ?
+            LIMIT 20
+            """,
+            (fts_query,),
+        )
+        rows = cur.fetchall()
+        if not rows:
+            # Fall back to prefix MATCH on individual tokens.
+            tokens = [w for w in safe_q.split() if len(w) >= 2]
+            if tokens:
+                fts_query = " OR ".join(f"{w}*" for w in tokens)
+                cur = conn.execute(
+                    """
+                    SELECT DISTINCT t.persistent_id, t.data
+                    FROM body_names_fts f
+                    JOIN tenders t ON t.persistent_id = f.persistent_id
+                    WHERE body_names_fts MATCH ?
+                    LIMIT 20
+                    """,
+                    (fts_query,),
+                )
+                rows = cur.fetchall()
+
+        hits: list[SourceHit] = []
+        for row in rows:
+            try:
+                tender = json.loads(row["data"])
+            except (json.JSONDecodeError, TypeError):
+                continue
+            hits.append(self._tender_hit(tender))
+        return hits
+
     # ------------------------------------------------------------------
     # Fetch
     # ------------------------------------------------------------------
 
     async def fetch(self, hit_id: str) -> dict[str, Any]:
+        conn = self._conn()
+        if conn is not None:
+            return self._db_fetch(conn, hit_id)
+
+        # Fixture-cache path (demo mode)
         cache_key = f"{_CACHE_NS}/tender/{_slug(hit_id)}"
         if not self._cache.has(cache_key):
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
@@ -115,13 +229,35 @@ class OpenTenderAdapter(SourceAdapter):
             "tender": tender,
         }
 
+    def _db_fetch(self, conn: sqlite3.Connection, hit_id: str) -> dict[str, Any]:
+        """Look up a tender by persistentId (primary key)."""
+        cur = conn.execute(
+            "SELECT data FROM tenders WHERE persistent_id = ?",
+            (hit_id,),
+        )
+        row = cur.fetchone()
+        if row is None:
+            return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
+
+        try:
+            tender = json.loads(row["data"])
+        except (json.JSONDecodeError, TypeError):
+            return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
+
+        return {
+            "source_id": self.id,
+            "tender_id": hit_id,
+            "tender": tender,
+        }
+
     # ------------------------------------------------------------------
     # Hit factory
     # ------------------------------------------------------------------
 
     @staticmethod
     def _tender_hit(item: dict[str, Any]) -> SourceHit:
-        tender_id = item.get("id") or ""
+        # Prefer persistentId as the stable hit_id; fall back to source id.
+        tender_id = item.get("persistentId") or item.get("id") or ""
         title = item.get("title") or item.get("titleEnglish") or "Tender"
         country = item.get("country") or ""
         buyers = item.get("buyers") or []
@@ -135,6 +271,12 @@ class OpenTenderAdapter(SourceAdapter):
         proc_type = item.get("procedureType")
         if proc_type:
             summary_bits.append(proc_type.replace("_", " ").lower())
+
+        # Capture DIGIWHIST integrity/transparency scores when present.
+        scores = item.get("ot", {}) or {}
+        integrity = scores.get("integrity")
+        if integrity is not None:
+            summary_bits.append(f"integrity {integrity:.2f}")
 
         # Surface every BodyIdentifier we can reach as a flat identifier
         # map so the cross-source reconciler can bridge to GLEIF / CH /
@@ -173,10 +315,9 @@ class OpenTenderAdapter(SourceAdapter):
                 kind=SearchKind.ENTITY,
                 name=f"{query} (stub)",
                 summary=(
-                    "Stub OpenTender record — drop a fixture under "
-                    "data/cache/demos/opentender/ to see real procurement "
-                    "data flow through. Live opentender.eu integration "
-                    "is a TODO."
+                    "Stub OpenTender record — set OPENTENDER_DB_FILE to a "
+                    "database built by scripts/extract_opentender.py to enable "
+                    "live procurement search."
                 ),
                 identifiers={"opentender_id": "OT-stub-0001"},
                 raw={
@@ -249,8 +390,19 @@ def _bridge_identifier(ident: dict[str, Any]) -> tuple[str | None, str | None]:
 
     if type_ == "VAT":
         return "vat", value
-    if type_ == "ORGANIZATION_ID" and scope == "GB":
-        return "gb_coh", value
+
+    if type_ == "ORGANIZATION_ID":
+        # DIGIWHIST UK data publishes ORGANIZATION_ID with scope "UNKNOWN"
+        # (publisher didn't set a country scope). We treat both "GB" and
+        # "UNKNOWN" as GB Companies House numbers since UK is the only
+        # jurisdiction in DIGIWHIST that consistently uses this type.
+        if scope in {"GB", "UNKNOWN"}:
+            # DIGIWHIST strips leading zeros; restore 8-digit CH format.
+            clean = value
+            if clean.isdigit() and len(clean) < 8:
+                clean = clean.zfill(8)
+            return "gb_coh", clean
+
     if type_ in {"HEADER_ICO", "STATISTICAL", "TAX_ID", "TRADE_REGISTER"}:
         # These are country-specific national registry IDs; surface
         # them under a generic key so reconciler doesn't lose them.

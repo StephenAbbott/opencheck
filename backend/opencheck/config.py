@@ -118,6 +118,15 @@ class Settings(BaseSettings):
     # License: CC BY 4.0 — no API key required, only the local DB file.
     ariregister_db_file: str | None = Field(default=None, alias="ARIREGISTER_DB_FILE")
 
+    # --- OpenTender (DIGIWHIST) ---
+    # Pre-built SQLite index. Build with: python scripts/extract_opentender.py
+    # Source: https://opentender.eu/all/download (CC BY-NC-SA 4.0)
+    # Set OPENTENDER_DB_FILE to the local path once you have built the DB.
+    # On ephemeral-filesystem hosts (Render), upload the DB to S3 and set
+    # OPENTENDER_S3_URL so the adapter can download it at startup.
+    opentender_db_file: str | None = Field(default=None, alias="OPENTENDER_DB_FILE")
+    opentender_s3_url: str | None = Field(default=None, alias="OPENTENDER_S3_URL")
+
     # --- Austrian Firmenbuch (commercial register) HVD API ---
     # Register for a key at: https://justizonline.gv.at/jop/web/iwg/register
     # WSDL: https://justizonline.gv.at/jop/api/at.gv.justiz.fbw/ws/fbw.wsdl
