@@ -147,18 +147,17 @@ def _extract_request_xml(fn: str) -> str:
 
     ``fn`` is passed directly as ``<aus:FNR>`` — the v2 operation accepts the
     FN (e.g. "659195f") directly, no internal FIRMA_ID resolution needed.
-    ``UMFANG=Vollinhalt`` requests the full extract (officers + shareholders).
-    ``STICHTAG`` is today's date so we always get the current register state.
+    ``UMFANG=Kurzinformation`` is the only documented value in the reference
+    Postman collection; update once we know the enum for a full extract.
+    ``STICHTAG`` is omitted — it is optional and the default is current date.
     """
     esc = _xml_escape(fn)
-    today = datetime.date.today().isoformat()
     return _soap_envelope(
         "aus",
         _NS_AUSZUG,
         f"<aus:AUSZUG_V2_REQUEST>"
         f"<aus:FNR>{esc}</aus:FNR>"
-        f"<aus:STICHTAG>{today}</aus:STICHTAG>"
-        f"<aus:UMFANG>Vollinhalt</aus:UMFANG>"
+        f"<aus:UMFANG>Kurzinformation</aus:UMFANG>"
         f"</aus:AUSZUG_V2_REQUEST>",
     )
 
