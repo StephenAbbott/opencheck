@@ -598,6 +598,10 @@ _AT_ROLE_MAP: dict[str, tuple[str, str]] = {
     "ARV":  ("boardMember",             "Aufsichtsratsvorsitzender (Supervisory Board Chair)"),
     "PK":   ("otherInfluenceOrControl", "Prokurist (Authorised Signatory)"),
     "PKI":  ("otherInfluenceOrControl", "Prokuristin (Authorised Signatory)"),
+    # Live API returns FKEN="PR"/"PRI" for Prokurist/Prokuristin — the "PK"/"PKI"
+    # codes match the DKZ fallback path; both must be mapped.
+    "PR":   ("otherInfluenceOrControl", "Prokurist (Authorised Signatory)"),
+    "PRI":  ("otherInfluenceOrControl", "Prokuristin (Authorised Signatory)"),
     "LI":   ("otherInfluenceOrControl", "Liquidator"),
     "LII":  ("otherInfluenceOrControl", "Liquidatorin"),
     "GES":  ("otherInfluenceOrControl", "Gesellschafter (Partner/Shareholder)"),

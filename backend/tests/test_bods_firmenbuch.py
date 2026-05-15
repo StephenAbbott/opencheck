@@ -20,7 +20,9 @@ from opencheck.sources.firmenbuch import (
     AT_FB_RA_CODE,
     FirmenbuchAdapter,
     _parse_extract_response,
+    _parse_fun_per_officers,
     _parse_search_response,
+    _strip_namespaces,
     is_valid_fn,
     normalise_fn,
 )
@@ -631,3 +633,216 @@ def test_map_firmenbuch_source_type_official_register() -> None:
     stmts = list(map_firmenbuch(_bundle()))
     source = stmts[0].get("source") or {}
     assert "officialRegister" in (source.get("type") or [])
+
+
+# ---------------------------------------------------------------------------
+# FUN/PER officer parsing (Kurzinformation structure)
+#
+# The free HVD tier (UMFANG=Kurzinformation) returns officer data in top-level
+# FUN and PER elements — siblings of FIRMA inside AUSZUG_V2_RESPONSE — not in
+# FI_DKZ08/09 inside FIRMA.  This was confirmed by the Firmenbuch team (May
+# 2026) and verified against a live API call for company 160573m
+# (Bundesrechenzentrum GmbH), which returned 2 GF (FKEN="GF") and 5 PR
+# (FKEN="PR") officers.
+#
+# Key structural facts from the live response:
+#   - FUN carries FKEN, FKENTEXT, PNR attributes; FU_DKZ10 child has AUFRECHT
+#   - PER carries PNR; PE_DKZ02 child has VORNAME, NACHNAME, GEBURTSDATUM
+#   - Terminated appointments have FU_DKZ10 AUFRECHT="false" → skipped
+#   - Role code FKEN="GF" → Geschäftsführer (managing director)
+#   - Role code FKEN="PR" → Prokurist/in (authorised signatory)
+# ---------------------------------------------------------------------------
+
+# Kurzinformation response with namespace prefixes (like the real API).
+# Contains 2 active officers (one GF, one PR) and 1 terminated PR.
+# Namespace-stripping is applied by _parse_extract_response before parsing.
+_EXTRACT_XML_KURZINFO_FUN_PER = """<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
+  <env:Header/>
+  <env:Body>
+    <ns6:AUSZUG_V2_RESPONSE
+        xmlns:ns6="ns://firmenbuch.justiz.gv.at/Abfrage/v2/AuszugResponse"
+        ns6:FNR="160573 m"
+        ns6:STICHTAG="2026-05-14"
+        ns6:UMFANG="Kurzinformation">
+      <ns6:FIRMA>
+        <ns6:FI_DKZ02 ns6:AUFRECHT="true" ns6:VNR="001">
+          <ns6:BEZEICHNUNG>Bundesrechenzentrum GmbH</ns6:BEZEICHNUNG>
+        </ns6:FI_DKZ02>
+        <ns6:FI_DKZ03 ns6:AUFRECHT="true">
+          <ns6:STELLE>Hintere Zollamtsstraße 4</ns6:STELLE>
+          <ns6:PLZ>1030</ns6:PLZ>
+          <ns6:ORT>Wien</ns6:ORT>
+        </ns6:FI_DKZ03>
+      </ns6:FIRMA>
+      <ns6:FUN ns6:FKEN="GF" ns6:FKENTEXT="GESCHÄFTSFÜHRER/IN (handelsrechtlich)" ns6:PNR="1001">
+        <ns6:FU_DKZ10 ns6:AUFRECHT="true" ns6:VNR="001"/>
+      </ns6:FUN>
+      <ns6:FUN ns6:FKEN="PR" ns6:FKENTEXT="PROKURIST/IN" ns6:PNR="1002">
+        <ns6:FU_DKZ10 ns6:AUFRECHT="true" ns6:VNR="001"/>
+      </ns6:FUN>
+      <ns6:FUN ns6:FKEN="PR" ns6:FKENTEXT="PROKURIST/IN" ns6:PNR="1003">
+        <ns6:FU_DKZ10 ns6:AUFRECHT="false" ns6:VNR="001"/>
+      </ns6:FUN>
+      <ns6:PER ns6:PNR="1001">
+        <ns6:PE_DKZ02 ns6:VNR="001">
+          <ns6:VORNAME>Christine</ns6:VORNAME>
+          <ns6:NACHNAME>Sumper-Billinger</ns6:NACHNAME>
+          <ns6:GEBURTSDATUM>1973-09-06</ns6:GEBURTSDATUM>
+        </ns6:PE_DKZ02>
+      </ns6:PER>
+      <ns6:PER ns6:PNR="1002">
+        <ns6:PE_DKZ02 ns6:VNR="001">
+          <ns6:VORNAME>Günther</ns6:VORNAME>
+          <ns6:NACHNAME>Lauer</ns6:NACHNAME>
+          <ns6:GEBURTSDATUM>1968-03-15</ns6:GEBURTSDATUM>
+        </ns6:PE_DKZ02>
+      </ns6:PER>
+      <ns6:PER ns6:PNR="1003">
+        <ns6:PE_DKZ02 ns6:VNR="001">
+          <ns6:VORNAME>Former</ns6:VORNAME>
+          <ns6:NACHNAME>Prokurist</ns6:NACHNAME>
+          <ns6:GEBURTSDATUM>1960-01-01</ns6:GEBURTSDATUM>
+        </ns6:PE_DKZ02>
+      </ns6:PER>
+    </ns6:AUSZUG_V2_RESPONSE>
+  </env:Body>
+</env:Envelope>"""
+
+
+# ---------------------------------------------------------------------------
+# _parse_fun_per_officers — unit tests on the stripped XML element
+# ---------------------------------------------------------------------------
+
+import xml.etree.ElementTree as ET
+
+
+def _fun_per_resp_el() -> ET.Element:
+    """Return the parsed AUSZUG_V2_RESPONSE element from the FUN/PER fixture."""
+    stripped = _strip_namespaces(_EXTRACT_XML_KURZINFO_FUN_PER)
+    root = ET.fromstring(stripped)
+    el = root.find(".//AUSZUG_V2_RESPONSE")
+    assert el is not None
+    return el
+
+
+def test_parse_fun_per_officers_count() -> None:
+    """Two active FUN entries → 2 officers (terminated PNR=1003 is skipped)."""
+    officers = _parse_fun_per_officers(_fun_per_resp_el())
+    assert len(officers) == 2
+
+
+def test_parse_fun_per_officers_gf_name() -> None:
+    officers = _parse_fun_per_officers(_fun_per_resp_el())
+    gf = next(o for o in officers if o["role_code"] == "GF")
+    assert gf["full_name"] == "Christine Sumper-Billinger"
+
+
+def test_parse_fun_per_officers_gf_dob() -> None:
+    officers = _parse_fun_per_officers(_fun_per_resp_el())
+    gf = next(o for o in officers if o["role_code"] == "GF")
+    assert gf["dob"] == "1973-09-06"
+
+
+def test_parse_fun_per_officers_pr_name() -> None:
+    officers = _parse_fun_per_officers(_fun_per_resp_el())
+    pr = next(o for o in officers if o["role_code"] == "PR")
+    assert pr["full_name"] == "Günther Lauer"
+
+
+def test_parse_fun_per_officers_pr_role_name() -> None:
+    officers = _parse_fun_per_officers(_fun_per_resp_el())
+    pr = next(o for o in officers if o["role_code"] == "PR")
+    assert pr["role_name"] == "PROKURIST/IN"
+
+
+def test_parse_fun_per_officers_skips_terminated() -> None:
+    """FU_DKZ10 AUFRECHT='false' → that person must not appear in results."""
+    officers = _parse_fun_per_officers(_fun_per_resp_el())
+    names = [o["full_name"] for o in officers]
+    assert "Former Prokurist" not in names
+
+
+# ---------------------------------------------------------------------------
+# _parse_extract_response — FUN/PER path via the full pipeline
+# ---------------------------------------------------------------------------
+
+
+def test_parse_extract_kurzinfo_name() -> None:
+    ext = _parse_extract_response(_EXTRACT_XML_KURZINFO_FUN_PER)
+    assert ext["name"] == "Bundesrechenzentrum GmbH"
+
+
+def test_parse_extract_kurzinfo_fn() -> None:
+    ext = _parse_extract_response(_EXTRACT_XML_KURZINFO_FUN_PER)
+    assert ext["fn"] == "160573m"
+
+
+def test_parse_extract_kurzinfo_address() -> None:
+    ext = _parse_extract_response(_EXTRACT_XML_KURZINFO_FUN_PER)
+    assert "Hintere Zollamtsstraße 4" in ext["address"]
+    assert "Wien" in ext["address"]
+
+
+def test_parse_extract_kurzinfo_officers_count() -> None:
+    """FUN/PER path: 2 active, 1 terminated → 2 officers."""
+    ext = _parse_extract_response(_EXTRACT_XML_KURZINFO_FUN_PER)
+    assert len(ext["officers"]) == 2
+
+
+def test_parse_extract_kurzinfo_officer_names() -> None:
+    ext = _parse_extract_response(_EXTRACT_XML_KURZINFO_FUN_PER)
+    names = [o["full_name"] for o in ext["officers"]]
+    assert "Christine Sumper-Billinger" in names
+    assert "Günther Lauer" in names
+
+
+def test_parse_extract_kurzinfo_no_shareholders() -> None:
+    """Kurzinformation does not return shareholder data."""
+    ext = _parse_extract_response(_EXTRACT_XML_KURZINFO_FUN_PER)
+    assert ext["shareholders"] == []
+
+
+# ---------------------------------------------------------------------------
+# map_firmenbuch — FUN/PER path BODS output
+# ---------------------------------------------------------------------------
+
+_KURZINFO_FUN_PER_EXTRACT = _parse_extract_response(_EXTRACT_XML_KURZINFO_FUN_PER)
+
+
+def _kurzinfo_bundle() -> dict:
+    return {
+        "source_id": "firmenbuch",
+        "fn": "160573m",
+        "extract": _KURZINFO_FUN_PER_EXTRACT,
+        "legal_name": "",
+        "is_stub": False,
+    }
+
+
+def test_map_firmenbuch_kurzinfo_statement_count() -> None:
+    """1 entity + 2 person (officers) + 2 relationship → 5 statements."""
+    stmts = list(map_firmenbuch(_kurzinfo_bundle()))
+    assert len(stmts) == 5
+
+
+def test_map_firmenbuch_kurzinfo_gf_interest_type() -> None:
+    stmts = list(map_firmenbuch(_kurzinfo_bundle()))
+    rels = [s for s in stmts if s["recordType"] == "relationship"]
+    all_types = {i["type"] for r in rels for i in r["recordDetails"]["interests"]}
+    assert "otherInfluenceOrControl" in all_types
+
+
+def test_map_firmenbuch_kurzinfo_pr_mapped_label() -> None:
+    """FKEN='PR' must map to 'Prokurist (Authorised Signatory)', not raw FKENTEXT."""
+    stmts = list(map_firmenbuch(_kurzinfo_bundle()))
+    rels = [s for s in stmts if s["recordType"] == "relationship"]
+    all_details = [i["details"] for r in rels for i in r["recordDetails"]["interests"]]
+    assert any("Prokurist" in d for d in all_details)
+    # Must NOT fall back to the raw uppercased "PROKURIST/IN" FKENTEXT
+    assert not any(d == "PROKURIST/IN" for d in all_details)
+
+
+def test_map_firmenbuch_kurzinfo_passes_validator() -> None:
+    issues = validate_shape(map_firmenbuch(_kurzinfo_bundle()))
+    assert issues == [], issues
