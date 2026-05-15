@@ -62,10 +62,14 @@ Open-source reference implementation:
 from __future__ import annotations
 
 import datetime
+import logging
 import re
+import httpx
 import xml.etree.ElementTree as ET
 from typing import Any
 from urllib.parse import quote
+
+logger = logging.getLogger(__name__)
 
 from ..cache import Cache
 from ..config import get_settings
@@ -790,8 +794,7 @@ class FirmenbuchAdapter(SourceAdapter):
         # Use a tighter timeout than the shared default (connect 5s, read 15s):
         # the Firmenbuch API is low-latency when reachable; a long read timeout
         # just delays error reporting without helping success cases.
-        import httpx as _httpx
-        _fb_timeout = _httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0)
+        _fb_timeout = httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0)
 
         try:
             async with build_client() as client:
