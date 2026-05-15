@@ -791,10 +791,11 @@ class FirmenbuchAdapter(SourceAdapter):
         settings = get_settings()
         api_key = settings.firmenbuch_api_key or ""
 
-        # Use a tighter timeout than the shared default (connect 5s, read 15s):
-        # the Firmenbuch API is low-latency when reachable; a long read timeout
-        # just delays error reporting without helping success cases.
-        _fb_timeout = httpx.Timeout(connect=3.0, read=10.0, write=5.0, pool=5.0)
+        # The Firmenbuch SOAP endpoint is an Austrian government server that can
+        # take 5–10 s for the full TCP + TLS handshake from non-Austrian networks.
+        # Use a generous connect timeout to accommodate the slow TLS negotiation;
+        # the read timeout is tighter since the API responds quickly once connected.
+        _fb_timeout = httpx.Timeout(connect=15.0, read=10.0, write=5.0, pool=5.0)
 
         try:
             async with build_client() as client:
