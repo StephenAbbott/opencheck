@@ -794,7 +794,7 @@ class FirmenbuchAdapter(SourceAdapter):
         # Use a tighter timeout than the shared default (connect 5s, read 15s):
         # the Firmenbuch API is low-latency when reachable; a long read timeout
         # just delays error reporting without helping success cases.
-        _fb_timeout = httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0)
+        _fb_timeout = httpx.Timeout(connect=3.0, read=10.0, write=5.0, pool=5.0)
 
         try:
             async with build_client() as client:
