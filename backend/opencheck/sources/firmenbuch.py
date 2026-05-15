@@ -786,6 +786,9 @@ class FirmenbuchAdapter(SourceAdapter):
                     content=body.encode("utf-8"),
                     headers={
                         "Content-Type": "application/soap+xml;charset=UTF-8",
+                        # Override the default Accept: application/json set by
+                        # build_client() — the Firmenbuch API is SOAP/XML only.
+                        "Accept": "application/soap+xml;charset=UTF-8",
                         "SOAPAction": '""',
                         "X-Api-Key": api_key,
                     },
