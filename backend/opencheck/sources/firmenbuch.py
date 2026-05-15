@@ -690,7 +690,7 @@ class FirmenbuchAdapter(SourceAdapter):
         if not self.info.live_available and not self._cache.has(cache_key):
             return self._stub_search(query)
 
-        xml_response = await self._soap_call(
+        xml_response, _ = await self._soap_call(
             _search_request_xml(query),
             cache_key=cache_key,
         )
@@ -729,7 +729,7 @@ class FirmenbuchAdapter(SourceAdapter):
                 "is_stub": True,
             }
 
-        xml_response = await self._soap_call(
+        xml_response, soap_error = await self._soap_call(
             _extract_request_xml(fn),
             cache_key=cache_key,
         )
@@ -740,6 +740,7 @@ class FirmenbuchAdapter(SourceAdapter):
                 "extract": None,
                 "legal_name": self._names.get(fn, legal_name),
                 "is_stub": False,
+                "soap_error": soap_error,
             }
 
         extract = _parse_extract_response(xml_response)
@@ -764,20 +765,33 @@ class FirmenbuchAdapter(SourceAdapter):
         body: str,
         *,
         cache_key: str,
-    ) -> str | None:
-        """Send a SOAP 1.2 request and return the raw XML response string.
+    ) -> tuple[str | None, str | None]:
+        """Send a SOAP 1.2 request and return ``(xml_text, error)`` pair.
 
-        Results are cached by *cache_key*. Returns None on error.
+        On success: ``(xml_text, None)``.
+        On failure: ``(None, error_description)`` — the error string is
+        surfaced in the fetch bundle under ``"soap_error"`` so callers can
+        diagnose failures without needing debug-level logging.
+
+        Results are cached by *cache_key*; cached calls always return no error.
 
         The Firmenbuch API uses a blank SOAPAction (``""``), not the operation
-        name. The ``X-Api-Key`` header carries the HVD API key.
+        name.  The ``X-Api-Key`` header carries the HVD API key.
+        The API is SOAP/XML only, so we override the ``Accept`` header that
+        ``build_client()`` sets to ``application/json``.
         """
         cached = self._cache.get_payload(cache_key)
         if cached is not None:
-            return cached[0]
+            return cached[0], None
 
         settings = get_settings()
         api_key = settings.firmenbuch_api_key or ""
+
+        # Use a tighter timeout than the shared default (connect 5s, read 15s):
+        # the Firmenbuch API is low-latency when reachable; a long read timeout
+        # just delays error reporting without helping success cases.
+        import httpx as _httpx
+        _fb_timeout = _httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0)
 
         try:
             async with build_client() as client:
@@ -792,26 +806,27 @@ class FirmenbuchAdapter(SourceAdapter):
                         "SOAPAction": '""',
                         "X-Api-Key": api_key,
                     },
+                    timeout=_fb_timeout,
                 )
                 response.raise_for_status()
                 xml_text = response.text
-        except Exception:
-            import logging
-            logging.getLogger(__name__).warning(
-                "Firmenbuch SOAP call failed (cache_key=%s)",
+        except Exception as exc:
+            error_str = f"{type(exc).__name__}: {exc}"
+            logger.warning(
+                "Firmenbuch SOAP call failed (cache_key=%s): %s",
                 cache_key,
+                error_str,
                 exc_info=True,
             )
-            return None
+            return None, error_str
 
-        import logging as _logging
-        _logging.getLogger(__name__).debug(
+        logger.debug(
             "Firmenbuch raw XML response (cache_key=%s):\n%s",
             cache_key,
             xml_text,
         )
         self._cache.put(cache_key, xml_text)
-        return xml_text
+        return xml_text, None
 
     # ------------------------------------------------------------------
     # Hit factory

@@ -44,6 +44,7 @@ Without the DB the adapter falls back to fixture-cache and demo stubs.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -150,7 +151,9 @@ class OpenTenderAdapter(SourceAdapter):
 
         conn = self._conn()
         if conn is not None:
-            return self._db_search(conn, query)
+            # Run synchronous sqlite3 FTS5 query in a thread so it doesn't
+            # block the asyncio event loop while other sources run concurrently.
+            return await asyncio.to_thread(self._db_search, conn, query)
 
         # Fixture-cache path (demo mode)
         cache_key = f"{_CACHE_NS}/search/{_slug(query)}"
@@ -213,7 +216,7 @@ class OpenTenderAdapter(SourceAdapter):
     async def fetch(self, hit_id: str) -> dict[str, Any]:
         conn = self._conn()
         if conn is not None:
-            return self._db_fetch(conn, hit_id)
+            return await asyncio.to_thread(self._db_fetch, conn, hit_id)
 
         # Fixture-cache path (demo mode)
         cache_key = f"{_CACHE_NS}/tender/{_slug(hit_id)}"
