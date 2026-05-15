@@ -16,21 +16,31 @@ Operations used by this adapter:
   * AUSZUG_V2_REQUEST   — entity extract (UMFANG=Kurzinformation)
   * VERAENDERUNGENFIRMAREQUEST — change history (future use)
 
-Data scope (HVD free tier — UMFANG=Kurzinformation only):
+Data scope (HVD free tier — UMFANG=Kurzinformation):
   - Company name (FI_DKZ02 / BEZEICHNUNG)
-  - Business address (FI_DKZ03)
+  - Business address (FI_DKZ03, STELLE free-text form)
   - Entity status (AUFRECHT attribute on FI_DKZ02)
   - FN number (FNR attribute on the response element)
+  - Officers: managing directors, authorised signatories, supervisory board
+    members, liquidators — via top-level FUN/PER elements in the response
+    (confirmed by the Firmenbuch team, May 2026)
 
 NOT available on the free HVD API key:
-  - Officers (Geschäftsführer, Prokuristen, Vorstand, Aufsichtsrat)
   - Shareholders (Gesellschafter, Komplementäre, Kommanditisten)
   - Registered capital / Stammkapital
   - Founding date
-  These require UMFANG=Auszug/Vollzug, which is a paid Justiz Online
-  subscription.  The parser is written to handle those DKZ sections if
-  the data is ever present (e.g. a future paid tier), but they will be
-  empty lists under the current free key.
+  These require UMFANG=aktueller Auszug / historischer Auszug, which needs
+  a paid Justiz Online subscription.
+
+Officer data structure in Kurzinformation responses:
+  - FUN elements (siblings of FIRMA at AUSZUG_V2_RESPONSE level):
+      FKEN attribute — role code (GF, PK, AR, VW, LI, …)
+      FKENTEXT attribute — role label ("GESCHÄFTSFÜHRER/IN (handelsrechtlich)")
+      PNR attribute — person reference key
+      FU_DKZ10 child — carries AUFRECHT ("true"/"false") and VNR
+  - PER elements (also siblings of FIRMA):
+      PNR attribute — matches FUN.PNR
+      PE_DKZ02 child — person data: VORNAME, NACHNAME, GEBURTSDATUM, …
 
 Intentional exclusion:
   - WiEReG beneficial ownership data (restricted since ECJ 2022 ruling;
@@ -327,8 +337,15 @@ def _parse_extract_response(xml_text: str) -> dict[str, Any]:
         except ValueError:
             pass
 
-    # ── Officers and shareholders ──────────────────────────────────────────
-    officers = _parse_officers(firma_el)
+    # ── Officers ───────────────────────────────────────────────────────────
+    # Kurzinformation responses carry officer data in top-level FUN/PER
+    # elements (siblings of FIRMA).  Fall back to the FI_DKZ structure inside
+    # FIRMA if FUN/PER yields nothing (e.g. a paid-tier Auszug response).
+    officers = _parse_fun_per_officers(resp_el)
+    if not officers:
+        officers = _parse_officers(firma_el)
+
+    # ── Shareholders ───────────────────────────────────────────────────────
     shareholders = _parse_shareholders(firma_el, stamm_kapital)
 
     return {
@@ -394,19 +411,81 @@ def _parse_person(el: ET.Element) -> tuple[str, str, str, str]:
     return given, family, full, dob
 
 
+def _parse_fun_per_officers(resp_el: ET.Element) -> list[dict[str, Any]]:
+    """Parse officers from the FUN/PER structure in a Kurzinformation response.
+
+    Kurzinformation responses place officer data in top-level FUN and PER
+    elements that are siblings of FIRMA inside AUSZUG_V2_RESPONSE, NOT inside
+    the FIRMA element itself (confirmed by the Firmenbuch team, May 2026).
+
+    FUN element — one per role appointment:
+        FKEN attribute    — role code (GF, PK, AR, VW, LI, …)
+        FKENTEXT attribute — human-readable role label
+        PNR attribute     — person reference key linking to a PER element
+        FU_DKZ10 child    — carries AUFRECHT="true"|"false" and VNR
+
+    PER element — one per person:
+        PNR attribute     — matches FUN.PNR
+        PE_DKZ02 child    — current personal data (VORNAME, NACHNAME,
+                             GEBURTSDATUM, …)
+
+    Terminated appointments (FU_DKZ child AUFRECHT="false") are skipped.
+    """
+    # Index PER elements by PNR so we can resolve FUN → person in O(1).
+    per_map: dict[str, ET.Element] = {}
+    for per_el in resp_el.iter("PER"):
+        pnr = (per_el.get("PNR") or "").strip()
+        if pnr:
+            per_map[pnr] = per_el
+
+    officers: list[dict[str, Any]] = []
+    for fun_el in resp_el.iter("FUN"):
+        fken = (fun_el.get("FKEN") or "").strip()
+        fkentext = (fun_el.get("FKENTEXT") or "").strip()
+        pnr = (fun_el.get("PNR") or "").strip()
+
+        # Active check: look at the AUFRECHT attribute on the FU_DKZ child.
+        # If any child explicitly says AUFRECHT="false" the appointment is
+        # terminated — skip it.
+        is_active = True
+        for child in fun_el:
+            if child.get("AUFRECHT", "true").lower() == "false":
+                is_active = False
+                break
+        if not is_active:
+            continue
+
+        # Resolve to the linked PER element.
+        per_el = per_map.get(pnr)
+        given = family = full = dob = ""
+        if per_el is not None:
+            pe_dkz02 = per_el.find(".//PE_DKZ02")
+            target = pe_dkz02 if pe_dkz02 is not None else per_el
+            given, family, full, dob = _parse_person(target)
+
+        if not full:
+            continue
+
+        officers.append({
+            "full_name": full,
+            "given_name": given,
+            "family_name": family,
+            "role_code": fken,
+            "role_name": fkentext,
+            "start_date": "",  # not in FU_DKZ10 at Kurzinformation scope
+            "dob": dob,
+        })
+    return officers
+
+
 def _parse_officers(firma_el: ET.Element) -> list[dict[str, Any]]:
-    """Extract officer records from DKZ sections.
+    """Fallback: extract officers from FI_DKZ sections inside FIRMA.
 
-    DKZ → role mapping:
-      FI_DKZ08  Geschäftsführer / managing directors
-      FI_DKZ09  Prokuristen / authorised signatories
-      FI_DKZ10  Aufsichtsrat / supervisory board
-      FI_DKZ12  Komplementäre / general partners (KG)
-      FI_DKZ14  Vorstand / management board (AG/SE)
-      FI_DKZ16  Liquidatoren / liquidators
-
-    Each section may contain one or more person blocks.  Terminated entries
-    have ``AUFRECHT="false"`` and are skipped.
+    This path was written for the paid Auszug tier where officers appear as
+    FI_DKZ08 / FI_DKZ09 / FI_DKZ10 / FI_DKZ14 / FI_DKZ16 children of
+    FIRMA.  In practice the free Kurzinformation tier uses the FUN/PER
+    structure parsed by ``_parse_fun_per_officers`` instead.  This function
+    is kept as a fallback in case the response structure varies.
     """
     _DKZ_ROLES: dict[str, tuple[str, str]] = {
         "FI_DKZ08": ("GF",    "Geschäftsführer"),
@@ -575,10 +654,10 @@ class FirmenbuchAdapter(SourceAdapter):
             name="Firmenbuch — Austrian Commercial Register",
             homepage="https://justizonline.gv.at/jop/web/firmenbuchabfrage",
             description=(
-                "Austrian company name, address, and status from the Firmenbuch "
-                "(commercial register), via the BMJ High Value Dataset API. "
-                "Officer and shareholder data requires a paid Justiz Online "
-                "subscription and is not currently available."
+                "Austrian company name, address, status, and officers "
+                "(managing directors, authorised signatories, supervisory board) "
+                "from the Firmenbuch (commercial register), via the BMJ High "
+                "Value Dataset API. Shareholder data requires a paid subscription."
             ),
             license="CC-BY-4.0",
             attribution=(
@@ -718,6 +797,12 @@ class FirmenbuchAdapter(SourceAdapter):
             )
             return None
 
+        import logging as _logging
+        _logging.getLogger(__name__).debug(
+            "Firmenbuch raw XML response (cache_key=%s):\n%s",
+            cache_key,
+            xml_text,
+        )
         self._cache.put(cache_key, xml_text)
         return xml_text
 

@@ -105,13 +105,13 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 
 ## Firmenbuch — Austrian Commercial Register
 
-- **Data:** company name, business address, and entity status from the Austrian commercial register (Firmenbuch), available as a High-Value Dataset (HVD) under EU open data legislation (EU Implementing Regulation 2023/138, Annex 5)
+- **Data:** company name, business address, entity status, and officers (managing directors, authorised signatories, supervisory board members, liquidators) from the Austrian commercial register (Firmenbuch), available as a High-Value Dataset (HVD) under EU open data legislation (EU Implementing Regulation 2023/138, Annex 5)
 - **API:** Firmenbuch HVD SOAP 1.2 API at `https://justizonline.gv.at/jop/api/at.gv.justiz.fbw/ws` — requires a free API key issued by Justiz Online
 - **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 - **Attribution:** "Contains data from the Austrian commercial register (Firmenbuch), open data under CC BY 4.0, provided by the Austrian Federal Ministry of Justice."
 - **Entry point:** `at_fn` (Firmenbuchnummer, e.g. `123456a`) derived from GLEIF RA code `RA000017`
 - **Key registration:** Free API key available at <https://justizonline.gv.at/jop/web/iwg/register>. Set the `FIRMENBUCH_API_KEY` environment variable to enable live data. Without it, the adapter returns a stub entry.
-- **Note — data scope:** The free HVD API key only supports `UMFANG=Kurzinformation`, which returns company name and business address only. Officer and shareholder data requires `UMFANG=aktueller Auszug` or `historischer Auszug`, both of which need a paid Justiz Online subscription — OpenCheck does not currently support this. Austrian UBO declarations (wirtschaftliche Eigentümer) are held in the separate WiEReG register and are also not available via this API.
+- **Note — data scope:** The free HVD API key supports `UMFANG=Kurzinformation`, which returns company name, business address, and officers (managing directors / Geschäftsführer, authorised signatories / Prokuristen, supervisory board / Aufsichtsrat, liquidators). Shareholder data (Gesellschafter, Kommanditisten) and registered capital require `UMFANG=aktueller Auszug` or `historischer Auszug`, which need a paid Justiz Online subscription — OpenCheck does not currently support this. Austrian UBO declarations (wirtschaftliche Eigentümer) are held in the separate WiEReG register and are also not available via this API.
 
 ## OpenCorporates
 
