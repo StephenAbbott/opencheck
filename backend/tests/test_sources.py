@@ -36,7 +36,6 @@ def test_registry_has_expected_sources() -> None:
         "sec_edgar",
         "ur_latvia",
         "wikidata",
-        "opentender",
         "prh",
         "zefix",
         "kvk",

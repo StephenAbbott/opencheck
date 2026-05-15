@@ -43,13 +43,11 @@ from .bods import (
     map_companies_house,
     map_cro,
     map_everypolitician,
-    map_firmenbuch,
     map_gleif,
     map_inpi,
     map_openaleph,
     map_opencorporates,
     map_opensanctions,
-    map_opentender,
     map_prh,
     map_sec_edgar,
     map_ur_latvia,
@@ -62,7 +60,6 @@ from .sources.ariregister import EE_RA_CODE as _EE_RA_CODE
 from .sources.bolagsverket import BV_RA_CODE as _BV_RA_CODE, normalise_org_number as _normalise_org_number
 from .sources.brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_orgnr
 from .sources.cro import IE_RA_CODE as _CRO_RA_CODE, normalise_crn as _normalise_crn
-from .sources.firmenbuch import AT_FB_RA_CODE as _AT_FB_RA_CODE, normalise_fn as _normalise_fn
 from .sources.prh import FI_RA_CODE as _PRH_RA_CODE, normalise_ytunnus as _normalise_ytunnus
 from .sources.ur_latvia import LV_RA_CODE as _LV_RA_CODE, normalise_regcode as _normalise_lv_regcode
 from .sources.inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
@@ -367,7 +364,6 @@ _MAPPERS = {
     "climatetrace": map_climatetrace,
     "companies_house": map_companies_house,
     "cro": map_cro,
-    "firmenbuch": map_firmenbuch,
     "gleif": map_gleif,
     "inpi": map_inpi,
     "opencorporates": map_opencorporates,
@@ -378,7 +374,6 @@ _MAPPERS = {
     "wikidata": map_wikidata,
     "everypolitician": map_everypolitician,
     "kvk": map_kvk,
-    "opentender": map_opentender,
     "prh": map_prh,
     "ur_latvia": map_ur_latvia,
     "zefix": map_zefix,
@@ -705,9 +700,6 @@ async def lookup(
     if registered_at_id == _LV_RA_CODE and registered_as:
         # Latvian registration number — 11-digit string (e.g. "40003521600")
         derived["lv_regcode"] = _normalise_lv_regcode(registered_as)
-    if registered_at_id == _AT_FB_RA_CODE and registered_as:
-        # Austrian Firmenbuchnummer (e.g. "473888w")
-        derived["at_fn"] = _normalise_fn(registered_as)
 
     # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
     # (format: ``{jurisdiction_code}/{company_number}``).
@@ -1066,34 +1058,6 @@ async def lookup(
                 deepened_bundles.append(("ur_latvia", derived["lv_regcode"]))
         except Exception as exc:  # noqa: BLE001
             errors["ur_latvia"] = f"{type(exc).__name__}: {exc}"
-
-    # Firmenbuch — direct fetch by Firmenbuchnummer when Austrian entity (RA000017).
-    if "at_fn" in derived:
-        try:
-            fb_bundle = await REGISTRY["firmenbuch"].fetch(
-                derived["at_fn"], legal_name=legal_name
-            )
-            fb_extract = fb_bundle.get("extract") or {}
-            fb_name = fb_extract.get("name") or legal_name or ""
-            hits.append(
-                SourceHit(
-                    source_id="firmenbuch",
-                    hit_id=derived["at_fn"],
-                    kind=SearchKind.ENTITY,
-                    name=fb_name,
-                    summary=f"AT-FB {derived['at_fn']}"
-                    + (f" · {fb_extract.get('rechtsform')}" if fb_extract.get("rechtsform") else ""),
-                    identifiers={
-                        "at_fn": derived["at_fn"],
-                        "lei": lei,
-                    },
-                    raw=fb_bundle,
-                    is_stub=bool(fb_bundle.get("is_stub")),
-                )
-            )
-            deepened_bundles.append(("firmenbuch", derived["at_fn"]))
-        except Exception as exc:  # noqa: BLE001
-            errors["firmenbuch"] = f"{type(exc).__name__}: {exc}"
 
     # OpenCorporates — direct fetch by ocid derived from GLEIF.
     if ocid:

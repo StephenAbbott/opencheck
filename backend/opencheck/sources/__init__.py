@@ -16,14 +16,12 @@ from .climatetrace import ClimateTRACEAdapter
 from .companies_house import CompaniesHouseAdapter
 from .cro import CroAdapter
 from .everypolitician import EveryPoliticianAdapter
-from .firmenbuch import FirmenbuchAdapter
 from .gleif import GleifAdapter
 from .inpi import InpiAdapter
 from .kvk import KvKAdapter
 from .openaleph import OpenAlephAdapter
 from .opencorporates import OpenCorporatesAdapter
 from .opensanctions import OpenSanctionsAdapter
-from .opentender import OpenTenderAdapter
 from .prh import PrhAdapter
 from .sec_edgar import SecEdgarAdapter
 from .ur_latvia import UrLatviaAdapter
@@ -45,9 +43,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "openaleph": OpenAlephAdapter(),
     "opensanctions": OpenSanctionsAdapter(),
     "everypolitician": EveryPoliticianAdapter(),
-    "firmenbuch": FirmenbuchAdapter(),
     "wikidata": WikidataAdapter(),
-    "opentender": OpenTenderAdapter(),
     "prh": PrhAdapter(),
     "sec_edgar": SecEdgarAdapter(),
     "ur_latvia": UrLatviaAdapter(),
