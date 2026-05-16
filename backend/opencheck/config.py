@@ -127,6 +127,18 @@ class Settings(BaseSettings):
     opentender_db_file: str | None = Field(default=None, alias="OPENTENDER_DB_FILE")
     opentender_s3_url: str | None = Field(default=None, alias="OPENTENDER_S3_URL")
 
+    # --- Open Ownership BODS bulk data (GLEIF + UK PSC) ---
+    # Pre-extracted Parquet files. Build with: python scripts/setup_bods_data.py
+    # S3 source URLs are fetched once and extracted locally.
+    # BODS_GLEIF_PARQUET_DIR   — directory containing GLEIF Parquet files
+    # BODS_GLEIF_FTS_DB        — path to the FTS5 SQLite index for GLEIF
+    # BODS_UK_PSC_PARQUET_DIR  — directory containing UK PSC Parquet files
+    # BODS_UK_PSC_FTS_DB       — path to the FTS5 SQLite index for UK PSC
+    bods_gleif_parquet_dir: str | None = Field(default=None, alias="BODS_GLEIF_PARQUET_DIR")
+    bods_gleif_fts_db: str | None = Field(default=None, alias="BODS_GLEIF_FTS_DB")
+    bods_uk_psc_parquet_dir: str | None = Field(default=None, alias="BODS_UK_PSC_PARQUET_DIR")
+    bods_uk_psc_fts_db: str | None = Field(default=None, alias="BODS_UK_PSC_FTS_DB")
+
     # --- Austrian Firmenbuch (commercial register) HVD API ---
     # Register for a key at: https://justizonline.gv.at/jop/web/iwg/register
     # WSDL: https://justizonline.gv.at/jop/api/at.gv.justiz.fbw/ws/fbw.wsdl

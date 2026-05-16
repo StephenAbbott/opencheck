@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from .ariregister import AriregisterAdapter
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .bods_gleif import BODSGleifAdapter
+from .bods_uk_psc import BODSUKPSCAdapter
 from .bolagsverket import BolagsverketAdapter
 from .brightquery import BrightQueryAdapter
 from .brreg import BrregAdapter
@@ -30,6 +32,8 @@ from .zefix import ZefixAdapter
 
 REGISTRY: dict[str, SourceAdapter] = {
     "ariregister": AriregisterAdapter(),
+    "bods_gleif": BODSGleifAdapter(),
+    "bods_uk_psc": BODSUKPSCAdapter(),
     "bolagsverket": BolagsverketAdapter(),
     "brreg": BrregAdapter(),
     "climatetrace": ClimateTRACEAdapter(),

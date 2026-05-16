@@ -21,6 +21,8 @@ def _isolated_data_root(monkeypatch, tmp_path):
 def test_registry_has_expected_sources() -> None:
     assert set(REGISTRY.keys()) == {
         "ariregister",
+        "bods_gleif",
+        "bods_uk_psc",
         "bolagsverket",
         "brreg",
         "climatetrace",

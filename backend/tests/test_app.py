@@ -41,6 +41,8 @@ def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
     ids = {s["id"] for s in r.json()["sources"]}
     assert ids == {
         "ariregister",
+        "bods_gleif",
+        "bods_uk_psc",
         "bolagsverket",
         "brreg",
         "climatetrace",

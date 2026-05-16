@@ -5065,3 +5065,31 @@ def map_firmenbuch(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interests=[interest],
             source_url=source_url,
         )
+
+
+# ----------------------------------------------------------------------
+# Open Ownership BODS bulk data — passthrough mappers
+# ----------------------------------------------------------------------
+# The bods_gleif and bods_uk_psc adapters already reconstruct full BODS
+# v0.4 statements inside their fetch() method and return them under the
+# ``bods_statements`` key. These mapper functions are simple passthroughs
+# so the _MAPPERS dispatch in app.py can route to them uniformly.
+# ----------------------------------------------------------------------
+
+
+def map_bods_gleif(bundle: dict[str, Any]) -> BODSBundle:
+    """Passthrough mapper for the Open Ownership GLEIF bulk data adapter.
+
+    The adapter returns ``{"bods_statements": [...], ...}`` directly from
+    its Parquet reconstruction step; we just yield those statements.
+    """
+    return iter(bundle.get("bods_statements", []))
+
+
+def map_bods_uk_psc(bundle: dict[str, Any]) -> BODSBundle:
+    """Passthrough mapper for the Open Ownership UK PSC bulk data adapter.
+
+    Same pattern as map_bods_gleif — statements are pre-built by the
+    adapter; this function makes them visible to the _MAPPERS dispatch.
+    """
+    return iter(bundle.get("bods_statements", []))

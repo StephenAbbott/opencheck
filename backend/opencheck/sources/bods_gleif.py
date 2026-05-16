@@ -1,0 +1,446 @@
+"""Open Ownership BODS bulk data adapter — GLEIF.
+
+Queries the pre-extracted Open Ownership BODS v0.4 Parquet files for the
+GLEIF dataset.  The Parquet files are built by Open Ownership from the
+GLEIF LEI-CDF bulk data and published at:
+https://bods-data.openownership.org/source/gleif_version_0_4/
+
+Files are produced by `Flatterer <https://github.com/kindly/flatterer>`_
+which flattens nested JSON into one file per JSON array level.  Key files:
+
+* ``entity_statement.parquet`` — one row per LEI entity
+* ``entity_recordDetails_identifiers.parquet`` — one row per identifier
+  (the LEI value itself lives here under ``scheme = "LEI"``)
+* ``entity_recordDetails_addresses.parquet`` — postal/registered addresses
+* ``relationship_statement.parquet`` — direct/ultimate parent links
+
+Column naming convention: Flatterer uses snake_case with double-underscored
+prefix for nested paths.  In practice the BODS 0.4 nesting
+``recordDetails.name`` becomes ``recorddetails_name``.
+
+Setup
+-----
+Run ``python scripts/setup_bods_data.py --source gleif`` once to download
+and index the data, then set:
+
+    BODS_GLEIF_PARQUET_DIR=/path/to/data/bods/gleif/parquet
+    BODS_GLEIF_FTS_DB=/path/to/data/bods/gleif/fts.db
+
+Without these vars the adapter returns stubs.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import re
+import sqlite3
+from pathlib import Path
+from typing import Any
+
+from ..cache import Cache
+from ..config import get_settings
+from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+
+logger = logging.getLogger(__name__)
+
+_CACHE_NS = "bods_gleif"
+
+# DuckDB is optional at import time — defer the import so the server starts
+# even if duckdb is not yet installed.  The adapter will fall back to stubs.
+try:
+    import duckdb as _duckdb  # noqa: F401
+    _DUCKDB_AVAILABLE = True
+except ImportError:
+    _DUCKDB_AVAILABLE = False
+    logger.warning("bods_gleif: duckdb not installed — live queries unavailable")
+
+
+def _escape_fts5(query: str) -> str:
+    """Escape FTS5 special characters and build a safe query string."""
+    cleaned = re.sub(r'["\']', " ", query.strip())
+    return f'"{cleaned}"'
+
+
+def _prefix_fts5(query: str) -> str:
+    """Build a prefix OR-match FTS5 query from *query* tokens."""
+    tokens = [w for w in re.sub(r'["\']', " ", query.strip()).split() if len(w) >= 2]
+    return " OR ".join(f"{w}*" for w in tokens) if tokens else query.strip()
+
+
+class BODSGleifAdapter(SourceAdapter):
+    """Entity search/fetch over Open Ownership's GLEIF BODS bulk data.
+
+    * ``search()`` — FTS5 name search (sub-50 ms for 4 M+ entities)
+    * ``fetch()``  — DuckDB JOIN across Parquet files to reconstruct full
+                     BODS 0.4 entity statement + linked relationship statements
+    """
+
+    id = "bods_gleif"
+
+    def __init__(self) -> None:
+        self._cache = Cache()
+        self._fts_conn: sqlite3.Connection | None = None
+
+    @property
+    def info(self) -> SourceInfo:
+        settings = get_settings()
+        live = bool(
+            _DUCKDB_AVAILABLE
+            and settings.bods_gleif_parquet_dir
+            and Path(settings.bods_gleif_parquet_dir).exists()
+            and settings.bods_gleif_fts_db
+            and Path(settings.bods_gleif_fts_db).exists()
+        )
+        return SourceInfo(
+            id=self.id,
+            name="Open Ownership GLEIF (BODS bulk)",
+            homepage="https://bods-data.openownership.org/source/gleif_version_0_4/",
+            description=(
+                "GLEIF LEI data processed into BODS v0.4 by Open Ownership. "
+                "Covers 4 M+ legal entities with LEI, registered name, "
+                "jurisdiction, addresses, and direct/ultimate parent links."
+            ),
+            license="CC-BY-4.0",
+            attribution=(
+                "LEI data sourced from the Global Legal Entity Identifier "
+                "Foundation (GLEIF), processed into BODS v0.4 by Open "
+                "Ownership. Licensed under CC BY 4.0."
+            ),
+            supports=[SearchKind.ENTITY],
+            requires_api_key=False,
+            live_available=live,
+        )
+
+    # ------------------------------------------------------------------
+    # FTS connection (lazy)
+    # ------------------------------------------------------------------
+
+    def _fts(self) -> sqlite3.Connection | None:
+        settings = get_settings()
+        fts_path = settings.bods_gleif_fts_db
+        if not fts_path or not Path(fts_path).exists():
+            return None
+        if self._fts_conn is not None:
+            return self._fts_conn
+        conn = sqlite3.connect(str(fts_path), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        self._fts_conn = conn
+        return conn
+
+    # ------------------------------------------------------------------
+    # Parquet directory
+    # ------------------------------------------------------------------
+
+    def _parquet_dir(self) -> Path | None:
+        settings = get_settings()
+        d = settings.bods_gleif_parquet_dir
+        if not d:
+            return None
+        p = Path(d)
+        return p if p.exists() else None
+
+    # ------------------------------------------------------------------
+    # Search
+    # ------------------------------------------------------------------
+
+    async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
+        if kind != SearchKind.ENTITY:
+            return []
+
+        fts_conn = self._fts()
+        if fts_conn is not None:
+            return await asyncio.to_thread(self._fts_search, fts_conn, query)
+
+        # Stub path
+        return self._stub_search(query)
+
+    def _fts_search(self, conn: sqlite3.Connection, query: str) -> list[SourceHit]:
+        # Try exact phrase match first.
+        fts_q = _escape_fts5(query)
+        cur = conn.execute(
+            "SELECT statementid, name, entity_type, jurisdiction "
+            "FROM entity_fts WHERE entity_fts MATCH ? LIMIT 20",
+            (fts_q,),
+        )
+        rows = cur.fetchall()
+        if not rows:
+            # Fall back to prefix match on individual tokens.
+            fts_q = _prefix_fts5(query)
+            if fts_q:
+                cur = conn.execute(
+                    "SELECT statementid, name, entity_type, jurisdiction "
+                    "FROM entity_fts WHERE entity_fts MATCH ? LIMIT 20",
+                    (fts_q,),
+                )
+                rows = cur.fetchall()
+
+        return [self._fts_row_to_hit(row) for row in rows]
+
+    @staticmethod
+    def _fts_row_to_hit(row: sqlite3.Row) -> SourceHit:
+        statementid = row["statementid"]
+        name = row["name"] or ""
+        entity_type = row["entity_type"] or ""
+        jurisdiction = row["jurisdiction"] or ""
+
+        summary_bits: list[str] = []
+        if jurisdiction:
+            summary_bits.append(jurisdiction)
+        if entity_type:
+            summary_bits.append(entity_type.replace("_", " "))
+
+        return SourceHit(
+            source_id="bods_gleif",
+            hit_id=statementid,
+            kind=SearchKind.ENTITY,
+            name=name,
+            summary=" · ".join(summary_bits) or "GLEIF entity",
+            identifiers={"bods_gleif_statementid": statementid},
+            raw={"statementid": statementid, "name": name},
+            is_stub=False,
+        )
+
+    # ------------------------------------------------------------------
+    # Fetch
+    # ------------------------------------------------------------------
+
+    async def fetch(self, hit_id: str) -> dict[str, Any]:
+        parquet_dir = self._parquet_dir()
+        if parquet_dir is not None and _DUCKDB_AVAILABLE:
+            return await asyncio.to_thread(self._parquet_fetch, parquet_dir, hit_id)
+
+        return {
+            "source_id": self.id,
+            "hit_id": hit_id,
+            "is_stub": True,
+        }
+
+    def _parquet_fetch(self, parquet_dir: Path, statementid: str) -> dict[str, Any]:
+        """Fetch a full BODS entity statement + relationships from Parquet."""
+        import duckdb
+
+        entity_p = str(parquet_dir / "entity_statement.parquet")
+        ids_p = parquet_dir / "entity_recordDetails_identifiers.parquet"
+        addrs_p = parquet_dir / "entity_recordDetails_addresses.parquet"
+        rels_p = parquet_dir / "relationship_statement.parquet"
+
+        duck = duckdb.connect(":memory:")
+        try:
+            # Main entity row
+            row = duck.execute(
+                "SELECT * FROM read_parquet(?) WHERE statementid = ? LIMIT 1",
+                [entity_p, statementid],
+            ).fetchone()
+
+            if row is None:
+                return {"source_id": self.id, "hit_id": statementid, "is_stub": True}
+
+            cols = [d[0] for d in duck.description]  # type: ignore[union-attr]
+            entity_row = dict(zip(cols, row))
+            link = entity_row.get("_link", "")
+
+            # Identifiers sub-table
+            identifiers: list[dict[str, str]] = []
+            if ids_p.exists() and link:
+                id_rows = duck.execute(
+                    "SELECT id, scheme, schemename, uri "
+                    "FROM read_parquet(?) WHERE _link_entity_statement = ?",
+                    [str(ids_p), link],
+                ).fetchall()
+                for id_row in id_rows:
+                    ident: dict[str, str] = {}
+                    if id_row[0]:
+                        ident["id"] = str(id_row[0])
+                    if id_row[1]:
+                        ident["scheme"] = str(id_row[1])
+                    if id_row[2]:
+                        ident["schemeName"] = str(id_row[2])
+                    if id_row[3]:
+                        ident["uri"] = str(id_row[3])
+                    if ident.get("id"):
+                        identifiers.append(ident)
+
+            # Addresses sub-table
+            addresses: list[dict[str, Any]] = []
+            if addrs_p.exists() and link:
+                addr_rows = duck.execute(
+                    "SELECT type, address, postcode, country_name, country_code "
+                    "FROM read_parquet(?) WHERE _link_entity_statement = ?",
+                    [str(addrs_p), link],
+                ).fetchall()
+                for addr_row in addr_rows:
+                    addr: dict[str, Any] = {}
+                    if addr_row[0]:
+                        addr["type"] = str(addr_row[0])
+                    if addr_row[1]:
+                        addr["address"] = str(addr_row[1])
+                    if addr_row[2]:
+                        addr["postcode"] = str(addr_row[2])
+                    if addr_row[3] or addr_row[4]:
+                        addr["country"] = {
+                            k: v for k, v in [
+                                ("name", addr_row[3]),
+                                ("code", addr_row[4]),
+                            ] if v
+                        }
+                    addresses.append(addr)
+
+            # Reconstruct BODS 0.4 entity statement
+            entity_stmt = _build_entity_statement(entity_row, identifiers, addresses)
+
+            # Relationship statements (direct/ultimate parents)
+            relationship_stmts: list[dict[str, Any]] = []
+            if rels_p.exists():
+                rel_rows = duck.execute(
+                    """
+                    SELECT statementid, recorddetails_statementtype,
+                           recorddetails_subject, recorddetails_interestedparty,
+                           recorddetails_interestedparty_reason,
+                           recorddetails_interestedparty_description
+                    FROM read_parquet(?)
+                    WHERE recorddetails_subject = ?
+                       OR recorddetails_interestedparty = ?
+                    LIMIT 50
+                    """,
+                    [str(rels_p), statementid, statementid],
+                ).fetchall()
+                for rel_row in rel_rows:
+                    relationship_stmts.append(_build_relationship_statement(rel_row))
+
+        finally:
+            duck.close()
+
+        # Build the cross-source identifier map (for reconciler)
+        cross_ids: dict[str, str] = {"bods_gleif_statementid": statementid}
+        for ident in identifiers:
+            if ident.get("scheme") == "LEI" and ident.get("id"):
+                cross_ids["lei"] = ident["id"]
+
+        all_stmts = [entity_stmt] + relationship_stmts
+
+        return {
+            "source_id": self.id,
+            "hit_id": statementid,
+            "is_stub": False,
+            "bods_statements": all_stmts,
+            # Expose identifiers flat for reconciler cross-linking
+            "identifiers": cross_ids,
+        }
+
+    # ------------------------------------------------------------------
+    # Stub path
+    # ------------------------------------------------------------------
+
+    def _stub_search(self, query: str) -> list[SourceHit]:
+        return [
+            SourceHit(
+                source_id=self.id,
+                hit_id="bods-gleif-stub-0001",
+                kind=SearchKind.ENTITY,
+                name=f"{query} (stub)",
+                summary=(
+                    "Stub BODS GLEIF record — run scripts/setup_bods_data.py "
+                    "--source gleif and set BODS_GLEIF_PARQUET_DIR / BODS_GLEIF_FTS_DB "
+                    "to enable live search."
+                ),
+                identifiers={"bods_gleif_statementid": "bods-gleif-stub-0001"},
+                raw={"statementid": "bods-gleif-stub-0001"},
+                is_stub=True,
+            )
+        ]
+
+
+# ---------------------------------------------------------------------------
+# BODS statement reconstruction helpers
+# ---------------------------------------------------------------------------
+
+
+def _build_entity_statement(
+    row: dict[str, Any],
+    identifiers: list[dict[str, str]],
+    addresses: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Reconstruct a BODS 0.4 entityStatement from a Flatterer-flatten row."""
+    statementid = row.get("statementid") or ""
+    pub_date = row.get("publicationdetails_publicationdate") or row.get("publicationdetails_date") or ""
+
+    record_details: dict[str, Any] = {
+        "isComponent": False,
+        "entityType": {"type": row.get("recorddetails_entitytype_type") or "unknownEntity"},
+        "name": row.get("recorddetails_name") or "",
+        "identifiers": identifiers,
+    }
+
+    # Jurisdiction
+    jname = row.get("recorddetails_jurisdiction_name") or ""
+    jcode = row.get("recorddetails_jurisdiction_code") or ""
+    if jname or jcode:
+        record_details["incorporatedInJurisdiction"] = {
+            k: v for k, v in [("name", jname), ("code", jcode)] if v
+        }
+
+    # Dates
+    founding = row.get("recorddetails_foundingdate") or ""
+    if founding:
+        record_details["foundingDate"] = founding[:10]  # trim to YYYY-MM-DD
+    dissolution = row.get("recorddetails_dissolutiondate") or ""
+    if dissolution:
+        record_details["dissolutionDate"] = dissolution[:10]
+
+    if addresses:
+        record_details["addresses"] = addresses
+
+    stmt: dict[str, Any] = {
+        "statementId": statementid,
+        "recordId": statementid,
+        "statementType": "entityStatement",
+        "recordDetails": record_details,
+        "publicationDetails": {
+            "bodsVersion": "0.4",
+            "publisher": {"name": "OpenCheck (via Open Ownership GLEIF bulk data)"},
+        },
+    }
+    if pub_date:
+        stmt["publicationDetails"]["publicationDate"] = pub_date[:10]
+
+    source_url = row.get("source_url") or ""
+    if source_url:
+        stmt["source"] = {"url": source_url, "type": "officialRegister"}
+
+    return stmt
+
+
+def _build_relationship_statement(row: tuple[Any, ...]) -> dict[str, Any]:
+    """Reconstruct a minimal BODS 0.4 relationshipStatement from a row."""
+    statementid = row[0] or ""
+    stmt_type = row[1] or "relationshipStatement"
+    subject = row[2] or ""
+    interested_party = row[3] or ""
+    reason = row[4] or ""
+    description = row[5] or ""
+
+    interests: list[dict[str, Any]] = []
+    if reason or description:
+        interests.append({
+            "type": "otherInfluenceOrControl",
+            "directOrIndirect": "direct",
+            "beneficialOwnershipOrControl": False,
+            "details": description or reason,
+        })
+
+    return {
+        "statementId": statementid,
+        "recordId": statementid,
+        "statementType": "relationshipStatement",
+        "recordDetails": {
+            "isComponent": False,
+            "subject": {"describedByEntityStatement": subject},
+            "interestedParty": {"describedByEntityStatement": interested_party},
+            "interests": interests,
+        },
+        "publicationDetails": {
+            "bodsVersion": "0.4",
+            "publisher": {"name": "OpenCheck (via Open Ownership GLEIF bulk data)"},
+        },
+    }

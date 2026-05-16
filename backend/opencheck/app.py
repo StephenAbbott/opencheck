@@ -36,6 +36,8 @@ from . import __version__
 from .bods import (
     BODSBundle,
     map_ariregister,
+    map_bods_gleif,
+    map_bods_uk_psc,
     map_bolagsverket,
     map_brightquery,
     map_brreg,
@@ -359,6 +361,8 @@ def _ch_ra_code(company_number: str) -> str:
 
 _MAPPERS = {
     "ariregister": map_ariregister,
+    "bods_gleif": map_bods_gleif,
+    "bods_uk_psc": map_bods_uk_psc,
     "bolagsverket": map_bolagsverket,
     "brreg": map_brreg,
     "climatetrace": map_climatetrace,
