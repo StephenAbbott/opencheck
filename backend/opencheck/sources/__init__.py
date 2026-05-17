@@ -24,6 +24,7 @@ from .kvk import KvKAdapter
 from .openaleph import OpenAlephAdapter
 from .opencorporates import OpenCorporatesAdapter
 from .opensanctions import OpenSanctionsAdapter
+from .opentender import OpenTenderAdapter
 from .prh import PrhAdapter
 from .sec_edgar import SecEdgarAdapter
 from .ur_latvia import UrLatviaAdapter
@@ -47,6 +48,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "openaleph": OpenAlephAdapter(),
     "opensanctions": OpenSanctionsAdapter(),
     "everypolitician": EveryPoliticianAdapter(),
+    "opentender": OpenTenderAdapter(),
     "wikidata": WikidataAdapter(),
     "prh": PrhAdapter(),
     "sec_edgar": SecEdgarAdapter(),
