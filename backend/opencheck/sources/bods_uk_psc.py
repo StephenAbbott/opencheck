@@ -119,43 +119,70 @@ class BODSUKPSCAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     def _bootstrap_from_s3(self) -> None:
-        """Download and extract the UK PSC bundle zip from S3 if needed."""
+        """Download the UK PSC FTS db from S3.
+
+        Mirrors the two-mode logic of BODSGleifAdapter._bootstrap_from_s3:
+
+        * **Option B** — set ``BODS_UK_PSC_FTS_S3_URL`` to just the fts.db.
+          Only ~500 MB downloaded; Parquet queried via HTTPFS.
+        * **Bundle zip** (legacy) — set ``BODS_UK_PSC_S3_URL`` to the full
+          bundle produced by ``setup_bods_data.py --create-bundle``.
+        """
         if self._bootstrapped:
             return
 
         settings = get_settings()
-        s3_url = settings.bods_uk_psc_s3_url
         fts_path = settings.bods_uk_psc_fts_db
-
-        if not s3_url or not fts_path:
-            return  # don't set flag — allow retry after env vars are added
-
-        self._bootstrapped = True  # set after guard, before download
+        if not fts_path:
+            return
 
         fts_p = Path(fts_path)
         if fts_p.exists():
-            return  # already extracted
+            self._bootstrapped = True
+            return
+
+        fts_s3_url = settings.bods_uk_psc_fts_s3_url
+        bundle_s3_url = settings.bods_uk_psc_s3_url
+
+        if not fts_s3_url and not bundle_s3_url:
+            return
+
+        self._bootstrapped = True
 
         dest_dir = fts_p.parent
-        zip_path = dest_dir / "bundle.zip"
         dest_dir.mkdir(parents=True, exist_ok=True)
 
-        logger.info("bods_uk_psc: downloading bundle from S3 …")
-        try:
-            with httpx.stream("GET", s3_url, follow_redirects=True, timeout=600) as r:
-                r.raise_for_status()
-                with open(zip_path, "wb") as fh:
-                    for chunk in r.iter_bytes(chunk_size=1 << 20):
-                        fh.write(chunk)
-            logger.info("bods_uk_psc: extracting bundle …")
-            with zipfile.ZipFile(zip_path) as zf:
-                zf.extractall(dest_dir)
-            zip_path.unlink(missing_ok=True)
-            logger.info("bods_uk_psc: S3 bootstrap complete")
-        except Exception as exc:
-            logger.warning("bods_uk_psc: S3 bootstrap failed: %s", exc)
-            zip_path.unlink(missing_ok=True)
-            self._bootstrapped = False  # allow retry on next request
+        if fts_s3_url:
+            logger.info("bods_uk_psc: downloading fts.db from %s …", fts_s3_url)
+            try:
+                with httpx.stream("GET", fts_s3_url, follow_redirects=True, timeout=600) as r:
+                    r.raise_for_status()
+                    with open(fts_p, "wb") as fh:
+                        for chunk in r.iter_bytes(chunk_size=1 << 20):
+                            fh.write(chunk)
+                logger.info("bods_uk_psc: fts.db ready (%s MB)", fts_p.stat().st_size // 1_000_000)
+            except Exception as exc:
+                logger.warning("bods_uk_psc: fts.db download failed: %s", exc)
+                fts_p.unlink(missing_ok=True)
+                self._bootstrapped = False
+        else:
+            zip_path = dest_dir / "bundle.zip"
+            logger.info("bods_uk_psc: downloading bundle from %s …", bundle_s3_url)
+            try:
+                with httpx.stream("GET", bundle_s3_url, follow_redirects=True, timeout=600) as r:
+                    r.raise_for_status()
+                    with open(zip_path, "wb") as fh:
+                        for chunk in r.iter_bytes(chunk_size=1 << 20):
+                            fh.write(chunk)
+                logger.info("bods_uk_psc: extracting bundle …")
+                with zipfile.ZipFile(zip_path) as zf:
+                    zf.extractall(dest_dir)
+                zip_path.unlink(missing_ok=True)
+                logger.info("bods_uk_psc: S3 bootstrap complete")
+            except Exception as exc:
+                logger.warning("bods_uk_psc: S3 bootstrap failed: %s", exc)
+                zip_path.unlink(missing_ok=True)
+                self._bootstrapped = False
 
     # ------------------------------------------------------------------
     # FTS connection (lazy)

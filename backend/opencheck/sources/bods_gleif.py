@@ -123,59 +123,79 @@ class BODSGleifAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     def _bootstrap_from_s3(self) -> None:
-        """Download and extract the GLEIF bundle zip from S3 if needed.
+        """Download the GLEIF FTS db (and optionally Parquet) from S3.
 
-        The bundle zip is produced by ``setup_bods_data.py --create-bundle``
-        and has the layout::
+        Two modes, tried in order:
 
-            parquet/entity_statement.parquet
-            parquet/entity_recordDetails_identifiers.parquet
-            ...
-            fts.db
+        **Option B — direct fts.db download** (preferred on Render):
+          Set ``BODS_GLEIF_FTS_S3_URL`` to the public URL of just the
+          ``fts.db`` file.  Only ~500 MB is downloaded; no Parquet files
+          touch local disk.  Parquet is queried via HTTPFS using
+          ``BODS_GLEIF_PARQUET_S3_BASE``.
 
-        We extract into the directory that contains ``BODS_GLEIF_FTS_DB``
-        so that ``fts.db`` lands at the configured path and ``parquet/``
-        lands as a sibling directory.
+        **Bundle zip** (legacy / local use):
+          Set ``BODS_GLEIF_S3_URL`` to the bundle zip produced by
+          ``setup_bods_data.py --create-bundle``.  Downloads zip + extracts
+          ``parquet/`` + ``fts.db`` into the parent of ``BODS_GLEIF_FTS_DB``.
+          Requires ~2 GB of /tmp which can trigger eviction on Render.
         """
         if self._bootstrapped:
             return
 
         settings = get_settings()
-        s3_url = settings.bods_gleif_s3_url
         fts_path = settings.bods_gleif_fts_db
-
-        # Only lock out future attempts once we know both vars are present.
-        # If either is missing we return WITHOUT setting the flag so a later
-        # call (after env vars are added and server redeployed) can still work.
-        if not s3_url or not fts_path:
-            return
-
-        self._bootstrapped = True  # set after guard, before download
+        if not fts_path:
+            return  # nowhere to put the db — wait for env var
 
         fts_p = Path(fts_path)
         if fts_p.exists():
-            return  # already extracted — persistent disk or previous call
+            self._bootstrapped = True
+            return  # already on disk
+
+        fts_s3_url = settings.bods_gleif_fts_s3_url
+        bundle_s3_url = settings.bods_gleif_s3_url
+
+        if not fts_s3_url and not bundle_s3_url:
+            return  # no S3 URL configured — nothing to do
+
+        self._bootstrapped = True  # set before I/O; reset to False on failure
 
         dest_dir = fts_p.parent
-        zip_path = dest_dir / "bundle.zip"
         dest_dir.mkdir(parents=True, exist_ok=True)
 
-        logger.info("bods_gleif: downloading bundle from S3 …")
-        try:
-            with httpx.stream("GET", s3_url, follow_redirects=True, timeout=600) as r:
-                r.raise_for_status()
-                with open(zip_path, "wb") as fh:
-                    for chunk in r.iter_bytes(chunk_size=1 << 20):
-                        fh.write(chunk)
-            logger.info("bods_gleif: extracting bundle …")
-            with zipfile.ZipFile(zip_path) as zf:
-                zf.extractall(dest_dir)
-            zip_path.unlink(missing_ok=True)
-            logger.info("bods_gleif: S3 bootstrap complete")
-        except Exception as exc:
-            logger.warning("bods_gleif: S3 bootstrap failed: %s", exc)
-            zip_path.unlink(missing_ok=True)
-            self._bootstrapped = False  # allow retry on next request
+        if fts_s3_url:
+            # --- Option B: download fts.db directly ---
+            logger.info("bods_gleif: downloading fts.db from %s …", fts_s3_url)
+            try:
+                with httpx.stream("GET", fts_s3_url, follow_redirects=True, timeout=600) as r:
+                    r.raise_for_status()
+                    with open(fts_p, "wb") as fh:
+                        for chunk in r.iter_bytes(chunk_size=1 << 20):
+                            fh.write(chunk)
+                logger.info("bods_gleif: fts.db ready (%s MB)", fts_p.stat().st_size // 1_000_000)
+            except Exception as exc:
+                logger.warning("bods_gleif: fts.db download failed: %s", exc)
+                fts_p.unlink(missing_ok=True)
+                self._bootstrapped = False
+        else:
+            # --- Bundle zip: download + extract ---
+            zip_path = dest_dir / "bundle.zip"
+            logger.info("bods_gleif: downloading bundle from %s …", bundle_s3_url)
+            try:
+                with httpx.stream("GET", bundle_s3_url, follow_redirects=True, timeout=600) as r:
+                    r.raise_for_status()
+                    with open(zip_path, "wb") as fh:
+                        for chunk in r.iter_bytes(chunk_size=1 << 20):
+                            fh.write(chunk)
+                logger.info("bods_gleif: extracting bundle …")
+                with zipfile.ZipFile(zip_path) as zf:
+                    zf.extractall(dest_dir)
+                zip_path.unlink(missing_ok=True)
+                logger.info("bods_gleif: S3 bootstrap complete")
+            except Exception as exc:
+                logger.warning("bods_gleif: S3 bootstrap failed: %s", exc)
+                zip_path.unlink(missing_ok=True)
+                self._bootstrapped = False
 
     # ------------------------------------------------------------------
     # FTS connection (lazy)

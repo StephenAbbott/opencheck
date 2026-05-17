@@ -79,12 +79,17 @@ from .sources import REGISTRY, SearchKind, SourceHit, SourceInfo
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """FastAPI lifespan: kick off S3 bootstrap for BODS bulk adapters.
+    """FastAPI lifespan: kick off S3 bootstrap for adapters that need it.
 
-    Running at startup means the download happens immediately on deploy,
-    not on the first user request (which would cause a long timeout / 502).
-    Requests during the download return stubs; once complete all subsequent
-    requests use live data without any server restart needed.
+    Running at startup means downloads happen immediately on deploy, not on
+    the first user request (which would cause a long timeout / 502).
+    Requests during download return stubs; once complete all subsequent
+    requests use live data without any server restart.
+
+    Adapters bootstrapped here:
+    - BODSGleifAdapter  — downloads fts.db (Option B) or bundle zip
+    - BODSUKPSCAdapter  — same
+    - OpenTenderAdapter — downloads opentender.db from S3
     """
     import logging as _logging
 
@@ -92,21 +97,26 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     from .sources.bods_gleif import BODSGleifAdapter
     from .sources.bods_uk_psc import BODSUKPSCAdapter
-
-    adapters_to_bootstrap = [
-        a for a in REGISTRY.values()
-        if isinstance(a, (BODSGleifAdapter, BODSUKPSCAdapter))
-    ]
+    from .sources.opentender import OpenTenderAdapter
 
     async def _run_bootstrap() -> None:
-        for adapter in adapters_to_bootstrap:
-            try:
-                await asyncio.to_thread(adapter._bootstrap_from_s3)
-            except Exception as exc:
-                _log.warning("BODS startup bootstrap failed for %s: %s", adapter.id, exc)
+        # BODS adapters: call _bootstrap_from_s3 directly
+        for adapter in REGISTRY.values():
+            if isinstance(adapter, (BODSGleifAdapter, BODSUKPSCAdapter)):
+                try:
+                    await asyncio.to_thread(adapter._bootstrap_from_s3)
+                except Exception as exc:
+                    _log.warning("BODS bootstrap failed for %s: %s", adapter.id, exc)
 
-    if adapters_to_bootstrap:
-        asyncio.create_task(_run_bootstrap())
+        # OpenTender: _conn() handles S3 download + opens the connection
+        for adapter in REGISTRY.values():
+            if isinstance(adapter, OpenTenderAdapter):
+                try:
+                    await asyncio.to_thread(adapter._conn)
+                except Exception as exc:
+                    _log.warning("OpenTender startup bootstrap failed: %s", exc)
+
+    asyncio.create_task(_run_bootstrap())
 
     yield  # server runs here
 
