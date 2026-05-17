@@ -120,17 +120,19 @@ class BODSUKPSCAdapter(SourceAdapter):
         """Download and extract the UK PSC bundle zip from S3 if needed."""
         if self._bootstrapped:
             return
-        self._bootstrapped = True
 
         settings = get_settings()
         s3_url = settings.bods_uk_psc_s3_url
         fts_path = settings.bods_uk_psc_fts_db
+
         if not s3_url or not fts_path:
-            return
+            return  # don't set flag — allow retry after env vars are added
+
+        self._bootstrapped = True  # set after guard, before download
 
         fts_p = Path(fts_path)
         if fts_p.exists():
-            return
+            return  # already extracted
 
         dest_dir = fts_p.parent
         zip_path = dest_dir / "bundle.zip"
@@ -151,6 +153,7 @@ class BODSUKPSCAdapter(SourceAdapter):
         except Exception as exc:
             logger.warning("bods_uk_psc: S3 bootstrap failed: %s", exc)
             zip_path.unlink(missing_ok=True)
+            self._bootstrapped = False  # allow retry on next request
 
     # ------------------------------------------------------------------
     # FTS connection (lazy)

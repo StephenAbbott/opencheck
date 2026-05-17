@@ -137,17 +137,22 @@ class BODSGleifAdapter(SourceAdapter):
         """
         if self._bootstrapped:
             return
-        self._bootstrapped = True  # set early to prevent re-entrant calls
 
         settings = get_settings()
         s3_url = settings.bods_gleif_s3_url
         fts_path = settings.bods_gleif_fts_db
+
+        # Only lock out future attempts once we know both vars are present.
+        # If either is missing we return WITHOUT setting the flag so a later
+        # call (after env vars are added and server redeployed) can still work.
         if not s3_url or not fts_path:
             return
 
+        self._bootstrapped = True  # set after guard, before download
+
         fts_p = Path(fts_path)
         if fts_p.exists():
-            return  # already present, nothing to do
+            return  # already extracted — persistent disk or previous call
 
         dest_dir = fts_p.parent
         zip_path = dest_dir / "bundle.zip"
@@ -168,6 +173,7 @@ class BODSGleifAdapter(SourceAdapter):
         except Exception as exc:
             logger.warning("bods_gleif: S3 bootstrap failed: %s", exc)
             zip_path.unlink(missing_ok=True)
+            self._bootstrapped = False  # allow retry on next request
 
     # ------------------------------------------------------------------
     # FTS connection (lazy)

@@ -24,6 +24,7 @@ import json
 import re
 import zipfile
 from datetime import datetime, timezone
+from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator
 
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -75,6 +76,40 @@ from .reconcile import reconcile
 from .risk import RiskSignal, assess_bundle, assess_hits
 from .sources import REGISTRY, SearchKind, SourceHit, SourceInfo
 
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """FastAPI lifespan: kick off S3 bootstrap for BODS bulk adapters.
+
+    Running at startup means the download happens immediately on deploy,
+    not on the first user request (which would cause a long timeout / 502).
+    Requests during the download return stubs; once complete all subsequent
+    requests use live data without any server restart needed.
+    """
+    import logging as _logging
+
+    _log = _logging.getLogger(__name__)
+
+    from .sources.bods_gleif import BODSGleifAdapter
+    from .sources.bods_uk_psc import BODSUKPSCAdapter
+
+    adapters_to_bootstrap = [
+        a for a in REGISTRY.values()
+        if isinstance(a, (BODSGleifAdapter, BODSUKPSCAdapter))
+    ]
+
+    async def _run_bootstrap() -> None:
+        for adapter in adapters_to_bootstrap:
+            try:
+                await asyncio.to_thread(adapter._bootstrap_from_s3)
+            except Exception as exc:
+                _log.warning("BODS startup bootstrap failed for %s: %s", adapter.id, exc)
+
+    if adapters_to_bootstrap:
+        asyncio.create_task(_run_bootstrap())
+
+    yield  # server runs here
+
+
 app = FastAPI(
     title="OpenCheck",
     version=__version__,
@@ -83,7 +118,9 @@ app = FastAPI(
         "Identifier (LEI) and open data — mapped to the "
         "Beneficial Ownership Data Standard (BODS)."
     ),
+    lifespan=_lifespan,
 )
+
 
 _cors_origin = get_settings().cors_origin
 app.add_middleware(
