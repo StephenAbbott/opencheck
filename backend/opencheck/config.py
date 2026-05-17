@@ -140,9 +140,16 @@ class Settings(BaseSettings):
     # On ephemeral-filesystem hosts (Render), the adapter downloads and
     # extracts this bundle at first connection if the local paths don't exist.
     bods_gleif_s3_url: str | None = Field(default=None, alias="BODS_GLEIF_S3_URL")
+    # Option B: base HTTPS URL for the individual Parquet files on S3
+    # (e.g. https://opencheck.s3.eu-north-1.amazonaws.com/bods/gleif/parquet).
+    # When set, DuckDB queries Parquet directly via HTTPFS — no local Parquet
+    # download needed.  Only the FTS db is bootstrapped locally.
+    bods_gleif_parquet_s3_base: str | None = Field(default=None, alias="BODS_GLEIF_PARQUET_S3_BASE")
     bods_uk_psc_parquet_dir: str | None = Field(default=None, alias="BODS_UK_PSC_PARQUET_DIR")
     bods_uk_psc_fts_db: str | None = Field(default=None, alias="BODS_UK_PSC_FTS_DB")
     bods_uk_psc_s3_url: str | None = Field(default=None, alias="BODS_UK_PSC_S3_URL")
+    # Option B equivalent for UK PSC.
+    bods_uk_psc_parquet_s3_base: str | None = Field(default=None, alias="BODS_UK_PSC_PARQUET_S3_BASE")
 
     # --- Austrian Firmenbuch (commercial register) HVD API ---
     # Register for a key at: https://justizonline.gv.at/jop/web/iwg/register

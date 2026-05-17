@@ -223,11 +223,24 @@ def _build_entity_fts(parquet_dir: Path, fts_db: Path) -> None:
 
 
 def _build_person_fts(parquet_dir: Path, fts_db: Path) -> None:
-    """Build FTS5 person-name index for UK PSC person statements."""
+    """Build FTS5 person-name index for UK PSC person statements.
+
+    Person names live in the sub-table ``person_recordDetails_names.parquet``
+    (Flatterer flattens the ``recordDetails.names`` array into its own file).
+    The column is ``fullName`` (camelCase), linked via ``_link_person_statement``.
+    Nationalities are in ``person_recordDetails_nationalities.parquet``.
+    """
     person_p = parquet_dir / "person_statement.parquet"
     if not person_p.exists():
         log.info("No person_statement.parquet found — skipping person FTS (GLEIF is entity-only)")
         return
+
+    names_p = parquet_dir / "person_recordDetails_names.parquet"
+    if not names_p.exists():
+        log.warning("person_recordDetails_names.parquet not found in %s — skipping person FTS", parquet_dir)
+        return
+
+    nats_p = parquet_dir / "person_recordDetails_nationalities.parquet"
 
     log.info("Building person FTS5 index from %s", person_p)
     t0 = time.time()
@@ -241,21 +254,40 @@ def _build_person_fts(parquet_dir: Path, fts_db: Path) -> None:
     count = 0
     batch: list[tuple[str, str, str]] = []
 
-    rows = duck.execute(
+    # Name lives in the sub-table; use GROUP BY to get one row per person.
+    if nats_p.exists():
+        query = """
+            SELECT
+                ps.statementId,
+                FIRST(n.fullName)  AS name,
+                FIRST(nat.name)    AS nationality
+            FROM read_parquet(?) ps
+            JOIN read_parquet(?) n
+              ON n._link_person_statement = ps._link
+            LEFT JOIN read_parquet(?) nat
+              ON nat._link_person_statement = ps._link
+            WHERE n.fullName IS NOT NULL
+              AND TRIM(n.fullName) != ''
+            GROUP BY ps.statementId
         """
-        SELECT
-            statementid,
-            COALESCE(recorddetails_names_fullname, '') AS name,
-            COALESCE(recorddetails_nationalities_name, '') AS nationality
-        FROM read_parquet(?)
-        WHERE recorddetails_names_fullname IS NOT NULL
-          AND TRIM(recorddetails_names_fullname) != ''
-        """,
-        [str(person_p)],
-    ).fetchall()
+        rows = duck.execute(query, [str(person_p), str(names_p), str(nats_p)]).fetchall()
+    else:
+        query = """
+            SELECT
+                ps.statementId,
+                FIRST(n.fullName) AS name,
+                ''                AS nationality
+            FROM read_parquet(?) ps
+            JOIN read_parquet(?) n
+              ON n._link_person_statement = ps._link
+            WHERE n.fullName IS NOT NULL
+              AND TRIM(n.fullName) != ''
+            GROUP BY ps.statementId
+        """
+        rows = duck.execute(query, [str(person_p), str(names_p)]).fetchall()
 
     for row in rows:
-        batch.append(row)
+        batch.append((row[0], row[1] or "", row[2] or ""))
         count += 1
         if len(batch) >= 50_000:
             conn.executemany(

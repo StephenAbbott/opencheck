@@ -89,13 +89,15 @@ class BODSGleifAdapter(SourceAdapter):
     @property
     def info(self) -> SourceInfo:
         settings = get_settings()
-        live = bool(
-            _DUCKDB_AVAILABLE
-            and settings.bods_gleif_parquet_dir
-            and Path(settings.bods_gleif_parquet_dir).exists()
-            and settings.bods_gleif_fts_db
+        fts_ok = bool(
+            settings.bods_gleif_fts_db
             and Path(settings.bods_gleif_fts_db).exists()
         )
+        parquet_ok = bool(
+            (settings.bods_gleif_parquet_dir and Path(settings.bods_gleif_parquet_dir).exists())
+            or settings.bods_gleif_parquet_s3_base
+        )
+        live = bool(_DUCKDB_AVAILABLE and fts_ok and parquet_ok)
         return SourceInfo(
             id=self.id,
             name="Open Ownership GLEIF (BODS bulk)",
@@ -196,7 +198,7 @@ class BODSGleifAdapter(SourceAdapter):
         return conn
 
     # ------------------------------------------------------------------
-    # Parquet directory
+    # Parquet directory / URL resolution
     # ------------------------------------------------------------------
 
     def _parquet_dir(self) -> Path | None:
@@ -208,6 +210,28 @@ class BODSGleifAdapter(SourceAdapter):
         if not p.exists():
             self._bootstrap_from_s3()
         return p if p.exists() else None
+
+    def _parquet_url(self, filename: str) -> str | None:
+        """Return a DuckDB-compatible path for a Parquet file.
+
+        Returns a local path string when ``BODS_GLEIF_PARQUET_DIR`` is set and
+        the file exists; otherwise builds an HTTPS URL from
+        ``BODS_GLEIF_PARQUET_S3_BASE`` if that env var is configured.
+        Returns ``None`` if neither source is available.
+        """
+        local = self._parquet_dir()
+        if local is not None:
+            p = local / filename
+            return str(p) if p.exists() else None
+        settings = get_settings()
+        base = settings.bods_gleif_parquet_s3_base
+        if base:
+            return f"{base.rstrip('/')}/{filename}"
+        return None
+
+    def _parquet_available(self) -> bool:
+        """True if at least one Parquet source (local or S3) is configured."""
+        return self._parquet_url("entity_statement.parquet") is not None
 
     # ------------------------------------------------------------------
     # Search
@@ -283,17 +307,16 @@ class BODSGleifAdapter(SourceAdapter):
 
         Returns ``None`` if the LEI is not found or data is not configured.
         """
-        parquet_dir = self._parquet_dir()
-        if parquet_dir is None or not _DUCKDB_AVAILABLE:
+        if not _DUCKDB_AVAILABLE or not self._parquet_available():
             return None
-        return await asyncio.to_thread(self._parquet_fetch_by_lei, parquet_dir, lei)
+        return await asyncio.to_thread(self._parquet_fetch_by_lei, lei)
 
-    def _parquet_fetch_by_lei(self, parquet_dir: Path, lei: str) -> dict[str, Any] | None:
+    def _parquet_fetch_by_lei(self, lei: str) -> dict[str, Any] | None:
         import duckdb
 
-        ids_p = parquet_dir / "entity_recordDetails_identifiers.parquet"
-        entity_p = parquet_dir / "entity_statement.parquet"
-        if not ids_p.exists() or not entity_p.exists():
+        ids_url = self._parquet_url("entity_recordDetails_identifiers.parquet")
+        entity_url = self._parquet_url("entity_statement.parquet")
+        if not ids_url or not entity_url:
             return None
 
         duck = duckdb.connect(":memory:")
@@ -306,7 +329,7 @@ class BODSGleifAdapter(SourceAdapter):
                 WHERE i.scheme = 'LEI' AND i.id = ?
                 LIMIT 1
                 """,
-                [str(ids_p), str(entity_p), lei.upper()],
+                [ids_url, entity_url, lei.upper()],
             ).fetchone()
         finally:
             duck.close()
@@ -315,16 +338,15 @@ class BODSGleifAdapter(SourceAdapter):
             return None
 
         statementid = row[1]
-        return self._parquet_fetch(parquet_dir, statementid)
+        return self._parquet_fetch(statementid)
 
     # ------------------------------------------------------------------
     # Fetch
     # ------------------------------------------------------------------
 
     async def fetch(self, hit_id: str) -> dict[str, Any]:
-        parquet_dir = self._parquet_dir()
-        if parquet_dir is not None and _DUCKDB_AVAILABLE:
-            return await asyncio.to_thread(self._parquet_fetch, parquet_dir, hit_id)
+        if _DUCKDB_AVAILABLE and self._parquet_available():
+            return await asyncio.to_thread(self._parquet_fetch, hit_id)
 
         return {
             "source_id": self.id,
@@ -332,21 +354,28 @@ class BODSGleifAdapter(SourceAdapter):
             "is_stub": True,
         }
 
-    def _parquet_fetch(self, parquet_dir: Path, statementid: str) -> dict[str, Any]:
-        """Fetch a full BODS entity statement + relationships from Parquet."""
+    def _parquet_fetch(self, statementid: str) -> dict[str, Any]:
+        """Fetch a full BODS entity statement + relationships from Parquet.
+
+        Parquet files may be local paths or HTTPS URLs (DuckDB HTTPFS).
+        """
         import duckdb
 
-        entity_p = str(parquet_dir / "entity_statement.parquet")
-        ids_p = parquet_dir / "entity_recordDetails_identifiers.parquet"
-        addrs_p = parquet_dir / "entity_recordDetails_addresses.parquet"
-        rels_p = parquet_dir / "relationship_statement.parquet"
+        entity_url = self._parquet_url("entity_statement.parquet")
+        ids_url = self._parquet_url("entity_recordDetails_identifiers.parquet")
+        addrs_url = self._parquet_url("entity_recordDetails_addresses.parquet")
+        rels_url = self._parquet_url("relationship_statement.parquet")
+        rel_interests_url = self._parquet_url("relationship_recordDetails_interests.parquet")
+
+        if not entity_url:
+            return {"source_id": self.id, "hit_id": statementid, "is_stub": True}
 
         duck = duckdb.connect(":memory:")
         try:
             # Main entity row
             row = duck.execute(
                 "SELECT * FROM read_parquet(?) WHERE statementid = ? LIMIT 1",
-                [entity_p, statementid],
+                [entity_url, statementid],
             ).fetchone()
 
             if row is None:
@@ -358,11 +387,11 @@ class BODSGleifAdapter(SourceAdapter):
 
             # Identifiers sub-table
             identifiers: list[dict[str, str]] = []
-            if ids_p.exists() and link:
+            if ids_url and link:
                 id_rows = duck.execute(
                     "SELECT id, scheme, schemename, uri "
                     "FROM read_parquet(?) WHERE _link_entity_statement = ?",
-                    [str(ids_p), link],
+                    [ids_url, link],
                 ).fetchall()
                 for id_row in id_rows:
                     ident: dict[str, str] = {}
@@ -379,11 +408,11 @@ class BODSGleifAdapter(SourceAdapter):
 
             # Addresses sub-table
             addresses: list[dict[str, Any]] = []
-            if addrs_p.exists() and link:
+            if addrs_url and link:
                 addr_rows = duck.execute(
                     "SELECT type, address, postcode, country_name, country_code "
                     "FROM read_parquet(?) WHERE _link_entity_statement = ?",
-                    [str(addrs_p), link],
+                    [addrs_url, link],
                 ).fetchall()
                 for addr_row in addr_rows:
                     addr: dict[str, Any] = {}
@@ -407,22 +436,49 @@ class BODSGleifAdapter(SourceAdapter):
 
             # Relationship statements (direct/ultimate parents)
             relationship_stmts: list[dict[str, Any]] = []
-            if rels_p.exists():
+            if rels_url:
                 rel_rows = duck.execute(
                     """
-                    SELECT statementid, recorddetails_statementtype,
-                           recorddetails_subject, recorddetails_interestedparty,
-                           recorddetails_interestedparty_reason,
-                           recorddetails_interestedparty_description
+                    SELECT statementid,
+                           recordDetails_subject,
+                           recordDetails_interestedParty
                     FROM read_parquet(?)
-                    WHERE recorddetails_subject = ?
-                       OR recorddetails_interestedparty = ?
+                    WHERE recordDetails_subject = ?
+                       OR recordDetails_interestedParty = ?
                     LIMIT 50
                     """,
-                    [str(rels_p), statementid, statementid],
+                    [rels_url, statementid, statementid],
                 ).fetchall()
                 for rel_row in rel_rows:
-                    relationship_stmts.append(_build_relationship_statement(rel_row))
+                    # Fetch interests for this relationship
+                    rel_link_row = duck.execute(
+                        "SELECT _link FROM read_parquet(?) WHERE statementid = ? LIMIT 1",
+                        [rels_url, rel_row[0]],
+                    ).fetchone() if rel_row[0] else None
+                    rel_link = rel_link_row[0] if rel_link_row else ""
+                    interests: list[dict[str, Any]] = []
+                    if rel_interests_url and rel_link:
+                        int_rows = duck.execute(
+                            """
+                            SELECT directOrIndirect, type, beneficialOwnershipOrControl,
+                                   details, startDate
+                            FROM read_parquet(?)
+                            WHERE _link_relationship_statement = ?
+                            """,
+                            [rel_interests_url, rel_link],
+                        ).fetchall()
+                        for ir in int_rows:
+                            interest: dict[str, Any] = {}
+                            if ir[0]: interest["directOrIndirect"] = str(ir[0])
+                            if ir[1]: interest["type"] = str(ir[1])
+                            if ir[2] is not None: interest["beneficialOwnershipOrControl"] = bool(ir[2])
+                            if ir[3]: interest["details"] = str(ir[3])
+                            if ir[4]: interest["startDate"] = str(ir[4])[:10]
+                            if interest:
+                                interests.append(interest)
+                    relationship_stmts.append(
+                        _build_relationship_statement(rel_row, interests)
+                    )
 
         finally:
             duck.close()
@@ -527,23 +583,20 @@ def _build_entity_statement(
     return stmt
 
 
-def _build_relationship_statement(row: tuple[Any, ...]) -> dict[str, Any]:
-    """Reconstruct a minimal BODS 0.4 relationshipStatement from a row."""
-    statementid = row[0] or ""
-    stmt_type = row[1] or "relationshipStatement"
-    subject = row[2] or ""
-    interested_party = row[3] or ""
-    reason = row[4] or ""
-    description = row[5] or ""
+def _build_relationship_statement(
+    row: tuple[Any, ...],
+    interests: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Reconstruct a minimal BODS 0.4 relationshipStatement from a row.
 
-    interests: list[dict[str, Any]] = []
-    if reason or description:
-        interests.append({
-            "type": "otherInfluenceOrControl",
-            "directOrIndirect": "direct",
-            "beneficialOwnershipOrControl": False,
-            "details": description or reason,
-        })
+    Row columns (as selected in _parquet_fetch):
+      0 — statementid
+      1 — recordDetails_subject (entity statementId)
+      2 — recordDetails_interestedParty (entity statementId — GLEIF has entity-entity links)
+    """
+    statementid = row[0] or ""
+    subject = row[1] or ""
+    interested_party = row[2] or ""
 
     return {
         "statementId": statementid,
@@ -553,7 +606,7 @@ def _build_relationship_statement(row: tuple[Any, ...]) -> dict[str, Any]:
             "isComponent": False,
             "subject": {"describedByEntityStatement": subject},
             "interestedParty": {"describedByEntityStatement": interested_party},
-            "interests": interests,
+            "interests": interests or [],
         },
         "publicationDetails": {
             "bodsVersion": "0.4",
