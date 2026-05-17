@@ -271,6 +271,53 @@ class BODSGleifAdapter(SourceAdapter):
         )
 
     # ------------------------------------------------------------------
+    # LEI-keyed fetch (for /lookup integration)
+    # ------------------------------------------------------------------
+
+    async def fetch_by_lei(self, lei: str) -> dict[str, Any] | None:
+        """Look up a GLEIF entity by LEI and return its full BODS bundle.
+
+        Queries ``entity_recordDetails_identifiers.parquet`` for a row
+        where ``scheme = 'LEI'`` and ``id = lei``, then delegates to
+        ``_parquet_fetch`` for the full entity + relationship bundle.
+
+        Returns ``None`` if the LEI is not found or data is not configured.
+        """
+        parquet_dir = self._parquet_dir()
+        if parquet_dir is None or not _DUCKDB_AVAILABLE:
+            return None
+        return await asyncio.to_thread(self._parquet_fetch_by_lei, parquet_dir, lei)
+
+    def _parquet_fetch_by_lei(self, parquet_dir: Path, lei: str) -> dict[str, Any] | None:
+        import duckdb
+
+        ids_p = parquet_dir / "entity_recordDetails_identifiers.parquet"
+        entity_p = parquet_dir / "entity_statement.parquet"
+        if not ids_p.exists() or not entity_p.exists():
+            return None
+
+        duck = duckdb.connect(":memory:")
+        try:
+            row = duck.execute(
+                """
+                SELECT i._link_entity_statement, es.statementid
+                FROM read_parquet(?) i
+                JOIN read_parquet(?) es ON es._link = i._link_entity_statement
+                WHERE i.scheme = 'LEI' AND i.id = ?
+                LIMIT 1
+                """,
+                [str(ids_p), str(entity_p), lei.upper()],
+            ).fetchone()
+        finally:
+            duck.close()
+
+        if row is None:
+            return None
+
+        statementid = row[1]
+        return self._parquet_fetch(parquet_dir, statementid)
+
+    # ------------------------------------------------------------------
     # Fetch
     # ------------------------------------------------------------------
 

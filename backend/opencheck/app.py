@@ -1357,6 +1357,36 @@ async def lookup(
         except Exception as exc:  # noqa: BLE001
             errors["climatetrace"] = f"{type(exc).__name__}: {exc}"
 
+    # Open Ownership BODS GLEIF (bulk) — compare OO-processed BODS mapping
+    # against the live GLEIF adapter to audit statement quality side-by-side.
+    bods_gleif_adapter = REGISTRY.get("bods_gleif")
+    if bods_gleif_adapter is not None and hasattr(bods_gleif_adapter, "fetch_by_lei"):
+        try:
+            bg_bundle = await bods_gleif_adapter.fetch_by_lei(lei)  # type: ignore[attr-defined]
+            if bg_bundle and not bg_bundle.get("is_stub"):
+                statementid = bg_bundle.get("hit_id") or lei
+                # Derive a human-readable name from the first entity statement
+                bg_name = legal_name or lei
+                for stmt in bg_bundle.get("bods_statements", []):
+                    if stmt.get("statementType") == "entityStatement":
+                        bg_name = stmt.get("recordDetails", {}).get("name") or bg_name
+                        break
+                hits.append(
+                    SourceHit(
+                        source_id="bods_gleif",
+                        hit_id=statementid,
+                        kind=SearchKind.ENTITY,
+                        name=bg_name,
+                        summary="Open Ownership BODS v0.4 (bulk) · LEI match",
+                        identifiers={"lei": lei, "bods_gleif_statementid": statementid},
+                        raw=bg_bundle,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("bods_gleif", statementid))
+        except Exception as exc:  # noqa: BLE001
+            errors["bods_gleif"] = f"{type(exc).__name__}: {exc}"
+
     # Reconcile + run risk over search-time data.
     links = [link.to_dict() for link in reconcile(hits)]
     search_signals = [s.to_dict() for s in assess_hits(hits)]
