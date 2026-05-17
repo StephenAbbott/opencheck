@@ -136,8 +136,13 @@ class Settings(BaseSettings):
     # BODS_UK_PSC_FTS_DB       — path to the FTS5 SQLite index for UK PSC
     bods_gleif_parquet_dir: str | None = Field(default=None, alias="BODS_GLEIF_PARQUET_DIR")
     bods_gleif_fts_db: str | None = Field(default=None, alias="BODS_GLEIF_FTS_DB")
+    # S3 URL for a bundle zip produced by setup_bods_data.py --create-bundle.
+    # On ephemeral-filesystem hosts (Render), the adapter downloads and
+    # extracts this bundle at first connection if the local paths don't exist.
+    bods_gleif_s3_url: str | None = Field(default=None, alias="BODS_GLEIF_S3_URL")
     bods_uk_psc_parquet_dir: str | None = Field(default=None, alias="BODS_UK_PSC_PARQUET_DIR")
     bods_uk_psc_fts_db: str | None = Field(default=None, alias="BODS_UK_PSC_FTS_DB")
+    bods_uk_psc_s3_url: str | None = Field(default=None, alias="BODS_UK_PSC_S3_URL")
 
     # --- Austrian Firmenbuch (commercial register) HVD API ---
     # Register for a key at: https://justizonline.gv.at/jop/web/iwg/register

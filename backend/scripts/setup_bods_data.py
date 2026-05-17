@@ -322,6 +322,53 @@ def _setup_source(
     )
 
 
+def _create_bundle(source_dir: Path) -> Path:
+    """Zip parquet/ + fts.db into a bundle.zip for upload to S3.
+
+    Bundle layout (extracted relative to fts.db's parent dir)::
+
+        parquet/entity_statement.parquet
+        parquet/...
+        fts.db
+
+    Returns the path to the created bundle.zip.
+    """
+    parquet_dir = source_dir / "parquet"
+    fts_db = source_dir / "fts.db"
+    bundle_path = source_dir / "bundle.zip"
+
+    if not parquet_dir.exists():
+        log.error("parquet/ not found at %s", parquet_dir)
+        sys.exit(1)
+    if not fts_db.exists():
+        log.error("fts.db not found at %s", fts_db)
+        sys.exit(1)
+
+    log.info("Creating bundle at %s …", bundle_path)
+    with zipfile.ZipFile(bundle_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        # Add fts.db at the top level
+        zf.write(fts_db, "fts.db")
+        # Add all parquet files under parquet/
+        for pf in sorted(parquet_dir.iterdir()):
+            if pf.suffix == ".parquet":
+                zf.write(pf, f"parquet/{pf.name}")
+                log.info("  + parquet/%s", pf.name)
+
+    size_mb = bundle_path.stat().st_size / 1e6
+    log.info("Bundle created: %.1f MB", size_mb)
+    log.info(
+        "Upload to S3 with:\n"
+        "  aws s3 cp %s s3://YOUR_BUCKET/bods/%s/bundle.zip\n"
+        "Then set:\n"
+        "  BODS_%s_S3_URL=https://YOUR_BUCKET.s3.amazonaws.com/bods/%s/bundle.zip",
+        bundle_path,
+        source_dir.name,
+        source_dir.name.upper(),
+        source_dir.name,
+    )
+    return bundle_path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Download and index Open Ownership BODS bulk data.",
@@ -344,6 +391,14 @@ def main() -> None:
         action="store_true",
         help="Skip S3 download; rebuild FTS index from existing Parquet files",
     )
+    parser.add_argument(
+        "--create-bundle",
+        action="store_true",
+        help=(
+            "After setup, create a bundle.zip (parquet/ + fts.db) suitable "
+            "for upload to S3 and use with BODS_*_S3_URL on Render"
+        ),
+    )
     args = parser.parse_args()
 
     gleif_url = os.environ.get("BODS_GLEIF_S3_URL", _DEFAULT_GLEIF_S3_URL)
@@ -356,6 +411,8 @@ def main() -> None:
         url = gleif_url if source == "gleif" else uk_psc_url
         log.info("=== Setting up %s ===", source)
         _setup_source(source, url, output_dir, skip_download=args.skip_download)
+        if args.create_bundle:
+            _create_bundle(output_dir / source)
 
     log.info("All done.")
 
