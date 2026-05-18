@@ -9,9 +9,9 @@ Files are produced by `Flatterer <https://github.com/kindly/flatterer>`_
 which flattens nested JSON into one file per JSON array level.  Key files:
 
 * ``entity_statement.parquet`` — one row per LEI entity
-* ``entity_recordDetails_identifiers.parquet`` — one row per identifier
+* ``entity_recorddetails_identifiers.parquet`` — one row per identifier
   (the LEI value itself lives here under ``scheme = "LEI"``)
-* ``entity_recordDetails_addresses.parquet`` — postal/registered addresses
+* ``entity_recorddetails_addresses.parquet`` — postal/registered addresses
 * ``relationship_statement.parquet`` — direct/ultimate parent links
 
 Column naming convention: Flatterer uses snake_case with double-underscored
@@ -321,7 +321,7 @@ class BODSGleifAdapter(SourceAdapter):
     async def fetch_by_lei(self, lei: str) -> dict[str, Any] | None:
         """Look up a GLEIF entity by LEI and return its full BODS bundle.
 
-        Queries ``entity_recordDetails_identifiers.parquet`` for a row
+        Queries ``entity_recorddetails_identifiers.parquet`` for a row
         where ``scheme = 'LEI'`` and ``id = lei``, then delegates to
         ``_parquet_fetch`` for the full entity + relationship bundle.
 
@@ -334,7 +334,7 @@ class BODSGleifAdapter(SourceAdapter):
     def _parquet_fetch_by_lei(self, lei: str) -> dict[str, Any] | None:
         import duckdb
 
-        ids_url = self._parquet_url("entity_recordDetails_identifiers.parquet")
+        ids_url = self._parquet_url("entity_recorddetails_identifiers.parquet")
         entity_url = self._parquet_url("entity_statement.parquet")
         if not ids_url or not entity_url:
             return None
@@ -355,7 +355,7 @@ class BODSGleifAdapter(SourceAdapter):
             except Exception as exc:
                 logger.warning(
                     "bods_gleif: LEI lookup failed (identifiers sub-table unavailable: %s) — "
-                    "upload entity_recordDetails_identifiers.parquet to S3",
+                    "upload entity_recorddetails_identifiers.parquet to S3",
                     exc,
                 )
                 return None
@@ -390,10 +390,10 @@ class BODSGleifAdapter(SourceAdapter):
         import duckdb
 
         entity_url = self._parquet_url("entity_statement.parquet")
-        ids_url = self._parquet_url("entity_recordDetails_identifiers.parquet")
-        addrs_url = self._parquet_url("entity_recordDetails_addresses.parquet")
+        ids_url = self._parquet_url("entity_recorddetails_identifiers.parquet")
+        addrs_url = self._parquet_url("entity_recorddetails_addresses.parquet")
         rels_url = self._parquet_url("relationship_statement.parquet")
-        rel_interests_url = self._parquet_url("relationship_recordDetails_interests.parquet")
+        rel_interests_url = self._parquet_url("relationship_recorddetails_interests.parquet")
 
         if not entity_url:
             return {"source_id": self.id, "hit_id": statementid, "is_stub": True}

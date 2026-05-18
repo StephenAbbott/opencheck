@@ -13,11 +13,11 @@ identify natural persons as controllers — so this adapter supports both
 Key Parquet files:
 
 * ``entity_statement.parquet``           — one row per company
-* ``entity_recordDetails_identifiers.parquet``
-* ``entity_recordDetails_addresses.parquet``
+* ``entity_recorddetails_identifiers.parquet``
+* ``entity_recorddetails_addresses.parquet``
 * ``person_statement.parquet``           — one row per PSC individual
-* ``person_recordDetails_names.parquet`` — name components (fullname, etc.)
-* ``person_recordDetails_nationalities.parquet``
+* ``person_recorddetails_names.parquet`` — name components (fullname, etc.)
+* ``person_recorddetails_nationalities.parquet``
 * ``relationship_statement.parquet``     — PSC → company ownership links
 
 Setup
@@ -368,10 +368,10 @@ class BODSUKPSCAdapter(SourceAdapter):
 
         entity_url = self._parquet_url("entity_statement.parquet")
         person_url = self._parquet_url("person_statement.parquet")
-        ids_url = self._parquet_url("entity_recordDetails_identifiers.parquet")
-        addrs_url = self._parquet_url("entity_recordDetails_addresses.parquet")
+        ids_url = self._parquet_url("entity_recorddetails_identifiers.parquet")
+        addrs_url = self._parquet_url("entity_recorddetails_addresses.parquet")
         rels_url = self._parquet_url("relationship_statement.parquet")
-        rel_interests_url = self._parquet_url("relationship_recordDetails_interests.parquet")
+        rel_interests_url = self._parquet_url("relationship_recorddetails_interests.parquet")
 
         duck = duckdb.connect(":memory:")
         try:
@@ -705,8 +705,8 @@ def _build_person_statement_psc(
 ) -> dict[str, Any]:
     """Reconstruct a BODS 0.4 personStatement from Flatterer-flatten rows.
 
-    Names live in ``person_recordDetails_names.parquet`` (column ``fullName``).
-    Nationalities live in ``person_recordDetails_nationalities.parquet``.
+    Names live in ``person_recorddetails_names.parquet`` (column ``fullName``).
+    Nationalities live in ``person_recorddetails_nationalities.parquet``.
     Birth date is a single VARCHAR column ``recordDetails_birthDate`` in
     ``person_statement.parquet`` with format ``YYYY-MM``.
     """
@@ -714,7 +714,7 @@ def _build_person_statement_psc(
     pub_date = row.get("publicationdetails_publicationdate") or ""
 
     # Names sub-table — actual column is ``fullName`` (DuckDB case-insensitive)
-    names_url = parquet_url_fn("person_recordDetails_names.parquet")
+    names_url = parquet_url_fn("person_recorddetails_names.parquet")
     full_name = ""
     names: list[dict[str, Any]] = []
     if names_url and link:
@@ -737,7 +737,7 @@ def _build_person_statement_psc(
             pass
 
     # Nationalities sub-table
-    nats_url = parquet_url_fn("person_recordDetails_nationalities.parquet")
+    nats_url = parquet_url_fn("person_recorddetails_nationalities.parquet")
     nationalities: list[dict[str, Any]] = []
     if nats_url and link:
         try:

@@ -225,22 +225,22 @@ def _build_entity_fts(parquet_dir: Path, fts_db: Path) -> None:
 def _build_person_fts(parquet_dir: Path, fts_db: Path) -> None:
     """Build FTS5 person-name index for UK PSC person statements.
 
-    Person names live in the sub-table ``person_recordDetails_names.parquet``
+    Person names live in the sub-table ``person_recorddetails_names.parquet``
     (Flatterer flattens the ``recordDetails.names`` array into its own file).
     The column is ``fullName`` (camelCase), linked via ``_link_person_statement``.
-    Nationalities are in ``person_recordDetails_nationalities.parquet``.
+    Nationalities are in ``person_recorddetails_nationalities.parquet``.
     """
     person_p = parquet_dir / "person_statement.parquet"
     if not person_p.exists():
         log.info("No person_statement.parquet found — skipping person FTS (GLEIF is entity-only)")
         return
 
-    names_p = parquet_dir / "person_recordDetails_names.parquet"
+    names_p = parquet_dir / "person_recorddetails_names.parquet"
     if not names_p.exists():
-        log.warning("person_recordDetails_names.parquet not found in %s — skipping person FTS", parquet_dir)
+        log.warning("person_recorddetails_names.parquet not found in %s — skipping person FTS", parquet_dir)
         return
 
-    nats_p = parquet_dir / "person_recordDetails_nationalities.parquet"
+    nats_p = parquet_dir / "person_recorddetails_nationalities.parquet"
 
     log.info("Building person FTS5 index from %s", person_p)
     t0 = time.time()
