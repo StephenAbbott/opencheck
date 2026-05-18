@@ -7,9 +7,12 @@ operating under the Ministry of Justice.
 This adapter uses the JAR public search interface at:
   https://www.registrucentras.lt/jar/p/
 
-Two live endpoints are used (both return HTML tables, parsed inline):
-  Name search:  GET /jar/p/index.php?pav=<query>     — up to ~20 results
-  Code lookup:  GET /jar/p/index.php?kod=<9-digit>   — single entity
+One live endpoint is used (returns HTML tables, parsed inline):
+  Name search:  GET /jar/p/index.php?pav=<query>&p=1  — up to ~25 results
+
+Note: the code-based lookup (?kod=) requires solving an image CAPTCHA
+(antispam_image.php) and is therefore not usable programmatically.
+Fetch() uses name search and matches on entity code.
 
 Rate limit: Registrų centras applies a soft cap of 100 public queries per
 IP address per day.  Search results are cached to stay within this limit.
@@ -261,7 +264,15 @@ class JarLithuaniaAdapter(SourceAdapter):
         """Return the full JAR record for a Lithuanian entity code.
 
         ``hit_id`` is a 9-digit entity code (may arrive zero-padded or not).
-        ``legal_name`` is an optional fallback from GLEIF.
+        ``legal_name`` is the GLEIF legal name used to drive the search.
+
+        Implementation note: the JAR public interface enforces an image-based
+        CAPTCHA (``antispam_image.php``) on direct code-based lookups
+        (``?kod=``), so those requests return only the empty search form.  Name
+        search (``?pav=``) is not CAPTCHA-gated for plain GET requests.  We
+        therefore search by name and match the result whose entity code equals
+        ``hit_id``.  If no match is found we return a partial (stub=False)
+        record using the GLEIF name, which is still useful for display.
         """
         code = normalise_code(hit_id)
 
@@ -281,23 +292,50 @@ class JarLithuaniaAdapter(SourceAdapter):
             _log.warning("jar_lithuania: invalid code %r — returning stub", hit_id)
             return stub_bundle
 
+        if not legal_name:
+            # Without a name we can't drive the search; return stub.
+            return stub_bundle
+
         cache_key = f"{_CACHE_NS}/entity/{code}"
         if not self.info.live_available and not self._cache.has(cache_key):
             return stub_bundle
 
+        # Use the name search endpoint — code-based lookup (?kod=) requires
+        # an image CAPTCHA that cannot be solved programmatically.
         html = await self._fetch_html(
-            f"{_SEARCH_URL}?kod={quote(code)}",
+            f"{_SEARCH_URL}?pav={quote(legal_name)}&p=1",
             cache_key=cache_key,
         )
         if html is None:
             return stub_bundle
 
         records = _parse_jar_html(html)
-        if not records:
-            return stub_bundle
 
-        rec = records[0]
-        bundle: dict[str, Any] = {
+        # Find the result whose code matches exactly.
+        rec = next((r for r in records if r.get("code") == code), None)
+
+        if rec is None:
+            # Name search returned results but none matched this code.
+            # Return a non-stub record using the GLEIF name so the source
+            # card is still surfaced (JAR is confirmed live for this entity).
+            _log.debug(
+                "jar_lithuania: code %s not in search results for %r "
+                "(%d hits); using GLEIF name",
+                code, legal_name, len(records),
+            )
+            return {
+                "source_id": self.id,
+                "hit_id": code,
+                "lt_code": code,
+                "name": legal_name,
+                "address": None,
+                "legal_form": None,
+                "status": None,
+                "link": _entity_url(code),
+                "is_stub": False,
+            }
+
+        return {
             "source_id": self.id,
             "hit_id": code,
             "lt_code": code,
@@ -308,7 +346,6 @@ class JarLithuaniaAdapter(SourceAdapter):
             "link": _entity_url(code),
             "is_stub": False,
         }
-        return bundle
 
     # ------------------------------------------------------------------
     # HTTP with caching
