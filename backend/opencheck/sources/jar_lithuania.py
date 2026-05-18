@@ -292,12 +292,46 @@ class JarLithuaniaAdapter(SourceAdapter):
             _log.warning("jar_lithuania: invalid code %r — returning stub", hit_id)
             return stub_bundle
 
+        cache_key = f"{_CACHE_NS}/entity/{code}"
+
+        # Check the cache before anything else.  A previous call from
+        # /lookup (which passes legal_name) stores the HTML here; the
+        # subsequent _safe_deepen call (which omits legal_name) can then
+        # reuse it without repeating the network request.
+        cached_html = self._cache.get_payload(cache_key)
+        if cached_html is not None:
+            records = _parse_jar_html(cached_html[0])
+            rec = next((r for r in records if r.get("code") == code), None)
+            if rec:
+                return {
+                    "source_id": self.id,
+                    "hit_id": code,
+                    "lt_code": code,
+                    "name": rec.get("name") or legal_name,
+                    "address": rec.get("address") or None,
+                    "legal_form": rec.get("legal_form") or None,
+                    "status": rec.get("status") or None,
+                    "link": _entity_url(code),
+                    "is_stub": False,
+                }
+            # HTML cached but code not in it; return non-stub with whatever name we have.
+            return {
+                "source_id": self.id,
+                "hit_id": code,
+                "lt_code": code,
+                "name": legal_name,
+                "address": None,
+                "legal_form": None,
+                "status": None,
+                "link": _entity_url(code),
+                "is_stub": False,
+            }
+
         if not legal_name:
-            # Without a name we can't drive the search; return stub.
+            # No cache and no name — cannot drive the search; return stub.
             return stub_bundle
 
-        cache_key = f"{_CACHE_NS}/entity/{code}"
-        if not self.info.live_available and not self._cache.has(cache_key):
+        if not self.info.live_available:
             return stub_bundle
 
         # Use the name search endpoint — code-based lookup (?kod=) requires
