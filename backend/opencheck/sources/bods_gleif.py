@@ -341,16 +341,24 @@ class BODSGleifAdapter(SourceAdapter):
 
         duck = duckdb.connect(":memory:")
         try:
-            row = duck.execute(
-                """
-                SELECT i._link_entity_statement, es.statementid
-                FROM read_parquet(?) i
-                JOIN read_parquet(?) es ON es._link = i._link_entity_statement
-                WHERE i.scheme = 'LEI' AND i.id = ?
-                LIMIT 1
-                """,
-                [ids_url, entity_url, lei.upper()],
-            ).fetchone()
+            try:
+                row = duck.execute(
+                    """
+                    SELECT i._link_entity_statement, es.statementid
+                    FROM read_parquet(?) i
+                    JOIN read_parquet(?) es ON es._link = i._link_entity_statement
+                    WHERE i.scheme = 'LEI' AND i.id = ?
+                    LIMIT 1
+                    """,
+                    [ids_url, entity_url, lei.upper()],
+                ).fetchone()
+            except Exception as exc:
+                logger.warning(
+                    "bods_gleif: LEI lookup failed (identifiers sub-table unavailable: %s) — "
+                    "upload entity_recordDetails_identifiers.parquet to S3",
+                    exc,
+                )
+                return None
         finally:
             duck.close()
 
