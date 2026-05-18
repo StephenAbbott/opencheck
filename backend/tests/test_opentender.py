@@ -138,7 +138,8 @@ def test_adapter_live_available_when_db_configured(
     db_path = _make_db(tmp_path, [])
     monkeypatch.setenv("OPENTENDER_DB_FILE", str(db_path))
     get_settings.cache_clear()
-    info = REGISTRY["opentender"].info
+    # opentender is temporarily deactivated from REGISTRY; instantiate directly.
+    info = OpenTenderAdapter().info
     assert info.live_available is True
 
 
@@ -514,6 +515,3 @@ def test_deepen_opentender_flags_nc_sa_license(tmp_path: Path) -> None:
         "/deepen", params={"source": "opentender", "hit_id": "OT-DE-2024-1"}
     )
     assert r.status_code == 404
-    # BODS shape made it through end-to-end.
-    assert body["bods"], "no BODS statements emitted"
-    assert any(s["recordType"] == "relationship" for s in body["bods"])

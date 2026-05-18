@@ -129,6 +129,24 @@ def _mock_openaleph_name_lookup_empty(httpx_mock: HTTPXMock, name: str) -> None:
     httpx_mock.add_response(url=url, json={"results": []})
 
 
+def _mock_gem_download_fail(httpx_mock: HTTPXMock) -> None:
+    """Return a 404 for the GEM ownership.zip download.
+
+    ClimateTRACE catches the resulting HTTPStatusError and continues with an
+    empty GEM index.  The download only fires on the first live test because
+    the result is cached in a module-level global; ``is_optional=True`` lets
+    the mock be registered without raising if it is never consumed.
+    """
+    httpx_mock.add_response(
+        url=(
+            "https://github.com/climatetracecoalition/climate-trace-tools"
+            "/raw/main/climate_trace_tools/data/ownership/ownership.zip"
+        ),
+        status_code=404,
+        is_optional=True,
+    )
+
+
 def test_export_json_returns_bods_array(
     client: TestClient, httpx_mock: HTTPXMock
 ) -> None:
@@ -138,6 +156,7 @@ def test_export_json_returns_bods_array(
     _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
     _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
     _mock_openaleph_name_lookup_empty(httpx_mock, "Demo Holdings P.L.C.")
+    _mock_gem_download_fail(httpx_mock)
 
     r = client.get("/export", params={"lei": _LEI, "format": "json"})
     assert r.status_code == 200
@@ -164,6 +183,7 @@ def test_export_jsonl_emits_one_statement_per_line(
     _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
     _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
     _mock_openaleph_name_lookup_empty(httpx_mock, "Demo Holdings P.L.C.")
+    _mock_gem_download_fail(httpx_mock)
 
     r = client.get("/export", params={"lei": _LEI, "format": "jsonl"})
     assert r.status_code == 200
@@ -185,6 +205,7 @@ def test_export_zip_contains_full_bundle(
     _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
     _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
     _mock_openaleph_name_lookup_empty(httpx_mock, "Demo Holdings P.L.C.")
+    _mock_gem_download_fail(httpx_mock)
 
     r = client.get("/export", params={"lei": _LEI, "format": "zip"})
     assert r.status_code == 200
@@ -216,6 +237,7 @@ def test_export_zip_licenses_md_lists_gleif(
     _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
     _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
     _mock_openaleph_name_lookup_empty(httpx_mock, "Demo Holdings P.L.C.")
+    _mock_gem_download_fail(httpx_mock)
 
     r = client.get("/export", params={"lei": _LEI, "format": "zip"})
     with zipfile.ZipFile(io.BytesIO(r.content)) as zf:

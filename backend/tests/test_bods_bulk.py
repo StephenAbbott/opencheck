@@ -39,14 +39,18 @@ def _isolated_env(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_bods_gleif_registered_in_registry() -> None:
-    assert "bods_gleif" in REGISTRY
-    assert isinstance(REGISTRY["bods_gleif"], BODSGleifAdapter)
+def test_bods_gleif_not_in_registry_when_deactivated() -> None:
+    # bods_gleif is temporarily deactivated (OOM on Render free tier).
+    # The adapter class still exists; verify it is instantiable.
+    assert "bods_gleif" not in REGISTRY
+    assert isinstance(BODSGleifAdapter(), BODSGleifAdapter)
 
 
-def test_bods_uk_psc_registered_in_registry() -> None:
-    assert "bods_uk_psc" in REGISTRY
-    assert isinstance(REGISTRY["bods_uk_psc"], BODSUKPSCAdapter)
+def test_bods_uk_psc_not_in_registry_when_deactivated() -> None:
+    # bods_uk_psc is temporarily deactivated (OOM on Render free tier).
+    # The adapter class still exists; verify it is instantiable.
+    assert "bods_uk_psc" not in REGISTRY
+    assert isinstance(BODSUKPSCAdapter(), BODSUKPSCAdapter)
 
 
 # ---------------------------------------------------------------------------

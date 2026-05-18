@@ -41,8 +41,6 @@ def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
     ids = {s["id"] for s in r.json()["sources"]}
     assert ids == {
         "ariregister",
-        "bods_gleif",
-        "bods_uk_psc",
         "bolagsverket",
         "brreg",
         "climatetrace",
@@ -50,6 +48,7 @@ def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
         "cro",
         "gleif",
         "inpi",
+        "jar_lithuania",
         "openaleph",
         "opencorporates",
         "brightquery",
@@ -75,6 +74,7 @@ def test_search_entity_fans_out_to_entity_adapters(client: TestClient) -> None:
     assert "everypolitician" not in source_ids
     assert "companies_house" in source_ids
     assert "gleif" in source_ids
+    assert "jar_lithuania" in source_ids
 
 
 def test_search_person_skips_entity_only_adapters(client: TestClient) -> None:

@@ -18,6 +18,7 @@ from .cro import CroAdapter
 from .everypolitician import EveryPoliticianAdapter
 from .gleif import GleifAdapter
 from .inpi import InpiAdapter
+from .jar_lithuania import JarLithuaniaAdapter
 from .kvk import KvKAdapter
 from .openaleph import OpenAlephAdapter
 from .opencorporates import OpenCorporatesAdapter
@@ -37,6 +38,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "cro": CroAdapter(),
     "gleif": GleifAdapter(),
     "inpi": InpiAdapter(),
+    "jar_lithuania": JarLithuaniaAdapter(),
     "kvk": KvKAdapter(),
     "opencorporates": OpenCorporatesAdapter(),
     "brightquery": BrightQueryAdapter(),

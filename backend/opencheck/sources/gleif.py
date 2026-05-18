@@ -34,6 +34,7 @@ from .cro import IE_RA_CODE as _CRO_RA_CODE, normalise_crn as _normalise_crn
 from .inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
 from .kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
 from .prh import FI_RA_CODE as _PRH_RA_CODE, normalise_ytunnus as _normalise_ytunnus
+from .jar_lithuania import LT_RA_CODE as _LT_RA_CODE, normalise_code as _normalise_lt_code
 from .ur_latvia import LV_RA_CODE as _LV_RA_CODE, normalise_regcode as _normalise_lv_regcode
 from .zefix import CH_RA_CODES as _ZEFIX_RA_CODES, format_uid as _zefix_format_uid
 
@@ -281,6 +282,10 @@ class GleifAdapter(SourceAdapter):
             # the reconciler can bridge GLEIF ↔ UR Latvia.
             if registered_at_id == _LV_RA_CODE:
                 identifiers["lv_regcode"] = _normalise_lv_regcode(registered_as)
+            # Lithuanian entity code — expose as ``lt_code`` so the
+            # reconciler can bridge GLEIF ↔ JAR Lithuania.
+            if registered_at_id == _LT_RA_CODE:
+                identifiers["lt_code"] = _normalise_lt_code(registered_as)
 
         return SourceHit(
             source_id="gleif",
