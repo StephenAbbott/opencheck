@@ -34,7 +34,6 @@ def test_registry_has_expected_sources() -> None:
         "opencorporates",
         "brightquery",
         "opensanctions",
-        "opentender",
         "everypolitician",
         "sec_edgar",
         "ur_latvia",

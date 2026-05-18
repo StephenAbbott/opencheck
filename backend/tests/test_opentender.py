@@ -120,11 +120,14 @@ def _make_db(tmp_path: Path, tenders: list[dict]) -> Path:
 
 
 def test_adapter_is_registered() -> None:
-    assert "opentender" in REGISTRY
-    info = REGISTRY["opentender"].info
+    # OpenTender is currently deactivated (removed from REGISTRY) pending
+    # a more robust deployment approach. The adapter module is retained for
+    # future re-enablement. Verify the adapter class itself still works.
+    from opencheck.sources.opentender import OpenTenderAdapter
+    adapter = OpenTenderAdapter()
+    info = adapter.info
     assert info.license == "CC-BY-NC-SA-4.0"
     assert SearchKind.ENTITY in info.supports
-    # Without OPENTENDER_DB_FILE the adapter reports live_available=False.
     assert info.live_available is False
 
 
@@ -505,20 +508,12 @@ def test_map_opentender_handles_empty_bundle() -> None:
 
 
 def test_deepen_opentender_flags_nc_sa_license(tmp_path: Path) -> None:
-    _seed(
-        tmp_path,
-        f"opentender/tender/{_slug('OT-DE-2024-1')}",
-        _sample_tender(),
-    )
+    # OpenTender is deactivated — /deepen returns 404 for unregistered sources.
     client = TestClient(app)
     r = client.get(
         "/deepen", params={"source": "opentender", "hit_id": "OT-DE-2024-1"}
     )
-    assert r.status_code == 200
-    body = r.json()
-    assert body["license"] == "CC-BY-NC-SA-4.0"
-    assert body["license_notice"] is not None
-    assert "CC-BY-NC-SA-4.0" in body["license_notice"]
+    assert r.status_code == 404
     # BODS shape made it through end-to-end.
     assert body["bods"], "no BODS statements emitted"
     assert any(s["recordType"] == "relationship" for s in body["bods"])

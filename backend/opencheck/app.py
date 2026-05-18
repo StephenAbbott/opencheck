@@ -49,7 +49,6 @@ from .bods import (
     map_openaleph,
     map_opencorporates,
     map_opensanctions,
-    map_opentender,
     map_prh,
     map_sec_edgar,
     map_ur_latvia,
@@ -77,45 +76,7 @@ from .sources import REGISTRY, SearchKind, SourceHit, SourceInfo
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """FastAPI lifespan: kick off S3 bootstrap for adapters that need it.
-
-    Running at startup means downloads happen immediately on deploy, not on
-    the first user request (which would cause a long timeout / 502).
-    Requests during download return stubs; once complete all subsequent
-    requests use live data without any server restart.
-
-    Adapters bootstrapped here:
-    - BODSGleifAdapter  — downloads fts.db (Option B) or bundle zip
-    - BODSUKPSCAdapter  — same
-    - OpenTenderAdapter — downloads opentender.db from S3
-    """
-    import logging as _logging
-
-    _log = _logging.getLogger(__name__)
-
-    from .sources.bods_gleif import BODSGleifAdapter
-    from .sources.bods_uk_psc import BODSUKPSCAdapter
-    from .sources.opentender import OpenTenderAdapter
-
-    async def _run_bootstrap() -> None:
-        # BODS adapters: call _bootstrap_from_s3 directly
-        for adapter in REGISTRY.values():
-            if isinstance(adapter, (BODSGleifAdapter, BODSUKPSCAdapter)):
-                try:
-                    await asyncio.to_thread(adapter._bootstrap_from_s3)
-                except Exception as exc:
-                    _log.warning("BODS bootstrap failed for %s: %s", adapter.id, exc)
-
-        # OpenTender: _conn() handles S3 download + opens the connection
-        for adapter in REGISTRY.values():
-            if isinstance(adapter, OpenTenderAdapter):
-                try:
-                    await asyncio.to_thread(adapter._conn)
-                except Exception as exc:
-                    _log.warning("OpenTender startup bootstrap failed: %s", exc)
-
-    asyncio.create_task(_run_bootstrap())
-
+    """FastAPI lifespan hook (reserved for future startup tasks)."""
     yield  # server runs here
 
 
@@ -417,7 +378,6 @@ _MAPPERS = {
     "opencorporates": map_opencorporates,
     "brightquery": map_brightquery,
     "opensanctions": map_opensanctions,
-    "opentender": map_opentender,
     "openaleph": map_openaleph,
     "sec_edgar": map_sec_edgar,
     "wikidata": map_wikidata,
@@ -1258,7 +1218,7 @@ async def lookup(
                 errors["sec_edgar"] = f"{type(exc).__name__}: {exc}"
 
     # OpenSanctions, OpenTender — search by LEI (free-text, LEI is indexed).
-    for source_id in ("opensanctions", "opentender"):
+    for source_id in ("opensanctions",):
         adapter = REGISTRY.get(source_id)
         if adapter is None or SearchKind.ENTITY not in adapter.info.supports:
             continue
