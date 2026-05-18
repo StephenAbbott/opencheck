@@ -292,40 +292,44 @@ class JarLithuaniaAdapter(SourceAdapter):
             _log.warning("jar_lithuania: invalid code %r — returning stub", hit_id)
             return stub_bundle
 
-        cache_key = f"{_CACHE_NS}/entity/{code}"
+        # Cache keys:
+        #   bundle_cache_key — stores the fully-resolved bundle dict.  Written
+        #     after a successful (non-stub) resolution so that subsequent calls
+        #     (e.g. _safe_deepen, which omits legal_name) can retrieve the full
+        #     record without a second HTTP request or needing the legal name.
+        #   html_cache_key  — stores the raw search-result HTML so we don't
+        #     repeat the same HTTP request within the same session.
+        bundle_cache_key = f"{_CACHE_NS}/bundle/{code}"
+        html_cache_key = f"{_CACHE_NS}/entity/{code}"
 
-        # Check the cache before anything else.  A previous call from
-        # /lookup (which passes legal_name) stores the HTML here; the
-        # subsequent _safe_deepen call (which omits legal_name) can then
-        # reuse it without repeating the network request.
-        cached_html = self._cache.get_payload(cache_key)
+        # --- 1. Check for a previously-resolved bundle ------------------
+        # Written at the end of this method on the first successful call.
+        # Covers _safe_deepen (no legal_name) and repeat /lookup calls.
+        cached_bundle = self._cache.get_payload(bundle_cache_key)
+        if cached_bundle is not None:
+            return cached_bundle[0]  # type: ignore[index]
+
+        # --- 2. Check for cached HTML (no bundle yet) -------------------
+        # This can happen if fetch() stored HTML but the process restarted
+        # before the bundle was written — rare, but handle gracefully.
+        cached_html = self._cache.get_payload(html_cache_key)
         if cached_html is not None:
             records = _parse_jar_html(cached_html[0])
             rec = next((r for r in records if r.get("code") == code), None)
-            if rec:
-                return {
-                    "source_id": self.id,
-                    "hit_id": code,
-                    "lt_code": code,
-                    "name": rec.get("name") or legal_name,
-                    "address": rec.get("address") or None,
-                    "legal_form": rec.get("legal_form") or None,
-                    "status": rec.get("status") or None,
-                    "link": _entity_url(code),
-                    "is_stub": False,
-                }
-            # HTML cached but code not in it; return non-stub with whatever name we have.
-            return {
+            result: dict[str, Any] = {
                 "source_id": self.id,
                 "hit_id": code,
                 "lt_code": code,
-                "name": legal_name,
-                "address": None,
-                "legal_form": None,
-                "status": None,
+                "name": (rec.get("name") if rec else None) or legal_name or "",
+                "address": rec.get("address") if rec else None,
+                "legal_form": rec.get("legal_form") if rec else None,
+                "status": rec.get("status") if rec else None,
                 "link": _entity_url(code),
                 "is_stub": False,
             }
+            if result["name"]:  # only cache if we have a name to preserve
+                self._cache.put(bundle_cache_key, result)
+            return result
 
         if not legal_name:
             # No cache and no name — cannot drive the search; return stub.
@@ -334,11 +338,12 @@ class JarLithuaniaAdapter(SourceAdapter):
         if not self.info.live_available:
             return stub_bundle
 
-        # Use the name search endpoint — code-based lookup (?kod=) requires
-        # an image CAPTCHA that cannot be solved programmatically.
+        # --- 3. Live fetch via name search ------------------------------
+        # Code-based lookup (?kod=) requires an image CAPTCHA and cannot be
+        # solved programmatically; name search (?pav=) is not CAPTCHA-gated.
         html = await self._fetch_html(
             f"{_SEARCH_URL}?pav={quote(legal_name)}&p=1",
-            cache_key=cache_key,
+            cache_key=html_cache_key,
         )
         if html is None:
             # HTTP error or host unreachable.  We know the entity IS registered
@@ -349,7 +354,7 @@ class JarLithuaniaAdapter(SourceAdapter):
                 "returning partial non-stub using GLEIF name",
                 code, legal_name,
             )
-            return {
+            result = {
                 "source_id": self.id,
                 "hit_id": code,
                 "lt_code": code,
@@ -360,6 +365,8 @@ class JarLithuaniaAdapter(SourceAdapter):
                 "link": _entity_url(code),
                 "is_stub": False,
             }
+            self._cache.put(bundle_cache_key, result)
+            return result
 
         records = _parse_jar_html(html)
 
@@ -375,7 +382,7 @@ class JarLithuaniaAdapter(SourceAdapter):
                 "(%d hits); using GLEIF name",
                 code, legal_name, len(records),
             )
-            return {
+            result = {
                 "source_id": self.id,
                 "hit_id": code,
                 "lt_code": code,
@@ -386,8 +393,10 @@ class JarLithuaniaAdapter(SourceAdapter):
                 "link": _entity_url(code),
                 "is_stub": False,
             }
+            self._cache.put(bundle_cache_key, result)
+            return result
 
-        return {
+        result = {
             "source_id": self.id,
             "hit_id": code,
             "lt_code": code,
@@ -398,6 +407,8 @@ class JarLithuaniaAdapter(SourceAdapter):
             "link": _entity_url(code),
             "is_stub": False,
         }
+        self._cache.put(bundle_cache_key, result)
+        return result
 
     # ------------------------------------------------------------------
     # HTTP with caching
