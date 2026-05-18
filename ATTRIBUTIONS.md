@@ -62,6 +62,17 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `lv_regcode` (11-digit Latvian registration number) derived from GLEIF RA code `RA000423`
 - **Note:** Latvia was the first country to publish its national beneficial ownership data in BODS format (BODS v0.2, 2021); that historical dataset is available at <https://data.gov.lv/dati/lv/dataset/plg-bods>. The current live datasets do not carry percentage thresholds for beneficial owners — they record the declared UBO without specifying the interest mechanism. Individual identity numbers are partially masked (`DDMMYY-*****`).
 
+## JAR — Juridinių Asmenų Registras (Lithuanian Register of Legal Entities)
+
+- **Data:** entity name, code, address, legal form, and registration status for all entities registered in Lithuania — sourced from the public JAR search interface maintained by Registrų centras (Centre of Registers)
+- **Interface:** Public HTML search at <https://www.registrucentras.lt/jar/p/>
+- **Bulk download:** CC BY 4.0 daily CSV at <https://www.registrucentras.lt/aduomenys/?byla=JAR_IREGISTRUOTI.csv> (key fields: `jaAsm_Kodas`, `jaAsm_Pavadinimas`, `jaAsm_Adresas`, `jaAsm_FormKodas`, `jaAsm_StatusKodas`, `jaAsm_Reg`)
+- **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **Attribution:** "Contains data from the Lithuanian Register of Legal Entities (JAR), published by Registrų centras, available under CC BY 4.0. Source: registrucentras.lt."
+- **Entry point:** `lt_code` (9-digit Lithuanian entity code) derived from GLEIF RA code `RA000430` (Registrų centras)
+- **Rate limit:** 100 public queries per IP address per day via the HTML search interface. Results are cached to stay within this limit.
+- **Note on beneficial ownership:** Participant and shareholder data was formerly available via the JADIS open data system but is being migrated to JANGIS, a restricted sub-system accessible only to those with legitimate interest and not available as open data. This adapter covers entity data only; BO data is intentionally excluded.
+
 ## Ariregister — Estonian e-Business Register
 
 - **Data:** company profiles, shareholders, officers, and beneficial owners from the e-Business Register (äriregister) open data bulk files

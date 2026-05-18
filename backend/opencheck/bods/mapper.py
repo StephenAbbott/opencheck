@@ -5093,3 +5093,75 @@ def map_bods_uk_psc(bundle: dict[str, Any]) -> BODSBundle:
     adapter; this function makes them visible to the _MAPPERS dispatch.
     """
     return iter(bundle.get("bods_statements", []))
+
+
+# ----------------------------------------------------------------------
+# Lithuanian Register of Legal Entities (JAR) → BODS v0.4
+# ----------------------------------------------------------------------
+
+# Map common Lithuanian legal form abbreviations to BODS entity types.
+_LT_ENTITY_TYPES: dict[str, str] = {
+    "UAB": "registeredEntity",          # Private limited company
+    "AB": "registeredEntity",           # Public limited company
+    "MB": "registeredEntity",           # Small partnership
+    "IĮ": "registeredEntity",           # Sole proprietorship
+    "TŪB": "registeredEntity",          # General partnership
+    "KŪB": "registeredEntity",          # Limited partnership
+    "VšĮ": "legalEntity",               # Public institution (non-profit)
+    "Asociacija": "legalEntity",        # Association
+    "Valstybės įmonė": "stateBody",     # State enterprise
+    "Savivaldybės įmonė": "stateBody",  # Municipal enterprise
+    "Biudžetinė įstaiga": "stateBody",  # Budget institution
+    "Labdaros ir paramos fondas": "legalEntity",  # Charitable foundation
+    "Kooperatinė bendrovė": "registeredEntity",   # Cooperative
+}
+
+
+def map_jar_lithuania(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map a JarLithuaniaAdapter fetch bundle to a BODS v0.4 entity statement.
+
+    Only entity-level data (name, code, address, legal form, status) is
+    available from the JAR public search interface.  Participant / beneficial
+    ownership data from the former JADIS system has been migrated to JANGIS,
+    which is restricted to legitimate-interest access; it is intentionally
+    excluded from this adapter.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return
+
+    lt_code: str = (bundle.get("lt_code") or bundle.get("hit_id") or "").strip()
+    name: str = (bundle.get("name") or "").strip() or f"LT-{lt_code}"
+    if not lt_code or not name:
+        return
+
+    legal_form: str = (bundle.get("legal_form") or "").strip()
+    entity_type: str = _LT_ENTITY_TYPES.get(legal_form, "registeredEntity")
+
+    # Address — pre-formatted string from the JAR HTML.
+    raw_address: str = (bundle.get("address") or "").strip()
+    addresses: list[dict[str, Any]] = (
+        [_addr("registered", raw_address, "LT")]
+        if raw_address
+        else []
+    )
+
+    identifiers: list[dict[str, str]] = [
+        {
+            "id": lt_code,
+            "scheme": "LT-JAR",
+            "schemeName": "Juridinių Asmenų Registras (Lithuanian Register of Legal Entities)",
+        }
+    ]
+
+    source_url = f"https://www.registrucentras.lt/jar/p/index.php?kod={lt_code}"
+
+    yield make_entity_statement(
+        source_id="jar_lithuania",
+        local_id=lt_code,
+        name=name,
+        jurisdiction=("Lithuania", "LT"),
+        identifiers=identifiers,
+        addresses=addresses,
+        entity_type=entity_type,
+        source_url=source_url,
+    )
