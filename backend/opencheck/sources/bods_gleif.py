@@ -332,6 +332,39 @@ class BODSGleifAdapter(SourceAdapter):
         return await asyncio.to_thread(self._parquet_fetch_by_lei, lei)
 
     def _parquet_fetch_by_lei(self, lei: str) -> dict[str, Any] | None:
+        """Resolve LEI → statementId then return the full BODS fetch.
+
+        Strategy (fast-path first):
+        1. Query the ``lei_index`` SQLite table in the FTS db — populated at
+           build time by ``setup_bods_data.py --source gleif``.  This is a
+           sub-millisecond local lookup and avoids loading large Parquet files
+           into memory.
+        2. Fall back to a DuckDB HTTPFS JOIN if the index table is absent
+           (e.g. old fts.db built before this feature was added).  Note: this
+           JOIN requires ~700 MB RAM and will OOM on Render's free tier — the
+           index table should always be present in production.
+        """
+        lei_upper = lei.upper()
+
+        # ── Fast path: SQLite lei_index (built by setup_bods_data.py) ──────
+        fts_conn = self._fts()
+        if fts_conn:
+            try:
+                row = fts_conn.execute(
+                    "SELECT statementid FROM lei_index WHERE lei = ?",
+                    (lei_upper,),
+                ).fetchone()
+                if row:
+                    statementid = row[0] if isinstance(row, tuple) else row["statementid"]
+                    return self._parquet_fetch(statementid)
+            except sqlite3.OperationalError:
+                # lei_index table absent — fall through to HTTPFS JOIN
+                logger.warning(
+                    "bods_gleif: lei_index table not found in fts.db — "
+                    "rebuild the FTS db with setup_bods_data.py --source gleif --skip-download"
+                )
+
+        # ── Slow path: DuckDB HTTPFS JOIN (may OOM on low-memory hosts) ────
         import duckdb
 
         ids_url = self._parquet_url("entity_recorddetails_identifiers.parquet")
@@ -350,14 +383,10 @@ class BODSGleifAdapter(SourceAdapter):
                     WHERE i.scheme IN ('LEI', 'XI-LEI') AND i.id = ?
                     LIMIT 1
                     """,
-                    [ids_url, entity_url, lei.upper()],
+                    [ids_url, entity_url, lei_upper],
                 ).fetchone()
             except Exception as exc:
-                logger.warning(
-                    "bods_gleif: LEI lookup failed (identifiers sub-table unavailable: %s) — "
-                    "upload entity_recorddetails_identifiers.parquet to S3",
-                    exc,
-                )
+                logger.warning("bods_gleif: LEI HTTPFS lookup failed: %s", exc)
                 return None
         finally:
             duck.close()

@@ -311,6 +311,54 @@ def _build_person_fts(parquet_dir: Path, fts_db: Path) -> None:
     log.info("Person FTS5 done: %s rows in %.1fs", f"{count:,}", time.time() - t0)
 
 
+def _build_lei_index(parquet_dir: Path, fts_db: Path) -> None:
+    """Build a LEI → statementId lookup table in the FTS SQLite db.
+
+    Joins ``entity_recorddetails_identifiers.parquet`` (scheme XI-LEI/LEI)
+    with ``entity_statement.parquet`` to produce a compact mapping.
+
+    This is run once at build time so that ``fetch_by_lei`` at query time is
+    a fast local SQLite lookup instead of an expensive DuckDB HTTPFS JOIN
+    across two large Parquet files — which would OOM on memory-constrained
+    hosts such as Render's free tier (512 MB RAM).
+    """
+    ids_p = parquet_dir / "entity_recorddetails_identifiers.parquet"
+    entity_p = parquet_dir / "entity_statement.parquet"
+    if not ids_p.exists() or not entity_p.exists():
+        log.warning("Cannot build LEI index — parquet files not found in %s", parquet_dir)
+        return
+
+    log.info("Building LEI → statementId index from %s …", ids_p)
+    t0 = time.time()
+
+    duck = duckdb.connect(":memory:")
+    rows = duck.execute(
+        """
+        SELECT i.id AS lei, es.statementid
+        FROM read_parquet(?) i
+        JOIN read_parquet(?) es ON es._link = i._link_entity_statement
+        WHERE i.scheme IN ('LEI', 'XI-LEI')
+          AND i.id IS NOT NULL
+          AND TRIM(i.id) != ''
+        """,
+        [str(ids_p), str(entity_p)],
+    ).fetchall()
+    duck.close()
+
+    conn = sqlite3.connect(str(fts_db))
+    conn.execute(_META_SCHEMA)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS lei_index (lei TEXT PRIMARY KEY, statementid TEXT NOT NULL)"
+    )
+    conn.execute("DELETE FROM lei_index")
+    conn.executemany("INSERT OR REPLACE INTO lei_index VALUES (?, ?)", rows)
+    conn.execute("INSERT OR REPLACE INTO _meta VALUES ('lei_count', ?)", [str(len(rows))])
+    conn.commit()
+    conn.close()
+
+    log.info("LEI index done: %s entries in %.1fs", f"{len(rows):,}", time.time() - t0)
+
+
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
@@ -340,6 +388,8 @@ def _setup_source(
 
     _build_entity_fts(parquet_dir, fts_db)
     _build_person_fts(parquet_dir, fts_db)
+    if source == "gleif":
+        _build_lei_index(parquet_dir, fts_db)
 
     log.info(
         "Setup complete for %s.\n"
