@@ -341,7 +341,25 @@ class JarLithuaniaAdapter(SourceAdapter):
             cache_key=cache_key,
         )
         if html is None:
-            return stub_bundle
+            # HTTP error or host unreachable.  We know the entity IS registered
+            # in the JAR (GLEIF confirmed registeredAt.id == RA000430), so surface
+            # a non-stub card using the GLEIF name rather than hiding it entirely.
+            _log.warning(
+                "jar_lithuania: could not fetch JAR page for %s (%r); "
+                "returning partial non-stub using GLEIF name",
+                code, legal_name,
+            )
+            return {
+                "source_id": self.id,
+                "hit_id": code,
+                "lt_code": code,
+                "name": legal_name,
+                "address": None,
+                "legal_form": None,
+                "status": None,
+                "link": _entity_url(code),
+                "is_stub": False,
+            }
 
         records = _parse_jar_html(html)
 
