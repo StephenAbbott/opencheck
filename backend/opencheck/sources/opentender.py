@@ -103,6 +103,18 @@ class OpenTenderAdapter(SourceAdapter):
     # SQLite connection (lazy, with optional S3 bootstrap)
     # ------------------------------------------------------------------
 
+    # SQLite files start with this 16-byte magic string.
+    _SQLITE_MAGIC = b"SQLite format 3\x00"
+
+    @staticmethod
+    def _is_valid_sqlite(path: Path) -> bool:
+        """Return True if *path* starts with the SQLite magic header."""
+        try:
+            with open(path, "rb") as fh:
+                return fh.read(16) == OpenTenderAdapter._SQLITE_MAGIC
+        except OSError:
+            return False
+
     def _conn(self) -> sqlite3.Connection | None:
         settings = get_settings()
         db_path = settings.opentender_db_file
@@ -123,7 +135,7 @@ class OpenTenderAdapter(SourceAdapter):
                 )
                 try:
                     path.parent.mkdir(parents=True, exist_ok=True)
-                    with httpx.stream("GET", s3_url, follow_redirects=True) as r:
+                    with httpx.stream("GET", s3_url, follow_redirects=True, timeout=600) as r:
                         r.raise_for_status()
                         with open(path, "wb") as fh:
                             for chunk in r.iter_bytes(chunk_size=1 << 20):
@@ -131,10 +143,25 @@ class OpenTenderAdapter(SourceAdapter):
                     logger.info("opentender: DB downloaded (%s bytes)", path.stat().st_size)
                 except Exception as exc:
                     logger.warning("opentender: S3 download failed: %s", exc)
+                    path.unlink(missing_ok=True)
                     return None
             else:
                 logger.warning("opentender: DB file not found at %s", db_path)
                 return None
+
+        # Validate the file is a real SQLite database, not an HTML error page
+        # or a truncated download.  Delete and refuse to open if invalid so
+        # the next startup attempt will re-download from S3.
+        if not self._is_valid_sqlite(path):
+            size = path.stat().st_size if path.exists() else 0
+            logger.error(
+                "opentender: DB at %s is not a valid SQLite file (%s bytes) — "
+                "deleting so next startup re-downloads from S3",
+                path, size,
+            )
+            path.unlink(missing_ok=True)
+            self._db = None
+            return None
 
         conn = sqlite3.connect(str(path), check_same_thread=False)
         conn.row_factory = sqlite3.Row

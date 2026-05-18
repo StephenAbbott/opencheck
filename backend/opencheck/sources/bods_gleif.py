@@ -405,51 +405,58 @@ class BODSGleifAdapter(SourceAdapter):
             entity_row = dict(zip(cols, row))
             link = entity_row.get("_link", "")
 
-            # Identifiers sub-table
+            # Identifiers sub-table — wrapped so a missing S3 file degrades
+            # gracefully rather than crashing the whole fetch.
             identifiers: list[dict[str, str]] = []
             if ids_url and link:
-                id_rows = duck.execute(
-                    "SELECT id, scheme, schemename, uri "
-                    "FROM read_parquet(?) WHERE _link_entity_statement = ?",
-                    [ids_url, link],
-                ).fetchall()
-                for id_row in id_rows:
-                    ident: dict[str, str] = {}
-                    if id_row[0]:
-                        ident["id"] = str(id_row[0])
-                    if id_row[1]:
-                        ident["scheme"] = str(id_row[1])
-                    if id_row[2]:
-                        ident["schemeName"] = str(id_row[2])
-                    if id_row[3]:
-                        ident["uri"] = str(id_row[3])
-                    if ident.get("id"):
-                        identifiers.append(ident)
+                try:
+                    id_rows = duck.execute(
+                        "SELECT id, scheme, schemename, uri "
+                        "FROM read_parquet(?) WHERE _link_entity_statement = ?",
+                        [ids_url, link],
+                    ).fetchall()
+                    for id_row in id_rows:
+                        ident: dict[str, str] = {}
+                        if id_row[0]:
+                            ident["id"] = str(id_row[0])
+                        if id_row[1]:
+                            ident["scheme"] = str(id_row[1])
+                        if id_row[2]:
+                            ident["schemeName"] = str(id_row[2])
+                        if id_row[3]:
+                            ident["uri"] = str(id_row[3])
+                        if ident.get("id"):
+                            identifiers.append(ident)
+                except Exception as exc:
+                    logger.warning("bods_gleif: identifiers sub-table unavailable (%s) — skipping", exc)
 
             # Addresses sub-table
             addresses: list[dict[str, Any]] = []
             if addrs_url and link:
-                addr_rows = duck.execute(
-                    "SELECT type, address, postcode, country_name, country_code "
-                    "FROM read_parquet(?) WHERE _link_entity_statement = ?",
-                    [addrs_url, link],
-                ).fetchall()
-                for addr_row in addr_rows:
-                    addr: dict[str, Any] = {}
-                    if addr_row[0]:
-                        addr["type"] = str(addr_row[0])
-                    if addr_row[1]:
-                        addr["address"] = str(addr_row[1])
-                    if addr_row[2]:
-                        addr["postcode"] = str(addr_row[2])
-                    if addr_row[3] or addr_row[4]:
-                        addr["country"] = {
-                            k: v for k, v in [
-                                ("name", addr_row[3]),
-                                ("code", addr_row[4]),
-                            ] if v
-                        }
-                    addresses.append(addr)
+                try:
+                    addr_rows = duck.execute(
+                        "SELECT type, address, postcode, country_name, country_code "
+                        "FROM read_parquet(?) WHERE _link_entity_statement = ?",
+                        [addrs_url, link],
+                    ).fetchall()
+                    for addr_row in addr_rows:
+                        addr: dict[str, Any] = {}
+                        if addr_row[0]:
+                            addr["type"] = str(addr_row[0])
+                        if addr_row[1]:
+                            addr["address"] = str(addr_row[1])
+                        if addr_row[2]:
+                            addr["postcode"] = str(addr_row[2])
+                        if addr_row[3] or addr_row[4]:
+                            addr["country"] = {
+                                k: v for k, v in [
+                                    ("name", addr_row[3]),
+                                    ("code", addr_row[4]),
+                                ] if v
+                            }
+                        addresses.append(addr)
+                except Exception as exc:
+                    logger.warning("bods_gleif: addresses sub-table unavailable (%s) — skipping", exc)
 
             # Reconstruct BODS 0.4 entity statement
             entity_stmt = _build_entity_statement(entity_row, identifiers, addresses)
@@ -457,18 +464,22 @@ class BODSGleifAdapter(SourceAdapter):
             # Relationship statements (direct/ultimate parents)
             relationship_stmts: list[dict[str, Any]] = []
             if rels_url:
-                rel_rows = duck.execute(
-                    """
-                    SELECT statementid,
-                           recordDetails_subject,
-                           recordDetails_interestedParty
-                    FROM read_parquet(?)
-                    WHERE recordDetails_subject = ?
-                       OR recordDetails_interestedParty = ?
-                    LIMIT 50
-                    """,
-                    [rels_url, statementid, statementid],
-                ).fetchall()
+                try:
+                    rel_rows = duck.execute(
+                        """
+                        SELECT statementid,
+                               recordDetails_subject,
+                               recordDetails_interestedParty
+                        FROM read_parquet(?)
+                        WHERE recordDetails_subject = ?
+                           OR recordDetails_interestedParty = ?
+                        LIMIT 50
+                        """,
+                        [rels_url, statementid, statementid],
+                    ).fetchall()
+                except Exception as exc:
+                    logger.warning("bods_gleif: relationship_statement unavailable (%s) — skipping", exc)
+                    rel_rows = []
                 for rel_row in rel_rows:
                     # Fetch interests for this relationship
                     rel_link_row = duck.execute(
@@ -478,15 +489,18 @@ class BODSGleifAdapter(SourceAdapter):
                     rel_link = rel_link_row[0] if rel_link_row else ""
                     interests: list[dict[str, Any]] = []
                     if rel_interests_url and rel_link:
-                        int_rows = duck.execute(
-                            """
-                            SELECT directOrIndirect, type, beneficialOwnershipOrControl,
-                                   details, startDate
-                            FROM read_parquet(?)
-                            WHERE _link_relationship_statement = ?
-                            """,
-                            [rel_interests_url, rel_link],
-                        ).fetchall()
+                        try:
+                            int_rows = duck.execute(
+                                """
+                                SELECT directOrIndirect, type, beneficialOwnershipOrControl,
+                                       details, startDate
+                                FROM read_parquet(?)
+                                WHERE _link_relationship_statement = ?
+                                """,
+                                [rel_interests_url, rel_link],
+                            ).fetchall()
+                        except Exception:
+                            int_rows = []
                         for ir in int_rows:
                             interest: dict[str, Any] = {}
                             if ir[0]: interest["directOrIndirect"] = str(ir[0])
