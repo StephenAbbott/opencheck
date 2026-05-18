@@ -347,7 +347,7 @@ class BODSGleifAdapter(SourceAdapter):
                     SELECT i._link_entity_statement, es.statementid
                     FROM read_parquet(?) i
                     JOIN read_parquet(?) es ON es._link = i._link_entity_statement
-                    WHERE i.scheme = 'LEI' AND i.id = ?
+                    WHERE i.scheme IN ('LEI', 'XI-LEI') AND i.id = ?
                     LIMIT 1
                     """,
                     [ids_url, entity_url, lei.upper()],
@@ -528,7 +528,7 @@ class BODSGleifAdapter(SourceAdapter):
         # Build the cross-source identifier map (for reconciler)
         cross_ids: dict[str, str] = {"bods_gleif_statementid": statementid}
         for ident in identifiers:
-            if ident.get("scheme") == "LEI" and ident.get("id"):
+            if ident.get("scheme") in {"LEI", "XI-LEI"} and ident.get("id"):
                 cross_ids["lei"] = ident["id"]
 
         all_stmts = [entity_stmt] + relationship_stmts
