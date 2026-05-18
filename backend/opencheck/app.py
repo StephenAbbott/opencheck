@@ -37,8 +37,6 @@ from . import __version__
 from .bods import (
     BODSBundle,
     map_ariregister,
-    map_bods_gleif,
-    map_bods_uk_psc,
     map_bolagsverket,
     map_brightquery,
     map_brreg,
@@ -409,8 +407,6 @@ def _ch_ra_code(company_number: str) -> str:
 
 _MAPPERS = {
     "ariregister": map_ariregister,
-    "bods_gleif": map_bods_gleif,
-    "bods_uk_psc": map_bods_uk_psc,
     "bolagsverket": map_bolagsverket,
     "brreg": map_brreg,
     "climatetrace": map_climatetrace,
@@ -816,35 +812,6 @@ async def lookup(
     )
     hits.append(gleif_hit)
     deepened_bundles.append(("gleif", lei))
-
-    # Open Ownership BODS bulk data — GLEIF parquet.
-    # Provides interconnected entity + parent relationship statements
-    # from Open Ownership's processed GLEIF bulk dataset. Available for
-    # any LEI in the dataset without pre-extraction.
-    _bods_gleif_adapter = REGISTRY.get("bods_gleif")
-    if _bods_gleif_adapter and hasattr(_bods_gleif_adapter, "fetch_by_lei"):
-        try:
-            _bg_bundle = await _bods_gleif_adapter.fetch_by_lei(lei)  # type: ignore[attr-defined]
-            if _bg_bundle and not _bg_bundle.get("is_stub"):
-                _bg_hit_id = _bg_bundle.get("hit_id", lei)
-                hits.append(
-                    SourceHit(
-                        source_id="bods_gleif",
-                        hit_id=_bg_hit_id,
-                        kind=SearchKind.ENTITY,
-                        name=legal_name or "",
-                        summary=f"Open Ownership bulk BODS · LEI {lei}",
-                        identifiers={
-                            "lei": lei,
-                            **(_bg_bundle.get("identifiers") or {}),
-                        },
-                        raw=_bg_bundle,
-                        is_stub=False,
-                    )
-                )
-                deepened_bundles.append(("bods_gleif", _bg_hit_id))
-        except Exception as exc:  # noqa: BLE001
-            errors["bods_gleif"] = f"{type(exc).__name__}: {exc}"
 
     # Companies House — direct fetch by company number when GB.
     if "gb_coh" in derived:
