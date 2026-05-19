@@ -193,6 +193,93 @@ RAW_SPZOO: dict[str, Any] = {
 }
 
 
+# Cooperative (spółdzielnia) fixture — ``organNadzoru`` is a **list** of
+# organ dicts (cooperative variant) rather than a single dict.  This is the
+# shape that triggered AttributeError: 'list' object has no attribute 'get'.
+# KRS number 0000119004 → SPÓŁDZIELNIA PRODUCENTÓW DROBIU "EKO - GRIL"
+RAW_SPOLDZ: dict[str, Any] = {
+    "odpis": {
+        "naglowekA": {
+            "dataRejestracjiWKRS": "20.08.2002",
+            "dataOstatniegoWpisu": "12.11.2023",
+        },
+        "dane": {
+            "dzial1": {
+                "danePodmiotu": {
+                    "nazwa": 'SPÓŁDZIELNIA PRODUCENTÓW DROBIU "EKO - GRIL"',
+                    "formaPrawna": "SPÓŁDZIELNIA",
+                    "identyfikatory": {
+                        "nip": "7961234567",
+                        "regon": "123456789",
+                    },
+                },
+                "siedzibaIAdres": {
+                    "adres": {
+                        "ulica": "UL. ROLNA",
+                        "nrDomu": "12",
+                        "nrLokalu": "",
+                        "kodPocztowy": "08-400",
+                        "miejscowosc": "GARWOLIN",
+                        "kraj": "POLSKA",
+                    },
+                    "adresPocztyElektronicznej": "",
+                    "adresStronyInternetowej": "",
+                },
+                "kapital": {},
+                "wspolnicySpzoo": [],
+            },
+            "dzial2": {
+                # Board of management — single dict form (normal)
+                "reprezentacja": {
+                    "nazwaOrganu": "Zarząd",
+                    "sklad": [
+                        {
+                            "imiona": {"imie": "J*****", "imieDrugie": ""},
+                            "nazwisko": {"nazwiskoICzlon": "K*****", "nazwiskoIICzlon": ""},
+                            "funkcjaWOrganie": "PREZES ZARZĄDU",
+                            "czyZawieszona": False,
+                        }
+                    ],
+                },
+                # Supervisory organs — **list** form (cooperative variant).
+                # Uses key "nazwa" (not "nazwaOrganu") in each element.
+                "organNadzoru": [
+                    {
+                        "nazwa": "RADA NADZORCZA",
+                        "sklad": [
+                            {
+                                "imiona": {"imie": "A***", "imieDrugie": ""},
+                                "nazwisko": {"nazwiskoICzlon": "B*****", "nazwiskoIICzlon": ""},
+                                "funkcjaWOrganie": "PRZEWODNICZĄCY RADY",
+                                "czyZawieszona": False,
+                            },
+                            {
+                                "imiona": {"imie": "C***", "imieDrugie": ""},
+                                "nazwisko": {"nazwiskoICzlon": "D*****", "nazwiskoIICzlon": ""},
+                                "funkcjaWOrganie": "CZŁONEK RADY",
+                                "czyZawieszona": False,
+                            },
+                        ],
+                    }
+                ],
+            },
+            "dzial3": {
+                "przedmiotDzialalnosci": {
+                    "przedmiotPrzewazajacejDzialalnosci": [
+                        {
+                            "kodDzial": "01",
+                            "kodKlasa": "47",
+                            "kodPodklasa": "Z",
+                            "opis": "Chów i hodowla drobiu",
+                        }
+                    ]
+                }
+            },
+        },
+    }
+}
+
+
 # ---------------------------------------------------------------------------
 # Helper utilities
 # ---------------------------------------------------------------------------
@@ -437,6 +524,34 @@ class TestBuildBundle:
         assert stub["is_stub"] is True
         assert stub["name"] == "PKN ORLEN"
         assert stub["pl_krs"] == "0000028860"
+
+    # --- Cooperative (spółdzielnia) fixture: organNadzoru as a list ---
+
+    def test_spoldz_supervisory_list_form(self) -> None:
+        """organNadzoru as a list must not crash and must yield supervisory members."""
+        bundle = self.adapter._build_bundle("0000119004", RAW_SPOLDZ, "S")
+        assert bundle["is_stub"] is False
+        supervisory = bundle["supervisory_board"]
+        assert len(supervisory) == 2
+
+    def test_spoldz_supervisory_organ_name(self) -> None:
+        """Organ name from list-form 'nazwa' key should be preserved."""
+        bundle = self.adapter._build_bundle("0000119004", RAW_SPOLDZ, "S")
+        organs = {m["organ"] for m in bundle["supervisory_board"]}
+        assert "RADA NADZORCZA" in organs
+
+    def test_spoldz_supervisory_roles(self) -> None:
+        bundle = self.adapter._build_bundle("0000119004", RAW_SPOLDZ, "S")
+        roles = {m["role"] for m in bundle["supervisory_board"]}
+        assert "PRZEWODNICZĄCY RADY" in roles
+        assert "CZŁONEK RADY" in roles
+
+    def test_spoldz_director_single_dict_form(self) -> None:
+        """reprezentacja (single dict form) should still parse correctly."""
+        bundle = self.adapter._build_bundle("0000119004", RAW_SPOLDZ, "S")
+        directors = bundle["directors"]
+        assert len(directors) == 1
+        assert directors[0]["role"] == "PREZES ZARZĄDU"
 
 
 # ---------------------------------------------------------------------------

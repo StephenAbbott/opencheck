@@ -437,24 +437,47 @@ class KrsPolandAdapter(SourceAdapter):
         pkd = _extract_pkd(dzial3)
 
         # --- Board members (names masked in public API) ---
+        # ``reprezentacja`` is normally a single dict, but apply the same
+        # list-normalisation as ``organNadzoru`` for safety.
         directors: list[dict[str, Any]] = []
-        repr_section = dzial2.get("reprezentacja") or {}
-        organ_name = repr_section.get("nazwaOrganu") or "Zarząd"
-        for member in repr_section.get("sklad") or []:
-            rec = _extract_board_member(member)
-            if rec:
-                rec["organ"] = organ_name
-                directors.append(rec)
+        raw_repr = dzial2.get("reprezentacja") or {}
+        repr_list: list[dict[str, Any]] = (
+            raw_repr if isinstance(raw_repr, list) else [raw_repr] if raw_repr else []
+        )
+        for repr_section in repr_list:
+            organ_name = (
+                repr_section.get("nazwaOrganu")
+                or repr_section.get("nazwa")
+                or "Zarząd"
+            )
+            for member in repr_section.get("sklad") or []:
+                rec = _extract_board_member(member)
+                if rec:
+                    rec["organ"] = organ_name
+                    directors.append(rec)
 
-        # Supervisory board (organ nadzoru)
+        # Supervisory board (organ nadzoru).
+        # For cooperatives (spółdzielnia) and some other forms, ``organNadzoru``
+        # is a *list* of organ dicts rather than a single dict.  We normalise
+        # both shapes so the rest of the pipeline stays uniform.
         supervisory: list[dict[str, Any]] = []
-        organ_nadzoru = dzial2.get("organNadzoru") or {}
-        sn_name = organ_nadzoru.get("nazwaOrganu") or "Rada Nadzorcza"
-        for member in organ_nadzoru.get("sklad") or []:
-            rec = _extract_board_member(member)
-            if rec:
-                rec["organ"] = sn_name
-                supervisory.append(rec)
+        raw_organ_nadzoru = dzial2.get("organNadzoru") or {}
+        organ_nadzoru_list: list[dict[str, Any]] = (
+            raw_organ_nadzoru
+            if isinstance(raw_organ_nadzoru, list)
+            else [raw_organ_nadzoru] if raw_organ_nadzoru else []
+        )
+        for organ_nadzoru in organ_nadzoru_list:
+            sn_name = (
+                organ_nadzoru.get("nazwaOrganu")
+                or organ_nadzoru.get("nazwa")
+                or "Rada Nadzorcza"
+            )
+            for member in organ_nadzoru.get("sklad") or []:
+                rec = _extract_board_member(member)
+                if rec:
+                    rec["organ"] = sn_name
+                    supervisory.append(rec)
 
         # --- Shareholders (sp. z o.o. only; names masked) ---
         shareholders: list[dict[str, Any]] = []
