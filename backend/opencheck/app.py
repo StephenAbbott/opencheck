@@ -36,6 +36,7 @@ from sse_starlette.sse import EventSourceResponse
 from . import __version__
 from .bods import (
     BODSBundle,
+    map_ares,
     map_ariregister,
     map_bolagsverket,
     map_brightquery,
@@ -58,6 +59,7 @@ from .bods import (
     map_zefix,
     validate_shape,
 )
+from .sources.ares import CZ_RA_CODE as _CZ_RA_CODE, normalise_ico as _normalise_ico
 from .sources.ariregister import EE_RA_CODE as _EE_RA_CODE
 from .sources.bolagsverket import BV_RA_CODE as _BV_RA_CODE, normalise_org_number as _normalise_org_number
 from .sources.brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_orgnr
@@ -386,6 +388,7 @@ _MAPPERS = {
     "everypolitician": map_everypolitician,
     "kvk": map_kvk,
     "prh": map_prh,
+    "ares": map_ares,
     "jar_lithuania": map_jar_lithuania,
     "ur_latvia": map_ur_latvia,
     "zefix": map_zefix,
@@ -715,6 +718,9 @@ async def lookup(
     if registered_at_id == _LT_RA_CODE and registered_as:
         # Lithuanian entity code — 9-digit string (e.g. "111950694")
         derived["lt_code"] = _normalise_lt_code(registered_as)
+    if registered_at_id == _CZ_RA_CODE and registered_as:
+        # Czech IČO — 8-digit zero-padded string (e.g. "27082440")
+        derived["cz_ico"] = _normalise_ico(registered_as)
 
     # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
     # (format: ``{jurisdiction_code}/{company_number}``).
@@ -772,6 +778,7 @@ async def lookup(
             **({"fi_ytunnus": derived["fi_ytunnus"]} if "fi_ytunnus" in derived else {}),
             **({"lv_regcode": derived["lv_regcode"]} if "lv_regcode" in derived else {}),
             **({"lt_code": derived["lt_code"]} if "lt_code" in derived else {}),
+            **({"cz_ico": derived["cz_ico"]} if "cz_ico" in derived else {}),
             **({"wikidata_qid": qid} if qid else {}),
         },
         raw=gleif_bundle.get("record") or {},
@@ -1100,6 +1107,34 @@ async def lookup(
                 deepened_bundles.append(("jar_lithuania", derived["lt_code"]))
         except Exception as exc:  # noqa: BLE001
             errors["jar_lithuania"] = f"{type(exc).__name__}: {exc}"
+
+    # ARES — direct fetch by IČO when Czech entity (RA000163).
+    if "cz_ico" in derived:
+        try:
+            cz_bundle = await REGISTRY["ares"].fetch(
+                derived["cz_ico"], legal_name=legal_name
+            )
+            if not cz_bundle.get("is_stub"):
+                cz_entity = cz_bundle.get("entity") or {}
+                cz_name = (cz_entity.get("name") or "").strip() or legal_name or ""
+                hits.append(
+                    SourceHit(
+                        source_id="ares",
+                        hit_id=derived["cz_ico"],
+                        kind=SearchKind.ENTITY,
+                        name=cz_name,
+                        summary=f"CZ-ARES IČO {derived['cz_ico']}",
+                        identifiers={
+                            "cz_ico": derived["cz_ico"],
+                            "lei": lei,
+                        },
+                        raw=cz_entity,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("ares", derived["cz_ico"]))
+        except Exception as exc:  # noqa: BLE001
+            errors["ares"] = f"{type(exc).__name__}: {exc}"
 
     # OpenCorporates — direct fetch by ocid derived from GLEIF.
     if ocid:

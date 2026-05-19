@@ -8,6 +8,7 @@ by the FastAPI app.
 from __future__ import annotations
 
 from .ariregister import AriregisterAdapter
+from .ares import AresAdapter
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .bolagsverket import BolagsverketAdapter
 from .brightquery import BrightQueryAdapter
@@ -30,6 +31,7 @@ from .wikidata import WikidataAdapter
 from .zefix import ZefixAdapter
 
 REGISTRY: dict[str, SourceAdapter] = {
+    "ares": AresAdapter(),
     "ariregister": AriregisterAdapter(),
     "bolagsverket": BolagsverketAdapter(),
     "brreg": BrregAdapter(),
