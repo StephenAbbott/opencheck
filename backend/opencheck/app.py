@@ -52,6 +52,7 @@ from .bods import (
     map_opensanctions,
     map_prh,
     map_jar_lithuania,
+    map_krs_poland,
     map_sec_edgar,
     map_ur_latvia,
     map_wikidata,
@@ -60,6 +61,7 @@ from .bods import (
     validate_shape,
 )
 from .sources.ares import CZ_RA_CODE as _CZ_RA_CODE, normalise_ico as _normalise_ico
+from .sources.krs_poland import PL_KRS_RA_CODE as _PL_KRS_RA_CODE, normalise_krs as _normalise_krs
 from .sources.ariregister import EE_RA_CODE as _EE_RA_CODE
 from .sources.bolagsverket import BV_RA_CODE as _BV_RA_CODE, normalise_org_number as _normalise_org_number
 from .sources.brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_orgnr
@@ -389,6 +391,7 @@ _MAPPERS = {
     "kvk": map_kvk,
     "prh": map_prh,
     "ares": map_ares,
+    "krs_poland": map_krs_poland,
     "jar_lithuania": map_jar_lithuania,
     "ur_latvia": map_ur_latvia,
     "zefix": map_zefix,
@@ -721,6 +724,9 @@ async def lookup(
     if registered_at_id == _CZ_RA_CODE and registered_as:
         # Czech IČO — 8-digit zero-padded string (e.g. "27082440")
         derived["cz_ico"] = _normalise_ico(registered_as)
+    if registered_at_id == _PL_KRS_RA_CODE and registered_as:
+        # Polish KRS number — 10-digit zero-padded string (e.g. "0000028860")
+        derived["pl_krs"] = _normalise_krs(registered_as)
 
     # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
     # (format: ``{jurisdiction_code}/{company_number}``).
@@ -779,6 +785,7 @@ async def lookup(
             **({"lv_regcode": derived["lv_regcode"]} if "lv_regcode" in derived else {}),
             **({"lt_code": derived["lt_code"]} if "lt_code" in derived else {}),
             **({"cz_ico": derived["cz_ico"]} if "cz_ico" in derived else {}),
+            **({"pl_krs": derived["pl_krs"]} if "pl_krs" in derived else {}),
             **({"wikidata_qid": qid} if qid else {}),
         },
         raw=gleif_bundle.get("record") or {},
@@ -1135,6 +1142,33 @@ async def lookup(
                 deepened_bundles.append(("ares", derived["cz_ico"]))
         except Exception as exc:  # noqa: BLE001
             errors["ares"] = f"{type(exc).__name__}: {exc}"
+
+    # KRS Poland — direct fetch by KRS number when Polish entity (RA000484).
+    if "pl_krs" in derived:
+        try:
+            pl_bundle = await REGISTRY["krs_poland"].fetch(
+                derived["pl_krs"], legal_name=legal_name
+            )
+            if not pl_bundle.get("is_stub"):
+                pl_name = (pl_bundle.get("name") or "").strip() or legal_name or ""
+                hits.append(
+                    SourceHit(
+                        source_id="krs_poland",
+                        hit_id=derived["pl_krs"],
+                        kind=SearchKind.ENTITY,
+                        name=pl_name,
+                        summary=f"KRS {derived['pl_krs']}",
+                        identifiers={
+                            "pl_krs": derived["pl_krs"],
+                            "lei": lei,
+                        },
+                        raw=pl_bundle,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("krs_poland", derived["pl_krs"]))
+        except Exception as exc:  # noqa: BLE001
+            errors["krs_poland"] = f"{type(exc).__name__}: {exc}"
 
     # OpenCorporates — direct fetch by ocid derived from GLEIF.
     if ocid:
