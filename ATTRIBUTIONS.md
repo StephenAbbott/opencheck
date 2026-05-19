@@ -73,6 +73,16 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Rate limit:** 100 public queries per IP address per day via the HTML search interface. Results are cached to stay within this limit.
 - **Note on beneficial ownership:** Participant and shareholder data was formerly available via the JADIS open data system but is being migrated to JANGIS, a restricted sub-system accessible only to those with legitimate interest and not available as open data. This adapter covers entity data only; BO data is intentionally excluded.
 
+## ARES — Administrativní registr ekonomických subjektů (Czechia)
+
+- **Data:** entity name, IČO, address, legal form, registration status, shareholders (akcionáři / společníci), directors (statutární orgány), and share capital — sourced from the ARES REST API operated by the Czech Ministry of Finance. Aggregate data comes from the `/ekonomicke-subjekty/{ico}` endpoint; commercial-register (VR) data from `/ekonomicke-subjekty-vr/{ico}`.
+- **API:** <https://ares.gov.cz/ekonomicke-subjekty-v-be/rest> — no authentication required
+- **Open-data catalogue:** <https://data.mf.gov.cz/>
+- **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **Attribution:** "Contains data from ARES (Administrativní registr ekonomických subjektů), published by the Ministry of Finance of Czechia (Ministerstvo financí ČR) under CC BY 4.0. Source: ares.gov.cz."
+- **Entry point:** `cz_ico` (8-digit IČO, zero-padded) derived from GLEIF RA code `RA000163` (Obchodní rejstřík / Commercial Register, Ministry of Justice)
+- **Note:** ARES aggregates data from multiple sub-registers: ROS (base register), VR (commercial register, Ministry of Justice), RES (statistical register), and RZP (trade licence register). Shareholder and director data is only available for entities registered in the VR; ARES returns 404 on the VR endpoint for entities not in the commercial register — handled gracefully. Beneficial ownership declarations are not available via the public API.
+
 ## Ariregister — Estonian e-Business Register
 
 - **Data:** company profiles, shareholders, officers, and beneficial owners from the e-Business Register (äriregister) open data bulk files

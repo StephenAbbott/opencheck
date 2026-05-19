@@ -1,6 +1,6 @@
 """Czech ARES (Administrativní registr ekonomických subjektů) adapter.
 
-ARES is the Czech Republic's authoritative business register, operated by the
+ARES is Czechia's authoritative business register, operated by the
 Ministry of Finance.  It aggregates data from multiple sub-registers:
 
   • ROS  — Registr osob (base register of persons/entities)
@@ -201,7 +201,7 @@ class AresAdapter(SourceAdapter):
         settings = get_settings()
         return SourceInfo(
             id=self.id,
-            name="ARES (Czech Republic)",
+            name="ARES (Czechia)",
             homepage="https://ares.gov.cz/",
             description=(
                 "Czech ARES business register (Administrativní registr "
@@ -214,7 +214,7 @@ class AresAdapter(SourceAdapter):
             attribution=(
                 "Contains data from ARES (Administrativní registr ekonomických "
                 "subjektů), published by the Ministry of Finance of the Czech "
-                "Republic (Ministerstvo financí ČR) under CC BY 4.0. "
+                "Czechia (Ministerstvo financí ČR) under CC BY 4.0. "
                 "Source: ares.gov.cz."
             ),
             supports=[SearchKind.ENTITY],
@@ -233,7 +233,7 @@ class AresAdapter(SourceAdapter):
             hit_id=name,
             kind=SearchKind.ENTITY,
             name=name,
-            summary="ARES (Czech Republic)",
+            summary="ARES (Czechia)",
             identifiers={},
             raw={},
             is_stub=True,

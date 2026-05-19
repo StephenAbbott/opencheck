@@ -5169,7 +5169,7 @@ def map_jar_lithuania(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
 
 # ----------------------------------------------------------------------
-# ARES (Czech Republic) → BODS
+# ARES (Czechia) → BODS
 # ----------------------------------------------------------------------
 
 
@@ -5249,7 +5249,7 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         source_id="ares",
         local_id=ico,
         name=name,
-        jurisdiction=("Czech Republic", "CZ"),
+        jurisdiction=("Czechia", "CZ"),
         identifiers=identifiers,
         founding_date=founding_date,
         addresses=addresses,
