@@ -27,6 +27,7 @@ from .openaleph import OpenAlephAdapter
 from .opencorporates import OpenCorporatesAdapter
 from .opensanctions import OpenSanctionsAdapter
 from .prh import PrhAdapter
+from .rpo_slovakia import RpoSlovakiaAdapter
 from .sec_edgar import SecEdgarAdapter
 from .ur_latvia import UrLatviaAdapter
 from .wikidata import WikidataAdapter
@@ -53,6 +54,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "everypolitician": EveryPoliticianAdapter(),
     "wikidata": WikidataAdapter(),
     "prh": PrhAdapter(),
+    "rpo_slovakia": RpoSlovakiaAdapter(),
     "sec_edgar": SecEdgarAdapter(),
     "ur_latvia": UrLatviaAdapter(),
     "zefix": ZefixAdapter(),

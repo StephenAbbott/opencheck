@@ -5545,3 +5545,70 @@ def map_krs_poland(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         source_url=source_url,
     )
     yield entity_stmt
+
+
+# ----------------------------------------------------------------------
+# RPO Slovakia (Register právnických osôb) → BODS
+# ----------------------------------------------------------------------
+
+
+def map_rpo_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map an RpoSlovakiaAdapter fetch bundle to a BODS v0.4 entity statement.
+
+    Only entity-level data is available from RPO (name, IČO, address,
+    establishment date, registration number, court).  No beneficial
+    ownership or officer data is available via this API; the RPVS adapter
+    provides public-procurement beneficial ownership data separately.
+
+    Identifiers emitted:
+      • IČO  — scheme "SK-RPO"
+    """
+    if not bundle or bundle.get("is_stub"):
+        return
+
+    ico: str = (bundle.get("sk_ico") or bundle.get("hit_id") or "").strip()
+    if not ico:
+        return
+
+    name: str = (bundle.get("name") or "").strip() or f"SK-{ico}"
+
+    # Address — pre-formatted string from the RPO response.
+    raw_address: str = (bundle.get("address") or "").strip()
+    addresses: list[dict[str, Any]] = (
+        [_addr("registered", raw_address, "SK")]
+        if raw_address
+        else []
+    )
+
+    identifiers: list[dict[str, str]] = [
+        {
+            "id": ico,
+            "scheme": "SK-RPO",
+            "schemeName": "Register právnických osôb (Slovak Register of Legal Persons)",
+        }
+    ]
+
+    # Registration number in source register (e.g. Obchodný register number).
+    reg_numbers: list[str] = bundle.get("registration_numbers") or []
+    if reg_numbers:
+        identifiers.append({
+            "id": reg_numbers[0],
+            "scheme": "SK-OR",
+            "schemeName": "Obchodný register SR (Slovak Commercial Register)",
+        })
+
+    founding_date: str | None = bundle.get("establishment")
+
+    source_url: str = bundle.get("link") or f"https://rpo.statistics.sk/"
+
+    yield make_entity_statement(
+        source_id="rpo_slovakia",
+        local_id=ico,
+        name=name,
+        jurisdiction=("Slovakia", "SK"),
+        identifiers=identifiers,
+        founding_date=founding_date,
+        addresses=addresses,
+        entity_type="registeredEntity",
+        source_url=source_url,
+    )

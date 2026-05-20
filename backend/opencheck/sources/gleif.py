@@ -38,6 +38,7 @@ from .ares import CZ_RA_CODE as _CZ_RA_CODE, normalise_ico as _normalise_ico
 from .krs_poland import PL_KRS_RA_CODE as _PL_KRS_RA_CODE, normalise_krs as _normalise_krs
 from .firmenbuch import AT_FB_RA_CODE as _AT_FB_RA_CODE, normalise_fn as _normalise_fn
 from .jar_lithuania import LT_RA_CODE as _LT_RA_CODE, normalise_code as _normalise_lt_code
+from .rpo_slovakia import SK_RPO_RA_CODE as _SK_RPO_RA_CODE, normalise_ico as _normalise_sk_ico
 from .ur_latvia import LV_RA_CODE as _LV_RA_CODE, normalise_regcode as _normalise_lv_regcode
 from .zefix import CH_RA_CODES as _ZEFIX_RA_CODES, format_uid as _zefix_format_uid
 
@@ -301,6 +302,10 @@ class GleifAdapter(SourceAdapter):
             # can bridge GLEIF ↔ Firmenbuch.
             if registered_at_id == _AT_FB_RA_CODE:
                 identifiers["at_fn"] = _normalise_fn(registered_as)
+            # Slovak IČO — expose as ``sk_ico`` so the reconciler can bridge
+            # GLEIF ↔ RPO Slovakia.
+            if registered_at_id == _SK_RPO_RA_CODE:
+                identifiers["sk_ico"] = _normalise_sk_ico(registered_as)
 
         return SourceHit(
             source_id="gleif",

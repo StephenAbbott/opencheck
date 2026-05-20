@@ -54,6 +54,7 @@ from .bods import (
     map_jar_lithuania,
     map_krs_poland,
     map_firmenbuch,
+    map_rpo_slovakia,
     map_sec_edgar,
     map_ur_latvia,
     map_wikidata,
@@ -64,6 +65,7 @@ from .bods import (
 from .sources.ares import CZ_RA_CODE as _CZ_RA_CODE, normalise_ico as _normalise_ico
 from .sources.krs_poland import PL_KRS_RA_CODE as _PL_KRS_RA_CODE, normalise_krs as _normalise_krs
 from .sources.firmenbuch import AT_FB_RA_CODE as _AT_FB_RA_CODE, normalise_fn as _normalise_fn
+from .sources.rpo_slovakia import SK_RPO_RA_CODE as _SK_RPO_RA_CODE, normalise_ico as _normalise_sk_ico
 from .sources.ariregister import EE_RA_CODE as _EE_RA_CODE
 from .sources.bolagsverket import BV_RA_CODE as _BV_RA_CODE, normalise_org_number as _normalise_org_number
 from .sources.brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_orgnr
@@ -395,6 +397,7 @@ _MAPPERS = {
     "ares": map_ares,
     "krs_poland": map_krs_poland,
     "firmenbuch": map_firmenbuch,
+    "rpo_slovakia": map_rpo_slovakia,
     "jar_lithuania": map_jar_lithuania,
     "ur_latvia": map_ur_latvia,
     "zefix": map_zefix,
@@ -733,6 +736,9 @@ async def lookup(
     if registered_at_id == _AT_FB_RA_CODE and registered_as:
         # Austrian Firmenbuchnummer — digits + lowercase letter (e.g. "093363z")
         derived["at_fn"] = _normalise_fn(registered_as)
+    if registered_at_id == _SK_RPO_RA_CODE and registered_as:
+        # Slovak IČO — 8-digit zero-padded string (e.g. "00000000")
+        derived["sk_ico"] = _normalise_sk_ico(registered_as)
 
     # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
     # (format: ``{jurisdiction_code}/{company_number}``).
@@ -793,6 +799,7 @@ async def lookup(
             **({"cz_ico": derived["cz_ico"]} if "cz_ico" in derived else {}),
             **({"pl_krs": derived["pl_krs"]} if "pl_krs" in derived else {}),
             **({"at_fn": derived["at_fn"]} if "at_fn" in derived else {}),
+            **({"sk_ico": derived["sk_ico"]} if "sk_ico" in derived else {}),
             **({"wikidata_qid": qid} if qid else {}),
         },
         raw=gleif_bundle.get("record") or {},
@@ -1203,6 +1210,31 @@ async def lookup(
                 deepened_bundles.append(("firmenbuch", derived["at_fn"]))
         except Exception as exc:  # noqa: BLE001
             errors["firmenbuch"] = f"{type(exc).__name__}: {exc}"
+
+    # RPO Slovakia — direct fetch by IČO when Slovak entity (RA000526).
+    if "sk_ico" in derived:
+        try:
+            sk_bundle = await REGISTRY["rpo_slovakia"].fetch(derived["sk_ico"])
+            if not sk_bundle.get("is_stub"):
+                sk_name = (sk_bundle.get("name") or "").strip() or legal_name or ""
+                hits.append(
+                    SourceHit(
+                        source_id="rpo_slovakia",
+                        hit_id=derived["sk_ico"],
+                        kind=SearchKind.ENTITY,
+                        name=sk_name,
+                        summary=f"SK-IČO {derived['sk_ico']}",
+                        identifiers={
+                            "sk_ico": derived["sk_ico"],
+                            "lei": lei,
+                        },
+                        raw=sk_bundle,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("rpo_slovakia", derived["sk_ico"]))
+        except Exception as exc:  # noqa: BLE001
+            errors["rpo_slovakia"] = f"{type(exc).__name__}: {exc}"
 
     # OpenCorporates — direct fetch by ocid derived from GLEIF.
     if ocid:

@@ -41,6 +41,7 @@ def test_registry_has_expected_sources() -> None:
         "ur_latvia",
         "wikidata",
         "prh",
+        "rpo_slovakia",
         "zefix",
         "kvk",
     }
@@ -60,7 +61,7 @@ def test_source_info_fields_are_populated() -> None:
 # Adapters that are entered via a specific identifier (e.g. LEI, ocid) rather
 # than free-text search. Their search() method intentionally returns [] because
 # they are called directly via fetch() in the LEI-lookup flow (app.py).
-_IDENTIFIER_KEYED = {"ariregister", "bolagsverket", "firmenbuch", "krs_poland", "opencorporates", "brightquery", "inpi", "kvk", "zefix"}
+_IDENTIFIER_KEYED = {"ariregister", "bolagsverket", "firmenbuch", "krs_poland", "opencorporates", "brightquery", "inpi", "kvk", "rpo_slovakia", "zefix"}
 
 
 @pytest.mark.parametrize(
