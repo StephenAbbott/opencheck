@@ -42,6 +42,7 @@ def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
     assert ids == {
         "ares",
         "ariregister",
+        "bce_belgium",
         "bolagsverket",
         "brreg",
         "climatetrace",

@@ -162,6 +162,20 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Historical BODS mapping:** Open Ownership mapped an earlier version of this data to BODS v0.2 via the `register-ingester-sk` + `register-transformer-sk` pipeline. OpenCheck maps directly to BODS v0.4 from the live OData API.
 - **Note on IČO uniqueness:** a single IČO may have multiple versioned partner entries (`PartneriVerejnehoSektora`) over time as the entity re-registers or updates its KUV declarations. OpenCheck resolves to the internal `CisloVlozky` (register entry number) and fetches all versioned entries, presenting only the currently active KUVs (`PlatnostDo == null`) in the BODS output.
 
+## BCE / KBO — Belgian Crossroads Bank for Enterprises (Banque-Carrefour des Entreprises / Kruispuntbank van Ondernemingen)
+
+- **Data:** entity name (Dutch/French/German), legal status, juridical form, start date, and registered-office address for Belgian enterprises. The BCE/KBO is the authoritative central business register for Belgium, maintained by the FPS Economy (FOD Economie / SPF Économie). It covers approximately 1.5 million enterprises.
+- **Open data portal:** <https://kbopub.economie.fgov.be/kbo-open-data/>
+- **Download:** Monthly ZIP (enterprise.csv, denomination.csv, address.csv, and others) at <https://kbopub.economie.fgov.be/kbo-open-data/affiliation/xml/files/>
+- **License:** KBO Reuse Licence — free reuse with attribution; non-commercial reuse requires notification to <kbo-bce-webservice@economie.fgov.be>; commercial reuse requires a formal agreement. Full licence text: <https://kbopub.economie.fgov.be/kbo-open-data/static/doc/Licentie/Licentie.pdf>
+- **Attribution:** "Data from the Belgian Crossroads Bank for Enterprises (BCE/KBO), made available by the FPS Economy, SMEs, Self-Employed and Energy, Belgium."
+- **Entry point:** `be_enterprise_number` (10-digit, no dots, e.g. `0433795975`) derived from GLEIF `registeredAs` field when `registeredAt.id == "RA000025"` (BCE/KBO GLEIF RA code). Belgian enterprise numbers are published in dotted format (`NNNN.NNN.NNN`) in GLEIF records; OpenCheck normalises them by stripping dots.
+- **Activation:** build the local SQLite database with `python scripts/extract_bce.py --zip-file /path/to/KboOpenData_*.zip --output bce.db`, then set `BCE_BELGIUM_DB_FILE=/path/to/bce.db` in `.env`.
+- **BODS mapping:** each BCE entity produces a single `entityStatement` with scheme `BE-BCE_KBO`, a derived Belgian VAT number identifier (`BE` + enterprise number, scheme `XI-VAT`), founding date from `StartDate`, and registered-office address. No beneficial ownership data is available from the BCE open data publication.
+- **UBO register exclusion:** Belgium's UBO register (UBO-register / Registre UBO) is not included. It is not available as open data — access requires demonstrating legitimate interest and Belgium is in the process of legislating that public access will be limited to users with a justified legal basis (in line with AMLD6 implementation). This aligns with the C-601/20 CJEU judgment and the EU's sixth Anti-Money Laundering Directive.
+- **Enterprise number format:** Belgian enterprise numbers are 10-digit numeric strings formatted as `NNNN.NNN.NNN` (e.g. `0433.795.975` for Ageas SA/NV). The first digit is always 0 for legal persons registered before 2023 and 1 for natural persons carrying on an enterprise. The enterprise number also serves as the base for the Belgian VAT number (prefix `BE`).
+- **Name languages:** most Belgian enterprises have names in at least Dutch and French; enterprises in the German-speaking eastern cantons may also have German names. The adapter stores all three (`name_nl`, `name_fr`, `name_de`) and the FTS5 index covers all three columns, so name search works regardless of the language of the query.
+
 ## OpenCorporates
 
 - **Data:** global company registry data — company profiles, registered addresses, officer appointments, and network relationships

@@ -55,8 +55,9 @@ OpenCheck has shipped through thirty phases (latest commit on `main` is the sour
 | 32 | Austrian Firmenbuch adapter — company name, address, status, and officers from the Austrian commercial register HVD SOAP API; `at_fn` (Firmenbuchnummer) derived from GLEIF RA code `RA000017`; CC BY 4.0; requires free `FIRMENBUCH_API_KEY` |
 | 33 | RPO Slovakia adapter — entity data from Slovakia's Register of Legal Persons (Register právnických osôb) via the ŠÚ SR REST API; `sk_ico` (IČO) derived from GLEIF RA code `RA000526`; CC BY 4.0; no API key required |
 | 34 | RPVS Slovakia adapter — beneficial ownership declarations from the Slovak Public Sector Partners Register (Register partnerov verejného sektora) via the Ministry of Justice OData API; covers entities supplying public bodies above statutory thresholds with verified KUV (konečný užívateľ výhod) disclosures; also triggered by `sk_ico`; CC BY 4.0; no API key required |
+| 35 | BCE Belgium adapter — Belgian Crossroads Bank for Enterprises (BCE/KBO) — entity basics (name, status, juridical form, start date, registered address) from a local SQLite database built from the monthly KBO open data ZIP; `be_enterprise_number` derived from GLEIF RA code `RA000025`; supports name search via FTS5; KBO reuse licence; no API key required; activated via `BCE_BELGIUM_DB_FILE` |
 
-Test suite: 742 backend tests. Frontend type-checks clean.
+Test suite: 743 backend tests. Frontend type-checks clean.
 
 ## Quick start
 
@@ -107,6 +108,7 @@ Paste a 20-character ISO 17442 LEI — for example `213800LH1BZH3DI6G760` (BP) o
    - **UR Latvia — Latvian Register of Enterprises** — fetched by `lv_regcode` (11-digit registration number, derived from GLEIF RA code `RA000423`); queries the CKAN Datastore API on data.gov.lv to join five open datasets: the business register (entity profile), beneficial owners (UBO declarations from the Latvian BO register), officers (executive/supervisory board members, liquidators, and other representatives), SIA shareholders (LLC share-register entries), and historical names. All five tables are live-queryable via the CKAN Datastore API without downloading the bulk CSVs. Maps the full dataset to BODS v0.4 entity, person, and ownership-or-control statements. No API key required; open government data.
    - **JAR Lithuania — Lithuanian Register of Legal Entities** — fetched by `lt_code` (9-digit entity code, derived from GLEIF RA code `RA000430`); scrapes the Registrų centras public JAR search page to retrieve entity name, address, legal form, and registration status. Maps to a BODS v0.4 entity statement. BO / participant data (formerly JADIS) is excluded — it is being migrated to the restricted JANGIS system. No API key required; CC BY 4.0.
    - **ARES (Czechia)** — fetched by `cz_ico` (8-digit IČO, derived from GLEIF RA code `RA000163`); queries the ARES REST API aggregate endpoint for entity basics (name, address, legal form, registration date, status) and the VR (Veřejný rejstřík / commercial register) endpoint for shareholders (akcionáři / společníci) and directors (statutární orgány). Emits full BODS v0.4 entity, person, and ownership-or-control statements. Returns a graceful stub for entities not in the commercial register (VR 404). No API key required; CC BY 4.0.
+   - **BCE Belgium — Banque-Carrefour des Entreprises / Kruispuntbank van Ondernemingen** — fetched by `be_enterprise_number` (10-digit enterprise number, derived from GLEIF RA code `RA000025`); delivers entity name (Dutch/French/German), status, juridical form, start date, and registered address from a local SQLite database built from the monthly KBO open data ZIP by `scripts/extract_bce.py`. Also supports name search via FTS5 on the `/search` endpoint. No API key required; KBO reuse licence. Activated when `BCE_BELGIUM_DB_FILE` is set.
    - **Ariregister (Estonia)** — fetched by the Estonian registry code (derived from GLEIF RA code `RA000181`); delivers entity basics, shareholders, officers, and beneficial owners from a local SQLite database built from the e-Business Register open data bulk files. Activated when `ARIREGISTER_DB_FILE` is set.
    - **INPI (France)** — fetched by `fr_siren` (derived from GLEIF RA code `RA000189`); delivers company profile and officers as BODS statements via the Registre National des Entreprises API.
    - **KvK (Netherlands)** — fetched by `nl_kvk` (derived from GLEIF RA code `RA000463`); delivers company details and authorised representatives via the Kamer van Koophandel Handelsregister API.
@@ -143,7 +145,7 @@ python scripts/extract_bods_subgraphs.py \
 
 ## Sources
 
-Twenty-four active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
+Twenty-five active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
 
 | ID | Name | License | Entry point | Description |
 |----|------|---------|-------------|-------------|
@@ -159,6 +161,7 @@ Twenty-four active adapters, each implementing the same `SourceAdapter` protocol
 | `firmenbuch` | Firmenbuch — Austrian Commercial Register | CC-BY-4.0 | `at_fn` from GLEIF (`RA000017`) | Austrian commercial register HVD — entity name, address, status, and officers (managing directors, signatories, supervisory board) via the Justiz Online SOAP API. Requires free `FIRMENBUCH_API_KEY` |
 | `rpo_slovakia` | RPO Slovakia — Register právnických osôb | CC-BY-4.0 | `sk_ico` from GLEIF (`RA000526`) | Slovak Register of Legal Persons — entity name, address, establishment date, registration number, and court via the ŠÚ SR REST API; no API key required |
 | `rpvs_slovakia` | RPVS Slovakia — Register partnerov verejného sektora | CC-BY-4.0 | `sk_ico` from GLEIF (`RA000526`) | Slovak Public Sector Partners Register — verified beneficial ownership (KUV) declarations for entities supplying public bodies above statutory thresholds, via the Ministry of Justice OData API; also triggered by `sk_ico` alongside RPO; no API key required |
+| `bce_belgium` | Belgian Crossroads Bank for Enterprises (BCE/KBO) | Custom-KBO-Reuse | `be_enterprise_number` from GLEIF (`RA000025`) | Belgian business register — entity name (NL/FR/DE), status, juridical form, start date, and registered address from a local SQLite database built from the monthly KBO open data ZIP. Supports name search via FTS5. Activated via `BCE_BELGIUM_DB_FILE` |
 | `ariregister` | Estonian e-Business Register (Ariregister) | Open (PSI) | registry code from GLEIF (`RA000181`) | Estonian commercial register — entity basics, shareholders, officers, and beneficial owners from the RIK open data bulk files. Activated via `ARIREGISTER_DB_FILE` |
 | `inpi` | INPI — Registre National des Entreprises | Open (PSI) | `fr_siren` from GLEIF | French national business registry — company profile and officers via the RNE API |
 | `kvk` | KvK — Handelsregister | Open (PSI) | `nl_kvk` from GLEIF | Netherlands Chamber of Commerce commercial register — company details and authorised representatives |
@@ -233,7 +236,7 @@ A secondary token-overlap similarity check (≥ 0.45 Jaccard) guards against fal
 | Endpoint | Description |
 |----------|-------------|
 | `GET /health` | Liveness probe. |
-| `GET /sources` | Inventory of the 24 source adapters with license, description, live status. |
+| `GET /sources` | Inventory of the 25 source adapters with license, description, live status. |
 | `GET /lookup?lei=<LEI>` | **Primary entry point**. LEI-anchored synthesis. |
 | `GET /search?q=<q>&kind=<entity\|person>` | Free-text fan-out search. Power-user / debugging. |
 | `GET /stream?q=<q>&kind=<...>` | Same fan-out, streamed as SSE. |
@@ -260,6 +263,7 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 | `ZEFIX_PASSWORD` | Zefix (Switzerland) API password. |
 | `OPENCORPORATES_API_KEY` | OpenCorporates API key — unlocks live company + officer data via the OC REST API. |
 | `OPENCORPORATES_RELATIONSHIPS_FILE` | Path to the OC Relationships bulk CSV file. When set, network relationship data is read from this file instead of the live `/network` API endpoint (which requires a premium tier). |
+| `BCE_BELGIUM_DB_FILE` | Path to the SQLite database built by `scripts/extract_bce.py`. When set, the BCE Belgium adapter provides enterprise-number-keyed lookup (via GLEIF bridge) and FTS5 name search for Belgian entities from the monthly KBO open data ZIP. |
 | `ARIREGISTER_DB_FILE` | Path to the SQLite database built by `scripts/extract_ariregister.py`. When set, the Ariregister adapter provides registry-code-keyed lookup of Estonian entities, shareholders, officers, and beneficial owners from the RIK open data bulk files. |
 | `BRIGHTQUERY_DB_FILE` | Path to the SQLite database built by `scripts/extract_brightquery.py`. When set, the BrightQuery adapter provides LEI-keyed lookup of US entities and their executives from OpenData.org bulk data. |
 | `OPENSANCTIONS_API_KEY` | OpenSanctions API key (also unlocks the EveryPolitician PEPs dataset). |
@@ -293,7 +297,7 @@ opencheck/
   backend/
     opencheck/
       app.py              FastAPI entry — /lookup, /search, /report, /export, /deepen, /stream
-      sources/            One module per source adapter (24 implemented; 24 active in REGISTRY)
+      sources/            One module per source adapter (25 implemented; 25 active in REGISTRY)
         brightquery.py    BrightQuery / OpenData.org — LEI-keyed US entity + executive data
         opencorporates.py OpenCorporates — company profile, officers, network relationships
         oc_relationships.py  OC Relationships bulk-file lookup (indexed by jurisdiction/number)
@@ -308,10 +312,11 @@ opencheck/
       config.py           Pydantic settings; env vars listed above
     scripts/
       extract_bods_subgraphs.py    Walk local OO SQLite dumps → per-LEI BODS bundles
+      extract_bce.py               Walk Belgian BCE/KBO open data ZIP → SQLite DB with FTS5 name index
       extract_ariregister.py       Walk Estonian e-Business Register bulk files → SQLite DB
       extract_brightquery.py       Walk BrightQuery bulk files → SQLite DB indexed by LEI
       diagnose_brightquery.py      Inspect BrightQuery file format before extraction
-    tests/                pytest suite (601 tests)
+    tests/                pytest suite (743 tests)
   frontend/               React + Vite + TypeScript + Tailwind + BO design system
     src/
       App.tsx             LEI input, subject card, risk chips (on every source card), export panel

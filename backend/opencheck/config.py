@@ -112,6 +112,12 @@ class Settings(BaseSettings):
     bolagsverket_api_key: str | None = Field(default=None, alias="BOLAGSVERKET_API_KEY")
     bolagsverket_client_secret: str | None = Field(default=None, alias="BOLAGSVERKET_CLIENT_SECRET")
 
+    # --- Belgian Crossroads Bank for Enterprises (BCE / KBO) ---
+    # Pre-built SQLite index. Build with: python scripts/extract_bce.py
+    # Source: https://kbopub.economie.fgov.be/kbo-open-data/
+    # License: KBO reuse licence (attribution required, no API key needed).
+    bce_belgium_db_file: str | None = Field(default=None, alias="BCE_BELGIUM_DB_FILE")
+
     # --- Estonian e-Business Register (ariregister) ---
     # Pre-built SQLite index. Build with: python scripts/extract_ariregister.py
     # Source: https://avaandmed.ariregister.rik.ee/en/downloading-open-data

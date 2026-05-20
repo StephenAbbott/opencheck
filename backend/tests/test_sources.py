@@ -22,6 +22,7 @@ def test_registry_has_expected_sources() -> None:
     assert set(REGISTRY.keys()) == {
         "ares",
         "ariregister",
+        "bce_belgium",
         "bolagsverket",
         "brreg",
         "climatetrace",

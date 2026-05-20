@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from .ariregister import AriregisterAdapter
 from .ares import AresAdapter
+from .bce_belgium import BceBelgiumAdapter
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .bolagsverket import BolagsverketAdapter
 from .brightquery import BrightQueryAdapter
@@ -37,6 +38,7 @@ from .zefix import ZefixAdapter
 REGISTRY: dict[str, SourceAdapter] = {
     "ares": AresAdapter(),
     "ariregister": AriregisterAdapter(),
+    "bce_belgium": BceBelgiumAdapter(),
     "bolagsverket": BolagsverketAdapter(),
     "brreg": BrregAdapter(),
     "climatetrace": ClimateTRACEAdapter(),

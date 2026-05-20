@@ -38,6 +38,7 @@ from .bods import (
     BODSBundle,
     map_ares,
     map_ariregister,
+    map_bce_belgium,
     map_bolagsverket,
     map_brightquery,
     map_brreg,
@@ -64,6 +65,7 @@ from .bods import (
     validate_shape,
 )
 from .sources.ares import CZ_RA_CODE as _CZ_RA_CODE, normalise_ico as _normalise_ico
+from .sources.bce_belgium import BCE_RA_CODE as _BCE_RA_CODE, normalise_enterprise_number as _normalise_enterprise_number
 from .sources.krs_poland import PL_KRS_RA_CODE as _PL_KRS_RA_CODE, normalise_krs as _normalise_krs
 from .sources.firmenbuch import AT_FB_RA_CODE as _AT_FB_RA_CODE, normalise_fn as _normalise_fn
 from .sources.rpo_slovakia import SK_RPO_RA_CODE as _SK_RPO_RA_CODE, normalise_ico as _normalise_sk_ico
@@ -379,6 +381,7 @@ def _ch_ra_code(company_number: str) -> str:
 
 _MAPPERS = {
     "ariregister": map_ariregister,
+    "bce_belgium": map_bce_belgium,
     "bolagsverket": map_bolagsverket,
     "brreg": map_brreg,
     "climatetrace": map_climatetrace,
@@ -741,6 +744,9 @@ async def lookup(
     if registered_at_id == _SK_RPO_RA_CODE and registered_as:
         # Slovak IČO — 8-digit zero-padded string (e.g. "00000000")
         derived["sk_ico"] = _normalise_sk_ico(registered_as)
+    if registered_at_id == _BCE_RA_CODE and registered_as:
+        # Belgian enterprise number — 10-digit string (e.g. "0433795975")
+        derived["be_enterprise_number"] = _normalise_enterprise_number(registered_as)
 
     # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
     # (format: ``{jurisdiction_code}/{company_number}``).
@@ -802,6 +808,7 @@ async def lookup(
             **({"pl_krs": derived["pl_krs"]} if "pl_krs" in derived else {}),
             **({"at_fn": derived["at_fn"]} if "at_fn" in derived else {}),
             **({"sk_ico": derived["sk_ico"]} if "sk_ico" in derived else {}),
+            **({"be_enterprise_number": derived["be_enterprise_number"]} if "be_enterprise_number" in derived else {}),
             **({"wikidata_qid": qid} if qid else {}),
         },
         raw=gleif_bundle.get("record") or {},
@@ -1271,6 +1278,34 @@ async def lookup(
                 deepened_bundles.append(("rpvs_slovakia", derived["sk_ico"]))
         except Exception as exc:  # noqa: BLE001
             errors["rpvs_slovakia"] = f"{type(exc).__name__}: {exc}"
+
+    # BCE Belgium — direct fetch by enterprise number when Belgian entity (RA000025).
+    if "be_enterprise_number" in derived:
+        try:
+            bce_bundle = await REGISTRY["bce_belgium"].fetch(
+                derived["be_enterprise_number"], legal_name=legal_name
+            )
+            if not bce_bundle.get("is_stub"):
+                bce_name = bce_bundle.get("name") or legal_name or ""
+                dotted = bce_bundle.get("dotted") or derived["be_enterprise_number"]
+                hits.append(
+                    SourceHit(
+                        source_id="bce_belgium",
+                        hit_id=derived["be_enterprise_number"],
+                        kind=SearchKind.ENTITY,
+                        name=bce_name,
+                        summary=f"BE {dotted}",
+                        identifiers={
+                            "be_enterprise_number": derived["be_enterprise_number"],
+                            "lei": lei,
+                        },
+                        raw=bce_bundle,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("bce_belgium", derived["be_enterprise_number"]))
+        except Exception as exc:  # noqa: BLE001
+            errors["bce_belgium"] = f"{type(exc).__name__}: {exc}"
 
     # OpenCorporates — direct fetch by ocid derived from GLEIF.
     if ocid:
