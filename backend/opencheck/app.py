@@ -53,6 +53,7 @@ from .bods import (
     map_prh,
     map_jar_lithuania,
     map_krs_poland,
+    map_firmenbuch,
     map_sec_edgar,
     map_ur_latvia,
     map_wikidata,
@@ -62,6 +63,7 @@ from .bods import (
 )
 from .sources.ares import CZ_RA_CODE as _CZ_RA_CODE, normalise_ico as _normalise_ico
 from .sources.krs_poland import PL_KRS_RA_CODE as _PL_KRS_RA_CODE, normalise_krs as _normalise_krs
+from .sources.firmenbuch import AT_FB_RA_CODE as _AT_FB_RA_CODE, normalise_fn as _normalise_fn
 from .sources.ariregister import EE_RA_CODE as _EE_RA_CODE
 from .sources.bolagsverket import BV_RA_CODE as _BV_RA_CODE, normalise_org_number as _normalise_org_number
 from .sources.brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_orgnr
@@ -392,6 +394,7 @@ _MAPPERS = {
     "prh": map_prh,
     "ares": map_ares,
     "krs_poland": map_krs_poland,
+    "firmenbuch": map_firmenbuch,
     "jar_lithuania": map_jar_lithuania,
     "ur_latvia": map_ur_latvia,
     "zefix": map_zefix,
@@ -727,6 +730,9 @@ async def lookup(
     if registered_at_id == _PL_KRS_RA_CODE and registered_as:
         # Polish KRS number — 10-digit zero-padded string (e.g. "0000028860")
         derived["pl_krs"] = _normalise_krs(registered_as)
+    if registered_at_id == _AT_FB_RA_CODE and registered_as:
+        # Austrian Firmenbuchnummer — digits + lowercase letter (e.g. "093363z")
+        derived["at_fn"] = _normalise_fn(registered_as)
 
     # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
     # (format: ``{jurisdiction_code}/{company_number}``).
@@ -786,6 +792,7 @@ async def lookup(
             **({"lt_code": derived["lt_code"]} if "lt_code" in derived else {}),
             **({"cz_ico": derived["cz_ico"]} if "cz_ico" in derived else {}),
             **({"pl_krs": derived["pl_krs"]} if "pl_krs" in derived else {}),
+            **({"at_fn": derived["at_fn"]} if "at_fn" in derived else {}),
             **({"wikidata_qid": qid} if qid else {}),
         },
         raw=gleif_bundle.get("record") or {},
@@ -1169,6 +1176,33 @@ async def lookup(
                 deepened_bundles.append(("krs_poland", derived["pl_krs"]))
         except Exception as exc:  # noqa: BLE001
             errors["krs_poland"] = f"{type(exc).__name__}: {exc}"
+
+    # Firmenbuch — direct fetch by FN when Austrian entity (RA000017).
+    if "at_fn" in derived:
+        try:
+            fb_bundle = await REGISTRY["firmenbuch"].fetch(
+                derived["at_fn"], legal_name=legal_name
+            )
+            if not fb_bundle.get("is_stub"):
+                fb_name = (fb_bundle.get("name") or "").strip() or legal_name or ""
+                hits.append(
+                    SourceHit(
+                        source_id="firmenbuch",
+                        hit_id=derived["at_fn"],
+                        kind=SearchKind.ENTITY,
+                        name=fb_name,
+                        summary=f"FN {derived['at_fn']}",
+                        identifiers={
+                            "at_fn": derived["at_fn"],
+                            "lei": lei,
+                        },
+                        raw=fb_bundle,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("firmenbuch", derived["at_fn"]))
+        except Exception as exc:  # noqa: BLE001
+            errors["firmenbuch"] = f"{type(exc).__name__}: {exc}"
 
     # OpenCorporates — direct fetch by ocid derived from GLEIF.
     if ocid:
