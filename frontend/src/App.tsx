@@ -762,7 +762,9 @@ export default function App() {
                 // 480px min as per the BO design library card grid spec.
                 style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 480px), 1fr))" }}
               >
-                {sourcesQuery.data.sources.map((s, i) => (
+                {[...sourcesQuery.data.sources]
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((s, i) => (
                   <li
                     key={s.id}
                     className={`bg-white border rounded-oo p-6 text-sm transition-shadow hover:shadow-oo-card ${
