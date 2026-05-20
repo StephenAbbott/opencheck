@@ -134,6 +134,19 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Key registration:** Free API key available at <https://justizonline.gv.at/jop/web/iwg/register>. Set the `FIRMENBUCH_API_KEY` environment variable to enable live data. Without it, the adapter returns a stub entry.
 - **Note — data scope:** The free HVD API key supports `UMFANG=Kurzinformation`, which returns company name, business address, and officers (managing directors / Geschäftsführer, authorised signatories / Prokuristen, supervisory board / Aufsichtsrat, liquidators). Shareholder data (Gesellschafter, Kommanditisten) and registered capital require `UMFANG=aktueller Auszug` or `historischer Auszug`, which need a paid Justiz Online subscription — OpenCheck does not currently support this. Austrian UBO declarations (wirtschaftliche Eigentümer) are held in the separate WiEReG register and are also not available via this API.
 
+## RPO — Register právnických osôb (Slovak Register of Legal Persons)
+
+- **Data:** entity name history, address history, IČO, establishment date, termination date, registration numbers, registration offices, and source register type (e.g. Obchodný register) — sourced from the Register of Legal Persons (RPO) REST API operated by the Statistical Office of the Slovak Republic (Štatistický úrad SR / ŠÚ SR)
+- **API:** `https://api.statistics.sk/rpo/v1/search` — no authentication required
+- **Portal:** <https://rpo.statistics.sk/>
+- **Documentation:** <https://susrrpo.docs.apiary.io/>
+- **Open data catalogue:** <https://data.slovensko.sk/datasety/b2325a3a-e702-47d0-8fa1-13739f3d2370>
+- **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **Attribution:** "Contains data from the Slovak Register of Legal Persons (RPO), published by the Statistical Office of the Slovak Republic (ŠÚ SR) under CC BY 4.0. Source: rpo.statistics.sk."
+- **Entry point:** `sk_ico` (8-digit IČO, zero-padded) derived from GLEIF RA code `RA000526` (Obchodný register SR / Slovak Commercial Register, Ministry of Justice)
+- **Note on data scope:** The RPO API returns entity-level data only. Officers, shareholders, and beneficial ownership declarations are not available via this API. The RPVS (Register partnerov verejného sektora — Register of Public Sector Partners) is a separate Slovak register that holds beneficial ownership data for companies winning public procurement contracts; it is maintained by the Ministry of Justice and will be covered by a separate adapter.
+- **Note on IČO:** Some entities in RPO have `identifiers[].value = "Neuvedené"` (not provided) — these are non-commercial entities (e.g. state organisations) registered before IČO assignment became mandatory. OpenCheck skips those entities as they cannot be cross-referenced by identifier.
+
 ## OpenCorporates
 
 - **Data:** global company registry data — company profiles, registered addresses, officer appointments, and network relationships

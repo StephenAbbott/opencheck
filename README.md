@@ -8,7 +8,7 @@ Try the demo version at https://opencheck.onrender.com/
 
 ## What is OpenCheck?
 
-You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries data from the [Global Legal Entity Identifier Foundation (GLEIF)](https://www.gleif.org/) first, derives every cross-source identifier it can (UK Companies House number, Norwegian organisation number, Irish company registration number, Finnish Business ID (Y-tunnus), Latvian registration number, Lithuanian entity code, Estonian registry code, Czech IČO, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, OpenCorporates ID, Wikidata Q-ID, etc.), and uses those bridges to fan out across national corporate registries (UK, Norway, Ireland, Finland, Latvia, Lithuania, Estonia, France, the Netherlands, Sweden, Switzerland), OpenCorporates, SEC EDGAR (major shareholders of US-listed companies), OpenSanctions, EveryPolitician, Wikidata, and OpenTender. 
+You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries data from the [Global Legal Entity Identifier Foundation (GLEIF)](https://www.gleif.org/) first, derives every cross-source identifier it can (UK Companies House number, Norwegian organisation number, Irish company registration number, Finnish Business ID (Y-tunnus), Latvian registration number, Lithuanian entity code, Estonian registry code, Czech IČO, Polish KRS number, Austrian Firmenbuchnummer, Slovak IČO, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, OpenCorporates ID, Wikidata Q-ID, etc.), and uses those bridges to fan out across national corporate registries (UK, Norway, Ireland, Finland, Latvia, Lithuania, Estonia, Czechia, Poland, Austria, Slovakia, France, the Netherlands, Sweden, Switzerland), OpenCorporates, SEC EDGAR (major shareholders of US-listed companies), OpenSanctions, EveryPolitician, Wikidata, and OpenTender. 
 
 Everything maps into the [Beneficial Ownership Data Standard (BODS)](https://standard.openownership.org/en/0.4.0/), the cross-source links + risk signals are computed deterministically, and the whole bundle is one click away from a downloadable shareable export.
 
@@ -51,8 +51,11 @@ OpenCheck has shipped through thirty phases (latest commit on `main` is the sour
 | 28 | UR Latvia adapter — entity profiles, beneficial owners, officers, and shareholders from Latvia's Register of Enterprises via the CKAN Datastore API on data.gov.lv; open government data; no API key required |
 | 29 | JAR Lithuania adapter — entity data from Lithuania's Register of Legal Entities (Registrų centras) via the public JAR HTML search interface; `lt_code` derived from GLEIF RA code `RA000430`; CC BY 4.0; no API key required |
 | 30 | ARES (Czechia) adapter — entity data, shareholders, directors, and share capital from the Czech business register via the ARES REST API; `cz_ico` derived from GLEIF RA code `RA000163`; CC BY 4.0; no API key required |
+| 31 | KRS Poland adapter — entity data and officer/board information from the Polish National Court Register via the KRS API; `pl_krs` derived from GLEIF RA code `RA000484`; public data; no API key required |
+| 32 | Austrian Firmenbuch adapter — company name, address, status, and officers from the Austrian commercial register HVD SOAP API; `at_fn` (Firmenbuchnummer) derived from GLEIF RA code `RA000017`; CC BY 4.0; requires free `FIRMENBUCH_API_KEY` |
+| 33 | RPO Slovakia adapter — entity data from Slovakia's Register of Legal Persons (Register právnických osôb) via the ŠÚ SR REST API; `sk_ico` (IČO) derived from GLEIF RA code `RA000526`; CC BY 4.0; no API key required |
 
-Test suite: 601 backend tests. Frontend type-checks clean.
+Test suite: 741 backend tests. Frontend type-checks clean.
 
 ## Quick start
 
@@ -108,6 +111,7 @@ Paste a 20-character ISO 17442 LEI — for example `213800LH1BZH3DI6G760` (BP) o
    - **KvK (Netherlands)** — fetched by `nl_kvk` (derived from GLEIF RA code `RA000463`); delivers company details and authorised representatives via the Kamer van Koophandel Handelsregister API.
    - **Bolagsverket (Sweden)** — fetched by `se_org_number` (derived from GLEIF RA code `RA000544`); delivers company profile and board-level officers via the Swedish Companies Registration Office API.
    - **Zefix (Switzerland)** — fetched by `ch_uid` (derived from GLEIF RA code `RA000412`); delivers company profile and authorised signatories from the Zefix central business name index.
+   - **RPO Slovakia — Register právnických osôb** — fetched by `sk_ico` (8-digit IČO, derived from GLEIF RA code `RA000526`); delivers entity name, address, establishment date, termination date, registration number, and court from Slovakia's Register of Legal Persons via the ŠÚ SR REST API. Maps to a BODS v0.4 entity statement. No API key required; CC BY 4.0.
    - **OpenCorporates** — fetched by `ocid` (e.g. `gb/00102498`), a field GLEIF returns on Level 1 records; delivers company profile, current officers, and network relationships (from the live API or the OC Relationships bulk file) as BODS statements.
    - **BrightQuery** — direct fetch by LEI from a local SQLite database (built from OpenData.org bulk data). Covers 185,000+ US entities; adds executive contacts as `otherInfluenceOrControl` relationships. Activated when `BRIGHTQUERY_DB_FILE` is set.
    - **SEC EDGAR** — for US-jurisdiction entities, searches by legal name via the EDGAR company-search atom feed to find the subject company's CIK, then retrieves the most recent Schedule 13D and 13G filings (major shareholders reporting >5 % of any registered equity class, mandatory XML format since December 2024) as BODS statements. No API key required.
@@ -137,7 +141,7 @@ python scripts/extract_bods_subgraphs.py \
 
 ## Sources
 
-Twenty active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
+Twenty-three active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`):
 
 | ID | Name | License | Entry point | Description |
 |----|------|---------|-------------|-------------|
@@ -149,6 +153,9 @@ Twenty active adapters, each implementing the same `SourceAdapter` protocol (`se
 | `ur_latvia` | UR — Latvian Register of Enterprises | Open Government Data (PSI) | `lv_regcode` from GLEIF (`RA000423`) | Latvian business register — entity profile, beneficial owners, officers, shareholders, and historical names via the CKAN Datastore API on data.gov.lv; no API key required |
 | `jar_lithuania` | JAR — Lithuanian Register of Legal Entities | CC-BY-4.0 | `lt_code` from GLEIF (`RA000430`) | Lithuanian company register — entity name, code, address, legal form, and registration status from the Registrų centras public JAR search; no API key required |
 | `ares` | ARES (Czechia) | CC-BY-4.0 | `cz_ico` from GLEIF (`RA000163`) | Czech business register — entity basics, shareholders, directors, and share capital via the ARES REST API; no API key required |
+| `krs_poland` | KRS — National Court Register (Poland) | Open (PSI) | `pl_krs` from GLEIF (`RA000484`) | Polish National Court Register — entity basics and board/officer data (names masked in public API) via the KRS REST API; no API key required |
+| `firmenbuch` | Firmenbuch — Austrian Commercial Register | CC-BY-4.0 | `at_fn` from GLEIF (`RA000017`) | Austrian commercial register HVD — entity name, address, status, and officers (managing directors, signatories, supervisory board) via the Justiz Online SOAP API. Requires free `FIRMENBUCH_API_KEY` |
+| `rpo_slovakia` | RPO Slovakia — Register právnických osôb | CC-BY-4.0 | `sk_ico` from GLEIF (`RA000526`) | Slovak Register of Legal Persons — entity name, address, establishment date, registration number, and court via the ŠÚ SR REST API; no API key required |
 | `ariregister` | Estonian e-Business Register (Ariregister) | Open (PSI) | registry code from GLEIF (`RA000181`) | Estonian commercial register — entity basics, shareholders, officers, and beneficial owners from the RIK open data bulk files. Activated via `ARIREGISTER_DB_FILE` |
 | `inpi` | INPI — Registre National des Entreprises | Open (PSI) | `fr_siren` from GLEIF | French national business registry — company profile and officers via the RNE API |
 | `kvk` | KvK — Handelsregister | Open (PSI) | `nl_kvk` from GLEIF | Netherlands Chamber of Commerce commercial register — company details and authorised representatives |
@@ -223,7 +230,7 @@ A secondary token-overlap similarity check (≥ 0.45 Jaccard) guards against fal
 | Endpoint | Description |
 |----------|-------------|
 | `GET /health` | Liveness probe. |
-| `GET /sources` | Inventory of the 20 source adapters with license, description, live status. |
+| `GET /sources` | Inventory of the 23 source adapters with license, description, live status. |
 | `GET /lookup?lei=<LEI>` | **Primary entry point**. LEI-anchored synthesis. |
 | `GET /search?q=<q>&kind=<entity\|person>` | Free-text fan-out search. Power-user / debugging. |
 | `GET /stream?q=<q>&kind=<...>` | Same fan-out, streamed as SSE. |
@@ -283,7 +290,7 @@ opencheck/
   backend/
     opencheck/
       app.py              FastAPI entry — /lookup, /search, /report, /export, /deepen, /stream
-      sources/            One module per source adapter (20 implemented; 20 active in REGISTRY)
+      sources/            One module per source adapter (23 implemented; 23 active in REGISTRY)
         brightquery.py    BrightQuery / OpenData.org — LEI-keyed US entity + executive data
         opencorporates.py OpenCorporates — company profile, officers, network relationships
         oc_relationships.py  OC Relationships bulk-file lookup (indexed by jurisdiction/number)
