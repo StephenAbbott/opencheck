@@ -144,8 +144,23 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 - **Attribution:** "Contains data from the Slovak Register of Legal Persons (RPO), published by the Statistical Office of the Slovak Republic (ŠÚ SR) under CC BY 4.0. Source: rpo.statistics.sk."
 - **Entry point:** `sk_ico` (8-digit IČO, zero-padded) derived from GLEIF RA code `RA000526` (Obchodný register SR / Slovak Commercial Register, Ministry of Justice)
-- **Note on data scope:** The RPO API returns entity-level data only. Officers, shareholders, and beneficial ownership declarations are not available via this API. The RPVS (Register partnerov verejného sektora — Register of Public Sector Partners) is a separate Slovak register that holds beneficial ownership data for companies winning public procurement contracts; it is maintained by the Ministry of Justice and will be covered by a separate adapter.
+- **Note on data scope:** The RPO API returns entity-level data only. Officers, shareholders, and beneficial ownership declarations are not available via this API. Beneficial ownership for companies supplying public bodies is covered separately by the RPVS adapter — see below.
 - **Note on IČO:** Some entities in RPO have `identifiers[].value = "Neuvedené"` (not provided) — these are non-commercial entities (e.g. state organisations) registered before IČO assignment became mandatory. OpenCheck skips those entities as they cannot be cross-referenced by identifier.
+
+## RPVS — Register partnerov verejného sektora (Slovak Public Sector Partners Register)
+
+- **Data:** public-sector partner registrations and verified beneficial ownership (KUV — konečný užívateľ výhod) declarations for entities that supply goods, services, or other assets to Slovak public bodies above statutory value thresholds. The register covers the partner entity itself (name, IČO, validity dates) plus one or more beneficial owners per partner entry. KUV records include the person's name, date of birth, titles, a public-official flag (`JeVerejnyCinitel`), and the validity window of the declaration. Each entry is verified by an authorised person (a lawyer, notary, bank, or other qualifying entity recorded as `OpravnenaOsoba`).
+- **API:** OData v4 at `https://rpvs.gov.sk/opendatav2/` — no authentication required
+- **Swagger:** `https://rpvs.gov.sk/opendatav2/swagger/index.html`
+- **Portal:** `https://rpvs.gov.sk/rpvs`
+- **Publisher:** Ministry of Justice of the Slovak Republic (Ministerstvo spravodlivosti Slovenskej republiky)
+- **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **Attribution:** "Contains data from the Slovak Public Sector Partners Register (RPVS), published by the Ministry of Justice of the Slovak Republic under CC BY 4.0. Source: rpvs.gov.sk."
+- **Entry point:** `sk_ico` (8-digit IČO, zero-padded) — the same identifier used by the RPO adapter, both derived from GLEIF RA code `RA000526`. RPVS and RPO are fetched independently when a Slovak entity is resolved; RPVS is only present in the response when the entity is (or was) registered in the RPVS.
+- **BODS mapping:** each RPVS partner entry produces an entity statement (scheme `SK-RPVS`), a person or entity statement per active KUV, and an ownership-or-control relationship statement per KUV using interest type `unknownInterest` with `beneficialOwnershipOrControl: true`. The RPVS does not publish the specific ownership mechanism (share percentage, voting rights, etc.) — only the identity of the KUV — so `unknownInterest` is the appropriate BODS v0.4 type. KUV validity windows are mapped to `startDate`/`endDate` on the interest; `JeVerejnyCinitel` is mapped to the BODS `politicalExposure` block.
+- **Coverage note:** Participation in the RPVS is mandatory for entities meeting the legal thresholds (broadly: contracts with public bodies worth ≥ €100,000 for single contracts, ≥ €250,000 for recurring arrangements, or receiving state aid or subsidies above €100,000). Voluntary registration is also permitted. The register was established under the Act on Register of Public Sector Partners (Act No. 315/2016) and is cross-referenced with the Slovak BODS dataset published by Open Ownership at `https://bods-data.openownership.org/source/slovakia/`.
+- **Historical BODS mapping:** Open Ownership mapped an earlier version of this data to BODS v0.2 via the `register-ingester-sk` + `register-transformer-sk` pipeline. OpenCheck maps directly to BODS v0.4 from the live OData API.
+- **Note on IČO uniqueness:** a single IČO may have multiple versioned partner entries (`PartneriVerejnehoSektora`) over time as the entity re-registers or updates its KUV declarations. OpenCheck resolves to the internal `CisloVlozky` (register entry number) and fetches all versioned entries, presenting only the currently active KUVs (`PlatnostDo == null`) in the BODS output.
 
 ## OpenCorporates
 
