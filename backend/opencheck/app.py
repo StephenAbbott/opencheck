@@ -55,6 +55,7 @@ from .bods import (
     map_krs_poland,
     map_firmenbuch,
     map_rpo_slovakia,
+    map_rpvs_slovakia,
     map_sec_edgar,
     map_ur_latvia,
     map_wikidata,
@@ -398,6 +399,7 @@ _MAPPERS = {
     "krs_poland": map_krs_poland,
     "firmenbuch": map_firmenbuch,
     "rpo_slovakia": map_rpo_slovakia,
+    "rpvs_slovakia": map_rpvs_slovakia,
     "jar_lithuania": map_jar_lithuania,
     "ur_latvia": map_ur_latvia,
     "zefix": map_zefix,
@@ -1235,6 +1237,40 @@ async def lookup(
                 deepened_bundles.append(("rpo_slovakia", derived["sk_ico"]))
         except Exception as exc:  # noqa: BLE001
             errors["rpo_slovakia"] = f"{type(exc).__name__}: {exc}"
+
+    # RPVS Slovakia — fetch by IČO when Slovak entity; returns BO declarations
+    # for entities supplying goods/services to public bodies.
+    if "sk_ico" in derived:
+        try:
+            rpvs_bundle = await REGISTRY["rpvs_slovakia"].fetch(derived["sk_ico"])
+            if not rpvs_bundle.get("is_stub"):
+                rpvs_name = (rpvs_bundle.get("name") or "").strip() or legal_name or ""
+                hits.append(
+                    SourceHit(
+                        source_id="rpvs_slovakia",
+                        hit_id=derived["sk_ico"],
+                        kind=SearchKind.ENTITY,
+                        name=rpvs_name,
+                        summary=(
+                            f"SK-IČO {derived['sk_ico']} · "
+                            f"RPVS #{rpvs_bundle.get('partner_id', '')}"
+                        ),
+                        identifiers={
+                            "sk_ico": derived["sk_ico"],
+                            "lei": lei,
+                            **(
+                                {"rpvs_id": str(rpvs_bundle["partner_id"])}
+                                if rpvs_bundle.get("partner_id")
+                                else {}
+                            ),
+                        },
+                        raw=rpvs_bundle,
+                        is_stub=False,
+                    )
+                )
+                deepened_bundles.append(("rpvs_slovakia", derived["sk_ico"]))
+        except Exception as exc:  # noqa: BLE001
+            errors["rpvs_slovakia"] = f"{type(exc).__name__}: {exc}"
 
     # OpenCorporates — direct fetch by ocid derived from GLEIF.
     if ocid:

@@ -42,6 +42,7 @@ def test_registry_has_expected_sources() -> None:
         "wikidata",
         "prh",
         "rpo_slovakia",
+        "rpvs_slovakia",
         "zefix",
         "kvk",
     }

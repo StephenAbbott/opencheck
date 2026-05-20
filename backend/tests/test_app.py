@@ -62,6 +62,7 @@ def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
         "wikidata",
         "prh",
         "rpo_slovakia",
+        "rpvs_slovakia",
         "zefix",
         "kvk",
     }
