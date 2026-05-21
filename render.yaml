@@ -47,6 +47,10 @@ services:
         sync: false
       - key: OPENALEPH_API_KEY
         sync: false
+      # --- Bulk-file adapters: stub-only on Render ---
+      # ARIREGISTER_DB_FILE and BCE_BELGIUM_DB_FILE are intentionally omitted.
+      # Both adapters return stub responses when no DB path is set.
+      # To activate locally, set these in .env pointing at the downloaded .db files.
 
   # ------------------------------------------------------------------ #
   # Frontend — Vite build served as a static site                       #
