@@ -1228,9 +1228,10 @@ function BehindTheScenesPage() {
             >
               Global Open Data Integration Network (GODIN)
             </a>{" "}
-            is an alliance of open-data publishers — GLEIF, Open Ownership,
-            Open Corporates, and others — committed to making their datasets
-            interoperable through shared identifiers and open standards.
+            is a collaborative effort to enhance global data interoperability
+            and accessibility by connecting organisations that publish open data
+            or create open data standards and aligning data to a global
+            framework like the Global Legal Entity Identifier (LEI) System.
           </p>
           <p className="text-[13px] text-oo-muted leading-[1.7]">
             OpenCheck is a concrete demonstration of the GODIN thesis: a single
