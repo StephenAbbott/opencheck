@@ -75,6 +75,8 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .schemas import validate_raw
+from .schemas.firmenbuch import FBBundle
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -753,13 +755,15 @@ class FirmenbuchAdapter(SourceAdapter):
         if not extract.get("name"):
             extract["name"] = self._names.get(fn, legal_name)
 
-        return {
+        bundle = {
             "source_id": self.id,
             "fn": fn,
             "extract": extract,
             "legal_name": self._names.get(fn, legal_name),
             "is_stub": False,
         }
+        validate_raw("firmenbuch", FBBundle, bundle)
+        return bundle
 
     # ------------------------------------------------------------------
     # HTTP — SOAP over httpx (no zeep dependency)

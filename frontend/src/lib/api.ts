@@ -189,6 +189,8 @@ export interface SourceCompletedEvent {
 export interface SourceErrorEvent {
   source_id: string;
   error: string;
+  /** "schema_changed" when the source API structure changed; "fetch_error" otherwise. */
+  error_type?: "schema_changed" | "fetch_error";
 }
 
 export interface DoneEvent {

@@ -29,6 +29,8 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .schemas import validate_raw
+from .schemas.companies_house import CHBundle, CHOfficerBundle
 
 _API_BASE = "https://api.company-information.service.gov.uk"
 _CACHE_NS = "companies_house"
@@ -141,6 +143,7 @@ class CompaniesHouseAdapter(SourceAdapter):
             number, visited=visited, related=related, depth=0
         )
         root["related_companies"] = related
+        validate_raw("companies_house", CHBundle, root)
         return root
 
     async def _fetch_company_data(
@@ -226,11 +229,13 @@ class CompaniesHouseAdapter(SourceAdapter):
             f"/officers/{quote(officer_id)}/appointments",
             cache_key=f"{_CACHE_NS}/officer/{officer_id}/appointments",
         )
-        return {
+        bundle = {
             "source_id": self.id,
             "officer_id": officer_id,
             "appointments": appointments,
         }
+        validate_raw("companies_house", CHOfficerBundle, bundle)
+        return bundle
 
     # ------------------------------------------------------------------
     # HTTP with caching

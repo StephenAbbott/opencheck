@@ -28,6 +28,8 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .schemas import validate_raw
+from .schemas.gleif import GLEIFBundle
 from .bolagsverket import BV_RA_CODE as _BV_RA_CODE, normalise_org_number as _normalise_org_number
 from .brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_orgnr
 from .cro import IE_RA_CODE as _CRO_RA_CODE, normalise_crn as _normalise_crn
@@ -141,7 +143,7 @@ class GleifAdapter(SourceAdapter):
             lei, "ultimate"
         )
 
-        return {
+        bundle = {
             "source_id": self.id,
             "lei": lei,
             "record": record.get("data") or record,
@@ -150,6 +152,8 @@ class GleifAdapter(SourceAdapter):
             "direct_parent_exception": (direct_exception or {}).get("data"),
             "ultimate_parent_exception": (ultimate_exception or {}).get("data"),
         }
+        validate_raw("gleif", GLEIFBundle, bundle)
+        return bundle
 
     async def _parent_or_exception(
         self, lei: str, kind: str

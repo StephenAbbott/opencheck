@@ -32,6 +32,8 @@ from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .oc_relationships import get_bulk_lookup_for_settings
+from .schemas import validate_raw
+from .schemas.opencorporates import OCBundle
 
 _API_BASE = "https://api.opencorporates.com/v0.4"
 _CACHE_NS = "opencorporates"
@@ -146,7 +148,7 @@ class OpenCorporatesAdapter(SourceAdapter):
             )
             network_data = (raw_network.get("results") or {}) if raw_network else None
 
-        return {
+        bundle = {
             "source_id": self.id,
             "hit_id": ocid,
             "ocid": ocid,
@@ -160,6 +162,8 @@ class OpenCorporatesAdapter(SourceAdapter):
             "raw_company": company_data,
             "raw_officers": officers_data,
         }
+        validate_raw("opencorporates", OCBundle, bundle)
+        return bundle
 
     # ------------------------------------------------------------------
     # HTTP with caching

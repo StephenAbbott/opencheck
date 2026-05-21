@@ -37,6 +37,8 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .schemas import validate_raw
+from .schemas.kvk import KvKBundle
 
 _API_BASE = "https://opendata.kvk.nl/api/v1/hvds"
 _CACHE_NS = "kvk"
@@ -139,10 +141,12 @@ class KvKAdapter(SourceAdapter):
                 data = response.json()
             self._cache.put(cache_key, data)
 
-        return {
+        bundle = {
             "source_id": self.id,
             "kvk_number": kvk_number,
             "company": data,
             "legal_name": self._names.get(kvk_number, ""),
             "is_stub": False,
         }
+        validate_raw("kvk", KvKBundle, bundle)
+        return bundle

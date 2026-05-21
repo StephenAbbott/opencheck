@@ -59,6 +59,8 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .schemas import validate_raw
+from .schemas.bolagsverket import BVBundle
 
 # Gateway and token endpoints — production environment (confirmed).
 # Token endpoint confirmed: OAuth2 Client Credentials Grant returns a
@@ -259,10 +261,12 @@ class BolagsverketAdapter(SourceAdapter):
             data = organisationer[0] if organisationer else {}
             self._cache.put(cache_key, data)
 
-        return {
+        bundle = {
             "source_id": self.id,
             "org_number": org_number,
             "company": data,
             "legal_name": legal_name,
             "is_stub": False,
         }
+        validate_raw("bolagsverket", BVBundle, bundle)
+        return bundle

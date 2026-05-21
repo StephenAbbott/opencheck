@@ -50,6 +50,8 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .schemas import validate_raw
+from .schemas.ares import AresBundle
 
 _log = logging.getLogger(__name__)
 
@@ -480,7 +482,7 @@ class AresAdapter(SourceAdapter):
                             "start_date": member.get("datumZapisu"),
                         })
 
-        return {
+        bundle = {
             "source_id": self.id,
             "hit_id": ico,
             "cz_ico": ico,
@@ -490,3 +492,5 @@ class AresAdapter(SourceAdapter):
             "owners": owners,
             "directors": directors,
         }
+        validate_raw("ares", AresBundle, bundle)
+        return bundle

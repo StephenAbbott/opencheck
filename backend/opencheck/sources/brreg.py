@@ -44,6 +44,8 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .schemas import validate_raw
+from .schemas.brreg import BrregBundle
 
 _API_BASE = "https://data.brreg.no/enhetsregisteret/api"
 _CACHE_NS = "brreg"
@@ -177,7 +179,7 @@ class BrregAdapter(SourceAdapter):
             for role in group.get("roller") or []:
                 roles.append({**role, "_group_type": group_type})
 
-        return {
+        bundle = {
             "source_id": self.id,
             "orgnr": orgnr,
             "entity": entity,
@@ -185,6 +187,8 @@ class BrregAdapter(SourceAdapter):
             "legal_name": legal_name,
             "is_stub": False,
         }
+        validate_raw("brreg", BrregBundle, bundle)
+        return bundle
 
     # ------------------------------------------------------------------
     # HTTP with caching

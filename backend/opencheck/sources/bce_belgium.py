@@ -50,6 +50,8 @@ from typing import Any
 
 from ..config import get_settings
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .schemas import validate_raw
+from .schemas.bce_belgium import BCEBundle
 
 logger = logging.getLogger(__name__)
 
@@ -276,7 +278,7 @@ class BceBelgiumAdapter(SourceAdapter):
             or ""
         )
 
-        return {
+        bundle = {
             "source_id": self.id,
             "enterprise_number": enterprise_number,
             "dotted": dotted,
@@ -291,6 +293,8 @@ class BceBelgiumAdapter(SourceAdapter):
             "link": row.get("link") or _ENTITY_URL.format(enterprise_number=enterprise_number),
             "is_stub": False,
         }
+        validate_raw("bce_belgium", BCEBundle, bundle)
+        return bundle
 
     # ------------------------------------------------------------------
     # Stub

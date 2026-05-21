@@ -38,6 +38,8 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .schemas import validate_raw
+from .schemas.sec_edgar import EDGARBundle
 
 _EDGAR_BASE = "https://www.sec.gov"
 _BROWSE_BASE = f"{_EDGAR_BASE}/cgi-bin/browse-edgar"
@@ -528,6 +530,7 @@ class SecEdgarAdapter(SourceAdapter):
             "issuer_cik": cik,
             "filings": filings,
         }
+        validate_raw("sec_edgar", EDGARBundle, result)
         self._cache.put(cache_key, result)
         return result
 

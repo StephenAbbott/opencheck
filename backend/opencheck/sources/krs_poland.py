@@ -69,6 +69,8 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .schemas import validate_raw
+from .schemas.krs_poland import KRSBundle
 
 _log = logging.getLogger(__name__)
 
@@ -487,7 +489,7 @@ class KrsPolandAdapter(SourceAdapter):
             if rec:
                 shareholders.append(rec)
 
-        return {
+        bundle = {
             "source_id": self.id,
             "hit_id": krs,
             "pl_krs": krs,
@@ -510,6 +512,8 @@ class KrsPolandAdapter(SourceAdapter):
             "shareholders": shareholders,
             "link": f"https://ekrs.ms.gov.pl/web/wyszukiwarka-krs/strona-glowna,search.html?krs={krs}",
         }
+        validate_raw("krs_poland", KRSBundle, bundle)
+        return bundle
 
 
 # ---------------------------------------------------------------------------

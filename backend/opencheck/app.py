@@ -86,6 +86,19 @@ from .icij_check import assess_icij_names
 from .reconcile import reconcile
 from .risk import RiskSignal, assess_bundle, assess_hits
 from .sources import REGISTRY, SearchKind, SourceHit, SourceInfo
+from .sources.schemas import SourceSchemaError
+
+
+def _fmt_source_error(exc: Exception) -> str:
+    """Format a source fetch exception for the errors dict and SSE events.
+
+    SourceSchemaError gets a distinct human-readable prefix so the frontend
+    can surface "Source API changed" rather than a generic fetch-error message.
+    """
+    if isinstance(exc, SourceSchemaError):
+        return f"Source API changed — {exc}"
+    return f"{type(exc).__name__}: {exc}"
+
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -285,7 +298,8 @@ async def _stream_events(q: str, kind: SearchKind) -> AsyncIterator[dict[str, An
                     "data": json.dumps(
                         {
                             "source_id": source_id,
-                            "error": f"{type(result).__name__}: {result}",
+                            "error": _fmt_source_error(result),
+                            "error_type": "schema_changed" if isinstance(result, SourceSchemaError) else "fetch_error",
                         }
                     ),
                 }
@@ -915,7 +929,7 @@ async def lookup(
     if "gb_coh" in derived:
         _b = _r.get("companies_house")
         if isinstance(_b, Exception):
-            errors["companies_house"] = f"{type(_b).__name__}: {_b}"
+            errors["companies_house"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             _profile = _b.get("profile") or {}
             hits.append(SourceHit(
@@ -934,7 +948,7 @@ async def lookup(
     if "che_uid" in derived:
         _b = _r.get("zefix")
         if isinstance(_b, Exception):
-            errors["zefix"] = f"{type(_b).__name__}: {_b}"
+            errors["zefix"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             _company = _b.get("company") or {}
             hits.append(SourceHit(
@@ -953,7 +967,7 @@ async def lookup(
     if "kvk_number" in derived:
         _b = _r.get("kvk")
         if isinstance(_b, Exception):
-            errors["kvk"] = f"{type(_b).__name__}: {_b}"
+            errors["kvk"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             hits.append(SourceHit(
                 source_id="kvk",
@@ -971,7 +985,7 @@ async def lookup(
     if "siren" in derived:
         _b = _r.get("inpi")
         if isinstance(_b, Exception):
-            errors["inpi"] = f"{type(_b).__name__}: {_b}"
+            errors["inpi"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             _inpi_company = _b.get("company") or {}
             _inpi_name = (
@@ -994,7 +1008,7 @@ async def lookup(
     if "se_org_number" in derived:
         _b = _r.get("bolagsverket")
         if isinstance(_b, Exception):
-            errors["bolagsverket"] = f"{type(_b).__name__}: {_b}"
+            errors["bolagsverket"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             _bv_company = _b.get("company") or {}
             _bv_name = _bv_company.get("namn") or _bv_company.get("name") or legal_name or ""
@@ -1019,7 +1033,7 @@ async def lookup(
     if "ee_registry_code" in derived:
         _b = _r.get("ariregister")
         if isinstance(_b, Exception):
-            errors["ariregister"] = f"{type(_b).__name__}: {_b}"
+            errors["ariregister"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             hits.append(SourceHit(
                 source_id="ariregister",
@@ -1037,7 +1051,7 @@ async def lookup(
     if "no_orgnr" in derived:
         _b = _r.get("brreg")
         if isinstance(_b, Exception):
-            errors["brreg"] = f"{type(_b).__name__}: {_b}"
+            errors["brreg"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             _brreg_entity = _b.get("entity") or {}
             hits.append(SourceHit(
@@ -1056,7 +1070,7 @@ async def lookup(
     if "ie_crn" in derived:
         _b = _r.get("cro")
         if isinstance(_b, Exception):
-            errors["cro"] = f"{type(_b).__name__}: {_b}"
+            errors["cro"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             _cro_company = _b.get("company") or {}
             _cro_name = (_cro_company.get("company_name") or "").strip() or legal_name or ""
@@ -1076,7 +1090,7 @@ async def lookup(
     if "fi_ytunnus" in derived:
         _b = _r.get("prh")
         if isinstance(_b, Exception):
-            errors["prh"] = f"{type(_b).__name__}: {_b}"
+            errors["prh"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             _prh_company = _b.get("company") or {}
             _prh_name = ""
@@ -1100,7 +1114,7 @@ async def lookup(
     if "lv_regcode" in derived:
         _b = _r.get("ur_latvia")
         if isinstance(_b, Exception):
-            errors["ur_latvia"] = f"{type(_b).__name__}: {_b}"
+            errors["ur_latvia"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             _lv_entity = _b.get("entity") or {}
             hits.append(SourceHit(
@@ -1119,7 +1133,7 @@ async def lookup(
     if "lt_code" in derived:
         _b = _r.get("jar_lithuania")
         if isinstance(_b, Exception):
-            errors["jar_lithuania"] = f"{type(_b).__name__}: {_b}"
+            errors["jar_lithuania"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             hits.append(SourceHit(
                 source_id="jar_lithuania",
@@ -1137,7 +1151,7 @@ async def lookup(
     if "cz_ico" in derived:
         _b = _r.get("ares")
         if isinstance(_b, Exception):
-            errors["ares"] = f"{type(_b).__name__}: {_b}"
+            errors["ares"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             _cz_entity = _b.get("entity") or {}
             hits.append(SourceHit(
@@ -1156,7 +1170,7 @@ async def lookup(
     if "pl_krs" in derived:
         _b = _r.get("krs_poland")
         if isinstance(_b, Exception):
-            errors["krs_poland"] = f"{type(_b).__name__}: {_b}"
+            errors["krs_poland"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             hits.append(SourceHit(
                 source_id="krs_poland",
@@ -1174,7 +1188,7 @@ async def lookup(
     if "at_fn" in derived:
         _b = _r.get("firmenbuch")
         if isinstance(_b, Exception):
-            errors["firmenbuch"] = f"{type(_b).__name__}: {_b}"
+            errors["firmenbuch"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             hits.append(SourceHit(
                 source_id="firmenbuch",
@@ -1192,7 +1206,7 @@ async def lookup(
     if "sk_ico" in derived:
         _b = _r.get("rpo_slovakia")
         if isinstance(_b, Exception):
-            errors["rpo_slovakia"] = f"{type(_b).__name__}: {_b}"
+            errors["rpo_slovakia"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             hits.append(SourceHit(
                 source_id="rpo_slovakia",
@@ -1208,7 +1222,7 @@ async def lookup(
 
         _b = _r.get("rpvs_slovakia")
         if isinstance(_b, Exception):
-            errors["rpvs_slovakia"] = f"{type(_b).__name__}: {_b}"
+            errors["rpvs_slovakia"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             hits.append(SourceHit(
                 source_id="rpvs_slovakia",
@@ -1230,7 +1244,7 @@ async def lookup(
     if "be_enterprise_number" in derived:
         _b = _r.get("bce_belgium")
         if isinstance(_b, Exception):
-            errors["bce_belgium"] = f"{type(_b).__name__}: {_b}"
+            errors["bce_belgium"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             hits.append(SourceHit(
                 source_id="bce_belgium",
@@ -1248,7 +1262,7 @@ async def lookup(
     if ocid:
         _b = _r.get("opencorporates")
         if isinstance(_b, Exception):
-            errors["opencorporates"] = f"{type(_b).__name__}: {_b}"
+            errors["opencorporates"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             _oc_company = _b.get("company") or {}
             hits.append(SourceHit(
@@ -1282,7 +1296,7 @@ async def lookup(
     if qid:
         _b = _r.get("wikidata")
         if isinstance(_b, Exception):
-            errors["wikidata"] = f"{type(_b).__name__}: {_b}"
+            errors["wikidata"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             _wd_summary = _b.get("summary") or {}
             hits.append(SourceHit(
@@ -1305,7 +1319,7 @@ async def lookup(
     if bq_adapter and bq_adapter.info.live_available:
         _b = _r.get("brightquery")
         if isinstance(_b, Exception):
-            errors["brightquery"] = f"{type(_b).__name__}: {_b}"
+            errors["brightquery"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             hits.append(SourceHit(
                 source_id="brightquery",
@@ -1347,7 +1361,7 @@ async def lookup(
     if ct_adapter is not None and hasattr(ct_adapter, "fetch_by_lei"):
         _b = _r.get("climatetrace")
         if isinstance(_b, Exception):
-            errors["climatetrace"] = f"{type(_b).__name__}: {_b}"
+            errors["climatetrace"] = _fmt_source_error(_b)
         elif _b and _b.get("entity_id"):
             _entity_id = _b.get("entity_id") or lei
             _emissions = _b.get("emissions") or {}
@@ -1374,7 +1388,7 @@ async def lookup(
     if bods_gleif_adapter is not None and hasattr(bods_gleif_adapter, "fetch_by_lei"):
         _b = _r.get("bods_gleif")
         if isinstance(_b, Exception):
-            errors["bods_gleif"] = f"{type(_b).__name__}: {_b}"
+            errors["bods_gleif"] = _fmt_source_error(_b)
         elif _b and not _b.get("is_stub"):
             _statementid = _b.get("hit_id") or lei
             _bg_name = legal_name or lei
@@ -1448,7 +1462,7 @@ async def lookup(
                         )
                         deepened_bundles.append(("sec_edgar", se_hit.hit_id))
             except Exception as exc:  # noqa: BLE001
-                errors["sec_edgar"] = f"{type(exc).__name__}: {exc}"
+                errors["sec_edgar"] = _fmt_source_error(exc)
 
     # OpenSanctions, OpenTender — search by LEI (free-text, LEI is indexed).
     for source_id in ("opensanctions",):
@@ -2055,10 +2069,14 @@ async def _lookup_stream_events(
             source_id, result = task.result()
 
             if isinstance(result, Exception):
-                errors[source_id] = f"{type(result).__name__}: {result}"
+                errors[source_id] = _fmt_source_error(result)
                 yield {
                     "event": "source_error",
-                    "data": json.dumps({"source_id": source_id, "error": errors[source_id]}),
+                    "data": json.dumps({
+                        "source_id": source_id,
+                        "error": errors[source_id],
+                        "error_type": "schema_changed" if isinstance(result, SourceSchemaError) else "fetch_error",
+                    }),
                 }
                 continue
 
@@ -2429,8 +2447,12 @@ async def _lookup_stream_events(
                 yield {"event": "hit", "data": _edgar_hit2.model_dump_json()}
                 yield {"event": "source_completed", "data": json.dumps({"source_id": "sec_edgar", "hit_count": 1})}
         except Exception as exc:  # noqa: BLE001
-            errors["sec_edgar"] = f"{type(exc).__name__}: {exc}"
-            yield {"event": "source_error", "data": json.dumps({"source_id": "sec_edgar", "error": errors["sec_edgar"]})}
+            errors["sec_edgar"] = _fmt_source_error(exc)
+            yield {"event": "source_error", "data": json.dumps({
+                "source_id": "sec_edgar",
+                "error": errors["sec_edgar"],
+                "error_type": "schema_changed" if isinstance(exc, SourceSchemaError) else "fetch_error",
+            })}
 
     # ── Step 5: Reconcile + deepen + risk ─────────────────────────────────────
     links = [link.to_dict() for link in reconcile(hits)]
