@@ -2,7 +2,7 @@
 
 # OpenCheck
 
-Customer due diligence risk checks driven by the Legal Entity Identifier (LEI), open data and open standards.
+Customer due diligence risk checks powered by the Legal Entity Identifier (LEI), open data and open standards.
 
 Try the demo version at https://opencheck.onrender.com/
 
