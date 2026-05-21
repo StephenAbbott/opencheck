@@ -197,6 +197,7 @@ class RpoSlovakiaAdapter(SourceAdapter):
             supports=[SearchKind.ENTITY],
             requires_api_key=False,
             live_available=settings.allow_live,
+            is_national_register=True,
         )
 
     # ------------------------------------------------------------------

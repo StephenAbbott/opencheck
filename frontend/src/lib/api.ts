@@ -18,6 +18,8 @@ export interface SourceInfo {
   live_available: boolean;
   /** "cdd" = customer due diligence / compliance; "esg" = environmental, social and governance. */
   category: "cdd" | "esg";
+  /** True for official national company / BO registers (e.g. Companies House, Bolagsverket). */
+  is_national_register: boolean;
 }
 
 export interface SourceHit {

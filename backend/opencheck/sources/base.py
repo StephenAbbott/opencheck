@@ -64,6 +64,14 @@ class SourceInfo(BaseModel):
             "'esg' = environmental, social and governance data."
         ),
     )
+    is_national_register: bool = Field(
+        default=False,
+        description=(
+            "True when this source is an official national company or beneficial "
+            "ownership register (e.g. Companies House, Bolagsverket). False for "
+            "aggregators, cross-border databases, and ESG sources."
+        ),
+    )
 
 
 class SourceHit(BaseModel):

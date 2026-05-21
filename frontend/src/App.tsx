@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import BODSGraph from "./components/BODSGraph";
 import SearchLoadingGrid from "./components/SearchLoadingGrid";
@@ -436,10 +436,7 @@ export default function App() {
         <div className="max-w-oo-page mx-auto relative">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-light">
-                Customer due diligence
-              </p>
-              <div className="flex items-center gap-3 mt-2">
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -472,7 +469,7 @@ export default function App() {
                 onClick={() => setView(view === "main" ? "sources" : "main")}
                 className="text-[12px] font-mono text-oo-light hover:text-white underline underline-offset-4 whitespace-nowrap"
               >
-                {view === "main" ? "About the sources →" : "← Back to lookup"}
+                {view === "main" ? "Sources →" : "← Back"}
               </button>
             </nav>
           </div>
@@ -481,6 +478,7 @@ export default function App() {
             Entity Identifier (LEI) and open data — mapped to the
             Beneficial Ownership Data Standard.
           </p>
+          <SourceCounter sources={sourcesQuery.data?.sources ?? null} />
         </div>
       </header>
 
@@ -879,6 +877,67 @@ export default function App() {
           </a>
         </div>
       </footer>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Source counter strip — animated count-up, shown below header description
+// ---------------------------------------------------------------------
+
+/**
+ * Animates a number from 0 to `target` over `duration` ms.
+ * Returns the current display value.
+ */
+function useCountUp(target: number, duration = 800): number {
+  const [value, setValue] = useState(0);
+  const prev = useState(target)[0];
+  // Re-run whenever target becomes non-zero (data loaded).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (target === 0) return;
+    const start = performance.now();
+    const from = prev === target ? 0 : 0;
+    const tick = (now: number) => {
+      const t = Math.min((now - start) / duration, 1);
+      // Ease-out cubic
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(Math.round(from + (target - from) * eased));
+      if (t < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [target, duration]);
+  return value;
+}
+
+function SourceCounter({ sources }: { sources: { is_national_register: boolean }[] | null }) {
+  const registerCount = sources ? sources.filter((s) => s.is_national_register).length : 0;
+  const openCount = sources ? sources.filter((s) => !s.is_national_register).length : 0;
+
+  const animatedRegisters = useCountUp(registerCount);
+  const animatedOpen = useCountUp(openCount);
+
+  if (!sources) return null;
+
+  return (
+    <div className="flex items-center gap-6 mt-5 pt-4 border-t border-white/10">
+      <div className="flex items-baseline gap-2">
+        <span className="font-mono font-bold text-[1.45rem] leading-none text-white tabular-nums">
+          {animatedRegisters}
+        </span>
+        <span className="text-[11px] tracking-wide uppercase text-white/45">
+          national registers
+        </span>
+      </div>
+      <span className="text-white/15 text-[1.1rem]">·</span>
+      <div className="flex items-baseline gap-2">
+        <span className="font-mono font-bold text-[1.45rem] leading-none text-white tabular-nums">
+          {animatedOpen}
+        </span>
+        <span className="text-[11px] tracking-wide uppercase text-white/45">
+          open sources
+        </span>
+      </div>
     </div>
   );
 }

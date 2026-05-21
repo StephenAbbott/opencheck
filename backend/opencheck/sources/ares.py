@@ -219,6 +219,7 @@ class AresAdapter(SourceAdapter):
             ),
             supports=[SearchKind.ENTITY],
             live_available=settings.allow_live,
+            is_national_register=True,
             requires_api_key=False,
         )
 
