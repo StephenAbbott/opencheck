@@ -59,6 +59,14 @@ class Settings(BaseSettings):
 
     # --- Source credentials ---
     companies_house_api_key: str | None = Field(default=None, alias="COMPANIES_HOUSE_API_KEY")
+
+    # --- Corporations Canada (ISED) ---
+    # Public-plan API key from the ISED API Gateway.
+    # Register at: https://api.ised-isde.canada.ca/corporations/api
+    # Must be provided via .env (never committed to the repository).
+    corporations_canada_api_key: str | None = Field(
+        default=None, alias="CORPORATIONS_CANADA_API_KEY"
+    )
     opensanctions_api_key: str | None = Field(default=None, alias="OPENSANCTIONS_API_KEY")
     openaleph_api_key: str | None = Field(default=None, alias="OPENALEPH_API_KEY")
     wikidata_sparql_endpoint: str = Field(

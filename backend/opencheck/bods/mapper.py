@@ -355,8 +355,9 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "ur_latvia": "UR — Latvian Register of Enterprises (data.gov.lv)",
         "ares": "ARES — Czech Administrativní registr ekonomických subjektů",
         "krs_poland": "KRS — Polish National Court Register (Krajowy Rejestr Sądowy)",
+        "corporations_canada": "Corporations Canada — ISED federal register",
     }
-    _official_registers = {"ariregister", "bolagsverket", "brreg", "companies_house", "cro", "firmenbuch", "inpi", "kvk", "opencorporates", "zefix", "sec_edgar", "ur_latvia", "ares", "krs_poland"}
+    _official_registers = {"ariregister", "bolagsverket", "brreg", "companies_house", "corporations_canada", "cro", "firmenbuch", "inpi", "kvk", "opencorporates", "zefix", "sec_edgar", "ur_latvia", "ares", "krs_poland"}
     block: dict[str, Any] = {
         "type": ["officialRegister"] if source_id in _official_registers else ["thirdParty"],
         "description": source_names.get(source_id, source_id),
@@ -5930,3 +5931,157 @@ def map_bce_belgium(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         source_url=source_url,
     )
     yield entity_stmt
+
+
+# ----------------------------------------------------------------------
+# Corporations Canada — ISED federal register
+# ----------------------------------------------------------------------
+
+
+def _cc_corp_url(corp_id: str) -> str:
+    return (
+        f"https://ised-isde.canada.ca/cc/lgcy/fdrlCrpDtls.html"
+        f"?corpId={corp_id}&V_TOKEN=null&LANGUAGE_ID=1"
+    )
+
+
+def _cc_current_name(corp: dict[str, Any]) -> str:
+    """Return the current primary corporation name."""
+    names = corp.get("corporationNames") or []
+    for entry in names:
+        cn = entry.get("CorporationName") or {}
+        if cn.get("current") and (cn.get("nameType") or "").lower() == "primary":
+            return (cn.get("name") or "").strip()
+    for entry in names:
+        cn = entry.get("CorporationName") or {}
+        if cn.get("current"):
+            return (cn.get("name") or "").strip()
+    if names:
+        cn = (names[-1].get("CorporationName") or {})
+        return (cn.get("name") or "").strip()
+    return ""
+
+
+def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map a CorporationsCanadaAdapter fetch bundle to BODS v0.4 statements.
+
+    Yields:
+    * One entityStatement for the Canadian federal corporation.
+    * One personStatement per current director.
+    * One relationshipStatement (appointmentOfBoard) per director.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return
+
+    corp_id: str = bundle.get("corp_id") or ""
+    corp: dict[str, Any] = bundle.get("corporation") or {}
+    directors: list[dict[str, Any]] = bundle.get("directors") or []
+
+    name: str = _cc_current_name(corp) or bundle.get("legal_name") or corp_id
+    if not corp_id or not name:
+        return
+
+    source_url = _cc_corp_url(corp_id)
+
+    # ── Founding date from activities ─────────────────────────────────────
+    founding_date: str | None = None
+    for act_entry in corp.get("activities") or []:
+        act = act_entry.get("activity") or {}
+        act_type = (act.get("activity") or "").lower()
+        if act_type in ("incorporation", "continuance", "amalgamation"):
+            founding_date = act.get("date") or None
+            break
+
+    # ── Address from adresses (documented API typo) ───────────────────────
+    addresses: list[dict[str, Any]] = []
+    for addr_entry in corp.get("adresses") or []:
+        addr = addr_entry.get("address") or {}
+        lines = addr.get("addressLine") or []
+        city = (addr.get("city") or "").strip()
+        postal = (addr.get("postalCode") or "").strip()
+        country = (addr.get("countryCode") or "CA").strip()
+        parts = [ln.strip() for ln in lines if ln.strip()]
+        if city:
+            parts.append(city)
+        if postal:
+            parts.append(postal)
+        if parts:
+            addresses.append(_addr("registered", ", ".join(parts), country))
+        break  # use only the first address entry
+
+    # ── Identifiers ───────────────────────────────────────────────────────
+    identifiers: list[dict[str, str]] = [
+        {
+            "id": corp_id,
+            "scheme": "CA-CORP",
+            "schemeName": "Corporations Canada — ISED federal register",
+        }
+    ]
+    bn_block = corp.get("businessNumbers") or {}
+    if isinstance(bn_block, dict):
+        bn = (bn_block.get("businessNumber") or "").strip()
+        if bn:
+            identifiers.append({
+                "id": bn,
+                "scheme": "CA-BN",
+                "schemeName": "Canada Revenue Agency Business Number",
+            })
+
+    # ── 1. Entity statement ───────────────────────────────────────────────
+    company_stmt = make_entity_statement(
+        source_id="corporations_canada",
+        local_id=corp_id,
+        name=name,
+        jurisdiction=("Canada", "CA"),
+        identifiers=identifiers,
+        founding_date=founding_date,
+        addresses=addresses,
+        source_url=source_url,
+    )
+    yield company_stmt
+    company_stmt_id: str = company_stmt["statementId"]
+
+    # ── 2. Director statements ────────────────────────────────────────────
+    seen_person_ids: set[str] = set()
+
+    for idx, director in enumerate(directors):
+        first = (director.get("firstName") or "").strip()
+        last = (director.get("lastName") or "").strip()
+        full_name = " ".join(p for p in [first, last] if p)
+        if not full_name:
+            continue
+
+        person_local_id = f"{corp_id}:director:{idx}:{full_name.lower()}"
+
+        if person_local_id not in seen_person_ids:
+            person_stmt = make_person_statement(
+                source_id="corporations_canada",
+                local_id=person_local_id,
+                full_name=full_name,
+                source_url=source_url,
+            )
+            yield person_stmt
+            seen_person_ids.add(person_local_id)
+        else:
+            person_stmt = {
+                "statementId": _stable_id("corporations_canada", "person", person_local_id)
+            }
+
+        interests: list[dict[str, Any]] = [
+            {
+                "type": "appointmentOfBoard",
+                "directOrIndirect": "direct",
+                "beneficialOwnershipOrControl": False,
+                "details": "Director",
+            }
+        ]
+
+        yield make_relationship_statement(
+            source_id="corporations_canada",
+            local_id=f"{corp_id}:director:{idx}",
+            subject_statement_id=company_stmt_id,
+            interested_party_statement_id=person_stmt["statementId"],
+            interested_party_type="person",
+            interests=interests,
+            source_url=source_url,
+        )

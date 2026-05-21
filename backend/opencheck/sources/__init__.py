@@ -16,6 +16,7 @@ from .brightquery import BrightQueryAdapter
 from .brreg import BrregAdapter
 from .climatetrace import ClimateTRACEAdapter
 from .companies_house import CompaniesHouseAdapter
+from .corporations_canada import CorporationsCanadaAdapter
 from .cro import CroAdapter
 from .everypolitician import EveryPoliticianAdapter
 from .firmenbuch import FirmenbuchAdapter
@@ -42,6 +43,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "bolagsverket": BolagsverketAdapter(),
     "brreg": BrregAdapter(),
     "climatetrace": ClimateTRACEAdapter(),
+    "corporations_canada": CorporationsCanadaAdapter(),
     "companies_house": CompaniesHouseAdapter(),
     "cro": CroAdapter(),
     "firmenbuch": FirmenbuchAdapter(),

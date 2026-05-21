@@ -47,6 +47,7 @@ def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
         "brreg",
         "climatetrace",
         "companies_house",
+        "corporations_canada",
         "cro",
         "firmenbuch",
         "gleif",

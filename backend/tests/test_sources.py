@@ -27,6 +27,7 @@ def test_registry_has_expected_sources() -> None:
         "brreg",
         "climatetrace",
         "companies_house",
+        "corporations_canada",
         "cro",
         "firmenbuch",
         "gleif",

@@ -32,6 +32,7 @@ from .schemas import validate_raw
 from .schemas.gleif import GLEIFBundle
 from .bolagsverket import BV_RA_CODE as _BV_RA_CODE, normalise_org_number as _normalise_org_number
 from .brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_orgnr
+from .corporations_canada import CA_CORP_RA_CODE as _CA_CORP_RA_CODE, normalise_corp_id as _normalise_corp_id
 from .cro import IE_RA_CODE as _CRO_RA_CODE, normalise_crn as _normalise_crn
 from .inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
 from .kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
@@ -315,6 +316,10 @@ class GleifAdapter(SourceAdapter):
             # the reconciler can bridge GLEIF ↔ BCE/KBO.
             if registered_at_id == _BCE_RA_CODE:
                 identifiers["be_enterprise_number"] = _normalise_enterprise_number(registered_as)
+            # Canadian federal corporation number — expose as ``ca_corp_id`` so
+            # the reconciler can bridge GLEIF ↔ Corporations Canada.
+            if registered_at_id == _CA_CORP_RA_CODE:
+                identifiers["ca_corp_id"] = _normalise_corp_id(registered_as)
 
         return SourceHit(
             source_id="gleif",

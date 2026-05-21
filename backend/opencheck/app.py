@@ -39,6 +39,7 @@ from .bods import (
     map_ares,
     map_ariregister,
     map_bce_belgium,
+    map_corporations_canada,
     map_bolagsverket,
     map_brightquery,
     map_brreg,
@@ -66,6 +67,7 @@ from .bods import (
 )
 from .sources.ares import CZ_RA_CODE as _CZ_RA_CODE, normalise_ico as _normalise_ico
 from .sources.bce_belgium import BCE_RA_CODE as _BCE_RA_CODE, normalise_enterprise_number as _normalise_enterprise_number
+from .sources.corporations_canada import CA_CORP_RA_CODE as _CA_CORP_RA_CODE, normalise_corp_id as _normalise_corp_id
 from .sources.krs_poland import PL_KRS_RA_CODE as _PL_KRS_RA_CODE, normalise_krs as _normalise_krs
 from .sources.firmenbuch import AT_FB_RA_CODE as _AT_FB_RA_CODE, normalise_fn as _normalise_fn
 from .sources.rpo_slovakia import SK_RPO_RA_CODE as _SK_RPO_RA_CODE, normalise_ico as _normalise_sk_ico
@@ -398,6 +400,7 @@ _MAPPERS = {
     "bce_belgium": map_bce_belgium,
     "bolagsverket": map_bolagsverket,
     "brreg": map_brreg,
+    "corporations_canada": map_corporations_canada,
     "climatetrace": map_climatetrace,
     "companies_house": map_companies_house,
     "cro": map_cro,
@@ -761,6 +764,9 @@ async def lookup(
     if registered_at_id == _BCE_RA_CODE and registered_as:
         # Belgian enterprise number — 10-digit string (e.g. "0433795975")
         derived["be_enterprise_number"] = _normalise_enterprise_number(registered_as)
+    if registered_at_id == _CA_CORP_RA_CODE and registered_as:
+        # Canadian federal corporation number — numeric string (e.g. "1007")
+        derived["ca_corp_id"] = _normalise_corp_id(registered_as)
 
     # OpenCorporates identifier — comes from GLEIF Level 1 ``attributes.ocid``
     # (format: ``{jurisdiction_code}/{company_number}``).
@@ -823,6 +829,7 @@ async def lookup(
             **({"at_fn": derived["at_fn"]} if "at_fn" in derived else {}),
             **({"sk_ico": derived["sk_ico"]} if "sk_ico" in derived else {}),
             **({"be_enterprise_number": derived["be_enterprise_number"]} if "be_enterprise_number" in derived else {}),
+            **({"ca_corp_id": derived["ca_corp_id"]} if "ca_corp_id" in derived else {}),
             **({"wikidata_qid": qid} if qid else {}),
         },
         raw=gleif_bundle.get("record") or {},
@@ -902,6 +909,8 @@ async def lookup(
         _w1.append(("rpvs_slovakia", REGISTRY["rpvs_slovakia"].fetch(derived["sk_ico"])))
     if "be_enterprise_number" in derived:
         _w1.append(("bce_belgium", REGISTRY["bce_belgium"].fetch(derived["be_enterprise_number"], legal_name=legal_name)))
+    if "ca_corp_id" in derived:
+        _w1.append(("corporations_canada", REGISTRY["corporations_canada"].fetch(derived["ca_corp_id"], legal_name=legal_name)))
     if ocid:
         _w1.append(("opencorporates", REGISTRY["opencorporates"].fetch(ocid)))
     if qid:
@@ -1257,6 +1266,32 @@ async def lookup(
                 is_stub=False,
             ))
             deepened_bundles.append(("bce_belgium", derived["be_enterprise_number"]))
+
+    # Corporations Canada
+    if "ca_corp_id" in derived:
+        _b = _r.get("corporations_canada")
+        if isinstance(_b, Exception):
+            errors["corporations_canada"] = _fmt_source_error(_b)
+        elif _b and not _b.get("is_stub"):
+            _cc_corp = _b.get("corporation") or {}
+            _cc_name = ""
+            for _cn_entry in (_cc_corp.get("corporationNames") or []):
+                _cn = _cn_entry.get("CorporationName") or {}
+                if _cn.get("current"):
+                    _cc_name = (_cn.get("name") or "").strip()
+                    if (_cn.get("nameType") or "").lower() == "primary":
+                        break
+            hits.append(SourceHit(
+                source_id="corporations_canada",
+                hit_id=derived["ca_corp_id"],
+                kind=SearchKind.ENTITY,
+                name=_cc_name or legal_name or "",
+                summary=f"CA-CORP {derived['ca_corp_id']}",
+                identifiers={"ca_corp_id": derived["ca_corp_id"], "lei": lei},
+                raw=_cc_corp,
+                is_stub=False,
+            ))
+            deepened_bundles.append(("corporations_canada", derived["ca_corp_id"]))
 
     # OpenCorporates — also extract edgar_cik if present for Wave 2
     if ocid:
@@ -1886,6 +1921,7 @@ async def _lookup_stream_events(
             **({"at_fn": derived["at_fn"]} if "at_fn" in derived else {}),
             **({"sk_ico": derived["sk_ico"]} if "sk_ico" in derived else {}),
             **({"be_enterprise_number": derived["be_enterprise_number"]} if "be_enterprise_number" in derived else {}),
+            **({"ca_corp_id": derived["ca_corp_id"]} if "ca_corp_id" in derived else {}),
             **({"wikidata_qid": qid} if qid else {}),
         },
         raw=gleif_bundle.get("record") or {},
@@ -1934,6 +1970,8 @@ async def _lookup_stream_events(
         applicable_ids.extend(["rpo_slovakia", "rpvs_slovakia"])
     if "be_enterprise_number" in derived:
         applicable_ids.append("bce_belgium")
+    if "ca_corp_id" in derived:
+        applicable_ids.append("corporations_canada")
     if ocid:
         applicable_ids.append("opencorporates")
     if qid:
@@ -2031,6 +2069,8 @@ async def _lookup_stream_events(
         _add_task("rpvs_slovakia", REGISTRY["rpvs_slovakia"].fetch(derived["sk_ico"]))
     if "be_enterprise_number" in derived:
         _add_task("bce_belgium", REGISTRY["bce_belgium"].fetch(derived["be_enterprise_number"], legal_name=legal_name))
+    if "ca_corp_id" in derived:
+        _add_task("corporations_canada", REGISTRY["corporations_canada"].fetch(derived["ca_corp_id"], legal_name=legal_name))
     if ocid:
         _add_task("opencorporates", REGISTRY["opencorporates"].fetch(ocid))
     if qid:
@@ -2284,6 +2324,25 @@ async def _lookup_stream_events(
                         summary=f"BE {result.get('dotted') or derived['be_enterprise_number']}",
                         identifiers={"be_enterprise_number": derived["be_enterprise_number"], "lei": lei},
                         raw=result, is_stub=False,
+                    )
+
+            elif source_id == "corporations_canada" and "ca_corp_id" in derived:
+                if result and not result.get("is_stub"):
+                    _cc_corp = result.get("corporation") or {}
+                    _cc_name = ""
+                    for _cn_entry in (_cc_corp.get("corporationNames") or []):
+                        _cn = _cn_entry.get("CorporationName") or {}
+                        if _cn.get("current"):
+                            _cc_name = (_cn.get("name") or "").strip()
+                            if (_cn.get("nameType") or "").lower() == "primary":
+                                break
+                    hit = SourceHit(
+                        source_id="corporations_canada", hit_id=derived["ca_corp_id"],
+                        kind=SearchKind.ENTITY,
+                        name=_cc_name or legal_name or "",
+                        summary=f"CA-CORP {derived['ca_corp_id']}",
+                        identifiers={"ca_corp_id": derived["ca_corp_id"], "lei": lei},
+                        raw=_cc_corp, is_stub=False,
                     )
 
             elif source_id == "opencorporates" and ocid:
