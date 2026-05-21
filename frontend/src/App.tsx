@@ -1438,6 +1438,346 @@ function HitRow({
   );
 }
 
+// ---------------------------------------------------------------------
+// BODS statement cards — field-level mapping view (Phase 4)
+// ---------------------------------------------------------------------
+
+type BODSStmt = Record<string, unknown>;
+
+function stmtStr(obj: unknown, ...keys: string[]): string {
+  let cur: unknown = obj;
+  for (const k of keys) {
+    if (cur == null || typeof cur !== "object") return "";
+    cur = (cur as Record<string, unknown>)[k];
+  }
+  return typeof cur === "string" ? cur : "";
+}
+
+function stmtArr(obj: unknown, key: string): unknown[] {
+  if (obj == null || typeof obj !== "object") return [];
+  const v = (obj as Record<string, unknown>)[key];
+  return Array.isArray(v) ? v : [];
+}
+
+/** Compact pill for a BODS identifier entry. */
+function IdentifierPill({ id }: { id: unknown }) {
+  const scheme = stmtStr(id, "schemeName") || stmtStr(id, "scheme");
+  const value = stmtStr(id, "id");
+  if (!value) return null;
+  return (
+    <span className="inline-flex items-center gap-1 font-mono text-[10px] bg-white border border-oo-rule rounded px-1.5 py-0.5">
+      {scheme && <span className="text-oo-muted">{scheme}:</span>}
+      <span className="text-oo-ink">{value}</span>
+    </span>
+  );
+}
+
+/** A single labelled field row inside a statement card. */
+function FieldRow({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: React.ReactNode;
+  mono?: boolean;
+}) {
+  if (!value && value !== 0) return null;
+  return (
+    <div className="flex gap-2 items-baseline min-w-0">
+      <span className="text-[10px] text-oo-muted font-semibold uppercase tracking-wide whitespace-nowrap w-28 shrink-0">
+        {label}
+      </span>
+      <span
+        className={`text-[11px] text-oo-ink break-words min-w-0 ${mono ? "font-mono" : ""}`}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+/** Card for a BODS entity statement. */
+function EntityStatementCard({ stmt }: { stmt: BODSStmt }) {
+  const rd = (stmt.recordDetails ?? {}) as Record<string, unknown>;
+  const name = stmtStr(rd, "name");
+  const entityType = stmtStr(rd, "entityType", "type");
+  const jurisdiction = stmtStr(rd, "incorporatedInJurisdiction", "name");
+  const jurisdictionCode = stmtStr(rd, "incorporatedInJurisdiction", "code");
+  const foundingDate = stmtStr(rd, "foundingDate");
+  const identifiers = stmtArr(rd, "identifiers");
+  const addresses = stmtArr(rd, "addresses");
+  const sourceDesc = stmtStr(stmt, "source", "description");
+  const statementId = stmtStr(stmt, "statementId");
+
+  return (
+    <div className="rounded-oo border border-blue-200 bg-blue-50/40 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-blue-100/60 border-b border-blue-200">
+        <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-blue-700">
+          Entity
+        </span>
+        {entityType && (
+          <span className="text-[10px] font-mono text-blue-600">{entityType}</span>
+        )}
+      </div>
+      <div className="px-3 py-2.5 space-y-1.5">
+        <FieldRow label="Name" value={name || <span className="text-oo-muted italic">unknown</span>} />
+        {(jurisdiction || jurisdictionCode) && (
+          <FieldRow
+            label="Jurisdiction"
+            value={[jurisdiction, jurisdictionCode].filter(Boolean).join(" · ")}
+          />
+        )}
+        {foundingDate && <FieldRow label="Founded" value={foundingDate} mono />}
+        {identifiers.length > 0 && (
+          <FieldRow
+            label="Identifiers"
+            value={
+              <span className="flex flex-wrap gap-1">
+                {identifiers.map((id, i) => (
+                  <IdentifierPill key={i} id={id} />
+                ))}
+              </span>
+            }
+          />
+        )}
+        {addresses.map((addr, i) => {
+          const addrStr = stmtStr(addr, "address");
+          const addrType = stmtStr(addr, "type");
+          const addrCountry = stmtStr(addr, "country", "name");
+          const full = [addrStr, addrCountry].filter(Boolean).join(", ");
+          if (!full) return null;
+          return (
+            <FieldRow
+              key={i}
+              label={`Address${addrType ? ` (${addrType})` : ""}`}
+              value={full}
+            />
+          );
+        })}
+        {sourceDesc && <FieldRow label="Source" value={sourceDesc} />}
+        <details className="mt-1">
+          <summary className="text-[10px] font-mono text-oo-muted cursor-pointer">
+            {statementId ? statementId.slice(0, 28) + "…" : "Statement ID"}
+          </summary>
+          <pre className="mt-1 text-[9px] font-mono bg-white border border-oo-rule rounded p-2 overflow-auto max-h-48">
+            {JSON.stringify(stmt, null, 2)}
+          </pre>
+        </details>
+      </div>
+    </div>
+  );
+}
+
+/** Card for a BODS person statement. */
+function PersonStatementCard({ stmt }: { stmt: BODSStmt }) {
+  const rd = (stmt.recordDetails ?? {}) as Record<string, unknown>;
+  const names = stmtArr(rd, "names");
+  const fullName =
+    names.length > 0 ? stmtStr(names[0], "fullName") : "";
+  const personType = stmtStr(rd, "personType");
+  const birthDate = stmtStr(rd, "birthDate");
+  const nationalities = stmtArr(rd, "nationalities");
+  const identifiers = stmtArr(rd, "identifiers");
+  const sourceDesc = stmtStr(stmt, "source", "description");
+  const statementId = stmtStr(stmt, "statementId");
+
+  return (
+    <div className="rounded-oo border border-violet-200 bg-violet-50/40 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-violet-100/60 border-b border-violet-200">
+        <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-violet-700">
+          Person
+        </span>
+        {personType && (
+          <span className="text-[10px] font-mono text-violet-600">{personType}</span>
+        )}
+      </div>
+      <div className="px-3 py-2.5 space-y-1.5">
+        <FieldRow label="Name" value={fullName || <span className="text-oo-muted italic">unknown</span>} />
+        {birthDate && <FieldRow label="Born" value={birthDate} mono />}
+        {nationalities.length > 0 && (
+          <FieldRow
+            label="Nationality"
+            value={nationalities
+              .map((n) => stmtStr(n, "name") || stmtStr(n, "code"))
+              .filter(Boolean)
+              .join(", ")}
+          />
+        )}
+        {identifiers.length > 0 && (
+          <FieldRow
+            label="Identifiers"
+            value={
+              <span className="flex flex-wrap gap-1">
+                {identifiers.map((id, i) => (
+                  <IdentifierPill key={i} id={id} />
+                ))}
+              </span>
+            }
+          />
+        )}
+        {sourceDesc && <FieldRow label="Source" value={sourceDesc} />}
+        <details className="mt-1">
+          <summary className="text-[10px] font-mono text-oo-muted cursor-pointer">
+            {statementId ? statementId.slice(0, 28) + "…" : "Statement ID"}
+          </summary>
+          <pre className="mt-1 text-[9px] font-mono bg-white border border-oo-rule rounded p-2 overflow-auto max-h-48">
+            {JSON.stringify(stmt, null, 2)}
+          </pre>
+        </details>
+      </div>
+    </div>
+  );
+}
+
+/** Summarise a BODS interest entry as a short string. */
+function describeInterest(interest: unknown): string {
+  const type = stmtStr(interest, "type");
+  const doi = stmtStr(interest, "directOrIndirect");
+  const share = (interest as Record<string, unknown>)?.share as
+    | Record<string, unknown>
+    | undefined;
+  let parts: string[] = [];
+  if (type) parts.push(type);
+  if (doi) parts.push(doi);
+  if (share) {
+    const exact = share.exact;
+    const min = share.minimum;
+    const max = share.maximum;
+    if (exact != null) parts.push(`${exact}%`);
+    else if (min != null && max != null) parts.push(`${min}–${max}%`);
+    else if (min != null) parts.push(`≥${min}%`);
+  }
+  return parts.join(" · ");
+}
+
+/** Build a short name for a statement given a lookup map. */
+function stmtLabel(
+  id: string,
+  lookup: Map<string, BODSStmt>
+): string {
+  const s = lookup.get(id);
+  if (!s) return id.slice(0, 16) + "…";
+  const rd = (s.recordDetails ?? {}) as Record<string, unknown>;
+  if (s.recordType === "entity") return stmtStr(rd, "name") || id.slice(0, 16) + "…";
+  if (s.recordType === "person") {
+    const names = stmtArr(rd, "names");
+    return (names.length > 0 ? stmtStr(names[0], "fullName") : "") || id.slice(0, 16) + "…";
+  }
+  return id.slice(0, 16) + "…";
+}
+
+/** Card for a BODS relationship (ownership/control) statement. */
+function RelationshipStatementCard({
+  stmt,
+  lookup,
+}: {
+  stmt: BODSStmt;
+  lookup: Map<string, BODSStmt>;
+}) {
+  const rd = (stmt.recordDetails ?? {}) as Record<string, unknown>;
+  const subjectId = stmtStr(rd, "subject");
+  const interestedPartyId = stmtStr(rd, "interestedParty");
+  const interests = stmtArr(rd, "interests");
+  const statementDate = stmtStr(stmt, "statementDate");
+  const sourceDesc = stmtStr(stmt, "source", "description");
+  const statementId = stmtStr(stmt, "statementId");
+
+  return (
+    <div className="rounded-oo border border-teal-200 bg-teal-50/40 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-teal-100/60 border-b border-teal-200">
+        <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-teal-700">
+          Ownership / Control
+        </span>
+        {statementDate && (
+          <span className="text-[10px] font-mono text-teal-600">{statementDate}</span>
+        )}
+      </div>
+      <div className="px-3 py-2.5 space-y-1.5">
+        {subjectId && (
+          <FieldRow
+            label="Subject"
+            value={stmtLabel(subjectId, lookup)}
+          />
+        )}
+        {interestedPartyId && (
+          <FieldRow
+            label="Interested party"
+            value={stmtLabel(interestedPartyId, lookup)}
+          />
+        )}
+        {interests.length > 0 && (
+          <FieldRow
+            label="Interests"
+            value={
+              <span className="space-y-0.5 block">
+                {interests.map((int, i) => {
+                  const desc = describeInterest(int);
+                  const details = stmtStr(int, "details");
+                  return (
+                    <span key={i} className="block">
+                      {desc}
+                      {details && (
+                        <span className="text-oo-muted ml-1">({details})</span>
+                      )}
+                    </span>
+                  );
+                })}
+              </span>
+            }
+          />
+        )}
+        {sourceDesc && <FieldRow label="Source" value={sourceDesc} />}
+        <details className="mt-1">
+          <summary className="text-[10px] font-mono text-oo-muted cursor-pointer">
+            {statementId ? statementId.slice(0, 28) + "…" : "Statement ID"}
+          </summary>
+          <pre className="mt-1 text-[9px] font-mono bg-white border border-oo-rule rounded p-2 overflow-auto max-h-48">
+            {JSON.stringify(stmt, null, 2)}
+          </pre>
+        </details>
+      </div>
+    </div>
+  );
+}
+
+/** Renders all BODS statements as structured cards with a collapse-to-JSON option. */
+function BODSStatementCards({ statements }: { statements: BODSStmt[] }) {
+  // Build lookup map (statementId → stmt) for relationship label resolution.
+  const lookup = new Map<string, BODSStmt>();
+  for (const s of statements) {
+    const sid = stmtStr(s, "statementId");
+    if (sid) lookup.set(sid, s);
+  }
+
+  return (
+    <div className="space-y-2 mt-2">
+      {statements.map((stmt, i) => {
+        const type = stmtStr(stmt, "recordType");
+        if (type === "entity")
+          return <EntityStatementCard key={i} stmt={stmt} />;
+        if (type === "person")
+          return <PersonStatementCard key={i} stmt={stmt} />;
+        if (type === "relationship")
+          return (
+            <RelationshipStatementCard key={i} stmt={stmt} lookup={lookup} />
+          );
+        // Fallback for unknown types
+        return (
+          <details key={i} className="text-[11px]">
+            <summary className="font-mono text-oo-muted cursor-pointer">
+              {type || "unknown"} statement
+            </summary>
+            <pre className="mt-1 text-[9px] font-mono bg-white border border-oo-rule rounded p-2 overflow-auto max-h-48">
+              {JSON.stringify(stmt, null, 2)}
+            </pre>
+          </details>
+        );
+      })}
+    </div>
+  );
+}
+
 function DeepenBlock({ detail }: { detail: DeepenResponse }) {
   return (
     <div className="space-y-4">
@@ -1464,11 +1804,13 @@ function DeepenBlock({ detail }: { detail: DeepenResponse }) {
           )}
           {/* Directed graph (via @openownership/bods-dagre). */}
           <BODSGraph statements={detail.bods} />
-          <details className="mt-2">
+          {/* Structured statement cards — field-level mapping view. */}
+          <BODSStatementCards statements={detail.bods as BODSStmt[]} />
+          <details className="mt-3">
             <summary className="text-oo-muted cursor-pointer text-[11px] font-mono">
-              Show JSON statements
+              Show raw JSON statements
             </summary>
-            <pre className="mt-1 max-h-96 overflow-auto bg-white border border-oo-rule rounded-oo p-3">
+            <pre className="mt-1 max-h-96 overflow-auto bg-white border border-oo-rule rounded-oo p-3 text-[10px]">
               {JSON.stringify(detail.bods, null, 2)}
             </pre>
           </details>
@@ -1478,7 +1820,7 @@ function DeepenBlock({ detail }: { detail: DeepenResponse }) {
         <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
           Raw source payload
         </h4>
-        <pre className="max-h-96 overflow-auto bg-white border border-oo-rule rounded-oo p-3">
+        <pre className="max-h-96 overflow-auto bg-white border border-oo-rule rounded-oo p-3 text-[10px]">
           {JSON.stringify(detail.raw, null, 2)}
         </pre>
       </section>
