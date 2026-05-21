@@ -1670,6 +1670,852 @@ async def lookup(
 
 
 # ----------------------------------------------------------------------
+# /lookup-stream — LEI-anchored lookup, streamed as SSE
+# ----------------------------------------------------------------------
+#
+# Same logic as /lookup but results are emitted progressively as each
+# source completes.  Event sequence:
+#
+#   gleif_done          — GLEIF resolved; carries lei, legal_name, jurisdiction,
+#                         derived_identifiers.
+#   sources_applicable  — list of source_ids that will be queried (use to
+#                         render skeleton cards in the UI).
+#   source_started      — one per source, fired immediately after tasks are
+#                         created (before the result arrives).
+#   hit                 — SourceHit JSON, emitted as each source returns data.
+#   source_completed    — {source_id, hit_count}, one per source.
+#   source_error        — {source_id, error}, one per source that fails.
+#   cross_source_links  — after all sources have resolved and reconciliation ran.
+#   risk_signals        — after deepen + risk pipeline.
+#   done                — {lei, bods_issues, license_notices}; stream ends here.
+#
+# /lookup is preserved as a non-streaming endpoint for /export and other
+# batch consumers that want the full response in a single JSON payload.
+
+
+async def _lookup_stream_events(
+    lei: str,
+    deepen_top: int = 5,
+) -> AsyncIterator[dict[str, Any]]:
+    """SSE generator for /lookup-stream."""
+
+    lei = lei.strip().upper()
+    if not _LEI_SHAPE.match(lei):
+        yield {
+            "event": "error",
+            "data": json.dumps(
+                {
+                    "detail": (
+                        f"{lei!r} is not a valid LEI. ISO 17442 LEIs are "
+                        "20-character alphanumeric strings."
+                    )
+                }
+            ),
+        }
+        return
+
+    gleif = REGISTRY["gleif"]
+    wikidata_adapter = REGISTRY["wikidata"]
+
+    # ── Step 1: GLEIF (must resolve before we know which sources apply) ───────
+    yield {
+        "event": "source_started",
+        "data": json.dumps({"source_id": "gleif", "source_name": gleif.info.name}),
+    }
+
+    override_bundle = bods_data.gleif_bundle_for_lei(lei)
+    legal_name = ""
+    jurisdiction = ""
+    registered_as = ""
+    registered_at_id = ""
+    gleif_bundle: dict[str, Any] = {}
+
+    try:
+        if override_bundle:
+            legal_name, jurisdiction, registered_as = _subject_metadata_from_bundle(
+                override_bundle, lei
+            )
+            if not legal_name:
+                yield {
+                    "event": "error",
+                    "data": json.dumps(
+                        {"detail": f"Found a BODS bundle for {lei} but couldn't locate the subject entity statement."}
+                    ),
+                }
+                return
+            gleif_bundle = {"source_id": "gleif", "lei": lei, "_from_bundle": True}
+        else:
+            gleif_bundle = await gleif.fetch(lei)
+            if gleif_bundle.get("is_stub") or not gleif_bundle.get("record"):
+                yield {
+                    "event": "error",
+                    "data": json.dumps(
+                        {
+                            "detail": (
+                                f"No GLEIF record found for {lei}. Either the LEI is not registered, "
+                                "live mode is disabled, or no Open Ownership bundle has been extracted."
+                            )
+                        }
+                    ),
+                }
+                return
+            record_attrs = (gleif_bundle.get("record") or {}).get("attributes") or {}
+            entity_block = record_attrs.get("entity") or {}
+            legal_name = (entity_block.get("legalName") or {}).get("name") or ""
+            jurisdiction = entity_block.get("jurisdiction") or ""
+            registered_as = entity_block.get("registeredAs") or ""
+            registered_at_id = (entity_block.get("registeredAt") or {}).get("id") or ""
+    except Exception as exc:  # noqa: BLE001
+        yield {
+            "event": "error",
+            "data": json.dumps({"detail": f"GLEIF fetch failed: {type(exc).__name__}: {exc}"}),
+        }
+        return
+
+    # Build derived identifiers (same logic as /lookup).
+    derived: dict[str, str] = {"lei": lei}
+    if jurisdiction.upper() == "GB" and registered_as:
+        derived["gb_coh"] = registered_as
+    if registered_at_id in _ZEFIX_RA_CODES and registered_as:
+        derived["che_uid"] = _zefix_normalise_uid(registered_as)
+    if registered_at_id == _KVK_RA_CODE and registered_as:
+        derived["kvk_number"] = _normalise_kvk(registered_as)
+    if registered_at_id == _INPI_RA_CODE and registered_as:
+        derived["siren"] = _normalise_siren(registered_as)
+    if registered_at_id == _BV_RA_CODE and registered_as:
+        try:
+            derived["se_org_number"] = _normalise_org_number(registered_as)
+        except ValueError:
+            pass
+    if registered_at_id == _EE_RA_CODE and registered_as:
+        derived["ee_registry_code"] = registered_as.strip().zfill(8)
+    if registered_at_id == _BRREG_RA_CODE and registered_as:
+        derived["no_orgnr"] = _normalise_orgnr(registered_as)
+    if registered_at_id == _CRO_RA_CODE and registered_as:
+        derived["ie_crn"] = _normalise_crn(registered_as)
+    if registered_at_id == _PRH_RA_CODE and registered_as:
+        derived["fi_ytunnus"] = _normalise_ytunnus(registered_as)
+    if registered_at_id == _LV_RA_CODE and registered_as:
+        derived["lv_regcode"] = _normalise_lv_regcode(registered_as)
+    if registered_at_id == _LT_RA_CODE and registered_as:
+        derived["lt_code"] = _normalise_lt_code(registered_as)
+    if registered_at_id == _CZ_RA_CODE and registered_as:
+        derived["cz_ico"] = _normalise_ico(registered_as)
+    if registered_at_id == _PL_KRS_RA_CODE and registered_as:
+        derived["pl_krs"] = _normalise_krs(registered_as)
+    if registered_at_id == _AT_FB_RA_CODE and registered_as:
+        derived["at_fn"] = _normalise_fn(registered_as)
+    if registered_at_id == _SK_RPO_RA_CODE and registered_as:
+        derived["sk_ico"] = _normalise_sk_ico(registered_as)
+    if registered_at_id == _BCE_RA_CODE and registered_as:
+        derived["be_enterprise_number"] = _normalise_enterprise_number(registered_as)
+
+    # OC ID from GLEIF Level-1 (same as /lookup).
+    ocid: str | None = None
+    if gleif.info.live_available:
+        try:
+            _gleif_src = (
+                gleif_bundle
+                if not gleif_bundle.get("_from_bundle")
+                else await gleif.fetch(lei)
+            )
+            if not _gleif_src.get("is_stub"):
+                _attrs = (_gleif_src.get("record") or {}).get("attributes") or {}
+                ocid = _attrs.get("ocid") or None
+        except Exception:  # noqa: BLE001
+            pass
+    if ocid:
+        derived["ocid"] = ocid
+
+    # Wikidata QID.
+    qid = None
+    if hasattr(wikidata_adapter, "find_qid_by_lei"):
+        qid = await wikidata_adapter.find_qid_by_lei(lei)  # type: ignore[attr-defined]
+    if qid:
+        derived["wikidata_qid"] = qid
+
+    # Emit GLEIF resolved.
+    yield {
+        "event": "gleif_done",
+        "data": json.dumps(
+            {
+                "lei": lei,
+                "legal_name": legal_name or None,
+                "jurisdiction": jurisdiction or None,
+                "derived_identifiers": derived,
+            }
+        ),
+    }
+
+    # Surface GLEIF as the first hit.
+    gleif_hit = SourceHit(
+        source_id="gleif",
+        hit_id=lei,
+        kind=SearchKind.ENTITY,
+        name=legal_name or f"LEI {lei}",
+        summary=f"LEI {lei} · {jurisdiction}",
+        identifiers={
+            "lei": lei,
+            **({"gb_coh": registered_as} if "gb_coh" in derived else {}),
+            **({"che_uid": derived["che_uid"]} if "che_uid" in derived else {}),
+            **({"kvk_number": derived["kvk_number"]} if "kvk_number" in derived else {}),
+            **({"siren": derived["siren"]} if "siren" in derived else {}),
+            **({"se_org_number": derived["se_org_number"]} if "se_org_number" in derived else {}),
+            **({"ee_registry_code": derived["ee_registry_code"]} if "ee_registry_code" in derived else {}),
+            **({"no_orgnr": derived["no_orgnr"]} if "no_orgnr" in derived else {}),
+            **({"ie_crn": derived["ie_crn"]} if "ie_crn" in derived else {}),
+            **({"fi_ytunnus": derived["fi_ytunnus"]} if "fi_ytunnus" in derived else {}),
+            **({"lv_regcode": derived["lv_regcode"]} if "lv_regcode" in derived else {}),
+            **({"lt_code": derived["lt_code"]} if "lt_code" in derived else {}),
+            **({"cz_ico": derived["cz_ico"]} if "cz_ico" in derived else {}),
+            **({"pl_krs": derived["pl_krs"]} if "pl_krs" in derived else {}),
+            **({"at_fn": derived["at_fn"]} if "at_fn" in derived else {}),
+            **({"sk_ico": derived["sk_ico"]} if "sk_ico" in derived else {}),
+            **({"be_enterprise_number": derived["be_enterprise_number"]} if "be_enterprise_number" in derived else {}),
+            **({"wikidata_qid": qid} if qid else {}),
+        },
+        raw=gleif_bundle.get("record") or {},
+        is_stub=False,
+    )
+    yield {"event": "hit", "data": gleif_hit.model_dump_json()}
+    yield {"event": "source_completed", "data": json.dumps({"source_id": "gleif", "hit_count": 1})}
+
+    # ── Step 2: Announce which sources will be queried ────────────────────────
+    bq_adapter = REGISTRY.get("brightquery")
+    oa_adapter = REGISTRY.get("openaleph")
+    ct_adapter = REGISTRY.get("climatetrace")
+    bods_gleif_adapter = REGISTRY.get("bods_gleif")
+    se_adapter = REGISTRY.get("sec_edgar")
+
+    applicable_ids: list[str] = []
+    if "gb_coh" in derived:
+        applicable_ids.append("companies_house")
+    if "che_uid" in derived:
+        applicable_ids.append("zefix")
+    if "kvk_number" in derived:
+        applicable_ids.append("kvk")
+    if "siren" in derived:
+        applicable_ids.append("inpi")
+    if "se_org_number" in derived:
+        applicable_ids.append("bolagsverket")
+    if "ee_registry_code" in derived:
+        applicable_ids.append("ariregister")
+    if "no_orgnr" in derived:
+        applicable_ids.append("brreg")
+    if "ie_crn" in derived:
+        applicable_ids.append("cro")
+    if "fi_ytunnus" in derived:
+        applicable_ids.append("prh")
+    if "lv_regcode" in derived:
+        applicable_ids.append("ur_latvia")
+    if "lt_code" in derived:
+        applicable_ids.append("jar_lithuania")
+    if "cz_ico" in derived:
+        applicable_ids.append("ares")
+    if "pl_krs" in derived:
+        applicable_ids.append("krs_poland")
+    if "at_fn" in derived:
+        applicable_ids.append("firmenbuch")
+    if "sk_ico" in derived:
+        applicable_ids.extend(["rpo_slovakia", "rpvs_slovakia"])
+    if "be_enterprise_number" in derived:
+        applicable_ids.append("bce_belgium")
+    if ocid:
+        applicable_ids.append("opencorporates")
+    if qid:
+        applicable_ids.append("wikidata")
+    if bq_adapter and bq_adapter.info.live_available:
+        applicable_ids.append("brightquery")
+    _os_adp = REGISTRY.get("opensanctions")
+    if _os_adp and SearchKind.ENTITY in _os_adp.info.supports:
+        applicable_ids.append("opensanctions")
+    if oa_adapter is not None:
+        applicable_ids.append("openaleph")
+    if ct_adapter is not None and hasattr(ct_adapter, "fetch_by_lei"):
+        applicable_ids.append("climatetrace")
+    if bods_gleif_adapter is not None and hasattr(bods_gleif_adapter, "fetch_by_lei"):
+        applicable_ids.append("bods_gleif")
+    if jurisdiction.upper().startswith("US") and (derived.get("edgar_cik") or legal_name):
+        if se_adapter and se_adapter.info.live_available:
+            applicable_ids.append("sec_edgar")
+
+    yield {
+        "event": "sources_applicable",
+        "data": json.dumps({"source_ids": applicable_ids}),
+    }
+
+    # ── Step 3: Create tasks and fire source_started events ───────────────────
+    # Each task wraps a coroutine and returns (source_id, result_or_exception).
+    async def _run(src_id: str, coro: Any) -> tuple[str, Any]:
+        try:
+            return src_id, await coro
+        except Exception as exc:  # noqa: BLE001
+            return src_id, exc
+
+    # OpenAleph: wrap the sequential fallback chain into one task.
+    async def _openaleph_strategies() -> list[SourceHit]:
+        if oa_adapter is None:
+            return []
+        _oa: list[SourceHit] = await oa_adapter.fetch_by_lei(lei)  # type: ignore[attr-defined]
+        if not _oa and "ocid" in derived:
+            _oa = await oa_adapter.fetch_by_oc_url(derived["ocid"])  # type: ignore[attr-defined]
+        if not _oa:
+            for _jur, _reg in [
+                ("gb", derived.get("gb_coh")),
+                ("fr", derived.get("siren")),
+                ("nl", derived.get("kvk_number")),
+                ("se", derived.get("se_org_number")),
+                ("ch", derived.get("che_uid")),
+            ]:
+                if _reg:
+                    _oa = await oa_adapter.fetch_by_registration(_jur, _reg)  # type: ignore[attr-defined]
+                    if _oa:
+                        break
+        if not _oa and legal_name:
+            _oa = await oa_adapter.fetch_by_name(legal_name)  # type: ignore[attr-defined]
+        return _oa
+
+    tasks: dict[asyncio.Task[tuple[str, Any]], None] = {}
+
+    def _add_task(src_id: str, coro: Any) -> None:
+        tasks[asyncio.create_task(_run(src_id, coro))] = None
+
+    adapterIndex: dict[str, str] = {
+        s.id: s.info.name for s in REGISTRY.values()  # type: ignore[attr-defined]
+    }
+
+    if "gb_coh" in derived:
+        _add_task("companies_house", REGISTRY["companies_house"].fetch(derived["gb_coh"]))
+    if "che_uid" in derived:
+        _add_task("zefix", REGISTRY["zefix"].fetch(derived["che_uid"]))
+    if "kvk_number" in derived:
+        _add_task("kvk", REGISTRY["kvk"].fetch(derived["kvk_number"], legal_name=legal_name))
+    if "siren" in derived:
+        _add_task("inpi", REGISTRY["inpi"].fetch(derived["siren"]))
+    if "se_org_number" in derived:
+        _add_task("bolagsverket", REGISTRY["bolagsverket"].fetch(derived["se_org_number"], legal_name=legal_name))
+    if "ee_registry_code" in derived:
+        _add_task("ariregister", REGISTRY["ariregister"].fetch(derived["ee_registry_code"], legal_name=legal_name))
+    if "no_orgnr" in derived:
+        _add_task("brreg", REGISTRY["brreg"].fetch(derived["no_orgnr"], legal_name=legal_name))
+    if "ie_crn" in derived:
+        _add_task("cro", REGISTRY["cro"].fetch(derived["ie_crn"], legal_name=legal_name))
+    if "fi_ytunnus" in derived:
+        _add_task("prh", REGISTRY["prh"].fetch(derived["fi_ytunnus"], legal_name=legal_name))
+    if "lv_regcode" in derived:
+        _add_task("ur_latvia", REGISTRY["ur_latvia"].fetch(derived["lv_regcode"], legal_name=legal_name))
+    if "lt_code" in derived:
+        _add_task("jar_lithuania", REGISTRY["jar_lithuania"].fetch(derived["lt_code"], legal_name=legal_name))
+    if "cz_ico" in derived:
+        _add_task("ares", REGISTRY["ares"].fetch(derived["cz_ico"], legal_name=legal_name))
+    if "pl_krs" in derived:
+        _add_task("krs_poland", REGISTRY["krs_poland"].fetch(derived["pl_krs"], legal_name=legal_name))
+    if "at_fn" in derived:
+        _add_task("firmenbuch", REGISTRY["firmenbuch"].fetch(derived["at_fn"], legal_name=legal_name))
+    if "sk_ico" in derived:
+        _add_task("rpo_slovakia", REGISTRY["rpo_slovakia"].fetch(derived["sk_ico"]))
+        _add_task("rpvs_slovakia", REGISTRY["rpvs_slovakia"].fetch(derived["sk_ico"]))
+    if "be_enterprise_number" in derived:
+        _add_task("bce_belgium", REGISTRY["bce_belgium"].fetch(derived["be_enterprise_number"], legal_name=legal_name))
+    if ocid:
+        _add_task("opencorporates", REGISTRY["opencorporates"].fetch(ocid))
+    if qid:
+        _add_task("wikidata", wikidata_adapter.fetch(qid))
+    if bq_adapter and bq_adapter.info.live_available:
+        _add_task("brightquery", bq_adapter.fetch(lei))
+    if _os_adp and SearchKind.ENTITY in _os_adp.info.supports:
+        _add_task("opensanctions", _os_adp.search(lei, SearchKind.ENTITY))
+    if oa_adapter is not None:
+        _add_task("openaleph", _openaleph_strategies())
+    if ct_adapter is not None and hasattr(ct_adapter, "fetch_by_lei"):
+        _add_task("climatetrace", ct_adapter.fetch_by_lei(lei))
+    if bods_gleif_adapter is not None and hasattr(bods_gleif_adapter, "fetch_by_lei"):
+        _add_task("bods_gleif", bods_gleif_adapter.fetch_by_lei(lei))
+
+    # Emit source_started for all tasks at once (before any complete).
+    for src_id in applicable_ids:
+        if src_id == "sec_edgar":
+            continue  # sec_edgar is Wave 2; started separately below
+        src_name = REGISTRY[src_id].info.name if src_id in REGISTRY else src_id
+        yield {
+            "event": "source_started",
+            "data": json.dumps({"source_id": src_id, "source_name": src_name}),
+        }
+
+    # ── Step 4: Stream results as tasks complete ──────────────────────────────
+    hits: list[SourceHit] = [gleif_hit]
+    errors: dict[str, str] = {}
+    deepened_bundles: list[tuple[str, str]] = [("gleif", lei)]
+    oc_result_processed = False
+
+    pending = set(tasks.keys())
+    while pending:
+        done_set, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+        for task in done_set:
+            source_id, result = task.result()
+
+            if isinstance(result, Exception):
+                errors[source_id] = f"{type(result).__name__}: {result}"
+                yield {
+                    "event": "source_error",
+                    "data": json.dumps({"source_id": source_id, "error": errors[source_id]}),
+                }
+                continue
+
+            # ── per-source result → SourceHit ────────────────────────────────
+            hit: SourceHit | None = None
+
+            if source_id == "companies_house" and "gb_coh" in derived:
+                if result and not result.get("is_stub"):
+                    _p = result.get("profile") or {}
+                    hit = SourceHit(
+                        source_id="companies_house", hit_id=derived["gb_coh"],
+                        kind=SearchKind.ENTITY,
+                        name=_p.get("company_name", legal_name or ""),
+                        summary=f"GB-COH {derived['gb_coh']}",
+                        identifiers={"gb_coh": derived["gb_coh"], "lei": lei, **({"wikidata_qid": qid} if qid else {})},
+                        raw=_p, is_stub=False,
+                    )
+
+            elif source_id == "zefix" and "che_uid" in derived:
+                if result and not result.get("is_stub"):
+                    _c = result.get("company") or {}
+                    hit = SourceHit(
+                        source_id="zefix", hit_id=derived["che_uid"],
+                        kind=SearchKind.ENTITY,
+                        name=_c.get("name") or legal_name or "",
+                        summary=f"CHE {derived['che_uid']}",
+                        identifiers={"che_uid": derived["che_uid"], "lei": lei},
+                        raw=_c, is_stub=False,
+                    )
+
+            elif source_id == "kvk" and "kvk_number" in derived:
+                if result and not result.get("is_stub"):
+                    hit = SourceHit(
+                        source_id="kvk", hit_id=derived["kvk_number"],
+                        kind=SearchKind.ENTITY, name=legal_name or "",
+                        summary=f"KvK {derived['kvk_number']}",
+                        identifiers={"kvk_number": derived["kvk_number"], "lei": lei},
+                        raw=result.get("company") or {}, is_stub=False,
+                    )
+
+            elif source_id == "inpi" and "siren" in derived:
+                if result and not result.get("is_stub"):
+                    _ic = result.get("company") or {}
+                    _in = ((((_ic.get("identite") or {}).get("entreprise") or {}).get("denomination")) or legal_name or "")
+                    hit = SourceHit(
+                        source_id="inpi", hit_id=derived["siren"],
+                        kind=SearchKind.ENTITY, name=_in,
+                        summary=f"FR-SIREN {derived['siren']}",
+                        identifiers={"siren": derived["siren"], "lei": lei},
+                        raw=_ic, is_stub=False,
+                    )
+
+            elif source_id == "bolagsverket" and "se_org_number" in derived:
+                if result and not result.get("is_stub"):
+                    _bc = result.get("company") or {}
+                    _bn = _bc.get("namn") or _bc.get("name") or legal_name or ""
+                    _od = (f"{derived['se_org_number'][:6]}-{derived['se_org_number'][6:]}"
+                           if len(derived["se_org_number"]) == 10 else derived["se_org_number"])
+                    hit = SourceHit(
+                        source_id="bolagsverket", hit_id=derived["se_org_number"],
+                        kind=SearchKind.ENTITY, name=_bn, summary=f"SE-BLV {_od}",
+                        identifiers={"se_org_number": derived["se_org_number"], "lei": lei},
+                        raw=_bc, is_stub=False,
+                    )
+
+            elif source_id == "ariregister" and "ee_registry_code" in derived:
+                if result and not result.get("is_stub"):
+                    hit = SourceHit(
+                        source_id="ariregister", hit_id=derived["ee_registry_code"],
+                        kind=SearchKind.ENTITY,
+                        name=result.get("name") or legal_name or "",
+                        summary=f"EE-ARIREGISTER {derived['ee_registry_code']}",
+                        identifiers={"ee_registry_code": derived["ee_registry_code"], "lei": lei},
+                        raw=result, is_stub=False,
+                    )
+
+            elif source_id == "brreg" and "no_orgnr" in derived:
+                if result and not result.get("is_stub"):
+                    _be = result.get("entity") or {}
+                    hit = SourceHit(
+                        source_id="brreg", hit_id=derived["no_orgnr"],
+                        kind=SearchKind.ENTITY,
+                        name=_be.get("navn") or legal_name or "",
+                        summary=f"NO-ORGNR {derived['no_orgnr']}",
+                        identifiers={"no_orgnr": derived["no_orgnr"], "lei": lei},
+                        raw=_be, is_stub=False,
+                    )
+
+            elif source_id == "cro" and "ie_crn" in derived:
+                if result and not result.get("is_stub"):
+                    _cc = result.get("company") or {}
+                    hit = SourceHit(
+                        source_id="cro", hit_id=derived["ie_crn"],
+                        kind=SearchKind.ENTITY,
+                        name=(_cc.get("company_name") or "").strip() or legal_name or "",
+                        summary=f"IE-CRN {derived['ie_crn']}",
+                        identifiers={"ie_crn": derived["ie_crn"], "lei": lei},
+                        raw=_cc, is_stub=False,
+                    )
+
+            elif source_id == "prh" and "fi_ytunnus" in derived:
+                if result and not result.get("is_stub"):
+                    _pc = result.get("company") or {}
+                    _pn = ""
+                    for _n in (_pc.get("names") or []):
+                        if not _n.get("endDate") and _n.get("order") == 0:
+                            _pn = (_n.get("name") or "").strip()
+                            break
+                    hit = SourceHit(
+                        source_id="prh", hit_id=derived["fi_ytunnus"],
+                        kind=SearchKind.ENTITY, name=_pn or legal_name or "",
+                        summary=f"FI-YTUNNUS {derived['fi_ytunnus']}",
+                        identifiers={"fi_ytunnus": derived["fi_ytunnus"], "lei": lei},
+                        raw=_pc, is_stub=False,
+                    )
+
+            elif source_id == "ur_latvia" and "lv_regcode" in derived:
+                if result and not result.get("is_stub"):
+                    _le = result.get("entity") or {}
+                    hit = SourceHit(
+                        source_id="ur_latvia", hit_id=derived["lv_regcode"],
+                        kind=SearchKind.ENTITY,
+                        name=(_le.get("name") or "").strip() or legal_name or "",
+                        summary=f"LV-UR {derived['lv_regcode']}",
+                        identifiers={"lv_regcode": derived["lv_regcode"], "lei": lei},
+                        raw=_le, is_stub=False,
+                    )
+
+            elif source_id == "jar_lithuania" and "lt_code" in derived:
+                if result and not result.get("is_stub"):
+                    hit = SourceHit(
+                        source_id="jar_lithuania", hit_id=derived["lt_code"],
+                        kind=SearchKind.ENTITY,
+                        name=result.get("name") or legal_name or "",
+                        summary=f"LT-JAR {derived['lt_code']}",
+                        identifiers={"lt_code": derived["lt_code"], "lei": lei},
+                        raw=result, is_stub=False,
+                    )
+
+            elif source_id == "ares" and "cz_ico" in derived:
+                if result and not result.get("is_stub"):
+                    _ce = result.get("entity") or {}
+                    hit = SourceHit(
+                        source_id="ares", hit_id=derived["cz_ico"],
+                        kind=SearchKind.ENTITY,
+                        name=(_ce.get("name") or "").strip() or legal_name or "",
+                        summary=f"CZ-ARES IČO {derived['cz_ico']}",
+                        identifiers={"cz_ico": derived["cz_ico"], "lei": lei},
+                        raw=_ce, is_stub=False,
+                    )
+
+            elif source_id == "krs_poland" and "pl_krs" in derived:
+                if result and not result.get("is_stub"):
+                    hit = SourceHit(
+                        source_id="krs_poland", hit_id=derived["pl_krs"],
+                        kind=SearchKind.ENTITY,
+                        name=(result.get("name") or "").strip() or legal_name or "",
+                        summary=f"KRS {derived['pl_krs']}",
+                        identifiers={"pl_krs": derived["pl_krs"], "lei": lei},
+                        raw=result, is_stub=False,
+                    )
+
+            elif source_id == "firmenbuch" and "at_fn" in derived:
+                if result and not result.get("is_stub"):
+                    hit = SourceHit(
+                        source_id="firmenbuch", hit_id=derived["at_fn"],
+                        kind=SearchKind.ENTITY,
+                        name=(result.get("name") or "").strip() or legal_name or "",
+                        summary=f"FN {derived['at_fn']}",
+                        identifiers={"at_fn": derived["at_fn"], "lei": lei},
+                        raw=result, is_stub=False,
+                    )
+
+            elif source_id == "rpo_slovakia" and "sk_ico" in derived:
+                if result and not result.get("is_stub"):
+                    hit = SourceHit(
+                        source_id="rpo_slovakia", hit_id=derived["sk_ico"],
+                        kind=SearchKind.ENTITY,
+                        name=(result.get("name") or "").strip() or legal_name or "",
+                        summary=f"SK-IČO {derived['sk_ico']}",
+                        identifiers={"sk_ico": derived["sk_ico"], "lei": lei},
+                        raw=result, is_stub=False,
+                    )
+
+            elif source_id == "rpvs_slovakia" and "sk_ico" in derived:
+                if result and not result.get("is_stub"):
+                    hit = SourceHit(
+                        source_id="rpvs_slovakia", hit_id=derived["sk_ico"],
+                        kind=SearchKind.ENTITY,
+                        name=(result.get("name") or "").strip() or legal_name or "",
+                        summary=f"SK-IČO {derived['sk_ico']} · RPVS #{result.get('partner_id', '')}",
+                        identifiers={
+                            "sk_ico": derived["sk_ico"], "lei": lei,
+                            **({"rpvs_id": str(result["partner_id"])} if result.get("partner_id") else {}),
+                        },
+                        raw=result, is_stub=False,
+                    )
+
+            elif source_id == "bce_belgium" and "be_enterprise_number" in derived:
+                if result and not result.get("is_stub"):
+                    hit = SourceHit(
+                        source_id="bce_belgium", hit_id=derived["be_enterprise_number"],
+                        kind=SearchKind.ENTITY,
+                        name=result.get("name") or legal_name or "",
+                        summary=f"BE {result.get('dotted') or derived['be_enterprise_number']}",
+                        identifiers={"be_enterprise_number": derived["be_enterprise_number"], "lei": lei},
+                        raw=result, is_stub=False,
+                    )
+
+            elif source_id == "opencorporates" and ocid:
+                if result and not result.get("is_stub"):
+                    _oc = result.get("company") or {}
+                    hit = SourceHit(
+                        source_id="opencorporates", hit_id=ocid,
+                        kind=SearchKind.ENTITY,
+                        name=_oc.get("name") or legal_name or "",
+                        summary=f"OC {ocid} · {_oc.get('current_status', '')}",
+                        identifiers={"ocid": ocid, "lei": lei, **({"gb_coh": derived["gb_coh"]} if "gb_coh" in derived else {})},
+                        raw=_oc, is_stub=False,
+                    )
+                    # Extract edgar_cik for Wave 2.
+                    _od = _oc.get("data") or {}
+                    for _entry in (_od.get("most_recent") or []):
+                        _datum = (_entry.get("datum") or {}) if isinstance(_entry, dict) else {}
+                        if _datum.get("title") == "SEC Edgar entry" and _datum.get("description"):
+                            _desc: str = _datum["description"]
+                            if "register id:" in _desc:
+                                _raw_cik = _desc.split("register id:")[-1].strip()
+                                if _raw_cik.isdigit():
+                                    derived["edgar_cik"] = _raw_cik.lstrip("0") or "0"
+                            break
+                    if not oc_result_processed and jurisdiction.upper().startswith("US"):
+                        oc_result_processed = True
+                        # If we now have a CIK, add EDGAR task.
+                        _edgar_cik = derived.get("edgar_cik")
+                        if _edgar_cik and se_adapter and se_adapter.info.live_available:
+                            # Direct CIK hit: no I/O needed, emit immediately.
+                            _edgar_hit = SourceHit(
+                                source_id="sec_edgar", hit_id=_edgar_cik,
+                                kind=SearchKind.ENTITY, name=legal_name or "",
+                                summary=f"CIK {_edgar_cik} · US listed company",
+                                identifiers={"edgar_cik": _edgar_cik, "lei": lei},
+                                raw={"cik": _edgar_cik, "name": legal_name or ""},
+                                is_stub=False,
+                            )
+                            hits.append(_edgar_hit)
+                            deepened_bundles.append(("sec_edgar", _edgar_cik))
+                            yield {"event": "source_started", "data": json.dumps({"source_id": "sec_edgar", "source_name": se_adapter.info.name})}
+                            yield {"event": "hit", "data": _edgar_hit.model_dump_json()}
+                            yield {"event": "source_completed", "data": json.dumps({"source_id": "sec_edgar", "hit_count": 1})}
+
+            elif source_id == "wikidata" and qid:
+                if result and not result.get("is_stub"):
+                    _ws = result.get("summary") or {}
+                    hit = SourceHit(
+                        source_id="wikidata", hit_id=qid,
+                        kind=SearchKind.ENTITY,
+                        name=_ws.get("label") or qid,
+                        summary=_ws.get("description") or "",
+                        identifiers={"wikidata_qid": qid, "lei": lei, **({"gb_coh": registered_as} if "gb_coh" in derived else {})},
+                        raw=_ws, is_stub=False,
+                    )
+
+            elif source_id == "brightquery":
+                if result and not result.get("is_stub"):
+                    hit = SourceHit(
+                        source_id="brightquery", hit_id=lei,
+                        kind=SearchKind.ENTITY,
+                        name=result.get("name") or legal_name or "",
+                        summary=f"BrightQuery US entity · BQ ID {result.get('bq_id', '')}",
+                        identifiers={"lei": lei, **({"bq_id": result["bq_id"]} if result.get("bq_id") else {})},
+                        raw=result.get("company") or {}, is_stub=False,
+                    )
+
+            elif source_id == "opensanctions":
+                # result is a list[SourceHit]
+                if isinstance(result, list):
+                    for _sh in result:
+                        if not _sh.is_stub:
+                            hits.append(_sh)
+                            deepened_bundles.append(("opensanctions", _sh.hit_id))
+                            yield {"event": "hit", "data": _sh.model_dump_json()}
+                    yield {"event": "source_completed", "data": json.dumps({"source_id": "opensanctions", "hit_count": sum(1 for _sh in result if not _sh.is_stub)})}
+                    continue  # already emitted hits + completed; skip the standard block below
+
+            elif source_id == "openaleph":
+                # result is list[SourceHit]
+                if isinstance(result, list):
+                    for _sh in result:
+                        if not _sh.is_stub:
+                            hits.append(_sh)
+                            deepened_bundles.append(("openaleph", _sh.hit_id))
+                            yield {"event": "hit", "data": _sh.model_dump_json()}
+                    yield {"event": "source_completed", "data": json.dumps({"source_id": "openaleph", "hit_count": sum(1 for _sh in result if not _sh.is_stub)})}
+                    continue
+
+            elif source_id == "climatetrace":
+                if result and result.get("entity_id"):
+                    _eid = result.get("entity_id") or lei
+                    _em = result.get("emissions") or {}
+                    _tco2 = _em.get("total_co2e_tonnes")
+                    _sp = [f"GEM entity {_eid}"]
+                    if _tco2 is not None and _tco2 > 0:
+                        if _tco2 >= 1_000_000:
+                            _sp.append(f"{_tco2 / 1_000_000:.1f} Mt CO₂e (2024)")
+                        else:
+                            _sp.append(f"{_tco2:,.0f} t CO₂e (2024)")
+                    hit = SourceHit(
+                        source_id="climatetrace", hit_id=_eid,
+                        kind=SearchKind.ENTITY,
+                        name=result.get("entity_name") or legal_name or _eid,
+                        summary=" · ".join(_sp),
+                        identifiers={"gem_entity_id": _eid, "lei": lei},
+                        raw=result, is_stub=bool(result.get("is_stub")),
+                    )
+                    if hit:
+                        deepened_bundles.append(("climatetrace", _eid))
+
+            elif source_id == "bods_gleif":
+                if result and not result.get("is_stub"):
+                    _sid = result.get("hit_id") or lei
+                    _bgn = legal_name or lei
+                    for _stmt in result.get("bods_statements", []):
+                        if _stmt.get("statementType") == "entityStatement":
+                            _bgn = _stmt.get("recordDetails", {}).get("name") or _bgn
+                            break
+                    hit = SourceHit(
+                        source_id="bods_gleif", hit_id=_sid,
+                        kind=SearchKind.ENTITY, name=_bgn,
+                        summary="Open Ownership BODS v0.4 (bulk) · LEI match",
+                        identifiers={"lei": lei, "bods_gleif_statementid": _sid},
+                        raw=result, is_stub=False,
+                    )
+                    if hit:
+                        deepened_bundles.append(("bods_gleif", _sid))
+
+            # Standard hit emit + source_completed.
+            if hit is not None:
+                hits.append(hit)
+                deepened_bundles.append((source_id, hit.hit_id))
+                yield {"event": "hit", "data": hit.model_dump_json()}
+                yield {"event": "source_completed", "data": json.dumps({"source_id": source_id, "hit_count": 1})}
+            else:
+                yield {"event": "source_completed", "data": json.dumps({"source_id": source_id, "hit_count": 0})}
+
+    # Wave 2 fallback: EDGAR name-search if OC never fired / no CIK derived.
+    _edgar_cik = derived.get("edgar_cik")
+    if (
+        jurisdiction.upper().startswith("US")
+        and not _edgar_cik
+        and legal_name
+        and se_adapter
+        and se_adapter.info.live_available
+    ):
+        try:
+            se_hits = await se_adapter.search(legal_name, SearchKind.ENTITY)
+            if se_hits:
+                se_hit = se_hits[0]
+                _edgar_hit2 = SourceHit(
+                    source_id="sec_edgar", hit_id=se_hit.hit_id,
+                    kind=SearchKind.ENTITY, name=se_hit.name, summary=se_hit.summary,
+                    identifiers={"edgar_cik": se_hit.hit_id, "lei": lei},
+                    raw=se_hit.raw, is_stub=False,
+                )
+                hits.append(_edgar_hit2)
+                deepened_bundles.append(("sec_edgar", se_hit.hit_id))
+                yield {"event": "source_started", "data": json.dumps({"source_id": "sec_edgar", "source_name": se_adapter.info.name})}
+                yield {"event": "hit", "data": _edgar_hit2.model_dump_json()}
+                yield {"event": "source_completed", "data": json.dumps({"source_id": "sec_edgar", "hit_count": 1})}
+        except Exception as exc:  # noqa: BLE001
+            errors["sec_edgar"] = f"{type(exc).__name__}: {exc}"
+            yield {"event": "source_error", "data": json.dumps({"source_id": "sec_edgar", "error": errors["sec_edgar"]})}
+
+    # ── Step 5: Reconcile + deepen + risk ─────────────────────────────────────
+    links = [link.to_dict() for link in reconcile(hits)]
+    search_signals = [s.to_dict() for s in assess_hits(hits)]
+
+    yield {
+        "event": "cross_source_links",
+        "data": json.dumps({"links": links}),
+    }
+
+    bods_all: list[dict[str, Any]] = []
+    bods_issues: list[str] = []
+    deepen_signals: list[dict[str, Any]] = []
+    license_notices: list[dict[str, str]] = []
+
+    _deepen_pairs = deepened_bundles[:deepen_top]
+    _deepen_raw = await asyncio.gather(
+        *[_safe_deepen(_dsrc, _dhit) for _dsrc, _dhit in _deepen_pairs],
+        return_exceptions=True,
+    )
+    for (_dsrc, _dhit), _deep in zip(_deepen_pairs, _deepen_raw):
+        if isinstance(_deep, Exception):
+            errors.setdefault(_dsrc, f"{type(_deep).__name__}: {_deep}")
+            continue
+        if _deep is None:
+            continue
+        bods_all.extend(_deep["bods"])
+        bods_issues.extend(_deep["bods_issues"])
+        deepen_signals.extend(_deep["risk_signals"])
+        if _deep.get("license_notice"):
+            license_notices.append({"source_id": _dsrc, "hit_id": _dhit, "notice": _deep["license_notice"]})
+
+    _cross_raw, _icij_raw = await asyncio.gather(
+        assess_cross_source_names(bods_all),
+        assess_icij_names(bods_all),
+    )
+    cross_signals = [s.to_dict() for s in _cross_raw]
+    icij_signals = [s.to_dict() for s in _icij_raw]
+
+    structural_codes = {
+        "TRUST_OR_ARRANGEMENT", "NON_EU_JURISDICTION", "NOMINEE",
+        "COMPLEX_OWNERSHIP_LAYERS", "COMPLEX_CORPORATE_STRUCTURE", "POSSIBLE_OBFUSCATION",
+    }
+    _statement_scoped = {"RELATED_PEP", "RELATED_SANCTIONED"}
+    merged: dict[tuple, dict[str, Any]] = {}
+    for sig in search_signals + deepen_signals + cross_signals + icij_signals:
+        if sig["code"] in structural_codes:
+            key: tuple = (sig["code"],)
+        elif sig["code"] in _statement_scoped or (sig["code"] == "OFFSHORE_LEAKS" and sig.get("source_id") == "icij"):
+            key = (sig["code"], sig["source_id"], sig["hit_id"], sig.get("evidence", {}).get("subject_statement_id", ""))
+        else:
+            key = (sig["code"], sig["source_id"], sig["hit_id"])
+        merged[key] = sig
+
+    yield {
+        "event": "risk_signals",
+        "data": json.dumps({"signals": list(merged.values())}),
+    }
+
+    yield {
+        "event": "done",
+        "data": json.dumps(
+            {
+                "lei": lei,
+                "bods_issues": bods_issues,
+                "license_notices": license_notices,
+            }
+        ),
+    }
+
+
+@app.get("/lookup-stream")
+async def lookup_stream(
+    lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),
+    deepen_top: int = Query(5, ge=0, le=10),
+) -> EventSourceResponse:
+    """LEI-anchored lookup streamed as SSE.
+
+    Results arrive progressively as each source completes.  See the
+    ``_lookup_stream_events`` docstring for the full event sequence.
+    """
+    return EventSourceResponse(_lookup_stream_events(lei, deepen_top=deepen_top))
+
+
+# ----------------------------------------------------------------------
 # /export — downloadable BODS bundle
 # ----------------------------------------------------------------------
 

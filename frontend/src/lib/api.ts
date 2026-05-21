@@ -2,6 +2,7 @@
  * Thin typed client for the OpenCheck backend.
  *
  * Phase 1 surface: /health, /sources, /search, /stream (SSE), /deepen.
+ * Phase 2 surface: /lookup-stream (SSE, LEI-anchored progressive lookup).
  */
 
 export type SearchKind = "entity" | "person";
@@ -264,6 +265,127 @@ export function streamSearch(
   });
   es.onerror = (err) => {
     handlers.onError?.(err);
+    es.close();
+  };
+
+  return () => es.close();
+}
+
+// ---------------------------------------------------------------------
+// SSE — /lookup-stream
+// ---------------------------------------------------------------------
+
+/** Emitted once GLEIF has resolved the LEI and derived cross-register IDs. */
+export interface LookupGleifDoneEvent {
+  lei: string;
+  legal_name: string | null;
+  jurisdiction: string | null;
+  derived_identifiers: Record<string, string>;
+}
+
+/** Emitted right after gleif_done; lists every source_id that will be queried.
+ *  Use this to render skeleton cards before any hits arrive. */
+export interface LookupSourcesApplicableEvent {
+  source_ids: string[];
+}
+
+/** Emitted when all sources have completed and post-processing is done. */
+export interface LookupStreamDoneEvent {
+  lei: string;
+  bods_issues: string[];
+  license_notices: { source_id: string; hit_id: string; notice: string }[];
+}
+
+/** Fatal error before streaming could start (e.g. invalid / unknown LEI). */
+export interface LookupStreamErrorEvent {
+  detail: string;
+}
+
+export type LookupStreamHandlers = {
+  onGleifDone?: (e: LookupGleifDoneEvent) => void;
+  onSourcesApplicable?: (e: LookupSourcesApplicableEvent) => void;
+  onSourceStarted?: (e: SourceStartedEvent) => void;
+  onHit?: (e: SourceHit) => void;
+  onSourceCompleted?: (e: SourceCompletedEvent) => void;
+  onSourceError?: (e: SourceErrorEvent) => void;
+  onCrossSourceLinks?: (e: CrossSourceLinksEvent) => void;
+  onRiskSignals?: (e: RiskSignalsEvent) => void;
+  onDone?: (e: LookupStreamDoneEvent) => void;
+  /** Called on both backend "error" events and EventSource network errors. */
+  onError?: (detail: string) => void;
+};
+
+/**
+ * Subscribe to the /lookup-stream SSE endpoint.
+ * Returns a cleanup function that closes the connection.
+ *
+ * Event sequence:
+ *   source_started (gleif) → gleif_done → hit (gleif) → source_completed (gleif)
+ *   → sources_applicable → source_started* → {hit, source_completed}* (unordered)
+ *   → cross_source_links → risk_signals → done
+ */
+export function streamLookup(
+  lei: string,
+  handlers: LookupStreamHandlers,
+  deepen_top = 5,
+): () => void {
+  const params = new URLSearchParams({ lei, deepen_top: String(deepen_top) });
+  const es = new EventSource(`${BASE_URL}/lookup-stream?${params.toString()}`);
+
+  const safeParse = <T>(raw: string): T | null => {
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return null;
+    }
+  };
+
+  es.addEventListener("error", (ev) => {
+    // Backend emitted an "error" event (e.g. invalid LEI, GLEIF not found).
+    const data = safeParse<LookupStreamErrorEvent>((ev as MessageEvent).data);
+    handlers.onError?.(data?.detail ?? "Unknown error");
+    es.close();
+  });
+  es.addEventListener("gleif_done", (ev) => {
+    const data = safeParse<LookupGleifDoneEvent>((ev as MessageEvent).data);
+    if (data) handlers.onGleifDone?.(data);
+  });
+  es.addEventListener("sources_applicable", (ev) => {
+    const data = safeParse<LookupSourcesApplicableEvent>((ev as MessageEvent).data);
+    if (data) handlers.onSourcesApplicable?.(data);
+  });
+  es.addEventListener("source_started", (ev) => {
+    const data = safeParse<SourceStartedEvent>((ev as MessageEvent).data);
+    if (data) handlers.onSourceStarted?.(data);
+  });
+  es.addEventListener("hit", (ev) => {
+    const data = safeParse<SourceHit>((ev as MessageEvent).data);
+    if (data) handlers.onHit?.(data);
+  });
+  es.addEventListener("source_completed", (ev) => {
+    const data = safeParse<SourceCompletedEvent>((ev as MessageEvent).data);
+    if (data) handlers.onSourceCompleted?.(data);
+  });
+  es.addEventListener("source_error", (ev) => {
+    const data = safeParse<SourceErrorEvent>((ev as MessageEvent).data);
+    if (data) handlers.onSourceError?.(data);
+  });
+  es.addEventListener("cross_source_links", (ev) => {
+    const data = safeParse<CrossSourceLinksEvent>((ev as MessageEvent).data);
+    if (data) handlers.onCrossSourceLinks?.(data);
+  });
+  es.addEventListener("risk_signals", (ev) => {
+    const data = safeParse<RiskSignalsEvent>((ev as MessageEvent).data);
+    if (data) handlers.onRiskSignals?.(data);
+  });
+  es.addEventListener("done", (ev) => {
+    const data = safeParse<LookupStreamDoneEvent>((ev as MessageEvent).data);
+    if (data) handlers.onDone?.(data);
+    es.close();
+  });
+  es.onerror = () => {
+    // Network-level error (connection dropped, CORS failure, etc.)
+    handlers.onError?.("Connection error");
     es.close();
   };
 

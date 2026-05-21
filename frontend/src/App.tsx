@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import BODSGraph from "./components/BODSGraph";
 import SearchLoadingGrid from "./components/SearchLoadingGrid";
@@ -7,10 +7,9 @@ import {
   exportUrl,
   fetchSources,
   isValidLei,
-  lookup,
+  streamLookup,
   type CrossSourceLink,
   type DeepenResponse,
-  type LookupResponse,
   type RiskSignal,
   type SourceHit,
 } from "./lib/api";
@@ -229,9 +228,26 @@ function OpenCheckIcon({ className }: { className?: string }) {
 
 export default function App() {
   const [leiInput, setLeiInput] = useState("");
-  const [result, setResult] = useState<LookupResponse | null>(null);
   const [looking, setLooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // --- Streaming lookup state ---
+  // streamingLei is set once GLEIF resolves (replaces the old `result !== null` guard).
+  const [streamingLei, setStreamingLei] = useState<string | null>(null);
+  const [legalName, setLegalName] = useState<string | null>(null);
+  const [hits, setHits] = useState<SourceHit[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [crossSourceLinks, setCrossSourceLinks] = useState<CrossSourceLink[]>([]);
+  const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
+  const [applicableSources, setApplicableSources] = useState<string[]>([]);
+  const [completedSources, setCompletedSources] = useState<Set<string>>(new Set());
+  const [streaming, setStreaming] = useState(false);
+
+  // Cleanup ref — holds the SSE close function for the current in-flight stream.
+  const cleanupRef = useRef<(() => void) | null>(null);
+
+  // Close any open stream when the component unmounts.
+  useEffect(() => () => { cleanupRef.current?.(); }, []);
   // ``main`` shows the LEI form + lookup result; ``sources`` shows the
   // source inventory page. Kept as state rather than a router so we
   // don't pull in react-router for two views.
@@ -249,7 +265,7 @@ export default function App() {
     queryFn: () => fetchSources(),
   });
 
-  async function lookupLei(rawLei: string) {
+  function lookupLei(rawLei: string) {
     const lei = rawLei.trim().toUpperCase();
     setLeiInput(lei);
     setView("main");
@@ -260,17 +276,62 @@ export default function App() {
       );
       return;
     }
+
+    // Cancel any in-flight stream from a previous lookup.
+    cleanupRef.current?.();
+    cleanupRef.current = null;
+
+    // Reset all streaming state.
     setLooking(true);
     setError(null);
-    setResult(null);
-    try {
-      const data = await lookup(lei);
-      setResult(data);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLooking(false);
-    }
+    setStreamingLei(null);
+    setLegalName(null);
+    setHits([]);
+    setErrors({});
+    setCrossSourceLinks([]);
+    setRiskSignals([]);
+    setApplicableSources([]);
+    setCompletedSources(new Set());
+    setStreaming(false);
+
+    const cleanup = streamLookup(lei, {
+      onGleifDone: (e) => {
+        setStreamingLei(e.lei);
+        setLegalName(e.legal_name);
+        setLooking(false);
+        setStreaming(true);
+      },
+      onSourcesApplicable: (e) => {
+        setApplicableSources(e.source_ids);
+      },
+      onHit: (e) => {
+        setHits((prev) => [...prev, e]);
+      },
+      onSourceCompleted: (e) => {
+        setCompletedSources((prev) => new Set([...prev, e.source_id]));
+      },
+      onSourceError: (e) => {
+        setErrors((prev) => ({ ...prev, [e.source_id]: e.error }));
+        setCompletedSources((prev) => new Set([...prev, e.source_id]));
+      },
+      onCrossSourceLinks: (e) => {
+        setCrossSourceLinks(e.links);
+      },
+      onRiskSignals: (e) => {
+        setRiskSignals(e.signals);
+      },
+      onDone: (_e) => {
+        setStreaming(false);
+        cleanupRef.current = null;
+      },
+      onError: (detail) => {
+        setError(detail);
+        setLooking(false);
+        setStreaming(false);
+        cleanupRef.current = null;
+      },
+    });
+    cleanupRef.current = cleanup;
   }
 
   async function runLookup(e: React.FormEvent) {
@@ -334,17 +395,17 @@ export default function App() {
     );
   }, [sourcesQuery.data]);
 
-  // Group hits by source_id for the per-source bucket cards. With the
-  // LEI flow the result arrives in one shot — no streaming state.
+  // Group hits by source_id for the per-source bucket cards.
+  // Built progressively from streaming hits — updates on every onHit / onSourceError.
   const bucketList = useMemo<SourceBucket[]>(() => {
-    if (!result) return [];
+    if (!streamingLei) return [];
     const byId = new Map<string, SourceBucket>();
     const adapterIndex: Record<string, string> = sourcesQuery.data
       ? Object.fromEntries(
           sourcesQuery.data.sources.map((s) => [s.id, s.name])
         )
       : {};
-    for (const hit of result.hits) {
+    for (const hit of hits) {
       const existing = byId.get(hit.source_id);
       if (existing) {
         existing.hits.push(hit);
@@ -353,12 +414,12 @@ export default function App() {
           sourceId: hit.source_id,
           sourceName: adapterIndex[hit.source_id] ?? hit.source_id,
           hits: [hit],
-          error: result.errors[hit.source_id],
+          error: errors[hit.source_id],
         });
       }
     }
     // Surface adapters that errored even when they returned no hits.
-    for (const [source_id, errMsg] of Object.entries(result.errors)) {
+    for (const [source_id, errMsg] of Object.entries(errors)) {
       if (!byId.has(source_id)) {
         byId.set(source_id, {
           sourceId: source_id,
@@ -369,7 +430,7 @@ export default function App() {
       }
     }
     return Array.from(byId.values());
-  }, [result, sourcesQuery.data]);
+  }, [streamingLei, hits, errors, sourcesQuery.data]);
 
   // Partition into CDD and ESG buckets.
   const cddBuckets = useMemo(
@@ -387,36 +448,45 @@ export default function App() {
   // pull their own chips without re-scanning the whole list.
   const riskByHit = useMemo(() => {
     const out: Record<string, RiskSignal[]> = {};
-    for (const sig of result?.risk_signals ?? []) {
+    for (const sig of riskSignals) {
       const k = `${sig.source_id}:${sig.hit_id}`;
       (out[k] = out[k] ?? []).push(sig);
     }
     return out;
-  }, [result]);
+  }, [riskSignals]);
 
   // Index risk signals by source_id so each source card shows only the
   // signals attributed to that source — not all entity-level signals.
   const riskBySource = useMemo(() => {
     const out: Record<string, RiskSignal[]> = {};
-    for (const sig of result?.risk_signals ?? []) {
+    for (const sig of riskSignals) {
       (out[sig.source_id] = out[sig.source_id] ?? []).push(sig);
     }
     return out;
-  }, [result]);
+  }, [riskSignals]);
 
   // Distinct codes — used for the top-level summary chip strip.
   const aggregatedCodes = useMemo(() => {
     const seen = new Map<string, RiskSignal>();
-    for (const sig of result?.risk_signals ?? []) {
+    for (const sig of riskSignals) {
       const existing = seen.get(sig.code);
       if (!existing || rank(sig.confidence) > rank(existing.confidence)) {
         seen.set(sig.code, sig);
       }
     }
     return Array.from(seen.values());
-  }, [result]);
+  }, [riskSignals]);
 
-  const crossSourceLinks: CrossSourceLink[] = result?.cross_source_links ?? [];
+  // Sources that are announced (sources_applicable) but not yet completed —
+  // used to render skeleton placeholder cards while they are in flight.
+  const pendingCddSources = useMemo(
+    () => applicableSources.filter((id) => !completedSources.has(id) && !esgSourceIds.has(id)),
+    [applicableSources, completedSources, esgSourceIds],
+  );
+  const pendingEsgSources = useMemo(
+    () => applicableSources.filter((id) => !completedSources.has(id) && esgSourceIds.has(id)),
+    [applicableSources, completedSources, esgSourceIds],
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-oo-bg">
@@ -441,9 +511,20 @@ export default function App() {
                   type="button"
                   onClick={() => {
                     // Click the title to return to a fresh homepage state.
+                    cleanupRef.current?.();
+                    cleanupRef.current = null;
                     setView("main");
-                    setResult(null);
+                    setStreamingLei(null);
+                    setLegalName(null);
+                    setHits([]);
+                    setErrors({});
+                    setCrossSourceLinks([]);
+                    setRiskSignals([]);
+                    setApplicableSources([]);
+                    setCompletedSources(new Set());
+                    setStreaming(false);
                     setError(null);
+                    setLooking(false);
                     setLeiInput("");
                     setNameQuery("");
                     setNameResults(null);
@@ -664,14 +745,14 @@ export default function App() {
           <SearchLoadingGrid sources={sourcesQuery.data?.sources ?? []} />
         )}
 
-        {!result && !looking && !error && !nameResults && !nameSearching && (
+        {!streamingLei && !looking && !streaming && !error && !nameResults && !nameSearching && (
           <>
-            <ExampleLeiPicker onPick={lookupLei} disabled={looking} />
+            <ExampleLeiPicker onPick={lookupLei} disabled={looking || streaming} />
             <HowItWorks />
           </>
         )}
 
-        {result && <SubjectCard result={result} />}
+        {streamingLei && <SubjectCard lei={streamingLei} legalName={legalName} />}
 
         {aggregatedCodes.length > 0 && (
           <section className="mb-8">
@@ -699,11 +780,16 @@ export default function App() {
           </section>
         )}
 
-        {cddBuckets.length > 0 && (
+        {(cddBuckets.length > 0 || pendingCddSources.length > 0) && (
           <section className="mb-8">
             <SectionLabel>
               {totalHits} hit{totalHits === 1 ? "" : "s"} across{" "}
               {cddBuckets.length} source{cddBuckets.length === 1 ? "" : "s"}
+              {pendingCddSources.length > 0 && (
+                <span className="text-oo-blue/50 font-normal ml-1.5">
+                  · {pendingCddSources.length} pending…
+                </span>
+              )}
             </SectionLabel>
             <div className="space-y-4">
               {cddBuckets.map((b) => (
@@ -714,18 +800,21 @@ export default function App() {
                   sourceSignals={riskBySource[b.sourceId] ?? []}
                 />
               ))}
+              {pendingCddSources.map((id) => (
+                <SkeletonSourceCard key={id} />
+              ))}
             </div>
           </section>
         )}
 
-        {esgBuckets.length > 0 && (
-          <EsgPanel buckets={esgBuckets} />
+        {(esgBuckets.length > 0 || pendingEsgSources.length > 0) && (
+          <EsgPanel buckets={esgBuckets} pendingCount={pendingEsgSources.length} />
         )}
 
-        {result && totalHits > 0 && (
+        {streamingLei && !streaming && totalHits > 0 && (
           <ExportPanel
-            lei={result.lei}
-            legalName={result.legal_name}
+            lei={streamingLei}
+            legalName={legalName}
             sourceLicenses={
               sourcesQuery.data
                 ? Object.fromEntries(
@@ -1023,6 +1112,26 @@ function SourceBucketCard({
 }
 
 // ---------------------------------------------------------------------
+// Skeleton source card — pulsing placeholder while a source is in flight
+// ---------------------------------------------------------------------
+
+function SkeletonSourceCard() {
+  return (
+    <article className="bg-white border border-oo-rule rounded-oo animate-pulse" aria-hidden>
+      <header className="px-5 py-3 border-b border-oo-rule flex items-start justify-between gap-3">
+        <div className="h-4 bg-oo-rule rounded w-44" />
+        <div className="h-3 bg-oo-rule rounded w-12 mt-0.5" />
+      </header>
+      <div className="px-5 py-4 space-y-2.5">
+        <div className="h-3 bg-oo-rule rounded w-3/4" />
+        <div className="h-3 bg-oo-rule rounded w-1/2" />
+        <div className="h-3 bg-oo-rule rounded w-2/3" />
+      </div>
+    </article>
+  );
+}
+
+// ---------------------------------------------------------------------
 // Subject card — top-of-page summary of the LEI lookup
 // ---------------------------------------------------------------------
 
@@ -1234,14 +1343,14 @@ function HowItWorks() {
   );
 }
 
-function SubjectCard({ result }: { result: LookupResponse }) {
+function SubjectCard({ lei, legalName }: { lei: string; legalName: string | null }) {
   return (
     <section className="mb-8 bg-white border border-oo-rule rounded-oo p-7 transition-shadow hover:shadow-oo-card">
       <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-blue">
         Subject
       </p>
       <h2 className="font-head font-bold text-oo-ink mt-2 leading-tight text-[clamp(1.25rem,2.5vw,1.6rem)]">
-        {result.legal_name || `LEI ${result.lei}`}
+        {legalName || `LEI ${lei}`}
       </h2>
     </section>
   );
@@ -1827,7 +1936,13 @@ function ClimateTRACECard({ hit }: { hit: SourceHit }) {
  * leaf icon, "Environmental, Social, and Governance (ESG) Data" heading) signals clearly
  * that this is climate / ESG context, not a compliance check.
  */
-function EsgPanel({ buckets }: { buckets: SourceBucket[] }) {
+function EsgPanel({
+  buckets,
+  pendingCount = 0,
+}: {
+  buckets: SourceBucket[];
+  pendingCount?: number;
+}) {
   const [collapsed, setCollapsed] = useState(false);
   const hitCount = buckets.reduce((n, b) => n + b.hits.length, 0);
 
@@ -1911,6 +2026,11 @@ function EsgPanel({ buckets }: { buckets: SourceBucket[] }) {
                 />
               ))
             )}
+
+            {/* Skeleton placeholders for in-flight ESG sources */}
+            {Array.from({ length: pendingCount }).map((_, i) => (
+              <SkeletonSourceCard key={`esg-pending-${i}`} />
+            ))}
 
             {/* Error state */}
             {buckets
