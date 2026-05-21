@@ -56,7 +56,6 @@ def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
         "krs_poland",
         "openaleph",
         "opencorporates",
-        "brightquery",
         "opensanctions",
         "everypolitician",
         "sec_edgar",

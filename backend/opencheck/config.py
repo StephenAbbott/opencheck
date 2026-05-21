@@ -91,14 +91,6 @@ class Settings(BaseSettings):
         default=None, alias="OPENCORPORATES_RELATIONSHIPS_FILE"
     )
 
-    # --- BrightQuery ---
-    # Path to the SQLite database produced by scripts/extract_brightquery.py.
-    # When set, the BrightQuery adapter provides LEI-keyed lookup of US
-    # entities and their associated executives from OpenData.org bulk data.
-    brightquery_db_file: str | None = Field(
-        default=None, alias="BRIGHTQUERY_DB_FILE"
-    )
-
     # --- Zefix (Swiss Federal Commercial Registry) ---
     # HTTP Basic credentials — request via zefix@bj.admin.ch.
     zefix_username: str | None = Field(default=None, alias="ZEFIX_USERNAME")

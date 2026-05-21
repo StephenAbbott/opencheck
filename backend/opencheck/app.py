@@ -41,7 +41,6 @@ from .bods import (
     map_bce_belgium,
     map_corporations_canada,
     map_bolagsverket,
-    map_brightquery,
     map_brreg,
     map_climatetrace,
     map_companies_house,
@@ -407,7 +406,6 @@ _MAPPERS = {
     "gleif": map_gleif,
     "inpi": map_inpi,
     "opencorporates": map_opencorporates,
-    "brightquery": map_brightquery,
     "opensanctions": map_opensanctions,
     "openaleph": map_openaleph,
     "sec_edgar": map_sec_edgar,
@@ -846,7 +844,6 @@ async def lookup(
     # so it runs in a short Wave 2 after OC has been processed below.
     # -------------------------------------------------------------------------
 
-    bq_adapter = REGISTRY.get("brightquery")
     oa_adapter = REGISTRY.get("openaleph")
     ct_adapter = REGISTRY.get("climatetrace")
     bods_gleif_adapter = REGISTRY.get("bods_gleif")
@@ -915,8 +912,6 @@ async def lookup(
         _w1.append(("opencorporates", REGISTRY["opencorporates"].fetch(ocid)))
     if qid:
         _w1.append(("wikidata", wikidata_adapter.fetch(qid)))
-    if bq_adapter and bq_adapter.info.live_available:
-        _w1.append(("brightquery", bq_adapter.fetch(lei)))
     for _src_id in ("opensanctions",):
         _adp = REGISTRY.get(_src_id)
         if _adp and SearchKind.ENTITY in _adp.info.supports:
@@ -1349,24 +1344,6 @@ async def lookup(
                 is_stub=False,
             ))
             deepened_bundles.append(("wikidata", qid))
-
-    # BrightQuery
-    if bq_adapter and bq_adapter.info.live_available:
-        _b = _r.get("brightquery")
-        if isinstance(_b, Exception):
-            errors["brightquery"] = _fmt_source_error(_b)
-        elif _b and not _b.get("is_stub"):
-            hits.append(SourceHit(
-                source_id="brightquery",
-                hit_id=lei,
-                kind=SearchKind.ENTITY,
-                name=_b.get("name") or legal_name or "",
-                summary=f"BrightQuery US entity · BQ ID {_b.get('bq_id', '')}",
-                identifiers={"lei": lei, **({"bq_id": _b["bq_id"]} if _b.get("bq_id") else {})},
-                raw=_b.get("company") or {},
-                is_stub=False,
-            ))
-            deepened_bundles.append(("brightquery", lei))
 
     # OpenSanctions
     for _src_id in ("opensanctions",):
@@ -1931,7 +1908,6 @@ async def _lookup_stream_events(
     yield {"event": "source_completed", "data": json.dumps({"source_id": "gleif", "hit_count": 1})}
 
     # ── Step 2: Announce which sources will be queried ────────────────────────
-    bq_adapter = REGISTRY.get("brightquery")
     oa_adapter = REGISTRY.get("openaleph")
     ct_adapter = REGISTRY.get("climatetrace")
     bods_gleif_adapter = REGISTRY.get("bods_gleif")
@@ -1976,8 +1952,6 @@ async def _lookup_stream_events(
         applicable_ids.append("opencorporates")
     if qid:
         applicable_ids.append("wikidata")
-    if bq_adapter and bq_adapter.info.live_available:
-        applicable_ids.append("brightquery")
     _os_adp = REGISTRY.get("opensanctions")
     if _os_adp and SearchKind.ENTITY in _os_adp.info.supports:
         applicable_ids.append("opensanctions")
@@ -2075,8 +2049,6 @@ async def _lookup_stream_events(
         _add_task("opencorporates", REGISTRY["opencorporates"].fetch(ocid))
     if qid:
         _add_task("wikidata", wikidata_adapter.fetch(qid))
-    if bq_adapter and bq_adapter.info.live_available:
-        _add_task("brightquery", bq_adapter.fetch(lei))
     if _os_adp and SearchKind.ENTITY in _os_adp.info.supports:
         _add_task("opensanctions", _os_adp.search(lei, SearchKind.ENTITY))
     if oa_adapter is not None:
@@ -2397,17 +2369,6 @@ async def _lookup_stream_events(
                         summary=_ws.get("description") or "",
                         identifiers={"wikidata_qid": qid, "lei": lei, **({"gb_coh": registered_as} if "gb_coh" in derived else {})},
                         raw=_ws, is_stub=False,
-                    )
-
-            elif source_id == "brightquery":
-                if result and not result.get("is_stub"):
-                    hit = SourceHit(
-                        source_id="brightquery", hit_id=lei,
-                        kind=SearchKind.ENTITY,
-                        name=result.get("name") or legal_name or "",
-                        summary=f"BrightQuery US entity · BQ ID {result.get('bq_id', '')}",
-                        identifiers={"lei": lei, **({"bq_id": result["bq_id"]} if result.get("bq_id") else {})},
-                        raw=result.get("company") or {}, is_stub=False,
                     )
 
             elif source_id == "opensanctions":
