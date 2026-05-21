@@ -563,7 +563,7 @@ export default function App() {
                   ← Back
                 </button>
               ) : (
-                <>
+                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-y-1 gap-x-4">
                   <button
                     type="button"
                     onClick={() => setView("sources")}
@@ -580,7 +580,7 @@ export default function App() {
                   >
                     Behind the scenes →
                   </button>
-                </>
+                </div>
               )}
             </nav>
           </div>
@@ -1009,7 +1009,7 @@ export default function App() {
             rel="noreferrer"
             className="font-mono text-oo-blue hover:text-oo-burst"
           >
-            OpenCheck
+            GitHub
           </a>{" "}
           ·{" "}
           <a
