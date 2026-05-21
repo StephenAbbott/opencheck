@@ -251,7 +251,7 @@ export default function App() {
   // ``main`` shows the LEI form + lookup result; ``sources`` shows the
   // source inventory page. Kept as state rather than a router so we
   // don't pull in react-router for two views.
-  const [view, setView] = useState<"main" | "sources">("main");
+  const [view, setView] = useState<"main" | "sources" | "behind">("main");
 
   // Two-mode search: "name" = GLEIF company-name search; "lei" = paste LEI.
   const [searchMode, setSearchMode] = useState<"name" | "lei">("name");
@@ -490,6 +490,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-oo-bg">
+      {/* Skip-to-content link — visually hidden until focused (WCAG 2.4.1) */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-oo-blue focus:text-white focus:rounded focus:font-medium"
+      >
+        Skip to main content
+      </a>
       {/*
        * Header — full-width dark banner, BO design system.
        * Decorative blue radial gradient sits top-right (rgba 61,48,212,0.28)
@@ -498,6 +505,7 @@ export default function App() {
        */}
       <header
         className="relative overflow-hidden bg-oo-navy text-white px-6 sm:px-10 lg:px-16 py-10 sm:py-12"
+        role="banner"
         style={{
           backgroundImage:
             "radial-gradient(circle 500px at calc(100% + 80px) -80px, rgba(61, 48, 212, 0.28), transparent)",
@@ -544,14 +552,36 @@ export default function App() {
                 </span>
               </div>
             </div>
-            <nav>
-              <button
-                type="button"
-                onClick={() => setView(view === "main" ? "sources" : "main")}
-                className="text-[12px] font-mono text-oo-light hover:text-white underline underline-offset-4 whitespace-nowrap"
-              >
-                {view === "main" ? "Sources →" : "← Back"}
-              </button>
+            <nav aria-label="Site navigation" className="flex items-center gap-5">
+              {view !== "main" ? (
+                <button
+                  type="button"
+                  onClick={() => setView("main")}
+                  aria-label="Back to main page"
+                  className="text-[12px] font-mono text-oo-light hover:text-white underline underline-offset-4 whitespace-nowrap"
+                >
+                  ← Back
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setView("sources")}
+                    aria-label="View data sources"
+                    className="text-[12px] font-mono text-oo-light hover:text-white underline underline-offset-4 whitespace-nowrap"
+                  >
+                    Sources →
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setView("behind")}
+                    aria-label="Behind the scenes — how OpenCheck works"
+                    className="text-[12px] font-mono text-oo-light hover:text-white underline underline-offset-4 whitespace-nowrap"
+                  >
+                    Behind the scenes →
+                  </button>
+                </>
+              )}
             </nav>
           </div>
           <p className="mt-3 max-w-2xl text-[15px] font-light leading-[1.65] text-white/70">
@@ -563,15 +593,23 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex-1 px-6 sm:px-10 lg:px-16 py-12 max-w-oo-page mx-auto w-full">
+      <main
+        id="main-content"
+        role="main"
+        className="flex-1 px-6 sm:px-10 lg:px-16 py-12 max-w-oo-page mx-auto w-full"
+      >
         {view === "main" && (
         <>
         {/* ── Search panel — two-tab design ── */}
         <div className="mb-8 bg-white border border-oo-rule rounded-oo overflow-hidden">
           {/* Tab bar */}
-          <div className="flex border-b border-oo-rule">
+          <div role="tablist" aria-label="Search method" className="flex border-b border-oo-rule">
             <button
               type="button"
+              role="tab"
+              aria-selected={searchMode === "name"}
+              aria-controls="panel-name"
+              id="tab-name"
               onClick={() => setSearchMode("name")}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-[13px] font-medium transition-colors ${
                 searchMode === "name"
@@ -579,11 +617,15 @@ export default function App() {
                   : "text-oo-muted bg-oo-bg hover:text-oo-ink"
               }`}
             >
-              <GleifIcon className="flex-shrink-0" style={{ height: "1.15em", width: "auto" }} />
+              <GleifIcon className="flex-shrink-0" aria-hidden style={{ height: "1.15em", width: "auto" }} />
               Search by company name
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={searchMode === "lei"}
+              aria-controls="panel-lei"
+              id="tab-lei"
               onClick={() => setSearchMode("lei")}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-[13px] font-medium transition-colors border-l border-oo-rule ${
                 searchMode === "lei"
@@ -597,7 +639,7 @@ export default function App() {
 
           {/* ── Name search panel ── */}
           {searchMode === "name" && (
-            <div className="p-6">
+            <div id="panel-name" role="tabpanel" aria-labelledby="tab-name" className="p-6">
               <form onSubmit={searchByName}>
                 <label
                   htmlFor="name-input"
@@ -608,23 +650,26 @@ export default function App() {
                 <div className="flex gap-3">
                   <input
                     id="name-input"
-                    type="text"
+                    type="search"
                     value={nameQuery}
                     onChange={(e) => setNameQuery(e.target.value)}
                     placeholder="e.g. Unilever PLC"
                     autoComplete="off"
+                    aria-label="Company name"
+                    aria-describedby="name-hint"
                     className="flex-1 border border-oo-rule rounded px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
                   />
                   <button
                     type="submit"
                     disabled={nameSearching || !nameQuery.trim()}
+                    aria-busy={nameSearching}
                     className="bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
                   >
                     {nameSearching ? "Searching…" : "Search"}
                   </button>
                 </div>
-                <p className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
-                  <GleifIcon className="inline-block align-middle mr-1.5" style={{ height: "1.2em", width: "auto" }} />
+                <p id="name-hint" className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
+                  <GleifIcon className="inline-block align-middle mr-1.5" aria-hidden style={{ height: "1.2em", width: "auto" }} />
                   Powered by the{" "}
                   <a
                     href="https://www.gleif.org/"
@@ -647,28 +692,31 @@ export default function App() {
                 </p>
               </form>
 
+              <div aria-live="polite" aria-atomic="true">
               {nameError && (
-                <div className="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
+                <div role="alert" className="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
                   {nameError}
                 </div>
               )}
+              </div>
 
               {nameResults && nameResults.length > 0 && (
-                <div className="mt-4">
+                <div className="mt-4" aria-live="polite">
                   <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-3">
                     {nameResults.length} result{nameResults.length === 1 ? "" : "s"} — click to look up
                   </p>
-                  <ul className="divide-y divide-oo-rule border border-oo-rule rounded-oo overflow-hidden">
+                  <ul aria-label="Search results" className="divide-y divide-oo-rule border border-oo-rule rounded-oo overflow-hidden">
                     {nameResults.map((r) => (
                       <li key={r.lei}>
                         <button
                           type="button"
+                          aria-label={`Look up ${r.legalName}, LEI ${r.lei}`}
                           onClick={() => {
                             setNameResults(null);
                             setNameQuery("");
                             lookupLei(r.lei);
                           }}
-                          className="w-full text-left px-4 py-3 hover:bg-oo-bg transition-colors"
+                          className="w-full text-left px-4 py-3 hover:bg-oo-bg transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-oo-blue/40"
                         >
                           <div className="font-head font-bold text-[14px] text-oo-ink leading-snug">
                             {r.legalName}
@@ -699,7 +747,7 @@ export default function App() {
 
           {/* ── LEI paste panel ── */}
           {searchMode === "lei" && (
-            <form onSubmit={runLookup} className="p-6">
+            <form onSubmit={runLookup} id="panel-lei" role="tabpanel" aria-labelledby="tab-lei" className="p-6">
               <label
                 htmlFor="lei-input"
                 className="block text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2"
@@ -715,18 +763,23 @@ export default function App() {
                   placeholder="e.g. 213800LH1BZH3DI6G760"
                   spellCheck={false}
                   autoComplete="off"
+                  aria-label="Legal Entity Identifier (20 characters)"
+                  aria-describedby="lei-hint"
+                  pattern="[A-Za-z0-9]{20}"
+                  inputMode="text"
                   className="flex-1 border border-oo-rule rounded px-3 py-2.5 font-mono uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
                   maxLength={20}
                 />
                 <button
                   type="submit"
                   disabled={looking || !leiInput.trim()}
+                  aria-busy={looking}
                   className="bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
                 >
                   {looking ? "Looking up…" : "Look up"}
                 </button>
               </div>
-              <p className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
+              <p id="lei-hint" className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
                 Enter a 20-character ISO 17442 LEI to query GLEIF and bridge to
                 national company registries, OpenCorporates, OpenSanctions,
                 OpenAleph, Wikidata, and OpenTender.
@@ -735,11 +788,13 @@ export default function App() {
           )}
         </div>
 
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
-            {error}
-          </div>
-        )}
+        <div aria-live="assertive" aria-atomic="true">
+          {error && (
+            <div role="alert" className="mb-6 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
+              {error}
+            </div>
+          )}
+        </div>
 
         {looking && (
           <SearchLoadingGrid sources={sourcesQuery.data?.sources ?? []} />
@@ -896,10 +951,13 @@ export default function App() {
             )}
           </section>
         )}
+
+        {view === "behind" && <BehindTheScenesPage />}
       </main>
 
-      {/* GODIN ribbon — attribution banner. */}
+      {/* GODIN ribbon — permanent attribution banner. */}
       <aside
+        aria-label="GODIN — Global Open Data Integration Network"
         className="px-6 sm:px-10 lg:px-16 py-4 text-white/90 text-[13px] leading-[1.6]"
         style={{
           background:
@@ -911,11 +969,11 @@ export default function App() {
             href="https://godin.gleif.org/"
             target="_blank"
             rel="noreferrer"
-            title="Global Open Data Integration Network"
+            aria-label="GODIN — Global Open Data Integration Network (opens in new tab)"
           >
             <img
               src="https://godin.gleif.org/images/512/14456540/GODINRGBColourWide.png"
-              alt="GODIN"
+              alt="GODIN logo"
               className="h-8 w-auto"
               style={{ filter: "brightness(0) invert(1)" }}
             />
@@ -931,7 +989,14 @@ export default function App() {
               GODIN members
             </a>{" "}
             and others, and demonstrates the kind of interoperability GODIN
-            exists to enable.
+            exists to enable.{" "}
+            <button
+              type="button"
+              onClick={() => setView("behind")}
+              className="underline underline-offset-2 font-medium hover:text-white"
+            >
+              How it works →
+            </button>
           </p>
         </div>
       </aside>
@@ -998,6 +1063,255 @@ function useCountUp(target: number, duration = 800): number {
   }, [target, duration]);
   return value;
 }
+
+// ---------------------------------------------------------------------
+// Behind the Scenes page (Phase 5)
+// Explains OpenCheck's architecture, standards spine, and GODIN thesis.
+// ---------------------------------------------------------------------
+
+function BtsCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="bg-white border border-oo-rule rounded-oo p-6">
+      <h3 className="font-head font-bold text-[17px] text-oo-ink mb-3 leading-snug">
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
+function BtsBadge({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-block font-mono text-[10px] bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5 text-oo-ink mr-1 mb-1">
+      {children}
+    </span>
+  );
+}
+
+function BehindTheScenesPage() {
+  return (
+    <section aria-labelledby="bts-heading">
+      <h2
+        id="bts-heading"
+        className="font-head font-bold text-[clamp(1.35rem,3vw,1.8rem)] text-oo-ink mb-2 leading-tight"
+      >
+        Behind the Scenes
+      </h2>
+      <p className="text-[14px] leading-[1.75] text-oo-muted mb-8 max-w-2xl">
+        OpenCheck is a proof-of-concept that shows what becomes possible when
+        open data is anchored on the Legal Entity Identifier (LEI) and
+        expressed in a common standard. This page explains how it works and
+        the open ecosystem it draws on.
+      </p>
+
+      <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 500px), 1fr))" }}>
+
+        {/* Data pipeline */}
+        <BtsCard title="How a lookup works">
+          <p className="text-[13.5px] leading-[1.75] text-oo-muted mb-4">
+            Paste or search for a Legal Entity Identifier. OpenCheck then:
+          </p>
+          <ol className="text-[13.5px] leading-[1.75] text-oo-muted space-y-2 list-none">
+            {[
+              ["01", "Resolves the LEI via GLEIF", "gets the canonical legal name, jurisdiction, registration authority code, and related identifiers."],
+              ["02", "Derives bridge IDs", "maps the GLEIF record to national register IDs (UK company number, Dutch KvK number, Czech IČO, …) and cross-references (Wikidata Q-ID, CUSIP)."],
+              ["03", "Fans out in parallel", "each source adapter receives whichever identifier it understands and fetches independently; results stream back as they arrive."],
+              ["04", "Maps to BODS 0.4", "every source payload is run through a dedicated mapper, producing entity, person, and ownership/control statements in the Beneficial Ownership Data Standard."],
+              ["05", "Aggregates risk signals", "the unified BODS graph is inspected for structural risk patterns: complex chains, non-EU jurisdiction, sanctions exposure."],
+            ].map(([n, bold, rest]) => (
+              <li key={n} className="flex gap-3">
+                <span className="font-mono text-[11px] text-oo-blue shrink-0 mt-0.5">{n}</span>
+                <span><strong className="text-oo-ink font-semibold">{bold}</strong> — {rest}</span>
+              </li>
+            ))}
+          </ol>
+        </BtsCard>
+
+        {/* BODS spine */}
+        <BtsCard title="The BODS spine">
+          <p className="text-[13.5px] leading-[1.75] text-oo-muted mb-3">
+            All data converges on the{" "}
+            <a
+              href="https://standard.openownership.org/en/0.4.0/"
+              target="_blank"
+              rel="noreferrer"
+              className="underline text-oo-blue hover:text-oo-burst"
+            >
+              Beneficial Ownership Data Standard (BODS) v0.4
+            </a>
+            , maintained by{" "}
+            <a
+              href="https://www.openownership.org/"
+              target="_blank"
+              rel="noreferrer"
+              className="underline text-oo-blue hover:text-oo-burst"
+            >
+              Open Ownership
+            </a>
+            . BODS defines three statement types:
+          </p>
+          <dl className="text-[13px] space-y-2">
+            {[
+              ["Entity statement", "blue", "A legal entity — company, trust, foundation."],
+              ["Person statement", "violet", "A natural person (or anonymous/unknown person)."],
+              ["Ownership/Control statement", "teal", "A relationship linking an interested party to a subject entity, with typed interests and share bands."],
+            ].map(([term, colour, def]) => (
+              <div key={term as string} className="flex gap-2 items-baseline">
+                <dt className={`shrink-0 font-semibold text-[11px] px-1.5 py-0.5 rounded border font-mono
+                  ${colour === "blue" ? "bg-blue-50 text-blue-700 border-blue-200" : ""}
+                  ${colour === "violet" ? "bg-violet-50 text-violet-700 border-violet-200" : ""}
+                  ${colour === "teal" ? "bg-teal-50 text-teal-700 border-teal-200" : ""}
+                `}>{term}</dt>
+                <dd className="text-oo-muted">{def}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="text-[13px] text-oo-muted mt-3 leading-[1.7]">
+            Each source has a dedicated mapper in{" "}
+            <code className="font-mono text-[11px] bg-oo-bg px-1 rounded">opencheck/bods/mapper.py</code>.
+            Statement IDs are deterministic (SHA-256 of source + type + local key)
+            so re-running a lookup always produces the same IDs — stable for
+            deduplication and graph visualisation.
+          </p>
+        </BtsCard>
+
+        {/* GLEIF + LEI */}
+        <BtsCard title="GLEIF and the Legal Entity Identifier">
+          <p className="text-[13.5px] leading-[1.75] text-oo-muted mb-3">
+            The{" "}
+            <a
+              href="https://www.gleif.org/"
+              target="_blank"
+              rel="noreferrer"
+              className="underline text-oo-blue hover:text-oo-burst"
+            >
+              Global Legal Entity Identifier Foundation (GLEIF)
+            </a>{" "}
+            maintains the global LEI registry under ISO 17442. Every LEI record
+            carries a Registration Authority code (e.g.{" "}
+            <code className="font-mono text-[11px] bg-oo-bg px-1 rounded">RA000586</code>{" "}
+            for Companies House) that OpenCheck uses to route to the right
+            national register adapter.
+          </p>
+          <p className="text-[13px] text-oo-muted leading-[1.7]">
+            Name search uses the{" "}
+            <a
+              href="https://mcp.gleif.org/gleif-api/mcp"
+              target="_blank"
+              rel="noreferrer"
+              className="underline text-oo-blue hover:text-oo-burst"
+            >
+              GLEIF MCP server
+            </a>
+            . The full GLEIF ownership graph (Level 2 data) is available as a
+            BODS 0.4 dataset and ingested via the{" "}
+            <code className="font-mono text-[11px] bg-oo-bg px-1 rounded">bods_gleif</code>{" "}
+            adapter.
+          </p>
+        </BtsCard>
+
+        {/* GODIN */}
+        <BtsCard title="GODIN — why interoperability matters">
+          <p className="text-[13.5px] leading-[1.75] text-oo-muted mb-3">
+            The{" "}
+            <a
+              href="https://godin.gleif.org/"
+              target="_blank"
+              rel="noreferrer"
+              className="underline text-oo-blue hover:text-oo-burst"
+            >
+              Global Open Data Integration Network (GODIN)
+            </a>{" "}
+            is an alliance of open-data publishers — GLEIF, Open Ownership,
+            Open Corporates, and others — committed to making their datasets
+            interoperable through shared identifiers and open standards.
+          </p>
+          <p className="text-[13px] text-oo-muted leading-[1.7]">
+            OpenCheck is a concrete demonstration of the GODIN thesis: a single
+            LEI, combined with open standards like BODS, lets a user pull
+            information from 20+ independent registries into a unified,
+            structured view — without any proprietary data agreements.
+          </p>
+        </BtsCard>
+
+        {/* Tech stack */}
+        <BtsCard title="Technical stack">
+          <p className="text-[13.5px] leading-[1.75] text-oo-muted mb-3">
+            OpenCheck is fully open-source under the MIT license.
+          </p>
+          <div className="space-y-3 text-[13px] text-oo-muted">
+            <div>
+              <p className="font-semibold text-oo-ink text-[12px] uppercase tracking-wide mb-1">Backend</p>
+              <div>
+                <BtsBadge>Python 3.12</BtsBadge>
+                <BtsBadge>FastAPI</BtsBadge>
+                <BtsBadge>Pydantic v2</BtsBadge>
+                <BtsBadge>httpx</BtsBadge>
+                <BtsBadge>SQLite (local caches)</BtsBadge>
+              </div>
+            </div>
+            <div>
+              <p className="font-semibold text-oo-ink text-[12px] uppercase tracking-wide mb-1">Frontend</p>
+              <div>
+                <BtsBadge>React 18 + TypeScript</BtsBadge>
+                <BtsBadge>Vite</BtsBadge>
+                <BtsBadge>Tailwind CSS</BtsBadge>
+                <BtsBadge>@openownership/bods-dagre</BtsBadge>
+                <BtsBadge>TanStack Query</BtsBadge>
+              </div>
+            </div>
+            <div>
+              <p className="font-semibold text-oo-ink text-[12px] uppercase tracking-wide mb-1">Standards</p>
+              <div>
+                <BtsBadge>ISO 17442 (LEI)</BtsBadge>
+                <BtsBadge>BODS v0.4</BtsBadge>
+                <BtsBadge>GLEIF Level 1 + 2</BtsBadge>
+                <BtsBadge>FATF R24 guidance</BtsBadge>
+              </div>
+            </div>
+          </div>
+        </BtsCard>
+
+        {/* Links */}
+        <BtsCard title="Resources and further reading">
+          <ul className="text-[13.5px] space-y-2.5">
+            {[
+              ["OpenCheck on GitHub", "https://github.com/StephenAbbott/opencheck"],
+              ["BODS v0.4 documentation", "https://standard.openownership.org/en/0.4.0/"],
+              ["Open Ownership", "https://www.openownership.org/"],
+              ["GLEIF — Global LEI Foundation", "https://www.gleif.org/"],
+              ["GODIN — Global Open Data Integration Network", "https://godin.gleif.org/"],
+              ["GLEIF Level 2 in BODS 0.4", "https://www.openownership.org/en/news/global-legal-entity-ownership-data-available-in-line-with-latest-version-of-data-standard/"],
+              ["FATF Recommendation 24 guidance (beneficial ownership)", "https://www.fatf-gafi.org/en/publications/Fatfrecommendations/Guidance-Beneficial-Ownership-Legal-Persons.html"],
+            ].map(([label, href]) => (
+              <li key={href as string}>
+                <a
+                  href={href as string}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline text-oo-blue hover:text-oo-burst leading-snug"
+                >
+                  {label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </BtsCard>
+
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Source counter strip
+// ---------------------------------------------------------------------
 
 function SourceCounter({ sources }: { sources: { is_national_register: boolean }[] | null }) {
   const registerCount = sources ? sources.filter((s) => s.is_national_register).length : 0;
