@@ -5968,7 +5968,7 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     Yields:
     * One entityStatement for the Canadian federal corporation.
     * One personStatement per current director.
-    * One relationshipStatement (appointmentOfBoard) per director.
+    * One relationshipStatement (seniorManagingOfficial) per director.
     """
     if not bundle or bundle.get("is_stub"):
         return
@@ -6069,7 +6069,7 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
         interests: list[dict[str, Any]] = [
             {
-                "type": "appointmentOfBoard",
+                "type": "seniorManagingOfficial",
                 "directOrIndirect": "direct",
                 "beneficialOwnershipOrControl": False,
                 "details": "Director",

@@ -247,7 +247,7 @@ class TestMapCorporationsCanada:
         rel_stmts = [s for s in stmts if s["recordType"] == "relationship"]
         assert len(rel_stmts) == 2
         for rel in rel_stmts:
-            assert rel["recordDetails"]["interests"][0]["type"] == "appointmentOfBoard"
+            assert rel["recordDetails"]["interests"][0]["type"] == "seniorManagingOfficial"
 
     def test_relationships_reference_entity(self) -> None:
         bundle = self._build_bundle(directors=DIRECTORS_1007["_embedded"]["directors"])
