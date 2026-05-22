@@ -1538,7 +1538,7 @@ function LicenseChip({ license }: { license: string }) {
 
 /** Human-readable label for each reconcile bridge key. */
 const SCHEME_LABELS: Record<string, string> = {
-  lei: "ISO 17442 (LEI)",
+  lei: "Legal Entity Identifier (LEI)",
   wikidata_qid: "Wikidata QID",
   gb_coh: "Companies House number",
   opensanctions_id: "OpenSanctions ID",
