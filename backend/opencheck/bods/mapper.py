@@ -1176,10 +1176,14 @@ def _gleif_entity_statement(
     ``entity``). It carries the cross-reference identifiers that GLEIF
     publishes via its LEI Mapping programme:
 
-    * ``ocid``  — OpenCorporates identifier (e.g. ``"gb/00102498"``)
-    * ``qcc``   — QCC Global Enterprise Identifier / QCC Code (e.g. ``"QGBVC89DTN"``)
-    * ``mic``   — Market Identifier Code ISO 10383 (e.g. ``"XLON"``)
-    * ``bic``   — Bank Identifier Code ISO 9362 (e.g. ``"BARCGB22"``)
+    * ``ocid``     — OpenCorporates identifier (e.g. ``"gb/00102498"``)
+    * ``qcc``      — QCC Global Enterprise Identifier / QCC Code (e.g. ``"QGBVC89DTN"``)
+    * ``mic``      — Market Identifier Code ISO 10383 (e.g. ``"XLON"``)
+    * ``bic``      — Bank Identifier Code ISO 9362 (e.g. ``"BARCGB22"``)
+    * ``spglobal`` — S&P CIQ Company ID (e.g. ``"32307"`` for NVIDIA). Published
+                     via GLEIF's LEI Mapping programme; S&P Global is not currently
+                     listed on org-id.guide so the scheme is recorded as
+                     ``"S&P CIQ Company ID"``.
 
     These are mapped to BODS identifiers when non-null, enabling
     downstream adapters to use them for additional cross-source queries.
@@ -1275,6 +1279,20 @@ def _gleif_entity_statement(
                     "id": bic_val,
                     "scheme": "ISO-9362",
                     "schemeName": "Bank Identifier Code (ISO 9362)",
+                }
+            )
+
+        spglobal = attrs.get("spglobal")
+        if spglobal:
+            # GLEIF API returns spglobal as a list; take the first element.
+            # S&P Global is not currently listed on org-id.guide so the scheme
+            # is recorded as a descriptive string per BODS v0.4 guidance.
+            spglobal_val: str = spglobal[0] if isinstance(spglobal, list) else spglobal
+            identifiers.append(
+                {
+                    "id": spglobal_val,
+                    "scheme": "S&P CIQ Company ID",
+                    "schemeName": "S&P CIQ Company ID",
                 }
             )
 

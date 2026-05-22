@@ -354,12 +354,12 @@ def test_map_gleif_exception_both_old_and_new_field_names_work() -> None:
 
 
 # ---------------------------------------------------------------------
-# GLEIF LEI Mapping cross-reference identifiers (ocid, qcc, mic, bic)
+# GLEIF LEI Mapping cross-reference identifiers (ocid, qcc, mic, bic, spglobal)
 # ---------------------------------------------------------------------
 
 
 def _gleif_bundle_with_lei_mappings() -> dict:
-    """Bundle that includes all four GLEIF LEI Mapping identifiers."""
+    """Bundle that includes all five GLEIF LEI Mapping identifiers."""
     return {
         "lei": "549300MLH00Y3BN4HD49",
         "record": {
@@ -376,6 +376,7 @@ def _gleif_bundle_with_lei_mappings() -> dict:
                 "qcc": "QSEVC89DTN",
                 "mic": "XSTO",
                 "bic": "SWEDSESS",
+                "spglobal": ["24937"],
             },
         },
         "direct_parent": None,
@@ -384,7 +385,7 @@ def _gleif_bundle_with_lei_mappings() -> dict:
 
 
 def _gleif_bundle_with_null_lei_mappings() -> dict:
-    """Bundle where all four GLEIF LEI Mapping fields are null."""
+    """Bundle where all five GLEIF LEI Mapping fields are null."""
     return {
         "lei": "213800NULLNULLNULLXX",
         "record": {
@@ -399,6 +400,7 @@ def _gleif_bundle_with_null_lei_mappings() -> dict:
                 "qcc": None,
                 "mic": None,
                 "bic": None,
+                "spglobal": None,
             },
         },
         "direct_parent": None,
@@ -460,14 +462,51 @@ def test_gleif_lei_mapping_bic_included() -> None:
     assert "Bank Identifier" in bic["schemeName"]
 
 
+def test_gleif_lei_mapping_spglobal_included() -> None:
+    """spglobal list present → S&P CIQ Company ID identifier in entity statement."""
+    subj = _subject_entity(_gleif_bundle_with_lei_mappings())
+    sp = next(
+        (i for i in subj["recordDetails"]["identifiers"] if i["scheme"] == "S&P CIQ Company ID"),
+        None,
+    )
+    assert sp is not None
+    assert sp["id"] == "24937"
+    assert sp["schemeName"] == "S&P CIQ Company ID"
+
+
+def test_gleif_lei_mapping_spglobal_as_string() -> None:
+    """spglobal returned as a plain string (not list) is handled safely."""
+    bundle = {
+        "lei": "549300S4KLFTLO7GSQ80",
+        "record": {
+            "id": "549300S4KLFTLO7GSQ80",
+            "attributes": {
+                "lei": "549300S4KLFTLO7GSQ80",
+                "entity": {"legalName": {"name": "NVIDIA Corporation"}, "jurisdiction": "US"},
+                "spglobal": "32307",  # scalar string, not list
+            },
+        },
+        "direct_parent": None,
+        "ultimate_parent": None,
+    }
+    subj = _subject_entity(bundle)
+    sp = next(
+        (i for i in subj["recordDetails"]["identifiers"] if i["scheme"] == "S&P CIQ Company ID"),
+        None,
+    )
+    assert sp is not None
+    assert sp["id"] == "32307"
+
+
 def test_gleif_lei_mapping_null_values_excluded() -> None:
-    """Null ocid/qcc/mic/bic must not produce empty identifier entries."""
+    """Null ocid/qcc/mic/bic/spglobal must not produce empty identifier entries."""
     subj = _subject_entity(_gleif_bundle_with_null_lei_mappings())
     schemes = {i["scheme"] for i in subj["recordDetails"]["identifiers"]}
     assert "OPENCORPORATES" not in schemes
     assert "QCC Code" not in schemes
     assert "ISO-10383" not in schemes
     assert "ISO-9362" not in schemes
+    assert "S&P CIQ Company ID" not in schemes
 
 
 def test_gleif_lei_mapping_absent_attrs_safe() -> None:
@@ -479,7 +518,7 @@ def test_gleif_lei_mapping_absent_attrs_safe() -> None:
             "attributes": {
                 "lei": "213800NOATTRSXXXXXXX",
                 "entity": {"legalName": {"name": "No Attrs Co"}, "jurisdiction": "DE"},
-                # no ocid/qcc/mic/bic keys at all
+                # no ocid/qcc/mic/bic/spglobal keys at all
             },
         },
         "direct_parent": None,
