@@ -237,13 +237,13 @@ A secondary token-overlap similarity check (≥ 0.45 Jaccard) guards against fal
 | Endpoint | Description |
 |----------|-------------|
 | `GET /health` | Liveness probe. |
-| `GET /sources` | Inventory of the 25 source adapters with license, description, live status. |
+| `GET /sources` | Inventory of the 26 source adapters with license, description, live status. |
 | `GET /lookup?lei=<LEI>` | **Primary entry point**. LEI-anchored synthesis. |
 | `GET /search?q=<q>&kind=<entity\|person>` | Free-text fan-out search. Power-user / debugging. |
 | `GET /stream?q=<q>&kind=<...>` | Same fan-out, streamed as SSE. |
 | `GET /deepen?source=<id>&hit_id=<id>` | Full record + BODS statements + risk signals for a single hit. |
 | `GET /report?q=<q>&kind=<...>` | Free-text synthesis (the pre-LEI flow). |
-| `GET /export?lei=<LEI>&format=zip\|json\|jsonl` | Downloadable BODS bundle. The `zip` form ships `bods.json` + `bods.jsonl` + `manifest.json` + `LICENSES.md`. |
+| `GET /export?lei=<LEI>&format=zip\|json\|jsonl\|xml` | Downloadable BODS bundle. `zip` ships `bods.json` + `bods.jsonl` + `bods.xml` + `manifest.json` + `LICENSES.md`; `json` / `jsonl` / `xml` return the statements only. The `xml` format uses the [canonical BODS v0.4 XML serialisation](https://github.com/StephenAbbott/bods-xml). |
 
 The `/lookup` and `/export?lei=…` endpoints share their synthesis logic (`_build_report`), so the export bundle exactly mirrors what the user just saw.
 
@@ -279,7 +279,7 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 
 ```bash
 cd backend
-uv run pytest             # 601 tests, ~5s
+uv run pytest             # 819 tests, ~6s
 ```
 
 Frontend type check:
