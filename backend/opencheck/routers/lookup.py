@@ -43,7 +43,6 @@ from ..bods import (
     map_zefix,
     validate_shape,
 )
-from ..sources.acra_singapore import ACRA_RA_CODE as _ACRA_RA_CODE
 from ..sources.ares import CZ_RA_CODE as _CZ_RA_CODE, normalise_ico as _normalise_ico
 from ..sources.bce_belgium import BCE_RA_CODE as _BCE_RA_CODE, normalise_enterprise_number as _normalise_enterprise_number
 from ..sources.corporations_canada import CA_CORP_RA_CODE as _CA_CORP_RA_CODE, normalise_corp_id as _normalise_corp_id
@@ -398,10 +397,13 @@ async def lookup(
         derived["be_enterprise_number"] = _normalise_enterprise_number(registered_as)
     if registered_at_id == _CA_CORP_RA_CODE and registered_as:
         derived["ca_corp_id"] = _normalise_corp_id(registered_as)
-    # Singapore: GLEIF often omits registeredAt/registeredAs for SG entities,
-    # so we activate ACRA via jurisdiction code and do a name-based lookup.
-    if jurisdiction.upper() == "SG" and legal_name:
-        derived["sg_name"] = legal_name
+    # NOTE: ACRA Singapore (RA000523) adapter is implemented but not wired into
+    # lookup dispatch. The data.gov.sg dataset is bulk CSV only (no live API),
+    # which doesn't fit the fast-API pattern used by the other national registers.
+    # To enable: uncomment the sg_name block below and the matching dispatch /
+    # result-handler blocks, then build the DB with scripts/extract_acra.py.
+    # if jurisdiction.upper() == "SG" and legal_name:
+    #     derived["sg_name"] = legal_name
 
     ocid: str | None = None
     if gleif.info.live_available:
@@ -534,8 +536,7 @@ async def lookup(
         _w1.append(("bce_belgium", REGISTRY["bce_belgium"].fetch(derived["be_enterprise_number"], legal_name=legal_name)))
     if "ca_corp_id" in derived:
         _w1.append(("corporations_canada", REGISTRY["corporations_canada"].fetch(derived["ca_corp_id"], legal_name=legal_name)))
-    if "sg_name" in derived:
-        _w1.append(("acra_singapore", REGISTRY["acra_singapore"].fetch(derived["sg_name"], legal_name=legal_name)))
+    # acra_singapore not dispatched — bulk-data adapter, not wired into live lookup.
     if ocid:
         _w1.append(("opencorporates", REGISTRY["opencorporates"].fetch(ocid)))
     if qid:
@@ -914,26 +915,7 @@ async def lookup(
             ))
             deepened_bundles.append(("corporations_canada", derived["ca_corp_id"]))
 
-    # ACRA Singapore
-    if "sg_name" in derived:
-        _b = _r.get("acra_singapore")
-        if isinstance(_b, Exception):
-            errors["acra_singapore"] = _fmt_source_error(_b)
-        elif _b and not _b.get("is_stub"):
-            _sg_uen = _b.get("uen") or ""
-            _sg_name = _b.get("entity_name") or legal_name or ""
-            if _sg_uen:
-                hits.append(SourceHit(
-                    source_id="acra_singapore",
-                    hit_id=_sg_uen,
-                    kind=SearchKind.ENTITY,
-                    name=_sg_name,
-                    summary=f"SG-UEN {_sg_uen}",
-                    identifiers={"sg_uen": _sg_uen, "lei": lei},
-                    raw=_b,
-                    is_stub=False,
-                ))
-                deepened_bundles.append(("acra_singapore", _sg_uen))
+    # ACRA Singapore — disabled (bulk CSV only, not wired into live lookup)
 
     # OpenCorporates
     if ocid:
@@ -1429,10 +1411,9 @@ async def _lookup_stream_events(
         derived["be_enterprise_number"] = _normalise_enterprise_number(registered_as)
     if registered_at_id == _CA_CORP_RA_CODE and registered_as:
         derived["ca_corp_id"] = _normalise_corp_id(registered_as)
-    # Singapore: GLEIF often omits registeredAt/registeredAs for SG entities,
-    # so we activate ACRA via jurisdiction code and do a name-based lookup.
-    if jurisdiction.upper() == "SG" and legal_name:
-        derived["sg_name"] = legal_name
+    # ACRA Singapore — disabled (bulk CSV only, not wired into live lookup).
+    # To enable: add `derived["sg_name"] = legal_name` when jurisdiction == "SG"
+    # and wire the applicable_ids / _add_task / result handler blocks below.
 
     # OC ID from GLEIF Level-1 (same as /lookup).
     ocid: str | None = None
@@ -1542,8 +1523,7 @@ async def _lookup_stream_events(
         applicable_ids.append("bce_belgium")
     if "ca_corp_id" in derived:
         applicable_ids.append("corporations_canada")
-    if "sg_name" in derived:
-        applicable_ids.append("acra_singapore")
+    # acra_singapore not dispatched — bulk-data adapter, not wired into live lookup.
     if ocid:
         applicable_ids.append("opencorporates")
     if qid:
@@ -1647,8 +1627,7 @@ async def _lookup_stream_events(
         _add_task("bce_belgium", REGISTRY["bce_belgium"].fetch(derived["be_enterprise_number"], legal_name=legal_name))
     if "ca_corp_id" in derived:
         _add_task("corporations_canada", REGISTRY["corporations_canada"].fetch(derived["ca_corp_id"], legal_name=legal_name))
-    if "sg_name" in derived:
-        _add_task("acra_singapore", REGISTRY["acra_singapore"].fetch(derived["sg_name"], legal_name=legal_name))
+    # acra_singapore not dispatched — bulk-data adapter, not wired into live lookup.
     if ocid:
         _add_task("opencorporates", REGISTRY["opencorporates"].fetch(ocid))
     if qid:
@@ -1917,19 +1896,6 @@ async def _lookup_stream_events(
                         identifiers={"ca_corp_id": derived["ca_corp_id"], "lei": lei},
                         raw=_cc_corp, is_stub=False,
                     )
-
-            elif source_id == "acra_singapore" and "sg_name" in derived:
-                if result and not result.get("is_stub"):
-                    _sg_uen = result.get("uen") or ""
-                    if _sg_uen:
-                        hit = SourceHit(
-                            source_id="acra_singapore", hit_id=_sg_uen,
-                            kind=SearchKind.ENTITY,
-                            name=result.get("entity_name") or legal_name or "",
-                            summary=f"SG-UEN {_sg_uen}",
-                            identifiers={"sg_uen": _sg_uen, "lei": lei},
-                            raw=result, is_stub=False,
-                        )
 
             elif source_id == "opencorporates" and ocid:
                 if result and not result.get("is_stub"):
