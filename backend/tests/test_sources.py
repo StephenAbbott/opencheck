@@ -20,7 +20,6 @@ def _isolated_data_root(monkeypatch, tmp_path):
 
 def test_registry_has_expected_sources() -> None:
     assert set(REGISTRY.keys()) == {
-        "acra_singapore",
         "ares",
         "ariregister",
         "bce_belgium",

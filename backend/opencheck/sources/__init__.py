@@ -7,7 +7,6 @@ by the FastAPI app.
 
 from __future__ import annotations
 
-from .acra_singapore import AcraSingaporeAdapter
 from .ariregister import AriregisterAdapter
 from .ares import AresAdapter
 from .bce_belgium import BceBelgiumAdapter
@@ -37,7 +36,6 @@ from .wikidata import WikidataAdapter
 from .zefix import ZefixAdapter
 
 REGISTRY: dict[str, SourceAdapter] = {
-    "acra_singapore": AcraSingaporeAdapter(),
     "ares": AresAdapter(),
     "ariregister": AriregisterAdapter(),
     "bce_belgium": BceBelgiumAdapter(),
