@@ -180,8 +180,8 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 
 - **Data:** corporation records (name, status, act of incorporation, registered address, business number, directors) for companies incorporated under Canadian federal statutes including the Canada Business Corporations Act and the Boards of Trade Act
 - **API:** ISED API Gateway — `https://apigateway-passerelledapi.ised-isde.canada.ca/corporations/api`
-  - `GET /v1/companies?lang=eng&corpId=<corpId>` — full corporation record
-  - `GET /v2/director?lang=eng&corpId=<corpId>` — current directors
+  - `GET /v1/corporations/<corpId>.json?lang=eng` — full corporation record
+  - `GET /v2/corporations/<corpId>/directors.json?lang=eng` — current directors
 - **License:** [Open Government Licence – Canada (OGL-Canada 2.0)](https://open.canada.ca/en/open-government-licence-canada)
 - **Attribution:** "Contains information licensed under the Open Government Licence – Canada. Source: Corporations Canada, Innovation, Science and Economic Development Canada."
 - **Entry point:** `ca_corp_id` (numeric corporation number) derived from GLEIF RA code `RA000072`

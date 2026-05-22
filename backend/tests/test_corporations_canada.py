@@ -293,10 +293,10 @@ async def test_fetch_returns_bundle(monkeypatch, tmp_path) -> None:
     mock_cache.has.return_value = False
     mock_cache.put.return_value = None
 
-    # V1 response: [corpObject, null]
+    # V1 response: [corpObject]
     v1_resp = MagicMock()
     v1_resp.is_success = True
-    v1_resp.json.return_value = [CORP_1007, None]
+    v1_resp.json.return_value = [CORP_1007]
 
     # V2 response: directors payload
     v2_resp = MagicMock()
@@ -308,7 +308,7 @@ async def test_fetch_returns_bundle(monkeypatch, tmp_path) -> None:
 
     async def mock_get(url: str, **kwargs: Any) -> MagicMock:
         call_urls.append(url)
-        if "/v1/companies" in url:
+        if "/v1/corporations/" in url and "/directors" not in url:
             return v1_resp
         return v2_resp
 

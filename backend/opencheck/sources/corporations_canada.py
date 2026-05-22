@@ -6,16 +6,16 @@ It is operated by Innovation, Science and Economic Development Canada (ISED).
 
 This adapter uses the ISED API Gateway:
 
-  * ``GET /v1/companies?lang=eng&corpId=<corpId>``
+  * ``GET /v1/corporations/<corpId>.json?lang=eng``
     — full corporation record by corporation number.
-    Always returns HTTP 200; the body is either a two-element array
-    ``[corpObject, null]`` (found) or ``["error string", "error en français"]``
+    Always returns HTTP 200; the body is either a one-element array
+    ``[corpObject]`` (found) or ``["error string", "error en français"]``
     (not found).
 
-  * ``GET /v2/director?lang=eng&corpId=<corpId>``
+  * ``GET /v2/corporations/<corpId>/directors.json?lang=eng``
     — current directors for the corporation.
-    Returns ``{"_embedded": {"directors": [...]}}`` or 404 when no
-    directors are on file.
+    Returns an object with a ``directors`` list, 404 when no directors
+    are on file, or 500 on a server-side error (treated as no directors).
 
 Authentication: ``user-key`` header (ISED API key).
 
@@ -248,8 +248,8 @@ class CorporationsCanadaAdapter(SourceAdapter):
 
         async with build_client() as client:
             response = await client.get(
-                f"{_API_BASE}/v1/companies",
-                params={"lang": "eng", "corpId": corp_id},
+                f"{_API_BASE}/v1/corporations/{corp_id}.json",
+                params={"lang": "eng"},
                 headers=self._auth_headers(),
             )
             if not response.is_success:
@@ -292,8 +292,8 @@ class CorporationsCanadaAdapter(SourceAdapter):
 
         async with build_client() as client:
             response = await client.get(
-                f"{_API_BASE}/v2/director",
-                params={"lang": "eng", "corpId": corp_id},
+                f"{_API_BASE}/v2/corporations/{corp_id}/directors.json",
+                params={"lang": "eng"},
                 headers=self._auth_headers(),
             )
             if response.status_code == 404:
