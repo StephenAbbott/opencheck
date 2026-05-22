@@ -1388,6 +1388,8 @@ async def _lookup_stream_events(
         derived["sk_ico"] = _normalise_sk_ico(registered_as)
     if registered_at_id == _BCE_RA_CODE and registered_as:
         derived["be_enterprise_number"] = _normalise_enterprise_number(registered_as)
+    if registered_at_id == _CA_CORP_RA_CODE and registered_as:
+        derived["ca_corp_id"] = _normalise_corp_id(registered_as)
 
     # OC ID from GLEIF Level-1 (same as /lookup).
     ocid: str | None = None
