@@ -1556,16 +1556,16 @@ function CrossSourceIdentifiersTable({
   if (!hasRows) return null;
 
   return (
-    <table className="w-full text-[13px] border-collapse">
+    <table className="w-full text-[13px] border-collapse table-fixed">
       <thead>
         <tr>
-          <th className="text-left text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 pr-4 w-[38%]">
+          <th className="text-left text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 pr-3 w-[32%]">
             Scheme
           </th>
-          <th className="text-left text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 pr-4">
+          <th className="text-left text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 pr-3 w-[32%]">
             Value
           </th>
-          <th className="text-right text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2">
+          <th className="text-right text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 w-[36%]">
             Confirmed by
           </th>
         </tr>
@@ -1573,10 +1573,10 @@ function CrossSourceIdentifiersTable({
       <tbody>
         {links.map((link, i) => (
           <tr key={`${link.key}:${link.key_value}:${i}`} className="border-t border-oo-rule">
-            <td className="py-2 pr-4 text-oo-muted">
+            <td className="py-2 pr-3 text-oo-muted">
               {SCHEME_LABELS[link.key] ?? link.key}
             </td>
-            <td className="py-2 pr-4 font-mono text-[12px] text-oo-ink">
+            <td className="py-2 pr-3 font-mono text-[12px] text-oo-ink break-all">
               {link.key_value}
             </td>
             <td className="py-2 text-right">
@@ -1595,8 +1595,8 @@ function CrossSourceIdentifiersTable({
         ))}
         {gleifMapped.map(({ scheme, value }) => (
           <tr key={scheme} className="border-t border-oo-rule">
-            <td className="py-2 pr-4 text-oo-muted">{scheme}</td>
-            <td className="py-2 pr-4 font-mono text-[12px] text-oo-ink">{value}</td>
+            <td className="py-2 pr-3 text-oo-muted">{scheme}</td>
+            <td className="py-2 pr-3 font-mono text-[12px] text-oo-ink break-all">{value}</td>
             <td className="py-2 text-right">
               <span className="inline-flex items-center gap-1 text-[11px] bg-blue-50 border border-blue-200 text-blue-700 rounded px-1.5 py-0.5">
                 <svg
