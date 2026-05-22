@@ -40,6 +40,7 @@ def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
     assert r.status_code == 200
     ids = {s["id"] for s in r.json()["sources"]}
     assert ids == {
+        "acra_singapore",
         "ares",
         "ariregister",
         "bce_belgium",

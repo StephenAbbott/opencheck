@@ -112,6 +112,12 @@ class Settings(BaseSettings):
     bolagsverket_api_key: str | None = Field(default=None, alias="BOLAGSVERKET_API_KEY")
     bolagsverket_client_secret: str | None = Field(default=None, alias="BOLAGSVERKET_CLIENT_SECRET")
 
+    # --- Singapore ACRA Business Registry ---
+    # Pre-built SQLite index. Build with: python scripts/extract_acra.py
+    # Source: https://data.gov.sg/datasets?query=acra&resultId=1
+    # License: Singapore Open Data Licence 1.0 — no API key required.
+    acra_singapore_db_file: str | None = Field(default=None, alias="ACRA_SINGAPORE_DB_FILE")
+
     # --- Belgian Crossroads Bank for Enterprises (BCE / KBO) ---
     # Pre-built SQLite index. Build with: python scripts/extract_bce.py
     # Source: https://kbopub.economie.fgov.be/kbo-open-data/

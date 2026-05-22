@@ -6103,3 +6103,94 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interests=interests,
             source_url=source_url,
         )
+
+
+# ---------------------------------------------------------------------------
+# ACRA Singapore (data.gov.sg open data)
+# ---------------------------------------------------------------------------
+#
+# ACRA publishes firmographic entity data only — no beneficial ownership
+# information is included in the open dataset.  This mapper therefore
+# produces a single entity statement.
+#
+# Fields mapped:
+#   uen              → identifiers (SG-UEN scheme)
+#   entity_name      → name
+#   uen_status_desc  → dissolved / founding date inference (status only)
+#   entity_type_desc → entity type label (stored in description)
+#   uen_issue_date   → foundingDate
+#   reg_street_name + reg_postal_code → registered address
+#   link             → publicationDetails.publicationDate / source URL
+
+
+def map_acra_singapore(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Yield BODS v0.4 statements for a Singapore ACRA entity.
+
+    Only an entity statement is produced — the open dataset contains
+    firmographic data only (no ownership / control relationships).
+    """
+    uen = (bundle.get("uen") or "").strip().upper()
+    if not uen:
+        return
+
+    name = (bundle.get("entity_name") or "").strip()
+    status_raw = (bundle.get("uen_status_desc") or "").strip().lower()
+    entity_type = (bundle.get("entity_type_desc") or "").strip()
+    issue_date = (bundle.get("uen_issue_date") or "").strip()
+    street = (bundle.get("reg_street_name") or "").strip()
+    postal = (bundle.get("reg_postal_code") or "").strip()
+    source_url = bundle.get("link") or "https://data.gov.sg/datasets?query=acra"
+
+    # Identifier block.
+    identifiers: list[dict[str, str]] = [
+        {
+            "id": uen,
+            "scheme": "SG-UEN",
+            "schemeName": "Singapore Unique Entity Number (ACRA)",
+        }
+    ]
+
+    # Address block.
+    addresses: list[dict[str, Any]] = []
+    addr_parts = [p for p in [street, postal, "Singapore"] if p]
+    if len(addr_parts) > 1:  # at least street or postal + country
+        addresses.append(_addr("registered", ", ".join(addr_parts), "SG"))
+
+    # Founding date from uen_issue_date.
+    founding_date: str | None = None
+    if issue_date and re.match(r"\d{4}-\d{2}-\d{2}", issue_date):
+        founding_date = issue_date
+
+    # Dissolved date: we don't have an explicit dissolution date in the
+    # open dataset; mark the entity as dissolved when status contains
+    # "struck off" or "cancelled".
+    dissolved_date: str | None = None
+    if any(k in status_raw for k in ("struck off", "cancelled")):
+        dissolved_date = "unknown"  # flag only; no date available
+
+    # Entity statement.
+    stmt = make_entity_statement(
+        source_id="acra_singapore",
+        local_id=uen,
+        name=name or f"SG Entity {uen}",
+        jurisdiction=("Singapore", "SG"),
+        identifiers=identifiers,
+        founding_date=founding_date,
+        addresses=addresses,
+        source_url=source_url,
+    )
+
+    # Annotate with entity type in the description field if available.
+    if entity_type:
+        record_details = stmt.get("recordDetails") or {}
+        record_details["entityType"] = {
+            "type": "registeredEntity",
+            "subtype": entity_type,
+        }
+        stmt["recordDetails"] = record_details
+
+    # Mark as inactive when struck off / cancelled.
+    if dissolved_date:
+        stmt.setdefault("recordDetails", {})["dissolutionDate"] = None  # unknown
+
+    yield stmt
