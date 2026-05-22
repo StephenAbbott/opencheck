@@ -176,6 +176,18 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Enterprise number format:** Belgian enterprise numbers are 10-digit numeric strings formatted as `NNNN.NNN.NNN` (e.g. `0433.795.975` for Ageas SA/NV). The first digit is always 0 for legal persons registered before 2023 and 1 for natural persons carrying on an enterprise. The enterprise number also serves as the base for the Belgian VAT number (prefix `BE`).
 - **Name languages:** most Belgian enterprises have names in at least Dutch and French; enterprises in the German-speaking eastern cantons may also have German names. The adapter stores all three (`name_nl`, `name_fr`, `name_de`) and the FTS5 index covers all three columns, so name search works regardless of the language of the query.
 
+## Corporations Canada — Innovation, Science and Economic Development Canada (ISED)
+
+- **Data:** corporation records (name, status, act of incorporation, registered address, business number, directors) for companies incorporated under Canadian federal statutes including the Canada Business Corporations Act and the Boards of Trade Act
+- **API:** ISED API Gateway — `https://apigateway-passerelledapi.ised-isde.canada.ca/corporations/api`
+  - `GET /v1/companies?lang=eng&corpId=<corpId>` — full corporation record
+  - `GET /v2/director?lang=eng&corpId=<corpId>` — current directors
+- **License:** [Open Government Licence – Canada (OGL-Canada 2.0)](https://open.canada.ca/en/open-government-licence-canada)
+- **Attribution:** "Contains information licensed under the Open Government Licence – Canada. Source: Corporations Canada, Innovation, Science and Economic Development Canada."
+- **Entry point:** `ca_corp_id` (numeric corporation number) derived from GLEIF RA code `RA000072`
+- **Key registration:** Requires `CORPORATIONS_CANADA_API_KEY` (public-plan API key from <https://api.ised-isde.canada.ca/corporations/api>)
+- **Note:** The V1 API always returns HTTP 200 even for unknown corporations; OpenCheck detects not-found responses by checking whether the first element of the response array is a dict (found) or a string (error message). Directors are mapped to BODS v0.4 `seniorManagingOfficial` relationship statements.
+
 ## OpenCorporates
 
 - **Data:** global company registry data — company profiles, registered addresses, officer appointments, and network relationships
