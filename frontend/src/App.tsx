@@ -491,12 +491,9 @@ export default function App() {
                 >
                   <OpenCheckIcon className="h-[clamp(2rem,4vw,2.6rem)] w-auto flex-shrink-0" />
                   <span className="font-head font-bold text-white leading-tight text-[clamp(1.6rem,4vw,2.4rem)]">
-                    Open<span className="text-[#93c5fd]">Check</span>
+                    Open<span className="text-[#93c5fd]">Check</span><span className="relative -top-2.5 ml-1 text-[8px] font-semibold tracking-oo-eyebrow uppercase bg-white/15 text-white/90 rounded px-1.5 py-0.5 border border-white/25 align-top">BETA</span>
                   </span>
                 </button>
-                <span className="text-[11px] font-semibold tracking-oo-eyebrow uppercase bg-white/15 text-white/90 rounded px-2 py-0.5 border border-white/25">
-                  Beta
-                </span>
               </div>
             </div>
             <nav aria-label="Site navigation" className="flex items-center gap-5">
