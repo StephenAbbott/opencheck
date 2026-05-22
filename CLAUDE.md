@@ -39,6 +39,15 @@ Similarly, the result-handling `elif source_id == "<name>":` block in the SSE ev
 
 ---
 
+## Available skills
+
+Two Cowork skills are available and should be used proactively:
+
+- **`/beneficial-ownership-data`** — use for any questions about beneficial ownership data, policy, registers, the BODS standard, FATF, EU AML, GLEIF→BODS mapping, OpenOwnership, or BO data in procurement/extractives.
+- **`/gleif-data`** — use for any questions about LEIs, the GLEIF registry, LEI issuers (LOUs), registration authorities, ownership relationships in GLEIF, or LEI statistics. Has live access to the GLEIF API and Statistics MCP servers.
+
+---
+
 ## Other conventions
 
 - API keys go in `.env` only — never committed to the repo.
