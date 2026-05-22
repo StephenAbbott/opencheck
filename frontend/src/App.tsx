@@ -361,6 +361,36 @@ export default function App() {
 
   const totalHits = cddBuckets.reduce((n, b) => n + b.hits.length, 0);
 
+  // Extract GLEIF LEI Mapping identifiers from the GLEIF hit's raw attributes.
+  // These are published by the GLEIF LEI Mapping programme (GODIN) and are not
+  // surfaced through cross_source_links because they don't require corroboration
+  // from a second source — GLEIF is the authoritative bridge.
+  const gleifMappedIds = useMemo<{ scheme: string; value: string }[]>(() => {
+    const gleifHit = hits.find((h) => h.source_id === "gleif");
+    if (!gleifHit) return [];
+    const attrs = (gleifHit.raw as Record<string, unknown>) ?? {};
+    const result: { scheme: string; value: string }[] = [];
+    const ocid = attrs["ocid"];
+    if (ocid && typeof ocid === "string")
+      result.push({ scheme: "OpenCorporates ID", value: ocid });
+    const bic = attrs["bic"];
+    if (bic) {
+      const bicVal = Array.isArray(bic) ? bic[0] : bic;
+      if (typeof bicVal === "string") result.push({ scheme: "BIC (ISO 9362)", value: bicVal });
+    }
+    const mic = attrs["mic"];
+    if (mic) {
+      const micVal = Array.isArray(mic) ? mic[0] : mic;
+      if (typeof micVal === "string") result.push({ scheme: "MIC (ISO 10383)", value: micVal });
+    }
+    const spglobal = attrs["spglobal"];
+    if (spglobal) {
+      const spVal = Array.isArray(spglobal) ? spglobal[0] : spglobal;
+      if (typeof spVal === "string") result.push({ scheme: "S&P CIQ Company ID", value: spVal });
+    }
+    return result;
+  }, [hits]);
+
   // Index risk signals by `${source_id}:${hit_id}` so hit rows can
   // pull their own chips without re-scanning the whole list.
   const riskByHit = useMemo(() => {
@@ -741,14 +771,13 @@ export default function App() {
           </section>
         )}
 
-        {crossSourceLinks.length > 0 && (
+        {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && (
           <section className="mb-8 bg-white border border-oo-rule rounded-oo p-5">
-            <SectionLabel>Cross-source links</SectionLabel>
-            <ul className="space-y-2">
-              {crossSourceLinks.map((link, i) => (
-                <CrossSourceLinkRow key={`${link.key}:${link.key_value}:${i}`} link={link} />
-              ))}
-            </ul>
+            <SectionLabel>Cross-source identifiers</SectionLabel>
+            <CrossSourceIdentifiersTable
+              links={crossSourceLinks}
+              gleifMapped={gleifMappedIds}
+            />
           </section>
         )}
 
@@ -1507,28 +1536,89 @@ function LicenseChip({ license }: { license: string }) {
   );
 }
 
-function CrossSourceLinkRow({ link }: { link: CrossSourceLink }) {
-  const confidenceClasses =
-    link.confidence === "strong"
-      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-      : "bg-oo-bg text-oo-muted border-oo-rule";
+/** Human-readable label for each reconcile bridge key. */
+const SCHEME_LABELS: Record<string, string> = {
+  lei: "ISO 17442 (LEI)",
+  wikidata_qid: "Wikidata QID",
+  gb_coh: "Companies House number",
+  opensanctions_id: "OpenSanctions ID",
+  name: "Name match",
+};
+
+function CrossSourceIdentifiersTable({
+  links,
+  gleifMapped,
+}: {
+  links: CrossSourceLink[];
+  gleifMapped: { scheme: string; value: string }[];
+}) {
+  const hasRows = links.length > 0 || gleifMapped.length > 0;
+  if (!hasRows) return null;
+
   return (
-    <li className="flex flex-wrap items-baseline gap-2 text-[13px]">
-      <span
-        className={`text-[11px] border rounded px-1.5 py-0.5 font-mono ${confidenceClasses}`}
-      >
-        {link.confidence}
-      </span>
-      <span className="font-mono text-oo-ink">
-        {link.key} = {link.key_value}
-      </span>
-      <span className="text-oo-muted">→</span>
-      <span className="text-oo-ink">
-        {link.hits.map((h) => h.source_id).join(" · ")}
-      </span>
-      <span className="text-oo-muted italic">
-        ({link.hits.map((h) => h.name).join(" / ")})
-      </span>
-    </li>
+    <table className="w-full text-[13px] border-collapse">
+      <thead>
+        <tr>
+          <th className="text-left text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 pr-4 w-[38%]">
+            Scheme
+          </th>
+          <th className="text-left text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 pr-4">
+            Value
+          </th>
+          <th className="text-right text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2">
+            Confirmed by
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {links.map((link, i) => (
+          <tr key={`${link.key}:${link.key_value}:${i}`} className="border-t border-oo-rule">
+            <td className="py-2 pr-4 text-oo-muted">
+              {SCHEME_LABELS[link.key] ?? link.key}
+            </td>
+            <td className="py-2 pr-4 font-mono text-[12px] text-oo-ink">
+              {link.key_value}
+            </td>
+            <td className="py-2 text-right">
+              <span className="inline-flex flex-wrap gap-1 justify-end">
+                {link.hits.map((h) => (
+                  <span
+                    key={h.source_id}
+                    className="text-[11px] bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5 font-mono text-oo-muted"
+                  >
+                    {h.source_id}
+                  </span>
+                ))}
+              </span>
+            </td>
+          </tr>
+        ))}
+        {gleifMapped.map(({ scheme, value }) => (
+          <tr key={scheme} className="border-t border-oo-rule">
+            <td className="py-2 pr-4 text-oo-muted">{scheme}</td>
+            <td className="py-2 pr-4 font-mono text-[12px] text-oo-ink">{value}</td>
+            <td className="py-2 text-right">
+              <span className="inline-flex items-center gap-1 text-[11px] bg-blue-50 border border-blue-200 text-blue-700 rounded px-1.5 py-0.5">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-3 h-3"
+                  aria-hidden="true"
+                >
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </svg>
+                GLEIF mapped
+              </span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
