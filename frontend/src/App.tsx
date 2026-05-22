@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import SearchLoadingGrid from "./components/SearchLoadingGrid";
 import {
   fetchSources,
@@ -145,8 +145,6 @@ const EXAMPLE_LEIS: ExampleLei[] = [
 
 export default function App() {
   const [leiInput, setLeiInput] = useState("");
-  const [looking, setLooking] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // --- Streaming lookup state ---
   // streamingLei is set once GLEIF resolves (replaces the old `result !== null` guard).
@@ -173,111 +171,25 @@ export default function App() {
   // Two-mode search: "name" = GLEIF company-name search; "lei" = paste LEI.
   const [searchMode, setSearchMode] = useState<"name" | "lei">("name");
   const [nameQuery, setNameQuery] = useState("");
-  const [nameResults, setNameResults] = useState<GleifSearchResult[] | null>(null);
-  const [nameSearching, setNameSearching] = useState(false);
-  const [nameError, setNameError] = useState<string | null>(null);
 
   const sourcesQuery = useQuery({
     queryKey: ["sources"],
     queryFn: () => fetchSources(),
   });
 
-  function lookupLei(rawLei: string) {
-    const lei = rawLei.trim().toUpperCase();
-    setLeiInput(lei);
-    setView("main");
-    if (!isValidLei(lei)) {
-      setError(
-        "Enter a 20-character ISO 17442 LEI " +
-          "(e.g. 213800LH1BZH3DI6G760)."
-      );
-      return;
-    }
-
-    // Cancel any in-flight stream from a previous lookup.
-    cleanupRef.current?.();
-    cleanupRef.current = null;
-
-    // Reset all streaming state.
-    setLooking(true);
-    setError(null);
-    setStreamingLei(null);
-    setLegalName(null);
-    setHits([]);
-    setErrors({});
-    setCrossSourceLinks([]);
-    setRiskSignals([]);
-    setApplicableSources([]);
-    setCompletedSources(new Set());
-    setStreaming(false);
-
-    const cleanup = streamLookup(lei, {
-      onGleifDone: (e) => {
-        setStreamingLei(e.lei);
-        setLegalName(e.legal_name);
-        setLooking(false);
-        setStreaming(true);
-      },
-      onSourcesApplicable: (e) => {
-        setApplicableSources(e.source_ids);
-      },
-      onHit: (e) => {
-        setHits((prev) => [...prev, e]);
-      },
-      onSourceCompleted: (e) => {
-        setCompletedSources((prev) => new Set([...prev, e.source_id]));
-      },
-      onSourceError: (e) => {
-        setErrors((prev) => ({ ...prev, [e.source_id]: e.error }));
-        setCompletedSources((prev) => new Set([...prev, e.source_id]));
-      },
-      onCrossSourceLinks: (e) => {
-        setCrossSourceLinks(e.links);
-      },
-      onRiskSignals: (e) => {
-        setRiskSignals(e.signals);
-      },
-      onDone: (_e) => {
-        setStreaming(false);
-        cleanupRef.current = null;
-      },
-      onError: (detail) => {
-        setError(detail);
-        setLooking(false);
-        setStreaming(false);
-        cleanupRef.current = null;
-      },
-    });
-    cleanupRef.current = cleanup;
-  }
-
-  async function runLookup(e: React.FormEvent) {
-    e.preventDefault();
-    await lookupLei(leiInput);
-  }
-
-  /**
-   * Search GLEIF by company name using the public REST API.
-   * On success, populates ``nameResults`` for the user to pick from.
-   * After selection the standard ``lookupLei`` flow takes over.
-   */
-  async function searchByName(e: React.FormEvent) {
-    e.preventDefault();
-    const q = nameQuery.trim();
-    if (!q) return;
-    setNameSearching(true);
-    setNameError(null);
-    setNameResults(null);
-    try {
+  // ── Name-search mutation ──────────────────────────────────────────────────
+  // Queries GLEIF's public API by legal name. Returns a list of matching
+  // entities for the user to pick from; selection hands off to lookupMutation.
+  const nameSearchMutation = useMutation<GleifSearchResult[], Error, string>({
+    mutationFn: async (q: string) => {
       const url =
         `https://api.gleif.org/api/v1/lei-records` +
-        `?filter[entity.legalName]=${encodeURIComponent(q)}` +
-        `&page[size]=10`;
+        `?filter[entity.legalName]=${encodeURIComponent(q)}&page[size]=10`;
       const resp = await fetch(url, { headers: { Accept: "application/vnd.api+json" } });
       if (!resp.ok) throw new Error(`GLEIF API returned ${resp.status}`);
       const json = await resp.json();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const items: GleifSearchResult[] = (json.data ?? []).map((item: any) => {
+      return (json.data ?? []).map((item: any) => {
         const attrs = item.attributes ?? {};
         const entity = attrs.entity ?? {};
         const reg = attrs.registration ?? {};
@@ -289,17 +201,95 @@ export default function App() {
             attrs.lei,
           country: entity.legalAddress?.country ?? "—",
           status: reg.status ?? "—",
-        };
+        } satisfies GleifSearchResult;
       });
-      setNameResults(items);
-      if (items.length === 0) {
-        setNameError("No entities found. Try a shorter or different spelling.");
-      }
-    } catch (err) {
-      setNameError(err instanceof Error ? err.message : "Search failed");
-    } finally {
-      setNameSearching(false);
-    }
+    },
+  });
+
+  // ── LEI lookup mutation ───────────────────────────────────────────────────
+  // Opens the SSE stream for /lookup-stream. The mutation is considered
+  // "pending" (i.e. showing the loading grid) until the backend emits the
+  // gleif_done event confirming the entity; all subsequent streaming state
+  // (hits, risk signals, cross-source links) is managed via useState below.
+  const lookupMutation = useMutation<{ lei: string; legal_name: string | null }, Error, string>({
+    mutationFn: (lei: string) =>
+      new Promise((resolve, reject) => {
+        if (!isValidLei(lei)) {
+          reject(
+            new Error(
+              "Enter a 20-character ISO 17442 LEI " +
+                "(e.g. 213800LH1BZH3DI6G760)."
+            )
+          );
+          return;
+        }
+        // Reset streaming state before starting a new stream.
+        setStreamingLei(null);
+        setLegalName(null);
+        setHits([]);
+        setErrors({});
+        setCrossSourceLinks([]);
+        setRiskSignals([]);
+        setApplicableSources([]);
+        setCompletedSources(new Set());
+        setStreaming(false);
+
+        const cleanup = streamLookup(lei, {
+          onGleifDone: (e) => {
+            setStreamingLei(e.lei);
+            setLegalName(e.legal_name);
+            setStreaming(true);
+            resolve({ lei: e.lei, legal_name: e.legal_name });
+          },
+          onSourcesApplicable: (e) => setApplicableSources(e.source_ids),
+          onHit: (e) => setHits((prev) => [...prev, e]),
+          onSourceCompleted: (e) =>
+            setCompletedSources((prev) => new Set([...prev, e.source_id])),
+          onSourceError: (e) => {
+            setErrors((prev) => ({ ...prev, [e.source_id]: e.error }));
+            setCompletedSources((prev) => new Set([...prev, e.source_id]));
+          },
+          onCrossSourceLinks: (e) => setCrossSourceLinks(e.links),
+          onRiskSignals: (e) => setRiskSignals(e.signals),
+          onDone: () => {
+            setStreaming(false);
+            cleanupRef.current = null;
+          },
+          onError: (detail) => {
+            setStreaming(false);
+            cleanupRef.current = null;
+            reject(new Error(detail));
+          },
+        });
+        cleanupRef.current = cleanup;
+      }),
+  });
+
+  function lookupLei(rawLei: string) {
+    const lei = rawLei.trim().toUpperCase();
+    setLeiInput(lei);
+    setView("main");
+    // Cancel any in-flight stream before starting a new one.
+    cleanupRef.current?.();
+    cleanupRef.current = null;
+    lookupMutation.mutate(lei);
+  }
+
+  function runLookup(e: React.FormEvent) {
+    e.preventDefault();
+    lookupLei(leiInput);
+  }
+
+  /**
+   * Search GLEIF by company name using the public REST API.
+   * On success, nameSearchMutation.data is populated for the user to pick from.
+   * After selection the standard lookupLei flow takes over.
+   */
+  function searchByName(e: React.FormEvent) {
+    e.preventDefault();
+    const q = nameQuery.trim();
+    if (!q) return;
+    nameSearchMutation.mutate(q);
   }
 
   // Build a set of source IDs that are categorised as ESG.
@@ -478,12 +468,10 @@ export default function App() {
                     setApplicableSources([]);
                     setCompletedSources(new Set());
                     setStreaming(false);
-                    setError(null);
-                    setLooking(false);
+                    lookupMutation.reset();
+                    nameSearchMutation.reset();
                     setLeiInput("");
                     setNameQuery("");
-                    setNameResults(null);
-                    setNameError(null);
                     setSearchMode("name");
                   }}
                   aria-label="Back to homepage"
@@ -605,11 +593,11 @@ export default function App() {
                   />
                   <button
                     type="submit"
-                    disabled={nameSearching || !nameQuery.trim()}
-                    aria-busy={nameSearching}
+                    disabled={nameSearchMutation.isPending || !nameQuery.trim()}
+                    aria-busy={nameSearchMutation.isPending}
                     className="bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
                   >
-                    {nameSearching ? "Searching…" : "Search"}
+                    {nameSearchMutation.isPending ? "Searching…" : "Search"}
                   </button>
                 </div>
                 <p id="name-hint" className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
@@ -637,26 +625,31 @@ export default function App() {
               </form>
 
               <div aria-live="polite" aria-atomic="true">
-              {nameError && (
-                <div role="alert" className="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
-                  {nameError}
-                </div>
-              )}
+                {nameSearchMutation.isError && (
+                  <div role="alert" className="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
+                    {nameSearchMutation.error?.message ?? "Search failed"}
+                  </div>
+                )}
+                {nameSearchMutation.isSuccess && nameSearchMutation.data.length === 0 && (
+                  <div role="alert" className="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
+                    No entities found. Try a shorter or different spelling.
+                  </div>
+                )}
               </div>
 
-              {nameResults && nameResults.length > 0 && (
+              {nameSearchMutation.data && nameSearchMutation.data.length > 0 && (
                 <div className="mt-4" aria-live="polite">
                   <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-3">
-                    {nameResults.length} result{nameResults.length === 1 ? "" : "s"} — click to look up
+                    {nameSearchMutation.data.length} result{nameSearchMutation.data.length === 1 ? "" : "s"} — click to look up
                   </p>
                   <ul aria-label="Search results" className="divide-y divide-oo-rule border border-oo-rule rounded-oo overflow-hidden">
-                    {nameResults.map((r) => (
+                    {nameSearchMutation.data.map((r) => (
                       <li key={r.lei}>
                         <button
                           type="button"
                           aria-label={`Look up ${r.legalName}, LEI ${r.lei}`}
                           onClick={() => {
-                            setNameResults(null);
+                            nameSearchMutation.reset();
                             setNameQuery("");
                             lookupLei(r.lei);
                           }}
@@ -716,11 +709,11 @@ export default function App() {
                 />
                 <button
                   type="submit"
-                  disabled={looking || !leiInput.trim()}
-                  aria-busy={looking}
+                  disabled={lookupMutation.isPending || !leiInput.trim()}
+                  aria-busy={lookupMutation.isPending}
                   className="bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
                 >
-                  {looking ? "Looking up…" : "Look up"}
+                  {lookupMutation.isPending ? "Looking up…" : "Look up"}
                 </button>
               </div>
               <p id="lei-hint" className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
@@ -733,20 +726,20 @@ export default function App() {
         </div>
 
         <div aria-live="assertive" aria-atomic="true">
-          {error && (
+          {lookupMutation.isError && (
             <div role="alert" className="mb-6 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
-              {error}
+              {lookupMutation.error?.message}
             </div>
           )}
         </div>
 
-        {looking && (
+        {lookupMutation.isPending && (
           <SearchLoadingGrid sources={sourcesQuery.data?.sources ?? []} />
         )}
 
-        {!streamingLei && !looking && !streaming && !error && !nameResults && !nameSearching && (
+        {!streamingLei && !lookupMutation.isPending && !streaming && !lookupMutation.isError && !nameSearchMutation.data && !nameSearchMutation.isPending && (
           <>
-            <ExampleLeiPicker onPick={lookupLei} disabled={looking || streaming} />
+            <ExampleLeiPicker onPick={lookupLei} disabled={lookupMutation.isPending || streaming} />
             <HowItWorks />
           </>
         )}
