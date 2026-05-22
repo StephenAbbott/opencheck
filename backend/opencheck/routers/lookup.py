@@ -480,7 +480,16 @@ async def lookup(
                         break
         if not _oa and legal_name:
             _oa = await oa_adapter.fetch_by_name(legal_name)  # type: ignore[attr-defined]
-        return _oa
+        # OpenAleph can index the same entity under multiple collection
+        # aliases, causing duplicate hit_ids in the results array.
+        # Deduplicate by hit_id before returning.
+        _seen: set[str] = set()
+        _deduped: list[SourceHit] = []
+        for _h in _oa:
+            if _h.hit_id not in _seen:
+                _seen.add(_h.hit_id)
+                _deduped.append(_h)
+        return _deduped
 
     _w1: list[tuple[str, Any]] = []
     if "gb_coh" in derived:
@@ -1547,7 +1556,16 @@ async def _lookup_stream_events(
                         break
         if not _oa and legal_name:
             _oa = await oa_adapter.fetch_by_name(legal_name)  # type: ignore[attr-defined]
-        return _oa
+        # OpenAleph can index the same entity under multiple collection
+        # aliases, causing duplicate hit_ids in the results array.
+        # Deduplicate by hit_id before returning.
+        _seen: set[str] = set()
+        _deduped: list[SourceHit] = []
+        for _h in _oa:
+            if _h.hit_id not in _seen:
+                _seen.add(_h.hit_id)
+                _deduped.append(_h)
+        return _deduped
 
     tasks: dict[asyncio.Task[tuple[str, Any]], None] = {}
 
