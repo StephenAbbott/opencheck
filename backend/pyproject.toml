@@ -24,6 +24,9 @@ dependencies = [
     # DuckDB — used by bods_gleif and bods_uk_psc adapters to query Parquet
     # files downloaded from Open Ownership's BODS bulk-data S3 bucket.
     "duckdb>=1.1",
+    # bods-xml — canonical XML serialisation of BODS v0.4 statements.
+    # Used by the /export?format=xml endpoint.
+    "bods-xml @ git+https://github.com/StephenAbbott/bods-xml.git",
 ]
 
 [project.optional-dependencies]

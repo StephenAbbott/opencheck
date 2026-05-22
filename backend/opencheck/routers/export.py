@@ -12,13 +12,15 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
+from bods_xml.canonical import convert as _bods_xml_convert, to_string as _bods_xml_str
+
 from .. import __version__
 from ..sources import REGISTRY, SearchKind
 from .lookup import LookupResponse, ReportResponse, _build_report, lookup
 
 router = APIRouter()
 
-_EXPORT_FORMATS = {"json", "jsonl", "zip"}
+_EXPORT_FORMATS = {"json", "jsonl", "zip", "xml"}
 
 
 @router.get("/export")
@@ -42,8 +44,8 @@ async def export(
     deepen_top: int = Query(3, ge=0, le=10),
     format: str = Query(
         "zip",
-        pattern="^(json|jsonl|zip)$",
-        description="json (pretty array) | jsonl (newline-delimited) | zip (bundle)",
+        pattern="^(json|jsonl|zip|xml)$",
+        description="json (pretty array) | jsonl (newline-delimited) | zip (bundle) | xml (canonical BODS XML)",
     ),
 ) -> Response:
     """Download a BODS v0.4 bundle for a subject."""
@@ -86,6 +88,19 @@ async def export(
             headers={
                 "Content-Disposition": (
                     f'attachment; filename="opencheck-{slug}-{stamp}.jsonl"'
+                ),
+            },
+        )
+
+    if format == "xml":
+        xml_root = _bods_xml_convert(payload.bods)
+        body = _bods_xml_str(xml_root).encode("utf-8")
+        return Response(
+            content=body,
+            media_type="application/xml",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="opencheck-{slug}-{stamp}.xml"'
                 ),
             },
         )
@@ -154,11 +169,13 @@ def _build_export_zip(
 
     bods_json = json.dumps(payload.bods, indent=2)
     bods_jsonl = "\n".join(json.dumps(s) for s in payload.bods) + "\n"
+    bods_xml = _bods_xml_str(_bods_xml_convert(payload.bods))
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(f"opencheck-{slug}-{stamp}/bods.json", bods_json)
         zf.writestr(f"opencheck-{slug}-{stamp}/bods.jsonl", bods_jsonl)
+        zf.writestr(f"opencheck-{slug}-{stamp}/bods.xml", bods_xml)
         zf.writestr(
             f"opencheck-{slug}-{stamp}/manifest.json",
             json.dumps(manifest, indent=2, default=str),

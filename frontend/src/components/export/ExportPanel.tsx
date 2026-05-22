@@ -18,7 +18,7 @@ export function ExportPanel({
   sourceLicenses: Record<string, string>;
   contributingSourceIds: string[];
 }) {
-  const [format, setFormat] = useState<"zip" | "json" | "jsonl">("zip");
+  const [format, setFormat] = useState<"zip" | "json" | "jsonl" | "xml">("zip");
 
   const ncSources = contributingSourceIds.filter((id) =>
     (sourceLicenses[id] ?? "").toLowerCase().includes("nc")
@@ -45,13 +45,14 @@ export function ExportPanel({
           <select
             value={format}
             onChange={(e) =>
-              setFormat(e.target.value as "zip" | "json" | "jsonl")
+              setFormat(e.target.value as "zip" | "json" | "jsonl" | "xml")
             }
             className="border border-oo-rule rounded px-2 py-1.5 text-[13px] bg-white"
           >
             <option value="zip">ZIP (bods + manifest + licenses)</option>
             <option value="json">JSON (BODS array)</option>
             <option value="jsonl">JSONL (newline-delimited)</option>
+            <option value="xml">XML (canonical BODS)</option>
           </select>
           <a
             href={href}
