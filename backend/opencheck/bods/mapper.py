@@ -1940,10 +1940,20 @@ _EE_BO_CONTROL_MAP: dict[str, tuple[str, str]] = {
 
 
 def _ee_date(s: str | None) -> str | None:
-    """Convert Estonian DD.MM.YYYY date string to ISO YYYY-MM-DD."""
+    """Convert an Estonian date string to ISO YYYY-MM-DD.
+
+    Handles two input formats:
+    * ``DD.MM.YYYY`` — bulk open-data exports
+    * ``YYYY-MM-DD[Z]`` / ``YYYY-MM-DDTHH:MM:SSZ`` — live API responses
+    """
     if not s:
         return None
-    parts = s.strip().split(".")
+    s = str(s).strip()
+    # Already ISO (or API format with optional time/timezone suffix).
+    if len(s) >= 10 and s[4] == "-":
+        return s[:10].rstrip("Z")
+    # Estonian bulk-data: DD.MM.YYYY
+    parts = s.split(".")
     if len(parts) == 3:
         d, m, y = parts
         if len(y) == 4 and d.isdigit() and m.isdigit():

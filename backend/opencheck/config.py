@@ -125,10 +125,11 @@ class Settings(BaseSettings):
     bce_belgium_db_file: str | None = Field(default=None, alias="BCE_BELGIUM_DB_FILE")
 
     # --- Estonian e-Business Register (ariregister) ---
-    # Pre-built SQLite index. Build with: python scripts/extract_ariregister.py
-    # Source: https://avaandmed.ariregister.rik.ee/en/downloading-open-data
-    # License: CC BY 4.0 — no API key required, only the local DB file.
-    ariregister_db_file: str | None = Field(default=None, alias="ARIREGISTER_DB_FILE")
+    # Live SOAP API credentials issued under the free RIK data contract.
+    # Register at: https://www.rik.ee/en/e-business-register/api
+    # Rate limit: 50,000 requests/day, 1 simultaneous request.
+    ariregister_username: str | None = Field(default=None, alias="ARIREGISTER_USERNAME")
+    ariregister_password: str | None = Field(default=None, alias="ARIREGISTER_PASSWORD")
 
     # --- OpenTender (DIGIWHIST) ---
     # Pre-built SQLite index. Build with: python scripts/extract_opentender.py
