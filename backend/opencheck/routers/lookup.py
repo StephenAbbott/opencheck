@@ -578,7 +578,11 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=_profile.get("company_name", legal_name or ""),
                 summary=f"GB-COH {derived['gb_coh']}",
-                identifiers={"gb_coh": derived["gb_coh"], "lei": lei, **({"wikidata_qid": qid} if qid else {})},
+                # wikidata_qid is intentionally omitted: the QID is sourced
+                # exclusively from Wikidata; Companies House does not publish
+                # Wikidata mappings, so including it would falsely imply CH
+                # corroborates the identifier.
+                identifiers={"gb_coh": derived["gb_coh"], "lei": lei},
                 raw=_profile,
                 is_stub=False,
             ))
@@ -1701,7 +1705,11 @@ async def _lookup_stream_events(
                         kind=SearchKind.ENTITY,
                         name=_p.get("company_name", legal_name or ""),
                         summary=f"GB-COH {derived['gb_coh']}",
-                        identifiers={"gb_coh": derived["gb_coh"], "lei": lei, **({"wikidata_qid": qid} if qid else {})},
+                        # wikidata_qid is intentionally omitted: the QID is sourced
+                        # exclusively from Wikidata; Companies House does not publish
+                        # Wikidata mappings, so including it would falsely imply CH
+                        # corroborates the identifier.
+                        identifiers={"gb_coh": derived["gb_coh"], "lei": lei},
                         raw=_p, is_stub=False,
                     )
 
