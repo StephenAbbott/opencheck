@@ -429,12 +429,154 @@ def map_companies_house(bundle: dict[str, Any]) -> BODSBundle:
     return result
 
 
+def _ch_officer_local_id(company_number: str, officer: dict[str, Any]) -> str:
+    """Derive a stable local_id for a Companies House officer from the company bundle.
+
+    Extracts the officer id from ``links.officer.appointments`` when present
+    (the path has the form ``/officers/{id}/appointments``), falling back to a
+    SHA-256 digest of ``{company_number}|{name}|{appointed_on}`` so IDs remain
+    stable even when the links block is absent.
+    """
+    links_path: str = (
+        (officer.get("links") or {})
+        .get("officer", {})
+        .get("appointments", "")
+    )
+    # Extract id from "/officers/{id}/appointments"
+    parts = [p for p in links_path.split("/") if p]
+    if "officers" in parts:
+        idx = parts.index("officers")
+        if idx + 1 < len(parts):
+            officer_id = parts[idx + 1]
+            return f"{company_number}:director:{officer_id}"
+    # Fallback: hash of stable fields
+    name = officer.get("name") or ""
+    appointed_on = officer.get("appointed_on") or ""
+    digest = hashlib.sha256(
+        f"{company_number}|{name}|{appointed_on}".encode("utf-8")
+    ).hexdigest()[:16]
+    return f"{company_number}:director:{digest}"
+
+
+def _ch_director_statements(
+    company_number: str,
+    officers_payload: dict[str, Any],
+    entity_sid: str,
+    company_url: str,
+    seen_sids: set[str],
+) -> list[dict[str, Any]]:
+    """Emit person + relationship statements for active director officers.
+
+    Only officers with ``officer_role == "director"`` (or a role containing
+    "director") and no ``resigned_on`` are included.  Each active director
+    becomes:
+
+    * A ``personStatement`` (``knownPerson``) with name, DOB, nationality and
+      service address.
+    * A ``relationship`` statement with:
+      - ``type: seniorManagingOfficial``
+      - ``beneficialOwnershipOrControl: false``
+      - ``startDate`` = ``appointed_on`` (when present)
+
+    Already-seen ``statementId``\\s are skipped so duplicates are suppressed
+    when the same director appears across the root + related-company passes.
+    """
+    stmts: list[dict[str, Any]] = []
+    items = officers_payload.get("items") or []
+
+    for officer in items:
+        # Only active directors — skip resignations and non-director roles.
+        if officer.get("resigned_on"):
+            continue
+        role = (officer.get("officer_role") or "").lower()
+        if "director" not in role:
+            continue
+
+        name: str = officer.get("name") or "Unknown director"
+
+        # Date of birth: CH returns {"year": int, "month": int} or {"year": int}.
+        dob = officer.get("date_of_birth")
+        birth_date: str | None = None
+        if isinstance(dob, dict) and "year" in dob:
+            if "month" in dob:
+                birth_date = f"{dob['year']:04d}-{dob['month']:02d}"
+            else:
+                birth_date = f"{dob['year']:04d}"
+
+        nationalities: list[dict[str, str]] = []
+        if officer.get("nationality"):
+            nationalities.append({"name": officer["nationality"]})
+
+        # Service address — same structure as individual PSC address.
+        address_block = officer.get("address") or {}
+        addresses: list[dict[str, str]] = []
+        if address_block:
+            addr_parts = [
+                address_block.get("premises"),
+                address_block.get("address_line_1"),
+                address_block.get("address_line_2"),
+                address_block.get("locality"),
+                address_block.get("region"),
+                address_block.get("postal_code"),
+                address_block.get("country"),
+            ]
+            joined = ", ".join([p for p in addr_parts if p])
+            if joined:
+                addresses.append(
+                    _addr("service", joined, address_block.get("country", ""))
+                )
+
+        local_id = _ch_officer_local_id(company_number, officer)
+        person = make_person_statement(
+            source_id="companies_house",
+            local_id=local_id,
+            full_name=name,
+            person_type="knownPerson",
+            nationalities=nationalities,
+            birth_date=birth_date,
+            addresses=addresses,
+            source_url=company_url,
+        )
+        person_sid = person["statementId"]
+        if person_sid not in seen_sids:
+            stmts.append(person)
+            seen_sids.add(person_sid)
+
+        appointed_on = officer.get("appointed_on")
+        details = "Director" + (f", from {appointed_on}" if appointed_on else "")
+        interest: dict[str, Any] = {
+            "type": "seniorManagingOfficial",
+            "directOrIndirect": "direct",
+            "beneficialOwnershipOrControl": False,
+            "details": details,
+        }
+        if appointed_on:
+            interest["startDate"] = appointed_on
+
+        rel = make_relationship_statement(
+            source_id="companies_house",
+            local_id=f"{local_id}:rel",
+            subject_statement_id=entity_sid,
+            interested_party_statement_id=person_sid,
+            interested_party_type="person",
+            interests=[interest],
+            source_url=company_url,
+            publication_date=appointed_on or None,
+        )
+        rel_sid = rel["statementId"]
+        if rel_sid not in seen_sids:
+            stmts.append(rel)
+            seen_sids.add(rel_sid)
+
+    return stmts
+
+
 def _emit_company_statements(
     bundle: dict[str, Any],
     result: BODSBundle,
     seen_sids: set[str],
 ) -> None:
-    """Emit entity + PSC statements for one company bundle into *result*.
+    """Emit entity + PSC + director statements for one company bundle into *result*.
 
     *seen_sids* is updated in place; statements whose ``statementId`` is
     already present are silently skipped so the same entity/relationship is
@@ -443,6 +585,7 @@ def _emit_company_statements(
     number = str(bundle.get("company_number", ""))
     profile = bundle.get("profile") or {}
     pscs = (bundle.get("pscs") or {}).get("items") or []
+    officers_payload = bundle.get("officers") or {}
 
     company_url = (
         f"https://find-and-update.company-information.service.gov.uk/company/{number}"
@@ -530,6 +673,12 @@ def _emit_company_statements(
         if rel_sid not in seen_sids:
             result.statements.append(rel)
             seen_sids.add(rel_sid)
+
+    # Directors → seniorManagingOfficial person + relationship statements.
+    director_stmts = _ch_director_statements(
+        number, officers_payload, entity_sid, company_url, seen_sids
+    )
+    result.statements.extend(director_stmts)
 
 
 def _profile_addresses(profile: dict[str, Any]) -> list[dict[str, str]]:
