@@ -72,6 +72,10 @@ def test_deepen_gleif_live_maps_to_bods(
         url=f"{_GLEIF}/lei-records/{lei}/ultimate-parent-reporting-exception",
         status_code=404,
     )
+    httpx_mock.add_response(
+        url=f"{_GLEIF}/lei-records/{lei}/direct-children?page[size]=10&page[number]=1",
+        json={"data": [], "meta": {"pagination": {"total": 0}}},
+    )
 
     client = TestClient(app)
     r = client.get("/deepen", params={"source": "gleif", "hit_id": lei})

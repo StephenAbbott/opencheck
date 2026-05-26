@@ -142,6 +142,10 @@ def test_deepen_gleif_uses_override_bundle_instead_of_live_mapper(
         httpx_mock.add_response(
             url=f"{api}/lei-records/{lei}/{path}", status_code=404
         )
+    httpx_mock.add_response(
+        url=f"{api}/lei-records/{lei}/direct-children?page[size]=10&page[number]=1",
+        json={"data": [], "meta": {"pagination": {"total": 0}}},
+    )
 
     # Now seed a richer override bundle (subject + parent + relationship).
     _seed_bundle(
@@ -251,6 +255,10 @@ def test_deepen_falls_back_to_live_when_no_override_bundle(
         httpx_mock.add_response(
             url=f"{api}/lei-records/{lei}/{path}", status_code=404
         )
+    httpx_mock.add_response(
+        url=f"{api}/lei-records/{lei}/direct-children?page[size]=10&page[number]=1",
+        json={"data": [], "meta": {"pagination": {"total": 0}}},
+    )
 
     client = TestClient(app)
     r = client.get("/deepen", params={"source": "gleif", "hit_id": lei})

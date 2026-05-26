@@ -462,7 +462,13 @@ async def lookup(
             # on the GLEIF hit would make the reconciler show "gleif" as a
             # confirmer of the QID, which is inaccurate.
         },
-        raw=gleif_bundle.get("record") or {},
+        raw={
+            **(gleif_bundle.get("record") or {}),
+            # Children metadata — read by the frontend to display
+            # "Showing X of N direct subsidiaries (GLEIF)".
+            "direct_children_total": gleif_bundle.get("direct_children_total", 0),
+            "direct_children_fetched": len(gleif_bundle.get("direct_children") or []),
+        },
         is_stub=False,
     )
     hits.append(gleif_hit)
@@ -1483,7 +1489,13 @@ async def _lookup_stream_events(
             # on the GLEIF hit would make the reconciler show "gleif" as a
             # confirmer of the QID, which is inaccurate.
         },
-        raw=gleif_bundle.get("record") or {},
+        raw={
+            **(gleif_bundle.get("record") or {}),
+            # Children metadata — read by the frontend to display
+            # "Showing X of N direct subsidiaries (GLEIF)".
+            "direct_children_total": gleif_bundle.get("direct_children_total", 0),
+            "direct_children_fetched": len(gleif_bundle.get("direct_children") or []),
+        },
         is_stub=False,
     )
     yield {"event": "hit", "data": gleif_hit.model_dump_json()}

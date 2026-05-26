@@ -1,19 +1,24 @@
 """GLEIF adapter.
 
 GLEIF exposes the Level 1 LEI record (legal entity) and Level 2 relationship
-records (direct/ultimate parent) via a JSON:API-formatted REST endpoint at
-``https://api.gleif.org/api/v1``. No authentication is required and the
-data is CC0.
+records (direct/ultimate parent and direct children) via a JSON:API-formatted
+REST endpoint at ``https://api.gleif.org/api/v1``. No authentication is
+required and the data is CC0.
 
-Live endpoints used (Phase 2):
+Live endpoints used:
 
 * ``GET /lei-records?filter[fulltext]=<query>`` — entity search.
 * ``GET /lei-records/{lei}`` — Level 1 record for a single LEI.
 * ``GET /lei-records/{lei}/direct-parent`` — Level 2 direct parent (optional).
 * ``GET /lei-records/{lei}/ultimate-parent`` — Level 2 ultimate parent (optional).
+* ``GET /lei-records/{lei}/direct-children?page[size]=10&page[number]=1`` —
+  first page of direct subsidiaries + total count (optional).
 
 The parent calls return 404 when no relationship is on file; we treat that
-as "no parent" rather than an error.
+as "no parent" rather than an error.  The children call returns an empty list
+(or 404) when the entity has no subsidiaries in GLEIF.  Only the first page
+(≤ 10 records) is fetched; the pagination total is stored in the bundle so
+the UI can display "showing X of N".
 """
 
 from __future__ import annotations
@@ -143,6 +148,7 @@ class GleifAdapter(SourceAdapter):
         ultimate_parent, ultimate_exception = await self._parent_or_exception(
             lei, "ultimate"
         )
+        direct_children, direct_children_total = await self._fetch_direct_children(lei)
 
         bundle = {
             "source_id": self.id,
@@ -152,9 +158,40 @@ class GleifAdapter(SourceAdapter):
             "ultimate_parent": (ultimate_parent or {}).get("data"),
             "direct_parent_exception": (direct_exception or {}).get("data"),
             "ultimate_parent_exception": (ultimate_exception or {}).get("data"),
+            "direct_children": direct_children,
+            "direct_children_total": direct_children_total,
         }
         validate_raw("gleif", GLEIFBundle, bundle)
         return bundle
+
+    async def _fetch_direct_children(
+        self, lei: str
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Fetch the first page of direct subsidiaries for ``lei``.
+
+        Returns ``(records, total)`` where ``records`` is a list of up to 10
+        Level 1 lei-record data objects (same shape as the Level 1 fetch) and
+        ``total`` is the full count reported by GLEIF pagination metadata.
+
+        Returns ``([], 0)`` when:
+        * live mode is disabled and the result is not cached
+        * GLEIF reports no children for this entity (empty ``data`` or 404)
+        """
+        cache_key = f"{_CACHE_NS}/lei/{lei}/direct-children-p1"
+        payload = await self._get_optional(
+            f"/lei-records/{quote(lei)}/direct-children?page[size]=10&page[number]=1",
+            cache_key=cache_key,
+        )
+        if payload is None:
+            return [], 0
+
+        records: list[dict[str, Any]] = payload.get("data") or []
+        total: int = (
+            (payload.get("meta") or {})
+            .get("pagination", {})
+            .get("total", len(records))
+        )
+        return records, total
 
     async def _parent_or_exception(
         self, lei: str, kind: str

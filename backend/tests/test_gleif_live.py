@@ -105,6 +105,10 @@ async def test_fetch_lei_bundle_with_parents(httpx_mock: HTTPXMock) -> None:
         url=f"{_API}/lei-records/{lei}/ultimate-parent-reporting-exception",
         status_code=404,
     )
+    httpx_mock.add_response(
+        url=f"{_API}/lei-records/{lei}/direct-children?page[size]=10&page[number]=1",
+        json={"data": [], "meta": {"pagination": {"total": 0}}},
+    )
 
     adapter = GleifAdapter()
     bundle = await adapter.fetch(lei)
@@ -159,6 +163,10 @@ async def test_fetch_surfaces_reporting_exception(httpx_mock: HTTPXMock) -> None
     httpx_mock.add_response(
         url=f"{_API}/lei-records/{lei}/ultimate-parent-reporting-exception",
         status_code=404,
+    )
+    httpx_mock.add_response(
+        url=f"{_API}/lei-records/{lei}/direct-children?page[size]=10&page[number]=1",
+        json={"data": [], "meta": {"pagination": {"total": 0}}},
     )
 
     adapter = GleifAdapter()

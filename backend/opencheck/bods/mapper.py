@@ -1073,6 +1073,9 @@ def map_gleif(bundle: dict[str, Any]) -> BODSBundle:
                 _gleif_exception_statements(lei, subject_sid, kind, exception)
             )
 
+    for child in bundle.get("direct_children") or []:
+        result.extend(_gleif_child_statements(lei, subject_sid, child))
+
     return result
 
 
@@ -1108,6 +1111,48 @@ def _gleif_parent_statements(
         source_url=parent_url,
     )
     return [parent_statement, rel]
+
+
+def _gleif_child_statements(
+    lei: str, subject_sid: str, child: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Emit entity + relationship statements for one GLEIF direct subsidiary.
+
+    Relationship direction (mirrors the parent case but inverted):
+    * ``subject``           = child entity  (the one being controlled)
+    * ``interestedParty``   = queried entity (the one doing the controlling)
+
+    Only the first page of children is passed in here; the total count is
+    surfaced separately via the bundle's ``direct_children_total`` field
+    (stored in the GLEIF hit's ``raw`` dict for the frontend to read).
+    """
+    child_attrs = child.get("attributes") or child
+    child_entity_block = child_attrs.get("entity") or {}
+    child_lei = child_attrs.get("lei") or child.get("id") or ""
+    if not child_lei:
+        return []
+
+    child_url = f"https://www.gleif.org/lei/{child_lei}"
+    child_statement = _gleif_entity_statement(
+        child_lei, child_entity_block, child_url, attrs=child_attrs
+    )
+    rel = make_relationship_statement(
+        source_id="gleif",
+        local_id=f"{lei}:direct-child:{child_lei}",
+        subject_statement_id=child_statement["statementId"],
+        interested_party_statement_id=subject_sid,
+        interested_party_type="entity",
+        interests=[
+            {
+                "type": "otherInfluenceOrControl",
+                "directOrIndirect": "direct",
+                "beneficialOwnershipOrControl": False,
+                "details": "GLEIF Level 2 direct-child (accounting consolidation)",
+            }
+        ],
+        source_url=child_url,
+    )
+    return [child_statement, rel]
 
 
 def _gleif_exception_statements(

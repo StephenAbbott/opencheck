@@ -136,6 +136,140 @@ def test_map_gleif_handles_missing_parents() -> None:
     assert types == ["entity"]  # just the subject
 
 
+# ---------------------------------------------------------------------
+# GLEIF direct children
+# ---------------------------------------------------------------------
+
+
+def _child_record(child_lei: str, name: str) -> dict:
+    return {
+        "id": child_lei,
+        "attributes": {
+            "lei": child_lei,
+            "entity": {
+                "legalName": {"name": name},
+                "jurisdiction": "FR",
+            },
+        },
+    }
+
+
+def test_map_gleif_emits_child_entity_and_relationship() -> None:
+    """A direct_children entry produces one entity + one relationship statement."""
+    payload = _gleif_bundle_with_direct_parent()
+    payload["direct_children"] = [_child_record("CHILDXXXXXXXXXXXXXXX", "BP France SAS")]
+    payload["direct_children_total"] = 1
+    bundle = map_gleif(payload)
+    statements = list(bundle)
+    entity_names = [s["recordDetails"]["name"] for s in statements if s["recordType"] == "entity"]
+    assert "BP France SAS" in entity_names
+    rel_count = sum(1 for s in statements if s["recordType"] == "relationship")
+    # 1 parent rel + 1 child rel
+    assert rel_count == 2
+
+
+def test_map_gleif_child_relationship_direction() -> None:
+    """The queried entity must be the interestedParty, not the subject."""
+    payload = {
+        "lei": "PARENTXXXXXXXXXXXXXX",
+        "record": {
+            "id": "PARENTXXXXXXXXXXXXXX",
+            "attributes": {
+                "lei": "PARENTXXXXXXXXXXXXXX",
+                "entity": {"legalName": {"name": "Parent Co"}},
+            },
+        },
+        "direct_children": [_child_record("CHILDXXXXXXXXXXXXXXX", "Child Co")],
+        "direct_children_total": 1,
+    }
+    bundle = map_gleif(payload)
+    stmts = list(bundle)
+    parent_entity = next(s for s in stmts if s["recordType"] == "entity" and s["recordDetails"]["name"] == "Parent Co")
+    child_entity = next(s for s in stmts if s["recordType"] == "entity" and s["recordDetails"]["name"] == "Child Co")
+    rel = next(s for s in stmts if s["recordType"] == "relationship")
+    rd = rel["recordDetails"]
+    # Child is subject; Parent (queried entity) is interestedParty.
+    assert rd["subject"] == child_entity["statementId"]
+    assert rd["interestedParty"] == parent_entity["statementId"]
+
+
+def test_map_gleif_child_interest_type() -> None:
+    payload = {
+        "lei": "PARENTXXXXXXXXXXXXXX",
+        "record": {
+            "id": "PARENTXXXXXXXXXXXXXX",
+            "attributes": {
+                "lei": "PARENTXXXXXXXXXXXXXX",
+                "entity": {"legalName": {"name": "Parent Co"}},
+            },
+        },
+        "direct_children": [_child_record("CHILDXXXXXXXXXXXXXXX", "Child Co")],
+        "direct_children_total": 1,
+    }
+    bundle = map_gleif(payload)
+    rel = next(s for s in bundle if s["recordType"] == "relationship")
+    interest = rel["recordDetails"]["interests"][0]
+    assert interest["type"] == "otherInfluenceOrControl"
+    assert interest["directOrIndirect"] == "direct"
+    assert "direct-child" in interest["details"]
+
+
+def test_map_gleif_multiple_children() -> None:
+    """Multiple children each produce their own entity + relationship pair."""
+    payload = {
+        "lei": "PARENTXXXXXXXXXXXXXX",
+        "record": {
+            "id": "PARENTXXXXXXXXXXXXXX",
+            "attributes": {
+                "lei": "PARENTXXXXXXXXXXXXXX",
+                "entity": {"legalName": {"name": "Parent Co"}},
+            },
+        },
+        "direct_children": [
+            _child_record("CHILD1XXXXXXXXXXXXXX", "Child One"),
+            _child_record("CHILD2XXXXXXXXXXXXXX", "Child Two"),
+            _child_record("CHILD3XXXXXXXXXXXXXX", "Child Three"),
+        ],
+        "direct_children_total": 42,  # total > fetched — simulates pagination
+    }
+    bundle = map_gleif(payload)
+    stmts = list(bundle)
+    entity_count = sum(1 for s in stmts if s["recordType"] == "entity")
+    rel_count = sum(1 for s in stmts if s["recordType"] == "relationship")
+    assert entity_count == 4  # 1 parent + 3 children
+    assert rel_count == 3  # 3 child relationships
+
+
+def test_map_gleif_no_children_no_extra_statements() -> None:
+    """Empty direct_children list emits no extra statements."""
+    payload = _gleif_bundle_with_direct_parent()
+    payload["direct_children"] = []
+    payload["direct_children_total"] = 0
+    bundle = map_gleif(payload)
+    stmts = list(bundle)
+    # Same as the base case: 2 entity + 1 relationship
+    assert sum(1 for s in stmts if s["recordType"] == "entity") == 2
+    assert sum(1 for s in stmts if s["recordType"] == "relationship") == 1
+
+
+def test_map_gleif_children_output_passes_validator() -> None:
+    payload = {
+        "lei": "PARENTXXXXXXXXXXXXXX",
+        "record": {
+            "id": "PARENTXXXXXXXXXXXXXX",
+            "attributes": {
+                "lei": "PARENTXXXXXXXXXXXXXX",
+                "entity": {"legalName": {"name": "Parent Co"}},
+            },
+        },
+        "direct_children": [_child_record("CHILDXXXXXXXXXXXXXXX", "Child Co")],
+        "direct_children_total": 1,
+    }
+    bundle = map_gleif(payload)
+    issues = validate_shape(bundle)
+    assert issues == [], issues
+
+
 def test_map_gleif_emits_bridge_for_natural_persons_exception() -> None:
     """A NATURAL_PERSONS exception becomes an unknownPerson + relationship."""
     payload = {

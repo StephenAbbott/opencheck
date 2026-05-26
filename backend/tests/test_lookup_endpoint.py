@@ -66,6 +66,10 @@ def _mock_lei_record_chain(httpx_mock: HTTPXMock, lei: str, attrs: dict) -> None
         httpx_mock.add_response(
             url=f"{api}/lei-records/{lei}/{path}", status_code=404
         )
+    httpx_mock.add_response(
+        url=f"{api}/lei-records/{lei}/direct-children?page[size]=10&page[number]=1",
+        json={"data": [], "meta": {"pagination": {"total": 0}}},
+    )
 
 
 def _mock_wikidata_lei_lookup_empty(

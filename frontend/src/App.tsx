@@ -381,6 +381,18 @@ export default function App() {
     return result;
   }, [hits]);
 
+  // Extract GLEIF direct-children counts from the GLEIF hit's raw dict.
+  // The adapter fetches only the first page (≤ 10) so we surface both
+  // the fetched count and the total reported by GLEIF pagination.
+  const gleifChildrenInfo = useMemo<{ fetched: number; total: number } | null>(() => {
+    const gleifHit = hits.find((h) => h.source_id === "gleif");
+    if (!gleifHit) return null;
+    const raw = (gleifHit.raw as Record<string, unknown>) ?? {};
+    const total = typeof raw["direct_children_total"] === "number" ? raw["direct_children_total"] : 0;
+    const fetched = typeof raw["direct_children_fetched"] === "number" ? raw["direct_children_fetched"] : 0;
+    return total > 0 ? { fetched, total } : null;
+  }, [hits]);
+
   // Index risk signals by `${source_id}:${hit_id}` so hit rows can
   // pull their own chips without re-scanning the whole list.
   const riskByHit = useMemo(() => {
@@ -761,13 +773,18 @@ export default function App() {
           </section>
         )}
 
-        {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && (
+        {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0 || gleifChildrenInfo) && (
           <section className="mb-8 bg-white border border-oo-rule rounded-oo p-5">
             <SectionLabel>Cross-source identifiers</SectionLabel>
             <CrossSourceIdentifiersTable
               links={crossSourceLinks}
               gleifMapped={gleifMappedIds}
             />
+            {gleifChildrenInfo && (
+              <p className="text-[12px] text-oo-muted mt-3 pt-3 border-t border-oo-rule">
+                Showing {gleifChildrenInfo.fetched} of {gleifChildrenInfo.total.toLocaleString()} direct subsidiaries in BODS statements (GLEIF Level 2 — first page only)
+              </p>
+            )}
           </section>
         )}
 

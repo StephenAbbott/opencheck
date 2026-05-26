@@ -104,6 +104,10 @@ def test_deepen_emits_amla_non_eu_signal_for_offshore_gleif_record(
         httpx_mock.add_response(
             url=f"{api}/lei-records/{lei_a}/{path}", status_code=404
         )
+    httpx_mock.add_response(
+        url=f"{api}/lei-records/{lei_a}/direct-children?page[size]=10&page[number]=1",
+        json={"data": [], "meta": {"pagination": {"total": 0}}},
+    )
 
     client = TestClient(app)
     r = client.get("/deepen", params={"source": "gleif", "hit_id": lei_a})
