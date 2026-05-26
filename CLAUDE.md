@@ -48,6 +48,18 @@ Two Cowork skills are available and should be used proactively:
 
 ---
 
+## Identifier corroboration rule for `SourceHit.identifiers`
+
+When building a `SourceHit` in `routers/lookup.py`, only include an identifier in `identifiers` if the source **independently publishes or validates** that identifier. The reconciler (`reconcile.py`) uses the presence of an identifier across multiple hits to assert cross-source corroboration — putting a borrowed identifier on a hit that doesn't actually contain it creates a false confirmation in the UI.
+
+Specific rules:
+
+- **`wikidata_qid`** — only on the **Wikidata** hit. Companies House and GLEIF do not publish Wikidata mappings; omitting it from their hits was fixed in commits `3454a36` and `fbc458e`.
+- **`lei`** — only on hits from sources that independently publish or validate LEIs (e.g. GLEIF, OpenCorporates). Do not propagate `lei` from the derived dict to registry adapters (CH, KvK, etc.) that received it as a lookup key rather than asserting it themselves.
+- When in doubt: if the source's own data payload doesn't contain the identifier, don't put it in `identifiers`.
+
+---
+
 ## Other conventions
 
 - API keys go in `.env` only — never committed to the repo.
