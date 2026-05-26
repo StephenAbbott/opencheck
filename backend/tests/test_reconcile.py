@@ -177,6 +177,43 @@ def test_reconcile_ignores_name_match_when_strong_link_already_exists() -> None:
     assert links[0].key == "wikidata_qid"
 
 
+def test_reconcile_wikidata_qid_surfaced_with_single_source() -> None:
+    """wikidata_qid is shown even when only Wikidata carries it.
+
+    GLEIF does not publish an official Wikidata mapping, so the QID is no
+    longer stamped onto the GLEIF hit.  The reconciler must therefore surface
+    the QID with just one source rather than silently dropping it.
+    """
+    hits = [
+        _hit("gleif", "213800ABC", lei="213800ABCDEF0000LEI0"),
+        _hit("wikidata", "Q12345", wikidata_qid="Q12345", lei="213800ABCDEF0000LEI0"),
+    ]
+    links = reconcile(hits)
+    qid_links = [l for l in links if l.key == "wikidata_qid"]
+    assert len(qid_links) == 1
+    assert qid_links[0].confidence == "strong"
+    assert {h.source_id for h in qid_links[0].hits} == {"wikidata"}
+
+
+def test_reconcile_gleif_not_in_wikidata_qid_confirmers() -> None:
+    """GLEIF must not appear as a confirmer of wikidata_qid.
+
+    The QID is derived from Wikidata's own SPARQL endpoint.  If it were
+    echoed onto the GLEIF SourceHit, the reconciler would incorrectly show
+    GLEIF as an independent corroborator.
+    """
+    hits = [
+        # GLEIF hit with NO wikidata_qid — correct post-fix behaviour.
+        _hit("gleif", "213800ABC", lei="213800ABCDEF0000LEI0"),
+        _hit("wikidata", "Q12345", wikidata_qid="Q12345", lei="213800ABCDEF0000LEI0"),
+    ]
+    links = reconcile(hits)
+    qid_links = [l for l in links if l.key == "wikidata_qid"]
+    confirmer_ids = {h.source_id for h in qid_links[0].hits}
+    assert "gleif" not in confirmer_ids
+    assert "wikidata" in confirmer_ids
+
+
 def test_reconcile_dict_serialisation() -> None:
     hits = [
         _hit("gleif", "L", lei="L0000000000000000000"),

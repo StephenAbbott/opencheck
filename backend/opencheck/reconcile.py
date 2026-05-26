@@ -68,13 +68,22 @@ _STRONG_KEYS: tuple[str, ...] = (
     "opensanctions_id",
 )
 
+# Keys where a single-source hit is still worth surfacing in the panel.
+# ``wikidata_qid`` is the canonical cross-source bridge and is worth showing
+# even when only Wikidata carries it — GLEIF does not yet publish an official
+# Wikidata mapping, so the QID is always Wikidata-sourced.
+_SINGLE_SOURCE_OK: frozenset[str] = frozenset({"wikidata_qid"})
+
 
 def reconcile(hits: Iterable[SourceHit]) -> list[CrossSourceLink]:
-    """Group hits by shared identifier and return one link per group ≥2.
+    """Group hits by shared identifier and return confirmed bridges.
 
-    Single-source matches (one hit carrying a Q-ID with no other source
-    matching that Q-ID) are deliberately not returned — the panel shows
-    *bridges*, not individual identifiers.
+    For most keys, at least two independent sources must share the identifier
+    before a link is emitted — a single-source match is not a *bridge*.
+
+    Exception: keys in ``_SINGLE_SOURCE_OK`` (currently ``wikidata_qid``) are
+    surfaced even with only one source because the identifier itself is the
+    canonical provenance marker — no corroboration is required.
     """
     hits = list(hits)
     seen: set[tuple[str, str]] = set()
@@ -88,8 +97,9 @@ def reconcile(hits: Iterable[SourceHit]) -> list[CrossSourceLink]:
                 continue
             groups.setdefault(value, []).append(hit)
 
+        min_group = 1 if key in _SINGLE_SOURCE_OK else 2
         for value, group in groups.items():
-            if len(group) < 2:
+            if len(group) < min_group:
                 continue
             if (key, value) in seen:
                 continue

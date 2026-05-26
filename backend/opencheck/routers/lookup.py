@@ -457,7 +457,10 @@ async def lookup(
             **({"sk_ico": derived["sk_ico"]} if "sk_ico" in derived else {}),
             **({"be_enterprise_number": derived["be_enterprise_number"]} if "be_enterprise_number" in derived else {}),
             **({"ca_corp_id": derived["ca_corp_id"]} if "ca_corp_id" in derived else {}),
-            **({"wikidata_qid": qid} if qid else {}),
+            # wikidata_qid is intentionally omitted here: the QID is sourced
+            # from Wikidata's own SPARQL endpoint, not from GLEIF.  Including it
+            # on the GLEIF hit would make the reconciler show "gleif" as a
+            # confirmer of the QID, which is inaccurate.
         },
         raw=gleif_bundle.get("record") or {},
         is_stub=False,
@@ -1475,7 +1478,10 @@ async def _lookup_stream_events(
             **({"sk_ico": derived["sk_ico"]} if "sk_ico" in derived else {}),
             **({"be_enterprise_number": derived["be_enterprise_number"]} if "be_enterprise_number" in derived else {}),
             **({"ca_corp_id": derived["ca_corp_id"]} if "ca_corp_id" in derived else {}),
-            **({"wikidata_qid": qid} if qid else {}),
+            # wikidata_qid is intentionally omitted here: the QID is sourced
+            # from Wikidata's own SPARQL endpoint, not from GLEIF.  Including it
+            # on the GLEIF hit would make the reconciler show "gleif" as a
+            # confirmer of the QID, which is inaccurate.
         },
         raw=gleif_bundle.get("record") or {},
         is_stub=False,
