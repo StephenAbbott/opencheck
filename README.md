@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [draft customer due diligence regulatory techn
 
 ## Status
 
-OpenCheck has shipped through thirty phases (latest commit on `main` is the source of truth):
+OpenCheck has shipped through forty phases (latest commit on `main` is the source of truth):
 
 | Phase | Headline |
 |------:|----------|
@@ -57,8 +57,12 @@ OpenCheck has shipped through thirty phases (latest commit on `main` is the sour
 | 34 | RPVS Slovakia adapter — beneficial ownership declarations from the Slovak Public Sector Partners Register (Register partnerov verejného sektora) via the Ministry of Justice OData API; covers entities supplying public bodies above statutory thresholds with verified KUV (konečný užívateľ výhod) disclosures; also triggered by `sk_ico`; CC BY 4.0; no API key required |
 | 35 | BCE Belgium adapter — Belgian Crossroads Bank for Enterprises (BCE/KBO) — entity basics (name, status, juridical form, start date, registered address) from a local SQLite database built from the monthly KBO open data ZIP; `be_enterprise_number` derived from GLEIF RA code `RA000025`; supports name search via FTS5; KBO reuse licence; no API key required; activated via `BCE_BELGIUM_DB_FILE` |
 | 36 | Corporations Canada (ISED) adapter — corporation records (name, status, act, registered address, business number, directors) for federally incorporated Canadian companies via the ISED API Gateway; `ca_corp_id` derived from GLEIF RA code `RA000072`; directors mapped to BODS v0.4 `seniorManagingOfficial` statements; OGL-Canada 2.0; requires `CORPORATIONS_CANADA_API_KEY` |
+| 37 | Ariregister (Estonia) rewritten to use the live SOAP/XML API (`ariregxmlv6.rik.ee`) — replaces the bulk-SQLite adapter; calls `detailandmed_v2` for entity + persons and `tegelikudKasusaajad_v2` for beneficial owners; credentials switched from `ARIREGISTER_DB_FILE` to `ARIREGISTER_USERNAME` / `ARIREGISTER_PASSWORD` (free RIK contract); `_ee_date()` extended to accept ISO dates returned by the live API |
+| 38 | GLEIF: direct subsidiaries in BODS output — first page of Level 2 parent–child relationships emitted as child `entityStatement` + `relationshipStatement` (`appointmentOfBoard`, `beneficialOwnershipOrControl: false`); subsidiary count surfaced in UI below the GLEIF source card; Wikidata QID accuracy fix |
+| 39 | Companies House: active directors → BODS — `officers.items[]` entries with a director role and no `resigned_on` are emitted as `personStatement` (knownPerson) + `relationshipStatement` (`seniorManagingOfficial`, `beneficialOwnershipOrControl: false`); officer ID extracted from `links.officer.appointments` for stable local IDs; secretary and resigned roles excluded |
+| 40 | INPI France: non-BO individuals → BODS — `composition.pouvoirs[]` entries with `typeDePersonne == "INDIVIDU"` and `beneficiaireEffectif == false` are now mapped to person + relationship statements; full 65-code `roleEntreprise` codelist from INPI data dictionary embedded in mapper; external professional roles (auditors, liquidators, fiscal reps — codes 14, 71, 72, 77, 109, 150, 220) → `otherInfluenceOrControl`; all governance/management roles → `seniorManagingOfficial`; French label in `details`; `dateEffetRoleDeclarant` → `startDate`; `beneficiaireEffectif == true` entries silently skipped per Loi Sapin II / décret 2017-1094 |
 
-Test suite: 817 backend tests. Frontend type-checks clean.
+Test suite: 911 backend tests. Frontend type-checks clean.
 
 ## Quick start
 
@@ -102,7 +106,7 @@ Paste a 20-character ISO 17442 LEI — for example `213800LH1BZH3DI6G760` (BP) o
 2. **Subject metadata.** If a pre-extracted Open Ownership bundle exists at `data/cache/bods_data/gleif/<LEI>.jsonl`, the legal name + jurisdiction are read directly from it (no live GLEIF call needed). Otherwise GLEIF is queried live.
 3. Looks up the **Wikidata Q-ID** via SPARQL on property `P1278`.
 4. Dispatches to every other adapter using whichever identifier they understand:
-   - **UK Companies House** — direct fetch by `gb_coh` when jurisdiction = GB. The Open Ownership processed UK PSC bundle (`data/cache/bods_data/uk/<GB-COH>.jsonl`) is the canonical answer when present; otherwise falls back to the live API.
+   - **UK Companies House** — direct fetch by `gb_coh` when jurisdiction = GB. The Open Ownership processed UK PSC bundle (`data/cache/bods_data/uk/<GB-COH>.jsonl`) is the canonical answer when present; otherwise falls back to the live API. Active directors from `officers.items` are mapped to `personStatement` + `relationshipStatement` (`seniorManagingOfficial`, `beneficialOwnershipOrControl: false`); secretaries and resigned directors are excluded.
    - **Brreg — Brønnøysundregistrene (Norway)** — fetched by `no_orgnr` (derived from GLEIF RA code `RA000472`); delivers company profile and role-holders (CEO, board chair, board members, deputies, and other officers) as BODS statements via the public Enhetsregisteret REST API. No API key required; licensed NLOD 2.0.
    - **CRO — Companies Registration Office Ireland** — fetched by `ie_crn` (derived from GLEIF RA code `RA000402`); delivers company profile (status, type, registration date, address) from the CRO Open Data Portal CKAN API. No API key required; licensed CC BY 4.0.
    - **PRH — Finnish Patent and Registration Office** — fetched by `fi_ytunnus` (Y-tunnus, derived from GLEIF RA code `RA000188`); delivers entity details from the YTJ (Business Information System) Open Data API. Officer data is not publicly available (the paid Virre service covers it). No API key required; licensed CC BY 4.0.
@@ -111,8 +115,8 @@ Paste a 20-character ISO 17442 LEI — for example `213800LH1BZH3DI6G760` (BP) o
    - **ARES (Czechia)** — fetched by `cz_ico` (8-digit IČO, derived from GLEIF RA code `RA000163`); queries the ARES REST API aggregate endpoint for entity basics (name, address, legal form, registration date, status) and the VR (Veřejný rejstřík / commercial register) endpoint for shareholders (akcionáři / společníci) and directors (statutární orgány). Emits full BODS v0.4 entity, person, and ownership-or-control statements. Returns a graceful stub for entities not in the commercial register (VR 404). No API key required; CC BY 4.0.
    - **BCE Belgium — Banque-Carrefour des Entreprises / Kruispuntbank van Ondernemingen** — fetched by `be_enterprise_number` (10-digit enterprise number, derived from GLEIF RA code `RA000025`); delivers entity name (Dutch/French/German), status, juridical form, start date, and registered address from a local SQLite database built from the monthly KBO open data ZIP by `scripts/extract_bce.py`. Also supports name search via FTS5 on the `/search` endpoint. No API key required; KBO reuse licence. Activated when `BCE_BELGIUM_DB_FILE` is set.
    - **Corporations Canada (ISED)** — fetched by `ca_corp_id` (numeric corporation number, derived from GLEIF RA code `RA000072`); queries the ISED API Gateway V1 endpoint for corporation details (name, status, act of incorporation, registered address, business number) and the V2 endpoint for current directors. Directors are mapped to BODS v0.4 `seniorManagingOfficial` relationship statements. Requires `CORPORATIONS_CANADA_API_KEY`; licensed OGL-Canada 2.0.
-   - **Ariregister (Estonia)** — fetched by the Estonian registry code (derived from GLEIF RA code `RA000181`); delivers entity basics, shareholders, officers, and beneficial owners from a local SQLite database built from the e-Business Register open data bulk files. Activated when `ARIREGISTER_DB_FILE` is set.
-   - **INPI (France)** — fetched by `fr_siren` (derived from GLEIF RA code `RA000189`); delivers company profile and officers as BODS statements via the Registre National des Entreprises API.
+   - **Ariregister (Estonia)** — fetched by the Estonian registry code (derived from GLEIF RA code `RA000181`); queries the e-Business Register's live SOAP/XML API (`ariregxmlv6.rik.ee`) for entity profile, persons (officers), and beneficial owners. Requires `ARIREGISTER_USERNAME` and `ARIREGISTER_PASSWORD` (free RIK contract credentials).
+   - **INPI (France)** — fetched by `fr_siren` (derived from GLEIF RA code `RA000189`); delivers company profile and officers as BODS statements via the Registre National des Entreprises API. Individual persons in `composition.pouvoirs` with `typeDePersonne == "INDIVIDU"` and `beneficiaireEffectif == false` are mapped to person + relationship statements using the full 65-code `roleEntreprise` codelist; BO records (`beneficiaireEffectif == true`) are silently excluded per Loi Sapin II.
    - **KvK (Netherlands)** — fetched by `nl_kvk` (derived from GLEIF RA code `RA000463`); delivers company details and authorised representatives via the Kamer van Koophandel Handelsregister API.
    - **Bolagsverket (Sweden)** — fetched by `se_org_number` (derived from GLEIF RA code `RA000544`); delivers company profile and board-level officers via the Swedish Companies Registration Office API.
    - **Zefix (Switzerland)** — fetched by `ch_uid` (derived from GLEIF RA code `RA000412`); delivers company profile and authorised signatories from the Zefix central business name index.
@@ -164,8 +168,8 @@ Twenty-five active adapters (plus one bulk-data adapter activated via env var), 
 | `rpvs_slovakia` | RPVS Slovakia — Register partnerov verejného sektora | CC-BY-4.0 | `sk_ico` from GLEIF (`RA000526`) | Slovak Public Sector Partners Register — verified beneficial ownership (KUV) declarations for entities supplying public bodies above statutory thresholds, via the Ministry of Justice OData API; also triggered by `sk_ico` alongside RPO; no API key required |
 | `bce_belgium` | Belgian Crossroads Bank for Enterprises (BCE/KBO) | Custom-KBO-Reuse | `be_enterprise_number` from GLEIF (`RA000025`) | Belgian business register — entity name (NL/FR/DE), status, juridical form, start date, and registered address from a local SQLite database built from the monthly KBO open data ZIP. Supports name search via FTS5. Activated via `BCE_BELGIUM_DB_FILE` |
 | `corporations_canada` | Corporations Canada (ISED) | OGL-Canada 2.0 | `ca_corp_id` from GLEIF (`RA000072`) | Canadian federal corporate registry — corporation details (name, status, act of incorporation, registered address, business number) and current directors via the ISED API Gateway. Directors mapped to BODS `seniorManagingOfficial` statements. Requires `CORPORATIONS_CANADA_API_KEY` |
-| `ariregister` | Estonian e-Business Register (Ariregister) | Open (PSI) | registry code from GLEIF (`RA000181`) | Estonian commercial register — entity basics, shareholders, officers, and beneficial owners from the RIK open data bulk files. Activated via `ARIREGISTER_DB_FILE` |
-| `inpi` | INPI — Registre National des Entreprises | Open (PSI) | `fr_siren` from GLEIF | French national business registry — company profile and officers via the RNE API |
+| `ariregister` | Estonian e-Business Register (Ariregister) | Open (PSI) | registry code from GLEIF (`RA000181`) | Estonian commercial register — entity profile, officers, and beneficial owners via the live e-Business Register SOAP/XML API (`ariregxmlv6.rik.ee`). Requires `ARIREGISTER_USERNAME` / `ARIREGISTER_PASSWORD` (free RIK contract) |
+| `inpi` | INPI — Registre National des Entreprises | Open (PSI) | `fr_siren` from GLEIF | French national business registry — company profile, officers, and non-BO individual persons (full 65-code `roleEntreprise` codelist) via the RNE API; BO records excluded per Loi Sapin II |
 | `kvk` | KvK — Handelsregister | Open (PSI) | `nl_kvk` from GLEIF | Netherlands Chamber of Commerce commercial register — company details and authorised representatives |
 | `bolagsverket` | Bolagsverket | Open (PSI) | `se_org_number` from GLEIF | Swedish Companies Registration Office — company profile and board-level officers |
 | `zefix` | Zefix | Open (PSI) | `ch_uid` from GLEIF | Switzerland central business name index — company profile and authorised signatories |
@@ -265,7 +269,8 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 | `OPENCORPORATES_API_KEY` | OpenCorporates API key — unlocks live company + officer data via the OC REST API. |
 | `OPENCORPORATES_RELATIONSHIPS_FILE` | Path to the OC Relationships bulk CSV file. When set, network relationship data is read from this file instead of the live `/network` API endpoint (which requires a premium tier). |
 | `BCE_BELGIUM_DB_FILE` | Path to the SQLite database built by `scripts/extract_bce.py`. When set, the BCE Belgium adapter provides enterprise-number-keyed lookup (via GLEIF bridge) and FTS5 name search for Belgian entities from the monthly KBO open data ZIP. |
-| `ARIREGISTER_DB_FILE` | Path to the SQLite database built by `scripts/extract_ariregister.py`. When set, the Ariregister adapter provides registry-code-keyed lookup of Estonian entities, shareholders, officers, and beneficial owners from the RIK open data bulk files. |
+| `ARIREGISTER_USERNAME` | Username for the Estonian e-Business Register SOAP/XML API (`ariregxmlv6.rik.ee`). Free RIK contract credentials. |
+| `ARIREGISTER_PASSWORD` | Password for the Estonian e-Business Register SOAP/XML API. |
 | `BRIGHTQUERY_DB_FILE` | Path to the SQLite database built by `scripts/extract_brightquery.py`. When set, the BrightQuery adapter provides LEI-keyed lookup of US entities and their executives from OpenData.org bulk data. |
 | `OPENSANCTIONS_API_KEY` | OpenSanctions API key (also unlocks the EveryPolitician PEPs dataset). |
 | `OPENALEPH_API_KEY` | OpenAleph API key (optional — unlocks restricted collections). |
@@ -279,7 +284,7 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 
 ```bash
 cd backend
-uv run pytest             # 819 tests, ~6s
+uv run pytest             # 911 tests, ~6s
 ```
 
 Frontend type check:
@@ -317,7 +322,7 @@ opencheck/
       extract_ariregister.py       Walk Estonian e-Business Register bulk files → SQLite DB
       extract_brightquery.py       Walk BrightQuery bulk files → SQLite DB indexed by LEI
       diagnose_brightquery.py      Inspect BrightQuery file format before extraction
-    tests/                pytest suite (743 tests)
+    tests/                pytest suite (911 tests)
   frontend/               React + Vite + TypeScript + Tailwind + BO design system
     src/
       App.tsx             LEI input, subject card, risk chips (on every source card), export panel
