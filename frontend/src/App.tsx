@@ -773,18 +773,13 @@ export default function App() {
           </section>
         )}
 
-        {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0 || gleifChildrenInfo) && (
+        {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && (
           <section className="mb-8 bg-white border border-oo-rule rounded-oo p-5">
             <SectionLabel>Cross-source identifiers</SectionLabel>
             <CrossSourceIdentifiersTable
               links={crossSourceLinks}
               gleifMapped={gleifMappedIds}
             />
-            {gleifChildrenInfo && (
-              <p className="text-[12px] text-oo-muted mt-3 pt-3 border-t border-oo-rule">
-                Showing {gleifChildrenInfo.fetched} of {gleifChildrenInfo.total.toLocaleString()} direct subsidiaries in BODS statements (GLEIF Level 2 — first page only)
-              </p>
-            )}
           </section>
         )}
 
@@ -801,12 +796,18 @@ export default function App() {
             </SectionLabel>
             <div className="space-y-4">
               {cddBuckets.map((b) => (
-                <SourceBucketCard
-                  key={b.sourceId}
-                  bucket={b}
-                  riskByHit={riskByHit}
-                  sourceSignals={riskBySource[b.sourceId] ?? []}
-                />
+                <div key={b.sourceId}>
+                  <SourceBucketCard
+                    bucket={b}
+                    riskByHit={riskByHit}
+                    sourceSignals={riskBySource[b.sourceId] ?? []}
+                  />
+                  {b.sourceId === "gleif" && gleifChildrenInfo && (
+                    <p className="text-[12px] text-oo-muted mt-2 px-1">
+                      Showing {gleifChildrenInfo.fetched} of {gleifChildrenInfo.total.toLocaleString()} direct subsidiaries in BODS statements (GLEIF Level 2 — first page only)
+                    </p>
+                  )}
+                </div>
               ))}
               {pendingCddSources.map((id) => (
                 <SkeletonSourceCard key={id} />
