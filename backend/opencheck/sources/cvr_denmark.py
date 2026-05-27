@@ -6,7 +6,7 @@ Business Authority).
 
 This adapter uses the Datafordeler GraphQL API (register: CVR, version: 2).
 
-  Endpoint:  https://graphql.datafordeler.dk/CVR/2
+  Endpoint:  https://graphql.datafordeler.dk/CVR/v2
   Auth:      ``?apiKey=<key>`` — raw API key as query parameter (no encoding required).
   Method:    POST application/json with {"query": "...", "variables": {...}}
 
@@ -67,7 +67,7 @@ Attribution
    Erhvervsstyrelsen / Danish Business Authority.
    Data distribueret via Datafordelerens CVR GraphQL API."
   License: Danish open government data (CVR brugervilkår)
-  Source:  https://graphql.datafordeler.dk/CVR/2
+  Source:  https://graphql.datafordeler.dk/CVR/v2
   Portal:  https://portal.datafordeler.dk/
 """
 
@@ -90,7 +90,7 @@ _log = logging.getLogger(__name__)
 # GLEIF Registration Authority code for Denmark's CVR.
 DK_CVR_RA_CODE: str = "RA000170"
 
-_GRAPHQL_URL = "https://graphql.datafordeler.dk/CVR/2"
+_GRAPHQL_URL = "https://graphql.datafordeler.dk/CVR/v2"
 _CVR_PORTAL = "https://datacvr.virk.dk/enhed/virksomhed/{cvr}"
 
 _CACHE_NS = "cvr_denmark"

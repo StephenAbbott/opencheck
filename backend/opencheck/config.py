@@ -138,7 +138,7 @@ class Settings(BaseSettings):
     #   1. Create an IT-system.
     #   2. Generate an API key under the IT-system (valid 2 years, renewable).
     #   3. Set CVR_DENMARK_API_KEY to the generated API key.
-    # GraphQL endpoint: https://graphql.datafordeler.dk/CVR/2
+    # GraphQL endpoint: https://graphql.datafordeler.dk/CVR/v2
     cvr_denmark_api_key: str | None = Field(default=None, alias="CVR_DENMARK_API_KEY")
 
     # --- OpenTender (DIGIWHIST) ---

@@ -191,7 +191,7 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 ## CVR — Det Centrale Virksomhedsregister (Danish Central Business Register)
 
 - **Data:** company profiles (legal name, address, legal form, sector code, entity status, start date) for all businesses registered in Denmark. CVR is the authoritative statutory register maintained by Erhvervsstyrelsen (the Danish Business Authority). It covers approximately 900,000 active entities.
-- **API:** Datafordeler GraphQL API at `https://graphql.datafordeler.dk/CVR/2.1` — authenticated via API key; free registration at <https://portal.datafordeler.dk/>
+- **API:** Datafordeler GraphQL API at `https://graphql.datafordeler.dk/CVR/v2` — authenticated via API key; free registration at <https://portal.datafordeler.dk/>
 - **Portal:** <https://datacvr.virk.dk/> (public CVR browser); <https://datafordeler.dk/> (API distribution)
 - **License:** Danish Open Government Data — CVR brugervilkår (terms of use). The CVR data may be used freely for any purpose with attribution; see <https://datacvr.virk.dk/artikel/vilkaar-og-betingelser> for the full terms. Commercial use is permitted with attribution.
 - **Attribution:** "Indeholder data fra Det Centrale Virksomhedsregister (CVR), Erhvervsstyrelsen / Danish Business Authority. Data distribueret via Datafordelerens CVR GraphQL API."
