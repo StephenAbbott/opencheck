@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 42** — CVR Denmark adapter (`cvr_denmark`) — entity data from Denmark's Central Business Register (CVR) via the Datafordeler GraphQL API; `dk_cvr` identifier derived from GLEIF RA code `RA000531`; two-query bitemporal fetch (CVR_Virksomhed → CVREnhedsId, then batch-fetch names/address/sector/form/participants); entity statements with `DK-CVR` scheme; requires free `CVR_DENMARK_API_KEY` from portal.datafordeler.dk. 969 backend tests (4 skipped). Frontend type-checks clean.
+**Latest: Phase 42** — CVR Denmark adapter (`cvr_denmark`) — entity data from Denmark's Central Business Register (CVR) via the Datafordeler GraphQL API; `dk_cvr` identifier derived from GLEIF RA code `RA000170`; two-query bitemporal fetch (CVR_Virksomhed → CVREnhedsId, then batch-fetch names/address/sector/form/participants); entity statements with `DK-CVR` scheme; requires free `CVR_DENMARK_API_KEY` from portal.datafordeler.dk. 969 backend tests (4 skipped). Frontend type-checks clean.
 
 → [Full development history](docs/status.md)
 

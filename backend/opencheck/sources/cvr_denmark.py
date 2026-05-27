@@ -31,7 +31,7 @@ Fetch strategy
 
 GLEIF integration
 -----------------
-  GLEIF Registration Authority code: RA000531
+  GLEIF Registration Authority code: RA000170
     (Det Centrale Virksomhedsregister / Erhvervsstyrelsen)
   The ``registeredAs`` field in GLEIF records for Danish entities contains
   the CVR number (8-digit, possibly zero-padded). ``gleif.py`` extracts
@@ -86,7 +86,7 @@ from .schemas.cvr_denmark import CVRBundle
 _log = logging.getLogger(__name__)
 
 # GLEIF Registration Authority code for Denmark's CVR.
-DK_CVR_RA_CODE: str = "RA000531"
+DK_CVR_RA_CODE: str = "RA000170"
 
 _GRAPHQL_URL = "https://graphql.datafordeler.dk/CVR/2.1"
 _CVR_PORTAL = "https://datacvr.virk.dk/enhed/virksomhed/{cvr}"

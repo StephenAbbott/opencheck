@@ -214,7 +214,7 @@ class TestBestForm:
 
 class TestConstant:
     def test_ra_code(self) -> None:
-        assert DK_CVR_RA_CODE == "RA000531"
+        assert DK_CVR_RA_CODE == "RA000170"
 
 
 # ---------------------------------------------------------------------------
