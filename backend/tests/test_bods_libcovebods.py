@@ -428,25 +428,11 @@ def test_libcovebods_inpi():
 def test_libcovebods_rpo_slovakia():
     from opencheck.bods.mapper import map_rpo_slovakia
     bundle = {
-        "ico": "12345678",
-        "nazovSubjektu": "Test s.r.o.",
-        "formaSubjektu": {"id": "112", "value": "Spoločnosť s ručením obmedzeným"},
-        "adresaSidla": {
-            "ulica": "Testová",
-            "cisloUlice": "1",
-            "obec": "Bratislava",
-            "stat": "SVK",
-        },
-        "datumVpisu": "2000-01-01",
-        "osoby": [
-            {
-                "typ": "Konateľ",
-                "meno": "Ján",
-                "priezvisko": "Novák",
-                "od": "2010-01-01",
-            }
-        ],
-        "spolocnici": [],
+        "sk_ico": "12345678",
+        "name": "Test s.r.o.",
+        "address": "Testová 1, Bratislava, Slovakia",
+        "establishment": "2000-01-01",
+        "registration_numbers": ["123/B"],
     }
     assert_valid(map_rpo_slovakia(bundle), "RPO Slovakia")
 
@@ -454,22 +440,17 @@ def test_libcovebods_rpo_slovakia():
 def test_libcovebods_rpvs_slovakia():
     from opencheck.bods.mapper import map_rpvs_slovakia
     bundle = {
-        "ico": "12345678",
-        "nazov": "Test s.r.o.",
-        "adresaSidla": {
-            "ulica": "Testová",
-            "cislo": "1",
-            "obec": "Bratislava",
-            "stat": "Slovenská republika",
-        },
-        "konecniUzivateliaVyhod": [
+        "sk_ico": "12345678",
+        "name": "Test s.r.o.",
+        "link": "https://rpvs.gov.sk/rpvs/Partner/123",
+        "active_kuvs": [
             {
-                "meno": "Ján",
-                "priezvisko": "Novák",
-                "datumNarodenia": "1970-01-01",
-                "statObcanstva": "SVK",
-                "adresa": "Testová 1, Bratislava",
-                "podiel": "100%",
+                "Id": 1,
+                "Meno": "Ján",
+                "Priezvisko": "Novák",
+                "DatumNarodenia": "1970-01-01T00:00:00+01:00",
+                "Obcanstvo": "SVK",
+                "Adresa": "Testová 1, Bratislava",
             }
         ],
     }

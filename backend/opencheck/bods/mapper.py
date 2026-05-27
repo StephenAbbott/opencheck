@@ -369,8 +369,28 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "ares": "ARES — Czech Administrativní registr ekonomických subjektů",
         "krs_poland": "KRS — Polish National Court Register (Krajowy Rejestr Sądowy)",
         "corporations_canada": "Corporations Canada — ISED federal register",
+        "rpo_slovakia": "RPO — Slovak Register of Legal Persons",
+        "rpvs_slovakia": "RPVS — Slovak Public Sector Partners Register",
     }
-    _official_registers = {"ariregister", "bolagsverket", "brreg", "companies_house", "corporations_canada", "cro", "firmenbuch", "inpi", "kvk", "opencorporates", "zefix", "sec_edgar", "ur_latvia", "ares", "krs_poland"}
+    _official_registers = {
+        "ariregister",
+        "bolagsverket",
+        "brreg",
+        "companies_house",
+        "corporations_canada",
+        "cro",
+        "firmenbuch",
+        "inpi",
+        "kvk",
+        "opencorporates",
+        "zefix",
+        "sec_edgar",
+        "ur_latvia",
+        "ares",
+        "krs_poland",
+        "rpo_slovakia",
+        "rpvs_slovakia",
+    }
     block: dict[str, Any] = {
         "type": ["officialRegister"] if source_id in _official_registers else ["thirdParty"],
         "description": source_names.get(source_id, source_id),
@@ -6189,8 +6209,8 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     and a details note explaining the RPVS declaration.
 
     Identifiers emitted:
-      • Entity  — scheme "SK-RPVS" (IČO within the RPVS context)
-      • Persons  — no external scheme available from the API
+    • Entity  — scheme "SK-RPVS" (IČO within the RPVS context)
+    • Persons  — no external scheme available from the API
     """
     if not bundle or bundle.get("is_stub"):
         return
@@ -6206,39 +6226,25 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     # ------------------------------------------------------------------
     # 1. Entity statement for the public sector partner
     # ------------------------------------------------------------------
-    entity_id = _stable_id("rpvs_slovakia", "entity", ico)
-
-    entity_stmt: dict[str, Any] = {
-        "statementId": entity_id,
-        "statementType": "entityStatement",
-        "statementDate": _today(),
-        "recordType": "entity",
-        "recordDetails": {
-            "entityType": {"type": "registeredEntity"},
-            "name": name,
-            "jurisdiction": {"name": "Slovakia", "code": "SK"},
-            "identifiers": [
-                {
-                    "id": ico,
-                    "scheme": "SK-RPVS",
-                    "schemeName": (
-                        "Register partnerov verejného sektora "
-                        "(Slovak Public Sector Partners Register)"
-                    ),
-                }
-            ],
-        },
-        "source": {
-            "type": ["officialRegister"],
-            "description": (
-                "Slovak Public Sector Partners Register (RPVS), "
-                "Ministry of Justice of the Slovak Republic"
-            ),
-            "url": source_url,
-            "assertedBy": [{"name": "Ministry of Justice SR"}],
-        },
-    }
+    entity_stmt = make_entity_statement(
+        source_id="rpvs_slovakia",
+        local_id=ico,
+        name=name,
+        jurisdiction=("Slovakia", "SK"),
+        identifiers=[
+            {
+                "id": ico,
+                "scheme": "SK-RPVS",
+                "schemeName": (
+                    "Register partnerov verejného sektora "
+                    "(Slovak Public Sector Partners Register)"
+                ),
+            }
+        ],
+        source_url=source_url,
+    )
     yield entity_stmt
+    entity_sid = entity_stmt["statementId"]
 
     # ------------------------------------------------------------------
     # 2 & 3. Person/entity statements + relationship statements for KUVs
@@ -6265,8 +6271,6 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         # --- 2. Interested party statement (person or entity) ---
         if is_legal_person:
             lp_name = (kuv.get("ObchodneMeno") or "").strip() or f"KUV-{kuv_id_raw}"
-            ip_stmt_id = _stable_id("rpvs_slovakia", "kuv_entity", ico, str(kuv_id_raw))
-
             ip_identifiers = []
             if kuv_ico:
                 ip_identifiers.append({
@@ -6275,24 +6279,15 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                     "schemeName": "Register právnických osôb (Slovak Register of Legal Persons)",
                 })
 
-            ip_stmt: dict[str, Any] = {
-                "statementId": ip_stmt_id,
-                "statementType": "entityStatement",
-                "statementDate": _today(),
-                "recordType": "entity",
-                "recordDetails": {
-                    "entityType": {"type": "registeredEntity"},
-                    "name": lp_name,
-                    "jurisdiction": {"name": "Slovakia", "code": "SK"},
-                    **({"identifiers": ip_identifiers} if ip_identifiers else {}),
-                },
-                "source": {
-                    "type": ["officialRegister"],
-                    "description": "Slovak RPVS — KUV (legal person)",
-                    "url": source_url,
-                    "assertedBy": [{"name": "Ministry of Justice SR"}],
-                },
-            }
+            ip_stmt = make_entity_statement(
+                source_id="rpvs_slovakia",
+                local_id=f"kuv_entity:{kuv_id_raw}",
+                name=lp_name,
+                jurisdiction=("Slovakia", "SK"),
+                identifiers=ip_identifiers,
+                source_url=source_url,
+            )
+            ip_type = "entity"
         else:
             # Natural person KUV
             first = (kuv.get("Meno") or "").strip()
@@ -6301,60 +6296,40 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 kuv.get("TitulPred", ""), first, last, kuv.get("TitulZa", "")
             ] if p and p.strip()) or f"KUV-{kuv_id_raw}"
 
-            ip_stmt_id = _stable_id("rpvs_slovakia", "kuv_person", ico, str(kuv_id_raw))
-
             person_dob_raw: str | None = kuv.get("DatumNarodenia")
             person_dob: str | None = None
             if person_dob_raw:
                 # DateTimeOffset like "1969-12-15T00:00:00+01:00"
                 person_dob = person_dob_raw[:10]
 
-            person_details: dict[str, Any] = {
-                "name": full_name,
-            }
-            if first or last:
-                person_details["names"] = [
-                    {
-                        "fullName": full_name,
-                        "type": "individual",
-                        **({"familyName": last} if last else {}),
-                        **({"givenName": first} if first else {}),
-                    }
-                ]
-            if person_dob:
-                person_details["birthDate"] = person_dob
+            nationalities = []
+            obcanstvo = kuv.get("Obcanstvo") or kuv.get("statObcanstva")
+            if obcanstvo:
+                nationalities.append({"name": obcanstvo})
 
-            is_pep: bool = bool(kuv.get("JeVerejnyCinitel"))
-            if is_pep:
-                person_details["politicalExposure"] = {
-                    "status": "isPEP",
-                    "details": [{"type": "existingRelationship", "jurisdiction": {"code": "SK"}}],
-                }
+            addresses = []
+            adresa = kuv.get("Adresa")
+            if adresa:
+                addresses.append(_addr("service", adresa))
 
-            ip_stmt = {
-                "statementId": ip_stmt_id,
-                "statementType": "personStatement",
-                "statementDate": _today(),
-                "recordType": "person",
-                "recordDetails": {
-                    "personType": "knownPerson",
-                    **person_details,
-                },
-                "source": {
-                    "type": ["officialRegister"],
-                    "description": "Slovak RPVS — KUV (natural person)",
-                    "url": source_url,
-                    "assertedBy": [{"name": "Ministry of Justice SR"}],
-                },
-            }
+            ip_stmt = make_person_statement(
+                source_id="rpvs_slovakia",
+                local_id=f"kuv_person:{kuv_id_raw}",
+                full_name=full_name,
+                person_type="knownPerson",
+                nationalities=nationalities,
+                birth_date=person_dob,
+                addresses=addresses,
+                source_url=source_url,
+            )
+            ip_type = "person"
 
         yield ip_stmt
+        ip_sid = ip_stmt["statementId"]
 
         # --- 3. Ownership-or-control relationship statement ---
         kuv_valid_from: str | None = (kuv.get("PlatnostOd") or "")[:10] or None
         kuv_valid_to: str | None = (kuv.get("PlatnostDo") or "")[:10] or None
-
-        rel_stmt_id = _stable_id("rpvs_slovakia", "rel", ico, str(kuv_id_raw))
 
         interest: dict[str, Any] = {
             "type": "unknownInterest",
@@ -6371,33 +6346,16 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             if kuv_valid_to:
                 interest["endDate"] = kuv_valid_to
 
-        rel_stmt: dict[str, Any] = {
-            "statementId": rel_stmt_id,
-            "statementType": "ownershipOrControlStatement",
-            "statementDate": _today(),
-            "recordType": "relationship",
-            "recordDetails": {
-                "relationshipType": "ownership",
-                "interests": [interest],
-                "subject": {
-                    "describedByEntityStatement": entity_id,
-                },
-                "interestedParty": {
-                    "describedByPersonStatement"
-                    if ip_stmt["statementType"] == "personStatement"
-                    else "describedByEntityStatement": ip_stmt_id
-                },
-            },
-            "source": {
-                "type": ["officialRegister"],
-                "description": (
-                    "Slovak Public Sector Partners Register (RPVS), "
-                    "Ministry of Justice of the Slovak Republic"
-                ),
-                "url": source_url,
-                "assertedBy": [{"name": "Ministry of Justice SR"}],
-            },
-        }
+        rel_stmt = make_relationship_statement(
+            source_id="rpvs_slovakia",
+            local_id=f"rel:{kuv_id_raw}",
+            subject_statement_id=entity_sid,
+            interested_party_statement_id=ip_sid,
+            interested_party_type=ip_type,
+            interests=[interest],
+            source_url=source_url,
+            publication_date=kuv_valid_from or None,
+        )
         yield rel_stmt
 
 
