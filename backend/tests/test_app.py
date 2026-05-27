@@ -49,6 +49,7 @@ def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
         "companies_house",
         "corporations_canada",
         "cro",
+        "cvr_denmark",
         "firmenbuch",
         "gleif",
         "inpi",

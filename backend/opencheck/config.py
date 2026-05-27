@@ -131,6 +131,15 @@ class Settings(BaseSettings):
     ariregister_username: str | None = Field(default=None, alias="ARIREGISTER_USERNAME")
     ariregister_password: str | None = Field(default=None, alias="ARIREGISTER_PASSWORD")
 
+    # --- Danish Central Business Register (CVR) via Datafordeler GraphQL ---
+    # Generate an API key at portal.datafordeler.dk (IT-system → API-Keys).
+    # The key is passed as the ``token`` query parameter.
+    # Valid for 2 years; renewable before expiry.
+    # Non-restricted CVR entities (everything except CVRPerson) are accessible
+    # with an API key — no separate access application required.
+    # GraphQL endpoint: https://graphql.datafordeler.dk/CVR/2.1
+    cvr_denmark_api_key: str | None = Field(default=None, alias="CVR_DENMARK_API_KEY")
+
     # --- OpenTender (DIGIWHIST) ---
     # Pre-built SQLite index. Build with: python scripts/extract_opentender.py
     # Source: https://opentender.eu/all/download (CC BY-NC-SA 4.0)

@@ -374,6 +374,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "corporations_canada": "Corporations Canada — ISED federal register",
         "rpo_slovakia": "RPO — Slovak Register of Legal Persons",
         "rpvs_slovakia": "RPVS — Slovak Public Sector Partners Register",
+        "cvr_denmark": "CVR — Det Centrale Virksomhedsregister (Danish Business Authority)",
     }
     _official_registers = {
         "ariregister",
@@ -382,6 +383,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "companies_house",
         "corporations_canada",
         "cro",
+        "cvr_denmark",
         "firmenbuch",
         "inpi",
         "kvk",
@@ -6696,5 +6698,96 @@ def map_acra_singapore(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     # Mark as inactive when struck off / cancelled.
     if dissolved_date:
         stmt.setdefault("recordDetails", {})["dissolutionDate"] = None  # unknown
+
+    yield stmt
+
+
+# ---------------------------------------------------------------------------
+# CVR Denmark → BODS
+# ---------------------------------------------------------------------------
+
+
+def map_cvr_denmark(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map a CVR Denmark bundle to BODS v0.4 statements.
+
+    CVRPerson (natural persons) is a restricted entity not available without
+    a separate access application, so this mapper produces entity statements
+    only — no person or ownership-or-control statements.
+
+    The entity identifier uses the "DK-CVR" scheme (CVR number).
+    """
+    cvr_number: str = bundle.get("cvr_number", "")
+    if bundle.get("is_stub") or not cvr_number:
+        return
+    name: str = bundle.get("name", "") or cvr_number
+    status: str = bundle.get("status", "unknown")
+    start_date: str | None = bundle.get("start_date")
+    end_date: str | None = bundle.get("end_date")
+    legal_form_text: str | None = bundle.get("legal_form_text")
+    branche_code: str | None = bundle.get("branche_code")
+    source_url: str | None = bundle.get("source_url")
+    addr_raw: dict[str, Any] | None = bundle.get("address")
+
+    # Identifiers.
+    identifiers: list[dict[str, str]] = [
+        {
+            "id": cvr_number,
+            "scheme": "DK-CVR",
+            "schemeName": (
+                "Det Centrale Virksomhedsregister — Danish Central Business Register"
+            ),
+        }
+    ]
+
+    # Address block.
+    addresses: list[dict[str, Any]] = []
+    if addr_raw:
+        parts = []
+        street = addr_raw.get("CVRAdresse_vejnavn", "")
+        house = addr_raw.get("CVRAdresse_husnummerFra", "")
+        if street:
+            parts.append(f"{street} {house}".strip())
+        postal = addr_raw.get("CVRAdresse_postnummer", "")
+        city = addr_raw.get("CVRAdresse_postdistrikt", "")
+        if postal or city:
+            parts.append(f"{postal} {city}".strip())
+        country_code = addr_raw.get("CVRAdresse_landekode", "DK") or "DK"
+        country_names = {"DK": "Denmark"}
+        country_name = country_names.get(country_code, country_code)
+        full_address = ", ".join(p for p in parts if p)
+        if full_address:
+            addresses.append(_addr("registered", full_address, country_code))
+
+    # Jurisdiction.
+    jurisdiction = ("Denmark", "DK")
+
+    # Entity statement.
+    stmt = make_entity_statement(
+        source_id="cvr_denmark",
+        local_id=cvr_number,
+        name=name,
+        jurisdiction=jurisdiction,
+        identifiers=identifiers,
+        founding_date=start_date,
+        addresses=addresses,
+        source_url=source_url,
+    )
+
+    # Annotate entityType subtype using legal form text.
+    record_details = stmt.get("recordDetails") or {}
+    entity_type_block: dict[str, Any] = {"type": "registeredEntity"}
+    if legal_form_text:
+        entity_type_block["subtype"] = legal_form_text
+    record_details["entityType"] = entity_type_block
+
+    # Dissolution / end date.
+    if end_date:
+        record_details["dissolutionDate"] = end_date
+
+    # Industry code (DB07/NACE) as supplemental annotation.
+    if branche_code:
+        record_details["primaryIndustryCode"] = branche_code
+
+    stmt["recordDetails"] = record_details
 
     yield stmt

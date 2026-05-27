@@ -50,6 +50,7 @@ from .bce_belgium import BCE_RA_CODE as _BCE_RA_CODE, normalise_enterprise_numbe
 from .rpo_slovakia import SK_RPO_RA_CODE as _SK_RPO_RA_CODE, normalise_ico as _normalise_sk_ico
 from .ur_latvia import LV_RA_CODE as _LV_RA_CODE, normalise_regcode as _normalise_lv_regcode
 from .zefix import CH_RA_CODES as _ZEFIX_RA_CODES, format_uid as _zefix_format_uid
+from .cvr_denmark import DK_CVR_RA_CODE as _DK_CVR_RA_CODE, normalise_cvr as _normalise_cvr
 
 _API_BASE = "https://api.gleif.org/api/v1"
 _CACHE_NS = "gleif"
@@ -357,6 +358,10 @@ class GleifAdapter(SourceAdapter):
             # the reconciler can bridge GLEIF ↔ Corporations Canada.
             if registered_at_id == _CA_CORP_RA_CODE:
                 identifiers["ca_corp_id"] = _normalise_corp_id(registered_as)
+            # Danish CVR number — expose as ``dk_cvr`` so the reconciler can
+            # bridge GLEIF ↔ CVR Denmark.
+            if registered_at_id == _DK_CVR_RA_CODE:
+                identifiers["dk_cvr"] = _normalise_cvr(registered_as)
 
         return SourceHit(
             source_id="gleif",

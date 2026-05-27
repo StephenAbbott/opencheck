@@ -13,6 +13,7 @@ from .bce_belgium import BceBelgiumAdapter
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .bolagsverket import BolagsverketAdapter
 from .brreg import BrregAdapter
+from .cvr_denmark import CvrDenmarkAdapter
 from .climatetrace import ClimateTRACEAdapter
 from .companies_house import CompaniesHouseAdapter
 from .corporations_canada import CorporationsCanadaAdapter
@@ -45,6 +46,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "corporations_canada": CorporationsCanadaAdapter(),
     "companies_house": CompaniesHouseAdapter(),
     "cro": CroAdapter(),
+    "cvr_denmark": CvrDenmarkAdapter(),
     "firmenbuch": FirmenbuchAdapter(),
     "gleif": GleifAdapter(),
     "inpi": InpiAdapter(),
