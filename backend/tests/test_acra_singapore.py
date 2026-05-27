@@ -252,7 +252,7 @@ def test_map_acra_singapore_entity_statement() -> None:
     assert rd.get("foundingDate") == "2003-04-01"
 
     # Jurisdiction should be SG.
-    jur = rd.get("incorporatedInJurisdiction") or {}
+    jur = rd.get("jurisdiction") or {}
     assert jur.get("code") == "SG"
 
 

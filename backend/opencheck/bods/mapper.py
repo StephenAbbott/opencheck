@@ -176,26 +176,24 @@ def _addr(type_: str, address: str, country_code: str = "") -> dict[str, Any]:
 def _publication_details_block(publication_date: str | None = None) -> dict[str, Any]:
     """Build a BODS v0.4 ``publicationDetails`` block.
 
-    ``bodsVersion`` and ``publisher`` are required by the schema.
-    ``publicationDate`` is optional — include it only when the source
-    provides an unambiguous date on which the information was published to
-    the original register or filing system (not the company founding date,
-    not OpenCheck's retrieval time).
+    ``bodsVersion``, ``publisher``, and ``publicationDate`` are all required
+    by the BODS v0.4 schema.
 
     Semantics (per BODS dates guidance):
       publicationDate  — the date the information was added to the public
                          registry or made available via an API.  For PSC
                          registers this is the notification date; for SEC
                          filings it is the filing date; for GLEIF it is
-                         the LEI record's last-update date.
+                         the LEI record's last-update date.  When no
+                         source-specific date is available we fall back to
+                         today's date — the date on which OpenCheck
+                         retrieved and published the statement.
     """
-    block: dict[str, Any] = {
+    return {
         "bodsVersion": "0.4",
+        "publicationDate": publication_date or _today(),
         "publisher": {"name": "OpenCheck"},
     }
-    if publication_date:
-        block["publicationDate"] = publication_date
-    return block
 
 
 def make_entity_statement(
@@ -227,7 +225,7 @@ def make_entity_statement(
         "identifiers": list(identifiers),
     }
     if jurisdiction:
-        record_details["incorporatedInJurisdiction"] = {
+        record_details["jurisdiction"] = {
             "name": jurisdiction[0],
             "code": jurisdiction[1],
         }
@@ -2996,7 +2994,7 @@ def _ftm_jurisdiction(props: dict[str, Any]) -> tuple[str, str] | None:
     FtM stores jurisdiction as an array of strings that may be ISO 3166-1
     alpha-2 codes (``"RU"``), lowercase codes (``"ru"``), or full country
     names. We resolve all forms via pycountry so the BODS
-    ``incorporatedInJurisdiction.name`` is always a human-readable string.
+    ``jurisdiction.name`` is always a human-readable string.
     """
     jur = (props.get("jurisdiction") or props.get("country") or [None])[0]
     if not jur:

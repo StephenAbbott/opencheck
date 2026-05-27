@@ -95,7 +95,7 @@ def test_map_gleif_resolves_jurisdiction_name() -> None:
         s for s in bundle
         if s["recordType"] == "entity" and s["recordDetails"]["name"] == "BP P.L.C."
     )
-    assert subject["recordDetails"]["incorporatedInJurisdiction"] == {
+    assert subject["recordDetails"]["jurisdiction"] == {
         "name": "United Kingdom",
         "code": "GB",
     }
@@ -109,7 +109,7 @@ def test_map_gleif_resolves_subdivision_jurisdiction() -> None:
         s for s in bundle
         if s["recordType"] == "entity" and s["recordDetails"]["name"] == "BP P.L.C."
     )
-    jur = subject["recordDetails"]["incorporatedInJurisdiction"]
+    jur = subject["recordDetails"]["jurisdiction"]
     assert jur["code"] == "GB-ENG"
     assert "United Kingdom" in jur["name"]
 
@@ -818,7 +818,7 @@ def test_ftm_jurisdiction_uppercase_code_resolves_to_full_name() -> None:
     }
     bundle = map_opensanctions(payload)
     entity = next(iter(bundle))
-    jur = entity["recordDetails"]["incorporatedInJurisdiction"]
+    jur = entity["recordDetails"]["jurisdiction"]
     assert jur == {"name": "Russian Federation", "code": "RU"}
 
 
@@ -833,7 +833,7 @@ def test_ftm_jurisdiction_lowercase_code_resolves() -> None:
     }
     bundle = map_opensanctions(payload)
     entity = next(iter(bundle))
-    jur = entity["recordDetails"]["incorporatedInJurisdiction"]
+    jur = entity["recordDetails"]["jurisdiction"]
     assert jur == {"name": "Russian Federation", "code": "RU"}
 
 

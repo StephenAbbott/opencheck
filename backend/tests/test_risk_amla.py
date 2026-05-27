@@ -58,7 +58,7 @@ def _entity(sid: str, *, entity_type: str = "registeredEntity",
         "name": name,
     }
     if jurisdiction_code:
-        rd["incorporatedInJurisdiction"] = {
+        rd["jurisdiction"] = {
             "code": jurisdiction_code,
             "name": jurisdiction_name or jurisdiction_code,
         }
@@ -295,7 +295,7 @@ def test_layers_handles_cycles_safely() -> None:
 def test_complex_corporate_structure_fires_when_layered_plus_non_eu() -> None:
     bods = _three_layer_chain()
     # Tag the topmost holding with a non-EU jurisdiction.
-    bods[2]["recordDetails"]["incorporatedInJurisdiction"] = {
+    bods[2]["recordDetails"]["jurisdiction"] = {
         "code": "VG",
         "name": "British Virgin Islands",
     }
@@ -338,7 +338,7 @@ def test_complex_corporate_structure_fires_with_trust_layer() -> None:
 def test_possible_obfuscation_fires_with_opacity_and_layered_concern() -> None:
     bods = _three_layer_chain()
     # Add a non-EU layer so the composite signal fires…
-    bods[2]["recordDetails"]["incorporatedInJurisdiction"] = {
+    bods[2]["recordDetails"]["jurisdiction"] = {
         "code": "PA",
         "name": "Panama",
     }
@@ -365,7 +365,7 @@ def test_possible_obfuscation_fires_with_opacity_and_layered_concern() -> None:
 
 def test_possible_obfuscation_does_not_fire_without_opacity() -> None:
     bods = _three_layer_chain()
-    bods[2]["recordDetails"]["incorporatedInJurisdiction"] = {
+    bods[2]["recordDetails"]["jurisdiction"] = {
         "code": "PA",
         "name": "Panama",
     }
@@ -385,7 +385,7 @@ def test_assess_amla_returns_empty_for_empty_bundle() -> None:
 def test_assess_bundle_returns_amla_signals_inline() -> None:
     """End-to-end: assess_bundle should expose the AMLA signals too."""
     bods = _three_layer_chain()
-    bods[2]["recordDetails"]["incorporatedInJurisdiction"] = {"code": "VG"}
+    bods[2]["recordDetails"]["jurisdiction"] = {"code": "VG"}
     signals = assess_bundle("companies_house", {"entity_id": "E1"}, bods)
     codes = {s.code for s in signals}
     assert {COMPLEX_OWNERSHIP_LAYERS, NON_EU_JURISDICTION, COMPLEX_CORPORATE_STRUCTURE}.issubset(codes)

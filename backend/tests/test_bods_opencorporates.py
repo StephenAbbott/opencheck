@@ -134,7 +134,7 @@ def test_map_opencorporates_entity_jurisdiction() -> None:
     bundle = _minimal_bundle(ocid="gb/00102498")
     statements = list(map_opencorporates(bundle))
     entity = next(s for s in statements if s["recordType"] == "entity")
-    jur = entity["recordDetails"]["incorporatedInJurisdiction"]
+    jur = entity["recordDetails"]["jurisdiction"]
     assert jur["code"] == "GB"
     assert "United Kingdom" in jur["name"]
 

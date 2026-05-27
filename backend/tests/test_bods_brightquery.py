@@ -125,7 +125,7 @@ def test_map_brightquery_entity_name() -> None:
 def test_map_brightquery_entity_jurisdiction_us() -> None:
     stmts = list(map_brightquery(_bundle()))
     entity = next(s for s in stmts if s["recordType"] == "entity")
-    jur = entity["recordDetails"]["incorporatedInJurisdiction"]
+    jur = entity["recordDetails"]["jurisdiction"]
     assert jur["code"] == "US"
     assert "United States" in jur["name"]
 

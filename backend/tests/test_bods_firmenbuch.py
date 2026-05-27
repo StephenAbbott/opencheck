@@ -446,7 +446,7 @@ def test_map_firmenbuch_entity_name() -> None:
 
 def test_map_firmenbuch_entity_jurisdiction() -> None:
     stmts = list(map_firmenbuch(_bundle()))
-    jur = stmts[0]["recordDetails"]["incorporatedInJurisdiction"]
+    jur = stmts[0]["recordDetails"]["jurisdiction"]
     assert jur["code"] == "AT"
     assert jur["name"] == "Austria"
 

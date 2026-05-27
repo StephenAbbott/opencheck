@@ -205,7 +205,7 @@ def test_lookup_uses_bundle_when_no_live_mode(
                 "recordType": "entity",
                 "recordDetails": {
                     "name": "Bundle Co P.L.C.",
-                    "incorporatedInJurisdiction": {"name": "United Kingdom", "code": "GB"},
+                    "jurisdiction": {"name": "United Kingdom", "code": "GB"},
                     "identifiers": [
                         {"id": lei, "scheme": "XI-LEI"},
                         {"id": "12345678", "scheme": "GB-COH"},

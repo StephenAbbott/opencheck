@@ -202,7 +202,7 @@ class TestMapCorporationsCanada:
     def test_entity_jurisdiction(self) -> None:
         stmts = list(map_corporations_canada(self._build_bundle()))
         entity = next(s for s in stmts if s["recordType"] == "entity")
-        assert entity["recordDetails"]["incorporatedInJurisdiction"]["code"] == "CA"
+        assert entity["recordDetails"]["jurisdiction"]["code"] == "CA"
 
     def test_ca_corp_identifier(self) -> None:
         stmts = list(map_corporations_canada(self._build_bundle()))

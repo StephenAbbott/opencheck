@@ -2156,7 +2156,9 @@ def _subject_metadata_from_bundle(
         if not has_lei:
             continue
         legal_name = rd.get("name") or ""
-        jur = rd.get("incorporatedInJurisdiction") or {}
+        # v0.4 field is "jurisdiction"; OO bulk BODS pass-through still uses
+        # the legacy "incorporatedInJurisdiction" — accept both.
+        jur = rd.get("jurisdiction") or rd.get("incorporatedInJurisdiction") or {}
         jurisdiction = (jur.get("code") or "").upper() if isinstance(jur, dict) else ""
         registered_as = ""
         for i in ids:

@@ -41,7 +41,7 @@ threshold is met.
   ``arrangement``, or whose ``legalForm``/``entitySubtype``/``details``
   mentions ``trust``, ``foundation``, ``stiftung`` or ``anstalt``.
   Maps to AMLA condition (a).
-* ``NON_EU_JURISDICTION`` — any ``entityStatement.incorporatedInJurisdiction.code``
+* ``NON_EU_JURISDICTION`` — any ``entityStatement.jurisdiction.code``
   outside the EU+EEA set. Maps to AMLA condition (b).
 * ``NOMINEE`` — any ``relationshipStatement`` with an interest type or
   ``details`` field mentioning ``nominee``, or a ``personStatement``
@@ -582,7 +582,7 @@ def _person_type(stmt: dict[str, Any]) -> str:
 
 def _entity_jurisdiction(stmt: dict[str, Any]) -> dict[str, str] | None:
     rd = _record_details(stmt)
-    j = rd.get("incorporatedInJurisdiction") or stmt.get("incorporatedInJurisdiction")
+    j = rd.get("jurisdiction") or stmt.get("incorporatedInJurisdiction")  # v0.4: jurisdiction; v0.3 pass-through: incorporatedInJurisdiction
     if isinstance(j, dict):
         return j
     return None

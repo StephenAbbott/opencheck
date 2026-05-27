@@ -168,7 +168,7 @@ def test_map_wikidata_entity_resolves_jurisdiction_to_iso_code() -> None:
     """Wikidata says 'United Kingdom' — pycountry should yield 'GB'."""
     bundle = map_wikidata(_entity_bundle())
     entity = next(iter(bundle))
-    assert entity["recordDetails"]["incorporatedInJurisdiction"] == {
+    assert entity["recordDetails"]["jurisdiction"] == {
         "name": "United Kingdom",
         "code": "GB",
     }

@@ -431,7 +431,7 @@ def test_map_sec_edgar_issuer_entity_identifiers():
                        and "Rush Street" in s["recordDetails"]["name"])
     details = issuer_stmt["recordDetails"]
     assert details["name"] == "Rush Street Interactive, Inc."
-    assert details["incorporatedInJurisdiction"]["code"] == "US"
+    assert details["jurisdiction"]["code"] == "US"
 
     ids_by_scheme = {i["scheme"]: i["id"] for i in details["identifiers"]}
     assert ids_by_scheme["US-SEC-CIK"] == "1793659"

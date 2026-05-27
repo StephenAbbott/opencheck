@@ -386,7 +386,7 @@ class TestMapAres:
         assert entity_stmts, "Expected at least one entity statement"
         subject = entity_stmts[0]
         assert subject["recordDetails"]["name"] == "Alza.cz a.s."
-        assert subject["recordDetails"]["incorporatedInJurisdiction"]["code"] == "CZ"
+        assert subject["recordDetails"]["jurisdiction"]["code"] == "CZ"
         ids = {i["scheme"]: i["id"] for i in subject["recordDetails"]["identifiers"]}
         assert ids["CZ-ARES"] == "27082440"
         assert ids["CZ-DIC"] == "CZ27082440"
@@ -398,7 +398,7 @@ class TestMapAres:
         assert len(entity_stmts) == 2
         shareholder_entity = entity_stmts[1]
         assert shareholder_entity["recordDetails"]["name"] == "L.S. INVESTMENTS LIMITED"
-        jur = shareholder_entity["recordDetails"].get("incorporatedInJurisdiction", {})
+        jur = shareholder_entity["recordDetails"].get("jurisdiction", {})
         assert jur.get("code") == "CY"
 
     def test_alza_director_person_statement(self) -> None:

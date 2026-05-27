@@ -172,7 +172,7 @@ def test_map_bolagsverket_entity_name_from_first_namn_lista_entry() -> None:
 
 def test_map_bolagsverket_entity_jurisdiction() -> None:
     stmts = list(map_bolagsverket(_bundle()))
-    jur = stmts[0]["recordDetails"]["incorporatedInJurisdiction"]
+    jur = stmts[0]["recordDetails"]["jurisdiction"]
     assert jur["code"] == "SE"
     assert "Sweden" in jur["name"]
 

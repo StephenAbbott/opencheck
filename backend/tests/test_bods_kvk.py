@@ -103,7 +103,7 @@ def test_map_kvk_entity_name() -> None:
 
 def test_map_kvk_entity_jurisdiction() -> None:
     stmts = list(map_kvk(_bundle()))
-    jur = stmts[0]["recordDetails"]["incorporatedInJurisdiction"]
+    jur = stmts[0]["recordDetails"]["jurisdiction"]
     assert jur["code"] == "NL"
     assert "Netherlands" in jur["name"]
 

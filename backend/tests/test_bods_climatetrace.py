@@ -121,7 +121,7 @@ def test_map_climatetrace_entity_carries_lei_identifier() -> None:
 def test_map_climatetrace_entity_resolves_jurisdiction() -> None:
     bundle = map_climatetrace(_entity_bundle())
     entity = next(iter(bundle))
-    assert entity["recordDetails"]["incorporatedInJurisdiction"]["code"] == "GB"
+    assert entity["recordDetails"]["jurisdiction"]["code"] == "GB"
 
 
 def test_map_climatetrace_entity_passes_validator() -> None:
@@ -219,7 +219,7 @@ def test_map_climatetrace_no_country_omits_jurisdiction() -> None:
     b["gem_row"]["Headquarters Country"] = ""
     bundle = map_climatetrace(b)
     entity = next(iter(bundle))
-    assert "incorporatedInJurisdiction" not in entity["recordDetails"]
+    assert "jurisdiction" not in entity["recordDetails"]
 
 
 def test_map_climatetrace_source_is_third_party() -> None:

@@ -29,7 +29,7 @@ def test_entity_statement_shape() -> None:
     assert s["recordType"] == "entity"
     assert s["recordStatus"] == "new"
     assert s["recordDetails"]["entityType"]["type"] == "registeredEntity"
-    assert s["recordDetails"]["incorporatedInJurisdiction"] == {
+    assert s["recordDetails"]["jurisdiction"] == {
         "name": "United Kingdom",
         "code": "GB",
     }

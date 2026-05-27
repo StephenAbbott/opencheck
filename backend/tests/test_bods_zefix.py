@@ -137,7 +137,7 @@ def test_map_zefix_entity_name() -> None:
 
 def test_map_zefix_entity_jurisdiction_canton() -> None:
     stmts = list(map_zefix(_bundle()))
-    jur = stmts[0]["recordDetails"]["incorporatedInJurisdiction"]
+    jur = stmts[0]["recordDetails"]["jurisdiction"]
     assert jur["code"] == "CH-NW"
     assert "Nidwalden" in jur["name"]
     assert "Switzerland" in jur["name"]
@@ -146,7 +146,7 @@ def test_map_zefix_entity_jurisdiction_canton() -> None:
 def test_map_zefix_entity_jurisdiction_no_canton() -> None:
     """When canton is absent, jurisdiction falls back to country-level CH."""
     stmts = list(map_zefix(_bundle(_COMPANY_NO_CANTON)))
-    jur = stmts[0]["recordDetails"]["incorporatedInJurisdiction"]
+    jur = stmts[0]["recordDetails"]["jurisdiction"]
     assert jur["code"] == "CH"
 
 

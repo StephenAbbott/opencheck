@@ -181,7 +181,7 @@ def test_map_inpi_entity_name() -> None:
 
 def test_map_inpi_entity_jurisdiction() -> None:
     stmts = list(map_inpi(_bundle()))
-    jur = stmts[0]["recordDetails"]["incorporatedInJurisdiction"]
+    jur = stmts[0]["recordDetails"]["jurisdiction"]
     assert jur["code"] == "FR"
     assert "France" in jur["name"]
 

@@ -434,7 +434,7 @@ class TestMapRpoSlovakia:
         bundle = self._make_bundle()
         stmts = list(map_rpo_slovakia(bundle))
         rd = stmts[0]["recordDetails"]
-        jur = rd.get("incorporatedInJurisdiction") or {}
+        jur = rd.get("jurisdiction") or {}
         assert jur.get("code") == "SK"
 
     def test_sk_rpo_identifier(self) -> None:

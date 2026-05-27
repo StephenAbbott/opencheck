@@ -582,7 +582,7 @@ class TestMapKrsPoland:
         assert len(entity_stmts) == 1
         subject = entity_stmts[0]
         assert subject["recordDetails"]["name"] == "PKN ORLEN SPÓŁKA AKCYJNA"
-        assert subject["recordDetails"]["incorporatedInJurisdiction"]["code"] == "PL"
+        assert subject["recordDetails"]["jurisdiction"]["code"] == "PL"
 
     def test_sa_entity_identifiers(self) -> None:
         stmts = list(map_krs_poland(self._sa_bundle()))
