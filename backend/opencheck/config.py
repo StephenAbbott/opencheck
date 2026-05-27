@@ -133,14 +133,12 @@ class Settings(BaseSettings):
 
     # --- Danish Central Business Register (CVR) via Datafordeler GraphQL ---
     # Datafordeler CVR GraphQL API authentication.
-    # Authentication uses base64(service_user_id:api_key) as the ``token`` query parameter.
+    # Auth: ?apiKey=<key> query parameter — raw key, no encoding.
     # Set up at portal.datafordeler.dk:
-    #   1. Create an IT-system and a service user under it.
-    #   2. Generate an API key for the service user (valid 2 years, renewable).
-    #   3. Set CVR_DENMARK_SERVICE_USER_ID to the service user UUID.
-    #   4. Set CVR_DENMARK_API_KEY to the generated API key.
-    # GraphQL endpoint: https://graphql.datafordeler.dk/CVR/2.1
-    cvr_denmark_service_user_id: str | None = Field(default=None, alias="CVR_DENMARK_SERVICE_USER_ID")
+    #   1. Create an IT-system.
+    #   2. Generate an API key under the IT-system (valid 2 years, renewable).
+    #   3. Set CVR_DENMARK_API_KEY to the generated API key.
+    # GraphQL endpoint: https://graphql.datafordeler.dk/CVR/2
     cvr_denmark_api_key: str | None = Field(default=None, alias="CVR_DENMARK_API_KEY")
 
     # --- OpenTender (DIGIWHIST) ---

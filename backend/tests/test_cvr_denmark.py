@@ -330,7 +330,6 @@ async def test_fetch_returns_bundle(monkeypatch, tmp_path) -> None:
 
     monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
     monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
-    monkeypatch.setenv("CVR_DENMARK_SERVICE_USER_ID", "test-user-id")
     monkeypatch.setenv("CVR_DENMARK_API_KEY", "test-key")
     get_settings.cache_clear()
 
@@ -377,7 +376,6 @@ async def test_fetch_not_found_raises(monkeypatch, tmp_path) -> None:
 
     monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
     monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
-    monkeypatch.setenv("CVR_DENMARK_SERVICE_USER_ID", "test-user-id")
     monkeypatch.setenv("CVR_DENMARK_API_KEY", "test-key")
     get_settings.cache_clear()
 
@@ -404,30 +402,11 @@ async def test_fetch_no_api_key_raises(monkeypatch, tmp_path) -> None:
 
     monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
     monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
-    monkeypatch.setenv("CVR_DENMARK_SERVICE_USER_ID", "test-user-id")
     monkeypatch.delenv("CVR_DENMARK_API_KEY", raising=False)
     get_settings.cache_clear()
 
     adapter = CvrDenmarkAdapter()
     with pytest.raises(RuntimeError, match="CVR_DENMARK_API_KEY"):
-        await adapter.fetch("24256790")
-
-    get_settings.cache_clear()
-
-
-@pytest.mark.asyncio
-async def test_fetch_no_service_user_raises(monkeypatch, tmp_path) -> None:
-    """fetch() raises RuntimeError when CVR_DENMARK_SERVICE_USER_ID is absent."""
-    from opencheck.config import get_settings
-
-    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
-    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
-    monkeypatch.setenv("CVR_DENMARK_API_KEY", "test-key")
-    monkeypatch.delenv("CVR_DENMARK_SERVICE_USER_ID", raising=False)
-    get_settings.cache_clear()
-
-    adapter = CvrDenmarkAdapter()
-    with pytest.raises(RuntimeError, match="CVR_DENMARK_SERVICE_USER_ID"):
         await adapter.fetch("24256790")
 
     get_settings.cache_clear()
