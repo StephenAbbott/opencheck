@@ -278,6 +278,7 @@ def make_person_statement(
     identifiers: Iterable[dict[str, str]] = (),
     source_url: str | None = None,
     publication_date: str | None = None,
+    political_exposure: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     statement_id = _stable_id(source_id, "person", local_id)
     record_id = statement_id  # see make_entity_statement for reasoning
@@ -298,6 +299,8 @@ def make_person_statement(
     addresses = list(addresses)
     if addresses:
         record_details["addresses"] = addresses
+    if political_exposure:
+        record_details["politicalExposure"] = political_exposure
 
     return {
         "statementId": statement_id,
@@ -6312,6 +6315,16 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             if adresa:
                 addresses.append(_addr("service", adresa))
 
+            is_pep: bool = bool(kuv.get("JeVerejnyCinitel"))
+            pep_exposure: dict[str, Any] | None = (
+                {
+                    "status": "isPep",
+                    "details": [{"type": "existingRelationship", "jurisdiction": {"name": "Slovakia", "code": "SK"}}],
+                }
+                if is_pep
+                else None
+            )
+
             ip_stmt = make_person_statement(
                 source_id="rpvs_slovakia",
                 local_id=f"kuv_person:{kuv_id_raw}",
@@ -6321,6 +6334,7 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 birth_date=person_dob,
                 addresses=addresses,
                 source_url=source_url,
+                political_exposure=pep_exposure,
             )
             ip_type = "person"
 
@@ -6354,7 +6368,6 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interested_party_type=ip_type,
             interests=[interest],
             source_url=source_url,
-            publication_date=kuv_valid_from or None,
         )
         yield rel_stmt
 

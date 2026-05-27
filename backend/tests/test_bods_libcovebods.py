@@ -451,10 +451,31 @@ def test_libcovebods_rpvs_slovakia():
                 "DatumNarodenia": "1970-01-01T00:00:00+01:00",
                 "Obcanstvo": "SVK",
                 "Adresa": "Testová 1, Bratislava",
+                "PlatnostOd": "2015-03-01T00:00:00+01:00",
             }
         ],
     }
     assert_valid(map_rpvs_slovakia(bundle), "RPVS Slovakia")
+
+
+def test_libcovebods_rpvs_slovakia_pep():
+    """JeVerejnyCinitel flag maps to politicalExposure and must still validate."""
+    from opencheck.bods.mapper import map_rpvs_slovakia
+    bundle = {
+        "sk_ico": "87654321",
+        "name": "PEP Supplier s.r.o.",
+        "link": "https://rpvs.gov.sk/rpvs/Partner/456",
+        "active_kuvs": [
+            {
+                "Id": 2,
+                "Meno": "Jana",
+                "Priezvisko": "Nováková",
+                "DatumNarodenia": "1975-06-15T00:00:00+01:00",
+                "JeVerejnyCinitel": True,
+            }
+        ],
+    }
+    assert_valid(map_rpvs_slovakia(bundle), "RPVS Slovakia — PEP KUV")
 
 
 def test_libcovebods_bce_belgium():
