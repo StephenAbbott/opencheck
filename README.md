@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [draft customer due diligence regulatory techn
 
 ## Status
 
-OpenCheck has shipped through forty phases (latest commit on `main` is the source of truth):
+OpenCheck has shipped through forty-one phases (latest commit on `main` is the source of truth):
 
 | Phase | Headline |
 |------:|----------|
@@ -61,8 +61,9 @@ OpenCheck has shipped through forty phases (latest commit on `main` is the sourc
 | 38 | GLEIF: direct subsidiaries in BODS output — first page of Level 2 parent–child relationships emitted as child `entityStatement` + `relationshipStatement` (`appointmentOfBoard`, `beneficialOwnershipOrControl: false`); subsidiary count surfaced in UI below the GLEIF source card; Wikidata QID accuracy fix |
 | 39 | Companies House: active directors → BODS — `officers.items[]` entries with a director role and no `resigned_on` are emitted as `personStatement` (knownPerson) + `relationshipStatement` (`seniorManagingOfficial`, `beneficialOwnershipOrControl: false`); officer ID extracted from `links.officer.appointments` for stable local IDs; secretary and resigned roles excluded |
 | 40 | INPI France: non-BO individuals → BODS — `composition.pouvoirs[]` entries with `typeDePersonne == "INDIVIDU"` and `beneficiaireEffectif == false` are now mapped to person + relationship statements; full 65-code `roleEntreprise` codelist from INPI data dictionary embedded in mapper; external professional roles (auditors, liquidators, fiscal reps — codes 14, 71, 72, 77, 109, 150, 220) → `otherInfluenceOrControl`; all governance/management roles → `seniorManagingOfficial`; French label in `details`; `dateEffetRoleDeclarant` → `startDate`; `beneficiaireEffectif == true` entries silently skipped per Loi Sapin II / décret 2017-1094 |
+| 41 | lib-cove-bods validation — `tests/test_bods_libcovebods.py` adds 23 tests running all mapper outputs through the BODS v0.4 JSON schema validator and additional quality checks (`libcovebods>=0.16`); fixes applied: `share.exclusiveMinimum` changed from boolean to numeric per JSON Schema Draft 2020-12; UK sub-regions (England/Scotland/Wales/Northern Ireland) mapped to `GB` in `_country_obj`; identifier scheme codes corrected to registered org.ids codes throughout (`NO-BRREG`→`NO-BRC`, `CZ-ARES`→`CZ-ICO`, `CH-UID`→`CH-FDJP`, `CH-ZEFIX`→`CH-COA`, `EE-ARIREGISTER`→`EE-KMKR`, `FR-SIREN`→`FR-INSEE`, `SG-UEN`→`SG-ACRA`, `OC-{jur}`→jurisdiction-specific org.ids code with `COA` fallback); GLEIF RA table France entry corrected (`RA000189` → `FR-INSEE`); corporate PSC `beneficialOwnershipOrControl` set to `false` when interested party is an entity (not a natural person) |
 
-Test suite: 911 backend tests. Frontend type-checks clean.
+Test suite: 913 backend tests (4 skipped). Frontend type-checks clean.
 
 ## Quick start
 
