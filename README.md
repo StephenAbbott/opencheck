@@ -8,7 +8,7 @@ Try the demo at **https://opencheck.onrender.com/**
 
 ## What is OpenCheck?
 
-You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries [GLEIF](https://www.gleif.org/) first, derives every cross-source identifier it can (UK Companies House number, Norwegian organisation number, Irish company registration number, Finnish Y-tunnus, Latvian registration number, Lithuanian entity code, Estonian registry code, Czech IČO, Polish KRS number, Austrian Firmenbuchnummer, Slovak IČO, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, Canadian corporation number, Belgian enterprise number, OpenCorporates ID, Wikidata Q-ID, and more), and uses those bridges to fan out across 25 national and international corporate data sources.
+You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries [GLEIF](https://www.gleif.org/) first, derives every cross-source identifier it can (UK Companies House number, Norwegian organisation number, Irish company registration number, Finnish Y-tunnus, Latvian registration number, Lithuanian entity code, Estonian registry code, Czech IČO, Polish KRS number, Austrian Firmenbuchnummer, Slovak IČO, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, Canadian corporation number, Belgian enterprise number, Danish CVR number, OpenCorporates ID, Wikidata Q-ID, and more), and uses those bridges to fan out across 26 national and international corporate data sources.
 
 Everything maps into [BODS v0.4](https://standard.openownership.org/en/0.4.0/). Cross-source links and risk signals are computed deterministically, and the whole bundle is one click away from a downloadable export (JSON / JSONL / XML / ZIP).
 
@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 41** — lib-cove-bods validation pass across all 20+ mappers; BODS v0.4 schema errors fixed (share percentage encoding, UK sub-region country codes, org.ids identifier scheme codes); 23 new tests using `libcovebods>=0.16`. 913 backend tests (4 skipped). Frontend type-checks clean.
+**Latest: Phase 42** — CVR Denmark adapter (`cvr_denmark`) — entity data from Denmark's Central Business Register (CVR) via the Datafordeler GraphQL API; `dk_cvr` identifier derived from GLEIF RA code `RA000531`; two-query bitemporal fetch (CVR_Virksomhed → CVREnhedsId, then batch-fetch names/address/sector/form/participants); entity statements with `DK-CVR` scheme; requires free `CVR_DENMARK_API_KEY` from portal.datafordeler.dk. 969 backend tests (4 skipped). Frontend type-checks clean.
 
 → [Full development history](docs/status.md)
 
@@ -59,10 +59,10 @@ The first frontend build copies bundled images for `@openownership/bods-dagre` i
 | Page | Contents |
 |------|----------|
 | [How it works](docs/how-it-works.md) | Step-by-step lookup flow, per-adapter detail, Open Ownership BODS bundles, API surface, project structure |
-| [Sources](docs/sources.md) | Full adapter table — 25 sources, license, entry point, description |
+| [Sources](docs/sources.md) | Full adapter table — 26 sources, license, entry point, description |
 | [Risk signals](docs/risk-signals.md) | All 12 signal codes: source-derived, AMLA CDD RTS, FATF jurisdiction, cross-source name match, ICIJ Offshore Leaks |
 | [Configuration](docs/configuration.md) | Environment variables, Render deployment, running the test suite |
-| [Development history](docs/status.md) | All 41 phases |
+| [Development history](docs/status.md) | All 42 phases |
 
 ## Licensing
 

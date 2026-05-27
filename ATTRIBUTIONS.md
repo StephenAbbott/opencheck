@@ -188,6 +188,18 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Key registration:** Requires `CORPORATIONS_CANADA_API_KEY` (public-plan API key from <https://api.ised-isde.canada.ca/corporations/api>)
 - **Note:** The V1 API always returns HTTP 200 even for unknown corporations; OpenCheck detects not-found responses by checking whether the first element of the response array is a dict (found) or a string (error message). Directors are mapped to BODS v0.4 `seniorManagingOfficial` relationship statements.
 
+## CVR — Det Centrale Virksomhedsregister (Danish Central Business Register)
+
+- **Data:** company profiles (legal name, address, legal form, sector code, entity status, start date) for all businesses registered in Denmark. CVR is the authoritative statutory register maintained by Erhvervsstyrelsen (the Danish Business Authority). It covers approximately 900,000 active entities.
+- **API:** Datafordeler GraphQL API at `https://graphql.datafordeler.dk/CVR/2.1` — authenticated via API key; free registration at <https://portal.datafordeler.dk/>
+- **Portal:** <https://datacvr.virk.dk/> (public CVR browser); <https://datafordeler.dk/> (API distribution)
+- **License:** Danish Open Government Data — CVR brugervilkår (terms of use). The CVR data may be used freely for any purpose with attribution; see <https://datacvr.virk.dk/artikel/vilkaar-og-betingelser> for the full terms. Commercial use is permitted with attribution.
+- **Attribution:** "Indeholder data fra Det Centrale Virksomhedsregister (CVR), Erhvervsstyrelsen / Danish Business Authority. Data distribueret via Datafordelerens CVR GraphQL API."
+- **Entry point:** `dk_cvr` (8-digit CVR number, zero-padded) derived from GLEIF RA code `RA000531` (Erhvervsstyrelsen)
+- **Key registration:** Free API key from <https://portal.datafordeler.dk/>. Set the `CVR_DENMARK_API_KEY` environment variable to enable live data. Without it, the adapter returns a stub entry.
+- **Technical notes:** The Datafordeler CVR API uses a bitemporal data model (`virkningFra` / `virkningTil` effect periods). OpenCheck filters to the current valid records at query time (Python-side, `virkningTil = null`). Fetch uses two sequential GraphQL queries: (1) `CVR_Virksomhed` by `CVRNummer` to obtain the internal `CVREnhedsId`; (2) a batch query for `CVR_Navn`, `CVR_Adressering`, `CVR_Branche`, `CVR_Virksomhedsform`, and `CVR_FuldtAnsvarligDeltagerRelation` (fully-liable participants, e.g. general partners in a K/S) using that ID.
+- **Scope:** Natural persons (CVRPerson) require MitID Erhverv credentials and are not available via the standard API key. OpenCheck maps entity data only; beneficial ownership disclosures are not published via CVR open data.
+
 ## OpenCorporates
 
 - **Data:** global company registry data — company profiles, registered addresses, officer appointments, and network relationships
