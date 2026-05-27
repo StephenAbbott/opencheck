@@ -66,13 +66,15 @@ def _parse_nature(nature: str) -> dict[str, Any]:
 
     band = _SHARE_BAND_RE.search(lowered)
     if band:
+        # BODS v0.4: ``share.exclusiveMinimum`` is a *number* (the exclusive
+        # lower bound), not a boolean.  PSC ranges like "25-to-50-percent"
+        # mean strictly more than 25 % and up to (inclusive) 50 %.
         entry["share"] = {
-            "minimum": int(band.group(1)),
+            "exclusiveMinimum": int(band.group(1)),
             "maximum": int(band.group(2)),
-            "exclusiveMinimum": True,
         }
     elif "75-to-100-percent" in lowered:
-        entry["share"] = {"minimum": 75, "maximum": 100, "exclusiveMinimum": True}
+        entry["share"] = {"exclusiveMinimum": 75, "maximum": 100}
 
     return entry
 
@@ -120,8 +122,21 @@ def _country_obj(code: str) -> dict[str, str] | None:
     except LookupError:
         pass
     # Overrides for native-language names pycountry can't resolve.
-    # Mainly needed for Bolagsverket (Swedish API), but covers other sources too.
+    # Includes UK sub-regions (England, Scotland, Wales, Northern Ireland) which
+    # are ISO 3166-2 subdivisions, not ISO 3166-1 countries, so they must map to
+    # "GB".  Mainly needed for Companies House addresses and other UK sources.
+    # Also covers Bolagsverket (Swedish API) and other European sources.
     _NATIVE_NAMES: dict[str, str] = {
+        # UK sub-regions
+        "England": "GB",
+        "ENGLAND": "GB",
+        "Scotland": "GB",
+        "SCOTLAND": "GB",
+        "Wales": "GB",
+        "WALES": "GB",
+        "Northern Ireland": "GB",
+        "NORTHERN IRELAND": "GB",
+        # Bolagsverket / other Scandinavian sources
         "Sverige": "SE",
         "SVERIGE": "SE",
         "Norge": "NO",
@@ -656,6 +671,13 @@ def _emit_company_statements(
                 "beneficialOwnershipOrControl": True,
             }
         ]
+        # BODS: beneficialOwnershipOrControl may only be True when the
+        # interested party is a natural person (known or anonymous).  For
+        # corporate / legal-person PSCs the interested party is an entity, so
+        # we set the flag to False — the BO relationship is further up the chain.
+        if ip_type == "entity":
+            for interest in interests:
+                interest["beneficialOwnershipOrControl"] = False
 
         rel = make_relationship_statement(
             source_id="companies_house",
@@ -1025,7 +1047,7 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     # Estonia — Centre of Registers and Information Systems (RIK)
     "RA000181": ("EE-RIK", "Centre of Registers and Information Systems (Estonia)"),
     # France — Sirene (INSEE)
-    "RA000189": ("FR-SIREN", "Sirene — Institut National de la Statistique et des Études Économiques (France)"),
+    "RA000189": ("FR-INSEE", "Sirene — Institut National de la Statistique et des Études Économiques (France)"),
     # Netherlands — Kamer van Koophandel (KvK)
     "RA000463": ("NL-KVK", "Netherlands Chamber of Commerce (KvK)"),
     # Sweden — Bolagsverket (Swedish Companies Registration Office)
@@ -1571,9 +1593,10 @@ def _gleif_address(block: dict[str, Any], *, address_type: str) -> dict[str, Any
 # We map the entity-level fields to a BODS entity statement.  Zefix does not
 # expose natural persons through this API, so only entity statements are emitted.
 #
-# Identifier scheme: ``CH-UID`` for the Swiss Unternehmens-Identifikationsnummer
-# (UID), issued by the Federal Statistical Office (FSO / BFS).  Format used in
-# BODS identifiers is ``CHE-NNN.NNN.NNN`` (the official display format).
+# Identifier scheme: ``CH-FDJP`` for the Swiss Unternehmens-Identifikationsnummer
+# (UID), issued by the Federal Department of Justice and Police (FDJP) via
+# the commercial register.  Format used in BODS identifiers is ``CHE-NNN.NNN.NNN``
+# (the official display format).
 #
 # The ``bundle`` shape expected here matches what ZefixAdapter.fetch() returns:
 #   {
@@ -1640,17 +1663,19 @@ def map_zefix(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     identifiers: list[dict[str, str]] = [
         {
             "id": uid_display,
-            "scheme": "CH-UID",
-            "schemeName": "Swiss Federal Statistical Office — UID Register",
+            "scheme": "CH-FDJP",
+            "schemeName": "Swiss commercial register (Federal Department of Justice and Police)",
         }
     ]
     # EHRA-ID (internal Zefix identifier) as a secondary cross-reference.
+    # Uses CH-COA (generic Swiss company register) since the EHRAID is a
+    # Zefix-internal key distinct from the publicly-issued UID.
     ehraid = company.get("ehraid")
     if ehraid is not None:
         identifiers.append(
             {
                 "id": str(ehraid),
-                "scheme": "CH-ZEFIX",
+                "scheme": "CH-COA",
                 "schemeName": "Zefix (FCRO/EHRA) internal ID",
             }
         )
@@ -1703,7 +1728,7 @@ def _zefix_address(block: dict[str, Any]) -> list[dict[str, str]]:
 # 2-digit postal-code region.  Company name is NOT available from this API
 # tier; it is passed via bundle["legal_name"] (sourced from GLEIF).
 #
-# Identifier scheme: "NL-KVK"  (follows the GB-COH / CH-UID pattern)
+# Identifier scheme: "NL-KVK"  (follows the GB-COH / CH-FDJP pattern)
 # Jurisdiction: Netherlands ("NL")
 # Source: https://developers.kvk.nl/nl/documentation/open-dataset-basis-bedrijfsgegevens-api
 
@@ -1780,7 +1805,7 @@ def map_kvk(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 # Only ``personneMorale`` companies are handled here; ``personnePhysique``
 # (sole traders / auto-entrepreneurs) are out of scope for Phase 1.
 #
-# Identifier scheme: "FR-SIREN"  (follows GB-COH / CH-UID / NL-KVK pattern)
+# Identifier scheme: "FR-INSEE"  (follows GB-COH / CH-FDJP / NL-KVK pattern)
 # Jurisdiction: France ("FR")
 # Source: https://registre-national-entreprises.inpi.fr/
 #
@@ -2029,11 +2054,11 @@ def map_inpi(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     nature_creation: dict[str, Any] = content.get("natureCreation") or {}
     founding_date: str | None = nature_creation.get("dateCreation") or None
 
-    # Identifier: FR-SIREN
+    # Identifier: FR-INSEE (SIREN — Système d'Identification du Répertoire des Entreprises)
     identifiers: list[dict[str, str]] = [
         {
             "id": siren,
-            "scheme": "FR-SIREN",
+            "scheme": "FR-INSEE",
             "schemeName": "INSEE — Système d'Identification du Répertoire des Entreprises",
         }
     ]
@@ -2222,7 +2247,7 @@ def _inpi_address(block: dict[str, Any]) -> list[dict[str, str]]:
 # there is no BO restriction; board members, CEO, and signatories are
 # safe to republish as BODS person statements.
 #
-# Identifier scheme: "SE-BLV"  (follows GB-COH / CH-UID / NL-KVK / FR-SIREN)
+# Identifier scheme: "SE-BLV"  (follows GB-COH / CH-FDJP / NL-KVK / FR-INSEE)
 # Jurisdiction: Sweden ("SE")
 # Source: https://www.bolagsverket.se/
 #
@@ -2497,15 +2522,15 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     identifiers: list[dict[str, str]] = [
         {
             "id": registry_code,
-            "scheme": "EE-ARIREGISTER",
-            "schemeName": "Estonian e-Business Register",
+            "scheme": "EE-KMKR",
+            "schemeName": "Estonian e-Business Register (Äriregister / KMKR)",
         }
     ]
     if vat:
         identifiers.append({
             "id": vat,
-            "scheme": "EE-VAT",
-            "schemeName": "Estonian VAT number",
+            "scheme": "EE-KMKR",
+            "schemeName": "Estonian VAT number (Äriregister)",
         })
 
     address_str = bundle.get("address") or ""
@@ -3894,10 +3919,23 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
             }
         )
     if company_number and jurisdiction_code:
+        # Map OC jurisdiction codes to org.ids scheme codes.
+        # OC uses ISO alpha-2 (lower) for country-level jurisdictions and
+        # "{alpha2}_{state}" for sub-national ones (e.g. "us_de" for Delaware).
+        # Fall back to "{ALPHA2}-COA" (generic companies register) if no exact
+        # match is known.
+        _OC_JUR_TO_ORGID: dict[str, str] = {
+            "gb": "GB-COH", "nl": "NL-KVK", "se": "SE-BLV", "no": "NO-BRC",
+            "fr": "FR-RCS", "be": "BE-BCE_KBO", "at": "AT-FB", "ch": "CH-FDJP",
+            "pl": "PL-KRS", "cz": "CZ-ICO", "sk": "SK-ORSR", "lt": "LT-RC",
+            "lv": "LV-RE", "ee": "EE-KMKR", "sg": "SG-ACRA", "ca": "CA-CC",
+        }
+        top_jur = jurisdiction_code.split("_")[0].lower()
+        jur_scheme = _OC_JUR_TO_ORGID.get(top_jur) or f"{top_jur.upper()}-COA"
         identifiers.append(
             {
                 "id": company_number,
-                "scheme": f"OC-{jurisdiction_code.upper()}",
+                "scheme": jur_scheme,
                 "schemeName": f"OpenCorporates {jurisdiction_code.upper()} company number",
             }
         )
@@ -4701,7 +4739,7 @@ def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     identifiers: list[dict[str, str]] = [
         {
             "id": orgnr,
-            "scheme": "NO-BRREG",
+            "scheme": "NO-BRC",
             "schemeName": "Brønnøysundregistrene Enhetsregisteret",
         }
     ]
@@ -5743,7 +5781,7 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     identifiers: list[dict[str, str]] = [
         {
             "id": ico,
-            "scheme": "CZ-ARES",
+            "scheme": "CZ-ICO",
             "schemeName": "Czech ARES (Administrativní registr ekonomických subjektů)",
         }
     ]
@@ -5827,7 +5865,7 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             if o_ico:
                 o_identifiers.append({
                     "id": str(o_ico).strip().zfill(8),
-                    "scheme": "CZ-ARES",
+                    "scheme": "CZ-ICO",
                     "schemeName": "Czech ARES",
                 })
 
@@ -5925,7 +5963,7 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             if d_ico:
                 d_ids.append({
                     "id": str(d_ico).strip().zfill(8),
-                    "scheme": "CZ-ARES",
+                    "scheme": "CZ-ICO",
                     "schemeName": "Czech ARES",
                 })
             d_jur: tuple[str, str] | None = None
@@ -6609,7 +6647,7 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 # produces a single entity statement.
 #
 # Fields mapped:
-#   uen              → identifiers (SG-UEN scheme)
+#   uen              → identifiers (SG-ACRA scheme)
 #   entity_name      → name
 #   uen_status_desc  → dissolved / founding date inference (status only)
 #   entity_type_desc → entity type label (stored in description)
@@ -6640,8 +6678,8 @@ def map_acra_singapore(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     identifiers: list[dict[str, str]] = [
         {
             "id": uen,
-            "scheme": "SG-UEN",
-            "schemeName": "Singapore Unique Entity Number (ACRA)",
+            "scheme": "SG-ACRA",
+            "schemeName": "Singapore Unique Entity Number — Accounting and Corporate Regulatory Authority (ACRA)",
         }
     ]
 

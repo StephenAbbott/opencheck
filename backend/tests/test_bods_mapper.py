@@ -86,7 +86,7 @@ def test_relationship_statement_shape() -> None:
                 "type": "shareholding",
                 "directOrIndirect": "direct",
                 "beneficialOwnershipOrControl": True,
-                "share": {"minimum": 50, "maximum": 75, "exclusiveMinimum": True},
+                "share": {"exclusiveMinimum": 50, "maximum": 75},
             }
         ],
     )
@@ -185,7 +185,7 @@ def test_individual_psc_shareholding_interest() -> None:
     sh = next(
         i for i in jane_rel["recordDetails"]["interests"] if i["type"] == "shareholding"
     )
-    assert sh["share"] == {"minimum": 50, "maximum": 75, "exclusiveMinimum": True}
+    assert sh["share"] == {"exclusiveMinimum": 50, "maximum": 75}
 
 
 def test_mapper_output_passes_shape_validator() -> None:

@@ -153,24 +153,25 @@ def test_map_zefix_entity_jurisdiction_no_canton() -> None:
 def test_map_zefix_identifier_ch_uid() -> None:
     stmts = list(map_zefix(_bundle()))
     schemes = {i["scheme"] for i in stmts[0]["recordDetails"]["identifiers"]}
-    assert "CH-UID" in schemes
+    assert "CH-FDJP" in schemes
 
 
 def test_map_zefix_identifier_uid_formatted() -> None:
-    """The CH-UID identifier should use the CHE-NNN.NNN.NNN display format."""
+    """The CH-FDJP UID identifier should use the CHE-NNN.NNN.NNN display format."""
     stmts = list(map_zefix(_bundle()))
     uid_id = next(
-        i["id"] for i in stmts[0]["recordDetails"]["identifiers"] if i["scheme"] == "CH-UID"
+        i["id"] for i in stmts[0]["recordDetails"]["identifiers"] if i["scheme"] == "CH-FDJP"
     )
     assert uid_id == "CHE-313.550.547"
 
 
 def test_map_zefix_identifier_ehraid() -> None:
+    """EHRAID (Zefix internal key) uses the CH-COA scheme."""
     stmts = list(map_zefix(_bundle()))
     schemes = {i["scheme"] for i in stmts[0]["recordDetails"]["identifiers"]}
-    assert "CH-ZEFIX" in schemes
+    assert "CH-COA" in schemes
     ehraid_id = next(
-        i["id"] for i in stmts[0]["recordDetails"]["identifiers"] if i["scheme"] == "CH-ZEFIX"
+        i["id"] for i in stmts[0]["recordDetails"]["identifiers"] if i["scheme"] == "CH-COA"
     )
     assert ehraid_id == "348639"
 
@@ -195,7 +196,7 @@ def test_map_zefix_dotted_uid_normalised() -> None:
     stmts = list(map_zefix(_bundle(_COMPANY_DOTTED_UID)))
     assert len(stmts) == 1
     uid_id = next(
-        i["id"] for i in stmts[0]["recordDetails"]["identifiers"] if i["scheme"] == "CH-UID"
+        i["id"] for i in stmts[0]["recordDetails"]["identifiers"] if i["scheme"] == "CH-FDJP"
     )
     assert uid_id == "CHE-346.487.424"
 

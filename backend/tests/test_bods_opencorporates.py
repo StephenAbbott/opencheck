@@ -127,7 +127,7 @@ def test_map_opencorporates_entity_identifiers() -> None:
     entity = next(s for s in statements if s["recordType"] == "entity")
     schemes = {i["scheme"] for i in entity["recordDetails"]["identifiers"]}
     assert "OpenCorporates" in schemes
-    assert "OC-GB" in schemes
+    assert "GB-COH" in schemes
 
 
 def test_map_opencorporates_entity_jurisdiction() -> None:

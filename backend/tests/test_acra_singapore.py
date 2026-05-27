@@ -245,7 +245,7 @@ def test_map_acra_singapore_entity_statement() -> None:
     assert "STARK" in (rd.get("name") or "")
 
     ids = rd.get("identifiers") or []
-    uen_id = next((i for i in ids if i.get("scheme") == "SG-UEN"), None)
+    uen_id = next((i for i in ids if i.get("scheme") == "SG-ACRA"), None)
     assert uen_id is not None
     assert uen_id["id"] == "200312345E"
 

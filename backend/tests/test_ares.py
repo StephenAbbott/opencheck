@@ -388,7 +388,7 @@ class TestMapAres:
         assert subject["recordDetails"]["name"] == "Alza.cz a.s."
         assert subject["recordDetails"]["jurisdiction"]["code"] == "CZ"
         ids = {i["scheme"]: i["id"] for i in subject["recordDetails"]["identifiers"]}
-        assert ids["CZ-ARES"] == "27082440"
+        assert ids["CZ-ICO"] == "27082440"
         assert ids["CZ-DIC"] == "CZ27082440"
 
     def test_alza_shareholder_entity_statement(self) -> None:

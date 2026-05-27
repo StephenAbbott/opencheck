@@ -47,6 +47,8 @@ dev = [
     "pytest-httpx>=0.32",
     "ruff>=0.7",
     "mypy>=1.13",
+    # Phase 41: lib-cove-bods BODS v0.4 validator (used in test_bods_libcovebods.py)
+    "libcovebods>=0.16",
 ]
 
 [build-system]

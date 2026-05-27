@@ -189,13 +189,13 @@ def test_map_inpi_entity_jurisdiction() -> None:
 def test_map_inpi_identifier_scheme() -> None:
     stmts = list(map_inpi(_bundle()))
     schemes = {i["scheme"] for i in stmts[0]["recordDetails"]["identifiers"]}
-    assert "FR-SIREN" in schemes
+    assert "FR-INSEE" in schemes
 
 
 def test_map_inpi_identifier_value() -> None:
     stmts = list(map_inpi(_bundle()))
     siren_id = next(
-        i["id"] for i in stmts[0]["recordDetails"]["identifiers"] if i["scheme"] == "FR-SIREN"
+        i["id"] for i in stmts[0]["recordDetails"]["identifiers"] if i["scheme"] == "FR-INSEE"
     )
     assert siren_id == "055804124"
 
