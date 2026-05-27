@@ -4,8 +4,8 @@ FROM python:3.11-slim
 # Install git (required by uv to clone git+ dependencies such as bods-xml)
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
-# Install uv (pinned minor version; newer patches picked up on rebuild)
-COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /usr/local/bin/uv
+# Install uv via pip — avoids GHCR dependency that can fail with 502 on Render
+RUN pip install --no-cache-dir uv
 
 WORKDIR /app
 
