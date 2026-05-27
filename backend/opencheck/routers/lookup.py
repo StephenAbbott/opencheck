@@ -582,7 +582,7 @@ async def lookup(
                 # exclusively from Wikidata; Companies House does not publish
                 # Wikidata mappings, so including it would falsely imply CH
                 # corroborates the identifier.
-                identifiers={"gb_coh": derived["gb_coh"], "lei": lei},
+                identifiers={"gb_coh": derived["gb_coh"]},
                 raw=_profile,
                 is_stub=False,
             ))
@@ -601,7 +601,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=_company.get("name") or legal_name or "",
                 summary=f"CHE {derived['che_uid']}",
-                identifiers={"che_uid": derived["che_uid"], "lei": lei},
+                identifiers={"che_uid": derived["che_uid"]},
                 raw=_company,
                 is_stub=False,
             ))
@@ -619,7 +619,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=legal_name or "",
                 summary=f"KvK {derived['kvk_number']}",
-                identifiers={"kvk_number": derived["kvk_number"], "lei": lei},
+                identifiers={"kvk_number": derived["kvk_number"]},
                 raw=_b.get("company") or {},
                 is_stub=False,
             ))
@@ -642,7 +642,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=_inpi_name,
                 summary=f"FR-SIREN {derived['siren']}",
-                identifiers={"siren": derived["siren"], "lei": lei},
+                identifiers={"siren": derived["siren"]},
                 raw=_inpi_company,
                 is_stub=False,
             ))
@@ -667,7 +667,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=_bv_name,
                 summary=f"SE-BLV {_org_display}",
-                identifiers={"se_org_number": derived["se_org_number"], "lei": lei},
+                identifiers={"se_org_number": derived["se_org_number"]},
                 raw=_bv_company,
                 is_stub=False,
             ))
@@ -685,7 +685,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=_b.get("name") or legal_name or "",
                 summary=f"EE-ARIREGISTER {derived['ee_registry_code']}",
-                identifiers={"ee_registry_code": derived["ee_registry_code"], "lei": lei},
+                identifiers={"ee_registry_code": derived["ee_registry_code"]},
                 raw=_b,
                 is_stub=False,
             ))
@@ -704,7 +704,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=_brreg_entity.get("navn") or legal_name or "",
                 summary=f"NO-ORGNR {derived['no_orgnr']}",
-                identifiers={"no_orgnr": derived["no_orgnr"], "lei": lei},
+                identifiers={"no_orgnr": derived["no_orgnr"]},
                 raw=_brreg_entity,
                 is_stub=False,
             ))
@@ -724,7 +724,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=_cro_name,
                 summary=f"IE-CRN {derived['ie_crn']}",
-                identifiers={"ie_crn": derived["ie_crn"], "lei": lei},
+                identifiers={"ie_crn": derived["ie_crn"]},
                 raw=_cro_company,
                 is_stub=False,
             ))
@@ -748,7 +748,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=_prh_name or legal_name or "",
                 summary=f"FI-YTUNNUS {derived['fi_ytunnus']}",
-                identifiers={"fi_ytunnus": derived["fi_ytunnus"], "lei": lei},
+                identifiers={"fi_ytunnus": derived["fi_ytunnus"]},
                 raw=_prh_company,
                 is_stub=False,
             ))
@@ -767,7 +767,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=(_lv_entity.get("name") or "").strip() or legal_name or "",
                 summary=f"LV-UR {derived['lv_regcode']}",
-                identifiers={"lv_regcode": derived["lv_regcode"], "lei": lei},
+                identifiers={"lv_regcode": derived["lv_regcode"]},
                 raw=_lv_entity,
                 is_stub=False,
             ))
@@ -785,7 +785,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=_b.get("name") or legal_name or "",
                 summary=f"LT-JAR {derived['lt_code']}",
-                identifiers={"lt_code": derived["lt_code"], "lei": lei},
+                identifiers={"lt_code": derived["lt_code"]},
                 raw=_b,
                 is_stub=False,
             ))
@@ -804,7 +804,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=(_cz_entity.get("name") or "").strip() or legal_name or "",
                 summary=f"CZ-ARES IČO {derived['cz_ico']}",
-                identifiers={"cz_ico": derived["cz_ico"], "lei": lei},
+                identifiers={"cz_ico": derived["cz_ico"]},
                 raw=_cz_entity,
                 is_stub=False,
             ))
@@ -822,7 +822,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=(_b.get("name") or "").strip() or legal_name or "",
                 summary=f"KRS {derived['pl_krs']}",
-                identifiers={"pl_krs": derived["pl_krs"], "lei": lei},
+                identifiers={"pl_krs": derived["pl_krs"]},
                 raw=_b,
                 is_stub=False,
             ))
@@ -840,7 +840,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=(_b.get("name") or "").strip() or legal_name or "",
                 summary=f"FN {derived['at_fn']}",
-                identifiers={"at_fn": derived["at_fn"], "lei": lei},
+                identifiers={"at_fn": derived["at_fn"]},
                 raw=_b,
                 is_stub=False,
             ))
@@ -858,7 +858,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=(_b.get("name") or "").strip() or legal_name or "",
                 summary=f"SK-IČO {derived['sk_ico']}",
-                identifiers={"sk_ico": derived["sk_ico"], "lei": lei},
+                identifiers={"sk_ico": derived["sk_ico"]},
                 raw=_b,
                 is_stub=False,
             ))
@@ -876,7 +876,6 @@ async def lookup(
                 summary=f"SK-IČO {derived['sk_ico']} · RPVS #{_b.get('partner_id', '')}",
                 identifiers={
                     "sk_ico": derived["sk_ico"],
-                    "lei": lei,
                     **({"rpvs_id": str(_b["partner_id"])} if _b.get("partner_id") else {}),
                 },
                 raw=_b,
@@ -896,7 +895,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=_b.get("name") or legal_name or "",
                 summary=f"BE {_b.get('dotted') or derived['be_enterprise_number']}",
-                identifiers={"be_enterprise_number": derived["be_enterprise_number"], "lei": lei},
+                identifiers={"be_enterprise_number": derived["be_enterprise_number"]},
                 raw=_b,
                 is_stub=False,
             ))
@@ -922,7 +921,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=_cc_name or legal_name or "",
                 summary=f"CA-CORP {derived['ca_corp_id']}",
-                identifiers={"ca_corp_id": derived["ca_corp_id"], "lei": lei},
+                identifiers={"ca_corp_id": derived["ca_corp_id"]},
                 raw=_cc_corp,
                 is_stub=False,
             ))
@@ -945,7 +944,6 @@ async def lookup(
                 summary=f"OC {ocid} · {_oc_company.get('current_status', '')}",
                 identifiers={
                     "ocid": ocid,
-                    "lei": lei,
                     **({"gb_coh": derived["gb_coh"]} if "gb_coh" in derived else {}),
                 },
                 raw=_oc_company,
@@ -978,7 +976,6 @@ async def lookup(
                 summary=_wd_summary.get("description") or "",
                 identifiers={
                     "wikidata_qid": qid,
-                    "lei": lei,
                     **({"gb_coh": registered_as} if "gb_coh" in derived else {}),
                 },
                 raw=_wd_summary,
@@ -1031,7 +1028,7 @@ async def lookup(
                 kind=SearchKind.ENTITY,
                 name=_b.get("entity_name") or legal_name or _entity_id,
                 summary=" · ".join(_summary_parts),
-                identifiers={"gem_entity_id": _entity_id, "lei": lei},
+                identifiers={"gem_entity_id": _entity_id},
                 raw=_b,
                 is_stub=bool(_b.get("is_stub")),
             ))
@@ -1075,7 +1072,7 @@ async def lookup(
                             kind=SearchKind.ENTITY,
                             name=legal_name or "",
                             summary=f"CIK {_edgar_cik} · US listed company",
-                            identifiers={"edgar_cik": _edgar_cik, "lei": lei},
+                            identifiers={"edgar_cik": _edgar_cik},
                             raw={"cik": _edgar_cik, "name": legal_name or ""},
                             is_stub=False,
                         )
@@ -1094,8 +1091,7 @@ async def lookup(
                                 summary=se_hit.summary,
                                 identifiers={
                                     "edgar_cik": se_hit.hit_id,
-                                    "lei": lei,
-                                },
+                                                },
                                 raw=se_hit.raw,
                                 is_stub=False,
                             )
@@ -1184,8 +1180,7 @@ async def lookup(
                         summary=" · ".join(summary_parts),
                         identifiers={
                             "gem_entity_id": entity_id,
-                            "lei": lei,
-                        },
+                                },
                         raw=ct_bundle,
                         is_stub=is_stub,
                     )
@@ -1709,7 +1704,7 @@ async def _lookup_stream_events(
                         # exclusively from Wikidata; Companies House does not publish
                         # Wikidata mappings, so including it would falsely imply CH
                         # corroborates the identifier.
-                        identifiers={"gb_coh": derived["gb_coh"], "lei": lei},
+                        identifiers={"gb_coh": derived["gb_coh"]},
                         raw=_p, is_stub=False,
                     )
 
@@ -1721,7 +1716,7 @@ async def _lookup_stream_events(
                         kind=SearchKind.ENTITY,
                         name=_c.get("name") or legal_name or "",
                         summary=f"CHE {derived['che_uid']}",
-                        identifiers={"che_uid": derived["che_uid"], "lei": lei},
+                        identifiers={"che_uid": derived["che_uid"]},
                         raw=_c, is_stub=False,
                     )
 
@@ -1731,7 +1726,7 @@ async def _lookup_stream_events(
                         source_id="kvk", hit_id=derived["kvk_number"],
                         kind=SearchKind.ENTITY, name=legal_name or "",
                         summary=f"KvK {derived['kvk_number']}",
-                        identifiers={"kvk_number": derived["kvk_number"], "lei": lei},
+                        identifiers={"kvk_number": derived["kvk_number"]},
                         raw=result.get("company") or {}, is_stub=False,
                     )
 
@@ -1743,7 +1738,7 @@ async def _lookup_stream_events(
                         source_id="inpi", hit_id=derived["siren"],
                         kind=SearchKind.ENTITY, name=_in,
                         summary=f"FR-SIREN {derived['siren']}",
-                        identifiers={"siren": derived["siren"], "lei": lei},
+                        identifiers={"siren": derived["siren"]},
                         raw=_ic, is_stub=False,
                     )
 
@@ -1756,7 +1751,7 @@ async def _lookup_stream_events(
                     hit = SourceHit(
                         source_id="bolagsverket", hit_id=derived["se_org_number"],
                         kind=SearchKind.ENTITY, name=_bn, summary=f"SE-BLV {_od}",
-                        identifiers={"se_org_number": derived["se_org_number"], "lei": lei},
+                        identifiers={"se_org_number": derived["se_org_number"]},
                         raw=_bc, is_stub=False,
                     )
 
@@ -1767,7 +1762,7 @@ async def _lookup_stream_events(
                         kind=SearchKind.ENTITY,
                         name=result.get("name") or legal_name or "",
                         summary=f"EE-ARIREGISTER {derived['ee_registry_code']}",
-                        identifiers={"ee_registry_code": derived["ee_registry_code"], "lei": lei},
+                        identifiers={"ee_registry_code": derived["ee_registry_code"]},
                         raw=result, is_stub=False,
                     )
 
@@ -1779,7 +1774,7 @@ async def _lookup_stream_events(
                         kind=SearchKind.ENTITY,
                         name=_be.get("navn") or legal_name or "",
                         summary=f"NO-ORGNR {derived['no_orgnr']}",
-                        identifiers={"no_orgnr": derived["no_orgnr"], "lei": lei},
+                        identifiers={"no_orgnr": derived["no_orgnr"]},
                         raw=_be, is_stub=False,
                     )
 
@@ -1791,7 +1786,7 @@ async def _lookup_stream_events(
                         kind=SearchKind.ENTITY,
                         name=(_cc.get("company_name") or "").strip() or legal_name or "",
                         summary=f"IE-CRN {derived['ie_crn']}",
-                        identifiers={"ie_crn": derived["ie_crn"], "lei": lei},
+                        identifiers={"ie_crn": derived["ie_crn"]},
                         raw=_cc, is_stub=False,
                     )
 
@@ -1807,7 +1802,7 @@ async def _lookup_stream_events(
                         source_id="prh", hit_id=derived["fi_ytunnus"],
                         kind=SearchKind.ENTITY, name=_pn or legal_name or "",
                         summary=f"FI-YTUNNUS {derived['fi_ytunnus']}",
-                        identifiers={"fi_ytunnus": derived["fi_ytunnus"], "lei": lei},
+                        identifiers={"fi_ytunnus": derived["fi_ytunnus"]},
                         raw=_pc, is_stub=False,
                     )
 
@@ -1819,7 +1814,7 @@ async def _lookup_stream_events(
                         kind=SearchKind.ENTITY,
                         name=(_le.get("name") or "").strip() or legal_name or "",
                         summary=f"LV-UR {derived['lv_regcode']}",
-                        identifiers={"lv_regcode": derived["lv_regcode"], "lei": lei},
+                        identifiers={"lv_regcode": derived["lv_regcode"]},
                         raw=_le, is_stub=False,
                     )
 
@@ -1830,7 +1825,7 @@ async def _lookup_stream_events(
                         kind=SearchKind.ENTITY,
                         name=result.get("name") or legal_name or "",
                         summary=f"LT-JAR {derived['lt_code']}",
-                        identifiers={"lt_code": derived["lt_code"], "lei": lei},
+                        identifiers={"lt_code": derived["lt_code"]},
                         raw=result, is_stub=False,
                     )
 
@@ -1842,7 +1837,7 @@ async def _lookup_stream_events(
                         kind=SearchKind.ENTITY,
                         name=(_ce.get("name") or "").strip() or legal_name or "",
                         summary=f"CZ-ARES IČO {derived['cz_ico']}",
-                        identifiers={"cz_ico": derived["cz_ico"], "lei": lei},
+                        identifiers={"cz_ico": derived["cz_ico"]},
                         raw=_ce, is_stub=False,
                     )
 
@@ -1853,7 +1848,7 @@ async def _lookup_stream_events(
                         kind=SearchKind.ENTITY,
                         name=(result.get("name") or "").strip() or legal_name or "",
                         summary=f"KRS {derived['pl_krs']}",
-                        identifiers={"pl_krs": derived["pl_krs"], "lei": lei},
+                        identifiers={"pl_krs": derived["pl_krs"]},
                         raw=result, is_stub=False,
                     )
 
@@ -1864,7 +1859,7 @@ async def _lookup_stream_events(
                         kind=SearchKind.ENTITY,
                         name=(result.get("name") or "").strip() or legal_name or "",
                         summary=f"FN {derived['at_fn']}",
-                        identifiers={"at_fn": derived["at_fn"], "lei": lei},
+                        identifiers={"at_fn": derived["at_fn"]},
                         raw=result, is_stub=False,
                     )
 
@@ -1875,7 +1870,7 @@ async def _lookup_stream_events(
                         kind=SearchKind.ENTITY,
                         name=(result.get("name") or "").strip() or legal_name or "",
                         summary=f"SK-IČO {derived['sk_ico']}",
-                        identifiers={"sk_ico": derived["sk_ico"], "lei": lei},
+                        identifiers={"sk_ico": derived["sk_ico"]},
                         raw=result, is_stub=False,
                     )
 
@@ -1887,7 +1882,7 @@ async def _lookup_stream_events(
                         name=(result.get("name") or "").strip() or legal_name or "",
                         summary=f"SK-IČO {derived['sk_ico']} · RPVS #{result.get('partner_id', '')}",
                         identifiers={
-                            "sk_ico": derived["sk_ico"], "lei": lei,
+                            "sk_ico": derived["sk_ico"],
                             **({"rpvs_id": str(result["partner_id"])} if result.get("partner_id") else {}),
                         },
                         raw=result, is_stub=False,
@@ -1900,7 +1895,7 @@ async def _lookup_stream_events(
                         kind=SearchKind.ENTITY,
                         name=result.get("name") or legal_name or "",
                         summary=f"BE {result.get('dotted') or derived['be_enterprise_number']}",
-                        identifiers={"be_enterprise_number": derived["be_enterprise_number"], "lei": lei},
+                        identifiers={"be_enterprise_number": derived["be_enterprise_number"]},
                         raw=result, is_stub=False,
                     )
 
@@ -1919,7 +1914,7 @@ async def _lookup_stream_events(
                         kind=SearchKind.ENTITY,
                         name=_cc_name or legal_name or "",
                         summary=f"CA-CORP {derived['ca_corp_id']}",
-                        identifiers={"ca_corp_id": derived["ca_corp_id"], "lei": lei},
+                        identifiers={"ca_corp_id": derived["ca_corp_id"]},
                         raw=_cc_corp, is_stub=False,
                     )
 
@@ -1952,7 +1947,7 @@ async def _lookup_stream_events(
                                 source_id="sec_edgar", hit_id=_edgar_cik,
                                 kind=SearchKind.ENTITY, name=legal_name or "",
                                 summary=f"CIK {_edgar_cik} · US listed company",
-                                identifiers={"edgar_cik": _edgar_cik, "lei": lei},
+                                identifiers={"edgar_cik": _edgar_cik},
                                 raw={"cik": _edgar_cik, "name": legal_name or ""},
                                 is_stub=False,
                             )
@@ -2010,7 +2005,7 @@ async def _lookup_stream_events(
                         kind=SearchKind.ENTITY,
                         name=result.get("entity_name") or legal_name or _eid,
                         summary=" · ".join(_sp),
-                        identifiers={"gem_entity_id": _eid, "lei": lei},
+                        identifiers={"gem_entity_id": _eid},
                         raw=result, is_stub=bool(result.get("is_stub")),
                     )
                     if hit:
@@ -2058,7 +2053,7 @@ async def _lookup_stream_events(
                 _edgar_hit2 = SourceHit(
                     source_id="sec_edgar", hit_id=se_hit.hit_id,
                     kind=SearchKind.ENTITY, name=se_hit.name, summary=se_hit.summary,
-                    identifiers={"edgar_cik": se_hit.hit_id, "lei": lei},
+                    identifiers={"edgar_cik": se_hit.hit_id},
                     raw=se_hit.raw, is_stub=False,
                 )
                 hits.append(_edgar_hit2)
