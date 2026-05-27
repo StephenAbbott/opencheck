@@ -7,7 +7,8 @@ Business Authority).
 This adapter uses the Datafordeler GraphQL API (register: CVR, version: 2.1).
 
   Endpoint:  https://graphql.datafordeler.dk/CVR/2.1
-  Auth:      API key passed as query parameter ``token=<key>``
+  Auth:      ``?token=base64(service_user_id:api_key)`` — Datafordeler standard Basic-auth
+             encoded as a token query parameter.
   Method:    POST application/json with {"query": "...", "variables": {...}}
 
 Access model
@@ -56,8 +57,11 @@ Datafordeler account setup
 --------------------------
   1. Register at portal.datafordeler.dk
   2. Create an IT-system
-  3. Generate an API key under the IT-system (valid 2 years, renewable)
-  4. Set CVR_DENMARK_API_KEY=<key> in .env
+  3. Create a service user under the IT-system (the UUID shown is the service user ID)
+  4. Generate an API key for the service user (valid 2 years, renewable)
+  5. Set CVR_DENMARK_SERVICE_USER_ID=<service-user-uuid> in .env
+  6. Set CVR_DENMARK_API_KEY=<api-key> in .env
+  The adapter encodes these as base64(service_user_id:api_key) for the token parameter.
 
 Attribution
 -----------
@@ -71,6 +75,7 @@ Attribution
 
 from __future__ import annotations
 
+import base64
 import logging
 from typing import Any
 
@@ -329,7 +334,7 @@ class CvrDenmarkAdapter(SourceAdapter):
             ),
             supports=[SearchKind.ENTITY],
             requires_api_key=True,
-            live_available=bool(settings.cvr_denmark_api_key) and settings.allow_live,
+            live_available=bool(settings.cvr_denmark_api_key) and bool(settings.cvr_denmark_service_user_id) and settings.allow_live,
             is_national_register=True,
         )
 
@@ -351,8 +356,15 @@ class CvrDenmarkAdapter(SourceAdapter):
     ) -> dict[str, Any]:
         settings = get_settings()
         api_key = settings.cvr_denmark_api_key
+        service_user_id = settings.cvr_denmark_service_user_id
         if not api_key:
             raise RuntimeError("CVR_DENMARK_API_KEY is not configured")
+        if not service_user_id:
+            raise RuntimeError("CVR_DENMARK_SERVICE_USER_ID is not configured")
+
+        # Datafordeler requires token=base64(service_user_id:api_key)
+        raw_token = f"{service_user_id}:{api_key}".encode()
+        token = base64.b64encode(raw_token).decode()
 
         cvr_norm = normalise_cvr(cvr_number)
         cache_key = f"{_CACHE_NS}:{cvr_norm}"
@@ -362,7 +374,7 @@ class CvrDenmarkAdapter(SourceAdapter):
             if cached is not None:
                 return cached  # type: ignore[return-value]
 
-        params = {"token": api_key}
+        params = {"token": token}
         own_client = client is None
         if own_client:
             client = build_client()
