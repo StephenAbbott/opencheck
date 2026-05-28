@@ -7,81 +7,110 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, sans-serif; background: #f8f9fa; color: #1a1a2e; }
-    header { background: #1a1a2e; color: #fff; padding: 14px 24px; display: flex; align-items: center; gap: 12px; }
-    header h1 { font-size: 16px; font-weight: 600; }
-    header span { font-size: 12px; opacity: 0.6; }
-    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
-    .card { background: #fff; border: 1px solid #e0e0e8; border-radius: 8px; margin-bottom: 20px; overflow: hidden; }
-    .card-header { padding: 12px 16px; border-bottom: 1px solid #e0e0e8; display: flex; align-items: center; justify-content: space-between; }
-    .card-header h2 { font-size: 14px; font-weight: 600; }
-    .badge { font-size: 11px; background: #e8f0fe; color: #1a56db; padding: 2px 8px; border-radius: 12px; }
-    .badge.orange { background: #fff3e0; color: #e65100; }
-    .badge.green { background: #e8f5e9; color: #2e7d32; }
-    #graph-before, #graph-after { min-height: 300px; }
-    .controls { padding: 8px 12px; border-bottom: 1px solid #e0e0e8; display: flex; gap: 8px; align-items: center; }
-    button { font-size: 12px; padding: 4px 10px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: #fff; }
-    button:hover { background: #f0f0f0; }
-    .note { padding: 12px 16px; font-size: 12px; color: #555; line-height: 1.5; }
-    .note code { font-family: monospace; background: #f0f0f8; padding: 1px 4px; border-radius: 3px; }
-    .diff { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 700px) { .diff { grid-template-columns: 1fr; } }
-    h3 { font-size: 13px; font-weight: 600; padding: 10px 16px 0; color: #333; }
+    header { background: #1a1a2e; color: #fff; padding: 14px 24px; }
+    header h1 { font-size: 15px; font-weight: 600; }
+    header p  { font-size: 11px; opacity: 0.6; margin-top: 2px; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 20px; }
+    .card { background: #fff; border: 1px solid #e0e0e8; border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+    .card-head { padding: 10px 16px; border-bottom: 1px solid #e0e0e8; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .card-head h2 { font-size: 13px; font-weight: 600; }
+    .badge  { font-size: 11px; padding: 2px 8px; border-radius: 12px; white-space: nowrap; }
+    .green  { background: #e8f5e9; color: #2e7d32; }
+    .orange { background: #fff3e0; color: #e65100; }
+    .blue   { background: #e3f2fd; color: #1565c0; }
+    /* bods-dagre required stubs — must exist before draw() */
+    #slider-container { display: none; }
+    #disclosure-widget { display: none; }
+    .graph-controls { padding: 6px 12px; border-bottom: 1px solid #e0e0e8; display: flex; gap: 6px; align-items: center; }
+    .graph-controls button { font-size: 12px; padding: 3px 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: #fff; }
+    .graph-controls button:hover { background: #f0f0f8; }
+    #graph-container { overflow: auto; padding: 8px; min-height: 320px; }
+    .note { padding: 12px 16px; font-size: 12px; line-height: 1.6; color: #444; }
+    .note code { font-family: monospace; background: #f0f0f8; padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+    pre { font-size: 10.5px; overflow: auto; max-height: 240px; background: #f8f8f8; padding: 8px 12px; border: 1px solid #eee; border-radius: 4px; line-height: 1.5; }
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid #e0e0e8; }
+    .tab { padding: 8px 16px; font-size: 12px; cursor: pointer; border-bottom: 2px solid transparent; color: #666; }
+    .tab.active { color: #1a1a2e; border-bottom-color: #1a1a2e; font-weight: 600; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
   </style>
 </head>
 <body>
+
+<!-- bods-dagre requires these IDs to exist anywhere in the document before draw() -->
+<div id="slider-container"></div>
+<div id="disclosure-widget"></div>
+
 <header>
-  <div>
-    <h1>BODS Dagre Demo</h1>
-    <span>UNILEVER PLC · LEI 549300MKFYEKVRWML317 · GLEIF subsidiaries</span>
-  </div>
+  <h1>BODS Dagre Demo — UNILEVER PLC (LEI 549300MKFYEKVRWML317)</h1>
+  <p>9 BODS v0.4 statements · 5 entity statements · 4 GLEIF subsidiary relationships</p>
 </header>
 
-<div class="container">
+<div class="wrap">
 
   <div class="card">
-    <div class="card-header">
-      <h2>Diagnosis: why edges are invisible in OpenCheck</h2>
-      <span class="badge orange">Bug analysis</span>
-    </div>
-    <div class="note">
-      <p><strong>Root cause:</strong> bods-dagre's <code>Dr</code>/<code>Pr</code> decorators (1) hide original dagre edges with <code>opacity:0</code> and (2) insert styled clones whose paths are recomputed via BezierJS <code>SVGtoBeziers().offset(n)</code>. When the bezier degenerates — either collinear control points (straight-line edges in simple TB graphs) or an empty PolyBezier returned for wide fan-out layouts — the internal <code>Br()</code> call fails silently inside d3's <code>.each()</code>, leaving the clone path at a stub value. Result: original hidden + clone invisible = <strong>no visible edge line</strong>, though the edge label still renders.</p>
-      <p style="margin-top:8px"><strong>Fix applied below (right panel):</strong> Pass 1 — restore all hidden original dagre edges unconditionally as a guaranteed fallback (grey lines). Pass 2 — remove broken styled clones (NaN or short paths). Valid clones continue to render on top of the restored originals.</p>
-    </div>
-  </div>
-
-  <div class="diff">
-
-    <div class="card">
-      <div class="card-header">
-        <h2>Before fix (original bods-dagre behaviour)</h2>
-        <span class="badge orange">edges invisible</span>
+    <div class="card-head">
+      <h2>BODS Ownership Graph</h2>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span class="badge green" id="fix-badge">Two-pass edge fix applied</span>
+        <span class="badge blue">@openownership/bods-dagre 0.4.x</span>
       </div>
-      <div class="controls">
-        <span style="font-size:12px;color:#888">Nodes and labels render; edge lines are hidden</span>
-      </div>
-      <div id="graph-before"></div>
     </div>
-
-    <div class="card">
-      <div class="card-header">
-        <h2>After fix (BODSGraph.tsx two-pass restore)</h2>
-        <span class="badge green">edges visible</span>
-      </div>
-      <div class="controls">
-        <span style="font-size:12px;color:#388e3c">Original dagre edges restored as fallback</span>
-      </div>
-      <div id="graph-after"></div>
+    <div class="graph-controls">
+      <button id="zoom_out">&#8722; Zoom out</button>
+      <button id="zoom_in">+ Zoom in</button>
+      <button id="download-svg">SVG</button>
+      <button id="download-png">PNG</button>
+      <span id="fix-label" style="margin-left:auto;font-size:11px;color:#388e3c">✓ edges restored</span>
     </div>
-
+    <div id="graph-container"></div>
   </div>
 
   <div class="card">
-    <div class="card-header">
-      <h2>BODS statement bundle (9 statements, 5 entities, 4 relationships)</h2>
-      <span class="badge">GLEIF data · otherInfluenceOrControl</span>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('diagnosis')">Diagnosis</div>
+      <div class="tab" onclick="switchTab('fix')">The Fix (BODSGraph.tsx)</div>
+      <div class="tab" onclick="switchTab('data')">BODS JSON</div>
     </div>
-    <div style="padding:12px 16px">
-      <pre id="json-dump" style="font-size:11px;overflow:auto;max-height:260px;background:#f8f8f8;padding:8px;border-radius:4px;border:1px solid #eee"></pre>
+
+    <div id="tab-diagnosis" class="tab-panel active">
+      <div class="note">
+        <p><strong>Why edges were invisible:</strong> bods-dagre's <code>Dr</code>/<code>Pr</code> decorators (1) set <code>opacity:0</code> on the original dagre edge path and (2) insert a styled clone whose path is recomputed via <code>BezierJS.SVGtoBeziers(d).offset(n)</code>. For GLEIF fan-out layouts in TB mode, the offset returns an empty <code>PolyBezier({curves:[]})</code>. The internal <code>Br()</code> function then tries to access <code>curves[0][0].x</code> on an empty array, throwing <code>TypeError</code>, which is swallowed silently inside d3's <code>.each()</code>. The clone path attribute is left at a short stub value. Both paths are invisible — but the edge <em>label</em> ("Controls") is a separate SVG element and still renders, explaining exactly what was visible in the screenshot.</p>
+        <p style="margin-top:8px"><strong>Interest type:</strong> <code>otherInfluenceOrControl</code>, <code>beneficialOwnershipOrControl: false</code>. No share percentage → BezierJS offset falls back to 5px, control stroke colour <code>#349aee</code>.</p>
+        <p style="margin-top:8px"><strong>Additional issue:</strong> bods-dagre calls <code>document.querySelector("#zoom_in").addEventListener(...)</code> unconditionally after every <code>draw()</code>. If those elements are absent the whole call throws before any edges are rendered — which produced the error you saw opening the previous version of this demo.</p>
+      </div>
+    </div>
+
+    <div id="tab-fix" class="tab-panel">
+      <div class="note">
+        <p><strong>Two-pass fix in <code>BODSGraph.tsx</code> (applied here in the graph above):</strong></p>
+        <p style="margin-top:6px"><strong>Pass 1</strong> — unconditionally restore all original dagre edges hidden by Dr/Pr:</p>
+        <pre>el.querySelectorAll('g.edgePath').forEach(edge => {
+  const isClone = edge.classList.contains('own') || edge.classList.contains('control');
+  if (!isClone && edge.getAttribute('style')?.includes('opacity: 0')) {
+    edge.style.opacity = '1';
+    const p = edge.querySelector('path');
+    if (p && !p.getAttribute('stroke') && !p.style.stroke) {
+      p.style.stroke = '#666';
+      p.style.strokeWidth = '1.5px';
+      p.style.fill = 'none';
+    }
+  }
+});</pre>
+        <p style="margin-top:8px"><strong>Pass 2</strong> — remove broken styled clones (NaN, empty, or stub paths):</p>
+        <pre>el.querySelectorAll('g.edgePath.own, g.edgePath.control').forEach(clone => {
+  const path = clone.querySelector('path');
+  const d = path?.getAttribute('d') ?? '';
+  if (!d || d.trim().length < 10 || d.includes('NaN')) clone.remove();
+});</pre>
+        <p style="margin-top:6px">Valid clones (properly formed BezierJS offsets) remain and render coloured on top of the restored originals.</p>
+      </div>
+    </div>
+
+    <div id="tab-data" class="tab-panel">
+      <div style="padding:12px 16px">
+        <pre id="json-out"></pre>
+      </div>
     </div>
   </div>
 
@@ -92,7 +121,16 @@
 const BODS = [{"statementId":"opencheck-39b0bebf6543b42cb34034ac","recordId":"opencheck-39b0bebf6543b42cb34034ac","declarationSubject":"opencheck-39b0bebf6543b42cb34034ac","recordType":"entity","recordStatus":"new","statementDate":"2026-05-28","publicationDetails":{"bodsVersion":"0.4","publicationDate":"2026-04-15","publisher":{"name":"OpenCheck"}},"recordDetails":{"isComponent":false,"entityType":{"type":"registeredEntity"},"name":"UNILEVER PLC","identifiers":[{"id":"549300MKFYEKVRWML317","scheme":"XI-LEI","schemeName":"Global Legal Entity Identifier Index"},{"id":"00041424","scheme":"GB-COH","schemeName":"Companies House"},{"id":"gb/00041424","scheme":"OpenCorporates","schemeName":"OpenCorporates company ID","uri":"https://opencorporates.com/companies/gb/00041424"},{"id":"QGBPXN0K9S","scheme":"QCC Code","schemeName":"QCC Global Enterprise Identifier (QCC Code)"},{"id":"523191","scheme":"S&P CIQ Company ID","schemeName":"S&P CIQ Company ID"}],"jurisdiction":{"name":"United Kingdom","code":"GB"},"addresses":[{"type":"registered","address":"PORT SUNLIGHT, LIVERPOOL, GB-WRL, CH62 4ZD, GB","country":{"name":"United Kingdom","code":"GB"}},{"type":"business","address":"PORT SUNLIGHT, LIVERPOOL, GB-WRL, CH62 4ZD, GB","country":{"name":"United Kingdom","code":"GB"}}]},"source":{"type":["thirdParty"],"description":"GLEIF","retrievedAt":"2026-05-28T21:18:32Z","url":"https://www.gleif.org/lei/549300MKFYEKVRWML317"}},{"statementId":"opencheck-eeddddb9863e05009ca2c0bf","recordId":"opencheck-eeddddb9863e05009ca2c0bf","declarationSubject":"opencheck-eeddddb9863e05009ca2c0bf","recordType":"entity","recordStatus":"new","statementDate":"2026-05-28","publicationDetails":{"bodsVersion":"0.4","publicationDate":"2026-04-23","publisher":{"name":"OpenCheck"}},"recordDetails":{"isComponent":false,"entityType":{"type":"registeredEntity"},"name":"UNILEVER CANADA INC.","identifiers":[{"id":"213800HCGYEJXD99N110","scheme":"XI-LEI","schemeName":"Global Legal Entity Identifier Index"},{"id":"1001097196","scheme":"","schemeName":"GLEIF Registration Authorities List"},{"id":"ca_on/1001097196","scheme":"OpenCorporates","schemeName":"OpenCorporates company ID","uri":"https://opencorporates.com/companies/ca_on/1001097196"},{"id":"4180181","scheme":"S&P CIQ Company ID","schemeName":"S&P CIQ Company ID"}],"jurisdiction":{"name":"Ontario, Canada","code":"CA-ON"},"addresses":[{"type":"registered","address":"160 BLOOR STREET EAST, UNIT 1400, TORONTO, CA-ON, M4W 3R2, CA","country":{"name":"Canada","code":"CA"}},{"type":"business","address":"160 BLOOR STREET EAST, UNIT 1400, TORONTO, CA-ON, M4W 3R2, CA","country":{"name":"Canada","code":"CA"}}]},"source":{"type":["thirdParty"],"description":"GLEIF","retrievedAt":"2026-05-28T21:18:32Z","url":"https://www.gleif.org/lei/213800HCGYEJXD99N110"}},{"statementId":"opencheck-3c648fbad8fac2bcb7b6330c","recordId":"opencheck-3c648fbad8fac2bcb7b6330c","declarationSubject":"opencheck-3c648fbad8fac2bcb7b6330c","recordType":"entity","recordStatus":"new","statementDate":"2026-05-28","publicationDetails":{"bodsVersion":"0.4","publicationDate":"2025-12-18","publisher":{"name":"OpenCheck"}},"recordDetails":{"isComponent":false,"entityType":{"type":"registeredEntity"},"name":"\u064a\u0648\u0646\u064a\u0644\u064a\u0641\u0631 \u0645\u0634\u0631\u0642 \u0644\u0644\u0635\u0646\u0627\u0639\u0629 \u0648 \u0627\u0644\u062a\u062c\u0627\u0631\u0629 \u0634 \u0645 \u0645","identifiers":[{"id":"213800WR5NOVOEYFLN72","scheme":"XI-LEI","schemeName":"Global Legal Entity Identifier Index"},{"id":"3920","scheme":"","schemeName":"GLEIF Registration Authorities List"},{"id":"1871809101","scheme":"S&P CIQ Company ID","schemeName":"S&P CIQ Company ID"}],"jurisdiction":{"name":"Egypt","code":"EG"},"addresses":[{"type":"registered","address":"5TH FLOOR, NORTH TOWER, GALLERIA 40 BUSINESS COMPLEX, SHEIKH ZAYED, 6TH OF OCTOBER CITY, GIZA, EG-C, 12573, EG","country":{"name":"Egypt","code":"EG"}},{"type":"business","address":"5TH FLOOR, NORTH TOWER, GALLERIA 40 BUSINESS COMPLEX, SHEIKH ZAYED, 6TH OF OCTOBER CITY, GIZA, EG-C, 12573, EG","country":{"name":"Egypt","code":"EG"}}],"alternateNames":["UNILEVER MASHREQ FOR MANUFACTURING AND TRADING (SAE)"]},"source":{"type":["thirdParty"],"description":"GLEIF","retrievedAt":"2026-05-28T21:18:32Z","url":"https://www.gleif.org/lei/213800WR5NOVOEYFLN72"}},{"statementId":"opencheck-c14edad466cbcf15ba627150","recordId":"opencheck-c14edad466cbcf15ba627150","declarationSubject":"opencheck-c14edad466cbcf15ba627150","recordType":"entity","recordStatus":"new","statementDate":"2026-05-28","publicationDetails":{"bodsVersion":"0.4","publicationDate":"2025-12-18","publisher":{"name":"OpenCheck"}},"recordDetails":{"isComponent":false,"entityType":{"type":"registeredEntity"},"name":"\u062a\u0627\u0648\u0644 \u064a\u0648\u0646\u064a\u0644\u064a\u0641\u0631","identifiers":[{"id":"213800IPN2AVTPFEY722","scheme":"XI-LEI","schemeName":"Global Legal Entity Identifier Index"},{"id":"1400525","scheme":"","schemeName":"GLEIF Registration Authorities List"},{"id":"QOM2HSR4JW","scheme":"QCC Code","schemeName":"QCC Global Enterprise Identifier (QCC Code)"},{"id":"403392043","scheme":"S&P CIQ Company ID","schemeName":"S&P CIQ Company ID"}],"jurisdiction":{"name":"Oman","code":"OM"},"addresses":[{"type":"registered","address":"PO BOX NUM 1711, RUWI, RUWI, OM-MA, 112, OM","country":{"name":"Oman","code":"OM"}},{"type":"business","address":"PO BOX NUMBER 1711, RUWI, RUWI, OM-MA, 112, OM","country":{"name":"Oman","code":"OM"}}],"alternateNames":["TOWELL UNILEVER LLC"]},"source":{"type":["thirdParty"],"description":"GLEIF","retrievedAt":"2026-05-28T21:18:32Z","url":"https://www.gleif.org/lei/213800IPN2AVTPFEY722"}},{"statementId":"opencheck-28dc16af860975c603dad0a0","recordId":"opencheck-28dc16af860975c603dad0a0","declarationSubject":"opencheck-28dc16af860975c603dad0a0","recordType":"entity","recordStatus":"new","statementDate":"2026-05-28","publicationDetails":{"bodsVersion":"0.4","publicationDate":"2025-11-20","publisher":{"name":"OpenCheck"}},"recordDetails":{"isComponent":false,"entityType":{"type":"registeredEntity"},"name":"UNILEVER DE CENTROAMERICA, S.A.","identifiers":[{"id":"21380056OKZR5M1PTT56","scheme":"XI-LEI","schemeName":"Global Legal Entity Identifier Index"},{"id":"2539","scheme":"","schemeName":"GLEIF Registration Authorities List"},{"id":"pa/2539","scheme":"OpenCorporates","schemeName":"OpenCorporates company ID","uri":"https://opencorporates.com/companies/pa/2539"},{"id":"49711307","scheme":"S&P CIQ Company ID","schemeName":"S&P CIQ Company ID"}],"jurisdiction":{"name":"Panama","code":"PA"},"addresses":[{"type":"registered","address":"URBANIZACI\u00d3N SANTA MARIA BUSINESS DISTRICT, EDIFICE TORRE ARGOS, CALLE SANTA MARIA BUSINESS DISTRICT, CORREGIMIENTO DE JUAN DIAZ, PANAMA, PA-8, 0801, PA","country":{"name":"Panama","code":"PA"}},{"type":"business","address":"URBANIZACI\u00d3N SANTA MARIA BUSINESS DISTRICT, EDIFICE TORRE ARGOS, CALLE SANTA MARIA BUSINESS DISTRICT, CORREGIMIENTO DE JUAN DIAZ, PANAMA, PA-8, 0801, PA","country":{"name":"Panama","code":"PA"}}]},"source":{"type":["thirdParty"],"description":"GLEIF","retrievedAt":"2026-05-28T21:18:32Z","url":"https://www.gleif.org/lei/21380056OKZR5M1PTT56"}},{"statementId":"opencheck-9b6e579a221a94eded195808","recordId":"opencheck-7e98f8f772c9c05338be0014","declarationSubject":"opencheck-eeddddb9863e05009ca2c0bf","recordType":"relationship","recordStatus":"new","statementDate":"2026-05-28","publicationDetails":{"bodsVersion":"0.4","publicationDate":"2026-05-28","publisher":{"name":"OpenCheck"}},"recordDetails":{"isComponent":false,"subject":"opencheck-eeddddb9863e05009ca2c0bf","interestedParty":"opencheck-39b0bebf6543b42cb34034ac","interests":[{"type":"otherInfluenceOrControl","directOrIndirect":"direct","beneficialOwnershipOrControl":false,"details":"GLEIF Level 2 direct-child (accounting consolidation)"}]},"source":{"type":["thirdParty"],"description":"GLEIF","retrievedAt":"2026-05-28T21:18:32Z","url":"https://www.gleif.org/lei/213800HCGYEJXD99N110"}},{"statementId":"opencheck-1adf134072518e22d79de5a4","recordId":"opencheck-007c2e702a9926144595721b","declarationSubject":"opencheck-3c648fbad8fac2bcb7b6330c","recordType":"relationship","recordStatus":"new","statementDate":"2026-05-28","publicationDetails":{"bodsVersion":"0.4","publicationDate":"2026-05-28","publisher":{"name":"OpenCheck"}},"recordDetails":{"isComponent":false,"subject":"opencheck-3c648fbad8fac2bcb7b6330c","interestedParty":"opencheck-39b0bebf6543b42cb34034ac","interests":[{"type":"otherInfluenceOrControl","directOrIndirect":"direct","beneficialOwnershipOrControl":false,"details":"GLEIF Level 2 direct-child (accounting consolidation)"}]},"source":{"type":["thirdParty"],"description":"GLEIF","retrievedAt":"2026-05-28T21:18:32Z","url":"https://www.gleif.org/lei/213800WR5NOVOEYFLN72"}},{"statementId":"opencheck-ed493d61e56dadb679c7017a","recordId":"opencheck-aeb0391c0ae3e6db2215d284","declarationSubject":"opencheck-c14edad466cbcf15ba627150","recordType":"relationship","recordStatus":"new","statementDate":"2026-05-28","publicationDetails":{"bodsVersion":"0.4","publicationDate":"2026-05-28","publisher":{"name":"OpenCheck"}},"recordDetails":{"isComponent":false,"subject":"opencheck-c14edad466cbcf15ba627150","interestedParty":"opencheck-39b0bebf6543b42cb34034ac","interests":[{"type":"otherInfluenceOrControl","directOrIndirect":"direct","beneficialOwnershipOrControl":false,"details":"GLEIF Level 2 direct-child (accounting consolidation)"}]},"source":{"type":["thirdParty"],"description":"GLEIF","retrievedAt":"2026-05-28T21:18:32Z","url":"https://www.gleif.org/lei/213800IPN2AVTPFEY722"}},{"statementId":"opencheck-f74b3a4a218f2170f1be1e8f","recordId":"opencheck-baf789d11b603a17c8072cb2","declarationSubject":"opencheck-28dc16af860975c603dad0a0","recordType":"relationship","recordStatus":"new","statementDate":"2026-05-28","publicationDetails":{"bodsVersion":"0.4","publicationDate":"2026-05-28","publisher":{"name":"OpenCheck"}},"recordDetails":{"isComponent":false,"subject":"opencheck-28dc16af860975c603dad0a0","interestedParty":"opencheck-39b0bebf6543b42cb34034ac","interests":[{"type":"otherInfluenceOrControl","directOrIndirect":"direct","beneficialOwnershipOrControl":false,"details":"GLEIF Level 2 direct-child (accounting consolidation)"}]},"source":{"type":["thirdParty"],"description":"GLEIF","retrievedAt":"2026-05-28T21:18:32Z","url":"https://www.gleif.org/lei/21380056OKZR5M1PTT56"}}]
 ;
 
-// Shared sanitiser (mirrors OpenCheck's sanitiseBundle)
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const panels = ['diagnosis','fix','data'];
+    t.classList.toggle('active', panels[i] === name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'tab-' + name);
+  });
+}
+
 function sanitise(input) {
   const wellTyped = input.filter(s => s && typeof s.statementId === 'string' && s.statementId.length > 0);
   for (const s of wellTyped) {
@@ -129,51 +167,47 @@ function sanitise(input) {
   return out;
 }
 
-function draw(containerId, applyFix) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  el.innerHTML = '';
+function applyEdgeFix(el) {
+  // Pass 1: restore all hidden original edges
+  el.querySelectorAll('g.edgePath').forEach(edge => {
+    const isClone = edge.classList.contains('own') || edge.classList.contains('control');
+    if (!isClone && (edge.getAttribute('style') || '').includes('opacity: 0')) {
+      edge.style.opacity = '1';
+      const p = edge.querySelector('path');
+      if (p && !p.getAttribute('stroke') && !p.style.stroke) {
+        p.style.stroke = '#666';
+        p.style.strokeWidth = '1.5px';
+        p.style.fill = 'none';
+      }
+    }
+  });
+  // Pass 2: remove broken styled clones
+  el.querySelectorAll('g.edgePath.own, g.edgePath.control').forEach(clone => {
+    const p = clone.querySelector('path');
+    const d = p?.getAttribute('d') || '';
+    if (!d || d.trim().length < 10 || d.includes('NaN')) clone.remove();
+  });
+}
+
+window.addEventListener('load', () => {
+  const el = document.getElementById('graph-container');
   const lib = window.BODSDagre;
-  if (!lib?.draw) { el.textContent = 'bods-dagre not loaded'; return; }
-  const data = sanitise(BODS);
-  try {
-    lib.draw({ data, selectedData: data, container: el, imagesPath: 'images', rankDir: 'TB', useTippy: false });
-  } catch(e) {
-    el.innerHTML = '<p style="color:red;padding:8px;font-size:12px">draw() threw: ' + e.message + '</p>';
+  if (!lib?.draw) {
+    el.innerHTML = '<p style="padding:12px;color:red;font-size:12px">bods-dagre.js not loaded — ensure this file is served alongside bods-dagre.js</p>';
     return;
   }
 
-  if (applyFix) {
-    // Pass 1: restore all hidden original edges
-    el.querySelectorAll('g.edgePath').forEach(edge => {
-      const isClone = edge.classList.contains('own') || edge.classList.contains('control');
-      if (!isClone && (edge.getAttribute('style') || '').includes('opacity: 0')) {
-        edge.style.opacity = '1';
-        const p = edge.querySelector('path');
-        if (p && !p.getAttribute('stroke') && !p.style.stroke) {
-          p.style.stroke = '#666';
-          p.style.strokeWidth = '1.5px';
-          p.style.fill = 'none';
-        }
-      }
-    });
-    // Pass 2: remove broken styled clones
-    el.querySelectorAll('g.edgePath.own, g.edgePath.control').forEach(clone => {
-      const p = clone.querySelector('path');
-      const d = p?.getAttribute('d') || '';
-      if (!d || d.trim().length < 10 || d.includes('NaN')) clone.remove();
-    });
+  const data = sanitise(BODS);
+  try {
+    lib.draw({ data, selectedData: data, container: el, imagesPath: 'images', rankDir: 'TB', useTippy: false });
+    applyEdgeFix(el);
+    document.getElementById('fix-label').textContent = '✓ edges restored via two-pass fix';
+  } catch(e) {
+    el.innerHTML = '<p style="padding:12px;color:red;font-size:12px">draw() threw: ' + e.message + '</p>';
+    console.error(e);
   }
-}
 
-// Render both versions
-window.addEventListener('load', () => {
-  // Slight delay to let bods-dagre's CSS inject
-  requestAnimationFrame(() => {
-    draw('graph-before', false);
-    draw('graph-after', true);
-  });
-  document.getElementById('json-dump').textContent = JSON.stringify(BODS, null, 2);
+  document.getElementById('json-out').textContent = JSON.stringify(BODS, null, 2);
 });
 </script>
 </body>
