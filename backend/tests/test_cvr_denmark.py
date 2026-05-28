@@ -77,7 +77,7 @@ _ADDR_NODES: list[dict[str, Any]] = [
 _BRANCHE_NODES: list[dict[str, Any]] = [
     {
         "vaerdi": "21.10",
-        "sekvens": 1,
+        "sekvens": 0,  # sekvens=0 is primary in Datafordeler CVR API
         "virkningFra": "2007-01-01T00:00:00.000Z",
         "virkningTil": None,
     }
@@ -133,7 +133,7 @@ def _make_bundle(
     start_date: str | None = "1989-09-14",
     end_date: str | None = None,
     legal_form_code: str | None = "30",
-    legal_form_text: str | None = "A/S — Aktieselskab (public limited company)",
+    legal_form_text: str | None = "Aktieselskab",  # vaerdiTekst from API takes priority over local map
     branche_code: str | None = "21.10",
     address: dict | None = None,
     source_url: str = "https://datacvr.virk.dk/enhed/virksomhed/24256790",

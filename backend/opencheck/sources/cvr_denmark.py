@@ -306,11 +306,15 @@ def _best_address(nodes: list[dict]) -> dict | None:
 
 
 def _best_branche(nodes: list[dict]) -> str | None:
-    """Pick the primary industry code (sekvens=1)."""
+    """Pick the primary industry code.
+
+    In Datafordeler CVR, sekvens=0 is the primary (main) industry code;
+    higher sekvens values are secondary/tertiary codes.
+    """
     if not nodes:
         return None
     current = _current(nodes)
-    primary = [n for n in current if n.get("sekvens") == 1]
+    primary = [n for n in current if n.get("sekvens") == 0]
     pool = primary or current
     return pool[0].get("vaerdi") if pool else None
 
@@ -497,11 +501,10 @@ class CvrDenmarkAdapter(SourceAdapter):
         ]
 
         status_norm = _STATUS_MAP.get(cvr_status.upper(), cvr_status.lower() or "unknown")
-        form_label = (
-            _LEGAL_FORM_MAP.get(str(form_code), form_text)
-            if form_code
-            else form_text
-        )
+        # Prefer the API's own vaerdiTekst label; our local map is a fallback
+        # only when the API returns no text (the Datafordeler code numbering
+        # does not match the datacvr.virk.dk documentation we used to build it).
+        form_label = form_text or (_LEGAL_FORM_MAP.get(str(form_code)) if form_code else None)
 
         source_url = _entity_url(cvr_norm)
 
