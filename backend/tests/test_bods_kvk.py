@@ -1,11 +1,15 @@
-"""Tests for the KvK → BODS v0.4 mapper."""
+"""Tests for the KvK → BODS v0.4 mapper and KvKAdapter."""
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import httpx
 import pytest
+import pytest_asyncio
 
 from opencheck.bods import map_kvk, validate_shape
-from opencheck.sources.kvk import KVK_RA_CODE, normalise_kvk
+from opencheck.sources.kvk import KVK_RA_CODE, KvKAdapter, normalise_kvk
 
 # ---------------------------------------------------------------------------
 # Sample fixtures (based on KvK Open Data API schema)
@@ -220,3 +224,154 @@ def test_map_kvk_insolvent_company_passes_validator() -> None:
 def test_map_kvk_no_date_passes_validator() -> None:
     issues = validate_shape(map_kvk(_bundle(_COMPANY_NO_DATE)))
     assert issues == [], issues
+
+
+# ---------------------------------------------------------------------------
+# KvKAdapter.fetch() — 429 retry logic
+# ---------------------------------------------------------------------------
+
+_KVK_API_RESPONSE = {
+    "datumAanvang": "20250101",
+    "actief": "J",
+    "rechtsvormCode": "NV",
+    "postcodeRegio": 1,
+    "activiteiten": [],
+    "lidstaat": "NL",
+}
+
+
+def _make_response(status_code: int, json_body: dict | None = None, headers: dict | None = None):
+    """Return a minimal httpx.Response mock."""
+    resp = MagicMock(spec=httpx.Response)
+    resp.status_code = status_code
+    resp.headers = httpx.Headers(headers or {})
+    if json_body is not None:
+        resp.json = MagicMock(return_value=json_body)
+    if status_code >= 400:
+        resp.raise_for_status = MagicMock(
+            side_effect=httpx.HTTPStatusError(
+                f"{status_code}",
+                request=MagicMock(),
+                response=resp,
+            )
+        )
+    else:
+        resp.raise_for_status = MagicMock(return_value=None)
+    return resp
+
+
+@pytest.mark.asyncio
+async def test_kvk_fetch_success_no_retry(monkeypatch) -> None:
+    """Happy-path: single successful GET, no retry needed."""
+    ok_resp = _make_response(200, _KVK_API_RESPONSE)
+
+    monkeypatch.setattr(
+        "opencheck.sources.kvk.get_settings",
+        lambda: MagicMock(allow_live=True),
+    )
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+    mock_client.get = AsyncMock(return_value=ok_resp)
+
+    with patch("opencheck.sources.kvk.build_client", return_value=mock_client):
+        adapter = KvKAdapter()
+        # Bypass cache
+        adapter._cache.get_payload = MagicMock(return_value=None)
+        adapter._cache.put = MagicMock()
+
+        bundle = await adapter.fetch("35000363", legal_name="Ahold Delhaize")
+
+    assert mock_client.get.call_count == 1
+    assert bundle["company"] == _KVK_API_RESPONSE
+    assert bundle["legal_name"] == "Ahold Delhaize"
+
+
+@pytest.mark.asyncio
+async def test_kvk_fetch_retries_on_429_then_succeeds(monkeypatch) -> None:
+    """One 429 followed by a 200 — should succeed after one retry."""
+    resp_429 = _make_response(429, headers={"Retry-After": "0"})
+    resp_200 = _make_response(200, _KVK_API_RESPONSE)
+
+    monkeypatch.setattr(
+        "opencheck.sources.kvk.get_settings",
+        lambda: MagicMock(allow_live=True),
+    )
+    monkeypatch.setattr("opencheck.sources.kvk.asyncio.sleep", AsyncMock())
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+    mock_client.get = AsyncMock(side_effect=[resp_429, resp_200])
+
+    with patch("opencheck.sources.kvk.build_client", return_value=mock_client):
+        adapter = KvKAdapter()
+        adapter._cache.get_payload = MagicMock(return_value=None)
+        adapter._cache.put = MagicMock()
+
+        bundle = await adapter.fetch("35000363")
+
+    assert mock_client.get.call_count == 2
+    assert bundle["company"] == _KVK_API_RESPONSE
+
+
+@pytest.mark.asyncio
+async def test_kvk_fetch_raises_after_max_retries(monkeypatch) -> None:
+    """All attempts return 429 — should raise HTTPStatusError after exhausting retries."""
+    resp_429 = _make_response(429, headers={"Retry-After": "0"})
+
+    monkeypatch.setattr(
+        "opencheck.sources.kvk.get_settings",
+        lambda: MagicMock(allow_live=True),
+    )
+    monkeypatch.setattr("opencheck.sources.kvk.asyncio.sleep", AsyncMock())
+
+    # _MAX_RETRIES = 3 means 4 total attempts (initial + 3 retries).
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+    mock_client.get = AsyncMock(return_value=resp_429)
+
+    with patch("opencheck.sources.kvk.build_client", return_value=mock_client):
+        adapter = KvKAdapter()
+        adapter._cache.get_payload = MagicMock(return_value=None)
+        adapter._cache.put = MagicMock()
+
+        with pytest.raises(httpx.HTTPStatusError):
+            await adapter.fetch("35000363")
+
+    # 4 total attempts (_MAX_RETRIES=3, so initial + 3)
+    assert mock_client.get.call_count == 4
+
+
+@pytest.mark.asyncio
+async def test_kvk_fetch_uses_exponential_backoff_without_retry_after(monkeypatch) -> None:
+    """Without Retry-After, backoff should double: 2s, 4s."""
+    sleep_calls: list[float] = []
+
+    async def fake_sleep(secs: float) -> None:
+        sleep_calls.append(secs)
+
+    resp_429 = _make_response(429)  # no Retry-After header
+    resp_200 = _make_response(200, _KVK_API_RESPONSE)
+
+    monkeypatch.setattr(
+        "opencheck.sources.kvk.get_settings",
+        lambda: MagicMock(allow_live=True),
+    )
+    monkeypatch.setattr("opencheck.sources.kvk.asyncio.sleep", fake_sleep)
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+    mock_client.get = AsyncMock(side_effect=[resp_429, resp_429, resp_200])
+
+    with patch("opencheck.sources.kvk.build_client", return_value=mock_client):
+        adapter = KvKAdapter()
+        adapter._cache.get_payload = MagicMock(return_value=None)
+        adapter._cache.put = MagicMock()
+
+        await adapter.fetch("35000363")
+
+    assert sleep_calls == [2.0, 4.0]

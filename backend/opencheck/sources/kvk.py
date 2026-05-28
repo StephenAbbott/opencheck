@@ -31,7 +31,10 @@ Press release (GLEIF partnership):
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
+
+import httpx
 
 from ..cache import Cache
 from ..config import get_settings
@@ -42,6 +45,11 @@ from .schemas.kvk import KvKBundle
 
 _API_BASE = "https://opendata.kvk.nl/api/v1/hvds"
 _CACHE_NS = "kvk"
+
+# Retry configuration for 429 Too Many Requests responses.
+_MAX_RETRIES = 3
+_RETRY_BACKOFF_BASE = 2.0  # seconds; doubled on each attempt
+_RETRY_BACKOFF_MAX = 30.0  # cap, regardless of Retry-After or backoff
 
 # GLEIF Registration Authority code for KvK (Netherlands Chamber of Commerce).
 KVK_RA_CODE: str = "RA000463"
@@ -134,9 +142,26 @@ class KvKAdapter(SourceAdapter):
             }
         else:
             async with build_client() as client:
-                response = await client.get(
-                    f"{_API_BASE}/basisbedrijfsgegevens/kvknummer/{kvk_number}",
-                )
+                url = f"{_API_BASE}/basisbedrijfsgegevens/kvknummer/{kvk_number}"
+                delay = _RETRY_BACKOFF_BASE
+                for attempt in range(_MAX_RETRIES + 1):
+                    response = await client.get(url)
+                    if response.status_code != 429:
+                        break
+                    if attempt == _MAX_RETRIES:
+                        # Exhausted retries — let raise_for_status surface the 429.
+                        break
+                    # Honour Retry-After if present; otherwise use exponential backoff.
+                    retry_after = response.headers.get("Retry-After")
+                    if retry_after is not None:
+                        try:
+                            wait = min(float(retry_after), _RETRY_BACKOFF_MAX)
+                        except ValueError:
+                            wait = delay
+                    else:
+                        wait = min(delay, _RETRY_BACKOFF_MAX)
+                    await asyncio.sleep(wait)
+                    delay *= 2
                 response.raise_for_status()
                 data = response.json()
             self._cache.put(cache_key, data)
