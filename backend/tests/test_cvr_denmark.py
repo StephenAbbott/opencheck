@@ -35,7 +35,7 @@ from opencheck.bods.mapper import map_cvr_denmark
 _VIRKSOMHED_NODES: list[dict[str, Any]] = [
     {
         "CVRNummer": 24256790,
-        "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+        "id": "312108",  # CVREnhedsId is a numeric string from the API (Long type)
         "status": "AKTIV",
         "virksomhedStartdato": "1989-09-14",
         "virksomhedOphoersdato": None,
@@ -127,7 +127,7 @@ def _make_bundle(
         address = _ADDR_NODES[0]
     return {
         "cvr_number": cvr_number,
-        "cvr_enhed_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+        "cvr_enhed_id": "312108",
         "name": name,
         "status": status,
         "start_date": start_date,

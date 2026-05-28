@@ -187,7 +187,7 @@ query($cvr: Long!) {
 """.strip()
 
 _Q_DETAILS = """
-query($id: String!) {
+query($id: Long!) {
   navn: CVR_Navn(where: {CVREnhedsId: {eq: $id}}) {
     nodes {
       vaerdi
@@ -424,7 +424,7 @@ class CvrDenmarkAdapter(SourceAdapter):
         r2 = await client.post(
             _GRAPHQL_URL,
             params=params,
-            json={"query": _Q_DETAILS, "variables": {"id": enhed_id}},
+            json={"query": _Q_DETAILS, "variables": {"id": int(enhed_id)}},
         )
         r2.raise_for_status()
         data2 = r2.json()
