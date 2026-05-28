@@ -102,53 +102,23 @@ export default function BODSGraph({
           useTippy: true,
         });
 
-        // Post-render fix for invisible / duplicate edges from bods-dagre's
-        // Dr/Pr edge decorators.
+        // Post-render fix for bods-dagre's Dr/Pr edge decorators.
         //
-        // Dr/Pr pattern:
-        //   1. Original dagre edge:  <g class="edgePath"> style="opacity: 0;"
-        //   2. Styled clone:         <g class="edgePath own|control"> style="opacity: 1;"
-        //      containing a BezierJS SVGtoBeziers().offset(n) path.
+        // Dr/Pr: hide original dagre edge (opacity:0), insert a BezierJS-offset
+        // styled clone (.own/.control). The clones are visually offset arcs that
+        // don't connect cleanly to nodes in fan-out TB layouts — they float.
         //
-        // Failure modes for the clone path:
-        //   a) Collinear bezier → BezierJS produces NaN coordinates
-        //      → clone path is "MNaN,NaN …" — invisible.
-        //   b) Wide fan-out (GLEIF subsidiaries) → BezierJS .offset() returns
-        //      empty PolyBezier ({curves:[]}) → Br() TypeError, silently caught
-        //      by d3 .each() → path left at a short stub value — invisible.
-        //
-        // Single-pass fix:
-        //   For each styled clone: if its path is VALID, leave it (original stays
-        //   hidden, clone provides proper BOVS-styled coloured edge — no duplicate).
-        //   If its path is INVALID (empty / NaN / too short), remove the clone and
-        //   restore the original dagre edge as a grey fallback.
+        // Fix: remove ALL styled clones unconditionally and restore ALL hidden
+        // original dagre edges. The originals connect properly to nodes and use
+        // dagre's clean default styling (solid lines with arrowheads).
         el.querySelectorAll<SVGGElement>(
           "g.edgePath.own, g.edgePath.control"
-        ).forEach((clone) => {
-          const path = clone.querySelector("path");
-          const d = path?.getAttribute("d") ?? "";
-          const isInvalid = !d || d.trim().length < 10 || d.includes("NaN");
+        ).forEach((clone) => clone.remove());
 
-          if (isInvalid) {
-            // Remove broken clone and restore the hidden original dagre edge.
-            const prev = clone.previousElementSibling as SVGGElement | null;
-            if (
-              prev !== null &&
-              prev.classList.contains("edgePath") &&
-              !prev.classList.contains("own") &&
-              !prev.classList.contains("control")
-            ) {
-              prev.style.opacity = "1";
-              const p = prev.querySelector<SVGPathElement>("path");
-              if (p && !p.getAttribute("stroke") && !p.style.stroke) {
-                p.style.stroke = "#666";
-                p.style.strokeWidth = "1.5px";
-                p.style.fill = "none";
-              }
-            }
-            clone.remove();
+        el.querySelectorAll<SVGGElement>("g.edgePath").forEach((edge) => {
+          if (edge.getAttribute("style")?.includes("opacity: 0")) {
+            edge.style.opacity = "1";
           }
-          // else: valid clone — leave it; original stays hidden; no duplicate edge.
         });
       } catch (err) {
         // The library throws when it doesn't recognise a statement

@@ -173,25 +173,12 @@ function sanitise(input) {
  * Valid clones remain, providing BOVS-styled coloured edges without duplicates.
  */
 function applyEdgeFix(el) {
-  el.querySelectorAll('g.edgePath.own, g.edgePath.control').forEach(clone => {
-    const path = clone.querySelector('path');
-    const d = path?.getAttribute('d') || '';
-    const isInvalid = !d || d.trim().length < 10 || d.includes('NaN');
-    if (isInvalid) {
-      const prev = clone.previousElementSibling;
-      if (prev && prev.classList.contains('edgePath') &&
-          !prev.classList.contains('own') && !prev.classList.contains('control')) {
-        prev.style.opacity = '1';
-        const pp = prev.querySelector('path');
-        if (pp && !pp.getAttribute('stroke') && !pp.style.stroke) {
-          pp.style.stroke = '#666';
-          pp.style.strokeWidth = '1.5px';
-          pp.style.fill = 'none';
-        }
-      }
-      clone.remove();
-    }
-    // else: valid clone renders with BOVS styling, original stays hidden — no duplicate
+  // Remove all BezierJS offset clones — they float and don't connect to nodes.
+  // Restore all hidden original dagre edges — they connect properly.
+  el.querySelectorAll('g.edgePath.own, g.edgePath.control').forEach(c => c.remove());
+  el.querySelectorAll('g.edgePath').forEach(edge => {
+    if ((edge.getAttribute('style') || '').includes('opacity: 0'))
+      edge.style.opacity = '1';
   });
 }
 
