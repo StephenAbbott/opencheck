@@ -432,6 +432,7 @@ class CvrDenmarkAdapter(SourceAdapter):
             _GRAPHQL_URL,
             params=params,
             json={"query": _Q_VIRKSOMHED, "variables": {"cvr": cvr_int}},
+            timeout=45.0,  # Datafordeler CVR can be slow; override default 15 s
         )
         r1.raise_for_status()
         data1 = r1.json()
@@ -464,6 +465,7 @@ class CvrDenmarkAdapter(SourceAdapter):
                 _GRAPHQL_URL,
                 params=params,
                 json={"query": query, "variables": id_vars},
+                timeout=45.0,  # Datafordeler CVR can be slow; override default 15 s
             )
             resp.raise_for_status()
             data = resp.json()
