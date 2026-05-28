@@ -108,18 +108,65 @@ export default function BODSGraph({
         // styled clone (.own/.control). The clones are visually offset arcs that
         // don't connect cleanly to nodes in fan-out TB layouts — they float.
         //
-        // Fix: remove ALL styled clones unconditionally and restore ALL hidden
-        // original dagre edges. The originals connect properly to nodes and use
-        // dagre's clean default styling (solid lines with arrowheads).
+        // Fix:
+        //   1. Remove all styled clones unconditionally.
+        //   2. Restore all hidden original dagre edges.
+        //   3. Inject a BOVS-compliant filled-triangle arrowhead marker into the
+        //      SVG <defs> and apply it to every restored edge path.
+        //
+        // BOVS directionality (vertical layout): arrows must point DOWN.
+        // marker-end is placed at the END of each dagre path = the target node
+        // = the subject (owned/controlled entity at the bottom).
+        // This correctly represents "interestedParty controls/owns subject".
+
+        // Step 1: remove floating BezierJS clones.
         el.querySelectorAll<SVGGElement>(
           "g.edgePath.own, g.edgePath.control"
         ).forEach((clone) => clone.remove());
 
+        // Step 2: restore hidden original dagre edges.
         el.querySelectorAll<SVGGElement>("g.edgePath").forEach((edge) => {
           if (edge.getAttribute("style")?.includes("opacity: 0")) {
             edge.style.opacity = "1";
           }
         });
+
+        // Step 3: inject BOVS arrowhead marker and apply to all edge paths.
+        const svgEl = el.querySelector("svg");
+        if (svgEl) {
+          const NS = "http://www.w3.org/2000/svg";
+          const MARKER_ID = "oc-bovs-arrow";
+
+          // Ensure <defs> exists.
+          let defs = svgEl.querySelector("defs");
+          if (!defs) {
+            defs = document.createElementNS(NS, "defs");
+            svgEl.insertBefore(defs, svgEl.firstChild);
+          }
+
+          // Remove any previous version of our marker.
+          defs.querySelector(`#${MARKER_ID}`)?.remove();
+
+          // BOVS-compliant filled triangle arrowhead.
+          // markerUnits="strokeWidth" scales with the edge line weight.
+          // orient="auto" rotates the marker to match each edge's direction.
+          // refX=9 places the arrowhead tip just at the path endpoint so it
+          // sits cleanly at the node boundary that dagre trims the path to.
+          defs.insertAdjacentHTML(
+            "beforeend",
+            `<marker id="${MARKER_ID}"
+               viewBox="0 0 10 10" refX="9" refY="5"
+               markerUnits="strokeWidth" markerWidth="8" markerHeight="6"
+               orient="auto">
+               <path d="M 0 0 L 10 5 L 0 10 z" fill="#333" stroke="none"/>
+             </marker>`
+          );
+
+          // Apply the arrowhead to every edge path.
+          el.querySelectorAll<SVGPathElement>("g.edgePath path").forEach((p) => {
+            p.setAttribute("marker-end", `url(#${MARKER_ID})`);
+          });
+        }
       } catch (err) {
         // The library throws when it doesn't recognise a statement
         // shape, or when popper hits an undefined ancestor. Surface

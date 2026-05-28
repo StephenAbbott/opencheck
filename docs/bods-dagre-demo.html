@@ -173,13 +173,34 @@ function sanitise(input) {
  * Valid clones remain, providing BOVS-styled coloured edges without duplicates.
  */
 function applyEdgeFix(el) {
-  // Remove all BezierJS offset clones — they float and don't connect to nodes.
-  // Restore all hidden original dagre edges — they connect properly.
+  // 1. Remove floating BezierJS clones.
   el.querySelectorAll('g.edgePath.own, g.edgePath.control').forEach(c => c.remove());
+
+  // 2. Restore hidden original dagre edges.
   el.querySelectorAll('g.edgePath').forEach(edge => {
     if ((edge.getAttribute('style') || '').includes('opacity: 0'))
       edge.style.opacity = '1';
   });
+
+  // 3. Inject BOVS-compliant arrowhead marker and apply to all edge paths.
+  // BOVS (vertical): arrows point DOWN. marker-end = target = owned entity (bottom).
+  const svgEl = el.querySelector('svg');
+  if (!svgEl) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const MARKER_ID = 'oc-bovs-arrow';
+  let defs = svgEl.querySelector('defs');
+  if (!defs) {
+    defs = document.createElementNS(NS, 'defs');
+    svgEl.insertBefore(defs, svgEl.firstChild);
+  }
+  defs.querySelector('#' + MARKER_ID)?.remove();
+  defs.insertAdjacentHTML('beforeend',
+    '<marker id="' + MARKER_ID + '" viewBox="0 0 10 10" refX="9" refY="5" ' +
+    'markerUnits="strokeWidth" markerWidth="8" markerHeight="6" orient="auto">' +
+    '<path d="M 0 0 L 10 5 L 0 10 z" fill="#333" stroke="none"/></marker>');
+  el.querySelectorAll('g.edgePath path').forEach(p =>
+    p.setAttribute('marker-end', 'url(#' + MARKER_ID + ')')
+  );
 }
 
 /**
