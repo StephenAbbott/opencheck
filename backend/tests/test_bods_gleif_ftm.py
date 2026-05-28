@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+from bods_validation_helpers import check_graph_connectivity, check_interest_types  # noqa: E402
+
 from opencheck.bods import (
     map_gleif,
     map_openaleph,
@@ -870,3 +877,31 @@ def test_ftm_registration_number_falls_back_to_reg_without_jurisdiction() -> Non
     entity = next(iter(bundle))
     schemes = {i["scheme"] for i in entity["recordDetails"]["identifiers"]}
     assert "REG" in schemes
+
+
+# ---------------------------------------------------------------------------
+# Graph connectivity (Phase 2)
+# ---------------------------------------------------------------------------
+
+
+def test_map_gleif_graph_connectivity_with_parent() -> None:
+    """Parent relationship subject/interestedParty refs resolve to in-bundle statementIds."""
+    bundle = map_gleif(_gleif_bundle_with_direct_parent())
+    issues = check_graph_connectivity(bundle.statements)
+    assert issues == [], issues
+
+
+def test_map_gleif_graph_connectivity_with_child() -> None:
+    """Child relationship refs resolve to in-bundle statementIds."""
+    payload = _gleif_bundle_with_direct_parent()
+    payload["direct_children"] = [_child_record("CHILDXXXXXXXXXXXXXXX", "BP France SAS")]
+    bundle = map_gleif(payload)
+    issues = check_graph_connectivity(bundle.statements)
+    assert issues == [], issues
+
+
+def test_map_gleif_interest_types_valid() -> None:
+    """All interest types are valid BODS v0.4 codelist members."""
+    bundle = map_gleif(_gleif_bundle_with_direct_parent())
+    invalid = check_interest_types(bundle.statements)
+    assert invalid == [], invalid

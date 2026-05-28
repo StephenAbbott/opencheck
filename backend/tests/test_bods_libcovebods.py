@@ -792,3 +792,71 @@ def test_libcovebods_companies_house_corporate_psc():
         },
     }
     assert_valid(map_companies_house(bundle), "Companies House (corporate PSC)")
+
+
+def test_libcovebods_cvr_denmark():
+    """CVR Denmark produces entity-only statements (CVRPerson is restricted access)."""
+    from opencheck.bods.mapper import map_cvr_denmark
+    bundle = {
+        "cvr_number": "10000501",
+        "name": "TEST A/S",
+        "status": "NORMAL",
+        "start_date": "2000-01-01",
+        "end_date": None,
+        "legal_form_text": "Aktieselskab",
+        "branche_code": "620100",
+        "source_url": "https://datacvr.virk.dk/enhed/virksomhed/10000501",
+        "address": {
+            "CVRAdresse_vejnavn": "Testgade",
+            "CVRAdresse_husnummerFra": "1",
+            "CVRAdresse_postnummer": "2100",
+            "CVRAdresse_postdistrikt": "KØBENHAVN Ø",
+            "CVRAdresse_landekode": "DK",
+        },
+        "is_stub": False,
+    }
+    assert_valid(map_cvr_denmark(bundle), "CVR Denmark")
+
+
+def test_libcovebods_cvr_denmark_dissolved():
+    """CVR Denmark with a dissolution date still produces a valid entity statement."""
+    from opencheck.bods.mapper import map_cvr_denmark
+    bundle = {
+        "cvr_number": "20000001",
+        "name": "OPLØST APS",
+        "status": "OPLØST",
+        "start_date": "1990-03-01",
+        "end_date": "2018-06-30",
+        "legal_form_text": "Anpartsselskab",
+        "branche_code": None,
+        "source_url": None,
+        "address": None,
+        "is_stub": False,
+    }
+    assert_valid(map_cvr_denmark(bundle), "CVR Denmark (dissolved)")
+
+
+def test_libcovebods_prh_finland():
+    """PRH Finland produces an entity-only statement (officer data requires paid Virre)."""
+    from opencheck.bods.mapper import map_prh
+    bundle = {
+        "ytunnus": "0108023-3",
+        "legal_name": "Test Oyj",
+        "company": {
+            "businessId": {"registrationDate": "1998-09-23"},
+            "names": [{"name": "Test Oyj", "endDate": None}],
+            "companyForm": "OYJ",
+            "mainBusinessLine": [{"code": "62010", "endDate": None}],
+            "addresses": [
+                {
+                    "street": "Testikatu 1",
+                    "postCode": "00100",
+                    "city": "Helsinki",
+                    "country": "FI",
+                    "endDate": None,
+                }
+            ],
+        },
+        "is_stub": False,
+    }
+    assert_valid(map_prh(bundle), "PRH Finland")

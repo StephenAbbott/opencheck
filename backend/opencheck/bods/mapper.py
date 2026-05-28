@@ -349,35 +349,45 @@ def make_relationship_statement(
 
 def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
     source_names = {
+        "acra_singapore": "ACRA — Accounting and Corporate Regulatory Authority (Singapore)",
         "ariregister": "Estonian e-Business Register (e-Äriregister)",
+        "bce_belgium": "BCE/KBO — Banque-Carrefour des Entreprises (Belgian Business Register)",
+        "bods_gleif": "GLEIF — Global LEI Foundation (BODS bulk dataset)",
+        "bods_uk_psc": "UK Companies House — Persons with Significant Control (BODS bulk dataset)",
         "bolagsverket": "Bolagsverket — Swedish Companies Registration Office",
         "brreg": "Brønnøysundregistrene — Norwegian Register Centre",
-        "companies_house": "UK Companies House",
+        "brightquery": "BrightQuery / OpenData.org",
         "climatetrace": "Global Energy Monitor / Climate TRACE",
+        "companies_house": "UK Companies House",
+        "corporations_canada": "Corporations Canada — ISED federal register",
         "cro": "CRO — Companies Registration Office Ireland",
+        "cvr_denmark": "CVR — Det Centrale Virksomhedsregister (Danish Business Authority)",
+        "everypolitician": "EveryPolitician",
         "firmenbuch": "Firmenbuch — Austrian Commercial Register",
         "gleif": "GLEIF",
         "inpi": "INPI — Registre National des Entreprises",
+        "jar_lithuania": "JAR — Juridinių asmenų registras (Lithuanian Register of Legal Entities)",
+        "krs_poland": "KRS — Polish National Court Register (Krajowy Rejestr Sądowy)",
         "kvk": "KvK — Netherlands Chamber of Commerce",
-        "opencorporates": "OpenCorporates",
-        "brightquery": "BrightQuery / OpenData.org",
-        "opensanctions": "OpenSanctions",
         "openaleph": "OpenAleph",
-        "everypolitician": "EveryPolitician",
-        "wikidata": "Wikidata",
-        "zefix": "Zefix — Swiss Commercial Registry",
+        "opencorporates": "OpenCorporates",
+        "opensanctions": "OpenSanctions",
         "opentender": "OpenTender",
+        "prh": "PRH — Finnish Patent and Registration Office (Patentti- ja rekisterihallitus)",
+        "rpo_slovakia": "RPO — Slovak Register of Legal Persons",
+        "rpvs_slovakia": "RPVS — Slovak Public Sector Partners Register",
         "sec_edgar": "SEC EDGAR — U.S. Securities and Exchange Commission",
         "ur_latvia": "UR — Latvian Register of Enterprises (data.gov.lv)",
         "ares": "ARES — Czech Administrativní registr ekonomických subjektů",
-        "krs_poland": "KRS — Polish National Court Register (Krajowy Rejestr Sądowy)",
-        "corporations_canada": "Corporations Canada — ISED federal register",
-        "rpo_slovakia": "RPO — Slovak Register of Legal Persons",
-        "rpvs_slovakia": "RPVS — Slovak Public Sector Partners Register",
-        "cvr_denmark": "CVR — Det Centrale Virksomhedsregister (Danish Business Authority)",
+        "wikidata": "Wikidata",
+        "zefix": "Zefix — Swiss Commercial Registry",
     }
     _official_registers = {
+        "acra_singapore",
         "ariregister",
+        "bce_belgium",
+        "bods_gleif",
+        "bods_uk_psc",
         "bolagsverket",
         "brreg",
         "companies_house",
@@ -386,15 +396,17 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "cvr_denmark",
         "firmenbuch",
         "inpi",
+        "jar_lithuania",
+        "krs_poland",
         "kvk",
         "opencorporates",
-        "zefix",
+        "prh",
+        "rpo_slovakia",
+        "rpvs_slovakia",
         "sec_edgar",
         "ur_latvia",
         "ares",
-        "krs_poland",
-        "rpo_slovakia",
-        "rpvs_slovakia",
+        "zefix",
     }
     block: dict[str, Any] = {
         "type": ["officialRegister"] if source_id in _official_registers else ["thirdParty"],
@@ -6773,12 +6785,15 @@ def map_cvr_denmark(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         source_url=source_url,
     )
 
-    # Annotate entityType subtype using legal form text.
+    # entityType block.  BODS v0.4 entityType.subtype is a restricted enum
+    # (governmentDepartment, stateAgency, other, trust, nomination) and does
+    # not accept arbitrary legal-form text.  The Danish legal form label is
+    # stored in the non-schema annotation field "legalFormLabel" for
+    # informational use only; libcovebods ignores unknown extra fields.
     record_details = stmt.get("recordDetails") or {}
-    entity_type_block: dict[str, Any] = {"type": "registeredEntity"}
+    record_details["entityType"] = {"type": "registeredEntity"}
     if legal_form_text:
-        entity_type_block["subtype"] = legal_form_text
-    record_details["entityType"] = entity_type_block
+        record_details["legalFormLabel"] = legal_form_text
 
     # Dissolution / end date.
     if end_date:

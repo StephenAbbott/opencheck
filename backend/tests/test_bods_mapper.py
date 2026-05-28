@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+from bods_validation_helpers import check_graph_connectivity, check_interest_types  # noqa: E402
+
 from opencheck.bods import (
     map_companies_house,
     make_entity_statement,
@@ -293,3 +300,22 @@ def test_related_companies_empty_is_backward_compatible() -> None:
     assert types.count("entity") == 2
     assert types.count("person") == 1
     assert types.count("relationship") == 2
+
+
+# ---------------------------------------------------------------------------
+# Graph connectivity (Phase 2)
+# ---------------------------------------------------------------------------
+
+
+def test_ch_mapper_graph_connectivity() -> None:
+    """All CH PSC relationship refs resolve to in-bundle statementIds."""
+    stmts = list(map_companies_house(_sample_bundle()))
+    issues = check_graph_connectivity(stmts)
+    assert issues == [], issues
+
+
+def test_ch_mapper_interest_types_valid() -> None:
+    """All CH mapper interest types are valid BODS v0.4 codelist members."""
+    stmts = list(map_companies_house(_sample_bundle()))
+    invalid = check_interest_types(stmts)
+    assert invalid == [], invalid

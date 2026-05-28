@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+from bods_validation_helpers import check_graph_connectivity, check_interest_types  # noqa: E402
+
 import pytest
 
 from opencheck.bods import map_inpi, validate_shape
@@ -604,3 +611,22 @@ def test_map_inpi_with_person_passes_validator() -> None:
     """Validate the full three-statement bundle against the BODS schema."""
     issues = validate_shape(map_inpi(_bundle()))
     assert issues == [], issues
+
+
+# ---------------------------------------------------------------------------
+# Graph connectivity (Phase 2)
+# ---------------------------------------------------------------------------
+
+
+def test_map_inpi_graph_connectivity() -> None:
+    """All relationship subject/interestedParty refs resolve to in-bundle statementIds."""
+    stmts = list(map_inpi(_bundle()))
+    issues = check_graph_connectivity(stmts)
+    assert issues == [], issues
+
+
+def test_map_inpi_interest_types_valid() -> None:
+    """All interest types are valid BODS v0.4 codelist members."""
+    stmts = list(map_inpi(_bundle()))
+    invalid = check_interest_types(stmts)
+    assert invalid == [], invalid

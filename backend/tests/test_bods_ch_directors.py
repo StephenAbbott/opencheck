@@ -7,6 +7,13 @@ test_bods_ch_officer.py which covers the officer-appointments bundle path
 
 from __future__ import annotations
 
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+from bods_validation_helpers import check_graph_connectivity, check_interest_types  # noqa: E402
+
 from opencheck.bods import map_companies_house, validate_shape
 
 
@@ -268,3 +275,24 @@ def test_missing_officers_key_produces_no_extra_statements() -> None:
     bundle = map_companies_house(bundle_data)
     types = [s["recordType"] for s in bundle]
     assert types == ["entity"]
+
+
+# ---------------------------------------------------------------------------
+# Graph connectivity (Phase 2)
+# ---------------------------------------------------------------------------
+
+
+def test_ch_directors_graph_connectivity() -> None:
+    """Director relationship subject/interestedParty refs resolve to in-bundle statementIds."""
+    bundle = _company_bundle_with_directors()
+    stmts = list(map_companies_house(bundle))
+    issues = check_graph_connectivity(stmts)
+    assert issues == [], issues
+
+
+def test_ch_directors_interest_types_valid() -> None:
+    """Director interest types are valid BODS v0.4 codelist members."""
+    bundle = _company_bundle_with_directors()
+    stmts = list(map_companies_house(bundle))
+    invalid = check_interest_types(stmts)
+    assert invalid == [], invalid

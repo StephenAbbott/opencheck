@@ -121,7 +121,7 @@ Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_
 
 ## Test suite
 
-- **973 tests, 4 skipped** as of Phase 42 (CVR Denmark + KvK retry fix). Run `python -m pytest` from `backend/`.
+- **1738 passed, 6 skipped, 5 xfailed** as of BODS compliance audit Phases 1–8. Run `python -m pytest` from `backend/`.
 - Async adapter tests use `pytest-asyncio` with `asyncio_mode = "auto"` (set in `pyproject.toml`).
 - HTTP mocking: use `respx` for httpx-based adapters; use `unittest.mock.AsyncMock` with `patch("...build_client", ...)` for adapters that call `build_client()` directly.
 - GraphQL adapters (CVR): mock by inspecting the request body (`request.content`) to route different query strings to different fixture responses.

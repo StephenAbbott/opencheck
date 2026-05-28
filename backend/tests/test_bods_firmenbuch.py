@@ -13,6 +13,13 @@ _strip_namespaces() before ElementTree parsing.
 
 from __future__ import annotations
 
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+from bods_validation_helpers import check_graph_connectivity, check_interest_types  # noqa: E402
+
 import pytest
 
 from opencheck.bods import map_firmenbuch, validate_shape
@@ -846,3 +853,29 @@ def test_map_firmenbuch_kurzinfo_pr_mapped_label() -> None:
 def test_map_firmenbuch_kurzinfo_passes_validator() -> None:
     issues = validate_shape(map_firmenbuch(_kurzinfo_bundle()))
     assert issues == [], issues
+
+
+# ---------------------------------------------------------------------------
+# Graph connectivity (Phase 2)
+# ---------------------------------------------------------------------------
+
+
+def test_map_firmenbuch_graph_connectivity() -> None:
+    """All relationship subject/interestedParty refs resolve to in-bundle statementIds."""
+    stmts = list(map_firmenbuch(_bundle()))
+    issues = check_graph_connectivity(stmts)
+    assert issues == [], issues
+
+
+def test_map_firmenbuch_corporate_sh_graph_connectivity() -> None:
+    """Corporate shareholder bundle is also fully connected."""
+    stmts = list(map_firmenbuch(_bundle("100000a", extract=_CORPORATE_SH_EXTRACT)))
+    issues = check_graph_connectivity(stmts)
+    assert issues == [], issues
+
+
+def test_map_firmenbuch_interest_types_valid() -> None:
+    """All interest types are valid BODS v0.4 codelist members."""
+    stmts = list(map_firmenbuch(_bundle()))
+    invalid = check_interest_types(stmts)
+    assert invalid == [], invalid

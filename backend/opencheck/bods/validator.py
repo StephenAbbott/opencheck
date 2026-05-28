@@ -65,9 +65,23 @@ def validate_shape(statements: Iterable[dict[str, Any]]) -> list[str]:
     * recordDetails shape matches recordType
     * Relationship statements reference existing statement IDs
     * Interest type codes are in the v0.4 codelist
+
+    Relationship cross-reference resolution
+    ---------------------------------------
+    BODS v0.4 specifies that ``subject`` and ``interestedParty`` are bare
+    strings (statementId references).  OpenCheck sets statementId == recordId
+    so either value works for our own output.  The canonical bods-fixtures pack
+    uses *recordId* as the reference key, so we accept both statementId and
+    recordId to avoid false positives on valid external datasets.
     """
     statements = list(statements)
-    known_ids = {s.get("statementId") for s in statements if s.get("statementId")}
+    # Accept both statementId and recordId as valid reference targets.
+    known_ids: set[str | None] = set()
+    for s in statements:
+        if s.get("statementId"):
+            known_ids.add(s["statementId"])
+        if s.get("recordId"):
+            known_ids.add(s["recordId"])
     issues: list[str] = []
 
     for i, s in enumerate(statements):
@@ -116,12 +130,18 @@ def validate_shape(statements: Iterable[dict[str, Any]]) -> list[str]:
                 issues.append(f"{prefix}: subject references unknown statement {subject_sid!r}")
 
             raw_ip = rd.get("interestedParty") or {}
-            ip_sid = (
-                raw_ip if isinstance(raw_ip, str)
-                else (raw_ip.get("describedByPersonStatement") or raw_ip.get("describedByEntityStatement"))
-            )
-            if ip_sid not in known_ids:
-                issues.append(f"{prefix}: interestedParty references unknown statement {ip_sid!r}")
+            if isinstance(raw_ip, dict) and "reason" in raw_ip:
+                # Inline "unidentifiable beneficial owner" object — not a
+                # statement reference.  BODS v0.4 permits this pattern when the
+                # subject entity is unable to confirm or identify a BO.
+                pass
+            else:
+                ip_sid = (
+                    raw_ip if isinstance(raw_ip, str)
+                    else (raw_ip.get("describedByPersonStatement") or raw_ip.get("describedByEntityStatement"))
+                )
+                if ip_sid not in known_ids:
+                    issues.append(f"{prefix}: interestedParty references unknown statement {ip_sid!r}")
 
             interests = rd.get("interests") or []
             for j, interest in enumerate(interests):

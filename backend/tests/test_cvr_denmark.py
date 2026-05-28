@@ -287,10 +287,15 @@ class TestMapCvrDenmark:
         entity = next(s for s in stmts if s["recordType"] == "entity")
         assert entity["recordDetails"]["entityType"]["type"] == "registeredEntity"
 
-    def test_legal_form_subtype(self) -> None:
+    def test_legal_form_label(self) -> None:
+        """Legal form text must be stored as legalFormLabel (not entityType.subtype,
+        which is a restricted BODS v0.4 enum and does not accept free-form text)."""
         stmts = list(map_cvr_denmark(_make_bundle()))
         entity = next(s for s in stmts if s["recordType"] == "entity")
-        assert "subtype" in entity["recordDetails"]["entityType"]
+        # subtype must NOT be on entityType (would fail libcovebods validation)
+        assert "subtype" not in entity["recordDetails"]["entityType"]
+        # legal form text lives in the informational legalFormLabel field
+        assert entity["recordDetails"].get("legalFormLabel") == "Aktieselskab"
 
     def test_address_included(self) -> None:
         stmts = list(map_cvr_denmark(_make_bundle()))
