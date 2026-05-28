@@ -47,14 +47,14 @@ _VIRKSOMHED_NODES: list[dict[str, Any]] = [
 _NAVN_NODES: list[dict[str, Any]] = [
     {
         "vaerdi": "Novo Nordisk A/S",
-        "sekvens": 1,
+        "sekvens": 0,  # sekvens=0 is primary in Datafordeler CVR API
         "virkningFra": "1989-09-14T00:00:00.000Z",
         "virkningTil": None,
     },
     # Old name — should be filtered out by _current()
     {
         "vaerdi": "Novo Industri A/S",
-        "sekvens": 1,
+        "sekvens": 0,
         "virkningFra": "1974-01-01T00:00:00.000Z",
         "virkningTil": "1989-09-13T23:59:59.000Z",
     },
@@ -94,21 +94,36 @@ _FORM_NODES: list[dict[str, Any]] = [
 
 _DELTAGER_NODES: list[dict[str, Any]] = []
 
-_GRAPHQL_RESP_1: dict[str, Any] = {
-    "data": {
-        "CVR_Virksomhed": {"nodes": _VIRKSOMHED_NODES}
-    }
+# Datafordeler forbids aliases and multi-root queries — each entity type
+# is fetched in a separate request.  Responses keyed by the actual root field.
+_GRAPHQL_RESP_VIRKSOMHED: dict[str, Any] = {
+    "data": {"CVR_Virksomhed": {"nodes": _VIRKSOMHED_NODES}}
+}
+_GRAPHQL_RESP_NAVN: dict[str, Any] = {
+    "data": {"CVR_Navn": {"nodes": _NAVN_NODES}}
+}
+_GRAPHQL_RESP_ADRESSERING: dict[str, Any] = {
+    "data": {"CVR_Adressering": {"nodes": _ADDR_NODES}}
+}
+_GRAPHQL_RESP_BRANCHE: dict[str, Any] = {
+    "data": {"CVR_Branche": {"nodes": _BRANCHE_NODES}}
+}
+_GRAPHQL_RESP_FORM: dict[str, Any] = {
+    "data": {"CVR_Virksomhedsform": {"nodes": _FORM_NODES}}
+}
+_GRAPHQL_RESP_DELTAGER: dict[str, Any] = {
+    "data": {"CVR_FuldtAnsvarligDeltagerRelation": {"nodes": _DELTAGER_NODES}}
 }
 
-_GRAPHQL_RESP_2: dict[str, Any] = {
-    "data": {
-        "navn": {"nodes": _NAVN_NODES},
-        "adressering": {"nodes": _ADDR_NODES},
-        "branche": {"nodes": _BRANCHE_NODES},
-        "form": {"nodes": _FORM_NODES},
-        "deltager": {"nodes": _DELTAGER_NODES},
-    }
-}
+# Ordered list matching asyncio.gather call order in _fetch_bundle:
+# virksomhed, then navn/adressering/branche/form/deltager in parallel.
+_DETAIL_RESPONSES = [
+    _GRAPHQL_RESP_NAVN,
+    _GRAPHQL_RESP_ADRESSERING,
+    _GRAPHQL_RESP_BRANCHE,
+    _GRAPHQL_RESP_FORM,
+    _GRAPHQL_RESP_DELTAGER,
+]
 
 
 def _make_bundle(
@@ -189,8 +204,8 @@ class TestBestNavn:
     def test_empty_list(self) -> None:
         assert _best_navn([]) is None
 
-    def test_falls_back_to_any_current(self) -> None:
-        nodes = [{"vaerdi": "Only Name", "sekvens": 2, "virkningTil": None}]
+    def test_falls_back_to_any_current_when_no_sekvens0(self) -> None:
+        nodes = [{"vaerdi": "Only Name", "sekvens": 1, "virkningTil": None}]
         assert _best_navn(nodes) == "Only Name"
 
 
@@ -333,20 +348,29 @@ async def test_fetch_returns_bundle(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("CVR_DENMARK_API_KEY", "test-key")
     get_settings.cache_clear()
 
-    # Build two mock responses (request 1 and request 2)
-    resp1 = MagicMock()
-    resp1.raise_for_status = MagicMock()
-    resp1.json.return_value = _GRAPHQL_RESP_1
-
-    resp2 = MagicMock()
-    resp2.raise_for_status = MagicMock()
-    resp2.json.return_value = _GRAPHQL_RESP_2
+    # 6 requests: 1 virksomhed + 5 parallel detail queries.
+    # Route by inspecting the query string in the POST body.
+    _QUERY_ROUTE = {
+        "CVR_Navn": _GRAPHQL_RESP_NAVN,
+        "CVR_Adressering": _GRAPHQL_RESP_ADRESSERING,
+        "CVR_Branche": _GRAPHQL_RESP_BRANCHE,
+        "CVR_Virksomhedsform": _GRAPHQL_RESP_FORM,
+        "CVR_FuldtAnsvarligDeltagerRelation": _GRAPHQL_RESP_DELTAGER,
+        "CVR_Virksomhed": _GRAPHQL_RESP_VIRKSOMHED,
+    }
 
     call_count = [0]
 
     async def mock_post(url: str, **kwargs: Any) -> MagicMock:
         call_count[0] += 1
-        return resp1 if call_count[0] == 1 else resp2
+        query_str = (kwargs.get("json") or {}).get("query", "")
+        payload = next(
+            v for k, v in _QUERY_ROUTE.items() if k in query_str
+        )
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock()
+        resp.json.return_value = payload
+        return resp
 
     mock_client = AsyncMock()
     mock_client.post = mock_post
@@ -366,7 +390,7 @@ async def test_fetch_returns_bundle(monkeypatch, tmp_path) -> None:
     assert bundle["end_date"] is None
     assert bundle["legal_form_code"] == "30"
     assert bundle["branche_code"] == "21.10"
-    assert call_count[0] == 2
+    assert call_count[0] == 6  # 1 virksomhed + 5 detail queries
 
 
 @pytest.mark.asyncio
@@ -381,7 +405,7 @@ async def test_fetch_not_found_raises(monkeypatch, tmp_path) -> None:
 
     resp1 = MagicMock()
     resp1.raise_for_status = MagicMock()
-    resp1.json.return_value = {"data": {"CVR_Virksomhed": {"nodes": []}}}
+    resp1.json.return_value = {"data": {"CVR_Virksomhed": {"nodes": []}}}  # not found
 
     mock_client = AsyncMock()
     mock_client.post = AsyncMock(return_value=resp1)

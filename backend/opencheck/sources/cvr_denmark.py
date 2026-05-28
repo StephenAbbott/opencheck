@@ -73,6 +73,7 @@ Attribution
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -186,9 +187,14 @@ query($cvr: Long!) {
 }
 """.strip()
 
-_Q_DETAILS = """
-query($id: Long!) {
-  navn: CVR_Navn(where: {CVREnhedsId: {eq: $id}}) {
+# Datafordeler GraphQL rules (DAF-GQL-0008, DAF-GQL-0010):
+#   - Aliases are NOT allowed
+#   - Multiple root fields in a single operation are NOT allowed
+# Each entity type must be fetched in a separate HTTP request.
+
+_Q_NAVN = """
+query($id: String!) {
+  CVR_Navn(where: {CVREnhedsId: {eq: $id}}) {
     nodes {
       vaerdi
       sekvens
@@ -196,7 +202,12 @@ query($id: Long!) {
       virkningTil
     }
   }
-  adressering: CVR_Adressering(where: {CVREnhedsId: {eq: $id}}) {
+}
+""".strip()
+
+_Q_ADRESSERING = """
+query($id: String!) {
+  CVR_Adressering(where: {CVREnhedsId: {eq: $id}}) {
     nodes {
       AdresseringAnvendelse
       CVRAdresse_vejnavn
@@ -209,7 +220,12 @@ query($id: Long!) {
       virkningTil
     }
   }
-  branche: CVR_Branche(where: {CVREnhedsId: {eq: $id}}) {
+}
+""".strip()
+
+_Q_BRANCHE = """
+query($id: String!) {
+  CVR_Branche(where: {CVREnhedsId: {eq: $id}}) {
     nodes {
       vaerdi
       sekvens
@@ -217,7 +233,12 @@ query($id: Long!) {
       virkningTil
     }
   }
-  form: CVR_Virksomhedsform(where: {CVREnhedsId: {eq: $id}}) {
+}
+""".strip()
+
+_Q_FORM = """
+query($id: String!) {
+  CVR_Virksomhedsform(where: {CVREnhedsId: {eq: $id}}) {
     nodes {
       vaerdi
       vaerdiTekst
@@ -225,7 +246,12 @@ query($id: Long!) {
       virkningTil
     }
   }
-  deltager: CVR_FuldtAnsvarligDeltagerRelation(where: {CVREnhedsId: {eq: $id}}) {
+}
+""".strip()
+
+_Q_DELTAGER = """
+query($id: String!) {
+  CVR_FuldtAnsvarligDeltagerRelation(where: {CVREnhedsId: {eq: $id}}) {
     nodes {
       deltagendeEnhedsId
       virkningFra
@@ -254,12 +280,16 @@ def _current(nodes: list[dict]) -> list[dict]:
 
 
 def _best_navn(nodes: list[dict]) -> str | None:
-    """Pick the best current name. Prefer sekvens=1 (primary name)."""
+    """Pick the best current name.
+
+    The Datafordeler API uses sekvens=0 for the primary name (the only name
+    for most entities). sekvens=1 indicates a secondary/alternate name.
+    We prefer sekvens=0; if absent fall back to any current record.
+    """
     if not nodes:
         return None
     current = _current(nodes)
-    # sekvens 1 = primary name
-    primary = [n for n in current if n.get("sekvens") == 1]
+    primary = [n for n in current if n.get("sekvens") == 0]
     pool = primary or current
     return pool[0].get("vaerdi") if pool else None
 
@@ -420,25 +450,36 @@ class CvrDenmarkAdapter(SourceAdapter):
         start_date: str | None = virksomhed.get("virksomhedStartdato")
         end_date: str | None = virksomhed.get("virksomhedOphoersdato")
 
-        # --- Request 2: batch-fetch related entities by CVREnhedsId ---
-        r2 = await client.post(
-            _GRAPHQL_URL,
-            params=params,
-            json={"query": _Q_DETAILS, "variables": {"id": int(enhed_id)}},
+        # --- Requests 2–6: one request per entity type (aliases and multi-root
+        #     fields are forbidden by DAF-GQL-0008 / DAF-GQL-0010) ---
+        id_vars = {"id": enhed_id}
+
+        async def _gql(query: str, root_key: str) -> list[dict]:
+            """Fire one GraphQL query and return the nodes list."""
+            resp = await client.post(
+                _GRAPHQL_URL,
+                params=params,
+                json={"query": query, "variables": id_vars},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            if errs := data.get("errors"):
+                _log.warning("CVR GraphQL errors (%s) for %s: %s", root_key, cvr_norm, errs)
+            return data.get("data", {}).get(root_key, {}).get("nodes", [])
+
+        (
+            navn_nodes,
+            addr_nodes,
+            branch_nodes,
+            form_nodes,
+            deltager_nodes,
+        ) = await asyncio.gather(
+            _gql(_Q_NAVN, "CVR_Navn"),
+            _gql(_Q_ADRESSERING, "CVR_Adressering"),
+            _gql(_Q_BRANCHE, "CVR_Branche"),
+            _gql(_Q_FORM, "CVR_Virksomhedsform"),
+            _gql(_Q_DELTAGER, "CVR_FuldtAnsvarligDeltagerRelation"),
         )
-        r2.raise_for_status()
-        data2 = r2.json()
-
-        if errors := data2.get("errors"):
-            _log.warning("CVR GraphQL detail errors for %s: %s", cvr_norm, errors)
-
-        d = data2.get("data", {})
-
-        navn_nodes = d.get("navn", {}).get("nodes", [])
-        addr_nodes = d.get("adressering", {}).get("nodes", [])
-        branch_nodes = d.get("branche", {}).get("nodes", [])
-        form_nodes = d.get("form", {}).get("nodes", [])
-        deltager_nodes = d.get("deltager", {}).get("nodes", [])
 
         name = _best_navn(navn_nodes)
         if not name and legal_name:
