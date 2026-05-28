@@ -299,8 +299,8 @@ def _best_address(nodes: list[dict]) -> dict | None:
     if not nodes:
         return None
     current = _current(nodes)
-    # Prefer registered seat address
-    seat = [n for n in current if "BELIGGENHED" in (n.get("AdresseringAnvendelse") or "")]
+    # Prefer registered seat address (API returns lowercase, so compare case-insensitively)
+    seat = [n for n in current if "beliggenhed" in (n.get("AdresseringAnvendelse") or "").lower()]
     pool = seat or current
     return pool[0] if pool else None
 
