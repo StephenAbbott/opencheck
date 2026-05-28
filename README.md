@@ -2,9 +2,7 @@
 
 # OpenCheck
 
-Customer due diligence risk checks powered by the Legal Entity Identifier (LEI), open data and open standards.
-
-Try the demo at **https://opencheck.onrender.com/**
+Customer due diligence risk checks powered by the Legal Entity Identifier (LEI), open data and open standards - including the [Beneficial Ownership Data Standard](https://standard.openownership.org/en/0.4.0/) (BODS). Try the demo at **https://opencheck.onrender.com/**
 
 ## What is OpenCheck?
 
@@ -62,7 +60,7 @@ The first frontend build copies bundled images for `@openownership/bods-dagre` i
 | [Sources](docs/sources.md) | Full adapter table — 27 sources, license, entry point, description |
 | [Risk signals](docs/risk-signals.md) | All 12 signal codes: source-derived, AMLA CDD RTS, FATF jurisdiction, cross-source name match, ICIJ Offshore Leaks |
 | [Configuration](docs/configuration.md) | Environment variables, Render deployment, running the test suite |
-| [Development history](docs/status.md) | All 42 phases |
+| [Development history](docs/status.md) | All 43 phases |
 
 ## Licensing
 
@@ -75,7 +73,6 @@ The frontend also uses the [Beneficial Ownership Visualisation System](https://w
 - **Live opentender.eu integration** — the adapter is wired but `live_available=False` for now.
 - **Surface `RELATED_*` signals on the BODS dagre graph** — currently they appear in the chip strip; ideally they'd render an OpenSanctions / EveryPolitician icon next to the matching node.
 - **A "complex offshore" demo subject** that fires every AMLA chip simultaneously.
-- **Re-enable OpenAleph** with an LEI-friendly entry path, once we have a curated demo set.
 - **BODS RDF / SPARQL backbone** via Oxigraph — load the assembled BODS bundle into a triple store, expose `/sparql` for the published Open Ownership red-flag queries.
 
 Open issues and discussion live in the [GitHub repo](https://github.com/StephenAbbott/opencheck).
