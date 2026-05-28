@@ -371,7 +371,7 @@ class CvrDenmarkAdapter(SourceAdapter):
 
         try:
             bundle = await self._fetch_bundle(
-                client, int(cvr_norm), cvr_norm, params
+                client, int(cvr_norm), cvr_norm, params, legal_name=legal_name
             )
         finally:
             if own_client:
@@ -390,6 +390,8 @@ class CvrDenmarkAdapter(SourceAdapter):
         cvr_int: int,
         cvr_norm: str,
         params: dict[str, str],
+        *,
+        legal_name: str | None = None,
     ) -> dict[str, Any]:
         # --- Request 1: fetch CVR_Virksomhed by CVRNummer ---
         r1 = await client.post(
