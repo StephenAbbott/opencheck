@@ -67,7 +67,9 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Daily Mail and General Trust",
     hint: "UK-listed media holding",
     signals: [
+      { code: "TRUST_OR_ARRANGEMENT", confidence: "high" },
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
+      { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
     ],
   },
   {
@@ -75,8 +77,9 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     name: "BP P.L.C.",
     hint: "UK oil major",
     signals: [
-      { code: "NON_EU_JURISDICTION", confidence: "high" },
+      { code: "TRUST_OR_ARRANGEMENT", confidence: "high" },
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
+      { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
     ],
   },
   {
@@ -85,7 +88,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "Russian state oil",
     signals: [
       { code: "SANCTIONED", confidence: "high" },
-      { code: "FATF_GREY_LIST", confidence: "high" },
+      { code: "RELATED_SANCTIONED", confidence: "high" },
     ],
   },
   {
@@ -94,7 +97,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "Iran-linked UK bank",
     signals: [
       { code: "SANCTIONED", confidence: "high" },
-      { code: "FATF_BLACK_LIST", confidence: "high" },
+      { code: "NON_EU_JURISDICTION", confidence: "high" },
     ],
   },
   {
@@ -103,8 +106,6 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "UK waste management",
     signals: [
       { code: "NON_EU_JURISDICTION", confidence: "high" },
-      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
-      { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
     ],
   },
   {
@@ -112,6 +113,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Hornsea 1 Limited",
     hint: "UK offshore wind",
     signals: [
+      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
       { code: "NON_EU_JURISDICTION", confidence: "high" },
     ],
   },
@@ -121,6 +123,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "UK care provider",
     signals: [
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
+      { code: "NON_EU_JURISDICTION", confidence: "high" },
     ],
   },
   {
@@ -128,7 +131,8 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Taqa Bratani Limited",
     hint: "UAE-owned UK oil & gas",
     signals: [
-      { code: "NON_EU_JURISDICTION", confidence: "high" },
+      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
+      { code: "RELATED_SANCTIONED", confidence: "high" },
     ],
   },
   {
@@ -136,8 +140,8 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Newcastle United FC",
     hint: "Saudi-owned football club",
     signals: [
-      { code: "NON_EU_JURISDICTION", confidence: "high" },
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
+      { code: "NON_EU_JURISDICTION", confidence: "high" },
     ],
   },
 ];
