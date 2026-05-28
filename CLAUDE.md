@@ -67,3 +67,85 @@ Specific rules:
 - `validate_raw()` is called at the end of `fetch()` on the fully-assembled bundle, before returning.
 - BODS interest type for **directors/managing officials** is `seniorManagingOfficial`, not `appointmentOfBoard`.
 - `appointmentOfBoard` is for right-to-appoint-and-remove style ownership interests.
+
+---
+
+## Deployment
+
+- Backend is deployed on **Render** (https://opencheck-api.onrender.com). Environment variables (API keys, etc.) must be set in the Render dashboard as well as in `.env` for local development.
+- Frontend is served separately. The backend CORS origin is configured via `OPENCHECK_CORS_ORIGIN` in `.env`.
+- Render free-tier instances spin down when idle — the first request after inactivity may be slow.
+
+---
+
+## Datafordeler CVR API (Denmark) — hard-won constraints
+
+These are non-obvious and cost significant debugging time. Do not deviate from them.
+
+- **Endpoint**: `https://graphql.datafordeler.dk/CVR/v2` — the `v` prefix is mandatory; `CVR/2` returns 404.
+- **Auth**: `?apiKey=<raw_key>` query parameter only. No base64 encoding, no `service_user_id`, no `Authorization` header. The config field is `cvr_denmark_api_key`.
+- **DAF-GQL-0008**: Aliases are forbidden. Every field must be queried by its canonical name.
+- **DAF-GQL-0010**: Only one root field per GraphQL operation. A single query cannot fetch `CVR_Navn` and `CVR_Adressering` together — each must be a separate HTTP request.
+- Consequence of DAF-GQL-0008/0010: the adapter issues **6 sequential/parallel HTTP requests** per lookup (one virksomhed lookup + 5 detail queries run via `asyncio.gather`).
+- **sekvens field**: `sekvens=0` is the primary/current record for names and branches. Higher values (1, 2…) are secondary or historical. Always prefer `sekvens==0`.
+- **Legal form text**: Use the API's own `vaerdiTekst` field first; fall back to the hardcoded `_LEGAL_FORM_MAP` only when `vaerdiTekst` is absent. The map's numeric codes do not match what the API returns for many entities.
+- **Address preference**: The `AdresseringAnvendelse` field value for the primary business address is `"beliggenhedsadresse"` (lowercase). Use case-insensitive matching: `"beliggenhed" in (val or "").lower()`.
+- **Timeout**: The Datafordeler API is slow. All CVR `client.post()` calls must use `timeout=45.0` explicitly, overriding the global 15 s read timeout in `http.py`.
+- **GLEIF RA code for Denmark**: `RA000170` (Erhvervsstyrelsen/CVR).
+
+---
+
+## KvK (Netherlands) — rate limit handling
+
+- The KvK open-data endpoint returns HTTP 429 when the global rate limit is hit.
+- The shared `httpx.AsyncHTTPTransport(retries=2)` only retries on network errors, not HTTP 4xx responses.
+- The adapter handles 429 with an explicit retry loop: up to `_MAX_RETRIES=3` retries, honouring the `Retry-After` response header when present, otherwise using exponential backoff starting at 2 s (capped at 30 s).
+
+---
+
+## INPI (France) — legal publishing prohibition
+
+**Security constraint — must never be relaxed.**
+
+INPI entries where `beneficiaireEffectif == True` MUST be silently skipped and never included in any output, BODS statements, or API responses. This is required by French law (Loi Sapin II / décret 2017-1094), which prohibits republishing beneficial ownership data from the INPI register. Always check this flag before processing any INPI record.
+
+---
+
+## Frontend curated examples (App.tsx)
+
+`EXAMPLE_LEIS` in `frontend/src/App.tsx` contains pre-computed `signals` arrays shown on the picker cards before the user clicks. These must be kept in sync with what the risk engine actually produces for each entity. When the risk engine changes (new signals, retired signals, confidence changes), update `EXAMPLE_LEIS` to match.
+
+Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_OWNERSHIP_LAYERS`, `COMPLEX_CORPORATE_STRUCTURE`, `SANCTIONED`, `RELATED_SANCTIONED`, `NON_EU_JURISDICTION`. Confidence `"high"` renders as `●`, `"medium"` as `◐`.
+
+---
+
+## Test suite
+
+- **973 tests, 4 skipped** as of Phase 42 (CVR Denmark + KvK retry fix). Run `python -m pytest` from `backend/`.
+- Async adapter tests use `pytest-asyncio` with `asyncio_mode = "auto"` (set in `pyproject.toml`).
+- HTTP mocking: use `respx` for httpx-based adapters; use `unittest.mock.AsyncMock` with `patch("...build_client", ...)` for adapters that call `build_client()` directly.
+- GraphQL adapters (CVR): mock by inspecting the request body (`request.content`) to route different query strings to different fixture responses.
+- Always check `tests/test_sources.py` (expected registry set) and `tests/test_app.py` (expected `/sources` endpoint set) when adding a new adapter — both require explicit entries.
+
+---
+
+## GLEIF RA codes for active adapters
+
+| Country | Adapter | RA code |
+|---|---|---|
+| UK | companies_house | RA000585 |
+| Netherlands | kvk | RA000463 |
+| Norway | brreg | RA000394 |
+| Ireland | cro | RA000215 |
+| Latvia | ur_latvia | RA000327 |
+| Lithuania | jar_lithuania | RA000330 |
+| France | inpi | RA000580 |
+| Sweden | bolagsverket | RA000523 |
+| Estonia | ariregister | RA000198 |
+| Belgium | bce_belgium | RA000143 |
+| Austria | firmenbuch | RA000128 |
+| Poland | krs_poland | RA000439 |
+| Slovakia | rpo_slovakia | RA000476 |
+| Singapore | acra_singapore | RA000509 |
+| Canada | corporations_canada | RA000072 |
+| Denmark | cvr_denmark | RA000170 |
