@@ -161,16 +161,19 @@ function bodsToElements(statements: Stmt[]): ElementDefinition[] {
       ?? ((rd.names as RD[] | undefined)?.[0]?.fullName as string)
       ?? id.slice(-8);
 
-    elements.push({
-      data: {
-        id,
-        label: name,
-        recordType: rt,
-        image: nodeImage(stmt),
-        flagImage: flagImage(stmt),
-        stmt,
-      },
-    });
+    const flag = flagImage(stmt);
+    const nodeData: Record<string, unknown> = {
+      id,
+      label: name,
+      recordType: rt,
+      image: nodeImage(stmt),
+      stmt,
+    };
+    // Only set flagImage when one exists — the [flagImage] selector below
+    // only activates for nodes where this attribute is defined and non-empty.
+    if (flag) nodeData.flagImage = flag;
+
+    elements.push({ data: nodeData });
   }
 
   // Second pass: relationship statements → edges
@@ -248,14 +251,15 @@ const STYLESHEET: StylesheetStyle[] = [
       "background-color": "#ffffff",
       "border-width": 2,
       "border-color": "#1a1a2e",
-      // BOVS entity/person icon centred in the node
+      // BOVS entity/person icon: explicit 60% size, no background-fit.
+      // background-fit: contain conflicts with explicit background-width/height,
+      // causing the icon to drift during zoom. Without background-fit, Cytoscape
+      // defaults background-position to 50% 50% (CSS semantics = centred),
+      // which stays stable at all zoom levels.
       "background-image": "data(image)",
-      "background-fit": "contain",
-      "background-clip": "node",
       "background-width": "60%",
       "background-height": "60%",
-      "background-position-x": "50%",
-      "background-position-y": "50%",
+      "background-repeat": "no-repeat",
       label: "data(label)",
       "text-valign": "bottom",
       "text-halign": "center",
@@ -265,6 +269,22 @@ const STYLESHEET: StylesheetStyle[] = [
       color: "#1a1a2e",
       "text-wrap": "wrap",
       "text-max-width": "120px",
+    } as cytoscape.Css.Node,
+  },
+  // Nodes WITH a country jurisdiction flag — overlay flag in top-right corner.
+  // Uses Cytoscape's multi-background-image array syntax. The [flagImage]
+  // attribute selector only matches nodes where flagImage was set (never null).
+  {
+    selector: "node[flagImage]",
+    style: {
+      "background-image": ["data(image)", "data(flagImage)"] as unknown as string,
+      "background-width": ["60%", "45%"] as unknown as string,
+      "background-height": ["60%", "32%"] as unknown as string,
+      // Icon: default 50% 50% (centered). Flag: right edge at node right,
+      // top edge at node top — CSS semantics: 100% = right-aligned, 0% = top.
+      "background-position-x": ["50%", "100%"] as unknown as string,
+      "background-position-y": ["50%", "0%"] as unknown as string,
+      "background-repeat": ["no-repeat", "no-repeat"] as unknown as string,
     } as cytoscape.Css.Node,
   },
   {
