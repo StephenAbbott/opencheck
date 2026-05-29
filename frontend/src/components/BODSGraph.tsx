@@ -269,6 +269,15 @@ const STYLESHEET: StylesheetStyle[] = [
       "border-width": 3,
     } as cytoscape.Css.Node,
   },
+  // Badge overlay nodes (jurisdiction flags) — suppress all inherited text/label styles.
+  {
+    selector: "node[isBadge]",
+    style: {
+      label: "",
+      "text-opacity": 0,
+      events: "no",
+    } as cytoscape.Css.Node,
+  },
   // ── Edges ────────────────────────────────────────────────────────────────
   {
     selector: "edge",
@@ -375,26 +384,72 @@ export default function BODSGraph({ statements }: { statements: unknown[] }) {
 
     cyRef.current = cy;
 
-    // After layout, apply flag background images via node.style().
-    // This sidesteps any stylesheet data() mapper timing issues and lets us
-    // apply multi-background-image arrays cleanly per-node.
+    // After layout: add BOVS-compliant jurisdiction flag overlay badges.
+    //
+    // BOVS "Metadata Overlays" spec:
+    //   "Metadata values are shown by overlaying icons around the circumference
+    //    of the related Party's Node. Prefer positions at 45°, 135°, 225°, 315°."
+    //   "Jurisdiction: identify the State using the same icon you would use for
+    //    that State as a Party." → country flag at the 45° (NE) position.
+    //
+    // Implementation: add small locked phantom nodes positioned so their centre
+    // is exactly at the 45° circumference point of each entity/person node.
+    // They extend equally inside and outside the circle — this is the correct
+    // BOVS overlay appearance. They are non-selectable and non-movable.
     cy.ready(() => {
+      const NODE_RADIUS = 40; // half of the 80px node width
+      const BADGE_W = 30;     // flag badge width  (px, model space)
+      const BADGE_H = 20;     // flag badge height — 3:2 flag aspect ratio
+      const ANGLE = Math.PI / 4; // 45° NE compass point
+
+      const badgeDefs: cytoscape.ElementDefinition[] = [];
+
       cy.nodes().forEach((node) => {
         const flag = node.data("flagUrl") as string | undefined;
-        if (flag) {
-          const icon = node.data("icon") as string;
-          node.style({
-            "background-image": [icon, flag],
-            "background-width": ["60%", "45%"],
-            "background-height": ["60%", "32%"],
-            // icon centred (default 50%/50%), flag top-right
-            "background-position-x": ["50%", "100%"],
-            "background-position-y": ["50%", "0%"],
-            "background-repeat": ["no-repeat", "no-repeat"],
-          });
-        }
+        if (!flag) return;
+
+        const pos = node.position();
+        // Centre the badge on the 45° circumference point.
+        // Screen y increases downward, so NE = (cos45, -sin45).
+        badgeDefs.push({
+          data: {
+            id: `badge-${node.id()}`,
+            flagUrl: flag,
+            isBadge: true,
+          },
+          position: {
+            x: pos.x + NODE_RADIUS * Math.cos(ANGLE),
+            y: pos.y - NODE_RADIUS * Math.sin(ANGLE),
+          },
+        });
       });
-      cy.fit(undefined, 32);
+
+      if (badgeDefs.length > 0) {
+        const badges = cy.add(badgeDefs);
+        badges.forEach((badge) => {
+          badge.style({
+            shape: "rectangle",
+            width: BADGE_W,
+            height: BADGE_H,
+            "background-color": "#ffffff",
+            "background-image": badge.data("flagUrl") as string,
+            "background-fit": "cover",
+            "border-width": 1.5,
+            "border-color": "#888888",
+            "border-opacity": 0.7,
+            label: "",
+            // Badges render on top of main nodes.
+            "z-index": 999,
+          });
+          // Prevent user interaction — badges are decorative only.
+          badge.lock();
+          badge.unselectify();
+        });
+      }
+
+      // Fit only the main (non-badge) nodes so badges at circumference edges
+      // don't cause unnecessary whitespace.
+      cy.fit(cy.nodes().filter("[!isBadge]"), 32);
     });
 
     return () => {
