@@ -3,19 +3,7 @@
  * ownership/control graph using Cytoscape.js with the dagre hierarchical
  * layout (top-to-bottom, matching BOVS vertical directionality).
  *
- * Replaces the previous @openownership/bods-dagre implementation, which
- * required loading a UMD bundle via a classic <script> tag, fought a
- * BezierJS edge-offset bug, and couldn't produce BOVS-compliant annotations
- * without extensive post-render DOM surgery.
- *
- * Cytoscape.js advantages:
- *  - 7.9M weekly downloads; academically published; MIT licence.
- *  - Full CSS-style stylesheet: node icons, edge labels, arrowheads
- *    all declared declaratively — no DOM hacks.
- *  - cytoscape-dagre plugin re-uses the same dagre layout algorithm,
- *    so the visual hierarchy is unchanged.
- *  - BOVS icons served from /bods-dagre-images/ via background-image.
- *  - Edge labels for BOVS annotation are a first-class feature.
+ * Replaces the previous @openownership/bods-dagre implementation.
  */
 
 import { useEffect, useRef } from "react";
@@ -25,6 +13,7 @@ import cytoscape, {
   type StylesheetStyle,
 } from "cytoscape";
 import dagre from "cytoscape-dagre";
+import { BOVS_ICONS } from "../lib/bovsIcons";
 
 // Register the dagre layout once at module load.
 cytoscape.use(dagre);
@@ -63,20 +52,15 @@ const INTEREST_LABELS: Record<string, string> = {
   rightToProfitOrIncomeFromAssets: "Profits from assets",
 };
 
-/** Build a short BOVS-compliant annotation string for one interest. */
 function interestLabel(interest: Interest): string {
   const base = INTEREST_LABELS[interest.type ?? ""] ?? interest.type ?? "Interest";
   const share = interest.share;
   if (!share) return base;
-
-  // Exact percentage
   if (share.exact != null) {
-    // Replace "Owns"/"Controls…" with quantified form
     const verb = base.startsWith("Owns") ? "Owns" : "Controls";
     const rest = base.startsWith("Owns") ? base.slice(4).trim() : base.slice(8).trim();
     return `${verb} ${share.exact}%${rest ? ` ${rest}` : ""}`.trim();
   }
-  // Range
   const lo = share.minimum ?? share.exclusiveMinimum;
   const hi = share.maximum ?? share.exclusiveMaximum;
   if (lo != null && hi != null) {
@@ -86,58 +70,71 @@ function interestLabel(interest: Interest): string {
   return base;
 }
 
-/** Build a combined label from all interests on one relationship statement. */
 function buildEdgeLabel(interests: Interest[]): string {
   if (!interests.length) return "";
-  // Prioritise: beneficial ownership first, then others
   const sorted = [...interests].sort((a, b) => {
     if (a.beneficialOwnershipOrControl && !b.beneficialOwnershipOrControl) return -1;
     if (!a.beneficialOwnershipOrControl && b.beneficialOwnershipOrControl) return 1;
     return 0;
   });
-  // Show at most 2 interests to avoid label overflow
   return sorted.slice(0, 2).map(interestLabel).join("\n");
 }
 
 // ---------------------------------------------------------------------------
-// BOVS node-type → background image URL (served from /bods-dagre-images/)
+// BOVS node icons (base64 data URIs) and country flag URLs
+//
+// WHY DATA URIS FOR ICONS:
+// The BOVS SVGs (some exported from Adobe Illustrator) include xmlns:xlink
+// namespace declarations. When Cytoscape's Canvas renderer calls
+//   new Image().src = "/bods-dagre-images/bovs-organisation.svg"
+// some browsers silently treat the SVG as potentially referencing external
+// resources via xlink and refuse to draw it on a tainted canvas.
+// Base64 data URIs bypass this entirely — no HTTP request, no CORS check,
+// no external resource concern. They load immediately and reliably.
+//
+// FLAGS stay as URL paths because:
+//  a) 265 SVGs × ~1KB = too large to inline
+//  b) Flag SVGs are simple (no xlink) and load fine as canvas images
+//  c) Flags are applied via node.style() after layout, not via stylesheet
+//     data() mapper, which avoids any mapper-timing issues.
 // ---------------------------------------------------------------------------
 
-const IMAGES_BASE = "/bods-dagre-images";
+const FLAGS_BASE = "/bods-dagre-images/flags";
 
-const ENTITY_TYPE_IMAGE: Record<string, string> = {
-  registeredEntity:       `${IMAGES_BASE}/bovs-organisation.svg`,
-  registeredEntityListed: `${IMAGES_BASE}/bovs-listed.svg`,
-  legalEntity:            `${IMAGES_BASE}/bovs-organisation.svg`,
-  arrangement:            `${IMAGES_BASE}/bovs-arrangement.svg`,
-  anonymousEntity:        `${IMAGES_BASE}/bovs-entity-unknown.svg`,
-  unknownEntity:          `${IMAGES_BASE}/bovs-entity-unknown.svg`,
-  state:                  `${IMAGES_BASE}/bovs-state.svg`,
-  stateBody:              `${IMAGES_BASE}/bovs-statebody.svg`,
+const ENTITY_TYPE_ICON: Record<string, string> = {
+  registeredEntity:       BOVS_ICONS["registeredEntity"],
+  registeredEntityListed: BOVS_ICONS["registeredEntityListed"],
+  legalEntity:            BOVS_ICONS["registeredEntity"],
+  arrangement:            BOVS_ICONS["arrangement"],
+  anonymousEntity:        BOVS_ICONS["anonymousEntity"],
+  unknownEntity:          BOVS_ICONS["unknownEntity"],
+  state:                  BOVS_ICONS["state"],
+  stateBody:              BOVS_ICONS["stateBody"],
 };
 
-const PERSON_TYPE_IMAGE: Record<string, string> = {
-  knownPerson:     `${IMAGES_BASE}/bovs-person.svg`,
-  anonymousPerson: `${IMAGES_BASE}/bovs-person-unknown.svg`,
-  unknownPerson:   `${IMAGES_BASE}/bovs-person-unknown.svg`,
+const PERSON_TYPE_ICON: Record<string, string> = {
+  knownPerson:     BOVS_ICONS["knownPerson"],
+  anonymousPerson: BOVS_ICONS["anonymousPerson"],
+  unknownPerson:   BOVS_ICONS["anonymousPerson"],
 };
 
-function nodeImage(stmt: Stmt): string {
+function nodeIcon(stmt: Stmt): string {
   const rd = (stmt.recordDetails ?? {}) as RD;
-  if (stmt.recordType === "person") {
+  const rt = (stmt.recordType ?? stmt.statementType) as string;
+  if (rt === "person" || rt === "personStatement") {
     const personType = (rd.personType as string) ?? "knownPerson";
-    return PERSON_TYPE_IMAGE[personType] ?? `${IMAGES_BASE}/bovs-person.svg`;
+    return PERSON_TYPE_ICON[personType] ?? BOVS_ICONS["knownPerson"];
   }
   const entityType = ((rd.entityType as RD)?.type as string) ?? "registeredEntity";
-  return ENTITY_TYPE_IMAGE[entityType] ?? `${IMAGES_BASE}/bovs-organisation.svg`;
+  return ENTITY_TYPE_ICON[entityType] ?? BOVS_ICONS["registeredEntity"];
 }
 
-function flagImage(stmt: Stmt): string | null {
+function flagUrl(stmt: Stmt): string | null {
   const rd = (stmt.recordDetails ?? {}) as RD;
   const jur = (rd.jurisdiction ?? rd.incorporatedInJurisdiction) as RD | undefined;
   const code = (jur?.code as string | undefined)?.toLowerCase().split("-")[0];
   if (!code) return null;
-  return `${IMAGES_BASE}/flags/${code}.svg`;
+  return `${FLAGS_BASE}/${code}.svg`;
 }
 
 // ---------------------------------------------------------------------------
@@ -161,17 +158,16 @@ function bodsToElements(statements: Stmt[]): ElementDefinition[] {
       ?? ((rd.names as RD[] | undefined)?.[0]?.fullName as string)
       ?? id.slice(-8);
 
-    const flag = flagImage(stmt);
+    const flag = flagUrl(stmt);
     const nodeData: Record<string, unknown> = {
       id,
       label: name,
       recordType: rt,
-      image: nodeImage(stmt),
-      stmt,
+      // Data URI — loads in canvas with no HTTP or CORS step.
+      icon: nodeIcon(stmt),
     };
-    // Only set flagImage when one exists — the [flagImage] selector below
-    // only activates for nodes where this attribute is defined and non-empty.
-    if (flag) nodeData.flagImage = flag;
+    // flagUrl stored separately; applied via node.style() after layout.
+    if (flag) nodeData.flagUrl = flag;
 
     elements.push({ data: nodeData });
   }
@@ -195,30 +191,22 @@ function bodsToElements(statements: Stmt[]): ElementDefinition[] {
         : (rawSubject as RD | undefined)?.describedByEntityStatement as string
         ?? (rawSubject as RD | undefined)?.describedByPersonStatement as string;
 
-    // Skip dangling references or unidentified BO (inline dict with "reason")
     if (!sourceId || !targetId) continue;
     if (!nodeIds.has(sourceId) || !nodeIds.has(targetId)) continue;
 
     const interests = (rd.interests ?? []) as Interest[];
     const edgeLabel = buildEdgeLabel(interests);
 
-    // Determine primary interest category for edge colour
-    const hasOwnership = interests.some(i =>
-      i.type === "shareholding" || i.type === "votingRights");
-    const hasControl = interests.some(i =>
-      !hasOwnership && (
-        i.type === "appointmentOfBoard" ||
-        i.type === "otherInfluenceOrControl" ||
-        i.type === "controlViaCompanyRulesOrArticles" ||
-        i.type === "controlByLegalFramework"
-      )
+    const hasOwnership = interests.some(i => i.type === "shareholding" || i.type === "votingRights");
+    const hasControl = !hasOwnership && interests.some(i =>
+      i.type === "appointmentOfBoard" ||
+      i.type === "otherInfluenceOrControl" ||
+      i.type === "controlViaCompanyRulesOrArticles" ||
+      i.type === "controlByLegalFramework"
     );
     const isRole = interests.some(i =>
-      i.type === "seniorManagingOfficial" ||
-      i.type === "boardMember" ||
-      i.type === "boardChair"
+      i.type === "seniorManagingOfficial" || i.type === "boardMember" || i.type === "boardChair"
     );
-
     const category = hasOwnership ? "ownership" : hasControl ? "control" : isRole ? "role" : "unknown";
 
     elements.push({
@@ -228,7 +216,6 @@ function bodsToElements(statements: Stmt[]): ElementDefinition[] {
         target: targetId,
         label: edgeLabel,
         category,
-        interests,
       },
     });
   }
@@ -251,12 +238,10 @@ const STYLESHEET: StylesheetStyle[] = [
       "background-color": "#ffffff",
       "border-width": 2,
       "border-color": "#1a1a2e",
-      // BOVS entity/person icon: explicit 60% size, no background-fit.
-      // background-fit: contain conflicts with explicit background-width/height,
-      // causing the icon to drift during zoom. Without background-fit, Cytoscape
-      // defaults background-position to 50% 50% (CSS semantics = centred),
-      // which stays stable at all zoom levels.
-      "background-image": "data(image)",
+      // BOVS icon: data URI so canvas loading is immediate and reliable.
+      // Explicit 60% size; Cytoscape defaults background-position to
+      // 50% 50% (CSS semantics = centred), stable at all zoom levels.
+      "background-image": "data(icon)",
       "background-width": "60%",
       "background-height": "60%",
       "background-repeat": "no-repeat",
@@ -269,22 +254,6 @@ const STYLESHEET: StylesheetStyle[] = [
       color: "#1a1a2e",
       "text-wrap": "wrap",
       "text-max-width": "120px",
-    } as cytoscape.Css.Node,
-  },
-  // Nodes WITH a country jurisdiction flag — overlay flag in top-right corner.
-  // Uses Cytoscape's multi-background-image array syntax. The [flagImage]
-  // attribute selector only matches nodes where flagImage was set (never null).
-  {
-    selector: "node[flagImage]",
-    style: {
-      "background-image": ["data(image)", "data(flagImage)"] as unknown as string,
-      "background-width": ["60%", "45%"] as unknown as string,
-      "background-height": ["60%", "32%"] as unknown as string,
-      // Icon: default 50% 50% (centered). Flag: right edge at node right,
-      // top edge at node top — CSS semantics: 100% = right-aligned, 0% = top.
-      "background-position-x": ["50%", "100%"] as unknown as string,
-      "background-position-y": ["50%", "0%"] as unknown as string,
-      "background-repeat": ["no-repeat", "no-repeat"] as unknown as string,
     } as cytoscape.Css.Node,
   },
   {
@@ -322,7 +291,6 @@ const STYLESHEET: StylesheetStyle[] = [
       "edge-text-rotation": "autorotate",
     } as cytoscape.Css.Edge,
   },
-  // Ownership edges (shareholding / voting) — dark blue
   {
     selector: "edge[category = 'ownership']",
     style: {
@@ -331,7 +299,6 @@ const STYLESHEET: StylesheetStyle[] = [
       color: "#1565c0",
     } as cytoscape.Css.Edge,
   },
-  // Control edges (board, influence) — orange
   {
     selector: "edge[category = 'control']",
     style: {
@@ -340,7 +307,6 @@ const STYLESHEET: StylesheetStyle[] = [
       color: "#e65100",
     } as cytoscape.Css.Edge,
   },
-  // Role edges (director, board member) — purple, dashed
   {
     selector: "edge[category = 'role']",
     style: {
@@ -350,7 +316,6 @@ const STYLESHEET: StylesheetStyle[] = [
       "line-style": "dashed",
     } as cytoscape.Css.Edge,
   },
-  // Unknown edges — grey
   {
     selector: "edge[category = 'unknown']",
     style: {
@@ -373,7 +338,6 @@ export default function BODSGraph({ statements }: { statements: unknown[] }) {
     const el = containerRef.current;
     if (!el) return;
 
-    // Destroy any existing Cytoscape instance before re-rendering.
     if (cyRef.current) {
       cyRef.current.destroy();
       cyRef.current = null;
@@ -385,7 +349,6 @@ export default function BODSGraph({ statements }: { statements: unknown[] }) {
     const elements = bodsToElements(stmts);
 
     if (elements.filter(e => !e.data.source).length === 0) {
-      // No renderable nodes
       el.innerHTML = '<p class="text-xs text-oo-muted p-2 italic">No nodes to visualise.</p>';
       return;
     }
@@ -397,13 +360,12 @@ export default function BODSGraph({ statements }: { statements: unknown[] }) {
       layout: {
         name: "dagre",
         // @ts-expect-error — dagre-specific options not in base type
-        rankDir: "TB",       // top-to-bottom per BOVS vertical rule
+        rankDir: "TB",
         nodeSep: 60,
         rankSep: 100,
         edgeSep: 20,
         animate: false,
       },
-      // Interaction
       userZoomingEnabled: true,
       userPanningEnabled: true,
       boxSelectionEnabled: false,
@@ -413,8 +375,25 @@ export default function BODSGraph({ statements }: { statements: unknown[] }) {
 
     cyRef.current = cy;
 
-    // Fit the graph with padding after layout completes.
+    // After layout, apply flag background images via node.style().
+    // This sidesteps any stylesheet data() mapper timing issues and lets us
+    // apply multi-background-image arrays cleanly per-node.
     cy.ready(() => {
+      cy.nodes().forEach((node) => {
+        const flag = node.data("flagUrl") as string | undefined;
+        if (flag) {
+          const icon = node.data("icon") as string;
+          node.style({
+            "background-image": [icon, flag],
+            "background-width": ["60%", "45%"],
+            "background-height": ["60%", "32%"],
+            // icon centred (default 50%/50%), flag top-right
+            "background-position-x": ["50%", "100%"],
+            "background-position-y": ["50%", "0%"],
+            "background-repeat": ["no-repeat", "no-repeat"],
+          });
+        }
+      });
       cy.fit(undefined, 32);
     });
 
@@ -434,7 +413,6 @@ export default function BODSGraph({ statements }: { statements: unknown[] }) {
 
   return (
     <div className="bg-white border border-oo-rule rounded-oo">
-      {/* Toolbar */}
       <div className="flex items-center gap-1 px-2 py-1 border-b border-oo-rule text-xs text-oo-muted">
         <button
           type="button"
@@ -460,11 +438,10 @@ export default function BODSGraph({ statements }: { statements: unknown[] }) {
         >
           Fit
         </button>
-        {/* Legend */}
         <span className="ml-auto flex items-center gap-3">
           <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#1565c0]"/>Ownership</span>
           <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#e65100]"/>Control</span>
-          <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#6a1b9a] border-dashed" style={{borderTop:'1.5px dashed #6a1b9a', background:'none'}}/>Role</span>
+          <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#6a1b9a]" style={{borderTop:"1.5px dashed #6a1b9a", background:"none"}}/>Role</span>
         </span>
       </div>
       <div
