@@ -69,9 +69,24 @@ _KEHA_RE = re.compile(
 # ---------------------------------------------------------------------------
 
 def _soap_envelope(query_name: str, params: dict[str, str]) -> str:
-    """Build a minimal SOAP 1.1 envelope for an Ariregister operation."""
+    """Build a SOAP 1.1 envelope for an Ariregister X-Road v6 operation.
+
+    Three hard-won constraints confirmed from the live XSD (elementFormDefault="qualified"):
+
+    1. Operation element name: bare name only — ``detailandmed_v2`` not
+       ``arireg.detailandmed_v2``. The ``arireg.`` prefix is NOT part of the
+       WSDL operation name and causes HTTP 500 "Processing Failure".
+
+    2. Namespace qualification: the XSD schema uses elementFormDefault="qualified",
+       so <keha> and every child element must carry the ``nik:`` prefix.
+       Unqualified elements cause HTTP 500 "'Element _keha missing from complexType'".
+
+    3. Query field names: all lowercase as declared in the XSD schema —
+       ``ariregistri_kood`` (not ``Isikukood_Registrikood``), ``keel`` (not ``Keel``),
+       ``yandmed`` (not ``Yandmed``), ``iandmed`` (not ``Iandmed``).
+    """
     inner = "\n".join(
-        f"         <{k}>{v}</{k}>" for k, v in params.items()
+        f"            <nik:{k}>{v}</nik:{k}>" for k, v in params.items()
     )
     return (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -80,9 +95,9 @@ def _soap_envelope(query_name: str, params: dict[str, str]) -> str:
         "   <soapenv:Header/>\n"
         "   <soapenv:Body>\n"
         f"      <nik:{query_name}>\n"
-        "         <keha>\n"
+        "         <nik:keha>\n"
         f"{inner}\n"
-        "         </keha>\n"
+        "         </nik:keha>\n"
         f"      </nik:{query_name}>\n"
         "   </soapenv:Body>\n"
         "</soapenv:Envelope>"
@@ -257,17 +272,25 @@ class AriregisterAdapter(SourceAdapter):
         password: str,
     ) -> dict[str, Any] | None:
         """Call detailandmed_v2 and return the first ettevotja dict."""
+        # Field names and values confirmed from the live XSD schema
+        # (xroad6_detailandmed_v2.xsd / detailandmed_v6_Query type).
+        # All required sequence elements must be present; all lowercase.
         params = {
-            "Isikukood_Registrikood": registry_code,
-            "Keel": "eng",
-            "Yandmed": "1",
-            "Iandmed": "1",
+            "ariregistri_kood": registry_code.lstrip("0") or registry_code,
+            "keel": "eng",
+            "yandmed": "1",   # include general company data
+            "iandmed": "1",   # include person/role data (shareholders, officers)
+            "kandmed": "0",   # registration card data — not needed
+            "dandmed": "0",   # other data — not needed
+            "maarused": "0",  # court orders — not needed
+            "ainult_kehtivad": "0",  # include all records, not just active
+            "staatused": "0",        # status history — not needed
             "ariregister_kasutajanimi": username,
             "ariregister_parool": password,
             "ariregister_valjundi_formaat": "json",
         }
         try:
-            data = await self._post_soap(client, "arireg.detailandmed_v2", params)
+            data = await self._post_soap(client, "detailandmed_v2", params)
         except Exception as exc:
             logger.error("ariregister: detailandmed_v2 error for %s: %s", registry_code, exc)
             return None
@@ -287,15 +310,15 @@ class AriregisterAdapter(SourceAdapter):
     ) -> list[dict]:
         """Call tegelikudKasusaajad_v2 and return the kasusaaja list."""
         params = {
-            "Isikukood_Registrikood": registry_code,
-            "Ainult_kehtivad": "1",
+            "ariregistri_kood": registry_code.lstrip("0") or registry_code,
+            "ainult_kehtivad": "0",  # include all BO records, not just current
             "ariregister_kasutajanimi": username,
             "ariregister_parool": password,
             "ariregister_valjundi_formaat": "json",
         }
         try:
             data = await self._post_soap(
-                client, "arireg.tegelikudKasusaajad_v2", params
+                client, "tegelikudKasusaajad_v2", params
             )
         except Exception as exc:
             logger.warning(
