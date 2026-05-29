@@ -42,8 +42,9 @@ frontend/dist/
 frontend/.vite/
 # Vite drops these next to the config when esbuild jit-compiles it.
 frontend/vite.config.ts.timestamp-*.mjs
-# bods-dagre images are copied in by a vite plugin at build start.
-frontend/public/bods-dagre-images/
+# bods-dagre-images/ is now committed as a static asset (no longer generated
+# by a vite plugin — the @openownership/bods-dagre package was removed in
+# Phase 44 when the graph renderer was migrated to Cytoscape.js).
 *.local
 
 # ---- Editors / OS ----
