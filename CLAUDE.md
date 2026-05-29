@@ -9,6 +9,20 @@
 
 ---
 
+## Current state (Phase 45)
+
+**Test suite**: 1733 passed, 6 skipped, 5 xfailed. Run `python -m pytest` from `backend/`.
+
+**Frontend graph renderer**: Cytoscape.js (replaced `@openownership/bods-dagre` in Phase 44). Component: `frontend/src/components/BODSGraph.tsx`. Uses a React HTML overlay layer for BOVS icons and flags — never use Cytoscape's `background-image` for icons (canvas taint from Adobe Illustrator `xmlns:xlink` SVGs). BOVS icons are base64 data URIs in `frontend/src/lib/bovsIcons.ts`. Flags are served from `frontend/public/bods-dagre-images/flags/`. The overlay recomputes on `cy.on('viewport')`. Flag badges are at 45° NE circumference; risk signal badges at 315° NW.
+
+**Risk signal overlays**: BOVS Option C implemented. `buildSignalMap()` in BODSGraph.tsx reads `evidence.statement_id` (SANCTIONED/PEP), `evidence.subject_statement_id` (RELATED_*), `evidence.matches[].statement_id` (TRUST/AMLA), `evidence.jurisdictions[].statement_id` (FATF/NON_EU), `evidence.longest_path[]` (COMPLEX_OWNERSHIP_LAYERS). Single signal → labelled pill at 315° NW; multiple → "N ⚠" stack badge.
+
+**Estonian adapter**: `ariregister.py` is now a public web scraper — `GET ariregister.rik.ee/eng/company/{reg}/company_print_json`. No credentials. The previous SOAP/X-Road approach (Phase 37) used `ariregxmlv6.rik.ee` with `ARIREGISTER_USERNAME`/`ARIREGISTER_PASSWORD` credentials from a paid RIK contract that turned out not to grant data access. Do NOT revert to SOAP. The HTML parser extracts officers (→ Estonian role codes), shareholders (person vs entity from ID code length), and BOs. `map_ariregister()` in mapper.py is unchanged.
+
+**GLEIF RA code for Estonia**: `RA000181` (confirmed from live GLEIF data — the CLAUDE.md table below has a typo: RA000198 is wrong, RA000181 is correct).
+
+---
+
 ## Critical rule: new source adapters require changes in TWO places in `routers/lookup.py`
 
 `routers/lookup.py` contains **two independent derived-identifier blocks** — one for the synchronous `/lookup` endpoint and one for the SSE `/lookup-stream` endpoint. They must be kept in sync.
@@ -78,6 +92,52 @@ Specific rules:
 
 ---
 
+## Frontend: BODSGraph (Cytoscape.js)
+
+**Do not use `@openownership/bods-dagre`** — it was removed in Phase 44. The graph is now pure Cytoscape.js + `cytoscape-dagre`.
+
+**Icon rendering**: BOVS entity/person icons are in `frontend/src/lib/bovsIcons.ts` as base64 data URIs (9 icons). They are rendered in a React HTML overlay (`position: absolute, pointerEvents: none`) above the Cytoscape canvas. The canvas background-image approach does NOT work for these SVGs because Adobe Illustrator export includes `xmlns:xlink` which causes browsers to silently refuse drawing on a tainted canvas.
+
+**Flag rendering**: Country flags served from `/bods-dagre-images/flags/{code}.svg`. Applied in the same HTML overlay as icons. Flag badge position: 45° NE circumference — `(cx + r·cos45°, cy − r·sin45°)`. Badge size: proportional to node radius (0.75r × 0.50r).
+
+**Signal badge rendering**: BOVS Option C risk overlays at 315° NW circumference — `(cx − r·cos45°, cy − r·sin45°)`. Single signal: labelled pill. Multiple signals: stack badge "N ⚠" in worst-severity colour. Signal→statementId mapping via `buildSignalMap()` which reads evidence fields.
+
+**Overlay update**: `cy.on('viewport', updateOverlays)` fires on every pan/zoom. All coordinates computed in screen-space pixels.
+
+**Edge styling**: All styled clones (`.own`/`.control`) from bods-dagre were removed. Arrowheads injected via custom SVG marker `#oc-bovs-arrow` in SVG `<defs>`.
+
+**BOVS arrowhead marker**: injected after draw() — `<marker id="oc-bovs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="strokeWidth" markerWidth="8" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/></marker>`. Applied to all `g.edgePath path` elements.
+
+**Edge categories**: `ownership` (blue #1565c0), `control` (orange #e65100), `role` (purple #6a1b9a, dashed), `unknown` (grey #888).
+
+---
+
+## Frontend: Risk signal system
+
+**`frontend/src/components/risk/RiskChip.tsx`**: `RISK_PRESENTATION` maps signal codes to `{label, classes}`. `CONFIDENCE_DOT`: `high`=`●`, `medium`=`◐`, `low`=`○`.
+
+**Signal codes and colours** (bg / text):
+- `SANCTIONED`, `RELATED_SANCTIONED` → rose (#ffe4e6 / #be123c)
+- `FATF_BLACK_LIST` → red (#fee2e2 / #991b1b)
+- `PEP`, `RELATED_PEP` → violet (#f5f3ff / #6d28d9)
+- `COMPLEX_CORPORATE_STRUCTURE` → red (#fef2f2 / #b91c1c)
+- `FATF_GREY_LIST` → orange dark (#fff7ed / #9a3412)
+- `NON_EU_JURISDICTION` → orange (#fff7ed / #c2410c)
+- `OFFSHORE_LEAKS` → amber (#fef3c7 / #92400e)
+- `TRUST_OR_ARRANGEMENT` → indigo (#eef2ff / #4338ca)
+- `COMPLEX_OWNERSHIP_LAYERS` → sky (#f0f9ff / #0369a1)
+
+**Signal→BODS node mapping** (evidence fields):
+- `SANCTIONED`, `PEP` → `evidence.statement_id` (added in Phase 45 via `_bods_stable_id(source_id, hit_id)` in `risk.py`)
+- `RELATED_SANCTIONED`, `RELATED_PEP` → `evidence.subject_statement_id`
+- `TRUST_OR_ARRANGEMENT`, `NOMINEE`, AMLA composites → `evidence.matches[].statement_id`
+- `NON_EU_JURISDICTION`, `FATF_BLACK_LIST`, `FATF_GREY_LIST` → `evidence.jurisdictions[].statement_id`
+- `COMPLEX_OWNERSHIP_LAYERS` → `evidence.longest_path[]` (array of statementIds)
+
+**`SourceBucketCard`** passes `detail.risk_signals` to `<BODSGraph signals={...} />`.
+
+---
+
 ## Datafordeler CVR API (Denmark) — hard-won constraints
 
 These are non-obvious and cost significant debugging time. Do not deviate from them.
@@ -111,6 +171,24 @@ INPI entries where `beneficiaireEffectif == True` MUST be silently skipped and n
 
 ---
 
+## Estonian adapter (ariregister) — hard-won constraints
+
+**Do NOT use the SOAP/X-Road API** at `ariregxmlv6.rik.ee`. The Phase 37 SOAP approach had a paid RIK contract that authenticated correctly (HTTP 200) but returned zero results for all queries. RIK confirmed the contract type did not grant data-query access.
+
+**Current approach (Phase 45)**: Public web scraper. No credentials needed.
+- **Main endpoint**: `GET https://ariregister.rik.ee/eng/company/{reg_code}/company_print_json`
+- **Search endpoint**: `GET https://ariregister.rik.ee/eng/api/autocomplete?q={query}` → JSON
+- **GLEIF RA code**: `RA000181` (NOT RA000198 — the table below has a typo, RA000181 is confirmed from live GLEIF data)
+- **HTML structure**: Bootstrap label/value rows (`col-md-4 text-muted` / `col font-weight-bold`). Tables identified by header keywords.
+- **Officer role mapping**: English labels → Estonian codes (e.g. "Management board member" → `JUHL`, "Procurist" → `PROK`, "Liquidator" → `LIKV`)
+- **Person type detection**: 11-digit code starting with 3-6 = natural person (F); 8-digit = legal entity (J)
+- **BO control mapping**: "Indirect ownership" → `K`, "Direct ownership" → `O`, "Voting rights" → `H`
+- **Not found detection**: If `str(r.url)` does not contain `/eng/company/`, the server redirected away (company not found) → return stub bundle
+- **Bundle format**: Unchanged from Phase 37 — `map_ariregister()` in `bods/mapper.py` needs no changes
+- `ARIREGISTER_USERNAME` / `ARIREGISTER_PASSWORD` in config.py are retained for backward compatibility but NOT read by the adapter
+
+---
+
 ## Frontend curated examples (App.tsx)
 
 `EXAMPLE_LEIS` in `frontend/src/App.tsx` contains pre-computed `signals` arrays shown on the picker cards before the user clicks. These must be kept in sync with what the risk engine actually produces for each entity. When the risk engine changes (new signals, retired signals, confidence changes), update `EXAMPLE_LEIS` to match.
@@ -121,10 +199,7 @@ Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_
 
 ## Test suite
 
-- **1738 passed, 6 skipped, 5 xfailed** as of BODS compliance audit Phases 1–8. Run `python -m pytest` from `backend/`.
-- **Phase 44**: Migrated BODS graph renderer from `@openownership/bods-dagre` to Cytoscape.js. BODSGraph.tsx now uses a React HTML overlay layer for pixel-perfect BOVS icon and jurisdiction flag rendering — icons centred at 60% of node diameter, flags as BOVS Metadata Overlays at 45° (NE) circumference point.
-- **Ariregister rewrite**: Estonian adapter rewritten from SOAP/X-Road to public web scraper (`/eng/company/{reg}/company_print_json`). No credentials required. RIK confirmed the public portal is freely accessible.
-- **Risk signal overlays**: BOVS Option C — coloured pill badges at 315° (NW) circumference for SANCTIONED/PEP/FATF signals; stack badge "N ⚠" for multiple signals; colours match existing RiskChip palette.
+- **1733 passed, 6 skipped, 5 xfailed** as of Phase 45. Run `python -m pytest` from `backend/`.
 - Async adapter tests use `pytest-asyncio` with `asyncio_mode = "auto"` (set in `pyproject.toml`).
 - HTTP mocking: use `respx` for httpx-based adapters; use `unittest.mock.AsyncMock` with `patch("...build_client", ...)` for adapters that call `build_client()` directly.
 - GraphQL adapters (CVR): mock by inspecting the request body (`request.content`) to route different query strings to different fixture responses.
@@ -144,7 +219,7 @@ Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_
 | Lithuania | jar_lithuania | RA000330 |
 | France | inpi | RA000580 |
 | Sweden | bolagsverket | RA000523 |
-| Estonia | ariregister | RA000198 |
+| Estonia | ariregister | **RA000181** (confirmed live; ignore any reference to RA000198) |
 | Belgium | bce_belgium | RA000143 |
 | Austria | firmenbuch | RA000128 |
 | Poland | krs_poland | RA000439 |
@@ -152,3 +227,30 @@ Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_
 | Singapore | acra_singapore | RA000509 |
 | Canada | corporations_canada | RA000072 |
 | Denmark | cvr_denmark | RA000170 |
+
+---
+
+## BODS mapper key conventions
+
+- `_stable_id(*parts)` — deterministic SHA-256-based ID; format `"opencheck-" + 24 hex chars`. Used as both `statementId` and `recordId` for entity/person statements.
+- `make_entity_statement()`, `make_person_statement()`, `make_relationship_statement()` — factory functions in `mapper.py`. Always use these; never hand-build BODS statements.
+- `_source_block(source_id, url)` — builds the `source` field. Every source_id must be in the `source_names` dict in mapper.py (6 were missing, fixed in Phase 43).
+- `_official_registers` set in mapper.py — source IDs that get `"type": ["officialRegister"]` instead of `"thirdParty"]`.
+- Relationship statements: `statementId != recordId` (unlike entity/person where they're equal).
+- Risk signal `statement_id` in evidence: `_bods_stable_id(source_id, hit_id)` — added to SANCTIONED/PEP evidence in `risk.py` in Phase 45 so frontend can look up which node to overlay.
+
+---
+
+## Key files quick reference
+
+| File | Purpose |
+|---|---|
+| `backend/opencheck/routers/lookup.py` | Main lookup endpoint + SSE stream — both must have identical derived-identifier blocks |
+| `backend/opencheck/bods/mapper.py` | All BODS v0.4 mapping functions; ~6800 lines |
+| `backend/opencheck/risk.py` | Risk signal rules (PEP, SANCTIONED, AMLA, FATF, etc.) |
+| `backend/opencheck/cross_check.py` | RELATED_PEP / RELATED_SANCTIONED from cross-source name matching |
+| `frontend/src/components/BODSGraph.tsx` | Cytoscape.js ownership graph with BOVS icons, flags, edge annotations, risk overlays |
+| `frontend/src/components/risk/RiskChip.tsx` | Risk signal colours and labels |
+| `frontend/src/lib/bovsIcons.ts` | Base64 data URIs for 9 BOVS entity/person icons |
+| `frontend/public/bods-dagre-images/` | BOVS icons (SVG) + 265 country flag SVGs |
+| `backend/tests/test_ariregister.py` | HTML-fixture tests for the web scraper adapter |
