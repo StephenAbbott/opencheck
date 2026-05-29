@@ -125,9 +125,11 @@ class Settings(BaseSettings):
     bce_belgium_db_file: str | None = Field(default=None, alias="BCE_BELGIUM_DB_FILE")
 
     # --- Estonian e-Business Register (ariregister) ---
-    # Live SOAP API credentials issued under the free RIK data contract.
-    # Register at: https://www.rik.ee/en/e-business-register/api
-    # Rate limit: 50,000 requests/day, 1 simultaneous request.
+    # No credentials required — the adapter uses the public printable-page
+    # endpoint at ariregister.rik.ee without authentication.
+    # ARIREGISTER_USERNAME / ARIREGISTER_PASSWORD are retained here only for
+    # backward compatibility (existing .env files); they are no longer read
+    # by the adapter.
     ariregister_username: str | None = Field(default=None, alias="ARIREGISTER_USERNAME")
     ariregister_password: str | None = Field(default=None, alias="ARIREGISTER_PASSWORD")
 
