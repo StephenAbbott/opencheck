@@ -16,9 +16,9 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 43** — BODS compliance audit (Phases 1–8) — eight-phase audit of the full BODS v0.4 mapper and validator surface area. Highlights: fixed two bugs in `validate_shape()` that caused all three canonical `bods-fixtures` cases to fail; fixed `_source_block()` for 6 missing source names and 4 incorrect `officialRegister`/`thirdParty` type classifications; added exhaustive unit tests for all four date-normalisation helpers (`_ee_date`, `_normalise_wikidata_date`, `_lv_date`, `_at_date_iso`); verified identifier scheme completeness across all 16 national registry adapters. New test files: `test_bods_validator.py`, `test_bods_fixtures_conformance.py`, `test_bods_statement_metadata.py`, `test_bods_date_helpers.py`, `test_bods_identifier_schemes.py`, plus graph connectivity, correctness matrix, multi-source, and export tests. 1738 backend tests (6 skipped, 5 xfailed). Frontend type-checks clean.
+**Latest: Phase 44** — BODS graph renderer migrated from `@openownership/bods-dagre` (45 npm downloads/week, required UMD global + SVGInjector XHR workarounds, BezierJS edge-offset bug) to **Cytoscape.js** (7.9M downloads/week, MIT, academically published) with `cytoscape-dagre` for hierarchical layout. BOVS-compliant edge annotations built-in (ownership blue, control orange, role purple/dashed). Node icons and jurisdiction flags rendered via a React HTML overlay layer above the Cytoscape canvas — pixel-perfect centering at all zoom levels, flags as BOVS Metadata Overlays at the 45° (NE) circumference point per spec. 1738 backend tests unchanged.
 
-*Previous: [Phase 42 — CVR Denmark adapter](docs/status.md)*
+*Previous: [Phase 43 — BODS compliance audit](docs/status.md)*
 
 → [Full development history](docs/status.md)
 

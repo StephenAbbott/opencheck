@@ -122,6 +122,7 @@ Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_
 ## Test suite
 
 - **1738 passed, 6 skipped, 5 xfailed** as of BODS compliance audit Phases 1–8. Run `python -m pytest` from `backend/`.
+- **Phase 44**: Migrated BODS graph renderer from `@openownership/bods-dagre` to Cytoscape.js. BODSGraph.tsx now uses a React HTML overlay layer for pixel-perfect BOVS icon and jurisdiction flag rendering — icons centred at 60% of node diameter, flags as BOVS Metadata Overlays at 45° (NE) circumference point.
 - Async adapter tests use `pytest-asyncio` with `asyncio_mode = "auto"` (set in `pyproject.toml`).
 - HTTP mocking: use `respx` for httpx-based adapters; use `unittest.mock.AsyncMock` with `patch("...build_client", ...)` for adapters that call `build_client()` directly.
 - GraphQL adapters (CVR): mock by inspecting the request body (`request.content`) to route different query strings to different fixture responses.
