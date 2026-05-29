@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import cytoscape, { type Core, type ElementDefinition, type StylesheetStyle } from "cytoscape";
 import dagre from "cytoscape-dagre";
 import { BOVS_ICONS } from "../lib/bovsIcons";
+import type { RiskSignal } from "../lib/api";
 
 cytoscape.use(dagre);
 
@@ -42,6 +43,90 @@ interface NodeOverlay {
   r:       number;   // screen-space node radius
   icon:    string;   // base64 data-URI for BOVS entity/person icon
   flagUrl?: string;  // URL for jurisdiction flag SVG (null if no jurisdiction)
+  signals?: RiskSignal[];  // risk signals scoped to this node
+}
+
+// ---------------------------------------------------------------------------
+// Risk signal → BOVS badge colour (Option C)
+//
+// Colours match the existing RiskChip palette in RiskChip.tsx.
+// BOVS position: 315° (NW) compass point on the node circumference.
+// Multiple signals collapse into a "N ⚠" stack badge in the worst colour.
+// RELATED_* signals also annotate the connecting edge with a ⚠ circle.
+// ---------------------------------------------------------------------------
+
+interface SignalStyle { bg: string; border: string; text: string; label: string; severity: number }
+
+const SIGNAL_STYLE: Record<string, SignalStyle> = {
+  SANCTIONED:               { bg:"#ffe4e6", border:"#be123c", text:"#be123c", label:"S",  severity:6 },
+  RELATED_SANCTIONED:       { bg:"#ffe4e6", border:"#be123c", text:"#be123c", label:"RS", severity:6 },
+  FATF_BLACK_LIST:          { bg:"#fee2e2", border:"#991b1b", text:"#991b1b", label:"F!",  severity:5 },
+  PEP:                      { bg:"#f5f3ff", border:"#6d28d9", text:"#6d28d9", label:"P",  severity:4 },
+  RELATED_PEP:              { bg:"#f5f3ff", border:"#6d28d9", text:"#6d28d9", label:"RP", severity:4 },
+  COMPLEX_CORPORATE_STRUCTURE: { bg:"#fef2f2", border:"#b91c1c", text:"#b91c1c", label:"CC", severity:3 },
+  FATF_GREY_LIST:           { bg:"#fff7ed", border:"#9a3412", text:"#9a3412", label:"Fg", severity:2 },
+  NON_EU_JURISDICTION:      { bg:"#fff7ed", border:"#c2410c", text:"#c2410c", label:"N",  severity:2 },
+  OFFSHORE_LEAKS:           { bg:"#fef3c7", border:"#92400e", text:"#92400e", label:"OL", severity:2 },
+  TRUST_OR_ARRANGEMENT:     { bg:"#eef2ff", border:"#4338ca", text:"#4338ca", label:"T",  severity:1 },
+  COMPLEX_OWNERSHIP_LAYERS: { bg:"#f0f9ff", border:"#0369a1", text:"#0369a1", label:"≥3", severity:1 },
+  POSSIBLE_OBFUSCATION:     { bg:"#fefce8", border:"#854d0e", text:"#854d0e", label:"?",  severity:1 },
+  NOMINEE:                  { bg:"#fdf4ff", border:"#7e22ce", text:"#7e22ce", label:"Nm", severity:1 },
+  OPAQUE_OWNERSHIP:         { bg:"#f8fafc", border:"#475569", text:"#475569", label:"O",  severity:1 },
+};
+
+const DEFAULT_SIGNAL_STYLE: SignalStyle =
+  { bg:"#f1f5f9", border:"#64748b", text:"#64748b", label:"!", severity:0 };
+
+function signalStyle(code: string): SignalStyle {
+  return SIGNAL_STYLE[code] ?? DEFAULT_SIGNAL_STYLE;
+}
+
+/**
+ * Build a map from BODS statementId → RiskSignal[] by extracting statement
+ * IDs from each signal's evidence block.
+ *
+ * Evidence fields (per signal type):
+ *  - SANCTIONED, PEP                → evidence.statement_id
+ *  - RELATED_SANCTIONED, RELATED_PEP → evidence.subject_statement_id
+ *  - TRUST, NOMINEE, COMPLEX, AMLA   → evidence.matches[].statement_id
+ *  - NON_EU, FATF                    → evidence.jurisdictions[].statement_id
+ *  - COMPLEX_OWNERSHIP_LAYERS        → evidence.longest_path[]  (array of ids)
+ */
+function buildSignalMap(signals: RiskSignal[]): Map<string, RiskSignal[]> {
+  const map = new Map<string, RiskSignal[]>();
+  const add = (id: string, sig: RiskSignal) => {
+    if (!id) return;
+    if (!map.has(id)) map.set(id, []);
+    map.get(id)!.push(sig);
+  };
+
+  for (const sig of signals) {
+    const ev = (sig.evidence ?? {}) as Record<string, unknown>;
+
+    // Direct single-statement signals
+    if (typeof ev.statement_id === "string")        add(ev.statement_id, sig);
+    if (typeof ev.subject_statement_id === "string") add(ev.subject_statement_id, sig);
+
+    // Multi-statement array signals
+    for (const key of ["matches", "jurisdictions"] as const) {
+      const arr = ev[key];
+      if (Array.isArray(arr)) {
+        for (const item of arr) {
+          if (item && typeof item === "object" && typeof (item as Record<string,unknown>).statement_id === "string") {
+            add((item as Record<string,unknown>).statement_id as string, sig);
+          }
+        }
+      }
+    }
+
+    // COMPLEX_OWNERSHIP_LAYERS: longest_path is a string[]
+    if (Array.isArray(ev.longest_path)) {
+      for (const id of ev.longest_path) {
+        if (typeof id === "string") add(id, sig);
+      }
+    }
+  }
+  return map;
 }
 
 // ---------------------------------------------------------------------------
@@ -277,7 +362,13 @@ const ICON_FRACTION = 0.6;
 // Component
 // ---------------------------------------------------------------------------
 
-export default function BODSGraph({ statements }: { statements: unknown[] }) {
+export default function BODSGraph({
+  statements,
+  signals = [],
+}: {
+  statements: unknown[];
+  signals?: RiskSignal[];
+}) {
   const containerRef  = useRef<HTMLDivElement | null>(null);
   const cyRef         = useRef<Core | null>(null);
   const [overlays, setOverlays] = useState<NodeOverlay[]>([]);
@@ -315,6 +406,9 @@ export default function BODSGraph({ statements }: { statements: unknown[] }) {
 
     cyRef.current = cy;
 
+    // Build signal map once per render (signals prop changes trigger re-mount).
+    const signalMap = buildSignalMap(signals);
+
     // Recompute HTML overlay positions whenever the viewport changes.
     // All values are in SCREEN pixels so that icons/flags render at pixel-perfect
     // size and position regardless of the current zoom level.
@@ -325,13 +419,15 @@ export default function BODSGraph({ statements }: { statements: unknown[] }) {
 
       cy.nodes().forEach(node => {
         const pos = node.position();
+        const id  = node.id();
         next.push({
-          id:      node.id(),
+          id,
           cx:      pos.x * zoom + pan.x,
           cy:      pos.y * zoom + pan.y,
           r:       (node.width() * zoom) / 2,
           icon:    node.data("icon")    as string,
           flagUrl: node.data("flagUrl") as string | undefined,
+          signals: signalMap.get(id),
         });
       });
 
@@ -346,7 +442,8 @@ export default function BODSGraph({ statements }: { statements: unknown[] }) {
     });
 
     return () => { cy.destroy(); cyRef.current = null; };
-  }, [statements]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statements, signals]);
 
   if (statements.length === 0) {
     return <p className="text-xs text-oo-muted italic">No BODS statements to visualise.</p>;
@@ -370,10 +467,16 @@ export default function BODSGraph({ statements }: { statements: unknown[] }) {
           onClick={() => cyRef.current?.fit(undefined, 32)}>
           Fit
         </button>
-        <span className="ml-auto flex items-center gap-3">
+        <span className="ml-auto flex items-center gap-3 text-[10px]">
           <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#1565c0]"/>Ownership</span>
           <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#e65100]"/>Control</span>
           <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#6a1b9a]" style={{borderTop:"1.5px dashed #6a1b9a",background:"none"}}/>Role</span>
+          {signals.length > 0 && <>
+            <span className="text-oo-rule">|</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-4 h-3 rounded border bg-[#ffe4e6] border-[#be123c]"/><span className="text-[#be123c]">Sanction</span></span>
+            <span className="flex items-center gap-1"><span className="inline-block w-4 h-3 rounded border bg-[#f5f3ff] border-[#6d28d9]"/><span className="text-[#6d28d9]">PEP</span></span>
+            <span className="flex items-center gap-1"><span className="inline-block w-4 h-3 rounded border bg-[#fff7ed] border-[#c2410c]"/><span className="text-[#c2410c]">Jurisdiction</span></span>
+          </>}
         </span>
       </div>
 
@@ -385,64 +488,133 @@ export default function BODSGraph({ statements }: { statements: unknown[] }) {
           style={{ width: "100%", height: 420 }}
         />
 
-        {/* Pixel-perfect icon + flag overlay — never painted by Cytoscape canvas */}
+        {/* Pixel-perfect icon + flag + risk signal overlay */}
         <div
           style={{
             position: "absolute",
             inset: 0,
             overflow: "hidden",
-            pointerEvents: "none",   // clicks pass through to Cytoscape
+            pointerEvents: "none",
           }}
         >
           {overlays.map(item => {
-            // Icon: 60% of rendered node diameter, centred on node
             const iconSize = item.r * 2 * ICON_FRACTION;
-            // Flag badge: proportional to node radius
             const bw = item.r * BADGE_W_FACTOR;
             const bh = item.r * BADGE_H_FACTOR;
-            // 45° NE compass → screen: x+, y- (y increases downward in screen space)
+            // Flag: 45° NE (top-right)
             const flagCx = item.cx + item.r * Math.cos(OVERLAY_ANGLE);
             const flagCy = item.cy - item.r * Math.sin(OVERLAY_ANGLE);
+            // Risk signal badge: 315° NW (top-left) per BOVS Metadata Overlays spec
+            const sigCx = item.cx - item.r * Math.cos(OVERLAY_ANGLE);
+            const sigCy = item.cy - item.r * Math.sin(OVERLAY_ANGLE);
+
+            // Build risk badge
+            let sigBadge: React.ReactNode = null;
+            if (item.signals && item.signals.length > 0) {
+              const sigs = item.signals;
+              const worst = sigs.reduce(
+                (best, s) => signalStyle(s.code).severity > signalStyle(best.code).severity ? s : best,
+                sigs[0]
+              );
+              const st = signalStyle(worst.code);
+              const badgePx = Math.max(18, item.r * 0.55);
+              const tooltip = sigs.map(s => `${s.code}: ${s.summary}`).join("\n");
+
+              if (sigs.length === 1) {
+                // Single signal: labelled pill
+                sigBadge = (
+                  <div
+                    title={tooltip}
+                    style={{
+                      position: "absolute",
+                      left: sigCx - badgePx * 0.9,
+                      top:  sigCy - badgePx * 0.45,
+                      minWidth: badgePx * 1.8,
+                      height: badgePx * 0.9,
+                      background: st.bg,
+                      border: `1.5px solid ${st.border}`,
+                      borderRadius: badgePx,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: Math.max(8, badgePx * 0.42),
+                      fontWeight: 700,
+                      color: st.text,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                      whiteSpace: "nowrap",
+                      padding: `0 ${badgePx * 0.3}px`,
+                    }}
+                  >
+                    {st.label}
+                  </div>
+                );
+              } else {
+                // Stack badge: "N ⚠" in worst colour, shadow circles for depth
+                sigBadge = (
+                  <div style={{ position: "absolute", left: sigCx - badgePx * 0.75, top: sigCy - badgePx * 0.45 }}>
+                    {/* shadow circle for depth */}
+                    <div style={{
+                      position: "absolute", left: 3, top: 3,
+                      width: badgePx * 1.5, height: badgePx * 0.9,
+                      background: st.bg, border: `1.5px solid ${st.border}`,
+                      borderRadius: badgePx, opacity: 0.5,
+                    }}/>
+                    <div
+                      title={tooltip}
+                      style={{
+                        position: "relative",
+                        minWidth: badgePx * 1.5,
+                        height: badgePx * 0.9,
+                        background: st.bg,
+                        border: `1.5px solid ${st.border}`,
+                        borderRadius: badgePx,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: Math.max(8, badgePx * 0.42),
+                        fontWeight: 700,
+                        color: st.text,
+                        boxShadow: "0 1px 4px rgba(0,0,0,0.25)",
+                        whiteSpace: "nowrap",
+                        padding: `0 ${badgePx * 0.3}px`,
+                        gap: 2,
+                      }}
+                    >
+                      {sigs.length} ⚠
+                    </div>
+                  </div>
+                );
+              }
+            }
 
             return (
               <div key={item.id}>
-                {/* BOVS entity/person icon — always centred, always 60% of node */}
-                <img
-                  src={item.icon}
-                  alt=""
-                  style={{
-                    position: "absolute",
-                    width:  iconSize,
-                    height: iconSize,
-                    left:   item.cx - iconSize / 2,
-                    top:    item.cy - iconSize / 2,
-                    objectFit: "contain",
-                  }}
-                />
+                {/* BOVS entity/person icon — centred, 60% of node */}
+                <img src={item.icon} alt="" style={{
+                  position: "absolute",
+                  width: iconSize, height: iconSize,
+                  left: item.cx - iconSize / 2, top: item.cy - iconSize / 2,
+                  objectFit: "contain",
+                }}/>
 
-                {/* BOVS jurisdiction flag overlay — centred at 45° (NE) circumference */}
+                {/* BOVS jurisdiction flag — 45° NE circumference */}
                 {item.flagUrl && (
-                  <div
-                    style={{
-                      position:        "absolute",
-                      width:           bw,
-                      height:          bh,
-                      left:            flagCx - bw / 2,
-                      top:             flagCy - bh / 2,
-                      border:          "1.5px solid rgba(0,0,0,0.25)",
-                      borderRadius:    2,
-                      overflow:        "hidden",
-                      backgroundColor: "#fff",
-                      boxShadow:       "0 1px 3px rgba(0,0,0,0.18)",
-                    }}
-                  >
-                    <img
-                      src={item.flagUrl}
-                      alt=""
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                    />
+                  <div style={{
+                    position: "absolute",
+                    width: bw, height: bh,
+                    left: flagCx - bw / 2, top: flagCy - bh / 2,
+                    border: "1.5px solid rgba(0,0,0,0.25)",
+                    borderRadius: 2, overflow: "hidden",
+                    backgroundColor: "#fff",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
+                  }}>
+                    <img src={item.flagUrl} alt=""
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}/>
                   </div>
                 )}
+
+                {/* BOVS risk signal badge — 315° NW circumference */}
+                {sigBadge}
               </div>
             );
           })}

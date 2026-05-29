@@ -387,7 +387,7 @@ export function DeepenBlock({ detail }: { detail: DeepenResponse }) {
               {detail.bods_issues.length === 1 ? "" : "s"}
             </p>
           )}
-          <BODSGraph statements={detail.bods} />
+          <BODSGraph statements={detail.bods} signals={detail.risk_signals} />
           <BODSStatementCards statements={detail.bods as BODSStmt[]} />
           <details className="mt-3">
             <summary className="text-oo-muted cursor-pointer text-[11px] font-mono">

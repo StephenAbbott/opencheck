@@ -279,4 +279,6 @@ def test_dict_serialisation() -> None:
     assert payload["confidence"] == "high"
     assert payload["source_id"] == "opensanctions"
     assert payload["hit_id"] == "NK-x"
-    assert payload["evidence"] == {"topics": ["sanction"]}
+    assert payload["evidence"]["topics"] == ["sanction"]
+    # statement_id is now included so the frontend can highlight the BODS graph node
+    assert "statement_id" in payload["evidence"]

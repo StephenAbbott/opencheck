@@ -79,6 +79,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
+from .bods.mapper import _stable_id as _bods_stable_id
 from .config import get_settings
 from .sources import SearchKind, SourceHit
 
@@ -402,6 +403,8 @@ def _opensanctions_topic_signals_from_entity(
 ) -> list[RiskSignal]:
     topics = _extract_topics(entity)
     out: list[RiskSignal] = []
+    # statement_id lets the frontend highlight the exact BODS graph node.
+    stmt_id = _bods_stable_id(source_id, hit_id)
     if any(t in _PEP_TOPICS for t in topics):
         matched = sorted(t for t in topics if t in _PEP_TOPICS)
         out.append(
@@ -411,7 +414,7 @@ def _opensanctions_topic_signals_from_entity(
                 summary=f"OpenSanctions tags this record as {', '.join(matched)}.",
                 source_id=source_id,
                 hit_id=hit_id,
-                evidence={"topics": matched},
+                evidence={"topics": matched, "statement_id": stmt_id},
             )
         )
     sanction_topics = sorted(
@@ -428,7 +431,7 @@ def _opensanctions_topic_signals_from_entity(
                 ),
                 source_id=source_id,
                 hit_id=hit_id,
-                evidence={"topics": sanction_topics},
+                evidence={"topics": sanction_topics, "statement_id": stmt_id},
             )
         )
     return out
