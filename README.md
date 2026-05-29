@@ -16,9 +16,13 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 44** — BODS graph renderer migrated from `@openownership/bods-dagre` (45 npm downloads/week, required UMD global + SVGInjector XHR workarounds, BezierJS edge-offset bug) to **Cytoscape.js** (7.9M downloads/week, MIT, academically published) with `cytoscape-dagre` for hierarchical layout. BOVS-compliant edge annotations built-in (ownership blue, control orange, role purple/dashed). Node icons and jurisdiction flags rendered via a React HTML overlay layer above the Cytoscape canvas — pixel-perfect centering at all zoom levels, flags as BOVS Metadata Overlays at the 45° (NE) circumference point per spec. 1738 backend tests unchanged.
+**Latest: Phase 45** — Two features shipped together:
 
-*Previous: [Phase 43 — BODS compliance audit](docs/status.md)*
+**Estonian e-Business Register (Ariregister) rewritten** — replaces the SOAP/X-Road API (Phase 37, which required a paid RIK contract that returned no data) with a public web scraper against `ariregister.rik.ee/eng/company/{reg}/company_print_json`. No credentials or API key required. RIK confirmed the public portal is freely accessible. Parses board members, shareholders (with ownership percentages), and beneficial owners from the HTML printable page. Live-tested against Nordic Foods 1 OÜ and Bolt Technology OÜ (181 shareholders).
+
+**BOVS Option C risk signal overlays on ownership diagrams** — coloured pill badges appear at the 315° NW circumference point of relevant BODS graph nodes (per BOVS Metadata Overlays spec). Signal colours match the existing RiskChip palette: rose for `SANCTIONED`/`RELATED_SANCTIONED`/`FATF_BLACK_LIST`, violet for `PEP`/`RELATED_PEP`, orange for `FATF_GREY_LIST`/`NON_EU_JURISDICTION`. Multiple signals on one node collapse into a "N ⚠" stack badge showing count and worst-severity colour. Backend: `statement_id` added to SANCTIONED/PEP evidence so the frontend can resolve which BODS node to overlay without recomputing SHA-256.
+
+*Previous: [Phase 44 — Cytoscape.js migration](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
