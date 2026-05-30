@@ -467,16 +467,17 @@ export default function BODSGraph({
           onClick={() => cyRef.current?.fit(undefined, 32)}>
           Fit
         </button>
-        <span className="ml-auto flex items-center gap-3 text-[10px]">
-          <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#1565c0]"/>Ownership</span>
-          <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#e65100]"/>Control</span>
-          <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#6a1b9a]" style={{borderTop:"1.5px dashed #6a1b9a",background:"none"}}/>Role</span>
-          {signals.length > 0 && <>
-            <span className="text-oo-rule">|</span>
+        <span className="ml-auto flex flex-wrap justify-end gap-x-3 gap-y-1 text-[10px]">
+          <span className="flex items-center gap-3">
+            <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#1565c0]"/>Ownership</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#e65100]"/>Control</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#6a1b9a]" style={{borderTop:"1.5px dashed #6a1b9a",background:"none"}}/>Role</span>
+          </span>
+          {signals.length > 0 && <span className="flex items-center gap-3">
             <span className="flex items-center gap-1"><span className="inline-block w-4 h-3 rounded border bg-[#ffe4e6] border-[#be123c]"/><span className="text-[#be123c]">Sanction</span></span>
             <span className="flex items-center gap-1"><span className="inline-block w-4 h-3 rounded border bg-[#f5f3ff] border-[#6d28d9]"/><span className="text-[#6d28d9]">PEP</span></span>
             <span className="flex items-center gap-1"><span className="inline-block w-4 h-3 rounded border bg-[#fff7ed] border-[#c2410c]"/><span className="text-[#c2410c]">Jurisdiction</span></span>
-          </>}
+          </span>}
         </span>
       </div>
 
