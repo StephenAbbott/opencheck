@@ -38,6 +38,7 @@ from ..bods import (
     map_rpo_slovakia,
     map_rpvs_slovakia,
     map_sec_edgar,
+    map_sudreg_croatia,
     map_ur_latvia,
     map_wikidata,
     map_kvk,
@@ -61,6 +62,7 @@ from ..sources.inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _no
 from ..sources.kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
 from ..sources.zefix import CH_RA_CODES as _ZEFIX_RA_CODES, normalise_uid as _zefix_normalise_uid
 from ..sources.cvr_denmark import DK_CVR_RA_CODE as _DK_CVR_RA_CODE, normalise_cvr as _normalise_cvr
+from ..sources.sudreg_croatia import SUDREG_RA_CODE as _SUDREG_RA_CODE, normalise_mbs as _normalise_mbs
 from .. import bods_data
 from ..cross_check import assess_cross_source_names
 from ..icij_check import assess_icij_names
@@ -108,6 +110,7 @@ _MAPPERS = {
     "ur_latvia": map_ur_latvia,
     "zefix": map_zefix,
     "cvr_denmark": map_cvr_denmark,
+    "sudreg_croatia": map_sudreg_croatia,
 }
 
 _NC_LICENSES = {"CC-BY-NC-4.0", "CC-BY-NC-SA-4.0"}
@@ -402,6 +405,8 @@ async def lookup(
         derived["ca_corp_id"] = _normalise_corp_id(registered_as)
     if registered_at_id == _DK_CVR_RA_CODE and registered_as:
         derived["dk_cvr"] = _normalise_cvr(registered_as)
+    if registered_at_id == _SUDREG_RA_CODE and registered_as:
+        derived["hr_mbs"] = _normalise_mbs(registered_as)
     # NOTE: ACRA Singapore (RA000523) adapter is implemented but not wired into
     # lookup dispatch. The data.gov.sg dataset is bulk CSV only (no live API),
     # which doesn't fit the fast-API pattern used by the other national registers.
@@ -463,6 +468,7 @@ async def lookup(
             **({"be_enterprise_number": derived["be_enterprise_number"]} if "be_enterprise_number" in derived else {}),
             **({"ca_corp_id": derived["ca_corp_id"]} if "ca_corp_id" in derived else {}),
             **({"dk_cvr": derived["dk_cvr"]} if "dk_cvr" in derived else {}),
+            **({"hr_mbs": derived["hr_mbs"]} if "hr_mbs" in derived else {}),
             # wikidata_qid is intentionally omitted here: the QID is sourced
             # from Wikidata's own SPARQL endpoint, not from GLEIF.  Including it
             # on the GLEIF hit would make the reconciler show "gleif" as a
@@ -553,6 +559,8 @@ async def lookup(
         _w1.append(("corporations_canada", REGISTRY["corporations_canada"].fetch(derived["ca_corp_id"], legal_name=legal_name)))
     if "dk_cvr" in derived:
         _w1.append(("cvr_denmark", REGISTRY["cvr_denmark"].fetch(derived["dk_cvr"], legal_name=legal_name)))
+    if "hr_mbs" in derived:
+        _w1.append(("sudreg_croatia", REGISTRY["sudreg_croatia"].fetch(derived["hr_mbs"], legal_name=legal_name)))
     # acra_singapore not dispatched — bulk-data adapter, not wired into live lookup.
     if ocid:
         _w1.append(("opencorporates", REGISTRY["opencorporates"].fetch(ocid)))
@@ -952,6 +960,33 @@ async def lookup(
                 is_stub=False,
             ))
             deepened_bundles.append(("cvr_denmark", derived["dk_cvr"]))
+
+    # Sudski registar (Croatia)
+    if "hr_mbs" in derived:
+        _b = _r.get("sudreg_croatia")
+        if isinstance(_b, Exception):
+            errors["sudreg_croatia"] = _fmt_source_error(_b)
+        elif _b and not _b.get("is_stub"):
+            _hr_subject = _b.get("subject") or {}
+            _hr_name = (
+                (_hr_subject.get("tvrtka") or {}).get("ime")
+                or legal_name
+                or ""
+            )
+            hits.append(SourceHit(
+                source_id="sudreg_croatia",
+                hit_id=derived["hr_mbs"],
+                kind=SearchKind.ENTITY,
+                name=_hr_name,
+                summary=f"HR-MBS {derived['hr_mbs']}",
+                identifiers={
+                    "hr_mbs": derived["hr_mbs"],
+                    **({"hr_oib": _b["oib"]} if _b.get("oib") else {}),
+                },
+                raw=_hr_subject,
+                is_stub=False,
+            ))
+            deepened_bundles.append(("sudreg_croatia", derived["hr_mbs"]))
 
     # ACRA Singapore — disabled (bulk CSV only, not wired into live lookup)
 
@@ -1447,6 +1482,8 @@ async def _lookup_stream_events(
         derived["ca_corp_id"] = _normalise_corp_id(registered_as)
     if registered_at_id == _DK_CVR_RA_CODE and registered_as:
         derived["dk_cvr"] = _normalise_cvr(registered_as)
+    if registered_at_id == _SUDREG_RA_CODE and registered_as:
+        derived["hr_mbs"] = _normalise_mbs(registered_as)
     # ACRA Singapore — disabled (bulk CSV only, not wired into live lookup).
     # To enable: add `derived["sg_name"] = legal_name` when jurisdiction == "SG"
     # and wire the applicable_ids / _add_task / result handler blocks below.
@@ -1512,6 +1549,7 @@ async def _lookup_stream_events(
             **({"be_enterprise_number": derived["be_enterprise_number"]} if "be_enterprise_number" in derived else {}),
             **({"ca_corp_id": derived["ca_corp_id"]} if "ca_corp_id" in derived else {}),
             **({"dk_cvr": derived["dk_cvr"]} if "dk_cvr" in derived else {}),
+            **({"hr_mbs": derived["hr_mbs"]} if "hr_mbs" in derived else {}),
             # wikidata_qid is intentionally omitted here: the QID is sourced
             # from Wikidata's own SPARQL endpoint, not from GLEIF.  Including it
             # on the GLEIF hit would make the reconciler show "gleif" as a
@@ -1571,6 +1609,8 @@ async def _lookup_stream_events(
         applicable_ids.append("corporations_canada")
     if "dk_cvr" in derived:
         applicable_ids.append("cvr_denmark")
+    if "hr_mbs" in derived:
+        applicable_ids.append("sudreg_croatia")
     # acra_singapore not dispatched — bulk-data adapter, not wired into live lookup.
     if ocid:
         applicable_ids.append("opencorporates")
@@ -1677,6 +1717,8 @@ async def _lookup_stream_events(
         _add_task("corporations_canada", REGISTRY["corporations_canada"].fetch(derived["ca_corp_id"], legal_name=legal_name))
     if "dk_cvr" in derived:
         _add_task("cvr_denmark", REGISTRY["cvr_denmark"].fetch(derived["dk_cvr"], legal_name=legal_name))
+    if "hr_mbs" in derived:
+        _add_task("sudreg_croatia", REGISTRY["sudreg_croatia"].fetch(derived["hr_mbs"], legal_name=legal_name))
     # acra_singapore not dispatched — bulk-data adapter, not wired into live lookup.
     if ocid:
         _add_task("opencorporates", REGISTRY["opencorporates"].fetch(ocid))
@@ -1960,6 +2002,21 @@ async def _lookup_stream_events(
                         summary=f"DK-CVR {derived['dk_cvr']}",
                         identifiers={"dk_cvr": derived["dk_cvr"]},
                         raw=result, is_stub=False,
+                    )
+
+            elif source_id == "sudreg_croatia" and "hr_mbs" in derived:
+                if result and not result.get("is_stub"):
+                    _hr_subject = result.get("subject") or {}
+                    hit = SourceHit(
+                        source_id="sudreg_croatia", hit_id=derived["hr_mbs"],
+                        kind=SearchKind.ENTITY,
+                        name=(_hr_subject.get("tvrtka") or {}).get("ime") or legal_name or "",
+                        summary=f"HR-MBS {derived['hr_mbs']}",
+                        identifiers={
+                            "hr_mbs": derived["hr_mbs"],
+                            **({"hr_oib": result["oib"]} if result.get("oib") else {}),
+                        },
+                        raw=_hr_subject, is_stub=False,
                     )
 
             elif source_id == "opencorporates" and ocid:

@@ -227,6 +227,7 @@ Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_
 | Singapore | acra_singapore | RA000509 |
 | Canada | corporations_canada | RA000072 |
 | Denmark | cvr_denmark | RA000170 |
+| Croatia | sudreg_croatia | RA000156 |
 
 ---
 

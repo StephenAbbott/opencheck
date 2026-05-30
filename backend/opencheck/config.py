@@ -143,6 +143,15 @@ class Settings(BaseSettings):
     # GraphQL endpoint: https://graphql.datafordeler.dk/CVR/v2
     cvr_denmark_api_key: str | None = Field(default=None, alias="CVR_DENMARK_API_KEY")
 
+    # --- Croatian Court Register (Sudski registar) ---
+    # OAuth2 Client Credentials Grant against the public sudreg_javni v3 API.
+    # Register at https://sudreg-data.gov.hr/ to obtain the credentials.
+    # NOTE: both the Client ID and Client Secret end in literal dots ("..") —
+    # the trailing dots are an integral part of each value and must be kept.
+    # Token endpoint: https://sudreg-data.gov.hr/api/oauth/token
+    sudreg_client_id: str | None = Field(default=None, alias="SUDREG_CLIENT_ID")
+    sudreg_client_secret: str | None = Field(default=None, alias="SUDREG_CLIENT_SECRET")
+
     # --- OpenTender (DIGIWHIST) ---
     # Pre-built SQLite index. Build with: python scripts/extract_opentender.py
     # Source: https://opentender.eu/all/download (CC BY-NC-SA 4.0)

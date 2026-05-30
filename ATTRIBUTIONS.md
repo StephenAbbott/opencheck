@@ -200,6 +200,18 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Technical notes:** The Datafordeler CVR API uses a bitemporal data model (`virkningFra` / `virkningTil` effect periods). OpenCheck filters to the current valid records at query time (Python-side, `virkningTil = null`). Fetch uses two sequential GraphQL queries: (1) `CVR_Virksomhed` by `CVRNummer` to obtain the internal `CVREnhedsId`; (2) a batch query for `CVR_Navn`, `CVR_Adressering`, `CVR_Branche`, `CVR_Virksomhedsform`, and `CVR_FuldtAnsvarligDeltagerRelation` (fully-liable participants, e.g. general partners in a K/S) using that ID.
 - **Scope:** Natural persons (CVRPerson) require MitID Erhverv credentials and are not available via the standard API key. OpenCheck maps entity data only; beneficial ownership disclosures are not published via CVR open data.
 
+## Sudski registar (Croatian Court Register)
+
+- **Data:** company profiles (legal name, short name, MBS and OIB identifiers, legal form, status, founding date, registered seat, share capital) for entities registered in the Croatian Court Register. The Sudski registar is the authoritative court-administered business register, maintained by the Ministry of Justice and Public Administration (Ministarstvo pravosuđa i uprave).
+- **API:** public `sudreg_javni` v3 JSON API at `https://sudreg-data.gov.hr/api/javni` — OAuth2 client-credentials authentication. OpenAPI: <https://sudreg-data.gov.hr/api/javni/dokumentacija/open_api>
+- **Portal:** <https://sudreg.pravosudje.hr> (public register search); dataset listing at <https://data.gov.hr/ckan/dataset/sudski-registar>
+- **License:** open data published via data.gov.hr under Croatia's open licence (Otvorena dozvola). Free reuse with attribution.
+- **Attribution:** "Contains data from the Sudski registar (Court Register), Ministry of Justice and Public Administration of the Republic of Croatia, published as open data via data.gov.hr."
+- **Entry point:** `hr_mbs` (MBS — court register number, 9-digit zero-padded form) derived from GLEIF RA code `RA000156` (Croatian Court Registry). GLEIF publishes the MBS in the `registeredAs` field as the zero-padded `potpuni_mbs` (e.g. `080000604`).
+- **Key registration:** Free Client ID and Client Secret from <https://sudreg-data.gov.hr/>. Set `SUDREG_CLIENT_ID` and `SUDREG_CLIENT_SECRET` to enable live data. Without them, the adapter returns a stub entry. Note: both credentials end in literal dots (`..`), which are an integral part of each value.
+- **Technical notes:** Fetch uses the OAuth2 client-credentials grant (token endpoint `https://sudreg-data.gov.hr/api/oauth/token`, 6-hour TTL, cached in-process), then a single `GET /detalji_subjekta?tip_identifikatora=mbs&identifikator=<mbs>&expand_relations=true` call. Not-found and invalid identifiers return HTTP 400 with an `error_code` body (not a 404), which the adapter treats as a stub.
+- **Scope:** The public API exposes entity identity data only — officer/board-member and beneficial-ownership data are not published. OpenCheck emits a single BODS entity statement. Croatian beneficial ownership is held in a separate FINA-administered register (Registar stvarnih vlasnika).
+
 ## OpenCorporates
 
 - **Data:** global company registry data — company profiles, registered addresses, officer appointments, and network relationships

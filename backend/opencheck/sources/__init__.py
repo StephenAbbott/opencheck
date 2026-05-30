@@ -32,6 +32,7 @@ from .prh import PrhAdapter
 from .rpo_slovakia import RpoSlovakiaAdapter
 from .rpvs_slovakia import RpvsSlovakiaAdapter
 from .sec_edgar import SecEdgarAdapter
+from .sudreg_croatia import SudregCroatiaAdapter
 from .ur_latvia import UrLatviaAdapter
 from .wikidata import WikidataAdapter
 from .zefix import ZefixAdapter
@@ -62,6 +63,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "rpo_slovakia": RpoSlovakiaAdapter(),
     "rpvs_slovakia": RpvsSlovakiaAdapter(),
     "sec_edgar": SecEdgarAdapter(),
+    "sudreg_croatia": SudregCroatiaAdapter(),
     "ur_latvia": UrLatviaAdapter(),
     "zefix": ZefixAdapter(),
 }

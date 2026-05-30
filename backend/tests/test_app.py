@@ -65,6 +65,7 @@ def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
         "prh",
         "rpo_slovakia",
         "rpvs_slovakia",
+        "sudreg_croatia",
         "zefix",
         "kvk",
     }
