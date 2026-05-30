@@ -165,6 +165,13 @@ export default function App() {
   // Cleanup ref — holds the SSE close function for the current in-flight stream.
   const cleanupRef = useRef<(() => void) | null>(null);
 
+  // Close any open stream when the component unmounts.
+  useEffect(() => () => { cleanupRef.current?.(); }, []);
+  // ``main`` shows the LEI form + lookup result; ``sources`` shows the
+  // source inventory page. Kept as state rather than a router so we
+  // don't pull in react-router for two views.
+  const [view, setView] = useState<"main" | "sources" | "behind">("main");
+
   // Dynamic document title — updates on lookup results and view changes.
   useEffect(() => {
     if (legalName && view === "main") {
@@ -184,13 +191,6 @@ export default function App() {
     const el = document.getElementById("main-content");
     if (el) el.focus({ preventScroll: true });
   }, [view]);
-
-  // Close any open stream when the component unmounts.
-  useEffect(() => () => { cleanupRef.current?.(); }, []);
-  // ``main`` shows the LEI form + lookup result; ``sources`` shows the
-  // source inventory page. Kept as state rather than a router so we
-  // don't pull in react-router for two views.
-  const [view, setView] = useState<"main" | "sources" | "behind">("main");
 
   // Two-mode search: "name" = GLEIF company-name search; "lei" = paste LEI.
   const [searchMode, setSearchMode] = useState<"name" | "lei">("name");
