@@ -428,6 +428,43 @@ class TestRelationshipValidation:
         )
         assert validate_shape([entity, rel]) == []
 
+    def test_interested_party_unspecified_reason_reporting_exception(self):
+        """GLEIF Level 2 Reporting Exceptions are published with the v0.3
+        ``unspecifiedReason`` key (e.g. NO_LEI / interestedPartyExemptFromDisclosure)
+        under a v0.4 version stamp.  The interestedParty has no statement to
+        reference and MUST NOT be flagged as a dangling reference."""
+        entity = _entity()
+        rel = _relationship(
+            subject=_ENTITY_ID,
+            interested_party={
+                "unspecifiedReason": "interestedPartyExemptFromDisclosure",
+                "description": "Exception Reason: NO_LEI.",
+            },
+        )
+        assert validate_shape([entity, rel]) == []
+
+    def test_subject_unspecified_reason_is_ok(self):
+        """An unspecified *subject* (e.g. subjectExemptFromDisclosure) must also
+        be skipped rather than treated as a dangling reference."""
+        person = _person()
+        rel = _relationship(
+            subject={
+                "unspecifiedReason": "subjectExemptFromDisclosure",
+                "description": "Subject exempt.",
+            },
+            interested_party=_PERSON_ID,
+        )
+        assert validate_shape([person, rel]) == []
+
+    def test_subject_reason_v04_is_ok(self):
+        """v0.4 ``reason`` key on the subject side is equally valid."""
+        person = _person()
+        rel = _relationship(
+            subject={"reason": "subjectExemptFromDisclosure"},
+            interested_party=_PERSON_ID,
+        )
+        assert validate_shape([person, rel]) == []
+
     # --- interests --------------------------------------------------------------
 
     def test_invalid_interest_type(self):

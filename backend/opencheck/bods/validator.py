@@ -56,6 +56,21 @@ _VALID_INTEREST_TYPES = {
 }
 
 
+def _is_unspecified_record(party: Any) -> bool:
+    """True if a relationship ``subject``/``interestedParty`` is an unspecified
+    record rather than a statement reference.
+
+    An unspecified record names a *reason* the party cannot be identified
+    instead of pointing at an entity/person statement.  We accept both the
+    BODS v0.4 ``reason`` key and the v0.3 ``unspecifiedReason`` key, since
+    externally sourced datasets (notably GLEIF Level 2 Reporting Exceptions)
+    are published with the v0.3 idiom under a v0.4 version stamp.
+    """
+    return isinstance(party, dict) and (
+        "reason" in party or "unspecifiedReason" in party
+    )
+
+
 def validate_shape(statements: Iterable[dict[str, Any]]) -> list[str]:
     """Return a list of human-readable issues. Empty list means OK.
 
@@ -121,21 +136,25 @@ def validate_shape(statements: Iterable[dict[str, Any]]) -> list[str]:
         elif rt == "relationship":
             # BODS v0.4: subject/interestedParty are bare strings.
             # Legacy wrapped format: {"describedByEntityStatement": "id"}.
+            #
+            # Either side may also be an *unspecified record* rather than a
+            # reference, when the party cannot or need not be identified — e.g.
+            # GLEIF Level 2 Reporting Exceptions (NO_LEI, NON_CONSOLIDATING,
+            # NON_PUBLIC) or a "no beneficial owners" declaration.  These carry
+            # an ``unspecifiedReason`` (BODS v0.3 idiom) or ``reason`` (v0.4
+            # ``UnspecifiedRecord``) key and have no statement to reference, so
+            # they must be skipped rather than treated as dangling references.
             raw_subj = rd.get("subject") or {}
-            subject_sid = (
-                raw_subj if isinstance(raw_subj, str)
-                else raw_subj.get("describedByEntityStatement")
-            )
-            if subject_sid not in known_ids:
-                issues.append(f"{prefix}: subject references unknown statement {subject_sid!r}")
+            if not _is_unspecified_record(raw_subj):
+                subject_sid = (
+                    raw_subj if isinstance(raw_subj, str)
+                    else raw_subj.get("describedByEntityStatement")
+                )
+                if subject_sid not in known_ids:
+                    issues.append(f"{prefix}: subject references unknown statement {subject_sid!r}")
 
             raw_ip = rd.get("interestedParty") or {}
-            if isinstance(raw_ip, dict) and "reason" in raw_ip:
-                # Inline "unidentifiable beneficial owner" object — not a
-                # statement reference.  BODS v0.4 permits this pattern when the
-                # subject entity is unable to confirm or identify a BO.
-                pass
-            else:
+            if not _is_unspecified_record(raw_ip):
                 ip_sid = (
                     raw_ip if isinstance(raw_ip, str)
                     else (raw_ip.get("describedByPersonStatement") or raw_ip.get("describedByEntityStatement"))
