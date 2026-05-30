@@ -165,6 +165,26 @@ export default function App() {
   // Cleanup ref — holds the SSE close function for the current in-flight stream.
   const cleanupRef = useRef<(() => void) | null>(null);
 
+  // Dynamic document title — updates on lookup results and view changes.
+  useEffect(() => {
+    if (legalName && view === "main") {
+      document.title = `${legalName} — OpenCheck`;
+    } else if (view === "sources") {
+      document.title = "Data Sources — OpenCheck";
+    } else if (view === "behind") {
+      document.title = "Behind the Scenes — OpenCheck";
+    } else {
+      document.title = "OpenCheck";
+    }
+  }, [legalName, view]);
+
+  // Focus management — move focus to #main-content on view changes so keyboard
+  // and screen reader users are oriented to the new page content (WCAG 2.4.3).
+  useEffect(() => {
+    const el = document.getElementById("main-content");
+    if (el) el.focus({ preventScroll: true });
+  }, [view]);
+
   // Close any open stream when the component unmounts.
   useEffect(() => () => { cleanupRef.current?.(); }, []);
   // ``main`` shows the LEI form + lookup result; ``sources`` shows the
@@ -544,8 +564,15 @@ export default function App() {
       <main
         id="main-content"
         role="main"
+        tabIndex={-1}
         className="flex-1 px-6 sm:px-10 lg:px-16 py-12 max-w-oo-page mx-auto w-full"
       >
+        {/* Screen-reader live region — announces streaming lookup progress */}
+        <div aria-live="polite" aria-atomic="false" className="sr-only">
+          {lookupMutation.isPending && "Looking up entity, please wait…"}
+          {streaming && legalName && `Loading results for ${legalName}…`}
+          {streamingLei && !streaming && legalName && `Lookup complete for ${legalName}. ${totalHits} result${totalHits === 1 ? "" : "s"} found.`}
+        </div>
         {view === "main" && (
         <>
         {/* ── Search panel — two-tab design ── */}

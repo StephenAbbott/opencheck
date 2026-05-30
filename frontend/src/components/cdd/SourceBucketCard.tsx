@@ -363,7 +363,7 @@ function BODSStatementCards({ statements }: { statements: BODSStmt[] }) {
 // DeepenBlock — shows BODS graph + raw JSON after "Go deeper"
 // ---------------------------------------------------------------------
 
-export function DeepenBlock({ detail }: { detail: DeepenResponse }) {
+export function DeepenBlock({ detail, entityName }: { detail: DeepenResponse; entityName?: string }) {
   return (
     <div className="space-y-4">
       {detail.license_notice && (
@@ -387,7 +387,7 @@ export function DeepenBlock({ detail }: { detail: DeepenResponse }) {
               {detail.bods_issues.length === 1 ? "" : "s"}
             </p>
           )}
-          <BODSGraph statements={detail.bods} signals={detail.risk_signals} />
+          <BODSGraph statements={detail.bods} signals={detail.risk_signals} entityName={entityName} />
           <BODSStatementCards statements={detail.bods as BODSStmt[]} />
           <details className="mt-3">
             <summary className="text-oo-muted cursor-pointer text-[11px] font-mono">
@@ -486,7 +486,7 @@ export function HitRow({
         <div className="mt-4 bg-oo-bg rounded-oo p-4 text-[12px]">
           {loading && <p className="text-oo-muted">Fetching…</p>}
           {error && <p className="text-red-700">{error}</p>}
-          {detail && <DeepenBlock detail={detail} />}
+          {detail && <DeepenBlock detail={detail} entityName={hit.name} />}
         </div>
       )}
     </li>

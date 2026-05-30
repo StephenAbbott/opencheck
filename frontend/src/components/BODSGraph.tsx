@@ -365,9 +365,11 @@ const ICON_FRACTION = 0.6;
 export default function BODSGraph({
   statements,
   signals = [],
+  entityName,
 }: {
   statements: unknown[];
   signals?: RiskSignal[];
+  entityName?: string;
 }) {
   const containerRef  = useRef<HTMLDivElement | null>(null);
   const cyRef         = useRef<Core | null>(null);
@@ -487,6 +489,10 @@ export default function BODSGraph({
           ref={containerRef}
           className="overflow-hidden"
           style={{ width: "100%", height: 420 }}
+          role="img"
+          aria-label={entityName
+            ? `Ownership structure graph for ${entityName}`
+            : "Ownership structure graph"}
         />
 
         {/* Pixel-perfect icon + flag + risk signal overlay */}
