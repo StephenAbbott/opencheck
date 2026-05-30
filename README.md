@@ -16,13 +16,11 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 45** — Two features shipped together:
+**Latest: Phase 46** — Sudski registar (Croatia) adapter
 
-**Estonian e-Business Register (Ariregister) rewritten** — replaces the SOAP/X-Road API (Phase 37, which required a paid RIK contract that returned no data) with a public web scraper against `ariregister.rik.ee/eng/company/{reg}/company_print_json`. No credentials or API key required. RIK confirmed the public portal is freely accessible. Parses board members, shareholders (with ownership percentages), and beneficial owners from the HTML printable page. Live-tested against Nordic Foods 1 OÜ (181 shareholders).
+Entity data from the Croatian Court Register via the public `sudreg_javni` v3 JSON API (`https://sudreg-data.gov.hr/api/javni`). `hr_mbs` derived from GLEIF RA code `RA000156` (Croatian Court Registry), taken from the `registeredAs` field (zero-padded `potpuni_mbs`, e.g. `080000604`). OAuth2 client-credentials grant (token endpoint `…/api/oauth/token`, 6-hour TTL, cached in-process), then a single `GET /detalji_subjekta?tip_identifikatora=mbs&identifikator=<mbs>&expand_relations=true`. Maps legal name, short name, founding date, registered seat, and identifiers `HR-MBS` + `HR-OIB`. Output validated against canonical lib-cove-bods v0.4 (zero schema errors). Not-found/invalid identifiers return HTTP 400 → treated as stub. Wired into both `/lookup` and `/lookup-stream`. Requires `SUDREG_CLIENT_ID` / `SUDREG_CLIENT_SECRET` (free from sudreg-data.gov.hr). 25 new tests.
 
-**BOVS risk signal overlays on ownership diagrams** — coloured pill badges appear at the 315° NW circumference point of relevant BODS graph nodes (per BOVS Metadata Overlays spec). Signal colours match the existing RiskChip palette: rose for `SANCTIONED`/`RELATED_SANCTIONED`/`FATF_BLACK_LIST`, violet for `PEP`/`RELATED_PEP`, orange for `FATF_GREY_LIST`/`NON_EU_JURISDICTION`. Multiple signals on one node collapse into a "N ⚠" stack badge showing count and worst-severity colour. Backend: `statement_id` added to SANCTIONED/PEP evidence so the frontend can resolve which BODS node to overlay without recomputing SHA-256.
-
-*Previous: [Phase 44 — Cytoscape.js migration](docs/status.md)*
+*Previous: [Phase 45 — Ariregister web scraper + BOVS risk signal overlays](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
@@ -68,7 +66,7 @@ The first frontend build copies bundled images for `@openownership/bods-dagre` i
 | [Sources](docs/sources.md) | Full adapter table — 27 sources, license, entry point, description |
 | [Risk signals](docs/risk-signals.md) | All 12 signal codes: source-derived, AMLA CDD RTS, FATF jurisdiction, cross-source name match, ICIJ Offshore Leaks |
 | [Configuration](docs/configuration.md) | Environment variables, Render deployment, running the test suite |
-| [Development history](docs/status.md) | All 43 phases |
+| [Development history](docs/status.md) | All 46 phases |
 
 ## Licensing
 
