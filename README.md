@@ -16,11 +16,11 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 46** — Sudski registar (Croatia) adapter
+**Latest: Phase 47** — Cyprus DRCOR adapter (committed, inactive — bulk-only)
 
-Entity data from the Croatian Court Register via the public `sudreg_javni` v3 JSON API (`https://sudreg-data.gov.hr/api/javni`). `hr_mbs` derived from GLEIF RA code `RA000156` (Croatian Court Registry), taken from the `registeredAs` field (zero-padded `potpuni_mbs`, e.g. `080000604`). OAuth2 client-credentials grant (token endpoint `…/api/oauth/token`, 6-hour TTL, cached in-process), then a single `GET /detalji_subjekta?tip_identifikatora=mbs&identifikator=<mbs>&expand_relations=true`. Maps legal name, short name, founding date, registered seat, and identifiers `HR-MBS` + `HR-OIB`. Output validated against canonical lib-cove-bods v0.4 (zero schema errors). Not-found/invalid identifiers return HTTP 400 → treated as stub. Wired into both `/lookup` and `/lookup-stream`. Requires `SUDREG_CLIENT_ID` / `SUDREG_CLIENT_SECRET` (free from sudreg-data.gov.hr). 25 new tests.
+Cyprus company + officer data from the Department of Registrar of Companies and Intellectual Property (DRCOR), published as three monthly CSVs on data.gov.cy under CC BY 4.0. `cy_he` derived from GLEIF RA code `RA000161` (DRCOR Companies Section), taken from the `registeredAs` field (Greek-script `ΗΕ` number, normalised to digits). data.gov.cy exposes **no working query API** — `/api/1/datastore/query` returns HTTP 404 and the large CSVs (officials ≈126 MB) are not imported into a queryable datastore — so the adapter follows the ACRA/BCE local-SQLite pattern: the three CSVs (organisations, registered office, officials) are built into a local DB via `scripts/extract_cyprus.py` and queried by registration number. Maps a company `entityStatement` plus one person/entity statement per official and a `seniorManagingOfficial` `relationshipStatement` each (no shareholders in the open data). **Kept inactive (ACRA tier): not registered in `REGISTRY` and not wired into `/lookup` or `/lookup-stream`, so it never appears on `/sources`** — pending an API or a bulk-data strategy for OpenCheck. Activate via `CYPRUS_DRCOR_DB_FILE`. 14 new tests.
 
-*Previous: [Phase 45 — Ariregister web scraper + BOVS risk signal overlays](docs/status.md)*
+*Previous: [Phase 46 — Sudski registar (Croatia) adapter](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
