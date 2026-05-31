@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import xml.etree.ElementTree as ET
 from typing import Any
 from urllib.parse import quote
@@ -55,6 +56,12 @@ _NS_ATOM = "http://www.w3.org/2005/Atom"
 
 # Maximum filings retrieved per form type per subject company.
 _MAX_FILINGS = 20
+
+# SEC mandate date for machine-readable (structured XML) Schedule 13D/13G
+# filings. Filings before this date have no primary_doc.xml, so no
+# beneficial-owner data can be extracted from them.
+# See https://www.sec.gov/rules/final/2024/33-11253.pdf
+_STRUCTURED_FROM = "2024-12-18"
 
 # EDGAR citizenship/organisation codes → ISO 3166-1 alpha-2.
 _US_STATES: frozenset[str] = frozenset({
@@ -99,9 +106,7 @@ def _normalise_company_name(name: str) -> str:
         "Netflix, Inc."           -> "NETFLIX"
         "Walt Disney Co"          -> "WALT DISNEY"
     """
-    import re as _re
-
-    s = _re.sub(r"[^A-Z0-9 ]+", " ", (name or "").upper())
+    s = re.sub(r"[^A-Z0-9 ]+", " ", (name or "").upper())
     tokens = s.split()
     while tokens and tokens[0] == "THE":
         tokens = tokens[1:]
@@ -215,42 +220,57 @@ def _parse_filing_refs_from_atom(atom_xml: str) -> list[dict[str, str]]:
     ns = {"atom": _NS_ATOM}
     refs: list[dict[str, str]] = []
     for entry in root.findall("atom:entry", ns):
-        # Form type — <category scheme="…" term="SCHEDULE 13D"/>
-        cat_el = entry.find("atom:category", ns)
-        form_type = (cat_el.get("term") or "").strip() if cat_el is not None else ""
+        # The EDGAR getcompany atom puts the clean filing metadata in
+        # <content> child elements; prefer those and fall back to the
+        # <category>/<id>/<link> elements for other feed variants.
+        content_el = entry.find("atom:content", ns)
+
+        def _ctext(tag: str) -> str:
+            if content_el is None:
+                return ""
+            el = content_el.find(f"atom:{tag}", ns)
+            return _xml_text(el)
+
+        # Form type — <content><filing-type> or <category term=…>.
+        form_type = _ctext("filing-type")
+        if not form_type:
+            cat_el = entry.find("atom:category", ns)
+            form_type = (cat_el.get("term") or "").strip() if cat_el is not None else ""
         if not ("13D" in form_type or "13G" in form_type):
             continue
 
-        # Accession — <id>urn:tag:sec.gov,2008:accession-number=0001104659-26-057435</id>
-        id_el = entry.find("atom:id", ns)
-        id_text = _xml_text(id_el)
-        if "accession-number=" not in id_text:
+        # Accession — <content><accession-number> or the <id> urn tag.
+        raw_accession = _ctext("accession-number")
+        if not raw_accession:
+            id_text = _xml_text(entry.find("atom:id", ns))
+            if "accession-number=" in id_text:
+                raw_accession = id_text.split("accession-number=")[-1].strip()
+        if not raw_accession:
             continue
-        raw_accession = id_text.split("accession-number=")[-1].strip()
         accession = raw_accession.replace("-", "")
 
-        # Filer CIK — extracted from the link href:
+        # Archive CIK — from <content><filing-href> or the <link> href:
         #   /Archives/edgar/data/{cik}/{accession_nodashes}/…-index.htm
-        link_el = entry.find("atom:link", ns)
-        href = (link_el.get("href") or "") if link_el is not None else ""
+        href = _ctext("filing-href")
+        if not href:
+            link_el = entry.find("atom:link", ns)
+            href = (link_el.get("href") or "") if link_el is not None else ""
         filer_cik = ""
         if "/Archives/edgar/data/" in href:
             tail = href.split("/Archives/edgar/data/")[-1]
             cik_candidate = tail.split("/")[0]
             filer_cik = cik_candidate.lstrip("0") or cik_candidate
 
-        # Filed date — prefer <summary>Filed: 2026-04-15</summary>;
-        # fall back to the date prefix of <updated>.
-        filed = ""
-        summary_el = entry.find("atom:summary", ns)
-        if summary_el is not None:
-            summary_text = _xml_text(summary_el)
-            if "Filed:" in summary_text:
-                filed = summary_text.split("Filed:")[-1].strip()
+        # Filed date — <content><filing-date> is a clean YYYY-MM-DD; fall back
+        # to a date found in <summary> ("Filed: …") or the <updated> prefix.
+        filed = _ctext("filing-date")
         if not filed:
-            updated_el = entry.find("atom:updated", ns)
-            if updated_el is not None:
-                filed = _xml_text(updated_el)[:10]
+            summary_text = _xml_text(entry.find("atom:summary", ns))
+            m = re.search(r"\d{4}-\d{2}-\d{2}", summary_text)
+            if m:
+                filed = m.group(0)
+        if not filed:
+            filed = _xml_text(entry.find("atom:updated", ns))[:10]
 
         refs.append(
             {
@@ -636,13 +656,30 @@ class SecEdgarAdapter(SourceAdapter):
 
         # _fetch_filings_for_subject → _get_text raises RuntimeError on
         # HTTP errors so the caller sees a real error, not empty filings.
-        filings = await self._fetch_filings_for_subject(cik)
+        filings, meta = await self._fetch_filings_for_subject(cik)
         result: dict[str, Any] = {
             "source_id": self.id,
             "hit_id": cik,
             "issuer_cik": cik,
             "filings": filings,
+            "legacy_filing_count": meta["legacy_filing_count"],
+            "structured_filing_count": meta["structured_filing_count"],
+            "latest_filing_date": meta["latest_filing_date"],
         }
+        # When the issuer has 13D/13G filings but none in the machine-readable
+        # era, explain the empty result instead of leaving a blank card.
+        if not filings and meta["legacy_filing_count"]:
+            result["coverage_note"] = (
+                f"{meta['legacy_filing_count']} Schedule 13D/13G filing(s) found "
+                f"for this issuer (most recent {meta['latest_filing_date']}), but all "
+                f"predate the SEC's {_STRUCTURED_FROM} structured-data mandate, so no "
+                f"machine-readable beneficial owners are available."
+            )
+        elif not filings:
+            result["coverage_note"] = (
+                "No Schedule 13D/13G filings found for this issuer since the SEC's "
+                f"{_STRUCTURED_FROM} structured-data mandate."
+            )
         validate_raw("sec_edgar", EDGARBundle, result)
         self._cache.put(cache_key, result)
         return result
@@ -653,21 +690,28 @@ class SecEdgarAdapter(SourceAdapter):
 
     async def _fetch_filings_for_subject(
         self, subject_cik: str
-    ) -> list[dict[str, Any]]:
+    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         """Retrieve and parse recent 13D/13G filings for a subject company.
 
         Uses the EDGAR filing-search atom feed (browse-edgar?action=getcompany&
         CIK=<cik>&type=SC+13D/13G&output=atom) to list filings where the given
         company is the issuer (subject).  One atom request is made per form type.
 
+        Only filings on/after ``_STRUCTURED_FROM`` (the SEC structured-XML
+        mandate) carry a ``primary_doc.xml`` from which beneficial owners can
+        be parsed; older filings are counted but skipped (no HTTP fetch).
+
         Primary XML documents are archived under the filer's CIK (extracted from
         the atom entry link href), at the root of each accession directory:
             /Archives/edgar/data/{filer_cik}/{accession_nodashes}/primary_doc.xml
 
-        After parsing, results are deduplicated per reporter CIK, retaining the
-        most-recently-dated filing per reporter.
+        Returns ``(records, meta)`` where ``meta`` carries filing counts and the
+        latest filing date so the caller can explain an empty result.
         """
         raw_records: list[dict[str, Any]] = []
+        legacy_count = 0
+        structured_count = 0
+        latest_filing_date = ""
 
         for form_type_param in ("SC+13D", "SC+13G"):
             atom_url = (
@@ -682,6 +726,17 @@ class SecEdgarAdapter(SourceAdapter):
 
             refs = _parse_filing_refs_from_atom(atom_text)
             for ref in refs:
+                filed = ref.get("filed") or ""
+                if filed > latest_filing_date:
+                    latest_filing_date = filed
+
+                # Filings before the structured-XML mandate have no
+                # primary_doc.xml — count them but don't waste a fetch.
+                if filed and filed < _STRUCTURED_FROM:
+                    legacy_count += 1
+                    continue
+                structured_count += 1
+
                 filer_cik = ref.get("filer_cik") or subject_cik
                 accession = ref["accession"]
                 xml_url = (
@@ -723,7 +778,13 @@ class SecEdgarAdapter(SourceAdapter):
             if prev is None or rec["filed"] > prev["filed"]:
                 best[reporter_cik] = rec
 
-        return list(best.values()) + no_cik
+        records = list(best.values()) + no_cik
+        meta = {
+            "legacy_filing_count": legacy_count,
+            "structured_filing_count": structured_count,
+            "latest_filing_date": latest_filing_date,
+        }
+        return records, meta
 
     # ------------------------------------------------------------------
     # HTTP with caching

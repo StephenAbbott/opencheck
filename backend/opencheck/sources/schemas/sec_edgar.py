@@ -43,3 +43,9 @@ class EDGARBundle(_Base):
 
     issuer_cik: str  # required — mapper key
     filings: list[EDGARFiling] = Field(default_factory=list)
+    # Coverage metadata — explains an empty ``filings`` list (e.g. the issuer
+    # has only legacy, pre-structured-XML 13D/13G filings).
+    legacy_filing_count: int | None = None
+    structured_filing_count: int | None = None
+    latest_filing_date: str | None = None
+    coverage_note: str | None = None

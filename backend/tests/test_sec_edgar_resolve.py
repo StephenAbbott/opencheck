@@ -143,3 +143,80 @@ async def test_resolve_cik_fallback_picks_exact_normalised_match(monkeypatch, tm
 async def test_search_returns_empty_for_person(monkeypatch, tmp_path) -> None:
     adapter = _adapter_with_tickers(monkeypatch, tmp_path)
     assert await adapter.search("anything", SearchKind.PERSON) == []
+
+
+# ---------------------------------------------------------------------------
+# Filing-ref parsing — real getcompany atom uses <content> children
+# ---------------------------------------------------------------------------
+
+_GETCOMPANY_ATOM = (
+    '<feed xmlns="http://www.w3.org/2005/Atom"><title>x</title>'
+    '<entry>'
+    '<category label="form type" scheme="https://www.sec.gov/" term="SC 13G/A" />'
+    '<content type="text/xml">'
+    '<accession-number>0001104659-24-020136</accession-number>'
+    '<filing-date>2024-02-13</filing-date>'
+    '<filing-href>https://www.sec.gov/Archives/edgar/data/1744489/000110465924020136/0001104659-24-020136-index.htm</filing-href>'
+    '<filing-type>SC 13G/A</filing-type>'
+    '</content>'
+    '<id>urn:tag:sec.gov,2008:accession-number=0001104659-24-020136</id>'
+    '</entry></feed>'
+)
+
+
+def test_parse_refs_reads_content_children_clean_date() -> None:
+    from opencheck.sources.sec_edgar import _parse_filing_refs_from_atom
+
+    refs = _parse_filing_refs_from_atom(_GETCOMPANY_ATOM)
+    assert len(refs) == 1
+    ref = refs[0]
+    assert ref["form_type"] == "SC 13G/A"
+    assert ref["accession"] == "000110465924020136"
+    assert ref["filer_cik"] == "1744489"
+    # The previous parser produced a junk 'filed' value with <b> tags; it must
+    # now be a clean ISO date.
+    assert ref["filed"] == "2024-02-13"
+
+
+@pytest.mark.asyncio
+async def test_fetch_legacy_only_sets_coverage_note(monkeypatch, tmp_path) -> None:
+    """An issuer whose 13D/13G filings all predate the structured-XML mandate
+    yields empty filings with an explanatory coverage_note — and fetches no
+    primary_doc.xml (legacy filings are skipped)."""
+    from opencheck.config import get_settings
+    from opencheck.sources.sec_edgar import SecEdgarAdapter
+
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    get_settings.cache_clear()
+
+    fetched_urls: list[str] = []
+
+    async def _get(url: str, **kwargs: Any) -> MagicMock:
+        fetched_urls.append(url)
+        resp = MagicMock(status_code=200)
+        resp.raise_for_status = MagicMock()
+        # 13G getcompany atom → one legacy filing; everything else empty.
+        resp.text = _GETCOMPANY_ATOM if "type=SC+13G" in url else (
+            '<feed xmlns="http://www.w3.org/2005/Atom"><title>x</title></feed>'
+        )
+        return resp
+
+    client = AsyncMock()
+    client.__aenter__.return_value = client
+    client.__aexit__.return_value = None
+    client.get = _get
+
+    with patch("opencheck.sources.sec_edgar.build_client", return_value=client):
+        adapter = SecEdgarAdapter()
+        bundle = await adapter.fetch("1744489")
+
+    get_settings.cache_clear()
+
+    assert bundle["filings"] == []
+    assert bundle["legacy_filing_count"] == 1
+    assert bundle["structured_filing_count"] == 0
+    assert bundle["latest_filing_date"] == "2024-02-13"
+    assert "predate" in bundle["coverage_note"]
+    # No primary_doc.xml should have been fetched for the legacy filing.
+    assert not any("primary_doc.xml" in u for u in fetched_urls)
