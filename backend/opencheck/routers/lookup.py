@@ -561,7 +561,7 @@ async def lookup(
         _w1.append(("cvr_denmark", REGISTRY["cvr_denmark"].fetch(derived["dk_cvr"], legal_name=legal_name)))
     if "hr_mbs" in derived:
         _w1.append(("sudreg_croatia", REGISTRY["sudreg_croatia"].fetch(derived["hr_mbs"], legal_name=legal_name)))
-    # acra_singapore not dispatched — bulk-data adapter, not wired into live lookup.
+    # acra_singapore + cyprus_drcor not dispatched — bulk-data adapters, not wired into live lookup.
     if ocid:
         _w1.append(("opencorporates", REGISTRY["opencorporates"].fetch(ocid)))
     if qid:
@@ -1611,7 +1611,7 @@ async def _lookup_stream_events(
         applicable_ids.append("cvr_denmark")
     if "hr_mbs" in derived:
         applicable_ids.append("sudreg_croatia")
-    # acra_singapore not dispatched — bulk-data adapter, not wired into live lookup.
+    # acra_singapore + cyprus_drcor not dispatched — bulk-data adapters, not wired into live lookup.
     if ocid:
         applicable_ids.append("opencorporates")
     if qid:
@@ -1719,7 +1719,7 @@ async def _lookup_stream_events(
         _add_task("cvr_denmark", REGISTRY["cvr_denmark"].fetch(derived["dk_cvr"], legal_name=legal_name))
     if "hr_mbs" in derived:
         _add_task("sudreg_croatia", REGISTRY["sudreg_croatia"].fetch(derived["hr_mbs"], legal_name=legal_name))
-    # acra_singapore not dispatched — bulk-data adapter, not wired into live lookup.
+    # acra_singapore + cyprus_drcor not dispatched — bulk-data adapters, not wired into live lookup.
     if ocid:
         _add_task("opencorporates", REGISTRY["opencorporates"].fetch(ocid))
     if qid:

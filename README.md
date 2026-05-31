@@ -63,7 +63,7 @@ The first frontend build copies bundled images for `@openownership/bods-dagre` i
 | Page | Contents |
 |------|----------|
 | [How it works](docs/how-it-works.md) | Step-by-step lookup flow, per-adapter detail, Open Ownership BODS bundles, API surface, project structure |
-| [Sources](docs/sources.md) | Full adapter table — 27 sources, license, entry point, description |
+| [Sources](docs/sources.md) | Full adapter table — 26 active sources plus inactive bulk-only adapters, license, entry point, description |
 | [Risk signals](docs/risk-signals.md) | All 12 signal codes: source-derived, AMLA CDD RTS, FATF jurisdiction, cross-source name match, ICIJ Offshore Leaks |
 | [Configuration](docs/configuration.md) | Environment variables, Render deployment, running the test suite |
 | [Development history](docs/status.md) | All 46 phases |

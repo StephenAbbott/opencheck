@@ -118,6 +118,11 @@ class Settings(BaseSettings):
     # License: Singapore Open Data Licence 1.0 — no API key required.
     acra_singapore_db_file: str | None = Field(default=None, alias="ACRA_SINGAPORE_DB_FILE")
 
+    # --- Cyprus DRCOR (data.gov.cy open data, CC BY 4.0) ---
+    # No API key. Pre-built SQLite index. Build with: python scripts/extract_cyprus.py
+    # Source (3 monthly CSVs): https://data.gov.cy/el/dataset/mitroo-eggegrammenon-etaireion-emporikon-eponymion-kai-synetairismon-stin-kypro
+    cyprus_drcor_db_file: str | None = Field(default=None, alias="CYPRUS_DRCOR_DB_FILE")
+
     # --- Belgian Crossroads Bank for Enterprises (BCE / KBO) ---
     # Pre-built SQLite index. Build with: python scripts/extract_bce.py
     # Source: https://kbopub.economie.fgov.be/kbo-open-data/

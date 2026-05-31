@@ -37,6 +37,16 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `ie_crn` (company registration number) derived from GLEIF RA code `RA000402`
 - **Note:** Officer and director data is not available from the Open Data Portal tier. The CRO Open Services API (`services.cro.ie/cws`) provides richer data including officers, but requires an API key issued by the CRO.
 
+## DRCOR — Department of Registrar of Companies and Intellectual Property (Cyprus)
+
+- **Data:** organisations, registered office addresses, and officials (directors/secretaries) from the *Register of Registered Companies, Commercial Names and Cooperatives in Cyprus*. No shareholder/ownership data is published.
+- **Portal:** <https://data.gov.cy/> (High-Value Dataset, three monthly CSVs). Public search UI: <https://efiling.drcor.mcit.gov.cy/DrcorPublic/SearchForm.aspx>
+- **Access:** Bulk CSV download only — data.gov.cy exposes no working datastore query API for these resources (`/api/1/datastore/query` returns HTTP 404). The CSVs are built into a local SQLite index via `scripts/extract_cyprus.py`.
+- **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **Attribution:** "Contains information from the Department of Registrar of Companies and Intellectual Property (Republic of Cyprus), published on data.gov.cy under CC BY 4.0."
+- **Entry point:** `cy_he` (HE registration number) derived from GLEIF RA code `RA000161`
+- **Note:** The dataset refreshes monthly. The OpenSanctions-aggregated copy carries a CC BY-NC licence; this adapter draws from the original data.gov.cy distributions, which are CC BY 4.0 (commercial reuse permitted with attribution).
+
 ## PRH — Patentti- ja rekisterihallitus (Finnish Patent and Registration Office)
 
 - **Data:** entity records for all organisations registered in Finland, via the YTJ (Yritys- ja yhteisötietojärjestelmä / Business Information System) Open Data API
