@@ -1125,39 +1125,26 @@ async def lookup(
         se_adapter = REGISTRY.get("sec_edgar")
         if se_adapter and se_adapter.info.live_available:
             try:
-                if _edgar_cik:
+                # Prefer a CIK derived from OpenCorporates; otherwise resolve it
+                # from the legal name via company_tickers.json (with a normalised
+                # EDGAR company-search fallback). Never a blind name-search[0].
+                _cik = _edgar_cik
+                if not _cik and legal_name:
+                    _cik = await se_adapter.resolve_cik(legal_name)  # type: ignore[attr-defined]
+                if _cik:
                     hits.append(
                         SourceHit(
                             source_id="sec_edgar",
-                            hit_id=_edgar_cik,
+                            hit_id=_cik,
                             kind=SearchKind.ENTITY,
                             name=legal_name or "",
-                            summary=f"CIK {_edgar_cik} · US listed company",
-                            identifiers={"edgar_cik": _edgar_cik},
-                            raw={"cik": _edgar_cik, "name": legal_name or ""},
+                            summary=f"CIK {_cik} · US listed company",
+                            identifiers={"edgar_cik": _cik},
+                            raw={"cik": _cik, "name": legal_name or ""},
                             is_stub=False,
                         )
                     )
-                    deepened_bundles.append(("sec_edgar", _edgar_cik))
-                else:
-                    se_hits = await se_adapter.search(legal_name, SearchKind.ENTITY)
-                    if se_hits:
-                        se_hit = se_hits[0]
-                        hits.append(
-                            SourceHit(
-                                source_id="sec_edgar",
-                                hit_id=se_hit.hit_id,
-                                kind=SearchKind.ENTITY,
-                                name=se_hit.name,
-                                summary=se_hit.summary,
-                                identifiers={
-                                    "edgar_cik": se_hit.hit_id,
-                                                },
-                                raw=se_hit.raw,
-                                is_stub=False,
-                            )
-                        )
-                        deepened_bundles.append(("sec_edgar", se_hit.hit_id))
+                    deepened_bundles.append(("sec_edgar", _cik))
             except Exception as exc:  # noqa: BLE001
                 errors["sec_edgar"] = _fmt_source_error(exc)
 
@@ -2148,17 +2135,17 @@ async def _lookup_stream_events(
         and se_adapter.info.live_available
     ):
         try:
-            se_hits = await se_adapter.search(legal_name, SearchKind.ENTITY)
-            if se_hits:
-                se_hit = se_hits[0]
+            _cik2 = await se_adapter.resolve_cik(legal_name)  # type: ignore[attr-defined]
+            if _cik2:
                 _edgar_hit2 = SourceHit(
-                    source_id="sec_edgar", hit_id=se_hit.hit_id,
-                    kind=SearchKind.ENTITY, name=se_hit.name, summary=se_hit.summary,
-                    identifiers={"edgar_cik": se_hit.hit_id},
-                    raw=se_hit.raw, is_stub=False,
+                    source_id="sec_edgar", hit_id=_cik2,
+                    kind=SearchKind.ENTITY, name=legal_name or "",
+                    summary=f"CIK {_cik2} · US listed company",
+                    identifiers={"edgar_cik": _cik2},
+                    raw={"cik": _cik2, "name": legal_name or ""}, is_stub=False,
                 )
                 hits.append(_edgar_hit2)
-                deepened_bundles.append(("sec_edgar", se_hit.hit_id))
+                deepened_bundles.append(("sec_edgar", _cik2))
                 yield {"event": "source_started", "data": json.dumps({"source_id": "sec_edgar", "source_name": se_adapter.info.name})}
                 yield {"event": "hit", "data": _edgar_hit2.model_dump_json()}
                 yield {"event": "source_completed", "data": json.dumps({"source_id": "sec_edgar", "hit_count": 1})}

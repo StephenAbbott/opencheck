@@ -44,6 +44,10 @@ from .schemas.sec_edgar import EDGARBundle
 _EDGAR_BASE = "https://www.sec.gov"
 _BROWSE_BASE = f"{_EDGAR_BASE}/cgi-bin/browse-edgar"
 _SUBMISSIONS_BASE = "https://data.sec.gov/submissions"
+# Authoritative ticker→CIK→title map for all exchange-listed US issuers —
+# the same universe that files Schedule 13D/13G.  Used to resolve a GLEIF
+# legal name to a CIK without relying on EDGAR's fragile prefix name-search.
+_TICKERS_URL = f"{_EDGAR_BASE}/files/company_tickers.json"
 _CACHE_NS = "sec_edgar"
 _NS_13D = "http://www.sec.gov/edgar/schedule13D"
 _NS_13G = "http://www.sec.gov/edgar/schedule13g"  # lowercase g — different schema
@@ -70,6 +74,40 @@ _EDGAR_CITIZENSHIP_TO_ISO: dict[str, str] = {
 
 # typeOfReportingPerson codes that indicate a natural person.
 _INDIVIDUAL_CODES: frozenset[str] = frozenset({"IN"})
+
+# Trailing legal-form tokens stripped when normalising a company name, so a
+# GLEIF legal name ("THE WALT DISNEY COMPANY", "Netflix, Inc.") matches an
+# EDGAR conformed name ("Walt Disney Co", "NETFLIX INC").
+_LEGAL_FORM_SUFFIXES: frozenset[str] = frozenset({
+    "INC", "INCORPORATED", "CORP", "CORPORATION", "CO", "COMPANY",
+    "PLC", "LTD", "LIMITED", "LLC", "LLP", "LP", "NV", "SA", "AG",
+    "SE", "AB", "AS", "OYJ", "SPA", "GMBH", "KG", "BV",
+})
+
+
+def _normalise_company_name(name: str) -> str:
+    """Normalise a company name for cross-source matching.
+
+    Uppercases, replaces punctuation with spaces, strips a leading ``THE``,
+    and repeatedly strips trailing legal-form tokens (``INC``, ``CO``,
+    ``COMPANY``, ``CORP`` …).  Returns the distinctive name tokens joined by
+    single spaces (empty string if nothing remains).
+
+    Examples::
+
+        "THE WALT DISNEY COMPANY" -> "WALT DISNEY"
+        "Netflix, Inc."           -> "NETFLIX"
+        "Walt Disney Co"          -> "WALT DISNEY"
+    """
+    import re as _re
+
+    s = _re.sub(r"[^A-Z0-9 ]+", " ", (name or "").upper())
+    tokens = s.split()
+    while tokens and tokens[0] == "THE":
+        tokens = tokens[1:]
+    while tokens and tokens[-1] in _LEGAL_FORM_SUFFIXES:
+        tokens = tokens[:-1]
+    return " ".join(tokens)
 
 
 # ----------------------------------------------------------------------
@@ -440,6 +478,9 @@ class SecEdgarAdapter(SourceAdapter):
 
     def __init__(self) -> None:
         self._cache = Cache()
+        # In-memory {normalised_title: cik} index built from company_tickers.json,
+        # lazily populated on first resolve_cik() call.
+        self._ticker_index: dict[str, str] | None = None
 
     @property
     def info(self) -> SourceInfo:
@@ -498,6 +539,78 @@ class SecEdgarAdapter(SourceAdapter):
                 is_stub=True,
             )
         ]
+
+    # ------------------------------------------------------------------
+    # CIK resolution (legal name → CIK)
+    # ------------------------------------------------------------------
+
+    async def _load_ticker_index(self) -> dict[str, str]:
+        """Build (and cache) a {normalised_title: cik} index from
+        ``company_tickers.json`` — the authoritative SEC map of every
+        exchange-listed US issuer.
+
+        Returns an empty dict if the file can't be retrieved (offline, no
+        contact e-mail set, etc.).  When two titles normalise to the same
+        key, the first wins.
+        """
+        if self._ticker_index is not None:
+            return self._ticker_index
+
+        cache_key = f"{_CACHE_NS}/company_tickers"
+        if not self.info.live_available and not self._cache.has(cache_key):
+            return {}
+
+        raw = await self._get_text(_TICKERS_URL, cache_key=cache_key)
+        index: dict[str, str] = {}
+        if raw:
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError:
+                data = {}
+            # Shape: {"0": {"cik_str": 320193, "ticker": "AAPL", "title": "Apple Inc."}, …}
+            rows = data.values() if isinstance(data, dict) else data
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                title = row.get("title") or ""
+                cik_raw = row.get("cik_str")
+                if title == "" or cik_raw is None:
+                    continue
+                key = _normalise_company_name(title)
+                if key and key not in index:
+                    index[key] = str(cik_raw).lstrip("0") or "0"
+        self._ticker_index = index
+        return index
+
+    async def resolve_cik(self, legal_name: str) -> str | None:
+        """Resolve a company legal name to its EDGAR CIK.
+
+        Strategy:
+        1. Exact normalised-name match against ``company_tickers.json``
+           (authoritative for exchange-listed issuers — the 13D/13G universe).
+        2. Fallback to the EDGAR company-search atom feed using the normalised
+           name, selecting the candidate whose conformed name normalises to
+           the same value (never a blind first-row pick).
+
+        Returns the CIK (leading zeros stripped) or ``None`` if no confident
+        match is found.
+        """
+        target = _normalise_company_name(legal_name)
+        if not target:
+            return None
+
+        index = await self._load_ticker_index()
+        if target in index:
+            return index[target]
+
+        # Fallback: normalised company-search, pick an exact normalised match.
+        candidates = await self.search(target, SearchKind.ENTITY)
+        for hit in candidates:
+            if hit.is_stub:
+                continue
+            if _normalise_company_name(hit.name) == target:
+                return hit.hit_id
+        return None
 
     # ------------------------------------------------------------------
     # Fetch
