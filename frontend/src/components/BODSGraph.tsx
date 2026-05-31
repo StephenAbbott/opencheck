@@ -454,33 +454,41 @@ export default function BODSGraph({
   return (
     <div className="bg-white border border-oo-rule rounded-oo">
       {/* Toolbar */}
-      <div className="flex items-center gap-1 px-2 py-1 border-b border-oo-rule text-xs text-oo-muted">
-        <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom in"
-          onClick={() => cyRef.current?.zoom({ level: (cyRef.current?.zoom() ?? 1) * 1.3,
-            renderedPosition: { x: (containerRef.current?.clientWidth ?? 0) / 2, y: (containerRef.current?.clientHeight ?? 0) / 2 } })}>
-          +
-        </button>
-        <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom out"
-          onClick={() => cyRef.current?.zoom({ level: (cyRef.current?.zoom() ?? 1) / 1.3,
-            renderedPosition: { x: (containerRef.current?.clientWidth ?? 0) / 2, y: (containerRef.current?.clientHeight ?? 0) / 2 } })}>
-          −
-        </button>
-        <button type="button" className="hover:text-oo-blue px-2" title="Fit"
-          onClick={() => cyRef.current?.fit(undefined, 32)}>
-          Fit
-        </button>
-        <span className="ml-auto flex flex-wrap justify-end gap-x-3 gap-y-1 text-[10px]">
-          <span className="flex items-center gap-3">
-            <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#1565c0]"/>Ownership</span>
-            <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#e65100]"/>Control</span>
-            <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#6a1b9a]" style={{borderTop:"1.5px dashed #6a1b9a",background:"none"}}/>Role</span>
+      <div className="border-b border-oo-rule">
+        {/* Zoom controls row */}
+        <div className="flex items-center gap-1 px-2 py-1 text-xs text-oo-muted">
+          <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom in"
+            onClick={() => cyRef.current?.zoom({ level: (cyRef.current?.zoom() ?? 1) * 1.3,
+              renderedPosition: { x: (containerRef.current?.clientWidth ?? 0) / 2, y: (containerRef.current?.clientHeight ?? 0) / 2 } })}>
+            +
+          </button>
+          <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom out"
+            onClick={() => cyRef.current?.zoom({ level: (cyRef.current?.zoom() ?? 1) / 1.3,
+              renderedPosition: { x: (containerRef.current?.clientWidth ?? 0) / 2, y: (containerRef.current?.clientHeight ?? 0) / 2 } })}>
+            −
+          </button>
+          <button type="button" className="hover:text-oo-blue px-2" title="Fit"
+            onClick={() => cyRef.current?.fit(undefined, 32)}>
+            Fit
+          </button>
+        </div>
+        {/* Legend — coloured pills, wrapping rows */}
+        <div className="flex flex-wrap gap-1.5 px-3 pb-2">
+          <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#e8f0fb] border-[#1565c0] text-[#1565c0]">
+            <span className="inline-block w-3.5 h-0.5 bg-[#1565c0] rounded-full flex-shrink-0"/>Ownership
           </span>
-          {signals.length > 0 && <span className="flex items-center gap-3">
-            <span className="flex items-center gap-1"><span className="inline-block w-4 h-3 rounded border bg-[#ffe4e6] border-[#be123c]"/><span className="text-[#be123c]">Sanction</span></span>
-            <span className="flex items-center gap-1"><span className="inline-block w-4 h-3 rounded border bg-[#f5f3ff] border-[#6d28d9]"/><span className="text-[#6d28d9]">PEP</span></span>
-            <span className="flex items-center gap-1"><span className="inline-block w-4 h-3 rounded border bg-[#fff7ed] border-[#c2410c]"/><span className="text-[#c2410c]">Jurisdiction</span></span>
-          </span>}
-        </span>
+          <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#fdf0e8] border-[#e65100] text-[#e65100]">
+            <span className="inline-block w-3.5 h-0.5 bg-[#e65100] rounded-full flex-shrink-0"/>Control
+          </span>
+          <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#f3eef8] border-[#6a1b9a] text-[#6a1b9a]">
+            <span className="inline-block w-3.5 flex-shrink-0" style={{borderTop:"1.5px dashed #6a1b9a"}}/>Role
+          </span>
+          {signals.length > 0 && <>
+            <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#ffe4e6] border-[#be123c] text-[#be123c]">Sanction</span>
+            <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#f5f3ff] border-[#6d28d9] text-[#6d28d9]">PEP</span>
+            <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#fff7ed] border-[#c2410c] text-[#c2410c]">Jurisdiction</span>
+          </>}
+        </div>
       </div>
 
       {/* Graph container + HTML overlay */}
