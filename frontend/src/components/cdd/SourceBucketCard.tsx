@@ -360,10 +360,26 @@ function BODSStatementCards({ statements }: { statements: BODSStmt[] }) {
 }
 
 // ---------------------------------------------------------------------
-// DeepenBlock — shows BODS graph + raw JSON after "Go deeper"
+// DeepenBlock — shows BODS graph + statements + raw JSON
+// showDiagram / showStatements / showJson control which sections render.
 // ---------------------------------------------------------------------
 
-export function DeepenBlock({ detail, entityName }: { detail: DeepenResponse; entityName?: string }) {
+export function DeepenBlock({
+  detail,
+  entityName,
+  showDiagram = true,
+  showStatements = true,
+  showJson = true,
+}: {
+  detail: DeepenResponse;
+  entityName?: string;
+  showDiagram?: boolean;
+  showStatements?: boolean;
+  showJson?: boolean;
+}) {
+  const anyVisible = showDiagram || showStatements || showJson;
+  if (!anyVisible) return null;
+
   return (
     <div className="space-y-4">
       {detail.license_notice && (
@@ -375,45 +391,64 @@ export function DeepenBlock({ detail, entityName }: { detail: DeepenResponse; en
           <p className="mt-1 leading-[1.6]">{detail.license_notice}</p>
         </div>
       )}
-      {detail.bods.length > 0 && (
+
+      {showDiagram && detail.bods.length > 0 && (
         <section>
           <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
-            BODS · {detail.bods.length} statement
-            {detail.bods.length === 1 ? "" : "s"}
+            BODS · {detail.bods.length} statement{detail.bods.length === 1 ? "" : "s"}
           </h4>
           {detail.bods_issues.length > 0 && (
             <p className="text-amber-800 mb-2">
-              {detail.bods_issues.length} validation issue
-              {detail.bods_issues.length === 1 ? "" : "s"}
+              {detail.bods_issues.length} validation issue{detail.bods_issues.length === 1 ? "" : "s"}
             </p>
           )}
           <BODSGraph statements={detail.bods} signals={detail.risk_signals} entityName={entityName} />
-          <BODSStatementCards statements={detail.bods as BODSStmt[]} />
-          <details className="mt-3">
-            <summary className="text-oo-muted cursor-pointer text-[11px] font-mono">
-              Show raw JSON statements
-            </summary>
-            <pre className="mt-1 max-h-96 overflow-auto bg-white border border-oo-rule rounded-oo p-3 text-[10px]">
-              {JSON.stringify(detail.bods, null, 2)}
-            </pre>
-          </details>
         </section>
       )}
-      <section>
-        <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
-          Raw source payload
-        </h4>
-        <pre className="max-h-96 overflow-auto bg-white border border-oo-rule rounded-oo p-3 text-[10px]">
-          {JSON.stringify(detail.raw, null, 2)}
-        </pre>
-      </section>
+
+      {showStatements && detail.bods.length > 0 && (
+        <section>
+          <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
+            Mapped statements
+          </h4>
+          <BODSStatementCards statements={detail.bods as BODSStmt[]} />
+        </section>
+      )}
+
+      {showJson && (
+        <section className="space-y-3">
+          {detail.bods.length > 0 && (
+            <div>
+              <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-1.5">
+                BODS statements
+              </h4>
+              <pre className="max-h-80 overflow-auto bg-white border border-oo-rule rounded-oo p-3 text-[10px]">
+                {JSON.stringify(detail.bods, null, 2)}
+              </pre>
+            </div>
+          )}
+          <div>
+            <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-1.5">
+              Raw source payload
+            </h4>
+            <pre className="max-h-80 overflow-auto bg-white border border-oo-rule rounded-oo p-3 text-[10px]">
+              {JSON.stringify(detail.raw, null, 2)}
+            </pre>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------
-// HitRow — single result row with drill-down
+// HitRow — single result row with three independent drill-down pills
 // ---------------------------------------------------------------------
+
+// Shared pill style helpers
+const PILL_BASE = "flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors";
+const PILL_ACTIVE = `${PILL_BASE} bg-[#e8f0fb] border-[#1565c0] text-[#1565c0]`;
+const PILL_IDLE   = `${PILL_BASE} bg-oo-bg border-oo-rule text-oo-muted hover:text-oo-ink hover:border-oo-ink`;
 
 export function HitRow({
   hit,
@@ -422,71 +457,112 @@ export function HitRow({
   hit: SourceHit;
   riskSignals: RiskSignal[];
 }) {
-  const [open, setOpen] = useState(false);
-  const [detail, setDetail] = useState<DeepenResponse | null>(null);
+  const [showDiagram,    setShowDiagram]    = useState(false);
+  const [showStatements, setShowStatements] = useState(false);
+  const [showJson,       setShowJson]       = useState(false);
+  const [detail,  setDetail]  = useState<DeepenResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error,   setError]   = useState<string | null>(null);
 
-  async function toggle() {
-    const next = !open;
-    setOpen(next);
-    if (next && !detail && !loading) {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await deepen(hit.source_id, hit.hit_id);
-        setDetail(data);
-      } catch (e) {
-        setError(String(e));
-      } finally {
-        setLoading(false);
-      }
+  const anyOpen = showDiagram || showStatements || showJson;
+
+  async function ensureFetched() {
+    if (detail || loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await deepen(hit.source_id, hit.hit_id);
+      setDetail(data);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setLoading(false);
     }
   }
 
+  function toggleDiagram()    { ensureFetched(); setShowDiagram(v    => !v); }
+  function toggleStatements() { ensureFetched(); setShowStatements(v => !v); }
+  function toggleJson()       { ensureFetched(); setShowJson(v       => !v); }
+
+  const stmtCount = detail?.bods.length ?? 0;
+
   return (
     <li className="px-5 py-4">
-      <div className="flex justify-between items-baseline gap-4">
-        <div className="min-w-0">
-          <div className="font-head font-bold text-[15px] text-oo-ink leading-snug">
-            {hit.name}
-            {hit.is_stub && (
-              <span className="ml-2 text-[11px] font-mono bg-amber-50 text-amber-800 border border-amber-200 rounded px-1.5 py-0.5">
-                stub
-              </span>
-            )}
-          </div>
-          <p className="text-[13px] text-oo-muted mt-1 leading-[1.6]">
-            {hit.summary}
-          </p>
-          {Object.keys(hit.identifiers).length > 0 && (
-            <p className="text-[11px] text-oo-muted mt-1.5 font-mono break-all">
-              {Object.entries(hit.identifiers)
-                .map(([k, v]) => `${k}=${v}`)
-                .join(" · ")}
-            </p>
-          )}
-          {riskSignals.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {riskSignals.map((sig, i) => (
-                <RiskChip key={`${sig.code}-${i}`} signal={sig} compact />
-              ))}
-            </div>
-          )}
+      {/* Entity name, summary, identifiers, risk chips */}
+      <div className="font-head font-bold text-[15px] text-oo-ink leading-snug">
+        {hit.name}
+        {hit.is_stub && (
+          <span className="ml-2 text-[11px] font-mono bg-amber-50 text-amber-800 border border-amber-200 rounded px-1.5 py-0.5">
+            stub
+          </span>
+        )}
+      </div>
+      <p className="text-[13px] text-oo-muted mt-1 leading-[1.6]">{hit.summary}</p>
+      {Object.keys(hit.identifiers).length > 0 && (
+        <p className="text-[11px] text-oo-muted mt-1.5 font-mono break-all">
+          {Object.entries(hit.identifiers).map(([k, v]) => `${k}=${v}`).join(" · ")}
+        </p>
+      )}
+      {riskSignals.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {riskSignals.map((sig, i) => (
+            <RiskChip key={`${sig.code}-${i}`} signal={sig} compact />
+          ))}
         </div>
-        <button
-          onClick={toggle}
-          className="text-[12px] font-mono text-oo-blue hover:text-oo-burst whitespace-nowrap"
-        >
-          {open ? "Hide" : "Go deeper →"}
+      )}
+
+      {/* Action pills */}
+      <div className="flex flex-wrap gap-1.5 mt-3">
+        <button type="button" onClick={toggleDiagram} className={showDiagram ? PILL_ACTIVE : PILL_IDLE}
+          aria-pressed={showDiagram}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <circle cx="6" cy="2.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
+            <circle cx="2" cy="9.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
+            <circle cx="10" cy="9.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
+            <line x1="6" y1="4.3" x2="2.8" y2="7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            <line x1="6" y1="4.3" x2="9.2" y2="7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
+          {showDiagram ? "Hide diagram" : "Visualise"}
+        </button>
+
+        <button type="button" onClick={toggleStatements} className={showStatements ? PILL_ACTIVE : PILL_IDLE}
+          aria-pressed={showStatements}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+            <line x1="3.5" y1="4.5" x2="8.5" y2="4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+            <line x1="3.5" y1="6.5" x2="8.5" y2="6.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+            <line x1="3.5" y1="8.5" x2="6.5" y2="8.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+          </svg>
+          {showStatements ? "Hide statements" : (
+            detail ? `${stmtCount} statement${stmtCount === 1 ? "" : "s"}` : "Statements"
+          )}
+        </button>
+
+        <button type="button" onClick={toggleJson} className={showJson ? PILL_ACTIVE : PILL_IDLE}
+          aria-pressed={showJson}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M3.5 2.5 L1.5 6 L3.5 9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M8.5 2.5 L10.5 6 L8.5 9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            <line x1="7" y1="2" x2="5" y2="10" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+          </svg>
+          {showJson ? "Hide JSON" : "Raw JSON"}
         </button>
       </div>
 
-      {open && (
+      {/* Expanded content */}
+      {anyOpen && (
         <div className="mt-4 bg-oo-bg rounded-oo p-4 text-[12px]">
           {loading && <p className="text-oo-muted">Fetching…</p>}
-          {error && <p className="text-red-700">{error}</p>}
-          {detail && <DeepenBlock detail={detail} entityName={hit.name} />}
+          {error   && <p className="text-red-700">{error}</p>}
+          {detail  && (
+            <DeepenBlock
+              detail={detail}
+              entityName={hit.name}
+              showDiagram={showDiagram}
+              showStatements={showStatements}
+              showJson={showJson}
+            />
+          )}
         </div>
       )}
     </li>
