@@ -32,6 +32,9 @@ class CHProfile(_Base):
     date_of_creation: str | None = None
     jurisdiction: str | None = None
     registered_office_address: CHAddress | None = None
+    # Former names the company traded under → BODS alternateNames.
+    # Each item: {"name": ..., "effective_from": ..., "ceased_on": ...}.
+    previous_company_names: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class CHPscIdentification(_Base):

@@ -644,16 +644,30 @@ def _emit_company_statements(
     company_url = (
         f"https://find-and-update.company-information.service.gov.uk/company/{number}"
     )
+    company_name = profile.get("company_name", f"Company {number}")
+
+    # Previous names the company traded under → BODS alternateNames.
+    # Companies House publishes these in ``profile.previous_company_names``
+    # as ``[{"name": ..., "effective_from": ..., "ceased_on": ...}, ...]``.
+    seen_names: set[str] = {company_name}
+    alternate_names: list[str] = []
+    for prev in profile.get("previous_company_names") or []:
+        prev_name = (prev.get("name") or "").strip()
+        if prev_name and prev_name not in seen_names:
+            seen_names.add(prev_name)
+            alternate_names.append(prev_name)
+
     entity = make_entity_statement(
         source_id="companies_house",
         local_id=number,
-        name=profile.get("company_name", f"Company {number}"),
+        name=company_name,
         jurisdiction=("United Kingdom", "GB"),
         identifiers=[
             {"id": number, "scheme": "GB-COH", "schemeName": "Companies House"}
         ],
         founding_date=profile.get("date_of_creation"),
         addresses=_profile_addresses(profile),
+        alternate_names=alternate_names,
         source_url=company_url,
     )
     entity_sid = entity["statementId"]
