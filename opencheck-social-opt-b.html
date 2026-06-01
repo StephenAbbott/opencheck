@@ -29,10 +29,10 @@ body { background: #1C1C2E; padding: 48px 64px 44px; display: flex; flex-directi
     <!-- Right: diagram preview + flag grid -->
     <div style="flex-shrink:0;width:420px;margin-left:44px;background:#13132A;border:1px solid #2A2A44;border-radius:10px;padding:18px 20px 16px;display:flex;flex-direction:column;">
 
-      <div style="font-size:10px;letter-spacing:0.12em;color:#4A4A6A;text-transform:uppercase;margin-bottom:14px;">BODS ownership diagram</div>
+      <div style="font-size:10px;letter-spacing:0.12em;color:#4A4A6A;text-transform:uppercase;margin-bottom:14px;">Corporate structure diagram</div>
 
       <!-- Mini diagram SVG -->
-      <svg width="380" height="174" viewBox="0 0 380 174" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+      <svg width="380" height="164" viewBox="0 0 380 164" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
         <defs>
           <marker id="arr-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="5" orient="auto">
             <path d="M0,0 L10,5 L0,10 z" fill="#3E82D4"/>
@@ -42,60 +42,60 @@ body { background: #1C1C2E; padding: 48px 64px 44px; display: flex; flex-directi
           </marker>
         </defs>
 
-        <!-- Edge: HoldCo → Target (Owns 100%, blue) -->
-        <path d="M 310,102 C 310,138 230,148 226,148" fill="none" stroke="#3E82D4" stroke-width="1.8" marker-end="url(#arr-blue)"/>
-        <text x="295" y="142" fill="#3E82D4" font-size="10" font-family="-apple-system,sans-serif" text-anchor="middle">Owns 100%</text>
+        <!-- Edge: HoldCo → Target (Owns 100%, blue) — all y values shifted up 15px -->
+        <path d="M 310,87 C 310,123 230,133 226,133" fill="none" stroke="#3E82D4" stroke-width="1.8" marker-end="url(#arr-blue)"/>
+        <text x="295" y="127" fill="#3E82D4" font-size="10" font-family="-apple-system,sans-serif" text-anchor="middle">Owns 100%</text>
 
         <!-- Edge: Person → Target (Director, purple dashed) -->
-        <path d="M 70,102 C 70,138 150,148 154,148" fill="none" stroke="#7B6CC8" stroke-width="1.8" stroke-dasharray="5,3" marker-end="url(#arr-purple)"/>
-        <text x="85" y="142" fill="#7B6CC8" font-size="10" font-family="-apple-system,sans-serif" text-anchor="middle">Director</text>
+        <path d="M 70,87 C 70,123 150,133 154,133" fill="none" stroke="#7B6CC8" stroke-width="1.8" stroke-dasharray="5,3" marker-end="url(#arr-purple)"/>
+        <text x="85" y="127" fill="#7B6CC8" font-size="10" font-family="-apple-system,sans-serif" text-anchor="middle">Director</text>
 
         <!-- Person node (dashed border) -->
-        <circle cx="70" cy="68" r="34" fill="#1A1A30" stroke="#5A4FA8" stroke-width="2" stroke-dasharray="6,3"/>
+        <circle cx="70" cy="53" r="34" fill="#1A1A30" stroke="#5A4FA8" stroke-width="2" stroke-dasharray="6,3"/>
         <!-- Person icon -->
-        <circle cx="70" cy="58" r="9" fill="none" stroke="#7B6CC8" stroke-width="1.5"/>
-        <path d="M 54,88 Q 70,78 86,88" fill="none" stroke="#7B6CC8" stroke-width="1.5"/>
+        <circle cx="70" cy="43" r="9" fill="none" stroke="#7B6CC8" stroke-width="1.5"/>
+        <path d="M 54,73 Q 70,63 86,73" fill="none" stroke="#7B6CC8" stroke-width="1.5"/>
         <!-- Person label -->
-        <text x="70" y="117" fill="#9090C0" font-size="9.5" font-family="-apple-system,sans-serif" text-anchor="middle">Arnis Kalnins</text>
+        <text x="70" y="102" fill="#9090C0" font-size="9.5" font-family="-apple-system,sans-serif" text-anchor="middle">Arnis Kalnins</text>
 
         <!-- Risk signal badge (SANCTIONED, rose) — 315° NW of person node -->
-        <rect x="24" y="30" width="36" height="16" rx="7" fill="#3D0F18" stroke="#BE123C" stroke-width="1.2"/>
-        <text x="42" y="42" fill="#FB7185" font-size="9" font-family="-apple-system,sans-serif" font-weight="700" text-anchor="middle">⚠ S</text>
+        <rect x="24" y="15" width="36" height="16" rx="7" fill="#3D0F18" stroke="#BE123C" stroke-width="1.2"/>
+        <text x="42" y="27" fill="#FB7185" font-size="9" font-family="-apple-system,sans-serif" font-weight="700" text-anchor="middle">⚠ S</text>
 
         <!-- HoldCo entity node -->
-        <circle cx="310" cy="68" r="34" fill="#1A1A30" stroke="#2A2A50" stroke-width="2"/>
+        <circle cx="310" cy="53" r="34" fill="#1A1A30" stroke="#2A2A50" stroke-width="2"/>
         <!-- Building icon -->
-        <rect x="297" y="54" width="26" height="20" rx="1" fill="none" stroke="#5A5A9A" stroke-width="1.5"/>
-        <rect x="300" y="57" width="6" height="5" fill="#5A5A9A" opacity="0.6"/>
-        <rect x="310" y="57" width="6" height="5" fill="#5A5A9A" opacity="0.6"/>
-        <rect x="300" y="65" width="6" height="9" fill="#5A5A9A" opacity="0.6"/>
-        <rect x="310" y="65" width="6" height="9" fill="#5A5A9A" opacity="0.6"/>
+        <rect x="297" y="39" width="26" height="20" rx="1" fill="none" stroke="#5A5A9A" stroke-width="1.5"/>
+        <rect x="300" y="42" width="6" height="5" fill="#5A5A9A" opacity="0.6"/>
+        <rect x="310" y="42" width="6" height="5" fill="#5A5A9A" opacity="0.6"/>
+        <rect x="300" y="50" width="6" height="9" fill="#5A5A9A" opacity="0.6"/>
+        <rect x="310" y="50" width="6" height="9" fill="#5A5A9A" opacity="0.6"/>
         <!-- HoldCo label -->
-        <text x="310" y="117" fill="#9090C0" font-size="9.5" font-family="-apple-system,sans-serif" text-anchor="middle">Baltic HoldCo OÜ</text>
+        <text x="310" y="102" fill="#9090C0" font-size="9.5" font-family="-apple-system,sans-serif" text-anchor="middle">Baltic HoldCo OÜ</text>
         <!-- Flag badge NE (EE flag colours) -->
-        <rect x="332" y="32" width="26" height="17" rx="2" fill="#fff" stroke="#888" stroke-width="1"/>
-        <rect x="332" y="32" width="26" height="5.5" fill="#0072CE"/>
-        <rect x="332" y="37.5" width="26" height="5.5" fill="#1a1a1a"/>
-        <rect x="332" y="43" width="26" height="6" fill="#fff"/>
+        <rect x="332" y="17" width="26" height="17" rx="2" fill="#fff" stroke="#888" stroke-width="1"/>
+        <rect x="332" y="17" width="26" height="5.5" fill="#0072CE"/>
+        <rect x="332" y="22.5" width="26" height="5.5" fill="#1a1a1a"/>
+        <rect x="332" y="28" width="26" height="6" fill="#fff"/>
 
         <!-- Target company node (main subject) -->
-        <circle cx="190" cy="155" r="34" fill="#1A1A30" stroke="#2A2A50" stroke-width="2"/>
+        <circle cx="190" cy="140" r="34" fill="#1A1A30" stroke="#2A2A50" stroke-width="2"/>
         <!-- Building icon -->
-        <rect x="177" y="141" width="26" height="20" rx="1" fill="none" stroke="#5A5A9A" stroke-width="1.5"/>
-        <rect x="180" y="144" width="6" height="5" fill="#5A5A9A" opacity="0.6"/>
-        <rect x="190" y="144" width="6" height="5" fill="#5A5A9A" opacity="0.6"/>
-        <rect x="180" y="152" width="6" height="9" fill="#5A5A9A" opacity="0.6"/>
-        <rect x="190" y="152" width="6" height="9" fill="#5A5A9A" opacity="0.6"/>
+        <rect x="177" y="126" width="26" height="20" rx="1" fill="none" stroke="#5A5A9A" stroke-width="1.5"/>
+        <rect x="180" y="129" width="6" height="5" fill="#5A5A9A" opacity="0.6"/>
+        <rect x="190" y="129" width="6" height="5" fill="#5A5A9A" opacity="0.6"/>
+        <rect x="180" y="137" width="6" height="9" fill="#5A5A9A" opacity="0.6"/>
+        <rect x="190" y="137" width="6" height="9" fill="#5A5A9A" opacity="0.6"/>
         <!-- Flag badge NE (GB) -->
-        <rect x="211" y="120" width="26" height="17" rx="2" fill="#012169" stroke="#888" stroke-width="1"/>
-        <line x1="211" y1="120" x2="237" y2="137" stroke="#fff" stroke-width="2.5"/>
-        <line x1="237" y1="120" x2="211" y2="137" stroke="#fff" stroke-width="2.5"/>
-        <line x1="224" y1="120" x2="224" y2="137" stroke="#fff" stroke-width="3"/>
-        <line x1="211" y1="128.5" x2="237" y2="128.5" stroke="#fff" stroke-width="3"/>
-        <line x1="211" y1="120" x2="237" y2="137" stroke="#C8102E" stroke-width="1.5"/>
-        <line x1="237" y1="120" x2="211" y2="137" stroke="#C8102E" stroke-width="1.5"/>
-        <line x1="224" y1="120" x2="224" y2="137" stroke="#C8102E" stroke-width="2"/>
-        <line x1="211" y1="128.5" x2="237" y2="128.5" stroke="#C8102E" stroke-width="2"/>
+        <rect x="211" y="105" width="26" height="17" rx="2" fill="#012169" stroke="#888" stroke-width="1"/>
+        <line x1="211" y1="105" x2="237" y2="122" stroke="#fff" stroke-width="2.5"/>
+        <line x1="237" y1="105" x2="211" y2="122" stroke="#fff" stroke-width="2.5"/>
+        <line x1="224" y1="105" x2="224" y2="122" stroke="#fff" stroke-width="3"/>
+        <line x1="211" y1="113.5" x2="237" y2="113.5" stroke="#fff" stroke-width="3"/>
+        <line x1="211" y1="105" x2="237" y2="122" stroke="#C8102E" stroke-width="1.5"/>
+        <line x1="237" y1="105" x2="211" y2="122" stroke="#C8102E" stroke-width="1.5"/>
+        <line x1="224" y1="105" x2="224" y2="122" stroke="#C8102E" stroke-width="2"/>
+        <line x1="211" y1="113.5" x2="237" y2="113.5" stroke="#C8102E" stroke-width="2"/>
       </svg>
 
       <!-- Flag strip -->
