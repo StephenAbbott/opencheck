@@ -565,6 +565,7 @@ export default function App() {
         id="main-content"
         role="main"
         tabIndex={-1}
+        style={{ outline: "none" }}
         className="flex-1 px-6 sm:px-10 lg:px-16 py-12 max-w-oo-page mx-auto w-full"
       >
         {/* Screen-reader live region — announces streaming lookup progress */}
