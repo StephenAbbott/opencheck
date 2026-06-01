@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>OpenCheck — social card option B (flag panel)</title>
+<title>OpenCheck — social card option B (diagram + flag panel)</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 1080px; height: 566px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
@@ -11,7 +11,7 @@ body { background: #1C1C2E; padding: 48px 64px 44px; display: flex; flex-directi
 </head>
 <body>
 
-<!-- TOP: Eyebrow + two-column (title/tagline left, flag panel right) -->
+<!-- TOP: Eyebrow + two-column (title/tagline left, diagram+flag panel right) -->
 <div>
   <div style="font-size:11px;letter-spacing:0.15em;color:#1D9E75;text-transform:uppercase;font-weight:600;margin-bottom:22px;">Open data, Open APIs, Open standards</div>
   <div style="display:flex;align-items:flex-start;gap:0;">
@@ -19,37 +19,109 @@ body { background: #1C1C2E; padding: 48px 64px 44px; display: flex; flex-directi
     <!-- Left: title + tagline + mini stat chips -->
     <div style="flex:1;min-width:0;">
       <div style="font-size:72px;font-weight:500;color:#fff;line-height:1.0;margin-bottom:14px;letter-spacing:-0.5px;">OpenCheck</div>
-      <div style="font-size:20px;color:#9FE1CB;line-height:1.55;margin-bottom:22px;">One query. 20 national registers,<br>8 open data sources. All at once.</div>
+      <div style="font-size:19px;color:#9FE1CB;line-height:1.55;margin-bottom:22px;">One query. 20 national registers,<br>8 open data sources, BODS ownership<br>diagrams and risk signals. All at once.</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <span style="font-size:12px;font-weight:600;color:#5DCAA5;background:#04342C;border:1px solid #085041;border-radius:20px;padding:5px 14px;white-space:nowrap;">20 national registers</span>
-        <span style="font-size:12px;font-weight:600;color:#CECBF6;background:#26215C;border:1px solid #3C3489;border-radius:20px;padding:5px 14px;white-space:nowrap;">8 open data sources</span>
-        <span style="font-size:12px;font-weight:600;color:#9FE1CB;background:#04342C;border:1px solid #085041;border-radius:20px;padding:5px 14px;white-space:nowrap;">20 countries</span>
+        <span style="font-size:12px;font-weight:600;color:#CECBF6;background:#26215C;border:1px solid #3C3489;border-radius:20px;padding:5px 14px;white-space:nowrap;">BODS v0.4 diagrams</span>
+        <span style="font-size:12px;font-weight:600;color:#F0997B;background:#4A1B0C;border:1px solid #72280F;border-radius:20px;padding:5px 14px;white-space:nowrap;">Risk signal overlays</span>
       </div>
     </div>
 
-    <!-- Right: flag grid panel -->
-    <div style="flex-shrink:0;width:400px;margin-left:44px;background:#13132A;border:1px solid #2A2A44;border-radius:10px;padding:24px 24px 22px;">
-      <div style="font-size:10px;letter-spacing:0.12em;color:#4A4A6A;text-transform:uppercase;margin-bottom:18px;">National register countries</div>
-      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:12px 6px;">
-        <span style="font-size:36px;line-height:1;text-align:center;">🇦🇹</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇧🇪</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇨🇦</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇨🇿</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇩🇰</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇪🇪</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇫🇮</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇫🇷</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇮🇪</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇱🇻</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇱🇹</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇳🇱</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇳🇴</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇵🇱</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇸🇬</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇸🇰</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇸🇪</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇨🇭</span>
-        <span style="font-size:36px;line-height:1;text-align:center;">🇬🇧</span>
+    <!-- Right: diagram preview + flag grid -->
+    <div style="flex-shrink:0;width:420px;margin-left:44px;background:#13132A;border:1px solid #2A2A44;border-radius:10px;padding:18px 20px 16px;display:flex;flex-direction:column;">
+
+      <div style="font-size:10px;letter-spacing:0.12em;color:#4A4A6A;text-transform:uppercase;margin-bottom:14px;">BODS ownership diagram</div>
+
+      <!-- Mini diagram SVG -->
+      <svg width="380" height="174" viewBox="0 0 380 174" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+        <defs>
+          <marker id="arr-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#3E82D4"/>
+          </marker>
+          <marker id="arr-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#7B6CC8"/>
+          </marker>
+        </defs>
+
+        <!-- Edge: HoldCo → Target (Owns 100%, blue) -->
+        <path d="M 310,102 C 310,138 230,148 226,148" fill="none" stroke="#3E82D4" stroke-width="1.8" marker-end="url(#arr-blue)"/>
+        <text x="295" y="142" fill="#3E82D4" font-size="10" font-family="-apple-system,sans-serif" text-anchor="middle">Owns 100%</text>
+
+        <!-- Edge: Person → Target (Director, purple dashed) -->
+        <path d="M 70,102 C 70,138 150,148 154,148" fill="none" stroke="#7B6CC8" stroke-width="1.8" stroke-dasharray="5,3" marker-end="url(#arr-purple)"/>
+        <text x="85" y="142" fill="#7B6CC8" font-size="10" font-family="-apple-system,sans-serif" text-anchor="middle">Director</text>
+
+        <!-- Person node (dashed border) -->
+        <circle cx="70" cy="68" r="34" fill="#1A1A30" stroke="#5A4FA8" stroke-width="2" stroke-dasharray="6,3"/>
+        <!-- Person icon -->
+        <circle cx="70" cy="58" r="9" fill="none" stroke="#7B6CC8" stroke-width="1.5"/>
+        <path d="M 54,88 Q 70,78 86,88" fill="none" stroke="#7B6CC8" stroke-width="1.5"/>
+        <!-- Person label -->
+        <text x="70" y="117" fill="#9090C0" font-size="9.5" font-family="-apple-system,sans-serif" text-anchor="middle">Arnis Kalnins</text>
+
+        <!-- Risk signal badge (SANCTIONED, rose) — 315° NW of person node -->
+        <rect x="24" y="30" width="36" height="16" rx="7" fill="#3D0F18" stroke="#BE123C" stroke-width="1.2"/>
+        <text x="42" y="42" fill="#FB7185" font-size="9" font-family="-apple-system,sans-serif" font-weight="700" text-anchor="middle">⚠ S</text>
+
+        <!-- HoldCo entity node -->
+        <circle cx="310" cy="68" r="34" fill="#1A1A30" stroke="#2A2A50" stroke-width="2"/>
+        <!-- Building icon -->
+        <rect x="297" y="54" width="26" height="20" rx="1" fill="none" stroke="#5A5A9A" stroke-width="1.5"/>
+        <rect x="300" y="57" width="6" height="5" fill="#5A5A9A" opacity="0.6"/>
+        <rect x="310" y="57" width="6" height="5" fill="#5A5A9A" opacity="0.6"/>
+        <rect x="300" y="65" width="6" height="9" fill="#5A5A9A" opacity="0.6"/>
+        <rect x="310" y="65" width="6" height="9" fill="#5A5A9A" opacity="0.6"/>
+        <!-- HoldCo label -->
+        <text x="310" y="117" fill="#9090C0" font-size="9.5" font-family="-apple-system,sans-serif" text-anchor="middle">Baltic HoldCo OÜ</text>
+        <!-- Flag badge NE (EE flag colours) -->
+        <rect x="332" y="32" width="26" height="17" rx="2" fill="#fff" stroke="#888" stroke-width="1"/>
+        <rect x="332" y="32" width="26" height="5.5" fill="#0072CE"/>
+        <rect x="332" y="37.5" width="26" height="5.5" fill="#1a1a1a"/>
+        <rect x="332" y="43" width="26" height="6" fill="#fff"/>
+
+        <!-- Target company node (main subject) -->
+        <circle cx="190" cy="155" r="34" fill="#1A1A30" stroke="#2A2A50" stroke-width="2"/>
+        <!-- Building icon -->
+        <rect x="177" y="141" width="26" height="20" rx="1" fill="none" stroke="#5A5A9A" stroke-width="1.5"/>
+        <rect x="180" y="144" width="6" height="5" fill="#5A5A9A" opacity="0.6"/>
+        <rect x="190" y="144" width="6" height="5" fill="#5A5A9A" opacity="0.6"/>
+        <rect x="180" y="152" width="6" height="9" fill="#5A5A9A" opacity="0.6"/>
+        <rect x="190" y="152" width="6" height="9" fill="#5A5A9A" opacity="0.6"/>
+        <!-- Flag badge NE (GB) -->
+        <rect x="211" y="120" width="26" height="17" rx="2" fill="#012169" stroke="#888" stroke-width="1"/>
+        <line x1="211" y1="120" x2="237" y2="137" stroke="#fff" stroke-width="2.5"/>
+        <line x1="237" y1="120" x2="211" y2="137" stroke="#fff" stroke-width="2.5"/>
+        <line x1="224" y1="120" x2="224" y2="137" stroke="#fff" stroke-width="3"/>
+        <line x1="211" y1="128.5" x2="237" y2="128.5" stroke="#fff" stroke-width="3"/>
+        <line x1="211" y1="120" x2="237" y2="137" stroke="#C8102E" stroke-width="1.5"/>
+        <line x1="237" y1="120" x2="211" y2="137" stroke="#C8102E" stroke-width="1.5"/>
+        <line x1="224" y1="120" x2="224" y2="137" stroke="#C8102E" stroke-width="2"/>
+        <line x1="211" y1="128.5" x2="237" y2="128.5" stroke="#C8102E" stroke-width="2"/>
+      </svg>
+
+      <!-- Flag strip -->
+      <div style="border-top:1px solid #1F1F38;margin:12px -4px 10px;"></div>
+      <div style="font-size:9px;letter-spacing:0.12em;color:#4A4A6A;text-transform:uppercase;margin-bottom:8px;">National register countries</div>
+      <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px 4px;">
+        <span style="font-size:22px;line-height:1;text-align:center;">🇦🇹</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇧🇪</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇨🇦</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇨🇿</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇩🇰</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇪🇪</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇫🇮</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇫🇷</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇮🇪</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇱🇻</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇱🇹</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇳🇱</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇳🇴</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇵🇱</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇸🇬</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇸🇰</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇸🇪</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇨🇭</span>
+        <span style="font-size:22px;line-height:1;text-align:center;">🇬🇧</span>
       </div>
     </div>
   </div>
@@ -82,10 +154,8 @@ body { background: #1C1C2E; padding: 48px 64px 44px; display: flex; flex-directi
     <span style="font-size:11.5px;padding:4px 9px;border-radius:5px;font-family:'SF Mono','Fira Code',monospace;color:#CECBF6;background:#26215C;">opencorporates</span>
     <span style="font-size:11.5px;padding:4px 9px;border-radius:5px;font-family:'SF Mono','Fira Code',monospace;color:#CECBF6;background:#26215C;">sec_edgar</span>
     <span style="font-size:11.5px;padding:4px 9px;border-radius:5px;font-family:'SF Mono','Fira Code',monospace;color:#F0997B;background:#4A1B0C;">opensanctions</span>
-    <span style="font-size:11.5px;padding:4px 9px;border-radius:5px;font-family:'SF Mono','Fira Code',monospace;color:#F0997B;background:#4A1B0C;">openaleph</span>
     <span style="font-size:11.5px;padding:4px 9px;border-radius:5px;font-family:'SF Mono','Fira Code',monospace;color:#FAC775;background:#412402;">wikidata</span>
     <span style="font-size:11.5px;padding:4px 9px;border-radius:5px;font-family:'SF Mono','Fira Code',monospace;color:#FAC775;background:#412402;">everypolitician</span>
-    <span style="font-size:11.5px;padding:4px 9px;border-radius:5px;font-family:'SF Mono','Fira Code',monospace;color:#FAC775;background:#412402;">climatetrace</span>
   </div>
   <div style="font-size:12px;color:#4A4A6A;">Open source &nbsp;&middot;&nbsp; github.com/StephenAbbott/opencheck</div>
 </div>
