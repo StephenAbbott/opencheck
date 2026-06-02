@@ -349,6 +349,7 @@ def make_relationship_statement(
 
 def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
     source_names = {
+        "abr_australia": "Australian Business Register — ABN Lookup (Australian Taxation Office)",
         "acra_singapore": "ACRA — Accounting and Corporate Regulatory Authority (Singapore)",
         "ariregister": "Estonian e-Business Register (e-Äriregister)",
         "bce_belgium": "BCE/KBO — Banque-Carrefour des Entreprises (Belgian Business Register)",
@@ -385,6 +386,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "zefix": "Zefix — Swiss Commercial Registry",
     }
     _official_registers = {
+        "abr_australia",
         "acra_singapore",
         "ariregister",
         "bce_belgium",
@@ -7084,3 +7086,81 @@ def map_cyprus_drcor(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interests=interests,
             source_url=source_url,
         )
+
+
+# ---------------------------------------------------------------------------
+# Australian Business Register — ABN Lookup (data.gov.au, CC BY 3.0 AU)
+# ---------------------------------------------------------------------------
+#
+# ABN Lookup publishes entity-level firmographic data only — no officers or
+# beneficial owners — so this mapper produces a single entity statement.
+
+
+def map_abr_australia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Yield a BODS v0.4 entity statement for an Australian ABR entity.
+
+    Identifiers: ``AU-ABN`` (always) and ``AU-ACN`` (companies only).
+    Business/trading names become ``alternateNames``; the registered state and
+    postcode become a partial registered address.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return
+
+    abn = (bundle.get("abn") or "").strip()
+    acn = (bundle.get("acn") or "").strip()
+    name = (bundle.get("name") or "").strip()
+    if not (abn or acn) or not name:
+        return
+
+    local_id = abn or acn
+    source_url = bundle.get("link") or "https://abr.business.gov.au/"
+
+    # ── Identifiers ───────────────────────────────────────────────────────
+    identifiers: list[dict[str, str]] = []
+    if abn:
+        identifiers.append({
+            "id": abn,
+            "scheme": "AU-ABN",
+            "schemeName": "Australian Business Number — Australian Business Register",
+        })
+    if acn:
+        identifiers.append({
+            "id": acn,
+            "scheme": "AU-ACN",
+            "schemeName": "Australian Company Number — Australian Securities and Investments Commission",
+        })
+
+    # ── Partial registered address (state + postcode only) ────────────────
+    addresses: list[dict[str, Any]] = []
+    addr_parts = [p for p in (bundle.get("state"), bundle.get("postcode")) if p]
+    if addr_parts:
+        addresses.append(_addr("registered", " ".join(addr_parts), "AU"))
+
+    # ── Business / trading names → alternateNames ─────────────────────────
+    alternate_names = [
+        b for b in (bundle.get("business_names") or []) if isinstance(b, str) and b.strip()
+    ]
+
+    stmt = make_entity_statement(
+        source_id="abr_australia",
+        local_id=local_id,
+        name=name,
+        jurisdiction=("Australia", "AU"),
+        identifiers=identifiers,
+        addresses=addresses,
+        alternate_names=alternate_names,
+        source_url=source_url,
+    )
+
+    # Entity type subtype + cancelled-status annotation.
+    entity_type_name = (bundle.get("entity_type_name") or "").strip()
+    abn_status = (bundle.get("abn_status") or "").strip().lower()
+    record_details = stmt.get("recordDetails") or {}
+    if entity_type_name:
+        record_details["entityType"] = {"type": "registeredEntity", "subtype": entity_type_name}
+    if abn_status and abn_status != "active":
+        # ABN Lookup gives a status (e.g. "Cancelled") but not always a date.
+        record_details["dissolutionDate"] = (bundle.get("abn_status_from") or "unknown")
+    stmt["recordDetails"] = record_details
+
+    yield stmt

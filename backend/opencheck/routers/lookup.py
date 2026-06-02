@@ -17,6 +17,7 @@ from ..bods import (
     map_acra_singapore,
     map_ares,
     map_ariregister,
+    map_abr_australia,
     map_bce_belgium,
     map_corporations_canada,
     map_bolagsverket,
@@ -44,6 +45,12 @@ from ..bods import (
     map_kvk,
     map_zefix,
     validate_shape,
+)
+from ..sources.abr_australia import (
+    ABR_ASIC_RA_CODE as _ABR_ASIC_RA_CODE,
+    ABR_ABR_RA_CODE as _ABR_ABR_RA_CODE,
+    normalise_acn as _normalise_acn,
+    normalise_abn as _normalise_abn,
 )
 from ..sources.ares import CZ_RA_CODE as _CZ_RA_CODE, normalise_ico as _normalise_ico
 from ..sources.bce_belgium import BCE_RA_CODE as _BCE_RA_CODE, normalise_enterprise_number as _normalise_enterprise_number
@@ -111,6 +118,7 @@ _MAPPERS = {
     "zefix": map_zefix,
     "cvr_denmark": map_cvr_denmark,
     "sudreg_croatia": map_sudreg_croatia,
+    "abr_australia": map_abr_australia,
 }
 
 _NC_LICENSES = {"CC-BY-NC-4.0", "CC-BY-NC-SA-4.0"}
@@ -407,6 +415,10 @@ async def lookup(
         derived["dk_cvr"] = _normalise_cvr(registered_as)
     if registered_at_id == _SUDREG_RA_CODE and registered_as:
         derived["hr_mbs"] = _normalise_mbs(registered_as)
+    if registered_at_id == _ABR_ASIC_RA_CODE and registered_as:
+        derived["au_acn"] = _normalise_acn(registered_as)
+    if registered_at_id == _ABR_ABR_RA_CODE and registered_as:
+        derived["au_abn"] = _normalise_abn(registered_as)
     # NOTE: ACRA Singapore (RA000523) adapter is implemented but not wired into
     # lookup dispatch. The data.gov.sg dataset is bulk CSV only (no live API),
     # which doesn't fit the fast-API pattern used by the other national registers.
@@ -469,6 +481,8 @@ async def lookup(
             **({"ca_corp_id": derived["ca_corp_id"]} if "ca_corp_id" in derived else {}),
             **({"dk_cvr": derived["dk_cvr"]} if "dk_cvr" in derived else {}),
             **({"hr_mbs": derived["hr_mbs"]} if "hr_mbs" in derived else {}),
+            **({"au_acn": derived["au_acn"]} if "au_acn" in derived else {}),
+            **({"au_abn": derived["au_abn"]} if "au_abn" in derived else {}),
             # wikidata_qid is intentionally omitted here: the QID is sourced
             # from Wikidata's own SPARQL endpoint, not from GLEIF.  Including it
             # on the GLEIF hit would make the reconciler show "gleif" as a
@@ -561,6 +575,10 @@ async def lookup(
         _w1.append(("cvr_denmark", REGISTRY["cvr_denmark"].fetch(derived["dk_cvr"], legal_name=legal_name)))
     if "hr_mbs" in derived:
         _w1.append(("sudreg_croatia", REGISTRY["sudreg_croatia"].fetch(derived["hr_mbs"], legal_name=legal_name)))
+    if "au_acn" in derived:
+        _w1.append(("abr_australia", REGISTRY["abr_australia"].fetch(derived["au_acn"], legal_name=legal_name)))
+    elif "au_abn" in derived:
+        _w1.append(("abr_australia", REGISTRY["abr_australia"].fetch(derived["au_abn"], legal_name=legal_name)))
     # acra_singapore + cyprus_drcor not dispatched — bulk-data adapters, not wired into live lookup.
     if ocid:
         _w1.append(("opencorporates", REGISTRY["opencorporates"].fetch(ocid)))
@@ -987,6 +1005,29 @@ async def lookup(
                 is_stub=False,
             ))
             deepened_bundles.append(("sudreg_croatia", derived["hr_mbs"]))
+
+    # Australian Business Register (ABN Lookup)
+    if "au_acn" in derived or "au_abn" in derived:
+        _au_id = derived.get("au_acn") or derived.get("au_abn") or ""
+        _b = _r.get("abr_australia")
+        if isinstance(_b, Exception):
+            errors["abr_australia"] = _fmt_source_error(_b)
+        elif _b and not _b.get("is_stub"):
+            _au_ids = {
+                **({"au_abn": _b["abn"]} if _b.get("abn") else {}),
+                **({"au_acn": _b["acn"]} if _b.get("acn") else {}),
+            }
+            hits.append(SourceHit(
+                source_id="abr_australia",
+                hit_id=_au_id,
+                kind=SearchKind.ENTITY,
+                name=(_b.get("name") or "").strip() or legal_name or "",
+                summary=f"AU-ABN {_b.get('abn') or _au_id}".strip(),
+                identifiers=_au_ids,
+                raw=_b,
+                is_stub=False,
+            ))
+            deepened_bundles.append(("abr_australia", _au_id))
 
     # ACRA Singapore — disabled (bulk CSV only, not wired into live lookup)
 
@@ -1471,6 +1512,10 @@ async def _lookup_stream_events(
         derived["dk_cvr"] = _normalise_cvr(registered_as)
     if registered_at_id == _SUDREG_RA_CODE and registered_as:
         derived["hr_mbs"] = _normalise_mbs(registered_as)
+    if registered_at_id == _ABR_ASIC_RA_CODE and registered_as:
+        derived["au_acn"] = _normalise_acn(registered_as)
+    if registered_at_id == _ABR_ABR_RA_CODE and registered_as:
+        derived["au_abn"] = _normalise_abn(registered_as)
     # ACRA Singapore — disabled (bulk CSV only, not wired into live lookup).
     # To enable: add `derived["sg_name"] = legal_name` when jurisdiction == "SG"
     # and wire the applicable_ids / _add_task / result handler blocks below.
@@ -1537,6 +1582,8 @@ async def _lookup_stream_events(
             **({"ca_corp_id": derived["ca_corp_id"]} if "ca_corp_id" in derived else {}),
             **({"dk_cvr": derived["dk_cvr"]} if "dk_cvr" in derived else {}),
             **({"hr_mbs": derived["hr_mbs"]} if "hr_mbs" in derived else {}),
+            **({"au_acn": derived["au_acn"]} if "au_acn" in derived else {}),
+            **({"au_abn": derived["au_abn"]} if "au_abn" in derived else {}),
             # wikidata_qid is intentionally omitted here: the QID is sourced
             # from Wikidata's own SPARQL endpoint, not from GLEIF.  Including it
             # on the GLEIF hit would make the reconciler show "gleif" as a
@@ -1598,6 +1645,8 @@ async def _lookup_stream_events(
         applicable_ids.append("cvr_denmark")
     if "hr_mbs" in derived:
         applicable_ids.append("sudreg_croatia")
+    if "au_acn" in derived or "au_abn" in derived:
+        applicable_ids.append("abr_australia")
     # acra_singapore + cyprus_drcor not dispatched — bulk-data adapters, not wired into live lookup.
     if ocid:
         applicable_ids.append("opencorporates")
@@ -1706,6 +1755,10 @@ async def _lookup_stream_events(
         _add_task("cvr_denmark", REGISTRY["cvr_denmark"].fetch(derived["dk_cvr"], legal_name=legal_name))
     if "hr_mbs" in derived:
         _add_task("sudreg_croatia", REGISTRY["sudreg_croatia"].fetch(derived["hr_mbs"], legal_name=legal_name))
+    if "au_acn" in derived:
+        _add_task("abr_australia", REGISTRY["abr_australia"].fetch(derived["au_acn"], legal_name=legal_name))
+    elif "au_abn" in derived:
+        _add_task("abr_australia", REGISTRY["abr_australia"].fetch(derived["au_abn"], legal_name=legal_name))
     # acra_singapore + cyprus_drcor not dispatched — bulk-data adapters, not wired into live lookup.
     if ocid:
         _add_task("opencorporates", REGISTRY["opencorporates"].fetch(ocid))
@@ -2004,6 +2057,21 @@ async def _lookup_stream_events(
                             **({"hr_oib": result["oib"]} if result.get("oib") else {}),
                         },
                         raw=_hr_subject, is_stub=False,
+                    )
+
+            elif source_id == "abr_australia" and ("au_acn" in derived or "au_abn" in derived):
+                if result and not result.get("is_stub"):
+                    _au_id = derived.get("au_acn") or derived.get("au_abn") or ""
+                    hit = SourceHit(
+                        source_id="abr_australia", hit_id=_au_id,
+                        kind=SearchKind.ENTITY,
+                        name=(result.get("name") or "").strip() or legal_name or "",
+                        summary=f"AU-ABN {result.get('abn') or _au_id}".strip(),
+                        identifiers={
+                            **({"au_abn": result["abn"]} if result.get("abn") else {}),
+                            **({"au_acn": result["acn"]} if result.get("acn") else {}),
+                        },
+                        raw=result, is_stub=False,
                     )
 
             elif source_id == "opencorporates" and ocid:

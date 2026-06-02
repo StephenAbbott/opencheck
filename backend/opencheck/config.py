@@ -123,6 +123,10 @@ class Settings(BaseSettings):
     # Source (3 monthly CSVs): https://data.gov.cy/el/dataset/mitroo-eggegrammenon-etaireion-emporikon-eponymion-kai-synetairismon-stin-kypro
     cyprus_drcor_db_file: str | None = Field(default=None, alias="CYPRUS_DRCOR_DB_FILE")
 
+    # --- Australian Business Register (ABN Lookup, CC BY 3.0 AU) ---
+    # Free GUID from https://abr.business.gov.au/Documentation/WebServiceRegistration
+    abn_guid: str | None = Field(default=None, alias="ABN_GUID")
+
     # --- Belgian Crossroads Bank for Enterprises (BCE / KBO) ---
     # Pre-built SQLite index. Build with: python scripts/extract_bce.py
     # Source: https://kbopub.economie.fgov.be/kbo-open-data/

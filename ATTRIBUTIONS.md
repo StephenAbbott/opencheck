@@ -37,6 +37,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `ie_crn` (company registration number) derived from GLEIF RA code `RA000402`
 - **Note:** Officer and director data is not available from the Open Data Portal tier. The CRO Open Services API (`services.cro.ie/cws`) provides richer data including officers, but requires an API key issued by the CRO.
 
+## Australian Business Register — ABN Lookup (Australia)
+
+- **Data:** ABN, ACN, entity name and type, ABN/GST status, registered state and postcode, and business (trading) names, via the ABN Lookup JSON web services (updated hourly from the ABR).
+- **Portal / API:** <https://abr.business.gov.au/> · dataset: <https://data.gov.au/data/dataset/abn-lookup-web-services>
+- **License:** [CC BY 3.0 AU](https://creativecommons.org/licenses/by/3.0/au/)
+- **Attribution:** "Contains data sourced from the Australian Business Register (ABR), used under CC BY 3.0 AU. The Australian Taxation Office does not endorse OpenCheck or this use."
+- **Entry point:** `au_acn` (9-digit ACN) from GLEIF RA code `RA000014` (ASIC), or `au_abn` (11-digit ABN) from `RA000013` (ABR/ATO)
+- **Note:** Entity-level firmographic data only — no officers or beneficial owners. Requires a free GUID (`ABN_GUID`) from the ABR web-service registration.
+
 ## DRCOR — Department of Registrar of Companies and Intellectual Property (Cyprus)
 
 - **Data:** organisations, registered office addresses, and officials (directors/secretaries) from the *Register of Registered Companies, Commercial Names and Cooperatives in Cyprus*. No shareholder/ownership data is published.
