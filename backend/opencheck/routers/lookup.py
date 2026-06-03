@@ -199,7 +199,7 @@ async def deepen(
 
     info = adapter.info
     license_notice = _license_notice_for(info, raw)
-    signals = [s.to_dict() for s in assess_bundle(source, raw, bods)]
+    signals = [s.to_dict() for s in assess_bundle(source, raw, bods, hit_id=hit_id)]
 
     return DeepenResponse(
         source_id=source,
@@ -2359,7 +2359,7 @@ async def _safe_deepen(source_id: str, hit_id: str) -> dict[str, Any] | None:
             issues = validate_shape(bods)
 
     license_notice = _license_notice_for(adapter.info, raw)
-    signals = [s.to_dict() for s in assess_bundle(source_id, raw, bods)]
+    signals = [s.to_dict() for s in assess_bundle(source_id, raw, bods, hit_id=hit_id)]
     return {
         "raw": raw,
         "bods": bods,

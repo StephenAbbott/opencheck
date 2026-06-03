@@ -326,7 +326,8 @@ def assess_hits(hits: Iterable[SourceHit]) -> list[RiskSignal]:
 
 
 def assess_bundle(
-    source_id: str, raw: dict[str, Any], bods: list[dict[str, Any]] | None = None
+    source_id: str, raw: dict[str, Any], bods: list[dict[str, Any]] | None = None,
+    hit_id: str = "",
 ) -> list[RiskSignal]:
     """Risk signals derivable from a ``/deepen`` payload.
 
@@ -373,12 +374,12 @@ def assess_bundle(
 
     if bods:
         signals.extend(_opaque_ownership_signals(source_id, raw, bods))
-        signals.extend(assess_amla(source_id, raw, bods))
+        signals.extend(assess_amla(source_id, raw, bods, hit_id=hit_id))
 
     # Subjective AMLA "obfuscation" signal looks at the assembled
     # signal set (after every other rule has fired) — last to run.
     obfuscation = _possible_obfuscation_signal(
-        source_id, raw.get("entity_id") or raw.get("hit_id") or "", signals
+        source_id, hit_id or raw.get("entity_id") or raw.get("hit_id") or "", signals
     )
     if obfuscation is not None:
         signals.append(obfuscation)
@@ -655,17 +656,22 @@ def _interests(stmt: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def assess_amla(
-    source_id: str, raw: dict[str, Any], bods: list[dict[str, Any]]
+    source_id: str, raw: dict[str, Any], bods: list[dict[str, Any]],
+    hit_id: str = "",
 ) -> list[RiskSignal]:
     """Run all AMLA-aligned rules over a BODS bundle.
 
     Called from ``assess_bundle``; broken out so callers (CLI, tests,
     a future export pipeline) can invoke it directly on a hand-built
     BODS bundle without going through a deepen response.
+
+    ``hit_id`` should be passed explicitly by ``assess_bundle`` (which
+    knows the true hit id). The raw-dict fallback exists for direct
+    callers (tests, CLI) that pass ``entity_id`` in the raw dict.
     """
     if not bods:
         return []
-    hit_id = raw.get("entity_id") or raw.get("hit_id") or ""
+    hit_id = hit_id or raw.get("entity_id") or raw.get("hit_id") or ""
 
     trust_signal = _trust_or_arrangement_signal(source_id, hit_id, bods)
     non_eu_signal = _non_eu_jurisdiction_signal(source_id, hit_id, bods)
