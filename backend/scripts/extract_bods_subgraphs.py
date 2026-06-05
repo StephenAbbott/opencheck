@@ -359,7 +359,9 @@ def _publication_block(row: dict[str, Any]) -> dict[str, Any]:
 def _source_block(row: dict[str, Any]) -> dict[str, Any]:
     src: dict[str, Any] = {}
     if row.get("source_type"):
-        src["type"] = row["source_type"]
+        # BODS 0.4 requires source.type to be an array; the parquet stores it
+        # as a comma-joined string (e.g. "officialRegister,verified").
+        src["type"] = [t for t in str(row["source_type"]).split(",") if t]
     if row.get("source_url"):
         src["url"] = row["source_url"]
     return src
@@ -384,18 +386,22 @@ def reconstruct_entity_statement(
             "WHERE _link_entity_statement = ?",
             (link,),
         ).fetchall()
-        if r["id"]
+        # BODS 0.4 requires a scheme/schemeName/uri alongside the id; drop
+        # id-only identifiers (e.g. a bare foreign registration number).
+        if r["id"] and (r["scheme"] or r["schemename"] or r["uri"])
     ]
 
     addresses = [
         {
-            **({"type": r["type"]} if r["type"] else {}),
+            # BODS 0.4 address.type enum is [registered, business, alternative];
+            # map anything else (e.g. UK PSC "service") to "alternative".
+            **({"type": (r["type"] if r["type"] in ("registered", "business", "alternative") else "alternative")} if r["type"] else {}),
             **({"address": r["address"]} if r["address"] else {}),
             **({"postCode": r["postcode"]} if r["postcode"] else {}),
             **(
-                {"country": r["country_code"]}
+                {"country": {"name": r["country_name"] or r["country_code"], "code": r["country_code"]}}
                 if r["country_code"]
-                else ({"country": r["country_name"]} if r["country_name"] else {})
+                else {}
             ),
         }
         for r in conn.execute(
@@ -407,6 +413,7 @@ def reconstruct_entity_statement(
     ]
 
     rd: dict[str, Any] = {
+        "isComponent": bool(e.get("recorddetails_iscomponent")),
         "entityType": {
             "type": e.get("recorddetails_entitytype_type") or "registeredEntity",
             **(
@@ -435,6 +442,7 @@ def reconstruct_entity_statement(
     return {
         "statementId": e["statementid"],
         **({"recordId": e["recordid"]} if e.get("recordid") else {}),
+        "declarationSubject": e.get("declarationsubject") or e.get("recordid") or e["statementid"],
         "recordType": "entity",
         "recordStatus": e.get("recordstatus") or "new",
         **({"statementDate": e["statementdate"]} if e.get("statementdate") else {}),
@@ -480,6 +488,7 @@ def reconstruct_person_statement(
     ]
 
     rd: dict[str, Any] = {
+        "isComponent": bool(p.get("recorddetails_iscomponent")),
         "personType": p.get("recorddetails_persontype") or "knownPerson",
     }
     if names:
@@ -492,6 +501,7 @@ def reconstruct_person_statement(
     return {
         "statementId": p["statementid"],
         **({"recordId": p["recordid"]} if p.get("recordid") else {}),
+        "declarationSubject": p.get("declarationsubject") or p.get("recordid") or p["statementid"],
         "recordType": "person",
         "recordStatus": p.get("recordstatus") or "new",
         **({"statementDate": p["statementdate"]} if p.get("statementdate") else {}),
@@ -551,12 +561,14 @@ def reconstruct_relationship_statement(
                 v = i[col]
             except (IndexError, KeyError):
                 continue
-            if v is None:
+            # Treat empty strings as missing: BODS wants a date for endDate and
+            # a number for share bounds, and "" fails both.
+            if v is None or v == "":
                 continue
             if col == "share_minimum":
                 share = {"minimum": v}
                 try:
-                    if i["share_maximum"] is not None:
+                    if i["share_maximum"] not in (None, ""):
                         share["maximum"] = i["share_maximum"]
                 except (IndexError, KeyError):
                     pass
@@ -581,31 +593,19 @@ def reconstruct_relationship_statement(
     if not subject_sid:
         return None
     rd: dict[str, Any] = {
-        "subject": {"describedByEntityStatement": subject_sid},
+        "isComponent": bool(r.get("recorddetails_iscomponent")),
+        # BODS 0.4 references subject/interestedParty by the target's recordId
+        # (not statementId; the additional check ``subject_must_be_record_id``
+        # enforces this). The describedBy* object form is also rejected.
+        "subject": subject_record,
     }
     if interested_sid:
-        # Decide entity vs. person based on the recordId convention
-        # — Open Ownership UK PSC uses the ``GB-COH-PER-`` prefix for
-        # persons, everything else is an entity.
-        ip_record = interested_record or ""
-        ip_key = (
-            "describedByPersonStatement"
-            if any(ip_record.startswith(p) for p in person_recordid_prefixes)
-            else "describedByEntityStatement"
-        )
-        rd["interestedParty"] = {ip_key: interested_sid}
-    elif r.get("recorddetails_interestedparty_reason"):
-        rd["interestedParty"] = {
-            "unspecifiedReason": r["recorddetails_interestedparty_reason"],
-            **(
-                {"description": r["recorddetails_interestedparty_description"]}
-                if r.get("recorddetails_interestedparty_description")
-                else {}
-            ),
-        }
+        rd["interestedParty"] = interested_record
     else:
-        # Has neither a resolvable target nor an unspecifiedReason —
-        # nothing useful to render. Drop.
+        # No resolvable interested party. Reporting exceptions (NO_LEI,
+        # NON_CONSOLIDATING) have no identifiable party, and BODS 0.4 has no
+        # inline "unspecified" form here (the proper representation creates a
+        # placeholder statement — see map_bods_gleif). Drop the edge for now.
         return None
 
     if interests:
@@ -614,6 +614,7 @@ def reconstruct_relationship_statement(
     return {
         "statementId": r["statementid"],
         **({"recordId": r["recordid"]} if r.get("recordid") else {}),
+        "declarationSubject": r.get("declarationsubject") or subject_record,
         "recordType": "relationship",
         "recordStatus": r.get("recordstatus") or "new",
         **({"statementDate": r["statementdate"]} if r.get("statementdate") else {}),
@@ -632,7 +633,12 @@ def patch_relationship_targets(
     because it's a simple column read. Here we look at the actual
     target's type and rewrite to ``describedByPersonStatement`` where
     appropriate.
+
+    No-op as of the BODS 0.4 fix: reconstruct_relationship_statement now emits
+    ``interestedParty`` as a plain recordId string, so there is no
+    ``describedBy*`` key to rewrite. Retained for call-site compatibility.
     """
+    return
     has_persons = has_table(conn, "person_statement")
     if not has_persons:
         return
