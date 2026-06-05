@@ -34,6 +34,7 @@ type Interest = {
             exclusiveMinimum?: number; exclusiveMaximum?: number };
   directOrIndirect?: string;
   beneficialOwnershipOrControl?: boolean;
+  details?: string;
 };
 
 interface NodeOverlay {
@@ -272,13 +273,20 @@ function bodsToElements(statements: Stmt[]): ElementDefinition[] {
     const isRole = interests.some(i =>
       i.type === "seniorManagingOfficial" || i.type === "boardMember" || i.type === "boardChair");
 
+    // Collect details text from all interests for the hover tooltip.
+    const detailsText = interests
+      .map(i => i.details)
+      .filter((d): d is string => !!d)
+      .join(" · ") || undefined;
+
     elements.push({
       data: {
         id: (stmt.statementId ?? stmt.statementID) as string ?? `${sourceId}-${targetId}`,
         source: sourceId,
         target: targetId,
-        label:  buildEdgeLabel(interests),
+        label:    buildEdgeLabel(interests),
         category: hasOwnership ? "ownership" : hasControl ? "control" : isRole ? "role" : "unknown",
+        details:  detailsText,
       },
     });
   }
@@ -345,6 +353,8 @@ const STYLESHEET: StylesheetStyle[] = [
   { selector: "edge[category = 'control']",  style: { "line-color": "#e65100", "target-arrow-color": "#e65100", color: "#e65100" } as cytoscape.Css.Edge },
   { selector: "edge[category = 'role']",     style: { "line-color": "#6a1b9a", "target-arrow-color": "#6a1b9a", color: "#6a1b9a", "line-style": "dashed" } as cytoscape.Css.Edge },
   { selector: "edge[category = 'unknown']",  style: { "line-color": "#888",    "target-arrow-color": "#888",    color: "#888" } as cytoscape.Css.Edge },
+  // Edges with details: thicker on hover class, cursor handled via JS
+  { selector: "edge.hovered",                style: { width: 3, "z-index": 999 } as cytoscape.Css.Edge },
 ];
 
 // BOVS flag badge dimensions — proportional to the node radius so they scale
@@ -374,6 +384,7 @@ export default function BODSGraph({
   const containerRef  = useRef<HTMLDivElement | null>(null);
   const cyRef         = useRef<Core | null>(null);
   const [overlays, setOverlays] = useState<NodeOverlay[]>([]);
+  const [edgeTooltip, setEdgeTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -437,6 +448,39 @@ export default function BODSGraph({
     }
 
     cy.on("viewport", updateOverlays);
+
+    // ── Edge tooltip — hover (desktop) and tap (mobile) ──────────────────
+    cy.on("mousemove", "edge", (evt) => {
+      const details = evt.target.data("details") as string | undefined;
+      if (!details) return;
+      evt.target.addClass("hovered");
+      el.style.cursor = "pointer";
+      const rp = evt.renderedPosition;
+      setEdgeTooltip({ x: rp.x, y: rp.y, text: details });
+    });
+
+    cy.on("mouseout", "edge", (evt) => {
+      evt.target.removeClass("hovered");
+      el.style.cursor = "";
+      setEdgeTooltip(null);
+    });
+
+    // Tap: toggle tooltip for touch / click (dismiss on second tap or background tap)
+    cy.on("tap", "edge", (evt) => {
+      const details = evt.target.data("details") as string | undefined;
+      if (!details) return;
+      const rp = evt.renderedPosition;
+      setEdgeTooltip(prev =>
+        prev?.text === details ? null : { x: rp.x, y: rp.y, text: details }
+      );
+    });
+
+    cy.on("tap", (evt) => {
+      if (evt.target === cy) setEdgeTooltip(null);
+    });
+
+    // Clear tooltip on pan/zoom so it doesn't float in a stale position.
+    cy.on("viewport", () => setEdgeTooltip(null));
 
     cy.ready(() => {
       cy.fit(undefined, 32);
@@ -634,6 +678,31 @@ export default function BODSGraph({
             );
           })}
         </div>
+
+        {/* Edge details tooltip — appears on hover/tap for edges that carry an interests.details string */}
+        {edgeTooltip && (
+          <div
+            style={{
+              position:     "absolute",
+              left:         Math.min(edgeTooltip.x + 12, (containerRef.current?.clientWidth ?? 400) - 220),
+              top:          Math.max(edgeTooltip.y - 48, 8),
+              zIndex:       20,
+              pointerEvents:"none",
+              background:   "#fff",
+              border:       "1px solid #d1d5db",
+              borderRadius: 6,
+              padding:      "6px 10px",
+              fontSize:     11,
+              lineHeight:   1.5,
+              maxWidth:     210,
+              boxShadow:    "0 2px 8px rgba(0,0,0,0.12)",
+              color:        "#1a1a2e",
+              whiteSpace:   "pre-wrap",
+            }}
+          >
+            {edgeTooltip.text}
+          </div>
+        )}
       </div>
     </div>
   );
