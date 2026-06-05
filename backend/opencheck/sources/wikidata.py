@@ -19,6 +19,7 @@ User-Agent, which our shared ``build_client()`` already sets.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import re
 from typing import Any
@@ -78,6 +79,88 @@ WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
 """
+
+
+# SPARQL query for *current* roleholders of an entity — people who hold
+# well-known corporate governance roles (P169 CEO, P488 chair, P3320 board
+# member, P6346 treasurer, P1037 director/manager) with no end-date qualifier.
+# Run concurrently with _FETCH_QUERY for entity subjects only.
+_ROLEHOLDER_QUERY = """
+SELECT ?roleLabel ?person ?personLabel ?start WHERE {
+  {
+    wd:%(qid)s p:P169 ?stmt .
+    ?stmt ps:P169 ?person .
+    BIND("chief executive officer" AS ?roleLabel)
+    OPTIONAL { ?stmt pq:P580 ?start }
+    OPTIONAL { ?stmt pq:P582 ?end }
+  } UNION {
+    wd:%(qid)s p:P488 ?stmt .
+    ?stmt ps:P488 ?person .
+    BIND("chairperson" AS ?roleLabel)
+    OPTIONAL { ?stmt pq:P580 ?start }
+    OPTIONAL { ?stmt pq:P582 ?end }
+  } UNION {
+    wd:%(qid)s p:P3320 ?stmt .
+    ?stmt ps:P3320 ?person .
+    BIND("board member" AS ?roleLabel)
+    OPTIONAL { ?stmt pq:P580 ?start }
+    OPTIONAL { ?stmt pq:P582 ?end }
+  } UNION {
+    wd:%(qid)s p:P6346 ?stmt .
+    ?stmt ps:P6346 ?person .
+    BIND("treasurer" AS ?roleLabel)
+    OPTIONAL { ?stmt pq:P580 ?start }
+    OPTIONAL { ?stmt pq:P582 ?end }
+  } UNION {
+    wd:%(qid)s p:P1037 ?stmt .
+    ?stmt ps:P1037 ?person .
+    BIND("director/manager" AS ?roleLabel)
+    OPTIONAL { ?stmt pq:P580 ?start }
+    OPTIONAL { ?stmt pq:P582 ?end }
+  }
+  FILTER(!BOUND(?end))
+  FILTER(ISIRI(?person))
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
+}
+"""
+
+
+def _parse_roleholders(bindings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Collapse roleholder SPARQL rows into a deduplicated per-person list.
+
+    Returns a list of::
+
+        {
+          "qid":   "Q12345",
+          "name":  "Jane Smith",
+          "roles": [{"label": "chief executive officer", "start": "2021-04-01"}, ...]
+        }
+
+    Multiple rows for the same person (one per role) are merged into a
+    single entry whose ``roles`` list carries each distinct role once.
+    """
+    by_person: dict[str, dict[str, Any]] = {}
+    for row in bindings:
+        person_uri = _bv(row, "person")
+        if not person_uri:
+            continue
+        person_qid = _qid_from_uri(person_uri)
+        if not person_qid or not person_qid.startswith("Q"):
+            continue
+        name = _bv(row, "personLabel") or person_qid
+        role_label = _bv(row, "roleLabel") or "officeholder"
+        start = _bv(row, "start")
+
+        if person_qid not in by_person:
+            by_person[person_qid] = {"qid": person_qid, "name": name, "roles": []}
+
+        existing_labels = {r["label"] for r in by_person[person_qid]["roles"]}
+        if role_label not in existing_labels:
+            by_person[person_qid]["roles"].append(
+                {"label": role_label, "start": start}
+            )
+
+    return list(by_person.values())
 
 
 def _slug(text: str) -> str:
@@ -175,7 +258,12 @@ class WikidataAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     async def fetch(self, hit_id: str) -> dict[str, Any]:
-        """Return bindings + a normalised summary for a Q-ID."""
+        """Return bindings + a normalised summary for a Q-ID.
+
+        For entity subjects, the roleholder query (P169/P488/P3320/P6346/P1037)
+        is run concurrently with the main fetch query so we add only one
+        SPARQL round-trip rather than two sequential ones.
+        """
         qid = hit_id.strip().upper()
         cache_key = f"{_CACHE_NS}/fetch/{qid}"
         if not self.info.live_available and not self._cache.has(cache_key):
@@ -191,15 +279,33 @@ class WikidataAdapter(SourceAdapter):
                 "summary": {},
             }
 
-        query = _FETCH_QUERY % {"qid": qid}
-        payload = await self._sparql(query, cache_key=cache_key)
-        bindings = payload.get("results", {}).get("bindings", [])
+        main_query = _FETCH_QUERY % {"qid": qid}
+        rh_query   = _ROLEHOLDER_QUERY % {"qid": qid}
+        rh_cache_key = f"{_CACHE_NS}/roleholders/{qid}"
+
+        # Run both SPARQL queries concurrently — roleholders is a separate
+        # query because it queries company-page properties (P169, P488 …)
+        # not present on person pages.
+        main_payload, rh_payload = await asyncio.gather(
+            self._sparql(main_query, cache_key=cache_key),
+            self._sparql(rh_query,   cache_key=rh_cache_key),
+        )
+
+        bindings    = main_payload.get("results", {}).get("bindings", [])
+        rh_bindings = rh_payload.get("results",  {}).get("bindings", [])
+
+        summary = _summarise_bindings(qid, bindings)
+        # Only parse roleholders for entity subjects (companies/orgs).
+        # Person pages don't have P169/P488 etc. so the query returns nothing.
+        summary["roleholders"] = (
+            _parse_roleholders(rh_bindings) if summary.get("is_entity") else []
+        )
 
         return {
             "source_id": self.id,
             "qid": qid,
             "bindings": bindings,
-            "summary": _summarise_bindings(qid, bindings),
+            "summary": summary,
         }
 
     # ------------------------------------------------------------------

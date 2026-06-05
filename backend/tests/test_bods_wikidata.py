@@ -289,3 +289,163 @@ def test_map_wikidata_empty_bundle_still_emits_a_statement() -> None:
     statements = list(bundle)
     assert len(statements) == 1
     assert statements[0]["recordType"] == "entity"
+
+
+# ---------------------------------------------------------------------
+# Roleholders (P169/P488/P3320 … → seniorManagingOfficial)
+# ---------------------------------------------------------------------
+
+
+def _entity_with_roleholders_bundle() -> dict:
+    """An entity with two current roleholders — a CEO and a chairperson."""
+    return {
+        "source_id": "wikidata",
+        "qid": "Q157062",
+        "summary": {
+            "qid": "Q157062",
+            "label": "Unilever",
+            "description": "British-Dutch multinational consumer goods company",
+            "is_person": False,
+            "is_entity": True,
+            "instance_of": [{"qid": "Q891723", "label": "public company"}],
+            "citizenships": [],
+            "positions": [],
+            "identifiers": {"lei": "549300MKFYEKVRWML317"},
+            "country": {"qid": "Q145", "label": "United Kingdom"},
+            "dob": None,
+            "dod": None,
+            "inception": "1929-09-02T00:00:00Z",
+            "parent_orgs": [],
+            "roleholders": [
+                {
+                    "qid": "Q111111",
+                    "name": "Hein Schumacher",
+                    "roles": [
+                        {"label": "chief executive officer", "start": "+2023-07-01T00:00:00Z"},
+                    ],
+                },
+                {
+                    "qid": "Q222222",
+                    "name": "Ian Meakins",
+                    "roles": [
+                        {"label": "chairperson", "start": "+2023-05-03T00:00:00Z"},
+                    ],
+                },
+            ],
+        },
+    }
+
+
+def _entity_with_dual_role_holder_bundle() -> dict:
+    """An entity where one person holds two concurrent roles."""
+    return {
+        "source_id": "wikidata",
+        "qid": "Q157062",
+        "summary": {
+            "qid": "Q157062",
+            "label": "Unilever",
+            "description": "British-Dutch multinational consumer goods company",
+            "is_person": False,
+            "is_entity": True,
+            "instance_of": [{"qid": "Q891723", "label": "public company"}],
+            "citizenships": [],
+            "positions": [],
+            "identifiers": {},
+            "country": None,
+            "dob": None,
+            "dod": None,
+            "inception": None,
+            "parent_orgs": [],
+            "roleholders": [
+                {
+                    "qid": "Q333333",
+                    "name": "Jane Smith",
+                    "roles": [
+                        {"label": "chief executive officer", "start": None},
+                        {"label": "board member", "start": None},
+                    ],
+                },
+            ],
+        },
+    }
+
+
+def test_map_wikidata_roleholders_emit_correct_statement_count() -> None:
+    """entity + 2×(person + relationship) = 5 statements."""
+    bundle = map_wikidata(_entity_with_roleholders_bundle())
+    statements = list(bundle)
+    assert len(statements) == 5
+
+
+def test_map_wikidata_roleholders_record_types() -> None:
+    bundle = map_wikidata(_entity_with_roleholders_bundle())
+    types = [s["recordType"] for s in bundle]
+    assert types == ["entity", "person", "relationship", "person", "relationship"]
+
+
+def test_map_wikidata_roleholder_interest_type_is_senior_managing_official() -> None:
+    bundle = map_wikidata(_entity_with_roleholders_bundle())
+    relationships = [s for s in bundle if s["recordType"] == "relationship"]
+    for rel in relationships:
+        for interest in rel["recordDetails"]["interests"]:
+            assert interest["type"] == "seniorManagingOfficial"
+            assert interest["beneficialOwnershipOrControl"] is False
+
+
+def test_map_wikidata_roleholder_details_carries_role_title() -> None:
+    bundle = map_wikidata(_entity_with_roleholders_bundle())
+    relationships = [s for s in bundle if s["recordType"] == "relationship"]
+    details = {i["details"] for rel in relationships for i in rel["recordDetails"]["interests"]}
+    assert "chief executive officer" in details
+    assert "chairperson" in details
+
+
+def test_map_wikidata_roleholder_start_date_normalised() -> None:
+    bundle = map_wikidata(_entity_with_roleholders_bundle())
+    relationships = [s for s in bundle if s["recordType"] == "relationship"]
+    ceo_rel = next(
+        rel for rel in relationships
+        if any(i["details"] == "chief executive officer" for i in rel["recordDetails"]["interests"])
+    )
+    ceo_interest = next(
+        i for i in ceo_rel["recordDetails"]["interests"]
+        if i["details"] == "chief executive officer"
+    )
+    assert ceo_interest.get("startDate") == "2023-07-01"
+
+
+def test_map_wikidata_dual_role_holder_emits_two_interests_on_one_relationship() -> None:
+    """One person holding CEO + board member → one relationship with two interests."""
+    bundle = map_wikidata(_entity_with_dual_role_holder_bundle())
+    relationships = [s for s in bundle if s["recordType"] == "relationship"]
+    assert len(relationships) == 1
+    interests = relationships[0]["recordDetails"]["interests"]
+    assert len(interests) == 2
+    labels = {i["details"] for i in interests}
+    assert labels == {"chief executive officer", "board member"}
+
+
+def test_map_wikidata_roleholders_relationship_links_to_correct_statements() -> None:
+    """Each relationship's subject is the entity; interestedParty is the person."""
+    bundle = map_wikidata(_entity_with_roleholders_bundle())
+    statements = list(bundle)
+    entity_id = statements[0]["statementId"]
+    relationships = [s for s in statements if s["recordType"] == "relationship"]
+    persons = {s["statementId"] for s in statements if s["recordType"] == "person"}
+    for rel in relationships:
+        assert rel["recordDetails"]["subject"] == entity_id
+        assert rel["recordDetails"]["interestedParty"] in persons
+
+
+def test_map_wikidata_roleholders_passes_validator() -> None:
+    bundle = map_wikidata(_entity_with_roleholders_bundle())
+    issues = validate_shape(bundle)
+    assert issues == [], issues
+
+
+def test_map_wikidata_entity_without_roleholders_key_still_emits_one_statement() -> None:
+    """Existing bundles lacking the roleholders key are unaffected (backward compat)."""
+    bundle = map_wikidata(_entity_bundle())  # _entity_bundle has no roleholders key
+    statements = list(bundle)
+    assert len(statements) == 1
+    assert statements[0]["recordType"] == "entity"

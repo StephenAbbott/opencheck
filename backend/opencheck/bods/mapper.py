@@ -3450,6 +3450,70 @@ def map_wikidata(bundle: dict[str, Any]) -> BODSBundle:
         )
         result.statements.append(relationship)
 
+    # Emit person + relationship statements for current roleholders
+    # (P169 CEO, P488 chair, P3320 board member, P6346 treasurer, P1037 director).
+    # Each person gets one personStatement and one relationshipStatement whose
+    # interests list carries one seniorManagingOfficial entry per role they hold,
+    # with the role title in the ``details`` field.
+    for roleholder in summary.get("roleholders") or []:
+        person_qid  = roleholder.get("qid") or ""
+        person_name = roleholder.get("name") or person_qid
+        if not person_qid:
+            continue
+
+        person_identifiers = [
+            {
+                "id": person_qid,
+                "scheme": "WIKIDATA",
+                "schemeName": "Wikidata Q identifier",
+                "uri": f"https://www.wikidata.org/wiki/{person_qid}",
+            }
+        ]
+        person_stmt = make_person_statement(
+            source_id="wikidata",
+            local_id=person_qid,
+            full_name=person_name,
+            identifiers=person_identifiers,
+            source_url=f"https://www.wikidata.org/wiki/{person_qid}",
+        )
+        result.statements.append(person_stmt)
+
+        # One BODS interest per role; normalise Wikidata date strings.
+        roles = roleholder.get("roles") or []
+        interests: list[dict[str, Any]] = []
+        for role in roles:
+            role_label = role.get("label") or "officeholder"
+            start_raw  = role.get("start")
+            interest: dict[str, Any] = {
+                "type": "seniorManagingOfficial",
+                "details": role_label,
+                "beneficialOwnershipOrControl": False,
+            }
+            start_date = _normalise_wikidata_date(start_raw)
+            if start_date:
+                interest["startDate"] = start_date
+            interests.append(interest)
+
+        if not interests:
+            interests = [
+                {
+                    "type": "seniorManagingOfficial",
+                    "details": "officeholder",
+                    "beneficialOwnershipOrControl": False,
+                }
+            ]
+
+        roleholder_rel = make_relationship_statement(
+            source_id="wikidata",
+            local_id=f"{qid}-role-{person_qid}",
+            subject_statement_id=subject_statement_id,
+            interested_party_statement_id=person_stmt["statementId"],
+            interested_party_type="person",
+            interests=interests,
+            source_url=source_url,
+        )
+        result.statements.append(roleholder_rel)
+
     return result
 
 
