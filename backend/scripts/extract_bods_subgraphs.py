@@ -73,6 +73,14 @@ from typing import Any
 LEI_SCHEME = "XI-LEI"
 GB_COH_SCHEME = "GB-COH"
 
+# Phase 3 — memory-ceiling guard.
+# The BFS frontier and reconstructed statement list grow with hop depth.
+# At depth ≥ 6 the GLEIF/UK PSC graphs start pulling in thousands of
+# nodes and the process RSS can exceed the 512 MB Render free-tier limit.
+# Warn above 5 hops; refuse above 10.
+_MAX_HOPS_WARN  = 5
+_MAX_HOPS_LIMIT = 10
+
 
 # ---------------------------------------------------------------------
 # Index helpers — one-off, idempotent
@@ -814,6 +822,26 @@ def main(argv: list[str] | None = None) -> int:
         help="Maximum BFS depth from each LEI (default 3).",
     )
     args = parser.parse_args(argv)
+
+    # Phase 3 hard-cap: guard against runaway walks that would OOM Render.
+    if args.max_hops > _MAX_HOPS_LIMIT:
+        print(
+            f"ERROR: --max-hops {args.max_hops} exceeds the hard limit of "
+            f"{_MAX_HOPS_LIMIT}. The GLEIF/UK PSC graphs at this depth pull "
+            f"in thousands of nodes and will exceed the 512 MB Render budget. "
+            f"Use scripts/profile_memory.py to characterise memory before "
+            f"raising this limit.",
+            file=sys.stderr,
+        )
+        return 1
+    if args.max_hops > _MAX_HOPS_WARN:
+        print(
+            f"WARNING: --max-hops {args.max_hops} is above the recommended "
+            f"maximum of {_MAX_HOPS_WARN}. Peak RSS may approach the Render "
+            f"512 MB limit on large entities (e.g. BP). Run "
+            f"scripts/profile_memory.py first to verify.",
+            file=sys.stderr,
+        )
 
     if not args.gleif.is_file():
         print(f"GLEIF db not found: {args.gleif}", file=sys.stderr)
