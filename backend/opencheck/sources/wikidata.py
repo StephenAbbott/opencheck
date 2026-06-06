@@ -294,6 +294,24 @@ class WikidataAdapter(SourceAdapter):
         bindings    = main_payload.get("results", {}).get("bindings", [])
         rh_bindings = rh_payload.get("results",  {}).get("bindings", [])
 
+        if not bindings:
+            # The main SPARQL query returned nothing — most likely a WDQS
+            # timeout or transient error that wasn't cached.  Return a stub
+            # so the lookup router suppresses this source card rather than
+            # showing an entity named "Q157062" with all-null fields.
+            import logging
+            logging.getLogger(__name__).warning(
+                "Wikidata SPARQL returned empty bindings for %s — marking stub",
+                qid,
+            )
+            return {
+                "source_id": self.id,
+                "qid": qid,
+                "bindings": [],
+                "summary": {},
+                "is_stub": True,
+            }
+
         summary = _summarise_bindings(qid, bindings)
         # Only parse roleholders for entity subjects (companies/orgs).
         # Person pages don't have P169/P488 etc. so the query returns nothing.
@@ -362,6 +380,20 @@ class WikidataAdapter(SourceAdapter):
                 )
                 return {}
             payload = response.json()
+
+        # WDQS returns HTTP 200 for timeouts and internal errors, with an
+        # "error" key and no "results" key.  Caching these poisons the cache
+        # permanently (the empty bindings get served forever).  Only cache
+        # genuine SPARQL result sets.
+        if "error" in payload or "results" not in payload:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Wikidata SPARQL returned error/unexpected JSON — not caching "
+                "(url=%s): %s",
+                response.url,
+                str(payload)[:300],
+            )
+            return {}
 
         self._cache.put(cache_key, payload)
         return payload
