@@ -30,6 +30,71 @@ function LicenseChip({ license }: { license: string }) {
 }
 
 // ---------------------------------------------------------------------
+// sourceEntityUrl — resolve the public URL for a source hit
+// ---------------------------------------------------------------------
+
+function sourceEntityUrl(sourceId: string, hit: SourceHit): string | null {
+  const raw = hit.raw;
+
+  // Many adapters set raw.link directly
+  if (typeof raw.link === "string" && raw.link) return raw.link;
+  // cvr_denmark, sec_edgar use source_url
+  if (typeof raw.source_url === "string" && raw.source_url) return raw.source_url;
+  // opencorporates
+  if (typeof raw.opencorporates_url === "string" && raw.opencorporates_url)
+    return raw.opencorporates_url;
+  // openaleph: raw.links.ui
+  const rawLinks = raw.links as Record<string, unknown> | undefined;
+  if (rawLinks && typeof rawLinks.ui === "string" && rawLinks.ui) return rawLinks.ui;
+
+  // Source-specific construction from hit_id
+  const id = hit.hit_id;
+  switch (sourceId) {
+    case "gleif":
+    case "bods_gleif":
+      return `https://search.gleif.org/#/record/${id}`;
+    case "companies_house":
+    case "bods_uk_psc":
+      return `https://find-and-update.company-information.service.gov.uk/company/${id}`;
+    case "wikidata":
+      return `https://www.wikidata.org/wiki/${(raw.qid as string) || id}`;
+    case "opensanctions":
+    case "everypolitician":
+      return `https://www.opensanctions.org/entities/${id}`;
+    case "brreg":
+      return `https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=${id}`;
+    case "prh":
+      return `https://tietopalvelu.ytj.fi/yritystiedot.aspx?yavain=${id}`;
+    case "kvk":
+      return `https://www.kvk.nl/zoeken/?source=all&q=${id}`;
+    case "ur_latvia":
+      return `https://www.latvija.lv/lv/bizness/uznemumu-registrs/${id}`;
+    case "firmenbuch":
+      return `https://justizonline.gv.at/jop/web/firmenbuchabfrage?firmennummer=${encodeURIComponent(id)}`;
+    case "corporations_canada":
+      return `https://ised-isde.canada.ca/cc/lgcy/fdrlCrpDtls.html?corpId=${id}`;
+    case "cro":
+      return `https://core.cro.ie/company/${id}`;
+    case "bolagsverket": {
+      const orgNo = (raw.org_number as string) || id;
+      return `https://webbotjanster.bolagsverket.se/foretag-och-foreningar/foreningsregistret/SokOrganisationsnummer?q=${orgNo}`;
+    }
+    case "sec_edgar": {
+      const cik = (raw.cik as string) || id;
+      return `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${cik}`;
+    }
+    case "inpi":
+      return `https://data.inpi.fr/entreprises/${id}`;
+    case "zefix":
+      return `https://www.zefix.ch/en/search/entity/list?name=${encodeURIComponent(id)}`;
+    case "sudreg_croatia":
+      return `https://sudreg.pravosudje.hr/registar/f?p=150:28:0::NO:RP,28:P28_SBT_MBS:${id}`;
+    default:
+      return null;
+  }
+}
+
+// ---------------------------------------------------------------------
 // BODS statement cards
 // ---------------------------------------------------------------------
 
@@ -490,7 +555,14 @@ export function HitRow({
     <li className="px-5 py-4">
       {/* Entity name, summary, identifiers, risk chips */}
       <div className="font-head font-bold text-[15px] text-oo-ink leading-snug">
-        {hit.name}
+        {(() => {
+          const url = sourceEntityUrl(hit.source_id, hit);
+          return url ? (
+            <a href={url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+              {hit.name}
+            </a>
+          ) : hit.name;
+        })()}
         {hit.is_stub && (
           <span className="ml-2 text-[11px] font-mono bg-amber-50 text-amber-800 border border-amber-200 rounded px-1.5 py-0.5">
             stub
@@ -610,6 +682,8 @@ export function SourceBucketCard({
     : "text-oo-muted";
 
   const headerSignals = sourceSignals;
+  const firstHit = bucket.hits.find((h) => !h.is_stub);
+  const bucketUrl = firstHit ? sourceEntityUrl(bucket.sourceId, firstHit) : null;
 
   return (
     <article className="bg-white border border-oo-rule rounded-oo">
@@ -626,9 +700,20 @@ export function SourceBucketCard({
             </div>
           )}
         </div>
-        <span className={`text-[11px] font-mono shrink-0 ${stateColor}`}>
-          {stateLabel}
-        </span>
+        {bucketUrl && !bucket.error ? (
+          <a
+            href={bucketUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`text-[11px] font-mono shrink-0 ${stateColor} hover:underline`}
+          >
+            {stateLabel}
+          </a>
+        ) : (
+          <span className={`text-[11px] font-mono shrink-0 ${stateColor}`}>
+            {stateLabel}
+          </span>
+        )}
       </header>
       {bucket.error && (
         <p className="px-5 py-3 text-[13px] text-red-700">{bucket.error}</p>
