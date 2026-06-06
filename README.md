@@ -77,7 +77,6 @@ The frontend also uses the [Beneficial Ownership Visualisation System](https://w
 ## Roadmap
 
 - **Live opentender.eu integration** — the adapter is wired but `live_available=False` for now.
-- **Surface `RELATED_*` signals on the BODS dagre graph** — currently they appear in the chip strip; ideally they'd render an OpenSanctions / EveryPolitician icon next to the matching node.
 - **A "complex offshore" demo subject** that fires every AMLA chip simultaneously.
 - **BODS RDF / SPARQL backbone** via Oxigraph — load the assembled BODS bundle into a triple store, expose `/sparql` for the published Open Ownership red-flag queries.
 
