@@ -3010,6 +3010,179 @@ _FTM_PERSON_SCHEMAS = {"Person"}
 # BODS interests here — they are risk signals handled by the risk engine, not
 # ownership or control relationships.
 
+# Role strings from Directorship/Employment FtM entities → BODS interest types.
+# Only the most common values are listed; anything not found defaults to
+# "seniorManagingOfficial".
+_FTM_ROLE_TO_INTEREST_TYPE: dict[str, str] = {
+    "board member": "boardMember",
+    "boardmember": "boardMember",
+    "director": "boardMember",
+    "board chair": "boardChair",
+    "boardchair": "boardChair",
+    "chair": "boardChair",
+    "chairman": "boardChair",
+    "ceo": "seniorManagingOfficial",
+    "cfo": "seniorManagingOfficial",
+    "coo": "seniorManagingOfficial",
+    "president": "seniorManagingOfficial",
+    "trustee": "trustee",
+    "protector": "protector",
+    "nominee": "nominee",
+    "beneficiary": "beneficiaryOfLegalArrangement",
+    "settlor": "settlor",
+}
+
+
+def _ftm_percentage(op: dict[str, Any]) -> float | None:
+    """Parse ``percentage`` from a FtM Ownership properties dict."""
+    raw = (op.get("percentage") or [None])[0]
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except (ValueError, TypeError):
+        return None
+
+
+def _ftm_nested_schemas(
+    payload: dict[str, Any],
+    subject_sid: str,
+    subject_type: str,
+    source_id: str,
+    source_url_builder: Any,
+    result: BODSBundle,
+) -> None:
+    """Process nested Ownership/Directorship FtM objects in the entity payload.
+
+    OpenSanctions embeds relationship data as nested schema objects under
+    these property keys:
+
+    * ``ownershipOwner``  — Ownership entries where this entity is the *owner*
+      (i.e. it holds stakes in other entities).  The ``asset`` side is a nested
+      entity dict; the ``owner`` side is a plain string ID (the subject).
+    * ``ownershipAsset``  — Ownership entries where this entity is the *asset*
+      (i.e. it is owned by others).  The ``owner`` side is a nested entity dict;
+      the ``asset`` side is a plain string ID (the subject).
+    * ``directorshipOrganization`` — Directorship entries where this entity is
+      the *organization* being directed.  The ``director`` side is a nested
+      person/entity dict.
+
+    For each resolved pair we emit a BODS entity/person statement for the
+    related party and a relationship statement linking subject and party.
+    """
+    props = payload.get("properties") or {}
+    subject_url: str | None = (
+        source_url_builder(payload.get("id", ""))
+        if callable(source_url_builder)
+        else None
+    )
+
+    # ---- ownershipOwner: subject is the OWNER; asset is a subsidiary --------
+    for entry in props.get("ownershipOwner") or []:
+        if not isinstance(entry, dict):
+            continue
+        op = entry.get("properties") or {}
+        for asset in op.get("asset") or []:
+            if not isinstance(asset, dict):
+                continue
+            asset_stmt = _ftm_statement(
+                asset, source_id=source_id, source_url_builder=source_url_builder
+            )
+            if asset_stmt is None:
+                continue
+            result.statements.append(asset_stmt)
+            pct = _ftm_percentage(op)
+            interest: dict[str, Any] = {
+                "type": "shareholding",
+                "directOrIndirect": "direct",
+                "beneficialOwnershipOrControl": True,
+            }
+            if pct is not None:
+                interest["share"] = {"exact": pct}
+            rel = make_relationship_statement(
+                source_id=source_id,
+                local_id=entry.get("id") or f"own:{payload.get('id')}:{asset.get('id')}",
+                subject_statement_id=asset_stmt["statementId"],
+                interested_party_statement_id=subject_sid,
+                interested_party_type=subject_type,
+                interests=[interest],
+                source_url=subject_url,
+            )
+            result.statements.append(rel)
+
+    # ---- ownershipAsset: subject is the ASSET; owner holds a stake ----------
+    for entry in props.get("ownershipAsset") or []:
+        if not isinstance(entry, dict):
+            continue
+        op = entry.get("properties") or {}
+        for owner in op.get("owner") or []:
+            if not isinstance(owner, dict):
+                continue
+            owner_stmt = _ftm_statement(
+                owner, source_id=source_id, source_url_builder=source_url_builder
+            )
+            if owner_stmt is None:
+                continue
+            result.statements.append(owner_stmt)
+            owner_type = "entity" if owner_stmt["recordType"] == "entity" else "person"
+            pct = _ftm_percentage(op)
+            interest = {
+                "type": "shareholding",
+                "directOrIndirect": "direct",
+                "beneficialOwnershipOrControl": True,
+            }
+            if pct is not None:
+                interest["share"] = {"exact": pct}
+            rel = make_relationship_statement(
+                source_id=source_id,
+                local_id=entry.get("id") or f"own:{owner.get('id')}:{payload.get('id')}",
+                subject_statement_id=subject_sid,
+                interested_party_statement_id=owner_stmt["statementId"],
+                interested_party_type=owner_type,
+                interests=[interest],
+                source_url=subject_url,
+            )
+            result.statements.append(rel)
+
+    # ---- directorshipOrganization: subject is the ORG; director holds role --
+    for entry in props.get("directorshipOrganization") or []:
+        if not isinstance(entry, dict):
+            continue
+        dp = entry.get("properties") or {}
+        role = (dp.get("role") or [""])[0]
+        interest_type = _FTM_ROLE_TO_INTEREST_TYPE.get(
+            role.lower().strip(), "seniorManagingOfficial"
+        )
+        for director in dp.get("director") or []:
+            if not isinstance(director, dict):
+                continue
+            dir_stmt = _ftm_statement(
+                director, source_id=source_id, source_url_builder=source_url_builder
+            )
+            if dir_stmt is None:
+                continue
+            result.statements.append(dir_stmt)
+            dir_type = "entity" if dir_stmt["recordType"] == "entity" else "person"
+            interest = {"type": interest_type}
+            if role:
+                interest["details"] = role
+            start = (dp.get("startDate") or [None])[0]
+            if start:
+                interest["startDate"] = start
+            end = (dp.get("endDate") or [None])[0]
+            if end:
+                interest["endDate"] = end
+            rel = make_relationship_statement(
+                source_id=source_id,
+                local_id=entry.get("id") or f"dir:{director.get('id')}:{payload.get('id')}",
+                subject_statement_id=subject_sid,
+                interested_party_statement_id=dir_stmt["statementId"],
+                interested_party_type=dir_type,
+                interests=[interest],
+                source_url=subject_url,
+            )
+            result.statements.append(rel)
+
 
 def map_ftm(
     payload: dict[str, Any],
@@ -3035,18 +3208,20 @@ def map_ftm(
     subject_sid = subject["statementId"]
     subject_type = "entity" if subject["recordType"] == "entity" else "person"
 
-    # FtM ownership-like properties can carry nested entities.
-    # We walk the canonical control-bearing properties and emit a
-    # relationship for each resolved child entity.
+    # --- Legacy flat-property relationships (older FtM API shape) -----------
+    # Some sources still use flat property arrays (``ownersOf``, ``owners``,
+    # ``directorshipDirector``, ``associates``) rather than the nested
+    # Ownership/Directorship schema objects.  Handle them here.
+    # ``directorshipOrganization`` is intentionally absent; newer payloads put
+    # it as a nested Directorship object, handled by _ftm_nested_schemas below.
     props = payload.get("properties") or {}
-    control_props = {
+    legacy_control_props = {
         "ownersOf": "shareholding",
         "owners": "shareholding",
         "directorshipDirector": "appointmentOfBoard",
-        "directorshipOrganization": "appointmentOfBoard",
         "associates": "otherInfluenceOrControl",
     }
-    for key, interest_type in control_props.items():
+    for key, interest_type in legacy_control_props.items():
         for related in props.get(key) or []:
             # FtM emits either string IDs or nested entity dicts.
             if not isinstance(related, dict):
@@ -3063,7 +3238,7 @@ def map_ftm(
 
             # When the FtM property expresses "owner of X", the related
             # record is the *subject* and `payload` is the interested party.
-            if key in {"ownersOf", "directorshipOrganization"}:
+            if key == "ownersOf":
                 rel_subject_sid = related_stmt["statementId"]
                 rel_ip_sid = subject_sid
                 rel_ip_type = subject_type
@@ -3089,6 +3264,17 @@ def map_ftm(
                 source_url=subject.get("source", {}).get("url"),
             )
             result.statements.append(rel)
+
+    # --- Nested Ownership/Directorship schema objects (current FtM shape) ----
+    # ownershipOwner, ownershipAsset, directorshipOrganization
+    _ftm_nested_schemas(
+        payload,
+        subject_sid=subject_sid,
+        subject_type=subject_type,
+        source_id=source_id,
+        source_url_builder=source_url_builder,
+        result=result,
+    )
 
     return result
 
