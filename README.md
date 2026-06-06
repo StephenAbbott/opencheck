@@ -8,7 +8,7 @@ Try the demo at **https://opencheck.onrender.com/**
 
 ## What is OpenCheck?
 
-You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries [GLEIF](https://www.gleif.org/) first, derives every cross-source identifier it can (UK Companies House number, Norwegian organisation number, Irish company registration number, Finnish Y-tunnus, Latvian registration number, Lithuanian entity code, Estonian registry code, Czech IČO, Polish KRS number, Austrian Firmenbuchnummer, Slovak IČO, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, Canadian corporation number, Belgian enterprise number, Danish CVR number, Croatian MBS, OpenCorporates ID, Wikidata Q-ID, and more), and uses those bridges to fan out across 28 national and international corporate data sources.
+You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries [GLEIF](https://www.gleif.org/) first, derives every cross-source identifier it can (UK Companies House number, Norwegian organisation number, Irish company registration number, Finnish Y-tunnus, Latvian registration number, Lithuanian entity code, Estonian registry code, Czech IČO, Polish KRS number, Austrian Firmenbuchnummer, Slovak IČO, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, Canadian corporation number, Belgian enterprise number, Danish CVR number, Croatian MBS, Australian ACN/ABN, OpenCorporates ID, Wikidata Q-ID, and more), and uses those bridges to fan out across 29 national and international corporate data sources.
 
 Everything maps into [BODS v0.4](https://standard.openownership.org/en/0.4.0/). Cross-source links and risk signals are computed deterministically, and the whole bundle is one click away from a downloadable export (JSON / JSONL / XML / ZIP).
 
@@ -16,11 +16,11 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 47** — Cyprus DRCOR adapter (committed, inactive — bulk-only)
+**Latest: Phase 48** — Australian Business Register (ABN Lookup) adapter
 
-Cyprus company + officer data from the Department of Registrar of Companies and Intellectual Property (DRCOR), published as three monthly CSVs on data.gov.cy under CC BY 4.0. `cy_he` derived from GLEIF RA code `RA000161` (DRCOR Companies Section), taken from the `registeredAs` field (Greek-script `ΗΕ` number, normalised to digits). data.gov.cy exposes **no working query API** — `/api/1/datastore/query` returns HTTP 404 and the large CSVs (officials ≈126 MB) are not imported into a queryable datastore — so the adapter follows the ACRA/BCE local-SQLite pattern: the three CSVs (organisations, registered office, officials) are built into a local DB via `scripts/extract_cyprus.py` and queried by registration number. Maps a company `entityStatement` plus one person/entity statement per official and a `seniorManagingOfficial` `relationshipStatement` each (no shareholders in the open data). **Kept inactive (ACRA tier): not registered in `REGISTRY` and not wired into `/lookup` or `/lookup-stream`, so it never appears on `/sources`** — pending an API or a bulk-data strategy for OpenCheck. Activate via `CYPRUS_DRCOR_DB_FILE`. 14 new tests.
+Live, free adapter over the ABR ABN Lookup JSON web services (`abr.business.gov.au/json`). Routes by identifier digit length (11 → `AbnDetails`, 9 → `AcnDetails`); JSONP callback wrapper unwrapped client-side. GLEIF bridge: `RA000014` (ASIC) → `au_acn`; `RA000013` (ABR/ATO) → `au_abn`. Entity-level firmographic data only — ABN, ACN, entity name and type, ABN/GST status, registered state and postcode, and business/trading names — mapped to a single BODS entity statement with `AU-ABN` + `AU-ACN` identifiers and `alternateNames`. Cancelled ABNs annotated with `dissolutionDate`. Wired into both `/lookup` and `/lookup-stream`. Requires a free `ABN_GUID` from abr.business.gov.au. License: CC BY 3.0 AU. 14 new tests.
 
-*Previous: [Phase 46 — Sudski registar (Croatia) adapter](docs/status.md)*
+*Previous: [Phase 47 — Cyprus DRCOR adapter](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
@@ -66,7 +66,7 @@ The first frontend build copies bundled images for `@openownership/bods-dagre` i
 | [Sources](docs/sources.md) | Full adapter table — 26 active sources plus inactive bulk-only adapters, license, entry point, description |
 | [Risk signals](docs/risk-signals.md) | All 12 signal codes: source-derived, AMLA CDD RTS, FATF jurisdiction, cross-source name match, ICIJ Offshore Leaks |
 | [Configuration](docs/configuration.md) | Environment variables, Render deployment, running the test suite |
-| [Development history](docs/status.md) | All 46 phases |
+| [Development history](docs/status.md) | All 48 phases |
 
 ## Licensing
 
