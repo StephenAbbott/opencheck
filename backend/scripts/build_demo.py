@@ -331,6 +331,20 @@ def merge_bundles(entry: dict) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
+def validate_shape_bundle(statements: list[dict]) -> list[str]:
+    """Run OpenCheck's lightweight validate_shape() on a list of statements.
+
+    Returns a list of issue strings. Empty means clean.
+    """
+    import importlib.util, importlib
+    # Import from the installed opencheck package (backend/opencheck/)
+    pkg_root = Path(__file__).resolve().parents[1]
+    if str(pkg_root) not in sys.path:
+        sys.path.insert(0, str(pkg_root))
+    from opencheck.bods.validator import validate_shape  # noqa: PLC0415
+    return validate_shape(statements)
+
+
 def validate_bundle(statements: list[dict]) -> tuple[list, list]:
     """Run lib-cove-bods on a list of statements.
 
@@ -503,11 +517,31 @@ def main(argv: list[str] | None = None) -> int:
                     continue
                 combined_path = _REPO_ROOT / result["combined_path"]
                 stmts = _load_jsonl(combined_path)
+
+                # Phase 6: validate_shape (lightweight boundary + structure check)
+                shape_issues = validate_shape_bundle(stmts)
+                shape_ok = not shape_issues
+
                 js_errors, additional = validate_bundle(stmts)
-                ok = not js_errors and not additional
-                verdict = "PASS" if ok else f"FAIL ({len(js_errors)} schema, {len(additional)} additional)"
+                cove_ok = not js_errors and not additional
+
+                ok = shape_ok and cove_ok
+                if ok:
+                    verdict = "PASS"
+                else:
+                    parts = []
+                    if shape_issues:
+                        parts.append(f"shape:{len(shape_issues)}")
+                    if js_errors or additional:
+                        parts.append(f"cove:{len(js_errors)}schema/{len(additional)}add")
+                    verdict = f"FAIL ({', '.join(parts)})"
                 print(f"  {entry['lei']}  {verdict}")
-                result["validation"] = {"pass": ok, "schema_errors": len(js_errors), "additional_errors": len(additional)}
+                result["validation"] = {
+                    "pass": ok,
+                    "shape_issues": len(shape_issues),
+                    "schema_errors": len(js_errors),
+                    "additional_errors": len(additional),
+                }
                 if ok:
                     n_pass += 1
         except ImportError:
