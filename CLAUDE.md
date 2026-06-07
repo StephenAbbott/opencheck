@@ -9,6 +9,53 @@
 
 ---
 
+## Phase 8 — Licensing & AuraDB deferral (recorded 2026-06-07)
+
+### Demo data licences
+
+The `data/demo/` graph is assembled from two freely-shareable published
+BODS v0.4 datasets. The combined graph is freely usable in talks,
+blog posts, and derivative works under the most restrictive of the two
+licences, OGL v3.0:
+
+| Dataset | Licence |
+|---|---|
+| UK PSC (Companies House via Open Ownership) | OGL v3.0 |
+| GLEIF L1 + L2 (GLEIF via Open Ownership) | CC0 1.0 |
+
+Both licences are permissive and compatible. OGL v3.0 requires
+attribution; CC0 does not. Pipeline code
+(`bods-uk-psc-pipeline`, `bods-gleif-pipeline`) is AGPL-3.0 but is
+**not** included in OpenCheck — OpenCheck only reads their published
+BODS output. No AGPL obligations apply to OpenCheck.
+
+Full attribution wording and source URLs: `data/demo/LICENCES.md`.
+
+### AuraDB / hosted Neo4j — explicitly parked
+
+**Decision (2026-06-07):** Do **not** move to a hosted Neo4j AuraDB
+instance or adopt any embedded graph DB (Kuzu, Memgraph, MemGQL) as a
+dependency of OpenCheck's runtime at this time.
+
+**Rationale:** The demo use-case (curated 9-entity set, one-off
+build, slides + local Neo4j Docker) is fully served by the current
+stack: SQLite extraction → BODS JSON-Lines → `bods-neo4j` CSV → local
+Neo4j. Adding a hosted graph DB introduces cost, network dependency,
+and operational complexity before any evidence that DuckDB + the
+curated set cannot handle the traversal load.
+
+**Named revisit trigger:** Revisit when either:
+1. A user-facing traversal query (multi-hop UBO resolution in the live
+   `/lookup` flow) measurably exceeds 2 s median latency on the
+   full-entity BODS data **with** DuckDB, **or**
+2. The demo set grows beyond ~200 anchor entities and
+   `extract_bods_subgraphs.py` + in-memory dedup becomes a bottleneck.
+
+Until one of those triggers fires, the architecture stays: SQLite
+source-of-truth → BODS JSON-Lines → Neo4j Docker for demos only.
+
+---
+
 ## Current state (Phase 45)
 
 **Test suite**: 1733 passed, 6 skipped, 5 xfailed. Run `python -m pytest` from `backend/`.
