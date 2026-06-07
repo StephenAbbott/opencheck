@@ -1,0 +1,218 @@
+{
+  "built_at": "2026-06-07T06:26:28.945894+00:00",
+  "gleif_db": "/sessions/friendly-great-cori/mnt/opencheck/backend/data/bods/gleif/gleif_version_0_4.db",
+  "uk_db": "/sessions/friendly-great-cori/mnt/opencheck/backend/data/bods/uk_psc/uk_version_0_4.db",
+  "anchor_count": 9,
+  "entities": [
+    {
+      "lei": "4OFD47D73QFJ1T1MOF29",
+      "name": "Daily Mail and General Trust P L C",
+      "ch": "00184594",
+      "features": [
+        "complex_corporate_structure",
+        "trust_or_arrangement"
+      ],
+      "note": "Complex corporate structure spanning jurisdictions",
+      "combined_path": "data/demo/4OFD47D73QFJ1T1MOF29.jsonl",
+      "statement_counts": {
+        "total": 139,
+        "entity": 49,
+        "person": 16,
+        "relationship": 74
+      },
+      "validation": {
+        "pass": true,
+        "shape_issues": 0,
+        "schema_errors": 0,
+        "additional_errors": 0
+      }
+    },
+    {
+      "lei": "213800LH1BZH3DI6G760",
+      "name": "BP P.L.C.",
+      "ch": "00102498",
+      "features": [
+        "trust_or_arrangement",
+        "complex_ownership_layers",
+        "complex_corporate_structure",
+        "non_eu_jurisdiction"
+      ],
+      "note": "Large corporate group with a complex structure spread across jurisdictions",
+      "combined_path": "data/demo/213800LH1BZH3DI6G760.jsonl",
+      "statement_counts": {
+        "total": 519,
+        "entity": 221,
+        "person": 0,
+        "relationship": 298
+      },
+      "validation": {
+        "pass": true,
+        "shape_issues": 0,
+        "schema_errors": 0,
+        "additional_errors": 0
+      }
+    },
+    {
+      "lei": "253400JT3MQWNDKMJE44",
+      "name": "Rosneft Deutschland GmbH",
+      "ch": null,
+      "features": [
+        "sanctioned",
+        "related_sanctioned"
+      ],
+      "note": "International network with connections from a sanctioned Russian entity",
+      "combined_path": "data/demo/253400JT3MQWNDKMJE44.jsonl",
+      "statement_counts": {
+        "total": 8,
+        "entity": 4,
+        "person": 0,
+        "relationship": 4
+      },
+      "validation": {
+        "pass": true,
+        "shape_issues": 0,
+        "schema_errors": 0,
+        "additional_errors": 0
+      }
+    },
+    {
+      "lei": "2138008KTNTDICZU8L25",
+      "name": "Bank Saderat PLC",
+      "ch": "01126618",
+      "features": [
+        "sanctioned",
+        "related_sanctioned",
+        "non_eu_jurisdiction"
+      ],
+      "note": "Sanctioned Iranian bank with connected sanctioned individuals",
+      "combined_path": "data/demo/2138008KTNTDICZU8L25.jsonl",
+      "statement_counts": {
+        "total": 16,
+        "entity": 6,
+        "person": 2,
+        "relationship": 8
+      },
+      "validation": {
+        "pass": true,
+        "shape_issues": 0,
+        "schema_errors": 0,
+        "additional_errors": 0
+      }
+    },
+    {
+      "lei": "2138008RB4WDK7HYYS91",
+      "name": "Biffa PLC",
+      "ch": "10336040",
+      "features": [
+        "complex_ownership_layers",
+        "non_eu_jurisdiction"
+      ],
+      "note": "UK waste management firm which wins lots of government contracts",
+      "combined_path": "data/demo/2138008RB4WDK7HYYS91.jsonl",
+      "statement_counts": {
+        "total": 53,
+        "entity": 26,
+        "person": 0,
+        "relationship": 27
+      },
+      "validation": {
+        "pass": true,
+        "shape_issues": 0,
+        "schema_errors": 0,
+        "additional_errors": 0
+      }
+    },
+    {
+      "lei": "2138002S3XGZ38WN5Q72",
+      "name": "Hornsea 1 Limited",
+      "ch": "07640868",
+      "features": [
+        "complex_ownership_layers",
+        "non_eu_jurisdiction"
+      ],
+      "note": "UK offshore wind company with connections to the UAE",
+      "combined_path": "data/demo/2138002S3XGZ38WN5Q72.jsonl",
+      "statement_counts": {
+        "total": 133,
+        "entity": 52,
+        "person": 0,
+        "relationship": 81
+      },
+      "validation": {
+        "pass": true,
+        "shape_issues": 0,
+        "schema_errors": 0,
+        "additional_errors": 0
+      }
+    },
+    {
+      "lei": "213800DBE5Y9ZM58PN63",
+      "name": "Care UK Social Care Limited",
+      "ch": "07068789",
+      "features": [
+        "complex_ownership_layers"
+      ],
+      "note": "UK care home chain with complex ownership structure",
+      "combined_path": "data/demo/213800DBE5Y9ZM58PN63.jsonl",
+      "statement_counts": {
+        "total": 47,
+        "entity": 24,
+        "person": 0,
+        "relationship": 23
+      },
+      "validation": {
+        "pass": true,
+        "shape_issues": 0,
+        "schema_errors": 0,
+        "additional_errors": 0
+      }
+    },
+    {
+      "lei": "213800E11LI1SCETU492",
+      "name": "Taqa Bratani Limited",
+      "ch": "05975475",
+      "features": [
+        "complex_ownership_layers",
+        "non_eu_jurisdiction",
+        "related_sanctioned"
+      ],
+      "note": "UAE-owned oil and gas company with operations in the UK",
+      "combined_path": "data/demo/213800E11LI1SCETU492.jsonl",
+      "statement_counts": {
+        "total": 188,
+        "entity": 92,
+        "person": 0,
+        "relationship": 96
+      },
+      "validation": {
+        "pass": true,
+        "shape_issues": 0,
+        "schema_errors": 0,
+        "additional_errors": 0
+      }
+    },
+    {
+      "lei": "213800AG2V6YE68H5N63",
+      "name": "Newcastle United Football Company Limited",
+      "ch": "00031014",
+      "features": [
+        "complex_ownership_layers",
+        "non_eu_jurisdiction"
+      ],
+      "note": "UK football club with complex but declared ownership ties to Saudi Arabia",
+      "combined_path": "data/demo/213800AG2V6YE68H5N63.jsonl",
+      "statement_counts": {
+        "total": 105,
+        "entity": 49,
+        "person": 0,
+        "relationship": 56
+      },
+      "validation": {
+        "pass": true,
+        "shape_issues": 0,
+        "schema_errors": 0,
+        "additional_errors": 0
+      }
+    }
+  ]
+}
