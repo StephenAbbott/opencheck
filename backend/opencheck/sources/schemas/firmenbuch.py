@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import Field
-
 from . import _Base
 
 
@@ -21,9 +19,9 @@ class FBExtract(_Base):
     uid: str | None = None
     status: str | None = None
     address: str | None = None
-    stamm_kapital: dict[str, Any] = Field(default_factory=dict)
-    officers: list[dict[str, Any]] = Field(default_factory=list)
-    shareholders: list[dict[str, Any]] = Field(default_factory=list)
+    stamm_kapital: float | None = None
+    officers: list[dict[str, Any]] = []
+    shareholders: list[dict[str, Any]] = []
 
 
 class FBBundle(_Base):

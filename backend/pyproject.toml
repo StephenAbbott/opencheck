@@ -49,6 +49,10 @@ dev = [
     "mypy>=1.13",
     # Phase 41: lib-cove-bods BODS v0.4 validator (used in test_bods_libcovebods.py)
     "libcovebods>=0.16",
+    # HTTP mocking for httpx-based adapters
+    "respx>=0.21",
+    # BODS v0.4 test fixture pack
+    "bods-v04-fixtures>=0.1",
 ]
 
 [build-system]
