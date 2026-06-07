@@ -16,11 +16,11 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 48** — Australian Business Register (ABN Lookup) adapter
+**Latest: Phase 49** — Graph-native demo: curated BODS subgraph pipeline, Neo4j CSV export, slide viewer, licensing
 
-Live, free adapter over the ABR ABN Lookup JSON web services (`abr.business.gov.au/json`). Routes by identifier digit length (11 → `AbnDetails`, 9 → `AcnDetails`); JSONP callback wrapper unwrapped client-side. GLEIF bridge: `RA000014` (ASIC) → `au_acn`; `RA000013` (ABR/ATO) → `au_abn`. Entity-level firmographic data only — ABN, ACN, entity name and type, ABN/GST status, registered state and postcode, and business/trading names — mapped to a single BODS entity statement with `AU-ABN` + `AU-ACN` identifiers and `alternateNames`. Cancelled ABNs annotated with `dissolutionDate`. Wired into both `/lookup` and `/lookup-stream`. Requires a free `ABN_GUID` from abr.business.gov.au. License: CC BY 3.0 AU. 14 new tests.
+An eight-phase de-risking sequence built a reproducible, talk-ready demo graph using nine curated anchor entities (DMGT, BP, Rosneft Deutschland, Bank Saderat, Biffa, Hornsea 1, Care UK, Taqa Bratani, Newcastle United) drawn from Open Ownership's published BODS v0.4 bulk data. `make build-demo` extracts GLEIF + UK PSC subgraphs from local SQLite, merges and validates them (both `validate_shape` and `lib-cove-bods` clean, 0 dangling edges). `make export-neo4j` produces Neo4j-importable CSVs via `bods-neo4j` (1,468 nodes, 2,887 relationships loaded into Neo4j 5 Community Docker). `make slides` generates a fully self-contained HTML ownership graph viewer for all nine entities (Cytoscape.js + dagre, ~1 MB, all JS inlined, works offline). UK PSC data is OGL v3.0; GLEIF data is CC0 — the demo graph is freely shareable in talks. AuraDB and all-entity-scale graph DBs parked with a named revisit trigger; decision recorded in `CLAUDE.md`.
 
-*Previous: [Phase 47 — Cyprus DRCOR adapter](docs/status.md)*
+*Previous: [Phase 48 — Australian Business Register adapter](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
@@ -66,7 +66,7 @@ The first frontend build copies bundled images for `@openownership/bods-dagre` i
 | [Sources](docs/sources.md) | Full adapter table — 26 active sources plus inactive bulk-only adapters, license, entry point, description |
 | [Risk signals](docs/risk-signals.md) | All 12 signal codes: source-derived, AMLA CDD RTS, FATF jurisdiction, cross-source name match, ICIJ Offshore Leaks |
 | [Configuration](docs/configuration.md) | Environment variables, Render deployment, running the test suite |
-| [Development history](docs/status.md) | All 48 phases |
+| [Development history](docs/status.md) | All 49 phases |
 
 ## Licensing
 
