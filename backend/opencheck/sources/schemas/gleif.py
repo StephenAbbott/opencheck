@@ -30,6 +30,11 @@ class GLEIFRegisteredAt(_Base):
     id: str | None = None
 
 
+class GLEIFExpiration(_Base):
+    date: str | None = None
+    reason: str | None = None
+
+
 class GLEIFEntity(_Base):
     legalName: dict[str, Any] = Field(default_factory=dict)
     legalAddress: GLEIFLegalAddress | None = None
@@ -38,6 +43,8 @@ class GLEIFEntity(_Base):
     jurisdiction: str | None = None
     legalForm: dict[str, Any] = Field(default_factory=dict)
     status: str | None = None
+    creationDate: str | None = None          # → foundingDate in BODS
+    expiration: GLEIFExpiration | None = None  # .date → dissolutionDate in BODS
 
 
 class GLEIFAttributes(_Base):
