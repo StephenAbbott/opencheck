@@ -221,6 +221,10 @@ function flagUrl(stmt: Stmt): string | undefined {
 function bodsToElements(statements: Stmt[]): ElementDefinition[] {
   const elements: ElementDefinition[] = [];
   const nodeIds = new Set<string>();
+  // BODS v0.4: relationship endpoints reference declarationSubject (e.g.
+  // "XI-LEI-…") rather than the statementId UUID.  Build a lookup so edge
+  // resolution works for both v0.3 and v0.4 data.
+  const declSubjToNodeId = new Map<string, string>();
 
   for (const stmt of statements) {
     const rt = (stmt.recordType ?? stmt.statementType) as string;
@@ -228,6 +232,10 @@ function bodsToElements(statements: Stmt[]): ElementDefinition[] {
     const id = (stmt.statementId ?? stmt.statementID) as string;
     if (!id || nodeIds.has(id)) continue;
     nodeIds.add(id);
+    // Register declarationSubject alias (v0.4) so relationship endpoints
+    // can resolve to the Cytoscape node id (= statementId UUID).
+    const declSubj = stmt.declarationSubject as string | undefined;
+    if (declSubj && declSubj !== id) declSubjToNodeId.set(declSubj, id);
 
     const rd = (stmt.recordDetails ?? {}) as RD;
     const name = (rd.name as string)
@@ -253,15 +261,19 @@ function bodsToElements(statements: Stmt[]): ElementDefinition[] {
     const rawIP   = rd.interestedParty;
     const rawSubj = rd.subject;
 
-    const sourceId: string | undefined =
-      typeof rawIP === "string"   ? rawIP
-      : (rawIP as RD | undefined)?.describedByEntityStatement as string
-      ?? (rawIP as RD | undefined)?.describedByPersonStatement as string;
+    const resolveRef = (raw: unknown): string | undefined => {
+      if (typeof raw === "string") {
+        // v0.4: plain string — may be a statementId UUID or a declarationSubject alias
+        return nodeIds.has(raw) ? raw : declSubjToNodeId.get(raw);
+      }
+      // v0.3: object with describedBy* reference pointing at the statementId
+      const obj = raw as RD | undefined;
+      return (obj?.describedByEntityStatement as string | undefined)
+          ?? (obj?.describedByPersonStatement as string | undefined);
+    };
 
-    const targetId: string | undefined =
-      typeof rawSubj === "string"  ? rawSubj
-      : (rawSubj as RD | undefined)?.describedByEntityStatement as string
-      ?? (rawSubj as RD | undefined)?.describedByPersonStatement as string;
+    const sourceId = resolveRef(rawIP);
+    const targetId = resolveRef(rawSubj);
 
     if (!sourceId || !targetId || !nodeIds.has(sourceId) || !nodeIds.has(targetId)) continue;
 
