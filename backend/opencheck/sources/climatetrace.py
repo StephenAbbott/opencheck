@@ -130,11 +130,28 @@ def _ensure_gem_data() -> None:
         log.warning("Could not download GEM ownership.zip: %s", exc)
 
 
+_GLEIF_GEM_MAX_AGE_DAYS = 32  # re-download after ~one month
+
+
 def _ensure_gleif_gem_data() -> None:
-    """Download the GLEIF-certified GEM Entity ID-to-LEI mapping if not on disk."""
+    """Download the GLEIF-certified GEM Entity ID-to-LEI mapping if absent or stale.
+
+    The mapping is published monthly by GLEIF and GEM.  A cached copy older than
+    ``_GLEIF_GEM_MAX_AGE_DAYS`` is treated as stale and re-downloaded automatically
+    so the Render instance always uses a reasonably current version.
+    """
+    import time
+
     path = _gleif_gem_zip_path()
     if path.exists():
-        return
+        age_days = (time.time() - path.stat().st_mtime) / 86_400
+        if age_days < _GLEIF_GEM_MAX_AGE_DAYS:
+            return
+        log.info(
+            "GLEIF GEM mapping is %.0f days old (max %d) — refreshing",
+            age_days,
+            _GLEIF_GEM_MAX_AGE_DAYS,
+        )
     path.parent.mkdir(parents=True, exist_ok=True)
     log.info("Downloading GLEIF GEM-to-LEI mapping from %s", _GLEIF_GEM_URL)
     try:
