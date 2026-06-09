@@ -457,6 +457,12 @@ export function DeepenBlock({
         </div>
       )}
 
+      {detail.bods.length === 0 && (detail.raw.coverage_note as string | undefined) && (
+        <div className="bg-sky-50 border border-sky-200 text-sky-900 rounded-oo p-3">
+          <p className="text-[13px] leading-[1.6]">{detail.raw.coverage_note as string}</p>
+        </div>
+      )}
+
       {showDiagram && detail.bods.length > 0 && (
         <section>
           <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
