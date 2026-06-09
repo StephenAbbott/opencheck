@@ -23,6 +23,7 @@ the UI can display "showing X of N".
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 from typing import Any
 from urllib.parse import quote
@@ -60,6 +61,12 @@ _CACHE_NS = "gleif"
 # can change at any time; a 1-day TTL ensures stale (or now-inactive)
 # relationships are not served indefinitely from cache.
 _RELATIONSHIP_CACHE_MAX_AGE_DAYS = 1.0
+
+# Main LEI record (entity name, address, registration status).  These change
+# less frequently than relationships but can be updated when an entity renews
+# its LEI or amends its registered details.  7-day TTL is a reasonable balance
+# between freshness and avoiding excessive API load.
+_LEI_RECORD_CACHE_MAX_AGE_DAYS = 7.0
 
 # GLEIF Registration Authority codes for Companies House sub-registries.
 # Used to disambiguate local company numbers that may coincidentally exist
@@ -144,18 +151,21 @@ class GleifAdapter(SourceAdapter):
         if not self.info.live_available and not self._cache.has(cache_key):
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
 
-        record = await self._get(
-            f"/lei-records/{quote(lei)}",
-            cache_key=cache_key,
+        (
+            record,
+            (direct_parent, direct_exception),
+            (ultimate_parent, ultimate_exception),
+            (direct_children, direct_children_total),
+        ) = await asyncio.gather(
+            self._get(
+                f"/lei-records/{quote(lei)}",
+                cache_key=cache_key,
+                max_age_days=_LEI_RECORD_CACHE_MAX_AGE_DAYS,
+            ),
+            self._parent_or_exception(lei, "direct"),
+            self._parent_or_exception(lei, "ultimate"),
+            self._fetch_direct_children(lei),
         )
-
-        direct_parent, direct_exception = await self._parent_or_exception(
-            lei, "direct"
-        )
-        ultimate_parent, ultimate_exception = await self._parent_or_exception(
-            lei, "ultimate"
-        )
-        direct_children, direct_children_total = await self._fetch_direct_children(lei)
 
         bundle = {
             "source_id": self.id,
@@ -236,8 +246,10 @@ class GleifAdapter(SourceAdapter):
     # HTTP with caching
     # ------------------------------------------------------------------
 
-    async def _get(self, path: str, *, cache_key: str) -> dict[str, Any]:
-        cached = self._cache.get_payload(cache_key)
+    async def _get(
+        self, path: str, *, cache_key: str, max_age_days: float | None = None
+    ) -> dict[str, Any]:
+        cached = self._cache.get_payload(cache_key, max_age_days=max_age_days)
         if cached is not None:
             return cached[0]
 

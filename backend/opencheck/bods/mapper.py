@@ -219,6 +219,7 @@ def make_entity_statement(
     jurisdiction: tuple[str, str] | None = None,
     identifiers: Iterable[dict[str, str]] = (),
     founding_date: str | None = None,
+    dissolution_date: str | None = None,
     addresses: Iterable[dict[str, str]] = (),
     alternate_names: Iterable[str] = (),
     entity_type: str = "registeredEntity",
@@ -246,6 +247,8 @@ def make_entity_statement(
         }
     if founding_date:
         record_details["foundingDate"] = founding_date
+    if dissolution_date:
+        record_details["dissolutionDate"] = dissolution_date
     addresses = list(addresses)
     if addresses:
         record_details["addresses"] = addresses
@@ -1588,6 +1591,15 @@ def _gleif_entity_statement(
     last_update = registration.get("lastUpdateDate") or ""
     gleif_publication_date = last_update[:10] or None
 
+    # entity.creationDate → foundingDate (ISO 8601 date or datetime; take date part).
+    creation_date_raw = entity_block.get("creationDate") or ""
+    founding_date = creation_date_raw[:10] if creation_date_raw else None
+
+    # entity.expiration.date → dissolutionDate (set when entity dissolved/merged).
+    expiration = entity_block.get("expiration") or {}
+    expiration_date_raw = expiration.get("date") or ""
+    dissolution_date = expiration_date_raw[:10] if expiration_date_raw else None
+
     return make_entity_statement(
         source_id="gleif",
         local_id=lei,
@@ -1596,6 +1608,8 @@ def _gleif_entity_statement(
         identifiers=identifiers,
         addresses=addresses,
         alternate_names=alternate_names,
+        founding_date=founding_date,
+        dissolution_date=dissolution_date,
         source_url=source_url,
         publication_date=gleif_publication_date,
     )

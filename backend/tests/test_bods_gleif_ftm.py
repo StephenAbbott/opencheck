@@ -669,6 +669,61 @@ def test_gleif_lei_mapping_absent_attrs_safe() -> None:
     assert any(s["recordType"] == "entity" for s in stmts)
 
 
+def test_gleif_entity_founding_and_dissolution_dates_mapped() -> None:
+    """creationDate → foundingDate and expiration.date → dissolutionDate in entity statement."""
+    bundle = {
+        "lei": "213800DATESTEST00001",
+        "record": {
+            "id": "213800DATESTEST00001",
+            "attributes": {
+                "lei": "213800DATESTEST00001",
+                "entity": {
+                    "legalName": {"name": "Dissolved Corp"},
+                    "jurisdiction": "GB",
+                    "creationDate": "1990-06-15T00:00:00Z",
+                    "expiration": {"date": "2022-12-31", "reason": "MERGED"},
+                },
+                "registration": {
+                    "lastUpdateDate": "2023-01-10T08:00:00Z",
+                },
+            },
+        },
+        "direct_parent": None,
+        "ultimate_parent": None,
+    }
+    stmts = list(map_gleif(bundle))
+    entity = next(s for s in stmts if s["recordType"] == "entity")
+    rd = entity["recordDetails"]
+    assert rd.get("foundingDate") == "1990-06-15"
+    assert rd.get("dissolutionDate") == "2022-12-31"
+
+
+def test_gleif_entity_no_dates_when_absent() -> None:
+    """foundingDate and dissolutionDate are omitted when GLEIF fields are null/absent."""
+    bundle = {
+        "lei": "213800NODATESTEST001",
+        "record": {
+            "id": "213800NODATESTEST001",
+            "attributes": {
+                "lei": "213800NODATESTEST001",
+                "entity": {
+                    "legalName": {"name": "No Dates Ltd"},
+                    "jurisdiction": "DE",
+                    "creationDate": None,
+                    "expiration": {"date": None, "reason": None},
+                },
+            },
+        },
+        "direct_parent": None,
+        "ultimate_parent": None,
+    }
+    stmts = list(map_gleif(bundle))
+    entity = next(s for s in stmts if s["recordType"] == "entity")
+    rd = entity["recordDetails"]
+    assert "foundingDate" not in rd
+    assert "dissolutionDate" not in rd
+
+
 def test_gleif_lei_mapping_passes_validator() -> None:
     """Full bundle with all four mappings must pass the BODS shape validator."""
     issues = validate_shape(map_gleif(_gleif_bundle_with_lei_mappings()))
