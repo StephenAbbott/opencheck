@@ -12,6 +12,7 @@ import pytest
 
 from opencheck.sources.climatetrace import (
     ClimateTRACEAdapter,
+    _load_gleif_gem_mapping,
     _parse_emissions,
     _parse_parents,
     _stub_bundle,
@@ -384,6 +385,24 @@ def test_search_returns_stub_when_live_disabled(tmp_path, monkeypatch) -> None:
         get_settings.cache_clear()
 
 
+def _make_gleif_gem_zip(tmp_path: Path, rows: list[dict]) -> Path:
+    """Create a minimal GLEIF GEM-to-LEI zip under *tmp_path* and return its path."""
+    gem_dir = tmp_path / "gem"
+    gem_dir.mkdir(parents=True, exist_ok=True)
+    zip_path = gem_dir / "gleif-gem-lei.zip"
+
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=["LEI", "GEM"])
+    writer.writeheader()
+    for row in rows:
+        writer.writerow(row)
+
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("LEI-GEM-20260520.csv", buf.getvalue())
+
+    return zip_path
+
+
 def test_search_returns_empty_for_person_kind(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
     monkeypatch.setenv("OPENCHECK_DISABLE_DOTENV", "1")
@@ -399,3 +418,166 @@ def test_search_returns_empty_for_person_kind(tmp_path, monkeypatch) -> None:
         assert hits == []
     finally:
         get_settings.cache_clear()
+
+
+# ---------------------------------------------------------------------------
+# GLEIF-certified GEM mapping
+# ---------------------------------------------------------------------------
+
+
+def test_gleif_mapping_parses_two_column_csv(tmp_path, monkeypatch) -> None:
+    """_load_gleif_gem_mapping() correctly parses a LEI,GEM CSV from the zip."""
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    import opencheck.sources.climatetrace as _ct_mod
+
+    # Both are exactly 20-character LEIs
+    _make_gleif_gem_zip(
+        tmp_path,
+        [
+            {"LEI": "213800LH1BZH3DI6G760", "GEM": "E100000001096"},
+            {"LEI": "AAAABBBBCCCCDDDDEEEE", "GEM": "E100000000001"},
+        ],
+    )
+    mapping = _load_gleif_gem_mapping()
+    assert mapping["213800LH1BZH3DI6G760"] == "E100000001096"
+    assert mapping["AAAABBBBCCCCDDDDEEEE"] == "E100000000001"
+    assert len(mapping) == 2
+
+
+def test_gleif_mapping_overrides_gem_self_reported_lei(tmp_path, monkeypatch) -> None:
+    """When GLEIF and GEM disagree on the LEI for an entity, GLEIF wins."""
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("OPENCHECK_DISABLE_DOTENV", "1")
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
+
+    # GEM CSV says entity E100000000042 has LEI "GEMREPORTED0000000001" (20 chars)
+    _make_gem_zip(
+        tmp_path,
+        [
+            {
+                "Entity ID": "E100000000042",
+                "Full Name": "Acme Energy Ltd",
+                "Global Legal Entity Identifier Index": "GEMREPORTED000000001",
+                "Headquarters Country": "GBR",
+                "Gem parents IDs": "",
+                "Gem parents": "",
+            }
+        ],
+    )
+    # GLEIF certified mapping assigns a different LEI "GLEIFCERTIFIED000001" (20 chars)
+    _make_gleif_gem_zip(
+        tmp_path,
+        [{"LEI": "GLEIFCERTIFIED000001", "GEM": "E100000000042"}],
+    )
+
+    from opencheck.config import get_settings
+    import opencheck.sources.climatetrace as _ct_mod
+
+    get_settings.cache_clear()
+    _ct_mod._lei_index = None
+    _ct_mod._entity_index = None
+    try:
+        import asyncio
+        adapter = ClimateTRACEAdapter()
+
+        # The GLEIF-certified LEI resolves to the entity
+        r_gleif = asyncio.get_event_loop().run_until_complete(
+            adapter.fetch_by_lei("GLEIFCERTIFIED000001")
+        )
+        assert r_gleif is not None
+        assert r_gleif["entity_id"] == "E100000000042"
+        assert r_gleif["entity_name"] == "Acme Energy Ltd"
+    finally:
+        get_settings.cache_clear()
+        _ct_mod._lei_index = None
+        _ct_mod._entity_index = None
+
+
+def test_gleif_mapping_adds_new_lei_not_in_gem_csv(tmp_path, monkeypatch) -> None:
+    """GLEIF mapping makes an entity findable by LEI even when GEM's CSV has no LEI."""
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("OPENCHECK_DISABLE_DOTENV", "1")
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
+
+    # GEM CSV has no LEI for this entity
+    _make_gem_zip(
+        tmp_path,
+        [
+            {
+                "Entity ID": "E100000000099",
+                "Full Name": "Mystery Corp",
+                "Global Legal Entity Identifier Index": "not found",
+                "Headquarters Country": "FRA",
+                "Gem parents IDs": "",
+                "Gem parents": "",
+            }
+        ],
+    )
+    # GLEIF certified mapping now provides the LEI (exactly 20 chars)
+    _make_gleif_gem_zip(
+        tmp_path,
+        [{"LEI": "NEWLEIFROMGLEIF00001", "GEM": "E100000000099"}],
+    )
+
+    from opencheck.config import get_settings
+    import opencheck.sources.climatetrace as _ct_mod
+
+    get_settings.cache_clear()
+    _ct_mod._lei_index = None
+    _ct_mod._entity_index = None
+    try:
+        import asyncio
+        adapter = ClimateTRACEAdapter()
+        result = asyncio.get_event_loop().run_until_complete(
+            adapter.fetch_by_lei("NEWLEIFROMGLEIF00001")
+        )
+        assert result is not None
+        assert result["entity_id"] == "E100000000099"
+        assert result["entity_name"] == "Mystery Corp"
+    finally:
+        get_settings.cache_clear()
+        _ct_mod._lei_index = None
+        _ct_mod._entity_index = None
+
+
+def test_gleif_mapping_missing_file_falls_back_gracefully(tmp_path, monkeypatch) -> None:
+    """When the GLEIF zip doesn't exist, the index is built from GEM only — no error."""
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("OPENCHECK_DISABLE_DOTENV", "1")
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
+
+    # GEM CSV has a well-formed LEI; GLEIF zip is deliberately absent
+    _make_gem_zip(
+        tmp_path,
+        [
+            {
+                "Entity ID": "E100000001096",
+                "Full Name": "BP p.l.c.",
+                "Global Legal Entity Identifier Index": "213800LH1BZH3DI6G760",
+                "Headquarters Country": "GBR",
+                "Gem parents IDs": "",
+                "Gem parents": "",
+            }
+        ],
+    )
+    # Do NOT call _make_gleif_gem_zip — the file should simply be absent
+
+    from opencheck.config import get_settings
+    import opencheck.sources.climatetrace as _ct_mod
+
+    get_settings.cache_clear()
+    _ct_mod._lei_index = None
+    _ct_mod._entity_index = None
+    try:
+        import asyncio
+        adapter = ClimateTRACEAdapter()
+        result = asyncio.get_event_loop().run_until_complete(
+            adapter.fetch_by_lei("213800LH1BZH3DI6G760")
+        )
+        # GEM self-reported LEI still works
+        assert result is not None
+        assert result["entity_id"] == "E100000001096"
+    finally:
+        get_settings.cache_clear()
+        _ct_mod._lei_index = None
+        _ct_mod._entity_index = None

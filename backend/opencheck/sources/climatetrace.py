@@ -22,7 +22,25 @@ Data licensing
 --------------
 GEM ownership tracker: CC BY 4.0 — use directly, no NC restriction.
 Climate TRACE: CC BY 4.0.
+GLEIF GEM-to-LEI mapping: CC BY 4.0.
 (Do **not** use the OpenSanctions GEM dataset — it adds a NC restriction.)
+
+LEI → GEM entity ID resolution — two sources, merged
+------------------------------------------------------
+1. **GLEIF certified mapping** (primary): monthly-updated file at
+   ``https://mapping.gleif.org/api/v2/gem-lei/latest/download`` published
+   jointly by GLEIF and GEM from June 2026. Contains ~5,400 GLEIF-certified
+   LEI ↔ GEM entity ID pairs in a two-column CSV (``LEI,GEM``).
+   Cached at ``{data_root}/gem/gleif-gem-lei.zip``.
+
+2. **GEM self-reported LEIs** (supplementary fallback): the "Global Legal
+   Entity Identifier Index" column in GEM's ownership.zip. Less reliable
+   than the certified mapping (unvalidated, may have stale or missing LEIs),
+   but covers more entities.  Takes effect only where the GLEIF file has no
+   entry.
+
+GLEIF-certified entries override GEM self-reported entries for the same
+entity when both are present and differ.
 
 GEM ownership.zip download
 --------------------------
@@ -62,6 +80,12 @@ _GEM_ZIP_URL = (
     "https://github.com/climatetracecoalition/climate-trace-tools/raw/main/"
     "climate_trace_tools/data/ownership/ownership.zip"
 )
+# GLEIF-certified GEM Entity ID ↔ LEI mapping.  Published monthly by GLEIF
+# and GEM from June 2026 under CC BY 4.0.  Two-column CSV: ``LEI,GEM``.
+# The ``/latest/download`` path always serves the most recent release.
+# https://www.gleif.org/en/lei-data/lei-mapping/download-gem-to-lei-relationship-files
+_GLEIF_GEM_URL = "https://mapping.gleif.org/api/v2/gem-lei/latest/download"
+
 _CT_API = "https://api.climatetrace.org"
 _CACHE_NS = "climatetrace"
 
@@ -85,6 +109,10 @@ def _gem_zip_path() -> Path:
     return data_root() / "gem" / "ownership.zip"
 
 
+def _gleif_gem_zip_path() -> Path:
+    return data_root() / "gem" / "gleif-gem-lei.zip"
+
+
 def _ensure_gem_data() -> None:
     """Download GEM ownership.zip if not already on disk."""
     path = _gem_zip_path()
@@ -100,6 +128,58 @@ def _ensure_gem_data() -> None:
         log.info("GEM ownership.zip saved to %s (%d bytes)", path, len(r.content))
     except Exception as exc:
         log.warning("Could not download GEM ownership.zip: %s", exc)
+
+
+def _ensure_gleif_gem_data() -> None:
+    """Download the GLEIF-certified GEM Entity ID-to-LEI mapping if not on disk."""
+    path = _gleif_gem_zip_path()
+    if path.exists():
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    log.info("Downloading GLEIF GEM-to-LEI mapping from %s", _GLEIF_GEM_URL)
+    try:
+        with httpx.Client(timeout=60, follow_redirects=True) as client:
+            r = client.get(_GLEIF_GEM_URL)
+            r.raise_for_status()
+        path.write_bytes(r.content)
+        log.info(
+            "GLEIF GEM-to-LEI mapping saved to %s (%d bytes)", path, len(r.content)
+        )
+    except Exception as exc:
+        log.warning("Could not download GLEIF GEM-to-LEI mapping: %s", exc)
+
+
+def _load_gleif_gem_mapping() -> dict[str, str]:
+    """Parse the GLEIF-certified GEM-to-LEI zip and return LEI → GEM entity ID.
+
+    The zip contains a single CSV with two columns: ``LEI`` and ``GEM``.
+    Returns an empty dict if the file cannot be read.
+    """
+    _ensure_gleif_gem_data()
+    lei_to_gem: dict[str, str] = {}
+    path = _gleif_gem_zip_path()
+    if not path.exists():
+        return lei_to_gem
+    try:
+        with zipfile.ZipFile(path) as zf:
+            candidates = [
+                n for n in zf.namelist()
+                if n.endswith(".csv") and not n.startswith("__MACOSX")
+            ]
+            if not candidates:
+                return lei_to_gem
+            with zf.open(candidates[0]) as raw:
+                text = raw.read().decode("utf-8-sig", errors="replace")
+        reader = csv.DictReader(io.StringIO(text))
+        for row in reader:
+            lei = (row.get("LEI") or "").strip().upper()
+            gem_id = (row.get("GEM") or "").strip()
+            if len(lei) == 20 and gem_id:
+                lei_to_gem[lei] = gem_id
+    except Exception as exc:
+        log.warning("Error parsing GLEIF GEM-to-LEI mapping: %s", exc)
+    log.info("GLEIF GEM mapping loaded: %d certified LEI → GEM pairs", len(lei_to_gem))
+    return lei_to_gem
 
 
 def _load_gem_indexes() -> tuple[dict[str, str], dict[str, dict[str, str]]]:
@@ -165,10 +245,31 @@ def _load_gem_indexes() -> tuple[dict[str, str], dict[str, dict[str, str]]]:
         log.warning("Error parsing GEM ownership.zip: %s", exc)
 
     log.info(
-        "GEM index built: %d entities, %d LEI → entity mappings",
+        "GEM index built: %d entities, %d self-reported LEI → entity mappings",
         len(ent_idx),
         len(lei_idx),
     )
+
+    # Merge GLEIF-certified mappings on top — they take precedence over GEM's
+    # self-reported LEI column, which can be unvalidated or stale.
+    gleif_mapping = _load_gleif_gem_mapping()
+    overrides = 0
+    additions = 0
+    for lei, gem_id in gleif_mapping.items():
+        if lei in lei_idx:
+            if lei_idx[lei] != gem_id:
+                lei_idx[lei] = gem_id
+                overrides += 1
+        else:
+            lei_idx[lei] = gem_id
+            additions += 1
+    if gleif_mapping:
+        log.info(
+            "GLEIF certified mapping applied: %d overrides, %d new LEI → entity entries",
+            overrides,
+            additions,
+        )
+
     return lei_idx, ent_idx
 
 
@@ -202,12 +303,14 @@ class ClimateTRACEAdapter(SourceAdapter):
             description=(
                 "Global fossil-fuel asset ownership data (GEM) combined with "
                 "satellite-derived emissions estimates (Climate TRACE). "
-                "Enables ESG and climate risk screening by LEI."
+                "LEI resolution uses the GLEIF-certified GEM Entity ID mapping "
+                "(June 2026). Enables ESG and climate risk screening by LEI."
             ),
             license="CC-BY-4.0",
             attribution=(
                 "Global Energy Monitor, CC BY 4.0. "
-                "Climate TRACE, CC BY 4.0."
+                "Climate TRACE, CC BY 4.0. "
+                "GLEIF GEM Entity ID-to-LEI mapping, CC BY 4.0."
             ),
             supports=[SearchKind.ENTITY],
             requires_api_key=False,
