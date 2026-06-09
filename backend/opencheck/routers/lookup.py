@@ -2243,6 +2243,7 @@ async def _lookup_stream_events(
         *[_safe_deepen(_dsrc, _dhit) for _dsrc, _dhit in _deepen_pairs],
         return_exceptions=True,
     )
+    _bods_counts: dict[str, int] = {}
     for (_dsrc, _dhit), _deep in zip(_deepen_pairs, _deepen_raw):
         if isinstance(_deep, Exception):
             errors.setdefault(_dsrc, f"{type(_deep).__name__}: {_deep}")
@@ -2254,6 +2255,12 @@ async def _lookup_stream_events(
         deepen_signals.extend(_deep["risk_signals"])
         if _deep.get("license_notice"):
             license_notices.append({"source_id": _dsrc, "hit_id": _dhit, "notice": _deep["license_notice"]})
+        _bods_counts[f"{_dsrc}:{_dhit}"] = len(_deep["bods"])
+
+    yield {
+        "event": "bods_counts",
+        "data": json.dumps({"counts": _bods_counts}),
+    }
 
     _cross_raw, _icij_raw = await asyncio.gather(
         assess_cross_source_names(bods_all),

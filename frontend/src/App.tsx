@@ -5,6 +5,7 @@ import {
   fetchSources,
   isValidLei,
   streamLookup,
+  type BodsCountsEvent,
   type CrossSourceLink,
   type RiskSignal,
   type SourceHit,
@@ -175,6 +176,8 @@ export default function App() {
   const [applicableSources, setApplicableSources] = useState<string[]>([]);
   const [completedSources, setCompletedSources] = useState<Set<string>>(new Set());
   const [streaming, setStreaming] = useState(false);
+  // Maps "source_id:hit_id" → BODS statement count; populated by the bods_counts SSE event.
+  const [bodsCountMap, setBodsCountMap] = useState<Record<string, number>>({});
 
   // Cleanup ref — holds the SSE close function for the current in-flight stream.
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -271,6 +274,7 @@ export default function App() {
         setApplicableSources([]);
         setCompletedSources(new Set());
         setStreaming(false);
+        setBodsCountMap({});
 
         const cleanup = streamLookup(lei, {
           onGleifDone: (e) => {
@@ -289,6 +293,7 @@ export default function App() {
           },
           onCrossSourceLinks: (e) => setCrossSourceLinks(e.links),
           onRiskSignals: (e) => setRiskSignals(e.signals),
+          onBodsCounts: (e: BodsCountsEvent) => setBodsCountMap(e.counts),
           onDone: () => {
             setStreaming(false);
             cleanupRef.current = null;
@@ -847,6 +852,7 @@ export default function App() {
                     bucket={b}
                     riskByHit={riskByHit}
                     sourceSignals={riskBySource[b.sourceId] ?? []}
+                    bodsCountMap={bodsCountMap}
                   />
                   {b.sourceId === "gleif" && gleifChildrenInfo && (
                     <p className="text-[12px] text-oo-muted mt-2 px-1">

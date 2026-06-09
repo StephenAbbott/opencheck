@@ -303,6 +303,14 @@ export interface LookupStreamErrorEvent {
   detail: string;
 }
 
+/**
+ * Emitted after the deepen batch completes.
+ * counts maps "source_id:hit_id" → number of BODS statements for that hit.
+ */
+export interface BodsCountsEvent {
+  counts: Record<string, number>;
+}
+
 export type LookupStreamHandlers = {
   onGleifDone?: (e: LookupGleifDoneEvent) => void;
   onSourcesApplicable?: (e: LookupSourcesApplicableEvent) => void;
@@ -312,6 +320,7 @@ export type LookupStreamHandlers = {
   onSourceError?: (e: SourceErrorEvent) => void;
   onCrossSourceLinks?: (e: CrossSourceLinksEvent) => void;
   onRiskSignals?: (e: RiskSignalsEvent) => void;
+  onBodsCounts?: (e: BodsCountsEvent) => void;
   onDone?: (e: LookupStreamDoneEvent) => void;
   /** Called on both backend "error" events and EventSource network errors. */
   onError?: (detail: string) => void;
@@ -379,6 +388,10 @@ export function streamLookup(
   es.addEventListener("risk_signals", (ev) => {
     const data = safeParse<RiskSignalsEvent>((ev as MessageEvent).data);
     if (data) handlers.onRiskSignals?.(data);
+  });
+  es.addEventListener("bods_counts", (ev) => {
+    const data = safeParse<BodsCountsEvent>((ev as MessageEvent).data);
+    if (data) handlers.onBodsCounts?.(data);
   });
   es.addEventListener("done", (ev) => {
     const data = safeParse<LookupStreamDoneEvent>((ev as MessageEvent).data);

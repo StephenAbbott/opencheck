@@ -524,9 +524,11 @@ const PILL_IDLE   = `${PILL_BASE} bg-oo-bg border-oo-rule text-oo-muted hover:te
 export function HitRow({
   hit,
   riskSignals,
+  preloadedStmtCount,
 }: {
   hit: SourceHit;
   riskSignals: RiskSignal[];
+  preloadedStmtCount?: number;
 }) {
   const [showDiagram,    setShowDiagram]    = useState(false);
   const [showStatements, setShowStatements] = useState(false);
@@ -555,7 +557,10 @@ export function HitRow({
   function toggleStatements() { ensureFetched(); setShowStatements(v => !v); }
   function toggleJson()       { ensureFetched(); setShowJson(v       => !v); }
 
-  const stmtCount = detail?.bods.length ?? 0;
+  // Use post-click detail count when available; fall back to the pre-loaded count
+  // from the bods_counts SSE event (available before any pill is clicked).
+  const stmtCount = detail?.bods.length ?? preloadedStmtCount ?? 0;
+  const hasKnownCount = detail !== null || preloadedStmtCount !== undefined;
 
   return (
     <li className="px-5 py-4">
@@ -612,7 +617,7 @@ export function HitRow({
             <line x1="3.5" y1="8.5" x2="6.5" y2="8.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
           </svg>
           {showStatements ? "Hide statements" : (
-            detail ? `${stmtCount} statement${stmtCount === 1 ? "" : "s"}` : "Statements"
+            hasKnownCount ? `${stmtCount} statement${stmtCount === 1 ? "" : "s"}` : "Statements"
           )}
         </button>
 
@@ -675,10 +680,12 @@ export function SourceBucketCard({
   bucket,
   riskByHit,
   sourceSignals = [],
+  bodsCountMap = {},
 }: {
   bucket: SourceBucket;
   riskByHit: Record<string, RiskSignal[]>;
   sourceSignals?: RiskSignal[];
+  bodsCountMap?: Record<string, number>;
 }) {
   const stateLabel = bucket.error
     ? "error"
@@ -735,6 +742,7 @@ export function SourceBucketCard({
             key={`${hit.source_id}:${hit.hit_id}`}
             hit={hit}
             riskSignals={riskByHit[`${hit.source_id}:${hit.hit_id}`] ?? []}
+            preloadedStmtCount={bodsCountMap[`${hit.source_id}:${hit.hit_id}`]}
           />
         ))}
       </ul>
