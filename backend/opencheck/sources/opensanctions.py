@@ -8,7 +8,8 @@ consumers (exports, reports) can warn before re-publishing.
 
 Live endpoints (Phase 2):
 
-* ``GET /search/default?q=<query>&schema=<Company|Person>`` — entity/person search.
+* ``GET /search/default?q=<query>&schema=<Company|Person>&topic=...`` — entity/person search,
+  scoped to risk-relevant topics only (sanctions, PEPs, debarment, reg. actions).
 * ``GET /entities/{entity_id}`` — full FtM entity with nested related parties.
 
 Authentication: ``Authorization: ApiKey <key>``. Gated on
@@ -28,6 +29,25 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _API_BASE = "https://api.opensanctions.org"
 _CACHE_NS = "opensanctions"
+
+# Risk-relevant topics for screening (sanctions, PEPs, debarment, regulatory
+# actions). Purely-descriptive topics like ``corp.public`` and ``corp.listed``
+# are intentionally excluded — entities that appear in OpenSanctions only
+# because they are referenced in enrichment/KYB datasets (e.g. GLEIF, GEM,
+# ESMA) should not surface as hits in a risk-screening search.
+# Source: https://www.opensanctions.org/docs/topics/
+_RISK_TOPICS: tuple[str, ...] = (
+    "sanction",
+    "sanction.linked",
+    "sanction.counter",
+    "debarment",
+    "role.pep",
+    "role.rca",
+    "poi",
+    "reg.action",
+    "reg.warn",
+)
+_TOPIC_PARAMS = "&".join(f"topic={t}" for t in _RISK_TOPICS)
 
 
 def _slug(text: str) -> str:
@@ -54,8 +74,8 @@ class OpenSanctionsAdapter(SourceAdapter):
             name="OpenSanctions",
             homepage="https://www.opensanctions.org/",
             description=(
-                "The open-source database of sanctions, watchlists, and "
-                "politically exposed persons."
+                "Sanctions lists, PEPs, debarments, and regulatory actions "
+                "from the OpenSanctions open-source database."
             ),
             license="CC-BY-NC-4.0",
             attribution="Data from OpenSanctions.org, licensed CC BY-NC 4.0.",
@@ -77,7 +97,7 @@ class OpenSanctionsAdapter(SourceAdapter):
             return self._stub_search(query, kind)
 
         payload = await self._get(
-            f"/search/default?q={quote(query)}&schema={schema}&limit=10",
+            f"/search/default?q={quote(query)}&schema={schema}&limit=10&{_TOPIC_PARAMS}",
             cache_key=cache_key,
         )
         return [self._hit(item, kind) for item in payload.get("results", [])]

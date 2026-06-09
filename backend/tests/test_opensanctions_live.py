@@ -10,6 +10,11 @@ from opencheck.sources import SearchKind
 from opencheck.sources.opensanctions import OpenSanctionsAdapter
 
 _API = "https://api.opensanctions.org"
+_TOPIC_PARAMS = (
+    "topic=sanction&topic=sanction.linked&topic=sanction.counter"
+    "&topic=debarment&topic=role.pep&topic=role.rca&topic=poi"
+    "&topic=reg.action&topic=reg.warn"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -24,7 +29,7 @@ def _live_settings(monkeypatch, tmp_path):
 
 async def test_entity_search_maps_results(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
-        url=f"{_API}/search/default?q=rosneft&schema=LegalEntity&limit=10",
+        url=f"{_API}/search/default?q=rosneft&schema=LegalEntity&limit=10&{_TOPIC_PARAMS}",
         match_headers={"Authorization": "ApiKey test-key"},
         json={
             "results": [
@@ -58,7 +63,7 @@ async def test_entity_search_maps_results(httpx_mock: HTTPXMock) -> None:
 
 async def test_person_search(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
-        url=f"{_API}/search/default?q=putin&schema=Person&limit=10",
+        url=f"{_API}/search/default?q=putin&schema=Person&limit=10&{_TOPIC_PARAMS}",
         json={
             "results": [
                 {
