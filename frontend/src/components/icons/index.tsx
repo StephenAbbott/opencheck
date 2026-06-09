@@ -33,29 +33,19 @@ export function GleifIcon({ className, style }: { className?: string; style?: Re
 }
 
 /**
- * Neo4j graph database icon — simplified nodes-and-edges mark in the
- * official Neo4j teal/blue palette.  Used on curated example cards to
- * link to the per-entity Neo4j CSV bundle.
+ * Neo4j logo icon — the official Neo4j mark (neo4j-logo.png served from
+ * /public/).  Used on curated example cards to link to the per-entity
+ * Neo4j CSV bundle.
  */
-export function Neo4jIcon({ size = 16 }: { size?: number }) {
+export function Neo4jIcon({ size = 18 }: { size?: number }) {
   return (
-    <svg
+    <img
+      src="/neo4j-logo.png"
+      alt="Neo4j"
       width={size}
       height={size}
-      viewBox="0 0 32 32"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-      focusable="false"
-    >
-      {/* Edges */}
-      <line x1="16" y1="6"  x2="26" y2="22" stroke="#018bff" strokeWidth="2" strokeLinecap="round" />
-      <line x1="16" y1="6"  x2="6"  y2="22" stroke="#018bff" strokeWidth="2" strokeLinecap="round" />
-      <line x1="6"  y1="22" x2="26" y2="22" stroke="#018bff" strokeWidth="2" strokeLinecap="round" />
-      {/* Nodes */}
-      <circle cx="16" cy="6"  r="4.5" fill="#00828b" />
-      <circle cx="26" cy="22" r="4.5" fill="#00828b" />
-      <circle cx="6"  cy="22" r="4.5" fill="#00828b" />
-    </svg>
+      style={{ display: "block", objectFit: "contain" }}
+    />
   );
 }
 
