@@ -40,7 +40,7 @@ export function GleifIcon({ className, style }: { className?: string; style?: Re
 export function Neo4jIcon({ size = 18 }: { size?: number }) {
   return (
     <img
-      src="/neo4j-logo.png"
+      src="/neo4j-logo.jpg"
       alt="Neo4j"
       width={size}
       height={size}
