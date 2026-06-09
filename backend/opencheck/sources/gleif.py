@@ -55,6 +55,12 @@ from .cvr_denmark import DK_CVR_RA_CODE as _DK_CVR_RA_CODE, normalise_cvr as _no
 _API_BASE = "https://api.gleif.org/api/v1"
 _CACHE_NS = "gleif"
 
+# Relationship data (parent, ultimate-parent, direct-children) is re-fetched
+# when the cached entry is older than this many days.  Ownership structures
+# can change at any time; a 1-day TTL ensures stale (or now-inactive)
+# relationships are not served indefinitely from cache.
+_RELATIONSHIP_CACHE_MAX_AGE_DAYS = 1.0
+
 # GLEIF Registration Authority codes for Companies House sub-registries.
 # Used to disambiguate local company numbers that may coincidentally exist
 # in multiple registries (e.g. NI000001 in both NI and England & Wales).
@@ -182,6 +188,7 @@ class GleifAdapter(SourceAdapter):
         payload = await self._get_optional(
             f"/lei-records/{quote(lei)}/direct-children?page[size]=10&page[number]=1",
             cache_key=cache_key,
+            max_age_days=_RELATIONSHIP_CACHE_MAX_AGE_DAYS,
         )
         if payload is None:
             return [], 0
@@ -199,12 +206,21 @@ class GleifAdapter(SourceAdapter):
     ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
         """Return ``(parent, exception)`` — at most one of the pair is non-None.
 
+        The parent endpoint (``/direct-parent`` or ``/ultimate-parent``) returns
+        the parent's L1 record when the accounting-consolidation relationship is
+        ACTIVE, and a 404 when the relationship is INACTIVE or has never been
+        filed.  The ``_RELATIONSHIP_CACHE_MAX_AGE_DAYS`` TTL ensures that a
+        formerly-active relationship that has since become inactive (or been
+        removed by GLEIF) will be re-checked on the next lookup rather than
+        served from stale cache indefinitely.
+
         GLEIF exposes the exception reason on a sibling endpoint:
         ``/lei-records/{lei}/{kind}-parent-reporting-exception``.
         """
         parent = await self._get_optional(
             f"/lei-records/{quote(lei)}/{kind}-parent",
             cache_key=f"{_CACHE_NS}/lei/{lei}/{kind}-parent",
+            max_age_days=_RELATIONSHIP_CACHE_MAX_AGE_DAYS,
         )
         if parent is not None:
             return parent, None
@@ -212,6 +228,7 @@ class GleifAdapter(SourceAdapter):
         exception = await self._get_optional(
             f"/lei-records/{quote(lei)}/{kind}-parent-reporting-exception",
             cache_key=f"{_CACHE_NS}/lei/{lei}/{kind}-parent-exception",
+            max_age_days=_RELATIONSHIP_CACHE_MAX_AGE_DAYS,
         )
         return None, exception
 
@@ -233,16 +250,22 @@ class GleifAdapter(SourceAdapter):
         return payload
 
     async def _get_optional(
-        self, path: str, *, cache_key: str
+        self, path: str, *, cache_key: str, max_age_days: float | None = None
     ) -> dict[str, Any] | None:
         """Like ``_get`` but returns ``None`` on 404 (no relationship on file).
+
+        ``max_age_days`` — when set, cached entries older than this many days
+        are treated as a miss and re-fetched.  Pass
+        ``_RELATIONSHIP_CACHE_MAX_AGE_DAYS`` for parent / children calls so
+        that ownership structures that have changed in GLEIF are not served
+        from stale cache indefinitely.
 
         Offline demo behaviour: when ``live_available`` is false and the
         cache has no entry, treat as "no relationship" rather than
         firing a network call. This keeps demo fixtures focused on the
         statements that actually matter.
         """
-        cached = self._cache.get_payload(cache_key)
+        cached = self._cache.get_payload(cache_key, max_age_days=max_age_days)
         if cached is not None:
             return cached[0]
         if not self.info.live_available:
