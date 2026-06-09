@@ -1387,14 +1387,14 @@ function ExampleLeiPicker({
         style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))" }}
       >
         {EXAMPLE_LEIS.map((ex) => (
-          <li key={ex.lei}>
+          <li key={ex.lei} className="relative">
             <button
               type="button"
               disabled={disabled}
               onClick={() => onPick(ex.lei)}
               className="w-full text-left bg-white border border-oo-rule rounded-oo p-4 transition-shadow hover:shadow-oo-card disabled:opacity-50"
             >
-              <div className="font-head text-[14px] font-bold text-oo-ink leading-tight">
+              <div className="font-head text-[14px] font-bold text-oo-ink leading-tight pr-6">
                 {ex.name}
               </div>
               {ex.hint && (
@@ -1420,23 +1420,22 @@ function ExampleLeiPicker({
                   ))}
                 </div>
               )}
-              <div className="flex items-center justify-between mt-2">
-                <span className="font-mono text-[10.5px] text-oo-blue break-all">{ex.lei}</span>
-                {ex.neo4jZipUrl && (
-                  <a
-                    href={ex.neo4jZipUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Download Neo4j CSV bundle"
-                    onClick={(e) => e.stopPropagation()}
-                    className="ml-2 shrink-0 opacity-50 hover:opacity-100 transition-opacity"
-                    aria-label={`Download Neo4j CSV bundle for ${ex.name}`}
-                  >
-                    <Neo4jIcon />
-                  </a>
-                )}
+              <div className="font-mono text-[10.5px] text-oo-blue mt-2 break-all">
+                {ex.lei}
               </div>
             </button>
+            {ex.neo4jZipUrl && (
+              <a
+                href={ex.neo4jZipUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Download Neo4j CSV bundle"
+                className="absolute top-3 right-3 opacity-40 hover:opacity-90 transition-opacity"
+                aria-label={`Download Neo4j CSV bundle for ${ex.name}`}
+              >
+                <Neo4jIcon />
+              </a>
+            )}
           </li>
         ))}
       </ul>
