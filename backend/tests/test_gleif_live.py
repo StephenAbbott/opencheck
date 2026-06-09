@@ -110,7 +110,7 @@ async def test_fetch_lei_bundle_with_parents(httpx_mock: HTTPXMock) -> None:
         status_code=404,
     )
     httpx_mock.add_response(
-        url=f"{_API}/lei-records/{lei}/direct-children?page[size]=10&page[number]=1",
+        url=f"{_API}/lei-records/{lei}/direct-children?page[size]=100&page[number]=1",
         json={"data": [], "meta": {"pagination": {"total": 0}}},
     )
 
@@ -169,7 +169,7 @@ async def test_fetch_surfaces_reporting_exception(httpx_mock: HTTPXMock) -> None
         status_code=404,
     )
     httpx_mock.add_response(
-        url=f"{_API}/lei-records/{lei}/direct-children?page[size]=10&page[number]=1",
+        url=f"{_API}/lei-records/{lei}/direct-children?page[size]=100&page[number]=1",
         json={"data": [], "meta": {"pagination": {"total": 0}}},
     )
 
@@ -275,7 +275,7 @@ async def test_stale_parent_cache_is_refetched_when_gleif_now_returns_404(
         status_code=404,
     )
     httpx_mock.add_response(
-        url=f"{_API}/lei-records/{_LEI}/direct-children?page[size]=10&page[number]=1",
+        url=f"{_API}/lei-records/{_LEI}/direct-children?page[size]=100&page[number]=1",
         json={"data": [], "meta": {"pagination": {"total": 0}}},
     )
 
@@ -306,7 +306,7 @@ async def test_fresh_parent_cache_is_served_without_refetch(
     cache.put(f"gleif/lei/{_LEI}/direct-parent", _PARENT_FIXTURE)
     cache.put(f"gleif/lei/{_LEI}/ultimate-parent", None)
     cache.put(f"gleif/lei/{_LEI}/ultimate-parent-exception", None)
-    cache.put(f"gleif/lei/{_LEI}/direct-children-p1", {"data": [], "meta": {"pagination": {"total": 0}}})
+    cache.put(f"gleif/lei/{_LEI}/direct-children-p1-s100", {"data": [], "meta": {"pagination": {"total": 0}}})
 
     # Only the main record fetch hits the network; parent/children come from cache.
     httpx_mock.add_response(url=f"{_API}/lei-records/{_LEI}", json=_RECORD_FIXTURE)

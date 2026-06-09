@@ -83,6 +83,6 @@ class GLEIFBundle(_Base):
     ultimate_parent: GLEIFRelationship | None = None
     direct_parent_exception: GLEIFException | None = None
     ultimate_parent_exception: GLEIFException | None = None
-    # First page of direct subsidiaries (≤ 10 records) + GLEIF total count.
+    # First page of direct subsidiaries (≤ 100 records) + GLEIF total count.
     direct_children: list[Any] = Field(default_factory=list)
     direct_children_total: int = 0

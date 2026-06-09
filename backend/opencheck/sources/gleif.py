@@ -194,9 +194,9 @@ class GleifAdapter(SourceAdapter):
         * live mode is disabled and the result is not cached
         * GLEIF reports no children for this entity (empty ``data`` or 404)
         """
-        cache_key = f"{_CACHE_NS}/lei/{lei}/direct-children-p1"
+        cache_key = f"{_CACHE_NS}/lei/{lei}/direct-children-p1-s100"
         payload = await self._get_optional(
-            f"/lei-records/{quote(lei)}/direct-children?page[size]=10&page[number]=1",
+            f"/lei-records/{quote(lei)}/direct-children?page[size]=100&page[number]=1",
             cache_key=cache_key,
             max_age_days=_RELATIONSHIP_CACHE_MAX_AGE_DAYS,
         )
