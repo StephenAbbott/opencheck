@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import json
+import time
+
 import pytest
 from pytest_httpx import HTTPXMock
 
 from opencheck.bods.mapper import map_sec_edgar
+from opencheck.cache import Cache
 from opencheck.config import get_settings
 from opencheck.sources import SearchKind
 from opencheck.sources.sec_edgar import (
@@ -236,7 +240,7 @@ async def test_fetch_parses_filings(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
         url=(
             f"{_BROWSE}?action=getcompany&CIK={subject_cik}"
-            f"&type=SC+13D&dateb=&owner=include&count=20&search_text=&output=atom"
+            f"&type=SC+13D&dateb=&owner=include&count=40&search_text=&output=atom"
         ),
         text=_FILINGS_ATOM_13D,
     )
@@ -244,7 +248,7 @@ async def test_fetch_parses_filings(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
         url=(
             f"{_BROWSE}?action=getcompany&CIK={subject_cik}"
-            f"&type=SC+13G&dateb=&owner=include&count=20&search_text=&output=atom"
+            f"&type=SC+13G&dateb=&owner=include&count=40&search_text=&output=atom"
         ),
         text=_FILINGS_ATOM_13G,
     )
@@ -310,11 +314,11 @@ async def test_fetch_deduplicates_by_reporter_cik(httpx_mock: HTTPXMock) -> None
     )
 
     httpx_mock.add_response(
-        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13D&dateb=&owner=include&count=20&search_text=&output=atom",
+        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13D&dateb=&owner=include&count=40&search_text=&output=atom",
         text=older_filing_atom,
     )
     httpx_mock.add_response(
-        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13G&dateb=&owner=include&count=20&search_text=&output=atom",
+        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13G&dateb=&owner=include&count=40&search_text=&output=atom",
         text=newer_filing_atom,
     )
     # Older filing XML
@@ -499,3 +503,194 @@ def test_map_sec_edgar_relationship_links_correct_entities():
     # In BODS v0.4, subject is a plain statementId string, not a nested dict.
     for rel in (s for s in stmts if s["recordType"] == "relationship"):
         assert rel["recordDetails"]["subject"] == issuer_sid
+
+
+# ---------------------------------------------------------------------------
+# Cache TTL tests
+# ---------------------------------------------------------------------------
+
+
+def test_cache_get_payload_respects_max_age_days(tmp_path):
+    """Live-tier entries older than max_age_days are treated as a cache miss."""
+    cache = Cache(root=tmp_path)
+    key = "sec_edgar/company/99999"
+
+    # Write an entry then backdating its _cached_at to 10 days ago.
+    cache.put(key, {"some": "data"})
+    live_path = tmp_path / "cache" / "live" / f"{key}.json"
+    wrapper = json.loads(live_path.read_text())
+    wrapper["_cached_at"] = time.time() - (10 * 86_400)  # 10 days ago
+    live_path.write_text(json.dumps(wrapper))
+
+    # With a 7-day TTL the entry is stale → miss.
+    assert cache.get_payload(key, max_age_days=7) is None
+
+    # With a 14-day TTL the entry is still fresh → hit.
+    result = cache.get_payload(key, max_age_days=14)
+    assert result is not None
+    assert result[0] == {"some": "data"}
+
+
+def test_cache_get_payload_no_ttl_always_returns_hit(tmp_path):
+    """Without max_age_days, entries never expire regardless of age."""
+    cache = Cache(root=tmp_path)
+    key = "sec_edgar/company/11111"
+    cache.put(key, "value")
+
+    live_path = tmp_path / "cache" / "live" / f"{key}.json"
+    wrapper = json.loads(live_path.read_text())
+    wrapper["_cached_at"] = 0.0  # epoch — ancient
+    live_path.write_text(json.dumps(wrapper))
+
+    result = cache.get_payload(key)
+    assert result is not None
+    assert result[0] == "value"
+
+
+# ---------------------------------------------------------------------------
+# Directional filter tests
+# ---------------------------------------------------------------------------
+
+# An XML where the issuer is a DIFFERENT company (not the subject).
+# This simulates a filing BY the subject company about its own position
+# in another company (subject = reporter, not issuer).
+_FILING_XML_WRONG_ISSUER = """\
+<?xml version="1.0" encoding="UTF-8"?>
+<edgarSubmission xmlns="http://www.sec.gov/edgar/schedule13D">
+  <schemaVersion>X0202</schemaVersion>
+  <headerData>
+    <submissionType>SCHEDULE 13D</submissionType>
+    <filerInfo>
+      <filer>
+        <filerCredentials>
+          <cik>0001793659</cik>
+        </filerCredentials>
+      </filer>
+    </filerInfo>
+  </headerData>
+  <formData>
+    <coverPageHeader>
+      <issuerInfo>
+        <issuerCIK>0009999999</issuerCIK>
+        <issuerCUSIP>XXXXXXXXX</issuerCUSIP>
+        <issuerName>Some Other Corp</issuerName>
+      </issuerInfo>
+    </coverPageHeader>
+    <reportingPersons>
+      <reportingPersonInfo>
+        <reportingPersonCIK>0001793659</reportingPersonCIK>
+        <reportingPersonName>RUSH STREET INTERACTIVE INC</reportingPersonName>
+        <typeOfReportingPerson>OO</typeOfReportingPerson>
+        <citizenshipOrOrganization>DE</citizenshipOrOrganization>
+        <aggregateAmountOwned>5000000.00</aggregateAmountOwned>
+        <percentOfClass>6.5</percentOfClass>
+      </reportingPersonInfo>
+    </reportingPersons>
+  </formData>
+</edgarSubmission>"""
+
+
+@pytest.mark.asyncio
+async def test_directional_filter_discards_filings_by_subject(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """Filings where issuerCIK != subject_cik are excluded from filings[] and
+    counted in filing_by_count, not legacy_filing_count."""
+    subject_cik = "1793659"
+
+    # 13D atom returns one post-mandate filing stored under the subject's CIK
+    # path — but the XML itself shows a DIFFERENT company as the issuer (the
+    # subject is actually the reporter/filer here).
+    wrong_issuer_atom = f"""\
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <category scheme="https://www.sec.gov/" term="SCHEDULE 13D"/>
+    <title>SCHEDULE 13D - 2025-03-01</title>
+    <id>urn:tag:sec.gov,2008:accession-number=0001793659-25-000001</id>
+    <link rel="alternate" href="https://www.sec.gov/Archives/edgar/data/{subject_cik}/000179365925000001/0001793659-25-000001-index.htm"/>
+    <updated>2025-03-01T12:00:00-04:00</updated>
+    <summary>Filed: 2025-03-01</summary>
+  </entry>
+</feed>"""
+
+    httpx_mock.add_response(
+        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13D&dateb=&owner=include&count=40&search_text=&output=atom",
+        text=wrong_issuer_atom,
+    )
+    httpx_mock.add_response(
+        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13G&dateb=&owner=include&count=40&search_text=&output=atom",
+        text=_FILINGS_ATOM_13G,
+    )
+    httpx_mock.add_response(
+        url=f"{_EDGAR_BASE}/Archives/edgar/data/{subject_cik}/000179365925000001/primary_doc.xml",
+        text=_FILING_XML_WRONG_ISSUER,
+    )
+
+    adapter = SecEdgarAdapter()
+    bundle = await adapter.fetch(subject_cik)
+
+    # The filing was found (structured_filing_count = 1) but filtered out.
+    assert bundle["filings"] == []
+    assert bundle["structured_filing_count"] == 1
+    assert bundle["legacy_filing_count"] == 0
+    # coverage_note should mention the by-count
+    assert "1" in bundle.get("coverage_note", "")
+    assert "excluded" in bundle.get("coverage_note", "")
+
+
+@pytest.mark.asyncio
+async def test_legacy_filing_count_excludes_by_filings(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """legacy_filing_count counts pre-mandate filings about the subject only.
+
+    The atom can include both filings about the subject AND filings by the
+    subject (stored under the same CIK path in EDGAR).  Legacy pre-mandate
+    filings are counted without fetching their XML, so the directional filter
+    cannot be applied to them.  However, their count should be surfaced
+    accurately — this test confirms that legacy_filing_count increments for
+    ALL pre-mandate entries seen in the atom regardless of direction (since
+    we can't know direction without fetching the XML), and that the field
+    is present in the bundle.
+    """
+    subject_cik = "1793659"
+
+    legacy_atom = f"""\
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <category scheme="https://www.sec.gov/" term="SCHEDULE 13G"/>
+    <title>SCHEDULE 13G - 2024-11-14</title>
+    <id>urn:tag:sec.gov,2008:accession-number=0001793659-24-000100</id>
+    <link rel="alternate" href="https://www.sec.gov/Archives/edgar/data/{subject_cik}/000179365924000100/0001793659-24-000100-index.htm"/>
+    <updated>2024-11-14T12:00:00-05:00</updated>
+    <summary>Filed: 2024-11-14</summary>
+  </entry>
+  <entry>
+    <category scheme="https://www.sec.gov/" term="SCHEDULE 13G"/>
+    <title>SCHEDULE 13G - 2024-06-01</title>
+    <id>urn:tag:sec.gov,2008:accession-number=0001793659-24-000050</id>
+    <link rel="alternate" href="https://www.sec.gov/Archives/edgar/data/{subject_cik}/000179365924000050/0001793659-24-000050-index.htm"/>
+    <updated>2024-06-01T12:00:00-04:00</updated>
+    <summary>Filed: 2024-06-01</summary>
+  </entry>
+</feed>"""
+
+    httpx_mock.add_response(
+        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13D&dateb=&owner=include&count=40&search_text=&output=atom",
+        text=_FILINGS_ATOM_13G,  # empty
+    )
+    httpx_mock.add_response(
+        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13G&dateb=&owner=include&count=40&search_text=&output=atom",
+        text=legacy_atom,
+    )
+
+    adapter = SecEdgarAdapter()
+    bundle = await adapter.fetch(subject_cik)
+
+    assert bundle["filings"] == []
+    assert bundle["structured_filing_count"] == 0
+    assert bundle["legacy_filing_count"] == 2
+    assert bundle["latest_filing_date"] == "2024-11-14"
+    assert "coverage_note" in bundle

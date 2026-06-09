@@ -122,11 +122,22 @@ class Cache:
         return path
 
     # ``put`` wraps the payload; ``get`` unwraps it transparently.
-    def get_payload(self, key: str) -> tuple[Any, str] | None:
+    def get_payload(self, key: str, max_age_days: float | None = None) -> tuple[Any, str] | None:
+        """Return ``(payload, tier)`` or ``None`` on miss.
+
+        ``max_age_days`` — when set, live-tier entries older than this many
+        days are treated as a cache miss so callers re-fetch fresh data.
+        Demo fixtures are never expired.
+        """
         hit = self.get(key)
         if hit is None:
             return None
         # Both tiers may or may not have the ``_cached_at`` wrapper.
         if isinstance(hit.payload, dict) and "payload" in hit.payload and "_cached_at" in hit.payload:
+            if max_age_days is not None and hit.tier == "live":
+                cached_at: float = hit.payload.get("_cached_at", 0.0)
+                age_days = (time.time() - cached_at) / 86_400
+                if age_days > max_age_days:
+                    return None
             return hit.payload["payload"], hit.tier
         return hit.payload, hit.tier

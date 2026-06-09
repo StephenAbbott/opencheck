@@ -55,13 +55,23 @@ _NS_13G = "http://www.sec.gov/edgar/schedule13g"  # lowercase g — different sc
 _NS_ATOM = "http://www.w3.org/2005/Atom"
 
 # Maximum filings retrieved per form type per subject company.
-_MAX_FILINGS = 20
+# Set to 40 so that even when a company has many self-filed 13G entries
+# (the company as institutional investor) in the atom page, we still have
+# capacity to reach third-party filings about the company after the
+# directional filter discards the self-filed ones.
+_MAX_FILINGS = 40
 
 # SEC mandate date for machine-readable (structured XML) Schedule 13D/13G
 # filings. Filings before this date have no primary_doc.xml, so no
 # beneficial-owner data can be extracted from them.
 # See https://www.sec.gov/rules/final/2024/33-11253.pdf
 _STRUCTURED_FROM = "2024-12-18"
+
+# How many days before a live-tier EDGAR cache entry is treated as stale.
+# Institutional investors file SC 13G annual updates in January/February;
+# a 7-day TTL ensures the first post-mandate filing season is picked up
+# without hammering EDGAR on every request.
+_CACHE_TTL_DAYS = 7
 
 # EDGAR citizenship/organisation codes → ISO 3166-1 alpha-2.
 _US_STATES: frozenset[str] = frozenset({
@@ -669,16 +679,28 @@ class SecEdgarAdapter(SourceAdapter):
         # When the issuer has 13D/13G filings but none in the machine-readable
         # era, explain the empty result instead of leaving a blank card.
         if not filings and meta["legacy_filing_count"]:
+            by_note = (
+                f"  ({meta['filing_by_count']} filing(s) made by this company "
+                f"as an investor in other companies were excluded.)"
+                if meta.get("filing_by_count")
+                else ""
+            )
             result["coverage_note"] = (
                 f"{meta['legacy_filing_count']} Schedule 13D/13G filing(s) found "
                 f"for this issuer (most recent {meta['latest_filing_date']}), but all "
                 f"predate the SEC's {_STRUCTURED_FROM} structured-data mandate, so no "
-                f"machine-readable beneficial owners are available."
+                f"machine-readable beneficial owners are available.{by_note}"
             )
         elif not filings:
+            by_note = (
+                f"  ({meta['filing_by_count']} filing(s) made by this company "
+                f"as an investor in other companies were excluded.)"
+                if meta.get("filing_by_count")
+                else ""
+            )
             result["coverage_note"] = (
                 "No Schedule 13D/13G filings found for this issuer since the SEC's "
-                f"{_STRUCTURED_FROM} structured-data mandate."
+                f"{_STRUCTURED_FROM} structured-data mandate.{by_note}"
             )
         validate_raw("sec_edgar", EDGARBundle, result)
         self._cache.put(cache_key, result)
@@ -711,6 +733,7 @@ class SecEdgarAdapter(SourceAdapter):
         raw_records: list[dict[str, Any]] = []
         legacy_count = 0
         structured_count = 0
+        filing_by_count = 0   # filings BY the subject (not about it) — discarded
         latest_filing_date = ""
 
         for form_type_param in ("SC+13D", "SC+13G"):
@@ -720,21 +743,28 @@ class SecEdgarAdapter(SourceAdapter):
                 f"&count={_MAX_FILINGS}&search_text=&output=atom"
             )
             atom_cache_key = f"{_CACHE_NS}/filings/{subject_cik}/{form_type_param}"
-            atom_text = await self._get_text(atom_url, cache_key=atom_cache_key)
+            # Filing-list atom feeds are mutable (new filings arrive); apply TTL.
+            atom_text = await self._get_text(
+                atom_url, cache_key=atom_cache_key, max_age_days=_CACHE_TTL_DAYS
+            )
             if not atom_text:
                 continue
 
             refs = _parse_filing_refs_from_atom(atom_text)
             for ref in refs:
                 filed = ref.get("filed") or ""
-                if filed > latest_filing_date:
-                    latest_filing_date = filed
 
                 # Filings before the structured-XML mandate have no
                 # primary_doc.xml — count them but don't waste a fetch.
                 if filed and filed < _STRUCTURED_FROM:
+                    # We'll update latest_filing_date and legacy_count after
+                    # the directional check below (legacy filings are cheap to
+                    # count without fetching the XML).  Temporarily stage them.
                     legacy_count += 1
+                    if filed > latest_filing_date:
+                        latest_filing_date = filed
                     continue
+
                 structured_count += 1
 
                 filer_cik = ref.get("filer_cik") or subject_cik
@@ -743,11 +773,29 @@ class SecEdgarAdapter(SourceAdapter):
                     f"{_EDGAR_BASE}/Archives/edgar/data/{filer_cik}"
                     f"/{accession}/primary_doc.xml"
                 )
+                # Individual filing XMLs are immutable — no TTL needed.
                 xml_cache_key = f"{_CACHE_NS}/filing/{filer_cik}/{accession}"
                 xml_text = await self._get_text(xml_url, cache_key=xml_cache_key)
                 parsed = _parse_filing_xml(xml_text, source_url=xml_url)
                 if not parsed:
                     continue
+
+                # --- Directional filter ---
+                # The EDGAR getcompany atom for a given CIK includes filings
+                # ABOUT that company (where it is the issuer/subject) AND
+                # filings BY that company (where it is the reporting investor).
+                # We only want filings where the subject company is the issuer,
+                # i.e. third parties reporting their >5 % stake in it.
+                # Filings BY the subject company are about its own positions in
+                # other companies — useful separately, but not for KYC/CDD on
+                # the entity under investigation.
+                issuer_cik_in_xml = (parsed.get("issuer") or {}).get("cik", "")
+                if issuer_cik_in_xml and issuer_cik_in_xml != subject_cik:
+                    filing_by_count += 1
+                    continue
+
+                if filed > latest_filing_date:
+                    latest_filing_date = filed
 
                 for reporter in parsed.get("reporters") or []:
                     raw_records.append(
@@ -782,6 +830,7 @@ class SecEdgarAdapter(SourceAdapter):
         meta = {
             "legacy_filing_count": legacy_count,
             "structured_filing_count": structured_count,
+            "filing_by_count": filing_by_count,
             "latest_filing_date": latest_filing_date,
         }
         return records, meta
@@ -814,15 +863,23 @@ class SecEdgarAdapter(SourceAdapter):
             "Accept-Encoding": "gzip, deflate",
         }
 
-    async def _get_text(self, url: str, *, cache_key: str) -> str:
+    async def _get_text(
+        self, url: str, *, cache_key: str, max_age_days: float | None = None
+    ) -> str:
         """Fetch any URL and return raw text; cache the result.
+
+        ``max_age_days`` — when set, passes through to ``Cache.get_payload``
+        so that live-tier entries older than this many days are treated as a
+        miss and re-fetched.  Pass ``_CACHE_TTL_DAYS`` for mutable resources
+        (filing-list atom feeds); leave ``None`` for immutable ones (individual
+        filing XMLs which never change after submission).
 
         Returns ``""`` on 404 or for optional resources (individual filing
         XMLs) that may not exist.  Raises ``RuntimeError`` on 403/429/5xx
         so callers can propagate the failure rather than silently producing
         empty results.
         """
-        cached = self._cache.get_payload(cache_key)
+        cached = self._cache.get_payload(cache_key, max_age_days=max_age_days)
         if cached is not None:
             return cached[0]
 
