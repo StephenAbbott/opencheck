@@ -9,7 +9,7 @@ import {
   type RiskSignal,
   type SourceHit,
 } from "./lib/api";
-import { OpenCheckIcon, GleifIcon } from "./components/icons";
+import { OpenCheckIcon, GleifIcon, Neo4jIcon } from "./components/icons";
 import { RiskChip, RISK_PRESENTATION, rank } from "./components/risk/RiskChip";
 import { ExportPanel } from "./components/export/ExportPanel";
 import { SubjectCard } from "./components/cdd/SubjectCard";
@@ -59,7 +59,12 @@ interface ExampleLei {
   name: string;
   hint?: string;
   signals?: ExampleSignal[];
+  /** GitHub raw URL for the per-entity Neo4j CSV zip */
+  neo4jZipUrl?: string;
 }
+
+const _NEO4J_BASE =
+  "https://github.com/StephenAbbott/opencheck/raw/main/data/demo/neo4j";
 
 const EXAMPLE_LEIS: ExampleLei[] = [
   {
@@ -71,6 +76,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
       { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
     ],
+    neo4jZipUrl: `${_NEO4J_BASE}/4OFD47D73QFJ1T1MOF29.zip`,
   },
   {
     lei: "213800LH1BZH3DI6G760",
@@ -81,6 +87,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
       { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
     ],
+    neo4jZipUrl: `${_NEO4J_BASE}/213800LH1BZH3DI6G760.zip`,
   },
   {
     lei: "253400JT3MQWNDKMJE44",
@@ -90,6 +97,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "SANCTIONED", confidence: "high" },
       { code: "RELATED_SANCTIONED", confidence: "high" },
     ],
+    neo4jZipUrl: `${_NEO4J_BASE}/253400JT3MQWNDKMJE44.zip`,
   },
   {
     lei: "2138008KTNTDICZU8L25",
@@ -99,6 +107,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "SANCTIONED", confidence: "high" },
       { code: "NON_EU_JURISDICTION", confidence: "high" },
     ],
+    neo4jZipUrl: `${_NEO4J_BASE}/2138008KTNTDICZU8L25.zip`,
   },
   {
     lei: "2138008RB4WDK7HYYS91",
@@ -107,6 +116,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     signals: [
       { code: "NON_EU_JURISDICTION", confidence: "high" },
     ],
+    neo4jZipUrl: `${_NEO4J_BASE}/2138008RB4WDK7HYYS91.zip`,
   },
   {
     lei: "2138002S3XGZ38WN5Q72",
@@ -116,6 +126,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
       { code: "NON_EU_JURISDICTION", confidence: "high" },
     ],
+    neo4jZipUrl: `${_NEO4J_BASE}/2138002S3XGZ38WN5Q72.zip`,
   },
   {
     lei: "213800DBE5Y9ZM58PN63",
@@ -125,6 +136,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
       { code: "NON_EU_JURISDICTION", confidence: "high" },
     ],
+    neo4jZipUrl: `${_NEO4J_BASE}/213800DBE5Y9ZM58PN63.zip`,
   },
   {
     lei: "213800E11LI1SCETU492",
@@ -134,6 +146,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
       { code: "RELATED_SANCTIONED", confidence: "high" },
     ],
+    neo4jZipUrl: `${_NEO4J_BASE}/213800E11LI1SCETU492.zip`,
   },
   {
     lei: "213800AG2V6YE68H5N63",
@@ -143,6 +156,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
       { code: "NON_EU_JURISDICTION", confidence: "high" },
     ],
+    neo4jZipUrl: `${_NEO4J_BASE}/213800AG2V6YE68H5N63.zip`,
   },
 ];
 
@@ -1406,8 +1420,21 @@ function ExampleLeiPicker({
                   ))}
                 </div>
               )}
-              <div className="font-mono text-[10.5px] text-oo-blue mt-2 break-all">
-                {ex.lei}
+              <div className="flex items-center justify-between mt-2">
+                <span className="font-mono text-[10.5px] text-oo-blue break-all">{ex.lei}</span>
+                {ex.neo4jZipUrl && (
+                  <a
+                    href={ex.neo4jZipUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Download Neo4j CSV bundle"
+                    onClick={(e) => e.stopPropagation()}
+                    className="ml-2 shrink-0 opacity-50 hover:opacity-100 transition-opacity"
+                    aria-label={`Download Neo4j CSV bundle for ${ex.name}`}
+                  >
+                    <Neo4jIcon />
+                  </a>
+                )}
               </div>
             </button>
           </li>
