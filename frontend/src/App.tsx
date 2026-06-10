@@ -14,7 +14,7 @@ import {
   searchByNationalId,
   type GleifSearchResult,
 } from "./lib/gleifNationalId";
-import { COUNTRY_OPTIONS, RA_CODES } from "./lib/raCodes";
+import { COUNTRY_OPTIONS, RA_CODES, validateNationalId } from "./lib/raCodes";
 import { OpenCheckIcon, GleifIcon, Neo4jIcon } from "./components/icons";
 import { RiskChip, RISK_PRESENTATION, rank } from "./components/risk/RiskChip";
 import { ExportPanel } from "./components/export/ExportPanel";
@@ -215,6 +215,10 @@ export default function App() {
   const [nationalIdQuery, setNationalIdQuery] = useState("");
   // ISO 3166-1 alpha-2 country code for the national ID tab; defaults to UK.
   const [selectedCountry, setSelectedCountry] = useState("GB");
+  // Tracks whether the national ID input has been blurred at least once.
+  // Format warnings are suppressed until the field is touched so they don't
+  // fire on every keystroke while the user is still typing.
+  const [nationalIdTouched, setNationalIdTouched] = useState(false);
 
   const sourcesQuery = useQuery({
     queryKey: ["sources"],
@@ -495,6 +499,11 @@ export default function App() {
     [applicableSources, completedSources, esgSourceIds],
   );
 
+  // Only show the national-ID format warning after the field has been blurred
+  // (touched) so partial input during typing doesn't trigger an amber state.
+  const nationalIdFormatOk =
+    !nationalIdTouched || validateNationalId(selectedCountry, nationalIdQuery);
+
   return (
     <div className="min-h-screen flex flex-col bg-oo-bg">
       {/* Skip-to-content link — visually hidden until focused (WCAG 2.4.1) */}
@@ -545,6 +554,7 @@ export default function App() {
                     setNameQuery("");
                     setNationalIdQuery("");
                     setSelectedCountry("GB");
+                    setNationalIdTouched(false);
                     setSearchMode("name");
                   }}
                   aria-label="Back to homepage"
@@ -819,6 +829,7 @@ export default function App() {
                         setSelectedCountry(e.target.value);
                         nationalIdSearchMutation.reset();
                         setNationalIdQuery("");
+                        setNationalIdTouched(false);
                       }}
                       className="border border-oo-rule rounded px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue bg-white"
                     >
@@ -842,12 +853,18 @@ export default function App() {
                         type="text"
                         value={nationalIdQuery}
                         onChange={(e) => setNationalIdQuery(e.target.value)}
+                        onBlur={() => setNationalIdTouched(true)}
                         placeholder={RA_CODES[selectedCountry]?.placeholder ?? ""}
                         autoComplete="off"
                         spellCheck={false}
                         aria-label={RA_CODES[selectedCountry]?.idLabel ?? "Registration number"}
-                        aria-describedby="national-id-hint"
-                        className="flex-1 border border-oo-rule rounded px-3 py-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
+                        aria-describedby={`national-id-hint${!nationalIdFormatOk ? " national-id-format-warn" : ""}`}
+                        aria-invalid={!nationalIdFormatOk || undefined}
+                        className={`flex-1 border rounded px-3 py-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue ${
+                          !nationalIdFormatOk
+                            ? "border-amber-400 bg-amber-50/40"
+                            : "border-oo-rule"
+                        }`}
                       />
                       <button
                         type="submit"
@@ -858,6 +875,16 @@ export default function App() {
                         {nationalIdSearchMutation.isPending ? "Searching…" : "Look up"}
                       </button>
                     </div>
+                    {!nationalIdFormatOk && (
+                      <p
+                        id="national-id-format-warn"
+                        role="status"
+                        className="mt-1.5 text-[12px] text-amber-700"
+                      >
+                        Format looks unexpected — expected {RA_CODES[selectedCountry]?.formatHint?.toLowerCase()}.
+                        You can still search; GLEIF may store the number differently.
+                      </p>
+                    )}
                   </div>
                 </div>
                 <p id="national-id-hint" className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">

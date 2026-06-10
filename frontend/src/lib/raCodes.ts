@@ -17,6 +17,14 @@ export interface RaEntry {
   placeholder: string;
   /** One-line format hint shown below the input */
   formatHint: string;
+  /**
+   * Optional regex used for client-side format validation.
+   * Applied to the trimmed input value. Absence means "no strict check"
+   * (used for countries with variable-length or complex ID formats).
+   * Validation is advisory — a mismatch shows a warning but never blocks
+   * submission, since GLEIF may store the ID in a normalised form.
+   */
+  formatPattern?: RegExp;
 }
 
 export const RA_CODES: Record<string, RaEntry> = {
@@ -25,7 +33,9 @@ export const RA_CODES: Record<string, RaEntry> = {
     countryName: "United Kingdom",
     idLabel: "Companies House number",
     placeholder: "02000048",
-    formatHint: "8 characters — digits or OC/SC/NI prefix + digits",
+    formatHint: "8 characters — digits or two-letter prefix (OC, SC, NI…) + 6 digits",
+    // 8 pure digits OR two uppercase letters + 6 digits (total 8 chars).
+    formatPattern: /^(?:\d{8}|[A-Z]{2}\d{6})$/i,
   },
   NL: {
     raCode: "RA000463",
@@ -33,6 +43,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     idLabel: "KvK number",
     placeholder: "34362985",
     formatHint: "8 digits",
+    formatPattern: /^\d{8}$/,
   },
   NO: {
     raCode: "RA000394",
@@ -40,6 +51,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     idLabel: "Organisation number (orgnr)",
     placeholder: "923609016",
     formatHint: "9 digits",
+    formatPattern: /^\d{9}$/,
   },
   DK: {
     raCode: "RA000170",
@@ -47,13 +59,16 @@ export const RA_CODES: Record<string, RaEntry> = {
     idLabel: "CVR number",
     placeholder: "36213728",
     formatHint: "8 digits",
+    formatPattern: /^\d{8}$/,
   },
   SE: {
     raCode: "RA000523",
     countryName: "Sweden",
     idLabel: "Organisation number",
     placeholder: "5560985801",
-    formatHint: "10 digits (format: NNNNNN-NNNN or 10 digits without dash)",
+    formatHint: "10 digits, optionally written as NNNNNN-NNNN",
+    // 10 pure digits OR NNNNNN-NNNN (with dash).
+    formatPattern: /^\d{10}$|^\d{6}-\d{4}$/,
   },
   FR: {
     raCode: "RA000580",
@@ -61,6 +76,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     idLabel: "SIREN number",
     placeholder: "542107651",
     formatHint: "9 digits",
+    formatPattern: /^\d{9}$/,
   },
   BE: {
     raCode: "RA000143",
@@ -68,6 +84,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     idLabel: "CBE / KBO number",
     placeholder: "0403838524",
     formatHint: "10 digits",
+    formatPattern: /^\d{10}$/,
   },
   IE: {
     raCode: "RA000215",
@@ -75,6 +92,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     idLabel: "CRO number",
     placeholder: "012345",
     formatHint: "Up to 6 digits",
+    formatPattern: /^\d{1,6}$/,
   },
   PL: {
     raCode: "RA000439",
@@ -82,13 +100,16 @@ export const RA_CODES: Record<string, RaEntry> = {
     idLabel: "KRS number",
     placeholder: "0000037171",
     formatHint: "10 digits",
+    formatPattern: /^\d{10}$/,
   },
   AT: {
     raCode: "RA000128",
     countryName: "Austria",
     idLabel: "Firmenbuchnummer",
     placeholder: "FN123456a",
-    formatHint: "FN + digits + letter suffix (e.g. FN 237338 p)",
+    formatHint: "FN + digits + letter suffix (e.g. FN 237338 p or FN123456a)",
+    // Optional "FN" prefix + optional space + digits + optional space + single letter suffix.
+    formatPattern: /^(?:FN\s*)?\d+\s*[a-z]?$/i,
   },
   EE: {
     raCode: "RA000181",
@@ -96,6 +117,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     idLabel: "Registration code",
     placeholder: "10138896",
     formatHint: "8 digits",
+    formatPattern: /^\d{8}$/,
   },
   LV: {
     raCode: "RA000327",
@@ -103,6 +125,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     idLabel: "Registration number",
     placeholder: "40003571815",
     formatHint: "11 digits",
+    formatPattern: /^\d{11}$/,
   },
   LT: {
     raCode: "RA000330",
@@ -110,6 +133,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     idLabel: "JAR code",
     placeholder: "302511363",
     formatHint: "9 digits",
+    formatPattern: /^\d{9}$/,
   },
   SK: {
     raCode: "RA000476",
@@ -117,6 +141,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     idLabel: "IČO number",
     placeholder: "31320155",
     formatHint: "8 digits",
+    formatPattern: /^\d{8}$/,
   },
   HR: {
     raCode: "RA000156",
@@ -124,13 +149,17 @@ export const RA_CODES: Record<string, RaEntry> = {
     idLabel: "OIB",
     placeholder: "30420566661",
     formatHint: "11 digits",
+    formatPattern: /^\d{11}$/,
   },
   SG: {
     raCode: "RA000509",
     countryName: "Singapore",
     idLabel: "UEN",
     placeholder: "196700240H",
-    formatHint: "9–10 characters",
+    formatHint: "9–10 alphanumeric characters",
+    // Local companies: 9 digits + check letter. Foreign/other: various.
+    // Accept 9-10 alphanumeric chars as the common denominator.
+    formatPattern: /^[A-Z0-9]{9,10}$/i,
   },
   CA: {
     raCode: "RA000072",
@@ -138,14 +167,29 @@ export const RA_CODES: Record<string, RaEntry> = {
     idLabel: "Corporation number",
     placeholder: "1234567",
     formatHint: "7–9 digits (federal corporations)",
+    formatPattern: /^\d{7,9}$/,
   },
 };
 
 /**
- * Ordered list for the country picker dropdown.
- * UK/NL/NO/FR/DK first (richest adapter coverage), then the rest alphabetically.
+ * Alphabetical by country name. UK is the default selected value (set in
+ * App.tsx state) but sits in its natural A–Z position in the list.
  */
 export const COUNTRY_OPTIONS: { code: string; entry: RaEntry }[] = [
-  "GB", "NL", "NO", "FR", "DK", "BE", "SE", "PL", "IE", "AT",
-  "EE", "LV", "LT", "SK", "HR", "SG", "CA",
+  "AT", "BE", "CA", "HR", "DK", "EE", "FR", "IE", "LV", "LT",
+  "NL", "NO", "PL", "SG", "SK", "SE", "GB",
 ].map((code) => ({ code, entry: RA_CODES[code] }));
+
+/**
+ * Returns true if `value` is empty, the country has no pattern defined,
+ * or `value` matches the country's formatPattern.
+ *
+ * Validation is advisory — callers should warn but not block submission.
+ */
+export function validateNationalId(countryCode: string, value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+  const pattern = RA_CODES[countryCode]?.formatPattern;
+  if (!pattern) return true;
+  return pattern.test(trimmed);
+}

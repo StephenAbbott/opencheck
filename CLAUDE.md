@@ -56,6 +56,34 @@ source-of-truth → BODS JSON-Lines → Neo4j Docker for demos only.
 
 ---
 
+## Current state (Phase 46)
+
+### National ID search (frontend-only, Phase 46)
+
+Three-tab search panel: **Company name** | **National ID** | **Paste an LEI**.
+
+The National ID tab lets users enter a local company registration number and
+resolve it to a LEI via GLEIF reverse lookup, then run the full OpenCheck
+lookup automatically.
+
+Key files:
+
+| File | Purpose |
+|---|---|
+| `frontend/src/lib/raCodes.ts` | RA codes, labels, placeholders, format regexes for 17 countries. Export: `RA_CODES`, `COUNTRY_OPTIONS`, `validateNationalId()` |
+| `frontend/src/lib/gleifNationalId.ts` | `searchByNationalId(raCode, id)` — fires three GLEIF filter endpoints in parallel (`registeredAs`, `validatedAs`, `otherValidationAuthorities.validatedAs`), deduplicates by LEI |
+
+How it works:
+1. User selects country → country picker resolves to an RA code (e.g. GB → RA000585)
+2. User enters registration number → `searchByNationalId()` queries all three GLEIF filter fields scoped to that RA code
+3. Single result → auto-navigates to `/lookup-stream`; multiple results → picker; zero results → amber notice with "try by name" fallback
+
+Format validation is advisory (non-blocking). The amber border + warning fires only after `onBlur` (`nationalIdTouched` state) so it doesn't interrupt typing. GLEIF may store IDs in a normalised form that differs from the raw input — always allow submission.
+
+**Pure frontend change — no backend routes added or modified.**
+
+---
+
 ## Current state (Phase 45)
 
 **Test suite**: 1733 passed, 6 skipped, 5 xfailed. Run `python -m pytest` from `backend/`.
