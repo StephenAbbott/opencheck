@@ -73,7 +73,7 @@ def test_deepen_gleif_live_maps_to_bods(
         status_code=404,
     )
     httpx_mock.add_response(
-        url=f"{_GLEIF}/lei-records/{lei}/direct-children?page[size]=10&page[number]=1",
+        url=f"{_GLEIF}/lei-records/{lei}/direct-children?page[size]=100&page[number]=1",
         json={"data": [], "meta": {"pagination": {"total": 0}}},
     )
 

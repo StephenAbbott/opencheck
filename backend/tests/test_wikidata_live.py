@@ -80,6 +80,10 @@ async def test_search_stub_when_allow_live_false(monkeypatch) -> None:
 # ---------------------------------------------------------------------
 
 
+# fetch() fires two SPARQL calls (main + roleholders) via asyncio.gather; one
+# mocked response serves both (pytest-httpx >=0.35 consumes a response once by
+# default).
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 async def test_fetch_summarises_person_bindings(httpx_mock: HTTPXMock) -> None:
     # Simulate a SPARQL response for a Person with two citizenships and
     # two positions — we expect the summariser to dedupe and collapse.
@@ -165,6 +169,7 @@ async def test_fetch_summarises_person_bindings(httpx_mock: HTTPXMock) -> None:
     assert position_qids == {"Q123028", "Q899139"}
 
 
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 async def test_fetch_picks_up_lei_and_jurisdiction(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
         url=_SPARQL_RE,

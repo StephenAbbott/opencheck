@@ -11,7 +11,7 @@ Live endpoints used:
 * ``GET /lei-records/{lei}`` — Level 1 record for a single LEI.
 * ``GET /lei-records/{lei}/direct-parent`` — Level 2 direct parent (optional).
 * ``GET /lei-records/{lei}/ultimate-parent`` — Level 2 ultimate parent (optional).
-* ``GET /lei-records/{lei}/direct-children?page[size]=10&page[number]=1`` —
+* ``GET /lei-records/{lei}/direct-children?page[size]=100&page[number]=1`` —
   first page of direct subsidiaries + total count (optional).
 
 The parent calls return 404 when no relationship is on file; we treat that

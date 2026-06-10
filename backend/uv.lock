@@ -55,6 +55,15 @@ wheels = [
 ]
 
 [[package]]
+name = "bods-v04-fixtures"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c8/9c/ae1562b40c9bcdfd0fdb69c7979c7692bcc954ebdb16aaee718511edb456/bods_v04_fixtures-0.1.1.tar.gz", hash = "sha256:061a0ff22c1c21b355303a75b6529ae4b46b483badd23b8f2fc0742a71962826", size = 13090, upload-time = "2026-04-20T07:51:37.557Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c7/c5/ebc6053bf5923ada4b7d878c84544b87e4b60af244e19c4c29c23d9e26e9/bods_v04_fixtures-0.1.1-py3-none-any.whl", hash = "sha256:1d751709b3e7e5584f413b146fc7fa75e6e62d2061e1bf78f7ca9c2850bf1910", size = 12954, upload-time = "2026-04-20T07:51:36.497Z" },
+]
+
+[[package]]
 name = "bods-xml"
 version = "0.1.0"
 source = { git = "https://github.com/StephenAbbott/bods-xml.git#dc5033c01e50a13ec9b01d12caa1365bc093116a" }
@@ -777,11 +786,14 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "bods-v04-fixtures" },
     { name = "libcovebods" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "pytest-bods-v04-fixtures" },
     { name = "pytest-httpx" },
+    { name = "respx" },
     { name = "ruff" },
 ]
 
@@ -803,11 +815,14 @@ provides-extras = ["bods", "llm"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "bods-v04-fixtures", specifier = ">=0.1" },
     { name = "libcovebods", specifier = ">=0.16" },
     { name = "mypy", specifier = ">=1.13" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "pytest-bods-v04-fixtures", specifier = ">=0.1" },
     { name = "pytest-httpx", specifier = ">=0.32" },
+    { name = "respx", specifier = ">=0.21" },
     { name = "ruff", specifier = ">=0.7" },
 ]
 
@@ -1017,6 +1032,19 @@ wheels = [
 ]
 
 [[package]]
+name = "pytest-bods-v04-fixtures"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "bods-v04-fixtures" },
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a9/b8/9ae1d4946e81fcd0fff33aa4dfd7d1e9f808ee239920ba41a650fc5dd3f9/pytest_bods_v04_fixtures-0.1.1.tar.gz", hash = "sha256:5a1a497b1ef5605ea7eeaf49a79b6e046c014f5edb95cf63e64c915a17c9d575", size = 5398, upload-time = "2026-04-20T08:02:52.938Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/06/b4/5023f0444ae7281f282e348336d4609138fc36f8afccb73c051c22c56ec7/pytest_bods_v04_fixtures-0.1.1-py3-none-any.whl", hash = "sha256:d407de3080c03d27c6900cd6f6e2d7b9232d3ad4847ed15a2c2d408a19db9dc4", size = 5349, upload-time = "2026-04-20T08:02:51.898Z" },
+]
+
+[[package]]
 name = "pytest-httpx"
 version = "0.36.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1153,6 +1181,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f3/61/d7545dafb7ac2230c70d38d31cbfe4cc64f7144dc41f6e4e4b78ecd9f5bb/requests-toolbelt-1.0.0.tar.gz", hash = "sha256:7681a0a3d047012b5bdc0ee37d7f8f07ebe76ab08caeccfc3921ce23c88d5bc6", size = 206888, upload-time = "2023-05-01T04:11:33.229Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3f/51/d4db610ef29373b879047326cbf6fa98b6c1969d6f6dc423279de2b1be2c/requests_toolbelt-1.0.0-py2.py3-none-any.whl", hash = "sha256:cccfdd665f0a24fcf4726e690f65639d272bb0637b9b92dfd91a5568ccf6bd06", size = 54481, upload-time = "2023-05-01T04:11:28.427Z" },
+]
+
+[[package]]
+name = "respx"
+version = "0.23.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/43/98/4e55c9c486404ec12373708d015ebce157966965a5ebe7f28ff2c784d41b/respx-0.23.1.tar.gz", hash = "sha256:242dcc6ce6b5b9bf621f5870c82a63997e8e82bc7c947f9ffe272b8f3dd5a780", size = 29243, upload-time = "2026-04-08T14:37:16.008Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1d/4a/221da6ca167db45693d8d26c7dc79ccfc978a440251bf6721c9aaf251ac0/respx-0.23.1-py2.py3-none-any.whl", hash = "sha256:b18004b029935384bccfa6d7d9d74b4ec9af73a081cc28600fffc0447f4b8c1a", size = 25557, upload-time = "2026-04-08T14:37:14.613Z" },
 ]
 
 [[package]]

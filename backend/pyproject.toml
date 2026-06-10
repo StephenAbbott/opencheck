@@ -51,8 +51,10 @@ dev = [
     "libcovebods>=0.16",
     # HTTP mocking for httpx-based adapters
     "respx>=0.21",
-    # BODS v0.4 test fixture pack
+    # BODS v0.4 test fixture pack + the pytest plugin that exposes the
+    # auto-parametrized `bods_fixture` fixture (test_bods_fixtures_conformance.py)
     "bods-v04-fixtures>=0.1",
+    "pytest-bods-v04-fixtures>=0.1",
 ]
 
 [build-system]
