@@ -96,10 +96,22 @@ function SectorBars({
 // ClimateTRACECard — card for a Climate TRACE / GEM hit
 // ---------------------------------------------------------------------
 
-function ClimateTRACECard({ hit }: { hit: SourceHit }) {
-  const [open, setOpen] = useState(false);
-  const [detail, setDetail] = useState<DeepenResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+const ESG_PILL_BASE = "flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors";
+const ESG_PILL_ACTIVE = `${ESG_PILL_BASE} bg-emerald-100 border-emerald-600 text-emerald-800`;
+const ESG_PILL_IDLE = `${ESG_PILL_BASE} bg-white border-emerald-200 text-emerald-700 hover:border-emerald-500 hover:text-emerald-900`;
+
+function ClimateTRACECard({
+  hit,
+  preloadedStmtCount,
+}: {
+  hit: SourceHit;
+  preloadedStmtCount?: number;
+}) {
+  const [showDiagram,    setShowDiagram]    = useState(false);
+  const [showStatements, setShowStatements] = useState(false);
+  const [showJson,       setShowJson]       = useState(false);
+  const [detail,     setDetail]     = useState<DeepenResponse | null>(null);
+  const [loading,    setLoading]    = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const raw = hit.raw as Record<string, unknown>;
@@ -115,46 +127,41 @@ function ClimateTRACECard({ hit }: { hit: SourceHit }) {
   const year = emissions.year ?? 2024;
   const formatted = totalCo2e > 0 ? formatCo2e(totalCo2e) : null;
 
-  async function toggle() {
-    const next = !open;
-    setOpen(next);
-    if (next && !detail && !loading) {
-      setLoading(true);
-      setFetchError(null);
-      try {
-        const data = await deepen(hit.source_id, hit.hit_id);
-        setDetail(data);
-      } catch (e) {
-        setFetchError(String(e));
-      } finally {
-        setLoading(false);
-      }
+  const anyOpen = showDiagram || showStatements || showJson;
+  const stmtCount = detail?.bods.length ?? preloadedStmtCount ?? 0;
+  const hasKnownCount = detail !== null || preloadedStmtCount !== undefined;
+
+  async function ensureFetched() {
+    if (detail || loading) return;
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const data = await deepen(hit.source_id, hit.hit_id);
+      setDetail(data);
+    } catch (e) {
+      setFetchError(String(e));
+    } finally {
+      setLoading(false);
     }
   }
+
+  function toggleDiagram()    { ensureFetched(); setShowDiagram(v    => !v); }
+  function toggleStatements() { ensureFetched(); setShowStatements(v => !v); }
+  function toggleJson()       { ensureFetched(); setShowJson(v       => !v); }
 
   return (
     <div className="rounded-oo border border-emerald-200 bg-emerald-50/40 overflow-hidden">
       <div className="px-5 pt-4 pb-3 border-b border-emerald-200/60">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
-              {hit.name}
-              {hit.is_stub && (
-                <span className="ml-2 text-[11px] font-mono bg-amber-50 text-amber-800 border border-amber-200 rounded px-1.5 py-0.5">
-                  stub
-                </span>
-              )}
-            </div>
-            <div className="text-[11px] font-mono text-emerald-700/70 mt-0.5">
-              GEM entity {hit.identifiers.gem_entity_id}
-            </div>
-          </div>
-          <button
-            onClick={toggle}
-            className="text-[12px] font-mono text-emerald-700 hover:text-emerald-900 whitespace-nowrap shrink-0"
-          >
-            {open ? "Hide" : "Go deeper →"}
-          </button>
+        <div className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
+          {hit.name}
+          {hit.is_stub && (
+            <span className="ml-2 text-[11px] font-mono bg-amber-50 text-amber-800 border border-amber-200 rounded px-1.5 py-0.5">
+              stub
+            </span>
+          )}
+        </div>
+        <div className="text-[11px] font-mono text-emerald-700/70 mt-0.5">
+          GEM entity {hit.identifiers.gem_entity_id}
         </div>
 
         {formatted && (
@@ -198,13 +205,61 @@ function ClimateTRACECard({ hit }: { hit: SourceHit }) {
             ))}
           </div>
         )}
+
+        {/* Action pills */}
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          <button type="button" onClick={toggleDiagram}
+            className={showDiagram ? ESG_PILL_ACTIVE : ESG_PILL_IDLE}
+            aria-pressed={showDiagram}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <circle cx="6" cy="2.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
+              <circle cx="2" cy="9.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
+              <circle cx="10" cy="9.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
+              <line x1="6" y1="4.3" x2="2.8" y2="7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              <line x1="6" y1="4.3" x2="9.2" y2="7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+            {showDiagram ? "Hide diagram" : "Visualise"}
+          </button>
+
+          <button type="button" onClick={toggleStatements}
+            className={showStatements ? ESG_PILL_ACTIVE : ESG_PILL_IDLE}
+            aria-pressed={showStatements}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+              <line x1="3.5" y1="4.5" x2="8.5" y2="4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+              <line x1="3.5" y1="6.5" x2="8.5" y2="6.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+              <line x1="3.5" y1="8.5" x2="6.5" y2="8.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+            </svg>
+            {showStatements ? "Hide statements" : (
+              hasKnownCount ? `${stmtCount} statement${stmtCount === 1 ? "" : "s"}` : "Statements"
+            )}
+          </button>
+
+          <button type="button" onClick={toggleJson}
+            className={showJson ? ESG_PILL_ACTIVE : ESG_PILL_IDLE}
+            aria-pressed={showJson}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M3.5 2.5 L1.5 6 L3.5 9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M8.5 2.5 L10.5 6 L8.5 9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <line x1="7" y1="2" x2="5" y2="10" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+            </svg>
+            {showJson ? "Hide JSON" : "Raw JSON"}
+          </button>
+        </div>
       </div>
 
-      {open && (
+      {anyOpen && (
         <div className="px-5 py-4 bg-white/60 text-[12px]">
           {loading && <p className="text-emerald-700">Fetching…</p>}
           {fetchError && <p className="text-red-700">{fetchError}</p>}
-          {detail && <DeepenBlock detail={detail} />}
+          {detail && (
+            <DeepenBlock
+              detail={detail}
+              showDiagram={showDiagram}
+              showStatements={showStatements}
+              showJson={showJson}
+            />
+          )}
         </div>
       )}
     </div>
@@ -218,9 +273,11 @@ function ClimateTRACECard({ hit }: { hit: SourceHit }) {
 export function EsgPanel({
   buckets,
   pendingCount = 0,
+  bodsCountMap = {},
 }: {
   buckets: SourceBucket[];
   pendingCount?: number;
+  bodsCountMap?: Record<string, number>;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const hitCount = buckets.reduce((n, b) => n + b.hits.length, 0);
@@ -297,6 +354,7 @@ export function EsgPanel({
                 <ClimateTRACECard
                   key={`${hit.source_id}:${hit.hit_id}`}
                   hit={hit}
+                  preloadedStmtCount={bodsCountMap[`${hit.source_id}:${hit.hit_id}`]}
                 />
               ))
             )}

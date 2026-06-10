@@ -869,7 +869,7 @@ export default function App() {
         )}
 
         {(esgBuckets.length > 0 || pendingEsgSources.length > 0) && (
-          <EsgPanel buckets={esgBuckets} pendingCount={pendingEsgSources.length} />
+          <EsgPanel buckets={esgBuckets} pendingCount={pendingEsgSources.length} bodsCountMap={bodsCountMap} />
         )}
 
         {streamingLei && !streaming && totalHits > 0 && (
