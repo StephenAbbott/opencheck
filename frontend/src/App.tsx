@@ -10,6 +10,11 @@ import {
   type RiskSignal,
   type SourceHit,
 } from "./lib/api";
+import {
+  searchByNationalId,
+  type GleifSearchResult,
+} from "./lib/gleifNationalId";
+import { COUNTRY_OPTIONS, RA_CODES } from "./lib/raCodes";
 import { OpenCheckIcon, GleifIcon, Neo4jIcon } from "./components/icons";
 import { RiskChip, RISK_PRESENTATION, rank } from "./components/risk/RiskChip";
 import { ExportPanel } from "./components/export/ExportPanel";
@@ -33,12 +38,6 @@ import { EsgPanel } from "./components/cdd/EsgPanel";
  *   3. We render a single subject view on top of the unified result.
  */
 
-interface GleifSearchResult {
-  lei: string;
-  legalName: string;
-  country: string;
-  status: string;
-}
 
 /**
  * Curated demo subjects that have a pre-extracted Open Ownership BODS
@@ -209,9 +208,13 @@ export default function App() {
     if (el) el.focus({ preventScroll: true });
   }, [view]);
 
-  // Two-mode search: "name" = GLEIF company-name search; "lei" = paste LEI.
-  const [searchMode, setSearchMode] = useState<"name" | "lei">("name");
+  // Three-mode search: "name" = GLEIF name search; "nationalId" = registration
+  // number reverse lookup; "lei" = paste LEI directly.
+  const [searchMode, setSearchMode] = useState<"name" | "nationalId" | "lei">("name");
   const [nameQuery, setNameQuery] = useState("");
+  const [nationalIdQuery, setNationalIdQuery] = useState("");
+  // ISO 3166-1 alpha-2 country code for the national ID tab; defaults to UK.
+  const [selectedCountry, setSelectedCountry] = useState("GB");
 
   const sourcesQuery = useQuery({
     queryKey: ["sources"],
@@ -245,6 +248,18 @@ export default function App() {
         } satisfies GleifSearchResult;
       });
     },
+  });
+
+  // ── National-ID search mutation ──────────────────────────────────────────
+  // Queries GLEIF's three registration-ID filter fields in parallel using
+  // the RA code for the selected country. On single result, auto-navigates;
+  // on multiple results, shows the same picker as the name search.
+  const nationalIdSearchMutation = useMutation<
+    GleifSearchResult[],
+    Error,
+    { raCode: string; id: string }
+  >({
+    mutationFn: ({ raCode, id }) => searchByNationalId(raCode, id),
   });
 
   // ── LEI lookup mutation ───────────────────────────────────────────────────
@@ -525,8 +540,11 @@ export default function App() {
                     setStreaming(false);
                     lookupMutation.reset();
                     nameSearchMutation.reset();
+                    nationalIdSearchMutation.reset();
                     setLeiInput("");
                     setNameQuery("");
+                    setNationalIdQuery("");
+                    setSelectedCountry("GB");
                     setSearchMode("name");
                   }}
                   aria-label="Back to homepage"
@@ -613,7 +631,22 @@ export default function App() {
               }`}
             >
               <GleifIcon className="flex-shrink-0" aria-hidden style={{ height: "1.15em", width: "auto" }} />
-              Search by company name
+              Company name
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={searchMode === "nationalId"}
+              aria-controls="panel-national-id"
+              id="tab-national-id"
+              onClick={() => setSearchMode("nationalId")}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-[13px] font-medium transition-colors border-l border-oo-rule ${
+                searchMode === "nationalId"
+                  ? "text-oo-ink border-b-2 border-oo-blue bg-white"
+                  : "text-oo-muted bg-oo-bg hover:text-oo-ink"
+              }`}
+            >
+              National ID
             </button>
             <button
               type="button"
@@ -745,6 +778,168 @@ export default function App() {
             </div>
           )}
 
+          {/* ── National ID panel ── */}
+          {searchMode === "nationalId" && (
+            <div id="panel-national-id" role="tabpanel" aria-labelledby="tab-national-id" className="p-6">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const q = nationalIdQuery.trim();
+                  if (!q) return;
+                  const entry = RA_CODES[selectedCountry];
+                  if (!entry) return;
+                  nationalIdSearchMutation.mutate(
+                    { raCode: entry.raCode, id: q },
+                    {
+                      onSuccess: (results) => {
+                        if (results.length === 1) {
+                          // Single unambiguous match — go straight to the lookup.
+                          nationalIdSearchMutation.reset();
+                          setNationalIdQuery("");
+                          lookupLei(results[0].lei);
+                        }
+                        // Multiple results: show the picker below (same as name search).
+                      },
+                    },
+                  );
+                }}
+              >
+                <div className="flex gap-3 items-end">
+                  <div className="flex-none">
+                    <label
+                      htmlFor="national-id-country"
+                      className="block text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2"
+                    >
+                      Country
+                    </label>
+                    <select
+                      id="national-id-country"
+                      value={selectedCountry}
+                      onChange={(e) => {
+                        setSelectedCountry(e.target.value);
+                        nationalIdSearchMutation.reset();
+                        setNationalIdQuery("");
+                      }}
+                      className="border border-oo-rule rounded px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue bg-white"
+                    >
+                      {COUNTRY_OPTIONS.map(({ code, entry }) => (
+                        <option key={code} value={code}>
+                          {entry.countryName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label
+                      htmlFor="national-id-input"
+                      className="block text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2"
+                    >
+                      {RA_CODES[selectedCountry]?.idLabel ?? "Registration number"}
+                    </label>
+                    <div className="flex gap-3">
+                      <input
+                        id="national-id-input"
+                        type="text"
+                        value={nationalIdQuery}
+                        onChange={(e) => setNationalIdQuery(e.target.value)}
+                        placeholder={RA_CODES[selectedCountry]?.placeholder ?? ""}
+                        autoComplete="off"
+                        spellCheck={false}
+                        aria-label={RA_CODES[selectedCountry]?.idLabel ?? "Registration number"}
+                        aria-describedby="national-id-hint"
+                        className="flex-1 border border-oo-rule rounded px-3 py-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
+                      />
+                      <button
+                        type="submit"
+                        disabled={nationalIdSearchMutation.isPending || !nationalIdQuery.trim()}
+                        aria-busy={nationalIdSearchMutation.isPending}
+                        className="bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
+                      >
+                        {nationalIdSearchMutation.isPending ? "Searching…" : "Look up"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <p id="national-id-hint" className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
+                  <GleifIcon className="inline-block align-middle mr-1.5" aria-hidden style={{ height: "1.2em", width: "auto" }} />
+                  {RA_CODES[selectedCountry]?.formatHint && (
+                    <span>Format: {RA_CODES[selectedCountry].formatHint}. </span>
+                  )}
+                  Resolves via GLEIF using registration authority{" "}
+                  <span className="font-mono text-[11px]">{RA_CODES[selectedCountry]?.raCode}</span>
+                  , then runs the full OpenCheck lookup.
+                </p>
+              </form>
+
+              <div aria-live="polite" aria-atomic="true">
+                {nationalIdSearchMutation.isError && (
+                  <div role="alert" className="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
+                    {nationalIdSearchMutation.error?.message ?? "Search failed"}
+                  </div>
+                )}
+                {nationalIdSearchMutation.isSuccess && nationalIdSearchMutation.data.length === 0 && (
+                  <div role="alert" className="mt-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-oo p-3 text-sm">
+                    No LEI found for this registration number in GLEIF. The company may not have an LEI, or the number may be recorded differently.{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        nationalIdSearchMutation.reset();
+                        setNationalIdQuery("");
+                        setSearchMode("name");
+                      }}
+                      className="underline hover:no-underline"
+                    >
+                      Try searching by company name instead →
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {nationalIdSearchMutation.data && nationalIdSearchMutation.data.length > 1 && (
+                <div className="mt-4" aria-live="polite">
+                  <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-3">
+                    {nationalIdSearchMutation.data.length} results — click to look up
+                  </p>
+                  <ul aria-label="Search results" className="divide-y divide-oo-rule border border-oo-rule rounded-oo overflow-hidden">
+                    {nationalIdSearchMutation.data.map((r) => (
+                      <li key={r.lei}>
+                        <button
+                          type="button"
+                          aria-label={`Look up ${r.legalName}, LEI ${r.lei}`}
+                          onClick={() => {
+                            nationalIdSearchMutation.reset();
+                            setNationalIdQuery("");
+                            lookupLei(r.lei);
+                          }}
+                          className="w-full text-left px-4 py-3 hover:bg-oo-bg transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-oo-blue/40"
+                        >
+                          <div className="font-head font-bold text-[14px] text-oo-ink leading-snug">
+                            {r.legalName}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="font-mono text-[11px] text-oo-blue">
+                              {r.lei}
+                            </span>
+                            <span className="text-[11px] text-oo-muted">{r.country}</span>
+                            <span
+                              className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                                r.status === "ISSUED"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : "bg-oo-bg text-oo-muted border-oo-rule"
+                              }`}
+                            >
+                              {r.status}
+                            </span>
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── LEI paste panel ── */}
           {searchMode === "lei" && (
             <form onSubmit={runLookup} id="panel-lei" role="tabpanel" aria-labelledby="tab-lei" className="p-6">
@@ -800,7 +995,7 @@ export default function App() {
           <SearchLoadingGrid sources={sourcesQuery.data?.sources ?? []} />
         )}
 
-        {!streamingLei && !lookupMutation.isPending && !streaming && !lookupMutation.isError && !nameSearchMutation.data && !nameSearchMutation.isPending && (
+        {!streamingLei && !lookupMutation.isPending && !streaming && !lookupMutation.isError && !nameSearchMutation.data && !nameSearchMutation.isPending && !nationalIdSearchMutation.data && !nationalIdSearchMutation.isPending && (
           <>
             <ExampleLeiPicker onPick={lookupLei} disabled={lookupMutation.isPending || streaming} />
             <HowItWorks />
