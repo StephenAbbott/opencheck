@@ -16,11 +16,11 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 49** — Graph-native demo: curated BODS subgraph pipeline, Neo4j CSV export, slide viewer, licensing
+**Latest: Phase 50** — National ID search: look up any company by local registration number
 
-An eight-phase de-risking sequence built a reproducible, talk-ready demo graph using nine curated anchor entities (DMGT, BP, Rosneft Deutschland, Bank Saderat, Biffa, Hornsea 1, Care UK, Taqa Bratani, Newcastle United) drawn from Open Ownership's published BODS v0.4 bulk data. `make build-demo` extracts GLEIF + UK PSC subgraphs from local SQLite, merges and validates them (both `validate_shape` and `lib-cove-bods` clean, 0 dangling edges). `make export-neo4j` produces Neo4j-importable CSVs via `bods-neo4j` (1,468 nodes, 2,887 relationships loaded into Neo4j 5 Community Docker). `make slides` generates a fully self-contained HTML ownership graph viewer for all nine entities (Cytoscape.js + dagre, ~1 MB, all JS inlined, works offline). UK PSC data is OGL v3.0; GLEIF data is CC0 — the demo graph is freely shareable in talks. AuraDB and all-entity-scale graph DBs parked with a named revisit trigger; decision recorded in `CLAUDE.md`.
+The search panel gains a third tab — **National ID** — alongside the existing company-name and LEI tabs. Users enter a local registration number (Companies House number, KvK, orgnr, CVR, SIREN, etc.) and select a country; OpenCheck queries GLEIF's three registration-ID filter fields in parallel (`registeredAs`, `validatedAs`, `otherValidationAuthorities.validatedAs`), scoped to the registration authority RA code to prevent false matches, then auto-navigates to the full lookup on a single hit or shows a picker on multiple. Covers all 17 countries with active adapters: Austria, Belgium, Canada, Croatia, Denmark, Estonia, France, Ireland, Latvia, Lithuania, Netherlands, Norway, Poland, Singapore, Slovakia, Sweden, and United Kingdom. Per-country format validation (advisory, non-blocking) fires after the field is blurred: amber border + inline hint when the format looks wrong, but submission is never prevented since GLEIF may store IDs in a normalised form. Pure frontend change — two new lib files (`raCodes.ts`, `gleifNationalId.ts`), no backend routes added or modified.
 
-*Previous: [Phase 48 — Australian Business Register adapter](docs/status.md)*
+*Previous: [Phase 49 — Graph-native demo](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
@@ -66,7 +66,7 @@ The first frontend build copies bundled images for `@openownership/bods-dagre` i
 | [Sources](docs/sources.md) | Full adapter table — 26 active sources plus inactive bulk-only adapters, license, entry point, description |
 | [Risk signals](docs/risk-signals.md) | All 12 signal codes: source-derived, AMLA CDD RTS, FATF jurisdiction, cross-source name match, ICIJ Offshore Leaks |
 | [Configuration](docs/configuration.md) | Environment variables, Render deployment, running the test suite |
-| [Development history](docs/status.md) | All 49 phases |
+| [Development history](docs/status.md) | All 50 phases |
 
 ## Licensing
 
