@@ -814,8 +814,8 @@ export default function App() {
                   );
                 }}
               >
-                <div className="flex gap-3 items-end">
-                  <div className="flex-none">
+                <div className="flex flex-col sm:flex-row sm:gap-3 sm:items-end gap-3">
+                  <div className="sm:flex-none">
                     <label
                       htmlFor="national-id-country"
                       className="block text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2"
@@ -831,7 +831,7 @@ export default function App() {
                         setNationalIdQuery("");
                         setNationalIdTouched(false);
                       }}
-                      className="border border-oo-rule rounded px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue bg-white"
+                      className="w-full sm:w-auto border border-oo-rule rounded px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue bg-white"
                     >
                       {COUNTRY_OPTIONS.map(({ code, entry }) => (
                         <option key={code} value={code}>
@@ -847,34 +847,24 @@ export default function App() {
                     >
                       {RA_CODES[selectedCountry]?.idLabel ?? "Registration number"}
                     </label>
-                    <div className="flex gap-3">
-                      <input
-                        id="national-id-input"
-                        type="text"
-                        value={nationalIdQuery}
-                        onChange={(e) => setNationalIdQuery(e.target.value)}
-                        onBlur={() => setNationalIdTouched(true)}
-                        placeholder={RA_CODES[selectedCountry]?.placeholder ?? ""}
-                        autoComplete="off"
-                        spellCheck={false}
-                        aria-label={RA_CODES[selectedCountry]?.idLabel ?? "Registration number"}
-                        aria-describedby={`national-id-hint${!nationalIdFormatOk ? " national-id-format-warn" : ""}`}
-                        aria-invalid={!nationalIdFormatOk || undefined}
-                        className={`flex-1 border rounded px-3 py-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue ${
-                          !nationalIdFormatOk
-                            ? "border-amber-400 bg-amber-50/40"
-                            : "border-oo-rule"
-                        }`}
-                      />
-                      <button
-                        type="submit"
-                        disabled={nationalIdSearchMutation.isPending || !nationalIdQuery.trim()}
-                        aria-busy={nationalIdSearchMutation.isPending}
-                        className="bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
-                      >
-                        {nationalIdSearchMutation.isPending ? "Searching…" : "Look up"}
-                      </button>
-                    </div>
+                    <input
+                      id="national-id-input"
+                      type="text"
+                      value={nationalIdQuery}
+                      onChange={(e) => setNationalIdQuery(e.target.value)}
+                      onBlur={() => setNationalIdTouched(true)}
+                      placeholder={RA_CODES[selectedCountry]?.placeholder ?? ""}
+                      autoComplete="off"
+                      spellCheck={false}
+                      aria-label={RA_CODES[selectedCountry]?.idLabel ?? "Registration number"}
+                      aria-describedby={`national-id-hint${!nationalIdFormatOk ? " national-id-format-warn" : ""}`}
+                      aria-invalid={!nationalIdFormatOk || undefined}
+                      className={`w-full border rounded px-3 py-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue ${
+                        !nationalIdFormatOk
+                          ? "border-amber-400 bg-amber-50/40"
+                          : "border-oo-rule"
+                      }`}
+                    />
                     {!nationalIdFormatOk && (
                       <p
                         id="national-id-format-warn"
@@ -886,6 +876,14 @@ export default function App() {
                       </p>
                     )}
                   </div>
+                  <button
+                    type="submit"
+                    disabled={nationalIdSearchMutation.isPending || !nationalIdQuery.trim()}
+                    aria-busy={nationalIdSearchMutation.isPending}
+                    className="w-full sm:w-auto sm:flex-none bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
+                  >
+                    {nationalIdSearchMutation.isPending ? "Searching…" : "Look up"}
+                  </button>
                 </div>
                 <p id="national-id-hint" className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
                   <GleifIcon className="inline-block align-middle mr-1.5" aria-hidden style={{ height: "1.2em", width: "auto" }} />
