@@ -254,6 +254,43 @@ Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_
 
 ---
 
+## GLEIF reverse-lookup: local ID → LEI
+
+GLEIF supports querying by local identifier, which is the **inverse** of OpenCheck's normal
+flow (LEI → `registeredAs` → national adapter). This isn't needed for the core lookup path,
+but would enable a future "company number first" entry point where a user supplies a local
+registry number instead of a LEI.
+
+A local ID may appear in **three** different fields on the LEI record:
+
+| GLEIF field path | Filter parameter |
+|---|---|
+| `entity.registeredAs` | `filter[entity.registeredAs]=<id>` |
+| `registration.validatedAs` | `filter[registration.validatedAs]=<id>` |
+| `registration.otherValidationAuthorities.validatedAs` | `filter[registration.otherValidationAuthorities.validatedAs]=<id>` |
+
+The same entity can hold different local IDs across those fields (e.g. a national registry
+code vs. a tax authority code). To avoid false matches from coincidental ID collisions across
+registries, always add the RA code as a second filter:
+
+```
+https://api.gleif.org/api/v1/lei-records?filter[entity.registeredAs]=00102498&filter[entity.registeredAt]=RA000585
+```
+
+Each adapter in the RA table below has the correct RA code for this second filter.
+
+**Future use**: a "find by company number" entry flow would query all three filter endpoints
+(parallel requests, deduplicate by LEI), then hand the resolved LEI to the standard
+`/lookup-stream` flow. The RA codes table already has everything needed.
+
+**Autocompletions endpoint**: `https://api.gleif.org/api/v1/autocompletions?field=fulltext&q=<name>`
+searches across the entire LEI record (not just legalName). Likely a superset of the existing
+`filter[fulltext]` search used in `gleif.py`; worth evaluating if name search miss-rate is a problem.
+
+Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=latest
+
+---
+
 ## GLEIF RA codes for active adapters
 
 | Country | Adapter | RA code |
