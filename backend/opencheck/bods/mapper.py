@@ -20,6 +20,8 @@ from typing import Any, Iterable
 
 import pycountry
 
+from .psc_natures import describe_nature
+
 # ----------------------------------------------------------------------
 # PSC "nature of control" → BODS v0.4 interest codelist
 # ----------------------------------------------------------------------
@@ -40,8 +42,27 @@ _INTEREST_PREFIX = {
     "voting-rights": "votingRights",
     "right-to-appoint-and-remove-directors": "appointmentOfBoard",
     "right-to-appoint-and-remove-members": "appointmentOfBoard",
-    "right-to-appoint-and-remove-persons": "appointmentOfBoard",
+    # Scottish-partnership codes use the singular "person"
+    # (``right-to-appoint-and-remove-person[-as-firm|-as-trust]``). The previous
+    # plural prefix never matched them, so they fell through to
+    # ``otherInfluenceOrControl``. The singular prefix matches the singular form
+    # and any plural form via ``startswith``.
+    "right-to-appoint-and-remove-person": "appointmentOfBoard",
+    # LLP (``right-to-share-surplus-assets-*``) and Scottish-partnership
+    # (``part-right-to-share-surplus-assets-*``) surplus-asset rights.
+    "right-to-share-surplus-assets": "rightsToSurplusAssetsOnDissolution",
+    "part-right-to-share-surplus-assets": "rightsToSurplusAssetsOnDissolution",
     "significant-influence-or-control": "otherInfluenceOrControl",
+    # NOTE: ``registered-owner-as-nominee-*`` (registered overseas entity) codes
+    # are intentionally NOT mapped to the ``nominee`` interest type here. BODS
+    # requires nominee arrangements to be modelled via an intermediary
+    # ``arrangement`` entity (entityType.subtype ``nomination``) linked by
+    # ``nominator``/``nominee`` relationships — not a bare ``nominee`` interest
+    # on a direct PSC relationship. See
+    # https://standard.openownership.org/en/0.4.0/standard/modelling/repr-nominations.html
+    # Until that arrangement model is implemented these fall through to
+    # ``otherInfluenceOrControl``; the descriptor carried in ``interest.details``
+    # preserves the nominee meaning.
 }
 
 _SHARE_BAND_RE = re.compile(r"(\d+)-to-(\d+)-percent")
@@ -57,11 +78,13 @@ def _parse_nature(nature: str) -> dict[str, Any]:
             interest_type = mapped
             break
 
+    # Prefer the official human-readable descriptor for the code; fall back to
+    # the raw code string for any code not in the vendored enumeration.
     entry: dict[str, Any] = {
         "type": interest_type,
         "directOrIndirect": "direct",
         "beneficialOwnershipOrControl": True,
-        "details": nature,
+        "details": describe_nature(nature) or nature,
     }
 
     band = _SHARE_BAND_RE.search(lowered)
@@ -127,7 +150,7 @@ def _country_obj(code: str) -> dict[str, str] | None:
     # "GB".  Mainly needed for Companies House addresses and other UK sources.
     # Also covers Bolagsverket (Swedish API) and other European sources.
     _NATIVE_NAMES: dict[str, str] = {
-        # UK sub-regions
+        # UK sub-regions + English variants pycountry no longer resolves
         "England": "GB",
         "ENGLAND": "GB",
         "Scotland": "GB",
@@ -136,6 +159,13 @@ def _country_obj(code: str) -> dict[str, str] | None:
         "WALES": "GB",
         "Northern Ireland": "GB",
         "NORTHERN IRELAND": "GB",
+        "Great Britain": "GB",
+        "GREAT BRITAIN": "GB",
+        "United Kingdom": "GB",
+        "UNITED KINGDOM": "GB",
+        # pycountry renamed Turkey -> Türkiye, so the English name no longer resolves
+        "Turkey": "TR",
+        "TURKEY": "TR",
         # Bolagsverket / other Scandinavian sources
         "Sverige": "SE",
         "SVERIGE": "SE",
@@ -166,8 +196,12 @@ def _country_obj(code: str) -> dict[str, str] | None:
         c = pycountry.countries.get(alpha_2=alpha2)
         if c:
             return {"name": c.name, "code": c.alpha_2}
-    # Unknown value — preserve as-is so nothing is silently lost.
-    return {"name": stripped, "code": upper}
+    # Unknown value — preserve the name but OMIT the code. BODS Country requires
+    # `name` and only SHOULD carry a 2-letter ISO code; emitting the raw string as
+    # a `code` violates the maxLength:2 / minLength:2 constraint (e.g. real PSC
+    # addresses with country "Great Britain" or "Turkey" that pycountry can't
+    # resolve). Name-only is conformant and loses nothing.
+    return {"name": stripped}
 
 
 def _addr(type_: str, address: str, country_code: str = "") -> dict[str, Any]:
@@ -328,16 +362,47 @@ def make_relationship_statement(
     interests: Iterable[dict[str, Any]] = (),
     source_url: str | None = None,
     publication_date: str | None = None,
+    record_status: str = "new",
+    replaces_statements: Iterable[str] | None = None,
 ) -> dict[str, Any]:
-    statement_id = _stable_id(source_id, "relationship", local_id)
-    record_id = _stable_id(source_id, "relationship-record", local_id)
+    """Build a BODS v0.4 relationship statement.
 
-    return {
+    Lifecycle (BODS *Information updates* + *Record identifiers* modelling
+    requirements):
+
+    * The ``recordId`` of a relationship MUST be **stable over time** — every
+      statement in the record's lifecycle (``new`` → ``updated`` → ``closed``)
+      shares the same ``recordId``. It is derived purely from ``local_id`` here,
+      so it never changes as the relationship's status changes.
+    * Each ``statementId`` MUST be unique. For non-``new`` lifecycle stages the
+      statementId is varied (by status + publication date) so the closed/updated
+      statement is a distinct statement from the original ``new`` one, while the
+      ``recordId`` stays put.
+    * A non-``new`` statement automatically records ``replacesStatements``
+      pointing at the original ``new`` statement's id (unless the caller supplies
+      an explicit list), making the supersession explicit. Deterministic ids mean
+      this link needs no stored history.
+    """
+    record_id = _stable_id(source_id, "relationship-record", local_id)
+    if record_status == "new":
+        statement_id = _stable_id(source_id, "relationship", local_id)
+        replaced: list[str] | None = list(replaces_statements) if replaces_statements else None
+    else:
+        statement_id = _stable_id(
+            source_id, "relationship", local_id, record_status, publication_date or ""
+        )
+        if replaces_statements is not None:
+            replaced = list(replaces_statements)
+        else:
+            # Supersede the original 'new' statement for this same recordId.
+            replaced = [_stable_id(source_id, "relationship", local_id)]
+
+    statement: dict[str, Any] = {
         "statementId": statement_id,
         "recordId": record_id,
         "declarationSubject": subject_statement_id,
         "recordType": "relationship",
-        "recordStatus": "new",
+        "recordStatus": record_status,
         "statementDate": _today(),
         "publicationDetails": _publication_details_block(publication_date),
         "recordDetails": {
@@ -348,6 +413,9 @@ def make_relationship_statement(
         },
         "source": _source_block(source_id, source_url),
     }
+    if replaced:
+        statement["replacesStatements"] = replaced
+    return statement
 
 
 def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
@@ -681,9 +749,11 @@ def _emit_company_statements(
         seen_sids.add(entity_sid)
 
     for psc in pscs:
-        if psc.get("ceased_on"):
-            # Skip ceased PSCs in Phase 1 — future work: emit a closed record.
-            continue
+        # Ceased PSCs are no longer dropped: per the BODS Information updates
+        # modelling requirements a no-longer-current element is represented by a
+        # statement with recordStatus 'closed' (stable recordId, distinct
+        # statementId), not by omission.
+        ceased_on = psc.get("ceased_on")
         psc_kind = (psc.get("kind") or "").lower()
 
         if "corporate-entity" in psc_kind or "legal-person" in psc_kind:
@@ -739,6 +809,13 @@ def _emit_company_statements(
             for interest in interests:
                 interest["beneficialOwnershipOrControl"] = False
 
+        # A ceased PSC closes the relationship: stamp each interest with the
+        # cessation date and emit the statement with recordStatus 'closed'
+        # (which auto-records replacesStatements -> the original 'new').
+        if ceased_on:
+            for interest in interests:
+                interest["endDate"] = ceased_on
+
         rel = make_relationship_statement(
             source_id="companies_house",
             local_id=f"{number}:{ip_sid}",
@@ -747,7 +824,8 @@ def _emit_company_statements(
             interested_party_type=ip_type,
             interests=interests,
             source_url=company_url,
-            publication_date=psc.get("notified_on") or None,
+            publication_date=(ceased_on or psc.get("notified_on") or None),
+            record_status="closed" if ceased_on else "new",
         )
         rel_sid = rel["statementId"]
         if rel_sid not in seen_sids:
