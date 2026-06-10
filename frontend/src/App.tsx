@@ -685,7 +685,7 @@ export default function App() {
                 >
                   Company name
                 </label>
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <input
                     id="name-input"
                     type="search"
@@ -701,7 +701,7 @@ export default function App() {
                     type="submit"
                     disabled={nameSearchMutation.isPending || !nameQuery.trim()}
                     aria-busy={nameSearchMutation.isPending}
-                    className="bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
+                    className="w-full sm:w-auto bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
                   >
                     {nameSearchMutation.isPending ? "Searching…" : "Search"}
                   </button>
@@ -974,7 +974,7 @@ export default function App() {
               >
                 Legal Entity Identifier
               </label>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   id="lei-input"
                   type="text"
@@ -994,7 +994,7 @@ export default function App() {
                   type="submit"
                   disabled={lookupMutation.isPending || !leiInput.trim()}
                   aria-busy={lookupMutation.isPending}
-                  className="bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
+                  className="w-full sm:w-auto bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
                 >
                   {lookupMutation.isPending ? "Looking up…" : "Look up"}
                 </button>
