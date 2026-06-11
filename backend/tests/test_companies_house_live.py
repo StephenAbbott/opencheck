@@ -107,6 +107,11 @@ async def test_fetch_company_bundle_returns_profile_officers_pscs(
         url=f"{_API}/company/{number}/persons-with-significant-control",
         json={"items": []},
     )
+    httpx_mock.add_response(
+        url=f"{_API}/company/{number}/persons-with-significant-control-statements",
+        json={"items": [{"statement": "no-individual-or-entity-with-signficant-control",
+                         "notified_on": "2016-04-06", "etag": "s1"}]},
+    )
 
     adapter = CompaniesHouseAdapter()
     bundle = await adapter.fetch(number)
@@ -115,6 +120,9 @@ async def test_fetch_company_bundle_returns_profile_officers_pscs(
     assert bundle["profile"]["company_name"] == "BP P.L.C."
     assert "officers" in bundle
     assert "pscs" in bundle
+    assert bundle["psc_statements"]["items"][0]["statement"] == (
+        "no-individual-or-entity-with-signficant-control"
+    )
 
 
 async def test_fetch_officer_bundle_returns_appointments(

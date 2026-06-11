@@ -20,7 +20,7 @@ from typing import Any, Iterable
 
 import pycountry
 
-from .psc_natures import describe_nature, describe_super_secure
+from .psc_natures import describe_nature, describe_statement, describe_super_secure
 
 # ----------------------------------------------------------------------
 # PSC "nature of control" → BODS v0.4 interest codelist
@@ -357,8 +357,9 @@ def make_relationship_statement(
     source_id: str,
     local_id: str,
     subject_statement_id: str,
-    interested_party_statement_id: str,
+    interested_party_statement_id: str | None = None,
     interested_party_type: str = "person",
+    interested_party_unspecified: dict[str, Any] | None = None,
     interests: Iterable[dict[str, Any]] = (),
     source_url: str | None = None,
     publication_date: str | None = None,
@@ -408,7 +409,11 @@ def make_relationship_statement(
         "recordDetails": {
             "isComponent": False,
             "subject": subject_statement_id,
-            "interestedParty": interested_party_statement_id,
+            "interestedParty": (
+                interested_party_unspecified
+                if interested_party_unspecified is not None
+                else interested_party_statement_id
+            ),
             "interests": list(interests),
         },
         "source": _source_block(source_id, source_url),
@@ -698,6 +703,89 @@ def _ch_director_statements(
     return stmts
 
 
+# CH PSC statement code → BODS unspecifiedReason. Only codes that represent
+# *missing* beneficial-ownership information are mapped; "positive" update-period
+# declarations (e.g. all-beneficial-owners-identified, no-change-…) are absent
+# and produce no statement. See data-standard issue #389.
+_PSC_STATEMENT_NO_BO = "noBeneficialOwners"
+_PSC_STATEMENT_REASON: dict[str, str] = {
+    # "There is no beneficial owner" — no party, no interest.
+    "no-individual-or-entity-with-signficant-control": _PSC_STATEMENT_NO_BO,
+    "no-individual-or-entity-with-signficant-control-partnership": _PSC_STATEMENT_NO_BO,
+    "no-beneficial-owner-identified": _PSC_STATEMENT_NO_BO,
+    # "A PSC exists but the company cannot identify/confirm them."
+    "psc-exists-but-not-identified": "subjectUnableToConfirmOrIdentifyBeneficialOwner",
+    "psc-exists-but-not-identified-partnership": "subjectUnableToConfirmOrIdentifyBeneficialOwner",
+    "psc-details-not-confirmed": "subjectUnableToConfirmOrIdentifyBeneficialOwner",
+    "psc-details-not-confirmed-partnership": "subjectUnableToConfirmOrIdentifyBeneficialOwner",
+    "steps-to-find-psc-not-yet-completed": "subjectUnableToConfirmOrIdentifyBeneficialOwner",
+    "steps-to-find-psc-not-yet-completed-partnership": "subjectUnableToConfirmOrIdentifyBeneficialOwner",
+    "awaiting-confirmation-from-psc": "subjectUnableToConfirmOrIdentifyBeneficialOwner",
+    "at-least-one-beneficial-owner-unidentified": "subjectUnableToConfirmOrIdentifyBeneficialOwner",
+    # "A PSC was contacted/required to disclose but the information wasn't provided."
+    "psc-contacted-but-no-response": "interestedPartyHasNotProvidedInformation",
+    "psc-contacted-but-no-response-partnership": "interestedPartyHasNotProvidedInformation",
+    "psc-has-failed-to-confirm-changed-details": "interestedPartyHasNotProvidedInformation",
+    "psc-has-failed-to-confirm-changed-details-partnership": "interestedPartyHasNotProvidedInformation",
+    "restrictions-notice-issued-to-psc": "interestedPartyHasNotProvidedInformation",
+    "restrictions-notice-issued-to-psc-partnership": "interestedPartyHasNotProvidedInformation",
+    "information-not-provided-for-at-least-one-beneficial-owner": "interestedPartyHasNotProvidedInformation",
+    "at-least-one-beneficial-owner-unidentified-and-information-not-provided-for-at-least-one-beneficial-owner": "interestedPartyHasNotProvidedInformation",
+}
+
+
+def _ch_psc_statement_statements(
+    number: str,
+    statements: list[dict[str, Any]],
+    entity_sid: str,
+    company_url: str,
+) -> list[dict[str, Any]]:
+    """Map CH PSC *statements* to BODS ownership-or-control statements with an
+    unspecified ``interestedParty`` (BODS missing-information modelling, #389).
+
+    "No beneficial owner" cases carry **no** interest (there is no owner, so no
+    phantom party is invented); "exists but unidentified/undisclosed" cases carry
+    a single ``unknownInterest`` (an owner exists, identity unknown). The CH
+    statement code becomes the ``reason`` and its official text the ``description``.
+    """
+    out: list[dict[str, Any]] = []
+    for item in statements:
+        code = (item.get("statement") or "").strip()
+        reason = _PSC_STATEMENT_REASON.get(code.lower())
+        if not reason:
+            continue  # positive / update-period declaration → no missing info
+        description = describe_statement(code) or code
+        linked = item.get("linked_psc_name")
+        if linked and "{linked_psc_name}" in description:
+            description = description.replace("{linked_psc_name}", linked)
+
+        ceased_on = item.get("ceased_on")
+        interests: list[dict[str, Any]] = []
+        if reason != _PSC_STATEMENT_NO_BO:
+            interests = [{
+                "type": "unknownInterest",
+                "directOrIndirect": "unknown",
+                "beneficialOwnershipOrControl": True,
+            }]
+        if ceased_on:
+            for interest in interests:
+                interest["endDate"] = ceased_on
+
+        out.append(
+            make_relationship_statement(
+                source_id="companies_house",
+                local_id=f"{number}:psc-statement:{code}:{item.get('etag', '0')}",
+                subject_statement_id=entity_sid,
+                interested_party_unspecified={"reason": reason, "description": description},
+                interests=interests,
+                source_url=company_url,
+                publication_date=(ceased_on or item.get("notified_on") or None),
+                record_status="closed" if ceased_on else "new",
+            )
+        )
+    return out
+
+
 def _emit_company_statements(
     bundle: dict[str, Any],
     result: BODSBundle,
@@ -848,6 +936,15 @@ def _emit_company_statements(
         if rel_sid not in seen_sids:
             result.statements.append(rel)
             seen_sids.add(rel_sid)
+
+    # PSC statements ("no PSC exists", "PSC not yet identified", …) → ownership-
+    # or-control statements with an unspecified interestedParty (BODS missing-
+    # information modelling, data-standard issue #389).
+    statement_items = (bundle.get("psc_statements") or {}).get("items") or []
+    for stmt in _ch_psc_statement_statements(number, statement_items, entity_sid, company_url):
+        if stmt["statementId"] not in seen_sids:
+            result.statements.append(stmt)
+            seen_sids.add(stmt["statementId"])
 
     # Directors → seniorManagingOfficial person + relationship statements.
     director_stmts = _ch_director_statements(

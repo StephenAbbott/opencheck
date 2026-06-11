@@ -77,6 +77,23 @@ class CHPscList(_Base):
     total_results: int | None = None
 
 
+class CHPscStatement(_Base):
+    """A 'persons with significant control statement' — a notice the company
+    files *instead of* (or alongside) a PSC, e.g. 'no PSC exists' or 'PSC not
+    yet identified'. The code is in ``statement``."""
+
+    statement: str | None = None  # the CH statement_description code
+    notified_on: str | None = None
+    ceased_on: str | None = None
+    linked_psc_name: str | None = None
+    etag: str | None = None
+
+
+class CHPscStatementList(_Base):
+    items: list[CHPscStatement] = Field(default_factory=list)
+    total_results: int | None = None
+
+
 class CHOfficerAppointment(_Base):
     name: str | None = None
     officer_role: str | None = None
@@ -102,6 +119,7 @@ class CHBundle(_Base):
     company_number: str  # required
     profile: CHProfile
     pscs: CHPscList | None = None
+    psc_statements: CHPscStatementList | None = None
     officers: dict[str, Any] = Field(default_factory=dict)
     related_companies: dict[str, Any] = Field(default_factory=dict)
 

@@ -175,6 +175,18 @@ class CompaniesHouseAdapter(SourceAdapter):
             f"/company/{number}/persons-with-significant-control",
             cache_key=f"{_CACHE_NS}/company/{number}/pscs",
         )
+        # PSC *statements* ("no PSC exists", "PSC not yet identified", …) are on a
+        # separate endpoint that 404s when the company has filed none.
+        try:
+            psc_statements = await self._get(
+                f"/company/{number}/persons-with-significant-control-statements",
+                cache_key=f"{_CACHE_NS}/company/{number}/psc-statements",
+            )
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                psc_statements = {"items": []}
+            else:
+                raise
 
         if depth < max_depth:
             for psc in pscs.get("items") or []:
@@ -212,6 +224,7 @@ class CompaniesHouseAdapter(SourceAdapter):
             "profile": profile,
             "officers": officers,
             "pscs": pscs,
+            "psc_statements": psc_statements,
         }
 
     async def _fetch_officer_bundle(self, officer_id: str) -> dict[str, Any]:

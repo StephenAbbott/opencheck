@@ -200,6 +200,50 @@ def test_super_secure_psc_carries_official_descriptor() -> None:
     assert "restrictions on disclosing" in interest["details"]
 
 
+def test_psc_statements_map_to_unspecified_ooc() -> None:
+    """CH PSC statements become ownership-or-control statements with an
+    unspecified interestedParty (BODS missing-information, issue #389):
+    'no PSC' → reason noBeneficialOwners with no interest; 'PSC unidentified'
+    → an unknownInterest. Positive update-period declarations are skipped."""
+    payload = {
+        "company_number": "00088888",
+        "profile": {"company_name": "Gap Co Ltd", "company_number": "00088888"},
+        "officers": {"items": []},
+        "pscs": {"items": []},
+        "psc_statements": {
+            "items": [
+                {"statement": "no-individual-or-entity-with-signficant-control",
+                 "notified_on": "2016-04-06", "etag": "s1"},
+                {"statement": "psc-exists-but-not-identified",
+                 "notified_on": "2017-01-01", "etag": "s2"},
+                {"statement": "all-beneficial-owners-identified",  # positive → skipped
+                 "notified_on": "2018-01-01", "etag": "s3"},
+            ]
+        },
+    }
+    statements = list(map_companies_house(payload))
+    assert validate_shape(statements) == []
+
+    rels = [s for s in statements if s["recordType"] == "relationship"]
+    assert len(rels) == 2  # the positive declaration produced nothing
+
+    by_reason = {r["recordDetails"]["interestedParty"]["reason"]: r for r in rels}
+    assert set(by_reason) == {
+        "noBeneficialOwners",
+        "subjectUnableToConfirmOrIdentifyBeneficialOwner",
+    }
+
+    no_bo = by_reason["noBeneficialOwners"]
+    assert no_bo["recordDetails"]["interests"] == []  # no phantom owner/interest
+    assert "no registrable person" in no_bo["recordDetails"]["interestedParty"]["description"]
+
+    unident = by_reason["subjectUnableToConfirmOrIdentifyBeneficialOwner"]
+    assert unident["recordDetails"]["interests"][0]["type"] == "unknownInterest"
+
+    company = next(s for s in statements if s["recordType"] == "entity")
+    assert no_bo["recordDetails"]["subject"] == company["statementId"]
+
+
 def test_individual_psc_shareholding_interest() -> None:
     bundle = map_companies_house(_sample_bundle())
     rels = [s for s in bundle if s["recordType"] == "relationship"]
