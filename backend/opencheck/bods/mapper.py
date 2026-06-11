@@ -20,7 +20,7 @@ from typing import Any, Iterable
 
 import pycountry
 
-from .psc_natures import describe_nature
+from .psc_natures import describe_nature, describe_super_secure
 
 # ----------------------------------------------------------------------
 # PSC "nature of control" → BODS v0.4 interest codelist
@@ -778,11 +778,13 @@ def _emit_company_statements(
             ip = _map_individual_psc(number, psc, company_url)
             ip_type = "person"
         else:
-            # super-secure-person / unknown — represent as anonymousPerson
+            # super-secure-person / unknown — a known person whose particulars are
+            # withheld by court order → anonymousPerson. The official explanation
+            # rides on the relationship interest (below), not a placeholder name.
             ip = make_person_statement(
                 source_id="companies_house",
                 local_id=f"{number}:anon:{psc.get('etag', '0')}",
-                full_name=psc.get("name", "Anonymous PSC"),
+                full_name="Super-secure person",
                 person_type="anonymousPerson",
                 source_url=company_url,
             )
@@ -794,13 +796,28 @@ def _emit_company_statements(
             seen_sids.add(ip_sid)
 
         natures = psc.get("natures_of_control") or []
-        interests = [_parse_nature(n) for n in natures] or [
-            {
-                "type": "unknownInterest",
-                "directOrIndirect": "unknown",
-                "beneficialOwnershipOrControl": True,
-            }
-        ]
+        if "super-secure" in psc_kind:
+            # Particulars withheld by court order → a single `unpublishedInterest`
+            # carrying CH's official explanatory text, not a bare unknownInterest.
+            ss_code = psc.get("description") or next(
+                (n for n in natures if "super-secure" in (n or "").lower()), None
+            )
+            interests = [
+                {
+                    "type": "unpublishedInterest",
+                    "directOrIndirect": "unknown",
+                    "beneficialOwnershipOrControl": True,
+                    "details": describe_super_secure(ss_code),
+                }
+            ]
+        else:
+            interests = [_parse_nature(n) for n in natures] or [
+                {
+                    "type": "unknownInterest",
+                    "directOrIndirect": "unknown",
+                    "beneficialOwnershipOrControl": True,
+                }
+            ]
         # BODS: beneficialOwnershipOrControl may only be True when the
         # interested party is a natural person (known or anonymous).  For
         # corporate / legal-person PSCs the interested party is an entity, so

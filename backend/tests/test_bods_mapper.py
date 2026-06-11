@@ -170,6 +170,36 @@ def test_map_companies_house_produces_entity_person_relationship() -> None:
     assert types.count("relationship") == 2  # one per PSC
 
 
+def test_super_secure_psc_carries_official_descriptor() -> None:
+    """A super-secure PSC is an anonymousPerson whose relationship carries CH's
+    official 'restrictions … are in force' text on an unpublishedInterest —
+    not a bare 'Anonymous PSC' name."""
+    payload = {
+        "company_number": "00099999",
+        "profile": {"company_name": "Secret Holdings Ltd", "company_number": "00099999"},
+        "officers": {"items": []},
+        "pscs": {
+            "items": [
+                {
+                    "kind": "super-secure-person-with-significant-control",
+                    "description": "super-secure-persons-with-significant-control",
+                    "etag": "ss001",
+                }
+            ]
+        },
+    }
+    statements = list(map_companies_house(payload))
+    assert validate_shape(statements) == []
+
+    person = next(s for s in statements if s["recordType"] == "person")
+    assert person["recordDetails"]["personType"] == "anonymousPerson"
+
+    rel = next(s for s in statements if s["recordType"] == "relationship")
+    interest = rel["recordDetails"]["interests"][0]
+    assert interest["type"] == "unpublishedInterest"
+    assert "restrictions on disclosing" in interest["details"]
+
+
 def test_individual_psc_shareholding_interest() -> None:
     bundle = map_companies_house(_sample_bundle())
     rels = [s for s in bundle if s["recordType"] == "relationship"]

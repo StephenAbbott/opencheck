@@ -128,3 +128,29 @@ def describe_nature(code: str) -> str | None:
     can fall back to the raw code string.
     """
     return PSC_NATURE_DESCRIPTIONS.get((code or "").lower())
+
+
+# Companies House ``super_secure_description`` block (2 codes), vendored from the
+# same ``psc_descriptions.yml``. A super-secure PSC withholds *all* particulars
+# under a court protection order; this is CH's official explanatory text.
+SUPER_SECURE_DESCRIPTIONS: dict[str, str] = {
+    "super-secure-persons-with-significant-control": (
+        "The person with significant control's details are not shown because "
+        "restrictions on disclosing any of the individual's details are in force"
+    ),
+    "super-secure-beneficial-owner": (
+        "The beneficial owners details are not shown because restrictions on using "
+        "or disclosing any of the individual’s particulars are in force"
+    ),
+}
+
+_DEFAULT_SUPER_SECURE = SUPER_SECURE_DESCRIPTIONS["super-secure-persons-with-significant-control"]
+
+
+def describe_super_secure(code: str | None) -> str:
+    """Return CH's official explanatory text for a super-secure PSC.
+
+    Falls back to the generic PSC wording for an unknown/empty code, so callers
+    always get a meaningful descriptor.
+    """
+    return SUPER_SECURE_DESCRIPTIONS.get((code or "").lower(), _DEFAULT_SUPER_SECURE)
