@@ -1,0 +1,27 @@
+name: Vendored enum drift
+
+# Fails the build if the vendored Companies House enumerations have drifted from
+# upstream (companieshouse/api-enumerations). Runs on every push/PR, and weekly
+# so upstream changes are caught even when nobody has pushed. To fix a failure,
+# run the named script locally (without --check) and commit the regenerated file.
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: PSC enums (psc_descriptions.yml) up to date
+        run: python backend/scripts/revendor_psc_enums.py --check
+      - name: CH constants (constants.yml) up to date
+        run: python backend/scripts/revendor_ch_constants.py --check
