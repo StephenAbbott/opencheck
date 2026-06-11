@@ -20,6 +20,7 @@ from typing import Any, Iterable
 
 import pycountry
 
+from .ch_constants import describe_company_type, describe_officer_role
 from .psc_natures import describe_nature, describe_statement, describe_super_secure
 
 # ----------------------------------------------------------------------
@@ -257,6 +258,7 @@ def make_entity_statement(
     addresses: Iterable[dict[str, str]] = (),
     alternate_names: Iterable[str] = (),
     entity_type: str = "registeredEntity",
+    entity_details: str | None = None,
     source_url: str | None = None,
     publication_date: str | None = None,
 ) -> dict[str, Any]:
@@ -268,9 +270,12 @@ def make_entity_statement(
     # distinction between "statement id" and "record id" doesn't apply.
     record_id = statement_id
 
+    entity_type_obj: dict[str, Any] = {"type": entity_type}
+    if entity_details:
+        entity_type_obj["details"] = entity_details
     record_details: dict[str, Any] = {
         "isComponent": False,
-        "entityType": {"type": entity_type},
+        "entityType": entity_type_obj,
         "name": name,
         "identifiers": list(identifiers),
     }
@@ -590,6 +595,35 @@ def _ch_officer_local_id(company_number: str, officer: dict[str, Any]) -> str:
     return f"{company_number}:director:{digest}"
 
 
+# Officer roles that constitute a senior managing official, mapped from the
+# official CH officer_role enumeration (constants.yml). Excludes purely
+# administrative or non-managing roles — secretaries, limited partners,
+# supervisory-organ members, and persons merely authorised to accept/represent.
+_MANAGING_OFFICIAL_ROLES = frozenset({
+    "director",
+    "corporate-director",
+    "nominee-director",
+    "corporate-nominee-director",
+    "managing-officer",
+    "corporate-managing-officer",
+    "member-of-a-management-organ",
+    "corporate-member-of-a-management-organ",
+    "member-of-an-administrative-organ",
+    "corporate-member-of-an-administrative-organ",
+    "manager-of-an-eeig",
+    "corporate-manager-of-an-eeig",
+    "cic-manager",
+    "llp-member",
+    "corporate-llp-member",
+    "llp-designated-member",
+    "corporate-llp-designated-member",
+    "general-partner-in-a-limited-partnership",
+    "corporate-general-partner-in-a-limited-partnership",
+    "judicial-factor",
+    "receiver-and-manager",
+})
+
+
 def _ch_director_statements(
     company_number: str,
     officers_payload: dict[str, Any],
@@ -597,11 +631,14 @@ def _ch_director_statements(
     company_url: str,
     seen_sids: set[str],
 ) -> list[dict[str, Any]]:
-    """Emit person + relationship statements for active director officers.
+    """Emit person + relationship statements for active managing-official officers.
 
-    Only officers with ``officer_role == "director"`` (or a role containing
-    "director") and no ``resigned_on`` are included.  Each active director
-    becomes:
+    Includes active officers whose ``officer_role`` is a senior managing official
+    per the official CH enumeration (``_MANAGING_OFFICIAL_ROLES``, from
+    constants.yml) — directors, managing officers, LLP (designated) members,
+    general partners, management/administrative-organ members, etc. Resigned
+    officers and non-managing roles (secretary, limited partner, …) are skipped.
+    Each becomes:
 
     * A ``personStatement`` (``knownPerson``) with name, DOB, nationality and
       service address.
@@ -621,8 +658,9 @@ def _ch_director_statements(
         if officer.get("resigned_on"):
             continue
         role = (officer.get("officer_role") or "").lower()
-        if "director" not in role:
+        if role not in _MANAGING_OFFICIAL_ROLES:
             continue
+        role_label = describe_officer_role(role) or "Managing official"
 
         name: str = officer.get("name") or "Unknown director"
 
@@ -675,7 +713,7 @@ def _ch_director_statements(
             seen_sids.add(person_sid)
 
         appointed_on = officer.get("appointed_on")
-        details = "Director" + (f", from {appointed_on}" if appointed_on else "")
+        details = role_label + (f", from {appointed_on}" if appointed_on else "")
         interest: dict[str, Any] = {
             "type": "seniorManagingOfficial",
             "directOrIndirect": "direct",
@@ -827,6 +865,10 @@ def _emit_company_statements(
             {"id": number, "scheme": "GB-COH", "schemeName": "Companies House"}
         ],
         founding_date=profile.get("date_of_creation"),
+        # Official company-type label (constants.yml) on entityType.details; the
+        # type stays registeredEntity (all CH companies are registered entities).
+        # CH profiles carry the type code in ``type`` (e.g. "ltd", "plc", "llp").
+        entity_details=describe_company_type(profile.get("type") or profile.get("company_type")),
         addresses=_profile_addresses(profile),
         alternate_names=alternate_names,
         source_url=company_url,
@@ -1125,7 +1167,8 @@ def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
         else:
             interest_type = "otherInfluenceOrControl"
 
-        details_bits = [appointment.get("officer_role") or "appointment"]
+        # Use the official CH label rather than passing the raw role code through.
+        details_bits = [describe_officer_role(role) or appointment.get("officer_role") or "appointment"]
         if appointment.get("appointed_on"):
             details_bits.append(f"from {appointment['appointed_on']}")
         if appointment.get("resigned_on"):

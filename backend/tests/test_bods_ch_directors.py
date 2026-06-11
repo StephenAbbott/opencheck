@@ -80,6 +80,46 @@ def _company_bundle_with_directors(
     }
 
 
+def test_managing_official_roles_and_company_type_label() -> None:
+    """Officer inclusion follows the official managing-official role set (not a
+    substring), role labels come from constants.yml, and company_type sets
+    entityType.details."""
+    bundle = {
+        "source_id": "companies_house",
+        "company_number": "00102498",
+        "profile": {"company_name": "DEMO LLP", "type": "llp"},
+        "officers": {"items": [
+            {"name": "MEMBER, Dee", "officer_role": "llp-designated-member", "appointed_on": "2020-01-01"},
+            {"name": "OFFICER, Mo", "officer_role": "managing-officer", "appointed_on": "2021-02-02"},
+            {"name": "SEC, Retary", "officer_role": "secretary"},                 # excluded
+            {"name": "LIMITED, Partner", "officer_role": "limited-partner-in-a-limited-partnership"},  # excluded
+        ]},
+        "pscs": {"items": []},
+        "related_companies": {},
+    }
+    statements = list(map_companies_house(bundle))
+    assert validate_shape(statements) == []
+
+    # Two managing officials included; secretary + limited partner excluded.
+    persons = [s for s in statements if s["recordType"] == "person"]
+    assert len(persons) == 2
+    names = {p["recordDetails"]["names"][0]["fullName"] for p in persons}
+    assert names == {"MEMBER, Dee", "OFFICER, Mo"}
+
+    # Official labels (constants.yml), not raw codes, on the interest details.
+    details = {
+        s["recordDetails"]["interests"][0]["details"].split(",")[0]
+        for s in statements if s["recordType"] == "relationship"
+    }
+    assert "LLP Designated Member" in details
+    assert "Managing Officer" in details
+
+    # Company type label surfaced on entityType.details (type stays registeredEntity).
+    entity = next(s for s in statements if s["recordType"] == "entity")
+    assert entity["recordDetails"]["entityType"]["type"] == "registeredEntity"
+    assert entity["recordDetails"]["entityType"]["details"] == "Limited liability partnership"
+
+
 # ---------------------------------------------------------------------------
 # Director statement counts
 # ---------------------------------------------------------------------------
