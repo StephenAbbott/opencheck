@@ -520,7 +520,7 @@ export default function App() {
        * have a clean utility for offset radial gradients.
        */}
       <header
-        className="relative overflow-hidden bg-oo-navy text-white px-6 sm:px-10 lg:px-16 py-10 sm:py-12"
+        className="relative overflow-hidden bg-oo-navy text-white px-6 sm:px-10 lg:px-16 py-3 sm:py-4"
         role="banner"
         style={{
           backgroundImage:
@@ -528,46 +528,53 @@ export default function App() {
         }}
       >
         <div className="max-w-oo-page mx-auto relative">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Click the title to return to a fresh homepage state.
-                    cleanupRef.current?.();
-                    cleanupRef.current = null;
-                    setView("main");
-                    setStreamingLei(null);
-                    setLegalName(null);
-                    setHits([]);
-                    setErrors({});
-                    setCrossSourceLinks([]);
-                    setRiskSignals([]);
-                    setApplicableSources([]);
-                    setCompletedSources(new Set());
-                    setStreaming(false);
-                    lookupMutation.reset();
-                    nameSearchMutation.reset();
-                    nationalIdSearchMutation.reset();
-                    setLeiInput("");
-                    setNameQuery("");
-                    setNationalIdQuery("");
-                    setSelectedCountry("GB");
-                    setNationalIdTouched(false);
-                    setSearchMode("name");
-                  }}
-                  aria-label="Back to homepage"
-                  className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left"
-                >
-                  <OpenCheckIcon className="h-[clamp(2rem,4vw,2.6rem)] w-auto flex-shrink-0" />
-                  <span className="font-head font-bold text-white leading-tight text-[clamp(1.6rem,4vw,2.4rem)]">
-                    Open<span className="text-[#93c5fd]">Check</span><span className="relative -top-2.5 ml-1 text-[8px] font-semibold tracking-oo-eyebrow uppercase bg-white/15 text-white/90 rounded px-1.5 py-0.5 border border-white/25 align-top">BETA</span>
-                  </span>
-                </button>
-              </div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  // Click the title to return to a fresh homepage state.
+                  cleanupRef.current?.();
+                  cleanupRef.current = null;
+                  setView("main");
+                  setStreamingLei(null);
+                  setLegalName(null);
+                  setHits([]);
+                  setErrors({});
+                  setCrossSourceLinks([]);
+                  setRiskSignals([]);
+                  setApplicableSources([]);
+                  setCompletedSources(new Set());
+                  setStreaming(false);
+                  lookupMutation.reset();
+                  nameSearchMutation.reset();
+                  nationalIdSearchMutation.reset();
+                  setLeiInput("");
+                  setNameQuery("");
+                  setNationalIdQuery("");
+                  setSelectedCountry("GB");
+                  setNationalIdTouched(false);
+                  setSearchMode("name");
+                }}
+                aria-label="Back to homepage"
+                className="flex items-center gap-2.5 hover:opacity-80 transition-opacity text-left"
+              >
+                <OpenCheckIcon className="h-7 w-auto flex-shrink-0" />
+                <span className="font-head font-bold text-white leading-tight text-xl">
+                  Open<span className="text-[#93c5fd]">Check</span><span className="relative -top-2 ml-1 text-[7px] font-semibold tracking-oo-eyebrow uppercase bg-white/15 text-white/90 rounded px-1.5 py-0.5 border border-white/25 align-top">BETA</span>
+                </span>
+              </button>
+              {sourcesQuery.data && (
+                <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-white/45 font-mono">
+                  <span className="text-white/70 font-semibold">{sourcesQuery.data.sources.filter(s => s.is_national_register).length}</span>
+                  <span>national registers</span>
+                  <span className="text-white/20">·</span>
+                  <span className="text-white/70 font-semibold">{sourcesQuery.data.sources.filter((s: { is_national_register: boolean }) => !s.is_national_register).length}</span>
+                  <span>open sources</span>
+                </span>
+              )}
             </div>
-            <nav aria-label="Site navigation" className="flex items-center gap-5">
+            <nav aria-label="Site navigation" className="flex items-center gap-4">
               {view !== "main" ? (
                 <button
                   type="button"
@@ -578,7 +585,7 @@ export default function App() {
                   ← Back
                 </button>
               ) : (
-                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-y-1 gap-x-4">
+                <div className="flex items-center gap-4">
                   <button
                     type="button"
                     onClick={() => setView("sources")}
@@ -591,7 +598,7 @@ export default function App() {
                     type="button"
                     onClick={() => setView("behind")}
                     aria-label="Behind the scenes — how OpenCheck works"
-                    className="text-[12px] font-mono text-oo-light hover:text-white underline underline-offset-4 whitespace-nowrap"
+                    className="hidden sm:inline text-[12px] font-mono text-oo-light hover:text-white underline underline-offset-4 whitespace-nowrap"
                   >
                     Behind the scenes →
                   </button>
@@ -599,12 +606,6 @@ export default function App() {
               )}
             </nav>
           </div>
-          <p className="mt-3 max-w-2xl text-[15px] font-light leading-[1.65] text-white/70">
-            Customer due diligence risk checks driven by the Legal
-            Entity Identifier (LEI) and open data — mapped to the
-            Beneficial Ownership Data Standard.
-          </p>
-          <SourceCounter sources={sourcesQuery.data?.sources ?? null} />
         </div>
       </header>
 
@@ -613,7 +614,7 @@ export default function App() {
         role="main"
         tabIndex={-1}
         style={{ outline: "none" }}
-        className="flex-1 px-6 sm:px-10 lg:px-16 py-12 max-w-oo-page mx-auto w-full"
+        className="flex-1 px-6 sm:px-10 lg:px-16 py-5 sm:py-6 max-w-oo-page mx-auto w-full"
       >
         {/* Screen-reader live region — announces streaming lookup progress */}
         <div aria-live="polite" aria-atomic="false" className="sr-only">
@@ -624,7 +625,7 @@ export default function App() {
         {view === "main" && (
         <>
         {/* ── Search panel — two-tab design ── */}
-        <div className="mb-8 bg-white border border-oo-rule rounded-oo overflow-hidden">
+        <div className="mb-4 bg-white border border-oo-rule rounded-oo overflow-hidden">
           {/* Tab bar */}
           <div role="tablist" aria-label="Search method" className="flex border-b border-oo-rule">
             <button
@@ -634,13 +635,13 @@ export default function App() {
               aria-controls="panel-name"
               id="tab-name"
               onClick={() => setSearchMode("name")}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-[13px] font-medium transition-colors ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors ${
                 searchMode === "name"
                   ? "text-oo-ink border-b-2 border-oo-blue bg-white"
                   : "text-oo-muted bg-oo-bg hover:text-oo-ink"
               }`}
             >
-              <GleifIcon className="flex-shrink-0" aria-hidden style={{ height: "1.15em", width: "auto" }} />
+              <GleifIcon aria-hidden style={{ height: "1.1em", width: "auto", flexShrink: 0 }} />
               Company name
             </button>
             <button
@@ -650,12 +651,13 @@ export default function App() {
               aria-controls="panel-national-id"
               id="tab-national-id"
               onClick={() => setSearchMode("nationalId")}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-[13px] font-medium transition-colors border-l border-oo-rule ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors border-l border-oo-rule ${
                 searchMode === "nationalId"
                   ? "text-oo-ink border-b-2 border-oo-blue bg-white"
                   : "text-oo-muted bg-oo-bg hover:text-oo-ink"
               }`}
             >
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16M4 12h8m-8 5h16"/></svg>
               National ID
             </button>
             <button
@@ -665,36 +667,30 @@ export default function App() {
               aria-controls="panel-lei"
               id="tab-lei"
               onClick={() => setSearchMode("lei")}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-[13px] font-medium transition-colors border-l border-oo-rule ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors border-l border-oo-rule ${
                 searchMode === "lei"
                   ? "text-oo-ink border-b-2 border-oo-blue bg-white"
                   : "text-oo-muted bg-oo-bg hover:text-oo-ink"
               }`}
             >
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M8 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-2"/><path d="M12 12h4m-4 4h4m-8-4h.01M8 16h.01"/></svg>
               Paste an LEI
             </button>
           </div>
 
           {/* ── Name search panel ── */}
           {searchMode === "name" && (
-            <div id="panel-name" role="tabpanel" aria-labelledby="tab-name" className="p-6">
+            <div id="panel-name" role="tabpanel" aria-labelledby="tab-name" className="p-4">
               <form onSubmit={searchByName}>
-                <label
-                  htmlFor="name-input"
-                  className="block text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2"
-                >
-                  Company name
-                </label>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <input
                     id="name-input"
                     type="search"
                     value={nameQuery}
                     onChange={(e) => setNameQuery(e.target.value)}
-                    placeholder="e.g. Unilever PLC"
+                    placeholder="Search by company name…"
                     autoComplete="off"
                     aria-label="Company name"
-                    aria-describedby="name-hint"
                     className="flex-1 border border-oo-rule rounded px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
                   />
                   <button
@@ -706,28 +702,6 @@ export default function App() {
                     {nameSearchMutation.isPending ? "Searching…" : "Search"}
                   </button>
                 </div>
-                <p id="name-hint" className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
-                  <GleifIcon className="inline-block align-middle mr-1.5" aria-hidden style={{ height: "1.2em", width: "auto" }} />
-                  Powered by the{" "}
-                  <a
-                    href="https://www.gleif.org/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline hover:text-oo-ink transition-colors"
-                  >
-                    Global Legal Entity Identifier Foundation (GLEIF)
-                  </a>{" "}
-                  LEI registry via the{" "}
-                  <a
-                    href="https://mcp.gleif.org/gleif-api/mcp"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline hover:text-oo-ink transition-colors"
-                  >
-                    GLEIF MCP server
-                  </a>
-                  .
-                </p>
               </form>
 
               <div aria-live="polite" aria-atomic="true">
@@ -790,7 +764,7 @@ export default function App() {
 
           {/* ── National ID panel ── */}
           {searchMode === "nationalId" && (
-            <div id="panel-national-id" role="tabpanel" aria-labelledby="tab-national-id" className="p-6">
+            <div id="panel-national-id" role="tabpanel" aria-labelledby="tab-national-id" className="p-4">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -857,7 +831,7 @@ export default function App() {
                       autoComplete="off"
                       spellCheck={false}
                       aria-label={RA_CODES[selectedCountry]?.idLabel ?? "Registration number"}
-                      aria-describedby={`national-id-hint${!nationalIdFormatOk ? " national-id-format-warn" : ""}`}
+                      aria-describedby={!nationalIdFormatOk ? "national-id-format-warn" : undefined}
                       aria-invalid={!nationalIdFormatOk || undefined}
                       className={`w-full border rounded px-3 py-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue ${
                         !nationalIdFormatOk
@@ -885,15 +859,6 @@ export default function App() {
                     {nationalIdSearchMutation.isPending ? "Searching…" : "Look up"}
                   </button>
                 </div>
-                <p id="national-id-hint" className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
-                  <GleifIcon className="inline-block align-middle mr-1.5" aria-hidden style={{ height: "1.2em", width: "auto" }} />
-                  {RA_CODES[selectedCountry]?.formatHint && (
-                    <span>Format: {RA_CODES[selectedCountry].formatHint}. </span>
-                  )}
-                  Resolves via GLEIF using registration authority{" "}
-                  <span className="font-mono text-[11px]">{RA_CODES[selectedCountry]?.raCode}</span>
-                  , then runs the full OpenCheck lookup.
-                </p>
               </form>
 
               <div aria-live="polite" aria-atomic="true">
@@ -967,24 +932,17 @@ export default function App() {
 
           {/* ── LEI paste panel ── */}
           {searchMode === "lei" && (
-            <form onSubmit={runLookup} id="panel-lei" role="tabpanel" aria-labelledby="tab-lei" className="p-6">
-              <label
-                htmlFor="lei-input"
-                className="block text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2"
-              >
-                Legal Entity Identifier
-              </label>
+            <form onSubmit={runLookup} id="panel-lei" role="tabpanel" aria-labelledby="tab-lei" className="p-4">
               <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   id="lei-input"
                   type="text"
                   value={leiInput}
                   onChange={(e) => setLeiInput(e.target.value)}
-                  placeholder="e.g. 213800LH1BZH3DI6G760"
+                  placeholder="Paste a 20-character LEI…"
                   spellCheck={false}
                   autoComplete="off"
                   aria-label="Legal Entity Identifier (20 characters)"
-                  aria-describedby="lei-hint"
                   pattern="[A-Za-z0-9]{20}"
                   inputMode="text"
                   className="flex-1 border border-oo-rule rounded px-3 py-2.5 font-mono uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
@@ -999,11 +957,6 @@ export default function App() {
                   {lookupMutation.isPending ? "Looking up…" : "Look up"}
                 </button>
               </div>
-              <p id="lei-hint" className="text-[13px] leading-[1.7] text-oo-muted mt-3 max-w-2xl">
-                Enter a 20-character ISO 17442 LEI to query GLEIF and bridge to
-                national company registries, OpenCorporates, OpenSanctions,
-                OpenAleph, Wikidata, and OpenTender.
-              </p>
             </form>
           )}
         </div>
@@ -1292,26 +1245,6 @@ export default function App() {
  * Animates a number from 0 to `target` over `duration` ms.
  * Returns the current display value.
  */
-function useCountUp(target: number, duration = 800): number {
-  const [value, setValue] = useState(0);
-  const prev = useState(target)[0];
-  // Re-run whenever target becomes non-zero (data loaded).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (target === 0) return;
-    const start = performance.now();
-    const from = prev === target ? 0 : 0;
-    const tick = (now: number) => {
-      const t = Math.min((now - start) / duration, 1);
-      // Ease-out cubic
-      const eased = 1 - Math.pow(1 - t, 3);
-      setValue(Math.round(from + (target - from) * eased));
-      if (t < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }, [target, duration]);
-  return value;
-}
 
 // ---------------------------------------------------------------------
 // Behind the Scenes page (Phase 5)
@@ -1563,37 +1496,6 @@ function BehindTheScenesPage() {
 // Source counter strip
 // ---------------------------------------------------------------------
 
-function SourceCounter({ sources }: { sources: { is_national_register: boolean }[] | null }) {
-  const registerCount = sources ? sources.filter((s) => s.is_national_register).length : 0;
-  const openCount = sources ? sources.filter((s) => !s.is_national_register).length : 0;
-
-  const animatedRegisters = useCountUp(registerCount);
-  const animatedOpen = useCountUp(openCount);
-
-  if (!sources) return null;
-
-  return (
-    <div className="flex items-center gap-6 mt-5 pt-4 border-t border-white/10">
-      <div className="flex items-baseline gap-2">
-        <span className="font-mono font-bold text-[1.45rem] leading-none text-white tabular-nums">
-          {animatedRegisters}
-        </span>
-        <span className="text-[11px] tracking-wide uppercase text-white/45">
-          national registers
-        </span>
-      </div>
-      <span className="text-white/15 text-[1.1rem]">·</span>
-      <div className="flex items-baseline gap-2">
-        <span className="font-mono font-bold text-[1.45rem] leading-none text-white tabular-nums">
-          {animatedOpen}
-        </span>
-        <span className="text-[11px] tracking-wide uppercase text-white/45">
-          open sources
-        </span>
-      </div>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------
 // Small layout primitives — design system "eyebrow" labels & dividers
