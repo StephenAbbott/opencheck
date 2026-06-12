@@ -42,12 +42,30 @@ LEI → GEM entity ID resolution — two sources, merged
 GLEIF-certified entries override GEM self-reported entries for the same
 entity when both are present and differ.
 
-GEM ownership.zip download
---------------------------
-``https://github.com/climatetracecoalition/climate-trace-tools/raw/main/
-  climate_trace_tools/data/ownership/ownership.zip``
+GEM ownership data download — GCS bucket first, GitHub zip fallback
+-------------------------------------------------------------------
+GEM refreshes its ownership data in the Climate TRACE GCS bucket every two
+months (dated ``DDMMYY`` filenames, e.g. ``ownership_all_entities_050826.csv``).
+The GitHub ``ownership.zip`` mirror lags behind the bucket (observed: zip on
+the Feb 2026 release while the bucket served May 2026), so the bucket is the
+preferred source:
 
-Cached locally at ``{data_root}/gem/ownership.zip`` once downloaded.
+1. List ``gs://climate_trace/ownership/`` via the public JSON API and download
+   the latest ``ownership_all_entities_*.csv``,
+   ``ownership_all_entity_relationships_*.csv`` and
+   ``ownership_all_entity_asset_relationships_*.csv``. Cached at
+   ``{data_root}/gem/ownership_all_<kind>.csv`` and refreshed when older than
+   ``_GEM_MAX_AGE_DAYS``.
+2. Fallback: the GitHub zip at
+   ``https://github.com/climatetracecoalition/climate-trace-tools/raw/main/
+   climate_trace_tools/data/ownership/ownership.zip``, cached at
+   ``{data_root}/gem/ownership.zip``. A pre-seeded zip with no cached CSVs is
+   used as-is without any network access (offline/test friendly).
+
+The entity-relationship CSV (entity → entity edges with ``percent_of_ownership``)
+and the entity-asset CSV (Climate TRACE ``source_id`` → immediate owner) feed an
+ownership summary per entity: direct asset count, group (transitive) asset
+count, subsidiary count and a sector breakdown.
 
 Climate TRACE API v7 endpoints used
 -------------------------------------
@@ -63,6 +81,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
+import re
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -80,6 +99,17 @@ _GEM_ZIP_URL = (
     "https://github.com/climatetracecoalition/climate-trace-tools/raw/main/"
     "climate_trace_tools/data/ownership/ownership.zip"
 )
+# Public listing of the Climate TRACE GCS bucket folder GEM refreshes
+# every two months. Preferred over the GitHub zip, which lags behind.
+_GCS_LIST_URL = (
+    "https://storage.googleapis.com/storage/v1/b/climate_trace/o"
+    "?prefix=ownership/&fields=items(name,updated)"
+)
+_GCS_FILE_URL = "https://storage.googleapis.com/climate_trace/{name}"
+# The three CSV kinds GEM publishes. Order matters for substring matching:
+# "entity_relationships" is NOT a substring of "entity_asset_relationships".
+_GEM_CSV_KINDS = ("entities", "entity_relationships", "entity_asset_relationships")
+_GEM_MAX_AGE_DAYS = 70  # bucket refreshes roughly every 2 months
 # GLEIF-certified GEM Entity ID ↔ LEI mapping.  Published monthly by GLEIF
 # and GEM from June 2026 under CC BY 4.0.  Two-column CSV: ``LEI,GEM``.
 # The ``/latest/download`` path always serves the most recent release.
@@ -90,9 +120,6 @@ _CT_API = "https://api.climatetrace.org"
 _CACHE_NS = "climatetrace"
 
 # Column names in the GEM ownership CSVs.
-# The zip filename changes with each release (e.g. ownership_all_entities_020626.csv)
-# so we match by substring rather than exact suffix.
-_ENTITY_CSV_SUBSTR = "all_entities"
 _LEI_COL = "Global Legal Entity Identifier Index"
 _ENTITY_ID_COL = "Entity ID"
 _ENTITY_NAME_COL = "Full Name"          # was "Entity Name" in earlier schema
@@ -103,31 +130,139 @@ _COUNTRY_COL = "Headquarters Country"  # ISO 3166-1 alpha-3
 # Module-level singletons — built lazily on first access so import is cheap.
 _lei_index: dict[str, str] | None = None          # LEI → GEM entity ID
 _entity_index: dict[str, dict[str, str]] | None = None  # GEM entity ID → row
+_rel_children: dict[str, list[dict[str, Any]]] | None = None  # owner → owned entities
+_asset_index: dict[str, list[dict[str, str]]] | None = None   # entity → CT assets
 
 
 def _gem_zip_path() -> Path:
     return data_root() / "gem" / "ownership.zip"
 
 
+def _gem_csv_path(kind: str) -> Path:
+    """Local cache path for a GCS-sourced GEM CSV (kind in _GEM_CSV_KINDS)."""
+    return data_root() / "gem" / f"ownership_all_{kind}.csv"
+
+
 def _gleif_gem_zip_path() -> Path:
     return data_root() / "gem" / "gleif-gem-lei.zip"
 
 
+def _csv_age_days(path: Path) -> float:
+    import time
+
+    return (time.time() - path.stat().st_mtime) / 86_400
+
+
+def _download_gem_csvs_from_gcs() -> bool:
+    """Download the latest dated GEM CSVs from the Climate TRACE GCS bucket.
+
+    Returns True if at least the entities CSV was downloaded successfully.
+    """
+    try:
+        with httpx.Client(timeout=120, follow_redirects=True) as client:
+            listing = client.get(_GCS_LIST_URL)
+            listing.raise_for_status()
+            items = listing.json().get("items") or []
+            ok = False
+            for kind in _GEM_CSV_KINDS:
+                # Dated filenames, e.g. ownership_all_entities_050826.csv.
+                # Sort matching names descending so the lexicographically
+                # greatest (not necessarily newest — DDMMYY) doesn't mislead:
+                # pick by the GCS "updated" timestamp instead.
+                matches = [
+                    it for it in items
+                    if f"all_{kind}_" in (it.get("name") or "")
+                    and it["name"].endswith(".csv")
+                ]
+                if not matches:
+                    continue
+                latest = max(matches, key=lambda it: it.get("updated") or "")
+                url = _GCS_FILE_URL.format(name=latest["name"])
+                r = client.get(url)
+                r.raise_for_status()
+                path = _gem_csv_path(kind)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(r.content)
+                log.info("GEM %s CSV saved from GCS: %s (%d bytes)",
+                         kind, latest["name"], len(r.content))
+                if kind == "entities":
+                    ok = True
+            return ok
+    except Exception as exc:
+        log.warning("Could not download GEM CSVs from GCS: %s", exc)
+        return False
+
+
 def _ensure_gem_data() -> None:
-    """Download GEM ownership.zip if not already on disk."""
-    path = _gem_zip_path()
-    if path.exists():
+    """Make GEM ownership data available locally.
+
+    Preference order:
+    1. Cached GCS CSVs younger than ``_GEM_MAX_AGE_DAYS`` — use as-is.
+    2. Stale GCS CSVs — try to refresh from the bucket; keep stale copy on failure.
+    3. No CSVs but a pre-seeded ownership.zip — use the zip without any
+       network access (keeps offline/test environments untouched).
+    4. Nothing on disk — try the GCS bucket first, then fall back to the
+       GitHub ownership.zip.
+    """
+    entities_csv = _gem_csv_path("entities")
+    if entities_csv.exists():
+        if _csv_age_days(entities_csv) < _GEM_MAX_AGE_DAYS:
+            return
+        log.info("GEM CSVs are stale — refreshing from GCS bucket")
+        _download_gem_csvs_from_gcs()  # keep stale copy if refresh fails
         return
-    path.parent.mkdir(parents=True, exist_ok=True)
+
+    zip_path = _gem_zip_path()
+    if zip_path.exists():
+        return
+
+    if _download_gem_csvs_from_gcs():
+        return
+
+    zip_path.parent.mkdir(parents=True, exist_ok=True)
     log.info("Downloading GEM ownership.zip from %s", _GEM_ZIP_URL)
     try:
         with httpx.Client(timeout=120, follow_redirects=True) as client:
             r = client.get(_GEM_ZIP_URL)
             r.raise_for_status()
-        path.write_bytes(r.content)
-        log.info("GEM ownership.zip saved to %s (%d bytes)", path, len(r.content))
+        zip_path.write_bytes(r.content)
+        log.info("GEM ownership.zip saved to %s (%d bytes)", zip_path, len(r.content))
     except Exception as exc:
         log.warning("Could not download GEM ownership.zip: %s", exc)
+
+
+def _read_gem_csv_text(kind: str) -> str | None:
+    """Return the text of a GEM CSV by kind, from cached GCS CSV or the zip.
+
+    Matches zip members by the ``all_<kind>_`` / ``all_<kind>.`` substring so
+    both dated (``ownership_all_entities_050826.csv``) and undated
+    (``all_entities.csv``) release filenames work.
+    """
+    path = _gem_csv_path(kind)
+    if path.exists():
+        try:
+            return path.read_text(encoding="utf-8-sig", errors="replace")
+        except Exception as exc:
+            log.warning("Error reading GEM %s CSV: %s", kind, exc)
+
+    zip_path = _gem_zip_path()
+    if not zip_path.exists():
+        return None
+    try:
+        with zipfile.ZipFile(zip_path) as zf:
+            candidates = [
+                n for n in zf.namelist()
+                if (f"all_{kind}_" in n or n.endswith(f"all_{kind}.csv"))
+                and not n.startswith("__MACOSX")
+                and n.endswith(".csv")
+            ]
+            if not candidates:
+                return None
+            with zf.open(candidates[0]) as raw:
+                return raw.read().decode("utf-8-sig", errors="replace")
+    except Exception as exc:
+        log.warning("Error reading %s from GEM zip: %s", kind, exc)
+        return None
 
 
 _GLEIF_GEM_MAX_AGE_DAYS = 32  # re-download after ~one month
@@ -200,49 +335,28 @@ def _load_gleif_gem_mapping() -> dict[str, str]:
 
 
 def _load_gem_indexes() -> tuple[dict[str, str], dict[str, dict[str, str]]]:
-    """Parse GEM ownership.zip and build LEI and entity indexes.
+    """Parse the GEM entities CSV and build LEI and entity indexes.
 
-    Downloads the GEM ownership.zip from GitHub if it is not already on disk
-    (Render and other ephemeral-filesystem hosts start with a clean slate on
-    every deploy, so the download must happen at runtime, not build time).
+    Downloads the GEM data (GCS CSVs preferred, GitHub ownership.zip fallback)
+    if it is not already on disk (Render and other ephemeral-filesystem hosts
+    start with a clean slate on every deploy, so the download must happen at
+    runtime, not build time).
 
     Returns ``(lei_index, entity_index)`` where:
     * ``lei_index`` maps a normalised LEI string → GEM entity ID.
     * ``entity_index`` maps a GEM entity ID → the full CSV row dict.
     """
-    _ensure_gem_data()  # no-op if the file already exists
+    _ensure_gem_data()  # no-op if data already exists
 
     lei_idx: dict[str, str] = {}
     ent_idx: dict[str, dict[str, str]] = {}
 
-    path = _gem_zip_path()
-    if not path.exists():
-        log.warning("GEM ownership.zip not found at %s — index will be empty", path)
+    text = _read_gem_csv_text("entities")
+    if text is None:
+        log.warning("GEM entities CSV not available — index will be empty")
         return lei_idx, ent_idx
 
     try:
-        with zipfile.ZipFile(path) as zf:
-            # The ZIP filename changes with each GEM release, e.g.:
-            #   "all_entities.csv"                     (2024 release)
-            #   "ownership_all_entities_020626.csv"    (Feb 2026 release)
-            # Match by substring; skip __MACOSX metadata entries.
-            candidates = [
-                n for n in zf.namelist()
-                if _ENTITY_CSV_SUBSTR in n
-                and not n.startswith("__MACOSX")
-                and n.endswith(".csv")
-            ]
-            if not candidates:
-                log.warning(
-                    "Could not find a CSV matching %r inside GEM zip",
-                    _ENTITY_CSV_SUBSTR,
-                )
-                return lei_idx, ent_idx
-            with zf.open(candidates[0]) as raw:
-                # Decode with utf-8-sig to strip the BOM that GEM CSVs include;
-                # falling back to replacement chars for any non-UTF-8 bytes.
-                text = raw.read().decode("utf-8-sig", errors="replace")
-
         reader = csv.DictReader(io.StringIO(text))
         for row in reader:
             entity_id = (row.get(_ENTITY_ID_COL) or "").strip()
@@ -259,7 +373,7 @@ def _load_gem_indexes() -> tuple[dict[str, str], dict[str, dict[str, str]]]:
                         lei_idx[lei] = entity_id
 
     except Exception as exc:
-        log.warning("Error parsing GEM ownership.zip: %s", exc)
+        log.warning("Error parsing GEM entities CSV: %s", exc)
 
     log.info(
         "GEM index built: %d entities, %d self-reported LEI → entity mappings",
@@ -295,6 +409,135 @@ def _get_indexes() -> tuple[dict[str, str], dict[str, dict[str, str]]]:
     if _lei_index is None or _entity_index is None:
         _lei_index, _entity_index = _load_gem_indexes()
     return _lei_index, _entity_index
+
+
+def _load_relationship_indexes() -> tuple[
+    dict[str, list[dict[str, Any]]], dict[str, list[dict[str, str]]]
+]:
+    """Build the entity→subsidiaries and entity→assets indexes.
+
+    * ``rel_children`` maps an owner GEM entity ID → list of
+      ``{"entity_id", "name", "percent"}`` for entities it directly owns
+      (from ``ownership_all_entity_relationships``; ``percent`` is a float
+      or None when GEM doesn't publish a share).
+    * ``asset_index`` maps a GEM entity ID → list of
+      ``{"source_id", "name", "sector", "subsector"}`` Climate TRACE assets
+      it immediately owns (from ``ownership_all_entity_asset_relationships``).
+
+    Both are empty when the CSVs are unavailable (e.g. pre-May-2026 zips
+    without them, or offline test environments) — callers must tolerate that.
+    """
+    rel_children: dict[str, list[dict[str, Any]]] = {}
+    asset_index: dict[str, list[dict[str, str]]] = {}
+
+    text = _read_gem_csv_text("entity_relationships")
+    if text:
+        try:
+            for row in csv.DictReader(io.StringIO(text)):
+                owner = (row.get("owner_entity_id") or "").strip()
+                subject = (row.get("subject_entity_id") or "").strip()
+                if not owner or not subject:
+                    continue
+                pct_raw = (row.get("percent_of_ownership") or "").strip()
+                try:
+                    pct: float | None = float(pct_raw) if pct_raw else None
+                except ValueError:
+                    pct = None
+                rel_children.setdefault(owner, []).append(
+                    {
+                        "entity_id": subject,
+                        "name": (row.get("subject_name") or "").strip(),
+                        "percent": pct,
+                    }
+                )
+        except Exception as exc:
+            log.warning("Error parsing GEM entity relationships CSV: %s", exc)
+
+    text = _read_gem_csv_text("entity_asset_relationships")
+    if text:
+        try:
+            for row in csv.DictReader(io.StringIO(text)):
+                owner = (row.get("immediate_source_owner_entity_id") or "").strip()
+                source_id = (row.get("source_id") or "").strip()
+                if not owner or not source_id:
+                    continue
+                asset_index.setdefault(owner, []).append(
+                    {
+                        "source_id": source_id,
+                        "name": (row.get("source_name") or "").strip(),
+                        "sector": (row.get("source_sector") or "").strip(),
+                        "subsector": (row.get("source_subsector") or "").strip(),
+                    }
+                )
+        except Exception as exc:
+            log.warning("Error parsing GEM entity-asset relationships CSV: %s", exc)
+
+    log.info(
+        "GEM relationship indexes built: %d owners with subsidiaries, "
+        "%d entities with assets",
+        len(rel_children),
+        len(asset_index),
+    )
+    return rel_children, asset_index
+
+
+def _get_relationship_indexes() -> tuple[
+    dict[str, list[dict[str, Any]]], dict[str, list[dict[str, str]]]
+]:
+    global _rel_children, _asset_index
+    if _rel_children is None or _asset_index is None:
+        _rel_children, _asset_index = _load_relationship_indexes()
+    return _rel_children, _asset_index
+
+
+_MAX_OWNERSHIP_DEPTH = 25  # GEOT's longest observed chain is 17 hops
+
+
+def _ownership_summary(entity_id: str) -> dict[str, Any]:
+    """Summarise GEM ownership reach for an entity.
+
+    Walks the entity→entity ownership graph downwards (breadth-first, cycle
+    safe) and counts Climate TRACE assets owned directly and across the whole
+    group. Counts are of distinct assets — GEM ownership chains routinely
+    overlap, and shares along a chain must never be summed naively.
+    """
+    rel_children, asset_index = _get_relationship_indexes()
+
+    direct_assets = asset_index.get(entity_id, [])
+
+    # BFS over owned entities.
+    seen: set[str] = {entity_id}
+    frontier = [entity_id]
+    depth = 0
+    while frontier and depth < _MAX_OWNERSHIP_DEPTH:
+        next_frontier: list[str] = []
+        for eid in frontier:
+            for child in rel_children.get(eid, []):
+                cid = child["entity_id"]
+                if cid not in seen:
+                    seen.add(cid)
+                    next_frontier.append(cid)
+        frontier = next_frontier
+        depth += 1
+
+    group_asset_ids: set[str] = set()
+    by_sector: dict[str, int] = {}
+    for eid in seen:
+        for asset in asset_index.get(eid, []):
+            sid = asset["source_id"]
+            if sid in group_asset_ids:
+                continue
+            group_asset_ids.add(sid)
+            sector = asset.get("sector") or "unknown"
+            by_sector[sector] = by_sector.get(sector, 0) + 1
+
+    return {
+        "direct_asset_count": len({a["source_id"] for a in direct_assets}),
+        "group_asset_count": len(group_asset_ids),
+        "subsidiary_count": len(seen) - 1,
+        "group_assets_by_sector": by_sector,
+        "direct_subsidiaries": rel_children.get(entity_id, []),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -463,6 +706,7 @@ class ClimateTRACEAdapter(SourceAdapter):
             "emissions": _parse_emissions(emissions_payload),
             "assets": assets_payload,
             "parents": _parse_parents(gem_row),
+            "ownership": _ownership_summary(entity_id),
             "is_stub": False,
         }
         self._cache.put(cache_key, bundle)
@@ -594,21 +838,53 @@ def _parse_emissions(payload: Any) -> dict[str, Any]:
     }
 
 
-def _parse_parents(gem_row: dict[str, str]) -> list[dict[str, str]]:
-    """Extract parent entities declared in the GEM CSV row."""
+# GEM appends the ownership share in square brackets to both the parent ID
+# and parent name columns, e.g. "E100000000817 [55.0%]" / "Vivant Corp [55.0%]".
+# ~12,000 of ~13,600 populated rows carry the suffix (May 2026 release).
+_PARENT_SHARE_RE = re.compile(r"\s*\[\s*([\d.]+)\s*%?\s*\]\s*$")
+
+
+def _split_parent_token(token: str) -> tuple[str, float | None]:
+    """Split "E100000000817 [55.0%]" into ("E100000000817", 55.0)."""
+    token = token.strip()
+    m = _PARENT_SHARE_RE.search(token)
+    if not m:
+        return token, None
+    try:
+        share: float | None = float(m.group(1))
+    except ValueError:
+        share = None
+    return token[: m.start()].strip(), share
+
+
+def _parse_parents(gem_row: dict[str, str]) -> list[dict[str, Any]]:
+    """Extract parent entities declared in the GEM CSV row.
+
+    Each parent dict has ``entity_id``, ``name`` and ``share`` (float
+    percentage, or None when GEM doesn't publish one). The share suffix that
+    GEM embeds in both columns ("… [55.0%]") is stripped from the values.
+    """
     parent_ids_raw = (gem_row.get(_PARENT_IDS_COL) or "").strip()
     parent_names_raw = (gem_row.get(_PARENT_NAMES_COL) or "").strip()
 
     if not parent_ids_raw:
         return []
 
-    ids = [p.strip() for p in parent_ids_raw.split(";") if p.strip()]
-    names = [p.strip() for p in parent_names_raw.split(";") if p.strip()]
+    ids = [p for p in (t.strip() for t in parent_ids_raw.split(";")) if p]
+    names = [p for p in (t.strip() for t in parent_names_raw.split(";")) if p]
 
     parents = []
-    for i, pid in enumerate(ids):
-        pname = names[i] if i < len(names) else pid
-        parents.append({"entity_id": pid, "name": pname})
+    for i, raw_id in enumerate(ids):
+        pid, share = _split_parent_token(raw_id)
+        if not pid:
+            continue
+        if i < len(names):
+            pname, name_share = _split_parent_token(names[i])
+            if share is None:
+                share = name_share
+        else:
+            pname = pid
+        parents.append({"entity_id": pid, "name": pname or pid, "share": share})
     return parents
 
 
@@ -627,5 +903,6 @@ def _stub_bundle(
         "emissions": {},
         "assets": [],
         "parents": _parse_parents(gem_row),
+        "ownership": _ownership_summary(entity_id),
         "is_stub": True,
     }

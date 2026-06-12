@@ -6062,22 +6062,27 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
         )
         result.statements.append(parent_entity)
 
+        interest: dict[str, Any] = {
+            "type": "otherInfluenceOrControl",
+            "beneficialOwnershipOrControl": False,
+            "details": (
+                "Parent organisation declared in GEM ownership tracker "
+                "(not a beneficial ownership assertion)"
+            ),
+        }
+        # GEM publishes the parent's share for most entities (parsed from the
+        # "Gem parents IDs" column by the adapter, e.g. "E1000… [55.0%]").
+        share = parent.get("share")
+        if isinstance(share, (int, float)):
+            interest["share"] = {"exact": float(share)}
+
         relationship = make_relationship_statement(
             source_id="climatetrace",
             local_id=f"{entity_id}-parent-{parent_eid}",
             subject_statement_id=subject_statement_id,
             interested_party_statement_id=parent_entity["statementId"],
             interested_party_type="entity",
-            interests=[
-                {
-                    "type": "otherInfluenceOrControl",
-                    "beneficialOwnershipOrControl": False,
-                    "details": (
-                        "Parent organisation declared in GEM ownership tracker "
-                        "(not a beneficial ownership assertion)"
-                    ),
-                }
-            ],
+            interests=[interest],
             source_url=source_url,
         )
         result.statements.append(relationship)
