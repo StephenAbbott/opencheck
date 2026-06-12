@@ -1065,6 +1065,29 @@ export default function App() {
                 </span>
               )}
             </SectionLabel>
+            {streamingLei && EXAMPLE_LEIS.some((e) => e.lei === streamingLei) && (
+              <div className="mb-4 flex items-start gap-3 rounded-oo border border-blue-200 bg-blue-50 px-4 py-3 text-[13px] leading-[1.6] text-blue-900">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.657 4.03 3 9 3s9-1.343 9-3V5"/><path d="M3 12c0 1.657 4.03 3 9 3s9-1.343 9-3"/></svg>
+                <span>
+                  <span className="font-medium">Curated example — pre-extracted data.</span>{" "}
+                  Results use Open Ownership bulk BODS datasets (UK PSC · OGL v3.0, GLEIF · CC0), not live API calls.
+                  Data may not reflect the current position.{" "}
+                  <button
+                    type="button"
+                    className="underline hover:no-underline"
+                    onClick={() => {
+                      if (streamingLei) {
+                        setLeiInput(streamingLei);
+                        setSearchMode("lei");
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
+                    }}
+                  >
+                    Run a live lookup →
+                  </button>
+                </span>
+              </div>
+            )}
             <div className="space-y-4">
               {cddBuckets.map((b) => (
                 <div key={b.sourceId}>
