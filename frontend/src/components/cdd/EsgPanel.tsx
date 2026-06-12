@@ -93,6 +93,114 @@ function SectorBars({
 }
 
 // ---------------------------------------------------------------------
+// GEOT project portfolio (per-tracker ownership closure)
+// ---------------------------------------------------------------------
+
+type GeotTrackerCounts = [number, number, number]; // [live, operating, ≥50% controlled]
+
+interface GeotProjects {
+  total: GeotTrackerCounts;
+  statuses: Record<string, number>;
+  trackers: Record<string, GeotTrackerCounts>;
+  meta: { release?: string; source?: string; control_threshold_pct?: number };
+}
+
+const TRACKER_LABELS: Record<string, string> = {
+  coal_plant: "Coal plants",
+  gas_plant: "Oil & gas plants",
+  bioenergy: "Bioenergy plants",
+  coal_mine: "Coal mines",
+  iron_mine: "Iron ore mines",
+  gas_pipeline: "Gas pipelines",
+  oil_ngl_pipeline: "Oil & NGL pipelines",
+  steel_plant: "Steel plants",
+  cement: "Cement & concrete",
+};
+
+function TrackerTable({ projects }: { projects: GeotProjects }) {
+  const rows = Object.entries(projects.trackers).sort((a, b) => b[1][0] - a[1][0]);
+  if (rows.length === 0) return null;
+  const maxLive = Math.max(...rows.map(([, v]) => v[0]));
+  return (
+    <div className="mt-4">
+      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 gap-y-1 items-center">
+        <span />
+        <span className="text-[10px] font-semibold uppercase tracking-oo-eyebrow text-emerald-700/50 text-right">
+          Live
+        </span>
+        <span className="text-[10px] font-semibold uppercase tracking-oo-eyebrow text-emerald-700/50 text-right">
+          Operating
+        </span>
+        <span className="text-[10px] font-semibold uppercase tracking-oo-eyebrow text-emerald-700/50 text-right">
+          ≥50%
+        </span>
+        {rows.map(([tracker, [live, operating, controlled]]) => (
+          <TrackerRow
+            key={tracker}
+            label={TRACKER_LABELS[tracker] ?? tracker.replace(/_/g, " ")}
+            live={live}
+            operating={operating}
+            controlled={controlled}
+            maxLive={maxLive}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TrackerRow({
+  label,
+  live,
+  operating,
+  controlled,
+  maxLive,
+}: {
+  label: string;
+  live: number;
+  operating: number;
+  controlled: number;
+  maxLive: number;
+}) {
+  const pct = maxLive > 0 ? (live / maxLive) * 100 : 0;
+  return (
+    <>
+      <div className="min-w-0">
+        <div className="text-[11px] text-emerald-900/70 font-medium truncate">{label}</div>
+        <div className="h-1 rounded-full bg-emerald-100 overflow-hidden mt-0.5">
+          <div
+            className="h-full rounded-full bg-emerald-400"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+      <span className="text-[12px] font-mono tabular-nums text-emerald-900 text-right">
+        {live.toLocaleString()}
+      </span>
+      <span className="text-[12px] font-mono tabular-nums text-emerald-800/70 text-right">
+        {operating.toLocaleString()}
+      </span>
+      <span
+        className={`text-[12px] font-mono tabular-nums text-right ${
+          controlled > 0 ? "text-emerald-900 font-semibold" : "text-emerald-800/40"
+        }`}
+      >
+        {controlled.toLocaleString()}
+      </span>
+    </>
+  );
+}
+
+function statusFootnote(statuses: Record<string, number>): string | null {
+  const parts: string[] = [];
+  for (const key of ["mothballed", "retired", "cancelled"] as const) {
+    const n = statuses[key] ?? 0;
+    if (n > 0) parts.push(`${n.toLocaleString()} ${key}`);
+  }
+  return parts.length > 0 ? `plus ${parts.join(" · ")}` : null;
+}
+
+// ---------------------------------------------------------------------
 // ClimateTRACECard — card for a Climate TRACE / GEM hit
 // ---------------------------------------------------------------------
 
@@ -121,11 +229,22 @@ function ClimateTRACECard({
     year?: number;
     by_sector?: Record<string, number>;
   };
-  const parents = (raw.parents ?? []) as { entity_id: string; name: string }[];
+  const parents = (raw.parents ?? []) as {
+    entity_id: string;
+    name: string;
+    share?: number | null;
+  }[];
+  const projects = (raw.projects ?? null) as GeotProjects | null;
+  const ownership = (raw.ownership ?? null) as {
+    group_asset_count?: number;
+    subsidiary_count?: number;
+  } | null;
   const totalCo2e = emissions.total_co2e_tonnes ?? 0;
   const bySector = emissions.by_sector ?? {};
   const year = emissions.year ?? 2024;
   const formatted = totalCo2e > 0 ? formatCo2e(totalCo2e) : null;
+  const [liveProjects, operatingProjects, controlledProjects] = projects?.total ?? [0, 0, 0];
+  const footnote = projects ? statusFootnote(projects.statuses) : null;
 
   const anyOpen = showDiagram || showStatements || showJson;
   const stmtCount = detail?.bods.length ?? preloadedStmtCount ?? 0;
@@ -164,26 +283,102 @@ function ClimateTRACECard({
           GEM entity {hit.identifiers.gem_entity_id}
         </div>
 
-        {formatted && (
-          <div className="mt-4 flex items-end gap-3">
-            <span className="font-head font-bold leading-none text-[2.6rem] text-emerald-800 tabular-nums">
-              {formatted.value}
-            </span>
-            <div className="pb-1">
-              <div className="text-[13px] font-semibold text-emerald-700">
-                {formatted.unit}
+        {/* Two-stat header: emissions | project portfolio */}
+        {(formatted || liveProjects > 0) && (
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+            {formatted ? (
+              <div>
+                <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-700/50 mb-1">
+                  Emissions ·{" "}
+                  <a
+                    href="https://climatetrace.org/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2 hover:text-emerald-900"
+                  >
+                    Climate TRACE
+                  </a>
+                </div>
+                <div className="flex items-end gap-3">
+                  <span className="font-head font-bold leading-none text-[2.6rem] text-emerald-800 tabular-nums">
+                    {formatted.value}
+                  </span>
+                  <div className="pb-1">
+                    <div className="text-[13px] font-semibold text-emerald-700">
+                      {formatted.unit}
+                    </div>
+                    <div className="text-[11px] text-emerald-600/70">
+                      {year} · direct assets
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="text-[11px] text-emerald-600/70">
-                {year} · direct assets
+            ) : (
+              <div className="hidden sm:block" />
+            )}
+
+            {liveProjects > 0 && (
+              <div>
+                <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-700/50 mb-1">
+                  Projects ·{" "}
+                  <a
+                    href="https://globalenergymonitor.org/projects/global-energy-ownership-tracker"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2 hover:text-emerald-900"
+                  >
+                    GEM Ownership Tracker
+                  </a>
+                </div>
+                <div className="flex items-end gap-3">
+                  <span className="font-head font-bold leading-none text-[2.6rem] text-emerald-800 tabular-nums">
+                    {liveProjects.toLocaleString()}
+                  </span>
+                  <div className="pb-1">
+                    <div className="text-[13px] font-semibold text-emerald-700">
+                      live project{liveProjects === 1 ? "" : "s"}
+                    </div>
+                    <div className="text-[11px] text-emerald-600/70">
+                      {operatingProjects.toLocaleString()} operating ·{" "}
+                      {controlledProjects.toLocaleString()} ≥50% controlled
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
-        {!formatted && !hit.is_stub && (
+        {!formatted && liveProjects === 0 && !hit.is_stub && (
           <p className="mt-3 text-[13px] text-emerald-700/60 italic">
-            Emissions data not available for this entity.
+            Emissions and project data not available for this entity.
           </p>
+        )}
+
+        {projects && Object.keys(projects.trackers).length > 0 && (
+          <>
+            <TrackerTable projects={projects} />
+            <div className="mt-1.5 flex items-baseline justify-between gap-2 flex-wrap">
+              {footnote ? (
+                <span className="text-[11px] text-emerald-700/50">{footnote}</span>
+              ) : <span />}
+              {projects.meta?.release && (
+                <span className="text-[10px] text-emerald-700/40">
+                  GEOT {projects.meta.release} · ≥50% effective share = controlled
+                </span>
+              )}
+            </div>
+          </>
+        )}
+
+        {ownership &&
+          ((ownership.subsidiary_count ?? 0) > 0 ||
+            (ownership.group_asset_count ?? 0) > 0) && (
+          <div className="mt-2 text-[11px] text-emerald-800/60">
+            Group reach: {(ownership.subsidiary_count ?? 0).toLocaleString()}{" "}
+            subsidiaries · {(ownership.group_asset_count ?? 0).toLocaleString()}{" "}
+            Climate TRACE assets group-wide
+          </div>
         )}
 
         {Object.keys(bySector).length > 0 && (
@@ -201,6 +396,9 @@ function ClimateTRACECard({
                 className="inline-block text-[11px] font-mono text-emerald-900/70 bg-emerald-100 border border-emerald-200 rounded px-1.5 py-0.5 mr-1"
               >
                 {p.name}
+                {typeof p.share === "number" && (
+                  <span className="text-emerald-700/60"> · {p.share}%</span>
+                )}
               </span>
             ))}
           </div>

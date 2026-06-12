@@ -79,7 +79,9 @@ Climate TRACE API v7 endpoints used
 from __future__ import annotations
 
 import csv
+import gzip
 import io
+import json
 import logging
 import re
 import zipfile
@@ -490,6 +492,56 @@ def _get_relationship_indexes() -> tuple[
     return _rel_children, _asset_index
 
 
+# ---------------------------------------------------------------------------
+# GEOT project portfolio — repo-shipped artifact
+# ---------------------------------------------------------------------------
+#
+# The Global Energy Ownership Tracker xlsx sits behind a download form
+# (reCAPTCHA), so its per-tracker ownership-closure sheets cannot be fetched
+# at runtime. scripts/build_geot_projects.py condenses each release into
+# opencheck/data/geot_projects.json.gz (CC BY 4.0, attribution in meta),
+# keyed by GEM entity ID:
+#
+#   {"total": [live, operating, controlled],          # controlled = live ≥50%
+#    "statuses": {"operating": n, "development": n, "mothballed": n,
+#                 "retired": n, "cancelled": n, "other": n},
+#    "trackers": {"coal_plant": [live, operating, controlled], ...}}
+
+_GEOT_PROJECTS_PATH = Path(__file__).resolve().parent.parent / "data" / "geot_projects.json.gz"
+_geot_data: dict[str, Any] | None = None
+
+
+def _get_geot_data() -> dict[str, Any]:
+    """Lazy-load the GEOT project artifact; empty structure when absent."""
+    global _geot_data
+    if _geot_data is None:
+        try:
+            with gzip.open(_GEOT_PROJECTS_PATH, "rt", encoding="utf-8") as f:
+                _geot_data = json.load(f)
+            log.info(
+                "GEOT project artifact loaded: %s entities (%s release)",
+                _geot_data.get("meta", {}).get("entity_count"),
+                _geot_data.get("meta", {}).get("release"),
+            )
+        except Exception as exc:
+            log.warning("GEOT project artifact unavailable: %s", exc)
+            _geot_data = {"meta": {}, "entities": {}}
+    return _geot_data
+
+
+def _geot_projects(entity_id: str) -> dict[str, Any] | None:
+    """Project-portfolio summary for a GEM entity, or None when not a parent.
+
+    Returns the per-entity record plus the artifact meta (release label and
+    attribution) so the frontend can cite the GEOT release it came from.
+    """
+    data = _get_geot_data()
+    rec = data["entities"].get(entity_id)
+    if rec is None:
+        return None
+    return {**rec, "meta": data.get("meta") or {}}
+
+
 _MAX_OWNERSHIP_DEPTH = 25  # GEOT's longest observed chain is 17 hops
 
 
@@ -707,6 +759,7 @@ class ClimateTRACEAdapter(SourceAdapter):
             "assets": assets_payload,
             "parents": _parse_parents(gem_row),
             "ownership": _ownership_summary(entity_id),
+            "projects": _geot_projects(entity_id),
             "is_stub": False,
         }
         self._cache.put(cache_key, bundle)
@@ -904,5 +957,6 @@ def _stub_bundle(
         "assets": [],
         "parents": _parse_parents(gem_row),
         "ownership": _ownership_summary(entity_id),
+        "projects": _geot_projects(entity_id),
         "is_stub": True,
     }

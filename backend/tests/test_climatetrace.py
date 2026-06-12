@@ -628,6 +628,104 @@ def test_stub_bundle_includes_ownership_summary(tmp_path, monkeypatch) -> None:
 
 
 # ---------------------------------------------------------------------------
+# GEOT project portfolio artifact
+# ---------------------------------------------------------------------------
+
+
+def test_geot_projects_loads_shipped_artifact() -> None:
+    """The committed geot_projects.json.gz parses and has sane meta."""
+    import opencheck.sources.climatetrace as _ct_mod
+
+    _ct_mod._geot_data = None
+    try:
+        data = _ct_mod._get_geot_data()
+        assert data["meta"]["control_threshold_pct"] == 50.0
+        assert data["meta"]["entity_count"] == len(data["entities"]) > 10_000
+        # Every record: total = [live, operating, controlled] with
+        # controlled ≤ live and operating ≤ live; trackers sum to total live.
+        sample = list(data["entities"].items())[:200]
+        for _eid, rec in sample:
+            live, operating, controlled = rec["total"]
+            assert operating <= live and controlled <= live
+            assert sum(v[0] for v in rec["trackers"].values()) == live
+    finally:
+        _ct_mod._geot_data = None
+
+
+def test_geot_projects_for_known_parent() -> None:
+    """BP plc (E100000001096) is a GEOT parent with live projects."""
+    import opencheck.sources.climatetrace as _ct_mod
+
+    _ct_mod._geot_data = None
+    try:
+        rec = _ct_mod._geot_projects("E100000001096")
+        assert rec is not None
+        live, operating, controlled = rec["total"]
+        assert live > 0 and operating > 0
+        assert "meta" in rec and rec["meta"]["release"]
+    finally:
+        _ct_mod._geot_data = None
+
+
+def test_geot_projects_none_for_unknown_entity() -> None:
+    import opencheck.sources.climatetrace as _ct_mod
+
+    _ct_mod._geot_data = None
+    try:
+        assert _ct_mod._geot_projects("E000000000000") is None
+    finally:
+        _ct_mod._geot_data = None
+
+
+def test_geot_projects_missing_artifact_degrades(tmp_path, monkeypatch) -> None:
+    """A missing artifact yields empty data, not an exception."""
+    import opencheck.sources.climatetrace as _ct_mod
+
+    monkeypatch.setattr(_ct_mod, "_GEOT_PROJECTS_PATH", tmp_path / "absent.json.gz")
+    _ct_mod._geot_data = None
+    try:
+        assert _ct_mod._geot_projects("E100000001096") is None
+    finally:
+        _ct_mod._geot_data = None
+
+
+def test_stub_bundle_carries_geot_projects(tmp_path, monkeypatch) -> None:
+    """fetch_by_lei stub path includes the projects summary for GEOT parents."""
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("OPENCHECK_DISABLE_DOTENV", "1")
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
+
+    _make_gem_zip(
+        tmp_path,
+        rows=[
+            {
+                "Entity ID": "E100000001096",
+                "Full Name": "BP p.l.c.",
+                "Global Legal Entity Identifier Index": "213800LH1BZH3DI6G760",
+                "Headquarters Country": "GBR",
+            }
+        ],
+    )
+    from opencheck.config import get_settings
+    import opencheck.sources.climatetrace as _ct_mod
+
+    get_settings.cache_clear()
+    _reset_indexes()
+    _ct_mod._geot_data = None
+    try:
+        import asyncio
+        adapter = ClimateTRACEAdapter()
+        result = asyncio.run(adapter.fetch_by_lei("213800LH1BZH3DI6G760"))
+        assert result is not None
+        assert result["projects"] is not None
+        assert result["projects"]["total"][0] > 0
+    finally:
+        get_settings.cache_clear()
+        _reset_indexes()
+        _ct_mod._geot_data = None
+
+
+# ---------------------------------------------------------------------------
 # GCS-first data refresh
 # ---------------------------------------------------------------------------
 
