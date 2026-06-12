@@ -4,6 +4,7 @@ import SearchLoadingGrid from "./components/SearchLoadingGrid";
 import {
   fetchSources,
   isValidLei,
+  retryLookupSource,
   streamLookup,
   type BodsCountsEvent,
   type CrossSourceLink,
@@ -177,6 +178,11 @@ export default function App() {
   const [streaming, setStreaming] = useState(false);
   // Maps "source_id:hit_id" → BODS statement count; populated by the bods_counts SSE event.
   const [bodsCountMap, setBodsCountMap] = useState<Record<string, number>>({});
+  // True when the SSE connection dropped AFTER the GLEIF anchor resolved —
+  // partial results are on screen and a "Resume lookup" banner is shown.
+  const [streamDropped, setStreamDropped] = useState(false);
+  // Source IDs with an in-flight per-source retry (/lookup-source).
+  const [retryingSources, setRetryingSources] = useState<Set<string>>(new Set());
 
   // Cleanup ref — holds the SSE close function for the current in-flight stream.
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -294,9 +300,17 @@ export default function App() {
         setCompletedSources(new Set());
         setStreaming(false);
         setBodsCountMap({});
+        setStreamDropped(false);
+        setRetryingSources(new Set());
+
+        // Tracks whether the GLEIF anchor resolved: a connection drop before
+        // it is a hard error; after it, we keep partial results and offer a
+        // "Resume lookup" instead.
+        let anchored = false;
 
         const cleanup = streamLookup(lei, {
           onGleifDone: (e) => {
+            anchored = true;
             setStreamingLei(e.lei);
             setLegalName(e.legal_name);
             setStreaming(true);
@@ -315,12 +329,19 @@ export default function App() {
           onBodsCounts: (e: BodsCountsEvent) => setBodsCountMap(e.counts),
           onDone: () => {
             setStreaming(false);
+            setStreamDropped(false);
             cleanupRef.current = null;
           },
           onError: (detail) => {
             setStreaming(false);
             cleanupRef.current = null;
-            reject(new Error(detail));
+            if (anchored) {
+              // Mid-lookup drop (e.g. Render cold start, flaky network):
+              // keep the partial results and surface the resume banner.
+              setStreamDropped(true);
+            } else {
+              reject(new Error(detail));
+            }
           },
         });
         cleanupRef.current = cleanup;
@@ -331,10 +352,78 @@ export default function App() {
     const lei = rawLei.trim().toUpperCase();
     setLeiInput(lei);
     setView("main");
+    // Shareable URLs: reflect the lookup in ?lei= so refresh and copy/paste
+    // re-run it (the backend replay cache makes repeats near-instant).
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("lei") !== lei) {
+      url.searchParams.set("lei", lei);
+      window.history.pushState({}, "", url);
+    }
     // Cancel any in-flight stream before starting a new one.
     cleanupRef.current?.();
     cleanupRef.current = null;
     lookupMutation.mutate(lei);
+  }
+
+  // On first load and on back/forward navigation, honour ?lei= in the URL.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const fromUrl = (q: string | null) => (q ?? "").trim().toUpperCase();
+    const initial = fromUrl(new URLSearchParams(window.location.search).get("lei"));
+    if (initial && isValidLei(initial)) lookupLei(initial);
+
+    const onPopState = () => {
+      const lei = fromUrl(new URLSearchParams(window.location.search).get("lei"));
+      if (lei && isValidLei(lei)) {
+        lookupLei(lei);
+      } else {
+        // Navigated back to the landing page — clear the result view.
+        cleanupRef.current?.();
+        cleanupRef.current = null;
+        setStreamingLei(null);
+        setLegalName(null);
+        setHits([]);
+        setErrors({});
+        setStreaming(false);
+        setStreamDropped(false);
+        lookupMutation.reset();
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  /** Re-run a single failed source via /lookup-source (per-source retry). */
+  async function retrySource(sourceId: string) {
+    if (!streamingLei) return;
+    setRetryingSources((prev) => new Set([...prev, sourceId]));
+    try {
+      const res = await retryLookupSource(streamingLei, sourceId);
+      if (res.error) {
+        setErrors((prev) => ({ ...prev, [sourceId]: res.error as string }));
+      } else {
+        setErrors((prev) => {
+          const next = { ...prev };
+          delete next[sourceId];
+          return next;
+        });
+        setHits((prev) => [
+          ...prev.filter((h) => h.source_id !== sourceId),
+          ...res.hits,
+        ]);
+      }
+    } catch (e) {
+      setErrors((prev) => ({
+        ...prev,
+        [sourceId]: e instanceof Error ? e.message : String(e),
+      }));
+    } finally {
+      setRetryingSources((prev) => {
+        const next = new Set(prev);
+        next.delete(sourceId);
+        return next;
+      });
+    }
   }
 
   function runLookup(e: React.FormEvent) {
@@ -980,6 +1069,25 @@ export default function App() {
           </>
         )}
 
+        {streamDropped && streamingLei && (
+          <div
+            role="alert"
+            className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-oo border border-amber-300 bg-amber-50 px-4 py-3"
+          >
+            <p className="text-[13px] leading-[1.6] text-amber-900">
+              <span className="font-medium">Connection lost mid-lookup.</span>{" "}
+              Showing partial results for {legalName ?? streamingLei}.
+            </p>
+            <button
+              type="button"
+              onClick={() => lookupLei(streamingLei)}
+              className="shrink-0 rounded border border-amber-400 px-3 py-1.5 text-[12px] font-semibold text-amber-900 transition-colors hover:bg-amber-100"
+            >
+              Resume lookup
+            </button>
+          </div>
+        )}
+
         {streamingLei && <SubjectCard lei={streamingLei} legalName={legalName} />}
 
         {aggregatedCodes.length > 0 && (
@@ -1049,6 +1157,8 @@ export default function App() {
                     riskByHit={riskByHit}
                     sourceSignals={riskBySource[b.sourceId] ?? []}
                     bodsCountMap={bodsCountMap}
+                    onRetry={b.error ? () => retrySource(b.sourceId) : undefined}
+                    retrying={retryingSources.has(b.sourceId)}
                   />
                   {b.sourceId === "gleif" && gleifChildrenInfo && (
                     <p className="text-[12px] text-oo-muted mt-2 px-1">

@@ -137,6 +137,22 @@ bulk/offline adapters are allowlisted in `_DELIBERATELY_UNREGISTERED`.
 LEI-keyed sources (opensanctions, openaleph, climatetrace, bods_gleif) and
 SEC EDGAR are handled inside `_dispatch()` / `_lookup_pipeline()` directly.
 
+### Replay cache, shareable URLs, per-source retry (Phase 47)
+
+- Completed pipeline runs are cached in memory for 15 min
+  (`_REPLAY_CACHE`, keyed `LEI:deepen_top`, 64 entries max) and replayed by
+  both endpoints; `?refresh=true` bypasses. Only runs that reach `done` are
+  cached. Tests must not leak cache entries across fixtures — a conftest.py
+  autouse fixture clears it around every test.
+- `GET /lookup-source?lei=&source_id=` re-runs one source (per-source retry
+  in the UI) via `_resolve_ctx()` + `_dispatch(ctx, only=...)`, and
+  invalidates the replay cache for that LEI.
+- Frontend: lookups are addressable via `?lei=` (pushState + popstate
+  handling in App.tsx — query param, not a path, so no static-host rewrite
+  rules needed). A mid-stream connection drop after `gleif_done` keeps
+  partial results and shows a "Resume lookup" banner; failed source cards
+  get a "Retry source" button wired to `/lookup-source`.
+
 ### Checklist for a new adapter
 
 - [ ] `sources/<name>.py` — adapter class with `lookup_derivers` /

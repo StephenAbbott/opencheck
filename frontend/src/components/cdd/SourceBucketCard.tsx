@@ -681,11 +681,16 @@ export function SourceBucketCard({
   riskByHit,
   sourceSignals = [],
   bodsCountMap = {},
+  onRetry,
+  retrying = false,
 }: {
   bucket: SourceBucket;
   riskByHit: Record<string, RiskSignal[]>;
   sourceSignals?: RiskSignal[];
   bodsCountMap?: Record<string, number>;
+  /** Re-run this source via /lookup-source — shown on error cards. */
+  onRetry?: () => void;
+  retrying?: boolean;
 }) {
   const stateLabel = bucket.error
     ? "error"
@@ -731,7 +736,19 @@ export function SourceBucketCard({
         })()}
       </header>
       {bucket.error && (
-        <p className="px-5 py-3 text-[13px] text-red-700">{bucket.error}</p>
+        <div className="px-5 py-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[13px] text-red-700">{bucket.error}</p>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              disabled={retrying}
+              className="shrink-0 rounded border border-red-300 px-3 py-1 text-[12px] font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
+            >
+              {retrying ? "Retrying…" : "Retry source"}
+            </button>
+          )}
+        </div>
       )}
       {bucket.hits.length === 0 && !bucket.error && (
         <p className="px-5 py-3 text-[13px] text-oo-muted">No hits.</p>

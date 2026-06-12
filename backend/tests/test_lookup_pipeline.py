@@ -171,6 +171,97 @@ def test_stream_announces_applicable_sources(client: TestClient, tmp_path: Path)
 
 
 # ---------------------------------------------------------------------------
+# Replay cache + per-source retry (/lookup-source)
+# ---------------------------------------------------------------------------
+
+
+def test_completed_lookup_is_served_from_replay_cache(
+    client: TestClient, tmp_path: Path, monkeypatch
+) -> None:
+    """The second identical lookup replays cached events — the pipeline
+    runs exactly once."""
+    from opencheck.routers import lookup as lookup_mod
+
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)
+
+    calls = {"n": 0}
+    real_pipeline = lookup_mod._lookup_pipeline
+
+    async def counting_pipeline(*args, **kwargs):
+        calls["n"] += 1
+        async for ev in real_pipeline(*args, **kwargs):
+            yield ev
+
+    monkeypatch.setattr(lookup_mod, "_lookup_pipeline", counting_pipeline)
+
+    first = client.get("/lookup", params={"lei": lei}).json()
+    second = client.get("/lookup", params={"lei": lei}).json()
+    assert calls["n"] == 1
+    assert second == first
+
+    # refresh=true bypasses the cache and re-runs the pipeline.
+    client.get("/lookup", params={"lei": lei, "refresh": "true"})
+    assert calls["n"] == 2
+
+
+def test_failed_lookup_is_not_cached(client: TestClient, monkeypatch) -> None:
+    """Runs that abort before "done" (e.g. unknown LEI) must not be cached."""
+    from opencheck.routers import lookup as lookup_mod
+
+    r1 = client.get("/lookup", params={"lei": "ZZZZ00000000000000ZZ"})
+    assert r1.status_code == 404
+    assert lookup_mod._REPLAY_CACHE == {}
+
+
+def test_lookup_source_retries_one_source(
+    client: TestClient, tmp_path: Path
+) -> None:
+    """Per-source retry re-runs just the requested source and reports
+    stub results as zero hits without an error."""
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)
+
+    r = client.get(
+        "/lookup-source", params={"lei": lei, "source_id": "companies_house"}
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["lei"] == lei
+    assert body["source_id"] == "companies_house"
+    assert body["error"] is None
+    assert body["hits"] == []  # offline → CH stub → no hit, no error
+
+
+def test_lookup_source_rejects_inapplicable_source(
+    client: TestClient, tmp_path: Path
+) -> None:
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)  # GB bundle — no Danish CVR identifier
+    r = client.get("/lookup-source", params={"lei": lei, "source_id": "cvr_denmark"})
+    assert r.status_code == 404
+    assert "not applicable" in r.json()["detail"]
+
+
+def test_lookup_source_rejects_invalid_lei(client: TestClient) -> None:
+    r = client.get("/lookup-source", params={"lei": "nope", "source_id": "kvk"})
+    assert r.status_code == 400
+
+
+def test_lookup_source_invalidates_replay_cache(
+    client: TestClient, tmp_path: Path
+) -> None:
+    from opencheck.routers import lookup as lookup_mod
+
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)
+    client.get("/lookup", params={"lei": lei})
+    assert lookup_mod._REPLAY_CACHE  # completed run cached
+    client.get("/lookup-source", params={"lei": lei, "source_id": "companies_house"})
+    assert lookup_mod._REPLAY_CACHE == {}
+
+
+# ---------------------------------------------------------------------------
 # Single-place wiring guarantees (replaces the old "two-place rule")
 # ---------------------------------------------------------------------------
 

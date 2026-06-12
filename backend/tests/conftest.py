@@ -19,6 +19,20 @@ from __future__ import annotations
 
 import os
 
+import pytest
+
 # Set the flag at import time, before any test code runs and before
 # opencheck.config is imported. No fixture wrapping needed.
 os.environ.setdefault("OPENCHECK_DISABLE_DOTENV", "1")
+
+
+@pytest.fixture(autouse=True)
+def _clear_lookup_replay_cache():
+    """The lookup replay cache is keyed by LEI only; tests reuse the same
+    demo LEIs with different fixtures, so cached events must never leak
+    across tests."""
+    from opencheck.routers import lookup as _lookup_mod
+
+    _lookup_mod._REPLAY_CACHE.clear()
+    yield
+    _lookup_mod._REPLAY_CACHE.clear()

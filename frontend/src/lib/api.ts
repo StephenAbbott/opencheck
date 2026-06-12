@@ -339,8 +339,10 @@ export function streamLookup(
   lei: string,
   handlers: LookupStreamHandlers,
   deepen_top = 5,
+  refresh = false,
 ): () => void {
   const params = new URLSearchParams({ lei, deepen_top: String(deepen_top) });
+  if (refresh) params.set("refresh", "true");
   const es = new EventSource(`${BASE_URL}/lookup-stream?${params.toString()}`);
 
   const safeParse = <T>(raw: string): T | null => {
@@ -405,4 +407,35 @@ export function streamLookup(
   };
 
   return () => es.close();
+}
+
+// ---------------------------------------------------------------------
+// Per-source retry — /lookup-source
+// ---------------------------------------------------------------------
+
+export interface LookupSourceResponse {
+  lei: string;
+  source_id: string;
+  hits: SourceHit[];
+  error: string | null;
+}
+
+/**
+ * Re-run a single source for an existing lookup (per-source retry button).
+ * Also invalidates the backend's replay cache for the LEI.
+ */
+export async function retryLookupSource(
+  lei: string,
+  sourceId: string,
+): Promise<LookupSourceResponse> {
+  const params = new URLSearchParams({ lei, source_id: sourceId });
+  const resp = await fetch(`${BASE_URL}/lookup-source?${params.toString()}`);
+  if (!resp.ok) {
+    const detail = await resp
+      .json()
+      .then((b) => b.detail as string)
+      .catch(() => `HTTP ${resp.status}`);
+    throw new Error(detail);
+  }
+  return (await resp.json()) as LookupSourceResponse;
 }

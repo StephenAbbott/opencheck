@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import time
 from dataclasses import dataclass, field as dc_field
 from typing import Any, AsyncIterator
 
@@ -739,10 +740,20 @@ async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
     return deduped
 
 
-def _dispatch(ctx: _LookupCtx) -> list[tuple[str, Any]]:
-    """Build the (source_id, awaitable) dispatch list for this lookup."""
+def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]:
+    """Build the (source_id, awaitable) dispatch list for this lookup.
+
+    ``only`` restricts dispatch to a single source — used by the
+    /lookup-source per-source retry endpoint.
+    """
     tasks: list[tuple[str, Any]] = []
+
+    def _want(source_id: str) -> bool:
+        return only is None or source_id == only
+
     for spec in _REGISTRY_SOURCES:
+        if not _want(spec.source_id):
+            continue
         local_id = _local_id_for(spec, ctx.derived)
         if not local_id:
             continue
@@ -751,20 +762,20 @@ def _dispatch(ctx: _LookupCtx) -> list[tuple[str, Any]]:
             tasks.append((spec.source_id, adapter.fetch(local_id, legal_name=ctx.legal_name)))
         else:
             tasks.append((spec.source_id, adapter.fetch(local_id)))
-    if ctx.ocid:
+    if ctx.ocid and _want("opencorporates"):
         tasks.append(("opencorporates", REGISTRY["opencorporates"].fetch(ctx.ocid)))
-    if ctx.qid:
+    if ctx.qid and _want("wikidata"):
         tasks.append(("wikidata", REGISTRY["wikidata"].fetch(ctx.qid)))
     os_adapter = REGISTRY.get("opensanctions")
-    if os_adapter and SearchKind.ENTITY in os_adapter.info.supports:
+    if os_adapter and SearchKind.ENTITY in os_adapter.info.supports and _want("opensanctions"):
         tasks.append(("opensanctions", os_adapter.search(ctx.lei, SearchKind.ENTITY)))
-    if REGISTRY.get("openaleph") is not None:
+    if REGISTRY.get("openaleph") is not None and _want("openaleph"):
         tasks.append(("openaleph", _openaleph_strategies(ctx)))
     ct_adapter = REGISTRY.get("climatetrace")
-    if ct_adapter is not None and hasattr(ct_adapter, "fetch_by_lei"):
+    if ct_adapter is not None and hasattr(ct_adapter, "fetch_by_lei") and _want("climatetrace"):
         tasks.append(("climatetrace", ct_adapter.fetch_by_lei(ctx.lei)))
     bg_adapter = REGISTRY.get("bods_gleif")
-    if bg_adapter is not None and hasattr(bg_adapter, "fetch_by_lei"):
+    if bg_adapter is not None and hasattr(bg_adapter, "fetch_by_lei") and _want("bods_gleif"):
         tasks.append(("bods_gleif", bg_adapter.fetch_by_lei(ctx.lei)))
     return tasks
 
@@ -828,6 +839,97 @@ def _merge_signals(*signal_lists: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return list(merged.values())
 
 
+# --- anchor resolution --------------------------------------------------------
+
+
+class _LookupAbort(Exception):
+    """Fatal lookup failure: HTTP status for /lookup, error event for SSE."""
+
+    def __init__(self, status: int, detail: str) -> None:
+        super().__init__(detail)
+        self.status = status
+        self.detail = detail
+
+
+async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
+    """Resolve the GLEIF anchor and build the lookup context.
+
+    Returns ``(ctx, gleif_bundle)`` with derived identifiers, OpenCorporates
+    ID and Wikidata QID populated. Raises :class:`_LookupAbort` when the LEI
+    cannot be resolved. Shared by the pipeline and /lookup-source.
+    """
+    gleif = REGISTRY["gleif"]
+    ctx = _LookupCtx(lei=lei)
+    registered_at_id = ""
+    gleif_bundle: dict[str, Any] = {}
+    override_bundle = bods_data.gleif_bundle_for_lei(lei)
+    try:
+        if override_bundle:
+            ctx.legal_name, ctx.jurisdiction, ctx.registered_as = (
+                _subject_metadata_from_bundle(override_bundle, lei)
+            )
+            if not ctx.legal_name:
+                raise _LookupAbort(
+                    404,
+                    (
+                        f"Found a BODS bundle for {lei} but couldn't locate "
+                        "the subject entity statement. Re-run the extraction "
+                        "script."
+                    ),
+                )
+            gleif_bundle = {"source_id": "gleif", "lei": lei, "_from_bundle": True}
+        else:
+            gleif_bundle = await gleif.fetch(lei)
+            if gleif_bundle.get("is_stub") or not gleif_bundle.get("record"):
+                raise _LookupAbort(
+                    404,
+                    (
+                        f"No GLEIF record found for {lei}. Either the LEI is "
+                        "not registered, live mode is disabled, or no Open "
+                        "Ownership bundle has been extracted for this LEI "
+                        "(see backend/scripts/extract_bods_subgraphs.py)."
+                    ),
+                )
+            record_attrs = (gleif_bundle.get("record") or {}).get("attributes") or {}
+            entity_block = record_attrs.get("entity") or {}
+            ctx.legal_name = (entity_block.get("legalName") or {}).get("name") or ""
+            ctx.jurisdiction = entity_block.get("jurisdiction") or ""
+            ctx.registered_as = entity_block.get("registeredAs") or ""
+            registered_at_id = (entity_block.get("registeredAt") or {}).get("id") or ""
+    except _LookupAbort:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        raise _LookupAbort(
+            502, f"GLEIF fetch failed: {type(exc).__name__}: {exc}"
+        ) from exc
+
+    _build_derived(ctx, registered_at_id)
+
+    # OpenCorporates ID from the GLEIF Level-1 record.
+    if gleif.info.live_available:
+        try:
+            gleif_src = (
+                gleif_bundle
+                if not gleif_bundle.get("_from_bundle")
+                else await gleif.fetch(lei)
+            )
+            if not gleif_src.get("is_stub"):
+                attrs = (gleif_src.get("record") or {}).get("attributes") or {}
+                ctx.ocid = attrs.get("ocid") or None
+        except Exception:  # noqa: BLE001
+            pass
+    if ctx.ocid:
+        ctx.derived["ocid"] = ctx.ocid
+
+    wikidata_adapter = REGISTRY["wikidata"]
+    if hasattr(wikidata_adapter, "find_qid_by_lei"):
+        ctx.qid = await wikidata_adapter.find_qid_by_lei(lei)  # type: ignore[attr-defined]
+    if ctx.qid:
+        ctx.derived["wikidata_qid"] = ctx.qid
+
+    return ctx, gleif_bundle
+
+
 # --- the pipeline -----------------------------------------------------------
 
 
@@ -858,75 +960,11 @@ async def _lookup_pipeline(
     gleif = REGISTRY["gleif"]
     yield ("source_started", {"source_id": "gleif", "source_name": gleif.info.name})
 
-    ctx = _LookupCtx(lei=lei)
-    registered_at_id = ""
-    gleif_bundle: dict[str, Any] = {}
-    override_bundle = bods_data.gleif_bundle_for_lei(lei)
     try:
-        if override_bundle:
-            ctx.legal_name, ctx.jurisdiction, ctx.registered_as = (
-                _subject_metadata_from_bundle(override_bundle, lei)
-            )
-            if not ctx.legal_name:
-                yield ("error", {
-                    "status": 404,
-                    "detail": (
-                        f"Found a BODS bundle for {lei} but couldn't locate "
-                        "the subject entity statement. Re-run the extraction "
-                        "script."
-                    ),
-                })
-                return
-            gleif_bundle = {"source_id": "gleif", "lei": lei, "_from_bundle": True}
-        else:
-            gleif_bundle = await gleif.fetch(lei)
-            if gleif_bundle.get("is_stub") or not gleif_bundle.get("record"):
-                yield ("error", {
-                    "status": 404,
-                    "detail": (
-                        f"No GLEIF record found for {lei}. Either the LEI is "
-                        "not registered, live mode is disabled, or no Open "
-                        "Ownership bundle has been extracted for this LEI "
-                        "(see backend/scripts/extract_bods_subgraphs.py)."
-                    ),
-                })
-                return
-            record_attrs = (gleif_bundle.get("record") or {}).get("attributes") or {}
-            entity_block = record_attrs.get("entity") or {}
-            ctx.legal_name = (entity_block.get("legalName") or {}).get("name") or ""
-            ctx.jurisdiction = entity_block.get("jurisdiction") or ""
-            ctx.registered_as = entity_block.get("registeredAs") or ""
-            registered_at_id = (entity_block.get("registeredAt") or {}).get("id") or ""
-    except Exception as exc:  # noqa: BLE001
-        yield ("error", {
-            "status": 502,
-            "detail": f"GLEIF fetch failed: {type(exc).__name__}: {exc}",
-        })
+        ctx, gleif_bundle = await _resolve_ctx(lei)
+    except _LookupAbort as abort:
+        yield ("error", {"status": abort.status, "detail": abort.detail})
         return
-
-    _build_derived(ctx, registered_at_id)
-
-    # OpenCorporates ID from the GLEIF Level-1 record.
-    if gleif.info.live_available:
-        try:
-            gleif_src = (
-                gleif_bundle
-                if not gleif_bundle.get("_from_bundle")
-                else await gleif.fetch(lei)
-            )
-            if not gleif_src.get("is_stub"):
-                attrs = (gleif_src.get("record") or {}).get("attributes") or {}
-                ctx.ocid = attrs.get("ocid") or None
-        except Exception:  # noqa: BLE001
-            pass
-    if ctx.ocid:
-        ctx.derived["ocid"] = ctx.ocid
-
-    wikidata_adapter = REGISTRY["wikidata"]
-    if hasattr(wikidata_adapter, "find_qid_by_lei"):
-        ctx.qid = await wikidata_adapter.find_qid_by_lei(lei)  # type: ignore[attr-defined]
-    if ctx.qid:
-        ctx.derived["wikidata_qid"] = ctx.qid
 
     yield ("gleif_done", {
         "lei": lei,
@@ -1128,6 +1166,52 @@ async def _lookup_pipeline(
     })
 
 
+# --- replay cache --------------------------------------------------------------
+#
+# Completed lookup runs are kept in memory for a short window so a page
+# refresh, a shared URL, or an SSE reconnect replays instantly instead of
+# re-querying every source. Only runs that reached the "done" event are
+# cached; per-source retries and ?refresh=true invalidate/bypass.
+
+_REPLAY_TTL_SECONDS = 15 * 60.0
+_REPLAY_MAX_ENTRIES = 64
+_REPLAY_CACHE: dict[str, tuple[float, list[LookupEvent]]] = {}
+
+
+def _invalidate_replay(lei: str) -> None:
+    prefix = f"{lei.strip().upper()}:"
+    for key in [k for k in _REPLAY_CACHE if k.startswith(prefix)]:
+        _REPLAY_CACHE.pop(key, None)
+
+
+async def _lookup_pipeline_cached(
+    lei: str, deepen_top: int = 5, refresh: bool = False
+) -> AsyncIterator[LookupEvent]:
+    """Replay a cached completed run, or run the pipeline and cache it."""
+    key = f"{lei.strip().upper()}:{deepen_top}"
+    now = time.monotonic()
+
+    if not refresh:
+        entry = _REPLAY_CACHE.get(key)
+        if entry is not None and now - entry[0] < _REPLAY_TTL_SECONDS:
+            for event in entry[1]:
+                yield event
+            return
+
+    buffer: list[LookupEvent] = []
+    completed = False
+    async for event in _lookup_pipeline(lei, deepen_top=deepen_top):
+        buffer.append(event)
+        if event[0] == "done":
+            completed = True
+        yield event
+
+    if completed:
+        while len(_REPLAY_CACHE) >= _REPLAY_MAX_ENTRIES:
+            _REPLAY_CACHE.pop(next(iter(_REPLAY_CACHE)), None)
+        _REPLAY_CACHE[key] = (now, buffer)
+
+
 # --- endpoints ---------------------------------------------------------------
 
 
@@ -1135,6 +1219,7 @@ async def _lookup_pipeline(
 async def lookup(
     lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),
     deepen_top: int = Query(5, ge=0, le=10),
+    refresh: bool = Query(False, description="Bypass the short-lived replay cache."),
 ) -> LookupResponse:
     """Driver endpoint: LEI in, full cross-source synthesis out.
 
@@ -1153,7 +1238,9 @@ async def lookup(
     jurisdiction: str | None = None
     derived: dict[str, str] = {}
 
-    async for event, payload in _lookup_pipeline(norm_lei, deepen_top=deepen_top):
+    async for event, payload in _lookup_pipeline_cached(
+        norm_lei, deepen_top=deepen_top, refresh=refresh
+    ):
         if event == "error":
             raise HTTPException(
                 status_code=payload["status"], detail=payload["detail"]
@@ -1199,22 +1286,95 @@ async def lookup(
 async def lookup_stream(
     lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),
     deepen_top: int = Query(5, ge=0, le=10),
+    refresh: bool = Query(False, description="Bypass the short-lived replay cache."),
 ) -> EventSourceResponse:
     """LEI-anchored lookup streamed as SSE — same pipeline as /lookup."""
-    return EventSourceResponse(_lookup_sse_events(lei, deepen_top=deepen_top))
+    return EventSourceResponse(
+        _lookup_sse_events(lei, deepen_top=deepen_top, refresh=refresh)
+    )
 
 
 async def _lookup_sse_events(
-    lei: str, deepen_top: int = 5
+    lei: str, deepen_top: int = 5, refresh: bool = False
 ) -> AsyncIterator[dict[str, Any]]:
     """Serialise pipeline events as SSE frames."""
-    async for event, payload in _lookup_pipeline(lei, deepen_top=deepen_top):
+    async for event, payload in _lookup_pipeline_cached(
+        lei, deepen_top=deepen_top, refresh=refresh
+    ):
         if event in ("deepen_result", "deepen_error"):
             continue  # internal events for the sync collector only
         if event == "hit":
             yield {"event": "hit", "data": payload.model_dump_json()}
         else:
             yield {"event": event, "data": json.dumps(payload)}
+
+
+class LookupSourceResponse(BaseModel):
+    """Result of re-running a single source within an existing lookup."""
+
+    lei: str
+    source_id: str
+    hits: list[SourceHit]
+    error: str | None = None
+
+
+@router.get("/lookup-source", response_model=LookupSourceResponse)
+async def lookup_source(
+    lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),
+    source_id: str = Query(..., description="Adapter id to re-run, e.g. 'kvk'."),
+) -> LookupSourceResponse:
+    """Re-run one source for a LEI — powers the per-source retry button.
+
+    Resolves the GLEIF anchor (cheap — adapter-cached), dispatches just the
+    requested source, and invalidates the replay cache so the next full
+    lookup reflects the fresh result.
+    """
+    norm_lei = lei.strip().upper()
+    if not _LEI_SHAPE.match(norm_lei):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"{norm_lei!r} is not a valid LEI. ISO 17442 LEIs are "
+                "20-character alphanumeric strings (e.g. "
+                "213800LH1BZH3DI6G760)."
+            ),
+        )
+
+    try:
+        ctx, _gleif_bundle = await _resolve_ctx(norm_lei)
+    except _LookupAbort as abort:
+        raise HTTPException(status_code=abort.status, detail=abort.detail)
+
+    tasks = _dispatch(ctx, only=source_id)
+    if not tasks:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"source {source_id!r} is not applicable to {norm_lei} "
+                "(no derived identifier for it on this LEI record)"
+            ),
+        )
+
+    hits: list[SourceHit] = []
+    error: str | None = None
+    for sid, coro in tasks:
+        try:
+            result = await coro
+        except Exception as exc:  # noqa: BLE001
+            error = _fmt_source_error(exc)
+            continue
+        if sid in ("opensanctions", "openaleph"):
+            if isinstance(result, list):
+                hits.extend(h for h in result if not h.is_stub)
+        else:
+            hit = _build_result_hit(sid, result, ctx)
+            if hit is not None:
+                hits.append(hit)
+
+    _invalidate_replay(norm_lei)
+    return LookupSourceResponse(
+        lei=norm_lei, source_id=source_id, hits=hits, error=error
+    )
 
 
 def _subject_metadata_from_bundle(
