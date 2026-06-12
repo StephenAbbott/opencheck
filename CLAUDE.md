@@ -98,18 +98,28 @@ Format validation is advisory (non-blocking). The amber border + warning fires o
 
 ---
 
-## Critical rule: new source adapters require changes in TWO places in `routers/lookup.py`
+## Lookup architecture: ONE pipeline drives both /lookup and /lookup-stream (Phase 47)
 
-`routers/lookup.py` contains **two independent derived-identifier blocks** — one for the synchronous `/lookup` endpoint and one for the SSE `/lookup-stream` endpoint. They must be kept in sync.
+`routers/lookup.py` has a single async generator, `_lookup_pipeline()`, that
+resolves the GLEIF anchor, builds derived identifiers, dispatches adapters,
+converts results to SourceHits, deepens and assesses risk. It yields
+`(event, payload)` tuples; `/lookup-stream` serialises them as SSE and
+`/lookup` collects them into a `LookupResponse`. The endpoints **cannot
+diverge** — the old hand-synchronised sync/SSE copies (and the
+Corporations Canada regression `603c086` they caused) are gone.
 
-When wiring a new adapter:
+Wiring a new national-register adapter into the lookup flow now means exactly
+two entries in `routers/lookup.py`:
 
-1. **Sync `/lookup` derived block** (search for `# Build derived identifiers` in the first half of the file) — add the RA code check here.
-2. **SSE `/lookup-stream` derived block** (search for `# Build derived identifiers (same logic as /lookup)`) — add the **identical** RA code check here.
+1. **`_RA_DERIVERS`** — `(frozenset({RA code}), "derived_key", normaliser)`.
+2. **`_REGISTRY_SOURCES`** — `_RegistrySource("name", ("derived_key",), pass_legal_name, _bh_<name>)`
+   plus the small `_bh_<name>()` hit-builder function.
 
-Forgetting step 2 means the frontend (which uses `/lookup-stream`) will never dispatch to the adapter, even though the `/lookup` API endpoint works correctly. This is exactly what happened with Corporations Canada (fixed in commit `603c086`).
-
-Similarly, the result-handling `elif source_id == "<name>":` block in the SSE event loop, and the `applicable_ids.append` / `_add_task` calls, must all be present in the stream path.
+`tests/test_lookup_pipeline.py` enforces the wiring (every deriver key must
+have a dispatch spec; every spec must exist in REGISTRY) and pins sync/stream
+parity. LEI-keyed sources (opensanctions, openaleph, climatetrace,
+bods_gleif) and SEC EDGAR are handled inside `_dispatch()` /
+`_lookup_pipeline()` directly.
 
 ### Checklist for a new adapter
 
@@ -118,8 +128,7 @@ Similarly, the result-handling `elif source_id == "<name>":` block in the SSE ev
 - [ ] `sources/__init__.py` — import + REGISTRY entry
 - [ ] `bods/mapper.py` — `map_<name>()` function
 - [ ] `bods/__init__.py` — import + `__all__` entry
-- [ ] `routers/lookup.py` sync path — RA code → derived dict, dispatch (`_w1.append`), result handler
-- [ ] `routers/lookup.py` SSE path — **same three things** as sync path
+- [ ] `routers/lookup.py` — `_MAPPERS` entry, `_RA_DERIVERS` entry, `_REGISTRY_SOURCES` entry + `_bh_<name>()` builder
 - [ ] `tests/test_<name>.py` — adapter + mapper tests
 - [ ] `tests/test_sources.py` — add to expected registry set
 - [ ] `tests/test_app.py` — add to expected sources endpoint set
@@ -325,12 +334,12 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 |---|---|---|
 | UK | companies_house | RA000585 |
 | Netherlands | kvk | RA000463 |
-| Norway | brreg | RA000394 |
+| Norway | brreg | RA000472 (verified live 2026-06-12 — RA000394 in earlier notes was wrong) |
 | Ireland | cro | RA000215 |
 | Latvia | ur_latvia | RA000327 |
 | Lithuania | jar_lithuania | RA000330 |
 | France | inpi | RA000580 |
-| Sweden | bolagsverket | RA000523 |
+| Sweden | bolagsverket | RA000544 (verified live 2026-06-12 — RA000523 in earlier notes was wrong) |
 | Estonia | ariregister | **RA000181** (confirmed live; ignore any reference to RA000198) |
 | Belgium | bce_belgium | RA000143 |
 | Austria | firmenbuch | RA000128 |
