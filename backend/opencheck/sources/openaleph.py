@@ -69,6 +69,10 @@ def _schema_for(kind: SearchKind) -> str:
 class OpenAlephAdapter(SourceAdapter):
     id = "openaleph"
 
+    # The lookup cascade tries up to seven sequential queries (LEI → OC URL
+    # → five registration numbers → name) — allow more than one HTTP budget.
+    lookup_timeout_s = 60.0
+
     def __init__(self) -> None:
         self._cache = Cache()
 

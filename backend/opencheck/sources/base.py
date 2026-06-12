@@ -143,6 +143,12 @@ class SourceAdapter(ABC):
     #: Whether ``fetch()`` should receive ``legal_name=`` from the anchor.
     lookup_pass_legal_name: ClassVar[bool] = False
 
+    #: Wall-clock budget (seconds) for this adapter inside one lookup. The
+    #: pipeline cancels the fetch and emits a source_error when exceeded, so
+    #: one hung source can never stall the whole lookup. Slow-by-design
+    #: adapters (Datafordeler CVR, the OpenAleph strategy cascade) override.
+    lookup_timeout_s: ClassVar[float] = 30.0
+
     @classmethod
     def lookup_keys(cls) -> tuple[str, ...]:
         """Dispatch keys for the lookup pipeline (explicit or derived)."""

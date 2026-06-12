@@ -262,6 +262,69 @@ def test_lookup_source_invalidates_replay_cache(
 
 
 # ---------------------------------------------------------------------------
+# Per-source wall-clock budgets
+# ---------------------------------------------------------------------------
+
+
+def test_hung_source_is_cut_off_by_its_time_budget(
+    client: TestClient, tmp_path: Path, monkeypatch
+) -> None:
+    """A source that never returns is cancelled at its budget and reported
+    as a timeout — the lookup itself still completes."""
+    import asyncio as _asyncio
+
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)  # GB → companies_house dispatched
+
+    ch_adapter = REGISTRY["companies_house"]
+
+    async def hung_fetch(*_a, **_kw):
+        await _asyncio.sleep(30)
+
+    monkeypatch.setattr(ch_adapter, "fetch", hung_fetch)
+    monkeypatch.setattr(type(ch_adapter), "lookup_timeout_s", 0.05)
+
+    r = client.get("/lookup", params={"lei": lei})
+    assert r.status_code == 200
+    body = r.json()
+    assert "companies_house" in body["errors"]
+    assert "time budget" in body["errors"]["companies_house"]
+    # The rest of the lookup is unaffected.
+    assert any(h["source_id"] == "gleif" for h in body["hits"])
+
+
+def test_timeout_emits_timeout_error_type_on_stream(
+    client: TestClient, tmp_path: Path, monkeypatch
+) -> None:
+    import asyncio as _asyncio
+
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)
+    ch_adapter = REGISTRY["companies_house"]
+
+    async def hung_fetch(*_a, **_kw):
+        await _asyncio.sleep(30)
+
+    monkeypatch.setattr(ch_adapter, "fetch", hung_fetch)
+    monkeypatch.setattr(type(ch_adapter), "lookup_timeout_s", 0.05)
+
+    events = _stream_events(_stream_body(client, lei))
+    timeout_errors = [
+        p for n, p in events
+        if n == "source_error" and p["source_id"] == "companies_house"
+    ]
+    assert timeout_errors and timeout_errors[0]["error_type"] == "timeout"
+
+
+def test_every_adapter_declares_a_sane_budget() -> None:
+    """Budgets must exist and be positive; slow-by-design adapters may
+    exceed the default but nothing should be unbounded."""
+    for sid, adapter in REGISTRY.items():
+        budget = adapter.lookup_timeout_s
+        assert 0 < budget <= 120, f"{sid} has unreasonable budget {budget}"
+
+
+# ---------------------------------------------------------------------------
 # Single-place wiring guarantees (replaces the old "two-place rule")
 # ---------------------------------------------------------------------------
 

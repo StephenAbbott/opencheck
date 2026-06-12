@@ -18,7 +18,9 @@ Surface:
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
@@ -31,11 +33,38 @@ from .config import get_settings
 from .routers import health, search, lookup, export
 from .routers.search import _ch_ra_code as _ch_ra_code  # re-exported for backward compat
 
+log = logging.getLogger(__name__)
+
+
+async def _warm_caches_background() -> None:
+    """Pre-build the GEM/GLEIF/GEOT indexes off the event loop.
+
+    Render's filesystem is ephemeral, so every deploy starts cold: the GEM
+    CSVs (several MB) and the GLEIF GEM↔LEI mapping must be downloaded and
+    parsed before the first climatetrace lookup can answer. Doing it here —
+    in a background thread, started at lifespan — means the first user
+    never pays that cost, and the event loop is never blocked by it.
+    Failures are logged and non-fatal: the adapter falls back to its lazy
+    path on first use.
+    """
+    try:
+        from .sources.climatetrace import warm_caches
+
+        stats = await asyncio.to_thread(warm_caches)
+        log.info("Startup cache warm-up complete: %s", stats)
+    except asyncio.CancelledError:  # shutdown before warm-up finished
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Startup cache warm-up failed (lazy fallback remains): %s", exc)
+
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """FastAPI lifespan hook (reserved for future startup tasks)."""
+    """FastAPI lifespan hook — kicks off background cache warm-up."""
+    warmup = asyncio.create_task(_warm_caches_background())
     yield  # server runs here
+    if not warmup.done():
+        warmup.cancel()
 
 
 app = FastAPI(

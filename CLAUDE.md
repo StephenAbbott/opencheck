@@ -137,6 +137,21 @@ bulk/offline adapters are allowlisted in `_DELIBERATELY_UNREGISTERED`.
 LEI-keyed sources (opensanctions, openaleph, climatetrace, bods_gleif) and
 SEC EDGAR are handled inside `_dispatch()` / `_lookup_pipeline()` directly.
 
+### Cold start & per-source time budgets (Phase 47)
+
+- The FastAPI lifespan kicks off `climatetrace.warm_caches()` in a
+  background thread at startup, so Render cold starts pre-download/parse
+  the GEM CSVs, GLEIF GEM↔LEI mapping and GEOT artifact before the first
+  lookup. Warm-up failures are logged and non-fatal (lazy fallback).
+  The climatetrace adapter's index builds run via `asyncio.to_thread` —
+  never on the event loop.
+- Every adapter has a `lookup_timeout_s` wall-clock budget (default 30 s,
+  declared on the class). The pipeline cancels and emits a
+  `source_error` with `error_type: "timeout"` when exceeded. Overrides:
+  cvr_denmark 90 s (Datafordeler is slow by design), openaleph 60 s
+  (strategy cascade). Budgets are capped sanity-tested in
+  `tests/test_lookup_pipeline.py` (must be ≤ 120 s).
+
 ### Replay cache, shareable URLs, per-source retry (Phase 47)
 
 - Completed pipeline runs are cached in memory for 15 min

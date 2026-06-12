@@ -815,6 +815,12 @@ _STRUCTURAL_SIGNAL_CODES = {
 _STATEMENT_SCOPED_SIGNAL_CODES = {"RELATED_PEP", "RELATED_SANCTIONED"}
 
 
+def _source_budget(source_id: str) -> float:
+    """Wall-clock budget for one source inside a lookup (adapter-declared)."""
+    adapter = REGISTRY.get(source_id)
+    return getattr(adapter, "lookup_timeout_s", 30.0) if adapter else 30.0
+
+
 def _merge_signals(*signal_lists: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Deduplicate risk signals: structural codes collapse globally,
     statement-scoped codes key on the subject statement, the rest on
@@ -998,8 +1004,13 @@ async def _lookup_pipeline(
         yield ("source_started", {"source_id": sid, "source_name": src_name})
 
     async def _run(src_id: str, coro: Any) -> tuple[str, Any]:
+        budget = _source_budget(src_id)
         try:
-            return src_id, await coro
+            return src_id, await asyncio.wait_for(coro, timeout=budget)
+        except asyncio.TimeoutError:
+            return src_id, TimeoutError(
+                f"source exceeded its {budget:.0f}s time budget"
+            )
         except Exception as exc:  # noqa: BLE001
             return src_id, exc
 
@@ -1015,14 +1026,16 @@ async def _lookup_pipeline(
 
             if isinstance(result, Exception):
                 errors[source_id] = _fmt_source_error(result)
+                if isinstance(result, SourceSchemaError):
+                    _err_type = "schema_changed"
+                elif isinstance(result, TimeoutError):
+                    _err_type = "timeout"
+                else:
+                    _err_type = "fetch_error"
                 yield ("source_error", {
                     "source_id": source_id,
                     "error": errors[source_id],
-                    "error_type": (
-                        "schema_changed"
-                        if isinstance(result, SourceSchemaError)
-                        else "fetch_error"
-                    ),
+                    "error_type": _err_type,
                 })
                 continue
 
@@ -1084,7 +1097,10 @@ async def _lookup_pipeline(
         and se_adapter.info.live_available
     ):
         try:
-            cik2 = await se_adapter.resolve_cik(ctx.legal_name)  # type: ignore[attr-defined]
+            cik2 = await asyncio.wait_for(
+                se_adapter.resolve_cik(ctx.legal_name),  # type: ignore[attr-defined]
+                timeout=_source_budget("sec_edgar"),
+            )
             if cik2:
                 edgar_hit = _edgar_hit(cik2, ctx.legal_name)
                 hits.append(edgar_hit)
@@ -1121,7 +1137,14 @@ async def _lookup_pipeline(
 
     deepen_pairs = deepened_bundles[:deepen_top]
     deepen_raw = await asyncio.gather(
-        *[_safe_deepen(dsrc, dhit) for dsrc, dhit in deepen_pairs],
+        *[
+            # Deepen usually replays the adapter's cached fetch, but give it
+            # the same wall-clock protection as dispatch (+ mapping headroom).
+            asyncio.wait_for(
+                _safe_deepen(dsrc, dhit), timeout=_source_budget(dsrc) + 15.0
+            )
+            for dsrc, dhit in deepen_pairs
+        ],
         return_exceptions=True,
     )
     for (dsrc, dhit), deep in zip(deepen_pairs, deepen_raw):
@@ -1359,7 +1382,13 @@ async def lookup_source(
     error: str | None = None
     for sid, coro in tasks:
         try:
-            result = await coro
+            result = await asyncio.wait_for(coro, timeout=_source_budget(sid))
+        except asyncio.TimeoutError:
+            error = (
+                f"TimeoutError: source exceeded its "
+                f"{_source_budget(sid):.0f}s time budget"
+            )
+            continue
         except Exception as exc:  # noqa: BLE001
             error = _fmt_source_error(exc)
             continue

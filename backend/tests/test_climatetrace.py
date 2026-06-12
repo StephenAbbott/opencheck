@@ -726,6 +726,63 @@ def test_stub_bundle_carries_geot_projects(tmp_path, monkeypatch) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Startup cache warm-up
+# ---------------------------------------------------------------------------
+
+
+def test_warm_caches_builds_all_indexes(tmp_path, monkeypatch) -> None:
+    """warm_caches() populates every lazy index in one call and returns
+    stats; with a pre-seeded zip it needs no network."""
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("OPENCHECK_DISABLE_DOTENV", "1")
+    _make_gem_zip(
+        tmp_path,
+        rows=[{
+            "Entity ID": "E1", "Full Name": "A",
+            "Global Legal Entity Identifier Index": "AAAABBBBCCCCDDDDEEEE",
+        }],
+        rel_rows=[], asset_rows=[],
+    )
+    from opencheck.config import get_settings
+    import opencheck.sources.climatetrace as _ct_mod
+
+    get_settings.cache_clear()
+    _reset_indexes()
+    try:
+        stats = _ct_mod.warm_caches()
+        assert stats["entities"] == 1
+        assert stats["lei_mappings"] >= 1
+        assert stats["geot_entities"] > 10_000  # committed artifact
+        # Indexes are now hot — module singletons populated.
+        assert _ct_mod._lei_index is not None
+        assert _ct_mod._rel_children is not None
+    finally:
+        get_settings.cache_clear()
+        _reset_indexes()
+        _ct_mod._geot_data = None
+
+
+def test_lifespan_warmup_is_nonfatal(monkeypatch, tmp_path) -> None:
+    """App startup must survive a warm-up failure (lazy fallback remains)."""
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("OPENCHECK_DISABLE_DOTENV", "1")
+
+    import opencheck.sources.climatetrace as _ct_mod
+
+    def boom() -> dict:
+        raise RuntimeError("warm-up exploded")
+
+    monkeypatch.setattr(_ct_mod, "warm_caches", boom)
+
+    from fastapi.testclient import TestClient
+    from opencheck.app import app
+
+    with TestClient(app) as client:  # context manager runs the lifespan
+        r = client.get("/health")
+        assert r.status_code == 200
+
+
+# ---------------------------------------------------------------------------
 # GCS-first data refresh
 # ---------------------------------------------------------------------------
 

@@ -78,6 +78,7 @@ Climate TRACE API v7 endpoints used
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import gzip
 import io
@@ -413,6 +414,25 @@ def _get_indexes() -> tuple[dict[str, str], dict[str, dict[str, str]]]:
     return _lei_index, _entity_index
 
 
+def warm_caches() -> dict[str, int]:
+    """Build every lazily-loaded GEM index (downloading data if needed).
+
+    Called from the FastAPI lifespan in a background thread so the first
+    user's lookup never pays the multi-MB download + parse cost on the
+    event loop. Synchronous by design — run via ``asyncio.to_thread``.
+    """
+    lei_idx, ent_idx = _get_indexes()
+    rel_children, asset_index = _get_relationship_indexes()
+    geot = _get_geot_data()
+    return {
+        "lei_mappings": len(lei_idx),
+        "entities": len(ent_idx),
+        "owners_with_subsidiaries": len(rel_children),
+        "entities_with_assets": len(asset_index),
+        "geot_entities": len(geot.get("entities") or {}),
+    }
+
+
 def _load_relationship_indexes() -> tuple[
     dict[str, list[dict[str, Any]]], dict[str, list[dict[str, str]]]
 ]:
@@ -695,7 +715,11 @@ class ClimateTRACEAdapter(SourceAdapter):
         Returns ``None`` if the LEI is not present in the GEM ownership index.
         """
         lei_norm = lei.strip().upper()
-        lei_idx, ent_idx = _get_indexes()
+        # The first call may download + parse the GEM CSVs (several MB) —
+        # run off the event loop so a cold start doesn't block other requests.
+        lei_idx, ent_idx = await asyncio.to_thread(_get_indexes)
+        await asyncio.to_thread(_get_relationship_indexes)
+        await asyncio.to_thread(_get_geot_data)
         entity_id = lei_idx.get(lei_norm)
         if not entity_id:
             return None
@@ -716,7 +740,9 @@ class ClimateTRACEAdapter(SourceAdapter):
         self, entity_id: str, cache_key: str
     ) -> dict[str, Any]:
         """Fetch full GEM + Climate TRACE data for a GEM entity ID."""
-        _, ent_idx = _get_indexes()
+        _, ent_idx = await asyncio.to_thread(_get_indexes)
+        await asyncio.to_thread(_get_relationship_indexes)
+        await asyncio.to_thread(_get_geot_data)
         gem_row = ent_idx.get(entity_id) or {}
 
         # Aggregate emissions (2024, CO2e 100-year GWP)

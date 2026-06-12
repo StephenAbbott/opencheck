@@ -348,6 +348,9 @@ class CvrDenmarkAdapter(SourceAdapter):
         LookupDeriver(frozenset({DK_CVR_RA_CODE}), "dk_cvr", normalise_cvr),
     )
     lookup_pass_legal_name = True
+    # Datafordeler is slow by design: one virksomhed lookup + 5 detail
+    # queries, each with an explicit 45 s timeout. Needs a bigger budget.
+    lookup_timeout_s = 90.0
 
 
     @property
