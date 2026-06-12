@@ -82,7 +82,7 @@ import httpx
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
-from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.cvr_denmark import CVRBundle
 
@@ -343,6 +343,12 @@ class CvrDenmarkAdapter(SourceAdapter):
     """Danish CVR adapter using the Datafordeler GraphQL API."""
 
     id = "cvr_denmark"
+
+    lookup_derivers = (
+        LookupDeriver(frozenset({DK_CVR_RA_CODE}), "dk_cvr", normalise_cvr),
+    )
+    lookup_pass_legal_name = True
+
 
     @property
     def info(self) -> SourceInfo:

@@ -28,6 +28,12 @@ from opencheck.sources import REGISTRY
 def _isolated(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
     monkeypatch.delenv("OPENCHECK_ALLOW_LIVE", raising=False)
+    # Pin the climatetrace in-memory indexes to empty so pipeline runs are
+    # deterministic and never download GEM data mid-test.
+    import opencheck.sources.climatetrace as _ct
+
+    monkeypatch.setattr(_ct, "_lei_index", {})
+    monkeypatch.setattr(_ct, "_entity_index", {})
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
@@ -180,8 +186,69 @@ def test_every_ra_derived_key_has_a_dispatch_spec() -> None:
     """An RA-code deriver without a dispatch entry would silently never
     fire — exactly the class of bug the old duplicated blocks produced."""
     dispatchable = {k for spec in _REGISTRY_SOURCES for k in spec.derived_keys}
-    for _codes, key, _norm in _RA_DERIVERS:
-        assert key in dispatchable, f"derived key {key!r} has no dispatch spec"
+    for deriver in _RA_DERIVERS:
+        assert deriver.derived_key in dispatchable, (
+            f"derived key {deriver.derived_key!r} has no dispatch spec"
+        )
+
+
+def test_dispatch_specs_come_from_adapter_declarations() -> None:
+    """The dispatch table is built from the adapters' own lookup specs —
+    one spec per registry adapter that declares lookup keys."""
+    declaring = {
+        sid for sid, a in REGISTRY.items() if a.lookup_keys()
+    }
+    assert {s.source_id for s in _REGISTRY_SOURCES} == declaring
+    for spec in _REGISTRY_SOURCES:
+        adapter = REGISTRY[spec.source_id]
+        assert spec.derived_keys == adapter.lookup_keys()
+        assert spec.pass_legal_name == adapter.lookup_pass_legal_name
+        assert callable(spec.build)
+
+
+def test_missing_hit_builder_fails_fast() -> None:
+    """An adapter declaring lookup keys without a _bh_<id>() builder must
+    blow up at import/collection time, not silently at runtime."""
+    from unittest.mock import patch
+
+    from opencheck.routers import lookup as lookup_mod
+    from opencheck.sources.base import SourceAdapter, SourceInfo
+    from opencheck.sources import SearchKind
+
+    class GhostAdapter(SourceAdapter):
+        id = "ghost_register"
+        lookup_dispatch_keys = ("ghost_id",)
+
+        @property
+        def info(self) -> SourceInfo:  # pragma: no cover - never called
+            raise NotImplementedError
+
+        async def search(self, query: str, kind: SearchKind):  # pragma: no cover
+            return []
+
+        async def fetch(self, hit_id: str):  # pragma: no cover
+            return {}
+
+    fake_registry = dict(REGISTRY)
+    fake_registry["ghost_register"] = GhostAdapter()
+    with patch.object(lookup_mod, "REGISTRY", fake_registry):
+        with pytest.raises(RuntimeError, match="_bh_ghost_register"):
+            lookup_mod._collect_registry_sources()
+
+
+def test_mapper_convention_covers_all_dispatch_sources() -> None:
+    """Every lookup-dispatched adapter has a map_<id>() BODS mapper
+    reachable by the naming convention (no hand-maintained mapper dict)."""
+    from opencheck.routers.lookup import _mapper_for
+
+    for spec in _REGISTRY_SOURCES:
+        assert callable(_mapper_for(spec.source_id)), (
+            f"no map_{spec.source_id}() exported from opencheck.bods"
+        )
+    # And the LEI-keyed specials used by the pipeline.
+    for sid in ("gleif", "wikidata", "opencorporates", "opensanctions",
+                "openaleph", "climatetrace", "sec_edgar"):
+        assert callable(_mapper_for(sid)), sid
 
 
 def test_build_derived_maps_ra_codes() -> None:

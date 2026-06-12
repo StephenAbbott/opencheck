@@ -35,7 +35,7 @@ from urllib.parse import quote
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
-from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _API_BASE = "https://www.zefix.admin.ch/ZefixPublicREST/api/v1"
 _CACHE_NS = "zefix"
@@ -74,6 +74,11 @@ class ZefixAdapter(SourceAdapter):
     """Source adapter for Zefix — Swiss Federal Commercial Registry."""
 
     id = "zefix"
+
+    lookup_derivers = (
+        LookupDeriver(CH_RA_CODES, "che_uid", normalise_uid),
+    )
+
 
     def __init__(self) -> None:
         self._cache = Cache()

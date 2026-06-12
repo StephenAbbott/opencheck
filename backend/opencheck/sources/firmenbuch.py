@@ -74,7 +74,7 @@ logger = logging.getLogger(__name__)
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
-from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.firmenbuch import FBBundle
 
@@ -650,6 +650,12 @@ class FirmenbuchAdapter(SourceAdapter):
     """
 
     id = "firmenbuch"
+
+    lookup_derivers = (
+        LookupDeriver(frozenset({AT_FB_RA_CODE}), "at_fn", normalise_fn),
+    )
+    lookup_pass_legal_name = True
+
 
     def __init__(self) -> None:
         self._cache = Cache()

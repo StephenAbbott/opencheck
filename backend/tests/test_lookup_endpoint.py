@@ -20,6 +20,12 @@ def _isolated(monkeypatch, tmp_path: Path):
     monkeypatch.delenv("OPENCHECK_ALLOW_LIVE", raising=False)
     monkeypatch.delenv("OPENSANCTIONS_API_KEY", raising=False)
     monkeypatch.delenv("COMPANIES_HOUSE_API_KEY", raising=False)
+    # Pin the climatetrace in-memory indexes to empty so the pipeline can't
+    # trigger live GEM downloads / Climate TRACE API calls during a lookup.
+    import opencheck.sources.climatetrace as _ct
+
+    monkeypatch.setattr(_ct, "_lei_index", {})
+    monkeypatch.setattr(_ct, "_entity_index", {})
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()

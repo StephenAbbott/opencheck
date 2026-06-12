@@ -49,7 +49,7 @@ import httpx
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
-from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.ares import AresBundle
 
@@ -197,6 +197,12 @@ class AresAdapter(SourceAdapter):
     """Source adapter for the Czech ARES business register."""
 
     id = "ares"
+
+    lookup_derivers = (
+        LookupDeriver(frozenset({CZ_RA_CODE}), "cz_ico", normalise_ico),
+    )
+    lookup_pass_legal_name = True
+
 
     @property
     def info(self) -> SourceInfo:

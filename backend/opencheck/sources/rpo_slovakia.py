@@ -57,7 +57,7 @@ from urllib.parse import quote
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
-from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _log = logging.getLogger(__name__)
 
@@ -173,6 +173,11 @@ class RpoSlovakiaAdapter(SourceAdapter):
     """Adapter for the Slovak Register of Legal Persons (RPO)."""
 
     id = "rpo_slovakia"
+
+    lookup_derivers = (
+        LookupDeriver(frozenset({SK_RPO_RA_CODE}), "sk_ico", normalise_ico),
+    )
+
 
     def __init__(self) -> None:
         self._cache = Cache()

@@ -41,7 +41,7 @@ from typing import Any
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
-from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _AUTH_URL = "https://registre-national-entreprises.inpi.fr/api/sso/login"
 _API_BASE = "https://registre-national-entreprises.inpi.fr/api"
@@ -63,6 +63,11 @@ class InpiAdapter(SourceAdapter):
     """Source adapter for INPI — French national company register (RNE)."""
 
     id = "inpi"
+
+    lookup_derivers = (
+        LookupDeriver(frozenset({INPI_RA_CODE}), "siren", normalise_siren),
+    )
+
 
     def __init__(self) -> None:
         self._cache = Cache()

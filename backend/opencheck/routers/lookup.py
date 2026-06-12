@@ -13,64 +13,9 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from .. import __version__
-from ..bods import (
-    BODSBundle,
-    map_acra_singapore,
-    map_ares,
-    map_ariregister,
-    map_abr_australia,
-    map_bce_belgium,
-    map_corporations_canada,
-    map_bolagsverket,
-    map_brreg,
-    map_climatetrace,
-    map_companies_house,
-    map_cro,
-    map_cvr_denmark,
-    map_everypolitician,
-    map_gleif,
-    map_inpi,
-    map_openaleph,
-    map_opencorporates,
-    map_opensanctions,
-    map_prh,
-    map_jar_lithuania,
-    map_krs_poland,
-    map_firmenbuch,
-    map_rpo_slovakia,
-    map_rpvs_slovakia,
-    map_sec_edgar,
-    map_sudreg_croatia,
-    map_ur_latvia,
-    map_wikidata,
-    map_kvk,
-    map_zefix,
-    validate_shape,
-)
-from ..sources.abr_australia import (
-    ABR_ASIC_RA_CODE as _ABR_ASIC_RA_CODE,
-    ABR_ABR_RA_CODE as _ABR_ABR_RA_CODE,
-    normalise_acn as _normalise_acn,
-    normalise_abn as _normalise_abn,
-)
-from ..sources.ares import CZ_RA_CODE as _CZ_RA_CODE, normalise_ico as _normalise_ico
-from ..sources.bce_belgium import BCE_RA_CODE as _BCE_RA_CODE, normalise_enterprise_number as _normalise_enterprise_number
-from ..sources.corporations_canada import CA_CORP_RA_CODE as _CA_CORP_RA_CODE, normalise_corp_id as _normalise_corp_id
-from ..sources.krs_poland import PL_KRS_RA_CODE as _PL_KRS_RA_CODE, normalise_krs as _normalise_krs
-from ..sources.firmenbuch import AT_FB_RA_CODE as _AT_FB_RA_CODE, normalise_fn as _normalise_fn
-from ..sources.rpo_slovakia import SK_RPO_RA_CODE as _SK_RPO_RA_CODE, normalise_ico as _normalise_sk_ico
-from ..sources.ariregister import EE_RA_CODE as _EE_RA_CODE
-from ..sources.bolagsverket import BV_RA_CODE as _BV_RA_CODE, normalise_org_number as _normalise_org_number
-from ..sources.brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_orgnr
-from ..sources.cro import IE_RA_CODE as _CRO_RA_CODE, normalise_crn as _normalise_crn
-from ..sources.prh import FI_RA_CODE as _PRH_RA_CODE, normalise_ytunnus as _normalise_ytunnus
-from ..sources.ur_latvia import LV_RA_CODE as _LV_RA_CODE, normalise_regcode as _normalise_lv_regcode
-from ..sources.jar_lithuania import LT_RA_CODE as _LT_RA_CODE, normalise_code as _normalise_lt_code
-from ..sources.inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
-from ..sources.kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
-from ..sources.zefix import CH_RA_CODES as _ZEFIX_RA_CODES, normalise_uid as _zefix_normalise_uid
-from ..sources.cvr_denmark import DK_CVR_RA_CODE as _DK_CVR_RA_CODE, normalise_cvr as _normalise_cvr
-from ..sources.sudreg_croatia import SUDREG_RA_CODE as _SUDREG_RA_CODE, normalise_mbs as _normalise_mbs
+from .. import bods as _bods
+from ..bods import BODSBundle, validate_shape
+from ..sources.base import LookupDeriver
 from .. import bods_data
 from ..cross_check import assess_cross_source_names
 from ..icij_check import assess_icij_names
@@ -89,38 +34,13 @@ def _fmt_source_error(exc: Exception) -> str:
     return f"{type(exc).__name__}: {exc}"
 
 
-_MAPPERS = {
-    "acra_singapore": map_acra_singapore,
-    "ariregister": map_ariregister,
-    "bce_belgium": map_bce_belgium,
-    "bolagsverket": map_bolagsverket,
-    "brreg": map_brreg,
-    "corporations_canada": map_corporations_canada,
-    "climatetrace": map_climatetrace,
-    "companies_house": map_companies_house,
-    "cro": map_cro,
-    "gleif": map_gleif,
-    "inpi": map_inpi,
-    "opencorporates": map_opencorporates,
-    "opensanctions": map_opensanctions,
-    "openaleph": map_openaleph,
-    "sec_edgar": map_sec_edgar,
-    "wikidata": map_wikidata,
-    "everypolitician": map_everypolitician,
-    "kvk": map_kvk,
-    "prh": map_prh,
-    "ares": map_ares,
-    "krs_poland": map_krs_poland,
-    "firmenbuch": map_firmenbuch,
-    "rpo_slovakia": map_rpo_slovakia,
-    "rpvs_slovakia": map_rpvs_slovakia,
-    "jar_lithuania": map_jar_lithuania,
-    "ur_latvia": map_ur_latvia,
-    "zefix": map_zefix,
-    "cvr_denmark": map_cvr_denmark,
-    "sudreg_croatia": map_sudreg_croatia,
-    "abr_australia": map_abr_australia,
-}
+def _mapper_for(source_id: str) -> Any | None:
+    """BODS mapper for a source, by convention: ``opencheck.bods.map_<id>``.
+
+    Adding ``map_<name>()`` to bods/mapper.py (exported via bods/__init__)
+    is all it takes to wire a mapper — there is no hand-maintained dict.
+    """
+    return getattr(_bods, f"map_{source_id}", None)
 
 _NC_LICENSES = {"CC-BY-NC-4.0", "CC-BY-NC-SA-4.0"}
 
@@ -192,7 +112,7 @@ async def deepen(
         bods = override
         issues = validate_shape(bods)
     else:
-        mapper = _MAPPERS.get(source)
+        mapper = _mapper_for(source)
         if mapper and not raw.get("is_stub"):
             bundle: BODSBundle = mapper(raw)
             bods = list(bundle)
@@ -304,9 +224,12 @@ async def _build_report(
 # hand-synchronised copies of each other — forgetting to edit both was a
 # recurring bug (see the Corporations Canada regression fixed in 603c086).
 #
-# Wiring a new national-register adapter now means exactly two entries here:
-# one in ``_RA_DERIVERS`` (RA code → derived identifier) and one in
-# ``_REGISTRY_SOURCES`` (dispatch + hit builder).
+# Adapters are self-describing: each national-register adapter declares its
+# RA-code derivers (``lookup_derivers``), dispatch keys and legal-name flag
+# on its class (see sources/base.py). The deriver table and dispatch specs
+# below are built from the REGISTRY at import time, so wiring a new adapter
+# into the lookup flow means declaring the spec on the adapter class and
+# adding a ``_bh_<id>()`` hit builder here — nothing else.
 
 LookupEvent = tuple[str, Any]
 
@@ -324,41 +247,20 @@ class _LookupCtx:
     qid: str | None = None
 
 
-def _zfill8(value: str) -> str:
-    return value.strip().zfill(8)
-
-
-# RA code(s) on the GLEIF record's ``registeredAt.id`` → (derived-identifier
-# key, normaliser). GB is special-cased on jurisdiction in _build_derived()
-# because UK records reliably carry registeredAs. Normalisers may raise
-# ValueError for malformed local IDs — the source is then skipped.
-_RA_DERIVERS: list[tuple[frozenset[str], str, Any]] = [
-    (frozenset(_ZEFIX_RA_CODES), "che_uid", _zefix_normalise_uid),
-    (frozenset({_KVK_RA_CODE}), "kvk_number", _normalise_kvk),
-    (frozenset({_INPI_RA_CODE}), "siren", _normalise_siren),
-    (frozenset({_BV_RA_CODE}), "se_org_number", _normalise_org_number),
-    (frozenset({_EE_RA_CODE}), "ee_registry_code", _zfill8),
-    (frozenset({_BRREG_RA_CODE}), "no_orgnr", _normalise_orgnr),
-    (frozenset({_CRO_RA_CODE}), "ie_crn", _normalise_crn),
-    (frozenset({_PRH_RA_CODE}), "fi_ytunnus", _normalise_ytunnus),
-    (frozenset({_LV_RA_CODE}), "lv_regcode", _normalise_lv_regcode),
-    (frozenset({_LT_RA_CODE}), "lt_code", _normalise_lt_code),
-    (frozenset({_CZ_RA_CODE}), "cz_ico", _normalise_ico),
-    (frozenset({_PL_KRS_RA_CODE}), "pl_krs", _normalise_krs),
-    (frozenset({_AT_FB_RA_CODE}), "at_fn", _normalise_fn),
-    (frozenset({_SK_RPO_RA_CODE}), "sk_ico", _normalise_sk_ico),
-    (frozenset({_BCE_RA_CODE}), "be_enterprise_number", _normalise_enterprise_number),
-    (frozenset({_CA_CORP_RA_CODE}), "ca_corp_id", _normalise_corp_id),
-    (frozenset({_DK_CVR_RA_CODE}), "dk_cvr", _normalise_cvr),
-    (frozenset({_SUDREG_RA_CODE}), "hr_mbs", _normalise_mbs),
-    (frozenset({_ABR_ASIC_RA_CODE}), "au_acn", _normalise_acn),
-    (frozenset({_ABR_ABR_RA_CODE}), "au_abn", _normalise_abn),
+# RA-code derivers declared by the adapters themselves, collected from the
+# registry. GB is special-cased on jurisdiction in _build_derived() because
+# UK records reliably carry registeredAs. Normalisers may raise ValueError
+# for malformed local IDs — the source is then skipped.
+_RA_DERIVERS: list[LookupDeriver] = [
+    deriver
+    for adapter in REGISTRY.values()
+    for deriver in adapter.lookup_derivers
 ]
 # NOTE: ACRA Singapore (RA000523) adapter is implemented but not wired into
 # lookup dispatch. The data.gov.sg dataset is bulk CSV only (no live API),
 # which doesn't fit the fast-API pattern used by the other national registers.
-# To enable: add an _RA_DERIVERS / _REGISTRY_SOURCES entry and build the DB
-# with scripts/extract_acra.py.
+# To enable: declare lookup_derivers on AcraSingaporeAdapter, add a
+# _bh_acra_singapore() builder, and build the DB with scripts/extract_acra.py.
 
 
 def _build_derived(ctx: _LookupCtx, registered_at_id: str) -> None:
@@ -367,10 +269,12 @@ def _build_derived(ctx: _LookupCtx, registered_at_id: str) -> None:
     if ctx.jurisdiction.upper() == "GB" and ctx.registered_as:
         ctx.derived["gb_coh"] = ctx.registered_as
     if ctx.registered_as and registered_at_id:
-        for codes, key, norm in _RA_DERIVERS:
-            if registered_at_id in codes:
+        for deriver in _RA_DERIVERS:
+            if registered_at_id in deriver.ra_codes:
                 try:
-                    ctx.derived[key] = norm(ctx.registered_as)
+                    ctx.derived[deriver.derived_key] = deriver.normalise(
+                        ctx.registered_as
+                    )
                 except ValueError:
                     pass  # malformed local ID on the LEI record — skip source
                 break
@@ -646,29 +550,32 @@ class _RegistrySource:
     build: Any  # Callable[[dict, str, _LookupCtx], SourceHit]
 
 
-_REGISTRY_SOURCES: list[_RegistrySource] = [
-    _RegistrySource("companies_house", ("gb_coh",), False, _bh_companies_house),
-    _RegistrySource("zefix", ("che_uid",), False, _bh_zefix),
-    _RegistrySource("kvk", ("kvk_number",), True, _bh_kvk),
-    _RegistrySource("inpi", ("siren",), False, _bh_inpi),
-    _RegistrySource("bolagsverket", ("se_org_number",), True, _bh_bolagsverket),
-    _RegistrySource("ariregister", ("ee_registry_code",), True, _bh_ariregister),
-    _RegistrySource("brreg", ("no_orgnr",), True, _bh_brreg),
-    _RegistrySource("cro", ("ie_crn",), True, _bh_cro),
-    _RegistrySource("prh", ("fi_ytunnus",), True, _bh_prh),
-    _RegistrySource("ur_latvia", ("lv_regcode",), True, _bh_ur_latvia),
-    _RegistrySource("jar_lithuania", ("lt_code",), True, _bh_jar_lithuania),
-    _RegistrySource("ares", ("cz_ico",), True, _bh_ares),
-    _RegistrySource("krs_poland", ("pl_krs",), True, _bh_krs_poland),
-    _RegistrySource("firmenbuch", ("at_fn",), True, _bh_firmenbuch),
-    _RegistrySource("rpo_slovakia", ("sk_ico",), False, _bh_rpo_slovakia),
-    _RegistrySource("rpvs_slovakia", ("sk_ico",), False, _bh_rpvs_slovakia),
-    _RegistrySource("bce_belgium", ("be_enterprise_number",), True, _bh_bce_belgium),
-    _RegistrySource("corporations_canada", ("ca_corp_id",), True, _bh_corporations_canada),
-    _RegistrySource("cvr_denmark", ("dk_cvr",), True, _bh_cvr_denmark),
-    _RegistrySource("sudreg_croatia", ("hr_mbs",), True, _bh_sudreg_croatia),
-    _RegistrySource("abr_australia", ("au_acn", "au_abn"), True, _bh_abr_australia),
-]
+def _collect_registry_sources() -> list[_RegistrySource]:
+    """Build dispatch specs from the adapters' own lookup declarations.
+
+    Any adapter that declares lookup keys (via ``lookup_derivers`` or
+    ``lookup_dispatch_keys``) MUST have a matching ``_bh_<id>()`` hit
+    builder in this module — enforced here at import time so a missing
+    builder fails the whole test suite, not one lookup at runtime.
+    """
+    specs: list[_RegistrySource] = []
+    for source_id, adapter in REGISTRY.items():
+        keys = adapter.lookup_keys()
+        if not keys:
+            continue
+        builder = globals().get(f"_bh_{source_id}")
+        if builder is None:
+            raise RuntimeError(
+                f"adapter {source_id!r} declares lookup keys {keys} but "
+                f"routers/lookup.py has no _bh_{source_id}() hit builder"
+            )
+        specs.append(
+            _RegistrySource(source_id, keys, adapter.lookup_pass_legal_name, builder)
+        )
+    return specs
+
+
+_REGISTRY_SOURCES: list[_RegistrySource] = _collect_registry_sources()
 
 _REGISTRY_SOURCE_INDEX: dict[str, _RegistrySource] = {
     s.source_id: s for s in _REGISTRY_SOURCES
@@ -1368,7 +1275,7 @@ async def _safe_deepen(source_id: str, hit_id: str) -> dict[str, Any] | None:
         bods = override
         issues = validate_shape(bods)
     else:
-        mapper = _MAPPERS.get(source_id)
+        mapper = _mapper_for(source_id)
         if mapper and not raw.get("is_stub"):
             bundle: BODSBundle = mapper(raw)
             bods = list(bundle)

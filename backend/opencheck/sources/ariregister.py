@@ -35,7 +35,7 @@ from typing import Any
 
 import httpx
 
-from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 logger = logging.getLogger(__name__)
 
@@ -329,6 +329,11 @@ def _parse_beneficial_owners(html: str) -> list[dict[str, Any]]:
 # Adapter
 # ---------------------------------------------------------------------------
 
+
+def normalise_registry_code(raw: str) -> str:
+    """Estonian registry codes are 8 digits; GLEIF may drop leading zeros."""
+    return raw.strip().zfill(8)
+
 class AriregisterAdapter(SourceAdapter):
     """Source adapter for the Estonian e-Business Register (e-Äriregister).
 
@@ -336,6 +341,12 @@ class AriregisterAdapter(SourceAdapter):
     """
 
     id = "ariregister"
+
+    lookup_derivers = (
+        LookupDeriver(frozenset({EE_RA_CODE}), "ee_registry_code", normalise_registry_code),
+    )
+    lookup_pass_legal_name = True
+
 
     @property
     def info(self) -> SourceInfo:

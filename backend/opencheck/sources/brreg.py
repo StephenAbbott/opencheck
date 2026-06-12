@@ -43,7 +43,7 @@ from urllib.parse import quote
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
-from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.brreg import BrregBundle
 
@@ -82,6 +82,12 @@ class BrregAdapter(SourceAdapter):
     """Source adapter for Brønnøysundregistrene — Norwegian Register Centre."""
 
     id = "brreg"
+
+    lookup_derivers = (
+        LookupDeriver(frozenset({NO_RA_CODE}), "no_orgnr", normalise_orgnr),
+    )
+    lookup_pass_legal_name = True
+
 
     def __init__(self) -> None:
         self._cache = Cache()

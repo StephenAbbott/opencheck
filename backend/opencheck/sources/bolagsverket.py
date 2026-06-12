@@ -58,7 +58,7 @@ from typing import Any
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
-from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.bolagsverket import BVBundle
 
@@ -154,6 +154,12 @@ class BolagsverketAdapter(SourceAdapter):
     """Source adapter for Bolagsverket — Swedish Companies Registration Office."""
 
     id = "bolagsverket"
+
+    lookup_derivers = (
+        LookupDeriver(frozenset({BV_RA_CODE}), "se_org_number", normalise_org_number),
+    )
+    lookup_pass_legal_name = True
+
 
     def __init__(self) -> None:
         self._cache = Cache()

@@ -51,7 +51,7 @@ from urllib.parse import quote
 
 from ..config import get_settings
 from ..http import build_client
-from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.abr_australia import ABRBundle
 
@@ -99,6 +99,13 @@ class AbrAustraliaAdapter(SourceAdapter):
     """Source adapter for the Australian Business Register (ABN Lookup)."""
 
     id = "abr_australia"
+
+    lookup_derivers = (
+        LookupDeriver(frozenset({ABR_ASIC_RA_CODE}), "au_acn", normalise_acn),
+        LookupDeriver(frozenset({ABR_ABR_RA_CODE}), "au_abn", normalise_abn),
+    )
+    lookup_pass_legal_name = True
+
 
     @property
     def info(self) -> SourceInfo:

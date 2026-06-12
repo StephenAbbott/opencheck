@@ -46,7 +46,7 @@ from urllib.parse import quote
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
-from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _API_BASE = "https://avoindata.prh.fi/opendata-ytj-api/v3"
 _CACHE_NS = "prh"
@@ -117,6 +117,12 @@ class PrhAdapter(SourceAdapter):
     """Source adapter for the Finnish Patent and Registration Office (PRH)."""
 
     id = "prh"
+
+    lookup_derivers = (
+        LookupDeriver(frozenset({FI_RA_CODE}), "fi_ytunnus", normalise_ytunnus),
+    )
+    lookup_pass_legal_name = True
+
 
     def __init__(self) -> None:
         self._cache = Cache()

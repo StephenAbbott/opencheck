@@ -147,6 +147,10 @@ class RpvsSlovakiaAdapter(SourceAdapter):
 
     id = "rpvs_slovakia"
 
+    # Dispatches on the sk_ico identifier derived by the RPO adapter.
+    lookup_dispatch_keys = ("sk_ico",)
+
+
     def __init__(self) -> None:
         self._cache = Cache()
 

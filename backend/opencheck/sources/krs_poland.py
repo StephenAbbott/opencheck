@@ -68,7 +68,7 @@ import httpx
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
-from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.krs_poland import KRSBundle
 
@@ -270,6 +270,12 @@ class KrsPolandAdapter(SourceAdapter):
     """Source adapter for the Polish National Court Register (KRS)."""
 
     id = "krs_poland"
+
+    lookup_derivers = (
+        LookupDeriver(frozenset({PL_KRS_RA_CODE}), "pl_krs", normalise_krs),
+    )
+    lookup_pass_legal_name = True
+
 
     def __init__(self) -> None:
         self._cache = Cache()

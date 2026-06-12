@@ -62,6 +62,10 @@ def _looks_like_company_number(value: str) -> bool:
 class CompaniesHouseAdapter(SourceAdapter):
     id = "companies_house"
 
+    # Dispatched via the GB jurisdiction special case in the lookup pipeline.
+    lookup_dispatch_keys = ("gb_coh",)
+
+
     def __init__(self) -> None:
         self._cache = Cache()
 

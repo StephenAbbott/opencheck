@@ -20,10 +20,27 @@ and the mapper is responsible for the translation.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Literal
+from typing import Any, Callable, ClassVar, Literal
 
 from pydantic import BaseModel, Field
+
+
+@dataclass(frozen=True)
+class LookupDeriver:
+    """How to derive a local identifier from the GLEIF LEI anchor record.
+
+    When the anchor record's ``registeredAt.id`` is one of ``ra_codes``,
+    the lookup pipeline stores ``normalise(registeredAs)`` under
+    ``derived_key`` and dispatches the declaring adapter. ``normalise``
+    may raise ValueError for malformed local IDs — the adapter is then
+    skipped for that lookup.
+    """
+
+    ra_codes: frozenset[str]
+    derived_key: str
+    normalise: Callable[[str], str]
 
 
 class SearchKind(str, Enum):
@@ -106,6 +123,32 @@ class SourceAdapter(ABC):
 
     #: Subclasses set this. Must be unique across the registry.
     id: str
+
+    # --- LEI-anchored lookup wiring (self-describing adapters) ------------
+    # National-register adapters declare how the lookup pipeline reaches
+    # them; the pipeline builds its dispatch tables from the registry, so
+    # there is nothing to wire by hand in routers/lookup.py.
+
+    #: RA-code rules that derive this adapter's local identifier from the
+    #: GLEIF anchor record. Empty → not derived from RA codes.
+    lookup_derivers: ClassVar[tuple[LookupDeriver, ...]] = ()
+
+    #: Derived-identifier keys that trigger dispatch of this adapter, in
+    #: priority order (first present key wins). Defaults to the keys of
+    #: ``lookup_derivers``; override when the adapter dispatches on a key
+    #: derived elsewhere (e.g. rpvs_slovakia reuses rpo's ``sk_ico``, and
+    #: companies_house uses the GB jurisdiction special case).
+    lookup_dispatch_keys: ClassVar[tuple[str, ...]] = ()
+
+    #: Whether ``fetch()`` should receive ``legal_name=`` from the anchor.
+    lookup_pass_legal_name: ClassVar[bool] = False
+
+    @classmethod
+    def lookup_keys(cls) -> tuple[str, ...]:
+        """Dispatch keys for the lookup pipeline (explicit or derived)."""
+        return cls.lookup_dispatch_keys or tuple(
+            d.derived_key for d in cls.lookup_derivers
+        )
 
     @property
     @abstractmethod

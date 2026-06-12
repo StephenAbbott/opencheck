@@ -49,7 +49,7 @@ from pathlib import Path
 from typing import Any
 
 from ..config import get_settings
-from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.bce_belgium import BCEBundle
 
@@ -91,6 +91,12 @@ class BceBelgiumAdapter(SourceAdapter):
     """Source adapter for the Belgian Crossroads Bank for Enterprises (BCE/KBO)."""
 
     id = "bce_belgium"
+
+    lookup_derivers = (
+        LookupDeriver(frozenset({BCE_RA_CODE}), "be_enterprise_number", normalise_enterprise_number),
+    )
+    lookup_pass_legal_name = True
+
 
     def __init__(self) -> None:
         self._db: sqlite3.Connection | None = None

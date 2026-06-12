@@ -18,38 +18,72 @@ def _isolated_data_root(monkeypatch, tmp_path):
     get_settings.cache_clear()
 
 
-def test_registry_has_expected_sources() -> None:
-    assert set(REGISTRY.keys()) == {
-        "abr_australia",
-        "ares",
-        "ariregister",
-        "bce_belgium",
-        "bolagsverket",
-        "brreg",
-        "climatetrace",
-        "companies_house",
-        "corporations_canada",
-        "cro",
-        "cvr_denmark",
-        "firmenbuch",
-        "gleif",
-        "inpi",
-        "jar_lithuania",
-        "krs_poland",
-        "openaleph",
-        "opencorporates",
-        "opensanctions",
-        "everypolitician",
-        "sec_edgar",
-        "ur_latvia",
-        "wikidata",
-        "prh",
-        "rpo_slovakia",
-        "rpvs_slovakia",
-        "sudreg_croatia",
-        "zefix",
-        "kvk",
-    }
+# Adapter modules that deliberately do NOT register in REGISTRY: bulk-data,
+# offline, or auxiliary adapters that don't fit the live search/fetch flow.
+# Removing an entry here means the module must be registered (or deleted).
+_DELIBERATELY_UNREGISTERED = {
+    "acra_singapore",   # data.gov.sg bulk CSV — needs scripts/extract_acra.py
+    "bods_gleif",       # Open Ownership bulk BODS — wired via lookup pipeline only
+    "bods_uk_psc",      # Open Ownership bulk BODS (UK PSC)
+    "brightquery",      # paid source, not enabled
+    "cyprus_drcor",     # bulk download only
+    "opentender",       # retired from the registry
+}
+
+
+def test_every_adapter_module_is_registered() -> None:
+    """Discovery replaces the old hand-maintained expected-source list:
+    every module under opencheck/sources/ that defines a concrete
+    SourceAdapter subclass must either be in REGISTRY or be explicitly
+    listed in _DELIBERATELY_UNREGISTERED."""
+    import importlib
+    import inspect
+    import pkgutil
+
+    import opencheck.sources as sources_pkg
+    from opencheck.sources.base import SourceAdapter
+
+    adapter_modules: dict[str, type] = {}
+    for mod_info in pkgutil.iter_modules(sources_pkg.__path__):
+        if mod_info.ispkg or mod_info.name == "base":
+            continue
+        module = importlib.import_module(f"opencheck.sources.{mod_info.name}")
+        for _, obj in inspect.getmembers(module, inspect.isclass):
+            if (
+                issubclass(obj, SourceAdapter)
+                and obj is not SourceAdapter
+                and not inspect.isabstract(obj)
+                and obj.__module__ == module.__name__
+            ):
+                adapter_modules[mod_info.name] = obj
+
+    registered_ids = set(REGISTRY.keys())
+    for mod_name, cls in sorted(adapter_modules.items()):
+        if mod_name in _DELIBERATELY_UNREGISTERED:
+            continue
+        adapter_id = getattr(cls, "id", None)
+        assert adapter_id in registered_ids, (
+            f"sources/{mod_name}.py defines {cls.__name__} (id={adapter_id!r}) "
+            "but it is not in REGISTRY — register it in sources/__init__.py "
+            "or add it to _DELIBERATELY_UNREGISTERED with a reason"
+        )
+
+    # Stale allowlist entries are errors too.
+    for mod_name in _DELIBERATELY_UNREGISTERED:
+        assert mod_name in adapter_modules, (
+            f"_DELIBERATELY_UNREGISTERED lists {mod_name!r} but no such "
+            "adapter module exists"
+        )
+        assert mod_name not in registered_ids, (
+            f"{mod_name!r} is registered AND listed as deliberately "
+            "unregistered — remove it from _DELIBERATELY_UNREGISTERED"
+        )
+
+    # Registry ids follow the module-name convention.
+    module_names = set(adapter_modules)
+    assert registered_ids <= module_names, (
+        f"registry ids without a module: {sorted(registered_ids - module_names)}"
+    )
 
 
 def test_source_info_fields_are_populated() -> None:

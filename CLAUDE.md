@@ -108,30 +108,44 @@ converts results to SourceHits, deepens and assesses risk. It yields
 diverge** — the old hand-synchronised sync/SSE copies (and the
 Corporations Canada regression `603c086` they caused) are gone.
 
-Wiring a new national-register adapter into the lookup flow now means exactly
-two entries in `routers/lookup.py`:
+**Adapters are self-describing.** Each national-register adapter declares its
+lookup wiring on its own class (see `sources/base.py`):
 
-1. **`_RA_DERIVERS`** — `(frozenset({RA code}), "derived_key", normaliser)`.
-2. **`_REGISTRY_SOURCES`** — `_RegistrySource("name", ("derived_key",), pass_legal_name, _bh_<name>)`
-   plus the small `_bh_<name>()` hit-builder function.
+```python
+class BrregAdapter(SourceAdapter):
+    id = "brreg"
+    lookup_derivers = (
+        LookupDeriver(frozenset({NO_RA_CODE}), "no_orgnr", normalise_orgnr),
+    )
+    lookup_pass_legal_name = True
+```
 
-`tests/test_lookup_pipeline.py` enforces the wiring (every deriver key must
-have a dispatch spec; every spec must exist in REGISTRY) and pins sync/stream
-parity. LEI-keyed sources (opensanctions, openaleph, climatetrace,
-bods_gleif) and SEC EDGAR are handled inside `_dispatch()` /
-`_lookup_pipeline()` directly.
+`routers/lookup.py` builds `_RA_DERIVERS` and `_REGISTRY_SOURCES` from the
+REGISTRY at import time; an adapter that declares lookup keys without a
+matching `_bh_<name>()` hit builder raises at import. Special cases:
+`lookup_dispatch_keys` overrides the dispatch key when it is derived
+elsewhere (rpvs_slovakia reuses rpo's `sk_ico`; companies_house uses the GB
+jurisdiction special case). BODS mappers are found by convention —
+`opencheck.bods.map_<source_id>` — there is no `_MAPPERS` dict.
+
+`tests/test_lookup_pipeline.py` enforces all of this (deriver keys must have
+dispatch specs, specs must match adapter declarations, mappers must exist,
+missing builders fail fast) and pins sync/stream parity.
+`tests/test_sources.py` discovers adapter modules from the filesystem — no
+hand-maintained expected-source lists anywhere. Deliberately unregistered
+bulk/offline adapters are allowlisted in `_DELIBERATELY_UNREGISTERED`.
+LEI-keyed sources (opensanctions, openaleph, climatetrace, bods_gleif) and
+SEC EDGAR are handled inside `_dispatch()` / `_lookup_pipeline()` directly.
 
 ### Checklist for a new adapter
 
-- [ ] `sources/<name>.py` — adapter class
+- [ ] `sources/<name>.py` — adapter class with `lookup_derivers` /
+      `lookup_pass_legal_name` declared on the class
 - [ ] `sources/schemas/<name>.py` — Pydantic bundle schema
 - [ ] `sources/__init__.py` — import + REGISTRY entry
-- [ ] `bods/mapper.py` — `map_<name>()` function
-- [ ] `bods/__init__.py` — import + `__all__` entry
-- [ ] `routers/lookup.py` — `_MAPPERS` entry, `_RA_DERIVERS` entry, `_REGISTRY_SOURCES` entry + `_bh_<name>()` builder
+- [ ] `bods/mapper.py` — `map_<name>()` function (+ `bods/__init__.py` export)
+- [ ] `routers/lookup.py` — `_bh_<name>()` hit builder (only this)
 - [ ] `tests/test_<name>.py` — adapter + mapper tests
-- [ ] `tests/test_sources.py` — add to expected registry set
-- [ ] `tests/test_app.py` — add to expected sources endpoint set
 - [ ] `.env` — API key if required (never committed)
 - [ ] `README.md` + `ATTRIBUTIONS.md` — document the source
 

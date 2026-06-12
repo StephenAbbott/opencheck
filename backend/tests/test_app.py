@@ -36,40 +36,16 @@ def test_health_endpoint(client: TestClient) -> None:
 
 
 def test_sources_endpoint_lists_all_adapters(client: TestClient) -> None:
+    """The endpoint must mirror the registry exactly. Registration
+    completeness itself is enforced by the module-discovery test in
+    test_sources.py, so there is no hand-maintained list here."""
+    from opencheck.sources import REGISTRY
+
     r = client.get("/sources")
     assert r.status_code == 200
     ids = {s["id"] for s in r.json()["sources"]}
-    assert ids == {
-        "abr_australia",
-        "ares",
-        "ariregister",
-        "bce_belgium",
-        "bolagsverket",
-        "brreg",
-        "climatetrace",
-        "companies_house",
-        "corporations_canada",
-        "cro",
-        "cvr_denmark",
-        "firmenbuch",
-        "gleif",
-        "inpi",
-        "jar_lithuania",
-        "krs_poland",
-        "openaleph",
-        "opencorporates",
-        "opensanctions",
-        "everypolitician",
-        "sec_edgar",
-        "ur_latvia",
-        "wikidata",
-        "prh",
-        "rpo_slovakia",
-        "rpvs_slovakia",
-        "sudreg_croatia",
-        "zefix",
-        "kvk",
-    }
+    assert ids == set(REGISTRY.keys())
+    assert len(ids) >= 29  # sanity floor: the registry never silently shrinks
 
 
 def test_search_entity_fans_out_to_entity_adapters(client: TestClient) -> None:

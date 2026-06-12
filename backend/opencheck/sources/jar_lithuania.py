@@ -54,7 +54,7 @@ from urllib.parse import quote
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
-from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _log = logging.getLogger(__name__)
 
@@ -206,6 +206,12 @@ class JarLithuaniaAdapter(SourceAdapter):
     """Source adapter for the Lithuanian Register of Legal Entities (JAR)."""
 
     id = "jar_lithuania"
+
+    lookup_derivers = (
+        LookupDeriver(frozenset({LT_RA_CODE}), "lt_code", normalise_code),
+    )
+    lookup_pass_legal_name = True
+
 
     def __init__(self) -> None:
         self._cache = Cache()
