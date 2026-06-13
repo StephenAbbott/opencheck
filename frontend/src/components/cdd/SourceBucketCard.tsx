@@ -1,8 +1,12 @@
-import { useState } from "react";
-import BODSGraph from "../BODSGraph";
+import { lazy, Suspense, useState } from "react";
 import { deepen } from "../../lib/api";
 import type { DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
+
+// BODSGraph pulls in Cytoscape + cytoscape-dagre (~the bulk of the bundle)
+// but only renders when a user clicks "Visualise". Code-split it so the
+// initial page load never ships the graph engine.
+const BODSGraph = lazy(() => import("../BODSGraph"));
 
 export interface SourceBucket {
   sourceId: string;
@@ -473,7 +477,18 @@ export function DeepenBlock({
               {detail.bods_issues.length} validation issue{detail.bods_issues.length === 1 ? "" : "s"}
             </p>
           )}
-          <BODSGraph statements={detail.bods} signals={detail.risk_signals} entityName={entityName} />
+          <Suspense
+            fallback={
+              <div
+                className="h-48 rounded-oo border border-oo-rule bg-oo-paper/40 animate-pulse flex items-center justify-center text-[12px] text-oo-muted"
+                role="status"
+              >
+                Loading graph…
+              </div>
+            }
+          >
+            <BODSGraph statements={detail.bods} signals={detail.risk_signals} entityName={entityName} />
+          </Suspense>
         </section>
       )}
 

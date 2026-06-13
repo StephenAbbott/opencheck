@@ -17,8 +17,7 @@
     "cytoscape": "^3.33.4",
     "cytoscape-dagre": "^3.0.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "zustand": "^5.0.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
