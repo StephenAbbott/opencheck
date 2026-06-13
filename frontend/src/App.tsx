@@ -727,10 +727,10 @@ export default function App() {
               aria-controls="panel-name"
               id="tab-name"
               onClick={() => setSearchMode("name")}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors bg-white ${
                 searchMode === "name"
-                  ? "text-oo-ink border-b-2 border-oo-blue bg-white"
-                  : "text-oo-muted bg-oo-bg hover:text-oo-ink"
+                  ? "text-oo-ink border-b-2 border-oo-blue"
+                  : "text-oo-muted hover:text-oo-ink"
               }`}
             >
               <GleifIcon aria-hidden style={{ height: "1.1em", width: "auto", flexShrink: 0 }} />
@@ -743,10 +743,10 @@ export default function App() {
               aria-controls="panel-national-id"
               id="tab-national-id"
               onClick={() => setSearchMode("nationalId")}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors border-l border-oo-rule ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors border-l border-oo-rule bg-white ${
                 searchMode === "nationalId"
-                  ? "text-oo-ink border-b-2 border-oo-blue bg-white"
-                  : "text-oo-muted bg-oo-bg hover:text-oo-ink"
+                  ? "text-oo-ink border-b-2 border-oo-blue"
+                  : "text-oo-muted hover:text-oo-ink"
               }`}
             >
               <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16M4 12h8m-8 5h16"/></svg>
@@ -759,10 +759,10 @@ export default function App() {
               aria-controls="panel-lei"
               id="tab-lei"
               onClick={() => setSearchMode("lei")}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors border-l border-oo-rule ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors border-l border-oo-rule bg-white ${
                 searchMode === "lei"
-                  ? "text-oo-ink border-b-2 border-oo-blue bg-white"
-                  : "text-oo-muted bg-oo-bg hover:text-oo-ink"
+                  ? "text-oo-ink border-b-2 border-oo-blue"
+                  : "text-oo-muted hover:text-oo-ink"
               }`}
             >
               <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M8 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-2"/><path d="M12 12h4m-4 4h4m-8-4h.01M8 16h.01"/></svg>
@@ -1037,7 +1037,7 @@ export default function App() {
                   aria-label="Legal Entity Identifier (20 characters)"
                   pattern="[A-Za-z0-9]{20}"
                   inputMode="text"
-                  className="flex-1 border border-oo-rule rounded px-3 py-2.5 font-mono uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
+                  className="flex-1 border border-oo-rule rounded px-3 py-2.5 font-mono uppercase tracking-wide placeholder:normal-case placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
                   maxLength={20}
                 />
                 <button
