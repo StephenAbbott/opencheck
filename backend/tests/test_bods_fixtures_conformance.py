@@ -16,7 +16,15 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from bods_fixtures import load
+
+# The bods-fixtures pack + its pytest plugin (pytest-bods-v04-fixtures) are
+# dev/test-only dependencies. Skip the whole module cleanly when absent
+# rather than aborting collection with a hard ModuleNotFoundError.
+bods_fixtures = pytest.importorskip(
+    "bods_fixtures",
+    reason="pytest-bods-v04-fixtures not installed — run `uv sync` / install the test extra",
+)
+load = bods_fixtures.load
 
 from opencheck.bods.validator import validate_shape
 

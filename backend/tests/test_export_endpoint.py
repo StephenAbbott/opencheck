@@ -34,6 +34,14 @@ def _isolated(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
     monkeypatch.delenv("OPENSANCTIONS_API_KEY", raising=False)
     monkeypatch.delenv("COMPANIES_HOUSE_API_KEY", raising=False)
+    # Pin the climatetrace in-memory indexes to empty so a full-synthesis
+    # export never tries to download the GEM CSVs (GCS bucket listing +
+    # GitHub zip) — those requests are unrelated to the BODS bundle under
+    # test and otherwise trip pytest_httpx's unexpected-request assertion.
+    import opencheck.sources.climatetrace as _ct
+
+    monkeypatch.setattr(_ct, "_lei_index", {})
+    monkeypatch.setattr(_ct, "_entity_index", {})
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()

@@ -25,6 +25,14 @@ from typing import Any
 
 import pytest
 
+# lib-cove-bods is a dev/test-only dependency (declared in pyproject's test
+# extra). Skip the whole module cleanly when it isn't installed, rather than
+# aborting collection with a hard ModuleNotFoundError.
+pytest.importorskip(
+    "libcovebods",
+    reason="lib-cove-bods not installed — run `uv sync` / install the test extra",
+)
+
 from libcovebods.config import LibCoveBODSConfig
 from libcovebods.data_reader import DataReader
 from libcovebods.jsonschemavalidate import JSONSchemaValidator
