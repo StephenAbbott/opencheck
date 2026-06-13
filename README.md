@@ -16,11 +16,17 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 50** — National ID search: look up any company by local registration number
+**Latest: Phase 51** — Backend & frontend hardening (architecture review)
 
-The search panel gains a third tab — **National ID** — alongside the existing company-name and LEI tabs. Users enter a local registration number (Companies House number, KvK, orgnr, CVR, SIREN, etc.) and select a country; OpenCheck queries GLEIF's three registration-ID filter fields in parallel (`registeredAs`, `validatedAs`, `otherValidationAuthorities.validatedAs`), scoped to the registration authority RA code to prevent false matches, then auto-navigates to the full lookup on a single hit or shows a picker on multiple. Covers all 17 countries with active adapters: Austria, Belgium, Canada, Croatia, Denmark, Estonia, France, Ireland, Latvia, Lithuania, Netherlands, Norway, Poland, Singapore, Slovakia, Sweden, and United Kingdom. Per-country format validation (advisory, non-blocking) fires after the field is blurred: amber border + inline hint when the format looks wrong, but submission is never prevented since GLEIF may store IDs in a normalised form. Pure frontend change — two new lib files (`raCodes.ts`, `gleifNationalId.ts`), no backend routes added or modified.
+Five improvements identified by a [Claude Fable 5](https://www.anthropic.com/news/claude-fable-5-mythos-5) review of the codebase, which to this point had been built with Sonnet and Opus:
 
-*Previous: [Phase 49 — Graph-native demo](docs/status.md)*
+1. **One lookup pipeline.** `/lookup` and `/lookup-stream` were two hand-synchronised copies (~600–700 duplicated lines, the cause of a past regression). A single async generator now drives both — the stream serialises its events, the sync endpoint collects them (2,403 → 1,159 lines), which also fixed three latent duplication bugs.
+2. **Self-describing adapters.** Each register adapter declares its lookup wiring on its own class; the router builds its dispatch tables from the registry at import, and the hand-maintained expected-source test lists are replaced by filesystem discovery. Adding an adapter no longer means editing six parallel places.
+3. **Shareable & survivable lookups.** A short-lived replay cache makes refreshes and shared `?lei=` URLs near-instant; a dropped stream now keeps partial results behind a "Resume lookup" banner; and individual failed sources get a "Retry source" button (`GET /lookup-source`).
+4. **Cold-start & tail-latency.** The FastAPI lifespan warms the GEM/GLEIF/GEOT indexes in a background thread so the first user never pays the download cost, and every source has a wall-clock budget so one hung adapter can't stall a lookup.
+5. **Code-split bundle.** Cytoscape is lazy-loaded (it only renders on "Visualise"), cutting the main bundle 777 kB → 271 kB (~67% smaller first paint).
+
+*Previous: [Phase 50 — National ID search](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
