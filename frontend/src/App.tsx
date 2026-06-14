@@ -714,8 +714,8 @@ export default function App() {
         {view === "main" && (
         <>
         {/* ── Search panel — two-tab design ── */}
-        <p className="text-[13px] text-oo-muted leading-snug mb-3">
-          Open source risk checks driven by the Legal Entity Identifier, open data and the Beneficial Ownership Data Standard.
+        <p className="text-[13px] sm:text-sm text-oo-muted leading-snug mb-3">
+          Customer due diligence checks powered by the Legal Entity Identifier, open data and open standards including the Beneficial Ownership Data Standard.
         </p>
         <div className="mb-4 bg-white border border-oo-rule rounded-oo overflow-hidden">
           {/* Tab bar */}
