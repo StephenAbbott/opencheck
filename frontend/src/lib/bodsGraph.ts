@@ -427,3 +427,90 @@ export function autoCollapse(model: GraphModel, opts: AutoCollapseOptions = {}):
   }
   return collapsed;
 }
+
+// ---------------------------------------------------------------------------
+// Tree view — accessible tabular tree mirroring the graph
+// ---------------------------------------------------------------------------
+
+export interface TreeRow {
+  /** Node id (matches the graph node id). */
+  id: string;
+  /** Unique per *occurrence* — a shared subsidiary appears under each parent. */
+  rowKey: string;
+  /** Nesting depth (0 = root); drives indentation and aria-level. */
+  depth: number;
+  label: string;
+  recordType: string;
+  flagUrl?: string;
+  identifiers: string[];
+  /** Interest label on the edge from this row's parent (undefined for roots). */
+  interestLabel?: string;
+  interestCategory?: EdgeCategory;
+  /** Has downstream children in the full graph (so it can expand/collapse). */
+  hasChildren: boolean;
+  /** Number of direct children. */
+  childCount: number;
+  collapsed: boolean;
+  /** Already shown in full above (DAG duplicate) — not expanded again here. */
+  isRepeat: boolean;
+}
+
+/**
+ * Flatten the DAG into an ordered list of tree rows for the accessible tree
+ * pane. A node with multiple parents is shown in full under its first parent
+ * and as a non-expandable "repeat" under the others (keeps the tree finite and
+ * cycle-safe). Collapsed nodes are listed but their children are not.
+ */
+export function buildTree(model: GraphModel, collapsed: Set<string>): TreeRow[] {
+  const byId = new Map(model.nodes.map((n) => [n.id, n] as const));
+  const outEdges = new Map<string, { target: string; label: string; category: EdgeCategory }[]>();
+  for (const e of model.edges) {
+    const arr = outEdges.get(e.source) ?? [];
+    arr.push({ target: e.target, label: e.label, category: e.category });
+    outEdges.set(e.source, arr);
+  }
+
+  const indeg = new Map<string, number>();
+  for (const n of model.nodes) indeg.set(n.id, 0);
+  for (const e of model.edges) indeg.set(e.target, (indeg.get(e.target) ?? 0) + 1);
+  let roots = model.nodes.filter((n) => (indeg.get(n.id) ?? 0) === 0).map((n) => n.id);
+  if (roots.length === 0) roots = model.nodes.map((n) => n.id);
+
+  const rows: TreeRow[] = [];
+  const seen = new Set<string>();
+
+  const visit = (
+    id: string,
+    depth: number,
+    parentEdge?: { label: string; category: EdgeCategory }
+  ) => {
+    const node = byId.get(id);
+    if (!node) return;
+    const children = outEdges.get(id) ?? [];
+    const isRepeat = seen.has(id);
+    const isCollapsed = collapsed.has(id);
+
+    rows.push({
+      id,
+      rowKey: `${rows.length}:${id}`,
+      depth,
+      label: node.label,
+      recordType: node.recordType,
+      flagUrl: node.flagUrl,
+      identifiers: node.identifiers,
+      interestLabel: parentEdge?.label || undefined,
+      interestCategory: parentEdge?.category,
+      hasChildren: children.length > 0,
+      childCount: children.length,
+      collapsed: isCollapsed,
+      isRepeat,
+    });
+
+    seen.add(id);
+    if (isRepeat || isCollapsed) return; // shown in full elsewhere, or collapsed
+    for (const c of children) visit(c.target, depth + 1, { label: c.label, category: c.category });
+  };
+
+  for (const r of roots) visit(r, 0);
+  return rows;
+}

@@ -3,10 +3,10 @@ import { deepen } from "../../lib/api";
 import type { DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
 
-// BODSGraph pulls in Cytoscape + cytoscape-dagre (~the bulk of the bundle)
-// but only renders when a user clicks "Visualise". Code-split it so the
-// initial page load never ships the graph engine.
-const BODSGraph = lazy(() => import("../BODSGraph"));
+// BodsGraphExplorer pulls in Cytoscape + cytoscape-dagre (~the bulk of the
+// bundle) but only renders when a user clicks "Visualise". Code-split it so
+// the initial page load never ships the graph engine.
+const BodsGraphExplorer = lazy(() => import("../BodsGraphExplorer"));
 
 export interface SourceBucket {
   sourceId: string;
@@ -487,7 +487,7 @@ export function DeepenBlock({
               </div>
             }
           >
-            <BODSGraph statements={detail.bods} signals={detail.risk_signals} entityName={entityName} />
+            <BodsGraphExplorer statements={detail.bods} signals={detail.risk_signals} entityName={entityName} />
           </Suspense>
         </section>
       )}

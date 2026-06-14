@@ -18,14 +18,12 @@
  * point; risk badge at 315° (NW); collapse toggle at due-south (270°).
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import cytoscape, { type Core, type ElementDefinition, type StylesheetStyle } from "cytoscape";
 import dagre from "cytoscape-dagre";
 import {
-  bodsToGraph,
   searchNodes,
   computeVisibility,
-  autoCollapse,
   nodesWithChildren,
   type GraphModel,
   type Visibility,
@@ -215,28 +213,28 @@ const ICON_FRACTION = 0.6;           // BOVS icon = 60% of node diameter
 // ---------------------------------------------------------------------------
 
 export default function BODSGraph({
-  statements,
+  model,
   signals = [],
   entityName,
+  collapsed,
+  onCollapsedChange,
+  selectedId = null,
+  onSelect,
 }: {
-  statements: unknown[];
+  model: GraphModel;
   signals?: RiskSignal[];
   entityName?: string;
+  /** Collapsed node ids (controlled — shared with the tree pane). */
+  collapsed: Set<string>;
+  onCollapsedChange: (next: Set<string>) => void;
+  /** Selected node id (controlled — shared with the tree pane). */
+  selectedId?: string | null;
+  onSelect?: (id: string | null) => void;
 }) {
   const containerRef  = useRef<HTMLDivElement | null>(null);
   const cyRef         = useRef<Core | null>(null);
   const [overlays, setOverlays] = useState<NodeOverlay[]>([]);
   const [edgeTooltip, setEdgeTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
-
-  // Pure graph model — derived once per statement bundle, shared by the
-  // Cytoscape build, search, collapse, and (later) the tree pane.
-  const model: GraphModel = useMemo(
-    () => bodsToGraph(statements as Record<string, unknown>[]),
-    [statements]
-  );
-
-  // ── Collapse state — deep graphs start partly collapsed for readability ────
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => autoCollapse(model));
 
   // ── Search state ───────────────────────────────────────────────────────────
   const [query, setQuery] = useState("");
@@ -250,25 +248,15 @@ export default function BODSGraph({
   const visRef = useRef<Visibility | null>(null);
   const childrenRef = useRef<Set<string>>(new Set());
   const updateOverlaysRef = useRef<(() => void) | null>(null);
-  const prevModelRef = useRef<GraphModel | null>(null);
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
 
   function toggleCollapse(id: string) {
-    setCollapsed(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    const next = new Set(collapsed);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onCollapsedChange(next);
   }
-
-  // Reset collapse to the auto default when the statement bundle changes
-  // (but not on the first mount, where useState already seeded it).
-  useEffect(() => {
-    if (prevModelRef.current && prevModelRef.current !== model) {
-      setCollapsed(autoCollapse(model));
-    }
-    prevModelRef.current = model;
-  }, [model]);
 
   // ── Build the Cytoscape instance (rebuilds only when data changes) ─────────
   useEffect(() => {
@@ -350,7 +338,10 @@ export default function BODSGraph({
       const rp = evt.renderedPosition;
       setEdgeTooltip(prev => prev?.text === details ? null : { x: rp.x, y: rp.y, text: details });
     });
-    cy.on("tap", (evt) => { if (evt.target === cy) setEdgeTooltip(null); });
+    cy.on("tap", "node", (evt) => { onSelectRef.current?.(evt.target.id()); });
+    cy.on("tap", (evt) => {
+      if (evt.target === cy) { setEdgeTooltip(null); onSelectRef.current?.(null); }
+    });
     cy.on("viewport", () => setEdgeTooltip(null));
 
     return () => { cy.destroy(); cyRef.current = null; };
@@ -417,6 +408,22 @@ export default function BODSGraph({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, model, collapsed]);
 
+  // ── Reflect the shared selection into the graph (highlight + centre) ───────
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.nodes(":selected").unselect();
+    if (selectedId) {
+      const node = cy.getElementById(selectedId);
+      const visible = visRef.current?.visible.has(selectedId) ?? true;
+      if (node.nonempty() && visible) {
+        node.select();
+        cy.animate({ center: { eles: node } }, { duration: 250 });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, model]);
+
   function focusMatch(idx: number) {
     const cy = cyRef.current;
     if (!cy || matchIds.length === 0) return;
@@ -434,7 +441,7 @@ export default function BODSGraph({
     : `${matchIdx + 1} of ${matchIds.length}`;
   const collapsedCount = collapsed.size;
 
-  if (statements.length === 0) {
+  if (model.nodes.length === 0) {
     return <p className="text-xs text-oo-muted italic">No BODS statements to visualise.</p>;
   }
 
@@ -459,7 +466,7 @@ export default function BODSGraph({
           </button>
           {collapsedCount > 0 && (
             <button type="button" className="hover:text-oo-blue px-2" title="Expand all collapsed nodes"
-              onClick={() => setCollapsed(new Set())}>
+              onClick={() => onCollapsedChange(new Set())}>
               Expand all
             </button>
           )}

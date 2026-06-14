@@ -5,6 +5,7 @@ import {
   computeLevels,
   computeVisibility,
   autoCollapse,
+  buildTree,
   type GraphModel,
 } from "./bodsGraph";
 
@@ -97,7 +98,7 @@ function diamondModel(): GraphModel {
   return {
     nodes: ids.map((id) => ({ id, label: id, recordType: "entity", icon: "", identifiers: [] })),
     edges: ([["R", "A"], ["R", "B"], ["A", "C"], ["B", "C"], ["C", "D"]] as const).map(
-      ([source, target], i) => ({ id: `e${i}`, source, target, label: "", category: "ownership" as const })
+      ([source, target], i) => ({ id: `e${i}`, source, target, label: `owns ${target}`, category: "ownership" as const })
     ),
   };
 }
@@ -145,5 +146,26 @@ describe("autoCollapse", () => {
       edges: [{ id: "e", source: "X", target: "Y", label: "", category: "ownership" }],
     };
     expect([...autoCollapse(shallow)]).toEqual([]);
+  });
+});
+
+describe("buildTree", () => {
+  it("flattens the DAG; a shared node is full once then a repeat", () => {
+    const rows = buildTree(diamondModel(), new Set());
+    expect(rows.map((r) => r.id)).toEqual(["R", "A", "C", "D", "B", "C"]);
+    expect(rows.map((r) => r.depth)).toEqual([0, 1, 2, 3, 1, 2]);
+    expect(rows.filter((r) => r.id === "C").map((r) => r.isRepeat)).toEqual([false, true]);
+  });
+
+  it("carries the parent interest label onto the row", () => {
+    const rows = buildTree(diamondModel(), new Set());
+    expect(rows.find((r) => r.id === "A")!.interestLabel).toBe("owns A");
+    expect(rows.find((r) => r.id === "R")!.interestLabel).toBeUndefined();
+  });
+
+  it("omits children of a collapsed node", () => {
+    const rows = buildTree(diamondModel(), new Set(["C"]));
+    expect(rows.map((r) => r.id)).toEqual(["R", "A", "C", "B", "C"]);
+    expect(rows.find((r) => r.id === "C" && !r.isRepeat)!.collapsed).toBe(true);
   });
 });
