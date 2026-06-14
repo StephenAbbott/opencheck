@@ -55,6 +55,12 @@ def _ocid_to_path(ocid: str) -> str:
 class OpenCorporatesAdapter(SourceAdapter):
     id = "opencorporates"
 
+    # OpenCorporates' terms permit OpenCheck to use the data and publish derived
+    # (BODS) output, but not to redistribute the raw source records in bulk. The
+    # raw payload is therefore redacted from all API responses and exports; the
+    # mapped BODS statements remain available.
+    republish_raw = False
+
     def __init__(self) -> None:
         self._cache = Cache()
 

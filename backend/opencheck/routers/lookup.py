@@ -16,7 +16,7 @@ from sse_starlette.sse import EventSourceResponse
 from .. import __version__
 from .. import bods as _bods
 from ..bods import BODSBundle, validate_shape
-from ..sources.base import LookupDeriver
+from ..sources.base import LookupDeriver, raw_redaction_notice
 from .. import bods_data
 from ..cross_check import assess_cross_source_names
 from ..icij_check import assess_icij_names
@@ -123,10 +123,14 @@ async def deepen(
     license_notice = _license_notice_for(info, raw)
     signals = [s.to_dict() for s in assess_bundle(source, raw, bods, hit_id=hit_id)]
 
+    # Sources whose licence forbids raw re-publication (OpenCorporates) return a
+    # redaction notice in place of the raw bundle; the BODS output is unaffected.
+    response_raw = raw if adapter.republish_raw else raw_redaction_notice(source)
+
     return DeepenResponse(
         source_id=source,
         hit_id=hit_id,
-        raw=raw,
+        raw=response_raw,
         bods=bods,
         bods_issues=issues,
         license=info.license,

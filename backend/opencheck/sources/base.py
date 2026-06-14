@@ -24,7 +24,25 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, ClassVar, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
+
+# Source ids whose **raw** source payload must not be redistributed via
+# OpenCheck (licence terms permit derived/BODS output but not bulk re-publication
+# of the raw records). Populated from the registry at import time (see
+# sources/__init__.py) so the SourceHit serializer below can redact them.
+RAW_SUPPRESSED_SOURCE_IDS: frozenset[str] = frozenset()
+
+
+def raw_redaction_notice(source_id: str) -> dict[str, str]:
+    """Placeholder returned in place of a suppressed source's raw payload."""
+    return {
+        "_redacted": (
+            "Raw source data is not redistributed via OpenCheck for licensing "
+            "reasons. The mapped BODS statements are still provided; obtain the "
+            "raw record from the original source."
+        ),
+        "source_id": source_id,
+    }
 
 
 @dataclass(frozen=True)
@@ -117,12 +135,29 @@ class SourceHit(BaseModel):
         description="True when this hit was produced by the Phase 0 stub path.",
     )
 
+    @field_serializer("raw")
+    def _redact_raw(self, raw: dict[str, Any], _info: Any) -> dict[str, Any]:
+        """Redact the raw payload on serialization for sources whose licence
+        does not permit raw re-publication (e.g. OpenCorporates). The derived
+        BODS output is unaffected — only the verbatim source record is withheld.
+        This runs for every ``model_dump`` / ``model_dump_json``, so it covers
+        search, lookup, lookup-source, the export manifest and SSE alike."""
+        if self.source_id in RAW_SUPPRESSED_SOURCE_IDS:
+            return raw_redaction_notice(self.source_id)
+        return raw
+
 
 class SourceAdapter(ABC):
     """Abstract base class for all source adapters."""
 
     #: Subclasses set this. Must be unique across the registry.
     id: str
+
+    #: Whether this source's **raw** payload may be redistributed via OpenCheck.
+    #: When False, the raw record is redacted from all API responses and exports
+    #: (the derived BODS output is still served). Used where a licence permits
+    #: derived works but not bulk re-publication of the raw data (OpenCorporates).
+    republish_raw: ClassVar[bool] = True
 
     # --- LEI-anchored lookup wiring (self-describing adapters) ------------
     # National-register adapters declare how the lookup pipeline reaches

@@ -70,6 +70,14 @@ REGISTRY: dict[str, SourceAdapter] = {
     "zefix": ZefixAdapter(),
 }
 
+# Tell the SourceHit serializer which sources must not have their raw payload
+# redistributed (licence permits derived/BODS output, not bulk raw re-publication).
+from . import base as _base  # noqa: E402
+
+_base.RAW_SUPPRESSED_SOURCE_IDS = frozenset(
+    sid for sid, adapter in REGISTRY.items() if not adapter.republish_raw
+)
+
 __all__ = [
     "REGISTRY",
     "SearchKind",
