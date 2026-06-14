@@ -1,9 +1,11 @@
-name: Vendored enum drift
+name: Drift checks
 
-# Fails the build if the vendored Companies House enumerations have drifted from
-# upstream (companieshouse/api-enumerations). Runs on every push/PR, and weekly
-# so upstream changes are caught even when nobody has pushed. To fix a failure,
-# run the named script locally (without --check) and commit the regenerated file.
+# Fails the build when generated/vendored artefacts drift from their source:
+#  - the vendored Companies House enumerations vs upstream api-enumerations, and
+#  - the OKF knowledge bundle's generated concepts vs the live source registry.
+# Runs on every push/PR, and weekly so upstream enum changes are caught even when
+# nobody has pushed. To fix a failure, run the named script locally (without
+# --check) and commit the regenerated files.
 on:
   push:
   pull_request:
@@ -14,7 +16,7 @@ permissions:
   contents: read
 
 jobs:
-  check:
+  enums:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,3 +27,16 @@ jobs:
         run: python backend/scripts/revendor_psc_enums.py --check
       - name: CH constants (constants.yml) up to date
         run: python backend/scripts/revendor_ch_constants.py --check
+
+  okf:
+    # The OKF check imports the source registry, so it needs the backend deps.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install backend
+        run: uv sync --no-dev
+        working-directory: backend
+      - name: OKF bundle conformant + in sync with the registry
+        run: uv run --no-dev python scripts/generate_okf.py --check
+        working-directory: backend

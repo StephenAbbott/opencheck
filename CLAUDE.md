@@ -9,6 +9,45 @@
 
 ---
 
+## Open Knowledge Format (OKF) bundle — `okf/`
+
+OpenCheck ships an **[OKF v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
+knowledge bundle** at `okf/` — a directory of markdown files with YAML
+frontmatter that lets humans and AI agents understand the project, its data
+sources, the BODS/LEI standards, and the API. OKF is "metadata as code": every
+concept has a required `type` field, cross-links are plain markdown links, and
+`index.md` / `log.md` are reserved filenames (see the spec §3–§9).
+
+Structure: `overview.md`, `architecture.md`, `glossary.md` (project);
+`standards/` (BODS v0.4, LEI/GLEIF anchoring); `api/` (one concept per
+endpoint); `sources/` (one **Data Source** concept per registered adapter);
+`licensing/matrix.md`.
+
+**Two halves:**
+
+- **Hand-authored** narrative concepts (project / standards / api). Edit these by
+  hand.
+- **Auto-generated** from the live registry: `sources/*.md`, `sources/index.md`,
+  `licensing/matrix.md`, `licensing/index.md`. **Do not hand-edit these** — they
+  are produced by the generator below and pull `SourceInfo` + `licensing.classify`.
+
+**Tooling (in `backend/scripts/`):**
+
+- `generate_okf.py` — the "enrichment agent". Regenerates the auto concepts from
+  the registry. `--check` validates OKF conformance **and** that the generated
+  concepts are in sync with the registry (timestamp lines are ignored in the
+  drift comparison). Run it (without `--check`) and commit after adding/changing
+  a source.
+- `generate_okf_viz.py` — renders the whole bundle to a self-contained
+  `okf/viz.html` (Cytoscape graph + rendered markdown; CDN-loaded, no backend).
+  Regenerate after editing concepts.
+
+**CI:** `.github/workflows/vendored-enum-drift.yml` has an `okf` job that installs
+the backend and runs `generate_okf.py --check`, so a stale bundle (e.g. a new
+source not regenerated) fails the build — alongside the vendored-enum drift jobs.
+
+---
+
 ## Phase 8 — Licensing & AuraDB deferral (recorded 2026-06-07)
 
 ### Demo data licences
