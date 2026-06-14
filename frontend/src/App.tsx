@@ -1926,9 +1926,6 @@ function ExampleLeiPicker({
                   ))}
                 </div>
               )}
-              <div className="font-mono text-[10.5px] text-oo-blue mt-2 break-all">
-                {ex.lei}
-              </div>
             </button>
             {ex.neo4jZipUrl && (
               <a
