@@ -1883,12 +1883,6 @@ function ExampleLeiPicker({
   return (
     <section className="mb-10">
       <SectionLabel>Try a curated example</SectionLabel>
-      <p className="text-[13px] leading-[1.7] text-oo-muted mb-4 max-w-2xl">
-        Each subject has a pre-extracted Beneficial Ownership Data Standard
-        (BODS) bundle on disk, so the lookup resolves entirely offline. Risk
-        flags are pre-computed from the cached bundle. Use the search box above
-        for any other LEI.
-      </p>
       <ul
         className="grid gap-3"
         // 280px min keeps three subjects per row at desktop widths,
