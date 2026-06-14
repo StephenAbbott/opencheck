@@ -1,0 +1,30 @@
+name: Live API smoke
+
+# Opt-in live tests (tests/test_live_smoke.py, @pytest.mark.live) that hit the
+# REAL GLEIF + Wikidata APIs to catch API-shape drift without recording payloads.
+#
+# Deliberately NOT run on push/pull_request: a transient upstream blip must never
+# block a merge. It runs weekly and on manual dispatch instead. A red run means
+# either an upstream API shape changed (update the adapter/mapper) or a transient
+# outage (just re-run). Only open, key-free sources are exercised — no secrets,
+# PII, or licence-restricted data are involved.
+on:
+  schedule:
+    - cron: "0 7 * * 1" # Mondays 07:00 UTC (after the 06:00 drift checks)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  live-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install backend (with test deps)
+        run: uv sync
+        working-directory: backend
+      - name: Live API smoke tests (GLEIF, Wikidata)
+        run: uv run pytest --run-live -m live
+        working-directory: backend
