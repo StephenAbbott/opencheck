@@ -26,6 +26,29 @@ import pytest
 os.environ.setdefault("OPENCHECK_DISABLE_DOTENV", "1")
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--run-live",
+        action="store_true",
+        default=False,
+        help="run @pytest.mark.live smoke tests that hit real external APIs (GLEIF, Wikidata).",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip @pytest.mark.live tests unless explicitly opted in. Keeps the
+    default suite (and CI) fully offline; run live with `pytest --run-live`
+    or `OPENCHECK_RUN_LIVE=1`."""
+    if config.getoption("--run-live") or os.environ.get("OPENCHECK_RUN_LIVE") == "1":
+        return
+    skip_live = pytest.mark.skip(
+        reason="live API smoke test — run with --run-live or OPENCHECK_RUN_LIVE=1"
+    )
+    for item in items:
+        if "live" in item.keywords:
+            item.add_marker(skip_live)
+
+
 @pytest.fixture(autouse=True)
 def _clear_lookup_replay_cache():
     """The lookup replay cache is keyed by LEI only; tests reuse the same

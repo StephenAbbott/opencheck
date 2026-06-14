@@ -70,6 +70,9 @@ packages = ["opencheck"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "live: opt-in smoke test that hits a real external API (GLEIF, Wikidata) to catch API-shape drift. Skipped unless --run-live (or OPENCHECK_RUN_LIVE=1).",
+]
 
 [tool.ruff]
 line-length = 100

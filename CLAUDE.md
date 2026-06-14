@@ -372,6 +372,7 @@ Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_
 - HTTP mocking: use `respx` for httpx-based adapters; use `unittest.mock.AsyncMock` with `patch("...build_client", ...)` for adapters that call `build_client()` directly.
 - GraphQL adapters (CVR): mock by inspecting the request body (`request.content`) to route different query strings to different fixture responses.
 - Always check `tests/test_sources.py` (expected registry set) and `tests/test_app.py` (expected `/sources` endpoint set) when adding a new adapter — both require explicit entries.
+- **Live smoke tier (`tests/test_live_smoke.py`, `@pytest.mark.live`):** opt-in tests that hit the *real* GLEIF + Wikidata APIs to catch API-shape drift without recording payloads (the deliberate alternative to vcrpy/cassettes — no PII, secrets or licence-restricted data committed). **Skipped by default**; run with `pytest --run-live -m live` (or `OPENCHECK_RUN_LIVE=1`). The skip wiring is in `conftest.py` (`pytest_addoption` + `pytest_collection_modifyitems`); the `live` marker is registered in `pyproject.toml`. Only open, key-free sources belong here — never OpenSanctions (CC-BY-NC), OpenCorporates, or key-gated/PII-heavy sources.
 
 ---
 
