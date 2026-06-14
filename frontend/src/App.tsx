@@ -1989,13 +1989,7 @@ const HOW_IT_WORKS_STEPS = [
         source.
       </>
     ),
-    badges: [
-      "UK CH number",
-      "OpenCorporates ID",
-      "SIREN",
-      "KvK number",
-      "SE org number",
-    ],
+    badges: null,
   },
   {
     num: "3",
@@ -2007,16 +2001,7 @@ const HOW_IT_WORKS_STEPS = [
         Results are normalised into BODS statements.
       </>
     ),
-    badges: [
-      "GLEIF",
-      "OpenSanctions",
-      "OpenCorporates",
-      "Companies House",
-      "Bolagsverket",
-      "OpenAleph",
-      "Wikidata",
-      "OpenTender",
-    ],
+    badges: null,
   },
   {
     num: "4",
