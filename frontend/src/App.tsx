@@ -2051,18 +2051,6 @@ function HowItWorks() {
                 <p className="text-[13px] leading-[1.65] text-oo-muted mt-1.5">
                   {step.body}
                 </p>
-                {step.badges && (
-                  <div className="flex flex-wrap gap-1.5 mt-2.5">
-                    {step.badges.map((b) => (
-                      <span
-                        key={b}
-                        className="font-mono text-[10.5px] px-2 py-0.5 rounded border border-oo-rule bg-oo-bg text-oo-muted"
-                      >
-                        {b}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           );
