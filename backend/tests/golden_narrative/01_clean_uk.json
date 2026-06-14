@@ -1,0 +1,49 @@
+{
+  "subject_name": "Northwind Logistics Ltd",
+  "lei": "2138000000000000A001",
+  "jurisdiction": "GB",
+  "subject_confidence": "identifier-confirmed",
+  "identifiers": {"company_number": "08123456", "lei": "2138000000000000A001"},
+  "facts": [
+    {
+      "id": "f1",
+      "statement": "Northwind Logistics Ltd is a registered entity in United Kingdom (Companies House 08123456; LEI 2138000000000000A001).",
+      "source_name": "UK Companies House",
+      "source_id": "companies_house",
+      "source_url": "https://find-and-update.company-information.service.gov.uk/company/08123456",
+      "bods_statement_ids": ["stmt-entity-1"],
+      "confidence": "high"
+    },
+    {
+      "id": "f2",
+      "statement": "Jane Eleanor Smith holds a person-with-significant-control interest of 75% or more of shares in Northwind Logistics Ltd, from 2016-04-06.",
+      "source_name": "UK Companies House",
+      "source_id": "companies_house",
+      "source_url": "https://find-and-update.company-information.service.gov.uk/company/08123456/persons-with-significant-control",
+      "bods_statement_ids": ["stmt-rel-1"],
+      "confidence": "high"
+    },
+    {
+      "id": "f3",
+      "statement": "Mark Anthony Reyes holds a directorship (senior managing official) in Northwind Logistics Ltd, from 2016-04-06.",
+      "source_name": "UK Companies House",
+      "source_id": "companies_house",
+      "source_url": "https://find-and-update.company-information.service.gov.uk/company/08123456/officers",
+      "bods_statement_ids": ["stmt-rel-2"],
+      "confidence": "high"
+    },
+    {
+      "id": "f4",
+      "statement": "The OpenCheck risk engine ran against the available data and identified no structural or jurisdictional risk signals for this entity.",
+      "source_name": "OpenCheck risk engine",
+      "bods_statement_ids": [],
+      "confidence": "high"
+    }
+  ],
+  "risks": [],
+  "sources_consulted": [
+    {"source_id": "companies_house", "name": "UK Companies House", "license": "Open Government Licence v3.0", "homepage": "https://www.gov.uk/government/organisations/companies-house"},
+    {"source_id": "gleif", "name": "GLEIF", "license": "CC0 1.0", "homepage": "https://www.gleif.org/"}
+  ],
+  "gaps": []
+}

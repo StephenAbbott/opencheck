@@ -216,8 +216,14 @@ class Settings(BaseSettings):
         default="opencheck@example.com", alias="OPENCHECK_EDGAR_CONTACT_EMAIL"
     )
 
-    # --- Optional LLM ---
+    # --- Optional LLM (narrative summaries) ---
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
+    # Model used for narrative summaries. Overridable so we can A/B Sonnet vs
+    # Opus without a code change.
+    narrative_model: str = Field(default="claude-sonnet-4-6", alias="OPENCHECK_NARRATIVE_MODEL")
+    # Feature flag for the /narrative endpoint. The feature also requires
+    # ``anthropic_api_key``; this flag lets us disable it even when a key is set.
+    narrative_enabled: bool = Field(default=True, alias="OPENCHECK_NARRATIVE_ENABLED")
 
     # --- AMLA risk-rule tuning ---
     # Codes added to the built-in EU+EEA set. Comma-separated ISO 3166-1

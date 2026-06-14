@@ -1,0 +1,43 @@
+{
+  "subject_name": "Fjordkraft Energi AS",
+  "lei": "2138000000000000E005",
+  "jurisdiction": "NO",
+  "subject_confidence": "identifier-confirmed",
+  "identifiers": {"company_number": "987654321", "lei": "2138000000000000E005"},
+  "facts": [
+    {
+      "id": "f1",
+      "statement": "Fjordkraft Energi AS is a registered entity in Norway (Brønnøysund 987654321; LEI 2138000000000000E005).",
+      "source_name": "Norway Brønnøysundregistrene",
+      "source_id": "brreg",
+      "source_url": "https://www.brreg.no/",
+      "bods_statement_ids": ["stmt-entity-1"],
+      "confidence": "high"
+    },
+    {
+      "id": "f2",
+      "statement": "Astrid Halvorsen holds a directorship (senior managing official) in Fjordkraft Energi AS.",
+      "source_name": "Norway Brønnøysundregistrene",
+      "source_id": "brreg",
+      "source_url": "https://www.brreg.no/",
+      "bods_statement_ids": ["stmt-rel-1"],
+      "confidence": "high"
+    },
+    {
+      "id": "f3",
+      "statement": "The OpenCheck risk engine ran against the available data and identified no structural or jurisdictional risk signals (sanctions/PEP screening was incomplete — see limitations).",
+      "source_name": "OpenCheck risk engine",
+      "bods_statement_ids": [],
+      "confidence": "medium"
+    }
+  ],
+  "risks": [],
+  "sources_consulted": [
+    {"source_id": "brreg", "name": "Norway Brønnøysundregistrene", "license": "NLOD 2.0", "homepage": "https://www.brreg.no/"},
+    {"source_id": "gleif", "name": "GLEIF", "license": "CC0 1.0", "homepage": "https://www.gleif.org/"}
+  ],
+  "gaps": [
+    "OpenSanctions could not be queried (timeout) — sanctions and PEP screening for this entity is therefore incomplete.",
+    "No beneficial owner or controlling individual was disclosed in the available sources; only a director was found."
+  ]
+}

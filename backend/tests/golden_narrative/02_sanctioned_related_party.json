@@ -1,0 +1,64 @@
+{
+  "subject_name": "Volga Trade Holdings Limited",
+  "lei": "2138000000000000B002",
+  "jurisdiction": "CY",
+  "subject_confidence": "identifier-confirmed",
+  "identifiers": {"company_number": "HE 412233", "lei": "2138000000000000B002"},
+  "facts": [
+    {
+      "id": "f1",
+      "statement": "Volga Trade Holdings Limited is a registered entity in Cyprus (DRCOR HE 412233; LEI 2138000000000000B002).",
+      "source_name": "GLEIF",
+      "source_id": "gleif",
+      "source_url": "https://search.gleif.org/#/record/2138000000000000B002",
+      "bods_statement_ids": ["stmt-entity-1"],
+      "confidence": "high"
+    },
+    {
+      "id": "f2",
+      "statement": "Igor Petrov holds an ownership-or-control interest of more than 50% in Volga Trade Holdings Limited.",
+      "source_name": "GLEIF",
+      "source_id": "gleif",
+      "source_url": "https://search.gleif.org/#/record/2138000000000000B002",
+      "bods_statement_ids": ["stmt-rel-1"],
+      "confidence": "medium"
+    },
+    {
+      "id": "f3",
+      "statement": "A controlling individual named Igor Petrov matches an OpenSanctions consolidated sanctions-list entry.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": "https://www.opensanctions.org/",
+      "bods_statement_ids": ["stmt-rel-1"],
+      "confidence": "medium"
+    }
+  ],
+  "risks": [
+    {
+      "id": "r1",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "medium",
+      "rationale": "A controlling individual of the subject (Igor Petrov) name-matches an entry on a consolidated sanctions list; the match is by name and date components, not a confirmed identifier.",
+      "source_name": "OpenSanctions",
+      "fact_ids": ["f2", "f3"]
+    },
+    {
+      "id": "r2",
+      "code": "NON_EU_JURISDICTION",
+      "label": "Non-EU jurisdiction",
+      "confidence": "high",
+      "rationale": "The ultimate controlling party is resident outside the EU/EEA, which the AMLA rule flags for enhanced review.",
+      "source_name": "OpenCheck risk engine",
+      "fact_ids": ["f2"]
+    }
+  ],
+  "sources_consulted": [
+    {"source_id": "gleif", "name": "GLEIF", "license": "CC0 1.0", "homepage": "https://www.gleif.org/"},
+    {"source_id": "opensanctions", "name": "OpenSanctions", "license": "CC-BY-NC 4.0", "homepage": "https://www.opensanctions.org/"}
+  ],
+  "gaps": [
+    "The sanctions match is on name and partial date only; positive identification requires manual confirmation against the source listing.",
+    "OpenSanctions data is licensed CC-BY-NC 4.0 and may not be used for commercial screening without a separate licence."
+  ]
+}

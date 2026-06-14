@@ -1,0 +1,34 @@
+{
+  "subject_name": "Acme Trading",
+  "lei": null,
+  "jurisdiction": null,
+  "subject_confidence": "name-matched",
+  "identifiers": {},
+  "facts": [
+    {
+      "id": "f1",
+      "statement": "An entity named \"Acme Trading\" appears in OpenCorporates, but no jurisdiction-confirmed registration record or LEI was resolved for the query.",
+      "source_name": "OpenCorporates",
+      "source_id": "opencorporates",
+      "source_url": "https://opencorporates.com/",
+      "bods_statement_ids": ["stmt-entity-1"],
+      "confidence": "medium"
+    },
+    {
+      "id": "f2",
+      "statement": "The OpenCheck risk engine ran against the available data and identified no structural or jurisdictional risk signals for this entity.",
+      "source_name": "OpenCheck risk engine",
+      "bods_statement_ids": [],
+      "confidence": "high"
+    }
+  ],
+  "risks": [],
+  "sources_consulted": [
+    {"source_id": "opencorporates", "name": "OpenCorporates", "license": "CC-BY-SA 4.0 (with restrictions)", "homepage": "https://opencorporates.com/"}
+  ],
+  "gaps": [
+    "The subject was matched by name only — no LEI or national registration number was confirmed, so this may not be a unique or correct entity.",
+    "No ownership, control, or officer information was disclosed in the available sources.",
+    "No beneficial owner or controlling individual was disclosed in the available sources."
+  ]
+}

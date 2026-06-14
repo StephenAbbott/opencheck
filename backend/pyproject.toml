@@ -27,6 +27,9 @@ dependencies = [
     # bods-xml — canonical XML serialisation of BODS v0.4 statements.
     # Used by the /export?format=xml endpoint.
     "bods-xml @ git+https://github.com/StephenAbbott/bods-xml.git",
+    # Anthropic SDK — narrative summaries (opencheck.narrative). The import is
+    # lazy, so a missing key simply disables the feature; the package is light.
+    "anthropic>=0.39",
 ]
 
 [project.optional-dependencies]

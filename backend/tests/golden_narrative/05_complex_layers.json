@@ -1,0 +1,63 @@
+{
+  "subject_name": "Meridian Structured Investments plc",
+  "lei": "2138000000000000D004",
+  "jurisdiction": "IE",
+  "subject_confidence": "identifier-confirmed",
+  "identifiers": {"company_number": "IE556677", "lei": "2138000000000000D004"},
+  "facts": [
+    {
+      "id": "f1",
+      "statement": "Meridian Structured Investments plc is a registered entity in Ireland (CRO IE556677; LEI 2138000000000000D004).",
+      "source_name": "Ireland CRO",
+      "source_id": "cro",
+      "source_url": "https://www.cro.ie/",
+      "bods_statement_ids": ["stmt-entity-1"],
+      "confidence": "high"
+    },
+    {
+      "id": "f2",
+      "statement": "Meridian Holdings (Jersey) Ltd holds a majority ownership interest in Meridian Structured Investments plc.",
+      "source_name": "GLEIF",
+      "source_id": "gleif",
+      "source_url": "https://search.gleif.org/#/record/2138000000000000D004",
+      "bods_statement_ids": ["stmt-rel-1"],
+      "confidence": "high"
+    },
+    {
+      "id": "f3",
+      "statement": "Meridian Group Trust holds a majority interest in Meridian Holdings (Jersey) Ltd.",
+      "source_name": "GLEIF",
+      "source_id": "gleif",
+      "source_url": "https://search.gleif.org/#/record/2138000000000000D004",
+      "bods_statement_ids": ["stmt-rel-2"],
+      "confidence": "medium"
+    }
+  ],
+  "risks": [
+    {
+      "id": "r1",
+      "code": "COMPLEX_OWNERSHIP_LAYERS",
+      "label": "Complex ownership layers",
+      "confidence": "high",
+      "rationale": "The ownership chain from the subject to its ultimate parent spans three or more intermediate layers across multiple jurisdictions (Ireland, Jersey), increasing the difficulty of identifying the ultimate beneficial owner.",
+      "source_name": "OpenCheck risk engine",
+      "fact_ids": ["f2", "f3"]
+    },
+    {
+      "id": "r2",
+      "code": "TRUST_OR_ARRANGEMENT",
+      "label": "Trust / arrangement",
+      "confidence": "medium",
+      "rationale": "A trust arrangement (Meridian Group Trust) sits in the control chain; trusts can obscure the natural persons who ultimately benefit.",
+      "source_name": "GLEIF",
+      "fact_ids": ["f3"]
+    }
+  ],
+  "sources_consulted": [
+    {"source_id": "cro", "name": "Ireland CRO", "license": "CRO re-use licence", "homepage": "https://www.cro.ie/"},
+    {"source_id": "gleif", "name": "GLEIF", "license": "CC0 1.0", "homepage": "https://www.gleif.org/"}
+  ],
+  "gaps": [
+    "No natural-person beneficial owner was disclosed at the top of the ownership chain; the ultimate beneficiary of Meridian Group Trust is not present in the open data."
+  ]
+}
