@@ -783,7 +783,7 @@ export default function App() {
                     type="search"
                     value={nameQuery}
                     onChange={(e) => setNameQuery(e.target.value)}
-                    placeholder="Search by company name…"
+                    placeholder="Search by company name"
                     autoComplete="off"
                     aria-label="Company name"
                     className="flex-1 border border-oo-rule rounded px-3 py-2.5 bg-oo-bg sm:bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
@@ -1034,13 +1034,13 @@ export default function App() {
                   type="text"
                   value={leiInput}
                   onChange={(e) => setLeiInput(e.target.value)}
-                  placeholder="Paste a 20-character LEI…"
+                  placeholder="Paste a 20-character LEI"
                   spellCheck={false}
                   autoComplete="off"
                   aria-label="Legal Entity Identifier (20 characters)"
                   pattern="[A-Za-z0-9]{20}"
                   inputMode="text"
-                  className="flex-1 border border-oo-rule rounded px-3 py-2.5 font-mono uppercase tracking-wide placeholder:normal-case placeholder:tracking-normal bg-oo-bg sm:bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
+                  className="flex-1 border border-oo-rule rounded px-3 py-2.5 font-mono uppercase tracking-wide bg-oo-bg sm:bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue placeholder:font-sans placeholder:normal-case placeholder:tracking-normal"
                   maxLength={20}
                 />
                 <button
