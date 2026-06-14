@@ -41,6 +41,7 @@ class RiskItem(BaseModel):
     confidence: Confidence
     rationale: str  # plain-English: how the rule fired
     source_name: str
+    source_id: str | None = None  # OpenCheck adapter id, for UI source-card linking
     fact_ids: list[str] = Field(default_factory=list)  # supporting facts, if any
 
 
@@ -205,16 +206,23 @@ def build_evidence_packet(
     if not subject_name and subject_stmt:
         subject_name = _entity_name(subject_stmt)
 
+    # Reverse map the human source name back to the adapter id, so a citation
+    # chip in the UI can link a fact to its source card reliably (matching on
+    # display text alone is fragile).
+    name_to_id = {a.info.name: sid for sid, a in REGISTRY.items()}
+
     facts: list[Fact] = []
     fid = 0
 
     def add_fact(statement: str, stmt: dict[str, Any], extra_ids: list[str] | None = None) -> str:
         nonlocal fid
         fid += 1
+        source_name = _source_name(stmt)
         f = Fact(
             id=f"f{fid}",
             statement=statement,
-            source_name=_source_name(stmt),
+            source_name=source_name,
+            source_id=name_to_id.get(source_name),
             source_url=(stmt.get("source") or {}).get("url"),
             bods_statement_ids=[stmt.get("statementId")] + (extra_ids or []),
             confidence=_source_authority(stmt),
@@ -263,6 +271,7 @@ def build_evidence_packet(
                 confidence=sig.get("confidence", "medium"),
                 rationale=sig.get("summary") or "Flagged by the OpenCheck risk engine.",
                 source_name=source_name,
+                source_id=sig.get("source_id") or None,
             )
         )
 

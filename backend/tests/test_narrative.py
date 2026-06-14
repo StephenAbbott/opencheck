@@ -121,6 +121,15 @@ def test_risk_item_uses_registry_source_name():
     assert risk.source_name == "OpenSanctions"
 
 
+def test_facts_and_risks_carry_adapter_source_id():
+    packet = build_evidence_packet(_report())
+    # Companies House facts resolve their adapter id from the display name.
+    ch_facts = [f for f in packet.facts if f.source_name == "UK Companies House"]
+    assert ch_facts and all(f.source_id == "companies_house" for f in ch_facts)
+    # The risk keeps the adapter id from its signal.
+    assert packet.risks[0].source_id == "opensanctions"
+
+
 def test_sources_consulted_excludes_stub_hits():
     packet = build_evidence_packet(_report())
     ids = {s.source_id for s in packet.sources_consulted}

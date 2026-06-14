@@ -717,7 +717,10 @@ export function SourceBucketCard({
   const headerSignals = sourceSignals;
 
   return (
-    <article className="bg-white border border-oo-rule rounded-oo">
+    <article
+      id={`oc-source-${bucket.sourceId}`}
+      className="bg-white border border-oo-rule rounded-oo scroll-mt-24 transition-shadow"
+    >
       <header className="px-5 py-3 border-b border-oo-rule flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-head font-bold text-[15px] text-oo-ink">

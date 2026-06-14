@@ -21,6 +21,7 @@ import { OpenCheckIcon, GleifIcon, Neo4jIcon } from "./components/icons";
 import { RiskChip, RISK_PRESENTATION, rank } from "./components/risk/RiskChip";
 import { ExportPanel } from "./components/export/ExportPanel";
 import { SubjectCard } from "./components/cdd/SubjectCard";
+import { NarrativePanel } from "./components/cdd/NarrativePanel";
 import {
   SourceBucketCard,
   SkeletonSourceCard,
@@ -1093,6 +1094,8 @@ export default function App() {
             </button>
           </div>
         )}
+
+        {streamingLei && <NarrativePanel lei={streamingLei} legalName={legalName} />}
 
         {streamingLei && <SubjectCard lei={streamingLei} legalName={legalName} />}
 

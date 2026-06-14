@@ -198,6 +198,96 @@ export async function lookup(lei: string): Promise<LookupResponse> {
   return (await r.json()) as LookupResponse;
 }
 
+// ---------------------------------------------------------------------
+// Narrative summary — /narrative
+// ---------------------------------------------------------------------
+
+/** One atomic, evidenced statement the narrative may draw on. */
+export interface NarrativeFact {
+  id: string;
+  statement: string;
+  source_name: string;
+  source_id: string | null;
+  source_url: string | null;
+  bods_statement_ids: string[];
+  confidence: "high" | "medium" | "low";
+}
+
+export interface NarrativeRisk {
+  id: string;
+  code: string;
+  label: string;
+  confidence: "high" | "medium" | "low";
+  rationale: string;
+  source_name: string;
+  source_id: string | null;
+  fact_ids: string[];
+}
+
+export interface NarrativeGap {
+  id: string;
+  statement: string;
+}
+
+export interface EvidencePacket {
+  subject_name: string;
+  lei: string | null;
+  jurisdiction: string | null;
+  subject_confidence: "identifier-confirmed" | "name-matched" | string;
+  identifiers: Record<string, string>;
+  facts: NarrativeFact[];
+  risks: NarrativeRisk[];
+  sources_consulted: { source_id: string; name: string; license: string; homepage: string | null }[];
+  gaps: NarrativeGap[];
+}
+
+/** One claim the model made, each grounded in packet evidence ids (f/r/g). */
+export interface NarrativeClaim {
+  id: string;
+  text: string;
+  fact_ids: string[];
+  confidence: "high" | "medium" | "low";
+}
+
+export interface NarrativeResponse {
+  lei: string | null;
+  subject_name: string;
+  summary: string;
+  claims: NarrativeClaim[];
+  limitations: string[];
+  overall_confidence: "high" | "medium" | "low";
+  model: string;
+  prompt_version: string;
+  packet: EvidencePacket;
+  validation_ok: boolean;
+  dropped_claims: NarrativeClaim[];
+  validation_issues: string[];
+}
+
+/**
+ * Fetch a grounded narrative summary for a resolved LEI. Every claim cites
+ * evidence in `packet`; nothing is asserted beyond OpenCheck's own data.
+ * Throws with the backend detail on 404 (disabled) / 503 (no key) / 5xx.
+ */
+export async function fetchNarrative(
+  lei: string,
+  deepenTop = 5,
+): Promise<NarrativeResponse> {
+  const params = new URLSearchParams({ lei, deepen_top: String(deepenTop) });
+  const r = await fetch(`${BASE_URL}/narrative?${params.toString()}`);
+  if (!r.ok) {
+    let detail = `${r.status} ${r.statusText}`;
+    try {
+      const body = await r.json();
+      if (body?.detail) detail = body.detail;
+    } catch {
+      /* fall through */
+    }
+    throw new Error(detail);
+  }
+  return (await r.json()) as NarrativeResponse;
+}
+
 /** ISO 17442 LEI: 20-char alphanumeric. */
 export const LEI_PATTERN = /^[A-Z0-9]{20}$/;
 export function isValidLei(lei: string): boolean {

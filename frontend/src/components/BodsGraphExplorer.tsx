@@ -55,6 +55,26 @@ export default function BodsGraphExplorer({
 
   const rows = useMemo(() => buildTree(model, collapsed), [model, collapsed]);
 
+  // Citation chips in the narrative panel dispatch `oc:cite` with the statement
+  // they reference; if it lives in this graph, focus it (expanding it first so a
+  // collapsed node still becomes visible).
+  useEffect(() => {
+    function onCite(ev: Event) {
+      const sid = (ev as CustomEvent<{ statementId?: string | null }>).detail?.statementId;
+      if (!sid) return;
+      if (!model.nodes.some((n) => n.id === sid)) return;
+      setCollapsed((prev) => {
+        if (!prev.has(sid)) return prev;
+        const next = new Set(prev);
+        next.delete(sid);
+        return next;
+      });
+      setSelectedId(sid);
+    }
+    window.addEventListener("oc:cite", onCite as EventListener);
+    return () => window.removeEventListener("oc:cite", onCite as EventListener);
+  }, [model]);
+
   function toggleCollapse(id: string) {
     setCollapsed((prev) => {
       const next = new Set(prev);
