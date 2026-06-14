@@ -772,7 +772,7 @@ export default function App() {
 
           {/* ── Name search panel ── */}
           {searchMode === "name" && (
-            <div id="panel-name" role="tabpanel" aria-labelledby="tab-name" className="p-4">
+            <div id="panel-name" role="tabpanel" aria-labelledby="tab-name" className="p-4 bg-oo-bg sm:bg-white">
               <form onSubmit={searchByName}>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <input
@@ -783,7 +783,7 @@ export default function App() {
                     placeholder="Search by company name…"
                     autoComplete="off"
                     aria-label="Company name"
-                    className="flex-1 border border-oo-rule rounded px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
+                    className="flex-1 border border-oo-rule rounded px-3 py-2.5 bg-oo-bg sm:bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
                   />
                   <button
                     type="submit"
@@ -856,7 +856,7 @@ export default function App() {
 
           {/* ── National ID panel ── */}
           {searchMode === "nationalId" && (
-            <div id="panel-national-id" role="tabpanel" aria-labelledby="tab-national-id" className="p-4">
+            <div id="panel-national-id" role="tabpanel" aria-labelledby="tab-national-id" className="p-4 bg-oo-bg sm:bg-white">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -897,7 +897,7 @@ export default function App() {
                         setNationalIdQuery("");
                         setNationalIdTouched(false);
                       }}
-                      className="w-full sm:w-auto border border-oo-rule rounded px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue bg-white"
+                      className="w-full sm:w-auto border border-oo-rule rounded px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue bg-oo-bg sm:bg-white"
                     >
                       {COUNTRY_OPTIONS.map(({ code, entry }) => (
                         <option key={code} value={code}>
@@ -928,7 +928,7 @@ export default function App() {
                       className={`w-full border rounded px-3 py-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue ${
                         !nationalIdFormatOk
                           ? "border-amber-400 bg-amber-50/40"
-                          : "border-oo-rule"
+                          : "border-oo-rule bg-oo-bg sm:bg-white"
                       }`}
                     />
                     {!nationalIdFormatOk && (
@@ -1024,7 +1024,7 @@ export default function App() {
 
           {/* ── LEI paste panel ── */}
           {searchMode === "lei" && (
-            <form onSubmit={runLookup} id="panel-lei" role="tabpanel" aria-labelledby="tab-lei" className="p-4">
+            <form onSubmit={runLookup} id="panel-lei" role="tabpanel" aria-labelledby="tab-lei" className="p-4 bg-oo-bg sm:bg-white">
               <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   id="lei-input"
@@ -1037,7 +1037,7 @@ export default function App() {
                   aria-label="Legal Entity Identifier (20 characters)"
                   pattern="[A-Za-z0-9]{20}"
                   inputMode="text"
-                  className="flex-1 border border-oo-rule rounded px-3 py-2.5 font-mono uppercase tracking-wide placeholder:normal-case placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
+                  className="flex-1 border border-oo-rule rounded px-3 py-2.5 font-mono uppercase tracking-wide placeholder:normal-case placeholder:tracking-normal bg-oo-bg sm:bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
                   maxLength={20}
                 />
                 <button
