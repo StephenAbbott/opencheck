@@ -2,6 +2,11 @@
  * BODSGraph — renders a BODS v0.4 statement bundle as an interactive
  * ownership/control graph using Cytoscape.js + dagre hierarchical layout.
  *
+ * The pure BODS → graph transform lives in lib/bodsGraph.ts (framework-free,
+ * unit-tested); this component owns the Cytoscape instance, the HTML overlay
+ * layer (BOVS icons / jurisdiction flags / risk badges), and the interactive
+ * viewport tools (zoom, pan, fit — native to Cytoscape — plus search).
+ *
  * Node icons and jurisdiction flag overlays are rendered as an HTML layer
  * that sits above the Cytoscape canvas. This gives pixel-perfect centering
  * and sizing at all zoom levels — Cytoscape's canvas background-image system
@@ -14,28 +19,22 @@
  * → Flag badge centred exactly at the 45° (NE) circumference point.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import cytoscape, { type Core, type ElementDefinition, type StylesheetStyle } from "cytoscape";
 import dagre from "cytoscape-dagre";
-import { BOVS_ICONS } from "../lib/bovsIcons";
+import { bodsToGraph, searchNodes, type GraphModel } from "../lib/bodsGraph";
 import type { RiskSignal } from "../lib/api";
 
 cytoscape.use(dagre);
 
 // ---------------------------------------------------------------------------
-// Types
+// Risk signal → BOVS badge colour (Option C)
+//
+// Colours match the existing RiskChip palette in RiskChip.tsx.
+// BOVS position: 315° (NW) compass point on the node circumference.
+// Multiple signals collapse into a "N ⚠" stack badge in the worst colour.
+// RELATED_* signals also annotate the connecting edge with a ⚠ circle.
 // ---------------------------------------------------------------------------
-
-type Stmt = Record<string, unknown>;
-type RD   = Record<string, unknown>;
-type Interest = {
-  type?: string;
-  share?: { exact?: number; minimum?: number; maximum?: number;
-            exclusiveMinimum?: number; exclusiveMaximum?: number };
-  directOrIndirect?: string;
-  beneficialOwnershipOrControl?: boolean;
-  details?: string;
-};
 
 interface NodeOverlay {
   id:      string;
@@ -46,15 +45,6 @@ interface NodeOverlay {
   flagUrl?: string;  // URL for jurisdiction flag SVG (null if no jurisdiction)
   signals?: RiskSignal[];  // risk signals scoped to this node
 }
-
-// ---------------------------------------------------------------------------
-// Risk signal → BOVS badge colour (Option C)
-//
-// Colours match the existing RiskChip palette in RiskChip.tsx.
-// BOVS position: 315° (NW) compass point on the node circumference.
-// Multiple signals collapse into a "N ⚠" stack badge in the worst colour.
-// RELATED_* signals also annotate the connecting edge with a ⚠ circle.
-// ---------------------------------------------------------------------------
 
 interface SignalStyle { bg: string; border: string; text: string; label: string; severity: number }
 
@@ -131,178 +121,24 @@ function buildSignalMap(signals: RiskSignal[]): Map<string, RiskSignal[]> {
 }
 
 // ---------------------------------------------------------------------------
-// BOVS interest-type → annotation label
+// BODS GraphModel → Cytoscape elements
 // ---------------------------------------------------------------------------
 
-const INTEREST_LABELS: Record<string, string> = {
-  shareholding:                    "Owns",
-  votingRights:                    "Controls (votes)",
-  appointmentOfBoard:              "Controls (board)",
-  otherInfluenceOrControl:         "Controls",
-  controlViaCompanyRulesOrArticles:"Controls (articles)",
-  controlByLegalFramework:         "Controls (law)",
-  seniorManagingOfficial:          "Director",
-  boardMember:                     "Board member",
-  boardChair:                      "Chair",
-  unknownInterest:                 "Interest (unknown)",
-  unpublishedInterest:             "Interest (unpublished)",
-  enjoymentAndUseOfAssets:         "Enjoys assets",
-  rightToProfitOrIncomeFromAssets: "Profits from assets",
-};
-
-function interestLabel(i: Interest): string {
-  const base = INTEREST_LABELS[i.type ?? ""] ?? i.type ?? "Interest";
-  const s = i.share;
-  if (!s) return base;
-  if (s.exact != null) {
-    const verb = base.startsWith("Owns") ? "Owns" : "Controls";
-    const rest = base.startsWith("Owns") ? base.slice(4).trim() : base.slice(8).trim();
-    return `${verb} ${s.exact}%${rest ? ` ${rest}` : ""}`.trim();
-  }
-  const lo = s.minimum ?? s.exclusiveMinimum;
-  const hi = s.maximum ?? s.exclusiveMaximum;
-  if (lo != null && hi != null) {
-    return `${base.startsWith("Owns") ? "Owns" : "Controls"} ${lo}–${hi}%`;
-  }
-  return base;
-}
-
-function buildEdgeLabel(interests: Interest[]): string {
-  if (!interests.length) return "";
-  const sorted = [...interests].sort((a, b) =>
-    (b.beneficialOwnershipOrControl ? 1 : 0) - (a.beneficialOwnershipOrControl ? 1 : 0)
-  );
-  return sorted.slice(0, 2).map(interestLabel).join("\n");
-}
-
-// ---------------------------------------------------------------------------
-// BOVS icons (base64 data URIs) — immune to canvas taint issues from xlink SVGs
-// ---------------------------------------------------------------------------
-
-const FLAGS_BASE = "/bods-dagre-images/flags";
-
-const ENTITY_ICON: Record<string, string> = {
-  registeredEntity:       BOVS_ICONS["registeredEntity"],
-  registeredEntityListed: BOVS_ICONS["registeredEntityListed"],
-  legalEntity:            BOVS_ICONS["registeredEntity"],
-  arrangement:            BOVS_ICONS["arrangement"],
-  anonymousEntity:        BOVS_ICONS["anonymousEntity"],
-  unknownEntity:          BOVS_ICONS["unknownEntity"],
-  state:                  BOVS_ICONS["state"],
-  stateBody:              BOVS_ICONS["stateBody"],
-};
-
-const PERSON_ICON: Record<string, string> = {
-  knownPerson:     BOVS_ICONS["knownPerson"],
-  anonymousPerson: BOVS_ICONS["anonymousPerson"],
-  unknownPerson:   BOVS_ICONS["anonymousPerson"],
-};
-
-function nodeIcon(stmt: Stmt): string {
-  const rd = (stmt.recordDetails ?? {}) as RD;
-  const rt = (stmt.recordType ?? stmt.statementType) as string;
-  if (rt === "person" || rt === "personStatement") {
-    return PERSON_ICON[(rd.personType as string) ?? "knownPerson"] ?? BOVS_ICONS["knownPerson"];
-  }
-  return ENTITY_ICON[((rd.entityType as RD)?.type as string) ?? "registeredEntity"] ?? BOVS_ICONS["registeredEntity"];
-}
-
-function flagUrl(stmt: Stmt): string | undefined {
-  const rd = (stmt.recordDetails ?? {}) as RD;
-  const jur = (rd.jurisdiction ?? rd.incorporatedInJurisdiction) as RD | undefined;
-  const code = (jur?.code as string | undefined)?.toLowerCase().split("-")[0];
-  return code ? `${FLAGS_BASE}/${code}.svg` : undefined;
-}
-
-// ---------------------------------------------------------------------------
-// BODS → Cytoscape elements (nodes + edges only — no badge phantom nodes)
-// ---------------------------------------------------------------------------
-
-function bodsToElements(statements: Stmt[]): ElementDefinition[] {
+function modelToElements(model: GraphModel): ElementDefinition[] {
   const elements: ElementDefinition[] = [];
-  const nodeIds = new Set<string>();
-  // BODS v0.4: relationship endpoints reference declarationSubject (e.g.
-  // "XI-LEI-…") rather than the statementId UUID.  Build a lookup so edge
-  // resolution works for both v0.3 and v0.4 data.
-  const declSubjToNodeId = new Map<string, string>();
-
-  for (const stmt of statements) {
-    const rt = (stmt.recordType ?? stmt.statementType) as string;
-    if (rt !== "entity" && rt !== "person" && rt !== "entityStatement" && rt !== "personStatement") continue;
-    const id = (stmt.statementId ?? stmt.statementID) as string;
-    if (!id || nodeIds.has(id)) continue;
-    nodeIds.add(id);
-    // Register declarationSubject alias (v0.4) so relationship endpoints
-    // can resolve to the Cytoscape node id (= statementId UUID).
-    const declSubj = stmt.declarationSubject as string | undefined;
-    if (declSubj && declSubj !== id) declSubjToNodeId.set(declSubj, id);
-
-    const rd = (stmt.recordDetails ?? {}) as RD;
-    const name = (rd.name as string)
-      ?? ((rd.names as RD[] | undefined)?.[0]?.fullName as string)
-      ?? id.slice(-8);
-
+  for (const n of model.nodes) {
+    elements.push({
+      data: { id: n.id, label: n.label, recordType: n.recordType, icon: n.icon, flagUrl: n.flagUrl },
+    });
+  }
+  for (const e of model.edges) {
     elements.push({
       data: {
-        id,
-        label: name,
-        recordType: rt,
-        icon:    nodeIcon(stmt),
-        flagUrl: flagUrl(stmt),
+        id: e.id, source: e.source, target: e.target,
+        label: e.label, category: e.category, details: e.details,
       },
     });
   }
-
-  for (const stmt of statements) {
-    const rt = (stmt.recordType ?? stmt.statementType) as string;
-    if (rt !== "relationship" && rt !== "ownershipOrControlStatement") continue;
-
-    const rd = (stmt.recordDetails ?? {}) as RD;
-    const rawIP   = rd.interestedParty;
-    const rawSubj = rd.subject;
-
-    const resolveRef = (raw: unknown): string | undefined => {
-      if (typeof raw === "string") {
-        // v0.4: plain string — may be a statementId UUID or a declarationSubject alias
-        return nodeIds.has(raw) ? raw : declSubjToNodeId.get(raw);
-      }
-      // v0.3: object with describedBy* reference pointing at the statementId
-      const obj = raw as RD | undefined;
-      return (obj?.describedByEntityStatement as string | undefined)
-          ?? (obj?.describedByPersonStatement as string | undefined);
-    };
-
-    const sourceId = resolveRef(rawIP);
-    const targetId = resolveRef(rawSubj);
-
-    if (!sourceId || !targetId || !nodeIds.has(sourceId) || !nodeIds.has(targetId)) continue;
-
-    const interests = (rd.interests ?? []) as Interest[];
-    const hasOwnership = interests.some(i => i.type === "shareholding" || i.type === "votingRights");
-    const hasControl   = !hasOwnership && interests.some(i =>
-      i.type === "appointmentOfBoard" || i.type === "otherInfluenceOrControl" ||
-      i.type === "controlViaCompanyRulesOrArticles" || i.type === "controlByLegalFramework");
-    const isRole = interests.some(i =>
-      i.type === "seniorManagingOfficial" || i.type === "boardMember" || i.type === "boardChair");
-
-    // Collect details text from all interests for the hover tooltip.
-    const detailsText = interests
-      .map(i => i.details)
-      .filter((d): d is string => !!d)
-      .join(" · ") || undefined;
-
-    elements.push({
-      data: {
-        id: (stmt.statementId ?? stmt.statementID) as string ?? `${sourceId}-${targetId}`,
-        source: sourceId,
-        target: targetId,
-        label:    buildEdgeLabel(interests),
-        category: hasOwnership ? "ownership" : hasControl ? "control" : isRole ? "role" : "unknown",
-        details:  detailsText,
-      },
-    });
-  }
-
   return elements;
 }
 
@@ -339,6 +175,13 @@ const STYLESHEET: StylesheetStyle[] = [
     selector: "node:selected",
     style: { "border-color": "#1565c0", "border-width": 3 } as cytoscape.Css.Node,
   },
+  // ── Search highlight / dim ─────────────────────────────────────────────────
+  {
+    selector: "node.search-match",
+    style: { "border-color": "#1565c0", "border-width": 5 } as cytoscape.Css.Node,
+  },
+  { selector: "node.search-dim", style: { opacity: 0.3 } as cytoscape.Css.Node },
+  { selector: "edge.search-dim", style: { opacity: 0.12 } as cytoscape.Css.Edge },
   // ── Edges ────────────────────────────────────────────────────────────────
   {
     selector: "edge",
@@ -398,6 +241,21 @@ export default function BODSGraph({
   const [overlays, setOverlays] = useState<NodeOverlay[]>([]);
   const [edgeTooltip, setEdgeTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
 
+  // ── Search-within-graph state ──────────────────────────────────────────────
+  const [query, setQuery] = useState("");
+  const [matchIds, setMatchIds] = useState<string[]>([]);
+  const [matchIdx, setMatchIdx] = useState(0);
+  // Set of matching node ids while a search is active (null = not searching);
+  // used to dim non-matching nodes in the HTML overlay layer too.
+  const [matchSet, setMatchSet] = useState<Set<string> | null>(null);
+
+  // The pure graph model — derived once per statement bundle, shared by the
+  // Cytoscape build and the search index (and, in later phases, the tree pane).
+  const model: GraphModel = useMemo(
+    () => bodsToGraph(statements as Record<string, unknown>[]),
+    [statements]
+  );
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -405,17 +263,14 @@ export default function BODSGraph({
     if (cyRef.current) { cyRef.current.destroy(); cyRef.current = null; }
     setOverlays([]);
 
-    if (!statements.length) return;
-
-    const elements = bodsToElements(statements as Stmt[]);
-    if (elements.filter(e => !e.data.source).length === 0) {
+    if (model.nodes.length === 0) {
       el.innerHTML = '<p class="text-xs text-oo-muted p-2 italic">No nodes to visualise.</p>';
       return;
     }
 
     const cy = cytoscape({
       container: el,
-      elements,
+      elements: modelToElements(model),
       style: STYLESHEET,
       layout: {
         name: "dagre",
@@ -501,7 +356,54 @@ export default function BODSGraph({
 
     return () => { cy.destroy(); cyRef.current = null; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statements, signals]);
+  }, [model, signals]);
+
+  // ── Apply search: highlight matches, dim the rest, focus the first hit ──────
+  // Runs after the graph is (re)built — depends on `model` so it re-applies
+  // when the statement bundle changes while a query is active.
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const ids = searchNodes(model.nodes, query);
+    const active = query.trim().length > 0;
+    const set = active ? new Set(ids) : null;
+
+    cy.batch(() => {
+      cy.nodes().forEach(n => {
+        n.removeClass("search-match search-dim");
+        if (!active) return;
+        n.addClass(set!.has(n.id()) ? "search-match" : "search-dim");
+      });
+      cy.edges().forEach(e => { e.toggleClass("search-dim", active); });
+    });
+
+    setMatchIds(ids);
+    setMatchIdx(0);
+    setMatchSet(set);
+
+    if (active && ids.length > 0) {
+      const node = cy.getElementById(ids[0]);
+      if (node.nonempty()) cy.animate({ center: { eles: node } }, { duration: 250 });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, model]);
+
+  function focusMatch(idx: number) {
+    const cy = cyRef.current;
+    if (!cy || matchIds.length === 0) return;
+    const wrapped = ((idx % matchIds.length) + matchIds.length) % matchIds.length;
+    setMatchIdx(wrapped);
+    const node = cy.getElementById(matchIds[wrapped]);
+    if (node.nonempty()) cy.animate({ center: { eles: node } }, { duration: 250 });
+  }
+
+  const searching = query.trim().length > 0;
+  const resultLabel = !searching
+    ? ""
+    : matchIds.length === 0
+    ? "No matches"
+    : `${matchIdx + 1} of ${matchIds.length}`;
 
   if (statements.length === 0) {
     return <p className="text-xs text-oo-muted italic">No BODS statements to visualise.</p>;
@@ -511,8 +413,8 @@ export default function BODSGraph({
     <div className="bg-white border border-oo-rule rounded-oo">
       {/* Toolbar */}
       <div className="border-b border-oo-rule">
-        {/* Zoom controls row */}
-        <div className="flex items-center gap-1 px-2 py-1 text-xs text-oo-muted">
+        {/* Zoom + search controls row */}
+        <div className="flex items-center flex-wrap gap-1 px-2 py-1 text-xs text-oo-muted">
           <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom in"
             onClick={() => cyRef.current?.zoom({ level: (cyRef.current?.zoom() ?? 1) * 1.3,
               renderedPosition: { x: (containerRef.current?.clientWidth ?? 0) / 2, y: (containerRef.current?.clientHeight ?? 0) / 2 } })}>
@@ -527,6 +429,37 @@ export default function BODSGraph({
             onClick={() => cyRef.current?.fit(undefined, 32)}>
             Fit
           </button>
+
+          {/* Search-within-graph */}
+          <div className="flex items-center gap-1 ml-auto">
+            <label htmlFor="bods-graph-search" className="sr-only">Search nodes in the graph</label>
+            <input
+              id="bods-graph-search"
+              type="search"
+              value={query}
+              placeholder="Search nodes…"
+              autoComplete="off"
+              className="px-2 py-0.5 text-xs border border-oo-rule rounded w-32 sm:w-44"
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); focusMatch(matchIdx + (e.shiftKey ? -1 : 1)); }
+                else if (e.key === "Escape") { e.preventDefault(); setQuery(""); }
+              }}
+            />
+            <button type="button" className="hover:text-oo-blue font-mono px-1 disabled:opacity-30"
+              title="Previous match" aria-label="Previous match"
+              disabled={matchIds.length === 0} onClick={() => focusMatch(matchIdx - 1)}>
+              ‹
+            </button>
+            <button type="button" className="hover:text-oo-blue font-mono px-1 disabled:opacity-30"
+              title="Next match" aria-label="Next match"
+              disabled={matchIds.length === 0} onClick={() => focusMatch(matchIdx + 1)}>
+              ›
+            </button>
+            <span role="status" aria-live="polite" className="min-w-[64px] tabular-nums text-[11px]">
+              {resultLabel}
+            </span>
+          </div>
         </div>
         {/* Legend — coloured pills, wrapping rows */}
         <div className="flex flex-wrap gap-1.5 px-3 pb-2">
@@ -578,6 +511,8 @@ export default function BODSGraph({
             // Risk signal badge: 315° NW (top-left) per BOVS Metadata Overlays spec
             const sigCx = item.cx - item.r * Math.cos(OVERLAY_ANGLE);
             const sigCy = item.cy - item.r * Math.sin(OVERLAY_ANGLE);
+            // Dim non-matching nodes while a search is active.
+            const dim = matchSet != null && !matchSet.has(item.id);
 
             // Build risk badge
             let sigBadge: React.ReactNode = null;
@@ -659,7 +594,7 @@ export default function BODSGraph({
             }
 
             return (
-              <div key={item.id}>
+              <div key={item.id} style={{ opacity: dim ? 0.25 : 1, transition: "opacity 0.15s" }}>
                 {/* BOVS entity/person icon — centred, 60% of node */}
                 <img src={item.icon} alt="" style={{
                   position: "absolute",
