@@ -1163,9 +1163,9 @@ export default function App() {
                     onRetry={b.error ? () => retrySource(b.sourceId) : undefined}
                     retrying={retryingSources.has(b.sourceId)}
                   />
-                  {b.sourceId === "gleif" && gleifChildrenInfo && (
+                  {b.sourceId === "gleif" && gleifChildrenInfo && gleifChildrenInfo.total > 100 && (
                     <p className="text-[12px] text-oo-muted mt-2 px-1">
-                      Showing {gleifChildrenInfo.fetched} of {gleifChildrenInfo.total.toLocaleString()} direct subsidiaries in BODS statements (GLEIF Level 2 — first page only)
+                      Showing the first {gleifChildrenInfo.fetched} of {gleifChildrenInfo.total.toLocaleString()} direct subsidiaries in BODS statements (GLEIF Level 2)
                     </p>
                   )}
                 </div>
