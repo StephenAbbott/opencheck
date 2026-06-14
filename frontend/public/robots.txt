@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://opencheck.onrender.com/sitemap.xml
+Sitemap: https://opencheck.world/sitemap.xml

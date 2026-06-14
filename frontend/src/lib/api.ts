@@ -95,7 +95,7 @@ export interface DeepenResponse {
 // In production (static build on Render / any CDN) there is no proxy, so we
 // bake in the absolute backend URL at build time via the VITE_API_BASE_URL
 // environment variable.  The Render dashboard sets this to the backend
-// service URL (e.g. https://opencheck-api.onrender.com).
+// service URL (e.g. https://api.opencheck.world).
 export const BASE_URL: string = import.meta.env.DEV
   ? ""
   : ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "");

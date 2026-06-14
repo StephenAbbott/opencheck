@@ -40,7 +40,7 @@ A `render.yaml` blueprint is included for one-click deployment to [Render](https
    - `OPENCORPORATES_API_KEY`
    - `OPENSANCTIONS_API_KEY`
    - `OPENALEPH_API_KEY` (optional)
-4. Once the backend service is live, copy its URL (e.g. `https://opencheck-api.onrender.com`) and set it as `VITE_API_BASE_URL` on the frontend static site, then trigger a redeploy of the frontend.
+4. Once the backend service is live, copy its URL (e.g. `https://api.opencheck.world`) and set it as `VITE_API_BASE_URL` on the frontend static site, then trigger a redeploy of the frontend.
 
 The backend runs as a Docker Web Service (uvicorn + Python 3.11); the frontend builds as a Render Static Site (Vite). Both use the free tier. The backend image bundles the pre-extracted BODS demo fixtures from `data/cache/` so the demo subjects work without a mounted volume.
 

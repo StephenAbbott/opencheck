@@ -48,7 +48,7 @@ _AUTO_URL  = _BASE_URL + "/eng/api/autocomplete"
 _TIMEOUT   = 20.0
 
 _HEADERS = {
-    "User-Agent": "OpenCheck/1.0 (https://opencheck.onrender.com; beneficialownership.co.uk)",
+    "User-Agent": "OpenCheck/1.0 (https://opencheck.world; beneficialownership.co.uk)",
     "Accept": "text/html,application/json,*/*",
 }
 

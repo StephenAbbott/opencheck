@@ -254,7 +254,7 @@ Specific rules:
 
 ## Deployment
 
-- Backend is deployed on **Render** (https://opencheck-api.onrender.com). Environment variables (API keys, etc.) must be set in the Render dashboard as well as in `.env` for local development.
+- Backend is deployed on **Render** (https://api.opencheck.world). Environment variables (API keys, etc.) must be set in the Render dashboard as well as in `.env` for local development.
 - Frontend is served separately. The backend CORS origin is configured via `OPENCHECK_CORS_ORIGIN` in `.env`.
 - Render free-tier instances spin down when idle — the first request after inactivity may be slow.
 

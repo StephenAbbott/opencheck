@@ -4,7 +4,7 @@
 
 Customer due diligence risk checks powered by the Legal Entity Identifier (LEI), open data and open standards - including the [Beneficial Ownership Data Standard](https://standard.openownership.org/en/0.4.0/) (BODS). 
 
-Try the demo at **https://opencheck.onrender.com/**
+Try the demo at **https://opencheck.world/**
 
 ## What is OpenCheck?
 
