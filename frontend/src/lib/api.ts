@@ -129,6 +129,54 @@ export function fetchSources(): Promise<{ sources: SourceInfo[] }> {
   return getJson("/sources");
 }
 
+// --- Licensing compatibility matrix (the export "licensing assistant") -------
+
+export interface LicenseTerms {
+  license: string;
+  name: string;
+  url: string | null;
+  commercial_use: "yes" | "no" | "conditional";
+  attribution_required: boolean;
+  share_alike: boolean;
+  redistribution: "yes" | "no" | "conditional";
+  color: "green" | "amber" | "red";
+  summary: string;
+}
+
+export interface SourceLicensing {
+  source_id: string;
+  name: string;
+  license: string;
+  terms: LicenseTerms;
+}
+
+export interface LicenseAssessment {
+  commercial_use: "yes" | "no" | "conditional";
+  attribution_required: boolean;
+  share_alike: boolean;
+  color: "green" | "amber" | "red";
+  headline: string;
+  warnings: string[];
+  per_source: SourceLicensing[];
+  disclaimer: string;
+}
+
+export interface LicenseMatrix {
+  disclaimer: string;
+  sources: SourceLicensing[];
+  licenses: LicenseTerms[];
+  assessment?: LicenseAssessment;
+}
+
+/** Licensing matrix; pass contributing source ids to also get a combined
+ * commercial-use assessment for the current result. */
+export function getLicenseMatrix(sourceIds?: string[]): Promise<LicenseMatrix> {
+  const params = new URLSearchParams();
+  if (sourceIds && sourceIds.length > 0) params.set("sources", sourceIds.join(","));
+  const qs = params.toString();
+  return getJson(`/license-matrix${qs ? `?${qs}` : ""}`);
+}
+
 /**
  * Drive the LEI-anchored lookup: GLEIF → cross-source bridges →
  * unified subject view. Throws an Error with the backend's detail

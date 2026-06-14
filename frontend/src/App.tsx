@@ -1185,13 +1185,6 @@ export default function App() {
           <ExportPanel
             lei={streamingLei}
             legalName={legalName}
-            sourceLicenses={
-              sourcesQuery.data
-                ? Object.fromEntries(
-                    sourcesQuery.data.sources.map((s) => [s.id, s.license])
-                  )
-                : {}
-            }
             contributingSourceIds={[...cddBuckets, ...esgBuckets]
               .filter((b) => b.hits.some((h) => !h.is_stub))
               .map((b) => b.sourceId)}

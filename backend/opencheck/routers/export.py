@@ -15,12 +15,36 @@ from fastapi.responses import Response
 from bods_xml.canonical import convert as _bods_xml_convert, to_string as _bods_xml_str
 
 from .. import __version__
+from ..licensing import assess as assess_licensing, full_matrix
 from ..sources import REGISTRY, SearchKind
 from .lookup import LookupResponse, ReportResponse, _build_report, lookup
 
 router = APIRouter()
 
 _EXPORT_FORMATS = {"json", "jsonl", "zip", "xml"}
+
+_TRAFFIC = {"green": "🟢", "amber": "🟡", "red": "🔴"}
+
+
+@router.get("/license-matrix")
+async def license_matrix(
+    sources: str | None = Query(
+        None,
+        description=(
+            "Optional comma-separated source ids. When given, the response also "
+            "includes an `assessment` of the combined licensing of those sources."
+        ),
+    ),
+) -> dict:
+    """The full licensing compatibility matrix: every source's licence terms
+    (commercial use, attribution, share-alike) plus the distinct licence
+    catalogue. With `?sources=`, also returns the combined assessment for the
+    contributing sources. Backs the Export panel's licensing assistant."""
+    matrix = full_matrix()
+    if sources:
+        ids = [s.strip() for s in sources.split(",") if s.strip()]
+        matrix["assessment"] = assess_licensing(ids).model_dump()
+    return matrix
 
 
 @router.get("/export")
@@ -140,6 +164,7 @@ def _build_export_zip(
         for adapter in REGISTRY.values()
     ]
     contributing_ids = sorted({h.source_id for h in payload.hits if not h.is_stub})
+    licensing = assess_licensing(contributing_ids)
 
     manifest = {
         "opencheck_version": __version__,
@@ -157,12 +182,14 @@ def _build_export_zip(
         "bods_statement_count": len(payload.bods),
         "bods_validation_issues": payload.bods_issues,
         "license_notices": payload.license_notices,
+        "licensing": licensing.model_dump(),
         "errors": payload.errors,
     }
 
     licenses_md = _build_licenses_md(
         contributing_ids=contributing_ids,
         license_notices=payload.license_notices,
+        licensing=licensing,
         query=q,
         kind=kind,
     )
@@ -188,21 +215,54 @@ def _build_licenses_md(
     *,
     contributing_ids: list[str],
     license_notices: list[dict[str, str]],
+    licensing,
     query: str,
     kind: SearchKind,
 ) -> str:
-    """Markdown summary of every source's license + any NC notices."""
+    """Markdown licence notes: a compatibility verdict + traffic-light matrix +
+    per-source attribution + any NC notices."""
     lines: list[str] = []
-    lines.append("# OpenCheck export — license notes")
+    lines.append("# OpenCheck export — licence notes")
     lines.append("")
     lines.append(
         f"This bundle was generated for query `{query}` (kind: {kind.value}). "
-        "It combines data from multiple open-data sources, each with its "
-        "own license. The **most restrictive** license applies to the "
-        "combined dataset for re-use purposes."
+        "It combines data from multiple open-data sources, each with its own "
+        "licence. The **most restrictive** licence applies to the combined "
+        "dataset for re-use."
     )
     lines.append("")
-    lines.append("## Sources consulted")
+
+    # Compatibility verdict (the licensing assistant, in print form).
+    lines.append("## Compatibility")
+    lines.append("")
+    lines.append(f"{_TRAFFIC.get(licensing.color, '')} **{licensing.headline}**")
+    lines.append("")
+    lines.append(f"- Commercial use: **{licensing.commercial_use}**")
+    lines.append(f"- Attribution required: **{'yes' if licensing.attribution_required else 'no'}**")
+    lines.append(f"- Share-alike obligations: **{'yes' if licensing.share_alike else 'no'}**")
+    lines.append("")
+    if licensing.warnings:
+        for w in licensing.warnings:
+            lines.append(f"> ⚠️ {w}")
+            lines.append("")
+
+    # Per-source traffic-light matrix.
+    if licensing.per_source:
+        lines.append("## Source licence matrix")
+        lines.append("")
+        lines.append("| | Source | Licence | Commercial | Attribution | Share-alike |")
+        lines.append("|---|---|---|---|---|---|")
+        for s in licensing.per_source:
+            t = s.terms
+            lines.append(
+                f"| {_TRAFFIC.get(t.color, '')} | {s.name} (`{s.source_id}`) | {t.license} "
+                f"| {t.commercial_use} | {'yes' if t.attribution_required else 'no'} "
+                f"| {'yes' if t.share_alike else 'no'} |"
+            )
+        lines.append("")
+
+    # Attribution + homepage detail per source.
+    lines.append("## Attribution")
     lines.append("")
     for source_id in contributing_ids:
         adapter = REGISTRY.get(source_id)
@@ -211,25 +271,19 @@ def _build_licenses_md(
         info = adapter.info
         lines.append(f"### {info.name} (`{info.id}`)")
         lines.append("")
-        lines.append(f"- **License**: {info.license}")
+        lines.append(f"- **Licence**: {info.license}")
         lines.append(f"- **Homepage**: {info.homepage}")
         lines.append(f"- **Attribution**: {info.attribution}")
         lines.append("")
+
     if license_notices:
         lines.append("## Specific notices")
         lines.append("")
         for n in license_notices:
-            lines.append(
-                f"- **{n['source_id']}/{n['hit_id']}** — {n['notice']}"
-            )
+            lines.append(f"- **{n['source_id']}/{n['hit_id']}** — {n['notice']}")
         lines.append("")
-    lines.append("## Re-use guidance")
+
+    lines.append("---")
     lines.append("")
-    lines.append(
-        "If any source above is non-commercial (CC BY-NC, CC BY-NC-SA), "
-        "the combined bundle inherits that restriction: re-publication "
-        "or commercial use of derivative works is not permitted under "
-        "the source license. Strip the relevant statements (filter on "
-        "the `source.description` field) before commercial use."
-    )
+    lines.append(f"_{licensing.disclaimer}_")
     return "\n".join(lines) + "\n"

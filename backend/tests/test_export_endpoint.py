@@ -257,7 +257,22 @@ def test_export_zip_licenses_md_lists_gleif(
         md = zf.read(f"{prefix}/LICENSES.md").decode("utf-8")
 
     assert "GLEIF" in md
-    assert "Re-use guidance" in md
+    # The licensing assistant / compatibility verdict is always present.
+    assert "Compatibility" in md
+    assert "Commercial use" in md
+    assert "Source licence matrix" in md
+
+
+def test_license_matrix_endpoint(client: TestClient) -> None:
+    """/license-matrix returns each source's licence terms + a disclaimer."""
+    r = client.get("/license-matrix")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["disclaimer"]
+    by_id = {s["source_id"]: s for s in data["sources"]}
+    assert by_id["gleif"]["terms"]["commercial_use"] == "yes"
+    assert by_id["opensanctions"]["terms"]["commercial_use"] == "no"
+    assert data["licenses"]
 
 
 def test_export_unknown_format_rejected(client: TestClient) -> None:
