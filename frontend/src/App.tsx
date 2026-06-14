@@ -1314,42 +1314,92 @@ export default function App() {
         </div>
       </aside>
 
-      <footer className="border-t border-oo-rule bg-white px-6 sm:px-10 lg:px-16 py-6 text-[12px] text-oo-muted">
-        <div className="max-w-oo-page mx-auto text-center">
-          <button
-            type="button"
-            onClick={() => setView("api")}
-            className="font-mono text-oo-blue hover:text-oo-burst cursor-pointer"
-          >
-            API
-          </button>{" "}
-          ·{" "}
-          <a
-            href="https://github.com/StephenAbbott/opencheck"
-            target="_blank"
-            rel="noreferrer"
-            className="font-mono text-oo-blue hover:text-oo-burst"
-          >
-            GitHub
-          </a>{" "}
-          ·{" "}
-          <a
-            href="https://github.com/StephenAbbott/opencheck?tab=License-1-ov-file"
-            target="_blank"
-            rel="noreferrer"
-            className="font-mono text-oo-blue hover:text-oo-burst"
-          >
-            MIT license
-          </a>{" "}
-          · third-party data licensed per source — see{" "}
-          <a
-            href="https://github.com/StephenAbbott/opencheck/blob/main/ATTRIBUTIONS.md"
-            target="_blank"
-            rel="noreferrer"
-            className="font-mono text-oo-blue hover:text-oo-burst"
-          >
-            ATTRIBUTIONS.md
-          </a>
+      <footer className="border-t border-oo-rule bg-oo-bg px-6 sm:px-10 lg:px-16 pt-8 pb-6">
+        <div className="max-w-oo-page mx-auto">
+          {/* Two-column grid: brand + tagline left, link groups right */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-4">
+            {/* Left: brand + tagline */}
+            <div>
+              <div className="font-head font-bold text-[15px] text-oo-ink">
+                Open<span className="text-oo-blue">Check</span>
+              </div>
+              <p className="mt-2 text-[12px] text-oo-muted leading-relaxed max-w-[220px]">
+                Customer due diligence checks powered by the Legal Entity
+                Identifier and open standards.
+              </p>
+            </div>
+            {/* Right: link groups */}
+            <div className="flex gap-10 sm:justify-end">
+              <div>
+                <div className="text-[10px] font-medium tracking-widest uppercase text-oo-muted mb-3">
+                  Project
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setView("api")}
+                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst mb-2 cursor-pointer text-left"
+                >
+                  API
+                </button>
+                <a
+                  href="https://github.com/StephenAbbott/opencheck"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst mb-2"
+                >
+                  GitHub
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setView("sources")}
+                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst mb-2 cursor-pointer text-left"
+                >
+                  Sources
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("behind")}
+                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst cursor-pointer text-left"
+                >
+                  Behind the scenes
+                </button>
+              </div>
+              <div>
+                <div className="text-[10px] font-medium tracking-widest uppercase text-oo-muted mb-3">
+                  Legal
+                </div>
+                <a
+                  href="https://github.com/StephenAbbott/opencheck?tab=License-1-ov-file"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst mb-2"
+                >
+                  MIT licence
+                </a>
+                <a
+                  href="https://github.com/StephenAbbott/opencheck/blob/main/ATTRIBUTIONS.md"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst"
+                >
+                  ATTRIBUTIONS.md
+                </a>
+              </div>
+            </div>
+          </div>
+          {/* Bottom strip */}
+          <div className="mt-8 pt-4 border-t border-oo-rule text-[11px] text-oo-muted font-mono">
+            Third-party data is licensed per source — see{" "}
+            <a
+              href="https://github.com/StephenAbbott/opencheck/blob/main/ATTRIBUTIONS.md"
+              target="_blank"
+              rel="noreferrer"
+              className="text-oo-blue hover:text-oo-burst"
+            >
+              ATTRIBUTIONS.md
+            </a>{" "}
+            for details.
+          </div>
         </div>
       </footer>
     </div>
