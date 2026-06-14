@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { bodsToGraph, searchNodes } from "./bodsGraph";
+import {
+  bodsToGraph,
+  searchNodes,
+  computeLevels,
+  computeVisibility,
+  autoCollapse,
+  type GraphModel,
+} from "./bodsGraph";
 
 // Minimal BODS v0.4 bundle: an entity (with a declarationSubject alias and an
 // identifier), a person, and a relationship whose endpoints reference the
@@ -80,5 +87,63 @@ describe("searchNodes", () => {
 
   it("returns no matches when nothing contains the query", () => {
     expect(searchNodes(nodes, "zzz")).toEqual([]);
+  });
+});
+
+// A DAG with a shared subsidiary (C reachable from both A and B) and a deep
+// chain (C → D): R→A, R→B, A→C, B→C, C→D.
+function diamondModel(): GraphModel {
+  const ids = ["R", "A", "B", "C", "D"];
+  return {
+    nodes: ids.map((id) => ({ id, label: id, recordType: "entity", icon: "", identifiers: [] })),
+    edges: ([["R", "A"], ["R", "B"], ["A", "C"], ["B", "C"], ["C", "D"]] as const).map(
+      ([source, target], i) => ({ id: `e${i}`, source, target, label: "", category: "ownership" as const })
+    ),
+  };
+}
+
+describe("computeLevels", () => {
+  it("uses longest path so a shared node sits below both parents", () => {
+    const L = computeLevels(diamondModel());
+    expect([L.get("R"), L.get("A"), L.get("C"), L.get("D")]).toEqual([0, 1, 2, 3]);
+  });
+});
+
+describe("computeVisibility (DAG-aware collapse)", () => {
+  const model = diamondModel();
+
+  it("hides nothing when a collapsed node's descendants stay reachable elsewhere", () => {
+    const v = computeVisibility(model, new Set(["A"]));
+    expect([...v.hidden]).toEqual([]); // C/D still reachable via B
+    expect(v.hiddenCount.get("A")).toBe(0);
+  });
+
+  it("hides the shared subtree only when every path is collapsed", () => {
+    const v = computeVisibility(model, new Set(["A", "B"]));
+    expect([...v.hidden].sort()).toEqual(["C", "D"]);
+    expect(v.hiddenCount.get("A")).toBe(2);
+  });
+
+  it("hides a node's descendants when that node is collapsed", () => {
+    const v = computeVisibility(model, new Set(["C"]));
+    expect([...v.hidden]).toEqual(["D"]);
+    expect(v.hiddenCount.get("C")).toBe(1);
+  });
+});
+
+describe("autoCollapse", () => {
+  it("collapses deep-level nodes with children when the graph is deep", () => {
+    expect([...autoCollapse(diamondModel())]).toEqual(["C"]); // level 2, has child D
+  });
+
+  it("collapses nothing for a shallow graph", () => {
+    const shallow: GraphModel = {
+      nodes: [
+        { id: "X", label: "X", recordType: "entity", icon: "", identifiers: [] },
+        { id: "Y", label: "Y", recordType: "entity", icon: "", identifiers: [] },
+      ],
+      edges: [{ id: "e", source: "X", target: "Y", label: "", category: "ownership" }],
+    };
+    expect([...autoCollapse(shallow)]).toEqual([]);
   });
 });

@@ -286,3 +286,144 @@ export function searchNodes(nodes: GraphNode[], query: string): string[] {
     )
     .map((n) => n.id);
 }
+
+// ---------------------------------------------------------------------------
+// Hierarchy helpers — collapsible parents/subsidiaries
+//
+// The graph is a DAG (a node can have several parents — e.g. a shared
+// subsidiary), not a simple tree, so "hide the subtree below X" is a
+// reachability question, not a delete. A node stays visible if it is still
+// reachable from a root without passing through a collapsed node.
+// ---------------------------------------------------------------------------
+
+/** source id → list of distinct downstream (subsidiary) node ids. */
+export function childAdjacency(model: GraphModel): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const e of model.edges) {
+    const arr = map.get(e.source) ?? [];
+    if (!arr.includes(e.target)) arr.push(e.target);
+    map.set(e.source, arr);
+  }
+  return map;
+}
+
+/** Ids of nodes that have at least one downstream child (can be collapsed). */
+export function nodesWithChildren(model: GraphModel): Set<string> {
+  const set = new Set<string>();
+  for (const e of model.edges) set.add(e.source);
+  return set;
+}
+
+/** Longest-path depth (0 = root) per node, via Kahn topological order.
+ *  Nodes left in a cycle keep depth 0. */
+export function computeLevels(model: GraphModel): Map<string, number> {
+  const indeg = new Map<string, number>();
+  const children = childAdjacency(model);
+  for (const n of model.nodes) indeg.set(n.id, 0);
+  for (const e of model.edges) indeg.set(e.target, (indeg.get(e.target) ?? 0) + 1);
+
+  const level = new Map<string, number>();
+  for (const n of model.nodes) level.set(n.id, 0);
+
+  const queue = model.nodes.filter((n) => (indeg.get(n.id) ?? 0) === 0).map((n) => n.id);
+  while (queue.length) {
+    const u = queue.shift()!;
+    for (const v of children.get(u) ?? []) {
+      level.set(v, Math.max(level.get(v) ?? 0, (level.get(u) ?? 0) + 1));
+      indeg.set(v, (indeg.get(v) ?? 0) - 1);
+      if ((indeg.get(v) ?? 0) === 0) queue.push(v);
+    }
+  }
+  return level;
+}
+
+/** All downstream descendants of `id` in the full graph. */
+export function descendants(model: GraphModel, id: string): Set<string> {
+  const children = childAdjacency(model);
+  const out = new Set<string>();
+  const stack = [...(children.get(id) ?? [])];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    if (out.has(cur)) continue;
+    out.add(cur);
+    for (const c of children.get(cur) ?? []) stack.push(c);
+  }
+  return out;
+}
+
+export interface Visibility {
+  visible: Set<string>;
+  hidden: Set<string>;
+  /** Per collapsed node: how many of its descendants are currently hidden. */
+  hiddenCount: Map<string, number>;
+}
+
+/**
+ * Given a set of collapsed node ids, compute which nodes remain visible.
+ *
+ * A node is visible if it is reachable from a root (indegree-0 node) without
+ * traversing *out of* a collapsed node. A node reachable via a non-collapsed
+ * path stays visible even if one of its parents is collapsed (DAG-correct).
+ * If the graph has no roots (a pure cycle), everything is shown.
+ */
+export function computeVisibility(model: GraphModel, collapsed: Set<string>): Visibility {
+  const children = childAdjacency(model);
+  const indeg = new Map<string, number>();
+  for (const n of model.nodes) indeg.set(n.id, 0);
+  for (const e of model.edges) indeg.set(e.target, (indeg.get(e.target) ?? 0) + 1);
+
+  let roots = model.nodes.filter((n) => (indeg.get(n.id) ?? 0) === 0).map((n) => n.id);
+  if (roots.length === 0) roots = model.nodes.map((n) => n.id); // pure cycle → show all
+
+  const visible = new Set<string>();
+  const queue = [...roots];
+  while (queue.length) {
+    const u = queue.shift()!;
+    if (visible.has(u)) continue;
+    visible.add(u);
+    if (collapsed.has(u)) continue; // don't descend into a collapsed node
+    for (const v of children.get(u) ?? []) queue.push(v);
+  }
+
+  const hidden = new Set<string>();
+  for (const n of model.nodes) if (!visible.has(n.id)) hidden.add(n.id);
+
+  const hiddenCount = new Map<string, number>();
+  for (const c of collapsed) {
+    let n = 0;
+    for (const d of descendants(model, c)) if (hidden.has(d)) n += 1;
+    hiddenCount.set(c, n);
+  }
+
+  return { visible, hidden, hiddenCount };
+}
+
+export interface AutoCollapseOptions {
+  /** Collapse nodes at this depth or deeper (default 2 → keep top 3 levels). */
+  collapseDepth?: number;
+  /** Only auto-collapse when the graph is at least this deep (default 3). */
+  triggerDepth?: number;
+}
+
+/**
+ * Pick an initial collapsed set for a complex graph: when the structure is
+ * deep (≥ triggerDepth levels), collapse every node at `collapseDepth` or
+ * deeper that has children, so the first view stays readable and the user
+ * expands the paths they care about. Shallow graphs collapse nothing.
+ */
+export function autoCollapse(model: GraphModel, opts: AutoCollapseOptions = {}): Set<string> {
+  const collapseDepth = opts.collapseDepth ?? 2;
+  const triggerDepth = opts.triggerDepth ?? 3;
+
+  const levels = computeLevels(model);
+  let maxLevel = 0;
+  for (const v of levels.values()) maxLevel = Math.max(maxLevel, v);
+  if (maxLevel < triggerDepth) return new Set();
+
+  const hasChildren = nodesWithChildren(model);
+  const collapsed = new Set<string>();
+  for (const n of model.nodes) {
+    if ((levels.get(n.id) ?? 0) >= collapseDepth && hasChildren.has(n.id)) collapsed.add(n.id);
+  }
+  return collapsed;
+}

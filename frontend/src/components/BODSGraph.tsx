@@ -2,38 +2,40 @@
  * BODSGraph — renders a BODS v0.4 statement bundle as an interactive
  * ownership/control graph using Cytoscape.js + dagre hierarchical layout.
  *
- * The pure BODS → graph transform lives in lib/bodsGraph.ts (framework-free,
- * unit-tested); this component owns the Cytoscape instance, the HTML overlay
- * layer (BOVS icons / jurisdiction flags / risk badges), and the interactive
- * viewport tools (zoom, pan, fit — native to Cytoscape — plus search).
+ * The pure BODS → graph transform + hierarchy helpers live in lib/bodsGraph.ts
+ * (framework-free, unit-tested); this component owns the Cytoscape instance,
+ * the HTML overlay layer (BOVS icons / jurisdiction flags / risk badges /
+ * collapse toggles), and the interactive viewport tools:
+ *   - zoom, pan, fit — native to Cytoscape;
+ *   - search within the graph (highlight + step through matches);
+ *   - collapsible parents/subsidiaries (DAG-aware; deep graphs auto-collapse).
  *
  * Node icons and jurisdiction flag overlays are rendered as an HTML layer
- * that sits above the Cytoscape canvas. This gives pixel-perfect centering
- * and sizing at all zoom levels — Cytoscape's canvas background-image system
- * has sub-pixel drift at non-integer zoom levels which made icons appear to
- * shift and flags fail to fill their container.
+ * that sits above the Cytoscape canvas — Cytoscape's canvas background-image
+ * system has sub-pixel drift at non-integer zoom levels.
  *
- * BOVS Metadata Overlays spec:
- *   "Jurisdiction: overlaying icons around the circumference of the Node.
- *    Prefer positions at 45°, 135°, 225°, 315° (diagonal compass points)."
- * → Flag badge centred exactly at the 45° (NE) circumference point.
+ * BOVS Metadata Overlays spec: jurisdiction flag at the 45° (NE) circumference
+ * point; risk badge at 315° (NW); collapse toggle at due-south (270°).
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import cytoscape, { type Core, type ElementDefinition, type StylesheetStyle } from "cytoscape";
 import dagre from "cytoscape-dagre";
-import { bodsToGraph, searchNodes, type GraphModel } from "../lib/bodsGraph";
+import {
+  bodsToGraph,
+  searchNodes,
+  computeVisibility,
+  autoCollapse,
+  nodesWithChildren,
+  type GraphModel,
+  type Visibility,
+} from "../lib/bodsGraph";
 import type { RiskSignal } from "../lib/api";
 
 cytoscape.use(dagre);
 
 // ---------------------------------------------------------------------------
 // Risk signal → BOVS badge colour (Option C)
-//
-// Colours match the existing RiskChip palette in RiskChip.tsx.
-// BOVS position: 315° (NW) compass point on the node circumference.
-// Multiple signals collapse into a "N ⚠" stack badge in the worst colour.
-// RELATED_* signals also annotate the connecting edge with a ⚠ circle.
 // ---------------------------------------------------------------------------
 
 interface NodeOverlay {
@@ -44,6 +46,9 @@ interface NodeOverlay {
   icon:    string;   // base64 data-URI for BOVS entity/person icon
   flagUrl?: string;  // URL for jurisdiction flag SVG (null if no jurisdiction)
   signals?: RiskSignal[];  // risk signals scoped to this node
+  hasChildren?: boolean;   // node has downstream subsidiaries (can collapse)
+  collapsed?: boolean;     // node is currently collapsed
+  hiddenCount?: number;    // descendants hidden because this node is collapsed
 }
 
 interface SignalStyle { bg: string; border: string; text: string; label: string; severity: number }
@@ -72,17 +77,7 @@ function signalStyle(code: string): SignalStyle {
   return SIGNAL_STYLE[code] ?? DEFAULT_SIGNAL_STYLE;
 }
 
-/**
- * Build a map from BODS statementId → RiskSignal[] by extracting statement
- * IDs from each signal's evidence block.
- *
- * Evidence fields (per signal type):
- *  - SANCTIONED, PEP                → evidence.statement_id
- *  - RELATED_SANCTIONED, RELATED_PEP → evidence.subject_statement_id
- *  - TRUST, NOMINEE, COMPLEX, AMLA   → evidence.matches[].statement_id
- *  - NON_EU, FATF                    → evidence.jurisdictions[].statement_id
- *  - COMPLEX_OWNERSHIP_LAYERS        → evidence.longest_path[]  (array of ids)
- */
+/** Build a map from BODS statementId → RiskSignal[] from each signal's evidence. */
 function buildSignalMap(signals: RiskSignal[]): Map<string, RiskSignal[]> {
   const map = new Map<string, RiskSignal[]>();
   const add = (id: string, sig: RiskSignal) => {
@@ -93,12 +88,8 @@ function buildSignalMap(signals: RiskSignal[]): Map<string, RiskSignal[]> {
 
   for (const sig of signals) {
     const ev = (sig.evidence ?? {}) as Record<string, unknown>;
-
-    // Direct single-statement signals
     if (typeof ev.statement_id === "string")        add(ev.statement_id, sig);
     if (typeof ev.subject_statement_id === "string") add(ev.subject_statement_id, sig);
-
-    // Multi-statement array signals
     for (const key of ["matches", "jurisdictions"] as const) {
       const arr = ev[key];
       if (Array.isArray(arr)) {
@@ -109,8 +100,6 @@ function buildSignalMap(signals: RiskSignal[]): Map<string, RiskSignal[]> {
         }
       }
     }
-
-    // COMPLEX_OWNERSHIP_LAYERS: longest_path is a string[]
     if (Array.isArray(ev.longest_path)) {
       for (const id of ev.longest_path) {
         if (typeof id === "string") add(id, sig);
@@ -141,6 +130,11 @@ function modelToElements(model: GraphModel): ElementDefinition[] {
   }
   return elements;
 }
+
+const DAGRE_LAYOUT = {
+  name: "dagre",
+  rankDir: "TB", nodeSep: 60, rankSep: 100, edgeSep: 20, animate: false,
+} as const;
 
 // ---------------------------------------------------------------------------
 // Cytoscape stylesheet — nodes are plain white circles (icons/flags in HTML overlay)
@@ -175,11 +169,10 @@ const STYLESHEET: StylesheetStyle[] = [
     selector: "node:selected",
     style: { "border-color": "#1565c0", "border-width": 3 } as cytoscape.Css.Node,
   },
-  // ── Search highlight / dim ─────────────────────────────────────────────────
-  {
-    selector: "node.search-match",
-    style: { "border-color": "#1565c0", "border-width": 5 } as cytoscape.Css.Node,
-  },
+  // Collapsed node — solid blue ring so it reads as "expandable".
+  { selector: "node.collapsed", style: { "border-color": "#1565c0", "border-width": 3 } as cytoscape.Css.Node },
+  // Search highlight / dim
+  { selector: "node.search-match", style: { "border-color": "#1565c0", "border-width": 5 } as cytoscape.Css.Node },
   { selector: "node.search-dim", style: { opacity: 0.3 } as cytoscape.Css.Node },
   { selector: "edge.search-dim", style: { opacity: 0.12 } as cytoscape.Css.Edge },
   // ── Edges ────────────────────────────────────────────────────────────────
@@ -208,20 +201,14 @@ const STYLESHEET: StylesheetStyle[] = [
   { selector: "edge[category = 'control']",  style: { "line-color": "#e65100", "target-arrow-color": "#e65100", color: "#e65100" } as cytoscape.Css.Edge },
   { selector: "edge[category = 'role']",     style: { "line-color": "#6a1b9a", "target-arrow-color": "#6a1b9a", color: "#6a1b9a", "line-style": "dashed" } as cytoscape.Css.Edge },
   { selector: "edge[category = 'unknown']",  style: { "line-color": "#888",    "target-arrow-color": "#888",    color: "#888" } as cytoscape.Css.Edge },
-  // Edges with details: thicker on hover class, cursor handled via JS
   { selector: "edge.hovered",                style: { width: 3, "z-index": 999 } as cytoscape.Css.Edge },
 ];
 
-// BOVS flag badge dimensions — proportional to the node radius so they scale
-// consistently at all zoom levels.  At zoom=1 (node Ø=80px, radius=40px):
-//   badge width  = 40 * 0.75 = 30px
-//   badge height = 40 * 0.50 = 20px  → 3:2 aspect ratio
-const BADGE_W_FACTOR = 0.75;   // fraction of node radius
+// BOVS overlay geometry (fractions of the node radius).
+const BADGE_W_FACTOR = 0.75;
 const BADGE_H_FACTOR = 0.50;
-// BOVS: flag at 45° (NE) compass point on the circumference
-const OVERLAY_ANGLE = Math.PI / 4;
-// BOVS icon: 60% of node diameter
-const ICON_FRACTION = 0.6;
+const OVERLAY_ANGLE = Math.PI / 4;   // 45° diagonal compass point
+const ICON_FRACTION = 0.6;           // BOVS icon = 60% of node diameter
 
 // ---------------------------------------------------------------------------
 // Component
@@ -241,21 +228,49 @@ export default function BODSGraph({
   const [overlays, setOverlays] = useState<NodeOverlay[]>([]);
   const [edgeTooltip, setEdgeTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
 
-  // ── Search-within-graph state ──────────────────────────────────────────────
-  const [query, setQuery] = useState("");
-  const [matchIds, setMatchIds] = useState<string[]>([]);
-  const [matchIdx, setMatchIdx] = useState(0);
-  // Set of matching node ids while a search is active (null = not searching);
-  // used to dim non-matching nodes in the HTML overlay layer too.
-  const [matchSet, setMatchSet] = useState<Set<string> | null>(null);
-
-  // The pure graph model — derived once per statement bundle, shared by the
-  // Cytoscape build and the search index (and, in later phases, the tree pane).
+  // Pure graph model — derived once per statement bundle, shared by the
+  // Cytoscape build, search, collapse, and (later) the tree pane.
   const model: GraphModel = useMemo(
     () => bodsToGraph(statements as Record<string, unknown>[]),
     [statements]
   );
 
+  // ── Collapse state — deep graphs start partly collapsed for readability ────
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => autoCollapse(model));
+
+  // ── Search state ───────────────────────────────────────────────────────────
+  const [query, setQuery] = useState("");
+  const [matchIds, setMatchIds] = useState<string[]>([]);
+  const [matchIdx, setMatchIdx] = useState(0);
+  const [matchSet, setMatchSet] = useState<Set<string> | null>(null);
+
+  // Refs that overlay/effect closures read for current values.
+  const collapsedRef = useRef(collapsed);
+  collapsedRef.current = collapsed;
+  const visRef = useRef<Visibility | null>(null);
+  const childrenRef = useRef<Set<string>>(new Set());
+  const updateOverlaysRef = useRef<(() => void) | null>(null);
+  const prevModelRef = useRef<GraphModel | null>(null);
+
+  function toggleCollapse(id: string) {
+    setCollapsed(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // Reset collapse to the auto default when the statement bundle changes
+  // (but not on the first mount, where useState already seeded it).
+  useEffect(() => {
+    if (prevModelRef.current && prevModelRef.current !== model) {
+      setCollapsed(autoCollapse(model));
+    }
+    prevModelRef.current = model;
+  }, [model]);
+
+  // ── Build the Cytoscape instance (rebuilds only when data changes) ─────────
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -268,38 +283,35 @@ export default function BODSGraph({
       return;
     }
 
+    childrenRef.current = nodesWithChildren(model);
+
     const cy = cytoscape({
       container: el,
       elements: modelToElements(model),
       style: STYLESHEET,
-      layout: {
-        name: "dagre",
-        // @ts-expect-error — dagre-specific options
-        rankDir: "TB", nodeSep: 60, rankSep: 100, edgeSep: 20, animate: false,
-      },
+      layout: DAGRE_LAYOUT,
       userZoomingEnabled: true,
       userPanningEnabled: true,
       boxSelectionEnabled: false,
       minZoom: 0.2,
       maxZoom: 4,
     });
-
     cyRef.current = cy;
 
-    // Build signal map once per render (signals prop changes trigger re-mount).
     const signalMap = buildSignalMap(signals);
 
-    // Recompute HTML overlay positions whenever the viewport changes.
-    // All values are in SCREEN pixels so that icons/flags render at pixel-perfect
-    // size and position regardless of the current zoom level.
     function updateOverlays() {
       const pan  = cy.pan();
       const zoom = cy.zoom();
+      const vis = visRef.current;
+      const collapsedNow = collapsedRef.current;
+      const hasChildren = childrenRef.current;
       const next: NodeOverlay[] = [];
 
       cy.nodes().forEach(node => {
+        const id = node.id();
+        if (vis && !vis.visible.has(id)) return; // skip collapsed-away nodes
         const pos = node.position();
-        const id  = node.id();
         next.push({
           id,
           cx:      pos.x * zoom + pan.x,
@@ -308,15 +320,17 @@ export default function BODSGraph({
           icon:    node.data("icon")    as string,
           flagUrl: node.data("flagUrl") as string | undefined,
           signals: signalMap.get(id),
+          hasChildren: hasChildren.has(id),
+          collapsed: collapsedNow.has(id),
+          hiddenCount: vis?.hiddenCount.get(id) ?? 0,
         });
       });
-
       setOverlays(next);
     }
+    updateOverlaysRef.current = updateOverlays;
 
     cy.on("viewport", updateOverlays);
 
-    // ── Edge tooltip — hover (desktop) and tap (mobile) ──────────────────
     cy.on("mousemove", "edge", (evt) => {
       const details = evt.target.data("details") as string | undefined;
       if (!details) return;
@@ -325,47 +339,61 @@ export default function BODSGraph({
       const rp = evt.renderedPosition;
       setEdgeTooltip({ x: rp.x, y: rp.y, text: details });
     });
-
     cy.on("mouseout", "edge", (evt) => {
       evt.target.removeClass("hovered");
       el.style.cursor = "";
       setEdgeTooltip(null);
     });
-
-    // Tap: toggle tooltip for touch / click (dismiss on second tap or background tap)
     cy.on("tap", "edge", (evt) => {
       const details = evt.target.data("details") as string | undefined;
       if (!details) return;
       const rp = evt.renderedPosition;
-      setEdgeTooltip(prev =>
-        prev?.text === details ? null : { x: rp.x, y: rp.y, text: details }
-      );
+      setEdgeTooltip(prev => prev?.text === details ? null : { x: rp.x, y: rp.y, text: details });
     });
-
-    cy.on("tap", (evt) => {
-      if (evt.target === cy) setEdgeTooltip(null);
-    });
-
-    // Clear tooltip on pan/zoom so it doesn't float in a stale position.
+    cy.on("tap", (evt) => { if (evt.target === cy) setEdgeTooltip(null); });
     cy.on("viewport", () => setEdgeTooltip(null));
-
-    cy.ready(() => {
-      cy.fit(undefined, 32);
-      updateOverlays();
-    });
 
     return () => { cy.destroy(); cyRef.current = null; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model, signals]);
 
-  // ── Apply search: highlight matches, dim the rest, focus the first hit ──────
-  // Runs after the graph is (re)built — depends on `model` so it re-applies
-  // when the statement bundle changes while a query is active.
+  // ── Apply collapse: hide/show elements, re-layout the visible subset ───────
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || model.nodes.length === 0) return;
+
+    const vis = computeVisibility(model, collapsed);
+    visRef.current = vis;
+
+    cy.batch(() => {
+      cy.nodes().forEach(n => {
+        n.style("display", vis.visible.has(n.id()) ? "element" : "none");
+        n.toggleClass("collapsed", collapsed.has(n.id()) && (vis.hiddenCount.get(n.id()) ?? 0) > 0);
+      });
+      cy.edges().forEach(e => {
+        const show =
+          vis.visible.has(e.source().id()) &&
+          vis.visible.has(e.target().id()) &&
+          !collapsed.has(e.source().id()); // a collapsed node hides its downstream edges
+        e.style("display", show ? "element" : "none");
+      });
+    });
+
+    const visEles = cy.elements(":visible");
+    visEles.layout(DAGRE_LAYOUT).run();
+    cy.fit(visEles, 32);
+    updateOverlaysRef.current?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [model, signals, collapsed]);
+
+  // ── Apply search over the currently-visible nodes ──────────────────────────
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
 
-    const ids = searchNodes(model.nodes, query);
+    const vis = visRef.current;
+    const visibleNodes = vis ? model.nodes.filter(n => vis.visible.has(n.id)) : model.nodes;
+    const ids = searchNodes(visibleNodes, query);
     const active = query.trim().length > 0;
     const set = active ? new Set(ids) : null;
 
@@ -387,7 +415,7 @@ export default function BODSGraph({
       if (node.nonempty()) cy.animate({ center: { eles: node } }, { duration: 250 });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, model]);
+  }, [query, model, collapsed]);
 
   function focusMatch(idx: number) {
     const cy = cyRef.current;
@@ -404,6 +432,7 @@ export default function BODSGraph({
     : matchIds.length === 0
     ? "No matches"
     : `${matchIdx + 1} of ${matchIds.length}`;
+  const collapsedCount = collapsed.size;
 
   if (statements.length === 0) {
     return <p className="text-xs text-oo-muted italic">No BODS statements to visualise.</p>;
@@ -413,7 +442,6 @@ export default function BODSGraph({
     <div className="bg-white border border-oo-rule rounded-oo">
       {/* Toolbar */}
       <div className="border-b border-oo-rule">
-        {/* Zoom + search controls row */}
         <div className="flex items-center flex-wrap gap-1 px-2 py-1 text-xs text-oo-muted">
           <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom in"
             onClick={() => cyRef.current?.zoom({ level: (cyRef.current?.zoom() ?? 1) * 1.3,
@@ -429,6 +457,12 @@ export default function BODSGraph({
             onClick={() => cyRef.current?.fit(undefined, 32)}>
             Fit
           </button>
+          {collapsedCount > 0 && (
+            <button type="button" className="hover:text-oo-blue px-2" title="Expand all collapsed nodes"
+              onClick={() => setCollapsed(new Set())}>
+              Expand all
+            </button>
+          )}
 
           {/* Search-within-graph */}
           <div className="flex items-center gap-1 ml-auto">
@@ -461,7 +495,7 @@ export default function BODSGraph({
             </span>
           </div>
         </div>
-        {/* Legend — coloured pills, wrapping rows */}
+        {/* Legend */}
         <div className="flex flex-wrap gap-1.5 px-3 pb-2">
           <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#e8f0fb] border-[#1565c0] text-[#1565c0]">
             <span className="inline-block w-3.5 h-0.5 bg-[#1565c0] rounded-full flex-shrink-0"/>Ownership
@@ -492,29 +526,18 @@ export default function BODSGraph({
             : "Ownership structure graph"}
         />
 
-        {/* Pixel-perfect icon + flag + risk signal overlay */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            overflow: "hidden",
-            pointerEvents: "none",
-          }}
-        >
+        {/* Pixel-perfect icon + flag + risk + collapse overlay */}
+        <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
           {overlays.map(item => {
             const iconSize = item.r * 2 * ICON_FRACTION;
             const bw = item.r * BADGE_W_FACTOR;
             const bh = item.r * BADGE_H_FACTOR;
-            // Flag: 45° NE (top-right)
             const flagCx = item.cx + item.r * Math.cos(OVERLAY_ANGLE);
             const flagCy = item.cy - item.r * Math.sin(OVERLAY_ANGLE);
-            // Risk signal badge: 315° NW (top-left) per BOVS Metadata Overlays spec
             const sigCx = item.cx - item.r * Math.cos(OVERLAY_ANGLE);
             const sigCy = item.cy - item.r * Math.sin(OVERLAY_ANGLE);
-            // Dim non-matching nodes while a search is active.
             const dim = matchSet != null && !matchSet.has(item.id);
 
-            // Build risk badge
             let sigBadge: React.ReactNode = null;
             if (item.signals && item.signals.length > 0) {
               const sigs = item.signals;
@@ -527,65 +550,30 @@ export default function BODSGraph({
               const tooltip = sigs.map(s => `${s.code}: ${s.summary}`).join("\n");
 
               if (sigs.length === 1) {
-                // Single signal: labelled pill
                 sigBadge = (
-                  <div
-                    title={tooltip}
-                    style={{
-                      position: "absolute",
-                      left: sigCx - badgePx * 0.9,
-                      top:  sigCy - badgePx * 0.45,
-                      minWidth: badgePx * 1.8,
-                      height: badgePx * 0.9,
-                      background: st.bg,
-                      border: `1.5px solid ${st.border}`,
-                      borderRadius: badgePx,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: Math.max(8, badgePx * 0.42),
-                      fontWeight: 700,
-                      color: st.text,
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-                      whiteSpace: "nowrap",
-                      padding: `0 ${badgePx * 0.3}px`,
-                    }}
-                  >
+                  <div title={tooltip} style={{
+                    position: "absolute", left: sigCx - badgePx * 0.9, top: sigCy - badgePx * 0.45,
+                    minWidth: badgePx * 1.8, height: badgePx * 0.9, background: st.bg,
+                    border: `1.5px solid ${st.border}`, borderRadius: badgePx,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: Math.max(8, badgePx * 0.42), fontWeight: 700, color: st.text,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.2)", whiteSpace: "nowrap", padding: `0 ${badgePx * 0.3}px`,
+                  }}>
                     {st.label}
                   </div>
                 );
               } else {
-                // Stack badge: "N ⚠" in worst colour, shadow circles for depth
                 sigBadge = (
                   <div style={{ position: "absolute", left: sigCx - badgePx * 0.75, top: sigCy - badgePx * 0.45 }}>
-                    {/* shadow circle for depth */}
-                    <div style={{
-                      position: "absolute", left: 3, top: 3,
-                      width: badgePx * 1.5, height: badgePx * 0.9,
-                      background: st.bg, border: `1.5px solid ${st.border}`,
-                      borderRadius: badgePx, opacity: 0.5,
-                    }}/>
-                    <div
-                      title={tooltip}
-                      style={{
-                        position: "relative",
-                        minWidth: badgePx * 1.5,
-                        height: badgePx * 0.9,
-                        background: st.bg,
-                        border: `1.5px solid ${st.border}`,
-                        borderRadius: badgePx,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: Math.max(8, badgePx * 0.42),
-                        fontWeight: 700,
-                        color: st.text,
-                        boxShadow: "0 1px 4px rgba(0,0,0,0.25)",
-                        whiteSpace: "nowrap",
-                        padding: `0 ${badgePx * 0.3}px`,
-                        gap: 2,
-                      }}
-                    >
+                    <div style={{ position: "absolute", left: 3, top: 3, width: badgePx * 1.5, height: badgePx * 0.9,
+                      background: st.bg, border: `1.5px solid ${st.border}`, borderRadius: badgePx, opacity: 0.5 }}/>
+                    <div title={tooltip} style={{
+                      position: "relative", minWidth: badgePx * 1.5, height: badgePx * 0.9, background: st.bg,
+                      border: `1.5px solid ${st.border}`, borderRadius: badgePx,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: Math.max(8, badgePx * 0.42), fontWeight: 700, color: st.text,
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.25)", whiteSpace: "nowrap", padding: `0 ${badgePx * 0.3}px`, gap: 2,
+                    }}>
                       {sigs.length} ⚠
                     </div>
                   </div>
@@ -593,60 +581,70 @@ export default function BODSGraph({
               }
             }
 
+            // Collapse toggle — due south of the node, clickable (overlay is
+            // pointer-events:none, so the button re-enables pointer events).
+            let toggle: React.ReactNode = null;
+            if (item.hasChildren) {
+              const tp = Math.max(15, item.r * 0.5);
+              const label = item.collapsed ? (item.hiddenCount ? `+${item.hiddenCount}` : "+") : "−";
+              toggle = (
+                <button
+                  type="button"
+                  title={item.collapsed ? `Expand ${item.hiddenCount ?? 0} hidden` : "Collapse subsidiaries"}
+                  aria-label={item.collapsed ? `Expand ${item.hiddenCount ?? 0} hidden subsidiaries` : "Collapse subsidiaries"}
+                  onClick={() => toggleCollapse(item.id)}
+                  style={{
+                    position: "absolute",
+                    left: item.cx - tp, top: item.cy + item.r - tp * 0.5,
+                    minWidth: tp * 2, height: tp,
+                    pointerEvents: "auto", cursor: "pointer",
+                    background: item.collapsed ? "#1565c0" : "#ffffff",
+                    color: item.collapsed ? "#ffffff" : "#1565c0",
+                    border: "1.5px solid #1565c0", borderRadius: tp,
+                    fontSize: Math.max(9, tp * 0.55), fontWeight: 700, lineHeight: 1,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.2)", padding: `0 ${tp * 0.3}px`,
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            }
+
             return (
               <div key={item.id} style={{ opacity: dim ? 0.25 : 1, transition: "opacity 0.15s" }}>
-                {/* BOVS entity/person icon — centred, 60% of node */}
                 <img src={item.icon} alt="" style={{
-                  position: "absolute",
-                  width: iconSize, height: iconSize,
-                  left: item.cx - iconSize / 2, top: item.cy - iconSize / 2,
-                  objectFit: "contain",
+                  position: "absolute", width: iconSize, height: iconSize,
+                  left: item.cx - iconSize / 2, top: item.cy - iconSize / 2, objectFit: "contain",
                 }}/>
-
-                {/* BOVS jurisdiction flag — 45° NE circumference */}
                 {item.flagUrl && (
                   <div style={{
-                    position: "absolute",
-                    width: bw, height: bh,
+                    position: "absolute", width: bw, height: bh,
                     left: flagCx - bw / 2, top: flagCy - bh / 2,
-                    border: "1.5px solid rgba(0,0,0,0.25)",
-                    borderRadius: 2, overflow: "hidden",
-                    backgroundColor: "#fff",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
+                    border: "1.5px solid rgba(0,0,0,0.25)", borderRadius: 2, overflow: "hidden",
+                    backgroundColor: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
                   }}>
-                    <img src={item.flagUrl} alt=""
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}/>
+                    <img src={item.flagUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}/>
                   </div>
                 )}
-
-                {/* BOVS risk signal badge — 315° NW circumference */}
                 {sigBadge}
+                {toggle}
               </div>
             );
           })}
         </div>
 
-        {/* Edge details tooltip — appears on hover/tap for edges that carry an interests.details string */}
+        {/* Edge details tooltip */}
         {edgeTooltip && (
-          <div
-            style={{
-              position:     "absolute",
-              left:         Math.min(edgeTooltip.x + 12, (containerRef.current?.clientWidth ?? 400) - 220),
-              top:          Math.max(edgeTooltip.y - 48, 8),
-              zIndex:       20,
-              pointerEvents:"none",
-              background:   "#fff",
-              border:       "1px solid #d1d5db",
-              borderRadius: 6,
-              padding:      "6px 10px",
-              fontSize:     11,
-              lineHeight:   1.5,
-              maxWidth:     210,
-              boxShadow:    "0 2px 8px rgba(0,0,0,0.12)",
-              color:        "#1a1a2e",
-              whiteSpace:   "pre-wrap",
-            }}
-          >
+          <div style={{
+            position: "absolute",
+            left: Math.min(edgeTooltip.x + 12, (containerRef.current?.clientWidth ?? 400) - 220),
+            top:  Math.max(edgeTooltip.y - 48, 8),
+            zIndex: 20, pointerEvents: "none", background: "#fff",
+            border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 10px",
+            fontSize: 11, lineHeight: 1.5, maxWidth: 210,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.12)", color: "#1a1a2e", whiteSpace: "pre-wrap",
+          }}>
             {edgeTooltip.text}
           </div>
         )}
