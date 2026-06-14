@@ -775,7 +775,7 @@ export default function App() {
 
           {/* ── Name search panel ── */}
           {searchMode === "name" && (
-            <div id="panel-name" role="tabpanel" aria-labelledby="tab-name" className="p-4 bg-oo-bg sm:bg-white">
+            <div id="panel-name" role="tabpanel" aria-labelledby="tab-name" className="p-4">
               <form onSubmit={searchByName}>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <input
@@ -859,7 +859,7 @@ export default function App() {
 
           {/* ── National ID panel ── */}
           {searchMode === "nationalId" && (
-            <div id="panel-national-id" role="tabpanel" aria-labelledby="tab-national-id" className="p-4 bg-oo-bg sm:bg-white">
+            <div id="panel-national-id" role="tabpanel" aria-labelledby="tab-national-id" className="p-4">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -1027,7 +1027,7 @@ export default function App() {
 
           {/* ── LEI paste panel ── */}
           {searchMode === "lei" && (
-            <form onSubmit={runLookup} id="panel-lei" role="tabpanel" aria-labelledby="tab-lei" className="p-4 bg-oo-bg sm:bg-white">
+            <form onSubmit={runLookup} id="panel-lei" role="tabpanel" aria-labelledby="tab-lei" className="p-4">
               <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   id="lei-input"
