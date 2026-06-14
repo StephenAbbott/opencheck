@@ -16,17 +16,17 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 51** — Backend & frontend hardening (architecture review)
+**Latest: Phase 53** — AI summaries: a grounded, source-cited narrative of each entity
 
-Five improvements identified by a [Claude Fable 5](https://www.anthropic.com/news/claude-fable-5-mythos-5) review of the codebase, which to this point had been built with Sonnet and Opus:
+An on-demand, plain-English summary of what OpenCheck found about an entity, written for a customer-due-diligence / financial-crime audience — where **every statement is grounded in OpenCheck's own data**. The model only rephrases a pre-built evidence packet (it never retrieves or infers), and a citation validator drops any claim it can't tie to a source, so "no unprovable information" is enforced in code, not just in the prompt.
 
-1. **One lookup pipeline.** `/lookup` and `/lookup-stream` were two hand-synchronised copies (~600–700 duplicated lines, the cause of a past regression). A single async generator now drives both — the stream serialises its events, the sync endpoint collects them (2,403 → 1,159 lines), which also fixed three latent duplication bugs.
-2. **Self-describing adapters.** Each register adapter declares its lookup wiring on its own class; the router builds its dispatch tables from the registry at import, and the hand-maintained expected-source test lists are replaced by filesystem discovery. Adding an adapter no longer means editing six parallel places.
-3. **Shareable & survivable lookups.** A short-lived replay cache makes refreshes and shared `?lei=` URLs near-instant; a dropped stream now keeps partial results behind a "Resume lookup" banner; and individual failed sources get a "Retry source" button (`GET /lookup-source`).
-4. **Cold-start & tail-latency.** The FastAPI lifespan warms the GEM/GLEIF/GEOT indexes in a background thread so the first user never pays the download cost, and every source has a wall-clock budget so one hung adapter can't stall a lookup.
-5. **Code-split bundle.** Cytoscape is lazy-loaded (it only renders on "Visualise"), cutting the main bundle 777 kB → 271 kB (~67% smaller first paint).
+1. **Evidence packet, not raw data.** `build_evidence_packet()` distils a lookup result into atomic, already-evidenced facts (each carrying its source, BODS statement ids and a confidence derived from source authority), structured risk items, sources consulted, and gaps. This packet is the only thing the model sees.
+2. **Cited claims + mechanical validator.** Claude (`claude-sonnet-4-6`, structured output, low temperature) returns one executive paragraph plus per-claim citations; `validate_narrative()` withholds anything ungrounded. Absence is evidence — clean results and gaps are themselves citable, so the model never fabricates a citation.
+3. **`GET /narrative`.** Reuses the cached lookup pipeline (so the summary can't diverge from the page), runs off the event loop, validates, and returns the packet for UI linking. Flag- and key-gated.
+4. **On-demand UI.** A summary panel at the top of the result page with per-claim citation chips; clicking a chip scrolls to and flashes the source card and highlights the cited BODS node.
+5. **Offline eval harness.** A versioned prompt, six synthetic golden packets, and a machine-checkable rubric for iterating wording before any UI ships — `scripts/eval_narrative.py`.
 
-*Previous: [Phase 50 — National ID search](docs/status.md)*
+*Previous: [Phase 52 — GEM GEOT project-level ESG data](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
@@ -72,7 +72,7 @@ The first frontend build copies bundled images for `@openownership/bods-dagre` i
 | [Sources](docs/sources.md) | Full adapter table — 26 active sources plus inactive bulk-only adapters, license, entry point, description |
 | [Risk signals](docs/risk-signals.md) | All 12 signal codes: source-derived, AMLA CDD RTS, FATF jurisdiction, cross-source name match, ICIJ Offshore Leaks |
 | [Configuration](docs/configuration.md) | Environment variables, Render deployment, running the test suite |
-| [Development history](docs/status.md) | All 50 phases |
+| [Development history](docs/status.md) | All 53 phases |
 
 ## Licensing
 
