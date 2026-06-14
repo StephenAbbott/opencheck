@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import SearchLoadingGrid from "./components/SearchLoadingGrid";
 import {
+  BASE_URL,
   fetchSources,
   isValidLei,
   retryLookupSource,
@@ -192,7 +193,7 @@ export default function App() {
   // ``main`` shows the LEI form + lookup result; ``sources`` shows the
   // source inventory page. Kept as state rather than a router so we
   // don't pull in react-router for two views.
-  const [view, setView] = useState<"main" | "sources" | "behind">("main");
+  const [view, setView] = useState<"main" | "sources" | "behind" | "api">("main");
 
   // Dynamic document title — updates on lookup results and view changes.
   useEffect(() => {
@@ -202,6 +203,8 @@ export default function App() {
       document.title = "Data Sources — OpenCheck";
     } else if (view === "behind") {
       document.title = "Behind the Scenes — OpenCheck";
+    } else if (view === "api") {
+      document.title = "API — OpenCheck";
     } else {
       document.title = "OpenCheck";
     }
@@ -1261,6 +1264,8 @@ export default function App() {
         )}
 
         {view === "behind" && <BehindTheScenesPage />}
+
+        {view === "api" && <ApiPage />}
       </main>
 
       {/* GODIN ribbon — permanent attribution banner. */}
@@ -1311,6 +1316,14 @@ export default function App() {
 
       <footer className="border-t border-oo-rule bg-white px-6 sm:px-10 lg:px-16 py-6 text-[12px] text-oo-muted">
         <div className="max-w-oo-page mx-auto text-center">
+          <button
+            type="button"
+            onClick={() => setView("api")}
+            className="font-mono text-oo-blue hover:text-oo-burst cursor-pointer"
+          >
+            API
+          </button>{" "}
+          ·{" "}
           <a
             href="https://github.com/StephenAbbott/opencheck"
             target="_blank"
@@ -1379,6 +1392,192 @@ function BtsBadge({ children }: { children: React.ReactNode }) {
     <span className="inline-block font-mono text-[10px] bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5 text-oo-ink mr-1 mb-1">
       {children}
     </span>
+  );
+}
+
+// ---------------------------------------------------------------------
+// API page — documents the read-only REST surface (api.opencheck.world).
+// ---------------------------------------------------------------------
+
+function CopyField({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="flex items-center gap-3 bg-oo-bg border border-oo-rule rounded-oo px-3 py-2">
+      <code className="font-mono text-[13px] text-oo-ink flex-1 break-all">{value}</code>
+      <button
+        type="button"
+        onClick={() => {
+          navigator.clipboard?.writeText(value);
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1200);
+        }}
+        className="text-[11px] font-medium text-oo-blue hover:text-oo-burst shrink-0"
+      >
+        {copied ? "Copied" : "Copy"}
+      </button>
+    </div>
+  );
+}
+
+function ApiEndpoint({
+  path,
+  children,
+  params,
+}: {
+  path: string;
+  children: React.ReactNode;
+  params?: [string, string][];
+}) {
+  return (
+    <div className="py-3.5 border-t border-oo-rule first:border-t-0 first:pt-0">
+      <div className="flex items-baseline gap-2 flex-wrap">
+        <span className="font-mono text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded px-1.5 py-0.5">
+          GET
+        </span>
+        <code className="font-mono text-[13px] text-oo-ink break-all">{path}</code>
+      </div>
+      <p className="text-[13px] leading-[1.7] text-oo-muted mt-1.5">{children}</p>
+      {params && params.length > 0 && (
+        <dl className="mt-2 space-y-1">
+          {params.map(([k, v]) => (
+            <div key={k} className="flex gap-2 text-[12.5px] leading-[1.6]">
+              <dt className="font-mono text-oo-blue shrink-0">{k}</dt>
+              <dd className="text-oo-muted">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+}
+
+function ApiPage() {
+  const base = BASE_URL || "https://api.opencheck.world";
+  const mono = "font-mono text-[12px] bg-oo-bg px-1 rounded";
+  return (
+    <section aria-labelledby="api-heading">
+      <h2
+        id="api-heading"
+        className="font-head font-bold text-[clamp(1.35rem,3vw,1.8rem)] text-oo-ink mb-2 leading-tight"
+      >
+        API
+      </h2>
+      <p className="text-[14px] leading-[1.75] text-oo-muted mb-6 max-w-2xl">
+        OpenCheck exposes a small, read-only REST API. Every endpoint is a{" "}
+        <code className={mono}>GET</code> that returns JSON — except{" "}
+        <code className={mono}>/export</code> (a downloadable bundle) and the
+        streaming endpoints (Server-Sent Events). Every result is expressed in the{" "}
+        <a
+          href="https://standard.openownership.org/en/0.4.0/"
+          target="_blank"
+          rel="noreferrer"
+          className="underline text-oo-blue hover:text-oo-burst"
+        >
+          Beneficial Ownership Data Standard (BODS) v0.4
+        </a>
+        . No API key is required to read.
+      </p>
+
+      <div className="mb-8 max-w-2xl">
+        <div className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
+          Base URL
+        </div>
+        <CopyField value={base} />
+      </div>
+
+      <div
+        className="grid gap-6"
+        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 560px), 1fr))" }}
+      >
+        <BtsCard title="Lookup">
+          <ApiEndpoint
+            path="/lookup?lei=<LEI>"
+            params={[
+              ["lei", "20-character ISO 17442 LEI (required)."],
+              ["deepen_top", "How many top hits to fully fetch + map + assess (default 3)."],
+            ]}
+          >
+            <strong className="text-oo-ink font-semibold">Primary entry point.</strong>{" "}
+            Resolves the company across every source and returns a unified BODS v0.4
+            view — subject, related people and entities, ownership-or-control
+            relationships, cross-source links and risk signals.
+          </ApiEndpoint>
+          <ApiEndpoint path="/lookup-stream?lei=<LEI>">
+            The same synthesis streamed as Server-Sent Events (<code className={mono}>gleif_done</code>,
+            per-source <code className={mono}>hit</code> / <code className={mono}>source_error</code>,
+            then <code className={mono}>done</code>) so a client can render progressively.
+          </ApiEndpoint>
+          <ApiEndpoint path="/lookup-source?lei=<LEI>&source_id=<id>">
+            Re-run a single source for an existing lookup (the per-source “retry” in the UI).
+          </ApiEndpoint>
+        </BtsCard>
+
+        <BtsCard title="Search &amp; drill-down">
+          <ApiEndpoint path="/search?q=<query>&kind=<entity|person>">
+            Free-text fan-out search across every source. Power-user / debugging path;
+            the LEI-anchored <code className={mono}>/lookup</code> is the precise one.
+          </ApiEndpoint>
+          <ApiEndpoint path="/stream?q=<query>&kind=<...>">
+            The same search, streamed as Server-Sent Events.
+          </ApiEndpoint>
+          <ApiEndpoint path="/report?q=<query>&kind=<...>">
+            One-shot free-text synthesis (the pre-LEI flow): search, reconcile, deepen
+            the top hits, assess risk.
+          </ApiEndpoint>
+          <ApiEndpoint path="/deepen?source=<id>&hit_id=<id>">
+            The full record for a single hit, mapped to BODS statements, with its risk signals.
+          </ApiEndpoint>
+        </BtsCard>
+
+        <BtsCard title="Export &amp; licensing">
+          <ApiEndpoint
+            path="/export?lei=<LEI>&format=<zip|json|jsonl|xml>"
+            params={[
+              [
+                "format",
+                "zip ships bods.json + bods.jsonl + bods.xml + manifest.json + LICENSES.md; json / jsonl / xml return the statements only.",
+              ],
+            ]}
+          >
+            A reproducible, downloadable BODS bundle. Shares its synthesis with{" "}
+            <code className={mono}>/lookup</code>, so the export mirrors exactly what you
+            saw on screen.
+          </ApiEndpoint>
+          <ApiEndpoint path="/license-matrix?sources=<a,b,c>">
+            Per-source licence terms (commercial use, attribution, share-alike) plus a
+            combined commercial-use assessment for the listed sources — the data behind
+            the export “licensing assistant”.
+          </ApiEndpoint>
+        </BtsCard>
+
+        <BtsCard title="Catalogue &amp; health">
+          <ApiEndpoint path="/sources">
+            Inventory of the source adapters: id, name, licence, description, category,
+            and whether each is live.
+          </ApiEndpoint>
+          <ApiEndpoint path="/health">Liveness probe.</ApiEndpoint>
+        </BtsCard>
+
+        <BtsCard title="Quick start">
+          <p className="text-[13px] leading-[1.7] text-oo-muted mb-3">
+            Look up a company by its LEI and get the unified BODS view:
+          </p>
+          <CopyField value={`curl "${base}/lookup?lei=HWUPKR0MPOU8FGXBT394"`} />
+          <p className="text-[13px] leading-[1.7] text-oo-muted mt-4">
+            Full request/response detail is in{" "}
+            <a
+              href="https://github.com/StephenAbbott/opencheck/blob/main/docs/how-it-works.md#api-surface"
+              target="_blank"
+              rel="noreferrer"
+              className="underline text-oo-blue hover:text-oo-burst"
+            >
+              docs/how-it-works.md
+            </a>
+            .
+          </p>
+        </BtsCard>
+      </div>
+    </section>
   );
 }
 
