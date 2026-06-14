@@ -1,6 +1,6 @@
 # OpenCheck — Sources
 
-Twenty-seven active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`). Three further adapters are committed but inactive (bulk-data only) — see [Inactive / bulk-only adapters](#inactive--bulk-only-adapters) below.
+Twenty-eight active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`). Three further adapters are committed but inactive (bulk-data only) — see [Inactive / bulk-only adapters](#inactive--bulk-only-adapters) below.
 
 | ID | Name | License | Entry point | Description |
 |----|------|---------|-------------|-------------|
@@ -20,12 +20,13 @@ Twenty-seven active adapters, each implementing the same `SourceAdapter` protoco
 | `abr_australia` | Australian Business Register (ABN Lookup) | CC-BY-3.0-AU | `au_acn` from GLEIF (`RA000014`, ASIC) or `au_abn` (`RA000013`, ABR) | Australian company/business data — ABN, ACN, entity name and type, ABN/GST status, registered state and postcode, and business (trading) names — via the free ABN Lookup JSON web services (hourly-updated). Entity statements only; no officer or ownership data. Requires a free `ABN_GUID` |
 | `cvr_denmark` | CVR — Det Centrale Virksomhedsregister | Danish Open Government Data (CVR brugervilkår) | `dk_cvr` from GLEIF (`RA000170`) | Danish Central Business Register — entity basics (name, address, legal form, sector, status) via the Datafordeler GraphQL API; bitemporal data filtered to current records; CVRPerson (natural persons) excluded; entity statements only with `DK-CVR` scheme. Requires `CVR_DENMARK_API_KEY` (free from portal.datafordeler.dk) |
 | `sudreg_croatia` | Sudski registar — Croatian Court Register | HR Open Data (Otvorena dozvola) | `hr_mbs` from GLEIF (`RA000156`) | Croatian Court Register — entity basics (legal name, short name, legal form, status, founding date, registered seat, share capital) and `HR-MBS` + `HR-OIB` identifiers via the public `sudreg_javni` v3 JSON API (OAuth2 client credentials); officers and beneficial owners not published; entity statements only. Requires `SUDREG_CLIENT_ID` / `SUDREG_CLIENT_SECRET` (free from sudreg-data.gov.hr) |
-| `ariregister` | Estonian e-Business Register (Ariregister) | Open (PSI) | registry code from GLEIF (`RA000181`) | Estonian commercial register — entity profile, officers, and beneficial owners via the live e-Business Register SOAP/XML API (`ariregxmlv6.rik.ee`). Requires `ARIREGISTER_USERNAME` / `ARIREGISTER_PASSWORD` (free RIK contract) |
+| `ariregister` | Estonian e-Business Register (Ariregister) | Open (PSI) | registry code from GLEIF (`RA000181`) | Estonian commercial register — entity profile, officers, shareholders, and beneficial owners via the public Ariregister website (`ariregister.rik.ee`); web scraper approach, no credentials required |
 | `inpi` | INPI — Registre National des Entreprises | Open (PSI) | `fr_siren` from GLEIF | French national business registry — company profile, officers, and non-BO individual persons (full 65-code `roleEntreprise` codelist) via the RNE API; BO records excluded per Loi Sapin II |
 | `kvk` | KvK — Handelsregister | Open (PSI) | `nl_kvk` from GLEIF | Netherlands Chamber of Commerce commercial register — company details and authorised representatives |
 | `bolagsverket` | Bolagsverket | Open (PSI) | `se_org_number` from GLEIF | Swedish Companies Registration Office — company profile and board-level officers |
 | `zefix` | Zefix | Open (PSI) | `ch_uid` from GLEIF | Switzerland central business name index — company profile and authorised signatories |
 | `opencorporates` | OpenCorporates | OC Terms | `ocid` from GLEIF | Global company database — company profile, current officers, and network relationships as BODS statements |
+| `openaleph` | OpenAleph (OCCRP Aleph) | Open (varies by dataset) | LEI → OC URL → registration numbers → legal name cascade | Open knowledge bases indexed by OCCRP's AlephData platform — entity records from investigative datasets, company registers, and document collections; 60 s timeout; no API key required |
 | `sec_edgar` | SEC EDGAR (Schedule 13D/13G) | Public Domain | legal name search for US-jurisdiction entities | Major shareholders (>5 %) of US-listed companies from mandatory Schedule 13D and 13G XML filings. No API key required; coverage limited to filings from December 2024 onward |
 | `opensanctions` | OpenSanctions | CC BY-NC 4.0 | LEI search | The open-source database of sanctions, watchlists, and politically exposed persons |
 | `everypolitician` | EveryPolitician | CC BY-NC 4.0 | LEI search | Global database of political office-holders (served via OpenSanctions PEPs dataset) |
@@ -39,12 +40,10 @@ These adapters are committed and tested but **not exposed as live sources**. Eac
 | ID | Name | License | Entry point | Status & description |
 |----|------|---------|-------------|----------------------|
 | `bce_belgium` | Belgian Crossroads Bank for Enterprises (BCE/KBO) | Custom-KBO-Reuse | `be_enterprise_number` from GLEIF (`RA000025`) | Registered + wired, but env-gated. Entity name (NL/FR/DE), status, juridical form, start date, registered address from a local SQLite DB built from the monthly KBO open data ZIP; FTS5 name search. Activate via `BCE_BELGIUM_DB_FILE` |
-| `acra_singapore` | Singapore ACRA Business Registry | Singapore-OGL-1.0 | jurisdiction `SG` from GLEIF (`RA000523`) | Not in `REGISTRY`, not wired. Entity data (UEN, name, status, type, registration date, address) from the data.gov.sg monthly CSVs, built into a local SQLite DB; entity statements only. Activate via `ACRA_SINGAPORE_DB_FILE` |
+| `acra_singapore` | Singapore ACRA Business Registry | Singapore-OGL-1.0 | jurisdiction `SG` from GLEIF (`RA000509`) | Not in `REGISTRY`, not wired. Entity data (UEN, name, status, type, registration date, address) from the data.gov.sg monthly CSVs, built into a local SQLite DB; entity statements only. Activate via `ACRA_SINGAPORE_DB_FILE` |
 | `cyprus_drcor` | Cyprus DRCOR — Registrar of Companies | CC-BY-4.0 | `cy_he` from GLEIF (`RA000161`) | Not in `REGISTRY`, not wired. Organisations, registered office, and officials (directors/secretaries; no shareholders) from three monthly data.gov.cy CSVs, built into a local SQLite DB via `scripts/extract_cyprus.py`; entity + officer statements. data.gov.cy exposes no query API (`/api/1/datastore/query` returns 404). Activate via `CYPRUS_DRCOR_DB_FILE` |
 
 ## Notes
-
-The OpenAleph adapter is implemented but currently disabled in `REGISTRY` — its API is name-keyed rather than identifier-keyed, which doesn't fit the LEI flow cleanly yet. Re-enable in `backend/opencheck/sources/__init__.py` once we have a curated demo set for it.
 
 NC-licensed sources (OpenSanctions, EveryPolitician, OpenTender) propagate their share-alike / non-commercial obligations through `/deepen` and `/export`. The exported `LICENSES.md` warns reviewers before they re-publish.
 
