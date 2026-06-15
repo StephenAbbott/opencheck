@@ -16,16 +16,16 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 54** — Accessible PDF export: a take-away due-diligence report
+**Latest: Phase 55** — Malta Business Registry adapter: OpenCheck's 30th source
 
-A source-cited PDF report of an entity's findings, generated from the live OpenCheck profile and rendered as a tagged **PDF/UA-1** so it meets WCAG. Every line is attributed to its source — the same "nothing unprovable" rule as the AI summary.
+A live, key-less national-register adapter over the Malta Business Registry Open Data API — the first source found by systematically sweeping the EU's High-Value Datasets on [data.europa.eu](https://data.europa.eu/).
 
-1. **Accessible by construction.** Authored as semantic HTML and converted to a tagged PDF with WeasyPrint, so the structure tree, language, document title, heading bookmarks and `th scope` table markup all come from the markup. Each ownership graph carries both alt text and a data-table equivalent.
-2. **Per-source ownership diagrams.** Each source's BODS relationships are rendered as a purpose-built print SVG in the BOVS style (person/entity icons, ownership vs control edge colours, the interest described on every edge) — crisp vector, not a screenshot of the canvas.
-3. **Everything in one place.** Entity title, identifiers, a live-check QR back to opencheck.world, the grounded AI summary (embedded only when you've already generated it — no model call on download), risk signals, what each source found, and full licensing/attribution.
-4. **`POST /export/pdf` + Download button.** Rebuilds from the same cached lookup pipeline as the page (so the PDF can't diverge), renders off the event loop, and streams the file; a "Download PDF" button sits in the summary panel.
+1. **GLEIF-bridged, no key.** `mt_crn` (e.g. `C 113927`) is derived from GLEIF RA code `RA000443` and handed straight to `GET /api/v1/companies/{registration_number}`. The MBR API is an EU Open Data Directive High-Value Dataset — no auth, no API key, CC BY 4.0.
+2. **One entity record → one BODS statement.** Name, legal form, status, registered office and registration date map to a single `entityStatement` (`MT-MBR` scheme, MT jurisdiction). The API exposes entity data only — no officers or beneficial owners — and has no name search, so the source is entered via the LEI flow.
+3. **Searchable by registration number.** Malta is wired into the National ID search panel (`C 113927`), so you can look a company up directly, not only via its LEI.
+4. **Verified live.** 18 unit tests plus an opt-in live smoke test that fetches a real MBR record and asserts valid BODS (also a production access check); live-verified against Blue Lagoon Holding Limited.
 
-*Previous: [Phase 53 — AI summaries](docs/status.md)*
+*Previous: [Phase 54 — Accessible PDF export](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
