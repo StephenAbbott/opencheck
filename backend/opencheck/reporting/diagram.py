@@ -38,6 +38,10 @@ _MUTE = "#595959"
 _R = 26              # node radius
 _VIEW_W = 760
 
+# A diagram shows at most this many relationships to stay readable; the
+# text-equivalent table always lists the full set.
+MAX_DIAGRAM_RELATIONSHIPS = 10
+
 
 @dataclass
 class SourceDiagram:
@@ -47,10 +51,16 @@ class SourceDiagram:
     svg: str
     rows: list[tuple[str, str, str]] = field(default_factory=list)  # (party, interest, subject)
     summary: str = ""  # plain-text description (used as the figure alt / desc)
+    omitted: int = 0   # relationships present in `rows` but not drawn (cap overflow)
 
     @property
     def has_relationships(self) -> bool:
         return bool(self.rows)
+
+    @property
+    def shown(self) -> int:
+        """How many relationships the diagram actually draws."""
+        return max(len(self.rows) - self.omitted, 0)
 
 
 # --- label / classification helpers -----------------------------------------
@@ -77,6 +87,15 @@ def _node_label(stmt: dict[str, Any] | None) -> str:
     if stmt is None:
         return "Unspecified party"
     return _person_name(stmt) if stmt.get("recordType") == "person" else _entity_name(stmt)
+
+
+def _party_label(party: Any, by_id: dict[str, dict[str, Any]]) -> str:
+    """Resolve a relationship party (statementId, or an unspecified record) to a
+    display label — used for the full text-equivalent table."""
+    if isinstance(party, dict):
+        reason = party.get("reason") or "unspecified"
+        return f"Unspecified party ({reason})"
+    return _node_label(by_id.get(party))
 
 
 _OWNERSHIP_TYPES = {"shareholding", "ownership", "ownership-of-shares", "ownershipOfShares"}
@@ -170,10 +189,23 @@ def source_diagram(
     source; ``by_id`` maps every statementId in the bundle to its statement so
     party/subject references resolve to labels and node kinds.
     """
-    # Collect nodes and edges.
+    # The text-equivalent table lists every relationship, regardless of the cap.
+    rows: list[tuple[str, str, str]] = [
+        (
+            _party_label((s.get("recordDetails") or {}).get("interestedParty"), by_id),
+            _row_interest((s.get("recordDetails") or {}).get("interests") or []),
+            _party_label((s.get("recordDetails") or {}).get("subject"), by_id),
+        )
+        for s in rel_statements
+    ]
+
+    # The diagram draws at most MAX_DIAGRAM_RELATIONSHIPS to stay readable.
+    shown = rel_statements[:MAX_DIAGRAM_RELATIONSHIPS]
+    omitted = len(rel_statements) - len(shown)
+
+    # Collect nodes and edges (from the capped subset only).
     nodes: dict[str, dict[str, Any]] = {}   # id -> {kind, label, sublabel}
     edges: list[dict[str, Any]] = []
-    rows: list[tuple[str, str, str]] = []
     unspec_seq = 0
 
     def node_for(party: Any) -> str:
@@ -195,22 +227,28 @@ def source_diagram(
             nodes[party] = {"kind": _node_kind(stmt), "label": _node_label(stmt), "sublabel": sub}
         return party
 
-    for s in rel_statements:
+    for s in shown:
         rd = s.get("recordDetails") or {}
         pid = node_for(rd.get("interestedParty"))
         sid = node_for(rd.get("subject"))
         interests = rd.get("interests") or []
-        label = _interest_label(interests)
-        cat = _classify(interests)
-        edges.append({"from": pid, "to": sid, "label": label, "cat": cat})
-        rows.append((nodes[pid]["label"], _row_interest(interests), nodes[sid]["label"]))
+        edges.append({
+            "from": pid,
+            "to": sid,
+            "label": _interest_label(interests),
+            "cat": _classify(interests),
+        })
 
     if not edges:
         # Entity-only (e.g. GLEIF with no parent): draw the subject alone.
-        return _entity_only_diagram(by_id, source_name)
+        diagram = _entity_only_diagram(by_id, source_name)
+        diagram.rows = rows  # keep any rows (normally empty here)
+        return diagram
 
     svg, summary = _render(nodes, edges, source_name)
-    return SourceDiagram(source_name=source_name, svg=svg, rows=rows, summary=summary)
+    return SourceDiagram(
+        source_name=source_name, svg=svg, rows=rows, summary=summary, omitted=omitted
+    )
 
 
 def _row_interest(interests: list[dict[str, Any]]) -> str:
@@ -272,8 +310,12 @@ def _render(nodes: dict, edges: list, source_name: str) -> tuple[str, str]:
     for n, lyr in layer.items():
         by_layer.setdefault(lyr, []).append(n)
     rows_max = max(len(v) for v in by_layer.values())
-    row_h = 150
-    height = max(rows_max * row_h, row_h) + 24
+    # Cap the total height so even a full 10-node column fits within one A4 page
+    # (at the figure's rendered width, ~980 units ≈ a page's usable height).
+    # With few nodes the spacing stays at the comfortable 150.
+    max_h = 980
+    row_h = min(150, (max_h - 24) / rows_max) if rows_max else 150
+    height = max(rows_max * row_h, 150) + 24
     pos: dict[str, tuple[float, float]] = {}
     for lyr, ns in by_layer.items():
         ns.sort(key=lambda n: nodes[n]["label"])

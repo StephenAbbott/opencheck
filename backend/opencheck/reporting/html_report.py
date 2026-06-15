@@ -39,7 +39,7 @@ body { font-family: "DejaVu Sans", sans-serif; color:#1a1a1a; font-size:10pt; li
 h1 { font-size:21pt; line-height:1.15; margin:2mm 0 1mm; color:#fff; }
 .band .meta { font-size:9pt; color:#cdd0dc; margin:0; }
 h2 { font-size:12.5pt; color:#191d23; margin:7mm 0 2mm; padding-bottom:1.5mm; border-bottom:1.5px solid #3d30d4; }
-h3 { font-size:10.5pt; color:#191d23; margin:4mm 0 1mm; }
+h3 { font-size:10.5pt; color:#191d23; margin:4mm 0 1mm; break-after:avoid; }
 p { margin:0 0 2mm; }
 a { color:#3d30d4; }
 table { width:100%; border-collapse:collapse; font-size:9pt; margin:1mm 0 3mm; }
@@ -324,10 +324,15 @@ def _diagrams(report: dict[str, Any]) -> str:
         diagram = source_diagram(rels, by_id, source_name=name)
         fig_no += 1
         table = _diagram_table(diagram.rows, fig_no)
+        cap = f"Figure {fig_no}. Ownership and control as found by {escape(name)}."
+        if diagram.omitted:
+            cap += (
+                f" The diagram shows the first {diagram.shown} of {len(diagram.rows)} "
+                "relationships for readability; all are listed in the table below."
+            )
         blocks.append(
             f"<h3>{escape(name)}</h3>"
-            f'<figure>{diagram.svg}<figcaption>Figure {fig_no}. '
-            f"Ownership and control as found by {escape(name)}.</figcaption></figure>{table}"
+            f"<figure>{diagram.svg}<figcaption>{cap}</figcaption></figure>{table}"
         )
     return (
         '<section aria-labelledby="viz"><h2 id="viz">Ownership &amp; control structure</h2>'

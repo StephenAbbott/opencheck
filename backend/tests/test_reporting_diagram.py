@@ -103,7 +103,32 @@ def test_unspecified_party_renders():
     by_id = {"e": entity, "r": rel}
     d = source_diagram([rel], by_id, source_name="Some register")
     assert "Unspecified party" in d.svg
-    assert d.rows[0][0] == "Unspecified party"
+    assert d.rows[0][0] == "Unspecified party (unknown)"
+
+
+def test_diagram_caps_at_ten_relationships_but_table_keeps_all():
+    entity = {"statementId": "ent", "recordType": "entity",
+              "recordDetails": {"name": "Parent Co"}}
+    by_id = {"ent": entity}
+    rels = []
+    for i in range(15):
+        cid = f"sub-{i}"
+        by_id[cid] = {"statementId": cid, "recordType": "entity",
+                      "recordDetails": {"name": f"Subsidiary {i} Ltd"}}
+        rels.append({
+            "statementId": f"r-{i}", "recordType": "relationship",
+            "recordDetails": {
+                "interestedParty": "ent", "subject": cid,
+                "interests": [{"type": "shareholding", "details": "ownership of shares"}],
+            },
+        })
+    d = source_diagram(rels, by_id, source_name="GLEIF")
+    assert len(d.rows) == 15          # table keeps every relationship
+    assert d.shown == 10 and d.omitted == 5
+    # The first subsidiary is drawn; the 15th (capped) is not in the SVG but is in rows.
+    assert "Subsidiary 0 Ltd" in d.svg
+    assert "Subsidiary 14 Ltd" not in d.svg
+    assert any(subj == "Subsidiary 14 Ltd" for _, _, subj in d.rows)
 
 
 def test_entity_only_when_no_relationships():
