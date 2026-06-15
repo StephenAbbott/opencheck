@@ -1,0 +1,267 @@
+{
+  "lei": "213800AG2V6YE68H5N63",
+  "subject_name": "NEWCASTLE UNITED FOOTBALL COMPANY LIMITED",
+  "summary": "NEWCASTLE UNITED FOOTBALL COMPANY LIMITED (LEI 213800AG2V6YE68H5N63, GB-COH 00031014) is identifier-confirmed and registered in the United Kingdom. UK Companies House records show that Newcastle United Limited holds 75% or more of shares in the company, while GLEIF Level 2 data identifies Public Investment Fund as the ultimate parent (accounting consolidation), a relationship also corroborated by OpenSanctions; however, GLEIF additionally records a reporting exception indicating that an intermediate parent exists but holds no LEI, introducing opacity into the ownership chain. The board comprises six directors per UK Companies House and OpenCorporates: James Adam Reuben (from 2021-10-07), Yasir Othman Alrumayyan (from 2021-12-02), Abdulmajid Ahmed Alhagbani (from 2023-02-23), Asmaa Mohammed Rezeeq (from 2023-02-23), Roger Thornton (from 2024-07-25), and Jacobo Francisco Solis Patino (from 2024-12-16). Two structural risk signals were identified: an opaque ownership signal (medium confidence, per GLEIF) arising from an anonymous entity in the ownership chain, and a non-EU/EEA jurisdiction signal (high confidence, per UK Companies House) reflecting that the ownership chain reaches into GB, a condition relevant under AMLA CDD RTS criterion (b). A material limitation applies: OpenSanctions data is licensed under CC-BY-NC-4.0 and may not be commercially re-used.",
+  "claims": [],
+  "limitations": [],
+  "overall_confidence": "low",
+  "model": "claude-sonnet-4-6",
+  "prompt_version": "2026-06-14-v3",
+  "packet": {
+    "subject_name": "NEWCASTLE UNITED FOOTBALL COMPANY LIMITED",
+    "lei": "213800AG2V6YE68H5N63",
+    "jurisdiction": "GB",
+    "subject_confidence": "identifier-confirmed",
+    "identifiers": {
+      "lei": "213800AG2V6YE68H5N63",
+      "gb_coh": "00031014",
+      "ocid": "gb/00031014"
+    },
+    "facts": [
+      {
+        "id": "f1",
+        "statement": "Unknown parent (GLEIF reporting exception) holds GLEIF reporting exception: parent exists but has no LEI in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/213800AG2V6YE68H5N63",
+        "bods_statement_ids": [
+          "opencheck-b4ec240f17f46ef11f844f54"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f2",
+        "statement": "Public Investment Fund holds GLEIF Level 2 ultimate-parent (accounting consolidation) in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/558600EF1LZ82YHRMV66",
+        "bods_statement_ids": [
+          "opencheck-8435743b1bd59c6c98835df3"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f3",
+        "statement": "Public Investment Fund holds shareholding in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/lei-213800AG2V6YE68H5N63/",
+        "bods_statement_ids": [
+          "opencheck-801bece197cf706f3bf6fed9"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f4",
+        "statement": "JAMES ADAM REUBEN holds appointmentOfBoard, from 2021-10-07 in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00031014",
+        "bods_statement_ids": [
+          "opencheck-9bf254bfe821aa58935d15ea"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f5",
+        "statement": "YASIR OTHMAN ALRUMAYYAN holds appointmentOfBoard, from 2021-12-02 in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00031014",
+        "bods_statement_ids": [
+          "opencheck-895d1fac96cb7309e011b75f"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f6",
+        "statement": "ABDULMAJID AHMED ALHAGBANI holds appointmentOfBoard, from 2023-02-23 in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00031014",
+        "bods_statement_ids": [
+          "opencheck-a745657657b7bcab563df644"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f7",
+        "statement": "ASMAA MOHAMMED REZEEQ holds appointmentOfBoard, from 2023-02-23 in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00031014",
+        "bods_statement_ids": [
+          "opencheck-3dc271d8581aa96e59f3b3cc"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f8",
+        "statement": "ROGER THORNTON holds appointmentOfBoard, from 2024-07-25 in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00031014",
+        "bods_statement_ids": [
+          "opencheck-e649748b34987ca1734f4aa3"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f9",
+        "statement": "JACOBO FRANCISCO SOLIS PATINO holds appointmentOfBoard, from 2024-12-16 in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00031014",
+        "bods_statement_ids": [
+          "opencheck-4fd4489c48080999b091108f"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f10",
+        "statement": "Newcastle United Limited holds Ownership of shares – 75% or more (75–100%) in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/00031014",
+        "bods_statement_ids": [
+          "opencheck-d6b0b4535245a74e1d2e58be"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f11",
+        "statement": "ALHAGBANI, Abdulmajid Ahmed holds Director, from 2023-02-23, from 2023-02-23 in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/00031014",
+        "bods_statement_ids": [
+          "opencheck-f7af6377a26c221b5096f5a0"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f12",
+        "statement": "ALRUMAYYAN, Yasir Othman holds Director, from 2021-12-02, from 2021-12-02 in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/00031014",
+        "bods_statement_ids": [
+          "opencheck-59d691b17b39ba74d1242d6a"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f13",
+        "statement": "REUBEN, James Adam holds Director, from 2021-10-07, from 2021-10-07 in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/00031014",
+        "bods_statement_ids": [
+          "opencheck-ba39eb5b1ecf03739e2bafb2"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f14",
+        "statement": "REZEEQ, Asmaa Mohammed holds Director, from 2023-02-23, from 2023-02-23 in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/00031014",
+        "bods_statement_ids": [
+          "opencheck-e16ca59ff8055681da9ba3c0"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f15",
+        "statement": "SOLIS PATINO, Jacobo Francisco holds Director, from 2024-12-16, from 2024-12-16 in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/00031014",
+        "bods_statement_ids": [
+          "opencheck-bb7cd34c3238541dfb77a6e1"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f16",
+        "statement": "THORNTON, Roger holds Director, from 2024-07-25, from 2024-07-25 in NEWCASTLE UNITED FOOTBALL COMPANY LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/00031014",
+        "bods_statement_ids": [
+          "opencheck-4a0cd6c21f363344bbd59605"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f17",
+        "statement": "NEWCASTLE UNITED FOOTBALL COMPANY LIMITED is a registered entity in United Kingdom (XI-LEI 213800AG2V6YE68H5N63, GB-COH 00031014, OpenCorporates gb/00031014, QCC Code QGBARQ4TMN, S&P CIQ Company ID 5756822).",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/213800AG2V6YE68H5N63",
+        "bods_statement_ids": [
+          "opencheck-a239a9224df5abbdf5b60510"
+        ],
+        "confidence": "medium"
+      }
+    ],
+    "risks": [
+      {
+        "id": "r1",
+        "code": "OPAQUE_OWNERSHIP",
+        "label": "Opaque ownership (super-secure)",
+        "confidence": "medium",
+        "rationale": "Ownership chain contains: anonymous entity in ownership chain.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "fact_ids": []
+      },
+      {
+        "id": "r2",
+        "code": "NON_EU_JURISDICTION",
+        "label": "Non-EU jurisdiction",
+        "confidence": "high",
+        "rationale": "Ownership chain reaches into jurisdictions outside the EU/EEA: GB. AMLA CDD RTS condition (b).",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "fact_ids": []
+      }
+    ],
+    "sources_consulted": [
+      {
+        "source_id": "gleif",
+        "name": "GLEIF",
+        "license": "CC0-1.0",
+        "homepage": "https://search.gleif.org/#/search/"
+      },
+      {
+        "source_id": "opensanctions",
+        "name": "OpenSanctions",
+        "license": "CC-BY-NC-4.0",
+        "homepage": "https://www.opensanctions.org/"
+      },
+      {
+        "source_id": "opencorporates",
+        "name": "OpenCorporates",
+        "license": "OC-Terms",
+        "homepage": "https://opencorporates.com/"
+      },
+      {
+        "source_id": "companies_house",
+        "name": "UK Companies House",
+        "license": "OGL-3.0",
+        "homepage": "https://find-and-update.company-information.service.gov.uk/"
+      }
+    ],
+    "gaps": [
+      {
+        "id": "g1",
+        "statement": "OpenSanctions is licensed under CC-BY-NC-4.0. Commercial re-use of this data is not permitted under the source license."
+      }
+    ]
+  },
+  "validation_ok": true,
+  "dropped_claims": [],
+  "validation_issues": []
+}

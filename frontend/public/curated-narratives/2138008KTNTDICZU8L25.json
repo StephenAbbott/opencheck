@@ -1,0 +1,372 @@
+{
+  "lei": "2138008KTNTDICZU8L25",
+  "subject_name": "BANK SADERAT PLC",
+  "summary": "BANK SADERAT PLC (LEI: 2138008KTNTDICZU8L25; GB Companies House: 01126618) is identifier-confirmed and registered in the United Kingdom. Bank Saderat Iran holds 75% or more of shares and voting rights and retains the right to appoint or remove directors, making it both the direct and ultimate parent under accounting consolidation; Mr Mohsen Seifi Kafshgari (appointed director 2024-10-19) additionally holds significant influence or control, while HAMID BORHANI and ROBERT JOHN SPEEDY serve as directors and DOMINIC NICHOLAS holds a senior managing official role from 2023-12-29. Multiple high-confidence risk signals are present: BANK SADERAT PLC itself is tagged as sanctioned by OpenSanctions; its parent Bank Saderat Iran is independently flagged as sanctioned (and sanction-linked) by OpenSanctions across several records; and Mr Mohsen Seifi Kafshgari is flagged as sanction-linked by OpenSanctions at both high and medium confidence. The ownership chain reaches into Iran, a jurisdiction on the FATF High-Risk (Call for Action / black list) list as of February 2026, corroborated by both GLEIF and UK Companies House at high confidence. A licensing limitation applies: OpenSanctions data is published under CC-BY-NC-4.0, and commercial re-use of that data is not permitted under the source licence.",
+  "claims": [],
+  "limitations": [],
+  "overall_confidence": "low",
+  "model": "claude-sonnet-4-6",
+  "prompt_version": "2026-06-14-v3",
+  "packet": {
+    "subject_name": "BANK SADERAT PLC",
+    "lei": "2138008KTNTDICZU8L25",
+    "jurisdiction": "GB",
+    "subject_confidence": "identifier-confirmed",
+    "identifiers": {
+      "lei": "2138008KTNTDICZU8L25",
+      "gb_coh": "01126618",
+      "ocid": "gb/01126618"
+    },
+    "facts": [
+      {
+        "id": "f1",
+        "statement": "BANK SADERAT IRAN holds GLEIF Level 2 direct-parent (accounting consolidation) in BANK SADERAT PLC.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300KBNGV4NYY3GE68",
+        "bods_statement_ids": [
+          "opencheck-bcf3f76510a09f6703df1a48"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f2",
+        "statement": "BANK SADERAT IRAN holds GLEIF Level 2 ultimate-parent (accounting consolidation) in BANK SADERAT PLC.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300KBNGV4NYY3GE68",
+        "bods_statement_ids": [
+          "opencheck-c90e9eea7287d1b06a7cfbd5"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f3",
+        "statement": "BANK SADERAT IRAN holds shareholding in Bank Saderat PLC.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-276gB7L8sFEhctkuEpZsus/",
+        "bods_statement_ids": [
+          "opencheck-8557262c4d4fa845ba054e3d"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f4",
+        "statement": "BANK SADERAT IRAN holds shareholding in Bank Saderat PLC.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-276gB7L8sFEhctkuEpZsus/",
+        "bods_statement_ids": [
+          "opencheck-7f539fa5142c253ad10cbba1"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f5",
+        "statement": "Mr Mohsen Seifi Kafshgari holds shareholding in Bank Saderat PLC.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-276gB7L8sFEhctkuEpZsus/",
+        "bods_statement_ids": [
+          "opencheck-7518f47eed930be3c2420b97"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f6",
+        "statement": "HAMID BORHANI holds appointmentOfBoard, from 1991-12-31 in BANK SADERAT PLC.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/01126618",
+        "bods_statement_ids": [
+          "opencheck-c1256adbbda9e6b87f098967"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f7",
+        "statement": "ROBERT JOHN SPEEDY holds appointmentOfBoard, from 2009-01-01 in BANK SADERAT PLC.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/01126618",
+        "bods_statement_ids": [
+          "opencheck-2294a4faca5bdbaefdde38a5"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f8",
+        "statement": "DOMINIC NICHOLAS holds seniorManagingOfficial, from 2023-12-29 in BANK SADERAT PLC.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/01126618",
+        "bods_statement_ids": [
+          "opencheck-f482c6a96f08bc9a5f1997c7"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f9",
+        "statement": "MOHSEN SEIFI KAFSHGARI holds appointmentOfBoard, from 2024-10-19 in BANK SADERAT PLC.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/01126618",
+        "bods_statement_ids": [
+          "opencheck-29ddf13495c8743cfc375755"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f10",
+        "statement": "Mr Mohsen Seifi Kafshgari holds Has significant influence or control in BANK SADERAT PLC.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/01126618",
+        "bods_statement_ids": [
+          "opencheck-15e3f8e9e81ae7336e986845"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f11",
+        "statement": "Mr Seyed Ziya Imany previously held Has significant influence or control, to 2024-10-04 in BANK SADERAT PLC.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/01126618",
+        "bods_statement_ids": [
+          "opencheck-18dc5ec553b9a1a5c1b36c9a"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f12",
+        "statement": "Bank Saderat Iran holds Ownership of shares – 75% or more (75–100%); Ownership of voting rights - 75% or more (75–100%); Right to appoint or remove directors in BANK SADERAT PLC.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/01126618",
+        "bods_statement_ids": [
+          "opencheck-b125f26f56630c1a37a4f5a4"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f13",
+        "statement": "BORHANI, Hamid holds Director in BANK SADERAT PLC.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/01126618",
+        "bods_statement_ids": [
+          "opencheck-83b4bc0b2db6948cfb699ce0"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f14",
+        "statement": "SEIFI KAFSHGARI, Mohsen holds Director, from 2024-10-19, from 2024-10-19 in BANK SADERAT PLC.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/01126618",
+        "bods_statement_ids": [
+          "opencheck-a2c557e42c5cbbbb476950e1"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f15",
+        "statement": "SPEEDY, Robert John holds Director, from 2009-01-01, from 2009-01-01 in BANK SADERAT PLC.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/01126618",
+        "bods_statement_ids": [
+          "opencheck-7450f5275f9937dad3964ad9"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f16",
+        "statement": "BANK SADERAT PLC is a registered entity in United Kingdom (XI-LEI 2138008KTNTDICZU8L25, GB-COH 01126618, OpenCorporates gb/01126618, QCC Code QGBK7A9631, ISO-9362 SADRGB21XXX, S&P CIQ Company ID 283665685).",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/2138008KTNTDICZU8L25",
+        "bods_statement_ids": [
+          "opencheck-53cef76c5b52cbfbd089d412"
+        ],
+        "confidence": "medium"
+      }
+    ],
+    "risks": [
+      {
+        "id": "r1",
+        "code": "SANCTIONED",
+        "label": "Sanctioned",
+        "confidence": "high",
+        "rationale": "OpenSanctions tags this record as sanctioned (sanction).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": []
+      },
+      {
+        "id": "r2",
+        "code": "NON_EU_JURISDICTION",
+        "label": "Non-EU jurisdiction",
+        "confidence": "high",
+        "rationale": "Ownership chain reaches into jurisdictions outside the EU/EEA: GB. AMLA CDD RTS condition (b).",
+        "source_name": "OpenAleph",
+        "source_id": "openaleph",
+        "fact_ids": []
+      },
+      {
+        "id": "r3",
+        "code": "FATF_BLACK_LIST",
+        "label": "FATF black-list jurisdiction",
+        "confidence": "high",
+        "rationale": "Ownership chain reaches into Iran, Islamic Republic of, a jurisdiction on the FATF High-Risk list (Call for Action / black list, February 2026).",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "fact_ids": []
+      },
+      {
+        "id": "r4",
+        "code": "FATF_BLACK_LIST",
+        "label": "FATF black-list jurisdiction",
+        "confidence": "high",
+        "rationale": "Ownership chain reaches into Iran, a jurisdiction on the FATF High-Risk list (Call for Action / black list, February 2026).",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "fact_ids": []
+      },
+      {
+        "id": "r5",
+        "code": "RELATED_SANCTIONED",
+        "label": "Related party sanctioned",
+        "confidence": "high",
+        "rationale": "Related entity 'BANK SADERAT IRAN' matches a record on opensanctions: sanctioned per OpenSanctions (sanction).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": []
+      },
+      {
+        "id": "r6",
+        "code": "RELATED_SANCTIONED",
+        "label": "Related party sanctioned",
+        "confidence": "high",
+        "rationale": "Related entity 'BANK SADERAT IRAN' matches a record on opensanctions: sanctioned per OpenSanctions (sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": []
+      },
+      {
+        "id": "r7",
+        "code": "RELATED_SANCTIONED",
+        "label": "Related party sanctioned",
+        "confidence": "high",
+        "rationale": "Related entity 'BANK SADERAT IRAN' matches a record on opensanctions: sanctioned per OpenSanctions (sanction).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": []
+      },
+      {
+        "id": "r8",
+        "code": "RELATED_SANCTIONED",
+        "label": "Related party sanctioned",
+        "confidence": "high",
+        "rationale": "Related entity 'BANK SADERAT IRAN' matches a record on opensanctions: sanctioned per OpenSanctions (sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": []
+      },
+      {
+        "id": "r9",
+        "code": "RELATED_SANCTIONED",
+        "label": "Related party sanctioned",
+        "confidence": "high",
+        "rationale": "Related party 'Mr Mohsen Seifi Kafshgari' matches a record on opensanctions: sanctioned per OpenSanctions (sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": []
+      },
+      {
+        "id": "r10",
+        "code": "RELATED_SANCTIONED",
+        "label": "Related party sanctioned",
+        "confidence": "medium",
+        "rationale": "Related party 'MOHSEN SEIFI KAFSHGARI' matches a record on opensanctions: sanctioned per OpenSanctions (sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": []
+      },
+      {
+        "id": "r11",
+        "code": "RELATED_SANCTIONED",
+        "label": "Related party sanctioned",
+        "confidence": "high",
+        "rationale": "Related party 'Mr Mohsen Seifi Kafshgari' matches a record on opensanctions: sanctioned per OpenSanctions (sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": []
+      },
+      {
+        "id": "r12",
+        "code": "RELATED_SANCTIONED",
+        "label": "Related party sanctioned",
+        "confidence": "high",
+        "rationale": "Related entity 'Bank Saderat Iran' matches a record on opensanctions: sanctioned per OpenSanctions (sanction).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": []
+      },
+      {
+        "id": "r13",
+        "code": "RELATED_SANCTIONED",
+        "label": "Related party sanctioned",
+        "confidence": "high",
+        "rationale": "Related entity 'Bank Saderat Iran' matches a record on opensanctions: sanctioned per OpenSanctions (sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": []
+      }
+    ],
+    "sources_consulted": [
+      {
+        "source_id": "gleif",
+        "name": "GLEIF",
+        "license": "CC0-1.0",
+        "homepage": "https://search.gleif.org/#/search/"
+      },
+      {
+        "source_id": "opensanctions",
+        "name": "OpenSanctions",
+        "license": "CC-BY-NC-4.0",
+        "homepage": "https://www.opensanctions.org/"
+      },
+      {
+        "source_id": "opencorporates",
+        "name": "OpenCorporates",
+        "license": "OC-Terms",
+        "homepage": "https://opencorporates.com/"
+      },
+      {
+        "source_id": "companies_house",
+        "name": "UK Companies House",
+        "license": "OGL-3.0",
+        "homepage": "https://find-and-update.company-information.service.gov.uk/"
+      },
+      {
+        "source_id": "openaleph",
+        "name": "OpenAleph",
+        "license": "per-collection",
+        "homepage": "https://openaleph.org/"
+      }
+    ],
+    "gaps": [
+      {
+        "id": "g1",
+        "statement": "OpenSanctions is licensed under CC-BY-NC-4.0. Commercial re-use of this data is not permitted under the source license."
+      }
+    ]
+  },
+  "validation_ok": true,
+  "dropped_claims": [],
+  "validation_issues": []
+}

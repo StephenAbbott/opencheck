@@ -1,0 +1,269 @@
+{
+  "lei": "213800E11LI1SCETU492",
+  "subject_name": "TAQA BRATANI LIMITED",
+  "summary": "TAQA BRATANI LIMITED (LEI: 213800E11LI1SCETU492; GB Companies House: 05975475) is identifier-confirmed and registered in the United Kingdom. The entity's direct and ultimate accounting parent is شركة أبوظبى الوطنية للطاقة - ش م ع (TAQA), per GLEIF Level 2 relationship data, and UK Companies House records confirm that the Abu Dhabi Government holds significant influence or control over the company; TAQA Bratani also holds a shareholding in the Brae Group per OpenSanctions. Current directors recorded at both UK Companies House and OpenCorporates are Alexander Burnett Hutchison (appointed 2015-09-17) and Franco Polo (appointed 2022-12-12), with Christopher Graham Ross Rettie recorded as a senior managing official from 2025-03-12. A structural risk signal of high confidence has been raised reflecting that the ownership chain reaches into jurisdictions outside the EU/EEA (United Kingdom), a condition relevant under AMLA CDD RTS criterion (b); this is a jurisdictional indicator for further review and not a determination of wrongdoing. A material limitation applies: OpenSanctions data is licensed under CC-BY-NC-4.0, meaning commercial re-use of that source is not permitted, and findings derived from it should be treated accordingly.",
+  "claims": [
+    {
+      "id": "c1",
+      "text": "TAQA BRATANI LIMITED is identifier-confirmed, registered in the United Kingdom, with LEI 213800E11LI1SCETU492 and GB Companies House number 05975475.",
+      "fact_ids": [
+        "f10"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c2",
+      "text": "شركة أبوظبى الوطنية للطاقة - ش م ع is the direct accounting parent of TAQA BRATANI LIMITED, per GLEIF Level 2 relationship data.",
+      "fact_ids": [
+        "f1"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c3",
+      "text": "شركة أبوظبى الوطنية للطاقة - ش م ع is the ultimate accounting parent of TAQA BRATANI LIMITED, per GLEIF Level 2 relationship data.",
+      "fact_ids": [
+        "f2"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c4",
+      "text": "UK Companies House records confirm that the Abu Dhabi Government holds significant influence or control in TAQA BRATANI LIMITED.",
+      "fact_ids": [
+        "f7"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c5",
+      "text": "TAQA Bratani holds a shareholding in the Brae Group, per OpenSanctions.",
+      "fact_ids": [
+        "f3"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c6",
+      "text": "Alexander Burnett Hutchison has been a director of TAQA BRATANI LIMITED since 2015-09-17, as recorded by both UK Companies House and OpenCorporates.",
+      "fact_ids": [
+        "f4",
+        "f8"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c7",
+      "text": "Franco Polo has been a director of TAQA BRATANI LIMITED since 2022-12-12, as recorded by both UK Companies House and OpenCorporates.",
+      "fact_ids": [
+        "f5",
+        "f9"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c8",
+      "text": "Christopher Graham Ross Rettie is recorded as a senior managing official of TAQA BRATANI LIMITED from 2025-03-12, per OpenCorporates.",
+      "fact_ids": [
+        "f6"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c9",
+      "text": "A high-confidence structural risk signal has been raised indicating that the ownership chain reaches into jurisdictions outside the EU/EEA (United Kingdom), relevant under AMLA CDD RTS criterion (b); this is a jurisdictional indicator for further review and not a determination of wrongdoing.",
+      "fact_ids": [
+        "r1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c10",
+      "text": "A material limitation applies: OpenSanctions data is licensed under CC-BY-NC-4.0, meaning commercial re-use of that source is not permitted, and findings derived from it should be treated accordingly.",
+      "fact_ids": [
+        "g1"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "limitations": [],
+  "overall_confidence": "low",
+  "model": "claude-sonnet-4-6",
+  "prompt_version": "2026-06-14-v3",
+  "packet": {
+    "subject_name": "TAQA BRATANI LIMITED",
+    "lei": "213800E11LI1SCETU492",
+    "jurisdiction": "GB",
+    "subject_confidence": "identifier-confirmed",
+    "identifiers": {
+      "lei": "213800E11LI1SCETU492",
+      "gb_coh": "05975475",
+      "ocid": "gb/05975475"
+    },
+    "facts": [
+      {
+        "id": "f1",
+        "statement": "شركة أبوظبى الوطنية للطاقة - ش م ع holds GLEIF Level 2 direct-parent (accounting consolidation) in TAQA BRATANI LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/213800UNJSVQFNUYYW03",
+        "bods_statement_ids": [
+          "opencheck-fabad323ace752b3b8155bd8"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f2",
+        "statement": "شركة أبوظبى الوطنية للطاقة - ش م ع holds GLEIF Level 2 ultimate-parent (accounting consolidation) in TAQA BRATANI LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/213800UNJSVQFNUYYW03",
+        "bods_statement_ids": [
+          "opencheck-cd9ae7fd71f4e04049cee751"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f3",
+        "statement": "TAQA Bratani holds shareholding in Brae Group.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/gem-own-e100001014306/",
+        "bods_statement_ids": [
+          "opencheck-9a77188044d016fc7c380b55"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f4",
+        "statement": "ALEXANDER BURNETT HUTCHISON holds appointmentOfBoard, from 2015-09-17 in TAQA BRATANI LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/05975475",
+        "bods_statement_ids": [
+          "opencheck-eee1557f9905489e753314fe"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f5",
+        "statement": "FRANCO POLO holds appointmentOfBoard, from 2022-12-12 in TAQA BRATANI LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/05975475",
+        "bods_statement_ids": [
+          "opencheck-72292d3a85246f3bf452ce83"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f6",
+        "statement": "CHRISTOPHER GRAHAM ROSS RETTIE holds seniorManagingOfficial, from 2025-03-12 in TAQA BRATANI LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/05975475",
+        "bods_statement_ids": [
+          "opencheck-2e4106194a19a70140343e44"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f7",
+        "statement": "The Abu Dhabi Government holds Has significant influence or control in TAQA BRATANI LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/05975475",
+        "bods_statement_ids": [
+          "opencheck-de5d402ee326c20081c85e1c"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f8",
+        "statement": "HUTCHISON, Alexander Burnett holds Director, from 2015-09-17, from 2015-09-17 in TAQA BRATANI LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/05975475",
+        "bods_statement_ids": [
+          "opencheck-ce304f62ed9bd2c43e922c26"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f9",
+        "statement": "POLO, Franco holds Director, from 2022-12-12, from 2022-12-12 in TAQA BRATANI LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/05975475",
+        "bods_statement_ids": [
+          "opencheck-210b0a91bb29c7cda4a5550f"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f10",
+        "statement": "TAQA BRATANI LIMITED is a registered entity in United Kingdom (XI-LEI 213800E11LI1SCETU492, GB-COH 05975475, OpenCorporates gb/05975475, QCC Code QGBK1M26PA, S&P CIQ Company ID 41390183).",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/213800E11LI1SCETU492",
+        "bods_statement_ids": [
+          "opencheck-707e63bf1e8568e9007a5ef2"
+        ],
+        "confidence": "medium"
+      }
+    ],
+    "risks": [
+      {
+        "id": "r1",
+        "code": "NON_EU_JURISDICTION",
+        "label": "Non-EU jurisdiction",
+        "confidence": "high",
+        "rationale": "Ownership chain reaches into jurisdictions outside the EU/EEA: GB. AMLA CDD RTS condition (b).",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "fact_ids": []
+      }
+    ],
+    "sources_consulted": [
+      {
+        "source_id": "gleif",
+        "name": "GLEIF",
+        "license": "CC0-1.0",
+        "homepage": "https://search.gleif.org/#/search/"
+      },
+      {
+        "source_id": "opensanctions",
+        "name": "OpenSanctions",
+        "license": "CC-BY-NC-4.0",
+        "homepage": "https://www.opensanctions.org/"
+      },
+      {
+        "source_id": "climatetrace",
+        "name": "Global Energy Monitor / Climate TRACE",
+        "license": "CC-BY-4.0",
+        "homepage": "https://globalenergymonitor.org/"
+      },
+      {
+        "source_id": "opencorporates",
+        "name": "OpenCorporates",
+        "license": "OC-Terms",
+        "homepage": "https://opencorporates.com/"
+      },
+      {
+        "source_id": "companies_house",
+        "name": "UK Companies House",
+        "license": "OGL-3.0",
+        "homepage": "https://find-and-update.company-information.service.gov.uk/"
+      }
+    ],
+    "gaps": [
+      {
+        "id": "g1",
+        "statement": "OpenSanctions is licensed under CC-BY-NC-4.0. Commercial re-use of this data is not permitted under the source license."
+      }
+    ]
+  },
+  "validation_ok": true,
+  "dropped_claims": [],
+  "validation_issues": []
+}

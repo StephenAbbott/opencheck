@@ -1,0 +1,827 @@
+{
+  "lei": "2138002S3XGZ38WN5Q72",
+  "subject_name": "HORNSEA 1 LIMITED",
+  "summary": "HORNSEA 1 LIMITED (LEI: 2138002S3XGZ38WN5Q72; GB Companies House: 07640868) is identifier-confirmed and registered in the United Kingdom. Its immediate parent for accounting consolidation purposes is ØRSTED A/S, which is also identified as the ultimate parent per GLEIF Level 2 data (medium confidence); however, the registered PSC at UK Companies House is Hornsea 1 Holdings Limited, which holds 75% or more of shares, voting rights, and the right to appoint or remove directors. That holding company is itself jointly owned by JUPITER OFFSHORE WIND LIMITED (25–50%) and HORNSEA 1 PSC LIMITED (25–50%), with HORNSEA 1 PSC LIMITED ultimately controlled via ORSTED UK HOW01 HOLDINGS LIMITED, which is in turn owned by Orsted Power (Uk) Limited — constituting a five-layer corporate ownership chain that meets the structural threshold for a complex corporate structure (high confidence, per UK Companies House). The board of HORNSEA 1 LIMITED currently comprises ten directors including Filippo Di Salle (from 2022-10-27), Edmund George Andrew (from 2023-09-29), Samuel James Claxton (from 2025-03-07), Hugh Alistair Yendole and Thomas Krogh Jensen (both from 2025-05-27), Fiona Catherine Power (from 2025-09-23), and Martin James Swain, Sara Sancho Peris, Benjamin Michael Burgess, and Matthew Derek George Ridley (all from 2026-04-23), as recorded by UK Companies House and OpenCorporates. Two structural risk signals are noted: the ownership chain reaches into jurisdictions outside the EU/EEA (high confidence) and comprises five corporate layers exceeding the AMLA CDD RTS threshold of three (medium confidence); no gaps were identified in the evidence packet.",
+  "claims": [],
+  "limitations": [],
+  "overall_confidence": "low",
+  "model": "claude-sonnet-4-6",
+  "prompt_version": "2026-06-14-v3",
+  "packet": {
+    "subject_name": "HORNSEA 1 LIMITED",
+    "lei": "2138002S3XGZ38WN5Q72",
+    "jurisdiction": "GB",
+    "subject_confidence": "identifier-confirmed",
+    "identifiers": {
+      "lei": "2138002S3XGZ38WN5Q72",
+      "gb_coh": "07640868",
+      "ocid": "gb/07640868"
+    },
+    "facts": [
+      {
+        "id": "f1",
+        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-parent (accounting consolidation) in HORNSEA 1 LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/W9NG6WMZIYEU8VEDOG48",
+        "bods_statement_ids": [
+          "opencheck-d4d231d07759d6d9e4ed138c"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f2",
+        "statement": "ØRSTED A/S holds GLEIF Level 2 ultimate-parent (accounting consolidation) in HORNSEA 1 LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/W9NG6WMZIYEU8VEDOG48",
+        "bods_statement_ids": [
+          "opencheck-56212e39f22ea11c9a4bbf21"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f3",
+        "statement": "FILIPPO DI SALLE holds appointmentOfBoard, from 2022-10-27 in HORNSEA 1 LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/07640868",
+        "bods_statement_ids": [
+          "opencheck-f71967353e7d22cc9a0bf3a6"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f4",
+        "statement": "EDMUND GEORGE ANDREW holds appointmentOfBoard, from 2023-09-29 in HORNSEA 1 LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/07640868",
+        "bods_statement_ids": [
+          "opencheck-19301de0bac6fd6415419f4f"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f5",
+        "statement": "SAMUEL JAMES CLAXTON holds appointmentOfBoard, from 2025-03-07 in HORNSEA 1 LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/07640868",
+        "bods_statement_ids": [
+          "opencheck-30e86d15537e607003c70878"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f6",
+        "statement": "HUGH ALISTAIR YENDOLE holds appointmentOfBoard, from 2025-05-21 in HORNSEA 1 LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/07640868",
+        "bods_statement_ids": [
+          "opencheck-b37cddcc2f6f8d0813ac4830"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f7",
+        "statement": "THOMAS KROGH JENSEN holds appointmentOfBoard, from 2025-05-21 in HORNSEA 1 LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/07640868",
+        "bods_statement_ids": [
+          "opencheck-1d80098b06f5c299d401932e"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f8",
+        "statement": "HUGH ALISTAIR YENDOLE holds appointmentOfBoard, from 2025-05-27 in HORNSEA 1 LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/07640868",
+        "bods_statement_ids": [
+          "opencheck-fbd2c2ca57abe018d5c2611f"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f9",
+        "statement": "THOMAS KROGH JENSEN holds appointmentOfBoard, from 2025-05-27 in HORNSEA 1 LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/07640868",
+        "bods_statement_ids": [
+          "opencheck-adeb1318e3a02e7acd12d7f9"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f10",
+        "statement": "FIONA CATHERINE POWER holds appointmentOfBoard, from 2025-09-23 in HORNSEA 1 LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/07640868",
+        "bods_statement_ids": [
+          "opencheck-c88e673ec3a3099f3d66d8dd"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f11",
+        "statement": "MARTIN JAMES SWAIN holds appointmentOfBoard, from 2026-04-23 in HORNSEA 1 LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/07640868",
+        "bods_statement_ids": [
+          "opencheck-7050b52ae623ff37536b047f"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f12",
+        "statement": "SARA SANCHO PERIS holds appointmentOfBoard, from 2026-04-23 in HORNSEA 1 LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/07640868",
+        "bods_statement_ids": [
+          "opencheck-2382480691d2bbdfb608fc61"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f13",
+        "statement": "BENJAMIN MICHAEL BURGESS holds appointmentOfBoard, from 2026-04-23 in HORNSEA 1 LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/07640868",
+        "bods_statement_ids": [
+          "opencheck-f15f0731843c7787b3429ac3"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f14",
+        "statement": "MATTHEW DEREK GEORGE RIDLEY holds appointmentOfBoard, from 2026-04-23 in HORNSEA 1 LIMITED.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/07640868",
+        "bods_statement_ids": [
+          "opencheck-57f920d85c2f6a137276cdd7"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f15",
+        "statement": "Hornsea 1 Holdings Limited holds Ownership of shares – 75% or more (75–100%); Ownership of voting rights - 75% or more (75–100%); Right to appoint or remove directors in HORNSEA 1 LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/07640868",
+        "bods_statement_ids": [
+          "opencheck-ff0207ae339bf5923cb5fafc"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f16",
+        "statement": "Ørsted A/S previously held Ownership of shares – 75% or more (75–100%), to 2018-01-17; Ownership of voting rights - 75% or more (75–100%), to 2018-01-17; Right to appoint or remove directors, to 2018-01-17 in HORNSEA 1 LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/07640868",
+        "bods_statement_ids": [
+          "opencheck-ddfed01379bcdab72e073c78"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f17",
+        "statement": "ANDREW, Edmund George holds Director, from 2023-09-29, from 2023-09-29 in HORNSEA 1 LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/07640868",
+        "bods_statement_ids": [
+          "opencheck-d1702fd1f6e7ec42d5a4e090"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f18",
+        "statement": "BURGESS, Benjamin Michael holds Director, from 2026-04-23, from 2026-04-23 in HORNSEA 1 LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/07640868",
+        "bods_statement_ids": [
+          "opencheck-cf581037f455e29d8226d1e9"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f19",
+        "statement": "CLAXTON, Samuel James holds Director, from 2025-03-07, from 2025-03-07 in HORNSEA 1 LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/07640868",
+        "bods_statement_ids": [
+          "opencheck-96d523acf52a902b703d12fe"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f20",
+        "statement": "DI SALLE, Filippo holds Director, from 2022-10-27, from 2022-10-27 in HORNSEA 1 LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/07640868",
+        "bods_statement_ids": [
+          "opencheck-5bf549fdf1a398c819eb69fb"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f21",
+        "statement": "JENSEN, Thomas Krogh holds Director, from 2025-05-27, from 2025-05-27 in HORNSEA 1 LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/07640868",
+        "bods_statement_ids": [
+          "opencheck-018f012d1fbfa77e9cd33b12"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f22",
+        "statement": "POWER, Fiona Catherine holds Director, from 2025-09-23, from 2025-09-23 in HORNSEA 1 LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/07640868",
+        "bods_statement_ids": [
+          "opencheck-393404294fe78edcf6cb7d94"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f23",
+        "statement": "RIDLEY, Matthew Derek George holds Director, from 2026-04-23, from 2026-04-23 in HORNSEA 1 LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/07640868",
+        "bods_statement_ids": [
+          "opencheck-02bda67065d30f4062ae8894"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f24",
+        "statement": "SANCHO PERIS, Sara holds Director, from 2026-04-23, from 2026-04-23 in HORNSEA 1 LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/07640868",
+        "bods_statement_ids": [
+          "opencheck-0fb2930c6d80fb3da3b57de3"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f25",
+        "statement": "SWAIN, Martin James holds Director, from 2026-04-23, from 2026-04-23 in HORNSEA 1 LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/07640868",
+        "bods_statement_ids": [
+          "opencheck-ab709ee36aabd7e92dfa8b31"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f26",
+        "statement": "YENDOLE, Hugh Alistair holds Director, from 2025-05-27, from 2025-05-27 in HORNSEA 1 LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/07640868",
+        "bods_statement_ids": [
+          "opencheck-773b7b8b38b7502484c0372d"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f27",
+        "statement": "Jupiter Investor Midco Limited holds Ownership of shares – 75% or more (75–100%); Ownership of voting rights - 75% or more (75–100%); Right to appoint or remove directors in JUPITER INVESTOR HOLDCO LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032246",
+        "bods_statement_ids": [
+          "opencheck-d165686ce8b3f173dbab62b0"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f28",
+        "statement": "Clifford Chance Nominees Limited previously held Ownership of shares – 75% or more (75–100%), to 2018-06-18; Ownership of voting rights - 75% or more (75–100%), to 2018-06-18; Right to appoint or remove directors, to 2018-06-18 in JUPITER INVESTOR HOLDCO LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032246",
+        "bods_statement_ids": [
+          "opencheck-a4c91d44d5414ceb1b91685e"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f29",
+        "statement": "ANDREW, Edmund George holds Director, from 2022-10-27, from 2022-10-27 in JUPITER INVESTOR HOLDCO LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032246",
+        "bods_statement_ids": [
+          "opencheck-f62c072232cce923697cecb2"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f30",
+        "statement": "BURGESS, Benjamin Michael holds Director, from 2025-07-07, from 2025-07-07 in JUPITER INVESTOR HOLDCO LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032246",
+        "bods_statement_ids": [
+          "opencheck-3016e24da5d8c6745e19cc53"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f31",
+        "statement": "FLYNN, Rowland Tom Harvey holds Director, from 2022-10-27, from 2022-10-27 in JUPITER INVESTOR HOLDCO LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032246",
+        "bods_statement_ids": [
+          "opencheck-630266edf5032785ae423ade"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f32",
+        "statement": "RIDLEY, Matthew Derek George holds Director, from 2026-04-23, from 2026-04-23 in JUPITER INVESTOR HOLDCO LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032246",
+        "bods_statement_ids": [
+          "opencheck-b2e477c0dcf585accefff135"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f33",
+        "statement": "SALLE, Filippo Di holds Director, from 2022-10-27, from 2022-10-27 in JUPITER INVESTOR HOLDCO LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032246",
+        "bods_statement_ids": [
+          "opencheck-7df1dbf30d95eb6fda98b55c"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f34",
+        "statement": "SANCHO PERIS, Sara holds Director, from 2026-04-22, from 2026-04-22 in JUPITER INVESTOR HOLDCO LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032246",
+        "bods_statement_ids": [
+          "opencheck-dffe75e3eff95cf1ce0a2e84"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f35",
+        "statement": "SWAIN, Martin James holds Director, from 2026-04-23, from 2026-04-23 in JUPITER INVESTOR HOLDCO LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032246",
+        "bods_statement_ids": [
+          "opencheck-805d59c49ba9d540a9bd41c0"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f36",
+        "statement": "JUPITER INVESTOR HOLDCO LIMITED holds Ownership of shares – 75% or more (75–100%); Ownership of voting rights - 75% or more (75–100%); Right to appoint or remove directors in JUPITER OFFSHORE WIND LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032205",
+        "bods_statement_ids": [
+          "opencheck-0231e0fbeba28959040bfbcc"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f37",
+        "statement": "Clifford Chance Nominees Limited previously held Ownership of shares – 75% or more (75–100%), to 2018-06-18; Ownership of voting rights - 75% or more (75–100%), to 2018-06-18; Right to appoint or remove directors, to 2018-06-18 in JUPITER OFFSHORE WIND LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032205",
+        "bods_statement_ids": [
+          "opencheck-46fbd03cce83c779d05bbd69"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f38",
+        "statement": "ANDREW, Edmund George holds Director, from 2022-10-27, from 2022-10-27 in JUPITER OFFSHORE WIND LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032205",
+        "bods_statement_ids": [
+          "opencheck-1d1cca70395e27bab1bdd66c"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f39",
+        "statement": "BURGESS, Benjamin Michael holds Director, from 2025-07-07, from 2025-07-07 in JUPITER OFFSHORE WIND LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032205",
+        "bods_statement_ids": [
+          "opencheck-0dbd4d481641876982bfbb73"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f40",
+        "statement": "FLYNN, Rowland Tom Harvey holds Director, from 2022-10-27, from 2022-10-27 in JUPITER OFFSHORE WIND LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032205",
+        "bods_statement_ids": [
+          "opencheck-6391b54e72ba2b77fa0a8441"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f41",
+        "statement": "RIDLEY, Matthew Derek George holds Director, from 2026-04-23, from 2026-04-23 in JUPITER OFFSHORE WIND LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032205",
+        "bods_statement_ids": [
+          "opencheck-759242d2dcdc9ce5a277f468"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f42",
+        "statement": "SALLE, Filippo Di holds Director, from 2022-10-27, from 2022-10-27 in JUPITER OFFSHORE WIND LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032205",
+        "bods_statement_ids": [
+          "opencheck-91ea5943d8264839507874c2"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f43",
+        "statement": "SANCHO PERIS, Sara holds Director, from 2026-04-22, from 2026-04-22 in JUPITER OFFSHORE WIND LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032205",
+        "bods_statement_ids": [
+          "opencheck-d145484eb22e2be6cc3d3fa0"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f44",
+        "statement": "SWAIN, Martin James holds Director, from 2026-04-23, from 2026-04-23 in JUPITER OFFSHORE WIND LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11032205",
+        "bods_statement_ids": [
+          "opencheck-3ace2230a8e0f117b1f4a02b"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f45",
+        "statement": "Orsted Power (Uk) Limited holds Ownership of shares – 75% or more (75–100%); Ownership of voting rights - 75% or more (75–100%); Right to appoint or remove directors in ORSTED UK HOW01 HOLDINGS LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/15920551",
+        "bods_statement_ids": [
+          "opencheck-a117c4d9f2b1812d6da1c235"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f46",
+        "statement": "CLAXTON, Samuel James holds Director, from 2025-03-18, from 2025-03-18 in ORSTED UK HOW01 HOLDINGS LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/15920551",
+        "bods_statement_ids": [
+          "opencheck-e76e1aad2534996be1c0a281"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f47",
+        "statement": "GREENLEAF, Andrew Colin holds Director, from 2025-05-06, from 2025-05-06 in ORSTED UK HOW01 HOLDINGS LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/15920551",
+        "bods_statement_ids": [
+          "opencheck-278372f41505e4a8a251af7b"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f48",
+        "statement": "ORSTED UK HOW01 HOLDINGS LIMITED holds Ownership of shares – 75% or more (75–100%); Ownership of voting rights - 75% or more (75–100%); Right to appoint or remove directors in HORNSEA 1 PSC LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11116433",
+        "bods_statement_ids": [
+          "opencheck-dee08c5b413045777135e373"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f49",
+        "statement": "Orsted Power (Uk) Limited previously held Ownership of shares – 75% or more (75–100%), to 2024-11-30; Ownership of voting rights - 75% or more (75–100%), to 2024-11-30; Right to appoint or remove directors, to 2024-11-30 in HORNSEA 1 PSC LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11116433",
+        "bods_statement_ids": [
+          "opencheck-024e31003844716653e454bf"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f50",
+        "statement": "CLAXTON, Samuel James holds Director, from 2025-03-04, from 2025-03-04 in HORNSEA 1 PSC LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11116433",
+        "bods_statement_ids": [
+          "opencheck-3dfb1fbc2d2ca9d39b06001c"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f51",
+        "statement": "GREENLEAF, Andrew Colin holds Director, from 2025-05-06, from 2025-05-06 in HORNSEA 1 PSC LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11116433",
+        "bods_statement_ids": [
+          "opencheck-e6c2449c7c1a121da725e04b"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f52",
+        "statement": "JENSEN, Thomas Krogh holds Director, from 2025-05-06, from 2025-05-06 in HORNSEA 1 PSC LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11116433",
+        "bods_statement_ids": [
+          "opencheck-9e5b06b4a26a37a99020a3c6"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f53",
+        "statement": "MENDEZ SANCHEZ-CASTILLO, Jose Maria holds Director, from 2024-12-31, from 2024-12-31 in HORNSEA 1 PSC LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11116433",
+        "bods_statement_ids": [
+          "opencheck-b600beb7dec8cb547ca1d542"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f54",
+        "statement": "REILLY, Daire holds Director, from 2025-01-09, from 2025-01-09 in HORNSEA 1 PSC LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11116433",
+        "bods_statement_ids": [
+          "opencheck-83953c7399f626b31f95a8a1"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f55",
+        "statement": "JUPITER OFFSHORE WIND LIMITED holds Ownership of shares – More than 25% but not more than 50% (25–50%); Ownership of voting rights - More than 25% but not more than 50% (25–50%) in Hornsea 1 Holdings Limited.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11120527",
+        "bods_statement_ids": [
+          "opencheck-928ba4ec0c7611529dcc4119"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f56",
+        "statement": "Ørsted Wind Power A/S previously held Ownership of shares – More than 25% but not more than 50% (25–50%), to 2018-11-26; Ownership of voting rights - More than 25% but not more than 50% (25–50%), to 2018-11-26 in Hornsea 1 Holdings Limited.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11120527",
+        "bods_statement_ids": [
+          "opencheck-fd512afb121c1f7071ab9a75"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f57",
+        "statement": "HORNSEA 1 PSC LIMITED holds Ownership of shares – More than 25% but not more than 50% (25–50%); Ownership of voting rights - More than 25% but not more than 50% (25–50%) in Hornsea 1 Holdings Limited.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11120527",
+        "bods_statement_ids": [
+          "opencheck-8e64b5f309b9e006d46a554e"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f58",
+        "statement": "ANDREW, Edmund George holds Director, from 2023-09-29, from 2023-09-29 in Hornsea 1 Holdings Limited.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11120527",
+        "bods_statement_ids": [
+          "opencheck-7bb64871f56ad024ee0b83ae"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f59",
+        "statement": "BURGESS, Benjamin Michael holds Director, from 2026-04-23, from 2026-04-23 in Hornsea 1 Holdings Limited.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11120527",
+        "bods_statement_ids": [
+          "opencheck-ce435d3d96d47c05fb804de9"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f60",
+        "statement": "CLAXTON, Samuel James holds Director, from 2025-03-07, from 2025-03-07 in Hornsea 1 Holdings Limited.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11120527",
+        "bods_statement_ids": [
+          "opencheck-d37875ee96a8c18143de330e"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f61",
+        "statement": "DI SALLE, Filippo holds Director, from 2022-10-27, from 2022-10-27 in Hornsea 1 Holdings Limited.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11120527",
+        "bods_statement_ids": [
+          "opencheck-f15e7e19650ec86ffbfad8ea"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f62",
+        "statement": "JENSEN, Thomas Krogh holds Director, from 2025-05-27, from 2025-05-27 in Hornsea 1 Holdings Limited.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11120527",
+        "bods_statement_ids": [
+          "opencheck-f8c1396ebbd1ed7bc9731ccf"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f63",
+        "statement": "POWER, Fiona Catherine holds Director, from 2025-09-23, from 2025-09-23 in Hornsea 1 Holdings Limited.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11120527",
+        "bods_statement_ids": [
+          "opencheck-b42b5370d1e42ca7ea3e4bb8"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f64",
+        "statement": "RIDLEY, Matthew Derek George holds Director, from 2026-04-23, from 2026-04-23 in Hornsea 1 Holdings Limited.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11120527",
+        "bods_statement_ids": [
+          "opencheck-c31acc6e9fca99e69439160a"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f65",
+        "statement": "SANCHO PERIS, Sara holds Director, from 2026-04-23, from 2026-04-23 in Hornsea 1 Holdings Limited.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11120527",
+        "bods_statement_ids": [
+          "opencheck-5d14708ef5a9d7e15a449f19"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f66",
+        "statement": "SWAIN, Martin James holds Director, from 2026-04-23, from 2026-04-23 in Hornsea 1 Holdings Limited.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11120527",
+        "bods_statement_ids": [
+          "opencheck-5b442ea496e9dfb262d81c40"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f67",
+        "statement": "YENDOLE, Hugh Alistair holds Director, from 2025-05-27, from 2025-05-27 in Hornsea 1 Holdings Limited.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "source_url": "https://find-and-update.company-information.service.gov.uk/company/11120527",
+        "bods_statement_ids": [
+          "opencheck-bf6a3fc06ed466b6ffefb2ce"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f68",
+        "statement": "HORNSEA 1 LIMITED is a registered entity in United Kingdom (XI-LEI 2138002S3XGZ38WN5Q72, GB-COH 07640868, OpenCorporates gb/07640868, QCC Code QGB71JCM18, S&P CIQ Company ID 144817351).",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/2138002S3XGZ38WN5Q72",
+        "bods_statement_ids": [
+          "opencheck-519b9a335a9283bfb69dd9ee"
+        ],
+        "confidence": "medium"
+      }
+    ],
+    "risks": [
+      {
+        "id": "r1",
+        "code": "NON_EU_JURISDICTION",
+        "label": "Non-EU jurisdiction",
+        "confidence": "high",
+        "rationale": "Ownership chain reaches into jurisdictions outside the EU/EEA: GB. AMLA CDD RTS condition (b).",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "fact_ids": []
+      },
+      {
+        "id": "r2",
+        "code": "COMPLEX_OWNERSHIP_LAYERS",
+        "label": "Complex ownership layers",
+        "confidence": "medium",
+        "rationale": "Ownership chain has 5 corporate layers (AMLA threshold: ≥3).",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "fact_ids": []
+      },
+      {
+        "id": "r3",
+        "code": "COMPLEX_CORPORATE_STRUCTURE",
+        "label": "Complex corporate structure",
+        "confidence": "high",
+        "rationale": "Meets AMLA CDD RTS threshold for a complex corporate structure: 5 layers of ownership combined with non-EU jurisdiction.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
+        "fact_ids": []
+      }
+    ],
+    "sources_consulted": [
+      {
+        "source_id": "gleif",
+        "name": "GLEIF",
+        "license": "CC0-1.0",
+        "homepage": "https://search.gleif.org/#/search/"
+      },
+      {
+        "source_id": "opencorporates",
+        "name": "OpenCorporates",
+        "license": "OC-Terms",
+        "homepage": "https://opencorporates.com/"
+      },
+      {
+        "source_id": "companies_house",
+        "name": "UK Companies House",
+        "license": "OGL-3.0",
+        "homepage": "https://find-and-update.company-information.service.gov.uk/"
+      }
+    ],
+    "gaps": []
+  },
+  "validation_ok": true,
+  "dropped_claims": [],
+  "validation_issues": []
+}

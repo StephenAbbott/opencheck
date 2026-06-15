@@ -1,0 +1,893 @@
+{
+  "lei": "213800LH1BZH3DI6G760",
+  "subject_name": "BP P.L.C.",
+  "summary": "BP P.L.C. is an identifier-confirmed entity registered in the United Kingdom (LEI: 213800LH1BZH3DI6G760; GB-COH: 00102498), with its ultimate beneficial ownership unresolved: GLEIF records a reporting exception indicating no known person can be identified as the parent, a medium-confidence signal of opaque ownership. The company operates an extensive multinational subsidiary network spanning the US, Canada, Australia, India, Spain, Italy, the Netherlands, Greece, Hungary, Poland, and other jurisdictions, and holds shareholdings in a broad range of energy-related entities including pipeline, bioenergia, and capital markets vehicles. Four structural risk signals were identified: the ownership chain contains an unidentified person or arrangement (medium confidence, GLEIF), includes a trust or non-corporate arrangement meeting AMLA CDD RTS condition (a) (high confidence, GLEIF), reaches into non-EU/EEA jurisdictions including AR, AU, BR, CH, GB, KY, and US meeting AMLA CDD RTS condition (b) (high confidence, OpenSanctions), and presents three corporate ownership layers combined with non-EU jurisdiction exposure constituting a complex corporate structure under AMLA CDD RTS thresholds (high confidence, OpenSanctions); additionally, BP is mentioned in the ICIJ OffshoreLeaks collection on OpenAleph (medium confidence). Material limitations include the absence of any disclosed beneficial owner and the restriction that OpenSanctions data is licensed CC-BY-NC-4.0, precluding commercial re-use.",
+  "claims": [],
+  "limitations": [],
+  "overall_confidence": "low",
+  "model": "claude-sonnet-4-6",
+  "prompt_version": "2026-06-14-v3",
+  "packet": {
+    "subject_name": "BP P.L.C.",
+    "lei": "213800LH1BZH3DI6G760",
+    "jurisdiction": "GB",
+    "subject_confidence": "identifier-confirmed",
+    "identifiers": {
+      "lei": "213800LH1BZH3DI6G760",
+      "gb_coh": "00102498",
+      "ocid": "gb/00102498",
+      "wikidata_qid": "Q152057",
+      "edgar_cik": "313807"
+    },
+    "facts": [
+      {
+        "id": "f1",
+        "statement": "Unknown parent (GLEIF reporting exception) holds GLEIF reporting exception: no known person can be identified in BP P.L.C..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/213800LH1BZH3DI6G760",
+        "bods_statement_ids": [
+          "opencheck-2c0d25ae99c375dff3f497ea"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f2",
+        "statement": "Unknown parent (GLEIF reporting exception) holds GLEIF reporting exception: no known person can be identified in BP P.L.C..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/213800LH1BZH3DI6G760",
+        "bods_statement_ids": [
+          "opencheck-8931f3e27c30a75a639e39d2"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f3",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in TA OPERATING LLC.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/254900E2H6UPESEYHK67",
+        "bods_statement_ids": [
+          "opencheck-d3cbc9430df92a1c150322ac"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f4",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP PENSION TRUSTEES LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/254900JJ39DUX0CTFU84",
+        "bods_statement_ids": [
+          "opencheck-3e36bdc14d164cf162d74620"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f5",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in CASTELLANA POWER, S.L..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/959800PBFW8MXTEGB919",
+        "bods_statement_ids": [
+          "opencheck-f071c7834de40f321d54115e"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f6",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in INVERSIONES ENERGY MADRID, S.L..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/959800ARYUQ2Y7MW1W73",
+        "bods_statement_ids": [
+          "opencheck-5f1c59b0e5d4a6e14d37062a"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f7",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in CASTROL HOLDINGS INTERNATIONAL LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300LCKI6BWPCJGX28",
+        "bods_statement_ids": [
+          "opencheck-702660636857a92840ca0773"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f8",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP INDIA PRIVATE LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/335800DTEWI5HM8G1295",
+        "bods_statement_ids": [
+          "opencheck-6a8f28887a13a2d2b60a415c"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f9",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP GLOBAL INVESTMENTS LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300GL1JKOPE05D156",
+        "bods_statement_ids": [
+          "opencheck-37b8c4bcc2f4882033c5e53a"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f10",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in CASTROL INDIA LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/335800KCNMKXQFPJ5Q28",
+        "bods_statement_ids": [
+          "opencheck-9c35505c0ebfb276c5d6209f"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f11",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP EUROPE SE MAGYARORSZAGI FIOKTELEPE.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300P807JHWY1X1063",
+        "bods_statement_ids": [
+          "opencheck-f2d4c22539b044b96efc2ed8"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f12",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BRITOIL LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300DTMH2NWOI8O090",
+        "bods_statement_ids": [
+          "opencheck-310c04ee9b9f2d7d088709f2"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f13",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP Espana, S.A. Unipersonal.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300XJERYFRMOP7O39",
+        "bods_statement_ids": [
+          "opencheck-b57b28c8281fd04638230f0b"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f14",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP MARINE LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300CBTY31RKLLW578",
+        "bods_statement_ids": [
+          "opencheck-00ba7938dc36c03c83c8e172"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f15",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP EUROPA SE SPÓŁKA EUROPEJSKA ODDZIAŁ W POLSCE.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300ELU6WABMM0EL36",
+        "bods_statement_ids": [
+          "opencheck-2b05d11b07b7fcb843741cd5"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f16",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP ITALIA S.P.A..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300TDJC5X1HQFVS97",
+        "bods_statement_ids": [
+          "opencheck-00a5aa7a62eb0db5d7061a0c"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f17",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in B P AUSTRALIA PTY LTD.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300ZNXYELB31FP503",
+        "bods_statement_ids": [
+          "opencheck-346735e34f83f2c56c5dbdba"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f18",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP Australia Investments Pty Ltd.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300HJ840SLKBDOS06",
+        "bods_statement_ids": [
+          "opencheck-78f9def7253af18ffcba16fe"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f19",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in ARCO BRITISH LIMITED, LLC.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/5493002S2FI7YB0RL442",
+        "bods_statement_ids": [
+          "opencheck-879af5c24f4fcec9446dfd25"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f20",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP FINANCE AUSTRALIA PTY LTD.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300LN3X0K77Z2SO79",
+        "bods_statement_ids": [
+          "opencheck-10e191f83d2768e8c1c481a0"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f21",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in ΒΡ ΕΛΛΗΝΙΚΗ ΜΟΝΟΠΡΟΣΩΠΗ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ ΠΕΤΡΕΛΑΙΟΕΙΔΩΝ.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/5493008CHX3FW76KG908",
+        "bods_statement_ids": [
+          "opencheck-07253260957d7e134b417539"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f22",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP RAFFINADERIJ ROTTERDAM B.V..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300KRU5NMN907SV73",
+        "bods_statement_ids": [
+          "opencheck-84043beaf21eca3a67f63425"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f23",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP EUROPA SE.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300ZPID4GQRDWI318",
+        "bods_statement_ids": [
+          "opencheck-3a780872c179049d72758249"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f24",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP AMI LEASING, INC..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300FJOXFUONBUSB24",
+        "bods_statement_ids": [
+          "opencheck-62bd20d856cb62e305220536"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f25",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP CAPITAL MARKETS AMERICA INC..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/5493009NTB34VXE1T760",
+        "bods_statement_ids": [
+          "opencheck-59ab9f01388e0b6c855589bf"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f26",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP CAPITAL MARKETS P.L.C..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300CRVT18MXX0AG93",
+        "bods_statement_ids": [
+          "opencheck-4bbbb539f497453e82c4862e"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f27",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP WEST COAST PRODUCTS LLC.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300MZ0FTF0W5N3I14",
+        "bods_statement_ids": [
+          "opencheck-c65d309e1dafd20b5c87451f"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f28",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP CANADA ENERGY GROUP ULC.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/5493008ZYIONF7JPJL24",
+        "bods_statement_ids": [
+          "opencheck-15b333434cd5447acdabcf1d"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f29",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP CANADA ENERGY MARKETING CORP..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/5493006US8Z88WK9IL47",
+        "bods_statement_ids": [
+          "opencheck-0cff3b9a54efaa1626ce5d0a"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f30",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP CORPORATION NORTH AMERICA INC..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300GMUCJ08527GQ81",
+        "bods_statement_ids": [
+          "opencheck-61c69081a98ed23268c70f50"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f31",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP PRODUCTS NORTH AMERICA INC..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/549300YYMNSW7KWZH127",
+        "bods_statement_ids": [
+          "opencheck-c1ebec663dd1ab0e09cff0dc"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f32",
+        "statement": "BP P.L.C. holds GLEIF Level 2 direct-child (accounting consolidation) in BP INTERNATIONAL LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/G1KG0OQD10NOMCMLDZ35",
+        "bods_statement_ids": [
+          "opencheck-a40cc0edc57c0a6af1543a78"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f33",
+        "statement": "BENEDICT JOHN SPURWAY MATHEWS holds seniorManagingOfficial, from 2019-05-07 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-70032b277640229240a647cd"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f34",
+        "statement": "TUSHAR MORZARIA holds appointmentOfBoard, from 2020-09-01 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-1d04b54fa4cc4c0b3a3f6e49"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f35",
+        "statement": "JOHANNES ANTONIUS TEYSSEN holds appointmentOfBoard, from 2021-01-01 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-992722ae0d237550c1b6b16c"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f36",
+        "statement": "ALIA FAZAL holds seniorManagingOfficial, from 2022-01-04 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-201f7c554370296473508265"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f37",
+        "statement": "JULIAN THURSTON holds seniorManagingOfficial, from 2022-05-02 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-354f49d7041641d359d031af"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f38",
+        "statement": "AMANDA JAYNE BLANC holds appointmentOfBoard, from 2022-09-01 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-f468a8d9476067a1ebc731e3"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f39",
+        "statement": "SATISH PAI holds appointmentOfBoard, from 2023-03-01 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-cb6d5772a9784c1b2c18993a"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f40",
+        "statement": "HINA NAGARAJAN holds appointmentOfBoard, from 2023-03-01 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-253818cbb052d5f233e9f859"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f41",
+        "statement": "KATHERINE ANNE THOMSON holds appointmentOfBoard, from 2024-02-02 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-97e6c086f65ccc16bb8dc43a"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f42",
+        "statement": "IAN PAUL TYLER holds appointmentOfBoard, from 2025-04-01 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-26869c2e8f837e1f5b75f4cb"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f43",
+        "statement": "DAVID ALAN HAGER holds appointmentOfBoard, from 2025-06-02 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-283c301be589e1cd9851989f"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f44",
+        "statement": "MARGUERITE EILEEN O‘NEILL holds appointmentOfBoard, from 2026-04-01 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-a57551b8e131f97ec2545706"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f45",
+        "statement": "BP holds shareholding in BP Alternative Energy North America.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-9e4f8ea4dc9fef094bd62470"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f46",
+        "statement": "BP holds shareholding in South Caucasus Pipeline.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-e1125e641d8860dd944773fa"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f47",
+        "statement": "BP holds shareholding in BP Bioenergia Ituiutaba.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-e7dc43501ffe7a2eb3016b53"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f48",
+        "statement": "BP holds shareholding in Bahia de Bizkaia Electricidad SL.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-3ceae11b22d5c592b6587c0c"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f49",
+        "statement": "BP holds shareholding in Pan American Energy SL.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-0019b48769e9bcbe792e8af0"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f50",
+        "statement": "BP holds shareholding in Société du Pipeline Sud-Européen SA.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-1107894ec38dbb799881cbba"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f51",
+        "statement": "BP holds shareholding in Rotterdam-Rijn Pijpleiding Maatschappij.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-07ee73c77660264c1046dead"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f52",
+        "statement": "BP holds shareholding in Itumbiara Bioenergia SA.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-9c085d42c412223c38b4caaa"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f53",
+        "statement": "BP holds shareholding in Ruhr Oel.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-332265271b7787a62ed51a27"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f54",
+        "statement": "BP holds shareholding in Bp Gamma Holdings Ltd.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-4cf1217c704f2b22f92a30a5"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f55",
+        "statement": "BP holds shareholding in Bp Global Investments Ltd.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-e9b1223aefe11280d59ecb3b"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f56",
+        "statement": "BP holds shareholding in Azerbaijan International Operating.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-87b00f882070e646b5369e7d"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f57",
+        "statement": "BP holds shareholding in Baku-Tbilisi-Ceyhan Pipeline Co.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-7dceac861ff0c1a1223f3237"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f58",
+        "statement": "BP holds shareholding in Endymion Oil Pipeline Company.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-c182fbae21e6fdc656d5bc77"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f59",
+        "statement": "BP holds shareholding in BP Holdings North America.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-8492f1ce35a7c9b171ec409e"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f60",
+        "statement": "BP holds shareholding in Trans Adriatic Pipeline AG.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-8aa200d6b9c0b8c2d7821db5"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f61",
+        "statement": "BP holds shareholding in BP Europa SE.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-113ad85dfca76a9706384f49"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f62",
+        "statement": "BP holds shareholding in Britoil Ltd.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-7782ea365e395781b54d9a9e"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f63",
+        "statement": "BP holds shareholding in Bp International Ltd.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-ce469f6205d1c67b25cde654"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f64",
+        "statement": "BP holds shareholding in Tropical Bioenergia SA.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-8819f03cfcd16bc41125ea9c"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f65",
+        "statement": "BP holds shareholding in BP Midstream Partners LP.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-abda8d6dc482b6628f01bc2e"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f66",
+        "statement": "BP holds shareholding in BP Developments Australia.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-fd83924a4b7b359614807628"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f67",
+        "statement": "Guaranty Nominees holds shareholding in BP.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-47faad3b5a0a7f44e3084c60"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f68",
+        "statement": "BlackRock Inc holds shareholding in BP.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-9b7b5ed55147fd57e6753da0"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f69",
+        "statement": "BP P.L.C. is a registered entity in United Kingdom (XI-LEI 213800LH1BZH3DI6G760, GB-COH 00102498, OpenCorporates gb/00102498, QCC Code QGBXKVABR2, S&P CIQ Company ID 394466).",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/213800LH1BZH3DI6G760",
+        "bods_statement_ids": [
+          "opencheck-697c671e1b4701e90617e736"
+        ],
+        "confidence": "medium"
+      }
+    ],
+    "risks": [
+      {
+        "id": "r1",
+        "code": "OPAQUE_OWNERSHIP",
+        "label": "Opaque ownership (super-secure)",
+        "confidence": "medium",
+        "rationale": "Ownership chain contains: unknown person in ownership chain.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "fact_ids": []
+      },
+      {
+        "id": "r2",
+        "code": "TRUST_OR_ARRANGEMENT",
+        "label": "Trust / arrangement",
+        "confidence": "high",
+        "rationale": "Ownership chain includes a trust or non-corporate arrangement (1 entity statement(s)). AMLA CDD RTS condition (a).",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "fact_ids": []
+      },
+      {
+        "id": "r3",
+        "code": "NON_EU_JURISDICTION",
+        "label": "Non-EU jurisdiction",
+        "confidence": "high",
+        "rationale": "Ownership chain reaches into jurisdictions outside the EU/EEA: AR, AU, BR, CH, GB, KY, US. AMLA CDD RTS condition (b).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": []
+      },
+      {
+        "id": "r4",
+        "code": "OFFSHORE_LEAKS",
+        "label": "Offshore Leaks match",
+        "confidence": "medium",
+        "rationale": "Mentioned in the ICIJ OffshoreLeaks leak collection on OpenAleph.",
+        "source_name": "OpenAleph",
+        "source_id": "openaleph",
+        "fact_ids": []
+      },
+      {
+        "id": "r5",
+        "code": "COMPLEX_OWNERSHIP_LAYERS",
+        "label": "Complex ownership layers",
+        "confidence": "medium",
+        "rationale": "Ownership chain has 3 corporate layers (AMLA threshold: ≥3).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": []
+      },
+      {
+        "id": "r6",
+        "code": "COMPLEX_CORPORATE_STRUCTURE",
+        "label": "Complex corporate structure",
+        "confidence": "high",
+        "rationale": "Meets AMLA CDD RTS threshold for a complex corporate structure: 3 layers of ownership combined with non-EU jurisdiction.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": []
+      }
+    ],
+    "sources_consulted": [
+      {
+        "source_id": "gleif",
+        "name": "GLEIF",
+        "license": "CC0-1.0",
+        "homepage": "https://search.gleif.org/#/search/"
+      },
+      {
+        "source_id": "openaleph",
+        "name": "OpenAleph",
+        "license": "per-collection",
+        "homepage": "https://openaleph.org/"
+      },
+      {
+        "source_id": "opencorporates",
+        "name": "OpenCorporates",
+        "license": "OC-Terms",
+        "homepage": "https://opencorporates.com/"
+      },
+      {
+        "source_id": "opensanctions",
+        "name": "OpenSanctions",
+        "license": "CC-BY-NC-4.0",
+        "homepage": "https://www.opensanctions.org/"
+      },
+      {
+        "source_id": "climatetrace",
+        "name": "Global Energy Monitor / Climate TRACE",
+        "license": "CC-BY-4.0",
+        "homepage": "https://globalenergymonitor.org/"
+      },
+      {
+        "source_id": "companies_house",
+        "name": "UK Companies House",
+        "license": "OGL-3.0",
+        "homepage": "https://find-and-update.company-information.service.gov.uk/"
+      }
+    ],
+    "gaps": [
+      {
+        "id": "g1",
+        "statement": "OpenSanctions is licensed under CC-BY-NC-4.0. Commercial re-use of this data is not permitted under the source license."
+      }
+    ]
+  },
+  "validation_ok": true,
+  "dropped_claims": [],
+  "validation_issues": []
+}

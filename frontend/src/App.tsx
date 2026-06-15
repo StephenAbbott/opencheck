@@ -765,6 +765,19 @@ export default function App() {
         <p className="text-[13px] sm:text-sm text-oo-muted leading-snug mb-3">
           Customer due diligence checks powered by the Legal Entity Identifier, open data and the Beneficial Ownership Data Standard.
         </p>
+        {!streamingLei && (
+          <p className="text-[12px] text-oo-muted leading-snug mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-oo-blue border border-[#cfd6f5] bg-[#eef1fb] rounded-full px-1.5 py-0.5">
+              New
+            </span>
+            <span className="text-oo-ink">AI-written summaries</span>
+            <span aria-hidden>·</span>
+            <span className="text-oo-ink">accessible PDF reports</span>
+            <span aria-hidden>·</span>
+            <span className="text-oo-ink">search by national ID</span>
+            <span className="text-oo-muted">— every claim links to its source.</span>
+          </p>
+        )}
         <div className="mb-4 bg-white border border-oo-rule rounded-oo overflow-hidden">
           {/* Tab bar */}
           <div role="tablist" aria-label="Search method" className="flex border-b border-oo-rule">
@@ -2048,13 +2061,14 @@ const HOW_IT_WORKS_STEPS = [
     num: "4",
     accent: "#3d30d4" as const,
     icon: <StepShieldIcon className="h-[15px] w-[15px]" />,
-    title: "Risk signals + shareable BODS bundle",
+    title: "Risk signals, AI summary & shareable reports",
     body: (
       <>
         Deterministic risk signals — sanctions, flagged jurisdictions, complex
-        ownership and more — are computed across the assembled statements,
-        following the EU AMLA's draft due-diligence standards. Download the full
-        BODS bundle as JSON, JSONL, XML or a ZIP with manifest and license notes.
+        ownership and more — follow the EU AMLA's draft due-diligence standards,
+        and a plain-English AI summary explains them with every statement linked
+        to its source. Take it away as an accessible PDF report, or download the
+        raw BODS bundle (JSON, JSONL, XML or ZIP).
       </>
     ),
     badges: null,
