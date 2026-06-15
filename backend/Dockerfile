@@ -42,6 +42,11 @@ RUN uv sync
 # by the cache layer when live API calls are made.
 COPY data/ /app/data/
 
+# Pin the data root explicitly so the app never relies on path heuristics to
+# find /app/data (where the pre-extracted BODS bundles + demo fixtures live).
+# This is the deterministic counterpart to _find_project_root() in cache.py.
+ENV OPENCHECK_DATA_ROOT=/app/data
+
 EXPOSE 8000
 
 # Use $PORT so the process binds to whatever port the host assigns
