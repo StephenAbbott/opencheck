@@ -160,8 +160,8 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
 
   return (
     <section className="mb-8 bg-white border border-oo-rule rounded-oo p-5 lg:p-7 transition-shadow hover:shadow-oo-card">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-[15px] font-semibold text-oo-navy flex items-center gap-2">
             AI summary
             <span className="text-[10px] font-medium uppercase tracking-wide text-oo-blue border border-[#cfd6f5] bg-[#eef1fb] rounded-full px-1.5 py-0.5">
@@ -172,52 +172,52 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
             A plain-English summary of what OpenCheck found — every statement links to its source.
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {data && (
-            <span
-              className={`text-[11px] font-medium border rounded-full px-2 py-0.5 ${
-                CONF_BADGE[data.overall_confidence] ?? CONF_BADGE.low
-              }`}
-            >
-              {data.overall_confidence} confidence
-            </span>
-          )}
+        {/* Pinned in the top-right corner at every width — never overflows the card. */}
+        <button
+          type="button"
+          onClick={downloadPdf}
+          disabled={pdfBusy}
+          title="Download an accessible PDF report of these findings"
+          className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 rounded-oo border border-oo-blue text-oo-blue text-[12px] font-medium px-3 py-1.5 hover:bg-[#eef1fb] disabled:opacity-60"
+        >
+          {pdfBusy ? "Preparing PDF…" : "Download PDF"}
+        </button>
+      </div>
+
+      {data && (
+        <div className="mt-3 flex items-center flex-wrap gap-2">
+          <span
+            className={`text-[11px] font-medium border rounded-full px-2 py-0.5 ${
+              CONF_BADGE[data.overall_confidence] ?? CONF_BADGE.low
+            }`}
+          >
+            {data.overall_confidence} confidence
+          </span>
           <button
             type="button"
-            onClick={downloadPdf}
-            disabled={pdfBusy}
-            title="Download an accessible PDF report of these findings"
-            className="inline-flex items-center gap-1.5 rounded-oo border border-oo-blue text-oo-blue text-[12px] font-medium px-3 py-1.5 hover:bg-[#eef1fb] disabled:opacity-60"
+            onClick={() => setCollapsed((c) => !c)}
+            aria-expanded={!collapsed}
+            title={collapsed ? "Show summary" : "Hide summary"}
+            className="inline-flex items-center gap-1 rounded-oo border border-oo-rule text-oo-muted text-[12px] font-medium px-3 py-1.5 hover:border-oo-blue hover:text-oo-blue transition-colors"
           >
-            {pdfBusy ? "Preparing PDF…" : "Download PDF"}
+            {collapsed ? (
+              <>
+                Show
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                  <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd"/>
+                </svg>
+              </>
+            ) : (
+              <>
+                Hide
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                  <path fillRule="evenodd" d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" clipRule="evenodd"/>
+                </svg>
+              </>
+            )}
           </button>
-          {data && (
-            <button
-              type="button"
-              onClick={() => setCollapsed((c) => !c)}
-              aria-expanded={!collapsed}
-              title={collapsed ? "Show summary" : "Hide summary"}
-              className="inline-flex items-center gap-1 rounded-oo border border-oo-rule text-oo-muted text-[12px] font-medium px-3 py-1.5 hover:border-oo-blue hover:text-oo-blue transition-colors"
-            >
-              {collapsed ? (
-                <>
-                  Show
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                    <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd"/>
-                  </svg>
-                </>
-              ) : (
-                <>
-                  Hide
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                    <path fillRule="evenodd" d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" clipRule="evenodd"/>
-                  </svg>
-                </>
-              )}
-            </button>
-          )}
         </div>
-      </div>
+      )}
       {pdfError && (
         <p className="mt-2 text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-oo px-3 py-2">
           {pdfError}
