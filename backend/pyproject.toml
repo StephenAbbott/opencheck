@@ -30,6 +30,11 @@ dependencies = [
     # Anthropic SDK — narrative summaries (opencheck.narrative). The import is
     # lazy, so a missing key simply disables the feature; the package is light.
     "anthropic>=0.39",
+    # WeasyPrint — renders the accessible (tagged PDF/UA-1) due-diligence report
+    # in opencheck.reporting. Imported lazily; needs Pango at runtime (installed
+    # in the Docker image). segno generates the live-check QR code.
+    "weasyprint>=60",
+    "segno>=1.6",
 ]
 
 [project.optional-dependencies]
@@ -58,6 +63,9 @@ dev = [
     # auto-parametrized `bods_fixture` fixture (test_bods_fixtures_conformance.py)
     "bods-v04-fixtures>=0.1",
     "pytest-bods-v04-fixtures>=0.1",
+    # Inspect the tagged-PDF structure in test_reporting_html.py's render test
+    # (Lang / MarkInfo / StructTreeRoot). WeasyPrint itself is a runtime dep.
+    "pikepdf>=9",
 ]
 
 [build-system]

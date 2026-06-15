@@ -13,6 +13,7 @@
 
 import { useState } from "react";
 import {
+  downloadReportPdf,
   fetchNarrative,
   type EvidencePacket,
   type NarrativeResponse,
@@ -106,6 +107,8 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
   const [data, setData] = useState<NarrativeResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   async function generate() {
     setLoading(true);
@@ -116,6 +119,19 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
       setError(e instanceof Error ? e.message : "Could not generate the summary.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function downloadPdf() {
+    setPdfBusy(true);
+    setPdfError(null);
+    try {
+      // Embed the summary in the PDF only if it has been generated here.
+      await downloadReportPdf(lei, data);
+    } catch (e) {
+      setPdfError(e instanceof Error ? e.message : "Could not generate the PDF.");
+    } finally {
+      setPdfBusy(false);
     }
   }
 
@@ -133,16 +149,32 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
             A plain-English summary of what OpenCheck found — every statement links to its source.
           </p>
         </div>
-        {data && (
-          <span
-            className={`shrink-0 text-[11px] font-medium border rounded-full px-2 py-0.5 ${
-              CONF_BADGE[data.overall_confidence] ?? CONF_BADGE.low
-            }`}
+        <div className="flex items-center gap-2 shrink-0">
+          {data && (
+            <span
+              className={`text-[11px] font-medium border rounded-full px-2 py-0.5 ${
+                CONF_BADGE[data.overall_confidence] ?? CONF_BADGE.low
+              }`}
+            >
+              {data.overall_confidence} confidence
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={downloadPdf}
+            disabled={pdfBusy}
+            title="Download an accessible PDF report of these findings"
+            className="inline-flex items-center gap-1.5 rounded-oo border border-oo-blue text-oo-blue text-[12px] font-medium px-3 py-1.5 hover:bg-[#eef1fb] disabled:opacity-60"
           >
-            {data.overall_confidence} confidence
-          </span>
-        )}
+            {pdfBusy ? "Preparing PDF…" : "Download PDF"}
+          </button>
+        </div>
       </div>
+      {pdfError && (
+        <p className="mt-2 text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-oo px-3 py-2">
+          {pdfError}
+        </p>
+      )}
 
       {!data && (
         <div className="mt-4">

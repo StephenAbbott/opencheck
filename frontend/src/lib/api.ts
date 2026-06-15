@@ -288,6 +288,44 @@ export async function fetchNarrative(
   return (await r.json()) as NarrativeResponse;
 }
 
+/**
+ * Download an accessible (tagged) PDF report for an LEI. POSTs to /export/pdf;
+ * the already-generated narrative (if any) is sent so it can be embedded without
+ * a fresh model call. Triggers the browser download and resolves when done.
+ * Throws with the backend detail on failure (e.g. 503 if PDF is unavailable).
+ */
+export async function downloadReportPdf(
+  lei: string,
+  narrative?: NarrativeResponse | null,
+): Promise<void> {
+  const r = await fetch(`${BASE_URL}/export/pdf`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lei, narrative: narrative ?? null }),
+  });
+  if (!r.ok) {
+    let detail = `${r.status} ${r.statusText}`;
+    try {
+      const body = await r.json();
+      if (body?.detail) detail = body.detail;
+    } catch {
+      /* fall through */
+    }
+    throw new Error(detail);
+  }
+  const blob = await r.blob();
+  const cd = r.headers.get("Content-Disposition") ?? "";
+  const filename = /filename="?([^"]+)"?/.exec(cd)?.[1] ?? `opencheck-${lei}.pdf`;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 /** ISO 17442 LEI: 20-char alphanumeric. */
 export const LEI_PATTERN = /^[A-Z0-9]{20}$/;
 export function isValidLei(lei: string): boolean {

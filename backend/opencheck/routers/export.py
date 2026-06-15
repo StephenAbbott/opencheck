@@ -2,22 +2,26 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 import json
 import re
 import zipfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
+from bods_xml.canonical import convert as _bods_xml_convert
+from bods_xml.canonical import to_string as _bods_xml_str
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
-
-from bods_xml.canonical import convert as _bods_xml_convert, to_string as _bods_xml_str
+from pydantic import BaseModel, Field
 
 from .. import __version__
-from ..licensing import assess as assess_licensing, full_matrix
+from ..licensing import assess as assess_licensing
+from ..licensing import full_matrix
+from ..reporting import PdfUnavailable, build_report_pdf
 from ..sources import REGISTRY, SearchKind
-from .lookup import LookupResponse, ReportResponse, _build_report, lookup
+from .lookup import ReportResponse, _build_report, lookup
 
 router = APIRouter()
 
@@ -90,7 +94,7 @@ async def export(
         payload = await _build_report(q, kind, deepen_top)
         slug = _filename_slug(q)
         export_query = q
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d")
+    stamp = datetime.now(UTC).strftime("%Y%m%d")
 
     if format == "json":
         body = json.dumps(payload.bods, indent=2).encode("utf-8")
@@ -144,6 +148,50 @@ async def export(
     )
 
 
+class PdfExportRequest(BaseModel):
+    """Body for ``POST /export/pdf``.
+
+    ``narrative`` is the result the client already received from ``/narrative``;
+    it is embedded verbatim so the PDF needs no fresh model call (per the product
+    decision — the summary appears only when the user generated it on the page).
+    The diagrams are rendered server-side from the BODS data, so no graph images
+    are uploaded.
+    """
+
+    lei: str = Field(..., description="ISO 17442 Legal Entity Identifier.")
+    deepen_top: int = Field(5, ge=0, le=10)
+    narrative: dict[str, Any] | None = None
+
+
+@router.post("/export/pdf")
+async def export_pdf(req: PdfExportRequest) -> Response:
+    """Build an accessible (tagged PDF/UA-1) due-diligence report for an LEI.
+
+    Reuses the same cached lookup pipeline as ``/lookup`` (so the PDF can't
+    diverge from the page), renders the report off the event loop, and streams
+    it back. Returns 503 when the PDF toolchain (WeasyPrint) is unavailable.
+    """
+    norm_lei = req.lei.strip().upper()
+    payload = await lookup(norm_lei, req.deepen_top)  # raises 400/404 on bad LEI
+    report = payload.model_dump()
+    try:
+        pdf_bytes = await asyncio.to_thread(
+            build_report_pdf, report, narrative=req.narrative
+        )
+    except PdfUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    slug = _filename_slug(payload.legal_name or payload.lei or norm_lei)
+    stamp = datetime.now(UTC).strftime("%Y%m%d")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="opencheck-{slug}-{stamp}.pdf"',
+        },
+    )
+
+
 def _filename_slug(query: str) -> str:
     """Make a query safe to embed in a download filename."""
     slug = re.sub(r"[^a-z0-9]+", "-", query.lower()).strip("-")
@@ -168,7 +216,7 @@ def _build_export_zip(
 
     manifest = {
         "opencheck_version": __version__,
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "query": q,
         "kind": kind.value,
         "deepen_top": len(payload.license_notices) + len(

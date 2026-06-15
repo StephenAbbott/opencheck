@@ -1,8 +1,18 @@
 # syntax=docker/dockerfile:1.7
 FROM python:3.11-slim
 
-# Install git (required by uv to clone git+ dependencies such as bods-xml)
-RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+# System dependencies:
+#   git                         — uv clones git+ deps such as bods-xml
+#   libpango-1.0-0 / -ft2       — WeasyPrint renders the PDF report (Pango; no
+#                                 Cairo needed in WeasyPrint 53+). These pull in
+#                                 glib, harfbuzz, fontconfig and freetype.
+#   fonts-dejavu-core           — the DejaVu Sans/Mono faces the report uses
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git \
+        libpango-1.0-0 \
+        libpangoft2-1.0-0 \
+        fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install uv via pip — avoids GHCR dependency that can fail with 502 on Render
 RUN pip install --no-cache-dir uv
