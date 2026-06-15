@@ -70,6 +70,112 @@ describe("bodsToGraph", () => {
   });
 });
 
+// GLEIF Level-2 publishes a direct and an ultimate accounting-consolidation
+// record per parent/child, each mapped to its own BODS statement. The two
+// view-layer clean-ups collapse the resulting duplicate / skip-level edges.
+function consolidationInterest(kind: "direct" | "ultimate") {
+  return {
+    type: "otherInfluenceOrControl",
+    beneficialOwnershipOrControl: false,
+    details: `Relationship Type: IS_${kind === "ultimate" ? "ULTIMATELY" : "DIRECTLY"}_CONSOLIDATED_BY`,
+  };
+}
+
+/** parent P, child C, grandchild G. P is both direct & ultimate parent of C;
+ *  C is direct parent of G and P is G's ultimate parent. */
+function consolidationStatements(): Record<string, unknown>[] {
+  const ent = (id: string) => ({
+    statementId: id,
+    recordType: "entity",
+    recordDetails: { name: id },
+  });
+  const rel = (id: string, parent: string, child: string, kind: "direct" | "ultimate") => ({
+    statementId: id,
+    recordType: "relationship",
+    recordDetails: {
+      interestedParty: parent,
+      subject: child,
+      interests: [consolidationInterest(kind)],
+    },
+  });
+  return [
+    ent("P"),
+    ent("C"),
+    ent("G"),
+    rel("r-pc-d", "P", "C", "direct"),
+    rel("r-pc-u", "P", "C", "ultimate"), // duplicate of the P→C direct edge
+    rel("r-cg-d", "C", "G", "direct"),
+    rel("r-pg-u", "P", "G", "ultimate"), // skip-level: implied by P→C→G
+  ];
+}
+
+describe("consolidation edge clean-up (B + C)", () => {
+  it("collapses a duplicate direct/ultimate pair into one edge (defaults on)", () => {
+    const { edges } = bodsToGraph(consolidationStatements());
+    // P→C once, C→G once, and the skip-level P→G suppressed → 2 edges.
+    const pairs = edges.map((e) => `${e.source}->${e.target}`).sort();
+    expect(pairs).toEqual(["C->G", "P->C"]);
+  });
+
+  it("the surviving P→C edge keeps a single control label (C dropped the dupe)", () => {
+    // With C on (default), the redundant ultimate P→C edge is removed before
+    // merge, so the lone direct edge survives and shows just its own detail.
+    const { edges } = bodsToGraph(consolidationStatements());
+    const pc = edges.find((e) => e.source === "P" && e.target === "C")!;
+    expect(pc.category).toBe("control");
+    expect(pc.label).toBe("Controls");
+    expect(pc.details).toContain("IS_DIRECTLY_CONSOLIDATED_BY");
+    expect(pc.details).not.toContain("IS_ULTIMATELY_CONSOLIDATED_BY");
+  });
+
+  it("when C is off, B merges the pair and pools both flavours into one edge", () => {
+    const { edges } = bodsToGraph(consolidationStatements(), {
+      suppressRedundantUltimateConsolidation: false,
+    });
+    const pc = edges.find((e) => e.source === "P" && e.target === "C")!;
+    expect(pc.label).toBe("Controls"); // de-duplicated despite two interests
+    expect(pc.details).toContain("IS_DIRECTLY_CONSOLIDATED_BY");
+    expect(pc.details).toContain("IS_ULTIMATELY_CONSOLIDATED_BY");
+  });
+
+  it("keeps an ultimate edge that has no direct-consolidation path (no orphan)", () => {
+    // G's only link to P is the ultimate edge; the C→G direct edge is removed.
+    const stmts = consolidationStatements().filter((s) => s.statementId !== "r-cg-d");
+    const { edges } = bodsToGraph(stmts);
+    const pairs = edges.map((e) => `${e.source}->${e.target}`).sort();
+    expect(pairs).toEqual(["P->C", "P->G"]); // P→G ultimate retained
+  });
+
+  it("merges parallel edges but does not suppress when C is disabled", () => {
+    const { edges } = bodsToGraph(consolidationStatements(), {
+      suppressRedundantUltimateConsolidation: false,
+    });
+    // P→C duplicate still merges (B), P→G skip-level edge stays (C off) → 3.
+    const pairs = edges.map((e) => `${e.source}->${e.target}`).sort();
+    expect(pairs).toEqual(["C->G", "P->C", "P->G"]);
+  });
+
+  it("leaves every raw edge separate when both clean-ups are disabled", () => {
+    const { edges } = bodsToGraph(consolidationStatements(), {
+      mergeParallelEdges: false,
+      suppressRedundantUltimateConsolidation: false,
+    });
+    expect(edges).toHaveLength(4); // r-pc-d, r-pc-u, r-cg-d, r-pg-u
+  });
+
+  it("does not merge edges between different pairs", () => {
+    // A diamond of ownership edges must stay as four distinct edges.
+    const { edges } = bodsToGraph([
+      { statementId: "A", recordType: "entity", recordDetails: { name: "A" } },
+      { statementId: "B", recordType: "entity", recordDetails: { name: "B" } },
+      { statementId: "C", recordType: "entity", recordDetails: { name: "C" } },
+      { statementId: "r1", recordType: "relationship", recordDetails: { interestedParty: "A", subject: "B", interests: [{ type: "shareholding" }] } },
+      { statementId: "r2", recordType: "relationship", recordDetails: { interestedParty: "A", subject: "C", interests: [{ type: "shareholding" }] } },
+    ]);
+    expect(edges).toHaveLength(2);
+  });
+});
+
 describe("searchNodes", () => {
   const { nodes } = bodsToGraph(STATEMENTS);
 

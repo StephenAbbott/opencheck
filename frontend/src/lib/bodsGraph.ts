@@ -107,7 +107,18 @@ export function buildEdgeLabel(interests: Interest[]): string {
     (a, b) =>
       (b.beneficialOwnershipOrControl ? 1 : 0) - (a.beneficialOwnershipOrControl ? 1 : 0)
   );
-  return sorted.slice(0, 2).map(interestLabel).join("\n");
+  // De-duplicate identical labels so a merged edge that pooled, e.g., a direct
+  // and an ultimate consolidation interest (both → "Controls") shows one line.
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const i of sorted) {
+    const l = interestLabel(i);
+    if (!seen.has(l)) {
+      seen.add(l);
+      labels.push(l);
+    }
+  }
+  return labels.slice(0, 2).join("\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -167,13 +178,121 @@ function nodeIdentifiers(stmt: Stmt): string[] {
 const NODE_TYPES = new Set(["entity", "person", "entityStatement", "personStatement"]);
 const REL_TYPES = new Set(["relationship", "ownershipOrControlStatement"]);
 
+// GLEIF Level-2 relationship records map to BODS with the accounting-
+// consolidation type carried in the interest's free-text `details`.
+const ULTIMATE_CONSOLIDATION = "IS_ULTIMATELY_CONSOLIDATED_BY";
+const DIRECT_CONSOLIDATION = "IS_DIRECTLY_CONSOLIDATED_BY";
+
+type ConsolidationKind = "direct" | "ultimate" | null;
+
+/** Classify a relationship's consolidation flavour from its interest details. */
+function consolidationKind(interests: Interest[]): ConsolidationKind {
+  let direct = false;
+  let ultimate = false;
+  for (const i of interests) {
+    const d = i.details ?? "";
+    if (d.includes(ULTIMATE_CONSOLIDATION)) ultimate = true;
+    else if (d.includes(DIRECT_CONSOLIDATION)) direct = true;
+  }
+  if (ultimate && !direct) return "ultimate";
+  if (direct && !ultimate) return "direct";
+  return null;
+}
+
+/** Edge colour-category from a (possibly pooled) interest set. Precedence:
+ *  ownership → control → role → unknown. */
+function categorise(interests: Interest[]): EdgeCategory {
+  if (interests.some((i) => i.type === "shareholding" || i.type === "votingRights")) {
+    return "ownership";
+  }
+  if (
+    interests.some(
+      (i) =>
+        i.type === "appointmentOfBoard" ||
+        i.type === "otherInfluenceOrControl" ||
+        i.type === "controlViaCompanyRulesOrArticles" ||
+        i.type === "controlByLegalFramework"
+    )
+  ) {
+    return "control";
+  }
+  if (
+    interests.some(
+      (i) =>
+        i.type === "seniorManagingOfficial" ||
+        i.type === "boardMember" ||
+        i.type === "boardChair"
+    )
+  ) {
+    return "role";
+  }
+  return "unknown";
+}
+
+/** Distinct interest `details` strings, joined for the edge tooltip. */
+function combineDetails(interests: Interest[]): string | undefined {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const i of interests) {
+    const d = i.details;
+    if (d && !seen.has(d)) {
+      seen.add(d);
+      out.push(d);
+    }
+  }
+  return out.length ? out.join(" · ") : undefined;
+}
+
+/** Is `goal` reachable from `start` over the direct-consolidation adjacency? */
+function reachableViaDirect(
+  adj: Map<string, string[]>,
+  start: string,
+  goal: string
+): boolean {
+  const stack = [...(adj.get(start) ?? [])];
+  const seen = new Set<string>();
+  while (stack.length) {
+    const cur = stack.pop()!;
+    if (cur === goal) return true;
+    if (seen.has(cur)) continue;
+    seen.add(cur);
+    for (const next of adj.get(cur) ?? []) stack.push(next);
+  }
+  return false;
+}
+
+interface RawEdge {
+  id: string;
+  source: string;
+  target: string;
+  interests: Interest[];
+  kind: ConsolidationKind;
+}
+
+export interface BuildGraphOptions {
+  /** B — collapse parallel same-direction edges between a pair into a single
+   *  edge that pools their interests. Default true. */
+  mergeParallelEdges?: boolean;
+  /** C — hide an ultimate-consolidation edge when a chain of direct-
+   *  consolidation edges already connects the same pair. Default true. */
+  suppressRedundantUltimateConsolidation?: boolean;
+}
+
 /**
  * Transform a BODS statement bundle into a neutral graph model.
  *
  * Handles both v0.3 (object refs via `describedBy*`) and v0.4 (string refs,
  * which may be a `statementId` UUID or a `declarationSubject` alias).
+ *
+ * By default two view-layer clean-ups run (both leave the underlying BODS
+ * untouched — they only shape the rendered graph/tree, never the export):
+ *   - B (`mergeParallelEdges`): one edge per entity pair, pooling interests.
+ *   - C (`suppressRedundantUltimateConsolidation`): drop GLEIF ultimate-
+ *     consolidation edges already implied by the direct-consolidation tree.
  */
-export function bodsToGraph(statements: Stmt[]): GraphModel {
+export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): GraphModel {
+  const mergeParallelEdges = opts.mergeParallelEdges ?? true;
+  const suppressRedundant = opts.suppressRedundantUltimateConsolidation ?? true;
   const nodes: GraphNode[] = [];
   const nodeIds = new Set<string>();
   // v0.4 relationship endpoints reference declarationSubject (e.g. "XI-LEI-…")
@@ -206,8 +325,6 @@ export function bodsToGraph(statements: Stmt[]): GraphModel {
     });
   }
 
-  const edges: GraphEdge[] = [];
-
   const resolveRef = (raw: unknown): string | undefined => {
     if (typeof raw === "string") {
       return nodeIds.has(raw) ? raw : declSubjToNodeId.get(raw);
@@ -219,6 +336,8 @@ export function bodsToGraph(statements: Stmt[]): GraphModel {
     );
   };
 
+  // One raw edge per ownership-or-control statement.
+  const raw: RawEdge[] = [];
   for (const stmt of statements) {
     const rt = (stmt.recordType ?? stmt.statementType) as string;
     if (!REL_TYPES.has(rt)) continue;
@@ -229,40 +348,70 @@ export function bodsToGraph(statements: Stmt[]): GraphModel {
     if (!sourceId || !targetId || !nodeIds.has(sourceId) || !nodeIds.has(targetId)) continue;
 
     const interests = (rd.interests ?? []) as Interest[];
-    const hasOwnership = interests.some(
-      (i) => i.type === "shareholding" || i.type === "votingRights"
-    );
-    const hasControl =
-      !hasOwnership &&
-      interests.some(
-        (i) =>
-          i.type === "appointmentOfBoard" ||
-          i.type === "otherInfluenceOrControl" ||
-          i.type === "controlViaCompanyRulesOrArticles" ||
-          i.type === "controlByLegalFramework"
-      );
-    const isRole = interests.some(
-      (i) =>
-        i.type === "seniorManagingOfficial" ||
-        i.type === "boardMember" ||
-        i.type === "boardChair"
-    );
-
-    const detailsText =
-      interests
-        .map((i) => i.details)
-        .filter((d): d is string => !!d)
-        .join(" · ") || undefined;
-
-    edges.push({
+    raw.push({
       id: ((stmt.statementId ?? stmt.statementID) as string) ?? `${sourceId}-${targetId}`,
       source: sourceId,
       target: targetId,
-      label: buildEdgeLabel(interests),
-      category: hasOwnership ? "ownership" : hasControl ? "control" : isRole ? "role" : "unknown",
-      details: detailsText,
+      interests,
+      kind: consolidationKind(interests),
     });
   }
+
+  // C — drop an ultimate-consolidation edge when a chain of direct-consolidation
+  // edges already connects the same pair. GLEIF publishes both a direct and an
+  // ultimate parent record: for a group head these collapse onto the same pair
+  // (a duplicate edge); for deeper members the ultimate edge just skips levels
+  // already covered by the direct tree (the "star"). Only redundant *ultimate*
+  // edges are removed, so a member whose direct parent is absent from the
+  // subgraph keeps its ultimate link and stays connected.
+  let kept = raw;
+  if (suppressRedundant) {
+    const directAdj = new Map<string, string[]>();
+    for (const e of raw) {
+      if (e.kind !== "direct") continue;
+      const arr = directAdj.get(e.source) ?? [];
+      if (!arr.includes(e.target)) arr.push(e.target);
+      directAdj.set(e.source, arr);
+    }
+    kept = raw.filter(
+      (e) => !(e.kind === "ultimate" && reachableViaDirect(directAdj, e.source, e.target))
+    );
+  }
+
+  // B — merge parallel same-direction edges into one, pooling their interests
+  // (so a pair carrying several statements renders as a single edge whose label
+  // and tooltip list every interest — mirroring how a multi-nature Companies
+  // House relationship already renders as one edge).
+  let finalEdges = kept;
+  if (mergeParallelEdges) {
+    const groups = new Map<string, RawEdge[]>();
+    for (const e of kept) {
+      const key = `${e.source} ${e.target}`;
+      const g = groups.get(key);
+      if (g) g.push(e);
+      else groups.set(key, [e]);
+    }
+    finalEdges = [...groups.values()].map((g) =>
+      g.length === 1
+        ? g[0]
+        : {
+            id: `${g[0].source}~${g[0].target}`,
+            source: g[0].source,
+            target: g[0].target,
+            interests: g.flatMap((x) => x.interests),
+            kind: null,
+          }
+    );
+  }
+
+  const edges: GraphEdge[] = finalEdges.map((e) => ({
+    id: e.id,
+    source: e.source,
+    target: e.target,
+    label: buildEdgeLabel(e.interests),
+    category: categorise(e.interests),
+    details: combineDetails(e.interests),
+  }));
 
   return { nodes, edges };
 }
