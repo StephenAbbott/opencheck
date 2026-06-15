@@ -648,6 +648,12 @@ export default function App() {
                   setSelectedCountry("GB");
                   setNationalIdTouched(false);
                   setSearchMode("name");
+                  // Clear ?lei= so the address bar returns to a clean homepage URL.
+                  if (window.location.search) {
+                    const url = new URL(window.location.href);
+                    url.search = "";
+                    window.history.pushState({}, "", url);
+                  }
                 }}
                 aria-label="Back to homepage"
                 className="flex items-center gap-2.5 hover:opacity-80 transition-opacity text-left"
