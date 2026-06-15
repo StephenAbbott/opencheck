@@ -221,9 +221,7 @@ export default function App() {
   function navigate(v: View) {
     const path = viewToPath(v);
     if (window.location.pathname !== path) {
-      // Strip ?lei= when leaving the main view so /sources etc. are clean URLs.
-      const url = v === "main" ? window.location.href : path;
-      window.history.pushState({ view: v }, "", url);
+      window.history.pushState({ view: v }, "", path);
     }
     setView(v);
   }
