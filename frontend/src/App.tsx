@@ -772,9 +772,9 @@ export default function App() {
             </span>
             <span className="text-oo-ink">AI-written summaries</span>
             <span aria-hidden>·</span>
-            <span className="text-oo-ink">accessible PDF reports</span>
+            <span className="text-oo-ink">Accessible PDF reports</span>
             <span aria-hidden>·</span>
-            <span className="text-oo-ink">search by national ID</span>
+            <span className="text-oo-ink">Search by national ID</span>
             <span className="text-oo-muted">— every claim links to its source.</span>
           </p>
         )}
