@@ -199,10 +199,34 @@ export default function App() {
 
   // Close any open stream when the component unmounts.
   useEffect(() => () => { cleanupRef.current?.(); }, []);
-  // ``main`` shows the LEI form + lookup result; ``sources`` shows the
-  // source inventory page. Kept as state rather than a router so we
-  // don't pull in react-router for two views.
-  const [view, setView] = useState<"main" | "sources" | "behind" | "api">("main");
+  // Path → view mapping. /sources and /about are real URLs; everything
+  // else falls through to "main" (the SPA rewrite in render.yaml serves
+  // index.html for all paths so deep links work).
+  type View = "main" | "sources" | "behind" | "api";
+  function pathToView(path: string): View {
+    if (path === "/sources") return "sources";
+    if (path === "/about") return "behind";
+    if (path === "/api") return "api";
+    return "main";
+  }
+  function viewToPath(v: View): string {
+    if (v === "sources") return "/sources";
+    if (v === "behind") return "/about";
+    if (v === "api") return "/api";
+    return "/";
+  }
+  const [view, setView] = useState<View>(() => pathToView(window.location.pathname));
+
+  /** Navigate to a view, updating the browser URL. */
+  function navigate(v: View) {
+    const path = viewToPath(v);
+    if (window.location.pathname !== path) {
+      // Strip ?lei= when leaving the main view so /sources etc. are clean URLs.
+      const url = v === "main" ? window.location.href : path;
+      window.history.pushState({ view: v }, "", url);
+    }
+    setView(v);
+  }
 
   // Dynamic document title — updates on lookup results and view changes.
   useEffect(() => {
@@ -385,6 +409,13 @@ export default function App() {
     if (initial && isValidLei(initial)) lookupLei(initial);
 
     const onPopState = () => {
+      // Handle non-main path views first (back/forward to /sources, /about etc.)
+      const v = pathToView(window.location.pathname);
+      if (v !== "main") {
+        setView(v);
+        return;
+      }
+      // Back on main — honour ?lei= if present, otherwise clear results.
       const lei = fromUrl(new URLSearchParams(window.location.search).get("lei"));
       if (lei && isValidLei(lei)) {
         lookupLei(lei);
@@ -399,6 +430,7 @@ export default function App() {
         setStreaming(false);
         setStreamDropped(false);
         lookupMutation.reset();
+        setView("main");
       }
     };
     window.addEventListener("popstate", onPopState);
@@ -637,7 +669,7 @@ export default function App() {
                   // Click the title to return to a fresh homepage state.
                   cleanupRef.current?.();
                   cleanupRef.current = null;
-                  setView("main");
+                  navigate("main");
                   setStreamingLei(null);
                   setLegalName(null);
                   setHits([]);
@@ -685,7 +717,7 @@ export default function App() {
               {view !== "main" ? (
                 <button
                   type="button"
-                  onClick={() => setView("main")}
+                  onClick={() => navigate("main")}
                   aria-label="Back to main page"
                   className="text-[12px] font-mono text-oo-light hover:text-white underline underline-offset-4 whitespace-nowrap"
                 >
@@ -693,22 +725,22 @@ export default function App() {
                 </button>
               ) : (
                 <div className="flex items-center gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setView("sources")}
+                  <a
+                    href="/sources"
+                    onClick={(e) => { e.preventDefault(); navigate("sources"); }}
                     aria-label="View data sources"
                     className="text-[12px] font-mono text-oo-light hover:text-white underline underline-offset-4 whitespace-nowrap"
                   >
                     Sources →
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setView("behind")}
+                  </a>
+                  <a
+                    href="/about"
+                    onClick={(e) => { e.preventDefault(); navigate("behind"); }}
                     aria-label="Behind the scenes — how OpenCheck works"
                     className="hidden sm:inline text-[12px] font-mono text-oo-light hover:text-white underline underline-offset-4 whitespace-nowrap"
                   >
                     Behind the scenes →
-                  </button>
+                  </a>
                 </div>
               )}
             </nav>
@@ -1322,7 +1354,7 @@ export default function App() {
             exists to enable.{" "}
             <button
               type="button"
-              onClick={() => setView("behind")}
+              onClick={() => navigate("behind")}
               className="underline underline-offset-2 font-medium hover:text-white"
             >
               How it works →
@@ -1351,13 +1383,13 @@ export default function App() {
                 <div className="text-[10px] font-medium tracking-widest uppercase text-oo-muted mb-3">
                   Project
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setView("api")}
-                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst mb-2 cursor-pointer text-left"
+                <a
+                  href="/api"
+                  onClick={(e) => { e.preventDefault(); navigate("api"); }}
+                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst mb-2"
                 >
                   API
-                </button>
+                </a>
                 <a
                   href="https://github.com/StephenAbbott/opencheck"
                   target="_blank"
@@ -1366,20 +1398,20 @@ export default function App() {
                 >
                   GitHub
                 </a>
-                <button
-                  type="button"
-                  onClick={() => setView("sources")}
-                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst mb-2 cursor-pointer text-left"
+                <a
+                  href="/sources"
+                  onClick={(e) => { e.preventDefault(); navigate("sources"); }}
+                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst mb-2"
                 >
                   Sources
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setView("behind")}
-                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst cursor-pointer text-left"
+                </a>
+                <a
+                  href="/about"
+                  onClick={(e) => { e.preventDefault(); navigate("behind"); }}
+                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst"
                 >
                   Behind the scenes
-                </button>
+                </a>
               </div>
               <div>
                 <div className="text-[10px] font-medium tracking-widest uppercase text-oo-muted mb-3">
