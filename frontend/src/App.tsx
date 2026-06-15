@@ -1109,9 +1109,9 @@ export default function App() {
           </div>
         )}
 
-        {streamingLei && <NarrativePanel lei={streamingLei} legalName={legalName} />}
-
         {streamingLei && <SubjectCard lei={streamingLei} legalName={legalName} />}
+
+        {streamingLei && <NarrativePanel lei={streamingLei} legalName={legalName} />}
 
         {aggregatedCodes.length > 0 && (
           <section className="mb-8">
