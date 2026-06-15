@@ -1,147 +1,47 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>OpenCheck — social card B</title>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body {
-  width: 1080px;
-  height: 566px;
-  overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
-body {
-  background: #1C1C2E;
-  padding: 50px 64px 46px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-.eyebrow {
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  color: #1D9E75;
-  text-transform: uppercase;
-  font-weight: 600;
-  margin-bottom: 22px;
-}
-.title {
-  font-size: 74px;
-  font-weight: 500;
-  color: #ffffff;
-  line-height: 1.0;
-  margin-bottom: 16px;
-  letter-spacing: -0.5px;
-}
-.tagline {
-  font-size: 20px;
-  color: #9FE1CB;
-  line-height: 1.6;
-}
-.legend {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  flex-shrink: 0;
-  margin-top: 8px;
-}
-.leg-row {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-}
-.leg-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.leg-text {
-  font-size: 15px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-.badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-bottom: 14px;
-}
-.badge {
-  font-size: 12px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Courier New', monospace;
-  white-space: nowrap;
-  font-weight: 400;
-  letter-spacing: 0.01em;
-}
-.footer {
-  font-size: 13px;
-  color: #4A4A6A;
-  letter-spacing: 0.01em;
-}
-</style>
-</head>
-<body>
-
-<div>
-  <div class="eyebrow">Open data, open standards</div>
-  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 48px;">
-    <div>
-      <div class="title">OpenCheck</div>
-      <div class="tagline">
-        One query. 19 sources.<br>
-        Entities, people, sanctions &mdash; all at once.
-      </div>
-    </div>
-    <div class="legend">
-      <div class="leg-row">
-        <div class="leg-dot" style="background: #5DCAA5;"></div>
-        <span class="leg-text" style="color: #9FE1CB;">National registries &mdash; 11 countries</span>
-      </div>
-      <div class="leg-row">
-        <div class="leg-dot" style="background: #7F77DD;"></div>
-        <span class="leg-text" style="color: #CECBF6;">Global corporate data &mdash; 3 sources</span>
-      </div>
-      <div class="leg-row">
-        <div class="leg-dot" style="background: #D85A30;"></div>
-        <span class="leg-text" style="color: #F0997B;">Sanctions &amp; investigative &mdash; 2 sources</span>
-      </div>
-      <div class="leg-row">
-        <div class="leg-dot" style="background: #EF9F27;"></div>
-        <span class="leg-text" style="color: #FAC775;">Open knowledge &amp; people &mdash; 3 sources</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div>
-  <div class="badges">
-    <span class="badge" style="color: #5DCAA5; background: #085041;">companies_house</span>
-    <span class="badge" style="color: #5DCAA5; background: #085041;">sec_edgar</span>
-    <span class="badge" style="color: #5DCAA5; background: #085041;">brreg</span>
-    <span class="badge" style="color: #5DCAA5; background: #085041;">bolagsverket</span>
-    <span class="badge" style="color: #5DCAA5; background: #085041;">prh</span>
-    <span class="badge" style="color: #5DCAA5; background: #085041;">kvk</span>
-    <span class="badge" style="color: #5DCAA5; background: #085041;">zefix</span>
-    <span class="badge" style="color: #5DCAA5; background: #085041;">inpi</span>
-    <span class="badge" style="color: #5DCAA5; background: #085041;">cro</span>
-    <span class="badge" style="color: #5DCAA5; background: #085041;">ur_latvia</span>
-    <span class="badge" style="color: #5DCAA5; background: #085041;">ariregister</span>
-    <span class="badge" style="color: #CECBF6; background: #26215C;">gleif</span>
-    <span class="badge" style="color: #CECBF6; background: #26215C;">opencorporates</span>
-    <span class="badge" style="color: #CECBF6; background: #26215C;">brightquery</span>
-    <span class="badge" style="color: #F0997B; background: #4A1B0C;">opensanctions</span>
-    <span class="badge" style="color: #F0997B; background: #4A1B0C;">openaleph</span>
-    <span class="badge" style="color: #FAC775; background: #412402;">wikidata</span>
-    <span class="badge" style="color: #FAC775; background: #412402;">everypolitician</span>
-    <span class="badge" style="color: #FAC775; background: #412402;">climatetrace</span>
-  </div>
-  <div class="footer">Built in 2 weeks &nbsp;&middot;&nbsp; Open source &nbsp;&middot;&nbsp; github.com/StephenAbbott/opencheck</div>
-</div>
-
-</body>
-</html>
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+@import url('https://fonts.googleapis.com/css2?family=Bitter:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap');
+@page { size: 1200px 630px; margin: 0; }
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:1200px; height:630px; overflow:hidden; }
+body { font-family:'DM Sans','Segoe UI',system-ui,Arial,sans-serif; position:relative; color:#191d23; -webkit-font-smoothing:antialiased; }
+.h { font-family:'Bitter',Georgia,serif; }
+.tag { font-size:16px; letter-spacing:2.5px; text-transform:uppercase; color:#1D9E75; font-weight:700; }
+.url { font-size:27px; font-weight:700; color:#3d30d4; }
+</style></head><body>
+<div style="position:absolute;inset:0;background:radial-gradient(1300px 820px at 100% -15%, #E6F1FB 0%, #ffffff 58%)"></div>
+<svg width="520" height="420" style="position:absolute;right:-40px;bottom:-30px;opacity:.13" viewBox="0 0 520 420">
+      <line x1="120" y1="90" x2="300" y2="200" stroke="#3d30d4" stroke-width="3"/><line x1="120" y1="320" x2="300" y2="200" stroke="#7c3aed" stroke-width="3"/>
+      <line x1="300" y1="200" x2="470" y2="120" stroke="#1565c0" stroke-width="3"/><line x1="300" y1="200" x2="470" y2="300" stroke="#1565c0" stroke-width="3"/>
+      <circle cx="120" cy="90" r="26" fill="#22c55e"/><circle cx="120" cy="320" r="26" fill="#7c3aed"/>
+      <circle cx="300" cy="200" r="34" fill="#0d1b3e"/><circle cx="470" cy="120" r="22" fill="#3b82f6"/><circle cx="470" cy="300" r="22" fill="#3b82f6"/>
+    </svg>
+<div style="position:absolute;left:80px;top:60px" class="tag">Open data. Open standards. Trusted insights.</div>
+<div style="position:absolute;left:78px;top:90px"><svg viewBox="0 0 560 120" style="height:104px;width:auto" xmlns="http://www.w3.org/2000/svg">
+  <defs><clipPath id="lc104"><circle cx="60" cy="60" r="47"/></clipPath></defs>
+  <line x1="95" y1="95" x2="138" y2="138" stroke="#0d1b3e" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="60" cy="60" r="52" fill="none" stroke="#0d1b3e" stroke-width="10"/>
+  <g clip-path="url(#lc104)">
+    <rect x="67" y="12" width="17" height="81" fill="#0d1b3e"/><rect x="81" y="31" width="13" height="62" fill="#0d1b3e"/>
+    <rect x="70" y="18" width="5" height="5" fill="#fff"/><rect x="78" y="18" width="5" height="5" fill="#fff"/>
+    <rect x="70" y="27" width="5" height="5" fill="#fff"/><rect x="78" y="27" width="5" height="5" fill="#fff"/>
+    <rect x="70" y="36" width="5" height="5" fill="#fff"/><rect x="78" y="36" width="5" height="5" fill="#fff"/>
+    <rect x="84" y="38" width="4" height="4" fill="#fff"/><rect x="84" y="46" width="4" height="4" fill="#fff"/>
+    <rect x="72" y="71" width="8" height="22" fill="#fff"/>
+  </g>
+  <line x1="36" y1="21" x2="14" y2="57" stroke="#93c5fd" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="14" y1="57" x2="36" y2="93" stroke="#93c5fd" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="36" y1="21" x2="36" y2="93" stroke="#93c5fd" stroke-width="3.5" stroke-linecap="round"/>
+  <polygon points="26,41 26,74 57,58" fill="#0d1b3e"/>
+  <circle cx="36" cy="21" r="8.5" fill="#22c55e"/><circle cx="14" cy="57" r="8.5" fill="#3b82f6"/><circle cx="36" cy="93" r="8.5" fill="#7c3aed"/>
+  <text x="155" y="83" font-family="DM Sans,Arial,sans-serif" font-weight="700" font-size="68" letter-spacing="-1" fill="#0d1b3e">Open</text>
+  <text x="355" y="83" font-family="DM Sans,Arial,sans-serif" font-weight="700" font-size="68" letter-spacing="-1" fill="#2563eb">Check</text>
+</svg></div>
+<div style="position:absolute;right:64px;top:58px;width:430px;background:#ffffff;border:1px solid #d9def0;border-radius:18px;padding:24px 30px 6px">
+  <div style="font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:#8a8a99;font-weight:700;margin-bottom:16px">29 sources, one query</div>
+  <div style="display:flex;align-items:center;gap:13px;margin-bottom:17px"><span style="width:12px;height:12px;border-radius:50%;background:#1D9E75;flex:none"></span><span style="font-size:28px;font-weight:700;color:#191d23;min-width:40px">21</span><span style="font-size:18px;color:#5f5e5a">national company registers</span></div><div style="display:flex;align-items:center;gap:13px;margin-bottom:17px"><span style="width:12px;height:12px;border-radius:50%;background:#7F77DD;flex:none"></span><span style="font-size:28px;font-weight:700;color:#191d23;min-width:40px">3</span><span style="font-size:18px;color:#5f5e5a">corporate &amp; LEI data sources</span></div><div style="display:flex;align-items:center;gap:13px;margin-bottom:17px"><span style="width:12px;height:12px;border-radius:50%;background:#D85A30;flex:none"></span><span style="font-size:28px;font-weight:700;color:#191d23;min-width:40px">2</span><span style="font-size:18px;color:#5f5e5a">sanctions &amp; watchlist sources</span></div><div style="display:flex;align-items:center;gap:13px;margin-bottom:17px"><span style="width:12px;height:12px;border-radius:50%;background:#EF9F27;flex:none"></span><span style="font-size:28px;font-weight:700;color:#191d23;min-width:40px">3</span><span style="font-size:18px;color:#5f5e5a">open knowledge &amp; ESG sources</span></div></div>
+<div class="h" style="position:absolute;left:80px;top:312px;font-size:80px;font-weight:700;letter-spacing:-1.5px;color:#191d23">One query,<br><span style="color:#3d30d4">29 sources</span></div>
+<div style="position:absolute;left:80px;top:516px;display:inline-flex;align-items:center;gap:13px;white-space:nowrap;background:#3d30d4;border-radius:26px;padding:12px 26px 12px 14px">
+  <span style="background:#ffffff;color:#3d30d4;font-size:15px;font-weight:800;letter-spacing:.06em;border-radius:13px;padding:4px 11px">NEW</span>
+  <span style="font-size:23px;font-weight:600;color:#ffffff">AI summaries &middot; PDF export</span></div>
+<div class="url" style="position:absolute;top:560px;right:74px">opencheck.world</div>
+</body></html>
