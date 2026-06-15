@@ -23,18 +23,32 @@ from pathlib import Path
 from typing import Any
 
 
-def _project_root() -> Path:
-    # Walk up from this file until we find a directory containing ``data``
-    # or bail out at the filesystem root. This makes tests cache-friendly
-    # regardless of CWD.
-    here = Path(__file__).resolve()
+def _find_project_root(start_file: Path) -> Path:
+    """Walk up from ``start_file`` to the project's data root.
+
+    The data root is the directory whose ``data/`` holds the runtime ``cache``
+    tree — specifically the committed BODS subgraph bundles at
+    ``data/cache/bods_data``. We anchor on that exact marker rather than a bare
+    ``data`` directory so that other ``data/`` folders on the path — the
+    package's own ``opencheck/data`` (GEM/GEOT package assets) or a stray
+    runtime ``backend/data`` — do not shadow the real repo-root ``data``
+    directory. (Regression: the GEM/GEOT work added ``opencheck/data`` which
+    silently redirected ``data_root`` and emptied every pre-extracted GLEIF/PSC
+    subgraph — see tests/test_cache_data_root.py.)
+    """
+    here = start_file.resolve()
+    marker = Path("data") / "cache" / "bods_data"
     for parent in [here, *here.parents]:
-        if (parent / "data").is_dir():
+        if (parent / marker).is_dir():
             return parent
-        if (parent / "pyproject.toml").is_file() and (parent.parent / "data").is_dir():
+        if (parent / "pyproject.toml").is_file() and (parent.parent / marker).is_dir():
             return parent.parent
     # Last resort: backend/ layout → ../data
-    return Path(__file__).resolve().parents[2]
+    return here.parents[2]
+
+
+def _project_root() -> Path:
+    return _find_project_root(Path(__file__))
 
 
 _DATA_ROOT_ENV = "OPENCHECK_DATA_ROOT"
