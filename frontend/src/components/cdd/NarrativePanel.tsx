@@ -109,6 +109,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
   const [error, setError] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   async function generate() {
     setLoading(true);
@@ -168,6 +169,31 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
           >
             {pdfBusy ? "Preparing PDF…" : "Download PDF"}
           </button>
+          {data && (
+            <button
+              type="button"
+              onClick={() => setCollapsed((c) => !c)}
+              aria-expanded={!collapsed}
+              title={collapsed ? "Show summary" : "Hide summary"}
+              className="inline-flex items-center gap-1 rounded-oo border border-oo-rule text-oo-muted text-[12px] font-medium px-3 py-1.5 hover:border-oo-blue hover:text-oo-blue transition-colors"
+            >
+              {collapsed ? (
+                <>
+                  Show
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                    <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd"/>
+                  </svg>
+                </>
+              ) : (
+                <>
+                  Hide
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                    <path fillRule="evenodd" d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" clipRule="evenodd"/>
+                  </svg>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
       {pdfError && (
@@ -176,7 +202,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
         </p>
       )}
 
-      {!data && (
+      {!data && !collapsed && (
         <div className="mt-4">
           <button
             type="button"
@@ -194,7 +220,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
         </div>
       )}
 
-      {data && (
+      {data && !collapsed && (
         <div className="mt-4">
           <p className="text-[14px] leading-relaxed text-oo-ink">{data.summary}</p>
 
