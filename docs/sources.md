@@ -32,7 +32,7 @@ Twenty-nine active adapters, each implementing the same `SourceAdapter` protocol
 | `opensanctions` | OpenSanctions | CC BY-NC 4.0 | LEI search | The open-source database of sanctions, watchlists, and politically exposed persons |
 | `everypolitician` | EveryPolitician | CC BY-NC 4.0 | LEI search | Global database of political office-holders (served via OpenSanctions PEPs dataset) |
 | `wikidata` | Wikidata | CC0-1.0 | Q-ID via SPARQL | A free and open knowledge base that can be read and edited by both humans and machines |
-| `opentender` | OpenTender (DIGIWHIST) | CC BY-NC-SA 4.0 | LEI search | Search and analyse tender data from 35 jurisdictions |
+| `climatetrace` | Global Energy Monitor / Climate TRACE | CC-BY-4.0 | LEI | **ESG** — asset-level CO₂ emissions (Climate TRACE) plus energy and heavy-industry ownership reach (GEM Global Energy Ownership Tracker): the entity's direct and group-wide power/industrial assets and live projects with per-sector breakdowns; no API key required |
 
 ## Inactive / bulk-only adapters
 
@@ -46,6 +46,6 @@ These adapters are committed and tested but **not exposed as live sources**. Eac
 
 ## Notes
 
-NC-licensed sources (OpenSanctions, EveryPolitician, OpenTender) propagate their share-alike / non-commercial obligations through `/deepen` and `/export`. The exported `LICENSES.md` warns reviewers before they re-publish.
+NC-licensed sources (OpenSanctions, EveryPolitician) propagate their non-commercial obligations through `/deepen` and `/export`. The exported `LICENSES.md` warns reviewers before they re-publish. (OpenTender / DIGIWHIST procurement was retired from `REGISTRY` and is parked for a future live opentender.eu integration.)
 
 Full per-source attribution and licence details are in [ATTRIBUTIONS.md](../ATTRIBUTIONS.md).
