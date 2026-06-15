@@ -16,17 +16,16 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 53** — AI summaries: a grounded, source-cited narrative of each entity
+**Latest: Phase 54** — Accessible PDF export: a take-away due-diligence report
 
-An on-demand, plain-English summary of what OpenCheck found about an entity, written for a customer-due-diligence / financial-crime audience — where **every statement is grounded in OpenCheck's own data**. The model only rephrases a pre-built evidence packet (it never retrieves or infers), and a citation validator drops any claim it can't tie to a source, so "no unprovable information" is enforced in code, not just in the prompt.
+A source-cited PDF report of an entity's findings, generated from the live OpenCheck profile and rendered as a tagged **PDF/UA-1** so it meets WCAG. Every line is attributed to its source — the same "nothing unprovable" rule as the AI summary.
 
-1. **Evidence packet, not raw data.** `build_evidence_packet()` distils a lookup result into atomic, already-evidenced facts (each carrying its source, BODS statement ids and a confidence derived from source authority), structured risk items, sources consulted, and gaps. This packet is the only thing the model sees.
-2. **Cited claims + mechanical validator.** Claude (`claude-sonnet-4-6`, structured output, low temperature) returns one executive paragraph plus per-claim citations; `validate_narrative()` withholds anything ungrounded. Absence is evidence — clean results and gaps are themselves citable, so the model never fabricates a citation.
-3. **`GET /narrative`.** Reuses the cached lookup pipeline (so the summary can't diverge from the page), runs off the event loop, validates, and returns the packet for UI linking. Flag- and key-gated.
-4. **On-demand UI.** A summary panel at the top of the result page with per-claim citation chips; clicking a chip scrolls to and flashes the source card and highlights the cited BODS node.
-5. **Offline eval harness.** A versioned prompt, six synthetic golden packets, and a machine-checkable rubric for iterating wording before any UI ships — `scripts/eval_narrative.py`.
+1. **Accessible by construction.** Authored as semantic HTML and converted to a tagged PDF with WeasyPrint, so the structure tree, language, document title, heading bookmarks and `th scope` table markup all come from the markup. Each ownership graph carries both alt text and a data-table equivalent.
+2. **Per-source ownership diagrams.** Each source's BODS relationships are rendered as a purpose-built print SVG in the BOVS style (person/entity icons, ownership vs control edge colours, the interest described on every edge) — crisp vector, not a screenshot of the canvas.
+3. **Everything in one place.** Entity title, identifiers, a live-check QR back to opencheck.world, the grounded AI summary (embedded only when you've already generated it — no model call on download), risk signals, what each source found, and full licensing/attribution.
+4. **`POST /export/pdf` + Download button.** Rebuilds from the same cached lookup pipeline as the page (so the PDF can't diverge), renders off the event loop, and streams the file; a "Download PDF" button sits in the summary panel.
 
-*Previous: [Phase 52 — GEM GEOT project-level ESG data](docs/status.md)*
+*Previous: [Phase 53 — AI summaries](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
@@ -72,7 +71,7 @@ The first frontend build copies bundled images for `@openownership/bods-dagre` i
 | [Sources](docs/sources.md) | Full adapter table — 26 active sources plus inactive bulk-only adapters, license, entry point, description |
 | [Risk signals](docs/risk-signals.md) | All 12 signal codes: source-derived, AMLA CDD RTS, FATF jurisdiction, cross-source name match, ICIJ Offshore Leaks |
 | [Configuration](docs/configuration.md) | Environment variables, Render deployment, running the test suite |
-| [Development history](docs/status.md) | All 53 phases |
+| [Development history](docs/status.md) | All 54 phases |
 
 ## Licensing
 
