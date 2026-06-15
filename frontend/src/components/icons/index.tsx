@@ -33,6 +33,84 @@ export function GleifIcon({ className, style }: { className?: string; style?: Re
 }
 
 /**
+ * "How it works" step icons — simple outline glyphs rendered inside the
+ * numbered step circles. They use ``currentColor`` so the parent's text colour
+ * (white, on the brand-blue circle) drives the stroke.
+ */
+function StepIcon({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {children}
+    </svg>
+  );
+}
+
+/** Step 1 — paste an LEI (key). */
+export function StepKeyIcon({ className }: { className?: string }) {
+  return (
+    <StepIcon className={className}>
+      <circle cx="8" cy="8" r="4.2" />
+      <path d="M11 11l8 8" />
+      <path d="M18.5 14.5l-2 2" />
+      <path d="M21 17l-2 2" />
+    </StepIcon>
+  );
+}
+
+/** Step 2 — GLEIF bridges to national identifiers (fork). */
+export function StepBridgeIcon({ className }: { className?: string }) {
+  return (
+    <StepIcon className={className}>
+      <circle cx="12" cy="5" r="2.4" />
+      <circle cx="6" cy="19" r="2.4" />
+      <circle cx="18" cy="19" r="2.4" />
+      <path d="M12 7.4v2.1c0 1.8-6 2.1-6 5.6" />
+      <path d="M12 9.5c0 1.8 6 2.1 6 5.6" />
+    </StepIcon>
+  );
+}
+
+/** Step 3 — parallel queries to open sources (hub + spokes). */
+export function StepNetworkIcon({ className }: { className?: string }) {
+  return (
+    <StepIcon className={className}>
+      <circle cx="12" cy="12" r="2.4" />
+      <circle cx="5" cy="6" r="1.8" />
+      <circle cx="19" cy="6" r="1.8" />
+      <circle cx="5" cy="18" r="1.8" />
+      <circle cx="19" cy="18" r="1.8" />
+      <path d="M10.3 10.4 6.4 7.3M13.7 10.4 17.6 7.3M10.3 13.6 6.4 16.7M13.7 13.6 17.6 16.7" />
+    </StepIcon>
+  );
+}
+
+/** Step 4 — risk signals + shareable bundle (shield with check). */
+export function StepShieldIcon({ className }: { className?: string }) {
+  return (
+    <StepIcon className={className}>
+      <path d="M12 3l7 3v5c0 4.5-3 7.4-7 8.8-4-1.4-7-4.3-7-8.8V6l7-3z" />
+      <path d="M9 12l2.2 2.2L15 10.5" />
+    </StepIcon>
+  );
+}
+
+/**
  * Neo4j logo icon — the official Neo4j mark (neo4j-logo.png served from
  * /public/).  Used on curated example cards to link to the per-entity
  * Neo4j CSV bundle.

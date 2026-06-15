@@ -17,7 +17,15 @@ import {
   type GleifSearchResult,
 } from "./lib/gleifNationalId";
 import { COUNTRY_OPTIONS, RA_CODES, validateNationalId } from "./lib/raCodes";
-import { OpenCheckIcon, GleifIcon, Neo4jIcon } from "./components/icons";
+import {
+  OpenCheckIcon,
+  GleifIcon,
+  Neo4jIcon,
+  StepKeyIcon,
+  StepBridgeIcon,
+  StepNetworkIcon,
+  StepShieldIcon,
+} from "./components/icons";
 import { RiskChip, RISK_PRESENTATION, rank } from "./components/risk/RiskChip";
 import { ExportPanel } from "./components/export/ExportPanel";
 import { SubjectCard } from "./components/cdd/SubjectCard";
@@ -1952,7 +1960,8 @@ function ExampleLeiPicker({
 const HOW_IT_WORKS_STEPS = [
   {
     num: "1",
-    accent: "#191d23" as const,
+    accent: "#3d30d4" as const,
+    icon: <StepKeyIcon className="h-[15px] w-[15px]" />,
     title: "Paste a Legal Entity Identifier",
     body: (
       <>
@@ -1973,6 +1982,7 @@ const HOW_IT_WORKS_STEPS = [
   {
     num: "2",
     accent: "#3d30d4" as const,
+    icon: <StepBridgeIcon className="h-[15px] w-[15px]" />,
     title: "GLEIF bridges to national identifiers",
     body: (
       <>
@@ -1994,6 +2004,7 @@ const HOW_IT_WORKS_STEPS = [
   {
     num: "3",
     accent: "#3d30d4" as const,
+    icon: <StepNetworkIcon className="h-[15px] w-[15px]" />,
     title: "Parallel queries to open sources",
     body: (
       <>
@@ -2005,16 +2016,15 @@ const HOW_IT_WORKS_STEPS = [
   },
   {
     num: "4",
-    accent: "#191d23" as const,
+    accent: "#3d30d4" as const,
+    icon: <StepShieldIcon className="h-[15px] w-[15px]" />,
     title: "Risk signals + shareable BODS bundle",
     body: (
       <>
-        Risk signals aligned with draft customer due diligence standards from
-        the EU's Anti-Money Laundering Authority are computed deterministically
-        across the assembled statements — checking for sanctions, flagged
-        jurisdictions, complex corporate structures and more. The full bundle is
-        one click away as JSON, JSONL or a ZIP with manifest and
-        license notes.
+        Deterministic risk signals — sanctions, flagged jurisdictions, complex
+        ownership and more — are computed across the assembled statements,
+        following the EU AMLA's draft due-diligence standards. Download the full
+        BODS bundle as JSON, JSONL, XML or a ZIP with manifest and license notes.
       </>
     ),
     badges: null,
@@ -2033,10 +2043,11 @@ function HowItWorks() {
               {/* Left rail — circle node + connector line */}
               <div className="flex flex-col items-center flex-shrink-0" style={{ width: 28 }}>
                 <div
-                  className="flex items-center justify-center rounded-full font-mono text-[11px] font-bold text-white flex-shrink-0"
+                  className="flex items-center justify-center rounded-full text-white flex-shrink-0"
                   style={{ width: 28, height: 28, background: step.accent }}
+                  aria-label={`Step ${step.num}`}
                 >
-                  {step.num}
+                  {step.icon}
                 </div>
                 {!isLast && (
                   <div
