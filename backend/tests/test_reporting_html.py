@@ -98,6 +98,32 @@ def test_stub_hits_excluded_from_sources():
     assert "stub" not in html
 
 
+def test_captioned_table_split_across_page_does_not_crash():
+    """Regression: a captioned table that splits right after its caption used to
+    raise WeasyPrint's "Table wrapper without a table". `caption{break-after:avoid}`
+    in the report CSS prevents the orphaned-caption split."""
+    pytest.importorskip("weasyprint")
+    from weasyprint import HTML
+
+    from opencheck.reporting.html_report import _CSS
+
+    rows = "".join(
+        f"<tr><td>Person {i}</td><td>Interest {i}</td><td>Subject</td></tr>" for i in range(8)
+    )
+    # The tall spacer pushes the captioned table to the bottom of page 1 so it
+    # must split immediately after the caption.
+    html = (
+        f'<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>t</title>'
+        f"<style>{_CSS}</style></head><body>"
+        '<div style="height:235mm">tall</div>'
+        "<table><caption>caption</caption>"
+        '<thead><tr><th scope="col">P</th><th scope="col">I</th><th scope="col">S</th></tr></thead>'
+        f"<tbody>{rows}</tbody></table></body></html>"
+    )
+    pdf = HTML(string=html).write_pdf(pdf_variant="pdf/ua-1")
+    assert pdf[:4] == b"%PDF"
+
+
 def test_weasyprint_render_is_tagged():
     pytest.importorskip("weasyprint")
     pikepdf = pytest.importorskip("pikepdf")

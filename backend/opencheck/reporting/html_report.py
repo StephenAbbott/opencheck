@@ -43,7 +43,11 @@ h3 { font-size:10.5pt; color:#191d23; margin:4mm 0 1mm; }
 p { margin:0 0 2mm; }
 a { color:#3d30d4; }
 table { width:100%; border-collapse:collapse; font-size:9pt; margin:1mm 0 3mm; }
-caption { text-align:left; font-size:8.5pt; color:#595959; margin-bottom:1mm; }
+/* break-after:avoid keeps the caption glued to the first row. Without it a
+   table that splits right after its caption leaves the wrapper with no table
+   box on the first page — WeasyPrint then raises "Table wrapper without a
+   table". (Reproduced and regression-tested.) */
+caption { text-align:left; font-size:8.5pt; color:#595959; margin-bottom:1mm; break-after:avoid; }
 th, td { text-align:left; vertical-align:top; padding:2mm 3mm; border-bottom:0.5px solid #d9d9de; }
 th[scope="row"] { width:38%; font-weight:normal; color:#595959; }
 thead th { background:#f5f5f7; color:#191d23; border-bottom:1px solid #d9d9de; }
