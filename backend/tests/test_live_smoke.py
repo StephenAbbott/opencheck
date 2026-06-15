@@ -9,6 +9,7 @@ Scope is deliberately limited to **open, key-free, low-sensitivity** sources:
 
 - **GLEIF** — public, CC0, no API key, legal-entity reference data.
 - **Wikidata** — public, CC0, no API key.
+- **Malta Business Registry** — public, CC BY 4.0, no API key (EU HVD).
 
 Licence-restricted (OpenSanctions CC-BY-NC, OpenCorporates) and PII-heavy or
 key-gated sources are intentionally excluded.
@@ -23,7 +24,7 @@ from __future__ import annotations
 
 import pytest
 
-from opencheck.bods.mapper import map_gleif, map_wikidata
+from opencheck.bods.mapper import map_gleif, map_malta_mbr, map_wikidata
 from opencheck.bods.validator import validate_shape
 from opencheck.config import get_settings
 from opencheck.sources import REGISTRY, SearchKind
@@ -91,3 +92,45 @@ async def test_wikidata_search_then_fetch_maps_to_valid_bods():
     bods = list(map_wikidata(bundle))
     # A sparse entity may yield no BODS, but whatever is produced must be valid.
     assert validate_shape(bods) == []
+
+
+# --- Malta Business Registry (public, CC BY 4.0, no key) ----------------------
+
+
+def test_malta_mbr_is_key_free_and_live():
+    info = REGISTRY["malta_mbr"].info
+    assert info.requires_api_key is False
+    assert info.live_available is True
+
+
+async def test_malta_mbr_live_fetch_maps_to_valid_bods():
+    """Fetch a real company from the live MBR Open Data API and confirm the
+    response still parses and maps to valid BODS.
+
+    This is also the production access check: if the MBR endpoint starts
+    rejecting non-browser clients (WAF / IP block) the fetch returns a stub
+    and this test fails loudly. A few stable registration numbers are tried so
+    one company being purged can't rot the test (struck-off companies normally
+    remain queryable, so this is belt-and-braces)."""
+    adapter = REGISTRY["malta_mbr"]
+
+    bundle = None
+    for reg in ("C 113927", "C 1", "C 100", "C 1000"):
+        b = await adapter.fetch(reg, legal_name="")
+        if not b.get("is_stub") and (b.get("company") or {}).get("name"):
+            bundle = b
+            break
+
+    assert bundle is not None, (
+        "Malta MBR live fetch returned no parseable record — the API shape or "
+        "access policy (e.g. a WAF blocking non-browser clients) may have changed"
+    )
+
+    company = bundle["company"]
+    # Fields the adapter/mapper rely on.
+    assert company.get("registration_number"), "no registration_number in live record"
+
+    bods = list(map_malta_mbr(bundle))
+    assert bods, "Malta MBR bundle produced no BODS statements"
+    assert validate_shape(bods) == []
+    assert any(s["recordType"] == "entity" for s in bods), "no entity statement"
