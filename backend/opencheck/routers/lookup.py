@@ -399,6 +399,16 @@ def _bh_cro(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_malta_mbr(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    c = r.get("company") or {}
+    return _hit(
+        "malta_mbr", local_id,
+        name=(c.get("name") or "").strip() or ctx.legal_name or "",
+        summary=f"MT-MBR {local_id}",
+        identifiers={"mt_crn": local_id}, raw=c,
+    )
+
+
 def _bh_prh(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     c = r.get("company") or {}
     name = ""

@@ -127,6 +127,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Attribution:** "Contains data from the Kamer van Koophandel (KvK) Handelsregister, open data."
 - **Entry point:** `kvk_number` derived from GLEIF RA code `RA000463`
 
+## Malta Business Registry (MBR)
+
+- **Data:** core company details (name, status, legal form, registered office, area of activity, registration number and date) from the Malta Business Registry Open Data API. Entity data only — no officers, shareholders or beneficial owners.
+- **API:** <https://openapi.baros.mbr.mt/swaggerui>
+- **License:** CC BY 4.0 — <https://creativecommons.org/licenses/by/4.0/>
+- **Attribution:** "Contains data from the Malta Business Registry, available under CC BY 4.0 via the MBR Open Data API (openapi.baros.mbr.mt)."
+- **Entry point:** `mt_crn` (Maltese registration number, e.g. `C 113927`) derived from GLEIF RA code `RA000443`
+- **Note:** No API key or registration required (EU High-Value Dataset under the Open Data Directive). The list endpoint is cursor-paginated with no name filter, so the source is entered via the LEI lookup flow rather than free-text search.
+
 ## Bolagsverket (Sweden)
 
 - **Data:** company profiles and board-level officers from the Swedish Companies Registration Office

@@ -135,6 +135,15 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatHint: "9 digits",
     formatPattern: /^\d{9}$/,
   },
+  MT: {
+    raCode: "RA000443",
+    countryName: "Malta",
+    idLabel: "Registration number (C-number)",
+    placeholder: "C 113927",
+    formatHint: "Letter prefix + number, e.g. C 12345",
+    // Short letter prefix (commonly C) + digits, with or without a space.
+    formatPattern: /^[A-Z]{1,3}\s*\d+$/i,
+  },
   SK: {
     raCode: "RA000476",
     countryName: "Slovakia",
@@ -177,7 +186,7 @@ export const RA_CODES: Record<string, RaEntry> = {
  */
 export const COUNTRY_OPTIONS: { code: string; entry: RaEntry }[] = [
   "AT", "BE", "CA", "HR", "DK", "EE", "FR", "IE", "LV", "LT",
-  "NL", "NO", "PL", "SG", "SK", "SE", "GB",
+  "MT", "NL", "NO", "PL", "SG", "SK", "SE", "GB",
 ].map((code) => ({ code, entry: RA_CODES[code] }));
 
 /**
