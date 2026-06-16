@@ -169,6 +169,9 @@ class Settings(BaseSettings):
     # OPENTENDER_S3_URL so the adapter can download it at startup.
     opentender_db_file: str | None = Field(default=None, alias="OPENTENDER_DB_FILE")
     opentender_s3_url: str | None = Field(default=None, alias="OPENTENDER_S3_URL")
+    # Optional SHA-256 of the S3 artifact. When set, a download whose checksum
+    # doesn't match is rejected (defends against truncated/corrupt downloads).
+    opentender_db_sha256: str | None = Field(default=None, alias="OPENTENDER_DB_SHA256")
 
     # --- Open Ownership BODS bulk data (GLEIF + UK PSC) ---
     # Pre-extracted Parquet files. Build with: python scripts/setup_bods_data.py

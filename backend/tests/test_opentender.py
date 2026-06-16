@@ -325,6 +325,91 @@ async def test_search_degrades_to_stub_when_db_corrupt(
     assert not db_path.exists()  # corrupt file removed so a re-download can run
 
 
+class _FakeStream:
+    """Minimal stand-in for httpx.stream(...) used as a context manager."""
+
+    def __init__(self, content: bytes, headers: dict[str, str]):
+        self._content = content
+        self.headers = headers
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def raise_for_status(self):
+        return None
+
+    def iter_bytes(self, chunk_size: int = 1 << 20):
+        for i in range(0, len(self._content), chunk_size):
+            yield self._content[i : i + chunk_size]
+
+
+def _serve(monkeypatch, blob: bytes, *, content_length: int | None = None) -> None:
+    from opencheck.sources import opentender as ot
+
+    headers = {"Content-Length": str(content_length if content_length is not None else len(blob))}
+    monkeypatch.setattr(ot.httpx, "stream", lambda method, url, **kw: _FakeStream(blob, headers))
+
+
+def test_download_db_writes_verified_file_atomically(monkeypatch, tmp_path: Path) -> None:
+    from opencheck.sources import opentender as ot
+
+    blob = _make_db(tmp_path, [_UK_TENDER]).read_bytes()
+    dest = tmp_path / "downloaded.db"
+    _serve(monkeypatch, blob)
+
+    assert ot._download_db(dest, "https://example/opentender.db", None) is True
+    assert dest.exists() and ot.OpenTenderAdapter._db_is_healthy(dest)
+    assert not (tmp_path / "downloaded.db.part").exists()  # temp cleaned up
+
+
+def test_download_db_rejects_truncated_stream(monkeypatch, tmp_path: Path) -> None:
+    """A stream that claims full Content-Length but delivers fewer bytes must be
+    discarded — never published — so the malformed file can't reach a query."""
+    from opencheck.sources import opentender as ot
+
+    blob = _make_db(tmp_path, [_UK_TENDER]).read_bytes()
+    dest = tmp_path / "downloaded.db"
+    _serve(monkeypatch, blob[: len(blob) // 2], content_length=len(blob))
+
+    assert ot._download_db(dest, "https://example/opentender.db", None) is False
+    assert not dest.exists()
+    assert not (tmp_path / "downloaded.db.part").exists()
+
+
+def test_download_db_rejects_sha_mismatch(monkeypatch, tmp_path: Path) -> None:
+    from opencheck.sources import opentender as ot
+
+    blob = _make_db(tmp_path, [_UK_TENDER]).read_bytes()
+    dest = tmp_path / "downloaded.db"
+    _serve(monkeypatch, blob)
+
+    assert ot._download_db(dest, "https://example/x.db", "deadbeef" * 8) is False
+    assert not dest.exists()
+
+
+def test_warm_opentender_db_noop_when_unconfigured() -> None:
+    from opencheck.sources.opentender import warm_opentender_db
+
+    warm_opentender_db()  # OPENTENDER_DB_FILE unset → returns without error
+
+
+def test_warm_opentender_db_downloads_when_configured(monkeypatch, tmp_path: Path) -> None:
+    from opencheck.sources import opentender as ot
+
+    blob = _make_db(tmp_path, [_UK_TENDER]).read_bytes()
+    dest = tmp_path / "warm.db"
+    monkeypatch.setenv("OPENTENDER_DB_FILE", str(dest))
+    monkeypatch.setenv("OPENTENDER_S3_URL", "https://example/opentender.db")
+    get_settings.cache_clear()
+    _serve(monkeypatch, blob)
+
+    ot.warm_opentender_db()
+    assert dest.exists() and ot.OpenTenderAdapter._db_is_healthy(dest)
+
+
 async def test_db_search_no_results_returns_empty(monkeypatch, tmp_path: Path) -> None:
     db_path = _make_db(tmp_path, [_UK_TENDER])
     monkeypatch.setenv("OPENTENDER_DB_FILE", str(db_path))

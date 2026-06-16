@@ -48,8 +48,10 @@ import asyncio
 import hashlib
 import json
 import logging
+import os
 import re
 import sqlite3
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +64,10 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 logger = logging.getLogger(__name__)
 
 _CACHE_NS = "opentender"
+
+# Serialises S3 downloads so concurrent first-requests — or the startup warm-up
+# racing a request — can never stream into the same file at once and corrupt it.
+_DOWNLOAD_LOCK = threading.Lock()
 
 
 def _slug(text: str) -> str:
@@ -138,53 +144,48 @@ class OpenTenderAdapter(SourceAdapter):
             return False
         return bool(row) and str(row[0]).lower() == "ok"
 
-    def _conn(self) -> sqlite3.Connection | None:
+    def _ensure_db(self) -> Path | None:
+        """Return a path to a healthy local DB, downloading from S3 if needed.
+
+        An existing local file is integrity-checked; a corrupt leftover is
+        removed. When an S3 URL is configured, the download is atomic and
+        verified (see ``_download_db``) so a partial or corrupt copy is never
+        published. Returns ``None`` if no usable DB can be produced (the adapter
+        then falls back to demo/stub mode).
+        """
         settings = get_settings()
         db_path = settings.opentender_db_file
         if not db_path:
             return None
-        if self._db is not None:
-            return self._db
-
         path = Path(db_path)
 
-        # If the DB doesn't exist locally and an S3 URL is configured,
-        # download it now (blocking; happens once at first request).
-        if not path.exists():
-            s3_url = settings.opentender_s3_url
-            if s3_url:
-                logger.info(
-                    "opentender: DB not found at %s, downloading from S3 …", db_path
-                )
-                try:
-                    path.parent.mkdir(parents=True, exist_ok=True)
-                    with httpx.stream("GET", s3_url, follow_redirects=True, timeout=600) as r:
-                        r.raise_for_status()
-                        with open(path, "wb") as fh:
-                            for chunk in r.iter_bytes(chunk_size=1 << 20):
-                                fh.write(chunk)
-                    logger.info("opentender: DB downloaded (%s bytes)", path.stat().st_size)
-                except Exception as exc:
-                    logger.warning("opentender: S3 download failed: %s", exc)
-                    path.unlink(missing_ok=True)
-                    return None
-            else:
-                logger.warning("opentender: DB file not found at %s", db_path)
-                return None
-
-        # Validate the file is a real, non-corrupt SQLite database — not an HTML
-        # error page and not a truncated download (which keeps a valid header
-        # but fails at query time with "database disk image is malformed").
-        # Delete and refuse to open if unhealthy so the next attempt re-downloads.
-        if not self._db_is_healthy(path):
+        if path.exists():
+            if self._db_is_healthy(path):
+                return path
             size = path.stat().st_size if path.exists() else 0
             logger.error(
-                "opentender: DB at %s failed the integrity check (%s bytes) — "
-                "deleting so the next attempt re-downloads from S3",
+                "opentender: existing DB at %s failed the integrity check "
+                "(%s bytes) — removing so it can be re-downloaded",
                 path, size,
             )
             path.unlink(missing_ok=True)
-            self._db = None
+
+        s3_url = settings.opentender_s3_url
+        if not s3_url:
+            logger.warning(
+                "opentender: no usable DB at %s and no S3 URL configured", path
+            )
+            return None
+
+        if _download_db(path, s3_url, settings.opentender_db_sha256):
+            return path
+        return None
+
+    def _conn(self) -> sqlite3.Connection | None:
+        if self._db is not None:
+            return self._db
+        path = self._ensure_db()
+        if path is None:
             return None
 
         # Open read-only + immutable: the artifact never changes at runtime, so
@@ -413,6 +414,80 @@ class OpenTenderAdapter(SourceAdapter):
                 },
             )
         ]
+
+
+def _download_db(path: Path, s3_url: str, expected_sha256: str | None = None) -> bool:
+    """Download the OpenTender DB to *path* atomically and verified.
+
+    Streams to ``<path>.part``, verifies completeness (bytes vs
+    ``Content-Length``), an optional pinned SHA-256, and a ``PRAGMA
+    quick_check``, then atomically ``os.replace``-s it into place — so a partial
+    or corrupt download is **never visible** at *path*. Serialised by
+    ``_DOWNLOAD_LOCK`` so concurrent callers (a request and the startup warm-up)
+    cannot collide. Returns True only if a healthy DB now exists at *path*.
+    """
+    with _DOWNLOAD_LOCK:
+        # A concurrent caller may have finished while we waited for the lock.
+        if path.exists() and OpenTenderAdapter._db_is_healthy(path):
+            return True
+        tmp = path.with_name(path.name + ".part")
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp.unlink(missing_ok=True)
+            logger.info("opentender: downloading DB from S3 …")
+            hasher = hashlib.sha256()
+            written = 0
+            with httpx.stream("GET", s3_url, follow_redirects=True, timeout=600) as r:
+                r.raise_for_status()
+                try:
+                    expected_len = int(r.headers.get("Content-Length") or 0)
+                except (TypeError, ValueError):
+                    expected_len = 0
+                with open(tmp, "wb") as fh:
+                    for chunk in r.iter_bytes(chunk_size=1 << 20):
+                        fh.write(chunk)
+                        hasher.update(chunk)
+                        written += len(chunk)
+
+            if expected_len and written != expected_len:
+                logger.error(
+                    "opentender: download truncated (%s of %s bytes) — discarding",
+                    written, expected_len,
+                )
+                tmp.unlink(missing_ok=True)
+                return False
+            if expected_sha256 and hasher.hexdigest().lower() != expected_sha256.strip().lower():
+                logger.error("opentender: download SHA-256 mismatch — discarding")
+                tmp.unlink(missing_ok=True)
+                return False
+            if not OpenTenderAdapter._db_is_healthy(tmp):
+                logger.error(
+                    "opentender: downloaded DB failed the integrity check — discarding"
+                )
+                tmp.unlink(missing_ok=True)
+                return False
+
+            os.replace(tmp, path)
+            logger.info("opentender: DB downloaded & verified (%s bytes)", written)
+            return True
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("opentender: S3 download failed: %s", exc)
+            tmp.unlink(missing_ok=True)
+            return False
+
+
+def warm_opentender_db() -> None:
+    """Pre-download + verify the OpenTender DB at startup, off the request path.
+
+    A no-op unless ``OPENTENDER_DB_FILE`` is configured. Wired into the FastAPI
+    lifespan warm-up (a background thread) so the first user lookup never blocks
+    on a multi-hundred-MB S3 fetch. Failures are logged, not raised — the
+    adapter still degrades to demo/stub mode on first use.
+    """
+    settings = get_settings()
+    if not settings.opentender_db_file:
+        return
+    OpenTenderAdapter()._ensure_db()
 
 
 _LEI_SHAPE = re.compile(r"^[A-Z0-9]{20}$")
