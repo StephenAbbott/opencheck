@@ -81,6 +81,27 @@ def _company_url(cnpj: str) -> str:
     return f"https://opencnpj.org/{cnpj}"
 
 
+def _txt(value: Any) -> str:
+    """Coerce a provider field to a trimmed string.
+
+    The providers are inconsistent: a field may arrive as a string, ``None``, a
+    number, or a ``{codigo, descricao}`` object (OpenCNPJ encodes a QSA
+    partner's ``pais`` this way, which previously crashed ``.strip()``).
+    Objects collapse to their descriptive label; None / lists become ``""``.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, dict):
+        return str(
+            value.get("descricao") or value.get("nome") or value.get("text") or ""
+        ).strip()
+    if isinstance(value, (list, tuple)):
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    return str(value).strip()
+
+
 def _partner_kind(identificador: Any) -> str:
     """Classify a QSA partner as 'entity' (PJ), 'person' (PF) or 'foreign'.
 
@@ -115,22 +136,24 @@ def _legal_nature(raw: Any) -> str | None:
 
 def _norm_partner(s: dict[str, Any]) -> dict[str, Any] | None:
     """Normalise one QSA entry from either provider into a common shape."""
-    name = (s.get("nome_socio") or s.get("nome") or "").strip()
+    name = _txt(s.get("nome_socio") or s.get("nome"))
     if not name:
         return None
-    doc = re.sub(r"\D", "", str(s.get("cnpj_cpf_socio") or s.get("cnpj_cpf_do_socio") or ""))
-    masked = "*" in str(s.get("cnpj_cpf_socio") or s.get("cnpj_cpf_do_socio") or "")
+    doc_raw = _txt(s.get("cnpj_cpf_socio") or s.get("cnpj_cpf_do_socio"))
+    doc = re.sub(r"\D", "", doc_raw)
+    masked = "*" in doc_raw
     kind = _partner_kind(s.get("identificador_socio") or s.get("identificador_de_socio"))
-    entry = (s.get("data_entrada_sociedade") or "")[:10] or None
+    entry = _txt(s.get("data_entrada_sociedade"))[:10] or None
     return {
         "name": name,
         # Full 14-digit CNPJ for a PJ partner is usable as an identifier;
         # a masked CPF (PF) is not.
         "cnpj": doc if (kind == "entity" and len(doc) == 14 and not masked) else None,
-        "role": (s.get("qualificacao_socio") or "").strip() or None,
+        "role": _txt(s.get("qualificacao_socio")) or None,
         "kind": kind,
         "entry_date": entry,
-        "country": (s.get("pais") or "").strip() or None,
+        # OpenCNPJ encodes pais as {codigo, descricao}; BrasilAPI as a string.
+        "country": _txt(s.get("pais")) or None,
     }
 
 
@@ -241,25 +264,19 @@ class CnpjBrazilAdapter(SourceAdapter):
 
     def _normalise(self, cnpj: str, raw: dict[str, Any], legal_name: str) -> dict[str, Any]:
         """Collapse an OpenCNPJ or BrasilAPI payload into the common bundle."""
-        name = (raw.get("razao_social") or raw.get("nome") or legal_name or "").strip()
+        name = _txt(raw.get("razao_social") or raw.get("nome")) or _txt(legal_name)
         addr_parts = [
-            (raw.get("logradouro") or "").strip(),
-            (raw.get("numero") or "").strip(),
-            (raw.get("bairro") or "").strip(),
-            (raw.get("municipio") or "").strip(),
-            (raw.get("uf") or "").strip(),
-            (raw.get("cep") or "").strip(),
+            _txt(raw.get(k))
+            for k in ("logradouro", "numero", "bairro", "municipio", "uf", "cep")
         ]
         company = {
             "name": name,
-            "trade_name": (raw.get("nome_fantasia") or "").strip() or None,
-            "status": (
-                raw.get("situacao_cadastral")
-                or raw.get("descricao_situacao_cadastral")
-                or None
-            ),
+            "trade_name": _txt(raw.get("nome_fantasia")) or None,
+            "status": _txt(
+                raw.get("situacao_cadastral") or raw.get("descricao_situacao_cadastral")
+            ) or None,
             "legal_nature": _legal_nature(raw.get("natureza_juridica")),
-            "founding_date": (raw.get("data_inicio_atividade") or "")[:10] or None,
+            "founding_date": _txt(raw.get("data_inicio_atividade"))[:10] or None,
             "capital_social": raw.get("capital_social"),
             "address": ", ".join(p for p in addr_parts if p) or None,
         }

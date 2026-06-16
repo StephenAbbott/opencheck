@@ -43,7 +43,7 @@ OPENCNPJ: dict[str, Any] = {
             "qualificacao_socio": "Diretor",
             "identificador_socio": "Pessoa Física",
             "data_entrada_sociedade": "2021-04-15",
-            "pais": "",
+            "pais": {"codigo": "105", "descricao": "BRASIL"},
         },
         {
             "nome_socio": "UNIAO HOLDING LTDA",
@@ -184,6 +184,8 @@ async def test_fetch_opencnpj_primary(monkeypatch, tmp_path) -> None:
     assert pj["cnpj"] == "11222333000181"            # PJ partner exposes full CNPJ
     pf = next(p for p in bundle["partners"] if p["kind"] == "person")
     assert pf["cnpj"] is None                         # masked CPF is not an identifier
+    # OpenCNPJ encodes pais as {codigo, descricao} — must not crash .strip()
+    assert pf["country"] == "BRASIL"
 
 
 @pytest.mark.asyncio
