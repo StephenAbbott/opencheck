@@ -56,6 +56,7 @@ from .sources import REGISTRY, SearchKind, SourceHit
 RELATED_PEP = "RELATED_PEP"
 RELATED_SANCTIONED = "RELATED_SANCTIONED"
 RELATED_SANCTIONS_LINKED = "RELATED_SANCTIONS_LINKED"
+RELATED_DEBARMENT = "RELATED_DEBARMENT"
 
 
 # OpenSanctions topic taxonomy. Same shape as the regular ``risk.py``
@@ -66,6 +67,7 @@ _PEP_TOPICS = {"role.pep", "role.rca", "role.spouse", "role.family"}
 _SANCTION_TOPIC_PREFIX = "sanction"
 _DIRECT_SANCTION_TOPICS = {"sanction", "sanction.counter"}
 _LINKED_SANCTION_TOPICS = {"sanction.linked"}
+_DEBARMENT_TOPICS = {"debarment"}
 
 
 # ---------------------------------------------------------------------
@@ -283,7 +285,11 @@ def _signal_from_os(
         or (t.startswith(_SANCTION_TOPIC_PREFIX) and t not in _DIRECT_SANCTION_TOPICS)
         for t in topics
     )
+    is_debarred = any(t in _DEBARMENT_TOPICS for t in topics)
     is_pep = any(t in _PEP_TOPICS for t in topics)
+    # Priority (one signal per related hit): a direct sanctions listing
+    # outranks a confirmed debarment, which outranks a mere sanctions link,
+    # which outranks PEP status.
     if direct_sanction:
         return _make_signal(
             code=RELATED_SANCTIONED,
@@ -291,6 +297,14 @@ def _signal_from_os(
             hit=hit,
             score=score,
             summary_extra=f"sanctioned per OpenSanctions ({_topic_blurb(topics)})",
+        )
+    if is_debarred:
+        return _make_signal(
+            code=RELATED_DEBARMENT,
+            target=target,
+            hit=hit,
+            score=score,
+            summary_extra=f"debarred from public contracts per OpenSanctions ({_topic_blurb(topics)})",
         )
     if linked_sanction:
         return _make_signal(
@@ -426,7 +440,7 @@ def _topic_blurb(topics: list[str]) -> str:
     keep = [
         t
         for t in topics
-        if t.startswith(_SANCTION_TOPIC_PREFIX) or t in _PEP_TOPICS
+        if t.startswith(_SANCTION_TOPIC_PREFIX) or t in _PEP_TOPICS or t in _DEBARMENT_TOPICS
     ]
     return ", ".join(sorted(set(keep))[:3]) if keep else "no topic"
 

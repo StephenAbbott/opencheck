@@ -225,34 +225,61 @@ async def test_emits_related_sanctioned_for_matching_person(monkeypatch) -> None
     assert s.source_id == "opensanctions"
 
 
-async def test_sanction_linked_emits_related_sanctions_linked_not_sanctioned(monkeypatch) -> None:
-    """A matched record tagged `sanction.linked` must NOT be reported as a
-    related *sanctioned* entity (the Vale S.A. case) — it's a distinct,
-    softer RELATED_SANCTIONS_LINKED signal."""
-    from opencheck.cross_check import RELATED_SANCTIONS_LINKED
-
-    linked_hit = SourceHit(
+def _os_entity_hit(hit_id: str, name: str, topics: list[str]) -> SourceHit:
+    return SourceHit(
         source_id="opensanctions",
-        hit_id="NK-vale",
+        hit_id=hit_id,
         kind=SearchKind.ENTITY,
-        name="Vale S.A.",
+        name=name,
         summary="",
-        identifiers={"opensanctions_id": "NK-vale"},
+        identifiers={"opensanctions_id": hit_id},
         raw={
-            "id": "NK-vale",
+            "id": hit_id,
             "schema": "Company",
-            "properties": {"name": ["Vale S.A."], "topics": ["sanction.linked"]},
-            "topics": ["corp.public", "sanction.linked", "debarment"],
+            "properties": {"name": [name], "topics": topics},
+            "topics": topics,
         },
         is_stub=False,
     )
-    _stub(monkeypatch, "opensanctions", [linked_hit])
+
+
+async def test_sanction_linked_emits_related_sanctions_linked_not_sanctioned(monkeypatch) -> None:
+    """A matched record tagged `sanction.linked` (only) must NOT be reported as
+    a related *sanctioned* entity — it's a distinct, softer
+    RELATED_SANCTIONS_LINKED signal."""
+    from opencheck.cross_check import RELATED_SANCTIONS_LINKED
+
+    _stub(monkeypatch, "opensanctions", [_os_entity_hit("NK-l", "Vale S.A.", ["corp.public", "sanction.linked"])])
     _stub(monkeypatch, "everypolitician", [])
 
-    bundle = [_entity("e1", "Vale S.A.")]
-    signals = await assess_cross_source_names(bundle)
+    signals = await assess_cross_source_names([_entity("e1", "Vale S.A.")])
     assert [s.code for s in signals] == [RELATED_SANCTIONS_LINKED]
     assert "linked to sanctioned entities" in signals[0].summary
+
+
+async def test_debarment_emits_related_debarment(monkeypatch) -> None:
+    """A matched record tagged `debarment` → RELATED_DEBARMENT."""
+    from opencheck.cross_check import RELATED_DEBARMENT
+
+    _stub(monkeypatch, "opensanctions", [_os_entity_hit("NK-d", "Acme Ltd", ["debarment"])])
+    _stub(monkeypatch, "everypolitician", [])
+
+    signals = await assess_cross_source_names([_entity("e1", "Acme Ltd")])
+    assert [s.code for s in signals] == [RELATED_DEBARMENT]
+    assert "debarred from public contracts" in signals[0].summary
+
+
+async def test_debarment_outranks_sanction_linked(monkeypatch) -> None:
+    """When a related hit is both sanctions-linked and debarred, the confirmed
+    debarment is the single signal surfaced (the Vale S.A. related case)."""
+    from opencheck.cross_check import RELATED_DEBARMENT
+
+    _stub(monkeypatch, "opensanctions",
+          [_os_entity_hit("NK-v", "Vale S.A.", ["corp.public", "sanction.linked", "debarment"])])
+    _stub(monkeypatch, "everypolitician", [])
+
+    signals = await assess_cross_source_names([_entity("e1", "Vale S.A.")])
+    assert [s.code for s in signals] == [RELATED_DEBARMENT]
     assert s.hit_id == "NK-bp"
 
 

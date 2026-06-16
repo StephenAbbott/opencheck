@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from opencheck.risk import (
+    DEBARMENT,
     OFFSHORE_LEAKS,
     OPAQUE_OWNERSHIP,
     PEP,
@@ -68,7 +69,8 @@ def test_counter_sanction_is_treated_as_sanctioned() -> None:
 def test_sanction_linked_is_not_sanctioned() -> None:
     """`sanction.linked` means connected to — not the subject of — sanctions.
     It must surface as SANCTIONS_LINKED (medium), never SANCTIONED. This is
-    the Vale S.A. false-positive guard."""
+    the Vale S.A. false-positive guard. Vale's record also carries
+    `debarment`, which surfaces as its own DEBARMENT signal."""
     hit = _hit(
         "opensanctions",
         "NK-vale",
@@ -77,10 +79,21 @@ def test_sanction_linked_is_not_sanctioned() -> None:
     signals = assess_hit(hit)
     codes = {s.code for s in signals}
     assert SANCTIONED not in codes
-    assert codes == {SANCTIONS_LINKED}
+    assert codes == {SANCTIONS_LINKED, DEBARMENT}
     linked = next(s for s in signals if s.code == SANCTIONS_LINKED)
     assert linked.confidence == "medium"
     assert "not itself sanctioned" in linked.summary
+
+
+def test_debarment_signal_from_opensanctions_topic() -> None:
+    """The `debarment` topic → a DEBARMENT signal (excluded from public
+    contracts), independent of any sanctions status."""
+    hit = _hit("opensanctions", "NK-debar", topics=["debarment"])
+    signals = assess_hit(hit)
+    assert [s.code for s in signals] == [DEBARMENT]
+    assert signals[0].confidence == "high"
+    assert "public contracts" in signals[0].summary
+    assert SANCTIONED not in {s.code for s in signals}
 
 
 def test_pep_and_sanctions_linked_can_co_occur() -> None:

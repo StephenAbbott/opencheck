@@ -25,6 +25,10 @@ Source-derived signals
   distinct from ``SANCTIONED`` so an associated entity (e.g. Vale S.A.) is
   never reported as sanctioned.
 
+* ``DEBARMENT`` — debarred / excluded from public contracts or procurement
+  (e.g. World Bank, AfDB, EU debarment lists). Fires on the OpenSanctions
+  ``debarment`` topic. A confirmed adverse listing, distinct from sanctions.
+
 * ``OFFSHORE_LEAKS`` — appears in an ICIJ-style leak.
   Fires for OpenAleph hits whose collection is one of the known leak
   collections (Panama / Paradise / Pandora / Bahamas / Offshore Leaks).
@@ -94,6 +98,7 @@ from .sources import SearchKind, SourceHit
 PEP = "PEP"
 SANCTIONED = "SANCTIONED"
 SANCTIONS_LINKED = "SANCTIONS_LINKED"
+DEBARMENT = "DEBARMENT"
 OFFSHORE_LEAKS = "OFFSHORE_LEAKS"
 OPAQUE_OWNERSHIP = "OPAQUE_OWNERSHIP"
 
@@ -239,6 +244,11 @@ _PEP_TOPICS = {"role.pep", "role.rca", "role.spouse", "role.family"}
 # never assert a listing we can't confirm).
 _DIRECT_SANCTION_TOPICS = {"sanction", "sanction.counter"}
 _LINKED_SANCTION_TOPICS = {"sanction.linked"}
+
+# Debarment: excluded from public contracts / procurement (e.g. World Bank,
+# AfDB, EU debarment lists). A confirmed adverse listing of the entity, but a
+# distinct category from financial sanctions — its own signal.
+_DEBARMENT_TOPICS = {"debarment"}
 
 # Known ICIJ leak collections on OpenAleph. Match on either the
 # collection foreign_id (preferred) or a fragment of the label.
@@ -473,6 +483,21 @@ def _opensanctions_topic_signals_from_entity(
                 source_id=source_id,
                 hit_id=hit_id,
                 evidence={"topics": linked_topics, "statement_id": stmt_id},
+            )
+        )
+    # Debarment ("debarment") → excluded from public contracts/procurement.
+    if any(t in _DEBARMENT_TOPICS for t in topics):
+        out.append(
+            RiskSignal(
+                code=DEBARMENT,
+                confidence="high",
+                summary=(
+                    "OpenSanctions lists this record as debarred from public "
+                    "contracts/procurement (debarment)."
+                ),
+                source_id=source_id,
+                hit_id=hit_id,
+                evidence={"topics": ["debarment"], "statement_id": stmt_id},
             )
         )
     return out
