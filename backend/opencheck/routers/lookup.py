@@ -104,9 +104,16 @@ async def deepen(
     if adapter is None:
         raise HTTPException(status_code=404, detail=f"unknown source {source!r}")
 
-    raw = await adapter.fetch(hit_id)
-
+    # Stored OO bundle is canonical — consult it first so a live-fetch failure
+    # (e.g. a Companies House outage) still serves the stored graph.
     override = _bods_data_override(source, hit_id)
+    try:
+        raw = await adapter.fetch(hit_id)
+    except Exception:
+        if override is None:
+            raise
+        raw = {"is_stub": True}
+
     bods: list[dict[str, Any]] = []
     issues: list[str] = []
     if override is not None:
@@ -1054,6 +1061,16 @@ async def _lookup_pipeline(
             source_id, result = task.result()
 
             if isinstance(result, Exception):
+                # A stored OO bundle is canonical — serve it instead of
+                # surfacing the live error (e.g. a Companies House outage).
+                bkey = _stored_bundle_key(source_id, ctx)
+                if bkey is not None:
+                    sh = _stored_bundle_hit(source_id, bkey, ctx)
+                    hits.append(sh)
+                    deepened_bundles.append((source_id, bkey))
+                    yield ("hit", sh)
+                    yield ("source_completed", {"source_id": source_id, "hit_count": 1})
+                    continue
                 errors[source_id] = _fmt_source_error(result)
                 if isinstance(result, SourceSchemaError):
                     _err_type = "schema_changed"
@@ -1085,6 +1102,12 @@ async def _lookup_pipeline(
                 continue
 
             hit = _build_result_hit(source_id, result, ctx)
+            if hit is None:
+                # No live hit (stub / not found). If a stored OO bundle exists,
+                # surface it anyway so the source card isn't lost to a live outage.
+                bkey = _stored_bundle_key(source_id, ctx)
+                if bkey is not None:
+                    hit = _stored_bundle_hit(source_id, bkey, ctx)
             if hit is not None:
                 hits.append(hit)
                 deepened_bundles.append((source_id, hit.hit_id))
@@ -1165,6 +1188,14 @@ async def _lookup_pipeline(
     bods_counts: dict[str, int] = {}
 
     deepen_pairs = deepened_bundles[:deepen_top]
+    # Stored-bundle sources (GLEIF, UK PSC) are always deepened, even past the
+    # top-N cap, so a curated example never drops its canonical OO graph behind
+    # other hits.
+    _seen_pairs = set(deepen_pairs)
+    for pair in deepened_bundles[deepen_top:]:
+        if pair not in _seen_pairs and _stored_bundle_key(pair[0], ctx) == pair[1]:
+            deepen_pairs.append(pair)
+            _seen_pairs.add(pair)
     deepen_raw = await asyncio.gather(
         *[
             # Deepen usually replays the adapter's cached fetch, but give it
@@ -1479,14 +1510,56 @@ def _bods_data_override(source_id: str, hit_id: str) -> list[dict[str, Any]] | N
     return None
 
 
+# Sources that ship pre-extracted Open Ownership BODS bundles, keyed by their
+# derived id: (bundle subdir under data/cache/bods_data, key extractor). These
+# must surface from the stored bundle regardless of the *live* source's health
+# — the bundle is canonical, not a fallback — so a Companies House outage can't
+# blank out a curated example's UK-PSC graph.
+_STORED_BUNDLE_SOURCES: dict[str, tuple[str, Any]] = {
+    "gleif": ("gleif", lambda ctx: ctx.lei),
+    "companies_house": ("uk", lambda ctx: ctx.derived.get("gb_coh")),
+}
+
+
+def _stored_bundle_key(source_id: str, ctx: "_LookupCtx") -> str | None:
+    """The deepen hit_id for *source_id* iff a stored OO bundle exists for it."""
+    spec = _STORED_BUNDLE_SOURCES.get(source_id)
+    if spec is None:
+        return None
+    subdir, key_fn = spec
+    key = key_fn(ctx)
+    if key and bods_data.has_bundle(subdir, key):
+        return key
+    return None
+
+
+def _stored_bundle_hit(source_id: str, key: str, ctx: "_LookupCtx") -> SourceHit:
+    """Minimal hit so a stored-bundle source still shows a card when its live
+    fetch failed; the deepen step serves the OO bundle for the graph."""
+    summary, ids = key, {}
+    if source_id == "companies_house":
+        summary, ids = f"GB-COH {key}", {"gb_coh": key}
+    return _hit(source_id, key, name=ctx.legal_name or "",
+                summary=summary, identifiers=ids, raw={})
+
+
 async def _safe_deepen(source_id: str, hit_id: str) -> dict[str, Any] | None:
     """Internal helper — does what /deepen does, returns plain dict."""
     adapter = REGISTRY.get(source_id)
     if adapter is None:
         return None
-    raw = await adapter.fetch(hit_id)
 
+    # Consult the stored OO bundle FIRST. When one exists it is the canonical
+    # output, so a live-fetch failure must not sink the deepen — the bundle
+    # stands in for the (unavailable) live record.
     override = _bods_data_override(source_id, hit_id)
+    try:
+        raw = await adapter.fetch(hit_id)
+    except Exception:
+        if override is None:
+            raise
+        raw = {"is_stub": True}
+
     bods: list[dict[str, Any]] = []
     issues: list[str] = []
     if override is not None:

@@ -224,6 +224,63 @@ def test_deepen_companies_house_uses_uk_override_bundle(tmp_path: Path) -> None:
     assert statement_ids == {"uk-e-1", "uk-p-1", "uk-r-1"}
 
 
+def test_deepen_companies_house_serves_bundle_when_live_fetch_raises(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """A live Companies House outage (fetch raises) must NOT blank out the
+    stored UK PSC bundle — the bundle is canonical, not a fallback. This is
+    the Care UK / CH-outage case: the override is consulted before the live
+    fetch, so a live failure no longer sinks the deepen."""
+    coh = "00102498"
+    _seed_bundle(
+        tmp_path, "uk", coh,
+        [{"recordType": "entity", "statementId": "uk-e-1", "recordDetails": {"name": "BP P.L.C."}}],
+    )
+
+    from opencheck.sources import REGISTRY
+
+    async def _boom(hit_id, **kwargs):
+        raise RuntimeError("Companies House 503 outage")
+
+    monkeypatch.setattr(REGISTRY["companies_house"], "fetch", _boom)
+
+    client = TestClient(app)
+    r = client.get("/deepen", params={"source": "companies_house", "hit_id": coh})
+    assert r.status_code == 200
+    assert {s["statementId"] for s in r.json()["bods"]} == {"uk-e-1"}
+
+
+async def test_safe_deepen_serves_bundle_when_live_fetch_raises(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """The pipeline's deepen path (_safe_deepen) is resilient the same way as
+    /deepen: a raising live fetch still yields the stored OO bundle."""
+    from opencheck.routers import lookup as L
+    from opencheck.sources import REGISTRY
+
+    coh = "07640868"
+    _seed_bundle(
+        tmp_path, "uk", coh,
+        [
+            {"recordType": "entity", "statementId": "x-e", "recordDetails": {"name": "Acme"}},
+            {"recordType": "person", "statementId": "x-p", "recordDetails": {"personType": "knownPerson"}},
+        ],
+    )
+
+    # _stored_bundle_key resolves the seeded bundle from the derived gb_coh.
+    ctx = L._LookupCtx(lei="Z")
+    ctx.derived = {"gb_coh": coh}
+    assert L._stored_bundle_key("companies_house", ctx) == coh
+
+    async def _boom(hit_id, **kwargs):
+        raise RuntimeError("CH outage")
+
+    monkeypatch.setattr(REGISTRY["companies_house"], "fetch", _boom)
+    deep = await L._safe_deepen("companies_house", coh)
+    assert deep is not None
+    assert {s["statementId"] for s in deep["bods"]} == {"x-e", "x-p"}
+
+
 def test_deepen_falls_back_to_live_when_no_override_bundle(
     tmp_path: Path, httpx_mock: HTTPXMock
 ) -> None:
