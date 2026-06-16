@@ -4,7 +4,7 @@ title: "Licensing compatibility matrix"
 description: "Per-source licence terms (commercial use, attribution, share-alike) for combining OpenCheck data in exports. Most-restrictive licence wins."
 resource: "/license-matrix"
 tags: ["licensing", "export", "compliance"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-16"
 ---
 
 # Source licence matrix
@@ -31,6 +31,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | JAR — Lithuanian Register of Legal Entities (`jar_lithuania`) | `CC-BY-4.0` | yes | yes | no |
 | KRS — Polish National Court Register (`krs_poland`) | `PL-OGD` | yes | yes | no |
 | KvK — Netherlands Chamber of Commerce (`kvk`) | `CC-BY-4.0` | yes | yes | no |
+| Malta Business Registry (MBR) (`malta_mbr`) | `CC-BY-4.0` | yes | yes | no |
 | OpenAleph (`openaleph`) | `per-collection` | conditional | yes | no |
 | OpenCorporates (`opencorporates`) | `OC-Terms` | conditional | yes | yes |
 | OpenSanctions (`opensanctions`) | `CC-BY-NC-4.0` | no | yes | no |
