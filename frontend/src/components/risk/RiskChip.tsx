@@ -16,6 +16,10 @@ export const RISK_PRESENTATION: Record<
     label: "Sanctioned",
     classes: "bg-rose-50 text-rose-700 border-rose-200",
   },
+  SANCTIONS_LINKED: {
+    label: "Sanctions-linked",
+    classes: "bg-amber-50 text-amber-800 border-amber-300",
+  },
   OFFSHORE_LEAKS: {
     label: "Offshore leaks",
     classes: "bg-amber-50 text-amber-800 border-amber-200",
@@ -55,6 +59,10 @@ export const RISK_PRESENTATION: Record<
   RELATED_SANCTIONED: {
     label: "Related sanctioned",
     classes: "bg-rose-50 text-rose-700 border-rose-300 font-semibold",
+  },
+  RELATED_SANCTIONS_LINKED: {
+    label: "Related sanctions-linked",
+    classes: "bg-amber-50 text-amber-800 border-amber-300",
   },
   FATF_BLACK_LIST: {
     label: "FATF black list",

@@ -223,6 +223,36 @@ async def test_emits_related_sanctioned_for_matching_person(monkeypatch) -> None
     assert s.evidence["subject_statement_id"] == "p1"
     assert s.evidence["matched_name"] == "Vladimir Putin"
     assert s.source_id == "opensanctions"
+
+
+async def test_sanction_linked_emits_related_sanctions_linked_not_sanctioned(monkeypatch) -> None:
+    """A matched record tagged `sanction.linked` must NOT be reported as a
+    related *sanctioned* entity (the Vale S.A. case) — it's a distinct,
+    softer RELATED_SANCTIONS_LINKED signal."""
+    from opencheck.cross_check import RELATED_SANCTIONS_LINKED
+
+    linked_hit = SourceHit(
+        source_id="opensanctions",
+        hit_id="NK-vale",
+        kind=SearchKind.ENTITY,
+        name="Vale S.A.",
+        summary="",
+        identifiers={"opensanctions_id": "NK-vale"},
+        raw={
+            "id": "NK-vale",
+            "schema": "Company",
+            "properties": {"name": ["Vale S.A."], "topics": ["sanction.linked"]},
+            "topics": ["corp.public", "sanction.linked", "debarment"],
+        },
+        is_stub=False,
+    )
+    _stub(monkeypatch, "opensanctions", [linked_hit])
+    _stub(monkeypatch, "everypolitician", [])
+
+    bundle = [_entity("e1", "Vale S.A.")]
+    signals = await assess_cross_source_names(bundle)
+    assert [s.code for s in signals] == [RELATED_SANCTIONS_LINKED]
+    assert "linked to sanctioned entities" in signals[0].summary
     assert s.hit_id == "NK-bp"
 
 

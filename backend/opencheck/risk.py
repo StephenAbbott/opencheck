@@ -16,8 +16,14 @@ Source-derived signals
     - Wikidata person bundle (``/deepen``) has at least one position
       with no end date — i.e. a *currently held* office
 
-* ``SANCTIONED`` — currently or historically sanctioned.
-  Fires when an OpenSanctions hit/bundle has a ``sanction`` topic.
+* ``SANCTIONED`` — the entity is itself the subject of a sanctions listing.
+  Fires only when an OpenSanctions hit/bundle has a direct ``sanction`` (or
+  ``sanction.counter``) topic.
+
+* ``SANCTIONS_LINKED`` — connected to a sanctioned party but not itself
+  sanctioned. Fires on the OpenSanctions ``sanction.linked`` topic. Kept
+  distinct from ``SANCTIONED`` so an associated entity (e.g. Vale S.A.) is
+  never reported as sanctioned.
 
 * ``OFFSHORE_LEAKS`` — appears in an ICIJ-style leak.
   Fires for OpenAleph hits whose collection is one of the known leak
@@ -87,6 +93,7 @@ from .sources import SearchKind, SourceHit
 # Codes — source-derived
 PEP = "PEP"
 SANCTIONED = "SANCTIONED"
+SANCTIONS_LINKED = "SANCTIONS_LINKED"
 OFFSHORE_LEAKS = "OFFSHORE_LEAKS"
 OPAQUE_OWNERSHIP = "OPAQUE_OWNERSHIP"
 
@@ -216,9 +223,22 @@ _NOMINEE_FRAGMENTS = (
 
 # OpenSanctions topic taxonomy. Anything in the "role.pep" family — pep,
 # rca (relative or close associate), spouse, family — is treated as a
-# PEP signal. Sanction-flavoured topics all start with "sanction".
+# PEP signal.
 _PEP_TOPICS = {"role.pep", "role.rca", "role.spouse", "role.family"}
-_SANCTION_TOPIC_PREFIX = "sanction"
+
+# Sanction-family topics carry very different meanings and must NOT be
+# conflated (this is exactly the Vale S.A. false positive):
+#   * "sanction"          — the entity is itself the subject of a sanctions
+#                           listing.
+#   * "sanction.counter"  — the entity is listed under a counter-sanctions
+#                           regime (still a direct listing of the entity).
+#   * "sanction.linked"   — the entity is *connected to* a sanctioned party
+#                           but is NOT itself sanctioned.
+# Direct listings → SANCTIONED; linked/associated → SANCTIONS_LINKED. Any
+# unrecognised "sanction.*" subtopic is treated as linked (conservative — we
+# never assert a listing we can't confirm).
+_DIRECT_SANCTION_TOPICS = {"sanction", "sanction.counter"}
+_LINKED_SANCTION_TOPICS = {"sanction.linked"}
 
 # Known ICIJ leak collections on OpenAleph. Match on either the
 # collection foreign_id (preferred) or a fragment of the label.
@@ -418,21 +438,41 @@ def _opensanctions_topic_signals_from_entity(
                 evidence={"topics": matched, "statement_id": stmt_id},
             )
         )
-    sanction_topics = sorted(
-        t for t in topics if t.startswith(_SANCTION_TOPIC_PREFIX)
-    )
-    if sanction_topics:
+    # Direct listing ("sanction" / "sanction.counter") → SANCTIONED.
+    direct_topics = sorted(t for t in topics if t in _DIRECT_SANCTION_TOPICS)
+    if direct_topics:
         out.append(
             RiskSignal(
                 code=SANCTIONED,
                 confidence="high",
                 summary=(
-                    "OpenSanctions tags this record as sanctioned"
-                    f" ({', '.join(sanction_topics)})."
+                    "OpenSanctions lists this record as sanctioned"
+                    f" ({', '.join(direct_topics)})."
                 ),
                 source_id=source_id,
                 hit_id=hit_id,
-                evidence={"topics": sanction_topics, "statement_id": stmt_id},
+                evidence={"topics": direct_topics, "statement_id": stmt_id},
+            )
+        )
+    # Linked/associated ("sanction.linked", or any other "sanction.*") →
+    # SANCTIONS_LINKED. Not itself sanctioned, so a separate, softer signal.
+    linked_topics = sorted(
+        t for t in topics
+        if t in _LINKED_SANCTION_TOPICS
+        or (t.startswith("sanction") and t not in _DIRECT_SANCTION_TOPICS)
+    )
+    if linked_topics:
+        out.append(
+            RiskSignal(
+                code=SANCTIONS_LINKED,
+                confidence="medium",
+                summary=(
+                    "OpenSanctions links this record to sanctioned entities; the "
+                    f"record is not itself sanctioned ({', '.join(linked_topics)})."
+                ),
+                source_id=source_id,
+                hit_id=hit_id,
+                evidence={"topics": linked_topics, "statement_id": stmt_id},
             )
         )
     return out

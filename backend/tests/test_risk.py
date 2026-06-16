@@ -7,6 +7,7 @@ from opencheck.risk import (
     OPAQUE_OWNERSHIP,
     PEP,
     SANCTIONED,
+    SANCTIONS_LINKED,
     assess_bundle,
     assess_hit,
     assess_hits,
@@ -58,7 +59,31 @@ def test_sanctioned_signal_from_opensanctions_topic() -> None:
     assert signals[0].confidence == "high"
 
 
-def test_pep_and_sanctioned_can_co_occur() -> None:
+def test_counter_sanction_is_treated_as_sanctioned() -> None:
+    hit = _hit("opensanctions", "NK-counter", topics=["sanction.counter"])
+    signals = assess_hit(hit)
+    assert [s.code for s in signals] == [SANCTIONED]
+
+
+def test_sanction_linked_is_not_sanctioned() -> None:
+    """`sanction.linked` means connected to — not the subject of — sanctions.
+    It must surface as SANCTIONS_LINKED (medium), never SANCTIONED. This is
+    the Vale S.A. false-positive guard."""
+    hit = _hit(
+        "opensanctions",
+        "NK-vale",
+        topics=["corp.public", "sanction.linked", "debarment"],
+    )
+    signals = assess_hit(hit)
+    codes = {s.code for s in signals}
+    assert SANCTIONED not in codes
+    assert codes == {SANCTIONS_LINKED}
+    linked = next(s for s in signals if s.code == SANCTIONS_LINKED)
+    assert linked.confidence == "medium"
+    assert "not itself sanctioned" in linked.summary
+
+
+def test_pep_and_sanctions_linked_can_co_occur() -> None:
     hit = _hit(
         "opensanctions",
         "NK-double",
@@ -66,7 +91,7 @@ def test_pep_and_sanctioned_can_co_occur() -> None:
         topics=["role.pep", "sanction.linked"],
     )
     codes = {s.code for s in assess_hit(hit)}
-    assert codes == {PEP, SANCTIONED}
+    assert codes == {PEP, SANCTIONS_LINKED}
 
 
 def test_topics_can_live_under_properties() -> None:

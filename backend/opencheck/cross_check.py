@@ -55,13 +55,17 @@ from .sources import REGISTRY, SearchKind, SourceHit
 # RISK_PRESENTATION map.
 RELATED_PEP = "RELATED_PEP"
 RELATED_SANCTIONED = "RELATED_SANCTIONED"
+RELATED_SANCTIONS_LINKED = "RELATED_SANCTIONS_LINKED"
 
 
 # OpenSanctions topic taxonomy. Same shape as the regular ``risk.py``
 # rules; duplicated here so the cross-check can be reasoned about
-# in isolation.
+# in isolation. Direct listings ("sanction" / "sanction.counter") differ
+# from "sanction.linked" (associated, not itself sanctioned) — never conflate.
 _PEP_TOPICS = {"role.pep", "role.rca", "role.spouse", "role.family"}
 _SANCTION_TOPIC_PREFIX = "sanction"
+_DIRECT_SANCTION_TOPICS = {"sanction", "sanction.counter"}
+_LINKED_SANCTION_TOPICS = {"sanction.linked"}
 
 
 # ---------------------------------------------------------------------
@@ -273,15 +277,28 @@ def _signal_from_os(
     if not _birth_year_compatible(target.get("birth_year"), hit):
         return None
     topics = _extract_topics(hit.raw or {})
-    sanctioned = any(t.startswith(_SANCTION_TOPIC_PREFIX) for t in topics)
+    direct_sanction = any(t in _DIRECT_SANCTION_TOPICS for t in topics)
+    linked_sanction = any(
+        t in _LINKED_SANCTION_TOPICS
+        or (t.startswith(_SANCTION_TOPIC_PREFIX) and t not in _DIRECT_SANCTION_TOPICS)
+        for t in topics
+    )
     is_pep = any(t in _PEP_TOPICS for t in topics)
-    if sanctioned:
+    if direct_sanction:
         return _make_signal(
             code=RELATED_SANCTIONED,
             target=target,
             hit=hit,
             score=score,
             summary_extra=f"sanctioned per OpenSanctions ({_topic_blurb(topics)})",
+        )
+    if linked_sanction:
+        return _make_signal(
+            code=RELATED_SANCTIONS_LINKED,
+            target=target,
+            hit=hit,
+            score=score,
+            summary_extra=f"linked to sanctioned entities per OpenSanctions ({_topic_blurb(topics)})",
         )
     # Entities can never be PEPs by definition — only natural persons
     # hold political office. Skip the RELATED_PEP path for entity
