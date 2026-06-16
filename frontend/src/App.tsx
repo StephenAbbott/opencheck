@@ -79,16 +79,6 @@ const _NEO4J_BASE =
 
 const EXAMPLE_LEIS: ExampleLei[] = [
   {
-    lei: "4OFD47D73QFJ1T1MOF29",
-    name: "Daily Mail and General Trust",
-    hint: "UK-listed media holding",
-    signals: [
-      { code: "TRUST_OR_ARRANGEMENT", confidence: "high" },
-      { code: "NON_EU_JURISDICTION", confidence: "high" },
-    ],
-    neo4jZipUrl: `${_NEO4J_BASE}/4OFD47D73QFJ1T1MOF29.zip`,
-  },
-  {
     lei: "213800LH1BZH3DI6G760",
     name: "BP P.L.C.",
     hint: "UK oil major",
@@ -122,15 +112,6 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     neo4jZipUrl: `${_NEO4J_BASE}/2138008KTNTDICZU8L25.zip`,
   },
   {
-    lei: "2138008RB4WDK7HYYS91",
-    name: "Biffa PLC",
-    hint: "UK waste management",
-    signals: [
-      { code: "NON_EU_JURISDICTION", confidence: "high" },
-    ],
-    neo4jZipUrl: `${_NEO4J_BASE}/2138008RB4WDK7HYYS91.zip`,
-  },
-  {
     lei: "2138002S3XGZ38WN5Q72",
     name: "Hornsea 1 Limited",
     hint: "UK offshore wind",
@@ -138,15 +119,6 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "NON_EU_JURISDICTION", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/2138002S3XGZ38WN5Q72.zip`,
-  },
-  {
-    lei: "213800DBE5Y9ZM58PN63",
-    name: "Care UK Social Care",
-    hint: "UK care provider",
-    signals: [
-      { code: "NON_EU_JURISDICTION", confidence: "high" },
-    ],
-    neo4jZipUrl: `${_NEO4J_BASE}/213800DBE5Y9ZM58PN63.zip`,
   },
   {
     lei: "213800E11LI1SCETU492",

@@ -38,13 +38,10 @@ from opencheck.narrative.summarise import DEFAULT_MODEL, summarise  # noqa: E402
 
 # Keep in sync with EXAMPLE_LEIS in frontend/src/App.tsx.
 CURATED_LEIS = [
-    "4OFD47D73QFJ1T1MOF29",  # Daily Mail and General Trust
     "213800LH1BZH3DI6G760",  # BP P.L.C.
     "253400JT3MQWNDKMJE44",  # Rosneft
     "2138008KTNTDICZU8L25",  # Bank Saderat PLC
-    "2138008RB4WDK7HYYS91",  # Biffa PLC
     "2138002S3XGZ38WN5Q72",  # Hornsea 1 Limited
-    "213800DBE5Y9ZM58PN63",  # Care UK Social Care
     "213800E11LI1SCETU492",  # Taqa Bratani Limited
     "213800AG2V6YE68H5N63",  # Newcastle United FC
 ]
