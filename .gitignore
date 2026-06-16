@@ -69,6 +69,21 @@ data/cache/*.tmp
 # Pre-built source adapter databases (large local files, built by scripts/extract_*.py)
 data/*.db
 
+# Stray local runtime cache / built databases under backend/ (live API caches,
+# UK PSC databases, etc. — large, never committed).
+backend/data/
+
+# Downloaded GEM/GEOT source CSVs (re-downloaded at runtime; the committed
+# artifact is backend/opencheck/data/geot_projects.json.gz, which stays tracked).
+data/gem/
+backend/opencheck/data/gem/
+
+# Cowork / local scratch outputs (favicons, render previews, etc.).
+outputs/
+
+# macOS folder metadata
+.DS_Store
+
 # Exports generated at runtime
 exports/
 *.export.json

@@ -218,6 +218,19 @@ SEC EDGAR are handled inside `_dispatch()` / `_lookup_pipeline()` directly.
 - [ ] `tests/test_<name>.py` — adapter + mapper tests
 - [ ] `.env` — API key if required (never committed)
 - [ ] `README.md` + `ATTRIBUTIONS.md` — document the source
+- [ ] `docs/sources.md` — add the adapter row (keep it in sync with `REGISTRY`;
+      the active table = `REGISTRY` minus env-gated bulk-only adapters), and
+      refresh the source counts in `README.md` (intro paragraph + adapter-table
+      pointer line) and the social card `opencheck-social-b.html`
+- [ ] **Regenerate the OKF bundle** — run `python backend/scripts/generate_okf.py`
+      and `python backend/scripts/generate_okf_viz.py`, then commit the resulting
+      `okf/` changes **in the same commit as the adapter**. The CI `okf` job runs
+      `generate_okf.py --check` and fails on drift, so a new/changed source that
+      isn't regenerated breaks the build (this is what broke the four commits after
+      `malta_mbr`). `--check` ignores the `timestamp:` line, so restore the
+      timestamp on otherwise-unchanged source concepts to avoid committing pure
+      churn — only `sources/<name>.md` (new), `sources/index.md`,
+      `licensing/matrix.md` and `viz.html` should carry real changes.
 
 ---
 
