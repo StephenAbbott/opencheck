@@ -127,6 +127,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Attribution:** "Contains data from the Kamer van Koophandel (KvK) Handelsregister, open data."
 - **Entry point:** `kvk_number` derived from GLEIF RA code `RA000463`
 
+## Receita Federal — CNPJ register (Brazil)
+
+- **Data:** company details plus the QSA (Quadro de Sócios e Administradores — partners and administrators) from the Receita Federal CNPJ open data. Mapped to a BODS entity statement plus person/entity + ownership-or-control statements for each partner. Partner names are public open data; CPF is masked at source and age is given only as a band.
+- **APIs (key-less):** OpenCNPJ <https://opencnpj.org/> (primary), BrasilAPI <https://brasilapi.com.br/> (fallback)
+- **License:** Brazilian public open data (Receita Federal do Brasil — Dados Públicos CNPJ)
+- **Attribution:** "Contains data from the Receita Federal do Brasil CNPJ open data, served via OpenCNPJ (opencnpj.org) and BrasilAPI (brasilapi.com.br)."
+- **Entry point:** `br_cnpj` (14-digit CNPJ) derived from GLEIF RA code `RA000681`
+- **Note:** Owner-type qualifications (sócio / acionista / quotista / titular) map to `shareholding`; administrators/directors map to `seniorManagingOfficial`. Legal-entity (PJ) partners carry their own CNPJ as a cross-source identifier.
+
 ## Malta Business Registry (MBR)
 
 - **Data:** core company details (name, status, legal form, registered office, area of activity, registration number and date) from the Malta Business Registry Open Data API. Entity data only — no officers, shareholders or beneficial owners.

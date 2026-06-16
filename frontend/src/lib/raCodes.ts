@@ -86,6 +86,15 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatHint: "10 digits",
     formatPattern: /^\d{10}$/,
   },
+  BR: {
+    raCode: "RA000681",
+    countryName: "Brazil",
+    idLabel: "CNPJ",
+    placeholder: "33.000.167/0001-01",
+    formatHint: "14 digits (CNPJ), with or without punctuation",
+    // 14 plain digits OR the punctuated XX.XXX.XXX/XXXX-XX form.
+    formatPattern: /^\d{14}$|^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/,
+  },
   IE: {
     raCode: "RA000215",
     countryName: "Ireland",
@@ -185,7 +194,7 @@ export const RA_CODES: Record<string, RaEntry> = {
  * App.tsx state) but sits in its natural A–Z position in the list.
  */
 export const COUNTRY_OPTIONS: { code: string; entry: RaEntry }[] = [
-  "AT", "BE", "CA", "HR", "DK", "EE", "FR", "IE", "LV", "LT",
+  "AT", "BE", "BR", "CA", "HR", "DK", "EE", "FR", "IE", "LV", "LT",
   "MT", "NL", "NO", "PL", "SG", "SK", "SE", "GB",
 ].map((code) => ({ code, entry: RA_CODES[code] }));
 

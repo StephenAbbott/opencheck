@@ -20,6 +20,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | Bolagsverket — Swedish Companies Registration Office (`bolagsverket`) | `SE-PSI` | yes | yes | no |
 | Brønnøysundregistrene — Norwegian Register Centre (`brreg`) | `NLOD-2.0` | yes | yes | no |
 | Global Energy Monitor / Climate TRACE (`climatetrace`) | `CC-BY-4.0` | yes | yes | no |
+| Receita Federal — CNPJ register (Brazil) (`cnpj_brazil`) | `BR-Open-Data` | conditional | yes | no |
 | UK Companies House (`companies_house`) | `OGL-3.0` | yes | yes | no |
 | Corporations Canada — ISED federal register (`corporations_canada`) | `OGL-Canada-2.0` | yes | yes | no |
 | CRO — Companies Registration Office Ireland (`cro`) | `CC-BY-4.0` | yes | yes | no |

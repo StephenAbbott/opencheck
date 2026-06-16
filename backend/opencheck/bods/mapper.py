@@ -443,6 +443,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "companies_house": "UK Companies House",
         "corporations_canada": "Corporations Canada — ISED federal register",
         "cyprus_drcor": "Cyprus DRCOR — Department of Registrar of Companies and Intellectual Property",
+        "cnpj_brazil": "Receita Federal — CNPJ register (Brazil)",
         "cro": "CRO — Companies Registration Office Ireland",
         "cvr_denmark": "CVR — Det Centrale Virksomhedsregister (Danish Business Authority)",
         "everypolitician": "EveryPolitician",
@@ -479,6 +480,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "companies_house",
         "corporations_canada",
         "cyprus_drcor",
+        "cnpj_brazil",
         "cro",
         "cvr_denmark",
         "firmenbuch",
@@ -5435,6 +5437,132 @@ def map_malta_mbr(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         entity_details=legal_form,
         source_url=source_url,
     )
+
+
+# Brazil CNPJ — QSA qualification label → BODS interest type.
+# Owner-type qualifications (sócio / acionista / quotista / titular) map to
+# ``shareholding``; management & representation roles map to
+# ``seniorManagingOfficial``.
+_BR_OWNER_KEYWORDS = ("socio", "sócio", "acionista", "quotista", "cotista", "titular")
+
+
+def _br_interest_type(qualificacao: str | None) -> str:
+    q = (qualificacao or "").strip().lower()
+    if any(k in q for k in _BR_OWNER_KEYWORDS):
+        return "shareholding"
+    return "seniorManagingOfficial"
+
+
+def map_cnpj_brazil(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map a CnpjBrazilAdapter bundle to BODS v0.4 statements.
+
+    Yields:
+    * One entityStatement for the Brazilian company.
+    * Per QSA partner: a personStatement (natural person / foreign) or an
+      entityStatement (legal-entity partner, carrying its own CNPJ) plus an
+      ownership-or-control relationshipStatement. Owner-type qualifications →
+      ``shareholding``; administrators/directors → ``seniorManagingOfficial``.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return
+
+    cnpj: str = str(bundle.get("br_cnpj") or "")
+    company: dict[str, Any] = bundle.get("company") or {}
+    partners: list[dict[str, Any]] = bundle.get("partners") or []
+
+    name: str = (
+        (company.get("name") or "").strip()
+        or bundle.get("legal_name")
+        or (f"CNPJ {cnpj}" if cnpj else "")
+    )
+    if not cnpj or not name:
+        return
+
+    source_url = bundle.get("link") or f"https://opencnpj.org/{cnpj}"
+
+    def _cnpj_id(value: str) -> dict[str, str]:
+        return {
+            "id": value,
+            "scheme": "BR-RFB",
+            "schemeName": "Receita Federal do Brasil — CNPJ",
+        }
+
+    # ── 1. Company entity statement ───────────────────────────────────────
+    company_stmt = make_entity_statement(
+        source_id="cnpj_brazil",
+        local_id=cnpj,
+        name=name,
+        jurisdiction=("Brazil", "BR"),
+        identifiers=[_cnpj_id(cnpj)],
+        founding_date=company.get("founding_date"),
+        addresses=(
+            [_addr("registered", company["address"], "BR")]
+            if company.get("address")
+            else []
+        ),
+        alternate_names=[company["trade_name"]] if company.get("trade_name") else [],
+        entity_details=company.get("legal_nature"),
+        source_url=source_url,
+    )
+    yield company_stmt
+    company_stmt_id: str = company_stmt["statementId"]
+
+    # ── 2. QSA partners / administrators ──────────────────────────────────
+    seen: set[str] = set()
+    for idx, p in enumerate(partners):
+        pname = (p.get("name") or "").strip()
+        if not pname:
+            continue
+
+        interest = {
+            "type": _br_interest_type(p.get("role")),
+            "directOrIndirect": "direct",
+            "beneficialOwnershipOrControl": False,
+        }
+        if p.get("role"):
+            interest["details"] = p["role"]
+        if p.get("entry_date"):
+            interest["startDate"] = p["entry_date"]
+
+        if p.get("kind") == "entity":
+            partner_cnpj = p.get("cnpj")
+            local_id = partner_cnpj or f"{cnpj}:pj:{idx}"
+            ip_type = "entity"
+            if local_id not in seen:
+                yield make_entity_statement(
+                    source_id="cnpj_brazil",
+                    local_id=local_id,
+                    name=pname,
+                    jurisdiction=("Brazil", "BR"),
+                    identifiers=[_cnpj_id(partner_cnpj)] if partner_cnpj else [],
+                    source_url=source_url,
+                )
+                seen.add(local_id)
+            ip_id = _stable_id("cnpj_brazil", "entity", local_id)
+        else:
+            # Natural person (PF) or foreign individual — scope the local id to
+            # the company so identical names across companies don't false-merge.
+            local_id = f"{cnpj}:pf:{pname}"
+            ip_type = "person"
+            if local_id not in seen:
+                yield make_person_statement(
+                    source_id="cnpj_brazil",
+                    local_id=local_id,
+                    full_name=pname,
+                    source_url=source_url,
+                )
+                seen.add(local_id)
+            ip_id = _stable_id("cnpj_brazil", "person", local_id)
+
+        yield make_relationship_statement(
+            source_id="cnpj_brazil",
+            local_id=f"{cnpj}:rel:{idx}",
+            subject_statement_id=company_stmt_id,
+            interested_party_statement_id=ip_id,
+            interested_party_type=ip_type,
+            interests=[interest],
+            source_url=source_url,
+        )
 
 
 def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:

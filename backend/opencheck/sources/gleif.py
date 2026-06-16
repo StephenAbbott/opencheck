@@ -41,6 +41,7 @@ from .brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_o
 from .corporations_canada import CA_CORP_RA_CODE as _CA_CORP_RA_CODE, normalise_corp_id as _normalise_corp_id
 from .cro import IE_RA_CODE as _CRO_RA_CODE, normalise_crn as _normalise_crn
 from .malta_mbr import MT_RA_CODE as _MT_RA_CODE, normalise_mt_crn as _normalise_mt_crn
+from .cnpj_brazil import BR_RA_CODE as _BR_RA_CODE, normalise_cnpj as _normalise_cnpj
 from .inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
 from .kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
 from .prh import FI_RA_CODE as _PRH_RA_CODE, normalise_ytunnus as _normalise_ytunnus
@@ -362,6 +363,10 @@ class GleifAdapter(SourceAdapter):
             # reconciler can bridge GLEIF ↔ Malta Business Registry.
             if registered_at_id == _MT_RA_CODE:
                 identifiers["mt_crn"] = _normalise_mt_crn(registered_as)
+            # Brazilian CNPJ — expose as ``br_cnpj`` so the reconciler can
+            # bridge GLEIF ↔ Receita Federal CNPJ register.
+            if registered_at_id == _BR_RA_CODE:
+                identifiers["br_cnpj"] = _normalise_cnpj(registered_as)
             # Finnish Business ID (Y-tunnus) — expose as ``fi_ytunnus`` so
             # the reconciler can bridge GLEIF ↔ PRH.
             if registered_at_id == _PRH_RA_CODE:
