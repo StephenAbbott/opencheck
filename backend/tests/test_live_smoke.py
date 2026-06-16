@@ -10,6 +10,7 @@ Scope is deliberately limited to **open, key-free, low-sensitivity** sources:
 - **GLEIF** — public, CC0, no API key, legal-entity reference data.
 - **Wikidata** — public, CC0, no API key.
 - **Malta Business Registry** — public, CC BY 4.0, no API key (EU HVD).
+- **Brazil CNPJ** (Receita Federal) — public open data, no API key (OpenCNPJ / BrasilAPI).
 
 Licence-restricted (OpenSanctions CC-BY-NC, OpenCorporates) and PII-heavy or
 key-gated sources are intentionally excluded.
@@ -24,7 +25,12 @@ from __future__ import annotations
 
 import pytest
 
-from opencheck.bods.mapper import map_gleif, map_malta_mbr, map_wikidata
+from opencheck.bods.mapper import (
+    map_cnpj_brazil,
+    map_gleif,
+    map_malta_mbr,
+    map_wikidata,
+)
 from opencheck.bods.validator import validate_shape
 from opencheck.config import get_settings
 from opencheck.sources import REGISTRY, SearchKind
@@ -134,3 +140,39 @@ async def test_malta_mbr_live_fetch_maps_to_valid_bods():
     assert bods, "Malta MBR bundle produced no BODS statements"
     assert validate_shape(bods) == []
     assert any(s["recordType"] == "entity" for s in bods), "no entity statement"
+
+
+# --- Brazil CNPJ (public open data, key-free) --------------------------------
+
+
+def test_cnpj_brazil_is_key_free_and_live():
+    info = REGISTRY["cnpj_brazil"].info
+    assert info.requires_api_key is False
+    assert info.live_available is True
+
+
+async def test_cnpj_brazil_live_fetch_maps_to_valid_bods():
+    """Fetch a real company from the live CNPJ providers (OpenCNPJ primary,
+    BrasilAPI fallback) and confirm the response still parses, includes the QSA,
+    and maps to valid BODS with ownership/control relationships. Also a
+    production access check for both providers.
+
+    Uses Petrobras (a stable, long-lived CNPJ) so the test can't rot easily."""
+    adapter = REGISTRY["cnpj_brazil"]
+    bundle = await adapter.fetch("33000167000101", legal_name="")
+
+    assert not bundle.get("is_stub"), (
+        "CNPJ Brazil live fetch returned a stub — both OpenCNPJ and BrasilAPI "
+        "may be unreachable or have changed shape/access"
+    )
+    company = bundle.get("company") or {}
+    assert company.get("name"), "no company name in live record"
+    assert bundle.get("partners"), "no QSA partners parsed — provider shape changed?"
+
+    bods = list(map_cnpj_brazil(bundle))
+    assert bods, "CNPJ Brazil bundle produced no BODS statements"
+    assert validate_shape(bods) == []
+    assert any(s["recordType"] == "entity" for s in bods), "no entity statement"
+    assert any(s["recordType"] == "relationship" for s in bods), (
+        "no ownership/control relationship from the QSA"
+    )

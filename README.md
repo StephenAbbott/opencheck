@@ -16,16 +16,16 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 55** — Malta Business Registry adapter: OpenCheck's 30th source
+**Latest: Phase 56** — Brazil CNPJ register adapter: OpenCheck's 31st source
 
-A live, key-less national-register adapter over the Malta Business Registry Open Data API — the first source found by systematically sweeping the EU's High-Value Datasets on [data.europa.eu](https://data.europa.eu/).
+A live, key-less national-register adapter over Brazil's Receita Federal CNPJ open data — and the first source outside the EU to contribute a real ownership graph, not just an entity record.
 
-1. **GLEIF-bridged, no key.** `mt_crn` (e.g. `C 113927`) is derived from GLEIF RA code `RA000443` and handed straight to `GET /api/v1/companies/{registration_number}`. The MBR API is an EU Open Data Directive High-Value Dataset — no auth, no API key, CC BY 4.0.
-2. **One entity record → one BODS statement.** Name, legal form, status, registered office and registration date map to a single `entityStatement` (`MT-MBR` scheme, MT jurisdiction). The API exposes entity data only — no officers or beneficial owners — and has no name search, so the source is entered via the LEI flow.
-3. **Searchable by registration number.** Malta is wired into the National ID search panel (`C 113927`), so you can look a company up directly, not only via its LEI.
-4. **Verified live.** 18 unit tests plus an opt-in live smoke test that fetches a real MBR record and asserts valid BODS (also a production access check); live-verified against Blue Lagoon Holding Limited.
+1. **Two-tier and key-less.** `br_cnpj` (14-digit CNPJ) is derived from GLEIF RA code `RA000681` and looked up via **OpenCNPJ** (primary) with a **BrasilAPI** fallback; a provider-agnostic normaliser collapses either shape into one bundle. No auth, no API key.
+2. **Entity + ownership (QSA).** Beyond the company entity statement (`BR-RFB` identifier, legal nature, founding date, BR jurisdiction), the **QSA** (partners & administrators) maps to BODS person/entity + ownership-or-control statements — owner qualifications (sócio/acionista) → `shareholding`, directors/administrators → `seniorManagingOfficial`. Legal-entity partners carry their own CNPJ as a cross-source identifier.
+3. **Searchable by CNPJ.** Brazil is wired into the National ID search panel, and being non-EU it correctly triggers the `NON_EU_JURISDICTION` risk signal.
+4. **Verified live.** 17 unit tests (both provider shapes, fallback, QSA mapping) plus an opt-in live smoke test asserting valid BODS with relationships; live-verified against Petrobras (9 QSA members).
 
-*Previous: [Phase 54 — Accessible PDF export](docs/status.md)*
+*Previous: [Phase 55 — Malta Business Registry adapter](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
