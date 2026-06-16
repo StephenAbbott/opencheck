@@ -292,6 +292,39 @@ async def test_db_fetch_stub_when_not_found(monkeypatch, tmp_path: Path) -> None
     assert bundle["is_stub"] is True
 
 
+def _truncate(path: Path) -> None:
+    """Simulate a download truncated mid-stream: keep the 16-byte SQLite header
+    (so the bare header check still passes) but drop interior pages."""
+    full = path.read_bytes()
+    path.write_bytes(full[: max(16, len(full) // 2)])
+
+
+def test_health_check_rejects_truncated_download(tmp_path: Path) -> None:
+    db_path = _make_db(tmp_path, [_UK_TENDER])
+    _truncate(db_path)
+    # Header alone still looks valid — that's the trap the old check fell into.
+    assert OpenTenderAdapter._is_valid_sqlite(db_path) is True
+    # The integrity check catches the truncation.
+    assert OpenTenderAdapter._db_is_healthy(db_path) is False
+
+
+async def test_search_degrades_to_stub_when_db_corrupt(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """A malformed DB must degrade gracefully (stub), never raise
+    'database disk image is malformed' up the lookup pipeline."""
+    db_path = _make_db(tmp_path, [_UK_TENDER])
+    _truncate(db_path)
+    monkeypatch.setenv("OPENTENDER_DB_FILE", str(db_path))
+    get_settings.cache_clear()
+
+    adapter = OpenTenderAdapter()
+    hits = await adapter.search("Highways England", SearchKind.ENTITY)
+    # _conn() detected the bad DB, deleted it, and fell back to the stub path.
+    assert len(hits) == 1 and hits[0].is_stub is True
+    assert not db_path.exists()  # corrupt file removed so a re-download can run
+
+
 async def test_db_search_no_results_returns_empty(monkeypatch, tmp_path: Path) -> None:
     db_path = _make_db(tmp_path, [_UK_TENDER])
     monkeypatch.setenv("OPENTENDER_DB_FILE", str(db_path))

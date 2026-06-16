@@ -115,6 +115,29 @@ class OpenTenderAdapter(SourceAdapter):
         except OSError:
             return False
 
+    @staticmethod
+    def _db_is_healthy(path: Path) -> bool:
+        """Return True only if *path* is a genuine, non-corrupt SQLite database.
+
+        The bare header check (``_is_valid_sqlite``) catches an HTML error page
+        or an empty file, but a download that was **truncated mid-stream** keeps
+        a valid 16-byte header while losing interior pages — which then raises
+        ``database disk image is malformed`` at query time (the exact Render
+        symptom). A read-only ``PRAGMA quick_check`` catches that up front so we
+        can delete + re-download instead of serving a corpse.
+        """
+        if not OpenTenderAdapter._is_valid_sqlite(path):
+            return False
+        try:
+            ro = sqlite3.connect(f"file:{path}?mode=ro&immutable=1", uri=True)
+            try:
+                row = ro.execute("PRAGMA quick_check").fetchone()
+            finally:
+                ro.close()
+        except sqlite3.DatabaseError:
+            return False
+        return bool(row) and str(row[0]).lower() == "ok"
+
     def _conn(self) -> sqlite3.Connection | None:
         settings = get_settings()
         db_path = settings.opentender_db_file
@@ -149,21 +172,27 @@ class OpenTenderAdapter(SourceAdapter):
                 logger.warning("opentender: DB file not found at %s", db_path)
                 return None
 
-        # Validate the file is a real SQLite database, not an HTML error page
-        # or a truncated download.  Delete and refuse to open if invalid so
-        # the next startup attempt will re-download from S3.
-        if not self._is_valid_sqlite(path):
+        # Validate the file is a real, non-corrupt SQLite database — not an HTML
+        # error page and not a truncated download (which keeps a valid header
+        # but fails at query time with "database disk image is malformed").
+        # Delete and refuse to open if unhealthy so the next attempt re-downloads.
+        if not self._db_is_healthy(path):
             size = path.stat().st_size if path.exists() else 0
             logger.error(
-                "opentender: DB at %s is not a valid SQLite file (%s bytes) — "
-                "deleting so next startup re-downloads from S3",
+                "opentender: DB at %s failed the integrity check (%s bytes) — "
+                "deleting so the next attempt re-downloads from S3",
                 path, size,
             )
             path.unlink(missing_ok=True)
             self._db = None
             return None
 
-        conn = sqlite3.connect(str(path), check_same_thread=False)
+        # Open read-only + immutable: the artifact never changes at runtime, so
+        # this skips journal/WAL handling on the ephemeral /tmp filesystem and
+        # never attempts a write-lock on the read path.
+        conn = sqlite3.connect(
+            f"file:{path}?mode=ro&immutable=1", uri=True, check_same_thread=False
+        )
         conn.row_factory = sqlite3.Row
         self._db = conn
         return self._db
@@ -194,6 +223,20 @@ class OpenTenderAdapter(SourceAdapter):
         return [self._tender_hit(item) for item in payload.get("tenders", [])]
 
     def _db_search(self, conn: sqlite3.Connection, query: str) -> list[SourceHit]:
+        """FTS5 search, hardened against a corrupt DB that slipped past the
+        connect-time integrity check (defence in depth)."""
+        try:
+            return self._db_search_impl(conn, query)
+        except sqlite3.DatabaseError as exc:
+            logger.error(
+                "opentender: DB error during search (%r) — returning no results "
+                "and dropping the connection so it revalidates next request: %s",
+                query, exc,
+            )
+            self._db = None
+            return []
+
+    def _db_search_impl(self, conn: sqlite3.Connection, query: str) -> list[SourceHit]:
         """FTS5 search over body names (buyers + bidders)."""
         # Escape FTS5 special characters.
         safe_q = re.sub(r'["\']', " ", query.strip())
@@ -260,6 +303,18 @@ class OpenTenderAdapter(SourceAdapter):
         }
 
     def _db_fetch(self, conn: sqlite3.Connection, hit_id: str) -> dict[str, Any]:
+        """Look up a tender by persistentId, hardened against a corrupt DB."""
+        try:
+            return self._db_fetch_impl(conn, hit_id)
+        except sqlite3.DatabaseError as exc:
+            logger.error(
+                "opentender: DB error during fetch (%s) — degrading to stub: %s",
+                hit_id, exc,
+            )
+            self._db = None
+            return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
+
+    def _db_fetch_impl(self, conn: sqlite3.Connection, hit_id: str) -> dict[str, Any]:
         """Look up a tender by persistentId (primary key)."""
         cur = conn.execute(
             "SELECT data FROM tenders WHERE persistent_id = ?",
