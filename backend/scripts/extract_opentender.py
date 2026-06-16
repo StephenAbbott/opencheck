@@ -49,9 +49,11 @@ from __future__ import annotations
 
 import argparse
 import gzip
+import hashlib
 import io
 import json
 import logging
+import os
 import re
 import sqlite3
 import sys
@@ -370,6 +372,52 @@ def _insert_tender(
 # Main
 # ------------------------------------------------------------------
 
+def _sha256_file(path: Path | str) -> str:
+    """Return the hex SHA-256 of a file, streamed (handles multi-GB DBs)."""
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def finalise_db(output: Path | str) -> str:
+    """Turn the freshly-built DB into a trustworthy, self-contained artifact and
+    return its SHA-256.
+
+    1. ``PRAGMA wal_checkpoint(TRUNCATE)`` folds the WAL back into the main file.
+    2. ``PRAGMA integrity_check`` verifies the database, raising on failure so a
+       corrupt build is never shipped.
+    3. ``VACUUM INTO`` writes a fresh, defragmented, single-file copy in the
+       default rollback-journal mode (no ``-wal``/``-shm`` dependency) — exactly
+       what the adapter opens read-only/immutable at runtime — which then
+       atomically replaces *output*.
+
+    Set the returned digest as ``OPENTENDER_DB_SHA256`` on the host so the
+    adapter can reject a truncated or corrupt download.
+    """
+    output = Path(str(output))
+    conn = sqlite3.connect(str(output))
+    try:
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        row = conn.execute("PRAGMA integrity_check").fetchone()
+        if not row or str(row[0]).lower() != "ok":
+            raise RuntimeError(
+                f"integrity_check failed for {output}: "
+                f"{row[0] if row else 'no result'}"
+            )
+        clean = output.with_name(output.name + ".clean")
+        clean.unlink(missing_ok=True)
+        conn.execute("VACUUM INTO ?", (str(clean),))
+    finally:
+        conn.close()
+    os.replace(clean, output)
+    # The vacuumed copy is a clean rollback-journal DB — drop any stale sidecars.
+    for suffix in ("-wal", "-shm"):
+        Path(str(output) + suffix).unlink(missing_ok=True)
+    return _sha256_file(output)
+
+
 def build(
     inputs: list[Path],
     output: Path | str,
@@ -421,6 +469,16 @@ def build(
         logger.info("Running ANALYZE …")
         conn.execute("ANALYZE")
         conn.commit()
+        conn.close()
+        logger.info("Finalising artifact (WAL checkpoint + integrity_check + VACUUM) …")
+        digest = finalise_db(output)
+        size = Path(str(output)).stat().st_size
+        logger.info("Artifact ready: %s (%d bytes)", output, size)
+        logger.info("SHA-256: %s", digest)
+        logger.info(
+            "→ set OPENTENDER_DB_SHA256=%s on the host to pin the download.", digest
+        )
+    elif not dry_run:
         conn.close()
 
     logger.info("Total: %d tenders processed, %d errors.", total, errors)
