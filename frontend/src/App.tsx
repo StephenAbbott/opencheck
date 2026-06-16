@@ -84,8 +84,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "UK-listed media holding",
     signals: [
       { code: "TRUST_OR_ARRANGEMENT", confidence: "high" },
-      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
-      { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
+      { code: "NON_EU_JURISDICTION", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/4OFD47D73QFJ1T1MOF29.zip`,
   },
@@ -95,8 +94,8 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "UK oil major",
     signals: [
       { code: "TRUST_OR_ARRANGEMENT", confidence: "high" },
+      { code: "NON_EU_JURISDICTION", confidence: "high" },
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
-      { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/213800LH1BZH3DI6G760.zip`,
   },
@@ -106,7 +105,8 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "Russian state oil",
     signals: [
       { code: "SANCTIONED", confidence: "high" },
-      { code: "RELATED_SANCTIONED", confidence: "high" },
+      { code: "NON_EU_JURISDICTION", confidence: "high" },
+      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/253400JT3MQWNDKMJE44.zip`,
   },
@@ -117,6 +117,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     signals: [
       { code: "SANCTIONED", confidence: "high" },
       { code: "NON_EU_JURISDICTION", confidence: "high" },
+      { code: "RELATED_SANCTIONED", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/2138008KTNTDICZU8L25.zip`,
   },
@@ -134,7 +135,6 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Hornsea 1 Limited",
     hint: "UK offshore wind",
     signals: [
-      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
       { code: "NON_EU_JURISDICTION", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/2138002S3XGZ38WN5Q72.zip`,
@@ -144,7 +144,6 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Care UK Social Care",
     hint: "UK care provider",
     signals: [
-      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
       { code: "NON_EU_JURISDICTION", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/213800DBE5Y9ZM58PN63.zip`,
@@ -154,8 +153,8 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Taqa Bratani Limited",
     hint: "UAE-owned UK oil & gas",
     signals: [
-      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
-      { code: "RELATED_SANCTIONED", confidence: "high" },
+      { code: "NON_EU_JURISDICTION", confidence: "high" },
+      { code: "RELATED_SANCTIONS_LINKED", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/213800E11LI1SCETU492.zip`,
   },
@@ -164,7 +163,6 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Newcastle United FC",
     hint: "Saudi-owned football club",
     signals: [
-      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
       { code: "NON_EU_JURISDICTION", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/213800AG2V6YE68H5N63.zip`,
