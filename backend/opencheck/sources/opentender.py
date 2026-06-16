@@ -479,11 +479,22 @@ def _download_db(path: Path, s3_url: str, expected_sha256: str | None = None) ->
 def warm_opentender_db() -> None:
     """Pre-download + verify the OpenTender DB at startup, off the request path.
 
-    A no-op unless ``OPENTENDER_DB_FILE`` is configured. Wired into the FastAPI
-    lifespan warm-up (a background thread) so the first user lookup never blocks
-    on a multi-hundred-MB S3 fetch. Failures are logged, not raised — the
-    adapter still degrades to demo/stub mode on first use.
+    No-op unless OpenTender is BOTH registered (reachable via a lookup) AND
+    ``OPENTENDER_DB_FILE`` is configured. The registry guard is essential: the
+    OpenTender DB is a multi-hundred-MB SQLite artifact, and on Render it lands
+    on the 2 GB-capped ephemeral ``/tmp``. Pre-downloading it for a source that
+    isn't in the registry — i.e. that no lookup can ever query — is pure
+    deadweight that, stacked on the GLEIF/UK-PSC FTS downloads, can tip ``/tmp``
+    over its limit and get the instance evicted. So we only warm it when the
+    adapter is actually live.
+
+    Failures are logged, not raised — the adapter still degrades to demo/stub
+    mode on first use.
     """
+    from . import REGISTRY
+
+    if "opentender" not in REGISTRY:
+        return
     settings = get_settings()
     if not settings.opentender_db_file:
         return

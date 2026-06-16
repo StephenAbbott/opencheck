@@ -396,7 +396,28 @@ def test_warm_opentender_db_noop_when_unconfigured() -> None:
     warm_opentender_db()  # OPENTENDER_DB_FILE unset → returns without error
 
 
-def test_warm_opentender_db_downloads_when_configured(monkeypatch, tmp_path: Path) -> None:
+def test_warm_opentender_db_noop_when_not_registered(monkeypatch, tmp_path: Path) -> None:
+    """Even fully configured, the warm-up must NOT download when OpenTender is
+    absent from the REGISTRY. This is the Render /tmp regression guard: a
+    retired source must never pull a multi-hundred-MB DB onto ephemeral disk on
+    every cold start."""
+    from opencheck.sources import REGISTRY
+    from opencheck.sources import opentender as ot
+
+    assert "opentender" not in REGISTRY  # retired — the live state
+    dest = tmp_path / "warm.db"
+    monkeypatch.setenv("OPENTENDER_DB_FILE", str(dest))
+    monkeypatch.setenv("OPENTENDER_S3_URL", "https://example/opentender.db")
+    get_settings.cache_clear()
+
+    ot.warm_opentender_db()  # no HTTP mock wired — must not attempt a download
+    assert not dest.exists()
+
+
+def test_warm_opentender_db_downloads_when_registered_and_configured(
+    monkeypatch, tmp_path: Path
+) -> None:
+    from opencheck.sources import REGISTRY
     from opencheck.sources import opentender as ot
 
     blob = _make_db(tmp_path, [_UK_TENDER]).read_bytes()
@@ -405,6 +426,8 @@ def test_warm_opentender_db_downloads_when_configured(monkeypatch, tmp_path: Pat
     monkeypatch.setenv("OPENTENDER_S3_URL", "https://example/opentender.db")
     get_settings.cache_clear()
     _serve(monkeypatch, blob)
+    # Simulate OpenTender being live (re-added to the registry).
+    monkeypatch.setitem(REGISTRY, "opentender", ot.OpenTenderAdapter())
 
     ot.warm_opentender_db()
     assert dest.exists() and ot.OpenTenderAdapter._db_is_healthy(dest)
