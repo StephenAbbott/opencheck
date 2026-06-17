@@ -280,7 +280,7 @@ async def test_debarment_outranks_sanction_linked(monkeypatch) -> None:
 
     signals = await assess_cross_source_names([_entity("e1", "Vale S.A.")])
     assert [s.code for s in signals] == [RELATED_DEBARMENT]
-    assert s.hit_id == "NK-bp"
+    assert signals[0].hit_id == "NK-v"
 
 
 async def test_emits_related_pep_for_pep_topic_or_everypolitician(
