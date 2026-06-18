@@ -1,5 +1,12 @@
 # OpenCheck — development notes for Claude
 
+## Local commands (macOS)
+
+Use **`python3`**, not `python`, in all documented commands and examples — macOS
+ships Python 3 as `python3` and has no bare `python` on the PATH (`python …`
+fails with `command not found`). The same applies to any one-off scripts and the
+test suite below.
+
 ## Architecture overview
 
 - **Backend**: FastAPI, split into `backend/opencheck/routers/` (health, search, lookup, export).
@@ -125,7 +132,7 @@ Format validation is advisory (non-blocking). The amber border + warning fires o
 
 ## Current state (Phase 45)
 
-**Test suite**: 1733 passed, 6 skipped, 5 xfailed. Run `python -m pytest` from `backend/`.
+**Test suite**: 1733 passed, 6 skipped, 5 xfailed. Run `python3 -m pytest` from `backend/`.
 
 **Frontend graph renderer**: Cytoscape.js (replaced `@openownership/bods-dagre` in Phase 44). Component: `frontend/src/components/BODSGraph.tsx`. Uses a React HTML overlay layer for BOVS icons and flags — never use Cytoscape's `background-image` for icons (canvas taint from Adobe Illustrator `xmlns:xlink` SVGs). BOVS icons are base64 data URIs in `frontend/src/lib/bovsIcons.ts`. Flags are served from `frontend/public/bods-dagre-images/flags/`. The overlay recomputes on `cy.on('viewport')`. Flag badges are at 45° NE circumference; risk signal badges at 315° NW.
 
@@ -222,8 +229,8 @@ SEC EDGAR are handled inside `_dispatch()` / `_lookup_pipeline()` directly.
       the active table = `REGISTRY` minus env-gated bulk-only adapters), and
       refresh the source counts in `README.md` (intro paragraph + adapter-table
       pointer line) and the social card `opencheck-social-b.html`
-- [ ] **Regenerate the OKF bundle** — run `python backend/scripts/generate_okf.py`
-      and `python backend/scripts/generate_okf_viz.py`, then commit the resulting
+- [ ] **Regenerate the OKF bundle** — run `python3 backend/scripts/generate_okf.py`
+      and `python3 backend/scripts/generate_okf_viz.py`, then commit the resulting
       `okf/` changes **in the same commit as the adapter**. The CI `okf` job runs
       `generate_okf.py --check` and fails on drift, so a new/changed source that
       isn't regenerated breaks the build (this is what broke the four commits after
@@ -380,7 +387,7 @@ Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_
 
 ## Test suite
 
-- **1733 passed, 6 skipped, 5 xfailed** as of Phase 45. Run `python -m pytest` from `backend/`.
+- **1733 passed, 6 skipped, 5 xfailed** as of Phase 45. Run `python3 -m pytest` from `backend/`.
 - Async adapter tests use `pytest-asyncio` with `asyncio_mode = "auto"` (set in `pyproject.toml`).
 - HTTP mocking: use `respx` for httpx-based adapters; use `unittest.mock.AsyncMock` with `patch("...build_client", ...)` for adapters that call `build_client()` directly.
 - GraphQL adapters (CVR): mock by inspecting the request body (`request.content`) to route different query strings to different fixture responses.
