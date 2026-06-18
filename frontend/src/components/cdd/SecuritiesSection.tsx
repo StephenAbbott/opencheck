@@ -16,20 +16,20 @@ function RegimeChip({ label }: { label: string }) {
 }
 
 function SecRow({ s, danger }: { s: Security; danger?: boolean }) {
+  // Regimes are company-level (identical across the entity's ISINs), so they're
+  // shown once in the banner header — not per row. Rows stay narrow (ISIN +
+  // type), which also keeps the box within the viewport on mobile.
   return (
     <div
-      className={`flex items-center gap-3 px-2.5 py-1.5 rounded ${
+      className={`flex items-center gap-2 px-2.5 py-1.5 rounded min-w-0 ${
         danger ? "bg-rose-50/60" : "border-b border-oo-rule/60 last:border-b-0"
       }`}
     >
       <span className="font-mono text-[12px] text-oo-ink shrink-0">{s.isin}</span>
-      <span className="text-[11px] text-oo-muted truncate">
+      <span className="text-[11px] text-oo-muted truncate min-w-0">
         {[s.type, s.exchange].filter(Boolean).join(" · ")}
         {s.name ? ` — ${s.name}` : ""}
       </span>
-      <span className="flex-1" />
-      {danger &&
-        (s.regimes ?? []).map((r) => <RegimeChip key={r} label={r} />)}
     </div>
   );
 }
@@ -108,6 +108,10 @@ export function SecuritiesSection({ lei }: { lei: string }) {
   if (meta.total === 0 && sanctioned.length === 0) return null;
 
   const ncNotice = meta.license_notices.find((n) => n.source_id === "opensanctions");
+  // Regimes are company-level — collect the union once for the banner header.
+  const sanctionedRegimes = Array.from(
+    new Set(sanctioned.flatMap((s) => s.regimes ?? [])),
+  );
 
   return (
     <section className="mb-8">
@@ -127,6 +131,13 @@ export function SecuritiesSection({ lei }: { lei: string }) {
                 {sanctioned.length} sanctioned secur{sanctioned.length === 1 ? "ity" : "ities"}
               </span>
             </div>
+            {sanctionedRegimes.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {sanctionedRegimes.map((r) => (
+                  <RegimeChip key={r} label={r} />
+                ))}
+              </div>
+            )}
             <div className="space-y-1">
               {(showAllSanctioned ? sanctioned : sanctioned.slice(0, 2)).map((s) => (
                 <SecRow key={s.isin} s={s} danger />
