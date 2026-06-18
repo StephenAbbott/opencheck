@@ -41,6 +41,7 @@ export function SecuritiesSection({ lei }: { lei: string }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showAllSanctioned, setShowAllSanctioned] = useState(false);
+  const [showAllRegimes, setShowAllRegimes] = useState(false);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("All");
 
@@ -51,6 +52,7 @@ export function SecuritiesSection({ lei }: { lei: string }) {
     setPage(1);
     setExpanded(false);
     setShowAllSanctioned(false);
+    setShowAllRegimes(false);
     setQuery("");
     setTypeFilter("All");
     getSecurities(lei, 1)
@@ -132,10 +134,19 @@ export function SecuritiesSection({ lei }: { lei: string }) {
               </span>
             </div>
             {sanctionedRegimes.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {sanctionedRegimes.map((r) => (
+              <div className="flex flex-wrap items-center gap-1 mb-2">
+                {(showAllRegimes ? sanctionedRegimes : sanctionedRegimes.slice(0, 4)).map((r) => (
                   <RegimeChip key={r} label={r} />
                 ))}
+                {sanctionedRegimes.length > 4 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllRegimes((v) => !v)}
+                    className="font-mono text-[10px] rounded px-1.5 py-0.5 text-rose-700 hover:underline"
+                  >
+                    {showAllRegimes ? "show fewer" : `+${sanctionedRegimes.length - 4} more`}
+                  </button>
+                )}
               </div>
             )}
             <div className="space-y-1">
