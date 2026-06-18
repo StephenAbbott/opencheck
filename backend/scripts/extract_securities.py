@@ -69,6 +69,11 @@ def _split(cell: str | None) -> list[str]:
 def _regimes(risk_datasets: list[str], eo_14071: bool) -> list[str]:
     labels: list[str] = []
     for ds in risk_datasets:
+        # Skip external reference/enrichment datasets (FIRDS, GLEIF, EGRUL, …):
+        # they record that an instrument *exists* on a market, not a sanction.
+        # OpenSanctions prefixes them with ``ext_``.
+        if ds.startswith("ext_"):
+            continue
         labels.append(_REGIME_LABELS.get(ds, ds))
     if eo_14071:
         labels.append("EO 14071 investment ban")

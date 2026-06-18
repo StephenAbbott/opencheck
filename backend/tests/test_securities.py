@@ -275,7 +275,8 @@ def test_extractor_builds_index_filtering_correctly():
     rows = [
         # sanctioned, has LEI + ISINs → kept
         {"caption": "Rosneft", "lei": "253400JT3MQWNDKMJE44", "isins": "US67812M2070;XS0123456789",
-         "sanctioned": "t", "eo_14071": "t", "risk_datasets": "us_ofac_sdn;gb_hmt_invbans", "id": "NK-2"},
+         "sanctioned": "t", "eo_14071": "t",
+         "risk_datasets": "us_ofac_sdn;gb_hmt_invbans;ext_eu_esma_firds;ext_gb_fca_firds", "id": "NK-2"},
         # private sanctioned co, no LEI → dropped
         {"caption": "Private LLC", "lei": "", "isins": "", "sanctioned": "t", "eo_14071": "f",
          "risk_datasets": "us_ofac_sdn", "id": "NK-3"},
@@ -293,4 +294,7 @@ def test_extractor_builds_index_filtering_correctly():
     assert "US OFAC SDN" in entry["regimes"]
     assert "UK investment ban" in entry["regimes"]
     assert "EO 14071 investment ban" in entry["regimes"]
+    # External reference datasets (FIRDS etc.) are not sanction regimes.
+    assert not any("firds" in r for r in entry["regimes"])
+    assert not any(r.startswith("ext_") for r in entry["regimes"])
     assert entry["eo_14071"] is True and entry["sanctioned"] is True

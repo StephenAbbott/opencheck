@@ -40,6 +40,7 @@ export function SecuritiesSection({ lei }: { lei: string }) {
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [showAllSanctioned, setShowAllSanctioned] = useState(false);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("All");
 
@@ -49,6 +50,7 @@ export function SecuritiesSection({ lei }: { lei: string }) {
     setLoaded([]);
     setPage(1);
     setExpanded(false);
+    setShowAllSanctioned(false);
     setQuery("");
     setTypeFilter("All");
     getSecurities(lei, 1)
@@ -126,10 +128,19 @@ export function SecuritiesSection({ lei }: { lei: string }) {
               </span>
             </div>
             <div className="space-y-1">
-              {sanctioned.map((s) => (
+              {(showAllSanctioned ? sanctioned : sanctioned.slice(0, 2)).map((s) => (
                 <SecRow key={s.isin} s={s} danger />
               ))}
             </div>
+            {sanctioned.length > 2 && (
+              <button
+                type="button"
+                onClick={() => setShowAllSanctioned((v) => !v)}
+                className="mt-1.5 text-[11px] font-semibold text-rose-700 hover:underline"
+              >
+                {showAllSanctioned ? "Hide" : `Show all ${sanctioned.length}`}
+              </button>
+            )}
           </div>
         )}
 
