@@ -76,6 +76,14 @@ class Settings(BaseSettings):
     # rate limit (and smaller batch size). Used by the securities service to
     # type the handful of ISINs we actually display.
     openfigi_api_key: str | None = Field(default=None, alias="OPENFIGI_API_KEY")
+    # The sanctioned-securities overlay queries the OpenSanctions ``securities``
+    # collection, which is gated behind a higher API plan tier than the default
+    # sanctions collection. Off by default so the securities panel ships on
+    # GLEIF + OpenFIGI alone; flip on once the OpenSanctions plan (or the bulk
+    # securities.csv route) is in place.
+    securities_sanctions_enabled: bool = Field(
+        default=False, alias="OPENCHECK_SECURITIES_SANCTIONS_ENABLED"
+    )
     wikidata_sparql_endpoint: str = Field(
         default="https://query.wikidata.org/sparql",
         alias="WIKIDATA_SPARQL_ENDPOINT",

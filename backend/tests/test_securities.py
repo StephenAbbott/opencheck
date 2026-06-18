@@ -83,6 +83,7 @@ def _live_with_keys(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
     monkeypatch.setenv("OPENFIGI_API_KEY", "figi-key")
     monkeypatch.setenv("OPENSANCTIONS_API_KEY", "os-key")
+    monkeypatch.setenv("OPENCHECK_SECURITIES_SANCTIONS_ENABLED", "true")
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
@@ -177,6 +178,25 @@ async def test_opensanctions_error_degrades_gracefully():
     assert out["sanctioned"] == []  # OS failed → no sanctioned, but not fatal
     assert out["securities"][0]["isin"] == "DE000A1"
     assert out["license_notices"] == []
+
+
+async def test_overlay_disabled_by_default(monkeypatch):
+    """With the sanctions overlay flag off, the panel is GLEIF+OpenFIGI only."""
+    monkeypatch.setenv("OPENCHECK_SECURITIES_SANCTIONS_ENABLED", "false")
+    get_settings.cache_clear()
+    client = _FakeClient(
+        gleif=_gleif_isins_payload(["DE000A1"], total=1),
+        openfigi_by_isin={"DE000A1": {"securityType2": "Warrant"}},
+        opensanctions={"results": [
+            {"id": "X", "target": True, "topics": ["sanction"], "properties": {"isin": ["DE000A1"]}},
+        ]},
+    )
+    with patch.object(svc, "build_client", lambda: _FakeCM(client)):
+        out = await svc.assemble_securities("7LTWFZYICNSX8D621K86")
+    assert out["available"] is True
+    assert out["sanctioned"] == []
+    assert "opensanctions" not in out["sources"]
+    assert out["securities"][0]["type"] == "Warrant"
 
 
 async def test_unsanctioned_result_is_ignored():

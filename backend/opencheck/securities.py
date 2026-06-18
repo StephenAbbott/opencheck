@@ -221,12 +221,17 @@ async def assemble_securities(
     if not settings.allow_live:
         return empty
 
+    overlay_on = settings.securities_sanctions_enabled and bool(settings.opensanctions_api_key)
     async with build_client() as client:
         total, isins = await _gleif_isins(client, lei, page, page_size)
-        sanctioned_map, figi_map = await asyncio.gather(
-            _sanctioned_isins(client, lei, settings.opensanctions_api_key),
-            _openfigi_map(client, isins, settings.openfigi_api_key),
-        )
+        if overlay_on:
+            sanctioned_map, figi_map = await asyncio.gather(
+                _sanctioned_isins(client, lei, settings.opensanctions_api_key),
+                _openfigi_map(client, isins, settings.openfigi_api_key),
+            )
+        else:
+            sanctioned_map = {}
+            figi_map = await _openfigi_map(client, isins, settings.openfigi_api_key)
         # Sanctioned ISINs may not be in the current GLEIF page (or in GLEIF at
         # all — e.g. Rosneft). Enrich those too so the banner shows their type.
         missing = [i for i in sanctioned_map if i not in figi_map]
@@ -244,7 +249,7 @@ async def assemble_securities(
     sources = ["gleif"]
     if figi_map or settings.openfigi_api_key:
         sources.append("openfigi")
-    if settings.opensanctions_api_key:
+    if overlay_on:
         sources.append("opensanctions")
 
     return {
