@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { deepen } from "../../lib/api";
 import type { BodsBreakdown, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
@@ -579,6 +579,13 @@ export function HitRow({
   // the count is still unknown (source not yet deepened) we keep the strip so
   // the affordance isn't withheld prematurely.
   const showGraphStrip = !hasKnownCount || stmtCount > 1;
+
+  // If the strip was opened while the count was still unknown and the source
+  // then resolves to ≤ 1 statement, the strip disappears — so close the diagram
+  // too, otherwise it would be stuck open with no control to hide it.
+  useEffect(() => {
+    if (!showGraphStrip && showDiagram) setShowDiagram(false);
+  }, [showGraphStrip, showDiagram]);
 
   // Graph-flavoured subtitle for the Visualise strip. Use the loaded detail
   // when available, otherwise the entity/relationship split streamed up front
