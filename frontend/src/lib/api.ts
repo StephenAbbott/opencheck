@@ -182,6 +182,41 @@ export function getLicenseMatrix(sourceIds?: string[]): Promise<LicenseMatrix> {
  * unified subject view. Throws an Error with the backend's detail
  * message when the LEI is malformed (400) or unknown to GLEIF (404).
  */
+// ---------------------------------------------------------------------
+// Securities — /securities (GLEIF ISINs + OpenFIGI typing + OpenSanctions)
+// ---------------------------------------------------------------------
+
+export interface Security {
+  isin: string;
+  type: string | null;
+  name: string | null;
+  ticker: string | null;
+  exchange: string | null;
+  sanctioned: boolean;
+  regimes?: string[];
+  opensanctions_id?: string | null;
+}
+
+export interface SecuritiesResponse {
+  lei: string;
+  available: boolean;
+  total: number;
+  page: number;
+  page_size: number;
+  securities: Security[];
+  sanctioned: Security[];
+  sources: string[];
+  license_notices: { source_id: string; notice: string }[];
+}
+
+/** Fetch one page of securities (ISINs) for an LEI, with the sanctioned subset. */
+export async function getSecurities(lei: string, page = 1): Promise<SecuritiesResponse> {
+  const params = new URLSearchParams({ lei, page: String(page) });
+  const r = await fetch(`${BASE_URL}/securities?${params.toString()}`);
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return (await r.json()) as SecuritiesResponse;
+}
+
 export async function lookup(lei: string): Promise<LookupResponse> {
   const params = new URLSearchParams({ lei });
   const r = await fetch(`${BASE_URL}/lookup?${params.toString()}`);

@@ -48,6 +48,10 @@ services:
         sync: false
       - key: OPENALEPH_API_KEY
         sync: false
+      # OpenFIGI — securities (ISIN) typing for the /securities endpoint.
+      # Optional: the endpoint works without it at a lower rate limit.
+      - key: OPENFIGI_API_KEY
+        sync: false
       # --- Bulk-file adapters: stub-only on Render ---
       # ARIREGISTER_DB_FILE and BCE_BELGIUM_DB_FILE are intentionally omitted.
       # Both adapters return stub responses when no DB path is set.

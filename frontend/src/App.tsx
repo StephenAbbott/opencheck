@@ -37,6 +37,7 @@ import {
   type SourceBucket,
 } from "./components/cdd/SourceBucketCard";
 import { EsgPanel } from "./components/cdd/EsgPanel";
+import { SecuritiesSection } from "./components/cdd/SecuritiesSection";
 
 
 /**
@@ -1149,6 +1150,8 @@ export default function App() {
             />
           </section>
         )}
+
+        {streamingLei && <SecuritiesSection lei={streamingLei} />}
 
         {(cddBuckets.length > 0 || pendingCddSources.length > 0) && (
           <section className="mb-8">

@@ -69,6 +69,13 @@ class Settings(BaseSettings):
     )
     opensanctions_api_key: str | None = Field(default=None, alias="OPENSANCTIONS_API_KEY")
     openaleph_api_key: str | None = Field(default=None, alias="OPENALEPH_API_KEY")
+
+    # --- OpenFIGI (securities enrichment: ISIN → FIGI / security type) ---
+    # Free key from https://www.openfigi.com/api — sent as the X-OPENFIGI-APIKEY
+    # header. Optional: the /v3/mapping endpoint works without a key at a lower
+    # rate limit (and smaller batch size). Used by the securities service to
+    # type the handful of ISINs we actually display.
+    openfigi_api_key: str | None = Field(default=None, alias="OPENFIGI_API_KEY")
     wikidata_sparql_endpoint: str = Field(
         default="https://query.wikidata.org/sparql",
         alias="WIKIDATA_SPARQL_ENDPOINT",
