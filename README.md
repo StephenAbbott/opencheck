@@ -16,16 +16,16 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 56** — Brazil CNPJ register adapter: OpenCheck's 31st source
+**Latest: Phase 57** — Securities (ISINs) & the sanctioned-securities overlay
 
-A live, key-less national-register adapter over Brazil's Receita Federal CNPJ open data — and the first source outside the EU to contribute a real ownership graph, not just an entity record.
+A new entity-level **Securities** panel showing the securities mapped to a company's LEI and surfacing any that are sanctioned — plus a first-class `SANCTIONED_SECURITY` risk chip.
 
-1. **Two-tier and key-less.** `br_cnpj` (14-digit CNPJ) is derived from GLEIF RA code `RA000681` and looked up via **OpenCNPJ** (primary) with a **BrasilAPI** fallback; a provider-agnostic normaliser collapses either shape into one bundle. No auth, no API key.
-2. **Entity + ownership (QSA).** Beyond the company entity statement (`BR-RFB` identifier, legal nature, founding date, BR jurisdiction), the **QSA** (partners & administrators) maps to BODS person/entity + ownership-or-control statements — owner qualifications (sócio/acionista) → `shareholding`, directors/administrators → `seniorManagingOfficial`. Legal-entity partners carry their own CNPJ as a cross-source identifier.
-3. **Searchable by CNPJ.** Brazil is wired into the National ID search panel, and being non-EU it correctly triggers the `NON_EU_JURISDICTION` risk signal.
-4. **Verified live.** 17 unit tests (both provider shapes, fallback, QSA mapping) plus an opt-in live smoke test asserting valid BODS with relationships; live-verified against Petrobras (9 QSA members).
+1. **Three open datasets, three roles.** **GLEIF** (`/lei-records/{lei}/isins`) gives the authoritative LEI→ISIN list and total count — fetched as count + one page only, since major issuers carry tens of thousands (Deutsche Bank ≈ 22,500). **OpenFIGI** types just the ISINs actually shown (security type, ticker, exchange). The free **OpenSanctions `securities.csv`** export supplies the sanctioned subset by LEI + regimes (incl. EO 14071 investment bans) — covering GLEIF's blind spot (Rosneft has 0 ISINs in GLEIF but 12 sanctioned).
+2. **Lazy and sanctions-first.** `GET /securities?lei=` assembles these on demand (never on the main lookup) and never enumerates every ISIN. The UI leads with a red banner of the sanctioned ISINs; the long tail is a count behind a searchable, type-filtered "Browse all" drawer.
+3. **Risk chip everywhere.** If the LEI has sanctioned securities, the main lookup emits `SANCTIONED_SECURITY` (high confidence) — so it appears in the risk chips, the BODS export and the MCP `lookup` tool.
+4. **Self-refreshing index.** A pure-stdlib extractor builds the compact `lei→sanctioned-ISINs` index (~187 LEIs / 13k ISINs from the 8.8 MB source); a weekly GitHub Action republishes it as a Release asset the backend loads at startup (local file or hosted URL).
 
-*Previous: [Phase 55 — Malta Business Registry adapter](docs/status.md)*
+*Previous: [Phase 56 — Brazil CNPJ register adapter](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
