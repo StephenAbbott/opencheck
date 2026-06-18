@@ -723,7 +723,6 @@ export function SkeletonSourceCard() {
 export function SourceBucketCard({
   bucket,
   riskByHit,
-  sourceSignals = [],
   bodsCountMap = {},
   bodsBreakdownMap = {},
   onRetry,
@@ -731,7 +730,6 @@ export function SourceBucketCard({
 }: {
   bucket: SourceBucket;
   riskByHit: Record<string, RiskSignal[]>;
-  sourceSignals?: RiskSignal[];
   bodsCountMap?: Record<string, number>;
   bodsBreakdownMap?: Record<string, BodsBreakdown>;
   /** Re-run this source via /lookup-source — shown on error cards. */
@@ -745,8 +743,6 @@ export function SourceBucketCard({
     ? "text-red-700"
     : "text-oo-muted";
 
-  const headerSignals = sourceSignals;
-
   return (
     <article
       id={`oc-source-${bucket.sourceId}`}
@@ -757,13 +753,6 @@ export function SourceBucketCard({
           <h3 className="font-head font-bold text-[15px] text-oo-ink">
             {bucket.sourceName}
           </h3>
-          {headerSignals.length > 0 && (
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {headerSignals.map((sig, i) => (
-                <RiskChip key={`${sig.code}-${i}`} signal={sig} compact />
-              ))}
-            </div>
-          )}
         </div>
         {(() => {
           const firstHit = bucket.hits.find((h) => !h.is_stub);

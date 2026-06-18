@@ -576,16 +576,6 @@ export default function App() {
     return out;
   }, [riskSignals]);
 
-  // Index risk signals by source_id so each source card shows only the
-  // signals attributed to that source — not all entity-level signals.
-  const riskBySource = useMemo(() => {
-    const out: Record<string, RiskSignal[]> = {};
-    for (const sig of riskSignals) {
-      (out[sig.source_id] = out[sig.source_id] ?? []).push(sig);
-    }
-    return out;
-  }, [riskSignals]);
-
   // Distinct codes — used for the top-level summary chip strip.
   const aggregatedCodes = useMemo(() => {
     const seen = new Map<string, RiskSignal>();
@@ -1200,7 +1190,6 @@ export default function App() {
                   <SourceBucketCard
                     bucket={b}
                     riskByHit={riskByHit}
-                    sourceSignals={riskBySource[b.sourceId] ?? []}
                     bodsCountMap={bodsCountMap}
                     bodsBreakdownMap={bodsBreakdownMap}
                     onRetry={b.error ? () => retrySource(b.sourceId) : undefined}
