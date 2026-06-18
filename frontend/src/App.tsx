@@ -1151,8 +1151,6 @@ export default function App() {
           </section>
         )}
 
-        {streamingLei && <SecuritiesSection lei={streamingLei} />}
-
         {(cddBuckets.length > 0 || pendingCddSources.length > 0) && (
           <section className="mb-8">
             <SectionLabel>
@@ -1211,6 +1209,8 @@ export default function App() {
             </div>
           </section>
         )}
+
+        {streamingLei && <SecuritiesSection lei={streamingLei} />}
 
         {(esgBuckets.length > 0 || pendingEsgSources.length > 0) && (
           <EsgPanel buckets={esgBuckets} pendingCount={pendingEsgSources.length} bodsCountMap={bodsCountMap} />
