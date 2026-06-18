@@ -574,6 +574,12 @@ export function HitRow({
   const stmtCount = detail?.bods.length ?? preloadedStmtCount ?? 0;
   const hasKnownCount = detail !== null || preloadedStmtCount !== undefined;
 
+  // A single (or zero) BODS statement is one entity with no relationships —
+  // there is no ownership graph to draw, so suppress the Visualise strip. While
+  // the count is still unknown (source not yet deepened) we keep the strip so
+  // the affordance isn't withheld prematurely.
+  const showGraphStrip = !hasKnownCount || stmtCount > 1;
+
   // Graph-flavoured subtitle for the Visualise strip. Use the loaded detail
   // when available, otherwise the entity/relationship split streamed up front
   // via the bods_counts SSE event; fall back to a descriptive label only when
@@ -616,7 +622,9 @@ export function HitRow({
       )}
 
       {/* Visualise — primary invitation strip (the graph is OpenCheck's headline
-          feature, so it gets a full-width call to action rather than a peer pill). */}
+          feature, so it gets a full-width call to action rather than a peer pill).
+          Hidden when the source returns ≤ 1 statement: a lone entity is not a graph. */}
+      {showGraphStrip && (
       <button
         type="button"
         onClick={toggleDiagram}
@@ -645,9 +653,10 @@ export function HitRow({
           <path d="M4.5 2.5 L8 6 L4.5 9.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </button>
+      )}
 
       {/* Secondary drill-downs — quieter than the graph CTA. */}
-      <div className="flex flex-wrap gap-4 mt-2 text-[11px] font-mono">
+      <div className={`flex flex-wrap gap-4 text-[11px] font-mono ${showGraphStrip ? "mt-2" : "mt-3"}`}>
         <button type="button" onClick={toggleStatements} aria-pressed={showStatements}
           className={`hover:underline ${showStatements ? "text-oo-blue" : "text-oo-muted hover:text-oo-ink"}`}>
           {showStatements ? "Hide statements" : (
