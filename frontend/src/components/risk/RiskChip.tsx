@@ -16,6 +16,10 @@ export const RISK_PRESENTATION: Record<
     label: "Sanctioned",
     classes: "bg-rose-50 text-rose-700 border-rose-200",
   },
+  SANCTIONED_SECURITY: {
+    label: "Sanctioned securities",
+    classes: "bg-rose-50 text-rose-700 border-rose-300 font-semibold",
+  },
   SANCTIONS_LINKED: {
     label: "Sanctions-linked",
     classes: "bg-amber-50 text-amber-800 border-amber-300",

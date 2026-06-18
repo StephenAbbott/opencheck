@@ -114,6 +114,38 @@ def _sanctioned_for_lei(lei: str) -> dict[str, dict[str, Any]]:
     return {isin: meta for isin in entry.get("isins") or [] if isin}
 
 
+def sanctioned_securities_signal(lei: str) -> dict[str, Any] | None:
+    """A ``SANCTIONED_SECURITY`` risk-signal dict if the LEI has sanctioned
+    securities in the index, else ``None``. Shaped like ``RiskSignal.to_dict()``
+    so the lookup pipeline can merge it with the other signals."""
+    entry = _index().get(lei.strip().upper())
+    if not entry:
+        return None
+    isins = [i for i in (entry.get("isins") or []) if i]
+    if not isins:
+        return None
+    regimes = entry.get("regimes") or []
+    n = len(isins)
+    summary = (
+        f"{n} sanctioned secur{'ity' if n == 1 else 'ities'} mapped to this entity"
+        + (f" ({', '.join(regimes)})" if regimes else "")
+        + " — its securities are subject to sanctions / investment bans."
+    )
+    return {
+        "code": "SANCTIONED_SECURITY",
+        "confidence": "high",
+        "summary": summary,
+        "source_id": "opensanctions",
+        "hit_id": entry.get("id") or lei.strip().upper(),
+        "evidence": {
+            "isin_count": n,
+            "regimes": regimes,
+            "sample_isins": isins[:5],
+            "eo_14071": bool(entry.get("eo_14071")),
+        },
+    }
+
+
 def _row(
     isin: str,
     figi: dict[str, Any] | None,

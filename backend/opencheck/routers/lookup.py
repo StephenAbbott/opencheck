@@ -842,6 +842,7 @@ _STRUCTURAL_SIGNAL_CODES = {
     "COMPLEX_OWNERSHIP_LAYERS",
     "COMPLEX_CORPORATE_STRUCTURE",
     "POSSIBLE_OBFUSCATION",
+    "SANCTIONED_SECURITY",
 }
 _STATEMENT_SCOPED_SIGNAL_CODES = {
     "RELATED_PEP",
@@ -1242,11 +1243,20 @@ async def _lookup_pipeline(
         assess_cross_source_names(bods_all),
         assess_icij_names(bods_all),
     )
+    # Sanctioned-securities chip: cheap in-memory lookup of the subject LEI in
+    # the OpenSanctions securities index (no network). No-op when the index
+    # isn't configured.
+    from .. import securities as _securities
+
+    sec_sig = _securities.sanctioned_securities_signal(lei)
+    sec_signals = [sec_sig] if sec_sig else []
+
     merged = _merge_signals(
         search_signals,
         deepen_signals,
         [s.to_dict() for s in cross_raw],
         [s.to_dict() for s in icij_raw],
+        sec_signals,
     )
     yield ("risk_signals", {"signals": merged})
 

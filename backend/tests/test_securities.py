@@ -229,6 +229,22 @@ async def test_overlay_from_url(monkeypatch, tmp_path):
     assert "opensanctions" in out["sources"]
 
 
+def test_sanctioned_securities_signal(monkeypatch, tmp_path):
+    _write_index(tmp_path, monkeypatch, {
+        "7LTWFZYICNSX8D621K86": {
+            "id": "NK-1", "isins": ["XS1", "XS2"],
+            "regimes": ["US OFAC SDN", "EU"], "eo_14071": True,
+        },
+    })
+    sig = svc.sanctioned_securities_signal("7ltwfzyicnsx8d621k86")  # case-insensitive
+    assert sig is not None
+    assert sig["code"] == "SANCTIONED_SECURITY" and sig["confidence"] == "high"
+    assert sig["evidence"]["isin_count"] == 2
+    assert sig["evidence"]["eo_14071"] is True
+    assert "US OFAC SDN" in sig["summary"]
+    assert svc.sanctioned_securities_signal("OTHERLEI000000000000") is None
+
+
 # ---------------------------------------------------------------------------
 # Endpoint
 # ---------------------------------------------------------------------------
