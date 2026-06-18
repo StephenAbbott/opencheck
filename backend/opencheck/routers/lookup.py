@@ -1392,6 +1392,104 @@ async def _lookup_sse_events(
             yield {"event": event, "data": json.dumps(payload)}
 
 
+# ISO 3166-1 alpha-2 → primary GLEIF Registration Authority code, used by the
+# national-ID → LEI reverse lookup. Mirrors frontend/src/lib/raCodes.ts and the
+# RA table in CLAUDE.md — keep in sync when adding a register. Countries with
+# sub-registries (e.g. GB) map to the dominant one; pass ``ra_code`` explicitly
+# to target a specific sub-registry.
+_RA_BY_COUNTRY: dict[str, str] = {
+    "GB": "RA000585",  # UK Companies House (England & Wales)
+    "NL": "RA000463",  # KvK (Netherlands)
+    "NO": "RA000472",  # Brønnøysund / Brreg (Norway)
+    "IE": "RA000215",  # CRO (Ireland)
+    "LV": "RA000327",  # UR (Latvia)
+    "LT": "RA000330",  # JAR (Lithuania)
+    "FR": "RA000580",  # INPI / SIREN (France)
+    "SE": "RA000544",  # Bolagsverket (Sweden)
+    "EE": "RA000181",  # ariregister (Estonia)
+    "BE": "RA000143",  # BCE/KBO (Belgium)
+    "AT": "RA000128",  # Firmenbuch (Austria)
+    "PL": "RA000439",  # KRS (Poland)
+    "SK": "RA000476",  # RPO (Slovakia)
+    "SG": "RA000509",  # ACRA (Singapore)
+    "CA": "RA000072",  # Corporations Canada
+    "DK": "RA000170",  # CVR (Denmark)
+    "HR": "RA000156",  # Sudski registar (Croatia)
+    "MT": "RA000443",  # Malta Business Registry
+    "BR": "RA000681",  # Receita Federal CNPJ (Brazil)
+}
+
+
+class NationalIdMatch(BaseModel):
+    """One LEI record carrying the queried national registration number."""
+
+    lei: str
+    name: str
+    jurisdiction: str | None = None
+
+
+class ResolveNationalIdResponse(BaseModel):
+    """LEIs that carry a given national company-registration number."""
+
+    number: str
+    country: str | None = None
+    ra_code: str | None = None
+    matches: list[NationalIdMatch]
+
+
+@router.get("/resolve-national-id", response_model=ResolveNationalIdResponse)
+async def resolve_national_id(
+    number: str = Query(
+        ...,
+        min_length=1,
+        description="National company-registration number, e.g. a UK Companies House number.",
+    ),
+    country: str = Query(
+        "",
+        description="ISO 3166-1 alpha-2 country code (e.g. 'GB'); resolved to a GLEIF RA code.",
+    ),
+    ra_code: str = Query(
+        "",
+        description="GLEIF Registration Authority code (e.g. 'RA000585'); overrides 'country' when set.",
+    ),
+) -> ResolveNationalIdResponse:
+    """Resolve a local company-registration number to its LEI(s) via GLEIF.
+
+    The inverse of OpenCheck's normal LEI-first flow: a caller who has a
+    national registry number (but not the LEI) obtains it here, then feeds the
+    LEI to ``/lookup``. Queries GLEIF's three local-id filter fields and
+    de-duplicates by LEI. The RA code — resolved from ``country`` when not given
+    explicitly — scopes the search to one registry, avoiding false matches from
+    coincidental number collisions across jurisdictions.
+    """
+    num = number.strip()
+    code = (ra_code or _RA_BY_COUNTRY.get(country.strip().upper(), "")).strip()
+
+    adapter = REGISTRY.get("gleif")
+    if adapter is None or not hasattr(adapter, "search_by_local_id"):
+        raise HTTPException(status_code=503, detail="GLEIF adapter unavailable")
+
+    hits = await adapter.search_by_local_id(num, code)
+    matches: list[NationalIdMatch] = []
+    for h in hits:
+        if not h.hit_id:
+            continue
+        jurisdiction = None
+        if isinstance(h.raw, dict):
+            entity = ((h.raw.get("attributes") or {}).get("entity") or {})
+            jurisdiction = entity.get("jurisdiction")
+        matches.append(
+            NationalIdMatch(lei=h.hit_id, name=h.name, jurisdiction=jurisdiction)
+        )
+
+    return ResolveNationalIdResponse(
+        number=num,
+        country=(country.strip().upper() or None),
+        ra_code=(code or None),
+        matches=matches,
+    )
+
+
 class LookupSourceResponse(BaseModel):
     """Result of re-running a single source within an existing lookup."""
 

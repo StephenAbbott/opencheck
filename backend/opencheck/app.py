@@ -21,7 +21,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from typing import AsyncIterator
 
 from fastapi import FastAPI, Request
@@ -34,6 +34,18 @@ from .routers import health, search, lookup, export, narrative
 from .routers.search import _ch_ra_code as _ch_ra_code  # re-exported for backward compat
 
 log = logging.getLogger(__name__)
+
+# MCP server (in-process). Built defensively: a failure here must never take
+# down the REST API, so we degrade to "no MCP mount" with a logged warning.
+try:
+    from . import mcp as _mcp_pkg
+
+    _MCP = _mcp_pkg.mcp
+    _MCP_ASGI = _mcp_pkg.asgi_app()  # also lazily creates _MCP.session_manager
+except Exception as exc:  # noqa: BLE001
+    _MCP = None
+    _MCP_ASGI = None
+    log.warning("MCP server unavailable, not mounting /mcp: %s", exc)
 
 
 async def _warm_caches_background() -> None:
@@ -73,13 +85,33 @@ async def _warm_caches_background() -> None:
         log.warning("OpenTender DB warm-up failed (lazy fallback remains): %s", exc)
 
 
+# The MCP streamable-HTTP session manager is single-use per instance (its
+# ``run()`` can be entered only once per process). Production starts the lifespan
+# exactly once, but the test suite spins it up repeatedly in one process — so we
+# guard with a module-level flag and only enter it the first time.
+_mcp_session_started = False
+
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """FastAPI lifespan hook — kicks off background cache warm-up."""
+    """FastAPI lifespan hook — kicks off cache warm-up and runs the MCP server.
+
+    The mounted MCP streamable-HTTP app does not get its own lifespan run by the
+    parent, so the session manager must be entered here, or ``/mcp`` requests
+    would fail. When MCP failed to build (or was already started in this
+    process), we just run the warm-up.
+    """
+    global _mcp_session_started
     warmup = asyncio.create_task(_warm_caches_background())
-    yield  # server runs here
-    if not warmup.done():
-        warmup.cancel()
+    async with AsyncExitStack() as stack:
+        if _MCP is not None and not _mcp_session_started:
+            await stack.enter_async_context(_MCP.session_manager.run())
+            _mcp_session_started = True
+        try:
+            yield  # server runs here
+        finally:
+            if not warmup.done():
+                warmup.cancel()
 
 
 app = FastAPI(
@@ -123,3 +155,19 @@ app.include_router(search.router)
 app.include_router(lookup.router)
 app.include_router(export.router)
 app.include_router(narrative.router)
+
+
+# ---------------------------------------------------------------------------
+# MCP server: streamable-HTTP app mounted at /mcp, plus its ARD descriptor.
+# ---------------------------------------------------------------------------
+if _MCP_ASGI is not None:
+
+    @app.get("/.well-known/mcp.json")
+    async def mcp_descriptor() -> JSONResponse:
+        """ARD / ai-catalog descriptor for the MCP server (CORS-readable)."""
+        return JSONResponse(
+            _mcp_pkg.descriptor(),
+            headers={"access-control-allow-origin": "*"},
+        )
+
+    app.mount("/mcp", _MCP_ASGI)

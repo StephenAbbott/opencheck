@@ -35,6 +35,9 @@ dependencies = [
     # in the Docker image). segno generates the live-check QR code.
     "weasyprint>=60",
     "segno>=1.6",
+    # MCP server (in-process, mounted at /mcp) — exposes the lookup pipeline as
+    # Model Context Protocol tools for AI agents. Streamable-HTTP transport.
+    "mcp>=1.2",
 ]
 
 [project.optional-dependencies]
