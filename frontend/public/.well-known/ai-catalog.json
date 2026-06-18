@@ -1,0 +1,67 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "OpenCheck",
+    "identifier": "did:web:opencheck.world",
+    "description": "Customer due diligence driven by the Legal Entity Identifier (LEI). OpenCheck resolves a company from its LEI, fans out to GLEIF and 30+ national company registers and open datasets, maps everything to the Beneficial Ownership Data Standard (BODS v0.4), and surfaces ownership graphs and risk signals.",
+    "url": "https://opencheck.world"
+  },
+  "entries": [
+    {
+      "identifier": "urn:ai:opencheck.world:api:lei-due-diligence",
+      "displayName": "OpenCheck LEI Due Diligence Lookup",
+      "type": "application/openapi+json",
+      "url": "https://api.opencheck.world/openapi.json",
+      "capabilities": [
+        "LEILookup",
+        "BeneficialOwnership",
+        "SanctionsScreening",
+        "PEPScreening",
+        "RiskSignals",
+        "BODSv0.4"
+      ],
+      "description": "Run customer due diligence on a legal entity from its Legal Entity Identifier (LEI). Resolves the GLEIF record, fans out to 30+ national company registers and open datasets, maps results to the Beneficial Ownership Data Standard (BODS v0.4), and returns an ownership-and-control graph annotated with sanctions, PEP, debarment, offshore-leaks, FATF-jurisdiction and complex-structure risk signals. Primary endpoint: GET /lookup?lei=. Streaming variant for incremental results: GET /lookup-stream. Open data, no API key required.",
+      "representativeQueries": [
+        "run due diligence on the company with LEI 213800LH1BZH3DI6G760",
+        "who are the beneficial owners and controllers of this legal entity",
+        "is this company sanctioned, a PEP, or linked to a sanctioned party",
+        "show the ownership structure and risk flags for this LEI"
+      ]
+    },
+    {
+      "identifier": "urn:ai:opencheck.world:api:entity-search",
+      "displayName": "OpenCheck Entity & LEI Search",
+      "type": "application/openapi+json",
+      "url": "https://api.opencheck.world/openapi.json",
+      "capabilities": [
+        "EntitySearch",
+        "LEIResolution",
+        "NationalIdResolution"
+      ],
+      "description": "Find a company's Legal Entity Identifier (LEI) from a name or a national company-registration number. Free-text fan-out search across GLEIF and connected registers (GET /search?q=&kind=entity), plus national-ID to LEI reverse resolution via GLEIF registration-authority codes. Use this first to obtain the LEI that drives the due-diligence lookup.",
+      "representativeQueries": [
+        "find the LEI for Apple Inc",
+        "look up the legal entity identifier for a company by name",
+        "resolve UK Companies House number 00102498 to an LEI",
+        "what is the LEI of Deutsche Bank"
+      ]
+    },
+    {
+      "identifier": "urn:ai:opencheck.world:api:bods-export",
+      "displayName": "OpenCheck Beneficial Ownership (BODS) Export",
+      "type": "application/openapi+json",
+      "url": "https://api.opencheck.world/openapi.json",
+      "capabilities": [
+        "BODSExport",
+        "OwnershipGraph",
+        "DataExport"
+      ],
+      "description": "Export an entity's beneficial ownership and control graph as Beneficial Ownership Data Standard (BODS v0.4) statements in JSON, JSON-Lines or a zipped bundle (GET /export?lei=&format=json|jsonl|zip). Each entity statement carries the cross-reference identifiers GLEIF publishes against the LEI (BIC, MIC, ISIN, OpenCorporates, S&P CIQ, QCC) plus national company-register numbers, so the LEI connects to datasets worldwide.",
+      "representativeQueries": [
+        "export the beneficial ownership data for this company as BODS",
+        "download the ownership graph in BODS JSON-Lines format",
+        "get a BODS bundle of owners and controllers for this LEI"
+      ]
+    }
+  ]
+}

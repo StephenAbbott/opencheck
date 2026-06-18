@@ -65,6 +65,11 @@ services:
       - path: /*
         name: Cache-Control
         value: no-cache
+      # ARD / ai-catalog discovery manifest must be CORS-readable by crawlers.
+      # https://agenticresourcediscovery.org/how_to_publish/
+      - path: /.well-known/ai-catalog.json
+        name: Access-Control-Allow-Origin
+        value: "*"
     routes:
       # Single-page app: all paths fall back to index.html
       - type: rewrite
