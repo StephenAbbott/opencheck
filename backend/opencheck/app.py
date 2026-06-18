@@ -133,6 +133,9 @@ app.add_middleware(
     allow_credentials=(_cors_origin != "*"),
     allow_methods=["*"],
     allow_headers=["*"],
+    # Browser-based MCP clients must be able to read the session/protocol headers
+    # off streamable-HTTP responses (otherwise the handshake can't continue).
+    expose_headers=["Mcp-Session-Id", "Mcp-Protocol-Version"],
 )
 
 
@@ -170,4 +173,8 @@ if _MCP_ASGI is not None:
             headers={"access-control-allow-origin": "*"},
         )
 
-    app.mount("/mcp", _MCP_ASGI)
+    # Register the streamable-HTTP route (published at /mcp) directly on the app
+    # instead of app.mount("/mcp", …): a Mount would 307-redirect a bare
+    # POST /mcp → /mcp/, which breaks MCP clients that don't replay POST bodies
+    # across redirects. A direct route serves /mcp with no redirect.
+    app.router.routes.extend(_MCP_ASGI.routes)

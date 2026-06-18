@@ -36,20 +36,21 @@ _INSTRUCTIONS = (
     "license_notices in responses."
 )
 
-# ``streamable_http_path="/"`` so the streamable-HTTP app serves at its own root;
-# mounting it at ``/mcp`` on the FastAPI app then exposes the endpoint at ``/mcp``
-# (otherwise FastMCP's default ``/mcp`` path would land at ``/mcp/mcp``).
 # DNS-rebinding protection guards localhost-bound dev servers from malicious
 # browser pages; OpenCheck's MCP runs as a public, read-only API behind a reverse
 # proxy with its own CORS, where the Host/Origin allowlist isn't known ahead of
 # time — so disable it rather than hard-code hosts that would 421 in production.
 _TRANSPORT_SECURITY = TransportSecuritySettings(enable_dns_rebinding_protection=False)
 
+# The route is published at ``/mcp`` and registered directly on the FastAPI app
+# (see app.py) rather than mounted under a prefix — a ``Mount`` at ``/mcp`` would
+# 307-redirect a bare ``POST /mcp`` to ``/mcp/``, and many MCP clients don't
+# replay the POST across that redirect, so the connector silently fails.
 mcp = FastMCP(
     "opencheck",
     instructions=_INSTRUCTIONS,
     stateless_http=True,
-    streamable_http_path="/",
+    streamable_http_path="/mcp",
     transport_security=_TRANSPORT_SECURITY,
 )
 
