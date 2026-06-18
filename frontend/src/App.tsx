@@ -1213,7 +1213,7 @@ export default function App() {
         {streamingLei && <SecuritiesSection lei={streamingLei} />}
 
         {(esgBuckets.length > 0 || pendingEsgSources.length > 0) && (
-          <EsgPanel buckets={esgBuckets} pendingCount={pendingEsgSources.length} bodsCountMap={bodsCountMap} />
+          <EsgPanel buckets={esgBuckets} pendingCount={pendingEsgSources.length} bodsCountMap={bodsCountMap} bodsBreakdownMap={bodsBreakdownMap} />
         )}
 
         {streamingLei && !streaming && totalHits > 0 && (

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { deepen } from "../../lib/api";
-import type { DeepenResponse, SourceHit } from "../../lib/api";
+import type { BodsBreakdown, DeepenResponse, SourceHit } from "../../lib/api";
 import { DeepenBlock, SkeletonSourceCard } from "./SourceBucketCard";
 import type { SourceBucket } from "./SourceBucketCard";
 
@@ -204,16 +204,14 @@ function statusFootnote(statuses: Record<string, number>): string | null {
 // ClimateTRACECard — card for a Climate TRACE / GEM hit
 // ---------------------------------------------------------------------
 
-const ESG_PILL_BASE = "flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors";
-const ESG_PILL_ACTIVE = `${ESG_PILL_BASE} bg-emerald-100 border-emerald-600 text-emerald-800`;
-const ESG_PILL_IDLE = `${ESG_PILL_BASE} bg-white border-emerald-200 text-emerald-700 hover:border-emerald-500 hover:text-emerald-900`;
-
 function ClimateTRACECard({
   hit,
   preloadedStmtCount,
+  preloadedBreakdown,
 }: {
   hit: SourceHit;
   preloadedStmtCount?: number;
+  preloadedBreakdown?: BodsBreakdown;
 }) {
   const [showDiagram,    setShowDiagram]    = useState(false);
   const [showStatements, setShowStatements] = useState(false);
@@ -249,6 +247,25 @@ function ClimateTRACECard({
   const anyOpen = showDiagram || showStatements || showJson;
   const stmtCount = detail?.bods.length ?? preloadedStmtCount ?? 0;
   const hasKnownCount = detail !== null || preloadedStmtCount !== undefined;
+
+  // Graph-flavoured subtitle for the Visualise strip (matches the other source
+  // cards): use the loaded detail, else the streamed entity/relationship split,
+  // else a descriptive label.
+  const breakdown: BodsBreakdown | undefined = detail
+    ? {
+        entities: detail.bods.filter((s) => (s as Record<string, unknown>).recordType === "entity").length,
+        relationships: detail.bods.filter((s) => (s as Record<string, unknown>).recordType === "relationship").length,
+      }
+    : preloadedBreakdown;
+  const graphMeta = breakdown
+    ? `${breakdown.entities} ${breakdown.entities === 1 ? "entity" : "entities"} · ${breakdown.relationships} ${breakdown.relationships === 1 ? "relationship" : "relationships"}`
+    : "Interactive ownership & control graph";
+  // A single (or zero) statement is not a graph — hide the strip once known.
+  const showGraphStrip = !hasKnownCount || stmtCount > 1;
+
+  useEffect(() => {
+    if (!showGraphStrip && showDiagram) setShowDiagram(false);
+  }, [showGraphStrip, showDiagram]);
 
   async function ensureFetched() {
     if (detail || loading) return;
@@ -404,43 +421,50 @@ function ClimateTRACECard({
           </div>
         )}
 
-        {/* Action pills */}
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          <button type="button" onClick={toggleDiagram}
-            className={showDiagram ? ESG_PILL_ACTIVE : ESG_PILL_IDLE}
-            aria-pressed={showDiagram}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+        {/* Visualise — primary invitation strip (emerald, to match the ESG card),
+            aligned with the "Explore the ownership graph" CTA on the other source
+            cards. Hidden when the source returns ≤ 1 statement. */}
+        {showGraphStrip && (
+        <button
+          type="button"
+          onClick={toggleDiagram}
+          aria-pressed={showDiagram}
+          className="mt-3 w-full flex items-center gap-3 rounded-oo border border-emerald-300 bg-emerald-100 px-3 py-2 text-left transition-colors hover:bg-emerald-200/70"
+        >
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white">
+            <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden="true">
               <circle cx="6" cy="2.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
               <circle cx="2" cy="9.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
               <circle cx="10" cy="9.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
               <line x1="6" y1="4.3" x2="2.8" y2="7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
               <line x1="6" y1="4.3" x2="9.2" y2="7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
             </svg>
-            {showDiagram ? "Hide diagram" : "Visualise"}
-          </button>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-semibold text-emerald-900 leading-tight">
+              {showDiagram ? "Hide ownership graph" : "Explore the ownership graph"}
+            </span>
+            <span className="block text-[11px] font-mono text-emerald-700/80 truncate">
+              {graphMeta}
+            </span>
+          </span>
+          <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden="true"
+            className={`shrink-0 text-emerald-700 transition-transform ${showDiagram ? "rotate-90" : ""}`}>
+            <path d="M4.5 2.5 L8 6 L4.5 9.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        )}
 
-          <button type="button" onClick={toggleStatements}
-            className={showStatements ? ESG_PILL_ACTIVE : ESG_PILL_IDLE}
-            aria-pressed={showStatements}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
-              <line x1="3.5" y1="4.5" x2="8.5" y2="4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-              <line x1="3.5" y1="6.5" x2="8.5" y2="6.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-              <line x1="3.5" y1="8.5" x2="6.5" y2="8.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-            </svg>
+        {/* Secondary drill-downs — quieter than the graph CTA. */}
+        <div className={`flex flex-wrap gap-4 text-[11px] font-mono ${showGraphStrip ? "mt-2" : "mt-3"}`}>
+          <button type="button" onClick={toggleStatements} aria-pressed={showStatements}
+            className={`hover:underline ${showStatements ? "text-emerald-800" : "text-emerald-700/70 hover:text-emerald-900"}`}>
             {showStatements ? "Hide statements" : (
               hasKnownCount ? `${stmtCount} statement${stmtCount === 1 ? "" : "s"}` : "Statements"
             )}
           </button>
-
-          <button type="button" onClick={toggleJson}
-            className={showJson ? ESG_PILL_ACTIVE : ESG_PILL_IDLE}
-            aria-pressed={showJson}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <path d="M3.5 2.5 L1.5 6 L3.5 9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M8.5 2.5 L10.5 6 L8.5 9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-              <line x1="7" y1="2" x2="5" y2="10" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-            </svg>
+          <button type="button" onClick={toggleJson} aria-pressed={showJson}
+            className={`hover:underline ${showJson ? "text-emerald-800" : "text-emerald-700/70 hover:text-emerald-900"}`}>
             {showJson ? "Hide JSON" : "Raw JSON"}
           </button>
         </div>
@@ -472,10 +496,12 @@ export function EsgPanel({
   buckets,
   pendingCount = 0,
   bodsCountMap = {},
+  bodsBreakdownMap = {},
 }: {
   buckets: SourceBucket[];
   pendingCount?: number;
   bodsCountMap?: Record<string, number>;
+  bodsBreakdownMap?: Record<string, BodsBreakdown>;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const hitCount = buckets.reduce((n, b) => n + b.hits.length, 0);
@@ -553,6 +579,7 @@ export function EsgPanel({
                   key={`${hit.source_id}:${hit.hit_id}`}
                   hit={hit}
                   preloadedStmtCount={bodsCountMap[`${hit.source_id}:${hit.hit_id}`]}
+                  preloadedBreakdown={bodsBreakdownMap[`${hit.source_id}:${hit.hit_id}`]}
                 />
               ))
             )}
