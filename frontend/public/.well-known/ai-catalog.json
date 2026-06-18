@@ -62,6 +62,27 @@
         "download the ownership graph in BODS JSON-Lines format",
         "get a BODS bundle of owners and controllers for this LEI"
       ]
+    },
+    {
+      "identifier": "urn:ai:opencheck.world:mcp:cdd",
+      "displayName": "OpenCheck MCP Server",
+      "type": "application/mcp-server+json",
+      "url": "https://api.opencheck.world/.well-known/mcp.json",
+      "capabilities": [
+        "LEILookup",
+        "EntitySearch",
+        "NationalIdResolution",
+        "BeneficialOwnership",
+        "SanctionsScreening",
+        "BODSExport"
+      ],
+      "description": "Model Context Protocol server (streamable HTTP at https://api.opencheck.world/mcp) exposing OpenCheck as agent-native tools: opencheck_search and opencheck_resolve_national_id to obtain an LEI, opencheck_lookup for owners/controllers and sanctions/PEP/debarment risk, opencheck_export_bods for the BODS v0.4 ownership graph, and opencheck_list_sources. The most directly invocable surface for AI agents.",
+      "representativeQueries": [
+        "check who owns and controls this company",
+        "is this entity sanctioned, a PEP, or debarred",
+        "resolve this company registration number to an LEI",
+        "export this company's beneficial ownership as BODS"
+      ]
     }
   ]
 }

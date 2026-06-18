@@ -38,6 +38,10 @@ the right capability to a task:
 3. **`…:api:bods-export`** — BODS v0.4 export of the ownership graph in
    JSON / JSON-Lines / zip (`GET /export`).
 
+A fourth entry advertises the **MCP server** (`type: application/mcp-server+json`,
+`url: https://api.opencheck.world/.well-known/mcp.json`) — the agent-native
+surface. See [`mcp-server.md`](./mcp-server.md).
+
 `type` is `application/openapi+json`: ARD/ai-catalog is artifact-agnostic, and
 OpenCheck's native runtime is a REST API documented by OpenAPI (the official
 vendor type `application/vnd.oai.openapi+json` is an equivalent alternative).
