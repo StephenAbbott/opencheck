@@ -84,6 +84,17 @@ async def _warm_caches_background() -> None:
     except Exception as exc:  # noqa: BLE001
         log.warning("OpenTender DB warm-up failed (lazy fallback remains): %s", exc)
 
+    # Sanctioned-securities index: load the file/URL off the event loop so the
+    # first /securities request doesn't block on a download.
+    try:
+        from .securities import warm_index
+
+        await asyncio.to_thread(warm_index)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Securities index warm-up failed (lazy fallback remains): %s", exc)
+
 
 # The MCP streamable-HTTP session manager is single-use per instance (its
 # ``run()`` can be entered only once per process). Production starts the lifespan
