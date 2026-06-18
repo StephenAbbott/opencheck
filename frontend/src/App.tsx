@@ -1565,7 +1565,9 @@ function ApiPage() {
         >
           Beneficial Ownership Data Standard (BODS) v0.4
         </a>
-        . No API key is required to read.
+        . No API key is required to read. OpenCheck also runs a{" "}
+        <strong className="text-oo-ink font-semibold">Model Context Protocol (MCP)</strong>{" "}
+        server, so AI agents can call the same pipeline as typed tools — see below.
       </p>
 
       <div className="mb-8 max-w-2xl">
@@ -1600,6 +1602,58 @@ function ApiPage() {
           <ApiEndpoint path="/lookup-source?lei=<LEI>&source_id=<id>">
             Re-run a single source for an existing lookup (the per-source “retry” in the UI).
           </ApiEndpoint>
+        </BtsCard>
+
+        <BtsCard title="MCP server — for AI agents">
+          <p className="text-[13px] leading-[1.7] text-oo-muted mb-3">
+            OpenCheck speaks the{" "}
+            <a
+              href="https://modelcontextprotocol.io"
+              target="_blank"
+              rel="noreferrer"
+              className="underline text-oo-blue hover:text-oo-burst"
+            >
+              Model Context Protocol
+            </a>
+            , exposing the same pipeline as typed tools an AI agent can call
+            directly — no glue code. It uses streamable HTTP, needs no API key,
+            and carries the same source licence notices as the REST API.
+          </p>
+          <div className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
+            Endpoint
+          </div>
+          <CopyField value={`${base}/mcp`} />
+          <div className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mt-4 mb-2">
+            Tools
+          </div>
+          <dl className="space-y-1.5">
+            {([
+              ["opencheck_search", "Find a company’s LEI from a name or free text."],
+              ["opencheck_resolve_national_id", "Resolve a national company-registration number to its LEI."],
+              ["opencheck_lookup", "Due diligence by LEI: identity, identifiers, risk signals, source coverage."],
+              ["opencheck_export_bods", "The full ownership-and-control graph as BODS v0.4 statements."],
+              ["opencheck_list_sources", "Inventory of the data sources, with licence and live status."],
+            ] as [string, string][]).map(([name, desc]) => (
+              <div key={name} className="flex gap-2 text-[12.5px] leading-[1.6]">
+                <dt className="font-mono text-oo-blue shrink-0 break-all">{name}</dt>
+                <dd className="text-oo-muted">{desc}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="text-[13px] leading-[1.7] text-oo-muted mt-4">
+            Add it as a custom connector in any MCP client (e.g. Claude Desktop →
+            Settings → Connectors). It is discoverable via{" "}
+            <a
+              href="https://agenticresourcediscovery.org/"
+              target="_blank"
+              rel="noreferrer"
+              className="underline text-oo-blue hover:text-oo-burst"
+            >
+              Agentic Resource Discovery
+            </a>
+            ; the server descriptor is at{" "}
+            <code className={mono}>/.well-known/mcp.json</code>.
+          </p>
         </BtsCard>
 
         <BtsCard title="Search &amp; drill-down">
