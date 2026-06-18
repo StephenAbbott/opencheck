@@ -1,0 +1,55 @@
+name: Refresh sanctioned-securities index
+
+# Rebuilds the sanctioned-securities index from the OpenSanctions securities.csv
+# export and replaces the GitHub Release asset the backend downloads at startup
+# (OPENCHECK_SECURITIES_INDEX_URL). The index is CC-BY-NC and intentionally NOT
+# committed to the repo — this keeps the hosted copy current without putting the
+# data in git history.
+#
+# Prerequisites (one-off):
+#   * a published Release tagged `securities-index` (the asset's stable URL).
+#   * optional repo secret RENDER_DEPLOY_HOOK_URL to redeploy the backend so the
+#     refreshed index is picked up immediately (otherwise it loads on the next
+#     cold start / deploy).
+on:
+  schedule:
+    - cron: "0 8 * * 1" # Mondays 08:00 UTC (after the drift + smoke checks)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write # required to upload the release asset
+
+concurrency:
+  group: refresh-securities-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the index from the latest securities.csv
+        run: python3 backend/scripts/extract_securities.py --output sanctioned_isins.json
+
+      - name: Sanity-check the output (guard against an empty/broken export)
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          data = json.load(open("sanctioned_isins.json"))
+          n = len(data)
+          print(f"{n} LEIs in the index")
+          if n < 50:
+              sys.exit(f"Refusing to publish: only {n} LEIs — likely a source/format change.")
+          PY
+
+      - name: Replace the `securities-index` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload securities-index sanctioned_isins.json --clobber
+
+      - name: Trigger a Render redeploy (optional)
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        if: ${{ env.HOOK != '' }}
+        run: curl -fsS -X POST "$HOOK"
