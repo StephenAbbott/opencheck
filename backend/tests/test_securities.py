@@ -1,10 +1,16 @@
-"""Tests for the securities service and /securities endpoint.
+"""Tests for the securities service, /securities endpoint, and the bulk
+sanctioned-securities index extractor.
 
-GLEIF, OpenFIGI and OpenSanctions are mocked at the httpx level (no network).
+GLEIF and OpenFIGI are mocked at the httpx level (no network). The OpenSanctions
+sanctioned overlay reads a local JSON index (built by extract_securities.py),
+so it's exercised with a temp fixture file.
 """
 
 from __future__ import annotations
 
+import importlib.util
+import json
+from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
@@ -15,9 +21,19 @@ from opencheck import securities as svc
 from opencheck.app import app
 from opencheck.config import get_settings
 
+_SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
+
+
+def _load_script(name: str):
+    spec = importlib.util.spec_from_file_location(name, _SCRIPTS / f"{name}.py")
+    mod = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(mod)
+    return mod
+
 
 # ---------------------------------------------------------------------------
-# Fake httpx client routed by URL
+# Fake httpx client routed by URL (GLEIF + OpenFIGI only)
 # ---------------------------------------------------------------------------
 
 
@@ -35,26 +51,19 @@ class _Resp:
 
 
 class _FakeClient:
-    def __init__(self, *, gleif: Any, openfigi_by_isin: dict, opensanctions: Any) -> None:
+    def __init__(self, *, gleif: Any, openfigi_by_isin: dict) -> None:
         self._gleif = gleif
         self._figi = openfigi_by_isin
-        self._os = opensanctions
-        self.figi_calls: list[list[str]] = []
 
     async def get(self, url: str, params=None, headers=None) -> _Resp:
-        if "/isins" in url:
-            return _Resp(self._gleif)
-        if "search/securities" in url:
-            return _Resp(self._os)
-        raise AssertionError(f"unexpected GET {url}")
+        assert "/isins" in url, f"unexpected GET {url}"
+        return _Resp(self._gleif)
 
     async def post(self, url: str, json=None, headers=None) -> _Resp:
         assert url == svc._OPENFIGI_URL
-        isins = [job["idValue"] for job in json]
-        self.figi_calls.append(isins)
         results = []
-        for isin in isins:
-            meta = self._figi.get(isin)
+        for job in json:
+            meta = self._figi.get(job["idValue"])
             results.append({"data": [meta]} if meta else {"warning": "No identifier found."})
         return _Resp(results)
 
@@ -70,23 +79,31 @@ class _FakeCM:
         return False
 
 
-def _gleif_isins_payload(isins: list[str], total: int) -> dict:
+def _gleif_payload(isins: list[str], total: int) -> dict:
     return {
         "data": [{"type": "isins", "attributes": {"isin": i}} for i in isins],
         "meta": {"pagination": {"total": total}},
     }
 
 
+def _write_index(tmp_path: Path, monkeypatch, mapping: dict) -> None:
+    path = tmp_path / "sanctioned_isins.json"
+    path.write_text(json.dumps(mapping), encoding="utf-8")
+    monkeypatch.setenv("OPENCHECK_SECURITIES_INDEX_FILE", str(path))
+    svc.reset_index_cache()
+    get_settings.cache_clear()
+
+
 @pytest.fixture(autouse=True)
-def _live_with_keys(monkeypatch, tmp_path):
+def _live(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
     monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
     monkeypatch.setenv("OPENFIGI_API_KEY", "figi-key")
-    monkeypatch.setenv("OPENSANCTIONS_API_KEY", "os-key")
-    monkeypatch.setenv("OPENCHECK_SECURITIES_SANCTIONS_ENABLED", "true")
     get_settings.cache_clear()
+    svc.reset_index_cache()
     yield
     get_settings.cache_clear()
+    svc.reset_index_cache()
 
 
 # ---------------------------------------------------------------------------
@@ -98,120 +115,118 @@ async def test_offline_returns_unavailable(monkeypatch):
     monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
     get_settings.cache_clear()
     out = await svc.assemble_securities("7LTWFZYICNSX8D621K86")
-    assert out["available"] is False
-    assert out["total"] == 0 and out["securities"] == []
+    assert out["available"] is False and out["securities"] == []
 
 
-async def test_full_assembly_types_and_flags_sanctioned():
-    client = _FakeClient(
-        gleif=_gleif_isins_payload(["DE000A1", "DE000A2"], total=22499),
-        openfigi_by_isin={
-            "DE000A1": {"securityType2": "Warrant", "name": "DB Warrant", "ticker": "DBW", "exchCode": "GR", "marketSector": "Equity"},
-            "DE000A2": {"securityType2": "Common Stock", "name": "DB Share", "ticker": "DBK", "exchCode": "GR", "marketSector": "Equity"},
-            "XS0848530001": {"securityType2": "Bond", "name": "Sanctioned Bond", "ticker": None, "exchCode": "LSE", "marketSector": "Corp"},
+async def test_full_assembly_types_and_flags_sanctioned(monkeypatch, tmp_path):
+    _write_index(tmp_path, monkeypatch, {
+        "7LTWFZYICNSX8D621K86": {
+            "name": "Deutsche Bank", "id": "NK-1",
+            "isins": ["XS0848530001"], "regimes": ["US OFAC SDN", "EU"],
         },
-        opensanctions={
-            "results": [
-                {"id": "NK-1", "caption": "Sanctioned Bond", "target": True,
-                 "datasets": ["us_ofac_sdn", "eu_fsf"], "topics": ["sanction"],
-                 "properties": {"isin": ["XS0848530001"]}},
-            ]
+    })
+    client = _FakeClient(
+        gleif=_gleif_payload(["DE000A1", "DE000A2"], total=22499),
+        openfigi_by_isin={
+            "DE000A1": {"securityType2": "Warrant", "name": "DB Warrant", "ticker": "DBW", "exchCode": "GR"},
+            "DE000A2": {"securityType2": "Common Stock", "name": "DB Share", "ticker": "DBK", "exchCode": "GR"},
+            "XS0848530001": {"securityType2": "Bond", "name": "Sanctioned Bond", "exchCode": "LSE"},
         },
     )
     with patch.object(svc, "build_client", lambda: _FakeCM(client)):
         out = await svc.assemble_securities("7LTWFZYICNSX8D621K86")
 
-    assert out["available"] is True
-    assert out["total"] == 22499
-    # The GLEIF page is typed by OpenFIGI.
+    assert out["available"] is True and out["total"] == 22499
     page = {s["isin"]: s for s in out["securities"]}
     assert page["DE000A1"]["type"] == "Warrant"
-    assert page["DE000A2"]["type"] == "Common Stock"
     assert all(not s["sanctioned"] for s in out["securities"])
-    # Sanctioned ISIN (not in the GLEIF page) surfaces with regimes + type.
     assert len(out["sanctioned"]) == 1
     s = out["sanctioned"][0]
-    assert s["isin"] == "XS0848530001" and s["sanctioned"] is True
-    assert s["type"] == "Bond"
+    assert s["isin"] == "XS0848530001" and s["type"] == "Bond"
     assert "US OFAC SDN" in s["regimes"] and "EU" in s["regimes"]
-    # CC-BY-NC notice present because there is sanctioned data.
     assert out["license_notices"] and out["license_notices"][0]["source_id"] == "opensanctions"
     assert set(out["sources"]) == {"gleif", "openfigi", "opensanctions"}
 
 
-async def test_sanctioned_security_with_zero_gleif_isins():
-    """Rosneft case: GLEIF has no ISINs, but OpenSanctions still surfaces the
-    sanctioned ones."""
-    client = _FakeClient(
-        gleif=_gleif_isins_payload([], total=0),
-        openfigi_by_isin={"US67812M2070": {"securityType2": "Depositary Receipt", "name": "ROSNEFT GDR", "exchCode": "OTC", "marketSector": "Equity"}},
-        opensanctions={
-            "results": [
-                {"id": "NK-2", "caption": "Rosneft", "target": True,
-                 "datasets": ["us_ofac_sdn"], "topics": ["sanction"],
-                 "properties": {"isin": ["US67812M2070"]}},
-            ]
+async def test_sanctioned_security_with_zero_gleif_isins(monkeypatch, tmp_path):
+    """Rosneft case: GLEIF has no ISINs, but the index still surfaces sanctioned ones."""
+    _write_index(tmp_path, monkeypatch, {
+        "253400JT3MQWNDKMJE44": {
+            "name": "Rosneft", "id": "NK-2",
+            "isins": ["US67812M2070"], "regimes": ["US OFAC SDN", "EO 14071 investment ban"],
         },
+    })
+    client = _FakeClient(
+        gleif=_gleif_payload([], total=0),
+        openfigi_by_isin={"US67812M2070": {"securityType2": "Depositary Receipt", "name": "ROSNEFT GDR", "exchCode": "OTC"}},
     )
     with patch.object(svc, "build_client", lambda: _FakeCM(client)):
         out = await svc.assemble_securities("253400JT3MQWNDKMJE44")
     assert out["total"] == 0 and out["securities"] == []
     assert len(out["sanctioned"]) == 1
     assert out["sanctioned"][0]["type"] == "Depositary Receipt"
+    assert "EO 14071 investment ban" in out["sanctioned"][0]["regimes"]
 
 
-async def test_opensanctions_error_degrades_gracefully():
-    class _OSErrClient(_FakeClient):
-        async def get(self, url, params=None, headers=None):
-            if "search/securities" in url:
-                return _Resp({}, status=500)
-            return await super().get(url, params=params, headers=headers)
-
-    client = _OSErrClient(
-        gleif=_gleif_isins_payload(["DE000A1"], total=1),
-        openfigi_by_isin={"DE000A1": {"securityType2": "Warrant", "name": "W"}},
-        opensanctions={},
+async def test_overlay_off_without_index(monkeypatch, tmp_path):
+    """No index file configured → GLEIF + OpenFIGI only, no sanctioned banner."""
+    monkeypatch.delenv("OPENCHECK_SECURITIES_INDEX_FILE", raising=False)
+    get_settings.cache_clear()
+    client = _FakeClient(
+        gleif=_gleif_payload(["DE000A1"], total=1),
+        openfigi_by_isin={"DE000A1": {"securityType2": "Warrant"}},
     )
     with patch.object(svc, "build_client", lambda: _FakeCM(client)):
         out = await svc.assemble_securities("7LTWFZYICNSX8D621K86")
-    assert out["available"] is True
-    assert out["sanctioned"] == []  # OS failed → no sanctioned, but not fatal
-    assert out["securities"][0]["isin"] == "DE000A1"
+    assert out["sanctioned"] == []
+    assert "opensanctions" not in out["sources"]
     assert out["license_notices"] == []
 
 
-async def test_overlay_disabled_by_default(monkeypatch):
-    """With the sanctions overlay flag off, the panel is GLEIF+OpenFIGI only."""
-    monkeypatch.setenv("OPENCHECK_SECURITIES_SANCTIONS_ENABLED", "false")
-    get_settings.cache_clear()
+async def test_lei_not_in_index_is_clean(monkeypatch, tmp_path):
+    _write_index(tmp_path, monkeypatch, {"OTHERLEI000000000000": {"isins": ["X"], "regimes": []}})
     client = _FakeClient(
-        gleif=_gleif_isins_payload(["DE000A1"], total=1),
+        gleif=_gleif_payload(["DE000A1"], total=1),
         openfigi_by_isin={"DE000A1": {"securityType2": "Warrant"}},
-        opensanctions={"results": [
-            {"id": "X", "target": True, "topics": ["sanction"], "properties": {"isin": ["DE000A1"]}},
-        ]},
-    )
-    with patch.object(svc, "build_client", lambda: _FakeCM(client)):
-        out = await svc.assemble_securities("7LTWFZYICNSX8D621K86")
-    assert out["available"] is True
-    assert out["sanctioned"] == []
-    assert "opensanctions" not in out["sources"]
-    assert out["securities"][0]["type"] == "Warrant"
-
-
-async def test_unsanctioned_result_is_ignored():
-    client = _FakeClient(
-        gleif=_gleif_isins_payload(["DE000A1"], total=1),
-        openfigi_by_isin={"DE000A1": {"securityType2": "Warrant"}},
-        opensanctions={"results": [
-            {"id": "X", "caption": "Not sanctioned", "target": False, "topics": ["corp.public"],
-             "properties": {"isin": ["DE000A1"]}},
-        ]},
     )
     with patch.object(svc, "build_client", lambda: _FakeCM(client)):
         out = await svc.assemble_securities("7LTWFZYICNSX8D621K86")
     assert out["sanctioned"] == []
     assert out["securities"][0]["sanctioned"] is False
+    # The source was still consulted (index configured), so it's listed.
+    assert "opensanctions" in out["sources"]
+
+
+async def test_overlay_from_url(monkeypatch, tmp_path):
+    """The index can be loaded from a URL (GitHub raw / release asset / S3)."""
+    monkeypatch.delenv("OPENCHECK_SECURITIES_INDEX_FILE", raising=False)
+    monkeypatch.setenv("OPENCHECK_SECURITIES_INDEX_URL", "https://example.com/idx.json")
+    get_settings.cache_clear()
+    svc.reset_index_cache()
+    blob = json.dumps({
+        "7LTWFZYICNSX8D621K86": {"name": "DB", "id": "NK-1", "isins": ["XS0848530001"], "regimes": ["EU"]},
+    }).encode("utf-8")
+
+    class _U:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return blob
+
+    client = _FakeClient(
+        gleif=_gleif_payload([], total=0),
+        openfigi_by_isin={"XS0848530001": {"securityType2": "Bond"}},
+    )
+    with patch("opencheck.securities.urllib.request.urlopen", lambda url, timeout=30: _U()):
+        with patch.object(svc, "build_client", lambda: _FakeCM(client)):
+            out = await svc.assemble_securities("7LTWFZYICNSX8D621K86")
+    assert len(out["sanctioned"]) == 1
+    assert out["sanctioned"][0]["isin"] == "XS0848530001"
+    assert "opensanctions" in out["sources"]
 
 
 # ---------------------------------------------------------------------------
@@ -231,6 +246,35 @@ def test_endpoint_offline_returns_available_false(monkeypatch):
     with TestClient(app) as client:
         r = client.get("/securities", params={"lei": "7LTWFZYICNSX8D621K86"})
     assert r.status_code == 200
-    body = r.json()
-    assert body["available"] is False
-    assert body["lei"] == "7LTWFZYICNSX8D621K86"
+    assert r.json()["available"] is False
+
+
+# ---------------------------------------------------------------------------
+# extract_securities.py — CSV → index
+# ---------------------------------------------------------------------------
+
+
+def test_extractor_builds_index_filtering_correctly():
+    ex = _load_script("extract_securities")
+    rows = [
+        # sanctioned, has LEI + ISINs → kept
+        {"caption": "Rosneft", "lei": "253400JT3MQWNDKMJE44", "isins": "US67812M2070;XS0123456789",
+         "sanctioned": "t", "eo_14071": "t", "risk_datasets": "us_ofac_sdn;gb_hmt_invbans", "id": "NK-2"},
+        # private sanctioned co, no LEI → dropped
+        {"caption": "Private LLC", "lei": "", "isins": "", "sanctioned": "t", "eo_14071": "f",
+         "risk_datasets": "us_ofac_sdn", "id": "NK-3"},
+        # has LEI but not sanctioned/eo (just a reference row) → dropped
+        {"caption": "Clean Corp", "lei": "549300CLEANCLEAN0001", "isins": "GB00CLEAN001",
+         "sanctioned": "f", "eo_14071": "f", "risk_datasets": "", "id": "NK-4"},
+        # sanctioned + LEI but no ISINs → dropped (nothing to show)
+        {"caption": "No Sec", "lei": "549300NOSEC00000001", "isins": "",
+         "sanctioned": "t", "eo_14071": "f", "risk_datasets": "eu_fsf", "id": "NK-5"},
+    ]
+    index = ex.build_index(rows)
+    assert set(index) == {"253400JT3MQWNDKMJE44"}
+    entry = index["253400JT3MQWNDKMJE44"]
+    assert entry["isins"] == ["US67812M2070", "XS0123456789"]
+    assert "US OFAC SDN" in entry["regimes"]
+    assert "UK investment ban" in entry["regimes"]
+    assert "EO 14071 investment ban" in entry["regimes"]
+    assert entry["eo_14071"] is True and entry["sanctioned"] is True

@@ -76,13 +76,20 @@ class Settings(BaseSettings):
     # rate limit (and smaller batch size). Used by the securities service to
     # type the handful of ISINs we actually display.
     openfigi_api_key: str | None = Field(default=None, alias="OPENFIGI_API_KEY")
-    # The sanctioned-securities overlay queries the OpenSanctions ``securities``
-    # collection, which is gated behind a higher API plan tier than the default
-    # sanctions collection. Off by default so the securities panel ships on
-    # GLEIF + OpenFIGI alone; flip on once the OpenSanctions plan (or the bulk
-    # securities.csv route) is in place.
-    securities_sanctions_enabled: bool = Field(
-        default=False, alias="OPENCHECK_SECURITIES_SANCTIONS_ENABLED"
+    # Sanctioned-securities overlay: path to the compact LEI→ISIN index built
+    # from the free OpenSanctions securities.csv export by
+    # scripts/extract_securities.py. When unset, the securities panel runs on
+    # GLEIF + OpenFIGI alone (no sanctioned banner). OpenSanctions has no live
+    # securities-by-LEI API — that collection is a bulk-export wrapper.
+    securities_index_file: str | None = Field(
+        default=None, alias="OPENCHECK_SECURITIES_INDEX_FILE"
+    )
+    # Alternative to the local file: a URL (GitHub raw / release asset / S3) the
+    # backend downloads at startup. Preferred on ephemeral-filesystem hosts
+    # (Render) so the index can be refreshed without rebuilding the image. The
+    # file wins if both are set.
+    securities_index_url: str | None = Field(
+        default=None, alias="OPENCHECK_SECURITIES_INDEX_URL"
     )
     wikidata_sparql_endpoint: str = Field(
         default="https://query.wikidata.org/sparql",

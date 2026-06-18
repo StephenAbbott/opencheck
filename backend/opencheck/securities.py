@@ -21,8 +21,10 @@ the long tail is a count behind a page.
 
 from __future__ import annotations
 
-import asyncio
+import json
 import logging
+import os
+import urllib.request
 from typing import Any
 from urllib.parse import quote
 
@@ -33,48 +35,83 @@ log = logging.getLogger(__name__)
 
 _GLEIF_ISINS_URL = "https://api.gleif.org/api/v1/lei-records/{lei}/isins"
 _OPENFIGI_URL = "https://api.openfigi.com/v3/mapping"
-_OPENSANCTIONS_URL = "https://api.opensanctions.org/search/securities"
 
 # ISINs shown per drawer page. Kept small so OpenFIGI enrichment stays cheap.
 PAGE_SIZE = 20
 # OpenFIGI batch limits: 100 jobs/request with a key, 10 without.
 _OPENFIGI_BATCH_KEYED = 100
 _OPENFIGI_BATCH_ANON = 10
-# How many OpenSanctions security results to scan for sanctioned ISINs.
-_SANCTIONED_SCAN_LIMIT = 50
 
 _OS_NC_NOTICE = (
     "OpenSanctions is licensed under CC-BY-NC-4.0. Commercial re-use of this "
     "data is not permitted under the source license."
 )
 
-# OpenSanctions dataset id → human regime label (best-effort; unknown ids fall
-# back to the raw id so nothing is hidden).
-_REGIME_LABELS: dict[str, str] = {
-    "us_ofac_sdn": "US OFAC SDN",
-    "us_ofac_cons": "US OFAC (non-SDN)",
-    "eu_fsf": "EU",
-    "eu_journal_sanctions": "EU",
-    "gb_hmt_sanctions": "UK HMT",
-    "gb_hmt_invbans": "UK investment ban",
-    "ch_seco_sanctions": "Swiss SECO",
-    "ca_dfatd_sema_sanctions": "Canada",
-    "au_dfat_sanctions": "Australia",
-    "jp_mof_sanctions": "Japan",
-    "ru_nsd_isin": "Russia NSD (EO 14071)",
-}
+
+# ---------------------------------------------------------------------------
+# Sanctioned-securities index (built from OpenSanctions securities.csv)
+# ---------------------------------------------------------------------------
+#
+# OpenSanctions has no live "sanctioned securities by LEI" API — that collection
+# is a packaging of a bulk CSV export. ``scripts/extract_securities.py`` turns
+# it into a compact JSON index keyed by LEI; we load that file here.
 
 
-def _regimes(datasets: list[str], topics: list[str]) -> list[str]:
-    labels = [_REGIME_LABELS.get(d, d) for d in datasets if d in _REGIME_LABELS]
-    # De-duplicate, preserve order.
-    seen: set[str] = set()
-    out: list[str] = []
-    for label in labels:
-        if label not in seen:
-            seen.add(label)
-            out.append(label)
-    return out
+# Loaded once (from a local file or a URL) and cached. Reset in tests via
+# ``reset_index_cache``; warmed at startup via ``warm_index``.
+_INDEX_CACHE: dict[str, Any] | None = None
+
+
+def reset_index_cache() -> None:
+    global _INDEX_CACHE
+    _INDEX_CACHE = None
+
+
+def _load_index() -> dict[str, Any]:
+    """Load the sanctioned-securities index from the configured file or URL."""
+    settings = get_settings()
+    path = settings.securities_index_file
+    if path and os.path.exists(path):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                return json.load(fh)
+        except Exception as exc:  # noqa: BLE001 — overlay is non-fatal
+            log.warning("Failed to load securities index file %s: %s", path, exc)
+            return {}
+    url = settings.securities_index_url
+    if url:
+        try:
+            with urllib.request.urlopen(url, timeout=30) as resp:  # noqa: S310 — operator-set URL
+                return json.loads(resp.read().decode("utf-8"))
+        except Exception as exc:  # noqa: BLE001 — overlay is non-fatal
+            log.warning("Failed to download securities index %s: %s", url, exc)
+            return {}
+    return {}
+
+
+def _index() -> dict[str, Any]:
+    global _INDEX_CACHE
+    if _INDEX_CACHE is None:
+        _INDEX_CACHE = _load_index()
+    return _INDEX_CACHE
+
+
+def warm_index() -> None:
+    """Force-load the index (run off the event loop at startup)."""
+    _index()
+
+
+def _sanctioned_for_lei(lei: str) -> dict[str, dict[str, Any]]:
+    """``{isin: meta}`` for sanctioned securities tied to this LEI (from the index)."""
+    entry = _index().get(lei.upper())
+    if not entry:
+        return {}
+    meta = {
+        "regimes": entry.get("regimes") or [],
+        "opensanctions_id": entry.get("id"),
+        "name": entry.get("name"),
+    }
+    return {isin: meta for isin in entry.get("isins") or [] if isin}
 
 
 def _row(
@@ -156,55 +193,11 @@ async def _openfigi_map(client, isins: list[str], api_key: str | None) -> dict[s
     return out
 
 
-async def _sanctioned_isins(client, lei: str, api_key: str | None) -> dict[str, dict[str, Any]]:
-    """Return ``{isin: meta}`` for sanctioned securities tied to this LEI.
-
-    Best-effort against the OpenSanctions ``securities`` scope. We collect ISINs
-    from any result that is a sanctions *target* or carries a ``sanction`` topic,
-    handling both ``Security`` entities (``isin`` property) and issuer entities
-    that list their securities. Returns ``{}`` on any error or unexpected shape
-    so the feature degrades to "GLEIF + OpenFIGI only" rather than breaking.
-    """
-    if not api_key:
-        return {}
-    headers = {"Authorization": f"ApiKey {api_key}"}
-    try:
-        resp = await client.get(
-            _OPENSANCTIONS_URL,
-            params={"q": lei, "limit": _SANCTIONED_SCAN_LIMIT},
-            headers=headers,
-        )
-        resp.raise_for_status()
-        payload = resp.json()
-    except Exception as exc:  # noqa: BLE001 — overlay is non-fatal
-        log.warning("OpenSanctions securities lookup failed for %s: %s", lei, exc)
-        return {}
-
-    out: dict[str, dict[str, Any]] = {}
-    for res in payload.get("results") or []:
-        props = res.get("properties") or {}
-        topics = res.get("topics") or props.get("topics") or []
-        is_sanctioned = res.get("target") is True or any("sanction" in str(t) for t in topics)
-        if not is_sanctioned:
-            continue
-        candidates = props.get("isin") or props.get("isinCode") or props.get("securities") or []
-        if isinstance(candidates, str):
-            candidates = [candidates]
-        meta = {
-            "opensanctions_id": res.get("id"),
-            "name": res.get("caption"),
-            "regimes": _regimes(res.get("datasets") or [], topics),
-        }
-        for isin in candidates:
-            if isinstance(isin, str) and isin:
-                out.setdefault(isin, meta)
-    return out
-
-
 async def assemble_securities(
     lei: str, *, page: int = 1, page_size: int = PAGE_SIZE
 ) -> dict[str, Any]:
-    """Assemble the securities view for an LEI from GLEIF + OpenFIGI + OpenSanctions."""
+    """Assemble the securities view for an LEI from GLEIF + OpenFIGI + the
+    OpenSanctions sanctioned-securities index."""
     lei = lei.strip().upper()
     settings = get_settings()
     empty = {
@@ -221,17 +214,14 @@ async def assemble_securities(
     if not settings.allow_live:
         return empty
 
-    overlay_on = settings.securities_sanctions_enabled and bool(settings.opensanctions_api_key)
+    # Sanctioned overlay comes from the local index (no network); on only when
+    # an index file is configured and loads.
+    overlay_on = bool(settings.securities_index_file or settings.securities_index_url) and bool(_index())
+    sanctioned_map = _sanctioned_for_lei(lei) if overlay_on else {}
+
     async with build_client() as client:
         total, isins = await _gleif_isins(client, lei, page, page_size)
-        if overlay_on:
-            sanctioned_map, figi_map = await asyncio.gather(
-                _sanctioned_isins(client, lei, settings.opensanctions_api_key),
-                _openfigi_map(client, isins, settings.openfigi_api_key),
-            )
-        else:
-            sanctioned_map = {}
-            figi_map = await _openfigi_map(client, isins, settings.openfigi_api_key)
+        figi_map = await _openfigi_map(client, isins, settings.openfigi_api_key)
         # Sanctioned ISINs may not be in the current GLEIF page (or in GLEIF at
         # all — e.g. Rosneft). Enrich those too so the banner shows their type.
         missing = [i for i in sanctioned_map if i not in figi_map]

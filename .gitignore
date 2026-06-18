@@ -78,6 +78,11 @@ backend/data/
 data/gem/
 backend/opencheck/data/gem/
 
+# Sanctioned-securities index built from OpenSanctions securities.csv (CC-BY-NC).
+# Built by scripts/extract_securities.py; not redistributed in the repo.
+data/securities/
+backend/data/securities/
+
 # Cowork / local scratch outputs (favicons, render previews, etc.).
 outputs/
 
