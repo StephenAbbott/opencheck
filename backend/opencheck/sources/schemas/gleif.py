@@ -51,6 +51,16 @@ class GLEIFAttributes(_Base):
     lei: str | None = None  # present in parent records
     entity: GLEIFEntity | None = None
     registration: dict[str, Any] = Field(default_factory=dict)
+    # GLEIF LEI Mapping cross-reference identifiers, surfaced inline on the LEI
+    # record. ``ocid`` / ``qcc`` are scalar strings; ``bic`` / ``mic`` /
+    # ``spglobal`` are arrays (string accepted for legacy single-value shapes).
+    # Typed ``Any`` so neither shape ever trips schema validation; the mapper
+    # normalises them via ``_gleif_scalar`` / ``_gleif_id_values``.
+    ocid: Any = None
+    qcc: Any = None
+    bic: Any = None
+    mic: Any = None
+    spglobal: Any = None
 
 
 class GLEIFRecord(_Base):

@@ -639,6 +639,91 @@ def test_gleif_lei_mapping_spglobal_as_string() -> None:
     assert sp["id"] == "32307"
 
 
+def test_gleif_lei_mapping_multiple_bics_all_included() -> None:
+    """A ``bic`` array with many values → one ISO-9362 identifier per BIC.
+
+    Mirrors real GLEIF data (e.g. Deutsche Bank carries 70+ BICs). Regression
+    guard against the previous behaviour that kept only ``bic[0]``.
+    """
+    bics = ["DBSCESMMXXX", "DEUTDEFFXXX", "DEUTGB22XXX", "DEUTUS33XXX"]
+    bundle = {
+        "lei": "7LTWFZYICNSX8D621K86",
+        "record": {
+            "id": "7LTWFZYICNSX8D621K86",
+            "attributes": {
+                "lei": "7LTWFZYICNSX8D621K86",
+                "entity": {
+                    "legalName": {"name": "DEUTSCHE BANK AKTIENGESELLSCHAFT"},
+                    "jurisdiction": "DE",
+                },
+                "bic": bics,
+            },
+        },
+        "direct_parent": None,
+        "ultimate_parent": None,
+    }
+    subj = _subject_entity(bundle)
+    emitted = [
+        i["id"] for i in subj["recordDetails"]["identifiers"] if i["scheme"] == "ISO-9362"
+    ]
+    assert emitted == bics  # all four, in order, none dropped
+
+
+def test_gleif_lei_mapping_multiple_mics_all_included() -> None:
+    """A ``mic`` array (exchange operator) → one ISO-10383 identifier per MIC.
+
+    Mirrors London Stock Exchange PLC (``mic: ["ECHO", "XLON"]``). Regression
+    guard against the previous behaviour that stuffed the whole list into a
+    single identifier ``id``.
+    """
+    bundle = {
+        "lei": "213800D1EI4B9WTWWD28",
+        "record": {
+            "id": "213800D1EI4B9WTWWD28",
+            "attributes": {
+                "lei": "213800D1EI4B9WTWWD28",
+                "entity": {
+                    "legalName": {"name": "LONDON STOCK EXCHANGE PLC"},
+                    "jurisdiction": "GB",
+                },
+                "mic": ["ECHO", "XLON"],
+                "bic": ["XLONGB2LR01", "XLONGB2LXXX"],
+            },
+        },
+        "direct_parent": None,
+        "ultimate_parent": None,
+    }
+    subj = _subject_entity(bundle)
+    mics = [
+        i["id"] for i in subj["recordDetails"]["identifiers"] if i["scheme"] == "ISO-10383"
+    ]
+    assert mics == ["ECHO", "XLON"]
+    # Every MIC id must be a plain string, never a list.
+    assert all(isinstance(m, str) for m in mics)
+
+
+def test_gleif_lei_mapping_values_deduplicated() -> None:
+    """Repeated values in a mapping array collapse to a single identifier."""
+    bundle = {
+        "lei": "5493000DUPLICATE0001",
+        "record": {
+            "id": "5493000DUPLICATE0001",
+            "attributes": {
+                "lei": "5493000DUPLICATE0001",
+                "entity": {"legalName": {"name": "Dup Co"}, "jurisdiction": "US"},
+                "bic": ["AAAAUS33XXX", "AAAAUS33XXX"],
+            },
+        },
+        "direct_parent": None,
+        "ultimate_parent": None,
+    }
+    subj = _subject_entity(bundle)
+    bics = [
+        i["id"] for i in subj["recordDetails"]["identifiers"] if i["scheme"] == "ISO-9362"
+    ]
+    assert bics == ["AAAAUS33XXX"]
+
+
 def test_gleif_lei_mapping_null_values_excluded() -> None:
     """Null ocid/qcc/mic/bic/spglobal must not produce empty identifier entries."""
     subj = _subject_entity(_gleif_bundle_with_null_lei_mappings())

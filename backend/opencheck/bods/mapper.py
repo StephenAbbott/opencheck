@@ -1676,6 +1676,46 @@ def _gleif_exception_statements(
     return [bridge, rel]
 
 
+def _gleif_scalar(value: Any) -> str:
+    """Coerce a GLEIF attribute expected to be a single string.
+
+    GLEIF returns ``ocid`` / ``qcc`` as scalar strings. Guard against a list
+    (take the first non-empty element) or ``None`` so a schema quirk can never
+    put a Python list into a BODS identifier ``id``. Returns ``""`` when empty.
+    """
+    if isinstance(value, list):
+        value = next((v for v in value if v), None)
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _gleif_id_values(value: Any) -> list[str]:
+    """Normalise a GLEIF multi-valued identifier field to a list of strings.
+
+    ``bic`` / ``mic`` / ``spglobal`` are arrays in the live GLEIF API — an
+    entity can hold many BICs (Deutsche Bank carries 70+) and an exchange
+    operator several MICs (London Stock Exchange has ``["ECHO", "XLON"]``) —
+    but GLEIF has historically returned a bare string for single-valued cases.
+    Accept ``str``, ``list`` or ``None``; return de-duplicated,
+    order-preserving, non-empty trimmed strings so *every* available
+    identifier is linked to the LEI, not just the first.
+    """
+    if value is None:
+        return []
+    items = value if isinstance(value, list) else [value]
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        if item is None:
+            continue
+        s = str(item).strip()
+        if s and s not in seen:
+            seen.add(s)
+            out.append(s)
+    return out
+
+
 def _gleif_entity_statement(
     lei: str,
     entity_block: dict[str, Any],
@@ -1750,9 +1790,15 @@ def _gleif_entity_statement(
         )
 
     # GLEIF LEI Mapping cross-reference identifiers (from ``record.attributes``).
+    # GLEIF surfaces its BIC-to-LEI, MIC-to-LEI and OpenCorporates / S&P Global /
+    # QCC mapping programmes inline on every LEI record. ``ocid`` and ``qcc`` are
+    # single strings; ``bic``, ``mic`` and ``spglobal`` are arrays (an entity can
+    # hold dozens of BICs and an exchange operator several MICs). We emit one
+    # BODS identifier per value so *all* available identifiers are linked to the
+    # LEI — the richer the identifier graph, the more datasets the LEI connects.
     # Each is only included when the GLEIF API returns a non-null value.
     if attrs:
-        ocid = attrs.get("ocid")
+        ocid = _gleif_scalar(attrs.get("ocid"))
         if ocid:
             identifiers.append(
                 {
@@ -1763,7 +1809,7 @@ def _gleif_entity_statement(
                 }
             )
 
-        qcc = attrs.get("qcc")
+        qcc = _gleif_scalar(attrs.get("qcc"))
         if qcc:
             identifiers.append(
                 {
@@ -1773,20 +1819,18 @@ def _gleif_entity_statement(
                 }
             )
 
-        mic = attrs.get("mic")
-        if mic:
+        # MIC — one identifier per Market Identifier Code (ISO 10383).
+        for mic_val in _gleif_id_values(attrs.get("mic")):
             identifiers.append(
                 {
-                    "id": mic,
+                    "id": mic_val,
                     "scheme": "ISO-10383",
                     "schemeName": "Market Identifier Code (ISO 10383)",
                 }
             )
 
-        bic = attrs.get("bic")
-        if bic:
-            # GLEIF API sometimes returns bic as a list; take the first element.
-            bic_val: str = bic[0] if isinstance(bic, list) else bic
+        # BIC — one identifier per Bank Identifier Code (ISO 9362).
+        for bic_val in _gleif_id_values(attrs.get("bic")):
             identifiers.append(
                 {
                     "id": bic_val,
@@ -1795,12 +1839,10 @@ def _gleif_entity_statement(
                 }
             )
 
-        spglobal = attrs.get("spglobal")
-        if spglobal:
-            # GLEIF API returns spglobal as a list; take the first element.
-            # S&P Global is not currently listed on org-id.guide so the scheme
-            # is recorded as a descriptive string per BODS v0.4 guidance.
-            spglobal_val: str = spglobal[0] if isinstance(spglobal, list) else spglobal
+        # S&P CIQ Company ID — one identifier per value. S&P Global is not
+        # currently listed on org-id.guide so the scheme is recorded as a
+        # descriptive string per BODS v0.4 guidance.
+        for spglobal_val in _gleif_id_values(attrs.get("spglobal")):
             identifiers.append(
                 {
                     "id": spglobal_val,
