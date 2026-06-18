@@ -502,12 +502,20 @@ export interface LookupStreamErrorEvent {
   detail: string;
 }
 
+/** Entity / relationship split for a single deepened hit's BODS graph. */
+export interface BodsBreakdown {
+  entities: number;
+  relationships: number;
+}
+
 /**
  * Emitted after the deepen batch completes.
  * counts maps "source_id:hit_id" → number of BODS statements for that hit.
+ * breakdown maps the same key → entity / relationship split (for the graph CTA).
  */
 export interface BodsCountsEvent {
   counts: Record<string, number>;
+  breakdown?: Record<string, BodsBreakdown>;
 }
 
 export type LookupStreamHandlers = {

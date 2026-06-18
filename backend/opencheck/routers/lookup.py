@@ -1186,6 +1186,9 @@ async def _lookup_pipeline(
     deepen_signals: list[dict[str, Any]] = []
     license_notices: list[dict[str, str]] = []
     bods_counts: dict[str, int] = {}
+    # Per-hit entity / relationship split, so the UI can show the graph shape
+    # ("N entities · M relationships") before the source is deepened on demand.
+    bods_breakdown: dict[str, dict[str, int]] = {}
 
     deepen_pairs = deepened_bundles[:deepen_top]
     # Stored-bundle sources (GLEIF, UK PSC) are always deepened, even past the
@@ -1223,12 +1226,17 @@ async def _lookup_pipeline(
             license_notices.append({
                 "source_id": dsrc, "hit_id": dhit, "notice": deep["license_notice"],
             })
-        bods_counts[f"{dsrc}:{dhit}"] = len(deep["bods"])
+        stmts = deep["bods"]
+        bods_counts[f"{dsrc}:{dhit}"] = len(stmts)
+        bods_breakdown[f"{dsrc}:{dhit}"] = {
+            "entities": sum(1 for s in stmts if s.get("recordType") == "entity"),
+            "relationships": sum(1 for s in stmts if s.get("recordType") == "relationship"),
+        }
         yield ("deepen_result", {
             "source_id": dsrc, "hit_id": dhit, "bods": deep["bods"],
         })
 
-    yield ("bods_counts", {"counts": bods_counts})
+    yield ("bods_counts", {"counts": bods_counts, "breakdown": bods_breakdown})
 
     cross_raw, icij_raw = await asyncio.gather(
         assess_cross_source_names(bods_all),

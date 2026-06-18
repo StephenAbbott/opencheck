@@ -7,6 +7,7 @@ import {
   isValidLei,
   retryLookupSource,
   streamLookup,
+  type BodsBreakdown,
   type BodsCountsEvent,
   type CrossSourceLink,
   type RiskSignal,
@@ -158,6 +159,10 @@ export default function App() {
   const [streaming, setStreaming] = useState(false);
   // Maps "source_id:hit_id" → BODS statement count; populated by the bods_counts SSE event.
   const [bodsCountMap, setBodsCountMap] = useState<Record<string, number>>({});
+  // Same key → entity / relationship split, for the source-card graph CTA subtitle.
+  const [bodsBreakdownMap, setBodsBreakdownMap] = useState<
+    Record<string, BodsBreakdown>
+  >({});
   // True when the SSE connection dropped AFTER the GLEIF anchor resolved —
   // partial results are on screen and a "Resume lookup" banner is shown.
   const [streamDropped, setStreamDropped] = useState(false);
@@ -304,6 +309,7 @@ export default function App() {
         setCompletedSources(new Set());
         setStreaming(false);
         setBodsCountMap({});
+        setBodsBreakdownMap({});
         setStreamDropped(false);
         setRetryingSources(new Set());
 
@@ -330,7 +336,10 @@ export default function App() {
           },
           onCrossSourceLinks: (e) => setCrossSourceLinks(e.links),
           onRiskSignals: (e) => setRiskSignals(e.signals),
-          onBodsCounts: (e: BodsCountsEvent) => setBodsCountMap(e.counts),
+          onBodsCounts: (e: BodsCountsEvent) => {
+            setBodsCountMap(e.counts);
+            if (e.breakdown) setBodsBreakdownMap(e.breakdown);
+          },
           onDone: () => {
             setStreaming(false);
             setStreamDropped(false);
@@ -1193,6 +1202,7 @@ export default function App() {
                     riskByHit={riskByHit}
                     sourceSignals={riskBySource[b.sourceId] ?? []}
                     bodsCountMap={bodsCountMap}
+                    bodsBreakdownMap={bodsBreakdownMap}
                     onRetry={b.error ? () => retrySource(b.sourceId) : undefined}
                     retrying={retryingSources.has(b.sourceId)}
                   />

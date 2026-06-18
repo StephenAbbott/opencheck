@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { deepen } from "../../lib/api";
-import type { DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
+import type { BodsBreakdown, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
 
 // BodsGraphExplorer pulls in Cytoscape + cytoscape-dagre (~the bulk of the
@@ -535,10 +535,12 @@ export function HitRow({
   hit,
   riskSignals,
   preloadedStmtCount,
+  preloadedBreakdown,
 }: {
   hit: SourceHit;
   riskSignals: RiskSignal[];
   preloadedStmtCount?: number;
+  preloadedBreakdown?: BodsBreakdown;
 }) {
   const [showDiagram,    setShowDiagram]    = useState(false);
   const [showStatements, setShowStatements] = useState(false);
@@ -572,17 +574,18 @@ export function HitRow({
   const stmtCount = detail?.bods.length ?? preloadedStmtCount ?? 0;
   const hasKnownCount = detail !== null || preloadedStmtCount !== undefined;
 
-  // Graph-flavoured subtitle for the Visualise strip. Before the source is
-  // deepened we only know the total statement count, so describe the feature;
-  // once loaded, show the entity / relationship breakdown the graph renders.
-  const entityCount = detail
-    ? detail.bods.filter((s) => (s as Record<string, unknown>).recordType === "entity").length
-    : 0;
-  const relCount = detail
-    ? detail.bods.filter((s) => (s as Record<string, unknown>).recordType === "relationship").length
-    : 0;
-  const graphMeta = detail
-    ? `${entityCount} ${entityCount === 1 ? "entity" : "entities"} · ${relCount} ${relCount === 1 ? "relationship" : "relationships"}`
+  // Graph-flavoured subtitle for the Visualise strip. Use the loaded detail
+  // when available, otherwise the entity/relationship split streamed up front
+  // via the bods_counts SSE event; fall back to a descriptive label only when
+  // neither is known yet.
+  const breakdown: BodsBreakdown | undefined = detail
+    ? {
+        entities: detail.bods.filter((s) => (s as Record<string, unknown>).recordType === "entity").length,
+        relationships: detail.bods.filter((s) => (s as Record<string, unknown>).recordType === "relationship").length,
+      }
+    : preloadedBreakdown;
+  const graphMeta = breakdown
+    ? `${breakdown.entities} ${breakdown.entities === 1 ? "entity" : "entities"} · ${breakdown.relationships} ${breakdown.relationships === 1 ? "relationship" : "relationships"}`
     : "Interactive ownership & control graph";
 
   return (
@@ -706,6 +709,7 @@ export function SourceBucketCard({
   riskByHit,
   sourceSignals = [],
   bodsCountMap = {},
+  bodsBreakdownMap = {},
   onRetry,
   retrying = false,
 }: {
@@ -713,6 +717,7 @@ export function SourceBucketCard({
   riskByHit: Record<string, RiskSignal[]>;
   sourceSignals?: RiskSignal[];
   bodsCountMap?: Record<string, number>;
+  bodsBreakdownMap?: Record<string, BodsBreakdown>;
   /** Re-run this source via /lookup-source — shown on error cards. */
   onRetry?: () => void;
   retrying?: boolean;
@@ -788,6 +793,7 @@ export function SourceBucketCard({
             hit={hit}
             riskSignals={riskByHit[`${hit.source_id}:${hit.hit_id}`] ?? []}
             preloadedStmtCount={bodsCountMap[`${hit.source_id}:${hit.hit_id}`]}
+            preloadedBreakdown={bodsBreakdownMap[`${hit.source_id}:${hit.hit_id}`]}
           />
         ))}
       </ul>
