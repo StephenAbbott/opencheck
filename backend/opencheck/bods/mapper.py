@@ -369,39 +369,34 @@ def make_relationship_statement(
     source_url: str | None = None,
     publication_date: str | None = None,
     record_status: str = "new",
-    replaces_statements: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Build a BODS v0.4 relationship statement.
 
-    Lifecycle (BODS *Information updates* + *Record identifiers* modelling
+    Lifecycle (BODS 0.4 *Information updates* + *Record identifiers* modelling
     requirements):
 
     * The ``recordId`` of a relationship MUST be **stable over time** — every
       statement in the record's lifecycle (``new`` → ``updated`` → ``closed``)
       shares the same ``recordId``. It is derived purely from ``local_id`` here,
-      so it never changes as the relationship's status changes.
+      so it never changes as the relationship's status changes. Consumers link a
+      record's versions together through this shared ``recordId``.
     * Each ``statementId`` MUST be unique. For non-``new`` lifecycle stages the
       statementId is varied (by status + publication date) so the closed/updated
       statement is a distinct statement from the original ``new`` one, while the
       ``recordId`` stays put.
-    * A non-``new`` statement automatically records ``replacesStatements``
-      pointing at the original ``new`` statement's id (unless the caller supplies
-      an explicit list), making the supersession explicit. Deterministic ids mean
-      this link needs no stored history.
+
+    BODS 0.4 **removed** the ``replacesStatements`` field (see the 0.4.0
+    changelog "Removed" section): supersession is expressed solely through the
+    shared, stable ``recordId``, so this factory does not emit
+    ``replacesStatements``.
     """
     record_id = _stable_id(source_id, "relationship-record", local_id)
     if record_status == "new":
         statement_id = _stable_id(source_id, "relationship", local_id)
-        replaced: list[str] | None = list(replaces_statements) if replaces_statements else None
     else:
         statement_id = _stable_id(
             source_id, "relationship", local_id, record_status, publication_date or ""
         )
-        if replaces_statements is not None:
-            replaced = list(replaces_statements)
-        else:
-            # Supersede the original 'new' statement for this same recordId.
-            replaced = [_stable_id(source_id, "relationship", local_id)]
 
     statement: dict[str, Any] = {
         "statementId": statement_id,
@@ -423,8 +418,6 @@ def make_relationship_statement(
         },
         "source": _source_block(source_id, source_url),
     }
-    if replaced:
-        statement["replacesStatements"] = replaced
     return statement
 
 
@@ -961,8 +954,9 @@ def _emit_company_statements(
                 interest["beneficialOwnershipOrControl"] = False
 
         # A ceased PSC closes the relationship: stamp each interest with the
-        # cessation date and emit the statement with recordStatus 'closed'
-        # (which auto-records replacesStatements -> the original 'new').
+        # cessation date and emit the statement with recordStatus 'closed'. The
+        # closed statement shares the original's stable recordId — which is how
+        # BODS 0.4 links a record's versions (replacesStatements was removed).
         if ceased_on:
             for interest in interests:
                 interest["endDate"] = ceased_on

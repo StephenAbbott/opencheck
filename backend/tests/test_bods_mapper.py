@@ -287,9 +287,10 @@ def test_ceased_pscs_emit_closed_record() -> None:
     closed = [r for r in rels if r["recordStatus"] == "closed"]
     assert len(closed) == 1
     c = closed[0]
-    # Stable recordId vs distinct statementId; supersedes the original 'new'.
+    # Stable recordId vs distinct statementId. BODS 0.4 links a record's versions
+    # via the shared recordId; the removed replacesStatements field must NOT appear.
     assert c["recordId"] != c["statementId"]
-    assert c["replacesStatements"], "closed record must record what it replaces"
+    assert "replacesStatements" not in c, "replacesStatements was removed in BODS 0.4"
     # Cessation date stamped on every interest and on the publication date.
     assert all(
         i.get("endDate") == "2024-01-01" for i in c["recordDetails"]["interests"]
@@ -298,8 +299,9 @@ def test_ceased_pscs_emit_closed_record() -> None:
 
 
 def test_relationship_recordid_stable_across_lifecycle() -> None:
-    """recordId is stable across new->closed; statementId is distinct;
-    replacesStatements links the closed statement to the original 'new'."""
+    """recordId is stable across new->closed; statementId is distinct. BODS 0.4
+    links a record's versions via the shared recordId — the removed
+    replacesStatements field must not be emitted on any statement."""
     common = dict(
         source_id="companies_house",
         local_id="00102498:psc:abc",
@@ -321,8 +323,8 @@ def test_relationship_recordid_stable_across_lifecycle() -> None:
     assert new["statementId"] != closed["statementId"]  # each statement unique
     assert new["recordStatus"] == "new"
     assert closed["recordStatus"] == "closed"
-    assert closed["replacesStatements"] == [new["statementId"]]
     assert "replacesStatements" not in new
+    assert "replacesStatements" not in closed
 
 
 # ---------------------------------------------------------------------
