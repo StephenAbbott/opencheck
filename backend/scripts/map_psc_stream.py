@@ -274,7 +274,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     if closed:
         print(f"  NOTE : {closed} cessation event(s) emitted as BODS 'closed' records")
-        print("         (recordStatus=closed, interest.endDate, replacesStatements).")
+        print("         (recordStatus=closed, interest.endDate, shared recordId).")
     deleted = outcome.get("skipped: deleted / no data block", 0)
     if deleted:
         print(f"  NOTE : {deleted} 'deleted' event(s) carry no data — the live service")
