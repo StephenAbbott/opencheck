@@ -16,16 +16,16 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 57** — Securities (ISINs) & the sanctioned-securities overlay
+**Latest: Phase 58** — Time Machine: change-over-time timelines (GLEIF + Companies House)
 
-A new entity-level **Securities** panel showing the securities mapped to a company's LEI and surfacing any that are sanctioned — plus a first-class `SANCTIONED_SECURITY` risk chip.
+A new **Time Machine** that reconstructs an entity's notable ownership and identity changes over time and renders them as a timeline — the temporal half of [BODS v0.4](https://standard.openownership.org/en/0.4.0/) (`statementDate`, the `recordId` + `recordStatus` new/updated/closed lifecycle, interest `startDate`/`endDate`) that almost no demo surfaces, shown across **two sources on one axis**.
 
-1. **Three open datasets, three roles.** **GLEIF** (`/lei-records/{lei}/isins`) gives the authoritative LEI→ISIN list and total count — fetched as count + one page only, since major issuers carry tens of thousands (Deutsche Bank ≈ 22,500). **OpenFIGI** types just the ISINs actually shown (security type, ticker, exchange). The free **OpenSanctions `securities.csv`** export supplies the sanctioned subset by LEI + regimes (incl. EO 14071 investment bans) — covering GLEIF's blind spot (Rosneft has 0 ISINs in GLEIF but 12 sanctioned).
-2. **Lazy and sanctions-first.** `GET /securities?lei=` assembles these on demand (never on the main lookup) and never enumerates every ISIN. The UI leads with a red banner of the sanctioned ISINs; the long tail is a count behind a searchable, type-filtered "Browse all" drawer.
-3. **Risk chip everywhere.** If the LEI has sanctioned securities, the main lookup emits `SANCTIONED_SECURITY` (high confidence) — so it appears in the risk chips, the BODS export and the MCP `lookup` tool.
-4. **Self-refreshing index.** A pure-stdlib extractor builds the compact `lei→sanctioned-ISINs` index (~187 LEIs / 13k ISINs from the 8.8 MB source); a weekly GitHub Action republishes it as a Release asset the backend loads at startup (local file or hosted URL).
+1. **Two live change streams, one model.** Both GLEIF (its per-LEI field-level modification log) and Companies House (typed filing history) expose a live, per-entity change stream — so detection is just a per-source allowlist into one shared, raw-first `ChangeEvent` codelist, with no snapshot-diffing or data hoarding.
+2. **The noise is the product.** An allowlist suppresses administrative churn (a GLEIF `NextRenewalDate` renewal is the twin of a Companies House CS01 "confirmed, no change"), surfacing only material moves — owners added/removed, name / legal-form / status changes, new parents — with a toggle to reveal the rest.
+3. **Multi-source, reconciled, honest.** Cross-source identity changes are de-duplicated and corroborated (a PLC→Limited rename shows both sources, the Companies House *effective* date beating GLEIF's *recorded* date); ownership interest dates come from the relationship period, not the publish date; every event labels whether its date is *as filed* or *as recorded*.
+4. **Lazy `GET /history` + a vertical timeline rail.** A "See timeline" button on the GLEIF and Companies House source cards opens a rail below them — tier-coloured events, source chips linking back to GLEIF / Companies House, parent + interest dates for ownership changes. GLEIF is key-free; Companies House uses a dedicated `COMPANIES_HOUSE_HISTORY_API_KEY` and degrades gracefully when it's absent.
 
-*Previous: [Phase 56 — Brazil CNPJ register adapter](docs/status.md)*
+*Previous: [Phase 57 — Securities (ISINs) & the sanctioned-securities overlay](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
