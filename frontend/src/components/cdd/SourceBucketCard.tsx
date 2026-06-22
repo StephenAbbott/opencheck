@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { deepen } from "../../lib/api";
 import type { BodsBreakdown, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
+import { HistoryTimeline } from "./HistoryTimeline";
 
 // BodsGraphExplorer pulls in Cytoscape + cytoscape-dagre (~the bulk of the
 // bundle) but only renders when a user clicks "Visualise". Code-split it so
@@ -720,8 +721,12 @@ export function SkeletonSourceCard() {
 // SourceBucketCard — per-source result card
 // ---------------------------------------------------------------------
 
+// Sources that can show the entity-level Time Machine timeline.
+const TIMELINE_SOURCES = new Set(["gleif", "companies_house"]);
+
 export function SourceBucketCard({
   bucket,
+  lei,
   riskByHit,
   bodsCountMap = {},
   bodsBreakdownMap = {},
@@ -729,6 +734,8 @@ export function SourceBucketCard({
   retrying = false,
 }: {
   bucket: SourceBucket;
+  /** Resolved LEI for the current lookup — keys the Time Machine timeline. */
+  lei?: string;
   riskByHit: Record<string, RiskSignal[]>;
   bodsCountMap?: Record<string, number>;
   bodsBreakdownMap?: Record<string, BodsBreakdown>;
@@ -736,6 +743,19 @@ export function SourceBucketCard({
   onRetry?: () => void;
   retrying?: boolean;
 }) {
+  const [showTimeline, setShowTimeline] = useState(false);
+  // The Time Machine timeline is entity-level. Offer it on the sources that
+  // contribute history (GLEIF + Companies House), keyed by the resolved LEI.
+  // Fall back to the GLEIF hit_id (which is the LEI) if no lei prop is passed.
+  const timelineLei =
+    lei ??
+    (bucket.sourceId === "gleif"
+      ? (bucket.hits.find((h) => !h.is_stub) ?? bucket.hits[0])?.hit_id
+      : undefined);
+  const timelineName = bucket.hits[0]?.name;
+  const showTimelineButton =
+    TIMELINE_SOURCES.has(bucket.sourceId) && !bucket.error && !!timelineLei;
+
   const stateLabel = bucket.error
     ? "error"
     : `${bucket.hits.length} result${bucket.hits.length === 1 ? "" : "s"}`;
@@ -744,6 +764,7 @@ export function SourceBucketCard({
     : "text-oo-muted";
 
   return (
+    <>
     <article
       id={`oc-source-${bucket.sourceId}`}
       className="bg-white border border-oo-rule rounded-oo scroll-mt-24 transition-shadow"
@@ -773,6 +794,22 @@ export function SourceBucketCard({
           );
         })()}
       </header>
+      {showTimelineButton && (
+        <div className="flex justify-end px-5 pt-3">
+          <button
+            type="button"
+            onClick={() => setShowTimeline((v) => !v)}
+            aria-pressed={showTimeline}
+            className="inline-flex items-center gap-1.5 rounded-oo border border-oo-rule bg-white px-2.5 py-1 text-[11px] font-semibold text-oo-ink transition-colors hover:bg-oo-bg"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M6 3.5 V6 L7.8 7.2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {showTimeline ? "Hide timeline" : "See timeline"}
+          </button>
+        </div>
+      )}
       {bucket.error && (
         <div className="px-5 py-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-[13px] text-red-700">{bucket.error}</p>
@@ -803,5 +840,9 @@ export function SourceBucketCard({
         ))}
       </ul>
     </article>
+    {showTimeline && timelineLei && (
+      <HistoryTimeline lei={timelineLei} entityName={timelineName} />
+    )}
+    </>
   );
 }

@@ -1190,6 +1190,7 @@ export default function App() {
                 <div key={b.sourceId}>
                   <SourceBucketCard
                     bucket={b}
+                    lei={streamingLei ?? undefined}
                     riskByHit={riskByHit}
                     bodsCountMap={bodsCountMap}
                     bodsBreakdownMap={bodsBreakdownMap}

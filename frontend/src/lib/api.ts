@@ -217,6 +217,63 @@ export async function getSecurities(lei: string, page = 1): Promise<SecuritiesRe
   return (await r.json()) as SecuritiesResponse;
 }
 
+// ---------------------------------------------------------------------
+// History / Time Machine — /history (GLEIF change log + Companies House)
+// ---------------------------------------------------------------------
+
+export interface HistoryEntry {
+  change_type: string;
+  label: string;
+  tier: number; // 1 = ownership/control, 2 = identity/status
+  record_type: string; // "entity" | "relationship"
+  date: string | null;
+  date_basis: string; // "effective" | "recorded" | "snapshot_window"
+  date_confidence: string; // "high" | "medium" | "low"
+  value_old: string | null;
+  value_new: string | null;
+  sources: string[];
+  corroborating_sources: string[];
+  counterparty: string | null;
+  interest_start_date: string | null;
+  interest_end_date: string | null;
+  boosted: boolean;
+}
+
+export interface HistoryRawChange {
+  source_id: string;
+  record_type: string;
+  raw_change_type: string;
+  raw_field: string | null;
+  value_old: string | null;
+  value_new: string | null;
+  change_type: string | null;
+  tier: number;
+  event_date: string | null;
+  date_basis: string;
+}
+
+export interface HistoryResponse {
+  lei: string;
+  company_number: string | null;
+  available: boolean;
+  sources: string[];
+  notable_count: number;
+  notable: HistoryEntry[];
+  events: HistoryRawChange[];
+}
+
+/** Fetch the Time Machine timeline for an LEI (notable changes, GLEIF + CH). */
+export async function getHistory(
+  lei: string,
+  includeNoise = false,
+): Promise<HistoryResponse> {
+  const params = new URLSearchParams({ lei });
+  if (includeNoise) params.set("include_noise", "true");
+  const r = await fetch(`${BASE_URL}/history?${params.toString()}`);
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return (await r.json()) as HistoryResponse;
+}
+
 export async function lookup(lei: string): Promise<LookupResponse> {
   const params = new URLSearchParams({ lei });
   const r = await fetch(`${BASE_URL}/lookup?${params.toString()}`);
