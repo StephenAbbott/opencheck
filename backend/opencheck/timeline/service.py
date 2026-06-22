@@ -130,7 +130,11 @@ async def fetch_timeline(lei: str) -> Timeline:
         if not isinstance(mods_res, BaseException):
             lei_mods, rr_mods = mods_res
 
-        api_key = settings.companies_house_api_key
+        # Prefer the dedicated history key; fall back to the lookup adapter's key.
+        api_key = (
+            settings.companies_house_history_api_key
+            or settings.companies_house_api_key
+        )
         if api_key and company_number:
             try:
                 ch_filings = await _ch_filings(client, company_number, api_key)

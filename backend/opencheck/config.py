@@ -59,6 +59,12 @@ class Settings(BaseSettings):
 
     # --- Source credentials ---
     companies_house_api_key: str | None = Field(default=None, alias="COMPANIES_HOUSE_API_KEY")
+    # Dedicated key for the Time Machine /history filing-history fetch, kept
+    # separate from the lookup adapter's key. Falls back to the lookup key if
+    # unset (see timeline/service.py).
+    companies_house_history_api_key: str | None = Field(
+        default=None, alias="COMPANIES_HOUSE_HISTORY_API_KEY"
+    )
 
     # --- Corporations Canada (ISED) ---
     # Public-plan API key from the ISED API Gateway.

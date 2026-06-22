@@ -30,6 +30,8 @@ class HistoryEntry(BaseModel):
     date: str | None
     date_basis: str
     date_confidence: str
+    value_old: str | None = None
+    value_new: str | None = None
     sources: list[str]
     corroborating_sources: list[str] = []
     counterparty: str | None = None
@@ -90,6 +92,8 @@ async def history(
             date=e.date,
             date_basis=e.date_basis.value,
             date_confidence=e.date_confidence.value,
+            value_old=e.primary.value_old,
+            value_new=e.primary.value_new,
             sources=e.sources,
             corroborating_sources=sorted({c.source_id for c in e.corroborating}),
             counterparty=e.counterparty,

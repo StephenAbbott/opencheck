@@ -120,7 +120,8 @@ async def test_history_stub_mode_is_unavailable(monkeypatch):
 @pytest.mark.asyncio
 async def test_history_live_merges_gleif_and_companies_house(monkeypatch):
     monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
-    monkeypatch.setenv("COMPANIES_HOUSE_API_KEY", "test-key")
+    # The dedicated history key is used (separate from the lookup adapter's key).
+    monkeypatch.setenv("COMPANIES_HOUSE_HISTORY_API_KEY", "test-history-key")
     get_settings.cache_clear()
     with respx.mock:
         _mock_live()
@@ -159,6 +160,7 @@ async def test_history_live_merges_gleif_and_companies_house(monkeypatch):
 async def test_history_degrades_to_gleif_only_without_ch_key(monkeypatch):
     monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
     monkeypatch.delenv("COMPANIES_HOUSE_API_KEY", raising=False)
+    monkeypatch.delenv("COMPANIES_HOUSE_HISTORY_API_KEY", raising=False)
     get_settings.cache_clear()
     with respx.mock:
         _mock_live()  # CH route present but should never be called
