@@ -32,3 +32,6 @@ class KvKBundle(_Base):
     kvk_number: str  # required — mapper key
     company: KvKCompany | None = None
     legal_name: str | None = None
+    # Set when the KvK number is absent from the open-data set (HTTP 404).
+    # See KvKAdapter._COVERAGE_404 for the wording and the reason.
+    coverage_note: str | None = None
