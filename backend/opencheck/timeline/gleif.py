@@ -155,8 +155,12 @@ def classify_gleif_modification(
     mtype = (mod.get("modificationType") or "").upper()
     old, new = mod.get("valueOld"), mod.get("valueNew")
 
+    counterparty: str | None = None
     if record_type is RecordType.RELATIONSHIP:
         change_type, tier = _classify_relationship(field, mtype, old, new)
+        # The other end of the relationship (the parent LEI) rides in context.
+        context = mod.get("context") or {}
+        counterparty = context.get("endNode")
     else:
         change_type, tier = _classify_entity(field, mtype, old, new)
 
@@ -175,6 +179,7 @@ def classify_gleif_modification(
         # GLEIF's date is when GLEIF recorded the change, not when it happened.
         date_basis=DateBasis.RECORDED,
         date_confidence=DateConfidence.MEDIUM,
+        counterparty=counterparty,
     )
 
 

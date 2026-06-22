@@ -203,6 +203,9 @@ class ChangeEvent:
     # NOT from event_date. See the spec's "critical rule".
     interest_start_date: str | None = None
     interest_end_date: str | None = None
+    # The other end of a relationship change (e.g. the parent LEI for a GLEIF
+    # ownership change). None for entity-record changes.
+    counterparty: str | None = None
 
     @property
     def is_notable(self) -> bool:

@@ -6,6 +6,7 @@ See ``docs/time-machine.md`` for the design. ``model`` holds the source-agnostic
 
 from __future__ import annotations
 
+from .assemble import Timeline, TimelineEntry, assemble_timeline
 from .companies_house import classify_companies_house_filing
 from .gleif import classify_gleif_modification, relationship_interest_dates
 from .model import (
@@ -28,6 +29,9 @@ __all__ = [
     "DateConfidence",
     "RecordType",
     "Tier",
+    "Timeline",
+    "TimelineEntry",
+    "assemble_timeline",
     "classify_companies_house_filing",
     "classify_gleif_modification",
     "relationship_interest_dates",
