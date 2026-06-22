@@ -155,7 +155,9 @@ const STYLESHEET: StylesheetStyle[] = [
       label: "data(label)",
       "text-valign": "bottom",
       "text-halign": "center",
-      "text-margin-y": 6,
+      // Clear the due-south collapse pill (which hangs ~10px below the node)
+      // so the entity name underneath stays readable.
+      "text-margin-y": 16,
       "font-family": "DM Sans, system-ui, sans-serif",
       "font-size": 11,
       color: "#1a1a2e",
@@ -596,7 +598,7 @@ export default function BODSGraph({
             // pointer-events:none, so the button re-enables pointer events).
             let toggle: React.ReactNode = null;
             if (item.hasChildren) {
-              const tp = Math.max(15, item.r * 0.5);
+              const tp = Math.max(13, item.r * 0.42);
               const label = item.collapsed ? (item.hiddenCount ? `+${item.hiddenCount}` : "+") : "−";
               toggle = (
                 <button
