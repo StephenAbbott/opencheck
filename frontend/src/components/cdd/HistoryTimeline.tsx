@@ -11,7 +11,7 @@ const SOURCE_LABEL: Record<string, string> = {
   companies_house: "Companies House",
 };
 
-function sourceUrl(
+export function sourceUrl(
   sourceId: string,
   lei: string,
   companyNumber: string | null,
@@ -58,7 +58,7 @@ function SourceChip({
 // Date-basis honesty label
 // ---------------------------------------------------------------------
 
-function basisLabel(basis: string): string {
+export function basisLabel(basis: string): string {
   if (basis === "effective") return "as filed";
   if (basis === "recorded") return "as recorded by GLEIF";
   if (basis === "snapshot_window") return "approximate";
@@ -187,9 +187,33 @@ function NoiseRow({ raw }: { raw: HistoryRawChange }) {
 // HistoryTimeline — vertical rail of notable changes (Time Machine)
 // ---------------------------------------------------------------------
 
-type Row =
+export type Row =
   | { kind: "notable"; date: string; entry: HistoryEntry }
   | { kind: "noise"; date: string; raw: HistoryRawChange };
+
+/** Tier-3 (administrative noise) raw changes, used by the "show admin" toggle. */
+export function noiseEventsOf(data: HistoryResponse): HistoryRawChange[] {
+  return (data.events ?? []).filter((e) => e.tier === 3);
+}
+
+/** Build the rail rows: notable entries always; noise rows when toggled on.
+ * Sorted oldest-first so the timeline reads as a story. */
+export function buildTimelineRows(
+  data: HistoryResponse,
+  showNoise: boolean,
+): Row[] {
+  const out: Row[] = data.notable.map((entry) => ({
+    kind: "notable",
+    date: entry.date ?? "9999-12-31",
+    entry,
+  }));
+  if (showNoise) {
+    for (const raw of noiseEventsOf(data))
+      out.push({ kind: "noise", date: raw.event_date ?? "9999-12-31", raw });
+  }
+  out.sort((a, b) => a.date.localeCompare(b.date));
+  return out;
+}
 
 export function HistoryTimeline({
   lei,
@@ -222,25 +246,11 @@ export function HistoryTimeline({
     };
   }, [lei]);
 
-  const noiseEvents = useMemo(
-    () => (data?.events ?? []).filter((e) => e.tier === 3),
-    [data],
+  const noiseEvents = useMemo(() => (data ? noiseEventsOf(data) : []), [data]);
+  const rows = useMemo<Row[]>(
+    () => (data ? buildTimelineRows(data, showNoise) : []),
+    [data, showNoise],
   );
-
-  const rows = useMemo<Row[]>(() => {
-    if (!data) return [];
-    const out: Row[] = data.notable.map((entry) => ({
-      kind: "notable",
-      date: entry.date ?? "9999-12-31",
-      entry,
-    }));
-    if (showNoise) {
-      for (const raw of noiseEvents)
-        out.push({ kind: "noise", date: raw.event_date ?? "9999-12-31", raw });
-    }
-    out.sort((a, b) => a.date.localeCompare(b.date));
-    return out;
-  }, [data, showNoise, noiseEvents]);
 
   return (
     <section className="mt-3 bg-white border border-oo-rule rounded-oo overflow-hidden">

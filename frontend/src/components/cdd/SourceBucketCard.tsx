@@ -721,8 +721,12 @@ export function SkeletonSourceCard() {
 // SourceBucketCard — per-source result card
 // ---------------------------------------------------------------------
 
+// Sources that can show the entity-level Time Machine timeline.
+const TIMELINE_SOURCES = new Set(["gleif", "companies_house"]);
+
 export function SourceBucketCard({
   bucket,
+  lei,
   riskByHit,
   bodsCountMap = {},
   bodsBreakdownMap = {},
@@ -730,6 +734,8 @@ export function SourceBucketCard({
   retrying = false,
 }: {
   bucket: SourceBucket;
+  /** Resolved LEI for the current lookup — keys the Time Machine timeline. */
+  lei?: string;
   riskByHit: Record<string, RiskSignal[]>;
   bodsCountMap?: Record<string, number>;
   bodsBreakdownMap?: Record<string, BodsBreakdown>;
@@ -738,15 +744,17 @@ export function SourceBucketCard({
   retrying?: boolean;
 }) {
   const [showTimeline, setShowTimeline] = useState(false);
-  // The Time Machine timeline is entity-level; surface it on the GLEIF anchor
-  // card (always present, keyed by the LEI).
+  // The Time Machine timeline is entity-level. Offer it on the sources that
+  // contribute history (GLEIF + Companies House), keyed by the resolved LEI.
+  // Fall back to the GLEIF hit_id (which is the LEI) if no lei prop is passed.
   const timelineLei =
-    bucket.sourceId === "gleif"
+    lei ??
+    (bucket.sourceId === "gleif"
       ? (bucket.hits.find((h) => !h.is_stub) ?? bucket.hits[0])?.hit_id
-      : undefined;
+      : undefined);
   const timelineName = bucket.hits[0]?.name;
   const showTimelineButton =
-    bucket.sourceId === "gleif" && !bucket.error && !!timelineLei;
+    TIMELINE_SOURCES.has(bucket.sourceId) && !bucket.error && !!timelineLei;
 
   const stateLabel = bucket.error
     ? "error"
