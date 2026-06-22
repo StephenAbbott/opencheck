@@ -343,11 +343,17 @@ def _bh_zefix(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
 
 
 def _bh_kvk(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    raw = dict(r.get("company") or {})
+    note = r.get("coverage_note")
+    if note and "coverage_note" not in raw:
+        # Not in the KvK open-data set (BV/NV-only 404) — pass the note through
+        # so the card explains the gap instead of looking empty/broken.
+        raw["coverage_note"] = note
     return _hit(
         "kvk", local_id,
         name=ctx.legal_name or "",
         summary=f"KvK {local_id}",
-        identifiers={"kvk_number": local_id}, raw=r.get("company") or {},
+        identifiers={"kvk_number": local_id}, raw=raw,
     )
 
 

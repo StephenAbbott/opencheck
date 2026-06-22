@@ -54,6 +54,22 @@ _RETRY_BACKOFF_MAX = 30.0  # cap, regardless of Retry-After or backoff
 # GLEIF Registration Authority code for KvK (Netherlands Chamber of Commerce).
 KVK_RA_CODE: str = "RA000463"
 
+# Wording surfaced when the KvK number is not in the open-data set (HTTP 404).
+# The HVD ``basisbedrijfsgegevens`` set only carries companies registered as a
+# BV (besloten vennootschap) or NV (naamloze vennootschap) with registered
+# business activity; other legal forms (eenmanszaak, VOF, stichting, vereniging,
+# coöperatie, etc.) and some pure holding entities are simply not in the set and
+# the API answers 404. That is a coverage limit of the open dataset, not a
+# lookup failure — so we degrade to a note instead of an error card.
+_COVERAGE_404: str = (
+    "Not in the KvK open-data set. The KvK 'basisbedrijfsgegevens' High-Value "
+    "Dataset only covers companies registered as a BV (besloten vennootschap) "
+    "or NV (naamloze vennootschap) with registered business activity; other "
+    "legal forms and some holding entities are not included and the API returns "
+    "404 for them. This is a coverage limit of the open dataset, not a lookup "
+    "error."
+)
+
 
 def normalise_kvk(kvk_number: str) -> str:
     """Normalise a KvK number: strip whitespace, zero-pad to 8 digits."""
@@ -168,16 +184,25 @@ class KvKAdapter(SourceAdapter):
                         wait = min(delay, _RETRY_BACKOFF_MAX)
                     await asyncio.sleep(wait)
                     delay *= 2
-                response.raise_for_status()
-                data = response.json()
+                if response.status_code == 404:
+                    # The KvK number is not in the open-data set (BV/NV-only).
+                    # Cache the miss so we don't re-hit the 1-req/minute limit,
+                    # and degrade gracefully rather than surfacing a 404 error.
+                    data = None
+                else:
+                    response.raise_for_status()
+                    data = response.json()
             self._cache.put(cache_key, data)
 
-        bundle = {
+        bundle: dict[str, Any] = {
             "source_id": self.id,
             "kvk_number": kvk_number,
             "company": data,
             "legal_name": self._names.get(kvk_number, ""),
             "is_stub": False,
         }
+        if data is None:
+            # Live lookup returned no record (404) — explain the coverage gap.
+            bundle["coverage_note"] = _COVERAGE_404
         validate_raw("kvk", KvKBundle, bundle)
         return bundle
