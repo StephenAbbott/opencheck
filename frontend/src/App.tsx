@@ -732,9 +732,14 @@ export default function App() {
         {view === "main" && (
         <>
         {/* ── Search panel — two-tab design ── */}
-        <p className="text-[13px] sm:text-sm text-oo-muted leading-snug mb-3">
-          Customer due diligence checks powered by the Legal Entity Identifier, open data and the Beneficial Ownership Data Standard.
-        </p>
+        <div className="mb-3">
+          <h2 className="font-head font-bold text-oo-ink leading-tight text-[20px] sm:text-[26px]">
+            Due diligence on <span className="text-oo-blue">3 million+</span> companies — starting from a single ID.
+          </h2>
+          <p className="text-[13px] sm:text-sm text-oo-muted leading-snug mt-2">
+            Paste a Legal Entity Identifier and OpenCheck pulls open corporate data from 31 national and international sources into one graph using the Beneficial Ownership Data Standard.
+          </p>
+        </div>
         {!streamingLei && (
           <p className="text-[12px] text-oo-muted leading-snug mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-oo-blue border border-[#cfd6f5] bg-[#eef1fb] rounded-full px-1.5 py-0.5">
@@ -2032,19 +2037,19 @@ const HOW_IT_WORKS_STEPS = [
     num: "1",
     accent: "#3d30d4" as const,
     icon: <StepKeyIcon className="h-[15px] w-[15px]" />,
-    title: "Paste a Legal Entity Identifier",
+    title: "One ID, the whole world",
     body: (
       <>
-        You supply a 20-character{" "}
+        Paste a 20-character{" "}
         <a
           href="https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei"
           target="_blank"
           rel="noreferrer"
           className="text-oo-blue underline underline-offset-2 hover:text-oo-burst"
         >
-          LEI
+          Legal Entity Identifier
         </a>{" "}
-        — OpenCheck's single entry point for any legal entity worldwide.
+        — the single key to 3 million+ entities worldwide.
       </>
     ),
     badges: null,
@@ -2053,20 +2058,19 @@ const HOW_IT_WORKS_STEPS = [
     num: "2",
     accent: "#3d30d4" as const,
     icon: <StepBridgeIcon className="h-[15px] w-[15px]" />,
-    title: "GLEIF bridges to national identifiers",
+    title: "We bridge to the registers",
     body: (
       <>
-        The LEI record carries{" "}
+        GLEIF maps the LEI to national company numbers and{" "}
         <a
           href="https://www.gleif.org/en/newsroom/blog/transforming-data-into-opportunities-metric-of-the-month-mapping-network"
           target="_blank"
           rel="noreferrer"
           className="text-oo-blue underline underline-offset-2 hover:text-oo-burst"
         >
-          registration data
+          cross-references
         </a>{" "}
-        that OpenCheck uses to derive bridging identifiers for each downstream
-        source.
+        — so you skip the manual lookups.
       </>
     ),
     badges: null,
@@ -2075,11 +2079,12 @@ const HOW_IT_WORKS_STEPS = [
     num: "3",
     accent: "#3d30d4" as const,
     icon: <StepNetworkIcon className="h-[15px] w-[15px]" />,
-    title: "Parallel queries to open sources",
+    title: "31 open sources, in parallel",
     body: (
       <>
-        Each source is queried using the right identifier for that dataset.
-        Results are normalised into BODS statements.
+        Each source is queried with the identifier it understands, and the
+        results are normalised in line with the Beneficial Ownership Data
+        Standard.
       </>
     ),
     badges: null,
@@ -2088,14 +2093,13 @@ const HOW_IT_WORKS_STEPS = [
     num: "4",
     accent: "#3d30d4" as const,
     icon: <StepShieldIcon className="h-[15px] w-[15px]" />,
-    title: "Risk signals, AI summary & shareable reports",
+    title: "Risk, explained and exportable",
     body: (
       <>
         Deterministic risk signals — sanctions, flagged jurisdictions, complex
         ownership and more — follow the EU AMLA's draft due-diligence standards,
         and a plain-English AI summary explains them with every statement linked
-        to its source. Take it away as an accessible PDF report, or download the
-        raw BODS bundle (JSON, JSONL, XML or ZIP).
+        to its source. Take it away as an accessible PDF or raw data.
       </>
     ),
     badges: null,
