@@ -740,11 +740,11 @@ export default function App() {
             <span className="text-[10px] font-semibold uppercase tracking-wide text-oo-blue border border-[#cfd6f5] bg-[#eef1fb] rounded-full px-1.5 py-0.5">
               New
             </span>
+            <span className="text-oo-ink">Company timelines</span>
+            <span aria-hidden>·</span>
             <span className="text-oo-ink">AI-written summaries</span>
             <span aria-hidden>·</span>
             <span className="text-oo-ink">Accessible PDF reports</span>
-            <span aria-hidden>·</span>
-            <span className="text-oo-ink">Search by national ID</span>
             <span className="text-oo-muted">— every claim links to its source.</span>
           </p>
         )}
