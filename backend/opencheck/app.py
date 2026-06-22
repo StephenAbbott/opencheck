@@ -30,7 +30,7 @@ from fastapi.responses import JSONResponse
 
 from . import __version__
 from .config import get_settings
-from .routers import health, search, lookup, export, narrative, securities
+from .routers import health, search, lookup, export, narrative, securities, history
 from .routers.search import _ch_ra_code as _ch_ra_code  # re-exported for backward compat
 
 log = logging.getLogger(__name__)
@@ -170,6 +170,7 @@ app.include_router(lookup.router)
 app.include_router(export.router)
 app.include_router(narrative.router)
 app.include_router(securities.router)
+app.include_router(history.router)
 
 
 # ---------------------------------------------------------------------------
