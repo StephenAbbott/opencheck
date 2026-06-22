@@ -306,7 +306,7 @@ export function HistoryTimeline({
               >
                 {showNoise
                   ? "Hide administrative changes"
-                  : `Show administrative changes (${noiseEvents.length})`}
+                  : `See full timeline (${noiseEvents.length})`}
               </button>
             )}
           </>
