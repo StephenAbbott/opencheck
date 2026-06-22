@@ -537,11 +537,14 @@ export function HitRow({
   riskSignals,
   preloadedStmtCount,
   preloadedBreakdown,
+  titleAccessory,
 }: {
   hit: SourceHit;
   riskSignals: RiskSignal[];
   preloadedStmtCount?: number;
   preloadedBreakdown?: BodsBreakdown;
+  /** Right-aligned control shown inline with the entity title (e.g. See timeline). */
+  titleAccessory?: React.ReactNode;
 }) {
   const [showDiagram,    setShowDiagram]    = useState(false);
   const [showStatements, setShowStatements] = useState(false);
@@ -604,21 +607,24 @@ export function HitRow({
 
   return (
     <li className="px-5 py-4">
-      {/* Entity name, summary, identifiers, risk chips */}
-      <div className="font-head font-bold text-[15px] text-oo-ink leading-snug">
-        {(() => {
-          const url = sourceEntityUrl(hit.source_id, hit);
-          return url ? (
-            <a href={url} target="_blank" rel="noopener noreferrer" className="hover:underline">
-              {hit.name}
-            </a>
-          ) : hit.name;
-        })()}
-        {hit.is_stub && (
-          <span className="ml-2 text-[11px] font-mono bg-amber-50 text-amber-800 border border-amber-200 rounded px-1.5 py-0.5">
-            stub
-          </span>
-        )}
+      {/* Entity name (+ optional title accessory, e.g. See timeline), summary, risk chips */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="font-head font-bold text-[15px] text-oo-ink leading-snug min-w-0">
+          {(() => {
+            const url = sourceEntityUrl(hit.source_id, hit);
+            return url ? (
+              <a href={url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                {hit.name}
+              </a>
+            ) : hit.name;
+          })()}
+          {hit.is_stub && (
+            <span className="ml-2 text-[11px] font-mono bg-amber-50 text-amber-800 border border-amber-200 rounded px-1.5 py-0.5">
+              stub
+            </span>
+          )}
+        </div>
+        {titleAccessory && <div className="shrink-0">{titleAccessory}</div>}
       </div>
       <p className="text-[13px] text-oo-muted mt-1 leading-[1.6]">{hit.summary}</p>
       {riskSignals.length > 0 && (
@@ -756,6 +762,22 @@ export function SourceBucketCard({
   const showTimelineButton =
     TIMELINE_SOURCES.has(bucket.sourceId) && !bucket.error && !!timelineLei;
 
+  // Rendered inline with the entity title (right-aligned) on the first hit row.
+  const timelineButton = showTimelineButton ? (
+    <button
+      type="button"
+      onClick={() => setShowTimeline((v) => !v)}
+      aria-pressed={showTimeline}
+      className="inline-flex items-center gap-1.5 rounded-oo border border-oo-rule bg-white px-2.5 py-1 text-[11px] font-semibold text-oo-ink transition-colors hover:bg-oo-bg"
+    >
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+        <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" />
+        <path d="M6 3.5 V6 L7.8 7.2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      {showTimeline ? "Hide timeline" : "See timeline"}
+    </button>
+  ) : null;
+
   const stateLabel = bucket.error
     ? "error"
     : `${bucket.hits.length} result${bucket.hits.length === 1 ? "" : "s"}`;
@@ -794,22 +816,6 @@ export function SourceBucketCard({
           );
         })()}
       </header>
-      {showTimelineButton && (
-        <div className="flex justify-end px-5 pt-3">
-          <button
-            type="button"
-            onClick={() => setShowTimeline((v) => !v)}
-            aria-pressed={showTimeline}
-            className="inline-flex items-center gap-1.5 rounded-oo border border-oo-rule bg-white px-2.5 py-1 text-[11px] font-semibold text-oo-ink transition-colors hover:bg-oo-bg"
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" />
-              <path d="M6 3.5 V6 L7.8 7.2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            {showTimeline ? "Hide timeline" : "See timeline"}
-          </button>
-        </div>
-      )}
       {bucket.error && (
         <div className="px-5 py-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-[13px] text-red-700">{bucket.error}</p>
@@ -829,13 +835,14 @@ export function SourceBucketCard({
         <p className="px-5 py-3 text-[13px] text-oo-muted">No hits.</p>
       )}
       <ul className="divide-y divide-oo-rule">
-        {bucket.hits.map((hit) => (
+        {bucket.hits.map((hit, idx) => (
           <HitRow
             key={`${hit.source_id}:${hit.hit_id}`}
             hit={hit}
             riskSignals={riskByHit[`${hit.source_id}:${hit.hit_id}`] ?? []}
             preloadedStmtCount={bodsCountMap[`${hit.source_id}:${hit.hit_id}`]}
             preloadedBreakdown={bodsBreakdownMap[`${hit.source_id}:${hit.hit_id}`]}
+            titleAccessory={idx === 0 ? timelineButton : undefined}
           />
         ))}
       </ul>
