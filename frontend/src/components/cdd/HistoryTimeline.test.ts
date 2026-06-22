@@ -97,24 +97,24 @@ describe("noiseEventsOf", () => {
 });
 
 describe("buildTimelineRows", () => {
-  it("shows only notable rows by default, oldest first", () => {
+  it("shows only notable rows by default, newest first", () => {
     const rows = buildTimelineRows(RESP, false);
     expect(rows).toHaveLength(3);
     expect(rows.every((r) => r.kind === "notable")).toBe(true);
     expect(rows.map((r) => r.date)).toEqual([
-      "2021-12-01", "2022-01-11", "2023-11-25",
+      "2023-11-25", "2022-01-11", "2021-12-01",
     ]);
   });
 
-  it("interleaves noise rows by date when toggled on", () => {
+  it("interleaves noise rows by date when toggled on (newest first)", () => {
     const rows = buildTimelineRows(RESP, true);
     expect(rows).toHaveLength(5); // 3 notable + 2 noise
     expect(rows.map((r) => r.date)).toEqual([
-      "2021-12-01", "2022-01-11", "2022-03-01", "2023-11-25", "2025-11-20",
+      "2025-11-20", "2023-11-25", "2022-03-01", "2022-01-11", "2021-12-01",
     ]);
-    // The 2022-03-01 and 2025-11-20 rows are the noise ones.
+    // The 2025-11-20 and 2022-03-01 rows are the noise ones.
     const noiseRows = rows.filter((r) => r.kind === "noise");
-    expect(noiseRows.map((r) => r.date)).toEqual(["2022-03-01", "2025-11-20"]);
+    expect(noiseRows.map((r) => r.date)).toEqual(["2025-11-20", "2022-03-01"]);
   });
 });
 

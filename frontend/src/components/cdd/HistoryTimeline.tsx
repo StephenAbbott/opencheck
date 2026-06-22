@@ -196,22 +196,30 @@ export function noiseEventsOf(data: HistoryResponse): HistoryRawChange[] {
   return (data.events ?? []).filter((e) => e.tier === 3);
 }
 
+// Sentinel date for undated rows so they always sort to the bottom.
+const _UNDATED = "9999-12-31";
+
 /** Build the rail rows: notable entries always; noise rows when toggled on.
- * Sorted oldest-first so the timeline reads as a story. */
+ * Sorted newest-first (reverse chronological); undated rows pinned last. */
 export function buildTimelineRows(
   data: HistoryResponse,
   showNoise: boolean,
 ): Row[] {
   const out: Row[] = data.notable.map((entry) => ({
     kind: "notable",
-    date: entry.date ?? "9999-12-31",
+    date: entry.date ?? _UNDATED,
     entry,
   }));
   if (showNoise) {
     for (const raw of noiseEventsOf(data))
-      out.push({ kind: "noise", date: raw.event_date ?? "9999-12-31", raw });
+      out.push({ kind: "noise", date: raw.event_date ?? _UNDATED, raw });
   }
-  out.sort((a, b) => a.date.localeCompare(b.date));
+  out.sort((a, b) => {
+    const aMissing = a.date === _UNDATED;
+    const bMissing = b.date === _UNDATED;
+    if (aMissing !== bMissing) return aMissing ? 1 : -1; // undated last
+    return b.date.localeCompare(a.date); // newest first
+  });
   return out;
 }
 
