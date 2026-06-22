@@ -35,8 +35,11 @@ from __future__ import annotations
 
 import hashlib
 import importlib.metadata
+import re
 from typing import Any
 from urllib.parse import quote
+
+import httpx
 
 from ..cache import Cache
 from ..config import get_settings
@@ -60,6 +63,20 @@ _OA_USER_AGENT = f"openaleph/{_OA_VERSION}"
 
 def _slug(text: str) -> str:
     return hashlib.sha256(text.lower().strip().encode("utf-8")).hexdigest()[:16]
+
+
+# Aleph parses the ``q`` parameter as an Elasticsearch query_string (Lucene
+# syntax), so unbalanced double quotes or stray backslashes in a legal name
+# make the parser return HTTP 500 — e.g. Rosneft's name carries nested ASCII
+# quotes: Публичное акционерное общество "Нефтяная компания "Роснефть". Strip
+# those before searching. Any other reserved metacharacter that still trips the
+# parser is absorbed by the tolerant 5xx handling in ``_get_tolerant``.
+_Q_UNSAFE = re.compile(r"[\"“”\\]")
+
+
+def _sanitise_q(text: str) -> str:
+    """Make a free-text query safe for Aleph's query_string parser."""
+    return " ".join(_Q_UNSAFE.sub(" ", text).split()).strip()
 
 
 def _schema_for(kind: SearchKind) -> str:
@@ -108,8 +125,11 @@ class OpenAlephAdapter(SourceAdapter):
         if not self.info.live_available and not self._cache.has(cache_key):
             return self._stub_search(query, kind)
 
-        payload = await self._get(
-            f"/entities?q={quote(query)}&filter:schema={schema}&limit=10",
+        q = _sanitise_q(query)
+        if not q:
+            return []
+        payload = await self._get_tolerant(
+            f"/entities?q={quote(q)}&filter:schema={schema}&limit=10",
             cache_key=cache_key,
         )
         return [self._hit(item, kind) for item in payload.get("results", [])]
@@ -170,8 +190,11 @@ class OpenAlephAdapter(SourceAdapter):
         cache_key = f"{_CACHE_NS}/name/{_slug(legal_name)}"
         if not self.info.live_available and not self._cache.has(cache_key):
             return []
-        payload = await self._get(
-            f"/entities?q={quote(legal_name)}&filter:schema=LegalEntity&limit=5",
+        q = _sanitise_q(legal_name)
+        if not q:
+            return []
+        payload = await self._get_tolerant(
+            f"/entities?q={quote(q)}&filter:schema=LegalEntity&limit=5",
             cache_key=cache_key,
         )
         return [
@@ -267,6 +290,19 @@ class OpenAlephAdapter(SourceAdapter):
 
         self._cache.put(cache_key, payload)
         return payload
+
+    async def _get_tolerant(self, path: str, *, cache_key: str) -> dict[str, Any]:
+        """Like ``_get`` but treats a 4xx/5xx from a *best-effort free-text
+        search* as 'no results' instead of surfacing an error card. The Aleph
+        query_string parser 500s on some legal names (unbalanced quotes etc.),
+        and a name fallback should degrade quietly rather than fail the source."""
+        try:
+            return await self._get(path, cache_key=cache_key)
+        except httpx.HTTPStatusError as exc:
+            code = exc.response.status_code
+            if code in (400, 422) or code >= 500:
+                return {"results": []}
+            raise
 
     # ------------------------------------------------------------------
     # Hit factory (live)

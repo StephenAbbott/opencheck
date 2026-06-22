@@ -294,3 +294,31 @@ async def test_fetch_by_name_stub_when_live_disabled(monkeypatch) -> None:
     adapter = OpenAlephAdapter()
     hits = await adapter.fetch_by_name("Ericsson AB")
     assert hits == []
+
+
+async def test_fetch_by_name_strips_quotes_that_break_aleph(httpx_mock: HTTPXMock) -> None:
+    """A legal name with nested ASCII quotes (e.g. Rosneft) must not be sent
+    verbatim — unbalanced quotes make Aleph's query_string parser 500."""
+    from urllib.parse import quote
+    raw_name = 'Публичное акционерное общество "Нефтяная компания "Роснефть"'
+    sanitised = "Публичное акционерное общество Нефтяная компания Роснефть"
+    httpx_mock.add_response(
+        url=f"{_API}/entities?q={quote(sanitised)}&filter:schema=LegalEntity&limit=5",
+        json={"results": [_ERICSSON_ENTITY]},
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_name(raw_name)
+    assert len(hits) == 1  # request used the sanitised query — no 500
+
+
+async def test_fetch_by_name_tolerates_server_error(httpx_mock: HTTPXMock) -> None:
+    """If Aleph still 500s on a free-text search, degrade to no results rather
+    than surfacing an error card for the source."""
+    from urllib.parse import quote
+    httpx_mock.add_response(
+        url=f"{_API}/entities?q={quote('Boom Corp')}&filter:schema=LegalEntity&limit=5",
+        status_code=500,
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_name("Boom Corp")
+    assert hits == []
