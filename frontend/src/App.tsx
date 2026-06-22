@@ -668,7 +668,7 @@ export default function App() {
               >
                 <OpenCheckIcon className="h-7 w-auto flex-shrink-0" />
                 <span className="font-head font-bold text-white leading-tight text-xl">
-                  Open<span className="text-[#93c5fd]">Check</span><span className="relative -top-2 ml-1 text-[7px] font-semibold tracking-oo-eyebrow uppercase bg-white/15 text-white/90 rounded px-1.5 py-0.5 border border-white/25 align-top">BETA</span>
+                  Open<span className="text-[#93c5fd]">Check</span>
                 </span>
               </button>
               {sourcesQuery.data && (
