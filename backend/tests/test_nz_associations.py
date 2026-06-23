@@ -10,7 +10,12 @@ import pytest
 from fastapi import HTTPException
 
 from opencheck.config import get_settings
-from opencheck.nz_associations import assemble_associations, summarise_person
+from opencheck.nz_associations import (
+    _collect_role_holders,
+    _role_search,
+    assemble_associations,
+    summarise_person,
+)
 from opencheck.routers.nz_associations import nz_associations
 
 _SUBJECT = "1166320"
@@ -147,6 +152,65 @@ def test_company_role_merges_director_and_shareholder():
     assert p["other_company_count"] == 1
     dual = p["companies"][0]
     assert set(dual["roles"]) == {"director", "shareholder"}
+
+
+# ---------------------------------------------------------------------------
+# Role Search request shaping — the required role-type param + recommended name
+# order. These were the cause of zero associations: role-type is mandatory and
+# was missing, and first-name-first names match less of the register.
+# ---------------------------------------------------------------------------
+
+
+class _CaptureResponse:
+    is_success = True
+    status_code = 200
+
+    def __init__(self, payload):
+        self._payload = payload
+
+    def json(self):
+        return self._payload
+
+
+class _CaptureClient:
+    """Async client stand-in that records the URLs it is asked to GET."""
+
+    def __init__(self):
+        self.urls: list[str] = []
+
+    async def get(self, url, headers=None):  # noqa: ANN001
+        self.urls.append(url)
+        return _CaptureResponse({"totalResults": 0, "roles": []})
+
+
+async def test_role_search_sends_required_role_type_and_name():
+    client = _CaptureClient()
+    await _role_search(client, "KRAMER Holly Suzanna", key="k")
+    assert client.urls, "expected at least one request"
+    first = client.urls[0]
+    # role-type is required by the API; omitting it returned nothing.
+    assert "role-type=ALL" in first
+    assert "registered-only=true" in first
+    # Name is URL-encoded into the query.
+    assert "KRAMER" in first and "Holly" in first
+
+
+def test_collect_role_holders_uses_surname_first_search_name():
+    bundle = {
+        "roles": [
+            {"kind": "person", "name": "Holly Suzanna Kramer",
+             "search_name": "Kramer Holly Suzanna", "paf_id": "1", "address": "x"},
+        ],
+        "shareholders": [
+            # Organisation shareholder — no search_name → falls back to display name.
+            {"kind": "entity", "name": "BIG HOLDINGS LTD", "paf_id": None, "address": None},
+        ],
+    }
+    holders = _collect_role_holders(bundle)
+    person = next(h for h in holders if h["name"] == "Holly Suzanna Kramer")
+    assert person["search_name"] == "Kramer Holly Suzanna"
+    org = next(h for h in holders if h["name"] == "BIG HOLDINGS LTD")
+    assert org["search_name"] == "BIG HOLDINGS LTD"  # fallback
 
 
 # ---------------------------------------------------------------------------

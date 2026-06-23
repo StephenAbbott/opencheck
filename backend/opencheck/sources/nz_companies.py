@@ -76,6 +76,23 @@ def _person_name(p: Any) -> str:
     return " ".join(str(x).strip() for x in parts if x and str(x).strip()).strip()
 
 
+def _person_search_name(p: Any) -> str | None:
+    """Name in the Companies Office recommended search order for the Entity Role
+    Search API: ``LastName FirstName MiddleName`` (exact match on last + first,
+    'starts with' on middle — tolerant of inconsistently-entered middle names).
+    Returns None when the structured parts aren't available (caller falls back
+    to the display name).
+    """
+    if not isinstance(p, dict):
+        return None
+    last = str(p.get("lastName") or "").strip()
+    first = str(p.get("firstName") or "").strip()
+    middles = str(p.get("middleNames") or "").strip()
+    if not (last and first):
+        return None
+    return " ".join(x for x in (last, first, middles) if x)
+
+
 def _address_str(a: Any) -> str | None:
     """Join an NZBN address block into a single line."""
     if not isinstance(a, dict):
@@ -136,10 +153,12 @@ def _norm_roles(roles: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "address": addr_str, "paf_id": paf,
             })
             continue
-        name = _person_name(r.get("rolePerson"))
+        person = r.get("rolePerson")
+        name = _person_name(person)
         if name:
             out.append({
                 "kind": "person", "name": name, "nzbn": None,
+                "search_name": _person_search_name(person),
                 "role_type": role_type, "status": status, "start": start, "end": end,
                 "address": addr_str, "paf_id": paf,
             })
@@ -187,10 +206,12 @@ def _norm_shareholders(company_details: dict[str, Any]) -> list[dict[str, Any]]:
                     "address": addr_str, "paf_id": paf,
                 })
                 continue
-            name = _person_name(h.get("individualShareholder"))
+            indiv = h.get("individualShareholder")
+            name = _person_name(indiv)
             if name:
                 out.append({
                     "kind": "person", "name": name, "nzbn": None, "company_number": None,
+                    "search_name": _person_search_name(indiv),
                     "shares": shares, "percent": percent, "jointly_held": joint, "start": start,
                     "address": addr_str, "paf_id": paf,
                 })

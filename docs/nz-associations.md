@@ -96,6 +96,15 @@ Per director/shareholder of the subject company:
   the API's `totalResults` magnitude is surfaced ("N records under this name —
   only a sample checked") so a prolific name isn't quietly undercounted.
   `registered-only=true`; results cached per company number.
+- **API request shape.** The Role Search API **requires** `role-type` (`SHR` /
+  `DIR` / `ALL`) — we send `role-type=ALL` to get every company a name is linked
+  to by any role. (An early version omitted this required parameter, which
+  returned nothing and made the panel show no associations for anyone.) Names are
+  queried in the Companies Office recommended order, **`LastName FirstName
+  MiddleName`** (`_person_search_name()` in the NZBN adapter), which exact-matches
+  last + first and does a 'starts with' on the middle name — tolerant of the
+  middle name being entered for one company but not another. Organisation
+  shareholders fall back to the display name (matched fuzzily).
 
 ## Roadmap
 

@@ -144,17 +144,29 @@ def _record_companies(rec: dict[str, Any]) -> list[dict[str, Any]]:
 # --------------------------------------------------------------------------- #
 
 def _collect_role_holders(bundle: dict[str, Any]) -> list[dict[str, Any]]:
-    """Unique directors + shareholders of the subject, with name + address."""
+    """Unique directors + shareholders of the subject, with name + address.
+
+    Each holder carries a ``search_name`` — the Companies Office recommended
+    "LastName FirstName MiddleName" order for the Role Search API (falling back
+    to the display name, e.g. organisation shareholders, which match by fuzzy
+    name regardless of order).
+    """
     by_name: dict[str, dict[str, Any]] = {}
 
-    def add(name: str | None, paf: str | None, addr: str | None, role_here: str) -> None:
+    def add(
+        name: str | None, paf: str | None, addr: str | None, role_here: str,
+        search_name: str | None = None,
+    ) -> None:
         name = (name or "").strip()
         if not name:
             return
         key = _norm_name(name)
         rh = by_name.get(key)
         if rh is None:
-            rh = {"name": name, "paf_id": paf, "address": addr, "roles_here": set()}
+            rh = {
+                "name": name, "search_name": (search_name or "").strip() or name,
+                "paf_id": paf, "address": addr, "roles_here": set(),
+            }
             by_name[key] = rh
         rh["roles_here"].add(role_here)
         if not rh.get("paf_id") and paf:
@@ -163,9 +175,9 @@ def _collect_role_holders(bundle: dict[str, Any]) -> list[dict[str, Any]]:
             rh["address"] = addr
 
     for r in bundle.get("roles") or []:
-        add(r.get("name"), r.get("paf_id"), r.get("address"), "director")
+        add(r.get("name"), r.get("paf_id"), r.get("address"), "director", r.get("search_name"))
     for s in bundle.get("shareholders") or []:
-        add(s.get("name"), s.get("paf_id"), s.get("address"), "shareholder")
+        add(s.get("name"), s.get("paf_id"), s.get("address"), "shareholder", s.get("search_name"))
     return list(by_name.values())
 
 
@@ -177,12 +189,17 @@ async def _role_search(client, name: str, key: str) -> tuple[list[dict[str, Any]
     """Return ``(records, total_results)`` for a name (registered companies only).
 
     ``records`` is capped at ``_PAGE_CAP * _PAGE_SIZE``; ``total_results`` is the
-    API's reported total so a prolific name isn't silently undercounted."""
+    API's reported total so a prolific name isn't silently undercounted.
+
+    ``role-type=ALL`` is **required** by the API (one of ``SHR`` / ``DIR`` /
+    ``ALL`` must be sent); omitting it returns no usable result. ``ALL`` is right
+    here because we want every company a name is linked to, by any role.
+    """
     records: list[dict[str, Any]] = []
     total = 0
     for page in range(_PAGE_CAP):
         url = (
-            f"{_ROLE_SEARCH_URL}?name={quote(name)}"
+            f"{_ROLE_SEARCH_URL}?name={quote(name)}&role-type=ALL"
             f"&page={page}&page-size={_PAGE_SIZE}&registered-only=true"
         )
         try:
@@ -317,7 +334,9 @@ async def assemble_associations(company_number: str) -> dict[str, Any]:
     async def _one(client, rh: dict[str, Any]) -> dict[str, Any]:
         async with sem:
             try:
-                records, total = await _role_search(client, rh["name"], key)
+                records, total = await _role_search(
+                    client, rh.get("search_name") or rh["name"], key
+                )
             except Exception as exc:  # noqa: BLE001
                 _LOG.warning("nz_associations: %s", exc)
                 records, total = [], 0
