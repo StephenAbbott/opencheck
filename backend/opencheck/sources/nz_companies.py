@@ -290,7 +290,13 @@ class NzCompaniesAdapter(SourceAdapter):
         key = get_settings().nzbn_api_key
         headers = {"Ocp-Apim-Subscription-Key": key} if key else {}
 
-        nzbn = await self._resolve_nzbn(number, headers)
+        # GLEIF stores either the company number *or* the 13-digit NZBN in
+        # registeredAs. A 13-digit all-numeric value is already an NZBN, so skip
+        # the directory-search resolution step.
+        if len(number) == 13 and number.isdigit():
+            nzbn = number
+        else:
+            nzbn = await self._resolve_nzbn(number, headers)
         if not nzbn:
             # GLEIF confirmed the entity is registered (RA000466) but we could
             # not resolve it — surface a non-stub card with the GLEIF name

@@ -18,7 +18,9 @@ from ..nz_associations import assemble_associations
 
 router = APIRouter()
 
-_NUMBER_SHAPE = re.compile(r"^\d{1,9}$")
+# An NZ company number (short) OR an NZBN (13 digits) — GLEIF stores either in
+# registeredAs depending on the entity, so accept both.
+_NUMBER_SHAPE = re.compile(r"^\d{1,13}$")
 
 
 class AssociatedCompany(BaseModel):
@@ -61,6 +63,6 @@ async def nz_associations(
     if not _NUMBER_SHAPE.match(num):
         raise HTTPException(
             status_code=400,
-            detail=f"{num!r} is not a valid New Zealand company number (digits).",
+            detail=f"{num!r} is not a valid New Zealand company number or NZBN (digits).",
         )
     return await assemble_associations(num)

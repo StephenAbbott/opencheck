@@ -134,3 +134,14 @@ async def test_endpoint_rejects_bad_number():
     with pytest.raises(HTTPException) as exc:
         await nz_associations(company_number="not-a-number")
     assert exc.value.status_code == 400
+
+
+async def test_endpoint_accepts_13_digit_nzbn(monkeypatch):
+    # Some NZ entities carry the 13-digit NZBN in GLEIF registeredAs (e.g. ADT
+    # Security 9429040916057) — must not 400.
+    monkeypatch.delenv("NZBN_ROLE_SEARCH_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCHECK_ALLOW_LIVE", raising=False)
+    get_settings.cache_clear()
+    res = await nz_associations(company_number="9429040916057")
+    get_settings.cache_clear()
+    assert res["company_number"] == "9429040916057"  # accepted, not rejected

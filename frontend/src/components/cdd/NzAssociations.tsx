@@ -139,6 +139,7 @@ export function NzAssociations({ companyNumber }: { companyNumber: string }) {
   const [data, setData] = useState<NzAssociationsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   async function run() {
     if (loading || data) return;
@@ -180,15 +181,37 @@ export function NzAssociations({ companyNumber }: { companyNumber: string }) {
     );
   }
 
+  // Collapsed after viewing — a quiet re-open (keeps the fetched data).
+  if (data && collapsed) {
+    return (
+      <button
+        type="button"
+        onClick={() => setCollapsed(false)}
+        className="mt-3 text-[12px] font-semibold text-oo-blue hover:underline"
+      >
+        Show director &amp; shareholder associations
+      </button>
+    );
+  }
+
   return (
     <section className="mt-3 rounded-oo border border-oo-rule bg-oo-bg p-3">
       {loading && <p className="text-[12px] text-oo-muted">Searching the NZ register…</p>}
       {error && <p className="text-[12px] text-red-700">{error}</p>}
 
       {data && !data.available && (
-        <p className="text-[12px] text-oo-muted leading-[1.6]">
-          Associations lookup isn’t available{data.reason ? ` (${data.reason})` : ""}.
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-[12px] text-oo-muted leading-[1.6]">
+            Associations lookup isn’t available{data.reason ? ` (${data.reason})` : ""}.
+          </p>
+          <button
+            type="button"
+            onClick={() => setCollapsed(true)}
+            className="shrink-0 text-[11px] font-mono text-oo-blue hover:underline"
+          >
+            Hide
+          </button>
+        </div>
       )}
 
       {data && data.available && (
@@ -197,9 +220,18 @@ export function NzAssociations({ companyNumber }: { companyNumber: string }) {
             <h4 className="font-head font-bold text-[13px] text-oo-ink">
               Director &amp; shareholder associations
             </h4>
-            <span className="text-[11px] font-mono text-oo-muted shrink-0">
-              {data.people.filter((p) => p.other_company_count > 0).length} of {data.checked} linked
-            </span>
+            <div className="flex items-baseline gap-3 shrink-0">
+              <span className="text-[11px] font-mono text-oo-muted">
+                {data.people.filter((p) => p.other_company_count > 0).length} of {data.checked} linked
+              </span>
+              <button
+                type="button"
+                onClick={() => setCollapsed(true)}
+                className="text-[11px] font-mono text-oo-blue hover:underline"
+              >
+                Hide
+              </button>
+            </div>
           </div>
           <p className="mt-1 text-[11px] text-oo-muted leading-[1.5]">
             Matched on name and address from the public register — may include different people who

@@ -167,6 +167,30 @@ async def test_fetch_resolves_and_normalises(monkeypatch, tmp_path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_fetch_13_digit_nzbn_skips_search(monkeypatch, tmp_path) -> None:
+    """When GLEIF registeredAs is the 13-digit NZBN (e.g. ADT Security), the
+    adapter uses it directly as the NZBN and skips the directory search."""
+    _live(monkeypatch, tmp_path)
+    cache = MagicMock(); cache.has.return_value = False
+    cache.get_payload.return_value = None; cache.put.return_value = None
+    calls: list[str] = []
+
+    async def route(url, **kw):
+        calls.append(url)
+        return _resp(200, {"entityName": "ADT SECURITY LIMITED", "nzbn": "9429040916057"})
+
+    with (
+        patch("opencheck.sources.nz_companies.Cache", return_value=cache),
+        patch("opencheck.sources.nz_companies.build_client", return_value=_make_client(route)),
+    ):
+        bundle = await NzCompaniesAdapter().fetch("9429040916057", legal_name="ADT")
+
+    assert bundle["nzbn"] == "9429040916057"
+    assert all("search-term" not in u for u in calls)  # no directory search
+    assert any("/entities/9429040916057" in u for u in calls)
+
+
+@pytest.mark.asyncio
 async def test_fetch_stub_without_key(monkeypatch, tmp_path) -> None:
     _live(monkeypatch, tmp_path, key=None)  # live mode but no NZBN_API_KEY
     cache = MagicMock(); cache.has.return_value = False; cache.get_payload.return_value = None
