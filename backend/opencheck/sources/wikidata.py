@@ -125,6 +125,33 @@ SELECT ?roleLabel ?person ?personLabel ?start WHERE {
 """
 
 
+# Controlling-owner extraction (prototype — see docs/wikidata-ownership.md).
+# One statement node per owner so qualifiers (P1107 proportion) and references
+# (prov:wasDerivedFrom → P248 stated-in / P854 reference URL / P813 retrieved)
+# come back alongside each ownership edge. P127 (owned by) and P749 (parent
+# organization) are queried as two UNION branches so we can record which.
+_OWNERSHIP_QUERY = """
+SELECT ?owner ?ownerLabel ?via ?ownerClass ?proportion
+       ?statedIn ?statedInLabel ?refUrl ?retrieved
+WHERE {
+  {
+    wd:%(qid)s p:P127 ?st . ?st ps:P127 ?owner . BIND("P127" AS ?via)
+  } UNION {
+    wd:%(qid)s p:P749 ?st . ?st ps:P749 ?owner . BIND("P749" AS ?via)
+  }
+  OPTIONAL { ?owner wdt:P31 ?ownerClass }
+  OPTIONAL { ?st pq:P1107 ?proportion }
+  OPTIONAL {
+    ?st prov:wasDerivedFrom ?ref .
+    OPTIONAL { ?ref pr:P248 ?statedIn }
+    OPTIONAL { ?ref pr:P854 ?refUrl }
+    OPTIONAL { ?ref pr:P813 ?retrieved }
+  }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
+}
+"""
+
+
 def _parse_roleholders(bindings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Collapse roleholder SPARQL rows into a deduplicated per-person list.
 
@@ -161,6 +188,130 @@ def _parse_roleholders(bindings: list[dict[str, Any]]) -> list[dict[str, Any]]:
             )
 
     return list(by_person.values())
+
+
+# ---------------------------------------------------------------------
+# Controlling-owner classification + parsing (prototype)
+# ---------------------------------------------------------------------
+
+# Wikidata P31 class QIDs → owner category. Direct-P31 based (subclass-aware
+# refinement via P279* is a follow-up); a name-hint fallback handles the common
+# cases where Wikidata's P31 is generic. Tuneable — see docs/wikidata-ownership.md.
+_PERSON_CLASSES = frozenset({"Q5"})                                 # human
+_FOUNDATION_CLASSES = frozenset({"Q157031", "Q708676", "Q163740"})  # foundation, charity, nonprofit
+_ARRANGEMENT_CLASSES = frozenset({"Q193076", "Q2992826"})           # trust / fiduciary arrangement
+_STATE_CLASSES = frozenset({"Q3624078", "Q7275"})                   # sovereign state, state
+_STATEBODY_CLASSES = frozenset({"Q7188", "Q327333", "Q192350", "Q2659904"})  # govt, agency, ministry
+_GLIE_CLASSES = frozenset({"Q1808582"})                             # sovereign wealth fund
+_FAMILY_CLASSES = frozenset({"Q8436", "Q17304012"})                 # family, noble family
+
+_FOUNDATION_HINTS = ("foundation", "stiftung", "fondation", "fondazione", "stichting")
+_ARRANGEMENT_HINTS = ("treuhand", " trust", "fiducie", "fideicomiso")
+
+# category → (BODS statement kind, entityType.type). Persons have no entityType.
+_CATEGORY_BODS: dict[str, tuple[str, str | None]] = {
+    "person": ("person", None),
+    "foundation": ("entity", "registeredEntity"),
+    "arrangement": ("entity", "arrangement"),
+    "company": ("entity", "registeredEntity"),
+    "glie": ("entity", "registeredEntity"),
+    "state": ("entity", "state"),
+    "statebody": ("entity", "stateBody"),
+}
+
+
+def _classify_owner(classes: set[str], name: str | None) -> str:
+    """Map an owner's P31 class set (+ name hints) to a controlling-owner category."""
+    name_l = (name or "").lower()
+    if classes & _FAMILY_CLASSES:
+        return "family"
+    if classes & _PERSON_CLASSES:
+        return "person"
+    if classes & _STATEBODY_CLASSES:
+        return "statebody"
+    if classes & _STATE_CLASSES:
+        return "state"
+    if classes & _GLIE_CLASSES:
+        return "glie"
+    if classes & _FOUNDATION_CLASSES or any(h in name_l for h in _FOUNDATION_HINTS):
+        return "foundation"
+    if classes & _ARRANGEMENT_CLASSES or any(h in name_l for h in _ARRANGEMENT_HINTS):
+        return "arrangement"
+    return "company"
+
+
+def _proportion_to_pct(value: str | None) -> float | None:
+    """Wikidata P1107 is stored as a ratio (0.92) or, rarely, a percent. Normalise
+    to a percentage. Indicative only — Wikidata conflates capital / voting / time."""
+    if value is None:
+        return None
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return None
+    pct = f * 100 if f <= 1.0 else f
+    return round(pct, 4)
+
+
+def _parse_ownership(bindings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Collapse ownership SPARQL rows into a per-owner list ready for BODS mapping.
+
+    Each entry carries the owner's category (person / foundation / arrangement /
+    company / glie / state / stateBody), an **indicative** share percentage, the
+    relating property/properties (P127 / P749), and the statement's references.
+    **Family-typed owners are dropped** — a "family" is neither a legal entity nor
+    a single natural person, so we do not fabricate a person or invent a group.
+    """
+    by: dict[str, dict[str, Any]] = {}
+    for row in bindings:
+        oqid = _qid_from_uri(_bv(row, "owner"))
+        if not oqid or not oqid.startswith("Q"):
+            continue
+        rec = by.get(oqid)
+        if rec is None:
+            rec = {
+                "qid": oqid, "name": _bv(row, "ownerLabel") or oqid,
+                "via": set(), "classes": set(), "proportion": None,
+                "references": [], "_refseen": set(),
+            }
+            by[oqid] = rec
+        via = _bv(row, "via")
+        if via:
+            rec["via"].add(via)
+        cls = _qid_from_uri(_bv(row, "ownerClass"))
+        if cls:
+            rec["classes"].add(cls)
+        prop = _bv(row, "proportion")
+        if prop and rec["proportion"] is None:
+            rec["proportion"] = prop
+        url, stated, retrieved = _bv(row, "refUrl"), _bv(row, "statedInLabel"), _bv(row, "retrieved")
+        if url or stated:
+            key = (stated or "", url or "")
+            if key not in rec["_refseen"]:
+                rec["_refseen"].add(key)
+                rec["references"].append(
+                    {"stated_in": stated, "url": url, "retrieved": retrieved}
+                )
+
+    out: list[dict[str, Any]] = []
+    for rec in by.values():
+        category = _classify_owner(rec["classes"], rec["name"])
+        if category == "family":
+            continue  # decided: drop family owners (see docs/wikidata-ownership.md)
+        bods_kind, entity_type = _CATEGORY_BODS[category]
+        share = _proportion_to_pct(rec["proportion"])
+        out.append({
+            "qid": rec["qid"],
+            "name": rec["name"],
+            "category": category,
+            "bods_kind": bods_kind,        # "person" | "entity"
+            "entity_type": entity_type,    # BODS entityType.type, or None for persons
+            "via": sorted(rec["via"]),     # ["P127"] owned-by / ["P749"] parent
+            "share_percent": share,        # INDICATIVE only — never render as fact alone
+            "references": rec["references"],
+            "has_reference": bool(rec["references"]),
+        })
+    return out
 
 
 def _slug(text: str) -> str:
@@ -325,6 +476,27 @@ class WikidataAdapter(SourceAdapter):
             "bindings": bindings,
             "summary": summary,
         }
+
+    # ------------------------------------------------------------------
+    # Controlling-owner extraction (prototype — not yet on the main fetch path)
+    # ------------------------------------------------------------------
+
+    async def fetch_ownership(self, hit_id: str) -> list[dict[str, Any]]:
+        """Return the entity's classified controlling owners (P127 / P749).
+
+        Prototype for the unified Wikidata ownership enrichment (see
+        docs/wikidata-ownership.md): foundation / family / SOE owners come from
+        the same extraction, classified and mapped toward BODS. Family owners are
+        dropped. Shares are indicative; references are captured for provenance.
+        """
+        qid = hit_id.strip().upper()
+        if not qid.startswith("Q") or not qid[1:].isdigit():
+            return []
+        cache_key = f"{_CACHE_NS}/ownership/{qid}"
+        if not self.info.live_available and not self._cache.has(cache_key):
+            return []
+        payload = await self._sparql(_OWNERSHIP_QUERY % {"qid": qid}, cache_key=cache_key)
+        return _parse_ownership(payload.get("results", {}).get("bindings", []))
 
     # ------------------------------------------------------------------
     # HTTP with caching
