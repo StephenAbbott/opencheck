@@ -29,12 +29,14 @@ in bods/mapper.py needs no changes):
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from typing import Any
 
 import httpx
 
+from ..config import get_settings
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 logger = logging.getLogger(__name__)
@@ -46,6 +48,54 @@ _BASE_URL = "https://ariregister.rik.ee"
 _PRINT_URL = _BASE_URL + "/eng/company/{reg_code}/company_print_json"
 _AUTO_URL  = _BASE_URL + "/eng/api/autocomplete"
 _TIMEOUT   = 20.0
+
+# --- RIK X-Road SOAP open-data API (Time Machine history only) --------------
+# The public scraper above drives the live /lookup. For *historical* data the
+# only machine-readable source is the credentialed SOAP service: detailandmed_v2
+# returns the full registry-card history (ainult_kehtivad=0), tegelikudKasusaajad_v2
+# the beneficial-owner history. Read-only, off the main lookup path. Credentials:
+# ARIREGISTER_USERNAME / ARIREGISTER_PASSWORD (open-data API contract).
+_SOAP_URL = "https://ariregxmlv6.rik.ee/"
+_SOAP_NS = "http://arireg.x-road.eu/producer/"
+_SOAP_TIMEOUT = 30.0
+_SOAP_HEADERS = {
+    "Content-Type": "text/xml; charset=utf-8",
+    "SOAPAction": '""',
+    "User-Agent": "OpenCheck/1.0 (https://opencheck.world; beneficialownership.co.uk)",
+}
+
+
+def _soap_escape(text: str) -> str:
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _detail_envelope(user: str, pw: str, reg_code: str) -> str:
+    """detailandmed_v2 with general + personnel data and history on."""
+    return (
+        f'<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" '
+        f'xmlns:prod="{_SOAP_NS}"><soapenv:Body><prod:detailandmed_v2><prod:keha>'
+        f"<prod:ariregister_kasutajanimi>{_soap_escape(user)}</prod:ariregister_kasutajanimi>"
+        f"<prod:ariregister_parool>{_soap_escape(pw)}</prod:ariregister_parool>"
+        f"<prod:ariregistri_kood>{_soap_escape(reg_code)}</prod:ariregistri_kood>"
+        "<prod:yandmed>1</prod:yandmed><prod:iandmed>1</prod:iandmed>"
+        "<prod:kandmed>0</prod:kandmed><prod:dandmed>0</prod:dandmed>"
+        "<prod:maarused>0</prod:maarused><prod:ainult_kehtivad>0</prod:ainult_kehtivad>"
+        "<prod:keel>eng</prod:keel>"
+        "</prod:keha></prod:detailandmed_v2></soapenv:Body></soapenv:Envelope>"
+    )
+
+
+def _bo_envelope(user: str, pw: str, reg_code: str) -> str:
+    """tegelikudKasusaajad_v2 with history on (ainult_kehtivad=0)."""
+    return (
+        f'<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" '
+        f'xmlns:prod="{_SOAP_NS}"><soapenv:Body><prod:tegelikudKasusaajad_v2><prod:keha>'
+        f"<prod:ariregister_kasutajanimi>{_soap_escape(user)}</prod:ariregister_kasutajanimi>"
+        f"<prod:ariregister_parool>{_soap_escape(pw)}</prod:ariregister_parool>"
+        f"<prod:ariregistri_kood>{_soap_escape(reg_code)}</prod:ariregistri_kood>"
+        "<prod:ainult_kehtivad>0</prod:ainult_kehtivad><prod:keel>eng</prod:keel>"
+        "</prod:keha></prod:tegelikudKasusaajad_v2></soapenv:Body></soapenv:Envelope>"
+    )
 
 _HEADERS = {
     "User-Agent": "OpenCheck/1.0 (https://opencheck.world; beneficialownership.co.uk)",
@@ -500,3 +550,52 @@ class AriregisterAdapter(SourceAdapter):
             "beneficial_owners": beneficial_owners,
             "is_stub": False,
         }
+
+    # ------------------------------------------------------------------
+    # Time Machine — historical data via the credentialed SOAP API
+    # ------------------------------------------------------------------
+
+    async def fetch_timeline_data(self, registry_code: str) -> dict[str, Any] | None:
+        """Raw registry-card + beneficial-owner *history* for the Time Machine.
+
+        Calls the RIK X-Road SOAP open-data API with history on
+        (``ainult_kehtivad=0``): ``detailandmed_v2`` for the dated registry-card
+        blocks and ``tegelikudKasusaajad_v2`` for beneficial owners. Read-only,
+        lazy, off the main lookup path — the live ``/lookup`` still uses the
+        no-auth public scraper in ``fetch()``.
+
+        Returns ``None`` when not live or when credentials are unset (the
+        feature then simply doesn't contribute Estonian events). The two calls
+        run concurrently and a failure of either is tolerated.
+        """
+        settings = get_settings()
+        if not settings.allow_live:
+            return None
+        user = settings.ariregister_username
+        pw = settings.ariregister_password
+        if not user or not pw:
+            return None
+
+        code = re.sub(r"\D", "", registry_code or "") or (registry_code or "").strip()
+        if not code:
+            return None
+
+        async def _post(envelope: str) -> str | None:
+            try:
+                async with httpx.AsyncClient(timeout=_SOAP_TIMEOUT) as client:
+                    r = await client.post(_SOAP_URL, content=envelope, headers=_SOAP_HEADERS)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("ariregister: timeline SOAP error for %s: %s", code, exc)
+                return None
+            if r.status_code != 200:
+                logger.info("ariregister: timeline HTTP %s for %s", r.status_code, code)
+                return None
+            return r.text
+
+        detail_xml, bo_xml = await asyncio.gather(
+            _post(_detail_envelope(user, pw, code)),
+            _post(_bo_envelope(user, pw, code)),
+        )
+        if not detail_xml and not bo_xml:
+            return None
+        return {"registry_code": code, "detail_xml": detail_xml, "bo_xml": bo_xml}

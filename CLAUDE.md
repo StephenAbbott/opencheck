@@ -366,9 +366,16 @@ INPI entries where `beneficiaireEffectif == True` MUST be silently skipped and n
 
 ## Estonian adapter (ariregister) — hard-won constraints
 
-**Do NOT use the SOAP/X-Road API** at `ariregxmlv6.rik.ee`. The Phase 37 SOAP approach had a paid RIK contract that authenticated correctly (HTTP 200) but returned zero results for all queries. RIK confirmed the contract type did not grant data-query access.
+**SOAP/X-Road API at `ariregxmlv6.rik.ee` — read-only history queries are now ALLOWED (narrowed ban).** The original blanket ban was written for the Phase 37 *paid* contract, which authenticated (HTTP 200) but returned zero rows for every query (RIK confirmed that contract type didn't grant data access). That premise is now false: the **free open-data API contract** credentials obtained 2026-05-29 (`ARIREGISTER_USERNAME` / `ARIREGISTER_PASSWORD`) **do** return data. Confirmed live via `scripts/spike_ariregister_history.py` (Bolt returned 744 dated rows + a 50-entry registry-card log).
 
-**Current approach (Phase 45)**: Public web scraper. No credentials needed.
+- **The live `/lookup` still uses the no-auth public scraper** in `fetch()` (see below) — do NOT route the lookup through SOAP.
+- **The Time Machine (history only) uses SOAP**, read-only: `AriregisterAdapter.fetch_timeline_data()` calls `detailandmed_v2` (`ainult_kehtivad=0`, full registry-card history) + `tegelikudKasusaajad_v2` (beneficial-owner history), and `timeline/ariregister.py` maps the dated blocks into `ChangeEvent`s (NZ-emitter shape; `DateBasis.EFFECTIVE`/`HIGH`). Endpoint: `https://ariregxmlv6.rik.ee/`, producer namespace `http://arireg.x-road.eu/producer/`.
+- **JSON dates are epoch-second floats and `{}` means "no end"** — the emitter requests XML (ISO dates, self-closing empties) for deterministic parsing; the epoch path is handled defensively in `_iso()`.
+- **Shareholders are on the register card since 1 Sept 2023** (roles `OSAN` on-card / `O` off-card), so ownership history is available via `detailandmed_v2`.
+- **BO access changes 10 July 2026.** BO events are deliberately isolated in `_bo_events()` in `timeline/ariregister.py` so the whole branch can be dropped then (and the `tegelikudKasusaajad_v2` call removed from `fetch_timeline_data`). Revisit on that date.
+- **Render**: the Time Machine Estonia branch only lights up when `ARIREGISTER_USERNAME` / `ARIREGISTER_PASSWORD` are set on Render (in addition to `.env` locally). Without them, `fetch_timeline_data()` returns `None` and the timeline silently omits Estonian events.
+
+**Current lookup approach (Phase 45)**: Public web scraper. No credentials needed.
 - **Main endpoint**: `GET https://ariregister.rik.ee/eng/company/{reg_code}/company_print_json`
 - **Search endpoint**: `GET https://ariregister.rik.ee/eng/api/autocomplete?q={query}` → JSON
 - **GLEIF RA code**: `RA000181` (NOT RA000198 — the table below has a typo, RA000181 is confirmed from live GLEIF data)
@@ -378,7 +385,7 @@ INPI entries where `beneficiaireEffectif == True` MUST be silently skipped and n
 - **BO control mapping**: "Indirect ownership" → `K`, "Direct ownership" → `O`, "Voting rights" → `H`
 - **Not found detection**: If `str(r.url)` does not contain `/eng/company/`, the server redirected away (company not found) → return stub bundle
 - **Bundle format**: Unchanged from Phase 37 — `map_ariregister()` in `bods/mapper.py` needs no changes
-- `ARIREGISTER_USERNAME` / `ARIREGISTER_PASSWORD` in config.py are retained for backward compatibility but NOT read by the adapter
+- `ARIREGISTER_USERNAME` / `ARIREGISTER_PASSWORD` are NOT used by the live-lookup scraper, but ARE read by `fetch_timeline_data()` for the SOAP history path (see the narrowed-ban note above)
 
 ---
 

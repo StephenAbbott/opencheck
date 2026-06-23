@@ -69,6 +69,13 @@ data/cache/*.tmp
 # Pre-built source adapter databases (large local files, built by scripts/extract_*.py)
 data/*.db
 
+# Stray pre-built adapter DBs built/pointed at from backend/ (OpenTender,
+# ariregister, etc.) — multi-hundred-MB artifacts, never committed. Includes the
+# SQLite WAL/SHM sidecars that appear next to an open DB.
+backend/*.db
+backend/*.db-wal
+backend/*.db-shm
+
 # Stray local runtime cache / built databases under backend/ (live API caches,
 # UK PSC databases, etc. — large, never committed).
 backend/data/

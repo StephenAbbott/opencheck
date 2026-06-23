@@ -21,6 +21,7 @@ import httpx
 
 from ..config import get_settings
 from ..http import build_client
+from .ariregister import ariregister_change_events
 from .assemble import Timeline, assemble_timeline
 from .nz_companies import nz_change_events
 
@@ -31,6 +32,7 @@ _CH_API_BASE = "https://api.company-information.service.gov.uk"
 # GLEIF Registration Authority codes.
 _CH_RA_CODE = "RA000585"   # UK Companies House
 _NZ_RA_CODE = "RA000466"   # NZ Companies Register
+_EE_RA_CODE = "RA000181"   # Estonian e-Business Register
 
 _MODS_PAGE_SIZE = 200
 _MODS_PAGE_CAP = 5  # ≤ 1000 modifications — plenty for a per-entity timeline
@@ -40,11 +42,11 @@ _CH_PAGE_CAP = 10  # ≤ 1000 filings
 
 async def _gleif_registration(
     client: httpx.AsyncClient, lei: str
-) -> tuple[str | None, str | None]:
-    """Return ``(ch_number, nz_number)`` derived from the GLEIF record."""
+) -> tuple[str | None, str | None, str | None]:
+    """Return ``(ch_number, nz_number, ee_registry_code)`` from the GLEIF record."""
     resp = await client.get(_GLEIF_RECORD_URL.format(lei=quote(lei)))
     if resp.status_code == 404:
-        return None, None
+        return None, None, None
     resp.raise_for_status()
     entity = (
         (((resp.json() or {}).get("data") or {}).get("attributes") or {}).get("entity")
@@ -57,7 +59,8 @@ async def _gleif_registration(
         registered_as and (registered_at == _CH_RA_CODE or jurisdiction == "GB")
     ) else None
     nz = registered_as if (registered_as and registered_at == _NZ_RA_CODE) else None
-    return ch, nz
+    ee = registered_as if (registered_as and registered_at == _EE_RA_CODE) else None
+    return ch, nz, ee
 
 
 async def _gleif_modifications(
@@ -120,12 +123,13 @@ async def fetch_timeline(lei: str) -> Timeline:
 
     company_number: str | None = None
     nz_number: str | None = None
+    ee_code: str | None = None
     lei_mods: list[dict] = []
     rr_mods: list[dict] = []
     ch_filings: list[dict] = []
 
     async with build_client() as client:
-        # GLEIF record (for the CH/NZ numbers) and the change log run concurrently.
+        # GLEIF record (for the CH/NZ/EE numbers) and the change log run concurrently.
         results = await asyncio.gather(
             _gleif_registration(client, lei),
             _gleif_modifications(client, lei),
@@ -133,7 +137,7 @@ async def fetch_timeline(lei: str) -> Timeline:
         )
         reg_res, mods_res = results
         if not isinstance(reg_res, BaseException):
-            company_number, nz_number = reg_res
+            company_number, nz_number, ee_code = reg_res
         if not isinstance(mods_res, BaseException):
             lei_mods, rr_mods = mods_res
 
@@ -160,13 +164,25 @@ async def fetch_timeline(lei: str) -> Timeline:
         if data:
             nz_events = nz_change_events(data)
 
+    # Estonia — registry-card + beneficial-owner history via the credentialed
+    # RIK SOAP API (read-only). Best-effort; never sinks the timeline.
+    ee_events = []
+    if ee_code and settings.ariregister_username and settings.ariregister_password:
+        try:
+            from ..sources import REGISTRY
+            data = await REGISTRY["ariregister"].fetch_timeline_data(ee_code)
+        except Exception:  # noqa: BLE001
+            data = None
+        if data:
+            ee_events = ariregister_change_events(data)
+
     return assemble_timeline(
         lei=lei,
         company_number=company_number,
         gleif_lei_mods=lei_mods,
         gleif_rr_mods=rr_mods,
         ch_filings=ch_filings,
-        extra_events=nz_events,
+        extra_events=nz_events + ee_events,
     )
 
 
