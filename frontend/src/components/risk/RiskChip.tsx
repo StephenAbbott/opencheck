@@ -44,6 +44,10 @@ export const RISK_PRESENTATION: Record<
     label: "Non-EU jurisdiction",
     classes: "bg-orange-50 text-orange-700 border-orange-200",
   },
+  STATE_CONTROLLED: {
+    label: "State-controlled",
+    classes: "bg-orange-50 text-orange-700 border-orange-200",
+  },
   NOMINEE: {
     label: "Nominee",
     classes: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200",

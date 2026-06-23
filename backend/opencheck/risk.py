@@ -102,6 +102,13 @@ DEBARMENT = "DEBARMENT"
 OFFSHORE_LEAKS = "OFFSHORE_LEAKS"
 OPAQUE_OWNERSHIP = "OPAQUE_OWNERSHIP"
 
+# Code — ownership structure (BODS-derived). Fires when an owner / controlling
+# party is modelled as a state or state body (BODS entityType 'state'/'stateBody',
+# per the SOE modelling requirement). Presence-only, corroborating — currently
+# sourced from Wikidata, which is crowd-sourced and famous-names-only, so its
+# absence means nothing. Medium confidence; not part of the AMLA composite.
+STATE_CONTROLLED = "STATE_CONTROLLED"
+
 # Codes — AMLA CDD RTS (BODS-derived)
 TRUST_OR_ARRANGEMENT = "TRUST_OR_ARRANGEMENT"
 NON_EU_JURISDICTION = "NON_EU_JURISDICTION"
@@ -405,6 +412,7 @@ def assess_bundle(
     if bods:
         signals.extend(_opaque_ownership_signals(source_id, raw, bods))
         signals.extend(assess_amla(source_id, raw, bods, hit_id=hit_id))
+        signals.extend(_state_controlled_signals(source_id, hit_id, bods))
 
     # Subjective AMLA "obfuscation" signal looks at the assembled
     # signal set (after every other rule has fired) — last to run.
@@ -713,6 +721,74 @@ def _interests(stmt: dict[str, Any]) -> list[dict[str, Any]]:
     rd = _record_details(stmt)
     interests = rd.get("interests")
     return interests if isinstance(interests, list) else []
+
+
+# BODS entityType.type values that denote a state / government body (per the
+# SOE modelling requirement). A relationship to such an entity = state control.
+_STATE_ENTITY_TYPES = {"state", "stateBody"}
+
+
+def _state_controlled_signals(
+    source_id: str, hit_id: str, bods: list[dict[str, Any]]
+) -> list[RiskSignal]:
+    """STATE_CONTROLLED — a controlling owner is a state or state body.
+
+    BODS-derived and source-agnostic: per the BODS *Representing state-owned
+    enterprises* requirement, an SOE connects (directly or indirectly) to an
+    entity statement with ``entityType.type`` ``state`` / ``stateBody``. We fire
+    when such an entity is the interested party of a relationship in the bundle.
+
+    Presence-only and corroborating — currently sourced from Wikidata (crowd-
+    sourced, famous-names-only), so its **absence is not evidence** the entity is
+    privately owned. Medium confidence; never a determination.
+    """
+    ents: dict[str, dict[str, Any]] = {}
+    state_ids: set[str] = set()
+    for stmt in bods:
+        if _stmt_kind(stmt) != "entity":
+            continue
+        sid = _statement_id(stmt)
+        ents[sid] = stmt
+        etype = (_record_details(stmt).get("entityType") or {}).get("type")
+        if etype in _STATE_ENTITY_TYPES:
+            state_ids.add(sid)
+    if not state_ids:
+        return []
+
+    owners: list[str] = []
+    state_node: str = ""
+    subject_node: str = ""
+    for stmt in bods:
+        if _stmt_kind(stmt) != "relationship":
+            continue
+        subj, ip, _ = _relationship_endpoints(stmt)
+        if ip in state_ids:
+            name = _record_details(ents.get(ip, {})).get("name") or ip
+            owners.append(name)
+            state_node = state_node or ip
+            subject_node = subject_node or subj
+    if not owners:
+        return []
+
+    return [
+        RiskSignal(
+            code=STATE_CONTROLLED,
+            confidence="medium",
+            summary=(
+                "A controlling owner is a state or state body — a possible "
+                "state-owned enterprise. Corroborating indicator (Wikidata-"
+                "sourced); not a determination, and its absence is not evidence "
+                "the entity is privately owned."
+            ),
+            source_id=source_id,
+            hit_id=hit_id,
+            evidence={
+                "state_owners": sorted(set(owners)),
+                "statement_id": state_node,            # the state/stateBody node
+                "subject_statement_id": subject_node,  # the controlled entity
+            },
+        )
+    ]
 
 
 # ----------------------------------------------------------------------

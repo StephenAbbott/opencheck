@@ -1,6 +1,6 @@
 # OpenCheck — Risk Signals
 
-Twelve codes, all deterministic — every firing is documented with a `summary`, `confidence` (`high` / `medium` / `low`), and an `evidence` payload citing the underlying topic / collection / BODS statement IDs that triggered it.
+All deterministic — every firing is documented with a `summary`, `confidence` (`high` / `medium` / `low`), and an `evidence` payload citing the underlying topic / collection / BODS statement IDs that triggered it.
 
 Risk signals fall into three groups:
 
@@ -25,6 +25,10 @@ These mirror the objective conditions in the EU AMLA draft customer due diligenc
 - `COMPLEX_OWNERSHIP_LAYERS` — DFS over the BODS relationship graph finds an entity-only chain ≥3 nodes (cycle-safe). Made meaningfully detectable by the Phase 10 Open Ownership bundles, which carry full multi-layer chains.
 - `COMPLEX_CORPORATE_STRUCTURE` — composite (high confidence), fires when `COMPLEX_OWNERSHIP_LAYERS` AND ≥1 of {trust, non-EU, nominee} both fire — the AMLA threshold rule end-to-end.
 - `POSSIBLE_OBFUSCATION` — advisory (low confidence) mirror of AMLA's subjective condition; explicitly notes the legitimate-economic-rationale caveat.
+
+## Ownership structure (BODS v0.4 derived)
+
+- `STATE_CONTROLLED` — `medium` — a controlling owner is modelled as a `state` or `stateBody` entity, i.e. the subject connects (directly or indirectly) to a state per the BODS [Representing state-owned enterprises](https://standard.openownership.org/en/0.4.0/standard/modelling/repr-state-owned-enterprises.html) requirement — a possible state-owned enterprise. Source-agnostic (any source whose BODS carries a `state`/`stateBody` owner), but currently fed by the Wikidata controlling-owner extraction (`P127`/`P749`). **Presence-only and corroborating**: Wikidata is crowd-sourced and famous-names-only, so the signal's *absence is not evidence* an entity is privately owned, and it is never a determination. Not part of the AMLA composite. Evidence carries the `state`/`stateBody` node (`statement_id`) and the controlled entity (`subject_statement_id`). See [docs/wikidata-ownership.md](wikidata-ownership.md).
 
 ## FATF jurisdiction signals (BODS v0.4 derived)
 
