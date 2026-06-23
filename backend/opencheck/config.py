@@ -67,6 +67,12 @@ class Settings(BaseSettings):
     )
     # New Zealand NZBN API (Companies Office / MBIE) subscription key.
     nzbn_api_key: str | None = Field(default=None, alias="NZBN_API_KEY")
+    # New Zealand Companies Entity Role Search API — separate subscription key,
+    # used by the lazy /nz-associations enrichment (director/shareholder links
+    # across the register).
+    nzbn_role_search_api_key: str | None = Field(
+        default=None, alias="NZBN_ROLE_SEARCH_API_KEY"
+    )
 
     # --- Corporations Canada (ISED) ---
     # Public-plan API key from the ISED API Gateway.

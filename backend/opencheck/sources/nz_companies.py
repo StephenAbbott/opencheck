@@ -99,6 +99,22 @@ def _registered_address(full: dict[str, Any]) -> str | None:
     return _address_str(addresses[0]) if addresses else None
 
 
+def _paf(a: Any) -> str | None:
+    """Extract the PAF delivery-point id (pafId) from an address block."""
+    if not isinstance(a, dict):
+        return None
+    return str(a.get("pafId") or "").strip() or None
+
+
+def _role_address(r: dict[str, Any]) -> dict[str, Any]:
+    """The first usable address block for a role (roleAddress[] or ASIC)."""
+    block = r.get("roleAddress")
+    if isinstance(block, list) and block and isinstance(block[0], dict):
+        return block[0]
+    asic = r.get("roleAsicAddress")
+    return asic if isinstance(asic, dict) else {}
+
+
 def _norm_roles(roles: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Normalise governance roles (directors etc.) → person/entity role-holders."""
     out: list[dict[str, Any]] = []
@@ -108,6 +124,8 @@ def _norm_roles(roles: list[dict[str, Any]]) -> list[dict[str, Any]]:
         role_type = str(r.get("roleType") or "").strip() or None
         start, end = _date(r.get("startDate")), _date(r.get("endDate"))
         status = str(r.get("roleStatus") or "").strip() or None
+        addr = _role_address(r)
+        addr_str, paf = _address_str(addr), _paf(addr)
         ent = r.get("roleEntity") or {}
         if isinstance(ent, dict) and str(ent.get("entityName") or "").strip():
             out.append({
@@ -115,6 +133,7 @@ def _norm_roles(roles: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "name": str(ent["entityName"]).strip(),
                 "nzbn": str(ent.get("nzbn") or "").strip() or None,
                 "role_type": role_type, "status": status, "start": start, "end": end,
+                "address": addr_str, "paf_id": paf,
             })
             continue
         name = _person_name(r.get("rolePerson"))
@@ -122,6 +141,7 @@ def _norm_roles(roles: list[dict[str, Any]]) -> list[dict[str, Any]]:
             out.append({
                 "kind": "person", "name": name, "nzbn": None,
                 "role_type": role_type, "status": status, "start": start, "end": end,
+                "address": addr_str, "paf_id": paf,
             })
     return out
 
@@ -155,6 +175,8 @@ def _norm_shareholders(company_details: dict[str, Any]) -> list[dict[str, Any]]:
                 continue
             other = h.get("otherShareholder") or {}
             start = _date(h.get("appointmentDate"))
+            addr = h.get("shareholderAddress") or {}
+            addr_str, paf = _address_str(addr), _paf(addr)
             if isinstance(other, dict) and str(other.get("currentEntityName") or "").strip():
                 out.append({
                     "kind": "entity",
@@ -162,6 +184,7 @@ def _norm_shareholders(company_details: dict[str, Any]) -> list[dict[str, Any]]:
                     "nzbn": str(other.get("nzbn") or "").strip() or None,
                     "company_number": str(other.get("companyNumber") or "").strip() or None,
                     "shares": shares, "percent": percent, "jointly_held": joint, "start": start,
+                    "address": addr_str, "paf_id": paf,
                 })
                 continue
             name = _person_name(h.get("individualShareholder"))
@@ -169,6 +192,7 @@ def _norm_shareholders(company_details: dict[str, Any]) -> list[dict[str, Any]]:
                 out.append({
                     "kind": "person", "name": name, "nzbn": None, "company_number": None,
                     "shares": shares, "percent": percent, "jointly_held": joint, "start": start,
+                    "address": addr_str, "paf_id": paf,
                 })
     return out
 

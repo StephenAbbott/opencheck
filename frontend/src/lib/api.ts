@@ -274,6 +274,51 @@ export async function getHistory(
   return (await r.json()) as HistoryResponse;
 }
 
+// ---------------------------------------------------------------------
+// NZ associations — /nz-associations (director/shareholder cross-company links)
+// ---------------------------------------------------------------------
+
+export interface NzAssociatedCompany {
+  number: string;
+  name: string | null;
+  nzbn: string | null;
+  roles: string[]; // "director" | "shareholder"
+  share_percentage: number | null;
+  confidence: string; // "high" | "medium"
+  basis: string;
+  link: string | null;
+}
+
+export interface NzPersonAssociations {
+  name: string;
+  role_here: string[];
+  other_company_count: number;
+  high_confidence_count: number;
+  as_director: number;
+  as_shareholder: number;
+  weaker_count: number;
+  companies: NzAssociatedCompany[];
+}
+
+export interface NzAssociationsResponse {
+  company_number: string;
+  available: boolean;
+  reason: string | null;
+  subject_name: string | null;
+  checked: number;
+  people: NzPersonAssociations[];
+}
+
+/** Director/shareholder cross-company associations for an NZ company. */
+export async function getNzAssociations(
+  companyNumber: string,
+): Promise<NzAssociationsResponse> {
+  const params = new URLSearchParams({ company_number: companyNumber });
+  const r = await fetch(`${BASE_URL}/nz-associations?${params.toString()}`);
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return (await r.json()) as NzAssociationsResponse;
+}
+
 export async function lookup(lei: string): Promise<LookupResponse> {
   const params = new URLSearchParams({ lei });
   const r = await fetch(`${BASE_URL}/lookup?${params.toString()}`);

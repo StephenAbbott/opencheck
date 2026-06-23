@@ -3,6 +3,7 @@ import { deepen } from "../../lib/api";
 import type { BodsBreakdown, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
 import { HistoryTimeline } from "./HistoryTimeline";
+import { NzAssociations } from "./NzAssociations";
 
 // BodsGraphExplorer pulls in Cytoscape + cytoscape-dagre (~the bulk of the
 // bundle) but only renders when a user clicks "Visualise". Code-split it so
@@ -762,6 +763,13 @@ export function SourceBucketCard({
   const showTimelineButton =
     TIMELINE_SOURCES.has(bucket.sourceId) && !bucket.error && !!timelineLei;
 
+  // NZ-only enrichment: director/shareholder cross-company associations. The
+  // nz_companies hit_id is the company number.
+  const nzCompanyNumber =
+    bucket.sourceId === "nz_companies" && !bucket.error
+      ? (bucket.hits.find((h) => !h.is_stub) ?? bucket.hits[0])?.hit_id
+      : undefined;
+
   // Rendered inline with the entity title (right-aligned) on the first hit row.
   const timelineButton = showTimelineButton ? (
     <button
@@ -846,6 +854,11 @@ export function SourceBucketCard({
           />
         ))}
       </ul>
+      {nzCompanyNumber && (
+        <div className="px-5 pb-4">
+          <NzAssociations companyNumber={nzCompanyNumber} />
+        </div>
+      )}
     </article>
     {showTimeline && timelineLei && (
       <HistoryTimeline lei={timelineLei} entityName={timelineName} />
