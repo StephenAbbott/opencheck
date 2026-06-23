@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 61** — New Zealand director/shareholder associations: recall fix
+**Latest: Phase 62** — Wikidata controlling owners + a `STATE_CONTROLLED` signal
 
-A tuning change to the NZ associations panel after live use surfaced **zero** associations for any company. The Companies Entity Role Search API is keyed on a name string, so we'd tiered matches by address and counted only the address-corroborated ones — which hid the very people the feature is for.
+Foundation, family, and state ownership pulled from Wikidata and mapped to BODS. Investigating the community Wikidata MCP confirmed it's just a transport over the same Wikidata we already query — so the win is in *what* we extract, not how.
 
-1. **The problem.** A career director (the trigger case was Fonterra's Holly Kramer, on many boards) files a different address on each board — home, a service address, the registered office — so almost every genuine match was "name-only" and got dropped. Recall collapsed to ~zero.
-2. **Address now upgrades, it doesn't gate.** Every name match counts; the address grades it `high` (same `pafId`), `medium` (overlapping address) or `low` (name-only — "may be a different person"). New `address_match_count` / `name_only_count` per person, ranked address-matched-first.
-3. **Honest by default.** Name-only matches are shown in amber and clearly labelled; the per-name register total still flags common names; subject company excluded, ceased roles skipped, nothing asserted as a determination.
+1. **The seam.** Wikidata carries real ownership for big private firms — Robert Bosch → **Robert Bosch Stiftung 92%** + family vehicles, Koch → the Koch brothers, Heineken → Heineken Holding + the family — and state ownership for famous SOEs (Gazprom, Rosneft, Equinor, EDF). 82% of these ownership statements carry a reference (often company filings, the Danish CVR register, or government press).
+2. **Mapped to BODS, correctly typed.** Each owner is classified and emitted as the right shape — `personStatement`, `registeredEntity` (foundation/company), `arrangement` (trust/Treuhand), or `state`/`stateBody` per the BODS state-owned-enterprise modelling. Shares ride as *indicative* `share.exact` with the source reference; **family** owners are dropped (not a legal entity or a person — not fabricated).
+3. **A `STATE_CONTROLLED` risk signal.** Fires medium-confidence when a controlling owner is a state/state body — orange chip, graph badge, evidence-linked. **Presence-only and corroborating**: Wikidata is famous-names-only, so its silence means nothing, and it's never a determination.
 
-*Previous: [Phase 60 — GLEIF subsidiary network: direct and ultimate children](docs/status.md)*
+*Previous: [Phase 61 — New Zealand director/shareholder associations: recall fix](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
