@@ -3833,6 +3833,83 @@ def map_everypolitician(bundle: dict[str, Any]) -> BODSBundle:
 # ----------------------------------------------------------------------
 
 
+def _emit_wikidata_owner(
+    result: BODSBundle,
+    subject_qid: str,
+    subject_statement_id: str,
+    owner: dict[str, Any],
+    subject_source_url: str | None,
+) -> None:
+    """Emit a controlling-owner statement + relationship from the Wikidata
+    ownership extraction (see docs/wikidata-ownership.md).
+
+    The owner is already classified (person / foundation / arrangement / company /
+    glie / state / stateBody) with family owners dropped upstream, so this maps it
+    to the correct BODS ``entityType`` (or a personStatement), records the
+    **indicative** share as ``share.exact``, and points the BODS ``source`` at the
+    underlying reference where Wikidata carries one.
+    """
+    oqid = owner.get("qid") or ""
+    oname = owner.get("name") or oqid
+    if not oqid:
+        return
+
+    identifiers = [
+        {
+            "id": oqid,
+            "scheme": "WIKIDATA",
+            "schemeName": "Wikidata Q identifier",
+            "uri": f"https://www.wikidata.org/wiki/{oqid}",
+        }
+    ]
+    owner_url = f"https://www.wikidata.org/wiki/{oqid}"
+
+    if owner.get("bods_kind") == "person":
+        owner_stmt = make_person_statement(
+            source_id="wikidata", local_id=oqid, full_name=oname,
+            identifiers=identifiers, source_url=owner_url,
+        )
+        ip_type, is_boc = "person", True   # natural-person owner = beneficial owner
+    else:
+        owner_stmt = make_entity_statement(
+            source_id="wikidata", local_id=oqid, name=oname, identifiers=identifiers,
+            entity_type=owner.get("entity_type") or "registeredEntity",
+            source_url=owner_url,
+        )
+        ip_type, is_boc = "entity", False  # intermediate entity, not the ultimate BO
+
+    result.statements.append(owner_stmt)
+
+    share = owner.get("share_percent")
+    refs = owner.get("references") or []
+    ref0 = refs[0] if refs else {}
+    ref_src = ref0.get("stated_in") or ref0.get("url")
+    via = "/".join(owner.get("via") or []) or "P127/P749"
+
+    interest: dict[str, Any] = {"beneficialOwnershipOrControl": is_boc}
+    if share is not None:
+        interest["type"] = "shareholding"
+        interest["share"] = {"exact": share}
+        detail = f"Ownership declared on Wikidata ({via}); {share}% (indicative)"
+    else:
+        interest["type"] = "otherInfluenceOrControl"
+        detail = f"Controlling owner declared on Wikidata ({via})"
+    if ref_src:
+        detail += f"; source: {ref_src}"
+    interest["details"] = detail
+
+    relationship = make_relationship_statement(
+        source_id="wikidata",
+        local_id=f"{subject_qid}-owner-{oqid}",
+        subject_statement_id=subject_statement_id,
+        interested_party_statement_id=owner_stmt["statementId"],
+        interested_party_type=ip_type,
+        interests=[interest],
+        source_url=(ref0.get("url") or subject_source_url),
+    )
+    result.statements.append(relationship)
+
+
 def map_wikidata(bundle: dict[str, Any]) -> BODSBundle:
     """Map a Wikidata fetch bundle to BODS statements.
 
@@ -3935,51 +4012,59 @@ def map_wikidata(bundle: dict[str, Any]) -> BODSBundle:
     )
     result.statements.append(entity)
 
-    # Emit stub entity + relationship statements for each declared parent
-    # organisation (P749 / P127).  These are best-effort — we have only the
-    # parent's Q-ID and label from the SPARQL result, so the parent entity
-    # statement carries ``unknownEntity`` type and a WIKIDATA identifier.
+    # Controlling owners (P127 owned-by / P749 parent). The richer extraction
+    # classifies each owner and maps it to the correct BODS entityType
+    # (registeredEntity / arrangement / state / stateBody) or a personStatement,
+    # with an indicative share and the underlying reference (see
+    # docs/wikidata-ownership.md). Falls back to the legacy parent_orgs path for
+    # bundles produced before the ownership query existed.
     subject_statement_id: str = entity["statementId"]
-    for parent in summary.get("parent_orgs") or []:
-        parent_qid = parent.get("qid") or ""
-        parent_name = parent.get("label") or parent_qid
-        if not parent_qid:
-            continue
+    controlling_owners = summary.get("controlling_owners")
+    if controlling_owners:
+        for owner in controlling_owners:
+            _emit_wikidata_owner(result, qid, subject_statement_id, owner, source_url)
+    else:
+        # Legacy fallback: parent Q-ID + label only → unknownEntity parent.
+        for parent in summary.get("parent_orgs") or []:
+            parent_qid = parent.get("qid") or ""
+            parent_name = parent.get("label") or parent_qid
+            if not parent_qid:
+                continue
 
-        parent_identifiers = [
-            {
-                "id": parent_qid,
-                "scheme": "WIKIDATA",
-                "schemeName": "Wikidata Q identifier",
-                "uri": f"https://www.wikidata.org/wiki/{parent_qid}",
-            }
-        ]
-        parent_entity = make_entity_statement(
-            source_id="wikidata",
-            local_id=parent_qid,
-            name=parent_name,
-            identifiers=parent_identifiers,
-            entity_type="unknownEntity",
-            source_url=f"https://www.wikidata.org/wiki/{parent_qid}",
-        )
-        result.statements.append(parent_entity)
-
-        relationship = make_relationship_statement(
-            source_id="wikidata",
-            local_id=f"{qid}-parent-{parent_qid}",
-            subject_statement_id=subject_statement_id,
-            interested_party_statement_id=parent_entity["statementId"],
-            interested_party_type="entity",
-            interests=[
+            parent_identifiers = [
                 {
-                    "type": "otherInfluenceOrControl",
-                    "beneficialOwnershipOrControl": False,
-                    "details": "Parent organisation declared on Wikidata (P749/P127)",
+                    "id": parent_qid,
+                    "scheme": "WIKIDATA",
+                    "schemeName": "Wikidata Q identifier",
+                    "uri": f"https://www.wikidata.org/wiki/{parent_qid}",
                 }
-            ],
-            source_url=source_url,
-        )
-        result.statements.append(relationship)
+            ]
+            parent_entity = make_entity_statement(
+                source_id="wikidata",
+                local_id=parent_qid,
+                name=parent_name,
+                identifiers=parent_identifiers,
+                entity_type="unknownEntity",
+                source_url=f"https://www.wikidata.org/wiki/{parent_qid}",
+            )
+            result.statements.append(parent_entity)
+
+            relationship = make_relationship_statement(
+                source_id="wikidata",
+                local_id=f"{qid}-parent-{parent_qid}",
+                subject_statement_id=subject_statement_id,
+                interested_party_statement_id=parent_entity["statementId"],
+                interested_party_type="entity",
+                interests=[
+                    {
+                        "type": "otherInfluenceOrControl",
+                        "beneficialOwnershipOrControl": False,
+                        "details": "Parent organisation declared on Wikidata (P749/P127)",
+                    }
+                ],
+                source_url=source_url,
+            )
+            result.statements.append(relationship)
 
     # Emit person + relationship statements for current roleholders
     # (P169 CEO, P488 chair, P3320 board member, P6346 treasurer, P1037 director).

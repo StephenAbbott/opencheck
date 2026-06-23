@@ -449,3 +449,91 @@ def test_map_wikidata_entity_without_roleholders_key_still_emits_one_statement()
     statements = list(bundle)
     assert len(statements) == 1
     assert statements[0]["recordType"] == "entity"
+
+
+# ---------------------------------------------------------------------
+# Controlling-owner path (foundation / family / SOE extraction)
+# ---------------------------------------------------------------------
+
+
+def _entity_with_owners_bundle() -> dict:
+    """An entity whose Wikidata bundle carries classified controlling owners."""
+    return {
+        "source_id": "wikidata",
+        "qid": "Q234021",
+        "summary": {
+            "qid": "Q234021",
+            "label": "Robert Bosch GmbH",
+            "description": "German manufacturing company",
+            "is_person": False,
+            "is_entity": True,
+            "instance_of": [{"qid": "Q4830453", "label": "business"}],
+            "citizenships": [],
+            "positions": [],
+            "identifiers": {},
+            "country": {"qid": "Q183", "label": "Germany"},
+            "dob": None,
+            "dod": None,
+            "inception": None,
+            "parent_orgs": [],
+            "controlling_owners": [
+                {
+                    "qid": "Q123", "name": "Robert Bosch Stiftung",
+                    "category": "foundation", "bods_kind": "entity",
+                    "entity_type": "registeredEntity", "via": ["P127"],
+                    "share_percent": 92.0,
+                    "references": [{"stated_in": None,
+                                    "url": "https://assets.bosch.com/ownership.pdf",
+                                    "retrieved": None}],
+                    "has_reference": True,
+                },
+                {
+                    "qid": "Q456", "name": "Jane Owner", "category": "person",
+                    "bods_kind": "person", "entity_type": None, "via": ["P127"],
+                    "share_percent": None, "references": [], "has_reference": False,
+                },
+                {
+                    "qid": "Q789", "name": "Ministry of Energy", "category": "statebody",
+                    "bods_kind": "entity", "entity_type": "stateBody", "via": ["P749"],
+                    "share_percent": None, "references": [], "has_reference": False,
+                },
+            ],
+        },
+    }
+
+
+def test_map_wikidata_controlling_owners_emit_typed_statements() -> None:
+    statements = list(map_wikidata(_entity_with_owners_bundle()))
+    entities = [s for s in statements if s["recordType"] == "entity"]
+    persons = [s for s in statements if s["recordType"] == "person"]
+    rels = [s for s in statements if s["recordType"] == "relationship"]
+
+    # subject + foundation + stateBody = 3 entities; 1 person owner; 3 relationships
+    assert len(rels) == 3
+    et = {e["recordDetails"]["name"]: e["recordDetails"]["entityType"]["type"] for e in entities}
+    assert et["Robert Bosch Stiftung"] == "registeredEntity"
+    assert et["Ministry of Energy"] == "stateBody"   # BODS SOE modelling
+    assert any(p["recordDetails"]["names"][0]["fullName"] == "Jane Owner" for p in persons)
+
+
+def test_map_wikidata_owner_share_and_bo_flags() -> None:
+    statements = list(map_wikidata(_entity_with_owners_bundle()))
+    rels = [s for s in statements if s["recordType"] == "relationship"]
+    persons = [s for s in statements if s["recordType"] == "person"]
+
+    # Foundation owner → shareholding with the indicative share; entity → BO false.
+    found = next(r for r in rels if "92" in r["recordDetails"]["interests"][0].get("details", ""))
+    fi = found["recordDetails"]["interests"][0]
+    assert fi["type"] == "shareholding"
+    assert fi["share"]["exact"] == 92.0
+    assert fi["beneficialOwnershipOrControl"] is False
+
+    # Natural-person owner → beneficialOwnershipOrControl true.
+    person_id = persons[0]["statementId"]
+    prel = next(r for r in rels if r["recordDetails"]["interestedParty"] == person_id)
+    assert prel["recordDetails"]["interests"][0]["beneficialOwnershipOrControl"] is True
+
+
+def test_map_wikidata_controlling_owners_validate_clean() -> None:
+    bundle = map_wikidata(_entity_with_owners_bundle())
+    assert validate_shape(bundle) == []

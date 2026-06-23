@@ -432,18 +432,22 @@ class WikidataAdapter(SourceAdapter):
 
         main_query = _FETCH_QUERY % {"qid": qid}
         rh_query   = _ROLEHOLDER_QUERY % {"qid": qid}
-        rh_cache_key = f"{_CACHE_NS}/roleholders/{qid}"
+        own_query  = _OWNERSHIP_QUERY % {"qid": qid}
+        rh_cache_key  = f"{_CACHE_NS}/roleholders/{qid}"
+        own_cache_key = f"{_CACHE_NS}/ownership/{qid}"
 
-        # Run both SPARQL queries concurrently — roleholders is a separate
-        # query because it queries company-page properties (P169, P488 …)
-        # not present on person pages.
-        main_payload, rh_payload = await asyncio.gather(
+        # Run all three SPARQL queries concurrently — roleholders (P169/P488…)
+        # and controlling owners (P127/P749) are separate queries because they
+        # carry statement-level qualifiers/references the main query can't.
+        main_payload, rh_payload, own_payload = await asyncio.gather(
             self._sparql(main_query, cache_key=cache_key),
             self._sparql(rh_query,   cache_key=rh_cache_key),
+            self._sparql(own_query,  cache_key=own_cache_key),
         )
 
-        bindings    = main_payload.get("results", {}).get("bindings", [])
-        rh_bindings = rh_payload.get("results",  {}).get("bindings", [])
+        bindings     = main_payload.get("results", {}).get("bindings", [])
+        rh_bindings  = rh_payload.get("results",  {}).get("bindings", [])
+        own_bindings = own_payload.get("results", {}).get("bindings", [])
 
         if not bindings:
             # The main SPARQL query returned nothing — most likely a WDQS
@@ -464,11 +468,12 @@ class WikidataAdapter(SourceAdapter):
             }
 
         summary = _summarise_bindings(qid, bindings)
-        # Only parse roleholders for entity subjects (companies/orgs).
-        # Person pages don't have P169/P488 etc. so the query returns nothing.
-        summary["roleholders"] = (
-            _parse_roleholders(rh_bindings) if summary.get("is_entity") else []
-        )
+        # Only parse roleholders + controlling owners for entity subjects
+        # (companies/orgs). Person pages don't carry P169/P488 or P127/P749 so
+        # both queries return nothing.
+        is_entity = summary.get("is_entity")
+        summary["roleholders"] = _parse_roleholders(rh_bindings) if is_entity else []
+        summary["controlling_owners"] = _parse_ownership(own_bindings) if is_entity else []
 
         return {
             "source_id": self.id,
