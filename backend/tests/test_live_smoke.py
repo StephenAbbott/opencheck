@@ -11,9 +11,13 @@ Scope is deliberately limited to **open, key-free, low-sensitivity** sources:
 - **Wikidata** — public, CC0, no API key.
 - **Malta Business Registry** — public, CC BY 4.0, no API key (EU HVD).
 - **Brazil CNPJ** (Receita Federal) — public open data, no API key (OpenCNPJ / BrasilAPI).
+- **New Zealand Companies Register (NZBN)** — CC BY 4.0, but *key-gated*: this
+  one runs only when ``NZBN_API_KEY`` is set, otherwise it skips.
 
-Licence-restricted (OpenSanctions CC-BY-NC, OpenCorporates) and PII-heavy or
-key-gated sources are intentionally excluded.
+Licence-restricted (OpenSanctions CC-BY-NC, OpenCorporates) and PII-heavy
+sources are intentionally excluded. The NZBN smoke test is the one key-gated
+exception (the key is free and the data is CC BY 4.0), and it skips cleanly
+when no key is configured.
 
 Skipped by default. Run with::
 
@@ -29,6 +33,7 @@ from opencheck.bods.mapper import (
     map_cnpj_brazil,
     map_gleif,
     map_malta_mbr,
+    map_nz_companies,
     map_wikidata,
 )
 from opencheck.bods.validator import validate_shape
@@ -176,3 +181,38 @@ async def test_cnpj_brazil_live_fetch_maps_to_valid_bods():
     assert any(s["recordType"] == "relationship" for s in bods), (
         "no ownership/control relationship from the QSA"
     )
+
+
+# --- New Zealand Companies Register / NZBN (CC BY 4.0, key-gated) -------------
+
+
+def test_nz_companies_requires_a_key():
+    assert REGISTRY["nz_companies"].info.requires_api_key is True
+
+
+async def test_nz_companies_live_fetch_maps_to_valid_bods():
+    """Resolve a real company number → NZBN, fetch the live FullEntity, and
+    confirm it still parses and maps to valid BODS. Skipped unless
+    ``NZBN_API_KEY`` is set. Also the production access check: if the NZBN API
+    changes shape or rejects the key, the fetch returns a stub and this fails.
+
+    Uses Fonterra Co-operative Group (company number 1166320) — a stable,
+    long-lived NZ company — so the test can't rot easily."""
+    if not get_settings().nzbn_api_key:
+        pytest.skip("NZBN_API_KEY not set — skipping NZ live smoke test")
+
+    adapter = REGISTRY["nz_companies"]
+    bundle = await adapter.fetch("1166320", legal_name="")
+
+    assert not bundle.get("is_stub"), (
+        "NZ live fetch returned a stub — the NZBN API key, access policy or "
+        "response shape may have changed"
+    )
+    assert bundle.get("nzbn"), "company number did not resolve to an NZBN"
+    company = bundle.get("company") or {}
+    assert company.get("name"), "no company name in live record"
+
+    bods = list(map_nz_companies(bundle))
+    assert bods, "NZ bundle produced no BODS statements"
+    assert validate_shape(bods) == []
+    assert any(s["recordType"] == "entity" for s in bods), "no entity statement"
