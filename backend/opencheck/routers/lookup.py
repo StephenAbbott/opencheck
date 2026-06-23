@@ -1259,6 +1259,27 @@ async def _lookup_pipeline(
             "source_id": dsrc, "hit_id": dhit, "bods": deep["bods"],
         })
 
+    # Lightweight counts for the remaining (non-deepened) sources, so every
+    # source can show its entity/relationship split up front — map-only on the
+    # cached bundle, decoupled from the deepen_top cap on full deepens.
+    _counted = set(bods_counts)
+    _remaining = [
+        pair for pair in deepened_bundles if f"{pair[0]}:{pair[1]}" not in _counted
+    ]
+    if _remaining:
+        count_raw = await asyncio.gather(
+            *[_count_only(dsrc, dhit) for dsrc, dhit in _remaining],
+            return_exceptions=True,
+        )
+        for (dsrc, dhit), cnt in zip(_remaining, count_raw):
+            if isinstance(cnt, BaseException) or not cnt:
+                continue
+            key = f"{dsrc}:{dhit}"
+            bods_counts[key] = cnt["total"]
+            bods_breakdown[key] = {
+                "entities": cnt["entities"], "relationships": cnt["relationships"],
+            }
+
     yield ("bods_counts", {"counts": bods_counts, "breakdown": bods_breakdown})
 
     cross_raw, icij_raw = await asyncio.gather(
@@ -1679,6 +1700,34 @@ def _stored_bundle_hit(source_id: str, key: str, ctx: "_LookupCtx") -> SourceHit
         summary, ids = f"GB-COH {key}", {"gb_coh": key}
     return _hit(source_id, key, name=ctx.legal_name or "",
                 summary=summary, identifiers=ids, raw={})
+
+
+async def _count_only(source_id: str, hit_id: str) -> dict[str, int] | None:
+    """Map a (cached) bundle just to count BODS statements — no risk/validate.
+
+    Lets every source surface its graph shape ("N entities · M relationships")
+    up front, without the cost of a full deepen (which stays capped at
+    ``deepen_top``). The fetch is a cache hit from dispatch, so this is map-only."""
+    adapter = REGISTRY.get(source_id)
+    if adapter is None:
+        return None
+    override = _bods_data_override(source_id, hit_id)
+    if override is not None:
+        bods: list[dict[str, Any]] = override
+    else:
+        try:
+            raw = await adapter.fetch(hit_id)
+        except Exception:  # noqa: BLE001
+            return None
+        mapper = _mapper_for(source_id)
+        if mapper is None or raw.get("is_stub"):
+            return None
+        bods = list(mapper(raw))
+    return {
+        "total": len(bods),
+        "entities": sum(1 for s in bods if s.get("recordType") == "entity"),
+        "relationships": sum(1 for s in bods if s.get("recordType") == "relationship"),
+    }
 
 
 async def _safe_deepen(source_id: str, hit_id: str) -> dict[str, Any] | None:
