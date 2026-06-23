@@ -21,6 +21,7 @@ lookup. Separate subscription key: ``NZBN_ROLE_SEARCH_API_KEY``.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from typing import Any
@@ -40,8 +41,9 @@ _ROLE_SEARCH_URL = (
 _CACHE_NS = "nz_associations"
 
 _PAGE_SIZE = 50
-_PAGE_CAP = 3            # ≤ 150 role records per name
-_MAX_ROLE_HOLDERS = 15   # cap searches per subject company
+_PAGE_CAP = 3              # ≤ 150 role records *fetched* per name (see totalResults)
+_MAX_ROLE_HOLDERS = 60     # safety ceiling on searches per subject company
+_CONCURRENCY = 5           # parallel Role Search calls (rate-limit friendly)
 
 _CONFIDENCE_BASIS = {
     "high": "Exact address match (PAF)",
@@ -164,9 +166,13 @@ def _collect_role_holders(bundle: dict[str, Any]) -> list[dict[str, Any]]:
 # Role Search API
 # --------------------------------------------------------------------------- #
 
-async def _role_search(client, name: str, key: str) -> list[dict[str, Any]]:
-    """Return RoleInEntity records for a name (registered companies only)."""
+async def _role_search(client, name: str, key: str) -> tuple[list[dict[str, Any]], int]:
+    """Return ``(records, total_results)`` for a name (registered companies only).
+
+    ``records`` is capped at ``_PAGE_CAP * _PAGE_SIZE``; ``total_results`` is the
+    API's reported total so a prolific name isn't silently undercounted."""
     records: list[dict[str, Any]] = []
+    total = 0
     for page in range(_PAGE_CAP):
         url = (
             f"{_ROLE_SEARCH_URL}?name={quote(name)}"
@@ -184,15 +190,21 @@ async def _role_search(client, name: str, key: str) -> list[dict[str, Any]]:
             payload = resp.json()
         except ValueError:
             break
+        if page == 0:
+            try:
+                total = int(payload.get("totalResults") or 0)
+            except (TypeError, ValueError):
+                total = 0
         roles = payload.get("roles") or []
         records.extend(r for r in roles if isinstance(r, dict))
         if len(roles) < _PAGE_SIZE:
             break
-    return records
+    return records, (total or len(records))
 
 
 def summarise_person(
-    rh: dict[str, Any], records: list[dict[str, Any]], subject_number: str
+    rh: dict[str, Any], records: list[dict[str, Any]], subject_number: str,
+    total_records: int = 0,
 ) -> dict[str, Any]:
     """Tier each record, dedup by company, exclude the subject, split roles."""
     subj_paf, subj_addr = rh.get("paf_id"), rh.get("address")
@@ -243,6 +255,10 @@ def summarise_person(
         "as_director": sum(1 for c in companies.values() if "director" in c["roles"]),
         "as_shareholder": sum(1 for c in companies.values() if "shareholder" in c["roles"]),
         "weaker_count": len(weak_only),
+        # The register holds more role records under this name than we fetched
+        # (≤ 150) — surface the true magnitude so a prolific name isn't capped.
+        "total_records_under_name": total_records,
+        "truncated": total_records > len(records),
         "companies": out_companies,
     }
 
@@ -272,17 +288,29 @@ async def assemble_associations(company_number: str) -> dict[str, Any]:
     adapter = REGISTRY["nz_companies"]
     bundle = await adapter.fetch(number, legal_name="")
     subject_number = str(bundle.get("nz_company_number") or number)
-    role_holders = _collect_role_holders(bundle)[:_MAX_ROLE_HOLDERS]
 
-    people: list[dict[str, Any]] = []
-    async with build_client() as client:
-        for rh in role_holders:
+    all_role_holders = _collect_role_holders(bundle)
+    # Directors first — control matters more than minority shareholdings for
+    # nominee detection — so any ceiling trims shareholder-only holders first.
+    all_role_holders.sort(key=lambda rh: "director" not in (rh.get("roles_here") or set()))
+    role_holders = all_role_holders[:_MAX_ROLE_HOLDERS]
+    not_checked = max(0, len(all_role_holders) - len(role_holders))
+
+    sem = asyncio.Semaphore(_CONCURRENCY)
+
+    async def _one(client, rh: dict[str, Any]) -> dict[str, Any]:
+        async with sem:
             try:
-                records = await _role_search(client, rh["name"], key)
+                records, total = await _role_search(client, rh["name"], key)
             except Exception as exc:  # noqa: BLE001
                 _LOG.warning("nz_associations: %s", exc)
-                records = []
-            people.append(summarise_person(rh, records, subject_number))
+                records, total = [], 0
+        return summarise_person(rh, records, subject_number, total_records=total)
+
+    async with build_client() as client:
+        people = list(
+            await asyncio.gather(*[_one(client, rh) for rh in role_holders])
+        )
 
     people.sort(
         key=lambda p: (p["other_company_count"], p["high_confidence_count"]),
@@ -293,6 +321,7 @@ async def assemble_associations(company_number: str) -> dict[str, Any]:
         "available": True,
         "subject_name": (bundle.get("company") or {}).get("name"),
         "checked": len(role_holders),
+        "not_checked": not_checked,
         "people": people,
     }
     _cache.put(cache_key, result)

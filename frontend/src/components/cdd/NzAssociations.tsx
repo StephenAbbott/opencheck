@@ -101,6 +101,12 @@ function PersonRow({ p }: { p: NzPersonAssociations }) {
               <span className="text-oo-muted">No other associations found.</span>
             )}
           </div>
+          {p.truncated && (
+            <div className="mt-0.5 text-[11px] text-oo-muted">
+              {p.total_records_under_name} role records exist under this name — only a
+              sample was checked (a common name may mix several people).
+            </div>
+          )}
         </div>
         {linked && (
           <button
@@ -247,6 +253,12 @@ export function NzAssociations({ companyNumber }: { companyNumber: string }) {
                 <PersonRow key={p.name} p={p} />
               ))}
             </ul>
+          )}
+          {data.not_checked > 0 && (
+            <p className="mt-2 text-[11px] text-oo-muted">
+              + {data.not_checked} more role {data.not_checked === 1 ? "holder" : "holders"} not
+              checked (cap reached).
+            </p>
           )}
         </>
       )}

@@ -297,6 +297,8 @@ export interface NzPersonAssociations {
   as_director: number;
   as_shareholder: number;
   weaker_count: number;
+  total_records_under_name: number;
+  truncated: boolean;
   companies: NzAssociatedCompany[];
 }
 
@@ -306,6 +308,7 @@ export interface NzAssociationsResponse {
   reason: string | null;
   subject_name: string | null;
   checked: number;
+  not_checked: number;
   people: NzPersonAssociations[];
 }
 

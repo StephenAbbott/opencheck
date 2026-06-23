@@ -76,8 +76,14 @@ Per director/shareholder of the subject company:
 - **Neutral styling.** No amber "too many" thresholds yet — counts are
   informational so real NZ data can be eyeballed before deciding what
   concentration warrants emphasis.
-- **Bounded.** Up to 15 role holders per company, up to 3 result pages per name,
-  `registered-only=true`. Results are cached per company number.
+- **Covers all role holders.** Every director and shareholder is checked
+  (directors first, since control matters more for nominee detection), run with
+  bounded concurrency (5 parallel calls) and a safety ceiling of 60 — beyond
+  which a "+ N more not checked" note is shown rather than silently dropping
+  holders. Each name is paged up to 150 records; when the register holds more,
+  the API's `totalResults` magnitude is surfaced ("N records under this name —
+  only a sample checked") so a prolific name isn't quietly undercounted.
+  `registered-only=true`; results cached per company number.
 
 ## Roadmap
 

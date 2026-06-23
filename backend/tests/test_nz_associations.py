@@ -105,6 +105,13 @@ def test_no_subject_address_means_name_only_is_weak():
     assert p["weaker_count"] == 1
 
 
+def test_prolific_name_surfaces_total_records():
+    records = [_director_rec("111", "ALPHA LTD", phys=_phys(paf="580631"))]
+    p = summarise_person(_RH, records, _SUBJECT, total_records=200)
+    assert p["total_records_under_name"] == 200
+    assert p["truncated"] is True  # 200 records exist, only 1 fetched/tiered here
+
+
 def test_company_role_merges_director_and_shareholder():
     records = [
         _director_rec("888", "DUAL LTD", phys=_phys(paf="580631")),

@@ -42,6 +42,8 @@ class PersonAssociations(BaseModel):
     as_director: int
     as_shareholder: int
     weaker_count: int
+    total_records_under_name: int = 0
+    truncated: bool = False
     companies: list[AssociatedCompany] = []
 
 
@@ -51,6 +53,7 @@ class AssociationsResponse(BaseModel):
     reason: str | None = None
     subject_name: str | None = None
     checked: int = 0
+    not_checked: int = 0
     people: list[PersonAssociations] = []
 
 
