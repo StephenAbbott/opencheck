@@ -229,6 +229,11 @@ SEC EDGAR are handled inside `_dispatch()` / `_lookup_pipeline()` directly.
       the active table = `REGISTRY` minus env-gated bulk-only adapters), and
       refresh the source counts in `README.md` (intro paragraph + adapter-table
       pointer line) and the social card `opencheck-social-b.html`
+- [ ] **Frontend homepage source count** — bump the "N sources" copy in
+      `frontend/src/App.tsx`: the hero subline ("…from N sources into one
+      graph…") **and** the "How it works" step-3 title ("N open sources, in
+      parallel"). Easy to miss — these are hard-coded counts separate from the
+      README/social-card ones.
 - [ ] **Regenerate the OKF bundle** — run `python3 backend/scripts/generate_okf.py`
       and `python3 backend/scripts/generate_okf_viz.py`, then commit the resulting
       `okf/` changes **in the same commit as the adapter**. The CI `okf` job runs

@@ -16,16 +16,16 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 58** — Time Machine: change-over-time timelines (GLEIF + Companies House)
+**Latest: Phase 59** — New Zealand Companies Register (NZBN), OpenCheck's 32nd source
 
-A new **Time Machine** that reconstructs an entity's notable ownership and identity changes over time and renders them as a timeline — the temporal half of [BODS v0.4](https://standard.openownership.org/en/0.4.0/) (`statementDate`, the `recordId` + `recordStatus` new/updated/closed lifecycle, interest `startDate`/`endDate`) that almost no demo surfaces, shown across **two sources on one axis**.
+A live New Zealand adapter over the NZBN API (Companies Office / MBIE) — and one of the richest sources, with a real ownership graph including shareholder percentages.
 
-1. **Two live change streams, one model.** Both GLEIF (its per-LEI field-level modification log) and Companies House (typed filing history) expose a live, per-entity change stream — so detection is just a per-source allowlist into one shared, raw-first `ChangeEvent` codelist, with no snapshot-diffing or data hoarding.
-2. **The noise is the product.** An allowlist suppresses administrative churn (a GLEIF `NextRenewalDate` renewal is the twin of a Companies House CS01 "confirmed, no change"), surfacing only material moves — owners added/removed, name / legal-form / status changes, new parents — with a toggle to reveal the rest.
-3. **Multi-source, reconciled, honest.** Cross-source identity changes are de-duplicated and corroborated (a PLC→Limited rename shows both sources, the Companies House *effective* date beating GLEIF's *recorded* date); ownership interest dates come from the relationship period, not the publish date; every event labels whether its date is *as filed* or *as recorded*.
-4. **Lazy `GET /history` + a vertical timeline rail.** A "See timeline" button on the GLEIF and Companies House source cards opens a rail below them — tier-coloured events, source chips linking back to GLEIF / Companies House, parent + interest dates for ownership changes. GLEIF is key-free; Companies House uses a dedicated `COMPANIES_HOUSE_HISTORY_API_KEY` and degrades gracefully when it's absent.
+1. **Company number → NZBN → full entity.** GLEIF stores NZ entities' company number (not the NZBN), so the adapter resolves it via the NZBN directory search, then fetches the FullEntity — entity details, directors, shareholders and the ultimate holding company in one call.
+2. **A real ownership graph.** Directors map to `seniorManagingOfficial`, shareholders to `shareholding` with `share.exact` percentages (each allocation ÷ the company total), and the ultimate holding company to an indirect control relationship — like Brazil's CNPJ, New Zealand gives actual ownership %.
+3. **Non-EU, key-gated.** New Zealand fires `NON_EU_JURISDICTION`; the free `NZBN_API_KEY` is sent as an `Ocp-Apim-Subscription-Key` header (no OAuth). CC BY 4.0.
+4. **Tested and live-checkable.** Adapter + mapper tests validate the BODS output; an opt-in live smoke test (`--run-live`) fetches Fonterra from the real API and skips cleanly without a key.
 
-*Previous: [Phase 57 — Securities (ISINs) & the sanctioned-securities overlay](docs/status.md)*
+*Previous: [Phase 58 — Time Machine change-over-time timelines](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
