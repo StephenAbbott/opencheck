@@ -4,7 +4,7 @@ title: "SEC EDGAR (Schedule 13D/13G)"
 description: "Major shareholders (>5 % beneficial owners) of US-listed companies from mandatory SEC Schedule 13D and 13G filings. Coverage is limited to XML filings submitted from December 2024 onward."
 resource: "https://www.sec.gov/search-filings"
 tags: ["cdd", "aggregator", "Public Domain", "commercial-yes"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-23"
 source_id: "sec_edgar"
 license: "Public Domain"
 commercial_use: "yes"

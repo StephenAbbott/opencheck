@@ -4,7 +4,7 @@ title: "Estonian e-Business Register (e-\u00c4riregister)"
 description: "Estonian company data including entity details, shareholders (with ownership percentages), board members, and beneficial owners, from the public e-Business Register portal (RIK)."
 resource: "https://ariregister.rik.ee/eng"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-23"
 source_id: "ariregister"
 license: "CC-BY-4.0"
 commercial_use: "yes"

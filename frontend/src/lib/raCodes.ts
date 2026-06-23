@@ -53,6 +53,14 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatHint: "9 digits",
     formatPattern: /^\d{9}$/,
   },
+  NZ: {
+    raCode: "RA000466",
+    countryName: "New Zealand",
+    idLabel: "Company number",
+    placeholder: "1166320",
+    formatHint: "Companies Register number (digits)",
+    formatPattern: /^\d{1,9}$/,
+  },
   DK: {
     raCode: "RA000170",
     countryName: "Denmark",

@@ -4,7 +4,7 @@ title: "EveryPolitician"
 description: "EveryPolitician is a global database of political office-holders, from rulers, law-makers to judges and more."
 resource: "https://everypolitician.org/"
 tags: ["cdd", "aggregator", "CC-BY-NC-4.0", "commercial-no"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-23"
 source_id: "everypolitician"
 license: "CC-BY-NC-4.0"
 commercial_use: "no"

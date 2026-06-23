@@ -4,7 +4,7 @@ title: "Global Energy Monitor / Climate TRACE"
 description: "Global fossil-fuel asset ownership data (GEM) combined with satellite-derived emissions estimates (Climate TRACE). LEI resolution uses the GLEIF-certified GEM Entity ID mapping (June 2026). Enables ESG and climate risk screening by LEI."
 resource: "https://globalenergymonitor.org/"
 tags: ["esg", "aggregator", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-23"
 source_id: "climatetrace"
 license: "CC-BY-4.0"
 commercial_use: "yes"

@@ -4,7 +4,7 @@ title: "CVR \u2014 Det Centrale Virksomhedsregister"
 description: "Danish Central Business Register (CVR) \u2014 the authoritative register of all Danish businesses, maintained by Erhvervsstyrelsen (the Danish Business Authority). Accessed via the Datafordeler GraphQL API (non-restricted entity data)."
 resource: "https://datacvr.virk.dk/"
 tags: ["cdd", "national-register", "Danish Open Government Data (CVR brugervilk\u00e5r)", "commercial-yes"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-23"
 source_id: "cvr_denmark"
 license: "Danish Open Government Data (CVR brugervilk\u00e5r)"
 commercial_use: "yes"

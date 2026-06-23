@@ -4,7 +4,7 @@ title: "Firmenbuch \u2014 Austrian Commercial Register"
 description: "Austrian company name, address, status, and officers (managing directors, authorised signatories, supervisory board) from the Firmenbuch (commercial register), via the BMJ High Value Dataset API. Shareholder data requires a paid subscription."
 resource: "https://justizonline.gv.at/jop/web/firmenbuchabfrage"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-23"
 source_id: "firmenbuch"
 license: "CC-BY-4.0"
 commercial_use: "yes"

@@ -4,7 +4,7 @@ title: "UR \u2014 Latvian Register of Enterprises"
 description: "Latvian company data from the Register of Enterprises (UR), sourced via Latvia's open-data portal (data.gov.lv). Provides entity profiles, beneficial owners, officers, and shareholders for companies registered in Latvia."
 resource: "https://www.ur.gov.lv/en/"
 tags: ["cdd", "national-register", "Open Government Data (PSI Directive)", "commercial-yes"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-23"
 source_id: "ur_latvia"
 license: "Open Government Data (PSI Directive)"
 commercial_use: "yes"

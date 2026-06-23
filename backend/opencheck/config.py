@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     companies_house_history_api_key: str | None = Field(
         default=None, alias="COMPANIES_HOUSE_HISTORY_API_KEY"
     )
+    # New Zealand NZBN API (Companies Office / MBIE) subscription key.
+    nzbn_api_key: str | None = Field(default=None, alias="NZBN_API_KEY")
 
     # --- Corporations Canada (ISED) ---
     # Public-plan API key from the ISED API Gateway.

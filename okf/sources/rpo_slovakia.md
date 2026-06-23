@@ -4,7 +4,7 @@ title: "RPO Slovakia"
 description: "Slovak Register of Legal Persons (Register pr\u00e1vnick\u00fdch os\u00f4b), operated by the Statistical Office of the Slovak Republic."
 resource: "https://rpo.statistics.sk/"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-23"
 source_id: "rpo_slovakia"
 license: "CC-BY-4.0"
 commercial_use: "yes"

@@ -4,7 +4,7 @@ title: "Zefix \u2014 Swiss Commercial Registry"
 description: "Swiss company data from the Federal Commercial Registry (Zefix / FCRO), sourced via the Swiss UID."
 resource: "https://www.zefix.ch/"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-23"
 source_id: "zefix"
 license: "CC-BY-4.0"
 commercial_use: "yes"

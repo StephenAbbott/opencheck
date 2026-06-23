@@ -4,7 +4,7 @@ title: "OpenCorporates"
 description: "The world's largest open legal-entity database, providing a single unified set of company records from government registries."
 resource: "https://opencorporates.com/"
 tags: ["cdd", "aggregator", "OC-Terms", "commercial-conditional"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-23"
 source_id: "opencorporates"
 license: "OC-Terms"
 commercial_use: "conditional"

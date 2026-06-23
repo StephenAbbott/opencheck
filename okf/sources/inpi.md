@@ -4,7 +4,7 @@ title: "INPI \u2014 Registre National des Entreprises"
 description: "French company data from the Registre National des Entreprises (RNE), operated by INPI, sourced via the SIREN number."
 resource: "https://registre-national-entreprises.inpi.fr/"
 tags: ["cdd", "national-register", "Licence Ouverte / Open Licence 2.0", "commercial-yes"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-23"
 source_id: "inpi"
 license: "Licence Ouverte / Open Licence 2.0"
 commercial_use: "yes"

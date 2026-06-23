@@ -4,7 +4,7 @@ title: "RPVS Slovakia"
 description: "Slovak Public Sector Partners Register (Register partnerov verejn\u00e9ho sektora), published by the Ministry of Justice of the Slovak Republic.  Lists entities supplying goods or services to public bodies above statutory thresholds, with verified ultimate beneficial owner (KUV) disclosures."
 resource: "https://rpvs.gov.sk/rpvs"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-23"
 source_id: "rpvs_slovakia"
 license: "CC-BY-4.0"
 commercial_use: "yes"

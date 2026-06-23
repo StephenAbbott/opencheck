@@ -28,6 +28,7 @@ from .jar_lithuania import JarLithuaniaAdapter
 from .krs_poland import KrsPolandAdapter
 from .kvk import KvKAdapter
 from .malta_mbr import MaltaMbrAdapter
+from .nz_companies import NzCompaniesAdapter
 from .openaleph import OpenAlephAdapter
 from .opencorporates import OpenCorporatesAdapter
 from .opensanctions import OpenSanctionsAdapter
@@ -60,6 +61,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "krs_poland": KrsPolandAdapter(),
     "kvk": KvKAdapter(),
     "malta_mbr": MaltaMbrAdapter(),
+    "nz_companies": NzCompaniesAdapter(),
     "opencorporates": OpenCorporatesAdapter(),
     "openaleph": OpenAlephAdapter(),
     "opensanctions": OpenSanctionsAdapter(),

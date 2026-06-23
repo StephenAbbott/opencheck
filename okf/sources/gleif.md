@@ -4,7 +4,7 @@ title: "GLEIF"
 description: "Legal entity information from the Global Legal Entity Identifier Foundation."
 resource: "https://search.gleif.org/#/search/"
 tags: ["cdd", "aggregator", "CC0-1.0", "commercial-yes"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-23"
 source_id: "gleif"
 license: "CC0-1.0"
 commercial_use: "yes"

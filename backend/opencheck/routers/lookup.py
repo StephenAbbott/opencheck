@@ -422,6 +422,22 @@ def _bh_cnpj_brazil(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_nz_companies(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    c = dict(r.get("company") or {})
+    identifiers = {"nz_company_number": local_id}
+    if r.get("nzbn"):
+        identifiers["nzbn"] = str(r["nzbn"])
+    if r.get("link") and "link" not in c:
+        # Surface the public NZBN entity page so the source card links out.
+        c["link"] = r["link"]
+    return _hit(
+        "nz_companies", local_id,
+        name=(c.get("name") or "").strip() or ctx.legal_name or "",
+        summary=f"NZ-COH {local_id}",
+        identifiers=identifiers, raw=c,
+    )
+
+
 def _bh_malta_mbr(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     c = r.get("company") or {}
     return _hit(

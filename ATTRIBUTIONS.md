@@ -145,6 +145,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `mt_crn` (Maltese registration number, e.g. `C 113927`) derived from GLEIF RA code `RA000443`
 - **Note:** No API key or registration required (EU High-Value Dataset under the Open Data Directive). The list endpoint is cursor-paginated with no name filter, so the source is entered via the LEI lookup flow rather than free-text search.
 
+## New Zealand Companies Register (NZBN)
+
+- **Data:** company details (name, status, type, registration date, registered address, trading and previous names) **plus directors, shareholders with share allocations, and the ultimate holding company** from the NZBN `FullEntity` endpoint. Mapped to a BODS entity statement, `seniorManagingOfficial` relationships for directors, `shareholding` relationships carrying `share.exact` for shareholders, and an `otherInfluenceOrControl` relationship for the ultimate holding company.
+- **API:** <https://portal.api.business.govt.nz/api/nzbn> (`https://api.business.govt.nz/gateway/nzbn/v5`)
+- **License:** CC BY 4.0 — <https://creativecommons.org/licenses/by/4.0/>
+- **Attribution:** "Contains data from the New Zealand Companies Register / NZBN (Ministry of Business, Innovation and Employment) via the NZBN API, licensed CC BY 4.0."
+- **Entry point:** `nz_company_number` derived from GLEIF RA code `RA000466`; resolved to the NZBN via the directory search before fetching the full entity.
+- **Auth:** free `NZBN_API_KEY` sent as the `Ocp-Apim-Subscription-Key` header (no OAuth for the read operations used).
+
 ## Bolagsverket (Sweden)
 
 - **Data:** company profiles and board-level officers from the Swedish Companies Registration Office

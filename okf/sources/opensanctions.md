@@ -4,7 +4,7 @@ title: "OpenSanctions"
 description: "Sanctions lists, PEPs, debarments, and regulatory actions from the OpenSanctions open-source database."
 resource: "https://www.opensanctions.org/"
 tags: ["cdd", "aggregator", "CC-BY-NC-4.0", "commercial-no"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-23"
 source_id: "opensanctions"
 license: "CC-BY-NC-4.0"
 commercial_use: "no"

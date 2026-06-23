@@ -4,7 +4,7 @@ title: "Belgian Crossroads Bank for Enterprises (BCE/KBO)"
 description: "Belgian company data including entity name, status, juridical form, start date, and registered address, from the BCE/KBO open data publication by FPS Economy."
 resource: "https://kbopub.economie.fgov.be/kbo-open-data/"
 tags: ["cdd", "national-register", "Custom-KBO-Reuse", "commercial-conditional"]
-timestamp: "2026-06-14"
+timestamp: "2026-06-23"
 source_id: "bce_belgium"
 license: "Custom-KBO-Reuse"
 commercial_use: "conditional"
