@@ -10,6 +10,7 @@ const SOURCE_LABEL: Record<string, string> = {
   gleif: "GLEIF",
   companies_house: "Companies House",
   nz_companies: "Companies Office (NZ)",
+  ariregister: "e-Äriregister (EE)",
 };
 
 export function sourceUrl(
@@ -41,7 +42,9 @@ function SourceChip({
       ? "bg-blue-50 text-blue-700 border-blue-200"
       : sourceId === "nz_companies"
         ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-        : "bg-teal-50 text-teal-700 border-teal-200";
+        : sourceId === "ariregister"
+          ? "bg-violet-50 text-violet-700 border-violet-200"
+          : "bg-teal-50 text-teal-700 border-teal-200";
   if (!url)
     return <span className={`${classes} ${palette}`}>{label}</span>;
   return (

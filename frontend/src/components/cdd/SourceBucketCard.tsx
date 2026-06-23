@@ -730,7 +730,12 @@ export function SkeletonSourceCard() {
 // ---------------------------------------------------------------------
 
 // Sources that can show the entity-level Time Machine timeline.
-const TIMELINE_SOURCES = new Set(["gleif", "companies_house", "nz_companies"]);
+const TIMELINE_SOURCES = new Set([
+  "gleif",
+  "companies_house",
+  "nz_companies",
+  "ariregister",
+]);
 
 export function SourceBucketCard({
   bucket,
