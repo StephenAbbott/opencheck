@@ -16,16 +16,16 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 59** — New Zealand Companies Register (NZBN), OpenCheck's 32nd source
+**Latest: Phase 60** — GLEIF subsidiary network: direct *and* ultimate children, the whole-group view
 
-A live New Zealand adapter over the NZBN API (Companies Office / MBIE) — and one of the richest sources, with a real ownership graph including shareholder percentages.
+A lazy, panel-only reveal on the GLEIF source that complements the inward parent/direct-child relationships with the **outward** network — the subsidiaries a group consolidates, mapped to BODS.
 
-1. **Company number → NZBN → full entity.** GLEIF stores NZ entities' company number (not the NZBN), so the adapter resolves it via the NZBN directory search, then fetches the FullEntity — entity details, directors, shareholders and the ultimate holding company in one call.
-2. **A real ownership graph.** Directors map to `seniorManagingOfficial`, shareholders to `shareholding` with `share.exact` percentages (each allocation ÷ the company total), and the ultimate holding company to an indirect control relationship — like Brazil's CNPJ, New Zealand gives actual ownership %.
-3. **Non-EU, key-gated.** New Zealand fires `NON_EU_JURISDICTION`; the free `NZBN_API_KEY` is sent as an `Ocp-Apim-Subscription-Key` header (no OAuth). CC BY 4.0.
-4. **Tested and live-checkable.** Adapter + mapper tests validate the BODS output; an opt-in live smoke test (`--run-live`) fetches Fonterra from the real API and skips cleanly without a key.
+1. **Direct *and* ultimate children, merged.** GLEIF Level 2 publishes two accounting-consolidation relationships per parent/child — *direct* and *ultimate* (the group head, often several layers down). OpenCheck fetches both, merges by child LEI, and tags each child `direct`, `ultimate` or `both`. Counts are exact even when the child list is page-capped.
+2. **Faithful data, rationalised graph.** A `both` child carries **two** distinct BODS relationship statements (direct + indirect), kept in the data and the export — but the graph merges them into **one edge annotated "Controls (direct + ultimate)"** rather than drawing two, while still hiding the redundant skip-level edges the direct tree already implies.
+3. **Graph or table, by size.** ≤ 150 nodes render in the interactive graph; larger groups degrade to a table (direct children first, then the indirect tail) plus a **Download BODS** button for your own tooling.
+4. **Lazy and open.** `GET /subsidiaries?lei=` is never on the main lookup, gated on `OPENCHECK_ALLOW_LIVE`, and needs no API key — GLEIF is CC0. See [docs/subsidiary-network.md](docs/subsidiary-network.md).
 
-*Previous: [Phase 58 — Time Machine change-over-time timelines](docs/status.md)*
+*Previous: [Phase 59 — New Zealand Companies Register (NZBN), OpenCheck's 32nd source](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
