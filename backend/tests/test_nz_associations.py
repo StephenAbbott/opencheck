@@ -262,6 +262,40 @@ def test_summarise_person_never_raises_on_malformed_records():
     assert sh["share_percentage"] == 33.0  # "33%" coerced
 
 
+def test_official_swagger_example_record_parses():
+    # The exact RoleInEntity example from the v3 OpenAPI definition, with numeric
+    # values returned as bare integers (as the live API does) even though the
+    # schema types them as strings — this is what previously 500'd. Director +
+    # shareholder of the SAME company → one merged company with both roles.
+    rec = {
+        "middleName": "Martin", "lastName": "SMITH", "firstName": "John",
+        "appointmentDate": "2013-04-03",
+        "associatedCompanyNumber": 1884264,            # int, not string
+        "associatedCompanyNzbn": 123456789012,
+        "associatedCompanyStatusCode": 80,
+        "status": "active",                             # active (no resignation)
+        "associatedCompanyName": "TIMARU BUS SERVICES LIMITED",
+        "roleType": "Director",
+        "physicalAddress": {
+            "addressLines": ["1 Queen St"], "postCode": 1025,
+            "countryCode": "NZ", "pafId": 580631,       # int, matches _RH paf
+        },
+        "shareholdings": [{
+            "associatedCompanyNumber": 1884264, "associatedCompanyNzbn": 123456789012,
+            "jointlyHeld": False, "sharePercentage": 100,
+            "associatedCompanyName": "TIMARU BUS SERVICES LIMITED",
+            "associatedCompanyStatusCode": 80, "numberOfShares": 150,
+        }],
+    }
+    p = summarise_person(_RH, [rec], subject_number="999")
+    assert p["other_company_count"] == 1
+    co = p["companies"][0]
+    assert co["number"] == "1884264"
+    assert set(co["roles"]) == {"director", "shareholder"}
+    assert co["share_percentage"] == 100.0
+    assert co["confidence"] == "high"   # pafId 580631 matches the subject holder
+
+
 # ---------------------------------------------------------------------------
 # Gating + endpoint
 # ---------------------------------------------------------------------------
