@@ -12,7 +12,9 @@ from fastapi import HTTPException
 from opencheck.config import get_settings
 from opencheck.nz_associations import (
     _collect_role_holders,
+    _extract_records,
     _role_search,
+    _to_pct,
     assemble_associations,
     summarise_person,
 )
@@ -211,6 +213,53 @@ def test_collect_role_holders_uses_surname_first_search_name():
     assert person["search_name"] == "Kramer Holly Suzanna"
     org = next(h for h in holders if h["name"] == "BIG HOLDINGS LTD")
     assert org["search_name"] == "BIG HOLDINGS LTD"  # fallback
+
+
+# ---------------------------------------------------------------------------
+# Response-shape robustness — the live API shape isn't pinned by a schema, so
+# parsing must be tolerant and must never raise (panel-only → no 500s).
+# ---------------------------------------------------------------------------
+
+
+def test_extract_records_tolerates_alternate_keys_and_fallback():
+    assert _extract_records({"roles": [{"a": 1}]}) == [{"a": 1}]
+    # Alternate array key the API might use instead of "roles".
+    assert _extract_records({"items": [{"b": 2}]}) == [{"b": 2}]
+    # Unknown key → fall back to the first list-of-dicts value.
+    assert _extract_records({"weird": [{"c": 3}]}) == [{"c": 3}]
+    # Nothing usable → empty, not an error.
+    assert _extract_records({"totalResults": 0}) == []
+    assert _extract_records("not a dict") == []
+
+
+def test_to_pct_coerces_any_shape():
+    assert _to_pct(50) == 50.0
+    assert _to_pct(50.5) == 50.5
+    assert _to_pct("50") == 50.0
+    assert _to_pct("50.0") == 50.0
+    assert _to_pct("50%") == 50.0
+    assert _to_pct(None) is None
+    assert _to_pct("n/a") is None
+    assert _to_pct(True) is None  # don't treat bool as a number
+
+
+def test_summarise_person_never_raises_on_malformed_records():
+    # physicalAddress as a list, shareholdings as a dict, percentage as junk —
+    # exactly the kind of unexpected shape that previously 500'd.
+    records = [
+        {"roleType": "Director", "associatedCompanyNumber": "900",
+         "physicalAddress": ["unexpected", "list"]},
+        {"roleType": "Shareholder", "shareholdings": {"not": "a list"}},
+        {"roleType": "Shareholder", "shareholdings": [
+            {"associatedCompanyNumber": "901", "sharePercentage": "33%"}]},
+        "a bare string that is not a dict",  # type: ignore[list-item]
+    ]
+    p = summarise_person(_RH, [r for r in records if isinstance(r, dict)], _SUBJECT)
+    # 900 (director) + 901 (shareholder) survive; the malformed ones are skipped.
+    nums = {c["number"] for c in p["companies"]}
+    assert nums == {"900", "901"}
+    sh = next(c for c in p["companies"] if c["number"] == "901")
+    assert sh["share_percentage"] == 33.0  # "33%" coerced
 
 
 # ---------------------------------------------------------------------------

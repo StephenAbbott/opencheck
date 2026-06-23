@@ -111,6 +111,53 @@ def _entity_link(nzbn: str | None) -> str | None:
     return f"https://www.nzbn.govt.nz/mynzbn/nzbndetails/{nzbn}/" if nzbn else None
 
 
+# The live Role Search response shape is not pinned by a public schema, so the
+# record array and total can arrive under a few different keys depending on the
+# API version. Extract tolerantly rather than assuming one shape (and never
+# raise — this is a panel-only enrichment that must degrade, not 500).
+_RECORD_KEYS = ("roles", "items", "results", "entityRoles", "entityRoleSearchResults", "entities")
+_TOTAL_KEYS = ("totalResults", "total", "totalRecords", "totalItems", "numFound")
+
+
+def _extract_records(payload: Any) -> list[dict[str, Any]]:
+    if not isinstance(payload, dict):
+        return []
+    for k in _RECORD_KEYS:
+        v = payload.get(k)
+        if isinstance(v, list):
+            return [r for r in v if isinstance(r, dict)]
+    # Fall back to the first list-of-dicts value anywhere in the payload.
+    for v in payload.values():
+        if isinstance(v, list) and any(isinstance(x, dict) for x in v):
+            return [r for r in v if isinstance(r, dict)]
+    return []
+
+
+def _extract_total(payload: Any, fallback: int) -> int:
+    if isinstance(payload, dict):
+        for k in _TOTAL_KEYS:
+            v = payload.get(k)
+            if v is not None:
+                try:
+                    return int(v)
+                except (TypeError, ValueError):
+                    continue
+    return fallback
+
+
+def _to_pct(v: Any) -> float | None:
+    """Coerce a share-percentage of any shape (number, "50", "50.0", "50%")."""
+    if v is None or isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    s = str(v).strip().rstrip("%").strip()
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
 def _record_companies(rec: dict[str, Any]) -> list[dict[str, Any]]:
     """The companies a single RoleInEntity record references (director + shares)."""
     out: list[dict[str, Any]] = []
@@ -134,7 +181,7 @@ def _record_companies(rec: dict[str, Any]) -> list[dict[str, Any]]:
             "number": scnum,
             "name": str(sh.get("associatedCompanyName") or "").strip() or None,
             "nzbn": str(sh.get("associatedCompanyNzbn") or "").strip() or None,
-            "role": "shareholder", "share_percentage": sh.get("sharePercentage"),
+            "role": "shareholder", "share_percentage": _to_pct(sh.get("sharePercentage")),
         })
     return out
 
@@ -214,14 +261,18 @@ async def _role_search(client, name: str, key: str) -> tuple[list[dict[str, Any]
             payload = resp.json()
         except ValueError:
             break
+        page_records = _extract_records(payload)
         if page == 0:
-            try:
-                total = int(payload.get("totalResults") or 0)
-            except (TypeError, ValueError):
-                total = 0
-        roles = payload.get("roles") or []
-        records.extend(r for r in roles if isinstance(r, dict))
-        if len(roles) < _PAGE_SIZE:
+            total = _extract_total(payload, len(page_records))
+            if not page_records and isinstance(payload, dict):
+                # 200 but nothing we recognise — log the keys so the live shape
+                # can be mapped without guessing (no PII in key names).
+                _LOG.warning(
+                    "nz_associations: role-search returned no parseable records; "
+                    "payload keys=%s", sorted(payload.keys()),
+                )
+        records.extend(page_records)
+        if len(page_records) < _PAGE_SIZE:
             break
     return records, (total or len(records))
 
@@ -240,9 +291,14 @@ def summarise_person(
     companies: dict[str, dict[str, Any]] = {}
 
     for rec in records:
-        phys = rec.get("physicalAddress")
-        tier = _tier(_paf_of(phys), _phys_addr_str(phys), subj_paf, subj_addr)
-        for c in _record_companies(rec):
+        try:
+            phys = rec.get("physicalAddress")
+            tier = _tier(_paf_of(phys), _phys_addr_str(phys), subj_paf, subj_addr)
+            record_companies = _record_companies(rec)
+        except Exception as exc:  # noqa: BLE001 — one odd record must not break the rest
+            _LOG.warning("nz_associations: skipping unparseable record: %s", exc)
+            continue
+        for c in record_companies:
             num = c["number"]
             if not num or num == subject_number:
                 continue
@@ -318,52 +374,61 @@ async def assemble_associations(company_number: str) -> dict[str, Any]:
     if cached is not None:
         return cached[0]
 
-    adapter = REGISTRY["nz_companies"]
-    bundle = await adapter.fetch(number, legal_name="")
-    subject_number = str(bundle.get("nz_company_number") or number)
+    # This is a panel-only enrichment over a third-party API whose response shape
+    # is not pinned by a public schema. Anything unexpected must degrade to
+    # "unavailable", never bubble a 500 onto the results page.
+    try:
+        adapter = REGISTRY["nz_companies"]
+        bundle = await adapter.fetch(number, legal_name="")
+        subject_number = str(bundle.get("nz_company_number") or number)
 
-    all_role_holders = _collect_role_holders(bundle)
-    # Directors first — control matters more than minority shareholdings for
-    # nominee detection — so any ceiling trims shareholder-only holders first.
-    all_role_holders.sort(key=lambda rh: "director" not in (rh.get("roles_here") or set()))
-    role_holders = all_role_holders[:_MAX_ROLE_HOLDERS]
-    not_checked = max(0, len(all_role_holders) - len(role_holders))
+        all_role_holders = _collect_role_holders(bundle)
+        # Directors first — control matters more than minority shareholdings for
+        # nominee detection — so any ceiling trims shareholder-only holders first.
+        all_role_holders.sort(key=lambda rh: "director" not in (rh.get("roles_here") or set()))
+        role_holders = all_role_holders[:_MAX_ROLE_HOLDERS]
+        not_checked = max(0, len(all_role_holders) - len(role_holders))
 
-    sem = asyncio.Semaphore(_CONCURRENCY)
+        sem = asyncio.Semaphore(_CONCURRENCY)
 
-    async def _one(client, rh: dict[str, Any]) -> dict[str, Any]:
-        async with sem:
-            try:
-                records, total = await _role_search(
-                    client, rh.get("search_name") or rh["name"], key
-                )
-            except Exception as exc:  # noqa: BLE001
-                _LOG.warning("nz_associations: %s", exc)
-                records, total = [], 0
-        return summarise_person(rh, records, subject_number, total_records=total)
+        async def _one(client, rh: dict[str, Any]) -> dict[str, Any]:
+            async with sem:
+                try:
+                    records, total = await _role_search(
+                        client, rh.get("search_name") or rh["name"], key
+                    )
+                    return summarise_person(rh, records, subject_number, total_records=total)
+                except Exception as exc:  # noqa: BLE001 — one holder must not fail all
+                    _LOG.warning("nz_associations: role-holder %r failed: %s", rh.get("name"), exc)
+                    return summarise_person(rh, [], subject_number)
 
-    async with build_client() as client:
-        people = list(
-            await asyncio.gather(*[_one(client, rh) for rh in role_holders])
+        async with build_client() as client:
+            people = list(
+                await asyncio.gather(*[_one(client, rh) for rh in role_holders])
+            )
+
+        # Lead with the most credible (address-corroborated) and most connected.
+        people.sort(
+            key=lambda p: (
+                p["address_match_count"],
+                p["other_company_count"],
+                p["high_confidence_count"],
+            ),
+            reverse=True,
         )
+        result = {
+            "company_number": subject_number,
+            "available": True,
+            "subject_name": (bundle.get("company") or {}).get("name"),
+            "checked": len(role_holders),
+            "not_checked": not_checked,
+            "people": people,
+        }
+    except Exception as exc:  # noqa: BLE001
+        _LOG.exception("nz_associations: assembly failed for %s: %s", number, exc)
+        return {"company_number": number, "available": False,
+                "reason": "associations lookup failed", "people": []}
 
-    # Lead with the most credible (address-corroborated) and the most connected.
-    people.sort(
-        key=lambda p: (
-            p["address_match_count"],
-            p["other_company_count"],
-            p["high_confidence_count"],
-        ),
-        reverse=True,
-    )
-    result = {
-        "company_number": subject_number,
-        "available": True,
-        "subject_name": (bundle.get("company") or {}).get("name"),
-        "checked": len(role_holders),
-        "not_checked": not_checked,
-        "people": people,
-    }
     _cache.put(cache_key, result)
     return result
 
