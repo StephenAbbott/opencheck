@@ -268,6 +268,44 @@ literal Companies House filing-history PDF URLs
 Level-2 is corroborated *by* CH filings. As a *change* it's noise, but it's a
 ready-made provenance link between the GLEIF and CH halves of the same timeline.
 
+## Third emitter — New Zealand (dated-record reconstruction)
+
+New Zealand is a third *shape* of source, which is exactly what the
+source-agnostic model was built to absorb. GLEIF is a field-diff stream
+(`recorded` dates), Companies House a typed filing stream (`effective` dates);
+**New Zealand is dated current-and-historic records** that we reconstruct events
+from — and the dates are real effective dates, so NZ events are
+`DateBasis.EFFECTIVE` / `DateConfidence.HIGH` (no snapshot-window guessing).
+
+The NZBN `FullEntity` (already fetched for the NZ source) plus three dated
+history endpoints feed `timeline/nz_companies.py` → `nz_change_events()`, which
+emits `ChangeEvent`s directly (passed to the assembler via `extra_events`, since
+there's no raw stream to classify):
+
+| NZ record | ChangeEvent |
+|---|---|
+| `shareAllocation[].shareholder[]` `appointmentDate` / `vacationDate` (current) | `OWNER_ADDED` (+ `OWNER_REMOVED`), interest start/end; share % in `counterparty` |
+| `historicShareholder[]` (`appointmentDate` + `vacationDate`) | `OWNER_ADDED` + `OWNER_REMOVED` |
+| `roles[]` directors (`startDate` / `endDate`) | `OWNER_ADDED` / `OWNER_REMOVED` (control; role in `counterparty`) |
+| `/history/entity-names` | `LEGAL_NAME_CHANGE` (transition from prior name) |
+| `/history/entity-statuses` | `STATUS_CHANGED` |
+| `/history/addresses` (per address type) | `ADDRESS_CHANGE` |
+
+Notes: shareholders are ownership and directors are control, but the codelist
+has no director-specific type — both use `OWNER_ADDED`/`OWNER_REMOVED` (Tier 1)
+with the role + share % carried in `counterparty` (e.g. *"John Doe — director"*,
+*"Jane Smith — shareholder (60.0%)"*). Identity history endpoints give dated
+transitions (the earliest entry is the original state, not a change). NZ is
+gated on `NZBN_API_KEY` and entered from the NZ source card's "See timeline"
+button — which is what makes the timeline useful for NZ entities, since for them
+GLEIF is mostly admin noise and Companies House is empty. NZ ownership events
+stay their own entries (different identifiers from GLEIF parents / CH PSCs);
+name/status changes can corroborate GLEIF's via the existing entity de-dup.
+
+Follow-on: a per-entity deep link on the NZ source chip (v1 shows the label
+only), and promoting directors to a distinct control change type if the generic
+"Owner / parent" label proves confusing in testing.
+
 ## Open questions / next steps
 
 1. **Codelist freeze.** Lock the `change_type` values and the two allowlists

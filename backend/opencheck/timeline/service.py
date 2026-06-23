@@ -22,13 +22,15 @@ import httpx
 from ..config import get_settings
 from ..http import build_client
 from .assemble import Timeline, assemble_timeline
+from .nz_companies import nz_change_events
 
 _GLEIF_RECORD_URL = "https://api.gleif.org/api/v1/lei-records/{lei}"
 _GLEIF_MODS_URL = "https://api.gleif.org/api/v1/lei-records/{lei}/field-modifications"
 _CH_API_BASE = "https://api.company-information.service.gov.uk"
 
-# GLEIF Registration Authority code for UK Companies House.
-_CH_RA_CODE = "RA000585"
+# GLEIF Registration Authority codes.
+_CH_RA_CODE = "RA000585"   # UK Companies House
+_NZ_RA_CODE = "RA000466"   # NZ Companies Register
 
 _MODS_PAGE_SIZE = 200
 _MODS_PAGE_CAP = 5  # ≤ 1000 modifications — plenty for a per-entity timeline
@@ -36,11 +38,13 @@ _CH_PAGE_SIZE = 100
 _CH_PAGE_CAP = 10  # ≤ 1000 filings
 
 
-async def _gleif_company_number(client: httpx.AsyncClient, lei: str) -> str | None:
-    """Derive the Companies House number from the GLEIF record (GB + RA000585)."""
+async def _gleif_registration(
+    client: httpx.AsyncClient, lei: str
+) -> tuple[str | None, str | None]:
+    """Return ``(ch_number, nz_number)`` derived from the GLEIF record."""
     resp = await client.get(_GLEIF_RECORD_URL.format(lei=quote(lei)))
     if resp.status_code == 404:
-        return None
+        return None, None
     resp.raise_for_status()
     entity = (
         (((resp.json() or {}).get("data") or {}).get("attributes") or {}).get("entity")
@@ -49,9 +53,11 @@ async def _gleif_company_number(client: httpx.AsyncClient, lei: str) -> str | No
     registered_as = (entity.get("registeredAs") or "").strip()
     registered_at = (entity.get("registeredAt") or {}).get("id")
     jurisdiction = entity.get("jurisdiction")
-    if registered_as and (registered_at == _CH_RA_CODE or jurisdiction == "GB"):
-        return registered_as
-    return None
+    ch = registered_as if (
+        registered_as and (registered_at == _CH_RA_CODE or jurisdiction == "GB")
+    ) else None
+    nz = registered_as if (registered_as and registered_at == _NZ_RA_CODE) else None
+    return ch, nz
 
 
 async def _gleif_modifications(
@@ -113,20 +119,21 @@ async def fetch_timeline(lei: str) -> Timeline:
         return Timeline(subject_lei=lei, company_number=None, events=[], notable=[])
 
     company_number: str | None = None
+    nz_number: str | None = None
     lei_mods: list[dict] = []
     rr_mods: list[dict] = []
     ch_filings: list[dict] = []
 
     async with build_client() as client:
-        # GLEIF record (for the CH number) and the change log run concurrently.
+        # GLEIF record (for the CH/NZ numbers) and the change log run concurrently.
         results = await asyncio.gather(
-            _gleif_company_number(client, lei),
+            _gleif_registration(client, lei),
             _gleif_modifications(client, lei),
             return_exceptions=True,
         )
-        num_res, mods_res = results
-        if not isinstance(num_res, BaseException):
-            company_number = num_res
+        reg_res, mods_res = results
+        if not isinstance(reg_res, BaseException):
+            company_number, nz_number = reg_res
         if not isinstance(mods_res, BaseException):
             lei_mods, rr_mods = mods_res
 
@@ -141,12 +148,25 @@ async def fetch_timeline(lei: str) -> Timeline:
             except httpx.HTTPError:
                 ch_filings = []
 
+    # New Zealand — reconstruct events from the NZBN dated records (manages its
+    # own client + key). Best-effort; never sinks the timeline.
+    nz_events = []
+    if nz_number and settings.nzbn_api_key:
+        try:
+            from ..sources import REGISTRY
+            data = await REGISTRY["nz_companies"].fetch_timeline_data(nz_number)
+        except Exception:  # noqa: BLE001
+            data = None
+        if data:
+            nz_events = nz_change_events(data)
+
     return assemble_timeline(
         lei=lei,
         company_number=company_number,
         gleif_lei_mods=lei_mods,
         gleif_rr_mods=rr_mods,
         ch_filings=ch_filings,
+        extra_events=nz_events,
     )
 
 

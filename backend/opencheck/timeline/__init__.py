@@ -9,6 +9,7 @@ from __future__ import annotations
 from .assemble import Timeline, TimelineEntry, assemble_timeline
 from .companies_house import classify_companies_house_filing
 from .gleif import classify_gleif_modification, relationship_interest_dates
+from .nz_companies import nz_change_events
 from .model import (
     CHANGE_TYPES,
     ChangeEvent,
@@ -34,5 +35,6 @@ __all__ = [
     "assemble_timeline",
     "classify_companies_house_filing",
     "classify_gleif_modification",
+    "nz_change_events",
     "relationship_interest_dates",
 ]

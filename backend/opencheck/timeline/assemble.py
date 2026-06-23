@@ -216,9 +216,14 @@ def assemble_timeline(
     gleif_lei_mods: list[dict] | None = None,
     gleif_rr_mods: list[dict] | None = None,
     ch_filings: list[dict] | None = None,
+    extra_events: list[ChangeEvent] | None = None,
     window_days: int = _DEFAULT_WINDOW_DAYS,
 ) -> Timeline:
-    """Classify and merge raw per-source change data into one timeline."""
+    """Classify and merge raw per-source change data into one timeline.
+
+    ``extra_events`` are already-classified ChangeEvents from emitters that
+    produce them directly (e.g. the NZ emitter reconstructs events from dated
+    records rather than classifying a raw stream)."""
     all_events: list[ChangeEvent] = []
     all_events += [classify_gleif_modification(m) for m in (gleif_lei_mods or [])]
     all_events += _classify_gleif_relationships(gleif_rr_mods or [])
@@ -226,6 +231,7 @@ def assemble_timeline(
         classify_companies_house_filing(f, company_id=company_number or "")
         for f in (ch_filings or [])
     ]
+    all_events += list(extra_events or [])
 
     notable = [ev for ev in all_events if ev.is_notable]
     entity_events = [ev for ev in notable if ev.record_type is RecordType.ENTITY]

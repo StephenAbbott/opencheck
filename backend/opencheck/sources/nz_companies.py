@@ -352,6 +352,54 @@ class NzCompaniesAdapter(SourceAdapter):
             return {}
         return data if isinstance(data, dict) else {}
 
+    async def _get_json(self, url: str, headers: dict[str, str]) -> Any:
+        try:
+            async with build_client() as client:
+                resp = await client.get(url, headers=headers)
+        except Exception as exc:  # noqa: BLE001
+            _LOG.warning("nz_companies: HTTP error %s: %s", url, exc)
+            return None
+        if not resp.is_success:
+            return None
+        try:
+            return resp.json()
+        except ValueError:
+            return None
+
+    async def fetch_timeline_data(self, company_number: str) -> dict[str, Any] | None:
+        """Raw FullEntity + dated name/status/address history for the Time Machine.
+
+        Returns ``None`` when not live, no NZBN key, or the entity can't be
+        resolved. Reuses the company-number → NZBN resolution."""
+        settings = get_settings()
+        key = settings.nzbn_api_key
+        if not settings.allow_live or not key:
+            return None
+        number = normalise_nz_company_number(company_number)
+        if not number:
+            return None
+        headers = {"Ocp-Apim-Subscription-Key": key}
+        if len(number) == 13 and number.isdigit():
+            nzbn = number
+        else:
+            nzbn = await self._resolve_nzbn(number, headers)
+        if not nzbn:
+            return None
+        full = await self._get_entity(nzbn, headers)
+        base = f"{_API_BASE}/entities/{quote(nzbn)}/history"
+        name_h = await self._get_json(f"{base}/entity-names", headers)
+        status_h = await self._get_json(f"{base}/entity-statuses", headers)
+        addr_h = await self._get_json(f"{base}/addresses", headers)
+        addr_list = (addr_h or {}).get("addressList") if isinstance(addr_h, dict) else addr_h
+        return {
+            "company_number": number,
+            "nzbn": nzbn,
+            "full": full or {},
+            "name_history": name_h if isinstance(name_h, list) else [],
+            "status_history": status_h if isinstance(status_h, list) else [],
+            "address_history": addr_list if isinstance(addr_list, list) else [],
+        }
+
     def _normalise(
         self, number: str, nzbn: str, full: dict[str, Any], legal_name: str
     ) -> dict[str, Any]:
