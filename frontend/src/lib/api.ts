@@ -322,6 +322,53 @@ export async function getNzAssociations(
   return (await r.json()) as NzAssociationsResponse;
 }
 
+// ---------------------------------------------------------------------
+// Subsidiary network — /subsidiaries (GLEIF direct + ultimate children)
+// ---------------------------------------------------------------------
+
+export interface SubsidiaryChild {
+  lei: string;
+  name: string | null;
+  jurisdiction: string | null;
+  status: string | null;
+  relation: "direct" | "ultimate" | "both";
+  link: string | null;
+}
+
+export interface SubsidiaryJurisdiction {
+  code: string;
+  count: number;
+}
+
+export interface SubsidiariesResponse {
+  lei: string;
+  available: boolean;
+  reason: string | null;
+  direct_total: number;
+  ultimate_total: number;
+  distinct_fetched: number;
+  indirect_only: number;
+  node_estimate: number;
+  render_mode: "graph" | "table";
+  truncated: boolean;
+  jurisdictions: SubsidiaryJurisdiction[];
+  children: SubsidiaryChild[];
+  bods: Record<string, unknown>[] | null;
+}
+
+/** GLEIF subsidiary network (direct + ultimate children) for a subject LEI.
+ *  `format: "bods"` additionally returns the BODS statements for the graph. */
+export async function getSubsidiaries(
+  lei: string,
+  format: "summary" | "bods" = "summary",
+): Promise<SubsidiariesResponse> {
+  const params = new URLSearchParams({ lei });
+  if (format === "bods") params.set("format", "bods");
+  const r = await fetch(`${BASE_URL}/subsidiaries?${params.toString()}`);
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return (await r.json()) as SubsidiariesResponse;
+}
+
 export async function lookup(lei: string): Promise<LookupResponse> {
   const params = new URLSearchParams({ lei });
   const r = await fetch(`${BASE_URL}/lookup?${params.toString()}`);

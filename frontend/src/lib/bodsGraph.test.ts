@@ -117,15 +117,17 @@ describe("consolidation edge clean-up (B + C)", () => {
     expect(pairs).toEqual(["C->G", "P->C"]);
   });
 
-  it("the surviving P→C edge keeps a single control label (C dropped the dupe)", () => {
-    // With C on (default), the redundant ultimate P→C edge is removed before
-    // merge, so the lone direct edge survives and shows just its own detail.
+  it("annotates a same-pair direct+ultimate child as one merged edge", () => {
+    // The same entity is both a direct AND ultimate child. C keeps the ultimate
+    // edge (its pair has a direct edge too), B merges them, and the single
+    // surviving edge is annotated to reflect both flavours — both BODS
+    // statements stay in the data, only the rendered edge is merged.
     const { edges } = bodsToGraph(consolidationStatements());
     const pc = edges.find((e) => e.source === "P" && e.target === "C")!;
     expect(pc.category).toBe("control");
-    expect(pc.label).toBe("Controls");
+    expect(pc.label).toBe("Controls (direct + ultimate)");
     expect(pc.details).toContain("IS_DIRECTLY_CONSOLIDATED_BY");
-    expect(pc.details).not.toContain("IS_ULTIMATELY_CONSOLIDATED_BY");
+    expect(pc.details).toContain("IS_ULTIMATELY_CONSOLIDATED_BY");
   });
 
   it("when C is off, B merges the pair and pools both flavours into one edge", () => {
@@ -133,7 +135,7 @@ describe("consolidation edge clean-up (B + C)", () => {
       suppressRedundantUltimateConsolidation: false,
     });
     const pc = edges.find((e) => e.source === "P" && e.target === "C")!;
-    expect(pc.label).toBe("Controls"); // de-duplicated despite two interests
+    expect(pc.label).toBe("Controls (direct + ultimate)");
     expect(pc.details).toContain("IS_DIRECTLY_CONSOLIDATED_BY");
     expect(pc.details).toContain("IS_ULTIMATELY_CONSOLIDATED_BY");
   });
@@ -161,6 +163,36 @@ describe("consolidation edge clean-up (B + C)", () => {
       suppressRedundantUltimateConsolidation: false,
     });
     expect(edges).toHaveLength(4); // r-pc-d, r-pc-u, r-cg-d, r-pg-u
+  });
+
+  it("recognises the live GLEIF mapper detail form (direct-child / ultimate-child)", () => {
+    // map_gleif_subsidiaries writes details "GLEIF Level 2 {direct,ultimate}-child
+    // (accounting consolidation)" with directOrIndirect direct/indirect — the
+    // subsidiary reveal must merge+annotate these exactly like the OO-bundle form.
+    const childRel = (id: string, kind: "direct" | "ultimate") => ({
+      statementId: id,
+      recordType: "relationship",
+      recordDetails: {
+        interestedParty: "P",
+        subject: "C",
+        interests: [
+          {
+            type: "otherInfluenceOrControl",
+            directOrIndirect: kind === "direct" ? "direct" : "indirect",
+            beneficialOwnershipOrControl: false,
+            details: `GLEIF Level 2 ${kind}-child (accounting consolidation)`,
+          },
+        ],
+      },
+    });
+    const { edges } = bodsToGraph([
+      { statementId: "P", recordType: "entity", recordDetails: { name: "P" } },
+      { statementId: "C", recordType: "entity", recordDetails: { name: "C" } },
+      childRel("r-d", "direct"),
+      childRel("r-u", "ultimate"),
+    ]);
+    expect(edges).toHaveLength(1);
+    expect(edges[0].label).toBe("Controls (direct + ultimate)");
   });
 
   it("does not merge edges between different pairs", () => {

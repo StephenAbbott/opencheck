@@ -185,18 +185,35 @@ const DIRECT_CONSOLIDATION = "IS_DIRECTLY_CONSOLIDATED_BY";
 
 type ConsolidationKind = "direct" | "ultimate" | null;
 
-/** Classify a relationship's consolidation flavour from its interest details. */
+/** Classify a relationship's consolidation flavour from its interest details.
+ *  Recognises both the OO-bundle form (``IS_…_CONSOLIDATED_BY``) and the live
+ *  GLEIF mapper form (``…direct-child`` / ``…ultimate-child``). */
 function consolidationKind(interests: Interest[]): ConsolidationKind {
   let direct = false;
   let ultimate = false;
   for (const i of interests) {
     const d = i.details ?? "";
-    if (d.includes(ULTIMATE_CONSOLIDATION)) ultimate = true;
-    else if (d.includes(DIRECT_CONSOLIDATION)) direct = true;
+    const dl = d.toLowerCase();
+    if (d.includes(ULTIMATE_CONSOLIDATION) || dl.includes("ultimate-child")) ultimate = true;
+    else if (d.includes(DIRECT_CONSOLIDATION) || dl.includes("direct-child")) direct = true;
   }
   if (ultimate && !direct) return "ultimate";
   if (direct && !ultimate) return "direct";
   return null;
+}
+
+/** When a merged edge pooled both a direct and an ultimate consolidation
+ *  statement (the same entity is a direct *and* ultimate child), annotate the
+ *  single edge to reflect both — instead of drawing two edges or hiding one. */
+function consolidationFlavour(interests: Interest[]): string | null {
+  let direct = false;
+  let ultimate = false;
+  for (const i of interests) {
+    const k = consolidationKind([i]);
+    if (k === "direct") direct = true;
+    else if (k === "ultimate") ultimate = true;
+  }
+  return direct && ultimate ? "Controls (direct + ultimate)" : null;
 }
 
 /** Edge colour-category from a (possibly pooled) interest set. Precedence:
@@ -367,14 +384,26 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
   let kept = raw;
   if (suppressRedundant) {
     const directAdj = new Map<string, string[]>();
+    const directPair = new Set<string>();
     for (const e of raw) {
       if (e.kind !== "direct") continue;
+      directPair.add(`${e.source} ${e.target}`);
       const arr = directAdj.get(e.source) ?? [];
       if (!arr.includes(e.target)) arr.push(e.target);
       directAdj.set(e.source, arr);
     }
+    // Keep an ultimate edge whose pair ALSO has a direct edge — that is the same
+    // entity being both a direct and ultimate child, which B merges into one
+    // edge annotated "direct + ultimate" (decision: merge visually, keep both
+    // statements). Only drop ultimate edges that skip levels already covered by
+    // the direct tree through *intermediates* (the redundant "star").
     kept = raw.filter(
-      (e) => !(e.kind === "ultimate" && reachableViaDirect(directAdj, e.source, e.target))
+      (e) =>
+        !(
+          e.kind === "ultimate" &&
+          !directPair.has(`${e.source} ${e.target}`) &&
+          reachableViaDirect(directAdj, e.source, e.target)
+        )
     );
   }
 
@@ -408,7 +437,7 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
     id: e.id,
     source: e.source,
     target: e.target,
-    label: buildEdgeLabel(e.interests),
+    label: consolidationFlavour(e.interests) ?? buildEdgeLabel(e.interests),
     category: categorise(e.interests),
     details: combineDetails(e.interests),
   }));

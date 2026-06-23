@@ -32,6 +32,7 @@ from .mapper import (
     map_firmenbuch,
     map_ftm,
     map_gleif,
+    map_gleif_subsidiaries,
     map_inpi,
     map_kvk,
     map_malta_mbr,

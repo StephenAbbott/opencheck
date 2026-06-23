@@ -1619,6 +1619,60 @@ def _gleif_child_statements(
     return [child_statement, rel]
 
 
+def map_gleif_subsidiaries(
+    subject_lei: str,
+    subject_attrs: dict[str, Any],
+    children: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Map a subject entity + its merged direct/ultimate children to BODS.
+
+    Used by the lazy ``/subsidiaries`` reveal. ``children`` is a list of
+    ``{"record": <GLEIF L1 data object>, "relations": ["direct"|"ultimate", …]}``.
+    A child that is **both** a direct and an ultimate child gets **two**
+    relationshipStatements (``directOrIndirect`` ``direct`` and ``indirect``) —
+    the graph merges them into one annotated edge, but the statements stay
+    distinct in the data and the export.
+    """
+    if not subject_lei:
+        return []
+    subj_url = f"https://www.gleif.org/lei/{subject_lei}"
+    subj = _gleif_entity_statement(
+        subject_lei, (subject_attrs or {}).get("entity") or {}, subj_url,
+        attrs=subject_attrs,
+    )
+    out: list[dict[str, Any]] = [subj]
+    subj_sid = subj["statementId"]
+    seen: set[str] = set()
+    for c in children:
+        rec = c.get("record") or {}
+        attrs = rec.get("attributes") or rec
+        child_lei = attrs.get("lei") or rec.get("id") or ""
+        if not child_lei or child_lei in seen:
+            continue
+        seen.add(child_lei)
+        child_url = f"https://www.gleif.org/lei/{child_lei}"
+        child_stmt = _gleif_entity_statement(
+            child_lei, attrs.get("entity") or {}, child_url, attrs=attrs
+        )
+        out.append(child_stmt)
+        for kind in sorted(set(c.get("relations") or [])):
+            out.append(make_relationship_statement(
+                source_id="gleif",
+                local_id=f"{subject_lei}:{kind}-child:{child_lei}",
+                subject_statement_id=child_stmt["statementId"],
+                interested_party_statement_id=subj_sid,
+                interested_party_type="entity",
+                interests=[{
+                    "type": "otherInfluenceOrControl",
+                    "directOrIndirect": "direct" if kind == "direct" else "indirect",
+                    "beneficialOwnershipOrControl": False,
+                    "details": f"GLEIF Level 2 {kind}-child (accounting consolidation)",
+                }],
+                source_url=child_url,
+            ))
+    return out
+
+
 def _gleif_exception_statements(
     lei: str, subject_sid: str, kind: str, exception: dict[str, Any]
 ) -> list[dict[str, Any]]:
