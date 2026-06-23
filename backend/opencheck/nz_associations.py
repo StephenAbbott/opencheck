@@ -6,17 +6,21 @@ companies that person / organisation is linked to — a customer-due-diligence
 indicator for nominees and mass directorships.
 
 The Role Search API is keyed on a **name string** (there is no stable person
-id), so this is fundamentally a matching problem. Every candidate match is
-tiered by **address** confidence and only high/medium count toward the headline:
+id), so this is fundamentally a matching problem. **Every name match counts**;
+address is used to *grade* confidence, not to gate the result:
 
 * **high**   — same PAF delivery-point id (exact registered address).
 * **medium** — same / strongly-overlapping address lines.
-* **low**    — name only (excluded from the count; surfaced separately as
-  "weaker possible matches").
+* **low**    — name matches but no address corroboration ("same name — may be a
+  different person").
 
-This never asserts that a person *is* a nominee — it reports what appears under a
-name in the public register, for analyst review. Lazy and never on the main
-lookup. Separate subscription key: ``NZBN_ROLE_SEARCH_API_KEY``.
+Earlier versions hid the **low** band entirely, which made the panel empty for
+career directors (who file different addresses across boards) — i.e. the exact
+people worth surfacing. Now name-only matches are shown and counted, clearly
+labelled, with the per-name register total as a common-name warning. This never
+asserts that a person *is* a nominee — it reports what appears under a name in
+the public register, for analyst review. Lazy and never on the main lookup.
+Separate subscription key: ``NZBN_ROLE_SEARCH_API_KEY``.
 """
 
 from __future__ import annotations
@@ -46,10 +50,13 @@ _MAX_ROLE_HOLDERS = 60     # safety ceiling on searches per subject company
 _CONCURRENCY = 5           # parallel Role Search calls (rate-limit friendly)
 
 _CONFIDENCE_BASIS = {
-    "high": "Exact address match (PAF)",
-    "medium": "Same address",
-    "low": "Name only",
+    "high": "Same registered address",
+    "medium": "Overlapping address",
+    "low": "Same name — may differ",
 }
+
+# Strongest → weakest, for keeping the best confidence per company and ordering.
+_CONF_ORDER = {"high": 0, "medium": 1, "low": 2}
 
 _cache = Cache()
 
@@ -206,10 +213,14 @@ def summarise_person(
     rh: dict[str, Any], records: list[dict[str, Any]], subject_number: str,
     total_records: int = 0,
 ) -> dict[str, Any]:
-    """Tier each record, dedup by company, exclude the subject, split roles."""
+    """Dedup by company, exclude the subject, grade each by address confidence.
+
+    **Every name match counts.** Address corroboration grades a company match
+    high / medium / low (name-only) — it no longer excludes it. The per-company
+    confidence is the strongest tier seen across that name's records.
+    """
     subj_paf, subj_addr = rh.get("paf_id"), rh.get("address")
     companies: dict[str, dict[str, Any]] = {}
-    weak: set[str] = set()
 
     for rec in records:
         phys = rec.get("physicalAddress")
@@ -217,9 +228,6 @@ def summarise_person(
         for c in _record_companies(rec):
             num = c["number"]
             if not num or num == subject_number:
-                continue
-            if tier == "low":
-                weak.add(num)
                 continue
             cur = companies.get(num)
             if cur is None:
@@ -232,13 +240,17 @@ def summarise_person(
                 cur["roles"].add(c["role"])
                 if c["share_percentage"] is not None and cur["share_percentage"] is None:
                     cur["share_percentage"] = c["share_percentage"]
-                if tier == "high":
-                    cur["confidence"] = "high"
+                if not cur.get("name") and c["name"]:
+                    cur["name"] = c["name"]
+                if not cur.get("nzbn") and c["nzbn"]:
+                    cur["nzbn"] = c["nzbn"]
+                # Keep the strongest confidence seen for this company.
+                if _CONF_ORDER[tier] < _CONF_ORDER[cur["confidence"]]:
+                    cur["confidence"] = tier
 
-    weak_only = weak - set(companies.keys())
     ordered = sorted(
         companies.values(),
-        key=lambda c: (c["confidence"] != "high", (c["name"] or "").lower()),
+        key=lambda c: (_CONF_ORDER[c["confidence"]], (c["name"] or "").lower()),
     )
     out_companies = [{
         "number": c["number"], "name": c["name"], "nzbn": c["nzbn"],
@@ -247,14 +259,18 @@ def summarise_person(
         "link": _entity_link(c["nzbn"]),
     } for c in ordered]
 
+    vals = companies.values()
     return {
         "name": rh["name"],
         "role_here": sorted(rh.get("roles_here") or []),
         "other_company_count": len(companies),
-        "high_confidence_count": sum(1 for c in companies.values() if c["confidence"] == "high"),
-        "as_director": sum(1 for c in companies.values() if "director" in c["roles"]),
-        "as_shareholder": sum(1 for c in companies.values() if "shareholder" in c["roles"]),
-        "weaker_count": len(weak_only),
+        "high_confidence_count": sum(1 for c in vals if c["confidence"] == "high"),
+        # Address-corroborated (high + medium) vs name-only (low) — so the UI can
+        # lead with the credible subset while still showing every name match.
+        "address_match_count": sum(1 for c in vals if c["confidence"] in ("high", "medium")),
+        "name_only_count": sum(1 for c in vals if c["confidence"] == "low"),
+        "as_director": sum(1 for c in vals if "director" in c["roles"]),
+        "as_shareholder": sum(1 for c in vals if "shareholder" in c["roles"]),
         # The register holds more role records under this name than we fetched
         # (≤ 150) — surface the true magnitude so a prolific name isn't capped.
         "total_records_under_name": total_records,
@@ -312,8 +328,13 @@ async def assemble_associations(company_number: str) -> dict[str, Any]:
             await asyncio.gather(*[_one(client, rh) for rh in role_holders])
         )
 
+    # Lead with the most credible (address-corroborated) and the most connected.
     people.sort(
-        key=lambda p: (p["other_company_count"], p["high_confidence_count"]),
+        key=lambda p: (
+            p["address_match_count"],
+            p["other_company_count"],
+            p["high_confidence_count"],
+        ),
         reverse=True,
     )
     result = {

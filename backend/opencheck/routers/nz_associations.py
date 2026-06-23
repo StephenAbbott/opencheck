@@ -29,7 +29,7 @@ class AssociatedCompany(BaseModel):
     nzbn: str | None = None
     roles: list[str] = []
     share_percentage: float | int | None = None
-    confidence: str  # "high" | "medium"
+    confidence: str  # "high" | "medium" | "low"
     basis: str
     link: str | None = None
 
@@ -39,9 +39,10 @@ class PersonAssociations(BaseModel):
     role_here: list[str] = []
     other_company_count: int
     high_confidence_count: int
+    address_match_count: int = 0
+    name_only_count: int = 0
     as_director: int
     as_shareholder: int
-    weaker_count: int
     total_records_under_name: int = 0
     truncated: bool = False
     companies: list[AssociatedCompany] = []

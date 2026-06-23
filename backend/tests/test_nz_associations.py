@@ -67,25 +67,31 @@ def test_tiering_dedup_split_and_subject_exclusion():
         # medium — same address lines, no PAF, director of GAMMA
         _director_rec("444", "GAMMA LTD",
                       phys=_phys(lines=["1 Queen St", "Auckland"], postcode="1010")),
-        # low — different person (different PAF + address) → weaker only
+        # low — different PAF + address → name-only, but still counted
         _director_rec("333", "DELTA LTD", phys=_phys(paf="999", lines=["99 Other Rd"])),
         # the subject company itself → excluded
         _director_rec(_SUBJECT, "SUBJECT LTD", phys=_phys(paf="580631")),
     ]
     p = summarise_person(_RH, records, _SUBJECT)
 
-    assert p["other_company_count"] == 3            # 111, 222, 444
+    # Every name match counts now (incl. the name-only DELTA), minus the subject.
+    assert p["other_company_count"] == 4            # 111, 222, 444, 333
     assert p["high_confidence_count"] == 2          # 111, 222
-    assert p["as_director"] == 2                    # 111, 444
+    assert p["address_match_count"] == 3            # 111, 222 (high) + 444 (medium)
+    assert p["name_only_count"] == 1               # 333
+    assert p["as_director"] == 3                    # 111, 444, 333
     assert p["as_shareholder"] == 1                # 222
-    assert p["weaker_count"] == 1                  # 333 (name-only)
 
     nums = {c["number"] for c in p["companies"]}
-    assert nums == {"111", "222", "444"}
+    assert nums == {"111", "222", "444", "333"}
     assert _SUBJECT not in nums
     gamma = next(c for c in p["companies"] if c["number"] == "444")
     assert gamma["confidence"] == "medium"
-    assert gamma["basis"] == "Same address"
+    assert gamma["basis"] == "Overlapping address"
+    delta = next(c for c in p["companies"] if c["number"] == "333")
+    assert delta["confidence"] == "low"
+    # Address-matched companies sort ahead of name-only.
+    assert p["companies"][-1]["number"] == "333"
 
 
 def test_ceased_directorship_is_skipped():
@@ -96,13 +102,16 @@ def test_ceased_directorship_is_skipped():
     assert p["other_company_count"] == 0
 
 
-def test_no_subject_address_means_name_only_is_weak():
+def test_no_subject_address_means_name_only_is_counted():
     rh = {"name": "Common Name", "paf_id": None, "address": None, "roles_here": {"director"}}
     records = [_director_rec("777", "SOME LTD", phys=_phys(paf="580631"))]
     p = summarise_person(rh, records, _SUBJECT)
-    # Can't corroborate by address → not counted, surfaced as a weaker match.
-    assert p["other_company_count"] == 0
-    assert p["weaker_count"] == 1
+    # No subject address to corroborate against → counts as a name-only match
+    # (shown, clearly labelled) rather than being dropped.
+    assert p["other_company_count"] == 1
+    assert p["name_only_count"] == 1
+    assert p["address_match_count"] == 0
+    assert p["companies"][0]["confidence"] == "low"
 
 
 def test_prolific_name_surfaces_total_records():
@@ -110,6 +119,23 @@ def test_prolific_name_surfaces_total_records():
     p = summarise_person(_RH, records, _SUBJECT, total_records=200)
     assert p["total_records_under_name"] == 200
     assert p["truncated"] is True  # 200 records exist, only 1 fetched/tiered here
+
+
+def test_career_director_with_differing_addresses_surfaces_as_name_only():
+    # Regression: a career director files a different address on each board, so
+    # nothing corroborates by PAF/address. Previously every match was hidden
+    # ("weaker, not counted") leaving the panel empty; now they surface as
+    # name-only matches that are clearly labelled.
+    records = [
+        _director_rec("201", "BOARD ONE LTD", phys=_phys(paf="111", lines=["1 First St"])),
+        _director_rec("202", "BOARD TWO LTD", phys=_phys(paf="222", lines=["2 Second St"])),
+        _shareholder_rec("203", "BOARD THREE LTD", 10, phys=_phys(paf="333")),
+    ]
+    p = summarise_person(_RH, records, _SUBJECT)  # _RH has paf 580631 / Queen St
+    assert p["other_company_count"] == 3
+    assert p["address_match_count"] == 0
+    assert p["name_only_count"] == 3
+    assert all(c["confidence"] == "low" for c in p["companies"])
 
 
 def test_company_role_merges_director_and_shareholder():

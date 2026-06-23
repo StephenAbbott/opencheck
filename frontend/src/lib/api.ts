@@ -294,9 +294,12 @@ export interface NzPersonAssociations {
   role_here: string[];
   other_company_count: number;
   high_confidence_count: number;
+  /** High + medium — corroborated by a matching registered address. */
+  address_match_count: number;
+  /** Low — name matches but no address corroboration. */
+  name_only_count: number;
   as_director: number;
   as_shareholder: number;
-  weaker_count: number;
   total_records_under_name: number;
   truncated: boolean;
   companies: NzAssociatedCompany[];

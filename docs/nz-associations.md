@@ -19,45 +19,57 @@ API that powers the main NZ lookup.
 
 The Role Search API is keyed on a **name string** — there is no stable person
 id. "How many companies is Jane Smith linked to?" really means "how many role
-records exist under the name 'Jane Smith'?", and names are not unique. In a CDD
-tool a false *"linked to 200 companies / nominee"* is more harmful than a missed
-one, so the design leads with **confidence, not count**, and never asserts that
-a person *is* a nominee — it reports what appears under a name, **for review**.
+records exist under the name 'Jane Smith'?", and names are not unique. So the
+panel shows every name match but leads with **confidence, not just a count**:
+matches are graded by address corroboration and the credible (address-matched)
+subset is separated from the name-only one, the per-name register total flags
+common names, and it never asserts that a person *is* a nominee — it reports what
+appears under a name, **for review**. (An earlier version went further and hid
+every name-only match; that suppressed real associations for career directors,
+so name-only matches are now shown — clearly labelled — rather than dropped.)
 
-## Confidence tiering
+## Confidence grading (address upgrades, it doesn't gate)
 
 Both the subject's role holders (from the NZBN `FullEntity`) and the Role Search
 results carry a `physicalAddress` with a **`pafId`** (NZ Post delivery-point id).
-Each candidate match is tiered:
+**Every name match counts**; the address is used to *grade* each match, not to
+exclude it:
 
-| Tier | Basis | Counted? |
+| Tier | Basis | Shown / counted? |
 |---|---|---|
-| **high** | same `pafId` (exact registered address) | yes |
-| **medium** | same / strongly-overlapping address lines | yes |
-| **low** | name only (no address corroboration) | **no** — surfaced separately as "weaker matches" |
+| **high** | same `pafId` (exact registered address) | yes — "address-matched" |
+| **medium** | same / strongly-overlapping address lines | yes — "address-matched" |
+| **low** | name matches, address doesn't corroborate | yes — **"name-only"**, clearly labelled |
 
-The headline count is **high + medium only**. The bias is deliberately toward
-**precision over recall**: people move, so the same person can carry different
-addresses across companies and land in "medium" or be missed — for a red flag
-that's the right way to be wrong (under-flag rather than wrongly brand someone).
+**Why name-only is shown (the recall fix).** An earlier version counted only
+high + medium and hid the rest as "weaker matches (not counted)". In practice
+that made the panel empty for exactly the people worth surfacing: a **career
+director** files a different address on each board (home, a service address, the
+company's registered office), so almost every genuine match landed in "low" and
+vanished. Recall collapsed to roughly zero. Now every name match is shown, split
+into an **address-matched** subset (high + medium, the credible core) and a
+**name-only** subset (low, "may be a different person who shares the name").
 
-Note a shared `pafId` means "same registered control point", which is exactly
-what nominee detection wants — but it can also be a shared service address (a
-formation agent's office). So the drill-down always shows the **evidence** (the
-companies, roles and match basis); the number is never presented on its own.
+The honesty rails carry the weight instead of a hard gate: each person leads with
+the `N address-matched, M name-only` split, the per-name register **total**
+(`totalResults`) flags common names, the drill-down always shows the **evidence**
+(companies, roles, match basis), and nothing is ever asserted as a determination.
+A shared `pafId` ("same registered control point") is the strongest signal for
+nominee detection — but can also be a shared formation-agent office — so it is
+surfaced as confidence, not proof.
 
 ## What it returns
 
 Per director/shareholder of the subject company:
 
-- distinct **other active companies** at high+medium confidence (subject company
-  excluded; deduped by company number; ceased directorships skipped);
-- the **high-confidence** subset count;
+- distinct **other active companies** under that name (subject company excluded;
+  deduped by company number; ceased directorships skipped);
+- the **address-matched** count (high + medium) and the **name-only** count (low),
+  plus the **high-confidence** (exact-`pafId`) subset;
 - a split into **as director** vs **as shareholder** (control vs ownership read
   differently for AML);
 - the company list — name, role(s), share % (where shareholder), confidence +
-  match basis, and a link out;
-- a count of **weaker name-only matches** (shown, not counted).
+  match basis, and a link out — ordered address-matched first, then name-only.
 
 ## Disclosure (three layers)
 

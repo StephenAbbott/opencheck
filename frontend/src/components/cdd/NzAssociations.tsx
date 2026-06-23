@@ -20,16 +20,20 @@ function RoleChip({ role }: { role: string }) {
 }
 
 function ConfidenceChip({ confidence, basis }: { confidence: string; basis: string }) {
-  const high = confidence === "high";
-  const classes = high
-    ? "bg-blue-600 text-white border-blue-600"
-    : "bg-blue-50 text-blue-700 border-blue-200";
+  const style =
+    confidence === "high"
+      ? "bg-blue-600 text-white border-blue-600"
+      : confidence === "medium"
+        ? "bg-blue-50 text-blue-700 border-blue-200"
+        : "bg-amber-50 text-amber-700 border-amber-200";
+  const label =
+    confidence === "high" ? "High" : confidence === "medium" ? "Medium" : "Name only";
   return (
     <span
       title={basis}
-      className={`text-[10px] font-semibold rounded px-1.5 py-0.5 border ${classes}`}
+      className={`text-[10px] font-semibold rounded px-1.5 py-0.5 border ${style}`}
     >
-      {high ? "High" : "Medium"} · {basis}
+      {label} · {basis}
     </span>
   );
 }
@@ -90,9 +94,10 @@ function PersonRow({ p }: { p: NzPersonAssociations }) {
               <span className="text-oo-ink">
                 Also in <strong>{p.other_company_count}</strong> other active{" "}
                 {p.other_company_count === 1 ? "company" : "companies"}
-                {p.high_confidence_count > 0 && (
-                  <span className="text-oo-muted"> ({p.high_confidence_count} high-confidence)</span>
-                )}{" "}
+                <span className="text-oo-muted">
+                  {" "}
+                  ({p.address_match_count} address-matched, {p.name_only_count} name-only)
+                </span>{" "}
                 <span className="text-oo-muted">
                   — {p.as_director} as director, {p.as_shareholder} as shareholder
                 </span>
@@ -126,12 +131,6 @@ function PersonRow({ p }: { p: NzPersonAssociations }) {
             <CompanyRow key={`${c.number}-${c.roles.join()}`} c={c} />
           ))}
         </ul>
-      )}
-      {open && p.weaker_count > 0 && (
-        <p className="mt-1.5 text-[11px] text-oo-muted">
-          + {p.weaker_count} weaker name-only{" "}
-          {p.weaker_count === 1 ? "match" : "matches"} (not counted)
-        </p>
       )}
     </li>
   );
@@ -241,8 +240,10 @@ export function NzAssociations({ companyNumber }: { companyNumber: string }) {
             </div>
           </div>
           <p className="mt-1 text-[11px] text-oo-muted leading-[1.5]">
-            Matched on name and address from the public register — may include different people who
-            share a name. For review, not a determination.
+            Every name match from the public register is shown; a matching registered address
+            upgrades a match to <span className="text-blue-700 font-semibold">address-matched</span>,
+            otherwise it is <span className="text-amber-700 font-semibold">name-only</span> and may
+            be a different person who shares the name. For review, not a determination.
           </p>
 
           {data.people.length === 0 ? (
