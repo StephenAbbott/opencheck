@@ -41,27 +41,23 @@ function ConfidenceChip({ confidence, basis }: { confidence: string; basis: stri
 function CompanyRow({ c }: { c: NzAssociatedCompany }) {
   const name = c.name || `Company ${c.number}`;
   return (
-    <li className="flex items-start justify-between gap-3 py-1.5 border-t border-oo-rule first:border-t-0">
-      <div className="min-w-0">
-        <div className="text-[12px] text-oo-ink leading-snug">
-          {c.link ? (
-            <a href={c.link} target="_blank" rel="noopener noreferrer" className="hover:underline">
-              {name}
-            </a>
-          ) : (
-            name
-          )}
-        </div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-1">
-          {c.roles.map((r) => (
-            <RoleChip key={r} role={r} />
-          ))}
-          {c.share_percentage != null && c.roles.includes("shareholder") && (
-            <span className="text-[10px] font-mono text-oo-muted">{c.share_percentage}%</span>
-          )}
-        </div>
+    <li className="py-1.5 border-t border-oo-rule first:border-t-0">
+      <div className="text-[12px] text-oo-ink leading-snug">
+        {c.link ? (
+          <a href={c.link} target="_blank" rel="noopener noreferrer" className="hover:underline">
+            {name}
+          </a>
+        ) : (
+          name
+        )}
       </div>
-      <div className="shrink-0">
+      <div className="mt-0.5 flex flex-wrap items-center gap-1">
+        {c.roles.map((r) => (
+          <RoleChip key={r} role={r} />
+        ))}
+        {c.share_percentage != null && c.roles.includes("shareholder") && (
+          <span className="text-[10px] font-mono text-oo-muted">{c.share_percentage}%</span>
+        )}
         <ConfidenceChip confidence={c.confidence} basis={c.basis} />
       </div>
     </li>
