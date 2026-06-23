@@ -16,16 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 60** — GLEIF subsidiary network: direct *and* ultimate children, the whole-group view
+**Latest: Phase 61** — New Zealand director/shareholder associations: recall fix
 
-A lazy, panel-only reveal on the GLEIF source that complements the inward parent/direct-child relationships with the **outward** network — the subsidiaries a group consolidates, mapped to BODS.
+A tuning change to the NZ associations panel after live use surfaced **zero** associations for any company. The Companies Entity Role Search API is keyed on a name string, so we'd tiered matches by address and counted only the address-corroborated ones — which hid the very people the feature is for.
 
-1. **Direct *and* ultimate children, merged.** GLEIF Level 2 publishes two accounting-consolidation relationships per parent/child — *direct* and *ultimate* (the group head, often several layers down). OpenCheck fetches both, merges by child LEI, and tags each child `direct`, `ultimate` or `both`. Counts are exact even when the child list is page-capped.
-2. **Faithful data, rationalised graph.** A `both` child carries **two** distinct BODS relationship statements (direct + indirect), kept in the data and the export — but the graph merges them into **one edge annotated "Controls (direct + ultimate)"** rather than drawing two, while still hiding the redundant skip-level edges the direct tree already implies.
-3. **Graph or table, by size.** ≤ 150 nodes render in the interactive graph; larger groups degrade to a table (direct children first, then the indirect tail) plus a **Download BODS** button for your own tooling.
-4. **Lazy and open.** `GET /subsidiaries?lei=` is never on the main lookup, gated on `OPENCHECK_ALLOW_LIVE`, and needs no API key — GLEIF is CC0. See [docs/subsidiary-network.md](docs/subsidiary-network.md).
+1. **The problem.** A career director (the trigger case was Fonterra's Holly Kramer, on many boards) files a different address on each board — home, a service address, the registered office — so almost every genuine match was "name-only" and got dropped. Recall collapsed to ~zero.
+2. **Address now upgrades, it doesn't gate.** Every name match counts; the address grades it `high` (same `pafId`), `medium` (overlapping address) or `low` (name-only — "may be a different person"). New `address_match_count` / `name_only_count` per person, ranked address-matched-first.
+3. **Honest by default.** Name-only matches are shown in amber and clearly labelled; the per-name register total still flags common names; subject company excluded, ceased roles skipped, nothing asserted as a determination.
 
-*Previous: [Phase 59 — New Zealand Companies Register (NZBN), OpenCheck's 32nd source](docs/status.md)*
+*Previous: [Phase 60 — GLEIF subsidiary network: direct and ultimate children](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
