@@ -68,6 +68,12 @@ python scripts/extract_bods_subgraphs.py \
 | `GET /deepen?source=<id>&hit_id=<id>` | Full record + BODS statements + risk signals for a single hit. |
 | `GET /report?q=<q>&kind=<...>` | Free-text synthesis (the pre-LEI flow). |
 | `GET /export?lei=<LEI>&format=zip\|json\|jsonl\|xml` | Downloadable BODS bundle. `zip` ships `bods.json` + `bods.jsonl` + `bods.xml` + `manifest.json` + `LICENSES.md`; `json` / `jsonl` / `xml` return the statements only. The `xml` format uses the [canonical BODS v0.4 XML serialisation](https://github.com/StephenAbbott/bods-xml). |
+| `GET /subsidiaries?lei=<LEI>&format=summary\|bods` | GLEIF Level-2 **subsidiary network** — direct + ultimate children merged and tagged `direct` / `ultimate` / `both`, with exact counts, a jurisdiction spread and a `render_mode` hint (graph ≤ 150 nodes, else table); `format=bods` adds the BODS statements. Lazy, never on the main lookup; gated on `OPENCHECK_ALLOW_LIVE`. See [docs/subsidiary-network.md](subsidiary-network.md). |
+| `GET /securities?lei=<LEI>&page=<n>` | Securities (ISINs) mapped to the LEI (GLEIF + OpenFIGI) with a sanctioned-securities overlay. See [docs/securities.md](securities.md). |
+| `GET /history?lei=<LEI>&include_noise=<bool>` | The Time Machine change-over-time timeline (GLEIF + Companies House) on one shared model. See [docs/time-machine.md](time-machine.md). |
+| `GET /nz-associations?company_number=<n>` | New Zealand director/shareholder cross-company associations (nominee / mass-directorship review). See [docs/nz-associations.md](nz-associations.md). |
+
+The enrichment endpoints (`/subsidiaries`, `/securities`, `/history`, `/nz-associations`) are lazy and panel-only — fetched on demand, cached, and never part of the main lookup synthesis.
 
 `/lookup`, `/lookup-stream`, and `/export?lei=…` all share the same single async generator `_lookup_pipeline()` — the export bundle exactly mirrors what the user saw. Completed pipeline runs are cached in memory for 15 minutes (keyed by LEI; `?refresh=true` bypasses). Lookups are addressable via `?lei=` query parameter in the frontend URL, so results pages are shareable.
 

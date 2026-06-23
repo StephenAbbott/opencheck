@@ -1692,6 +1692,44 @@ function ApiPage() {
           </ApiEndpoint>
         </BtsCard>
 
+        <BtsCard title="Enrichments — on demand">
+          <p className="text-[13px] leading-[1.7] text-oo-muted mb-3">
+            Heavier, source-specific views kept off the main lookup and fetched
+            only when asked. Each returns JSON; results are cached.
+          </p>
+          <ApiEndpoint
+            path="/subsidiaries?lei=<LEI>&format=<summary|bods>"
+            params={[
+              [
+                "format",
+                "summary (counts + tagged children, default) or bods (adds the BODS statements for the graph / export).",
+              ],
+            ]}
+          >
+            A company’s GLEIF Level-2{" "}
+            <strong className="text-oo-ink font-semibold">subsidiary network</strong> —
+            direct and ultimate children merged and tagged{" "}
+            <code className={mono}>direct</code> / <code className={mono}>ultimate</code> /{" "}
+            <code className={mono}>both</code>, with exact counts (even when the child
+            list is page-capped), a jurisdiction spread, and a{" "}
+            <code className={mono}>render_mode</code> hint (graph ≤ 150 nodes, else table).
+          </ApiEndpoint>
+          <ApiEndpoint path="/securities?lei=<LEI>&page=<n>">
+            Securities (ISINs) mapped to the LEI from GLEIF + OpenFIGI, flagging any that
+            are <strong className="text-oo-ink font-semibold">sanctioned</strong> (incl.
+            GLEIF’s blind spot for issuers with no listed ISINs).
+          </ApiEndpoint>
+          <ApiEndpoint path="/history?lei=<LEI>&include_noise=<bool>">
+            The <strong className="text-oo-ink font-semibold">Time Machine</strong>{" "}
+            change-over-time timeline (GLEIF + Companies House) on one shared model;{" "}
+            <code className={mono}>include_noise</code> folds in administrative changes.
+          </ApiEndpoint>
+          <ApiEndpoint path="/nz-associations?company_number=<n>">
+            For a New Zealand company, the other companies its directors and shareholders
+            are linked to — a nominee / mass-directorship review, graded by address.
+          </ApiEndpoint>
+        </BtsCard>
+
         <BtsCard title="Catalogue &amp; health">
           <ApiEndpoint path="/sources">
             Inventory of the source adapters: id, name, licence, description, category,
