@@ -170,6 +170,7 @@ _RISK_LABELS = {
     "OPAQUE_OWNERSHIP": "Opaque ownership (super-secure)",
     "COMPLEX_OWNERSHIP_LAYERS": "Complex ownership layers",
     "COMPLEX_CORPORATE_STRUCTURE": "Complex corporate structure",
+    "STATE_CONTROLLED": "State-controlled (possible SOE)",
 }
 
 
