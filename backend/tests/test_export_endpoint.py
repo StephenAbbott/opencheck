@@ -275,6 +275,92 @@ def test_license_matrix_endpoint(client: TestClient) -> None:
     assert data["licenses"]
 
 
+def _mock_full(httpx_mock: HTTPXMock) -> None:
+    """Register the full standard lookup-chain mocks for the BP-shaped LEI."""
+    _mock_lei_record_chain(httpx_mock, _LEI)
+    _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
+    _mock_icij_empty(httpx_mock)
+    _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
+    _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
+    _mock_openaleph_name_lookup_empty(httpx_mock, "Demo Holdings P.L.C.")
+    _mock_gem_download_fail(httpx_mock)
+
+
+def test_export_subsidiaries_opt_in_merges_and_dedupes(
+    client: TestClient, httpx_mock: HTTPXMock, monkeypatch
+) -> None:
+    """`?subsidiaries=true` folds the GLEIF subsidiary BODS into the bundle,
+    de-duplicating the shared subject statement by statementId."""
+    _mock_full(httpx_mock)
+    from opencheck.bods.mapper import _stable_id
+
+    subj_id = _stable_id("gleif", "entity", _LEI)  # the shared GLEIF subject id
+    extra = [
+        # same statementId as the main GLEIF subject → must be deduped out
+        {"statementId": subj_id, "recordType": "entity",
+         "recordDetails": {"entityType": {"type": "registeredEntity"}, "name": "dup"}},
+        {"statementId": "SUB-CHILD-1", "recordType": "entity",
+         "recordDetails": {"entityType": {"type": "registeredEntity"}, "name": "Child Co"}},
+        {"statementId": "SUB-REL-1", "recordType": "relationship",
+         "recordDetails": {"subject": "SUB-CHILD-1", "interestedParty": subj_id, "interests": []}},
+    ]
+
+    async def _fake(lei, *, include_bods=False):
+        assert include_bods is True
+        return {"available": True, "bods": extra}
+
+    monkeypatch.setattr("opencheck.subsidiaries.assemble_subsidiaries", _fake)
+
+    r = client.get("/export", params={"lei": _LEI, "format": "json", "subsidiaries": "true"})
+    assert r.status_code == 200
+    ids = [s["statementId"] for s in json.loads(r.content)]
+    assert "SUB-CHILD-1" in ids and "SUB-REL-1" in ids   # children merged in
+    assert ids.count(subj_id) == 1                        # subject not duplicated
+
+
+def test_export_subsidiaries_default_off(
+    client: TestClient, httpx_mock: HTTPXMock, monkeypatch
+) -> None:
+    """Without the flag, the subsidiary fetch is never invoked (perf default)."""
+    _mock_full(httpx_mock)
+    calls = {"n": 0}
+
+    async def _fake(lei, *, include_bods=False):
+        calls["n"] += 1
+        return {"bods": [{"statementId": "X", "recordType": "entity", "recordDetails": {}}]}
+
+    monkeypatch.setattr("opencheck.subsidiaries.assemble_subsidiaries", _fake)
+
+    r = client.get("/export", params={"lei": _LEI, "format": "json"})
+    assert r.status_code == 200
+    assert "X" not in [s["statementId"] for s in json.loads(r.content)]
+    assert calls["n"] == 0
+
+
+def test_export_zip_manifest_flags_subsidiaries(
+    client: TestClient, httpx_mock: HTTPXMock, monkeypatch
+) -> None:
+    _mock_full(httpx_mock)
+    extra = [
+        {"statementId": "SUB-C", "recordType": "entity",
+         "recordDetails": {"entityType": {"type": "registeredEntity"}, "name": "C"}},
+        {"statementId": "SUB-R", "recordType": "relationship",
+         "recordDetails": {"subject": "SUB-C", "interestedParty": "SUB-C", "interests": []}},
+    ]
+
+    async def _fake(lei, *, include_bods=False):
+        return {"bods": extra}
+
+    monkeypatch.setattr("opencheck.subsidiaries.assemble_subsidiaries", _fake)
+
+    r = client.get("/export", params={"lei": _LEI, "format": "zip", "subsidiaries": "true"})
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        prefix = zf.namelist()[0].split("/", 1)[0]
+        manifest = json.loads(zf.read(f"{prefix}/manifest.json"))
+    assert manifest["subsidiary_network_included"] is True
+    assert manifest["subsidiary_statement_count"] == 2
+
+
 def test_export_unknown_format_rejected(client: TestClient) -> None:
     r = client.get(
         "/export", params={"lei": _LEI, "format": "yaml"}

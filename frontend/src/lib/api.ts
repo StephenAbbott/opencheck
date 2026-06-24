@@ -111,9 +111,11 @@ export const BASE_URL: string = import.meta.env.DEV
  */
 export function exportUrl(
   lei: string,
-  format: "json" | "jsonl" | "zip" | "xml"
+  format: "json" | "jsonl" | "zip" | "xml",
+  opts?: { subsidiaries?: boolean }
 ): string {
   const params = new URLSearchParams({ lei, format });
+  if (opts?.subsidiaries) params.set("subsidiaries", "true");
   return `${BASE_URL}/export?${params.toString()}`;
 }
 

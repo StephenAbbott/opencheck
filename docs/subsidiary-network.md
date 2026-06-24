@@ -72,10 +72,23 @@ note appears when the fetched sample is smaller than the exact total.
 3. **Detail** — the interactive graph (small) or the BODS export (large), each
    fetched only when requested.
 
+## Including it in the main export (opt-in)
+
+By default the subsidiary network is **not** part of the main `/export` bundle —
+a large group can add hundreds of statements, so it stays a separate on-demand
+view. But a compliance user who wants "the full BODS for this entity, including
+its group" can opt in: **`GET /export?lei=<LEI>&subsidiaries=true`** folds the
+subsidiary BODS into the bundle for every format (JSON / JSONL / XML / ZIP). The
+subject statement is de-duplicated by `statementId` (it is shared with the GLEIF
+subject), the merged bundle is re-validated, and the ZIP manifest records
+`subsidiary_network_included` + `subsidiary_statement_count`. The Export panel
+exposes this as a checkbox. Off by default, gated on `OPENCHECK_ALLOW_LIVE`.
+
 ## Limits and roadmap (v1)
 
-- **Panel-only.** Does not emit an OpenCheck risk signal and is not part of the
-  main lookup, AI summary, or PDF — it is an explorer, fetched on demand.
+- **Lazy by default.** Does not emit an OpenCheck risk signal and is not on the
+  main lookup, AI summary, or PDF — it is an explorer, fetched on demand (and now
+  optionally folded into `/export`, see above).
 - **Cap.** 10 pages × 100 children per relation are fetched; counts stay exact
   above that and the UI marks the list truncated.
 - **Roadmap** — a `COMPLEX_GROUP_STRUCTURE` style signal off the network shape;

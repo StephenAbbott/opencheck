@@ -75,6 +75,14 @@ async def export(
         pattern="^(json|jsonl|zip|xml)$",
         description="json (pretty array) | jsonl (newline-delimited) | zip (bundle) | xml (canonical BODS XML)",
     ),
+    subsidiaries: bool = Query(
+        False,
+        description=(
+            "Opt-in: also fold the GLEIF subsidiary network (direct + ultimate "
+            "children) into the BODS bundle. Off by default because a large group "
+            "can add hundreds of statements. LEI exports only; requires live mode."
+        ),
+    ),
 ) -> Response:
     """Download a BODS v0.4 bundle for a subject."""
     if format not in _EXPORT_FORMATS:
@@ -85,10 +93,13 @@ async def export(
             detail="Provide either ?lei=<LEI> or ?q=<free-text query>.",
         )
 
+    sub_count = 0
     if lei is not None:
         payload = await lookup(lei, deepen_top)
         slug = _filename_slug(payload.lei)
         export_query = payload.lei
+        if subsidiaries:
+            payload, sub_count = await _merge_subsidiaries(payload)
     else:
         assert q is not None
         payload = await _build_report(q, kind, deepen_top)
@@ -135,7 +146,8 @@ async def export(
 
     # format == "zip"
     body = _build_export_zip(
-        payload, q=export_query, kind=kind, slug=slug, stamp=stamp
+        payload, q=export_query, kind=kind, slug=slug, stamp=stamp,
+        subsidiary_statement_count=sub_count,
     )
     return Response(
         content=body,
@@ -198,6 +210,40 @@ def _filename_slug(query: str) -> str:
     return slug or "export"
 
 
+async def _merge_subsidiaries(payload: ReportResponse) -> tuple[ReportResponse, int]:
+    """Opt-in: fold the GLEIF subsidiary-network BODS into the export bundle.
+
+    Deduplicated by ``statementId`` — the subsidiary subject shares the GLEIF
+    subject's statementId (both derive from the LEI), so it collapses cleanly and
+    the child relationships resolve against the existing subject. Best-effort: any
+    failure, live-mode-off, or an entity with no children leaves the bundle
+    unchanged. Returns the (possibly new) payload and the number of statements
+    added. Never mutates the lookup payload in place — a fresh copy is returned so
+    the shared lookup cache is untouched.
+    """
+    from ..bods import validate_shape
+    from ..subsidiaries import assemble_subsidiaries
+
+    try:
+        data = await assemble_subsidiaries(payload.lei, include_bods=True)
+    except Exception:  # noqa: BLE001
+        return payload, 0
+    sub = (data or {}).get("bods") or []
+    if not sub:
+        return payload, 0
+
+    existing = {s.get("statementId") for s in payload.bods}
+    added = [s for s in sub if s.get("statementId") not in existing]
+    if not added:
+        return payload, 0
+
+    merged = payload.bods + added
+    return (
+        payload.model_copy(update={"bods": merged, "bods_issues": validate_shape(merged)}),
+        len(added),
+    )
+
+
 def _build_export_zip(
     payload: ReportResponse,
     *,
@@ -205,6 +251,7 @@ def _build_export_zip(
     kind: SearchKind,
     slug: str,
     stamp: str,
+    subsidiary_statement_count: int = 0,
 ) -> bytes:
     """Assemble the canonical export bundle: BODS + manifest + licenses."""
     sources_consulted = [
@@ -228,6 +275,8 @@ def _build_export_zip(
         "cross_source_links": payload.cross_source_links,
         "risk_signals": payload.risk_signals,
         "bods_statement_count": len(payload.bods),
+        "subsidiary_network_included": subsidiary_statement_count > 0,
+        "subsidiary_statement_count": subsidiary_statement_count,
         "bods_validation_issues": payload.bods_issues,
         "license_notices": payload.license_notices,
         "licensing": licensing.model_dump(),

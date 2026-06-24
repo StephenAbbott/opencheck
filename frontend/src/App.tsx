@@ -1673,11 +1673,15 @@ function ApiPage() {
 
         <BtsCard title="Export &amp; licensing">
           <ApiEndpoint
-            path="/export?lei=<LEI>&format=<zip|json|jsonl|xml>"
+            path="/export?lei=<LEI>&format=<zip|json|jsonl|xml>&subsidiaries=<bool>"
             params={[
               [
                 "format",
                 "zip ships bods.json + bods.jsonl + bods.xml + manifest.json + LICENSES.md; json / jsonl / xml return the statements only.",
+              ],
+              [
+                "subsidiaries",
+                "opt-in (default false): also fold the GLEIF subsidiary network (direct + ultimate children) into the bundle. Off by default — a large group can add hundreds of statements.",
               ],
             ]}
           >

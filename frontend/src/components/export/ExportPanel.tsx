@@ -29,6 +29,7 @@ export function ExportPanel({
   contributingSourceIds: string[];
 }) {
   const [format, setFormat] = useState<"zip" | "json" | "jsonl" | "xml">("zip");
+  const [subsidiaries, setSubsidiaries] = useState(false);
 
   const sorted = [...contributingSourceIds].sort();
   const licensing = useQuery({
@@ -39,7 +40,7 @@ export function ExportPanel({
   });
   const a = licensing.data?.assessment;
 
-  const href = exportUrl(lei, format);
+  const href = exportUrl(lei, format, { subsidiaries });
 
   return (
     <section className="mb-8 bg-white border border-oo-rule rounded-oo p-5">
@@ -78,6 +79,19 @@ export function ExportPanel({
           </a>
         </div>
       </div>
+
+      <label className="mt-3 flex items-start gap-2 text-[12px] text-oo-muted cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={subsidiaries}
+          onChange={(e) => setSubsidiaries(e.target.checked)}
+          className="mt-0.5 accent-oo-blue"
+        />
+        <span>
+          Include the GLEIF subsidiary network (direct &amp; ultimate children).
+          Off by default — a large corporate group can add hundreds of statements.
+        </span>
+      </label>
 
       {a && (
         <div className="mt-4">
