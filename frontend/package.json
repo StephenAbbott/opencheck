@@ -6,6 +6,8 @@
   "description": "OpenCheck web UI — customer due diligence risk checks driven by the LEI and open data.",
   "scripts": {
     "dev": "vite",
+    "gen:changelog": "node scripts/gen-changelog.mjs",
+    "prebuild": "node scripts/gen-changelog.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",

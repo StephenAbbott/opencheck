@@ -29,6 +29,7 @@ import {
 } from "./components/icons";
 import { RiskChip, RISK_PRESENTATION, rank } from "./components/risk/RiskChip";
 import { ExportPanel } from "./components/export/ExportPanel";
+import { ChangelogPage } from "./components/ChangelogPage";
 import { SubjectCard } from "./components/cdd/SubjectCard";
 import { NarrativePanel } from "./components/cdd/NarrativePanel";
 import {
@@ -178,17 +179,19 @@ export default function App() {
   // Path → view mapping. /sources and /about are real URLs; everything
   // else falls through to "main" (the SPA rewrite in render.yaml serves
   // index.html for all paths so deep links work).
-  type View = "main" | "sources" | "behind" | "api";
+  type View = "main" | "sources" | "behind" | "api" | "changelog";
   function pathToView(path: string): View {
     if (path === "/sources") return "sources";
     if (path === "/about") return "behind";
     if (path === "/api") return "api";
+    if (path === "/changelog") return "changelog";
     return "main";
   }
   function viewToPath(v: View): string {
     if (v === "sources") return "/sources";
     if (v === "behind") return "/about";
     if (v === "api") return "/api";
+    if (v === "changelog") return "/changelog";
     return "/";
   }
   const [view, setView] = useState<View>(() => pathToView(window.location.pathname));
@@ -212,6 +215,8 @@ export default function App() {
       document.title = "Behind the Scenes — OpenCheck";
     } else if (view === "api") {
       document.title = "API — OpenCheck";
+    } else if (view === "changelog") {
+      document.title = "Changelog — OpenCheck";
     } else {
       document.title = "OpenCheck";
     }
@@ -1304,6 +1309,8 @@ export default function App() {
         {view === "behind" && <BehindTheScenesPage />}
 
         {view === "api" && <ApiPage />}
+
+        {view === "changelog" && <ChangelogPage />}
       </main>
 
       {/* GODIN ribbon — permanent attribution banner. */}
@@ -1378,6 +1385,13 @@ export default function App() {
                   className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst mb-2"
                 >
                   API
+                </a>
+                <a
+                  href="/changelog"
+                  onClick={(e) => { e.preventDefault(); navigate("changelog"); }}
+                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst mb-2"
+                >
+                  Changelog
                 </a>
                 <a
                   href="https://github.com/StephenAbbott/opencheck"
