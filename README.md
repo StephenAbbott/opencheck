@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 63** — Time Machine: Denmark (CVR) emitter, the 5th source
+**Latest: Phase 64** — Subsidiary network in the main export (opt-in)
 
-Change-over-time events from the Danish Central Business Register — and the cheapest emitter yet, because the data was already in hand.
+The GLEIF subsidiary network was a separate lazy view, so exporting "the BODS for this entity" silently left out its group. Now it's a conscious, opt-in choice.
 
-1. **CVR is bitemporal, and we already fetch the history.** Every name / address / legal-form / status record carries a `virkningFra`/`virkningTil` validity period, and the CVR adapter's queries already pull all of them — it just collapsed to the current row at the summary step. The emitter reconstructs the change events from data already in the lookup bundle, with **no new API calls**.
-2. **Real effective dates.** `virkningFra` is a true effective date, so CVR events are `effective` / high-confidence — the same quality as Companies House and New Zealand, not GLEIF's *recorded* dates.
-3. **Mapped to the shared codelist.** Legal-name changes (sekvens-0 names only), legal-form changes, status changes (active → bankruptcy/dissolved), and registered-seat address changes; industry recodes are kept but hidden as admin noise; no-op re-registrations are skipped. Anchored on the real Novo Nordisk history (Novo Industri A/S → Novo Nordisk A/S, 1989).
+1. **Opt-in, off by default.** `GET /export?lei=…&subsidiaries=true` folds the GLEIF subsidiary network (direct + ultimate children) into the bundle for every format. Off by default because a large group can add hundreds of statements — a performance call now made deliberately, not by accident.
+2. **Clean merge.** The subsidiary subject shares the GLEIF subject's `statementId`, so it dedups to a single subject and the child relationships resolve against it; the merged bundle is re-validated, and the cached lookup is never mutated.
+3. **Honest + visible.** The ZIP manifest records `subsidiary_network_included` and the statement count, and the Export panel adds a checkbox.
 
-*Previous: [Phase 62 — Wikidata controlling owners + a STATE_CONTROLLED signal](docs/status.md)*
+*Previous: [Phase 63 — Time Machine: Denmark (CVR) emitter, the 5th source](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
