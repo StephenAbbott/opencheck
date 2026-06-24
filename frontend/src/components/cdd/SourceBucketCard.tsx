@@ -735,6 +735,7 @@ const TIMELINE_SOURCES = new Set([
   "companies_house",
   "nz_companies",
   "ariregister",
+  "cvr_denmark",
 ]);
 
 export function SourceBucketCard({

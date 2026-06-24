@@ -23,6 +23,7 @@ from ..config import get_settings
 from ..http import build_client
 from .ariregister import ariregister_change_events
 from .assemble import Timeline, assemble_timeline
+from .cvr_denmark import cvr_change_events
 from .nz_companies import nz_change_events
 
 _GLEIF_RECORD_URL = "https://api.gleif.org/api/v1/lei-records/{lei}"
@@ -33,6 +34,7 @@ _CH_API_BASE = "https://api.company-information.service.gov.uk"
 _CH_RA_CODE = "RA000585"   # UK Companies House
 _NZ_RA_CODE = "RA000466"   # NZ Companies Register
 _EE_RA_CODE = "RA000181"   # Estonian e-Business Register
+_DK_RA_CODE = "RA000170"   # Danish CVR / Erhvervsstyrelsen
 
 _MODS_PAGE_SIZE = 200
 _MODS_PAGE_CAP = 5  # ≤ 1000 modifications — plenty for a per-entity timeline
@@ -42,11 +44,11 @@ _CH_PAGE_CAP = 10  # ≤ 1000 filings
 
 async def _gleif_registration(
     client: httpx.AsyncClient, lei: str
-) -> tuple[str | None, str | None, str | None]:
-    """Return ``(ch_number, nz_number, ee_registry_code)`` from the GLEIF record."""
+) -> tuple[str | None, str | None, str | None, str | None]:
+    """Return ``(ch_number, nz_number, ee_registry_code, dk_cvr)`` from GLEIF."""
     resp = await client.get(_GLEIF_RECORD_URL.format(lei=quote(lei)))
     if resp.status_code == 404:
-        return None, None, None
+        return None, None, None, None
     resp.raise_for_status()
     entity = (
         (((resp.json() or {}).get("data") or {}).get("attributes") or {}).get("entity")
@@ -60,7 +62,8 @@ async def _gleif_registration(
     ) else None
     nz = registered_as if (registered_as and registered_at == _NZ_RA_CODE) else None
     ee = registered_as if (registered_as and registered_at == _EE_RA_CODE) else None
-    return ch, nz, ee
+    dk = registered_as if (registered_as and registered_at == _DK_RA_CODE) else None
+    return ch, nz, ee, dk
 
 
 async def _gleif_modifications(
@@ -124,6 +127,7 @@ async def fetch_timeline(lei: str) -> Timeline:
     company_number: str | None = None
     nz_number: str | None = None
     ee_code: str | None = None
+    dk_cvr: str | None = None
     lei_mods: list[dict] = []
     rr_mods: list[dict] = []
     ch_filings: list[dict] = []
@@ -137,7 +141,7 @@ async def fetch_timeline(lei: str) -> Timeline:
         )
         reg_res, mods_res = results
         if not isinstance(reg_res, BaseException):
-            company_number, nz_number, ee_code = reg_res
+            company_number, nz_number, ee_code, dk_cvr = reg_res
         if not isinstance(mods_res, BaseException):
             lei_mods, rr_mods = mods_res
 
@@ -176,13 +180,26 @@ async def fetch_timeline(lei: str) -> Timeline:
         if data:
             ee_events = ariregister_change_events(data)
 
+    # Denmark — reconstruct events from CVR's bitemporal records. The normal CVR
+    # adapter fetch already returns the full virkning history in the bundle, so no
+    # dedicated history call is needed. Best-effort; never sinks the timeline.
+    dk_events = []
+    if dk_cvr and settings.cvr_denmark_api_key:
+        try:
+            from ..sources import REGISTRY
+            bundle = await REGISTRY["cvr_denmark"].fetch(dk_cvr)
+        except Exception:  # noqa: BLE001
+            bundle = None
+        if bundle:
+            dk_events = cvr_change_events(bundle)
+
     return assemble_timeline(
         lei=lei,
         company_number=company_number,
         gleif_lei_mods=lei_mods,
         gleif_rr_mods=rr_mods,
         ch_filings=ch_filings,
-        extra_events=nz_events + ee_events,
+        extra_events=nz_events + ee_events + dk_events,
     )
 
 

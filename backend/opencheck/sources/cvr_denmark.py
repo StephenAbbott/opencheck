@@ -532,7 +532,12 @@ class CvrDenmarkAdapter(SourceAdapter):
             "address": addr,
             "source_url": source_url,
             "fully_liable_participant_ids": current_deltagere,
-            # Raw for debugging / future use
+            # Raw for debugging / future use. CVR is bitemporal — these lists carry
+            # every virkning period (virkningFra/virkningTil), so the Time Machine
+            # emitter reconstructs change events from them with no extra API calls.
+            # `_raw_virksomhed` is the full virksomhed list (all status periods),
+            # not just the current row, so status / lifecycle changes are derivable.
+            "_raw_virksomhed": nodes_v,
             "_raw_navn": navn_nodes,
             "_raw_adressering": addr_nodes,
             "_raw_branche": branch_nodes,
