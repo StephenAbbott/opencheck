@@ -71,7 +71,7 @@ The first frontend build copies bundled images for `@openownership/bods-dagre` i
 | [Risk signals](docs/risk-signals.md) | All signal codes: source-derived, AMLA CDD RTS, FATF jurisdiction, state-controlled/SOE, cross-source name match, ICIJ Offshore Leaks |
 | [Subsidiary network](docs/subsidiary-network.md) | Lazy GLEIF Level-2 reveal — direct + ultimate children mapped to BODS, graph (small) or table + export (large) |
 | [Configuration](docs/configuration.md) | Environment variables, Render deployment, running the test suite |
-| [Development history](docs/status.md) | All 54 phases |
+| [Development history](docs/status.md) | All phases |
 
 ## Licensing
 
