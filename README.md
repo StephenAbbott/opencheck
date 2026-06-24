@@ -60,7 +60,7 @@ npm install
 npm run dev
 ```
 
-The first frontend build copies bundled images for `@openownership/bods-dagre` into `public/bods-dagre-images/`. If they're missing, run `npm run build` once.
+The BOVS icons and country-flag SVGs are committed under `frontend/public/`, so the dev server needs no extra build step.
 
 ## Documentation
 
@@ -77,7 +77,7 @@ The first frontend build copies bundled images for `@openownership/bods-dagre` i
 
 OpenCheck's own code is [MIT-licensed](LICENSE). Data retrieved from third-party sources is licensed under each source's own terms — see [ATTRIBUTIONS.md](ATTRIBUTIONS.md). Downloaded exports include a `LICENSES.md` listing every source that contributed data, with re-use guidance for the most-restrictive licence in the bundle.
 
-The frontend also uses the [Beneficial Ownership Visualisation System](https://www.openownership.org/en/publications/beneficial-ownership-visualisation-system/) design tokens and `@openownership/bods-dagre`, both © Open Ownership and re-used under CC BY 4.0 / Apache 2.0 respectively.
+The frontend renders ownership graphs with [Cytoscape.js](https://js.cytoscape.org/) (MIT). It re-uses the [Beneficial Ownership Visualisation System](https://www.openownership.org/en/publications/beneficial-ownership-visualisation-system/) design tokens (CC BY 4.0) and the BOVS entity/person icons and country-flag SVGs from Open Ownership's [visualisation library](https://github.com/openownership/visualisation-tool) (Apache 2.0) — both © Open Ownership. The committed assets live under `frontend/public/bods-dagre-images/`, a directory name retained from their original source.
 
 ## Roadmap
 
