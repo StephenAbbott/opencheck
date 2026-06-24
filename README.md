@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 64** — Subsidiary network in the main export (opt-in)
+**Latest: Phase 65** — Auto-generated changelog page at [opencheck.world/changelog](https://opencheck.world/changelog)
 
-The GLEIF subsidiary network was a separate lazy view, so exporting "the BODS for this entity" silently left out its group. Now it's a conscious, opt-in choice.
+A public "what's new" page generated from this repo's development-history table, so updates are communicated without any extra step.
 
-1. **Opt-in, off by default.** `GET /export?lei=…&subsidiaries=true` folds the GLEIF subsidiary network (direct + ultimate children) into the bundle for every format. Off by default because a large group can add hundreds of statements — a performance call now made deliberately, not by accident.
-2. **Clean merge.** The subsidiary subject shares the GLEIF subject's `statementId`, so it dedups to a single subject and the child relationships resolve against it; the merged bundle is re-validated, and the cached lookup is never mutated.
-3. **Honest + visible.** The ZIP manifest records `subsidiary_network_included` and the statement count, and the Export panel adds a checkbox.
+1. **The status table is the editorial gate.** An item shows on the changelog only if it earned a phase row in [`docs/status.md`](docs/status.md) — each card pulls the phase title, the first sentence of the update, and links to the commit(s).
+2. **Build-time, no runtime dependency.** A `prebuild` hook copies `status.md` into the bundle on every build, so the page auto-refreshes on each deploy (exactly when a phase row ships). Chosen over a live GitHub fetch or a backend endpoint so it loads instantly and survives a backend cold-start.
+3. **On the design system.** Reuses the existing tokens (`oo-ink`/`oo-muted`/`oo-rule`, `font-head`, `rounded-oo`) — a newest-first card list with phase chips and GitHub commit links.
 
-*Previous: [Phase 63 — Time Machine: Denmark (CVR) emitter, the 5th source](docs/status.md)*
+*Previous: [Phase 64 — Subsidiary network in the main export (opt-in)](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
