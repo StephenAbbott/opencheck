@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 62** — Wikidata controlling owners + a `STATE_CONTROLLED` signal
+**Latest: Phase 63** — Time Machine: Denmark (CVR) emitter, the 5th source
 
-Foundation, family, and state ownership pulled from Wikidata and mapped to BODS. Investigating the community Wikidata MCP confirmed it's just a transport over the same Wikidata we already query — so the win is in *what* we extract, not how.
+Change-over-time events from the Danish Central Business Register — and the cheapest emitter yet, because the data was already in hand.
 
-1. **The seam.** Wikidata carries real ownership for big private firms — Robert Bosch → **Robert Bosch Stiftung 92%** + family vehicles, Koch → the Koch brothers, Heineken → Heineken Holding + the family — and state ownership for famous SOEs (Gazprom, Rosneft, Equinor, EDF). 82% of these ownership statements carry a reference (often company filings, the Danish CVR register, or government press).
-2. **Mapped to BODS, correctly typed.** Each owner is classified and emitted as the right shape — `personStatement`, `registeredEntity` (foundation/company), `arrangement` (trust/Treuhand), or `state`/`stateBody` per the BODS state-owned-enterprise modelling. Shares ride as *indicative* `share.exact` with the source reference; **family** owners are dropped (not a legal entity or a person — not fabricated).
-3. **A `STATE_CONTROLLED` risk signal.** Fires medium-confidence when a controlling owner is a state/state body — orange chip, graph badge, evidence-linked. **Presence-only and corroborating**: Wikidata is famous-names-only, so its silence means nothing, and it's never a determination.
+1. **CVR is bitemporal, and we already fetch the history.** Every name / address / legal-form / status record carries a `virkningFra`/`virkningTil` validity period, and the CVR adapter's queries already pull all of them — it just collapsed to the current row at the summary step. The emitter reconstructs the change events from data already in the lookup bundle, with **no new API calls**.
+2. **Real effective dates.** `virkningFra` is a true effective date, so CVR events are `effective` / high-confidence — the same quality as Companies House and New Zealand, not GLEIF's *recorded* dates.
+3. **Mapped to the shared codelist.** Legal-name changes (sekvens-0 names only), legal-form changes, status changes (active → bankruptcy/dissolved), and registered-seat address changes; industry recodes are kept but hidden as admin noise; no-op re-registrations are skipped. Anchored on the real Novo Nordisk history (Novo Industri A/S → Novo Nordisk A/S, 1989).
 
-*Previous: [Phase 61 — New Zealand director/shareholder associations: recall fix](docs/status.md)*
+*Previous: [Phase 62 — Wikidata controlling owners + a STATE_CONTROLLED signal](docs/status.md)*
 
 → [Full development history](docs/status.md)
 

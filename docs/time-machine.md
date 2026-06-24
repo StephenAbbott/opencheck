@@ -227,6 +227,28 @@ To add a source to Time Machine:
 The renderer, the tier suppression, the boost engine and the BODS mapping are
 **unchanged**. The codelist is the contract.
 
+## Emitters (current)
+
+Five sources now feed the timeline. GLEIF's modification log is `recorded`; the
+four registers that publish dated, effective-from records give
+`date_basis: "effective"` / `date_confidence: "high"`:
+
+| Emitter | Source of history | Date basis | Notes |
+|---|---|---|---|
+| `gleif` | field-modification change log (LEI + RR records) | recorded | the original; corporate-tree + identity diffs |
+| `companies_house` | filing-history API (typed categories) | effective | UK PSC / filing events |
+| `nz_companies` | NZBN `FullEntity` + `/history/*` endpoints | effective | directors/shareholders + name/status/address |
+| `ariregister` | RIK X-Road SOAP history (credentialed) | effective | Estonian registry-card + beneficial-owner history |
+| `cvr_denmark` | CVR / Datafordeler bitemporal records (`virkningFra`/`virkningTil`) | effective | name / legal form / status / registered-seat address |
+
+**Denmark is the cheapest emitter to date.** CVR is bitemporal by design, so the
+full validity history is *already* in the lookup bundle's `_raw_*` blocks — the
+adapter fetches every `virkning` period and only collapses to the current state
+at the summary step. The emitter reconstructs transitions (sekvens-0 legal names,
+legal form, status from the preserved `_raw_virksomhed` list, registered-seat
+address) with **no extra API call** and skips no-op re-registrations; `branche`
+(industry) recodes are kept raw-first as Tier-3 admin noise.
+
 ## Worked example — Wm Morrison Supermarkets (recommended demo subject)
 
 `213800IN6LSRGTZSOS29` — the 2021 Clayton, Dubilier & Rice take-private. The
