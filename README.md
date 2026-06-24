@@ -67,7 +67,7 @@ The BOVS icons and country-flag SVGs are committed under `frontend/public/`, so 
 | Page | Contents |
 |------|----------|
 | [How it works](docs/how-it-works.md) | Step-by-step lookup flow, per-adapter detail, Open Ownership BODS bundles, API surface, project structure |
-| [Sources](docs/sources.md) | Full adapter table — 31 active sources plus inactive bulk-only adapters, license, entry point, description |
+| [Sources](docs/sources.md) | Full adapter table — active sources plus inactive bulk-only adapters, license, entry point, description |
 | [Risk signals](docs/risk-signals.md) | All signal codes: source-derived, AMLA CDD RTS, FATF jurisdiction, state-controlled/SOE, cross-source name match, ICIJ Offshore Leaks |
 | [Subsidiary network](docs/subsidiary-network.md) | Lazy GLEIF Level-2 reveal — direct + ultimate children mapped to BODS, graph (small) or table + export (large) |
 | [Configuration](docs/configuration.md) | Environment variables, Render deployment, running the test suite |
