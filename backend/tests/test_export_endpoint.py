@@ -208,6 +208,44 @@ def test_export_jsonl_emits_one_statement_per_line(
         assert obj.get("recordType") in {"entity", "person", "relationship"}
 
 
+def test_export_senzing_emits_senzing_records(
+    client: TestClient, httpx_mock: HTTPXMock
+) -> None:
+    _mock_full(httpx_mock)
+
+    r = client.get("/export", params={"lei": _LEI, "format": "senzing"})
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("application/x-ndjson")
+    cd = r.headers["content-disposition"]
+    assert "-senzing.jsonl" in cd
+    text = r.content.decode("utf-8")
+    lines = [ln for ln in text.split("\n") if ln.strip()]
+    assert lines, "no records in senzing export"
+    for ln in lines:
+        obj = json.loads(ln)
+        assert obj["DATA_SOURCE"] == "OPENCHECK"
+        assert obj["RECORD_ID"]
+        assert isinstance(obj["FEATURES"], list)
+        # Every entity/person record carries exactly one anchor.
+        anchors = [f for f in obj["FEATURES"] if "REL_ANCHOR_KEY" in f]
+        assert len(anchors) == 1
+
+
+def test_export_zip_includes_senzing_jsonl(
+    client: TestClient, httpx_mock: HTTPXMock
+) -> None:
+    _mock_full(httpx_mock)
+    r = client.get("/export", params={"lei": _LEI, "format": "zip"})
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        prefix = zf.namelist()[0].split("/", 1)[0]
+        assert f"{prefix}/senzing.jsonl" in zf.namelist()
+        senzing = zf.read(f"{prefix}/senzing.jsonl").decode("utf-8")
+        manifest = json.loads(zf.read(f"{prefix}/manifest.json"))
+    first = json.loads(senzing.splitlines()[0])
+    assert first["DATA_SOURCE"] == "OPENCHECK"
+    assert manifest["senzing_record_count"] >= 1
+
+
 def test_export_zip_contains_full_bundle(
     client: TestClient, httpx_mock: HTTPXMock
 ) -> None:

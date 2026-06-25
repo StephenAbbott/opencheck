@@ -52,6 +52,7 @@ from .mapper import (
     map_wikidata,
     map_zefix,
 )
+from .senzing import map_to_senzing, to_senzing_jsonl
 from .validator import validate_shape, ValidationError
 
 __all__ = [
@@ -97,6 +98,8 @@ __all__ = [
     "map_ur_latvia",
     "map_wikidata",
     "map_zefix",
+    "map_to_senzing",
+    "to_senzing_jsonl",
     "validate_shape",
     "ValidationError",
 ]

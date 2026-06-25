@@ -85,6 +85,30 @@ async def test_export_bods_tool_validates_format() -> None:
     assert "error" in out and "format" in out["error"]
 
 
+async def test_export_bods_tool_senzing_format(monkeypatch) -> None:
+    bods = [
+        {"statementId": "e1", "recordType": "entity",
+         "recordDetails": {"entityType": {"type": "registeredEntity"}, "name": "Acme"}},
+        {"statementId": "p1", "recordType": "person",
+         "recordDetails": {"personType": "knownPerson",
+                           "names": [{"type": "legal", "fullName": "Jane"}]}},
+        {"statementId": "r1", "recordType": "relationship",
+         "recordDetails": {"subject": "e1", "interestedParty": "p1",
+                           "interests": [{"type": "shareholding", "share": {"exact": 100}}]}},
+    ]
+
+    async def _fake_lookup(*, lei, deepen_top=3):
+        return SimpleNamespace(lei=lei, bods=bods, bods_issues=[], license_notices=[])
+
+    monkeypatch.setattr("opencheck.routers.lookup.lookup", _fake_lookup)
+    out = await mcp_server.opencheck_export_bods(
+        lei="213800LH1BZH3DI6G760", format="senzing"
+    )
+    assert out["format"] == "senzing"
+    assert out["record_count"] == 2  # one ORGANIZATION + one PERSON record
+    assert all(r["DATA_SOURCE"] == "OPENCHECK" for r in out["records"])
+
+
 async def test_search_tool_validates_kind() -> None:
     out = await mcp_server.opencheck_search(query="x", kind="banana")
     assert "error" in out

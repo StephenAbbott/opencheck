@@ -17,6 +17,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from .. import __version__
+from ..bods import map_to_senzing, to_senzing_jsonl
 from ..licensing import assess as assess_licensing
 from ..licensing import full_matrix
 from ..reporting import PdfUnavailable, build_report_pdf
@@ -25,7 +26,7 @@ from .lookup import ReportResponse, _build_report, lookup
 
 router = APIRouter()
 
-_EXPORT_FORMATS = {"json", "jsonl", "zip", "xml"}
+_EXPORT_FORMATS = {"json", "jsonl", "zip", "xml", "senzing"}
 
 _TRAFFIC = {"green": "🟢", "amber": "🟡", "red": "🔴"}
 
@@ -72,8 +73,12 @@ async def export(
     deepen_top: int = Query(3, ge=0, le=10),
     format: str = Query(
         "zip",
-        pattern="^(json|jsonl|zip|xml)$",
-        description="json (pretty array) | jsonl (newline-delimited) | zip (bundle) | xml (canonical BODS XML)",
+        pattern="^(json|jsonl|zip|xml|senzing)$",
+        description=(
+            "json (pretty array) | jsonl (newline-delimited) | zip (bundle) | "
+            "xml (canonical BODS XML) | senzing (newline-delimited Senzing JSON "
+            "entity records, ready to load into Senzing)"
+        ),
     ),
     subsidiaries: bool = Query(
         False,
@@ -140,6 +145,18 @@ async def export(
             headers={
                 "Content-Disposition": (
                     f'attachment; filename="opencheck-{slug}-{stamp}.xml"'
+                ),
+            },
+        )
+
+    if format == "senzing":
+        body = to_senzing_jsonl(payload.bods).encode("utf-8")
+        return Response(
+            content=body,
+            media_type="application/x-ndjson",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="opencheck-{slug}-{stamp}-senzing.jsonl"'
                 ),
             },
         )
@@ -275,6 +292,7 @@ def _build_export_zip(
         "cross_source_links": payload.cross_source_links,
         "risk_signals": payload.risk_signals,
         "bods_statement_count": len(payload.bods),
+        "senzing_record_count": len(map_to_senzing(payload.bods)),
         "subsidiary_network_included": subsidiary_statement_count > 0,
         "subsidiary_statement_count": subsidiary_statement_count,
         "bods_validation_issues": payload.bods_issues,
@@ -294,12 +312,14 @@ def _build_export_zip(
     bods_json = json.dumps(payload.bods, indent=2)
     bods_jsonl = "\n".join(json.dumps(s) for s in payload.bods) + "\n"
     bods_xml = _bods_xml_str(_bods_xml_convert(payload.bods))
+    senzing_jsonl = to_senzing_jsonl(payload.bods)
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(f"opencheck-{slug}-{stamp}/bods.json", bods_json)
         zf.writestr(f"opencheck-{slug}-{stamp}/bods.jsonl", bods_jsonl)
         zf.writestr(f"opencheck-{slug}-{stamp}/bods.xml", bods_xml)
+        zf.writestr(f"opencheck-{slug}-{stamp}/senzing.jsonl", senzing_jsonl)
         zf.writestr(
             f"opencheck-{slug}-{stamp}/manifest.json",
             json.dumps(manifest, indent=2, default=str),

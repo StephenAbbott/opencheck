@@ -132,17 +132,31 @@ async def opencheck_export_bods(
 
     Args:
         lei: ISO 17442 Legal Entity Identifier (20 chars).
-        format: "json" (list of statement objects) or "jsonl" (newline-delimited string).
+        format: "json" (list of BODS statement objects), "jsonl" (newline-delimited
+            BODS string), or "senzing" (Senzing JSON entity records, ready to load
+            into Senzing for entity resolution).
         deepen_top: How many top sources to deepen (0-10, default 3).
     """
+    from ..bods import map_to_senzing
     from ..routers.lookup import lookup as _lookup
 
-    if format not in ("json", "jsonl"):
-        return {"error": f"format must be 'json' or 'jsonl', got {format!r}"}
+    if format not in ("json", "jsonl", "senzing"):
+        return {"error": f"format must be 'json', 'jsonl' or 'senzing', got {format!r}"}
     try:
         resp = await _lookup(lei=lei, deepen_top=deepen_top)
     except HTTPException as exc:
         return _err(exc)
+
+    if format == "senzing":
+        records = map_to_senzing(resp.bods)
+        return {
+            "lei": resp.lei,
+            "format": format,
+            "record_count": len(records),
+            "records": records,
+            "bods_issues": resp.bods_issues,
+            "license_notices": resp.license_notices,
+        }
 
     statements: Any = resp.bods
     if format == "jsonl":

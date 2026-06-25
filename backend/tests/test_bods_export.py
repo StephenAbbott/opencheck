@@ -10,10 +10,12 @@ BODS bundle (one entity + one person + one relationship) so all four export
 formats exercise the serialisation path.
 
 Format coverage:
-  json   — pretty-printed JSON array, application/json
-  jsonl  — newline-delimited JSON, application/x-ndjson
-  xml    — canonical BODS XML, application/xml
-  zip    — bundle with bods.json + bods.jsonl + bods.xml + manifest.json + LICENSES.md
+  json    — pretty-printed JSON array, application/json
+  jsonl   — newline-delimited JSON, application/x-ndjson
+  xml     — canonical BODS XML, application/xml
+  senzing — newline-delimited Senzing JSON entity records, application/x-ndjson
+  zip     — bundle with bods.json + bods.jsonl + bods.xml + senzing.jsonl
+            + manifest.json + LICENSES.md
 """
 
 from __future__ import annotations
