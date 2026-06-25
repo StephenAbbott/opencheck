@@ -45,6 +45,13 @@ function firstSentence(text: string): string {
   return text.trim();
 }
 
+/** Capitalise the first character so each description reads as a sentence.
+ * Descriptions are continuations after the row's em-dash, so they usually start
+ * lowercase ("a lazy reveal…"). A no-op when the first char isn't a letter. */
+function capitaliseFirst(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
 /** Commit hashes from the trailing "Commit `x`." / "Commits `a`, `b`." clause. */
 function extractCommits(headline: string): string[] {
   const at = headline.search(/Commits?\b/i);
@@ -77,7 +84,7 @@ function parseRow(line: string): ChangelogEntry | null {
   let summary: string;
   if (dash >= 0) {
     title = stripMarkdown(headline.slice(0, dash));
-    summary = stripMarkdown(firstSentence(headline.slice(dash + 3)));
+    summary = capitaliseFirst(stripMarkdown(firstSentence(headline.slice(dash + 3))));
   } else {
     title = stripMarkdown(firstSentence(headline));
     summary = "";
