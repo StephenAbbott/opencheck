@@ -1426,6 +1426,62 @@ async def lookup(
     )
 
 
+def _asserts_lei(stmt: dict[str, Any], lei: str) -> bool:
+    """True if a BODS entity statement carries `lei` in its identifiers."""
+    ids = (stmt.get("recordDetails") or {}).get("identifiers") or []
+    return any((i.get("id") or "").upper() == lei for i in ids)
+
+
+@router.get("/expand")
+async def expand(
+    lei: str = Query(..., description="LEI of the corporate node to expand."),
+    anchor: str = Query(
+        ...,
+        description=(
+            "statementId of the existing graph node being expanded. The "
+            "looked-up entity's identity statements are remapped onto it so the "
+            "new owners layer stitches onto the existing node, not a duplicate."
+        ),
+    ),
+    deepen_top: int = Query(3, ge=0, le=10),
+) -> dict[str, Any]:
+    """SPIKE — progressive discovery: resolve one corporate node a hop deeper.
+
+    Re-anchors a standard LEI ``lookup`` on ``lei`` (reusing the replay cache),
+    then collapses every identity statement of that entity onto ``anchor`` so the
+    returned owners layer merges onto the existing graph node by ``statementId``.
+    Person nodes are terminal and the caller never expands them. This is a spike
+    surface (live-only, corporate hops only); it is not wired into the main
+    synthesis.
+    """
+    from ..bods.mapper import _stable_id
+
+    norm = lei.strip().upper()
+    resp = await lookup(lei=norm, deepen_top=deepen_top)  # raises 400/404
+
+    # Collapse all representations of the looked-up entity onto the anchor: the
+    # canonical GLEIF subject id plus any source's entity statement that asserts
+    # this LEI. A blunt id rewrite over the serialised bundle is safe because
+    # opencheck statement ids are unique 24-hex tokens with no collision risk.
+    subject_ids = {_stable_id("gleif", "entity", norm)}
+    for s in resp.bods:
+        if s.get("recordType") == "entity" and _asserts_lei(s, norm):
+            subject_ids.add(s["statementId"])
+    subject_ids.discard(anchor)
+
+    raw = json.dumps(resp.bods)
+    for sid in subject_ids:
+        raw = raw.replace(sid, anchor)
+    remapped: list[dict[str, Any]] = json.loads(raw)
+
+    return {
+        "lei": norm,
+        "anchor": anchor,
+        "bods": remapped,
+        "bods_issues": resp.bods_issues,
+    }
+
+
 @router.get("/lookup-stream")
 async def lookup_stream(
     lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),

@@ -119,6 +119,24 @@ export function exportUrl(
   return `${BASE_URL}/export?${params.toString()}`;
 }
 
+/** SPIKE — progressive discovery: resolve one corporate node a hop deeper.
+ * Returns the new owners layer as BODS statements, with the looked-up entity's
+ * identity remapped onto `anchor` so it stitches onto the existing graph node. */
+export interface ExpandResponse {
+  lei: string;
+  anchor: string;
+  bods: Record<string, unknown>[];
+  bods_issues: string[];
+}
+
+export async function expandNode(
+  lei: string,
+  anchor: string
+): Promise<ExpandResponse> {
+  const params = new URLSearchParams({ lei, anchor });
+  return getJson<ExpandResponse>(`/expand?${params.toString()}`);
+}
+
 async function getJson<T>(path: string): Promise<T> {
   const r = await fetch(`${BASE_URL}${path}`);
   if (!r.ok) {
