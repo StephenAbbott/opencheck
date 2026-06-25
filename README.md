@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 65** — Auto-generated changelog page at [opencheck.world/changelog](https://opencheck.world/changelog)
+**Latest: Phase 66** — Senzing JSON as an export format
 
-A public "what's new" page generated from this repo's development-history table, so updates are communicated without any extra step.
+Project the assembled BODS v0.4 bundle into the [Senzing entity specification](https://www.senzing.com/docs/entity_specification/) so an OpenCheck ownership graph loads straight into Senzing for entity resolution.
 
-1. **The status table is the editorial gate.** An item shows on the changelog only if it earned a phase row in [`docs/status.md`](docs/status.md) — each card pulls the phase title, the first sentence of the update, and links to the commit(s).
-2. **Build-time, no runtime dependency.** A `prebuild` hook copies `status.md` into the bundle on every build, so the page auto-refreshes on each deploy (exactly when a phase row ships). Chosen over a live GitHub fetch or a backend endpoint so it loads instantly and survives a backend cold-start.
-3. **On the design system.** Reuses the existing tokens (`oo-ink`/`oo-muted`/`oo-rule`, `font-head`, `rounded-oo`) — a newest-first card list with phase chips and GitHub commit links.
+1. **The mapping.** Each BODS entity → a `RECORD_TYPE: ORGANIZATION` record, each person → `PERSON`, both with one `REL_ANCHOR` keyed by their `statementId`; every disclosed relationship folds into a `REL_POINTER` on the interested party, with the role (`OWNER_OF`, `VOTING_RIGHTS_IN`, …) and share band derived from the BODS interest.
+2. **Why it lines up.** OpenCheck's `statementId == recordId` invariant makes the BODS id a stable Senzing `RECORD_ID`, so anchors and pointers resolve with no extra entity resolution.
+3. **Surfaces.** `GET /export?format=senzing` (newline-delimited), `senzing.jsonl` in the ZIP bundle, and the `opencheck_export_bods` MCP tool's `format='senzing'`.
 
-*Previous: [Phase 64 — Subsidiary network in the main export (opt-in)](docs/status.md)*
+*Previous: [Phase 65 — Auto-generated changelog page](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
