@@ -111,7 +111,7 @@ export const BASE_URL: string = import.meta.env.DEV
  */
 export function exportUrl(
   lei: string,
-  format: "json" | "jsonl" | "zip" | "xml",
+  format: "json" | "jsonl" | "zip" | "xml" | "senzing",
   opts?: { subsidiaries?: boolean }
 ): string {
   const params = new URLSearchParams({ lei, format });

@@ -28,7 +28,9 @@ export function ExportPanel({
   legalName: string | null;
   contributingSourceIds: string[];
 }) {
-  const [format, setFormat] = useState<"zip" | "json" | "jsonl" | "xml">("zip");
+  const [format, setFormat] = useState<
+    "zip" | "json" | "jsonl" | "xml" | "senzing"
+  >("zip");
   const [subsidiaries, setSubsidiaries] = useState(false);
 
   const sorted = [...contributingSourceIds].sort();
@@ -61,7 +63,9 @@ export function ExportPanel({
           <select
             value={format}
             onChange={(e) =>
-              setFormat(e.target.value as "zip" | "json" | "jsonl" | "xml")
+              setFormat(
+                e.target.value as "zip" | "json" | "jsonl" | "xml" | "senzing"
+              )
             }
             className="border border-oo-rule rounded px-2 py-1.5 text-[13px] bg-white"
           >
@@ -69,6 +73,7 @@ export function ExportPanel({
             <option value="json">JSON (BODS array)</option>
             <option value="jsonl">JSONL (newline-delimited)</option>
             <option value="xml">XML (canonical BODS)</option>
+            <option value="senzing">Senzing JSON (entity resolution)</option>
           </select>
           <a
             href={href}
@@ -79,6 +84,23 @@ export function ExportPanel({
           </a>
         </div>
       </div>
+
+      {format === "senzing" && (
+        <p className="mt-3 text-[12px] text-oo-muted leading-[1.6]">
+          Senzing JSON projects this ownership graph into the{" "}
+          <a
+            href="https://www.senzing.com/docs/entity_specification/"
+            target="_blank"
+            rel="noreferrer"
+            className="underline text-oo-blue hover:text-oo-burst"
+          >
+            Senzing entity specification
+          </a>{" "}
+          (newline-delimited records, ready to load for entity resolution) — one
+          record per company and person, with each disclosed ownership/control
+          relationship as a Senzing disclosed relationship.
+        </p>
+      )}
 
       <label className="mt-3 flex items-start gap-2 text-[12px] text-oo-muted cursor-pointer select-none">
         <input
