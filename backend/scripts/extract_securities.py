@@ -37,6 +37,16 @@ import sys
 import urllib.request
 from typing import Any
 
+# NOTE — OpenSanctions bulk-resource URL migration (changelog #45, June 2026):
+# OpenSanctions is moving dataset resource files (and index.json `index_url`s) to
+# https://data.opensanctions.org/artifacts/ URLs. The /datasets/latest/ and
+# /datasets/YYYYMMDD/ paths below keep working, but from **17 August 2026** newer
+# files are served as HTTP 307 redirects to the /artifacts/ location.
+# This is transparent for us: we read the resource directly (no index.json parse,
+# no path restriction) and urllib.request.urlopen() follows 307s by default — see
+# the download in _read_rows() below. If that ever changes, point _DEFAULT_URL at
+# the /artifacts/ URL (or resolve it from the dataset's index.json `resources`).
+# Ref: https://www.opensanctions.org/changelog/45/
 _DEFAULT_URL = "https://data.opensanctions.org/datasets/latest/securities/securities.csv"
 
 # OpenSanctions dataset id → human regime label (the watchlist subset in
