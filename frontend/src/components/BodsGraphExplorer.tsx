@@ -4,26 +4,25 @@
  * Owns the state shared between the two panes — `collapsed` (which nodes are
  * collapsed) and `selectedId` (the focused node) — and renders the visual
  * graph (BODSGraph) alongside the accessible tabular tree (BodsTree). A view
- * toggle switches between split / graph-only / tree-only; the layout is
- * side-by-side on wide screens and stacked on narrow ones.
+ * toggle switches between split / graph-only / tree-only.
  *
- * This is the component SourceBucketCard mounts; the panes themselves are
- * controlled, so selecting or expanding in one is reflected in the other.
- *
- * SPIKE — progressive discovery: selecting a corporate node reveals an action
- * to resolve its owners one hop deeper (live, via /expand). The newly fetched
- * BODS is merged into the local statement set and the graph re-derives. Person
- * nodes are terminal; nodes without an LEI are an honest dead-end (the case
- * bulk register data would cover). Driven off `selectedId`, so the intricate
- * Cytoscape event/overlay code is untouched.
+ * SPIKE — progressive discovery ("Add next layer"): a single action takes the
+ * current ownership *frontier* (LEI-bearing entity nodes nobody shown owns yet)
+ * and resolves every one of them a hop deeper at once, live, via /expand-layer.
+ * The fetched owners layers are merged into the local statement set (deduped by
+ * statementId) and the graph re-derives. Expanding the frontier means the new
+ * nodes render one rank further up — extending the graph in its existing
+ * direction rather than spawning a floating cluster. People are terminal; nodes
+ * without an LEI are skipped (the bulk-data case). Driven off the derived model,
+ * so the Cytoscape event/overlay code is untouched.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import BODSGraph from "./BODSGraph";
 import BodsTree from "./BodsTree";
 import { bodsToGraph, autoCollapse, buildTree, type GraphModel } from "../lib/bodsGraph";
-import { expandNode, type RiskSignal } from "../lib/api";
-import { isEntityStatement, subjectLei, mergeStatements } from "../lib/expand";
+import { expandLayer, type RiskSignal } from "../lib/api";
+import { frontierAnchors, mergeStatements } from "../lib/expand";
 
 type Stmt = Record<string, unknown>;
 type ViewMode = "split" | "graph" | "tree";
@@ -34,9 +33,9 @@ const VIEW_OPTIONS: { value: ViewMode; label: string }[] = [
   { value: "tree", label: "Tree" },
 ];
 
-// SPIKE guard: cap live hops per session so a runaway click-fest can't fan out
-// the whole register.
-const MAX_EXPANSIONS = 12;
+// SPIKE guard: cap how many anchors we'll expand across a session so a runaway
+// click-fest can't fan out the whole register (the server also caps each batch).
+const MAX_EXPANDED = 60;
 
 export default function BodsGraphExplorer({
   statements,
@@ -50,7 +49,7 @@ export default function BodsGraphExplorer({
   // SPIKE: owners revealed via progressive discovery, merged onto the base set.
   const [extra, setExtra] = useState<Stmt[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [expanding, setExpanding] = useState<string | null>(null);
+  const [expanding, setExpanding] = useState(false);
   const [expandNote, setExpandNote] = useState<string | null>(null);
 
   const baseModel: GraphModel = useMemo(
@@ -85,8 +84,8 @@ export default function BodsGraphExplorer({
   const rows = useMemo(() => buildTree(model, collapsed), [model, collapsed]);
 
   // Citation chips in the narrative panel dispatch `oc:cite` with the statement
-  // they reference; if it lives in this graph, focus it (expanding it first so a
-  // collapsed node still becomes visible).
+  // they reference; if it lives in this graph, focus it (expanding a collapsed
+  // node first so it becomes visible).
   useEffect(() => {
     function onCite(ev: Event) {
       const sid = (ev as CustomEvent<{ statementId?: string | null }>).detail?.statementId;
@@ -113,44 +112,37 @@ export default function BodsGraphExplorer({
     });
   }
 
-  // ── SPIKE: reveal-owners action for the selected node ──────────────────────
-  const selectedStmt = selectedId
-    ? allStatements.find((s) => s.statementId === selectedId)
-    : undefined;
-  const selectedNode = selectedId ? model.nodes.find((n) => n.id === selectedId) : undefined;
-  const selectedLabel = selectedNode?.label ?? "this company";
+  // ── SPIKE: "Add next layer" over the whole ownership frontier ──────────────
+  const frontier = useMemo(
+    () => frontierAnchors(allStatements, model.edges, expandedIds),
+    [allStatements, model.edges, expandedIds]
+  );
 
-  async function revealOwners() {
-    if (!selectedId || !isEntityStatement(selectedStmt)) return;
-    if (expandedIds.has(selectedId)) return;
-    if (expandedIds.size >= MAX_EXPANSIONS) {
+  async function addNextLayer() {
+    if (!frontier.length || expanding) return;
+    if (expandedIds.size >= MAX_EXPANDED) {
       setExpandNote("Reached the expansion limit for this session.");
       return;
     }
-    const lei = subjectLei(selectedStmt);
-    if (!lei) {
-      setExpandNote(
-        "This company has no LEI, so its owners can't be resolved live — this is the case bulk register data would cover."
-      );
-      return;
-    }
-    setExpanding(selectedId);
+    setExpanding(true);
     setExpandNote(null);
     try {
-      const res = await expandNode(lei, selectedId);
-      const added = res.bods as Stmt[];
-      setExtra((prev) => mergeStatements(prev, added));
-      setExpandedIds((prev) => new Set(prev).add(selectedId));
-      const newOwners = added.filter((s) => s.recordType === "relationship").length;
-      setExpandNote(
-        newOwners > 0
-          ? null
-          : "No further owners disclosed for this entity (a terminal node)."
-      );
+      const res = await expandLayer(frontier);
+      setExtra((prev) => mergeStatements(prev, res.bods as Stmt[]));
+      setExpandedIds((prev) => {
+        const next = new Set(prev);
+        frontier.forEach((f) => next.add(f.anchor));
+        return next;
+      });
+      const newRels = (res.bods as Stmt[]).filter((s) => s.recordType === "relationship").length;
+      const parts: string[] = [];
+      if (newRels === 0) parts.push("No further owners disclosed for the current frontier.");
+      if (res.truncated) parts.push(`Only the first ${res.count} were expanded (frontier was larger).`);
+      setExpandNote(parts.join(" ") || null);
     } catch (e) {
-      setExpandNote(`Couldn't expand: ${(e as Error).message}`);
+      setExpandNote(`Couldn't add layer: ${(e as Error).message}`);
     } finally {
-      setExpanding(null);
+      setExpanding(false);
     }
   }
 
@@ -158,35 +150,7 @@ export default function BodsGraphExplorer({
     return <p className="text-xs text-oo-muted italic">No BODS statements to visualise.</p>;
   }
 
-  const expandControl = (() => {
-    if (!selectedId || !selectedNode) {
-      return (
-        <span className="text-oo-muted">
-          Select a company node to reveal its owners a layer deeper.
-        </span>
-      );
-    }
-    if (!isEntityStatement(selectedStmt)) {
-      return (
-        <span className="text-oo-muted">
-          People are terminal in an ownership chain — nothing to expand.
-        </span>
-      );
-    }
-    if (expandedIds.has(selectedId)) {
-      return <span className="text-oo-muted">Owners revealed for {selectedLabel}.</span>;
-    }
-    return (
-      <button
-        type="button"
-        onClick={revealOwners}
-        disabled={expanding !== null}
-        className="text-[12px] px-2.5 py-1 rounded-full border border-[#1565c0] text-[#1565c0] hover:bg-[#e8f0fb] disabled:opacity-50"
-      >
-        {expanding === selectedId ? "Revealing…" : `▸ Reveal owners of ${selectedLabel}`}
-      </button>
-    );
-  })();
+  const frontierLabel = frontier.length === 1 ? "company" : "companies";
 
   return (
     <div>
@@ -209,8 +173,25 @@ export default function BodsGraphExplorer({
         ))}
       </div>
 
-      {/* SPIKE: progressive-discovery control */}
-      <div className="mb-2 flex items-center gap-2 flex-wrap text-[12px]">{expandControl}</div>
+      {/* SPIKE: prominent "Add next layer" control */}
+      <div className="mb-2 flex items-center gap-3 flex-wrap">
+        <button
+          type="button"
+          onClick={addNextLayer}
+          disabled={expanding || frontier.length === 0}
+          className="bg-oo-blue text-white text-[13px] font-medium rounded px-4 py-1.5 hover:bg-oo-burst transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {expanding
+            ? "Adding layer…"
+            : frontier.length === 0
+              ? "No further owners to reveal"
+              : `▸ Add next layer — ${frontier.length} ${frontierLabel}`}
+        </button>
+        <span className="text-[11px] text-oo-muted leading-[1.5] max-w-md">
+          Resolves the owners/controllers of every frontier company at once
+          (LEI-bearing entities; people are terminal).
+        </span>
+      </div>
       {expandNote && (
         <p className="mb-2 text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 leading-[1.5]">
           {expandNote}

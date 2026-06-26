@@ -34,6 +34,51 @@ export function subjectLei(stmt: Stmt | undefined): string | null {
   return null;
 }
 
+/** A graph edge, minimally — enough to find the ownership frontier. */
+export interface EdgeLite {
+  source: string;
+  target: string;
+  category: string;
+}
+
+export interface FrontierAnchor {
+  lei: string;
+  anchor: string;
+}
+
+/** The current ownership frontier: entity nodes we can dig one layer past.
+ *
+ * An entity is on the frontier when nobody shown owns it yet — i.e. it is never
+ * the *target* of an ownership/control edge (edges run owner → owned). Expanding
+ * those nodes reveals their owners, which renders one rank further up, so the
+ * graph extends in its existing direction instead of spawning a floating layer.
+ * People are terminal, and a node with no LEI can't be resolved live, so both
+ * are excluded. Already-expanded anchors are skipped so each click walks outward.
+ */
+export function frontierAnchors(
+  statements: Stmt[],
+  edges: EdgeLite[],
+  expandedIds: Set<string>
+): FrontierAnchor[] {
+  const owned = new Set(
+    edges
+      .filter((e) => e.category === "ownership" || e.category === "control")
+      .map((e) => e.target)
+  );
+  const out: FrontierAnchor[] = [];
+  const seen = new Set<string>();
+  for (const s of statements) {
+    if (!isEntityStatement(s)) continue;
+    const id = s.statementId as string | undefined;
+    if (!id || seen.has(id) || expandedIds.has(id) || owned.has(id)) continue;
+    const lei = subjectLei(s);
+    if (!lei) continue;
+    seen.add(id);
+    out.push({ lei, anchor: id });
+  }
+  return out;
+}
+
 /** Merge two BODS bundles, de-duplicating by statementId (base wins). */
 export function mergeStatements(base: Stmt[], extra: Stmt[]): Stmt[] {
   const seen = new Set(base.map((s) => s.statementId as string));

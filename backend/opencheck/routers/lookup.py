@@ -1426,10 +1426,49 @@ async def lookup(
     )
 
 
-def _asserts_lei(stmt: dict[str, Any], lei: str) -> bool:
-    """True if a BODS entity statement carries `lei` in its identifiers."""
+def _entity_idents(stmt: dict[str, Any]) -> set[str]:
+    """Upper-cased identifier values carried by a BODS entity statement."""
     ids = (stmt.get("recordDetails") or {}).get("identifiers") or []
-    return any((i.get("id") or "").upper() == lei for i in ids)
+    return {(i.get("id") or "").strip().upper() for i in ids if (i.get("id") or "").strip()}
+
+
+async def _expand_one_layer(lei: str, anchor: str, *, deepen_top: int = 3) -> list[dict[str, Any]]:
+    """Resolve one corporate node a hop deeper and stitch it onto ``anchor``.
+
+    Re-anchors a standard LEI ``lookup`` (reusing the replay cache), then collapses
+    **every** representation of the looked-up entity onto ``anchor`` so the new
+    owners layer merges onto the existing graph node by ``statementId`` — not a
+    duplicate. Cross-source collapse is the fix for the spike's first finding: a
+    national register keys its entity statement on the company number, not the
+    LEI, so matching on the LEI alone left a floating duplicate. We seed the
+    identifier set from every statement that asserts the LEI (GLEIF ties the LEI
+    to the company number), then remap any entity statement sharing one of those
+    identifier values. A blunt id rewrite over the serialised bundle is safe —
+    opencheck statement ids are unique 24-hex tokens with no collision risk.
+    """
+    from ..bods.mapper import _stable_id
+
+    norm = lei.strip().upper()
+    resp = await lookup(lei=norm, deepen_top=deepen_top)  # raises 400/404
+    bods = resp.bods
+
+    # Seed: the LEI itself + every identifier carried by any statement asserting
+    # the LEI (so GLEIF's registeredAs company number joins the set).
+    subj_idents: set[str] = {norm}
+    for s in bods:
+        if s.get("recordType") == "entity" and norm in _entity_idents(s):
+            subj_idents |= _entity_idents(s)
+
+    subject_ids = {_stable_id("gleif", "entity", norm)}
+    for s in bods:
+        if s.get("recordType") == "entity" and (_entity_idents(s) & subj_idents):
+            subject_ids.add(s["statementId"])
+    subject_ids.discard(anchor)
+
+    raw = json.dumps(bods)
+    for sid in subject_ids:
+        raw = raw.replace(sid, anchor)
+    return json.loads(raw)
 
 
 @router.get("/expand")
@@ -1447,38 +1486,63 @@ async def expand(
 ) -> dict[str, Any]:
     """SPIKE — progressive discovery: resolve one corporate node a hop deeper.
 
-    Re-anchors a standard LEI ``lookup`` on ``lei`` (reusing the replay cache),
-    then collapses every identity statement of that entity onto ``anchor`` so the
-    returned owners layer merges onto the existing graph node by ``statementId``.
     Person nodes are terminal and the caller never expands them. This is a spike
     surface (live-only, corporate hops only); it is not wired into the main
-    synthesis.
+    synthesis. See ``/expand-layer`` for the batch (whole-frontier) variant.
     """
-    from ..bods.mapper import _stable_id
+    bods = await _expand_one_layer(lei, anchor, deepen_top=deepen_top)
+    return {"lei": lei.strip().upper(), "anchor": anchor, "bods": bods}
 
-    norm = lei.strip().upper()
-    resp = await lookup(lei=norm, deepen_top=deepen_top)  # raises 400/404
 
-    # Collapse all representations of the looked-up entity onto the anchor: the
-    # canonical GLEIF subject id plus any source's entity statement that asserts
-    # this LEI. A blunt id rewrite over the serialised bundle is safe because
-    # opencheck statement ids are unique 24-hex tokens with no collision risk.
-    subject_ids = {_stable_id("gleif", "entity", norm)}
-    for s in resp.bods:
-        if s.get("recordType") == "entity" and _asserts_lei(s, norm):
-            subject_ids.add(s["statementId"])
-    subject_ids.discard(anchor)
+_MAX_LAYER_ITEMS = 25  # cap concurrent hops per "add layer" so it can't fan out the register
 
-    raw = json.dumps(resp.bods)
-    for sid in subject_ids:
-        raw = raw.replace(sid, anchor)
-    remapped: list[dict[str, Any]] = json.loads(raw)
+
+class _ExpandItem(BaseModel):
+    lei: str
+    anchor: str
+
+
+class ExpandLayerRequest(BaseModel):
+    items: list[_ExpandItem]
+
+
+@router.post("/expand-layer")
+async def expand_layer(req: ExpandLayerRequest) -> dict[str, Any]:
+    """SPIKE — progressive discovery (batch): take the whole current frontier and
+    go one layer deeper on every node at once.
+
+    Each item is a ``(lei, anchor)`` pair (the caller selects the frontier:
+    LEI-bearing entity nodes not yet owned by anyone shown). Hops run concurrently
+    (bounded), each stitched onto its anchor by :func:`_expand_one_layer`, and the
+    results are merged + de-duplicated by ``statementId``. Capped at
+    ``_MAX_LAYER_ITEMS`` so a click can't fan out the whole register.
+    """
+    items = req.items[:_MAX_LAYER_ITEMS]
+    sem = asyncio.Semaphore(5)
+
+    async def _one(item: _ExpandItem) -> list[dict[str, Any]]:
+        async with sem:
+            try:
+                return await _expand_one_layer(item.lei, item.anchor)
+            except Exception:  # noqa: BLE001 — a bad node must not sink the batch
+                return []
+
+    chunks = await asyncio.gather(*[_one(i) for i in items])
+
+    seen: set[str] = set()
+    merged: list[dict[str, Any]] = []
+    for chunk in chunks:
+        for s in chunk:
+            sid = s.get("statementId")
+            if sid and sid not in seen:
+                seen.add(sid)
+                merged.append(s)
 
     return {
-        "lei": norm,
-        "anchor": anchor,
-        "bods": remapped,
-        "bods_issues": resp.bods_issues,
+        "bods": merged,
+        "expanded": [i.anchor for i in items],
+        "count": len(items),
+        "truncated": len(req.items) > _MAX_LAYER_ITEMS,
     }
 
 
