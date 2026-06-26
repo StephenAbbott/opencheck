@@ -333,7 +333,16 @@ export default function App() {
             resolve({ lei: e.lei, legal_name: e.legal_name });
           },
           onSourcesApplicable: (e) => setApplicableSources(e.source_ids),
-          onHit: (e) => setHits((prev) => [...prev, e]),
+          // Dedup by source_id:hit_id — in dev, React StrictMode runs the lookup
+          // effect twice, so two streams can each deliver the same hit. The guard
+          // makes hit accumulation idempotent (no-op in production, where
+          // StrictMode doesn't double-invoke).
+          onHit: (e) =>
+            setHits((prev) =>
+              prev.some((h) => h.source_id === e.source_id && h.hit_id === e.hit_id)
+                ? prev
+                : [...prev, e]
+            ),
           onSourceCompleted: (e) =>
             setCompletedSources((prev) => new Set([...prev, e.source_id])),
           onSourceError: (e) => {
