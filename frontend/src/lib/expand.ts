@@ -46,31 +46,40 @@ export interface FrontierAnchor {
   anchor: string;
 }
 
-/** The current ownership frontier: entity nodes we can dig one layer past.
+export type ExpandDirection = "owners" | "subsidiaries";
+
+/** The current expansion frontier: entity nodes we can dig one layer past, in
+ * the graph's existing direction (edges run owner → owned).
  *
- * An entity is on the frontier when nobody shown owns it yet — i.e. it is never
- * the *target* of an ownership/control edge (edges run owner → owned). Expanding
- * those nodes reveals their owners, which renders one rank further up, so the
- * graph extends in its existing direction instead of spawning a floating layer.
- * People are terminal, and a node with no LEI can't be resolved live, so both
- * are excluded. Already-expanded anchors are skipped so each click walks outward.
+ * - `owners` (ownership graph, digs *up*): a node is on the frontier when nobody
+ *   shown owns it yet — it is never the *target* of an ownership/control edge.
+ *   Expanding reveals its owners, one rank further up.
+ * - `subsidiaries` (subsidiary tree, digs *down*): a node is on the frontier
+ *   when it doesn't yet own anything shown — it is never the *source* of an
+ *   ownership/control edge (a leaf). Expanding reveals its children, one rank
+ *   further down.
+ *
+ * People are terminal and no-LEI nodes can't be resolved live, so both are
+ * excluded; already-expanded anchors are skipped so each click walks outward.
  */
 export function frontierAnchors(
   statements: Stmt[],
   edges: EdgeLite[],
-  expandedIds: Set<string>
+  expandedIds: Set<string>,
+  direction: ExpandDirection = "owners"
 ): FrontierAnchor[] {
-  const owned = new Set(
-    edges
-      .filter((e) => e.category === "ownership" || e.category === "control")
-      .map((e) => e.target)
+  const oc = edges.filter((e) => e.category === "ownership" || e.category === "control");
+  // owners: exclude the owned (targets). subsidiaries: exclude nodes that
+  // already own something shown (sources) — i.e. keep only the leaves.
+  const exclude = new Set(
+    direction === "owners" ? oc.map((e) => e.target) : oc.map((e) => e.source)
   );
   const out: FrontierAnchor[] = [];
   const seen = new Set<string>();
   for (const s of statements) {
     if (!isEntityStatement(s)) continue;
     const id = s.statementId as string | undefined;
-    if (!id || seen.has(id) || expandedIds.has(id) || owned.has(id)) continue;
+    if (!id || seen.has(id) || expandedIds.has(id) || exclude.has(id)) continue;
     const lei = subjectLei(s);
     if (!lei) continue;
     seen.add(id);

@@ -147,12 +147,13 @@ export interface ExpandLayerResponse {
 }
 
 export async function expandLayer(
-  items: { lei: string; anchor: string }[]
+  items: { lei: string; anchor: string }[],
+  direction: "owners" | "subsidiaries" = "owners"
 ): Promise<ExpandLayerResponse> {
   const r = await fetch(`${BASE_URL}/expand-layer`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ items }),
+    body: JSON.stringify({ items, direction }),
   });
   if (!r.ok) throw new Error(`${r.status} ${r.statusText} — /expand-layer`);
   return (await r.json()) as ExpandLayerResponse;

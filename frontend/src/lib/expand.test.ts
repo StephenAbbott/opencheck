@@ -64,6 +64,13 @@ describe("frontierAnchors", () => {
     expect(f.map((x) => x.anchor)).toEqual(["B"]);
   });
 
+  it("subsidiaries direction keeps the leaves (nodes that own nothing shown)", () => {
+    // A owns B. Digging DOWN, the frontier is the leaf B (expand its children),
+    // not A — the opposite of the owners direction.
+    const f = frontierAnchors([A, B, person, noLei], edges, new Set(), "subsidiaries");
+    expect(f.map((x) => x.anchor)).toEqual(["B"]);
+  });
+
   it("ignores role edges when deciding the frontier", () => {
     // A director (role edge) pointing at A must not mark A as owned.
     const roleEdges: EdgeLite[] = [{ source: "P", target: "A", category: "role" }];

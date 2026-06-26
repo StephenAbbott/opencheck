@@ -22,7 +22,7 @@ import BODSGraph from "./BODSGraph";
 import BodsTree from "./BodsTree";
 import { bodsToGraph, autoCollapse, buildTree, type GraphModel } from "../lib/bodsGraph";
 import { expandLayer, type RiskSignal } from "../lib/api";
-import { frontierAnchors, mergeStatements } from "../lib/expand";
+import { frontierAnchors, mergeStatements, type ExpandDirection } from "../lib/expand";
 
 type Stmt = Record<string, unknown>;
 type ViewMode = "split" | "graph" | "tree";
@@ -41,10 +41,14 @@ export default function BodsGraphExplorer({
   statements,
   signals = [],
   entityName,
+  direction = "owners",
 }: {
   statements: unknown[];
   signals?: RiskSignal[];
   entityName?: string;
+  /** Which way "Add next layer" digs: an ownership graph goes up (owners), a
+   *  subsidiary tree goes down (children). The mounting view sets this. */
+  direction?: ExpandDirection;
 }) {
   // SPIKE: owners revealed via progressive discovery, merged onto the base set.
   const [extra, setExtra] = useState<Stmt[]>([]);
@@ -114,9 +118,10 @@ export default function BodsGraphExplorer({
 
   // ── SPIKE: "Add next layer" over the whole ownership frontier ──────────────
   const frontier = useMemo(
-    () => frontierAnchors(allStatements, model.edges, expandedIds),
-    [allStatements, model.edges, expandedIds]
+    () => frontierAnchors(allStatements, model.edges, expandedIds, direction),
+    [allStatements, model.edges, expandedIds, direction]
   );
+  const noun = direction === "subsidiaries" ? "subsidiaries" : "owners/controllers";
 
   async function addNextLayer() {
     if (!frontier.length || expanding) return;
@@ -127,7 +132,7 @@ export default function BodsGraphExplorer({
     setExpanding(true);
     setExpandNote(null);
     try {
-      const res = await expandLayer(frontier);
+      const res = await expandLayer(frontier, direction);
       setExtra((prev) => mergeStatements(prev, res.bods as Stmt[]));
       setExpandedIds((prev) => {
         const next = new Set(prev);
@@ -136,7 +141,7 @@ export default function BodsGraphExplorer({
       });
       const newRels = (res.bods as Stmt[]).filter((s) => s.recordType === "relationship").length;
       const parts: string[] = [];
-      if (newRels === 0) parts.push("No further owners disclosed for the current frontier.");
+      if (newRels === 0) parts.push(`No further ${noun} disclosed for the current frontier.`);
       if (res.truncated) parts.push(`Only the first ${res.count} were expanded (frontier was larger).`);
       setExpandNote(parts.join(" ") || null);
     } catch (e) {
@@ -184,12 +189,12 @@ export default function BodsGraphExplorer({
           {expanding
             ? "Adding layer…"
             : frontier.length === 0
-              ? "No further owners to reveal"
+              ? `No further ${noun} to reveal`
               : `▸ Add next layer — ${frontier.length} ${frontierLabel}`}
         </button>
         <span className="text-[11px] text-oo-muted leading-[1.5] max-w-md">
-          Resolves the owners/controllers of every frontier company at once
-          (LEI-bearing entities; people are terminal).
+          Resolves the {noun} of every frontier company at once (LEI-bearing
+          entities; people are terminal).
         </span>
       </div>
       {expandNote && (

@@ -133,6 +133,41 @@ def test_expand_layer_batches_and_dedupes(client, monkeypatch):
     assert subjects == {"ANCHOR-A", "ANCHOR-B"}  # each owner stitched to its own anchor
 
 
+def test_expand_layer_subsidiaries_direction(client, monkeypatch):
+    """direction='subsidiaries' digs DOWN: fetch the node's GLEIF children and
+    stitch them under the anchor (reusing the subsidiaries service)."""
+    def _children_bundle(lei: str) -> dict:
+        subj = _stable_id("gleif", "entity", lei)
+        return {"bods": [
+            {"statementId": subj, "recordType": "entity",
+             "recordDetails": {"entityType": {"type": "registeredEntity"}, "name": "Parent",
+                               "identifiers": [{"id": lei, "scheme": "XI-LEI"}]}},
+            {"statementId": "child-1", "recordType": "entity",
+             "recordDetails": {"entityType": {"type": "registeredEntity"}, "name": "Child Co"}},
+            # In subsidiary BODS the child is the SUBJECT, parent the interestedParty.
+            {"statementId": "rel-sub", "recordType": "relationship",
+             "recordDetails": {"subject": "child-1", "interestedParty": subj,
+                               "interests": [{"type": "otherInfluenceOrControl"}]}},
+        ]}
+
+    async def _fake_subs(lei, *, include_bods=False):
+        assert include_bods is True
+        return _children_bundle(lei.strip().upper())
+
+    monkeypatch.setattr("opencheck.subsidiaries.assemble_subsidiaries", _fake_subs)
+
+    r = client.post("/expand-layer", json={
+        "items": [{"lei": _LEI_A, "anchor": "LEAF-A"}],
+        "direction": "subsidiaries",
+    })
+    assert r.status_code == 200
+    bods = r.json()["bods"]
+    # The parent (the leaf) is collapsed onto the anchor; its child now hangs off it.
+    rel = next(s for s in bods if s["statementId"] == "rel-sub")
+    assert rel["recordDetails"]["interestedParty"] == "LEAF-A"
+    assert any(s["statementId"] == "child-1" for s in bods)
+
+
 def test_expand_rejects_bad_deepen(client):
     r = client.get("/expand", params={"lei": _LEI_A, "anchor": "A", "deepen_top": 99})
     assert r.status_code == 422

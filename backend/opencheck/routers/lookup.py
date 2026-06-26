@@ -7,7 +7,7 @@ import json
 import re
 import time
 from dataclasses import dataclass, field as dc_field
-from typing import Any, AsyncIterator
+from typing import Any, Literal, AsyncIterator
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -1432,28 +1432,20 @@ def _entity_idents(stmt: dict[str, Any]) -> set[str]:
     return {(i.get("id") or "").strip().upper() for i in ids if (i.get("id") or "").strip()}
 
 
-async def _expand_one_layer(lei: str, anchor: str, *, deepen_top: int = 3) -> list[dict[str, Any]]:
-    """Resolve one corporate node a hop deeper and stitch it onto ``anchor``.
+def _collapse_onto_anchor(bods: list[dict[str, Any]], lei: str, anchor: str) -> list[dict[str, Any]]:
+    """Collapse **every** representation of the LEI-identified entity onto ``anchor``.
 
-    Re-anchors a standard LEI ``lookup`` (reusing the replay cache), then collapses
-    **every** representation of the looked-up entity onto ``anchor`` so the new
-    owners layer merges onto the existing graph node by ``statementId`` — not a
-    duplicate. Cross-source collapse is the fix for the spike's first finding: a
-    national register keys its entity statement on the company number, not the
-    LEI, so matching on the LEI alone left a floating duplicate. We seed the
-    identifier set from every statement that asserts the LEI (GLEIF ties the LEI
-    to the company number), then remap any entity statement sharing one of those
-    identifier values. A blunt id rewrite over the serialised bundle is safe —
-    opencheck statement ids are unique 24-hex tokens with no collision risk.
+    The fix for the spike's cross-source finding: a national register keys its
+    entity statement on the company number, not the LEI, so matching on the LEI
+    alone left a floating duplicate. We seed the identifier set from every
+    statement that asserts the LEI (GLEIF ties the LEI to the company number),
+    then remap any entity statement sharing one of those identifier values onto
+    the anchor. A blunt id rewrite over the serialised bundle is safe — opencheck
+    statement ids are unique 24-hex tokens with no collision risk.
     """
     from ..bods.mapper import _stable_id
 
     norm = lei.strip().upper()
-    resp = await lookup(lei=norm, deepen_top=deepen_top)  # raises 400/404
-    bods = resp.bods
-
-    # Seed: the LEI itself + every identifier carried by any statement asserting
-    # the LEI (so GLEIF's registeredAs company number joins the set).
     subj_idents: set[str] = {norm}
     for s in bods:
         if s.get("recordType") == "entity" and norm in _entity_idents(s):
@@ -1469,6 +1461,25 @@ async def _expand_one_layer(lei: str, anchor: str, *, deepen_top: int = 3) -> li
     for sid in subject_ids:
         raw = raw.replace(sid, anchor)
     return json.loads(raw)
+
+
+async def _expand_one_layer(lei: str, anchor: str, *, deepen_top: int = 3) -> list[dict[str, Any]]:
+    """Owner-ward hop: re-anchor a standard ``lookup`` (the entity's owners) and
+    stitch it onto ``anchor`` (reusing the replay cache)."""
+    norm = lei.strip().upper()
+    resp = await lookup(lei=norm, deepen_top=deepen_top)  # raises 400/404
+    return _collapse_onto_anchor(resp.bods, norm, anchor)
+
+
+async def _subsidiaries_one_layer(lei: str, anchor: str) -> list[dict[str, Any]]:
+    """Subsidiary-ward hop: fetch the entity's GLEIF Level-2 children and stitch
+    them under ``anchor`` (so a subsidiary tree extends downward, not upward)."""
+    from ..subsidiaries import assemble_subsidiaries
+
+    norm = lei.strip().upper()
+    data = await assemble_subsidiaries(norm, include_bods=True)
+    bods = (data or {}).get("bods") or []
+    return _collapse_onto_anchor(bods, norm, anchor)
 
 
 @router.get("/expand")
@@ -1504,26 +1515,31 @@ class _ExpandItem(BaseModel):
 
 class ExpandLayerRequest(BaseModel):
     items: list[_ExpandItem]
+    # Context-aware direction: an ownership graph digs up (owners); a subsidiary
+    # tree digs down (GLEIF Level-2 children). The view tells us which.
+    direction: Literal["owners", "subsidiaries"] = "owners"
 
 
 @router.post("/expand-layer")
 async def expand_layer(req: ExpandLayerRequest) -> dict[str, Any]:
     """SPIKE — progressive discovery (batch): take the whole current frontier and
-    go one layer deeper on every node at once.
+    go one layer deeper on every node at once, in the graph's existing direction.
 
-    Each item is a ``(lei, anchor)`` pair (the caller selects the frontier:
-    LEI-bearing entity nodes not yet owned by anyone shown). Hops run concurrently
-    (bounded), each stitched onto its anchor by :func:`_expand_one_layer`, and the
-    results are merged + de-duplicated by ``statementId``. Capped at
-    ``_MAX_LAYER_ITEMS`` so a click can't fan out the whole register.
+    Each item is a ``(lei, anchor)`` pair (the caller selects the frontier).
+    ``direction`` picks the hop: ``owners`` re-anchors a standard lookup (up the
+    ownership chain); ``subsidiaries`` fetches GLEIF Level-2 children (down the
+    subsidiary tree). Hops run concurrently (bounded), each stitched onto its
+    anchor, and the results are merged + de-duplicated by ``statementId``. Capped
+    at ``_MAX_LAYER_ITEMS`` so a click can't fan out the whole register.
     """
     items = req.items[:_MAX_LAYER_ITEMS]
     sem = asyncio.Semaphore(5)
+    hop = _subsidiaries_one_layer if req.direction == "subsidiaries" else _expand_one_layer
 
     async def _one(item: _ExpandItem) -> list[dict[str, Any]]:
         async with sem:
             try:
-                return await _expand_one_layer(item.lei, item.anchor)
+                return await hop(item.lei, item.anchor)
             except Exception:  # noqa: BLE001 — a bad node must not sink the batch
                 return []
 
