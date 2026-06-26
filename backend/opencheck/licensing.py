@@ -314,6 +314,46 @@ def assess(source_ids: Iterable[str]) -> LicenseAssessment:
     )
 
 
+def _restrictiveness(t: LicenseTerms) -> int:
+    """Rank a licence's re-use restrictiveness (higher = more restrictive).
+    Non-commercial dominates; share-alike and attribution add weight."""
+    base = {"no": 3, "conditional": 2, "yes": 1}[t.commercial_use]
+    return base * 10 + (5 if t.share_alike else 0) + (2 if t.attribution_required else 0)
+
+
+def most_restrictive(source_ids: Iterable[str]) -> SourceLicensing | None:
+    """The most-restrictive contributing source's licence, or None if none of the
+    ids resolve to a registered source. Ties broken deterministically by licence
+    id. Used to stamp a per-record ``DATA_LICENSE`` on exports (e.g. Senzing JSON)
+    so a record that combines a permissive and a non-commercial source carries the
+    non-commercial licence."""
+    best: SourceLicensing | None = None
+    best_score = -1
+    for sid in sorted(set(source_ids)):
+        sl = source_licensing(sid)
+        if sl is None:
+            continue
+        score = _restrictiveness(sl.terms)
+        if score > best_score or (
+            score == best_score and best is not None and sl.terms.license < best.terms.license
+        ):
+            best, best_score = sl, score
+    return best
+
+
+def attribution_for(source_ids: Iterable[str]) -> str:
+    """Combined attribution text for the contributing registered sources (distinct,
+    order-stable). Empty string when none resolve."""
+    reg = _registry()
+    out: list[str] = []
+    for sid in sorted(set(source_ids)):
+        adapter = reg.get(sid)
+        attr = getattr(getattr(adapter, "info", None), "attribution", None)
+        if attr and attr not in out:
+            out.append(attr)
+    return " ".join(out)
+
+
 def full_matrix() -> dict:
     """The complete matrix: every registered source's licence terms + the
     distinct licence catalogue. Backs the /license-matrix endpoint."""

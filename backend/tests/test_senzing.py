@@ -158,6 +158,40 @@ def test_jsonl_serialisation_is_newline_delimited():
         assert isinstance(obj["FEATURES"], list)
 
 
+def _src(name: str) -> dict:
+    return {"type": ["thirdParty"], "description": name}
+
+
+def test_licensing_payload_uses_most_restrictive_source():
+    # e1 is GLEIF-sourced (permissive) but is the interested party of an
+    # OpenSanctions-sourced (CC-BY-NC) relationship → its record must carry the
+    # non-commercial licence.
+    bods = [
+        {"statementId": "e1", "recordType": "entity",
+         "recordDetails": {"entityType": {"type": "registeredEntity"}, "name": "Acme"},
+         "source": _src("GLEIF")},
+        {"statementId": "e2", "recordType": "entity",
+         "recordDetails": {"entityType": {"type": "registeredEntity"}, "name": "Sub"},
+         "source": _src("GLEIF")},
+        {"statementId": "rel-1", "recordType": "relationship",
+         "recordDetails": {"subject": "e2", "interestedParty": "e1",
+                           "interests": [{"type": "shareholding"}]},
+         "source": _src("OpenSanctions")},
+    ]
+    recs = {r["RECORD_ID"]: r for r in map_to_senzing(bods)}
+
+    assert recs["e1"]["DATA_LICENSE"] == "CC-BY-NC-4.0"
+    assert "OpenSanctions" in recs["e1"]["ATTRIBUTION"]
+    # e2 is GLEIF-only → not the non-commercial licence.
+    assert recs["e2"]["DATA_LICENSE"] != "CC-BY-NC-4.0"
+
+
+def test_no_source_block_means_no_licensing_payload():
+    [rec] = map_to_senzing([_entity("e1")])
+    assert "DATA_LICENSE" not in rec
+    assert "ATTRIBUTION" not in rec
+
+
 def test_empty_bundle_yields_no_records():
     assert map_to_senzing([]) == []
     assert to_senzing_jsonl([]) == "\n"

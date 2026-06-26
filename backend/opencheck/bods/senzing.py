@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import json
 import re
+from functools import lru_cache
 from typing import Any
 
 DATA_SOURCE = "OPENCHECK"
@@ -274,14 +275,69 @@ def _pointer_features(stmt: dict[str, Any]) -> list[dict[str, Any]]:
     return pointers
 
 
+@lru_cache(maxsize=1)
+def _desc_to_source_id() -> dict[str, str]:
+    """Reverse map: BODS ``source.description`` → opencheck source_id, derived from
+    the registry so it matches exactly how statements are stamped by
+    ``mapper._source_block``. Lazy + cached to avoid a circular import at load."""
+    from ..sources import REGISTRY
+    from .mapper import _source_block
+
+    out: dict[str, str] = {}
+    for sid in REGISTRY:
+        desc = (_source_block(sid, None).get("description") or "").strip()
+        if desc:
+            out[desc] = sid
+    return out
+
+
+def _source_ids_of(stmt: dict[str, Any]) -> set[str]:
+    """The registered source_id(s) behind a BODS statement, via its source block.
+    Empty when the source isn't a registered adapter (no licence info to attach)."""
+    desc = ((stmt.get("source") or {}).get("description") or "").strip()
+    if not desc:
+        return set()
+    sid = _desc_to_source_id().get(desc)
+    return {sid} if sid else set()
+
+
+def _attach_licensing(record: dict[str, Any], source_ids: set[str]) -> None:
+    """Stamp ``DATA_LICENSE`` (the most-restrictive contributing licence) and
+    ``ATTRIBUTION`` payload attributes onto a record — the Senzing-spec home for
+    non-resolving record metadata. No-op when no source resolves (e.g. unit tests
+    with hand-built statements)."""
+    if not source_ids:
+        return
+    from ..licensing import attribution_for, most_restrictive
+
+    lic = most_restrictive(source_ids)
+    attr = attribution_for(source_ids)
+    if lic is None and not attr:
+        return
+    # Insert the payload attributes ahead of FEATURES for readability.
+    features = record.pop("FEATURES")
+    if lic is not None:
+        record["DATA_LICENSE"] = lic.terms.license
+    if attr:
+        record["ATTRIBUTION"] = attr
+    record["FEATURES"] = features
+
+
 def map_to_senzing(bods_statements: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Project a BODS v0.4 bundle into Senzing JSON entity records.
 
     Returns one record per entity/person statement (insertion order preserved),
     each with its disclosed ownership/control relationships folded in as
-    ``REL_POINTER`` features. Pure function — safe to call anywhere.
+    ``REL_POINTER`` features, plus ``DATA_LICENSE`` / ``ATTRIBUTION`` payload
+    attributes computed from the record's contributing sources (the most-
+    restrictive licence wins — a record combining a permissive and a
+    non-commercial source carries the non-commercial licence). Deterministic; it
+    reads the source registry for licensing but does no network/IO.
     """
     records: dict[str, dict[str, Any]] = {}
+    # Per-record set of contributing source_ids (its own statement + any folded
+    # relationship statements) → drives the DATA_LICENSE / ATTRIBUTION payload.
+    contributors: dict[str, set[str]] = {}
     relationships: list[dict[str, Any]] = []
 
     for stmt in bods_statements or []:
@@ -289,8 +345,10 @@ def map_to_senzing(bods_statements: list[dict[str, Any]]) -> list[dict[str, Any]
         sid = stmt.get("statementId")
         if rtype == "entity" and sid:
             records[sid] = _entity_record(stmt)
+            contributors[sid] = _source_ids_of(stmt)
         elif rtype == "person" and sid:
             records[sid] = _person_record(stmt)
+            contributors[sid] = _source_ids_of(stmt)
         elif rtype == "relationship":
             relationships.append(stmt)
 
@@ -305,6 +363,11 @@ def map_to_senzing(bods_statements: list[dict[str, Any]]) -> list[dict[str, Any]
         if target is None:
             continue
         target["FEATURES"].extend(_pointer_features(stmt))
+        # The folded relationship's source also contributed to this record.
+        contributors.setdefault(party, set()).update(_source_ids_of(stmt))
+
+    for sid, record in records.items():
+        _attach_licensing(record, contributors.get(sid) or set())
 
     return list(records.values())
 
