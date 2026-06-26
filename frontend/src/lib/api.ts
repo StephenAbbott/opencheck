@@ -119,6 +119,46 @@ export function exportUrl(
   return `${BASE_URL}/export?${params.toString()}`;
 }
 
+/** SPIKE — progressive discovery: resolve one corporate node a hop deeper.
+ * Returns the new owners layer as BODS statements, with the looked-up entity's
+ * identity remapped onto `anchor` so it stitches onto the existing graph node. */
+export interface ExpandResponse {
+  lei: string;
+  anchor: string;
+  bods: Record<string, unknown>[];
+}
+
+export async function expandNode(
+  lei: string,
+  anchor: string
+): Promise<ExpandResponse> {
+  const params = new URLSearchParams({ lei, anchor });
+  return getJson<ExpandResponse>(`/expand?${params.toString()}`);
+}
+
+/** SPIKE — batch ("add next layer"): go one hop deeper on the whole frontier at
+ * once. Each item is a (lei, anchor) pair; the server fans out concurrently and
+ * returns the merged, de-duplicated owners layer. */
+export interface ExpandLayerResponse {
+  bods: Record<string, unknown>[];
+  expanded: string[];
+  count: number;
+  truncated: boolean;
+}
+
+export async function expandLayer(
+  items: { lei: string; anchor: string }[],
+  direction: "owners" | "subsidiaries" = "owners"
+): Promise<ExpandLayerResponse> {
+  const r = await fetch(`${BASE_URL}/expand-layer`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items, direction }),
+  });
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText} — /expand-layer`);
+  return (await r.json()) as ExpandLayerResponse;
+}
+
 async function getJson<T>(path: string): Promise<T> {
   const r = await fetch(`${BASE_URL}${path}`);
   if (!r.ok) {

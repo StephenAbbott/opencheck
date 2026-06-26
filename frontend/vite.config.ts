@@ -36,14 +36,25 @@ const backendTarget: string =
   localEnv.VITE_API_BASE_URL ??
   "http://localhost:8000";
 
+// One entry per backend path prefix. Vite matches by prefix, so "/lookup" also
+// covers /lookup-stream and /lookup-source, "/expand" covers /expand-layer, and
+// "/export" covers /export/pdf. Everything the frontend's API client fetches
+// must appear here or the dev server serves index.html (→ "Unexpected token '<'").
 const proxyRoutes: Record<string, { target: string; changeOrigin: boolean }> = {
-  "/lookup":  { target: backendTarget, changeOrigin: true },
-  "/sources": { target: backendTarget, changeOrigin: true },
-  "/search":  { target: backendTarget, changeOrigin: true },
-  "/deepen":  { target: backendTarget, changeOrigin: true },
-  "/export":  { target: backendTarget, changeOrigin: true },
-  "/health":  { target: backendTarget, changeOrigin: true },
-  "/stream":  { target: backendTarget, changeOrigin: true },
+  "/lookup":          { target: backendTarget, changeOrigin: true },
+  "/sources":         { target: backendTarget, changeOrigin: true },
+  "/search":          { target: backendTarget, changeOrigin: true },
+  "/deepen":          { target: backendTarget, changeOrigin: true },
+  "/expand":          { target: backendTarget, changeOrigin: true },
+  "/export":          { target: backendTarget, changeOrigin: true },
+  "/health":          { target: backendTarget, changeOrigin: true },
+  "/stream":          { target: backendTarget, changeOrigin: true },
+  "/subsidiaries":    { target: backendTarget, changeOrigin: true },
+  "/history":         { target: backendTarget, changeOrigin: true },
+  "/securities":      { target: backendTarget, changeOrigin: true },
+  "/nz-associations": { target: backendTarget, changeOrigin: true },
+  "/narrative":       { target: backendTarget, changeOrigin: true },
+  "/license-matrix":  { target: backendTarget, changeOrigin: true },
 };
 
 export default defineConfig({

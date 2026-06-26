@@ -7,7 +7,7 @@ import json
 import re
 import time
 from dataclasses import dataclass, field as dc_field
-from typing import Any, AsyncIterator
+from typing import Any, Literal, AsyncIterator
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -1424,6 +1424,142 @@ async def lookup(
         jurisdiction=jurisdiction,
         derived_identifiers=derived,
     )
+
+
+def _entity_idents(stmt: dict[str, Any]) -> set[str]:
+    """Upper-cased identifier values carried by a BODS entity statement."""
+    ids = (stmt.get("recordDetails") or {}).get("identifiers") or []
+    return {(i.get("id") or "").strip().upper() for i in ids if (i.get("id") or "").strip()}
+
+
+def _collapse_onto_anchor(bods: list[dict[str, Any]], lei: str, anchor: str) -> list[dict[str, Any]]:
+    """Collapse **every** representation of the LEI-identified entity onto ``anchor``.
+
+    The fix for the spike's cross-source finding: a national register keys its
+    entity statement on the company number, not the LEI, so matching on the LEI
+    alone left a floating duplicate. We seed the identifier set from every
+    statement that asserts the LEI (GLEIF ties the LEI to the company number),
+    then remap any entity statement sharing one of those identifier values onto
+    the anchor. A blunt id rewrite over the serialised bundle is safe — opencheck
+    statement ids are unique 24-hex tokens with no collision risk.
+    """
+    from ..bods.mapper import _stable_id
+
+    norm = lei.strip().upper()
+    subj_idents: set[str] = {norm}
+    for s in bods:
+        if s.get("recordType") == "entity" and norm in _entity_idents(s):
+            subj_idents |= _entity_idents(s)
+
+    subject_ids = {_stable_id("gleif", "entity", norm)}
+    for s in bods:
+        if s.get("recordType") == "entity" and (_entity_idents(s) & subj_idents):
+            subject_ids.add(s["statementId"])
+    subject_ids.discard(anchor)
+
+    raw = json.dumps(bods)
+    for sid in subject_ids:
+        raw = raw.replace(sid, anchor)
+    return json.loads(raw)
+
+
+async def _expand_one_layer(lei: str, anchor: str, *, deepen_top: int = 3) -> list[dict[str, Any]]:
+    """Owner-ward hop: re-anchor a standard ``lookup`` (the entity's owners) and
+    stitch it onto ``anchor`` (reusing the replay cache)."""
+    norm = lei.strip().upper()
+    resp = await lookup(lei=norm, deepen_top=deepen_top)  # raises 400/404
+    return _collapse_onto_anchor(resp.bods, norm, anchor)
+
+
+async def _subsidiaries_one_layer(lei: str, anchor: str) -> list[dict[str, Any]]:
+    """Subsidiary-ward hop: fetch the entity's GLEIF Level-2 children and stitch
+    them under ``anchor`` (so a subsidiary tree extends downward, not upward)."""
+    from ..subsidiaries import assemble_subsidiaries
+
+    norm = lei.strip().upper()
+    data = await assemble_subsidiaries(norm, include_bods=True)
+    bods = (data or {}).get("bods") or []
+    return _collapse_onto_anchor(bods, norm, anchor)
+
+
+@router.get("/expand")
+async def expand(
+    lei: str = Query(..., description="LEI of the corporate node to expand."),
+    anchor: str = Query(
+        ...,
+        description=(
+            "statementId of the existing graph node being expanded. The "
+            "looked-up entity's identity statements are remapped onto it so the "
+            "new owners layer stitches onto the existing node, not a duplicate."
+        ),
+    ),
+    deepen_top: int = Query(3, ge=0, le=10),
+) -> dict[str, Any]:
+    """SPIKE — progressive discovery: resolve one corporate node a hop deeper.
+
+    Person nodes are terminal and the caller never expands them. This is a spike
+    surface (live-only, corporate hops only); it is not wired into the main
+    synthesis. See ``/expand-layer`` for the batch (whole-frontier) variant.
+    """
+    bods = await _expand_one_layer(lei, anchor, deepen_top=deepen_top)
+    return {"lei": lei.strip().upper(), "anchor": anchor, "bods": bods}
+
+
+_MAX_LAYER_ITEMS = 25  # cap concurrent hops per "add layer" so it can't fan out the register
+
+
+class _ExpandItem(BaseModel):
+    lei: str
+    anchor: str
+
+
+class ExpandLayerRequest(BaseModel):
+    items: list[_ExpandItem]
+    # Context-aware direction: an ownership graph digs up (owners); a subsidiary
+    # tree digs down (GLEIF Level-2 children). The view tells us which.
+    direction: Literal["owners", "subsidiaries"] = "owners"
+
+
+@router.post("/expand-layer")
+async def expand_layer(req: ExpandLayerRequest) -> dict[str, Any]:
+    """SPIKE — progressive discovery (batch): take the whole current frontier and
+    go one layer deeper on every node at once, in the graph's existing direction.
+
+    Each item is a ``(lei, anchor)`` pair (the caller selects the frontier).
+    ``direction`` picks the hop: ``owners`` re-anchors a standard lookup (up the
+    ownership chain); ``subsidiaries`` fetches GLEIF Level-2 children (down the
+    subsidiary tree). Hops run concurrently (bounded), each stitched onto its
+    anchor, and the results are merged + de-duplicated by ``statementId``. Capped
+    at ``_MAX_LAYER_ITEMS`` so a click can't fan out the whole register.
+    """
+    items = req.items[:_MAX_LAYER_ITEMS]
+    sem = asyncio.Semaphore(5)
+    hop = _subsidiaries_one_layer if req.direction == "subsidiaries" else _expand_one_layer
+
+    async def _one(item: _ExpandItem) -> list[dict[str, Any]]:
+        async with sem:
+            try:
+                return await hop(item.lei, item.anchor)
+            except Exception:  # noqa: BLE001 — a bad node must not sink the batch
+                return []
+
+    chunks = await asyncio.gather(*[_one(i) for i in items])
+
+    seen: set[str] = set()
+    merged: list[dict[str, Any]] = []
+    for chunk in chunks:
+        for s in chunk:
+            sid = s.get("statementId")
+            if sid and sid not in seen:
+                seen.add(sid)
+                merged.append(s)
+
+    return {
+        "bods": merged,
+        "expanded": [i.anchor for i in items],
+        "count": len(items),
+        "truncated": len(req.items) > _MAX_LAYER_ITEMS,
+    }
 
 
 @router.get("/lookup-stream")
