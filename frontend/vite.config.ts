@@ -41,6 +41,7 @@ const proxyRoutes: Record<string, { target: string; changeOrigin: boolean }> = {
   "/sources": { target: backendTarget, changeOrigin: true },
   "/search":  { target: backendTarget, changeOrigin: true },
   "/deepen":  { target: backendTarget, changeOrigin: true },
+  "/expand":  { target: backendTarget, changeOrigin: true },
   "/export":  { target: backendTarget, changeOrigin: true },
   "/health":  { target: backendTarget, changeOrigin: true },
   "/stream":  { target: backendTarget, changeOrigin: true },
