@@ -193,8 +193,8 @@ export default function BodsGraphExplorer({
               : `▸ Add next layer — ${frontier.length} ${frontierLabel}`}
         </button>
         <span className="text-[11px] text-oo-muted leading-[1.5] max-w-md">
-          Resolves the {noun} of every frontier company at once (LEI-bearing
-          entities; people are terminal).
+          Resolves the next layer of ownership for frontier companies which have
+          an LEI. Chains which end with people can't be explored further
         </span>
       </div>
       {expandNote && (
