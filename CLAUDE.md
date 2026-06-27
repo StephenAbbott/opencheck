@@ -408,6 +408,38 @@ Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_
 
 ---
 
+## Spikes → production: test before you merge (hard-won, recorded 2026-06-26)
+
+A **spike** is exploratory, throwaway-quality code to validate an idea fast (e.g.
+the progressive-discovery / "Add next layer" graph expansion — destined for
+**FullCheck** mode; see the QuickCheck/FullCheck Notion ticket). Spikes are
+useful, but **merging a spike to `main` is moving it into production**, and that
+has repeatedly outrun its test coverage here. Be conservative and surface the
+gaps before promoting one.
+
+- **Test every layer that changed, and make sure CI runs those tests.** Backend
+  changes need pytest; frontend changes need `tsc` + the vitest suite. CI gates
+  push/PR via `.github/workflows/tests.yml` (backend `pytest`, frontend
+  `npm run build` + `npm test`) — a change that touches React/TS but only has
+  backend tests is **not** production-ready. The sandbox can't run vitest
+  (platform-mismatched `node_modules`); that is **not** the same as CI running
+  it, so don't treat "tsc clean locally" as sufficient — confirm CI is green.
+- **Unit fixtures are not enough — exercise it against real data before declaring
+  it done.** The progressive-discovery spike passed every test yet was wrong on
+  live Shell data three times (expansion direction; cross-source duplicate
+  subjects; an empty frontier) because those were data-shape failures fixtures
+  didn't capture.
+- **Don't let `SPIKE` / `TODO` shortcuts cross into `main` unguarded.** If they
+  must, open a tracked "de-spike" ticket *before* merging and link it in the
+  merge commit.
+- **Prefer a `--no-ff` merge that names the spike** so the debt is visible in
+  history, and keep general fixes that rode along (e.g. dev-proxy additions, the
+  StrictMode hit dedup) as their own commits so they're easy to find and port.
+- **If asked to merge a spike to `main`, say what testing is still missing first**
+  rather than merging silently.
+
+---
+
 ## GLEIF reverse-lookup: local ID → LEI
 
 GLEIF supports querying by local identifier, which is the **inverse** of OpenCheck's normal
