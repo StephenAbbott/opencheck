@@ -4,7 +4,6 @@ import type { BodsBreakdown, DeepenResponse, RiskSignal, SourceHit } from "../..
 import { RiskChip } from "../risk/RiskChip";
 import { HistoryTimeline } from "./HistoryTimeline";
 import { NzAssociations } from "./NzAssociations";
-import { SubsidiaryNetwork } from "./SubsidiaryNetwork";
 
 // BodsGraphExplorer pulls in Cytoscape + cytoscape-dagre (~the bulk of the
 // bundle) but only renders when a user clicks "Visualise". Code-split it so
@@ -777,13 +776,6 @@ export function SourceBucketCard({
       ? (bucket.hits.find((h) => !h.is_stub) ?? bucket.hits[0])?.hit_id
       : undefined;
 
-  // GLEIF-only enrichment: the subsidiary network (direct + ultimate children).
-  // Keyed by the resolved LEI (the gleif hit_id is the LEI).
-  const gleifLei =
-    bucket.sourceId === "gleif" && !bucket.error
-      ? (lei ?? (bucket.hits.find((h) => !h.is_stub) ?? bucket.hits[0])?.hit_id)
-      : undefined;
-
   // Rendered inline with the entity title (right-aligned) on the first hit row.
   const timelineButton = showTimelineButton ? (
     <button
@@ -871,11 +863,6 @@ export function SourceBucketCard({
       {nzCompanyNumber && (
         <div className="px-5 pb-4">
           <NzAssociations companyNumber={nzCompanyNumber} />
-        </div>
-      )}
-      {gleifLei && (
-        <div className="px-5 pb-4">
-          <SubsidiaryNetwork lei={gleifLei} entityName={timelineName} />
         </div>
       )}
     </article>

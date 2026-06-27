@@ -12,6 +12,7 @@
 import { useEffect, useState } from "react";
 import { lookup, type RiskSignal } from "../../lib/api";
 import BodsGraphExplorer from "../BodsGraphExplorer";
+import { SubsidiaryNetwork } from "./SubsidiaryNetwork";
 
 type Stmt = Record<string, unknown>;
 
@@ -76,6 +77,10 @@ export default function FullCheckPanel({
           />
         </div>
       )}
+
+      <div className="mt-4">
+        <SubsidiaryNetwork lei={lei} entityName={legalName ?? undefined} />
+      </div>
     </section>
   );
 }

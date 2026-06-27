@@ -1184,7 +1184,6 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-oo-blue" aria-hidden="true"><circle cx="6" cy="6" r="2.3" /><circle cx="18" cy="6" r="2.3" /><circle cx="12" cy="18" r="2.3" /><path d="M8 7.5 10.7 15.6M16 7.5 13.3 15.6M8.5 6h7" /></svg>
                 <span className="font-head font-bold text-[15px] text-oo-ink">FullCheck</span>
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#eef1fb] text-oo-blue border border-[#cfd6f5]">EDD</span>
               </div>
               <p className="text-[12px] text-oo-muted mt-1 leading-[1.5]">
                 Map the wider corporate network for enhanced due diligence.
