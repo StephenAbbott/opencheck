@@ -1151,6 +1151,48 @@ export default function App() {
 
         {streamingLei && <SubjectCard lei={streamingLei} legalName={legalName} />}
 
+        {streamingLei && (
+          <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3" role="group" aria-label="Check mode">
+            <button
+              type="button"
+              aria-pressed={mode === "quick"}
+              onClick={() => setMode("quick")}
+              className={`text-left rounded-oo border-2 p-4 transition-colors ${
+                mode === "quick"
+                  ? "border-oo-blue bg-[#eef1fb]"
+                  : "border-oo-rule bg-white hover:border-[#cfd6f5]"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-oo-blue" aria-hidden="true"><path d="M13 3 4 14h7l-1 7 9-11h-7z" /></svg>
+                <span className="font-head font-bold text-[15px] text-oo-ink">QuickCheck</span>
+              </div>
+              <p className="text-[12px] text-oo-muted mt-1 leading-[1.5]">
+                Fast screening of this entity for immediate risks.
+              </p>
+            </button>
+            <button
+              type="button"
+              aria-pressed={mode === "full"}
+              onClick={() => setMode("full")}
+              className={`text-left rounded-oo border-2 p-4 transition-colors ${
+                mode === "full"
+                  ? "border-oo-blue bg-[#eef1fb]"
+                  : "border-oo-rule bg-white hover:border-[#cfd6f5]"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-oo-blue" aria-hidden="true"><circle cx="6" cy="6" r="2.3" /><circle cx="18" cy="6" r="2.3" /><circle cx="12" cy="18" r="2.3" /><path d="M8 7.5 10.7 15.6M16 7.5 13.3 15.6M8.5 6h7" /></svg>
+                <span className="font-head font-bold text-[15px] text-oo-ink">FullCheck</span>
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#eef1fb] text-oo-blue border border-[#cfd6f5]">EDD</span>
+              </div>
+              <p className="text-[12px] text-oo-muted mt-1 leading-[1.5]">
+                Map the wider corporate network for enhanced due diligence.
+              </p>
+            </button>
+          </div>
+        )}
+
         {streamingLei && <NarrativePanel lei={streamingLei} legalName={legalName} />}
 
         {aggregatedCodes.length > 0 && (
@@ -1178,31 +1220,6 @@ export default function App() {
           </section>
         )}
 
-        {streamingLei && (
-          <div className="mb-4 flex items-center gap-2 flex-wrap" role="group" aria-label="Check mode">
-            <span className="text-[12px] text-oo-muted">Mode</span>
-            {(["quick", "full"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                aria-pressed={mode === m}
-                onClick={() => setMode(m)}
-                className={`text-[12px] px-3 py-1 rounded-full border ${
-                  mode === m
-                    ? "bg-oo-blue text-white border-oo-blue font-medium"
-                    : "border-oo-rule text-oo-muted hover:text-oo-blue"
-                }`}
-              >
-                {m === "quick" ? "QuickCheck" : "FullCheck"}
-              </button>
-            ))}
-            <span className="text-[11px] text-oo-muted ml-1 max-w-md leading-[1.5]">
-              {mode === "full"
-                ? "Enhanced due diligence — map the wider corporate network connected to this entity."
-                : "Fast screening of this entity. Switch to FullCheck to dig into the wider network."}
-            </span>
-          </div>
-        )}
         {mode === "full" && streamingLei ? (
           <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading FullCheck…</p>}>
             <FullCheckPanel lei={streamingLei} legalName={legalName} signals={riskSignals} />
