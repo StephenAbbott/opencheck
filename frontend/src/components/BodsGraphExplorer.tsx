@@ -36,7 +36,9 @@ import {
   signalsBeyond,
   type ExpandDirection,
 } from "../lib/expand";
+import { reconcileBods, remapSignals } from "../lib/reconcile";
 import { RiskChip } from "./risk/RiskChip";
+import { SourceLegend } from "./SourceLegend";
 
 type Stmt = Record<string, unknown>;
 type ViewMode = "split" | "graph" | "tree";
@@ -89,15 +91,37 @@ export default function BodsGraphExplorer({
   const [exportFormat, setExportFormat] = useState<NetworkExportFormat>("zip");
   const [exporting, setExporting] = useState(false);
 
-  const baseModel: GraphModel = useMemo(
-    () => bodsToGraph(statements as Stmt[]),
-    [statements]
-  );
+  // FullCheck reconciliation (display transform): merge per-source duplicate
+  // nodes that share an LEI/company number into one node, keyed by a stable
+  // identifier-derived id, stamping each surviving statement with `_sources`.
+  // Applied ONLY to the rendered model — the frontier/expansion bookkeeping
+  // below keeps running on the raw statements, so the working traversal is
+  // untouched. QuickCheck panels (fullCheck=false) render the raw model.
   const allStatements: Stmt[] = useMemo(
     () => mergeStatements(statements as Stmt[], extra),
     [statements, extra]
   );
-  const model: GraphModel = useMemo(() => bodsToGraph(allStatements), [allStatements]);
+  const recon = useMemo(
+    () => (fullCheck ? reconcileBods(allStatements) : null),
+    [fullCheck, allStatements]
+  );
+  const baseModel: GraphModel = useMemo(
+    () =>
+      bodsToGraph(
+        fullCheck ? reconcileBods(statements as Stmt[]).statements : (statements as Stmt[])
+      ),
+    [statements, fullCheck]
+  );
+  const model: GraphModel = useMemo(
+    () => bodsToGraph((recon?.statements ?? allStatements) as Stmt[]),
+    [recon, allStatements]
+  );
+  // Frontier/expansion run on the RAW (unreconciled) edges so the live traversal
+  // keys are unchanged; for QuickCheck raw == display.
+  const rawEdges = useMemo(
+    () => (recon ? bodsToGraph(allStatements).edges : model.edges),
+    [recon, allStatements, model]
+  );
 
   const [collapsed, setCollapsed] = useState<Set<string>>(() => autoCollapse(baseModel));
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -115,6 +139,7 @@ export default function BodsGraphExplorer({
       setExpandNote(null);
       setDiscoveredSignals([]);
       setRunProgress(null);
+      setHighlightSource(null);
       setCollapsed(autoCollapse(baseModel));
       prevStatementsRef.current = statements;
     }
@@ -153,8 +178,8 @@ export default function BodsGraphExplorer({
 
   // ── "Add next layer" over the whole frontier (direction set by the view) ───
   const frontier = useMemo(
-    () => frontierAnchors(allStatements, model.edges, expandedIds, direction),
-    [allStatements, model.edges, expandedIds, direction]
+    () => frontierAnchors(allStatements, rawEdges, expandedIds, direction),
+    [allStatements, rawEdges, expandedIds, direction]
   );
   const noun = direction === "subsidiaries" ? "subsidiaries" : "owners/controllers";
   const helperText =
@@ -171,6 +196,36 @@ export default function BodsGraphExplorer({
   const additionalSignals = useMemo(
     () => signalsBeyond(signals, discoveredSignals),
     [signals, discoveredSignals]
+  );
+
+  // ── FullCheck provenance: source legend + highlight-by-source ──────────────
+  const [highlightSource, setHighlightSource] = useState<string | null>(null);
+  // Distinct sources across the reconciled display, with how many nodes each
+  // asserts (corroboration count) — drives the legend chips.
+  const networkSources = useMemo(() => {
+    if (!fullCheck) return [];
+    const counts = new Map<string, number>();
+    for (const n of model.nodes)
+      for (const s of n.sources) counts.set(s, (counts.get(s) ?? 0) + 1);
+    return [...counts.entries()]
+      .map(([source, count]) => ({ source, count }))
+      .sort((a, b) => b.count - a.count || a.source.localeCompare(b.source));
+  }, [fullCheck, model]);
+  // Nodes corroborated by ≥2 sources — the EDD confidence signal.
+  const corroboratedCount = useMemo(
+    () => (fullCheck ? model.nodes.filter((n) => n.sources.length > 1).length : 0),
+    [fullCheck, model]
+  );
+  // Drop a stale highlight if its source left the network (e.g. after a reset).
+  useEffect(() => {
+    if (highlightSource && !networkSources.some((s) => s.source === highlightSource)) {
+      setHighlightSource(null);
+    }
+  }, [networkSources, highlightSource]);
+  // Risk-signal evidence ids follow the merged node so BOVS overlays still land.
+  const displaySignals = useMemo(
+    () => (recon ? remapSignals(networkSignals, recon.remap) : networkSignals),
+    [recon, networkSignals]
   );
 
   async function addNextLayer() {
@@ -386,14 +441,23 @@ export default function BodsGraphExplorer({
       <div className={`flex flex-col gap-2 ${view === "split" ? "lg:flex-row" : ""}`}>
         {view !== "tree" && (
           <div className="flex-1 min-w-0">
+            {fullCheck && networkSources.length > 0 && (
+              <SourceLegend
+                sources={networkSources}
+                active={highlightSource}
+                corroboratedCount={corroboratedCount}
+                onToggle={(s) => setHighlightSource((cur) => (cur === s ? null : s))}
+              />
+            )}
             <BODSGraph
               model={model}
-              signals={networkSignals}
+              signals={displaySignals}
               entityName={entityName}
               collapsed={collapsed}
               onCollapsedChange={setCollapsed}
               selectedId={selectedId}
               onSelect={setSelectedId}
+              highlightSource={highlightSource}
             />
           </div>
         )}

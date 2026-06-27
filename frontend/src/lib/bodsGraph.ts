@@ -48,6 +48,10 @@ export interface GraphNode {
   flagUrl?: string;
   /** Identifier values (e.g. LEI, company number) — used for search. */
   identifiers: string[];
+  /** Distinct sources that asserted this node (provenance / corroboration).
+   *  After FullCheck reconciliation a merged node carries every contributing
+   *  source; otherwise the single source that emitted it. */
+  sources: string[];
 }
 
 export interface GraphEdge {
@@ -57,6 +61,8 @@ export interface GraphEdge {
   label: string;
   category: EdgeCategory;
   details?: string;
+  /** Distinct sources that asserted this relationship (provenance). */
+  sources: string[];
 }
 
 export interface GraphModel {
@@ -169,6 +175,15 @@ function nodeIdentifiers(stmt: Stmt): string[] {
   return ids
     .map((i) => (i?.id as string | undefined) ?? "")
     .filter((s): s is string => s.length > 0);
+}
+
+/** Provenance for a statement: the reconciler stamps `_sources` (the distinct
+ *  sources that asserted it); otherwise fall back to the single source block. */
+function stmtSources(stmt: Stmt): string[] {
+  const tagged = (stmt as RD)._sources as string[] | undefined;
+  if (Array.isArray(tagged) && tagged.length) return tagged;
+  const desc = ((stmt.source as RD | undefined)?.description as string | undefined) ?? "";
+  return desc ? [desc] : [];
 }
 
 // ---------------------------------------------------------------------------
@@ -284,6 +299,7 @@ interface RawEdge {
   target: string;
   interests: Interest[];
   kind: ConsolidationKind;
+  sources: string[];
 }
 
 export interface BuildGraphOptions {
@@ -339,6 +355,7 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
       icon: nodeIcon(stmt),
       flagUrl: flagUrl(stmt),
       identifiers: nodeIdentifiers(stmt),
+      sources: stmtSources(stmt),
     });
   }
 
@@ -371,6 +388,7 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
       target: targetId,
       interests,
       kind: consolidationKind(interests),
+      sources: stmtSources(stmt),
     });
   }
 
@@ -429,6 +447,7 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
             target: g[0].target,
             interests: g.flatMap((x) => x.interests),
             kind: null,
+            sources: [...new Set(g.flatMap((x) => x.sources))],
           }
     );
   }
@@ -440,6 +459,7 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
     label: consolidationFlavour(e.interests) ?? buildEdgeLabel(e.interests),
     category: categorise(e.interests),
     details: combineDetails(e.interests),
+    sources: e.sources,
   }));
 
   return { nodes, edges };
