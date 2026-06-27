@@ -39,11 +39,16 @@ const VIEW_OPTIONS: { value: ViewMode; label: string }[] = [
 // click-fest can't fan out the whole register (the server also caps each batch).
 const MAX_EXPANDED = 60;
 
+// FullCheck eager run: stop expanding once the network reaches this many company
+// nodes — also the graph's comfortable render ceiling.
+const FULLCHECK_NODE_CAP = 150;
+
 export default function BodsGraphExplorer({
   statements,
   signals = [],
   entityName,
   direction = "owners",
+  fullCheck = false,
 }: {
   statements: unknown[];
   signals?: RiskSignal[];
@@ -51,6 +56,9 @@ export default function BodsGraphExplorer({
   /** Which way "Add next layer" digs: an ownership graph goes up (owners), a
    *  subsidiary tree goes down (children). The mounting view sets this. */
   direction?: ExpandDirection;
+  /** FullCheck mode: also show a "Run FullCheck" control that eagerly expands the
+   *  network to a chosen depth budget (Phase 1 eager traversal). */
+  fullCheck?: boolean;
 }) {
   // Layers revealed via progressive discovery, merged onto the base statement set.
   const [extra, setExtra] = useState<Stmt[]>([]);
@@ -157,6 +165,57 @@ export default function BodsGraphExplorer({
     }
   }
 
+  // ── FullCheck: eagerly expand the network to a depth budget ────────────────
+  const [depthBudget, setDepthBudget] = useState(2);
+  const [running, setRunning] = useState(false);
+  const [runProgress, setRunProgress] = useState<string | null>(null);
+  const cancelRef = useRef(false);
+
+  async function runFullCheck() {
+    if (running) return;
+    setRunning(true);
+    cancelRef.current = false;
+    setExpandNote(null);
+    setRunProgress("Starting FullCheck…");
+    try {
+      // Accumulate locally: React state updates aren't visible within this loop,
+      // so each layer recomputes the frontier from the local `working` set and
+      // also pushes to `extra` for progressive rendering.
+      let working = allStatements;
+      const expanded = new Set(expandedIds);
+      let stop = "";
+      for (let d = 0; d < depthBudget; d++) {
+        if (cancelRef.current) { stop = "cancelled"; break; }
+        const front = frontierAnchors(working, bodsToGraph(working).edges, expanded, direction);
+        if (front.length === 0) {
+          stop = "frontier exhausted (no further LEI-bearing companies)";
+          break;
+        }
+        const entities = working.filter((s) => (s as Stmt).recordType === "entity").length;
+        if (entities >= FULLCHECK_NODE_CAP || expanded.size >= MAX_EXPANDED) {
+          stop = `node cap reached (${entities} companies)`;
+          break;
+        }
+        setRunProgress(
+          `Layer ${d + 1} of ${depthBudget} — expanding ${front.length} ${front.length === 1 ? "company" : "companies"}…`
+        );
+        const res = await expandLayer(front, direction);
+        working = mergeStatements(working, res.bods as Stmt[]);
+        // Only the anchors the server actually processed (it caps each batch).
+        res.expanded.forEach((a) => expanded.add(a));
+        setExtra((prev) => mergeStatements(prev, res.bods as Stmt[]));
+        setExpandedIds(new Set(expanded));
+      }
+      if (cancelRef.current) setRunProgress("FullCheck cancelled.");
+      else setRunProgress(`FullCheck complete — ${stop || `reached the depth budget (${depthBudget})`}.`);
+    } catch (e) {
+      setRunProgress(`FullCheck failed: ${(e as Error).message}`);
+    } finally {
+      setRunning(false);
+      cancelRef.current = false;
+    }
+  }
+
   if (model.nodes.length === 0) {
     return <p className="text-xs text-oo-muted italic">No BODS statements to visualise.</p>;
   }
@@ -183,6 +242,45 @@ export default function BodsGraphExplorer({
           </button>
         ))}
       </div>
+
+      {/* FullCheck: eager "Run" to a depth budget */}
+      {fullCheck && (
+        <div className="mb-2 rounded-oo border border-[#1565c0] bg-[#f3f7fe] px-3 py-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={running ? () => { cancelRef.current = true; } : runFullCheck}
+              disabled={!running && frontier.length === 0}
+              className="bg-oo-blue text-white text-[13px] font-semibold rounded px-4 py-1.5 hover:bg-oo-burst transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {running ? "Cancel" : "▸ Run FullCheck"}
+            </button>
+            <label className="text-[12px] text-oo-ink flex items-center gap-1.5">
+              Depth
+              <input
+                type="number"
+                min={1}
+                max={5}
+                value={depthBudget}
+                disabled={running}
+                onChange={(e) =>
+                  setDepthBudget(Math.max(1, Math.min(5, Number(e.target.value) || 1)))
+                }
+                className="w-12 border border-oo-rule rounded px-1.5 py-0.5 text-[12px]"
+              />
+            </label>
+            <span className="text-[11px] text-oo-muted leading-[1.5] max-w-sm">
+              Builds the wider {direction === "subsidiaries" ? "subsidiary" : "ownership"} network to
+              the chosen depth (LEI-bearing companies; capped at {FULLCHECK_NODE_CAP}).
+            </span>
+          </div>
+          {runProgress && (
+            <p className="mt-1.5 text-[12px] text-[#1565c0]" aria-live="polite">
+              {runProgress}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Prominent "Add next layer" control */}
       <div className="mb-2 flex items-center gap-3 flex-wrap">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import SearchLoadingGrid from "./components/SearchLoadingGrid";
 import {
@@ -39,6 +39,10 @@ import {
 } from "./components/cdd/SourceBucketCard";
 import { EsgPanel } from "./components/cdd/EsgPanel";
 import { SecuritiesSection } from "./components/cdd/SecuritiesSection";
+
+// FullCheck (enhanced due diligence) view — lazy so Cytoscape/graph code only
+// loads when a user switches into FullCheck mode.
+const FullCheckPanel = lazy(() => import("./components/cdd/FullCheckPanel"));
 
 
 /**
@@ -159,6 +163,9 @@ export default function App() {
   const [applicableSources, setApplicableSources] = useState<string[]>([]);
   const [completedSources, setCompletedSources] = useState<Set<string>>(new Set());
   const [streaming, setStreaming] = useState(false);
+  // QuickCheck (subject screening, default) vs FullCheck (network EDD). Reset to
+  // QuickCheck on each new lookup so the headline experience is always QuickCheck.
+  const [mode, setMode] = useState<"quick" | "full">("quick");
   // Maps "source_id:hit_id" → BODS statement count; populated by the bods_counts SSE event.
   const [bodsCountMap, setBodsCountMap] = useState<Record<string, number>>({});
   // Same key → entity / relationship split, for the source-card graph CTA subtitle.
@@ -307,6 +314,7 @@ export default function App() {
         // Reset streaming state before starting a new stream.
         setStreamingLei(null);
         setLegalName(null);
+        setMode("quick");
         setHits([]);
         setErrors({});
         setCrossSourceLinks([]);
@@ -1170,6 +1178,37 @@ export default function App() {
           </section>
         )}
 
+        {streamingLei && (
+          <div className="mb-4 flex items-center gap-2 flex-wrap" role="group" aria-label="Check mode">
+            <span className="text-[12px] text-oo-muted">Mode</span>
+            {(["quick", "full"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                aria-pressed={mode === m}
+                onClick={() => setMode(m)}
+                className={`text-[12px] px-3 py-1 rounded-full border ${
+                  mode === m
+                    ? "bg-oo-blue text-white border-oo-blue font-medium"
+                    : "border-oo-rule text-oo-muted hover:text-oo-blue"
+                }`}
+              >
+                {m === "quick" ? "QuickCheck" : "FullCheck"}
+              </button>
+            ))}
+            <span className="text-[11px] text-oo-muted ml-1 max-w-md leading-[1.5]">
+              {mode === "full"
+                ? "Enhanced due diligence — map the wider corporate network connected to this entity."
+                : "Fast screening of this entity. Switch to FullCheck to dig into the wider network."}
+            </span>
+          </div>
+        )}
+        {mode === "full" && streamingLei ? (
+          <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading FullCheck…</p>}>
+            <FullCheckPanel lei={streamingLei} legalName={legalName} signals={riskSignals} />
+          </Suspense>
+        ) : (
+          <>
         {(cddBuckets.length > 0 || pendingCddSources.length > 0) && (
           <section className="mb-8">
             <SectionLabel>
@@ -1244,6 +1283,8 @@ export default function App() {
               .filter((b) => b.hits.some((h) => !h.is_stub))
               .map((b) => b.sourceId)}
           />
+        )}
+          </>
         )}
         </>
         )}
