@@ -1,7 +1,7 @@
 /**
  * expand — pure helpers for progressive-discovery (corporate-hop) expansion.
  *
- * SPIKE: these back the "reveal owners" action in BodsGraphExplorer. They are
+ * These back the "Add next layer" action in BodsGraphExplorer. They are
  * framework-agnostic and unit-tested without a DOM. Person nodes are terminal,
  * so only entity statements are ever expandable, and only when they carry an
  * LEI we can re-anchor a live lookup on.

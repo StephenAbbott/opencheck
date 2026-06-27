@@ -1495,11 +1495,12 @@ async def expand(
     ),
     deepen_top: int = Query(3, ge=0, le=10),
 ) -> dict[str, Any]:
-    """SPIKE — progressive discovery: resolve one corporate node a hop deeper.
+    """Progressive discovery: resolve one corporate node a hop deeper.
 
-    Person nodes are terminal and the caller never expands them. This is a spike
-    surface (live-only, corporate hops only); it is not wired into the main
-    synthesis. See ``/expand-layer`` for the batch (whole-frontier) variant.
+    Live-only and corporate-hops only (person nodes are terminal and the caller
+    never expands them); not part of the main lookup synthesis. The owner-ward
+    traversal foundation that FullCheck's network exploration builds on. See
+    ``/expand-layer`` for the batch (whole-frontier) variant.
     """
     bods = await _expand_one_layer(lei, anchor, deepen_top=deepen_top)
     return {"lei": lei.strip().upper(), "anchor": anchor, "bods": bods}
@@ -1522,8 +1523,8 @@ class ExpandLayerRequest(BaseModel):
 
 @router.post("/expand-layer")
 async def expand_layer(req: ExpandLayerRequest) -> dict[str, Any]:
-    """SPIKE — progressive discovery (batch): take the whole current frontier and
-    go one layer deeper on every node at once, in the graph's existing direction.
+    """Progressive discovery (batch): take the whole current frontier and go one
+    layer deeper on every node at once, in the graph's existing direction.
 
     Each item is a ``(lei, anchor)`` pair (the caller selects the frontier).
     ``direction`` picks the hop: ``owners`` re-anchors a standard lookup (up the

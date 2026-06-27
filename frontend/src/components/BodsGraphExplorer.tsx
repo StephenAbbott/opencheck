@@ -6,15 +6,17 @@
  * graph (BODSGraph) alongside the accessible tabular tree (BodsTree). A view
  * toggle switches between split / graph-only / tree-only.
  *
- * SPIKE — progressive discovery ("Add next layer"): a single action takes the
- * current ownership *frontier* (LEI-bearing entity nodes nobody shown owns yet)
- * and resolves every one of them a hop deeper at once, live, via /expand-layer.
- * The fetched owners layers are merged into the local statement set (deduped by
- * statementId) and the graph re-derives. Expanding the frontier means the new
- * nodes render one rank further up — extending the graph in its existing
- * direction rather than spawning a floating cluster. People are terminal; nodes
- * without an LEI are skipped (the bulk-data case). Driven off the derived model,
- * so the Cytoscape event/overlay code is untouched.
+ * Progressive discovery ("Add next layer"): a single action takes the current
+ * *frontier* (LEI-bearing entity nodes at the growing edge of the graph) and
+ * resolves every one a hop deeper at once, live, via /expand-layer. The mounting
+ * view sets the direction — an ownership graph digs up (owners), a subsidiary
+ * tree digs down (children). Fetched layers are merged into the local statement
+ * set (deduped by statementId) and the graph re-derives, so new nodes render one
+ * rank further out in the graph's existing direction rather than spawning a
+ * floating cluster. People are terminal; nodes without an LEI are skipped (the
+ * bulk-data case). Driven off the derived model, so the Cytoscape event/overlay
+ * code is untouched. This is the owner/subsidiary traversal foundation that
+ * FullCheck's network exploration will build on.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -33,7 +35,7 @@ const VIEW_OPTIONS: { value: ViewMode; label: string }[] = [
   { value: "tree", label: "Tree" },
 ];
 
-// SPIKE guard: cap how many anchors we'll expand across a session so a runaway
+// Guard: cap how many anchors we'll expand across a session so a runaway
 // click-fest can't fan out the whole register (the server also caps each batch).
 const MAX_EXPANDED = 60;
 
@@ -50,7 +52,7 @@ export default function BodsGraphExplorer({
    *  subsidiary tree goes down (children). The mounting view sets this. */
   direction?: ExpandDirection;
 }) {
-  // SPIKE: owners revealed via progressive discovery, merged onto the base set.
+  // Layers revealed via progressive discovery, merged onto the base statement set.
   const [extra, setExtra] = useState<Stmt[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [expanding, setExpanding] = useState(false);
@@ -116,12 +118,16 @@ export default function BodsGraphExplorer({
     });
   }
 
-  // ── SPIKE: "Add next layer" over the whole ownership frontier ──────────────
+  // ── "Add next layer" over the whole frontier (direction set by the view) ───
   const frontier = useMemo(
     () => frontierAnchors(allStatements, model.edges, expandedIds, direction),
     [allStatements, model.edges, expandedIds, direction]
   );
   const noun = direction === "subsidiaries" ? "subsidiaries" : "owners/controllers";
+  const helperText =
+    direction === "subsidiaries"
+      ? "Resolves the next layer of subsidiaries for frontier companies which have an LEI. Chains which end with people can't be explored further"
+      : "Resolves the next layer of ownership for frontier companies which have an LEI. Chains which end with people can't be explored further";
 
   async function addNextLayer() {
     if (!frontier.length || expanding) return;
@@ -178,7 +184,7 @@ export default function BodsGraphExplorer({
         ))}
       </div>
 
-      {/* SPIKE: prominent "Add next layer" control */}
+      {/* Prominent "Add next layer" control */}
       <div className="mb-2 flex items-center gap-3 flex-wrap">
         <button
           type="button"
@@ -193,8 +199,7 @@ export default function BodsGraphExplorer({
               : `▸ Add next layer — ${frontier.length} ${frontierLabel}`}
         </button>
         <span className="text-[11px] text-oo-muted leading-[1.5] max-w-md">
-          Resolves the next layer of ownership for frontier companies which have
-          an LEI. Chains which end with people can't be explored further
+          {helperText}
         </span>
       </div>
       {expandNote && (

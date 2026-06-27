@@ -1,4 +1,4 @@
-"""SPIKE tests for progressive-discovery expansion (/expand + /expand-layer).
+"""Tests for progressive-discovery expansion (/expand + /expand-layer).
 
 Expansion re-anchors a standard lookup on a node's LEI and collapses every
 representation of that entity onto the existing graph node (`anchor`) so the new

@@ -119,9 +119,9 @@ export function exportUrl(
   return `${BASE_URL}/export?${params.toString()}`;
 }
 
-/** SPIKE — progressive discovery: resolve one corporate node a hop deeper.
- * Returns the new owners layer as BODS statements, with the looked-up entity's
- * identity remapped onto `anchor` so it stitches onto the existing graph node. */
+/** Progressive discovery: resolve one corporate node a hop deeper. Returns the
+ * new layer as BODS statements, with the looked-up entity's identity remapped
+ * onto `anchor` so it stitches onto the existing graph node. */
 export interface ExpandResponse {
   lei: string;
   anchor: string;
@@ -136,9 +136,9 @@ export async function expandNode(
   return getJson<ExpandResponse>(`/expand?${params.toString()}`);
 }
 
-/** SPIKE — batch ("add next layer"): go one hop deeper on the whole frontier at
- * once. Each item is a (lei, anchor) pair; the server fans out concurrently and
- * returns the merged, de-duplicated owners layer. */
+/** Batch ("add next layer"): go one hop deeper on the whole frontier at once.
+ * Each item is a (lei, anchor) pair; the server fans out concurrently and
+ * returns the merged, de-duplicated layer. */
 export interface ExpandLayerResponse {
   bods: Record<string, unknown>[];
   expanded: string[];
