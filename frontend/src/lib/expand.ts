@@ -7,9 +7,40 @@
  * LEI we can re-anchor a live lookup on.
  */
 
+import type { RiskSignal } from "./api";
+
 type Stmt = Record<string, unknown>;
 
 const LEI_RE = /^[0-9A-Z]{18}[0-9]{2}$/;
+
+/** Merge two risk-signal lists, dropping exact duplicates. */
+export function mergeSignals(a: RiskSignal[], b: RiskSignal[]): RiskSignal[] {
+  const seen = new Set<string>();
+  const out: RiskSignal[] = [];
+  for (const s of [...a, ...b]) {
+    const key = JSON.stringify(s);
+    if (!seen.has(key)) {
+      seen.add(key);
+      out.push(s);
+    }
+  }
+  return out;
+}
+
+/** Signals in `extra` that aren't already in `base` — the QuickCheck-vs-FullCheck
+ *  diff: what expanding the network surfaced beyond the subject's own screening. */
+export function signalsBeyond(base: RiskSignal[], extra: RiskSignal[]): RiskSignal[] {
+  const baseKeys = new Set(base.map((s) => JSON.stringify(s)));
+  const seen = new Set<string>();
+  const out: RiskSignal[] = [];
+  for (const s of extra) {
+    const key = JSON.stringify(s);
+    if (baseKeys.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    out.push(s);
+  }
+  return out;
+}
 
 /** A BODS entity statement is the only expandable node type (people terminate). */
 export function isEntityStatement(stmt: Stmt | undefined): boolean {

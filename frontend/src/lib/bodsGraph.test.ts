@@ -234,9 +234,9 @@ describe("searchNodes", () => {
 function diamondModel(): GraphModel {
   const ids = ["R", "A", "B", "C", "D"];
   return {
-    nodes: ids.map((id) => ({ id, label: id, recordType: "entity", icon: "", identifiers: [] })),
+    nodes: ids.map((id) => ({ id, label: id, recordType: "entity", icon: "", identifiers: [], sources: [] })),
     edges: ([["R", "A"], ["R", "B"], ["A", "C"], ["B", "C"], ["C", "D"]] as const).map(
-      ([source, target], i) => ({ id: `e${i}`, source, target, label: `owns ${target}`, category: "ownership" as const })
+      ([source, target], i) => ({ id: `e${i}`, source, target, label: `owns ${target}`, category: "ownership" as const, sources: [] })
     ),
   };
 }
@@ -278,10 +278,10 @@ describe("autoCollapse", () => {
   it("collapses nothing for a shallow graph", () => {
     const shallow: GraphModel = {
       nodes: [
-        { id: "X", label: "X", recordType: "entity", icon: "", identifiers: [] },
-        { id: "Y", label: "Y", recordType: "entity", icon: "", identifiers: [] },
+        { id: "X", label: "X", recordType: "entity", icon: "", identifiers: [], sources: [] },
+        { id: "Y", label: "Y", recordType: "entity", icon: "", identifiers: [], sources: [] },
       ],
-      edges: [{ id: "e", source: "X", target: "Y", label: "", category: "ownership" }],
+      edges: [{ id: "e", source: "X", target: "Y", label: "", category: "ownership", sources: [] }],
     };
     expect([...autoCollapse(shallow)]).toEqual([]);
   });

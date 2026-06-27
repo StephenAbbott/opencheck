@@ -141,9 +141,43 @@ export async function expandNode(
  * returns the merged, de-duplicated layer. */
 export interface ExpandLayerResponse {
   bods: Record<string, unknown>[];
+  /** Risk signals the per-hop sub-lookups screened for the expanded entities,
+   *  with statement-id evidence remapped onto each anchor. Drives FullCheck's
+   *  network-wide risk + the QuickCheck-vs-FullCheck comparison. */
+  risk_signals: RiskSignal[];
   expanded: string[];
   count: number;
   truncated: boolean;
+}
+
+export type NetworkExportFormat = "json" | "jsonl" | "xml" | "senzing" | "cypher" | "zip";
+
+/** Export a client-assembled FullCheck network (BODS) in the chosen format and
+ * trigger a browser download. Reuses the server's Senzing / XML / Cypher /
+ * licensing machinery via POST /export-network. */
+export async function downloadNetwork(
+  bods: Record<string, unknown>[],
+  format: NetworkExportFormat,
+  slug?: string
+): Promise<void> {
+  const r = await fetch(`${BASE_URL}/export-network`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ bods, format, slug }),
+  });
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText} — /export-network`);
+  const blob = await r.blob();
+  const cd = r.headers.get("content-disposition") ?? "";
+  const m = /filename="?([^"]+)"?/.exec(cd);
+  const filename = m ? m[1] : `opencheck-network.${format === "zip" ? "zip" : "txt"}`;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 export async function expandLayer(

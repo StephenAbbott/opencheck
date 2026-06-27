@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 66** — Senzing JSON as an export format
+**Latest: Phase 67** — FullCheck mode (enhanced due diligence)
 
-Project the assembled BODS v0.4 bundle into the [Senzing entity specification](https://www.senzing.com/docs/entity_specification/) so an OpenCheck ownership graph loads straight into Senzing for entity resolution.
+A QuickCheck/FullCheck mode toggle on the results page. QuickCheck stays the fast subject screening; FullCheck maps and screens the wider corporate network connected to the entity, all behind the toggle.
 
-1. **The mapping.** Each BODS entity → a `RECORD_TYPE: ORGANIZATION` record, each person → `PERSON`, both with one `REL_ANCHOR` keyed by their `statementId`; every disclosed relationship folds into a `REL_POINTER` on the interested party, with the role (`OWNER_OF`, `VOTING_RIGHTS_IN`, …) and share band derived from the BODS interest.
-2. **Why it lines up.** OpenCheck's `statementId == recordId` invariant makes the BODS id a stable Senzing `RECORD_ID`, so anchors and pointers resolve with no extra entity resolution.
-3. **Surfaces.** `GET /export?format=senzing` (newline-delimited), `senzing.jsonl` in the ZIP bundle, and the `opencheck_export_bods` MCP tool's `format='senzing'`.
+1. **Eager network build.** "Run FullCheck" expands a single unified ownership graph to a visible depth budget (a client-side loop over `/expand-layer` — no new backend), with progress + cancel.
+2. **Risk-first.** Each expansion hop already screens the entity, so the network's risk signals are surfaced and overlaid on the graph, with a QuickCheck-vs-FullCheck diff ("FullCheck surfaced N more signals across the network").
+3. **Export the network.** `POST /export-network` takes the assembled network away as BODS / Senzing JSON / Neo4j-Cypher, or a ZIP bundling all of them + manifest + licences.
 
-*Previous: [Phase 65 — Auto-generated changelog page](docs/status.md)*
+*Previous: [Phase 66 — Senzing JSON as an export format](docs/status.md)*
 
 → [Full development history](docs/status.md)
 

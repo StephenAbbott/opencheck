@@ -7,6 +7,36 @@ ships Python 3 as `python3` and has no bare `python` on the PATH (`python …`
 fails with `command not found`). The same applies to any one-off scripts and the
 test suite below.
 
+## After every commit: post the local run commands
+
+After making **any** git commit during a session, post (in the chat) the commands
+the user needs to bring the stack up locally on the branch just committed to, so
+they can test immediately. The workspace is mounted from the user's disk, so the
+commits already exist locally — the user **checks out** the branch, they don't
+fetch/pull from origin.
+
+Template (fill in `<branch>`):
+
+```
+cd ~/code/opencheck
+rm -f .git/*.lock 2>/dev/null            # clear any leftover sandbox lock files
+git checkout <branch>
+
+# Backend (one terminal):
+cd backend && uv sync && uv run uvicorn opencheck.app:app --reload --port 8000
+
+# Frontend (another terminal):
+cd frontend && npm install && npm run dev
+```
+
+Notes to add when relevant: uvicorn `--reload` picks up backend changes
+automatically, but the Vite dev server must be **restarted** to pick up new files
+or `vite.config.ts` / `.env.local` changes; `.env.local` already proxies the API
+to `http://127.0.0.1:8000`; `uv sync` / `npm install` are only needed when
+dependencies changed but are harmless to run otherwise.
+
+---
+
 ## Architecture overview
 
 - **Backend**: FastAPI, split into `backend/opencheck/routers/` (health, search, lookup, export).

@@ -56,9 +56,12 @@ def _layer(lei: str) -> list[dict]:
     ]
 
 
-def _patch_lookup(monkeypatch, builder=_layer):
+def _patch_lookup(monkeypatch, builder=_layer, signals_builder=None):
     async def _fake_lookup(*, lei, deepen_top=3):
-        return SimpleNamespace(lei=lei, bods=builder(lei), bods_issues=[])
+        sigs = signals_builder(lei) if signals_builder else []
+        return SimpleNamespace(
+            lei=lei, bods=builder(lei), bods_issues=[], risk_signals=sigs
+        )
 
     monkeypatch.setattr("opencheck.routers.lookup.lookup", _fake_lookup)
 
@@ -166,6 +169,27 @@ def test_expand_layer_subsidiaries_direction(client, monkeypatch):
     rel = next(s for s in bods if s["statementId"] == "rel-sub")
     assert rel["recordDetails"]["interestedParty"] == "LEAF-A"
     assert any(s["statementId"] == "child-1" for s in bods)
+
+
+def test_expand_layer_returns_remapped_risk_signals(client, monkeypatch):
+    """Phase 2: each hop's sub-lookup already screens the expanded entity, so
+    /expand-layer returns those risk signals with their statement-id evidence
+    remapped onto the anchor (so they land on the right node in the network)."""
+    def _sig(lei: str) -> list[dict]:
+        subj = _stable_id("gleif", "entity", lei)
+        return [{
+            "code": "SANCTIONED", "confidence": "high", "source_id": "opensanctions",
+            "hit_id": "X", "evidence": {"statement_id": subj},
+        }]
+
+    _patch_lookup(monkeypatch, signals_builder=_sig)
+    r = client.post("/expand-layer", json={"items": [{"lei": _LEI_A, "anchor": "ANCHOR-A"}]})
+    assert r.status_code == 200
+    sigs = r.json()["risk_signals"]
+    assert len(sigs) == 1
+    assert sigs[0]["code"] == "SANCTIONED"
+    # the expanded entity collapsed onto the anchor → the evidence id follows it.
+    assert sigs[0]["evidence"]["statement_id"] == "ANCHOR-A"
 
 
 def test_expand_rejects_bad_deepen(client):

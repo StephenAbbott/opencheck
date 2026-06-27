@@ -120,14 +120,14 @@ function modelToElements(model: GraphModel): ElementDefinition[] {
   const elements: ElementDefinition[] = [];
   for (const n of model.nodes) {
     elements.push({
-      data: { id: n.id, label: n.label, recordType: n.recordType, icon: n.icon, flagUrl: n.flagUrl },
+      data: { id: n.id, label: n.label, recordType: n.recordType, icon: n.icon, flagUrl: n.flagUrl, sources: n.sources },
     });
   }
   for (const e of model.edges) {
     elements.push({
       data: {
         id: e.id, source: e.source, target: e.target,
-        label: e.label, category: e.category, details: e.details,
+        label: e.label, category: e.category, details: e.details, sources: e.sources,
       },
     });
   }
@@ -180,6 +180,10 @@ const STYLESHEET: StylesheetStyle[] = [
   { selector: "node.search-match", style: { "border-color": "#1565c0", "border-width": 5 } as cytoscape.Css.Node },
   { selector: "node.search-dim", style: { opacity: 0.3 } as cytoscape.Css.Node },
   { selector: "edge.search-dim", style: { opacity: 0.12 } as cytoscape.Css.Edge },
+  // Source highlight / dim (FullCheck provenance legend toggles)
+  { selector: "node.src-match", style: { "border-color": "#1565c0", "border-width": 5 } as cytoscape.Css.Node },
+  { selector: "node.src-dim", style: { opacity: 0.2 } as cytoscape.Css.Node },
+  { selector: "edge.src-dim", style: { opacity: 0.07 } as cytoscape.Css.Edge },
   // ── Edges ────────────────────────────────────────────────────────────────
   {
     selector: "edge",
@@ -227,6 +231,7 @@ export default function BODSGraph({
   onCollapsedChange,
   selectedId = null,
   onSelect,
+  highlightSource = null,
 }: {
   model: GraphModel;
   signals?: RiskSignal[];
@@ -237,6 +242,9 @@ export default function BODSGraph({
   /** Selected node id (controlled — shared with the tree pane). */
   selectedId?: string | null;
   onSelect?: (id: string | null) => void;
+  /** FullCheck provenance: when set, nodes/edges asserted by this source are
+   *  highlighted and the rest dimmed (highlight, don't hide). */
+  highlightSource?: string | null;
 }) {
   const containerRef  = useRef<HTMLDivElement | null>(null);
   const cyRef         = useRef<Core | null>(null);
@@ -414,6 +422,28 @@ export default function BODSGraph({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, model, collapsed]);
+
+  // ── Provenance: highlight one source, dim the rest (FullCheck legend) ──────
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const active = !!highlightSource;
+    cy.batch(() => {
+      cy.nodes().forEach((n) => {
+        n.removeClass("src-match src-dim");
+        if (!active) return;
+        const srcs = (n.data("sources") as string[] | undefined) ?? [];
+        n.addClass(srcs.includes(highlightSource!) ? "src-match" : "src-dim");
+      });
+      cy.edges().forEach((e) => {
+        e.removeClass("src-dim");
+        if (!active) return;
+        const srcs = (e.data("sources") as string[] | undefined) ?? [];
+        if (!srcs.includes(highlightSource!)) e.addClass("src-dim");
+      });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightSource, model]);
 
   // ── Reflect the shared selection into the graph (highlight + centre) ───────
   useEffect(() => {
