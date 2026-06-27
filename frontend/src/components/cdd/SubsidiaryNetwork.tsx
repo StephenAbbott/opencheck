@@ -306,7 +306,7 @@ export function SubsidiaryNetwork({ lei, entityName }: { lei: string; entityName
           {isGraphMode && showGraph && bods && (
             <div className="mt-2">
               <Suspense fallback={<p className="text-[12px] text-oo-muted">Loading graph…</p>}>
-                <BodsGraphExplorer statements={bods} entityName={entityName} direction="subsidiaries" />
+                <BodsGraphExplorer statements={bods} entityName={entityName} direction="subsidiaries" fullCheck />
               </Suspense>
             </div>
           )}

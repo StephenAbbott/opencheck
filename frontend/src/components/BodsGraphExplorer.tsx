@@ -356,7 +356,9 @@ export default function BodsGraphExplorer({
         </div>
       )}
 
-      {/* Prominent "Add next layer" control */}
+      {/* Prominent "Add next layer" control — FullCheck only (QuickCheck graph
+          panels are view-only). */}
+      {fullCheck && (
       <div className="mb-2 flex items-center gap-3 flex-wrap">
         <button
           type="button"
@@ -374,6 +376,7 @@ export default function BodsGraphExplorer({
           {helperText}
         </span>
       </div>
+      )}
       {expandNote && (
         <p className="mb-2 text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 leading-[1.5]">
           {expandNote}
