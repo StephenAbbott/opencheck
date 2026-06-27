@@ -5,8 +5,11 @@ import {
   subjectLei,
   mergeStatements,
   frontierAnchors,
+  mergeSignals,
+  signalsBeyond,
   type EdgeLite,
 } from "./expand";
+import type { RiskSignal } from "./api";
 
 type Stmt = Record<string, unknown>;
 
@@ -76,6 +79,21 @@ describe("frontierAnchors", () => {
     const roleEdges: EdgeLite[] = [{ source: "P", target: "A", category: "role" }];
     const f = frontierAnchors([A, person], roleEdges, new Set());
     expect(f.map((x) => x.anchor)).toEqual(["A"]);
+  });
+});
+
+describe("mergeSignals / signalsBeyond", () => {
+  const sanctioned = { code: "SANCTIONED", source_id: "os", hit_id: "1" } as unknown as RiskSignal;
+  const pep = { code: "PEP", source_id: "ep", hit_id: "2" } as unknown as RiskSignal;
+  const pepDup = { code: "PEP", source_id: "ep", hit_id: "2" } as unknown as RiskSignal;
+
+  it("mergeSignals drops exact duplicates", () => {
+    expect(mergeSignals([sanctioned], [pep, pepDup])).toHaveLength(2);
+  });
+
+  it("signalsBeyond returns only extras not already in the base", () => {
+    // base already has `sanctioned`; only PEP is new.
+    expect(signalsBeyond([sanctioned], [sanctioned, pep]).map((s) => s.code)).toEqual(["PEP"]);
   });
 });
 

@@ -1432,16 +1432,15 @@ def _entity_idents(stmt: dict[str, Any]) -> set[str]:
     return {(i.get("id") or "").strip().upper() for i in ids if (i.get("id") or "").strip()}
 
 
-def _collapse_onto_anchor(bods: list[dict[str, Any]], lei: str, anchor: str) -> list[dict[str, Any]]:
-    """Collapse **every** representation of the LEI-identified entity onto ``anchor``.
+def _anchor_replacements(bods: list[dict[str, Any]], lei: str, anchor: str) -> dict[str, str]:
+    """The statementId → ``anchor`` rewrites that collapse every representation of
+    the LEI-identified entity onto the existing graph node.
 
-    The fix for the spike's cross-source finding: a national register keys its
-    entity statement on the company number, not the LEI, so matching on the LEI
-    alone left a floating duplicate. We seed the identifier set from every
-    statement that asserts the LEI (GLEIF ties the LEI to the company number),
-    then remap any entity statement sharing one of those identifier values onto
-    the anchor. A blunt id rewrite over the serialised bundle is safe — opencheck
-    statement ids are unique 24-hex tokens with no collision risk.
+    Fix for the spike's cross-source finding: a national register keys its entity
+    statement on the company number, not the LEI, so matching on the LEI alone
+    left a floating duplicate. We seed the identifier set from every statement
+    that asserts the LEI (GLEIF ties the LEI to the company number), then mark any
+    entity statement sharing one of those identifier values for rewrite.
     """
     from ..bods.mapper import _stable_id
 
@@ -1456,30 +1455,52 @@ def _collapse_onto_anchor(bods: list[dict[str, Any]], lei: str, anchor: str) -> 
         if s.get("recordType") == "entity" and (_entity_idents(s) & subj_idents):
             subject_ids.add(s["statementId"])
     subject_ids.discard(anchor)
+    return {sid: anchor for sid in subject_ids}
 
-    raw = json.dumps(bods)
-    for sid in subject_ids:
-        raw = raw.replace(sid, anchor)
+
+def _apply_id_remap(items: list[dict[str, Any]], repl: dict[str, str]) -> list[dict[str, Any]]:
+    """Rewrite statement ids over a serialised list (BODS *or* risk signals). A
+    blunt string replace is safe — opencheck statement ids are unique 24-hex
+    tokens with no collision risk — and it catches every reference field uniformly
+    (including the ``evidence.statement_id`` fields risk signals carry)."""
+    if not repl:
+        return items
+    raw = json.dumps(items)
+    for old, new in repl.items():
+        raw = raw.replace(old, new)
     return json.loads(raw)
 
 
-async def _expand_one_layer(lei: str, anchor: str, *, deepen_top: int = 3) -> list[dict[str, Any]]:
+def _collapse_onto_anchor(bods: list[dict[str, Any]], lei: str, anchor: str) -> list[dict[str, Any]]:
+    """Collapse every representation of the LEI-identified entity onto ``anchor``."""
+    return _apply_id_remap(bods, _anchor_replacements(bods, lei, anchor))
+
+
+async def _expand_one_layer(
+    lei: str, anchor: str, *, deepen_top: int = 3
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Owner-ward hop: re-anchor a standard ``lookup`` (the entity's owners) and
-    stitch it onto ``anchor`` (reusing the replay cache)."""
+    stitch it onto ``anchor`` (reusing the replay cache). Returns the new layer's
+    BODS **and** the risk signals the sub-lookup already screened for the expanded
+    entity — both with ids remapped onto the anchor — so FullCheck accumulates
+    network-wide risk as it expands."""
     norm = lei.strip().upper()
     resp = await lookup(lei=norm, deepen_top=deepen_top)  # raises 400/404
-    return _collapse_onto_anchor(resp.bods, norm, anchor)
+    repl = _anchor_replacements(resp.bods, norm, anchor)
+    return _apply_id_remap(resp.bods, repl), _apply_id_remap(resp.risk_signals, repl)
 
 
-async def _subsidiaries_one_layer(lei: str, anchor: str) -> list[dict[str, Any]]:
+async def _subsidiaries_one_layer(
+    lei: str, anchor: str
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Subsidiary-ward hop: fetch the entity's GLEIF Level-2 children and stitch
-    them under ``anchor`` (so a subsidiary tree extends downward, not upward)."""
+    them under ``anchor``. GLEIF L2 children aren't risk-screened, so no signals."""
     from ..subsidiaries import assemble_subsidiaries
 
     norm = lei.strip().upper()
     data = await assemble_subsidiaries(norm, include_bods=True)
     bods = (data or {}).get("bods") or []
-    return _collapse_onto_anchor(bods, norm, anchor)
+    return _collapse_onto_anchor(bods, norm, anchor), []
 
 
 @router.get("/expand")
@@ -1502,7 +1523,7 @@ async def expand(
     traversal foundation that FullCheck's network exploration builds on. See
     ``/expand-layer`` for the batch (whole-frontier) variant.
     """
-    bods = await _expand_one_layer(lei, anchor, deepen_top=deepen_top)
+    bods, _signals = await _expand_one_layer(lei, anchor, deepen_top=deepen_top)
     return {"lei": lei.strip().upper(), "anchor": anchor, "bods": bods}
 
 
@@ -1537,26 +1558,34 @@ async def expand_layer(req: ExpandLayerRequest) -> dict[str, Any]:
     sem = asyncio.Semaphore(5)
     hop = _subsidiaries_one_layer if req.direction == "subsidiaries" else _expand_one_layer
 
-    async def _one(item: _ExpandItem) -> list[dict[str, Any]]:
+    async def _one(item: _ExpandItem) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         async with sem:
             try:
                 return await hop(item.lei, item.anchor)
             except Exception:  # noqa: BLE001 — a bad node must not sink the batch
-                return []
+                return [], []
 
     chunks = await asyncio.gather(*[_one(i) for i in items])
 
     seen: set[str] = set()
     merged: list[dict[str, Any]] = []
-    for chunk in chunks:
-        for s in chunk:
+    seen_sig: set[str] = set()
+    merged_sig: list[dict[str, Any]] = []
+    for bods_chunk, sig_chunk in chunks:
+        for s in bods_chunk:
             sid = s.get("statementId")
             if sid and sid not in seen:
                 seen.add(sid)
                 merged.append(s)
+        for sig in sig_chunk:
+            key = json.dumps(sig, sort_keys=True, default=str)
+            if key not in seen_sig:
+                seen_sig.add(key)
+                merged_sig.append(sig)
 
     return {
         "bods": merged,
+        "risk_signals": merged_sig,
         "expanded": [i.anchor for i in items],
         "count": len(items),
         "truncated": len(req.items) > _MAX_LAYER_ITEMS,

@@ -24,7 +24,14 @@ import BODSGraph from "./BODSGraph";
 import BodsTree from "./BodsTree";
 import { bodsToGraph, autoCollapse, buildTree, type GraphModel } from "../lib/bodsGraph";
 import { expandLayer, type RiskSignal } from "../lib/api";
-import { frontierAnchors, mergeStatements, type ExpandDirection } from "../lib/expand";
+import {
+  frontierAnchors,
+  mergeStatements,
+  mergeSignals,
+  signalsBeyond,
+  type ExpandDirection,
+} from "../lib/expand";
+import { RiskChip } from "./risk/RiskChip";
 
 type Stmt = Record<string, unknown>;
 type ViewMode = "split" | "graph" | "tree";
@@ -65,6 +72,14 @@ export default function BodsGraphExplorer({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [expanding, setExpanding] = useState(false);
   const [expandNote, setExpandNote] = useState<string | null>(null);
+  // Risk signals discovered while expanding (each hop's sub-lookup screens the
+  // expanded entity) — the network-wide risk beyond the subject's own screening.
+  const [discoveredSignals, setDiscoveredSignals] = useState<RiskSignal[]>([]);
+  // FullCheck eager-run controls (driven by runFullCheck below).
+  const [depthBudget, setDepthBudget] = useState(2);
+  const [running, setRunning] = useState(false);
+  const [runProgress, setRunProgress] = useState<string | null>(null);
+  const cancelRef = useRef(false);
 
   const baseModel: GraphModel = useMemo(
     () => bodsToGraph(statements as Stmt[]),
@@ -90,6 +105,8 @@ export default function BodsGraphExplorer({
       setExpandedIds(new Set());
       setSelectedId(null);
       setExpandNote(null);
+      setDiscoveredSignals([]);
+      setRunProgress(null);
       setCollapsed(autoCollapse(baseModel));
       prevStatementsRef.current = statements;
     }
@@ -137,6 +154,17 @@ export default function BodsGraphExplorer({
       ? "Resolves the next layer of subsidiaries for frontier companies which have an LEI. Chains which end with people can't be explored further"
       : "Resolves the next layer of ownership for frontier companies which have an LEI. Chains which end with people can't be explored further";
 
+  // Subject signals (QuickCheck, from the prop) + everything discovered while
+  // expanding = the network-wide risk; `additionalSignals` is the diff.
+  const networkSignals = useMemo(
+    () => mergeSignals(signals, discoveredSignals),
+    [signals, discoveredSignals]
+  );
+  const additionalSignals = useMemo(
+    () => signalsBeyond(signals, discoveredSignals),
+    [signals, discoveredSignals]
+  );
+
   async function addNextLayer() {
     if (!frontier.length || expanding) return;
     if (expandedIds.size >= MAX_EXPANDED) {
@@ -148,6 +176,7 @@ export default function BodsGraphExplorer({
     try {
       const res = await expandLayer(frontier, direction);
       setExtra((prev) => mergeStatements(prev, res.bods as Stmt[]));
+      setDiscoveredSignals((prev) => mergeSignals(prev, res.risk_signals));
       setExpandedIds((prev) => {
         const next = new Set(prev);
         frontier.forEach((f) => next.add(f.anchor));
@@ -166,11 +195,6 @@ export default function BodsGraphExplorer({
   }
 
   // ── FullCheck: eagerly expand the network to a depth budget ────────────────
-  const [depthBudget, setDepthBudget] = useState(2);
-  const [running, setRunning] = useState(false);
-  const [runProgress, setRunProgress] = useState<string | null>(null);
-  const cancelRef = useRef(false);
-
   async function runFullCheck() {
     if (running) return;
     setRunning(true);
@@ -204,6 +228,7 @@ export default function BodsGraphExplorer({
         // Only the anchors the server actually processed (it caps each batch).
         res.expanded.forEach((a) => expanded.add(a));
         setExtra((prev) => mergeStatements(prev, res.bods as Stmt[]));
+        setDiscoveredSignals((prev) => mergeSignals(prev, res.risk_signals));
         setExpandedIds(new Set(expanded));
       }
       if (cancelRef.current) setRunProgress("FullCheck cancelled.");
@@ -282,6 +307,34 @@ export default function BodsGraphExplorer({
         </div>
       )}
 
+      {/* FullCheck: risk-first — network risk + QuickCheck-vs-FullCheck diff */}
+      {fullCheck && (
+        <div className="mb-2 rounded-oo border border-oo-rule bg-white px-3 py-2">
+          <div className="text-[11px] font-semibold uppercase tracking-oo-eyebrow text-oo-blue mb-1">
+            Network risk
+          </div>
+          <p className="text-[13px] text-oo-ink leading-[1.5]">
+            QuickCheck flagged <strong>{signals.length}</strong> signal
+            {signals.length === 1 ? "" : "s"} on the subject.
+            {discoveredSignals.length > 0 ? (
+              <>
+                {" "}FullCheck surfaced <strong>{additionalSignals.length}</strong> more
+                across the wider network.
+              </>
+            ) : (
+              <> Run FullCheck to screen the wider network for risk.</>
+            )}
+          </p>
+          {additionalSignals.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {additionalSignals.map((s, i) => (
+                <RiskChip key={i} signal={s} compact />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Prominent "Add next layer" control */}
       <div className="mb-2 flex items-center gap-3 flex-wrap">
         <button
@@ -311,7 +364,7 @@ export default function BodsGraphExplorer({
           <div className="flex-1 min-w-0">
             <BODSGraph
               model={model}
-              signals={signals}
+              signals={networkSignals}
               entityName={entityName}
               collapsed={collapsed}
               onCollapsedChange={setCollapsed}

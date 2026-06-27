@@ -141,6 +141,10 @@ export async function expandNode(
  * returns the merged, de-duplicated layer. */
 export interface ExpandLayerResponse {
   bods: Record<string, unknown>[];
+  /** Risk signals the per-hop sub-lookups screened for the expanded entities,
+   *  with statement-id evidence remapped onto each anchor. Drives FullCheck's
+   *  network-wide risk + the QuickCheck-vs-FullCheck comparison. */
+  risk_signals: RiskSignal[];
   expanded: string[];
   count: number;
   truncated: boolean;
