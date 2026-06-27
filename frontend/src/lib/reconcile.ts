@@ -35,15 +35,35 @@ const sourceOf = (s: Stmt): string =>
 
 /** Normalised identifier keys for an entity statement. LEIs are global (scheme
  *  ignored); everything else is scoped by its scheme so company numbers from
- *  different registers never collide. */
+ *  different registers never collide.
+ *
+ *  Sources disagree on the *scheme label* for the same national register —
+ *  Novo Nordisk's Danish company number 24256790 arrives as scheme "" from
+ *  GLEIF, DK-COA from OpenCorporates and DK-CVR from CVR — so a bare
+ *  registration number ALSO keys by jurisdiction+value. That extra key is
+ *  scoped to national-register schemes (empty, or "<JUR>-…") so QCC / S&P /
+ *  BIC / OpenCorporates ids never cross-merge, and composite values like
+ *  "dk/24256790" are skipped. */
 function identKeys(s: Stmt): string[] {
-  const ids = (rd(s).identifiers ?? []) as Stmt[];
+  const d = rd(s);
+  const ids = (d.identifiers ?? []) as Stmt[];
+  const jur = String(((d.jurisdiction as Stmt | undefined)?.code as string | undefined) ?? "")
+    .trim()
+    .toUpperCase()
+    .split("-")[0];
   const keys: string[] = [];
   for (const i of ids) {
     const val = String(i.id ?? "").trim().toUpperCase();
     if (!val) continue;
-    if (LEI_RE.test(val)) keys.push(`LEI:${val}`);
-    else keys.push(`${String(i.scheme ?? "?").trim().toUpperCase()}:${val}`);
+    if (LEI_RE.test(val)) {
+      keys.push(`LEI:${val}`);
+      continue;
+    }
+    const scheme = String(i.scheme ?? "?").trim().toUpperCase();
+    keys.push(`${scheme}:${val}`);
+    if (jur && (scheme === "" || scheme.startsWith(`${jur}-`)) && !val.includes("/")) {
+      keys.push(`JUR:${jur}:${val}`);
+    }
   }
   return keys;
 }

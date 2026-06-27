@@ -122,6 +122,58 @@ describe("reconcileBods", () => {
     expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(2);
   });
 
+  it("merges a national reg. number tagged with different schemes by jurisdiction", () => {
+    // Real Novo Nordisk case: DK company no. 24256790 arrives as scheme ""
+    // (GLEIF), DK-COA (OpenCorporates) and DK-CVR (CVR) — no shared LEI on the
+    // CVR copy, so only a jurisdiction+value key collapses them.
+    const { statements } = reconcileBods([
+      {
+        statementId: "gleif",
+        recordType: "entity",
+        recordDetails: {
+          name: "NOVO NORDISK A/S",
+          jurisdiction: { code: "DK" },
+          identifiers: [
+            { id: "549300DAQ1CVT6CXN342", scheme: "XI-LEI" },
+            { id: "24256790", scheme: "" },
+          ],
+        },
+        source: { description: "GLEIF" },
+      },
+      {
+        statementId: "cvr",
+        recordType: "entity",
+        recordDetails: {
+          name: "NOVO NORDISK A/S",
+          jurisdiction: { code: "DK" },
+          identifiers: [{ id: "24256790", scheme: "DK-CVR" }],
+        },
+        source: { description: "CVR" },
+      },
+    ]);
+    const entities = statements.filter((s) => s.recordType === "entity");
+    expect(entities).toHaveLength(1);
+    expect(entities[0]._sources).toEqual(expect.arrayContaining(["GLEIF", "CVR"]));
+  });
+
+  it("does not cross-merge same-value ids in different jurisdictions", () => {
+    const { statements } = reconcileBods([
+      {
+        statementId: "dk",
+        recordType: "entity",
+        recordDetails: { name: "DK Co", jurisdiction: { code: "DK" }, identifiers: [{ id: "100", scheme: "DK-CVR" }] },
+        source: { description: "S1" },
+      },
+      {
+        statementId: "no",
+        recordType: "entity",
+        recordDetails: { name: "NO Co", jurisdiction: { code: "NO" }, identifiers: [{ id: "100", scheme: "NO-BRC" }] },
+        source: { description: "S2" },
+      },
+    ]);
+    expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(2);
+  });
+
   it("leaves persons and identifier-less entities untouched", () => {
     const { statements, remap } = reconcileBods([
       { statementId: "p1", recordType: "person", recordDetails: { name: "Jane" }, source: { description: "S1" } },
