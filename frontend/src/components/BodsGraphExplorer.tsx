@@ -23,7 +23,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import BODSGraph from "./BODSGraph";
 import BodsTree from "./BodsTree";
 import { bodsToGraph, autoCollapse, buildTree, type GraphModel } from "../lib/bodsGraph";
-import { expandLayer, type RiskSignal } from "../lib/api";
+import {
+  expandLayer,
+  downloadNetwork,
+  type RiskSignal,
+  type NetworkExportFormat,
+} from "../lib/api";
 import {
   frontierAnchors,
   mergeStatements,
@@ -80,6 +85,9 @@ export default function BodsGraphExplorer({
   const [running, setRunning] = useState(false);
   const [runProgress, setRunProgress] = useState<string | null>(null);
   const cancelRef = useRef(false);
+  // FullCheck network export.
+  const [exportFormat, setExportFormat] = useState<NetworkExportFormat>("zip");
+  const [exporting, setExporting] = useState(false);
 
   const baseModel: GraphModel = useMemo(
     () => bodsToGraph(statements as Stmt[]),
@@ -241,6 +249,19 @@ export default function BodsGraphExplorer({
     }
   }
 
+  async function exportNetwork() {
+    if (exporting) return;
+    setExporting(true);
+    setExpandNote(null);
+    try {
+      await downloadNetwork(allStatements, exportFormat, entityName ?? undefined);
+    } catch (e) {
+      setExpandNote(`Export failed: ${(e as Error).message}`);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   if (model.nodes.length === 0) {
     return <p className="text-xs text-oo-muted italic">No BODS statements to visualise.</p>;
   }
@@ -385,6 +406,32 @@ export default function BodsGraphExplorer({
           </div>
         )}
       </div>
+
+      {fullCheck && (
+        <div className="mt-3 flex items-center gap-2 flex-wrap border-t border-oo-rule pt-3">
+          <span className="text-[12px] text-oo-muted">Export network</span>
+          <select
+            value={exportFormat}
+            onChange={(e) => setExportFormat(e.target.value as NetworkExportFormat)}
+            className="border border-oo-rule rounded px-2 py-1 text-[12px] bg-white"
+          >
+            <option value="zip">ZIP (all formats + licences)</option>
+            <option value="json">BODS · JSON</option>
+            <option value="jsonl">BODS · JSONL</option>
+            <option value="xml">BODS · XML</option>
+            <option value="senzing">Senzing JSON</option>
+            <option value="cypher">Neo4j · Cypher</option>
+          </select>
+          <button
+            type="button"
+            onClick={exportNetwork}
+            disabled={exporting}
+            className="bg-oo-blue text-white text-[12px] font-medium rounded px-3 py-1 hover:bg-oo-burst transition-colors disabled:opacity-50"
+          >
+            {exporting ? "Exporting…" : "Download"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

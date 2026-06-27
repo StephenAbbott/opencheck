@@ -8,7 +8,7 @@ import json
 import re
 import zipfile
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from bods_xml.canonical import convert as _bods_xml_convert
 from bods_xml.canonical import to_string as _bods_xml_str
@@ -17,7 +17,8 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from .. import __version__
-from ..bods import map_to_senzing, to_senzing_jsonl
+from ..bods import map_to_senzing, to_cypher, to_senzing_jsonl, validate_shape
+from ..bods.senzing import _desc_to_source_id
 from ..licensing import assess as assess_licensing
 from ..licensing import full_matrix
 from ..reporting import PdfUnavailable, build_report_pdf
@@ -175,6 +176,113 @@ async def export(
             ),
         },
     )
+
+
+class ExportNetworkRequest(BaseModel):
+    """Body for ``POST /export-network`` — export a client-assembled FullCheck
+    network (a BODS bundle) without re-running the lookup."""
+
+    bods: list[dict[str, Any]]
+    format: Literal["json", "jsonl", "xml", "senzing", "cypher", "zip"] = "zip"
+    slug: str | None = None
+
+
+@router.post("/export-network")
+async def export_network(req: ExportNetworkRequest) -> Response:
+    """Format a FullCheck network (posted BODS) for download.
+
+    A FullCheck network is assembled in the browser by progressive expansion, so
+    the server can't reproduce it from a lookup — the client posts the BODS bundle
+    and this returns it in the requested format, reusing the same Senzing / XML /
+    Cypher / licensing machinery as ``/export``.
+    """
+    bods = req.bods or []
+    slug = _filename_slug(req.slug or "fullcheck-network")
+    stamp = datetime.now(UTC).strftime("%Y%m%d")
+
+    def _file(body: bytes, media: str, ext: str) -> Response:
+        return Response(
+            content=body,
+            media_type=media,
+            headers={
+                "Content-Disposition": f'attachment; filename="opencheck-{slug}-{stamp}.{ext}"'
+            },
+        )
+
+    if req.format == "json":
+        return _file(json.dumps(bods, indent=2).encode("utf-8"), "application/json", "json")
+    if req.format == "jsonl":
+        body = ("\n".join(json.dumps(s) for s in bods) + "\n").encode("utf-8")
+        return _file(body, "application/x-ndjson", "jsonl")
+    if req.format == "xml":
+        body = _bods_xml_str(_bods_xml_convert(bods)).encode("utf-8")
+        return _file(body, "application/xml", "xml")
+    if req.format == "senzing":
+        return _file(to_senzing_jsonl(bods).encode("utf-8"), "application/x-ndjson", "senzing.jsonl")
+    if req.format == "cypher":
+        return _file(to_cypher(bods).encode("utf-8"), "text/plain; charset=utf-8", "cypher")
+    # zip
+    body = _build_network_zip(bods, slug=slug, stamp=stamp)
+    return Response(
+        content=body,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="opencheck-{slug}-{stamp}.zip"'},
+    )
+
+
+def _network_source_ids(bods: list[dict[str, Any]]) -> list[str]:
+    """Registered source ids that contributed to a network, from BODS source blocks."""
+    rev = _desc_to_source_id()
+    ids: set[str] = set()
+    for s in bods:
+        desc = ((s.get("source") or {}).get("description") or "").strip()
+        sid = rev.get(desc)
+        if sid:
+            ids.add(sid)
+    return sorted(ids)
+
+
+def _build_network_zip(bods: list[dict[str, Any]], *, slug: str, stamp: str) -> bytes:
+    """Bundle a FullCheck network: BODS (json/jsonl/xml) + Senzing + Cypher +
+    manifest + LICENSES.md (most-restrictive licence across contributing sources)."""
+    contributing_ids = _network_source_ids(bods)
+    licensing = assess_licensing(contributing_ids)
+    counts = {"entity": 0, "person": 0, "relationship": 0}
+    for s in bods:
+        rt = s.get("recordType")
+        if rt in counts:
+            counts[rt] += 1
+
+    manifest = {
+        "opencheck_version": __version__,
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "kind": "fullcheck-network",
+        "bods_statement_count": len(bods),
+        "node_counts": counts,
+        "contributing_source_ids": contributing_ids,
+        "senzing_record_count": len(map_to_senzing(bods)),
+        "bods_validation_issues": validate_shape(bods),
+        "licensing": licensing.model_dump(),
+    }
+    licenses_md = _build_licenses_md(
+        contributing_ids=contributing_ids,
+        license_notices=[],
+        licensing=licensing,
+        query=slug,
+        kind=SearchKind.ENTITY,
+    )
+
+    buf = io.BytesIO()
+    base = f"opencheck-{slug}-{stamp}"
+    with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(f"{base}/bods.json", json.dumps(bods, indent=2))
+        zf.writestr(f"{base}/bods.jsonl", "\n".join(json.dumps(s) for s in bods) + "\n")
+        zf.writestr(f"{base}/bods.xml", _bods_xml_str(_bods_xml_convert(bods)))
+        zf.writestr(f"{base}/senzing.jsonl", to_senzing_jsonl(bods))
+        zf.writestr(f"{base}/network.cypher", to_cypher(bods))
+        zf.writestr(f"{base}/manifest.json", json.dumps(manifest, indent=2, default=str))
+        zf.writestr(f"{base}/LICENSES.md", licenses_md)
+    return buf.getvalue()
 
 
 class PdfExportRequest(BaseModel):
