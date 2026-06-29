@@ -70,6 +70,12 @@ dev = [
     # (Lang / MarkInfo / StructTreeRoot). WeasyPrint itself is a runtime dep.
     "pikepdf>=9",
 ]
+# Entity-resolution spike (backend/spikes/splink_er/). NOT a runtime dependency —
+# Splink is probabilistic record linkage used only by the offline spike scripts.
+# Install with: uv sync --group spike
+spike = [
+    "splink>=4",
+]
 
 [build-system]
 requires = ["hatchling"]

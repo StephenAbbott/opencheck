@@ -1,0 +1,7 @@
+# Throwaway spike artifacts — never commit (may carry source data we don't want
+# in the repo, and they're regenerable).
+corpus/
+*.parquet
+*.duckdb
+model.json
+charts/
