@@ -16,6 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import pycountry
 import splink.comparison_library as cl
 from splink import DuckDBAPI, Linker, SettingsCreator, block_on
 
@@ -30,6 +31,22 @@ CHARTS = HERE / "charts"
 _NULLABLE = ["name_norm", "jurisdiction", "inc_date", "address_norm", "lei", "nat_reg"]
 
 
+def _strip_country(addr: str | None, jur: str | None) -> str | None:
+    """Drop the country code / country name from an address (iteration-2
+    independence fix: address encodes the country, which correlated with
+    `jurisdiction` at phi=+0.26 and over-weighted that agreement)."""
+    if not isinstance(addr, str) or not addr:
+        return None
+    drop = set()
+    if isinstance(jur, str) and jur:
+        drop.add(jur.lower())
+        c = pycountry.countries.get(alpha_2=jur)
+        if c:
+            drop |= {w.lower() for w in c.name.replace(",", " ").split()}
+    toks = [t for t in addr.split() if t.strip(",.").lower() not in drop]
+    return " ".join(toks) or None
+
+
 def load_corpus() -> pd.DataFrame:
     # pandas tolerates the quoted-newline fields that trip DuckDB's CSV sniffer.
     df = pd.read_csv(CSV, dtype=str, keep_default_na=False)
@@ -37,6 +54,9 @@ def load_corpus() -> pd.DataFrame:
     df = df[df["name_norm"].str.len() > 0]          # name is the anchor feature
     for c in _NULLABLE:                              # blank -> NULL for Splink
         df[c] = df[c].replace("", None)
+    df["address_local"] = [
+        _strip_country(a, j) for a, j in zip(df["address_norm"], df["jurisdiction"])
+    ]
     return df.reset_index(drop=True)
 
 
@@ -55,7 +75,7 @@ def build_settings() -> SettingsCreator:
             # inc_date is an ISO date string; DOB comparison gives exact / close
             # / far levels (the logic is identical for an incorporation date).
             cl.DateOfBirthComparison("inc_date", input_is_string=True),
-            cl.JaroWinklerAtThresholds("address_norm", [0.9, 0.7]),
+            cl.JaroWinklerAtThresholds("address_local", [0.9, 0.7]),
         ],
         retain_intermediate_calculation_columns=True,
     )
@@ -77,19 +97,14 @@ def main() -> int:
     )
     # 2) u (coincidence) from random sampling — no labels needed.
     linker.training.estimate_u_using_random_sampling(max_pairs=1e6)
-    # 3) m (data quality) via unsupervised EM, blocked two ways for coverage.
-    linker.training.estimate_parameters_using_expectation_maximisation(block_on("name_norm"))
-    linker.training.estimate_parameters_using_expectation_maximisation(block_on("jurisdiction"))
+    # 3) m (data quality) — iteration 2: estimate directly from the reliable LEI
+    #    label as the PRIMARY estimator. EM (iteration 1) left several comparison
+    #    levels untrained on a small corpus, compressing the probabilities;
+    #    label-based m observes every true-match pair grouped by LEI.
+    linker.training.estimate_m_from_label_column("lei")
 
     linker.misc.save_model_to_json(str(MODEL_OUT), overwrite=True)
     print(f"saved model -> {MODEL_OUT}")
-
-    # m cross-check: estimate m straight from the LEI label and compare to EM.
-    try:
-        linker.training.estimate_m_from_label_column("lei")
-        print("m-from-label estimated (compare with EM via parameter chart)")
-    except Exception as e:  # noqa: BLE001
-        print(f"(m-from-label skipped: {type(e).__name__}: {e})")
 
     # Charts (HTML; no extra renderer needed).
     try:
