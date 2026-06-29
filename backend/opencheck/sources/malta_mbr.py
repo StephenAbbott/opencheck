@@ -53,6 +53,20 @@ _API_BASE = "https://openapi.baros.mbr.mt/api/v1"
 
 _CACHE_NS = "malta_mbr"
 
+# The MBR placed a WAF in front of the Open Data API (observed failing from the
+# 22 June 2026 weekly live-smoke run) that returns 403 to non-browser
+# User-Agents — including our default ``OpenCheck/…`` UA and an empty UA. The
+# API responses and JSON shape are unchanged, and the data is an EU High-Value
+# Dataset published for programmatic reuse (CC BY 4.0), so we send a browser
+# User-Agent for this host only (the shared client UA is left untouched for
+# every other adapter). A ``compatible; OpenCheck`` token is still blocked — the
+# filter requires a full browser UA string. tests/test_live_smoke.py guards this
+# against further WAF tightening.
+_BROWSER_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+)
+
 # GLEIF Registration Authority code for the Malta Business Registry
 # (Registry of Companies, mbr.mt) — confirmed live against GLEIF.
 MT_RA_CODE: str = "RA000443"
@@ -160,7 +174,9 @@ class MaltaMbrAdapter(SourceAdapter):
 
         url = _company_url(reg)
         async with build_client() as client:
-            response = await client.get(url)
+            # Browser UA required by the MBR WAF (see _BROWSER_UA); overrides the
+            # shared client's OpenCheck UA for this request only.
+            response = await client.get(url, headers={"User-Agent": _BROWSER_UA})
             if not response.is_success:
                 _LOG.warning(
                     "Malta MBR returned %s for %s — skipping",

@@ -181,6 +181,10 @@ async def test_fetch_builds_bundle(monkeypatch, tmp_path) -> None:
     # the request used the canonical, space-encoded registration number
     called_url = mock_client.get.call_args.args[0]
     assert called_url.endswith("/companies/C%20113927")
+    # the request overrides the shared client UA with a browser UA — the MBR WAF
+    # 403s the default OpenCheck UA (regression guard for the June 2026 fix).
+    sent_ua = (mock_client.get.call_args.kwargs.get("headers") or {}).get("User-Agent", "")
+    assert sent_ua.startswith("Mozilla/5.0") and "OpenCheck" not in sent_ua
 
 
 @pytest.mark.asyncio
