@@ -20,7 +20,7 @@ from ..sources.base import LookupDeriver, raw_redaction_notice
 from .. import bods_data
 from ..cross_check import assess_cross_source_names
 from ..icij_check import assess_icij_names
-from ..reconcile import reconcile
+from ..reconcile import possibly_same_entities, reconcile
 from ..risk import RiskSignal, assess_bundle, assess_hits
 from ..sources import REGISTRY, SearchKind, SourceHit, SourceInfo
 from ..sources.schemas import SourceSchemaError
@@ -81,6 +81,9 @@ class ReportResponse(BaseModel):
     bods: list[dict[str, Any]]
     bods_issues: list[str]
     license_notices: list[dict[str, str]]
+    #: Name-only "likely same" entity candidates (same name + jurisdiction, no
+    #: shared identifier) — human-review suggestions, never auto-merges.
+    possibly_same_entities: list[dict[str, Any]] = []
 
 
 class LookupResponse(ReportResponse):
@@ -221,6 +224,7 @@ async def _build_report(
         bods=bods_all,
         bods_issues=bods_issues,
         license_notices=license_notices,
+        possibly_same_entities=[p.to_dict() for p in possibly_same_entities(bods_all)],
     )
 
 
@@ -1419,6 +1423,7 @@ async def lookup(
         bods=bods_all,
         bods_issues=bods_issues,
         license_notices=license_notices,
+        possibly_same_entities=[p.to_dict() for p in possibly_same_entities(bods_all)],
         lei=norm_lei,
         legal_name=legal_name,
         jurisdiction=jurisdiction,

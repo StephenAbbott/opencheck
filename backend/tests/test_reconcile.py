@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from opencheck.reconcile import reconcile
+from opencheck.reconcile import possibly_same_entities, reconcile
 from opencheck.sources import SearchKind, SourceHit
 
 
@@ -223,3 +223,78 @@ def test_reconcile_dict_serialisation() -> None:
     assert payload["confidence"] == "strong"
     assert payload["key"] == "lei"
     assert {h["source_id"] for h in payload["hits"]} == {"gleif", "opensanctions"}
+
+
+# ---------------------------------------------------------------------
+# POSSIBLY_SAME_AS — name-only entity candidates (Splink-spike outcome)
+# ---------------------------------------------------------------------
+
+
+def _ent(sid: str, name: str, jur: str, date: str | None = None, *, jur_key: str = "jurisdiction") -> dict:
+    rd: dict = {"name": name, jur_key: {"code": jur}, "identifiers": []}
+    if date:
+        rd["foundingDate"] = date
+    return {"statementId": sid, "recordType": "entity", "recordDetails": rd}
+
+
+def test_possibly_same_flags_name_plus_jurisdiction() -> None:
+    pairs = possibly_same_entities([
+        _ent("a", "Acme Ltd", "GB", "1990-01-01"),
+        _ent("b", "ACME LTD.", "GB", "1990-06-02"),
+    ])
+    assert len(pairs) == 1
+    assert {pairs[0].a, pairs[0].b} == {"a", "b"}
+    assert pairs[0].reason == "same name + jurisdiction"
+
+
+def test_possibly_same_respects_jurisdiction() -> None:
+    pairs = possibly_same_entities([
+        _ent("a", "Acme Ltd", "GB"),
+        _ent("b", "Acme Ltd", "US"),
+    ])
+    assert pairs == []
+
+
+def test_possibly_same_founding_date_tiebreaker() -> None:
+    pairs = possibly_same_entities([
+        _ent("a", "Acme Ltd", "GB", "1990-01-01"),
+        _ent("b", "Acme Ltd", "GB", "2005-01-01"),
+    ])
+    assert pairs == []  # different incorporation year -> different entity
+
+
+def test_possibly_same_missing_date_is_compatible() -> None:
+    pairs = possibly_same_entities([
+        _ent("a", "Acme Ltd", "GB", "1990"),
+        _ent("b", "Acme Ltd", "GB"),
+    ])
+    assert len(pairs) == 1
+
+
+def test_possibly_same_does_not_flag_alpha_vs_beta() -> None:
+    pairs = possibly_same_entities([
+        _ent("a", "BP Exploration (Alpha) Limited", "GB", "1990"),
+        _ent("b", "BP Exploration (Beta) Limited", "GB", "1990"),
+    ])
+    assert pairs == []
+
+
+def test_possibly_same_skips_identifier_linked_pairs() -> None:
+    # Share an LEI -> known same (identifier-linked), not a name-only candidate.
+    lei = "529900T8BM49AURSDO55"
+    a = {"statementId": "a", "recordType": "entity", "recordDetails": {
+        "name": "Acme Ltd", "jurisdiction": {"code": "GB"},
+        "identifiers": [{"scheme": "XI-LEI", "id": lei}]}}
+    b = {"statementId": "b", "recordType": "entity", "recordDetails": {
+        "name": "ACME LTD.", "jurisdiction": {"code": "GB"},
+        "identifiers": [{"scheme": "XI-LEI", "id": lei}]}}
+    assert possibly_same_entities([a, b]) == []
+
+
+def test_possibly_same_reads_incorporated_in_jurisdiction() -> None:
+    # GLEIF uses incorporatedInJurisdiction; OpenSanctions uses jurisdiction.
+    pairs = possibly_same_entities([
+        _ent("a", "Globex Holdings", "FR", "2001", jur_key="incorporatedInJurisdiction"),
+        _ent("b", "GLOBEX HOLDINGS", "FR", "2001", jur_key="jurisdiction"),
+    ])
+    assert len(pairs) == 1

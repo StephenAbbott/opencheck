@@ -61,7 +61,17 @@ function identKeys(s: Stmt): string[] {
     }
     const scheme = String(i.scheme ?? "?").trim().toUpperCase();
     keys.push(`${scheme}:${val}`);
-    if (jur && (scheme === "" || scheme.startsWith(`${jur}-`)) && !val.includes("/")) {
+    // Jurisdiction+bare-value key bridges the same registration number under
+    // different scheme labels (CVR / COA / empty). Exclude VAT schemes — a VAT
+    // number coincidentally equal to a different entity's company number in the
+    // same jurisdiction must not merge them; VAT still merges scheme-scoped
+    // (`<JUR>-VAT:value` / `XI-VAT:value`), since a shared VAT means same entity.
+    if (
+      jur &&
+      (scheme === "" || scheme.startsWith(`${jur}-`)) &&
+      !scheme.includes("VAT") &&
+      !val.includes("/")
+    ) {
       keys.push(`JUR:${jur}:${val}`);
     }
   }
@@ -125,12 +135,14 @@ export function reconcileBods(statements: Stmt[]): ReconcileResult {
     let name = "";
     let jurisdiction: unknown;
     let entityType: unknown;
+    let foundingDate = "";
     for (const m of members) {
       remap[m] = canonicalId;
       const d = rd(byId.get(m)!);
       if (!name && d.name) name = d.name as string;
       if (!jurisdiction && d.jurisdiction) jurisdiction = d.jurisdiction;
       if (!entityType && d.entityType) entityType = d.entityType;
+      if (!foundingDate && d.foundingDate) foundingDate = d.foundingDate as string;
       for (const i of (d.identifiers ?? []) as Stmt[]) {
         const k = `${i.scheme}|${i.id}`;
         if (!seenIdent.has(k)) {
@@ -151,6 +163,7 @@ export function reconcileBods(statements: Stmt[]): ReconcileResult {
         name: name || canonicalId,
         identifiers: mergedIdents,
         ...(jurisdiction ? { jurisdiction } : {}),
+        ...(foundingDate ? { foundingDate } : {}),
       },
       source: byId.get(members[0])!.source ?? {},
       _sources: [...sources],
@@ -201,6 +214,94 @@ export function reconcileBods(statements: Stmt[]): ReconcileResult {
   }
 
   return { statements: out, remap };
+}
+
+// ---------------------------------------------------------------------------
+// POSSIBLY_SAME_AS — name-only "likely same" candidates (human-reviewed)
+//
+// Run AFTER reconcileBods on the reconciled nodes. Identifier-based merging has
+// already collapsed the certain matches; this surfaces the residual: distinct
+// nodes that share an exact normalised name + jurisdiction but no shared
+// identifier. The Splink spike (see Notion) showed this rule beats both fuzzy
+// matching and a trained probabilistic model on OpenCheck's data (F1 0.95).
+//
+// These are **suggestions for a human**, rendered as a dashed "likely same"
+// edge — never a silent merge (a false merge is a compliance liability). A
+// founding-date tiebreaker rejects the same-name/different-entity case (e.g.
+// distinct same-named subsidiaries incorporated in different years); address is
+// deliberately NOT used — its cross-source formatting is too noisy to require.
+// ---------------------------------------------------------------------------
+
+export interface SameAsCandidate {
+  /** statementIds (canonical node ids after reconcileBods) of the two nodes. */
+  a: string;
+  b: string;
+  /** Why they're flagged — drives the edge tooltip. */
+  reason: string;
+}
+
+function normName(s: string): string {
+  return s
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function jurOf(s: Stmt): string {
+  return String(((rd(s).jurisdiction as Stmt | undefined)?.code as string | undefined) ?? "")
+    .trim()
+    .toUpperCase()
+    .split("-")[0];
+}
+
+function foundingYear(s: Stmt): string | null {
+  const m = String(rd(s).foundingDate ?? "").trim().match(/^(\d{4})/);
+  return m ? m[1] : null;
+}
+
+/** Compatible unless BOTH founding years are present and differ. */
+function dateCompatible(a: Stmt, b: Stmt): boolean {
+  const ya = foundingYear(a);
+  const yb = foundingYear(b);
+  return !(ya && yb && ya !== yb);
+}
+
+/** Candidate "likely same" pairs among the reconciled entity nodes: exact
+ *  normalised name + same jurisdiction, no shared identifier (already merged if
+ *  they did), passing the founding-date tiebreaker. */
+export function possiblySameAs(statements: Stmt[]): SameAsCandidate[] {
+  const ents = (statements ?? []).filter((s) => s.recordType === "entity" && s.statementId);
+  const groups = new Map<string, Stmt[]>();
+  for (const s of ents) {
+    const nm = normName(String(rd(s).name ?? ""));
+    const jur = jurOf(s);
+    if (!nm || !jur) continue; // both required — name alone over-merges
+    const key = `${nm}|${jur}`;
+    const g = groups.get(key) ?? [];
+    g.push(s);
+    groups.set(key, g);
+  }
+  const out: SameAsCandidate[] = [];
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    for (let i = 0; i < group.length; i++) {
+      for (let j = i + 1; j < group.length; j++) {
+        const a = group[i];
+        const b = group[j];
+        if (a.statementId === b.statementId) continue;
+        if (!dateCompatible(a, b)) continue; // different incorporation year → different entity
+        out.push({
+          a: a.statementId as string,
+          b: b.statementId as string,
+          reason: "same name + jurisdiction",
+        });
+      }
+    }
+  }
+  return out;
 }
 
 /** Apply an id remap to risk signals so their evidence statement-ids follow the
