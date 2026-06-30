@@ -1896,6 +1896,31 @@ function BehindTheScenesPage() {
           </ol>
         </BtsCard>
 
+        {/* QuickCheck vs FullCheck */}
+        <BtsCard title="QuickCheck and FullCheck">
+          <p className="text-[13.5px] leading-[1.75] text-oo-muted mb-3">
+            Every lookup opens in{" "}
+            <strong className="text-oo-ink font-semibold">QuickCheck</strong> — a
+            fast screen of the subject itself: who it is, the identifiers each
+            source independently confirms, and any risk signals on the company
+            and its immediate people. It also flags records that are{" "}
+            <strong className="text-oo-ink font-semibold">likely the same
+            entity</strong> — an exact name and jurisdiction match with no shared
+            identifier — as a suggestion to review, never a silent merge.
+          </p>
+          <p className="text-[13px] text-oo-muted leading-[1.7]">
+            Switch to{" "}
+            <strong className="text-oo-ink font-semibold">FullCheck</strong> to
+            walk the wider ownership-and-control network: OpenCheck expands
+            layer by layer through owners and subsidiaries, overlays every
+            source on one canvas, and{" "}
+            <strong className="text-oo-ink font-semibold">reconciles</strong> the
+            same real-world company across sources into a single node — so three
+            sources agreeing reads as corroboration. The network can be exported
+            as BODS v0.4 or projected to Neo4j.
+          </p>
+        </BtsCard>
+
         {/* BODS spine */}
         <BtsCard title="The BODS spine">
           <p className="text-[13.5px] leading-[1.75] text-oo-muted mb-3">
