@@ -36,7 +36,7 @@ import {
   signalsBeyond,
   type ExpandDirection,
 } from "../lib/expand";
-import { reconcileBods, remapSignals } from "../lib/reconcile";
+import { reconcileBods, remapSignals, possiblySameAs } from "../lib/reconcile";
 import { RiskChip } from "./risk/RiskChip";
 import { SourceLegend } from "./SourceLegend";
 
@@ -116,6 +116,9 @@ export default function BodsGraphExplorer({
     () => bodsToGraph((recon?.statements ?? allStatements) as Stmt[]),
     [recon, allStatements]
   );
+  // FullCheck: name-only "likely same" candidates (post-reconciliation) → dashed
+  // review edges. Empty for QuickCheck (recon === null).
+  const sameAs = useMemo(() => (recon ? possiblySameAs(recon.statements) : []), [recon]);
   // Frontier/expansion run on the RAW (unreconciled) edges so the live traversal
   // keys are unchanged; for QuickCheck raw == display.
   const rawEdges = useMemo(
@@ -177,10 +180,25 @@ export default function BodsGraphExplorer({
   }
 
   // ── "Add next layer" over the whole frontier (direction set by the view) ───
-  const frontier = useMemo(
-    () => frontierAnchors(allStatements, rawEdges, expandedIds, direction),
-    [allStatements, rawEdges, expandedIds, direction]
-  );
+  // The frontier is computed on the RAW statements (so the live traversal keys
+  // are unchanged). In FullCheck the display is reconciled, so a raw frontier
+  // can list several per-source duplicates of the same entity — inflating the
+  // "Add next layer — N" count above the visible node count and re-fetching the
+  // same company. Dedupe by canonical id (via the reconcile remap) so the count
+  // matches what the user sees and each entity is expanded once.
+  const frontier = useMemo(() => {
+    const raw = frontierAnchors(allStatements, rawEdges, expandedIds, direction);
+    if (!recon) return raw;
+    const seen = new Set<string>();
+    const deduped: typeof raw = [];
+    for (const f of raw) {
+      const cid = recon.remap[f.anchor] ?? f.anchor;
+      if (seen.has(cid)) continue;
+      seen.add(cid);
+      deduped.push(f);
+    }
+    return deduped;
+  }, [allStatements, rawEdges, expandedIds, direction, recon]);
   const noun = direction === "subsidiaries" ? "subsidiaries" : "owners/controllers";
   const helperText =
     direction === "subsidiaries"
@@ -449,6 +467,13 @@ export default function BodsGraphExplorer({
                 onToggle={(s) => setHighlightSource((cur) => (cur === s ? null : s))}
               />
             )}
+            {fullCheck && sameAs.length > 0 && (
+              <p className="mb-1.5 text-[11px] text-[#b45309] leading-[1.5]">
+                <span className="font-semibold">{sameAs.length}</span> dashed “likely same”{" "}
+                {sameAs.length === 1 ? "link" : "links"}: same name + jurisdiction, no shared
+                identifier — review before treating as one entity (not auto-merged).
+              </p>
+            )}
             <BODSGraph
               model={model}
               signals={displaySignals}
@@ -458,6 +483,7 @@ export default function BodsGraphExplorer({
               selectedId={selectedId}
               onSelect={setSelectedId}
               highlightSource={highlightSource}
+              sameAs={sameAs}
             />
           </div>
         )}

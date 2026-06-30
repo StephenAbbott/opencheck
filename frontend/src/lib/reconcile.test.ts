@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { reconcileBods, remapSignals } from "./reconcile";
+import { reconcileBods, remapSignals, possiblySameAs } from "./reconcile";
 import { bodsToGraph } from "./bodsGraph";
 import type { RiskSignal } from "./api";
 
@@ -156,6 +156,43 @@ describe("reconcileBods", () => {
     expect(entities[0]._sources).toEqual(expect.arrayContaining(["GLEIF", "CVR"]));
   });
 
+  it("merges on a shared VAT number (scheme-scoped), no LEI needed", () => {
+    const { statements } = reconcileBods([
+      {
+        statementId: "g", recordType: "entity",
+        recordDetails: { name: "Müller GmbH", jurisdiction: { code: "DE" },
+          identifiers: [{ scheme: "XI-VAT", id: "DE123456789" }] },
+        source: { description: "GLEIF" },
+      },
+      {
+        statementId: "o", recordType: "entity",
+        recordDetails: { name: "MULLER GMBH", jurisdiction: { code: "DE" },
+          identifiers: [{ scheme: "XI-VAT", id: "DE123456789" }] },
+        source: { description: "OpenCorporates" },
+      },
+    ]);
+    expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(1);
+  });
+
+  it("does not merge a VAT number that collides with a company number (same jurisdiction)", () => {
+    // Coincidental bare-value collision across identifier TYPES must not merge.
+    const { statements } = reconcileBods([
+      {
+        statementId: "a", recordType: "entity",
+        recordDetails: { name: "Alpha A/S", jurisdiction: { code: "DK" },
+          identifiers: [{ scheme: "DK-CVR", id: "12345678" }] },
+        source: { description: "CVR" },
+      },
+      {
+        statementId: "b", recordType: "entity",
+        recordDetails: { name: "Beta A/S", jurisdiction: { code: "DK" },
+          identifiers: [{ scheme: "DK-VAT", id: "12345678" }] },
+        source: { description: "GLEIF" },
+      },
+    ]);
+    expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(2);
+  });
+
   it("does not cross-merge same-value ids in different jurisdictions", () => {
     const { statements } = reconcileBods([
       {
@@ -202,5 +239,65 @@ describe("remapSignals", () => {
   it("is a no-op when there is nothing to remap", () => {
     const signals = [{ code: "PEP", evidence: {} }] as unknown as RiskSignal[];
     expect(remapSignals(signals, {})).toBe(signals);
+  });
+});
+
+describe("possiblySameAs", () => {
+  const ent = (id: string, name: string, jur: string, date?: string): Stmt => ({
+    statementId: id,
+    recordType: "entity",
+    recordDetails: {
+      name,
+      jurisdiction: { code: jur },
+      ...(date ? { foundingDate: date } : {}),
+      identifiers: [],
+    },
+  });
+
+  it("flags same normalised name + jurisdiction (no shared id)", () => {
+    const c = possiblySameAs([ent("a", "Acme Ltd", "GB", "1990-01-01"), ent("b", "ACME LTD.", "GB", "1990-06-02")]);
+    expect(c).toHaveLength(1);
+    expect([c[0].a, c[0].b].sort()).toEqual(["a", "b"]);
+  });
+
+  it("does not flag the same name in different jurisdictions", () => {
+    expect(possiblySameAs([ent("a", "Acme Ltd", "GB"), ent("b", "Acme Ltd", "US")])).toHaveLength(0);
+  });
+
+  it("does not flag distinct same-name entities incorporated in different years (tiebreaker)", () => {
+    expect(possiblySameAs([ent("a", "Acme Ltd", "GB", "1990-01-01"), ent("b", "Acme Ltd", "GB", "2005-01-01")])).toHaveLength(0);
+  });
+
+  it("treats a missing founding date as compatible", () => {
+    expect(possiblySameAs([ent("a", "Acme Ltd", "GB", "1990"), ent("b", "Acme Ltd", "GB")])).toHaveLength(1);
+  });
+
+  it("does not flag genuinely different names (Alpha vs Beta)", () => {
+    expect(possiblySameAs([
+      ent("a", "BP Exploration (Alpha) Limited", "GB", "1990"),
+      ent("b", "BP Exploration (Beta) Limited", "GB", "1990"),
+    ])).toHaveLength(0);
+  });
+
+  it("flags two same-name entities that reconcileBods kept separate (different LEIs)", () => {
+    const lei1 = "529900T8BM49AURSDO55";
+    const lei2 = "213800LH1BZH3DI6G760";
+    const { statements } = reconcileBods([
+      {
+        statementId: "x", recordType: "entity",
+        recordDetails: { name: "Globex Holdings", jurisdiction: { code: "FR" }, foundingDate: "2001",
+          identifiers: [{ scheme: "XI-LEI", id: lei1 }] },
+        source: { description: "GLEIF" },
+      },
+      {
+        statementId: "y", recordType: "entity",
+        recordDetails: { name: "GLOBEX HOLDINGS", jurisdiction: { code: "FR" }, foundingDate: "2001",
+          identifiers: [{ scheme: "XI-LEI", id: lei2 }] },
+        source: { description: "OpenCorporates" },
+      },
+    ]);
+    // different LEIs -> two canonical nodes; same name+jurisdiction+year -> a candidate
+    expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(2);
+    expect(possiblySameAs(statements)).toHaveLength(1);
   });
 });

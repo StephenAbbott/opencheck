@@ -29,6 +29,7 @@ import {
   type Visibility,
 } from "../lib/bodsGraph";
 import type { RiskSignal } from "../lib/api";
+import type { SameAsCandidate } from "../lib/reconcile";
 
 cytoscape.use(dagre);
 
@@ -116,8 +117,9 @@ function buildSignalMap(signals: RiskSignal[]): Map<string, RiskSignal[]> {
 // BODS GraphModel → Cytoscape elements
 // ---------------------------------------------------------------------------
 
-function modelToElements(model: GraphModel): ElementDefinition[] {
+function modelToElements(model: GraphModel, sameAs: SameAsCandidate[] = []): ElementDefinition[] {
   const elements: ElementDefinition[] = [];
+  const nodeIds = new Set(model.nodes.map((n) => n.id));
   for (const n of model.nodes) {
     elements.push({
       data: { id: n.id, label: n.label, recordType: n.recordType, icon: n.icon, flagUrl: n.flagUrl, sources: n.sources },
@@ -128,6 +130,19 @@ function modelToElements(model: GraphModel): ElementDefinition[] {
       data: {
         id: e.id, source: e.source, target: e.target,
         label: e.label, category: e.category, details: e.details, sources: e.sources,
+      },
+    });
+  }
+  // POSSIBLY_SAME_AS — dashed, undirected "likely same" suggestion edges. Added
+  // here (not in the GraphModel) so they never enter the ownership hierarchy
+  // used by collapse/tree/frontier — they are a human-review overlay only.
+  for (const c of sameAs) {
+    if (!nodeIds.has(c.a) || !nodeIds.has(c.b)) continue;
+    elements.push({
+      data: {
+        id: `sameas~${c.a}~${c.b}`, source: c.a, target: c.b,
+        label: "likely same", category: "possiblySame", sources: [],
+        details: `Likely the same entity (${c.reason}, no shared identifier) — review before treating as one.`,
       },
     });
   }
@@ -210,6 +225,16 @@ const STYLESHEET: StylesheetStyle[] = [
   { selector: "edge[category = 'control']",  style: { "line-color": "#e65100", "target-arrow-color": "#e65100", color: "#e65100" } as cytoscape.Css.Edge },
   { selector: "edge[category = 'role']",     style: { "line-color": "#6a1b9a", "target-arrow-color": "#6a1b9a", color: "#6a1b9a", "line-style": "dashed" } as cytoscape.Css.Edge },
   { selector: "edge[category = 'unknown']",  style: { "line-color": "#888",    "target-arrow-color": "#888",    color: "#888" } as cytoscape.Css.Edge },
+  // POSSIBLY_SAME_AS — dashed, undirected, amber; a "likely same entity" suggestion for review (never a merge).
+  {
+    selector: "edge[category = 'possiblySame']",
+    style: {
+      "line-color": "#b45309", color: "#b45309",
+      "line-style": "dashed", "curve-style": "bezier",
+      "target-arrow-shape": "none", "source-arrow-shape": "none",
+      width: 1.5, "font-style": "italic",
+    } as cytoscape.Css.Edge,
+  },
   { selector: "edge.hovered",                style: { width: 3, "z-index": 999 } as cytoscape.Css.Edge },
 ];
 
@@ -232,6 +257,7 @@ export default function BODSGraph({
   selectedId = null,
   onSelect,
   highlightSource = null,
+  sameAs = [],
 }: {
   model: GraphModel;
   signals?: RiskSignal[];
@@ -245,6 +271,8 @@ export default function BODSGraph({
   /** FullCheck provenance: when set, nodes/edges asserted by this source are
    *  highlighted and the rest dimmed (highlight, don't hide). */
   highlightSource?: string | null;
+  /** FullCheck: name-only "likely same" candidates → dashed review edges. */
+  sameAs?: SameAsCandidate[];
 }) {
   const containerRef  = useRef<HTMLDivElement | null>(null);
   const cyRef         = useRef<Core | null>(null);
@@ -290,7 +318,7 @@ export default function BODSGraph({
 
     const cy = cytoscape({
       container: el,
-      elements: modelToElements(model),
+      elements: modelToElements(model, sameAs),
       style: STYLESHEET,
       layout: DAGRE_LAYOUT,
       userZoomingEnabled: true,
@@ -361,7 +389,7 @@ export default function BODSGraph({
 
     return () => { cy.destroy(); cyRef.current = null; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model, signals]);
+  }, [model, signals, sameAs]);
 
   // ── Apply collapse: hide/show elements, re-layout the visible subset ───────
   useEffect(() => {

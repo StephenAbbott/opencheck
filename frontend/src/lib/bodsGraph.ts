@@ -36,7 +36,7 @@ export interface Interest {
   details?: string;
 }
 
-export type EdgeCategory = "ownership" | "control" | "role" | "unknown";
+export type EdgeCategory = "ownership" | "control" | "role" | "unknown" | "possiblySame";
 
 export interface GraphNode {
   id: string;

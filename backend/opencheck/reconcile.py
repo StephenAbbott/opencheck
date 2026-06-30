@@ -151,3 +151,119 @@ def _normalise_name(name: str) -> str:
     ascii_only = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
     cleaned = re.sub(r"[^\w\s]", " ", ascii_only.lower())
     return re.sub(r"\s+", " ", cleaned).strip()
+
+
+# ---------------------------------------------------------------------
+# POSSIBLY_SAME_AS — name-only "likely same" entity candidates.
+#
+# Operates on the assembled BODS bundle (entity statements carry name +
+# jurisdiction + foundingDate, which SourceHits do not). Surfaces the residual
+# the identifier bridges above can't: distinct entity statements that share an
+# exact normalised name + jurisdiction but no shared identifier. The Splink
+# spike (Notion) showed this rule beats fuzzy matching and a trained
+# probabilistic model on OpenCheck's data (F1 0.95). These are **suggestions
+# for a human** (rendered as a dashed "likely same" edge), never a silent merge.
+# A founding-date tiebreaker rejects the same-name/different-entity case (e.g.
+# distinct same-named subsidiaries incorporated in different years); address is
+# deliberately not used — cross-source formatting is too noisy to require.
+#
+# Mirror of frontend ``possiblySameAs`` in ``frontend/src/lib/reconcile.ts`` —
+# keep the two in sync.
+# ---------------------------------------------------------------------
+
+
+@dataclass
+class PossiblySame:
+    """A name-only 'likely same' candidate between two entity statements."""
+
+    a: str  # statementId
+    b: str  # statementId
+    reason: str
+
+    def to_dict(self) -> dict:
+        return {"a": self.a, "b": self.b, "reason": self.reason}
+
+
+_LEI_RE = re.compile(r"^[0-9A-Z]{18}[0-9]{2}$")
+
+
+def _entity_jurisdiction(rd: dict) -> str:
+    # GLEIF entity statements use `incorporatedInJurisdiction`; OpenSanctions
+    # (and some others) use `jurisdiction`. Read both.
+    jur = rd.get("jurisdiction") or rd.get("incorporatedInJurisdiction") or {}
+    code = jur.get("code") if isinstance(jur, dict) else ""
+    return str(code or "").strip().upper().split("-")[0]
+
+
+def _identifier_keys(stmt: dict) -> set[str]:
+    """Identifier-merge keys for an entity (mirror of frontend ``identKeys``):
+    LEI (scheme-agnostic) + scheme-scoped values + a jurisdiction-scoped key for
+    bare national registration numbers (VAT excluded — see frontend note). Two
+    statements that share any key are already linked by identifier, so they are
+    NOT name-only candidates."""
+    rd = stmt.get("recordDetails") or {}
+    jur = _entity_jurisdiction(rd)
+    keys: set[str] = set()
+    for i in rd.get("identifiers") or []:
+        val = str(i.get("id") or "").strip().upper()
+        if not val:
+            continue
+        if _LEI_RE.match(val):
+            keys.add(f"LEI:{val}")
+            continue
+        scheme = str(i.get("scheme") or "?").strip().upper()
+        keys.add(f"{scheme}:{val}")
+        if jur and (scheme == "" or scheme.startswith(f"{jur}-")) and "VAT" not in scheme and "/" not in val:
+            keys.add(f"JUR:{jur}:{val}")
+    return keys
+
+
+def _founding_year(stmt: dict) -> str | None:
+    rd = stmt.get("recordDetails") or {}
+    m = re.match(r"(\d{4})", str(rd.get("foundingDate") or ""))
+    return m.group(1) if m else None
+
+
+def _founding_compatible(a: dict, b: dict) -> bool:
+    """Compatible unless BOTH founding years are present and differ."""
+    ya, yb = _founding_year(a), _founding_year(b)
+    return not (ya and yb and ya != yb)
+
+
+def possibly_same_entities(bods: list[dict]) -> list[PossiblySame]:
+    """Candidate 'likely same' entity pairs: exact normalised name + jurisdiction,
+    passing the founding-date tiebreaker. Run on the assembled BODS bundle."""
+    ents = [s for s in (bods or []) if s.get("recordType") == "entity" and s.get("statementId")]
+    id_keys = {s["statementId"]: _identifier_keys(s) for s in ents}
+    groups: dict[tuple[str, str], list[dict]] = {}
+    for s in ents:
+        rd = s.get("recordDetails") or {}
+        nm = _normalise_name(rd.get("name") or "")
+        jur = _entity_jurisdiction(rd)
+        if not nm or not jur:  # both required — name alone over-merges
+            continue
+        groups.setdefault((nm, jur), []).append(s)
+
+    out: list[PossiblySame] = []
+    seen: set[tuple[str, str]] = set()
+    for group in groups.values():
+        if len(group) < 2:
+            continue
+        for i in range(len(group)):
+            for j in range(i + 1, len(group)):
+                a, b = group[i], group[j]
+                if a["statementId"] == b["statementId"]:
+                    continue
+                # Skip pairs already linked by a shared identifier — they are
+                # known-same (the bundle just isn't identifier-merged here),
+                # not the name-only residual this surfaces.
+                if id_keys[a["statementId"]] & id_keys[b["statementId"]]:
+                    continue
+                if not _founding_compatible(a, b):
+                    continue
+                pair = tuple(sorted((a["statementId"], b["statementId"])))
+                if pair in seen:
+                    continue
+                seen.add(pair)
+                out.append(PossiblySame(pair[0], pair[1], "same name + jurisdiction"))
+    return out
