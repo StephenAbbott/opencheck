@@ -298,3 +298,16 @@ def test_possibly_same_reads_incorporated_in_jurisdiction() -> None:
         _ent("b", "GLOBEX HOLDINGS", "FR", "2001", jur_key="jurisdiction"),
     ])
     assert len(pairs) == 1
+
+
+def test_possibly_same_carries_names_for_display() -> None:
+    # The QuickCheck report renders pairs without the BODS bundle, so each pair
+    # must carry display names + jurisdiction.
+    pairs = possibly_same_entities([
+        _ent("a", "Acme Ltd", "GB", "1990-01-01"),
+        _ent("b", "ACME LTD.", "GB", "1990-06-02"),
+    ])
+    d = pairs[0].to_dict()
+    assert {d["a_name"], d["b_name"]} == {"Acme Ltd", "ACME LTD."}
+    assert d["jurisdiction"] == "GB"
+    assert set(d) == {"a", "b", "reason", "a_name", "b_name", "jurisdiction"}

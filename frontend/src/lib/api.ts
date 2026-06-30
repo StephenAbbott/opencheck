@@ -41,6 +41,19 @@ export interface CrossSourceLink {
   hits: { source_id: string; hit_id: string; name: string }[];
 }
 
+/** A name-only "likely same" entity candidate (same name + jurisdiction, no
+ *  shared identifier) — a human-review suggestion, never a confirmed match.
+ *  `a`/`b` are entity BODS statementIds; `a_name`/`b_name`/`jurisdiction` are
+ *  carried so the report can render the pair without the BODS bundle. */
+export interface PossiblySameEntity {
+  a: string;
+  b: string;
+  reason: string;
+  a_name: string;
+  b_name: string;
+  jurisdiction: string;
+}
+
 /** A single risk signal — see backend opencheck/risk.py for the rule list. */
 export interface RiskSignal {
   code: string;
@@ -70,6 +83,7 @@ export interface LookupResponse {
   hits: SourceHit[];
   errors: Record<string, string>;
   cross_source_links: CrossSourceLink[];
+  possibly_same_entities: PossiblySameEntity[];
   risk_signals: RiskSignal[];
   bods: Record<string, unknown>[];
   bods_issues: string[];
@@ -667,6 +681,10 @@ export interface CrossSourceLinksEvent {
   links: CrossSourceLink[];
 }
 
+export interface PossiblySameEntitiesEvent {
+  pairs: PossiblySameEntity[];
+}
+
 export interface RiskSignalsEvent {
   signals: RiskSignal[];
 }
@@ -792,6 +810,7 @@ export type LookupStreamHandlers = {
   onSourceCompleted?: (e: SourceCompletedEvent) => void;
   onSourceError?: (e: SourceErrorEvent) => void;
   onCrossSourceLinks?: (e: CrossSourceLinksEvent) => void;
+  onPossiblySame?: (e: PossiblySameEntitiesEvent) => void;
   onRiskSignals?: (e: RiskSignalsEvent) => void;
   onBodsCounts?: (e: BodsCountsEvent) => void;
   onDone?: (e: LookupStreamDoneEvent) => void;
@@ -859,6 +878,10 @@ export function streamLookup(
   es.addEventListener("cross_source_links", (ev) => {
     const data = safeParse<CrossSourceLinksEvent>((ev as MessageEvent).data);
     if (data) handlers.onCrossSourceLinks?.(data);
+  });
+  es.addEventListener("possibly_same_entities", (ev) => {
+    const data = safeParse<PossiblySameEntitiesEvent>((ev as MessageEvent).data);
+    if (data) handlers.onPossiblySame?.(data);
   });
   es.addEventListener("risk_signals", (ev) => {
     const data = safeParse<RiskSignalsEvent>((ev as MessageEvent).data);

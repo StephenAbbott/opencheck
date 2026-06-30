@@ -1286,6 +1286,11 @@ async def _lookup_pipeline(
 
     yield ("bods_counts", {"counts": bods_counts, "breakdown": bods_breakdown})
 
+    yield (
+        "possibly_same_entities",
+        {"pairs": [p.to_dict() for p in possibly_same_entities(bods_all)]},
+    )
+
     cross_raw, icij_raw = await asyncio.gather(
         assess_cross_source_names(bods_all),
         assess_icij_names(bods_all),
@@ -1380,6 +1385,7 @@ async def lookup(
     links: list[dict[str, Any]] = []
     signals: list[dict[str, Any]] = []
     bods_all: list[dict[str, Any]] = []
+    same_pairs: list[dict[str, Any]] = []
     bods_issues: list[str] = []
     license_notices: list[dict[str, str]] = []
     legal_name: str | None = None
@@ -1407,6 +1413,8 @@ async def lookup(
             bods_all.extend(payload["bods"])
         elif event == "cross_source_links":
             links = payload["links"]
+        elif event == "possibly_same_entities":
+            same_pairs = payload["pairs"]
         elif event == "risk_signals":
             signals = payload["signals"]
         elif event == "done":
@@ -1423,7 +1431,7 @@ async def lookup(
         bods=bods_all,
         bods_issues=bods_issues,
         license_notices=license_notices,
-        possibly_same_entities=[p.to_dict() for p in possibly_same_entities(bods_all)],
+        possibly_same_entities=same_pairs,
         lei=norm_lei,
         legal_name=legal_name,
         jurisdiction=jurisdiction,

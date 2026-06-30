@@ -151,6 +151,13 @@ def test_sync_and_stream_agree_on_offline_bundle(
         s["code"] for s in sync["risk_signals"]
     }
 
+    # possibly_same_entities is emitted on the stream and matches the sync view
+    # (single-entity bundle -> no name-only candidates, but the field/event
+    # must still be present in both).
+    assert "possibly_same_entities" in sync
+    stream_same = by_name["possibly_same_entities"][0]["pairs"]
+    assert stream_same == sync["possibly_same_entities"]
+
 
 def test_stream_announces_applicable_sources(client: TestClient, tmp_path: Path) -> None:
     lei = "213800LH1BZH3DI6G760"

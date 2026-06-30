@@ -10,6 +10,7 @@ import {
   type BodsBreakdown,
   type BodsCountsEvent,
   type CrossSourceLink,
+  type PossiblySameEntity,
   type RiskSignal,
   type SourceHit,
 } from "./lib/api";
@@ -159,6 +160,7 @@ export default function App() {
   const [hits, setHits] = useState<SourceHit[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [crossSourceLinks, setCrossSourceLinks] = useState<CrossSourceLink[]>([]);
+  const [possiblySame, setPossiblySame] = useState<PossiblySameEntity[]>([]);
   const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
   const [applicableSources, setApplicableSources] = useState<string[]>([]);
   const [completedSources, setCompletedSources] = useState<Set<string>>(new Set());
@@ -318,6 +320,7 @@ export default function App() {
         setHits([]);
         setErrors({});
         setCrossSourceLinks([]);
+        setPossiblySame([]);
         setRiskSignals([]);
         setApplicableSources([]);
         setCompletedSources(new Set());
@@ -358,6 +361,7 @@ export default function App() {
             setCompletedSources((prev) => new Set([...prev, e.source_id]));
           },
           onCrossSourceLinks: (e) => setCrossSourceLinks(e.links),
+          onPossiblySame: (e) => setPossiblySame(e.pairs),
           onRiskSignals: (e) => setRiskSignals(e.signals),
           onBodsCounts: (e: BodsCountsEvent) => {
             setBodsCountMap(e.counts);
@@ -665,6 +669,7 @@ export default function App() {
                   setHits([]);
                   setErrors({});
                   setCrossSourceLinks([]);
+                  setPossiblySame([]);
                   setRiskSignals([]);
                   setApplicableSources([]);
                   setCompletedSources(new Set());
@@ -1216,6 +1221,13 @@ export default function App() {
               links={crossSourceLinks}
               gleifMapped={gleifMappedIds}
             />
+          </section>
+        )}
+
+        {possiblySame.length > 0 && (
+          <section className="mb-8 bg-white border border-oo-rule rounded-oo p-5">
+            <SectionLabel>Possibly the same entity</SectionLabel>
+            <PossiblySameTable pairs={possiblySame} />
           </section>
         )}
 
@@ -2373,5 +2385,61 @@ function CrossSourceIdentifiersTable({
         ))}
       </tbody>
     </table>
+  );
+}
+
+/**
+ * Renders the name-only "likely same" entity candidates surfaced by the backend
+ * reconciler (exact name + jurisdiction, no shared identifier). These are
+ * **suggestions for a human to review**, never confirmed merges — the certain
+ * matches already appear in the cross-source identifiers table above. Renders
+ * nothing when there are no candidates.
+ */
+function PossiblySameTable({ pairs }: { pairs: PossiblySameEntity[] }) {
+  if (pairs.length === 0) return null;
+  return (
+    <>
+      <p className="text-[12px] text-oo-muted mb-3">
+        These records share an exact name and jurisdiction but no common
+        identifier, so they are <em>likely</em> the same entity — flagged for
+        review, not merged automatically.
+      </p>
+      <table className="w-full text-[13px] border-collapse table-fixed">
+        <thead>
+          <tr>
+            <th className="text-left text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 pr-3 w-[64%]">
+              Records
+            </th>
+            <th className="text-left text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 pr-3 w-[18%]">
+              Jurisdiction
+            </th>
+            <th className="text-right text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 w-[18%]">
+              Confidence
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {pairs.map((p) => (
+            <tr key={`${p.a}~${p.b}`} className="border-t border-oo-rule align-top">
+              <td className="py-2 pr-3 text-oo-ink">
+                <div className="break-words">{p.a_name || p.a}</div>
+                <div className="break-words text-oo-muted">{p.b_name || p.b}</div>
+              </td>
+              <td className="py-2 pr-3 font-mono text-[12px] text-oo-muted">
+                {p.jurisdiction || "—"}
+              </td>
+              <td className="py-2 text-right">
+                <span
+                  title={p.reason}
+                  className="inline-flex items-center gap-1 text-[11px] bg-amber-50 border border-amber-300 text-amber-800 rounded px-1.5 py-0.5"
+                >
+                  likely same
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
   );
 }
