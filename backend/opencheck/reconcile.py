@@ -174,14 +174,28 @@ def _normalise_name(name: str) -> str:
 
 @dataclass
 class PossiblySame:
-    """A name-only 'likely same' candidate between two entity statements."""
+    """A name-only 'likely same' candidate between two entity statements.
+
+    ``a_name`` / ``b_name`` / ``jurisdiction`` are carried so the QuickCheck
+    report can render the pair without re-assembling the BODS bundle (it only
+    holds SourceHits, not the entity statements these statementIds point at)."""
 
     a: str  # statementId
     b: str  # statementId
     reason: str
+    a_name: str = ""
+    b_name: str = ""
+    jurisdiction: str = ""
 
     def to_dict(self) -> dict:
-        return {"a": self.a, "b": self.b, "reason": self.reason}
+        return {
+            "a": self.a,
+            "b": self.b,
+            "reason": self.reason,
+            "a_name": self.a_name,
+            "b_name": self.b_name,
+            "jurisdiction": self.jurisdiction,
+        }
 
 
 _LEI_RE = re.compile(r"^[0-9A-Z]{18}[0-9]{2}$")
@@ -265,5 +279,17 @@ def possibly_same_entities(bods: list[dict]) -> list[PossiblySame]:
                 if pair in seen:
                     continue
                 seen.add(pair)
-                out.append(PossiblySame(pair[0], pair[1], "same name + jurisdiction"))
+                by_id = {a["statementId"]: a, b["statementId"]: b}
+                rd_a = by_id[pair[0]].get("recordDetails") or {}
+                rd_b = by_id[pair[1]].get("recordDetails") or {}
+                out.append(
+                    PossiblySame(
+                        pair[0],
+                        pair[1],
+                        "same name + jurisdiction",
+                        a_name=str(rd_a.get("name") or ""),
+                        b_name=str(rd_b.get("name") or ""),
+                        jurisdiction=_entity_jurisdiction(rd_a),
+                    )
+                )
     return out

@@ -1,0 +1,42 @@
+{
+  "floor_nj_label": {
+    "variant": "floor_nj_label",
+    "features": "name+juris",
+    "m": "label",
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "predicted": 0,
+    "cross_pos": 226
+  },
+  "it2_all_label": {
+    "variant": "it2_all_label",
+    "features": "name+juris+date+addr",
+    "m": "label",
+    "precision": 0.989,
+    "recall": 0.827,
+    "f1": 0.901,
+    "predicted": 189,
+    "cross_pos": 226
+  },
+  "nj_date_label": {
+    "variant": "nj_date_label",
+    "features": "name+juris+date",
+    "m": "label",
+    "precision": 0.989,
+    "recall": 0.81,
+    "f1": 0.891,
+    "predicted": 185,
+    "cross_pos": 226
+  },
+  "nj_addr_label": {
+    "variant": "nj_addr_label",
+    "features": "name+juris+addr",
+    "m": "label",
+    "precision": 1.0,
+    "recall": 0.235,
+    "f1": 0.38,
+    "predicted": 53,
+    "cross_pos": 226
+  }
+}
