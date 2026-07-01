@@ -376,6 +376,7 @@ class CvrDenmarkAdapter(SourceAdapter):
             requires_api_key=True,
             live_available=bool(settings.cvr_denmark_api_key) and settings.allow_live,
             is_national_register=True,
+            country="DK",
         )
 
     async def search(

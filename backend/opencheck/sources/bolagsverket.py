@@ -190,6 +190,7 @@ class BolagsverketAdapter(SourceAdapter):
             requires_api_key=True,
             live_available=live,
             is_national_register=True,
+            country="SE",
         )
 
     # ------------------------------------------------------------------

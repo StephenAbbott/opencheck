@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from .. import __version__
+from ..bo_access import notice_for
 from ..config import get_settings
 from ..sources import REGISTRY, SourceInfo
 
@@ -34,4 +35,12 @@ async def health() -> HealthResponse:
 
 @router.get("/sources", response_model=SourcesResponse)
 async def sources() -> SourcesResponse:
-    return SourcesResponse(sources=[adapter.info for adapter in REGISTRY.values()])
+    # Attach the computed EU/EEA beneficial-ownership access notice per register.
+    # Adapters declare only the static `country`; the (date-dependent) notice is
+    # computed here so it flips on the restriction date without a code change.
+    out: list[SourceInfo] = []
+    for adapter in REGISTRY.values():
+        info = adapter.info
+        notice = notice_for(info.country)
+        out.append(info.model_copy(update={"bo_access": notice}) if notice else info)
+    return SourcesResponse(sources=out)

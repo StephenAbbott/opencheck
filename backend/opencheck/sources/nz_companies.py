@@ -270,6 +270,7 @@ class NzCompaniesAdapter(SourceAdapter):
             requires_api_key=True,
             live_available=settings.allow_live and bool(settings.nzbn_api_key),
             is_national_register=True,
+            country="NZ",
         )
 
     # Identifier-keyed: entered via the LEI flow, not free-text name search.

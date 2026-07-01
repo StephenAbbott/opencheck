@@ -113,6 +113,7 @@ class BrregAdapter(SourceAdapter):
             requires_api_key=False,
             live_available=settings.allow_live,
             is_national_register=True,
+            country="NO",
         )
 
     # ------------------------------------------------------------------

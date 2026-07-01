@@ -684,6 +684,7 @@ class FirmenbuchAdapter(SourceAdapter):
             requires_api_key=True,
             live_available=settings.allow_live and bool(settings.firmenbuch_api_key),
             is_national_register=True,
+            country="AT",
         )
 
     # ------------------------------------------------------------------
