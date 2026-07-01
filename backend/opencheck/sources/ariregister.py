@@ -419,6 +419,7 @@ class AriregisterAdapter(SourceAdapter):
             requires_api_key=False,
             live_available=True,
             is_national_register=True,
+            country="EE",
         )
 
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:

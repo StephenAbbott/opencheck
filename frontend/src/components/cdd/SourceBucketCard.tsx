@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { deepen } from "../../lib/api";
-import type { BodsBreakdown, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
+import type { BodsBreakdown, BoAccessNotice, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
 import { HistoryTimeline } from "./HistoryTimeline";
 import { NzAssociations } from "./NzAssociations";
@@ -15,6 +15,60 @@ export interface SourceBucket {
   sourceName: string;
   hits: SourceHit[];
   error?: string;
+  /** EU/EEA beneficial-ownership access notice for this register, if any. */
+  boAccess?: BoAccessNotice | null;
+}
+
+// ---------------------------------------------------------------------
+// BoAccessFootnote — quiet, informational note that a national register's
+// beneficial ownership data is (or will soon be) restricted to legitimate-
+// interest access. Deliberately low-key (no fill, muted text, info icon —
+// never amber/red, which OpenCheck reserves for licence + risk): the company
+// registration and GLEIF ownership data shown above are unaffected.
+// ---------------------------------------------------------------------
+
+function formatAccessDate(iso: string): string {
+  const d = new Date(iso + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function BoAccessFootnote({ notice }: { notice: BoAccessNotice }) {
+  const { status, country_name, effective_date, access_url } = notice;
+  const sentence =
+    status === "becoming_restricted" && effective_date
+      ? `Beneficial ownership data from ${country_name} is currently public but will be restricted to certain groups from ${formatAccessDate(effective_date)}.`
+      : `Beneficial ownership data from ${country_name} is not public — available to certain groups only.`;
+  const linkText =
+    status === "becoming_restricted"
+      ? "Learn how to apply for access after then"
+      : "Learn how to apply for access";
+  return (
+    <div className="px-5 pb-4 flex gap-2 items-start">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"
+        className="text-oo-muted mt-0.5 shrink-0">
+        <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2" />
+        <path d="M8 7.2V11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+        <circle cx="8" cy="5" r="0.7" fill="currentColor" />
+      </svg>
+      <p className="text-[12px] leading-[1.6] text-oo-muted">
+        {sentence}
+        {access_url && (
+          <>
+            {" "}
+            <a
+              href={access_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-oo-blue underline hover:text-oo-burst"
+            >
+              {linkText}
+            </a>
+          </>
+        )}
+      </p>
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------
@@ -864,6 +918,9 @@ export function SourceBucketCard({
         <div className="px-5 pb-4">
           <NzAssociations companyNumber={nzCompanyNumber} />
         </div>
+      )}
+      {bucket.boAccess && !bucket.error && (
+        <BoAccessFootnote notice={bucket.boAccess} />
       )}
     </article>
     {showTimeline && timelineLei && (

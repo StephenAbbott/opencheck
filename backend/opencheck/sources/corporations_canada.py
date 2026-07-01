@@ -145,6 +145,7 @@ class CorporationsCanadaAdapter(SourceAdapter):
                 settings.allow_live and settings.corporations_canada_api_key
             ),
             is_national_register=True,
+            country="CA",
         )
 
     # ------------------------------------------------------------------

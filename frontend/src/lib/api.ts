@@ -7,6 +7,17 @@
 
 export type SearchKind = "entity" | "person";
 
+/** EU/EEA beneficial-ownership access notice for a national register, computed
+ *  by the backend from the country's `restricted_from` date and today. */
+export interface BoAccessNotice {
+  status: "restricted" | "becoming_restricted";
+  country_code: string;
+  country_name: string;
+  /** ISO date the restriction takes effect — only set for `becoming_restricted`. */
+  effective_date: string | null;
+  access_url: string | null;
+}
+
 export interface SourceInfo {
   id: string;
   name: string;
@@ -21,6 +32,10 @@ export interface SourceInfo {
   category: "cdd" | "esg";
   /** True for official national company / BO registers (e.g. Companies House, Bolagsverket). */
   is_national_register: boolean;
+  /** ISO 3166-1 alpha-2 code for national registers; null for global sources. */
+  country?: string | null;
+  /** EU/EEA beneficial-ownership access notice, or null when unrestricted. */
+  bo_access?: BoAccessNotice | null;
 }
 
 export interface SourceHit {

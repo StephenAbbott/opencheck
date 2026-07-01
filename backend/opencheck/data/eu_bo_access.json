@@ -1,0 +1,67 @@
+{
+  "FR": {
+    "restricted_from": "2025-05-03",
+    "access_url": "https://data.inpi.fr/content/editorial/acces_BE",
+    "note": "legifrance.gouv.fr/jorf/article_jo/JORFARTI000051539003"
+  },
+  "EE": {
+    "restricted_from": "2026-07-10",
+    "access_url": "https://www.fin.ee/en/news/ministry-finance-updates-rules-use-beneficial-ownership-data",
+    "note": ""
+  },
+  "SE": {
+    "restricted_from": "2026-07-01",
+    "access_url": "https://bolagsverket.se/omoss/nyheter/nyhetsarkiv/nyhetsarkiv2026/nyhetsarkiv2026/ettforstastegforattimplementeraeusnyapenningtvattsregelverk.6065.html",
+    "note": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/betankande/utlamnande-av-uppgifter-ur-registret-over-verkliga_hd01fiu35/"
+  },
+  "DK": {
+    "restricted_from": "2025-09-01",
+    "access_url": "https://erhvervsstyrelsen.dk/vejledning-adgang-til-oplysninger-om-reelle-ejere",
+    "note": "https://www.retsinformation.dk/eli/lta/2025/987#P1"
+  },
+  "FI": {
+    "restricted_from": null,
+    "access_url": "https://www.prh.fi/en/companiesandorganisations/beneficial_owner_details/information_services_and_details.html",
+    "note": ""
+  },
+  "DE": {
+    "restricted_from": null,
+    "access_url": "https://www.transparenzregister.de/",
+    "note": ""
+  },
+  "NL": {
+    "restricted_from": "2025-07-16",
+    "access_url": "https://www.kvk.nl/en/ubo/who-has-access-to-ubo-data/",
+    "note": "https://zoek.officielebekendmakingen.nl/kst-36584-A.html"
+  },
+  "SK": {
+    "restricted_from": "2025-07-10",
+    "access_url": null,
+    "note": ""
+  },
+  "CZ": {
+    "restricted_from": null,
+    "access_url": "https://odok.gov.cz/portal/veklep/material/ALBSDNCJXJV7/",
+    "note": ""
+  },
+  "NO": {
+    "restricted_from": "2024-10-01",
+    "access_url": "https://www.brreg.no/bruke-data-fra-bronnoysundregistrene/datasett-og-api/data-om-reelle-rettighetshavere/",
+    "note": ""
+  },
+  "AT": {
+    "restricted_from": "2025-10-01",
+    "access_url": "https://www.parlament.gv.at/gegenstand/XXVIII/ME/93",
+    "note": ""
+  },
+  "LT": {
+    "restricted_from": null,
+    "access_url": "https://www.e-tar.lt/portal/lt/legalAct/TAR.672DFD353334/asr?__cf_chl_f_tk=Bkm3bREkSi7Y4FF_6gWFeL4Py9RWoVC7gkFQW0UUvsY-1782935228-1.0.1.1-gfe8T5GMHOdThWjT3RcNc9mGGZoh7WmBujLP5nicowI#part_b2a3176c54fb4b3d8ba8c6676c67d00e",
+    "note": ""
+  },
+  "MT": {
+    "restricted_from": "2025-07-10",
+    "access_url": "https://www.mbr.mt/post/public-notice-bo-regulations-amendments",
+    "note": "https://f17ef982-b6ea-49d2-89f7-3359c3321206.usrfiles.com/ugd/f17ef9_a40b0ea8b02f4b04896b1ea70163e2ff.pdf"
+  }
+}

@@ -129,6 +129,7 @@ class BceBelgiumAdapter(SourceAdapter):
             requires_api_key=False,
             live_available=live,
             is_national_register=True,
+            country="BE",
         )
 
     # ------------------------------------------------------------------

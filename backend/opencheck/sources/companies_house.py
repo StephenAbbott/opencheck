@@ -89,6 +89,7 @@ class CompaniesHouseAdapter(SourceAdapter):
             requires_api_key=True,
             live_available=bool(settings.companies_house_api_key and settings.allow_live),
             is_national_register=True,
+            country="GB",
         )
 
     # ------------------------------------------------------------------

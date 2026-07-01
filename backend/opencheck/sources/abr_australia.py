@@ -132,6 +132,7 @@ class AbrAustraliaAdapter(SourceAdapter):
             requires_api_key=True,
             live_available=bool(settings.allow_live and guid),
             is_national_register=True,
+            country="AU",
         )
 
     def _guid(self) -> str:

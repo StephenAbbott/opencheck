@@ -7,6 +7,7 @@ import {
   isValidLei,
   retryLookupSource,
   streamLookup,
+  type BoAccessNotice,
   type BodsBreakdown,
   type BodsCountsEvent,
   type CrossSourceLink,
@@ -511,6 +512,11 @@ export default function App() {
           sourcesQuery.data.sources.map((s) => [s.id, s.name])
         )
       : {};
+    const boAccessIndex: Record<string, BoAccessNotice | null> = sourcesQuery.data
+      ? Object.fromEntries(
+          sourcesQuery.data.sources.map((s) => [s.id, s.bo_access ?? null])
+        )
+      : {};
     for (const hit of hits) {
       const existing = byId.get(hit.source_id);
       if (existing) {
@@ -521,6 +527,7 @@ export default function App() {
           sourceName: adapterIndex[hit.source_id] ?? hit.source_id,
           hits: [hit],
           error: errors[hit.source_id],
+          boAccess: boAccessIndex[hit.source_id] ?? null,
         });
       }
     }
@@ -532,6 +539,7 @@ export default function App() {
           sourceName: adapterIndex[source_id] ?? source_id,
           hits: [],
           error: errMsg,
+          boAccess: boAccessIndex[source_id] ?? null,
         });
       }
     }

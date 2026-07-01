@@ -26,6 +26,8 @@ from typing import Any, Callable, ClassVar, Literal
 
 from pydantic import BaseModel, Field, field_serializer
 
+from ..bo_access import BoAccessNotice
+
 # Source ids whose **raw** source payload must not be redistributed via
 # OpenCheck (licence terms permit derived/BODS output but not bulk re-publication
 # of the raw records). Populated from the registry at import time (see
@@ -105,6 +107,22 @@ class SourceInfo(BaseModel):
             "True when this source is an official national company or beneficial "
             "ownership register (e.g. Companies House, Bolagsverket). False for "
             "aggregators, cross-border databases, and ESG sources."
+        ),
+    )
+    country: str | None = Field(
+        default=None,
+        description=(
+            "ISO 3166-1 alpha-2 country code for national registers (e.g. 'FR', "
+            "'DK'). Used to join per-country notices such as the EU beneficial "
+            "ownership access status. None for cross-border / global sources."
+        ),
+    )
+    bo_access: "BoAccessNotice | None" = Field(
+        default=None,
+        description=(
+            "Computed EU/EEA beneficial-ownership access notice for this "
+            "register's country, or None. Populated by the /sources endpoint; "
+            "adapters do not set it (see opencheck.bo_access)."
         ),
     )
 
