@@ -150,6 +150,94 @@ async def test_match_entity_sends_auth_and_ua(httpx_mock: HTTPXMock) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Match-acceptance gating
+# ---------------------------------------------------------------------------
+
+
+def _match_result(name: str, score: float, lei: str | None = None) -> dict:
+    props: dict = {"name": [name]}
+    if lei:
+        props["leiCode"] = [lei]
+    return {
+        "id": f"ent-{name.lower().replace(' ', '-')}-{score}",
+        "schema": "Company",
+        "score": score,
+        "properties": props,
+        "collection": {"label": "Test", "foreign_id": "test"},
+    }
+
+
+async def test_low_scoring_uncorroborated_hits_are_dropped(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """Non-corroborated hits below 25% of the top score are gated out."""
+    httpx_mock.add_response(
+        method="POST",
+        url=f"{_API}/match?limit=5",
+        json={
+            "results": [
+                _match_result("BP P.L.C.", 160.0, lei=_LEI),
+                _match_result("Bp P.L.C.", 110.0),          # kept: > 25% of top
+                _match_result("BP Pension Fund", 20.0),      # dropped: < 25%
+            ]
+        },
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.match_entity(
+        {"schema": "Company", "properties": {"name": ["BP P.L.C."], "leiCode": [_LEI]}}
+    )
+    names = [h.name for h in hits]
+    assert "BP Pension Fund" not in names
+    assert len(hits) == 2
+
+
+async def test_corroborated_hits_rank_first_and_survive_low_scores(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """Identifier corroboration always keeps a hit, even below the relative
+    score cutoff, and corroborated hits are ordered before others."""
+    httpx_mock.add_response(
+        method="POST",
+        url=f"{_API}/match?limit=5",
+        json={
+            "results": [
+                _match_result("Bp P.L.C.", 200.0),                # name-only
+                _match_result("BP OLD NAME LTD", 10.0, lei=_LEI),  # corroborated, low score
+            ]
+        },
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.match_entity(
+        {"schema": "Company", "properties": {"name": ["BP P.L.C."], "leiCode": [_LEI]}}
+    )
+    assert [h.name for h in hits] == ["BP OLD NAME LTD", "Bp P.L.C."]
+    assert hits[0].raw["identifier_corroborated"] is True
+    assert "identifier corroborated" in hits[0].summary
+    assert hits[1].raw["identifier_corroborated"] is False
+
+
+async def test_corroboration_matches_registration_number(
+    httpx_mock: HTTPXMock,
+) -> None:
+    result = _match_result("BP P.L.C.", 50.0)
+    result["properties"]["registrationNumber"] = ["00102498"]
+    httpx_mock.add_response(
+        method="POST", url=f"{_API}/match?limit=5", json={"results": [result]}
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.match_entity(
+        {
+            "schema": "Company",
+            "properties": {
+                "name": ["BP P.L.C."],
+                "registrationNumber": ["00102498"],
+            },
+        }
+    )
+    assert hits[0].raw["identifier_corroborated"] is True
+
+
+# ---------------------------------------------------------------------------
 # Strategy cascade ordering
 # ---------------------------------------------------------------------------
 

@@ -16,8 +16,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v5
-      - name: Install backend (with test deps)
-        run: uv sync
+      - name: System deps for the ftm extra (bods-ftm → followthemoney → pyicu)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends g++ libicu-dev pkg-config
+      - name: Install backend (with test deps + ftm extra)
+        run: uv sync --extra ftm
         working-directory: backend
       - name: Backend test suite
         # Live tests are @pytest.mark.live and skipped unless --run-live, so this

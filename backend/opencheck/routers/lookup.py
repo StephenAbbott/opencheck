@@ -786,13 +786,13 @@ async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
                 if oa:
                     break
     if not oa and ctx.legal_name:
-        # SPIKE(bods-ftm-api-match): before falling back to free-text name
-        # search, try native FtM matching — POST /api/2/match with the
-        # subject converted to an FtM entity (bods-ftm when installed,
-        # equivalent built-in shape otherwise). Identifier-aware (leiCode /
-        # registrationNumber / jurisdiction participate), so precision is
-        # far better than the Lucene q= fallback. Needs OPENALEPH_API_KEY;
-        # degrades to [] without one, and the q= fallback still runs.
+        # Before falling back to free-text name search, try native FtM
+        # matching — POST /api/2/match with the subject converted to an FtM
+        # entity (bods-ftm when installed, equivalent built-in shape
+        # otherwise). Identifier-aware (leiCode / registrationNumber /
+        # jurisdiction participate), so precision is far better than the
+        # Lucene q= fallback. Needs OPENALEPH_API_KEY; degrades to []
+        # without one, and the q= fallback still runs after it.
         ftm_entity = subject_to_ftm_entity(
             ctx.lei, ctx.legal_name, ctx.jurisdiction, ctx.registered_as
         )

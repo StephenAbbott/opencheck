@@ -1,25 +1,24 @@
 """FollowTheMoney conversion for the OpenAleph /match flow.
 
-SPIKE (spike/bods-ftm-api-match): convert the lookup subject into an FtM
-``EntityUpdate`` payload for ``POST /api/2/match`` — identifier-aware,
-native-FtM matching as a precision upgrade over the free-text name
-fallback.
+Converts the lookup subject into an FtM ``EntityUpdate`` payload for
+``POST /api/2/match`` — identifier-aware, native-FtM matching used as a
+precision upgrade tried before the free-text name fallback.
 
 Two conversion paths, same output shape (``{"schema", "properties"}``):
 
-1. **bods-ftm** (preferred, when installed): the subject is expressed as a
-   BODS v0.4 entity statement and converted with
+1. **bods-ftm** (canonical, used in production): the subject is expressed
+   as a BODS v0.4 entity statement and converted with
    ``bods_ftm.bods_to_ftm.entity_mapper.entity_statement_to_ftm`` — the
    canonical BODS↔FtM mapping (XI-LEI → ``leiCode``, national register
    schemes → ``registrationNumber``, jurisdiction → country code).
-2. **Built-in minimal converter** (fallback): produces the identical
-   property set for the subject fields OpenCheck holds. Exists because
-   bods-ftm depends on followthemoney → pyicu, which needs ICU headers at
-   build time — a deployment-relevant dependency kept optional for now
-   (install with the ``ftm`` extra; see pyproject).
-
-De-spike note: once pyicu packaging is settled for Render/CI, collapse to
-path 1 only.
+   Installed via the ``ftm`` extra; the Docker image and CI ship the ICU
+   toolchain (g++ / libicu-dev / pkg-config) that its followthemoney →
+   pyicu dependency needs at build time.
+2. **Built-in minimal converter** (belt-and-braces): produces the
+   identical property set for the subject fields OpenCheck holds. Kept for
+   dev environments without ICU headers, where the ``ftm`` extra cannot
+   build — the ``test_builtin_and_bods_ftm_paths_agree`` parity test pins
+   the two paths to identical output.
 """
 
 from __future__ import annotations
