@@ -7,7 +7,10 @@ import io
 import json
 import re
 import zipfile
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+
+# 3.10-compatible alias for datetime.UTC (identical object on 3.11+).
+UTC = timezone.utc
 from typing import Any, Literal
 
 from bods_xml.canonical import convert as _bods_xml_convert

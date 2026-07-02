@@ -20,6 +20,7 @@ from typing import Any, Iterable
 
 import pycountry
 
+from ..elf import resolve_elf
 from .ch_constants import describe_company_type, describe_officer_role
 from .psc_natures import describe_nature, describe_statement, describe_super_secure
 
@@ -1931,7 +1932,7 @@ def _gleif_entity_statement(
     expiration_date_raw = expiration.get("date") or ""
     dissolution_date = expiration_date_raw[:10] if expiration_date_raw else None
 
-    return make_entity_statement(
+    stmt = make_entity_statement(
         source_id="gleif",
         local_id=lei,
         name=legal_name,
@@ -1944,6 +1945,17 @@ def _gleif_entity_statement(
         source_url=source_url,
         publication_date=gleif_publication_date,
     )
+
+    # Resolve GLEIF's ISO 20275 legal-form code (entity.legalForm.id, e.g.
+    # "2JZ4" = "Foundation") to a human label carried as the non-schema
+    # `legalFormLabel` annotation. This is what the AMLA trust/arrangement risk
+    # signal keys off, so a GLEIF-only foundation/trust (no national-register
+    # hit) is still caught — matching the legal form, never the entity name.
+    legal_form_label = resolve_elf((entity_block.get("legalForm") or {}).get("id"))
+    if legal_form_label:
+        stmt["recordDetails"]["legalFormLabel"] = legal_form_label
+
+    return stmt
 
 
 def _gleif_jurisdiction(code: str) -> tuple[str, str]:

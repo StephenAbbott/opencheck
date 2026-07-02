@@ -8,6 +8,15 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
+# The MCP SDK is an optional dependency of the opencheck.mcp module. Skip
+# this module cleanly when it isn't installed rather than aborting
+# collection with a hard ModuleNotFoundError (same pattern as the
+# libcovebods / bods-fixtures guards).
+pytest.importorskip(
+    "mcp",
+    reason="mcp SDK not installed — run `uv sync` / install the mcp extra",
+)
+
 from opencheck.app import app
 from opencheck.config import get_settings
 from opencheck.mcp import descriptor, TOOL_NAMES

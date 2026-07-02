@@ -1,0 +1,3 @@
+{
+  "_comment": "Hand-curated ELF codes resolved via the GLEIF API (api.gleif.org/api/v1/entity-legal-forms/<code>), for codes not present in the auto-generated elf_codes.json. elf_codes.json is generated from GLEIF's full ISO 20275 CSV by backend/scripts/build_elf_codes.py and is currently complete (v1.6, 3446 codes), so this supplement is intentionally empty. Add an entry here only if you need a code before the next CSV regen; the loader unions this over elf_codes.json."
+}

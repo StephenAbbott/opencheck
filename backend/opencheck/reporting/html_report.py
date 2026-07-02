@@ -12,7 +12,10 @@ the AI summary is only included when an already-generated narrative is passed in
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+
+# 3.10-compatible alias for datetime.UTC (identical object on 3.11+).
+UTC = timezone.utc
 from html import escape
 from typing import Any
 
