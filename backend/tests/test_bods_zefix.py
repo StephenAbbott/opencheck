@@ -135,6 +135,37 @@ def test_map_zefix_entity_name() -> None:
     assert stmts[0]["recordDetails"]["name"] == "GSSB GmbH"
 
 
+def test_map_zefix_carries_legal_form_label() -> None:
+    stmts = list(map_zefix(_bundle()))
+    assert stmts[0]["recordDetails"]["legalFormLabel"] == "Limited liability company"
+
+
+def test_map_zefix_foundation_legal_form_drives_trust_signal() -> None:
+    # A Swiss Stiftung carries legalForm.name.en "Foundation"; the mapped
+    # legalFormLabel is what the AMLA trust signal keys off — not the name.
+    from opencheck.risk import TRUST_OR_ARRANGEMENT, assess_amla
+
+    foundation = {
+        "name": "Example Holdings AG",  # name has no trust/foundation keyword
+        "ehraid": 424242,
+        "uid": "CHE200595965",
+        "legalForm": {
+            "id": 7,
+            "uid": "0110",
+            "name": {"de": "Stiftung", "en": "Foundation"},
+            "shortName": {"de": "Stift", "en": "Found"},
+        },
+        "status": "ACTIVE",
+        "canton": "BS",
+        "address": {},
+    }
+    stmts = list(map_zefix(_bundle(foundation)))
+    assert stmts[0]["recordDetails"]["legalFormLabel"] == "Foundation"
+    signals = assess_amla("zefix", {"entity_id": "X"}, stmts)
+    sig = next(s for s in signals if s.code == TRUST_OR_ARRANGEMENT)
+    assert sig.evidence["matches"][0]["match"] == "legalFormLabel contains 'foundation'"
+
+
 def test_map_zefix_entity_jurisdiction_canton() -> None:
     stmts = list(map_zefix(_bundle()))
     jur = stmts[0]["recordDetails"]["jurisdiction"]

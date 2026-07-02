@@ -2101,6 +2101,21 @@ def map_zefix(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         addresses=addresses,
         source_url=source_url or None,
     )
+
+    # Carry the Swiss legal form (e.g. "Foundation"/"Stiftung", "Corporation")
+    # as the non-schema `legalFormLabel` annotation. This is what the AMLA
+    # trust/arrangement risk signal keys off — matching the *legal form*, not
+    # the entity name (a name like "…Foundation" must not trip the signal on
+    # its own). BODS v0.4 entityType.subtype is a restricted enum that does not
+    # accept arbitrary legal-form text, so the label lives alongside it.
+    legal_form = company.get("legalForm") or {}
+    lf_names = legal_form.get("name") if isinstance(legal_form, dict) else None
+    legal_form_text = ""
+    if isinstance(lf_names, dict):
+        legal_form_text = (lf_names.get("en") or lf_names.get("de") or "").strip()
+    if legal_form_text:
+        entity["recordDetails"]["legalFormLabel"] = legal_form_text
+
     yield entity
 
 

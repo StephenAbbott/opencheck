@@ -136,6 +136,46 @@ def test_no_trust_signal_for_plain_company() -> None:
     assert TRUST_OR_ARRANGEMENT not in {s.code for s in signals}
 
 
+def test_trust_signal_does_not_fire_on_name_alone() -> None:
+    """A trust/foundation keyword in the *name* must not fire the signal — only
+    the legal form counts. Regression: GLEIF ("…Identifier Foundation") is a
+    registered company, not a foundation arrangement, by its name."""
+    bods = [
+        _entity(
+            "E1",
+            entity_type="registeredEntity",
+            name="Global Legal Entity Identifier Foundation",
+        )
+    ]
+    signals = assess_amla("zefix", {"entity_id": "X"}, bods)
+    assert TRUST_OR_ARRANGEMENT not in {s.code for s in signals}
+
+
+def test_trust_signal_fires_on_legal_form_label_annotation() -> None:
+    """The `legalFormLabel` annotation (what mappers attach) is a matched field,
+    and the evidence names that field rather than mislabelling it 'legalForm'."""
+    bods = [
+        _entity("E1", entity_type="registeredEntity", name="Some Foundation")
+    ]
+    bods[0]["recordDetails"]["legalFormLabel"] = "Foundation"
+    signals = assess_amla("zefix", {"entity_id": "X"}, bods)
+    sig = next(s for s in signals if s.code == TRUST_OR_ARRANGEMENT)
+    match = sig.evidence["matches"][0]["match"]
+    assert match == "legalFormLabel contains 'foundation'"
+
+
+def test_trust_signal_fires_on_entity_type_subtype() -> None:
+    # Exercise the entityType.subtype field path (not the arrangement shortcut).
+    bods = [_entity("E1", name="Holdings Ltd")]
+    bods[0]["recordDetails"]["entityType"] = {
+        "type": "registeredEntity",
+        "subtype": "trust",
+    }
+    signals = assess_amla("companies_house", {"entity_id": "X"}, bods)
+    sig = next(s for s in signals if s.code == TRUST_OR_ARRANGEMENT)
+    assert sig.evidence["matches"][0]["match"] == "entityType.subtype contains 'trust'"
+
+
 # ---------------------------------------------------------------------
 # (b) Non-EU / EEA jurisdiction
 # ---------------------------------------------------------------------
