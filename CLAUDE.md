@@ -228,6 +228,29 @@ SEC EDGAR are handled inside `_dispatch()` / `_lookup_pipeline()` directly.
   (strategy cascade). Budgets are capped sanity-tested in
   `tests/test_lookup_pipeline.py` (must be ≤ 120 s).
 
+### OpenAleph: FtM /match step + mentions enrichment
+
+- The OpenAleph strategy cascade is: leiCode → OC URL → registration
+  numbers → **FtM `POST /api/2/match`** → free-text `q=` name fallback.
+  The match step converts the subject to an FtM Company via
+  `opencheck/ftm.py` — bods-ftm's `entity_statement_to_ftm()` when
+  installed (the `ftm` extra; Docker + CI ship the ICU toolchain
+  g++/libicu-dev/pkg-config that followthemoney → pyicu needs), else a
+  built-in converter with parity-tested identical output. **Requires
+  `OPENALEPH_API_KEY`** — the flagship edge 405s anonymous POSTs to
+  /match even though the app route allows them; without the key the step
+  is skipped silently.
+- Match-acceptance gating in `match_entity()`: hits whose own properties
+  corroborate a subject identifier (leiCode / registrationNumber /
+  opencorporatesUrl) are always kept, flagged
+  `raw["identifier_corroborated"]` and ranked first; others survive only
+  at ≥ 25% of the top hit's score (relative — FtM/BM25 scores vary with
+  name length/rarity, so never use absolute thresholds).
+- Mentions enrichment (OpenAleph 5.3 `/entities/{id}/mentions`): top
+  OpenAleph hits get "· mentioned in N documents" + `raw.openaleph_mentions`
+  (title/collection/category/url per doc). Informational only — mentions
+  are name-derived and never count as identifier corroboration.
+
 ### Replay cache, shareable URLs, per-source retry (Phase 47)
 
 - Completed pipeline runs are cached in memory for 15 min

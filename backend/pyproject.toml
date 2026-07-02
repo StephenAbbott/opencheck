@@ -46,6 +46,16 @@ bods = [
     # "lib-cove-bods",
     # "bods-v04-fixtures",
 ]
+ftm = [
+    # Canonical BODS↔FtM conversion for the OpenAleph POST /api/2/match
+    # flow (opencheck/ftm.py prefers this and falls back to a built-in
+    # minimal converter when absent). An extra rather than a hard dep
+    # because followthemoney → pyicu builds from source against ICU
+    # headers: the Docker image and CI install g++/libicu-dev/pkg-config
+    # and sync with `--extra ftm`; dev environments without ICU still
+    # work via the built-in converter (parity-tested).
+    "bods-ftm @ git+https://github.com/StephenAbbott/bods-ftm.git",
+]
 llm = [
     # Phase 2+: intent extraction and narrative phrasing.
     # "anthropic>=0.39",

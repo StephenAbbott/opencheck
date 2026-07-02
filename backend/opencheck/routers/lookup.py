@@ -19,6 +19,7 @@ from ..bods import BODSBundle, validate_shape
 from ..sources.base import LookupDeriver, raw_redaction_notice
 from .. import bods_data
 from ..cross_check import assess_cross_source_names
+from ..ftm import subject_to_ftm_entity
 from ..icij_check import assess_icij_names
 from ..reconcile import possibly_same_entities, reconcile
 from ..risk import RiskSignal, assess_bundle, assess_hits
@@ -784,6 +785,19 @@ async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
                 oa = await oa_adapter.fetch_by_registration(jur, reg)  # type: ignore[attr-defined]
                 if oa:
                     break
+    if not oa and ctx.legal_name:
+        # Before falling back to free-text name search, try native FtM
+        # matching — POST /api/2/match with the subject converted to an FtM
+        # entity (bods-ftm when installed, equivalent built-in shape
+        # otherwise). Identifier-aware (leiCode / registrationNumber /
+        # jurisdiction participate), so precision is far better than the
+        # Lucene q= fallback. Needs OPENALEPH_API_KEY; degrades to []
+        # without one, and the q= fallback still runs after it.
+        ftm_entity = subject_to_ftm_entity(
+            ctx.lei, ctx.legal_name, ctx.jurisdiction, ctx.registered_as
+        )
+        if ftm_entity and hasattr(oa_adapter, "match_entity"):
+            oa = await oa_adapter.match_entity(ftm_entity)  # type: ignore[attr-defined]
     if not oa and ctx.legal_name:
         oa = await oa_adapter.fetch_by_name(ctx.legal_name)  # type: ignore[attr-defined]
     # OpenAleph can index the same entity under multiple collection aliases,
