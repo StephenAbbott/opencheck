@@ -18,6 +18,12 @@ Live endpoints used:
 * ``GET /api/2/entities/{entity_id}/mentions`` — Document-family entities whose
   indexed text mentions the entity's name variants (OpenAleph 5.3, the inverse
   of the percolation/Screening feature). Used for informational enrichment.
+* ``POST /api/2/match`` — similar-entity matching for a caller-supplied FtM
+  entity (identifier-aware: leiCode / registrationNumber / jurisdiction
+  participate, unlike free-text ``q=`` search). SPIKE: used as a precision
+  upgrade tried before the free-text name fallback. Requires an API key on
+  the flagship instance — the edge returns 405 for anonymous POSTs to this
+  path even though the app route allows them.
 
 LEI-anchored lookup strategy (used in /lookup flow):
   1. ``fetch_by_lei(lei)``  — filter on ``leiCode`` (FtM identifier type, exact-match).
@@ -38,6 +44,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.metadata
+import json
 import re
 from typing import Any
 from urllib.parse import quote
@@ -231,6 +238,68 @@ class OpenAlephAdapter(SourceAdapter):
             self._hit(item, SearchKind.ENTITY)
             for item in payload.get("results", [])
         ]
+
+    # ------------------------------------------------------------------
+    # FtM entity matching (POST /api/2/match) — SPIKE
+    # ------------------------------------------------------------------
+
+    async def match_entity(
+        self, ftm_entity: dict[str, Any], limit: int = 5
+    ) -> list[SourceHit]:
+        """Return entities similar to a caller-supplied FtM entity.
+
+        POSTs the entity (``{"schema", "properties"}``) to ``/api/2/match``.
+        Unlike the free-text ``q=`` fallback, FtM matching is identifier-
+        aware — leiCode, registrationNumber, jurisdiction and dates all
+        participate alongside fuzzy name features — so it is tried first
+        when every identifier-keyed strategy comes back empty.
+
+        Verified live 2026-07-02: the flagship edge 405s anonymous POSTs
+        to this path, so an API key is required; without one this method
+        short-circuits to ``[]``. Any HTTP failure also degrades to ``[]``
+        (the free-text fallback still runs after it).
+        """
+        settings = get_settings()
+        if not settings.openaleph_api_key:
+            return []
+        cache_key = (
+            f"{_CACHE_NS}/match/{_slug(json.dumps(ftm_entity, sort_keys=True))}"
+        )
+        if not self.info.live_available and not self._cache.has(cache_key):
+            return []
+
+        cached = self._cache.get_payload(cache_key)
+        if cached is not None:
+            payload = cached[0]
+        else:
+            headers = {
+                "User-Agent": _OA_USER_AGENT,
+                "Authorization": f"ApiKey {settings.openaleph_api_key}",
+            }
+            try:
+                async with build_client() as client:
+                    response = await client.post(
+                        f"{_API_BASE}/match",
+                        params={"limit": limit},
+                        json=ftm_entity,
+                        headers=headers,
+                    )
+                    if not response.is_success:
+                        return []
+                    payload = response.json()
+            except Exception:  # noqa: BLE001
+                return []
+            self._cache.put(cache_key, payload)
+
+        hits: list[SourceHit] = []
+        for item in (payload.get("results") or [])[:limit]:
+            hit = self._hit(item, SearchKind.ENTITY)
+            score = item.get("score")
+            if isinstance(score, (int, float)):
+                hit.raw["match_score"] = score
+                hit.summary = f"{hit.summary} · FtM match score {score:.0f}"
+            hits.append(hit)
+        return hits
 
     # ------------------------------------------------------------------
     # Mentions enrichment (OpenAleph 5.3 — reverse percolation)
