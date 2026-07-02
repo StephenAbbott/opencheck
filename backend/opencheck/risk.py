@@ -665,19 +665,35 @@ def _entity_jurisdiction(stmt: dict[str, Any]) -> dict[str, str] | None:
     return None
 
 
-def _entity_legal_form_blob(stmt: dict[str, Any]) -> str:
-    """Flatten any legal-form / subtype / details fields to one string for matching."""
+def _entity_legal_form_fields(stmt: dict[str, Any]) -> list[tuple[str, str]]:
+    """Return ``(field_name, value)`` pairs carrying an entity's legal form.
+
+    Deliberately EXCLUDES ``name``: matching a trust/foundation fragment in the
+    entity's *name* over-fires — any company with "Foundation", "Trust" etc. in
+    its trading name would trip the signal regardless of its actual legal form
+    (e.g. GLEIF, "Global Legal Entity Identifier Foundation"). We key only off
+    genuine legal-form fields: the ``legalFormLabel`` annotation mappers attach,
+    plus BODS ``entityType.subtype`` / ``entityType.details`` and any
+    forward-compat ``legalForm`` / ``entitySubtype`` / ``details`` fields.
+    """
     rd = _record_details(stmt)
-    parts: list[str] = []
-    for key in ("legalForm", "entitySubtype", "name", "details"):
-        v = rd.get(key)
-        if isinstance(v, str):
-            parts.append(v)
+    out: list[tuple[str, str]] = []
+
+    def _add(field: str, v: Any) -> None:
+        if isinstance(v, str) and v:
+            out.append((field, v))
         elif isinstance(v, dict):
             for sub in v.values():
-                if isinstance(sub, str):
-                    parts.append(sub)
-    return " ".join(parts).lower()
+                if isinstance(sub, str) and sub:
+                    out.append((field, sub))
+
+    for key in ("legalForm", "legalFormLabel", "entitySubtype", "details"):
+        _add(key, rd.get(key))
+    et = rd.get("entityType")
+    if isinstance(et, dict):
+        _add("entityType.subtype", et.get("subtype"))
+        _add("entityType.details", et.get("details"))
+    return out
 
 
 def _statement_id(stmt: dict[str, Any]) -> str:
@@ -878,15 +894,20 @@ def _trust_or_arrangement_signal(
                 }
             )
             continue
-        blob = _entity_legal_form_blob(stmt)
-        for frag in _TRUST_LEGAL_FORM_FRAGMENTS:
-            if frag in blob:
-                matches.append(
-                    {
-                        "statement_id": _statement_id(stmt),
-                        "match": f"legalForm contains '{frag}'",
-                    }
-                )
+        matched = False
+        for field, value in _entity_legal_form_fields(stmt):
+            low = value.lower()
+            for frag in _TRUST_LEGAL_FORM_FRAGMENTS:
+                if frag in low:
+                    matches.append(
+                        {
+                            "statement_id": _statement_id(stmt),
+                            "match": f"{field} contains '{frag}'",
+                        }
+                    )
+                    matched = True
+                    break
+            if matched:
                 break
     if not matches:
         return None
