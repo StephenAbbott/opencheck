@@ -15,6 +15,9 @@ Live endpoints used:
   (used by the /search / /report paths; not the LEI-anchored /lookup flow).
 * ``GET /api/2/entities/{entity_id}`` — single FtM entity with properties + collection.
 * ``GET /api/2/collections/{collection_id}`` — collection metadata (for license).
+* ``GET /api/2/entities/{entity_id}/mentions`` — Document-family entities whose
+  indexed text mentions the entity's name variants (OpenAleph 5.3, the inverse
+  of the percolation/Screening feature). Used for informational enrichment.
 
 LEI-anchored lookup strategy (used in /lookup flow):
   1. ``fetch_by_lei(lei)``  — filter on ``leiCode`` (FtM identifier type, exact-match).
@@ -228,6 +231,54 @@ class OpenAlephAdapter(SourceAdapter):
             self._hit(item, SearchKind.ENTITY)
             for item in payload.get("results", [])
         ]
+
+    # ------------------------------------------------------------------
+    # Mentions enrichment (OpenAleph 5.3 — reverse percolation)
+    # ------------------------------------------------------------------
+
+    async def fetch_mentions(
+        self, entity_id: str, limit: int = 5
+    ) -> dict[str, Any] | None:
+        """Return documents in the instance whose text mentions this entity.
+
+        Wraps the 5.3 ``/entities/{id}/mentions`` endpoint — the inverse of
+        the percolation/Screening feature: given a named FtM entity, find
+        Document-family entities (leaks, court records, news archives…)
+        containing any of its name variants as a phrase.
+
+        Purely informational enrichment: mentions are name-derived, so they
+        must never be treated as identifier corroboration. Any failure
+        (pre-5.3 instance → 404, timeout, auth) degrades to ``None`` rather
+        than surfacing an error card.
+        """
+        cache_key = f"{_CACHE_NS}/mentions/{_slug(entity_id)}"
+        if not self.info.live_available and not self._cache.has(cache_key):
+            return None
+        try:
+            payload = await self._get(
+                f"/entities/{quote(entity_id)}/mentions?limit={limit}",
+                cache_key=cache_key,
+            )
+        except Exception:  # noqa: BLE001
+            return None
+
+        total = payload.get("total") or 0
+        documents: list[dict[str, str]] = []
+        for item in (payload.get("results") or [])[:limit]:
+            collection = item.get("collection") or {}
+            documents.append(
+                {
+                    "title": item.get("caption") or "",
+                    "collection": collection.get("label")
+                    or collection.get("foreign_id")
+                    or "",
+                    # Collection category (leak / court / news / library…) —
+                    # kept for a future category-based breakdown or signal.
+                    "category": collection.get("category") or "",
+                    "url": (item.get("links") or {}).get("ui") or "",
+                }
+            )
+        return {"total": int(total), "documents": documents}
 
     # ------------------------------------------------------------------
     # Fetch

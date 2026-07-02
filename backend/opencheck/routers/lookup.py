@@ -794,6 +794,25 @@ async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
         if h.hit_id not in seen:
             seen.add(h.hit_id)
             deduped.append(h)
+
+    # Informational enrichment (OpenAleph 5.3): count the documents in the
+    # instance that mention each matched entity, via the /mentions endpoint
+    # (the inverse of percolation/Screening). Name-derived — never treated
+    # as identifier corroboration. Only the top hits are enriched to stay
+    # inside the adapter's lookup time budget; failures degrade silently.
+    if hasattr(oa_adapter, "fetch_mentions"):
+        for h in deduped[:2]:
+            try:
+                mentions = await oa_adapter.fetch_mentions(h.hit_id)  # type: ignore[attr-defined]
+            except Exception:  # noqa: BLE001
+                continue
+            if mentions and mentions.get("total"):
+                h.raw["openaleph_mentions"] = mentions
+                total = mentions["total"]
+                h.summary = (
+                    f"{h.summary} · mentioned in {total} "
+                    f"document{'s' if total != 1 else ''}"
+                )
     return deduped
 
 

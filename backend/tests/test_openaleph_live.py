@@ -322,3 +322,135 @@ async def test_fetch_by_name_tolerates_server_error(httpx_mock: HTTPXMock) -> No
     adapter = OpenAlephAdapter()
     hits = await adapter.fetch_by_name("Boom Corp")
     assert hits == []
+
+
+# ---------------------------------------------------------------------------
+# Mentions enrichment (OpenAleph 5.3 — /entities/{id}/mentions)
+# ---------------------------------------------------------------------------
+
+
+async def test_fetch_mentions_parses_documents(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(
+        url=f"{_API}/entities/aleph-123/mentions?limit=5",
+        json={
+            "status": "ok",
+            "total": 33,
+            "total_type": "eq",
+            "results": [
+                {
+                    "id": "doc-1",
+                    "schema": "Pages",
+                    "caption": "Annex1 1.pdf",
+                    "collection": {
+                        "label": "AskTheEU FOI documents",
+                        "foreign_id": "asktheeu",
+                        "category": "library",
+                    },
+                    "links": {"ui": "https://search.openaleph.org/entities/doc-1"},
+                },
+                {
+                    "id": "doc-2",
+                    "schema": "Email",
+                    "caption": "RE: contract award",
+                    "collection": {"foreign_id": "leak-x", "category": "leak"},
+                    "links": {},
+                },
+            ],
+        },
+    )
+
+    adapter = OpenAlephAdapter()
+    mentions = await adapter.fetch_mentions("aleph-123")
+
+    assert mentions is not None
+    assert mentions["total"] == 33
+    assert len(mentions["documents"]) == 2
+    first = mentions["documents"][0]
+    assert first["title"] == "Annex1 1.pdf"
+    assert first["collection"] == "AskTheEU FOI documents"
+    assert first["category"] == "library"
+    assert first["url"].endswith("/entities/doc-1")
+    # Falls back to foreign_id when the collection has no label.
+    assert mentions["documents"][1]["collection"] == "leak-x"
+
+
+async def test_fetch_mentions_degrades_to_none_on_error(httpx_mock: HTTPXMock) -> None:
+    """Pre-5.3 instances 404 on /mentions — enrichment must degrade quietly."""
+    httpx_mock.add_response(
+        url=f"{_API}/entities/aleph-123/mentions?limit=5",
+        status_code=404,
+    )
+    adapter = OpenAlephAdapter()
+    assert await adapter.fetch_mentions("aleph-123") is None
+
+
+async def test_fetch_mentions_none_when_live_disabled(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    get_settings.cache_clear()
+    try:
+        adapter = OpenAlephAdapter()
+        assert await adapter.fetch_mentions("aleph-123") is None
+    finally:
+        get_settings.cache_clear()
+
+
+async def test_lookup_strategies_attach_mentions_summary(monkeypatch) -> None:
+    """_openaleph_strategies enriches top hits with the mentions count —
+    informational only (raw payload + summary suffix, no identifiers)."""
+    from opencheck.routers import lookup as lookup_mod
+    from opencheck.sources import REGISTRY
+    from opencheck.sources.base import SourceHit
+
+    ctx = lookup_mod._LookupCtx(lei="LEI0000000000000ACME")
+    adapter = REGISTRY["openaleph"]
+
+    hit = SourceHit(
+        source_id="openaleph", hit_id="aleph-123", kind=SearchKind.ENTITY,
+        name="Acme Holdings", summary="collection: ICIJ leaks · Company",
+        identifiers={"aleph_id": "aleph-123"}, raw={}, is_stub=False,
+    )
+
+    async def fake_fetch_by_lei(lei):
+        return [hit]
+
+    async def fake_fetch_mentions(entity_id, limit=5):
+        assert entity_id == "aleph-123"
+        return {"total": 33, "documents": [{"title": "Annex1 1.pdf",
+                "collection": "AskTheEU", "category": "library", "url": ""}]}
+
+    monkeypatch.setattr(adapter, "fetch_by_lei", fake_fetch_by_lei)
+    monkeypatch.setattr(adapter, "fetch_mentions", fake_fetch_mentions)
+
+    result = await lookup_mod._openaleph_strategies(ctx)
+    assert len(result) == 1
+    assert result[0].summary.endswith("mentioned in 33 documents")
+    assert result[0].raw["openaleph_mentions"]["total"] == 33
+
+
+async def test_lookup_strategies_tolerate_mentions_failure(monkeypatch) -> None:
+    from opencheck.routers import lookup as lookup_mod
+    from opencheck.sources import REGISTRY
+    from opencheck.sources.base import SourceHit
+
+    ctx = lookup_mod._LookupCtx(lei="LEI0000000000000ACME")
+    adapter = REGISTRY["openaleph"]
+
+    hit = SourceHit(
+        source_id="openaleph", hit_id="aleph-999", kind=SearchKind.ENTITY,
+        name="Acme Holdings", summary="collection: ICIJ leaks · Company",
+        identifiers={"aleph_id": "aleph-999"}, raw={}, is_stub=False,
+    )
+
+    async def fake_fetch_by_lei(lei):
+        return [hit]
+
+    async def boom(entity_id, limit=5):
+        raise RuntimeError("mentions exploded")
+
+    monkeypatch.setattr(adapter, "fetch_by_lei", fake_fetch_by_lei)
+    monkeypatch.setattr(adapter, "fetch_mentions", boom)
+
+    result = await lookup_mod._openaleph_strategies(ctx)
+    assert len(result) == 1
+    assert "mentioned in" not in result[0].summary
