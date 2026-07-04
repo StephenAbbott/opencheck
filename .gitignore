@@ -108,3 +108,7 @@ frontend/tsconfig.tsbuildinfo
 # ---- Logs ----
 *.log
 logs/
+
+# Estonia sweep artefacts (release assets, not committed)
+data/estonia/
+data/ariregister_raw/
