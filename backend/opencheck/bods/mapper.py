@@ -3111,12 +3111,13 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         except ValueError:
             pct = None
         if pct is not None:
+            # BODS v0.4: ``share.exclusiveMinimum``/``exclusiveMaximum`` are
+            # *numbers* (exclusive percentage bounds), not booleans as in v0.3.
+            # With an exact value known, the inclusive bounds suffice.
             interests[0]["share"] = {
                 "exact": pct,
                 "minimum": pct,
                 "maximum": pct,
-                "exclusiveMinimum": False,
-                "exclusiveMaximum": False,
             }
         if share_size:
             interests[0]["details"] = (
