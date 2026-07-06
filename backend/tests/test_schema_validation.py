@@ -160,10 +160,20 @@ def test_oc_bundle_extra_field_ignored():
 from opencheck.sources.schemas.bolagsverket import BVBundle
 
 
+# organisationsnamn / organisationsdatum are OBJECTS in the real v4.x API — the
+# mapper reads organisationsnamn.organisationsnamnLista[].namn and
+# organisationsdatum.registreringsdatum. (Regression: they were modelled as
+# strings, so the real object shape failed validation once populated.)
 _BV_BUNDLE_VALID = {
     "source_id": "bolagsverket",
     "org_number": "5560000106",
-    "company": {"organisationsnamn": "AB Volvo"},
+    "company": {
+        "organisationsnamn": {
+            "organisationsnamnLista": [{"namn": "AB Volvo"}]
+        },
+        "organisationsdatum": {"registreringsdatum": "1915-08-07"},
+        "organisationsform": {"kod": "AB", "klartext": "Aktiebolag"},
+    },
     "legal_name": "AB Volvo",
     "is_stub": False,
 }
@@ -171,6 +181,14 @@ _BV_BUNDLE_VALID = {
 
 def test_bv_bundle_valid():
     validate_raw("bolagsverket", BVBundle, _BV_BUNDLE_VALID)
+
+
+def test_bv_bundle_object_named_fields_accepted():
+    """organisationsnamn/organisationsdatum must validate as objects, not strings."""
+    model = validate_raw("bolagsverket", BVBundle, _BV_BUNDLE_VALID)
+    assert model.company is not None
+    namn = model.company.organisationsnamn["organisationsnamnLista"][0]["namn"]
+    assert namn == "AB Volvo"
 
 
 def test_bv_bundle_missing_org_number():
