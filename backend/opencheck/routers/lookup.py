@@ -21,6 +21,7 @@ from .. import bods_data
 from ..cross_check import assess_cross_source_names
 from ..ftm import subject_to_ftm_entity
 from ..icij_check import assess_icij_names
+from ..meip import meip_lookup
 from ..reconcile import possibly_same_entities, reconcile
 from ..risk import RiskSignal, assess_bundle, assess_hits
 from ..sources import REGISTRY, SearchKind, SourceHit, SourceInfo
@@ -85,6 +86,8 @@ class ReportResponse(BaseModel):
     #: Name-only "likely same" entity candidates (same name + jurisdiction, no
     #: shared identifier) — human-review suggestions, never auto-merges.
     possibly_same_entities: list[dict[str, Any]] = []
+    #: OECD-UNSD MEIP signpost match for the subject LEI, or None. Not BODS.
+    meip: dict[str, Any] | None = None
 
 
 class LookupResponse(ReportResponse):
@@ -261,6 +264,8 @@ class _LookupCtx:
     registered_as: str = ""
     derived: dict[str, str] = dc_field(default_factory=dict)
     ocid: str | None = None
+    #: GLEIF-published S&P Global / Capital IQ id — corroborates MEIP's CapIQ id.
+    spglobal: str | None = None
     qid: str | None = None
 
 
@@ -1018,6 +1023,8 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
             if not gleif_src.get("is_stub"):
                 attrs = (gleif_src.get("record") or {}).get("attributes") or {}
                 ctx.ocid = attrs.get("ocid") or None
+                sp = attrs.get("spglobal")
+                ctx.spglobal = (sp[0] if isinstance(sp, list) and sp else sp) or None
         except Exception:  # noqa: BLE001
             pass
     if ctx.ocid:
@@ -1074,6 +1081,14 @@ async def _lookup_pipeline(
         "jurisdiction": ctx.jurisdiction or None,
         "derived_identifiers": ctx.derived,
     })
+
+    # OECD-UNSD MEIP signpost — fires when the subject LEI is in the MEIP Global
+    # Register (a subsidiary of, or one of, the 500 largest MNEs). Not mapped to
+    # BODS; corroborated against GLEIF's own OpenCorporates / S&P Capital IQ ids.
+    meip_match = meip_lookup(
+        lei, {"opencorporates": ctx.ocid or "", "capiq": ctx.spglobal or ""}
+    )
+    yield ("meip", {"match": meip_match.model_dump() if meip_match else None})
 
     gleif_hit = _build_gleif_hit(ctx, gleif_bundle)
     hits: list[SourceHit] = [gleif_hit]
@@ -1419,6 +1434,7 @@ async def lookup(
     signals: list[dict[str, Any]] = []
     bods_all: list[dict[str, Any]] = []
     same_pairs: list[dict[str, Any]] = []
+    meip_match: dict[str, Any] | None = None
     bods_issues: list[str] = []
     license_notices: list[dict[str, str]] = []
     legal_name: str | None = None
@@ -1448,6 +1464,8 @@ async def lookup(
             links = payload["links"]
         elif event == "possibly_same_entities":
             same_pairs = payload["pairs"]
+        elif event == "meip":
+            meip_match = payload["match"]
         elif event == "risk_signals":
             signals = payload["signals"]
         elif event == "done":
@@ -1465,6 +1483,7 @@ async def lookup(
         bods_issues=bods_issues,
         license_notices=license_notices,
         possibly_same_entities=same_pairs,
+        meip=meip_match,
         lei=norm_lei,
         legal_name=legal_name,
         jurisdiction=jurisdiction,

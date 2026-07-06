@@ -159,6 +159,35 @@ def test_sync_and_stream_agree_on_offline_bundle(
     assert stream_same == sync["possibly_same_entities"]
 
 
+def test_meip_signpost_fires_for_a_register_lei(
+    client: TestClient, tmp_path: Path
+) -> None:
+    # Apple (UK) Limited is in the MEIP Global Register as an Apple Inc subsidiary.
+    lei = "549300QKDHYRRQH2MB86"
+    _seed_bundle(tmp_path, lei)
+
+    sync = client.get("/lookup", params={"lei": lei}).json()
+    events = _stream_events(_stream_body(client, lei))
+    by_name: dict[str, list[dict]] = {}
+    for name, payload in events:
+        by_name.setdefault(name, []).append(payload)
+
+    # Stream emits a `meip` event and the sync response carries the same match.
+    stream_meip = by_name["meip"][0]["match"]
+    assert stream_meip == sync["meip"]
+    assert sync["meip"]["mode"] == "subsidiary"
+    assert sync["meip"]["parent_mne"] == "Apple Inc"
+
+
+def test_meip_absent_for_non_register_lei(
+    client: TestClient, tmp_path: Path
+) -> None:
+    lei = "984500ABCDEF00000042"  # synthetic, not in the MEIP register
+    _seed_bundle(tmp_path, lei)
+    sync = client.get("/lookup", params={"lei": lei}).json()
+    assert sync["meip"] is None
+
+
 def test_stream_announces_applicable_sources(client: TestClient, tmp_path: Path) -> None:
     lei = "213800LH1BZH3DI6G760"
     _seed_bundle(tmp_path, lei)
