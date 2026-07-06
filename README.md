@@ -16,15 +16,17 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 67** — FullCheck mode (enhanced due diligence)
+**Latest: Phase 69** — OECD-UNSD MEIP signpost source
 
-A QuickCheck/FullCheck mode toggle on the results page. QuickCheck stays the fast subject screening; FullCheck maps and screens the wider corporate network connected to the entity, all behind the toggle.
+A new *kind* of source that behaves differently from every other: it is deliberately **not mapped to BODS** and adds nothing to the ownership graph. The OECD-UNSD [Multinational Enterprise Information Platform (MEIP)](https://www.oecd.org/en/data/dashboards/oecd-unsd-multinational-enterprise-information-platform.html) publishes an annual register of the world's 500 largest multinationals and their 126,000+ subsidiaries. When the subject LEI is in that register, OpenCheck shows a **signpost card** at the bottom of the results page — beneath the data-source cards and the ESG box — that:
 
-1. **Eager network build.** "Run FullCheck" expands a single unified ownership graph to a visible depth budget (a client-side loop over `/expand-layer` — no new backend), with progress + cancel.
-2. **Risk-first.** Each expansion hop already screens the entity, so the network's risk signals are surfaced and overlaid on the graph, with a QuickCheck-vs-FullCheck diff ("FullCheck surfaced N more signals across the network").
-3. **Export the network.** `POST /export-network` takes the assembled network away as BODS / Senzing JSON / Neo4j-Cypher, or a ZIP bundling all of them + manifest + licences.
+1. **Proves the match, both ways.** *Subsidiary* mode shows the entity's immediate parent and ultimate parent MNE; *MNE-head* mode shows "one of the 500 largest MNEs" plus a subsidiary count.
+2. **Corroborates against GLEIF.** The identifiers MEIP publishes (OpenCorporates, S&P Capital IQ, alongside the LEI and Refinitiv PermID) are cross-checked against GLEIF's own and flagged where they agree — a light cross-source trust signal.
+3. **Points to the source.** A clear link to download and reuse the full 126k+-subsidiary dataset on the OECD site.
 
-*Previous: [Phase 66 — Senzing JSON as an export format](docs/status.md)*
+Vendored from the annual Global Register CSV (`build_meip.py` → two LEI-keyed JSON tables); no live API. Listed under a new "signpost sources" section in [docs/sources.md](docs/sources.md), separate from the BODS-mapped adapters.
+
+*Previous: [Phase 68 — FullCheck network reconciliation + source provenance](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
