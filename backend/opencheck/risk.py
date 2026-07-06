@@ -177,27 +177,29 @@ def _eu_eea_codes() -> frozenset[str]:
 # Source: https://www.fatf-gafi.org/en/countries/black-and-grey-lists.html
 FATF_BLACK_LIST_CODES: frozenset[str] = frozenset({"KP", "IR", "MM"})
 
-# FATF Jurisdictions under Increased Monitoring ("grey list") as of
-# February 2026.  Note that Bulgaria (BG) is an EU member-state — if
-# NON_EU_JURISDICTION is suppressed via OPENCHECK_AMLA_EQUIVALENT_JURISDICTIONS,
-# FATF_GREY_LIST will still fire for it.
-# Source: https://www.fatf-gafi.org/en/countries/black-and-grey-lists.html
+# FATF Jurisdictions under Increased Monitoring ("grey list") as of the
+# June 2026 plenary (19 June 2026).  Note that Bulgaria (BG) is an EU
+# member-state — if NON_EU_JURISDICTION is suppressed via
+# OPENCHECK_AMLA_EQUIVALENT_JURISDICTIONS, FATF_GREY_LIST will still fire for it.
+# June 2026 changes: added Bosnia and Herzegovina (BA) and Iraq (IQ); removed
+# Algeria (DZ) and Namibia (NA).
+# Source: https://www.fatf-gafi.org/en/publications/High-risk-and-other-monitored-jurisdictions/increased-monitoring-june-2026.html
 FATF_GREY_LIST_CODES: frozenset[str] = frozenset(
     {
-        "DZ",  # Algeria
         "AO",  # Angola
+        "BA",  # Bosnia and Herzegovina
         "BO",  # Bolivia
         "BG",  # Bulgaria
         "CM",  # Cameroon
         "CI",  # Côte d'Ivoire
         "CD",  # Democratic Republic of Congo
         "HT",  # Haiti
+        "IQ",  # Iraq
         "KE",  # Kenya
         "KW",  # Kuwait
         "LA",  # Laos (Lao PDR)
         "LB",  # Lebanon
         "MC",  # Monaco
-        "NA",  # Namibia
         "NP",  # Nepal
         "PG",  # Papua New Guinea
         "SS",  # South Sudan
@@ -1116,8 +1118,8 @@ def _fatf_jurisdiction_signals(
     different severities.  Both can fire on the same bundle (e.g. an entity
     that is itself grey-listed but has an owner in a black-listed jurisdiction).
 
-    Lists current as of February 2026. Update ``FATF_BLACK_LIST_CODES`` and
-    ``FATF_GREY_LIST_CODES`` at each FATF plenary (typically February, June,
+    Lists current as of the June 2026 plenary. Update ``FATF_BLACK_LIST_CODES``
+    and ``FATF_GREY_LIST_CODES`` at each FATF plenary (typically February, June,
     October) when the lists are refreshed.
     """
     black_hits: list[dict[str, str]] = []
@@ -1152,7 +1154,7 @@ def _fatf_jurisdiction_signals(
                 summary=(
                     f"Ownership chain reaches into {label}, "
                     "a jurisdiction on the FATF High-Risk list "
-                    "(Call for Action / black list, February 2026)."
+                    "(Call for Action / black list, June 2026)."
                 ),
                 source_id=source_id,
                 hit_id=hit_id,
@@ -1171,7 +1173,7 @@ def _fatf_jurisdiction_signals(
                 summary=(
                     f"Ownership chain reaches into {label}, "
                     "a jurisdiction under FATF Increased Monitoring "
-                    "(grey list, February 2026)."
+                    "(grey list, June 2026)."
                 ),
                 source_id=source_id,
                 hit_id=hit_id,

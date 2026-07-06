@@ -25,6 +25,8 @@ from opencheck.risk import (
     COMPLEX_OWNERSHIP_LAYERS,
     DEFAULT_EU_EEA_COUNTRY_CODES,
     EU_EEA_COUNTRY_CODES,
+    FATF_GREY_LIST,
+    FATF_GREY_LIST_CODES,
     NOMINEE,
     NON_EU_JURISDICTION,
     OPAQUE_OWNERSHIP,
@@ -174,6 +176,37 @@ def test_trust_signal_fires_on_entity_type_subtype() -> None:
     signals = assess_amla("companies_house", {"entity_id": "X"}, bods)
     sig = next(s for s in signals if s.code == TRUST_OR_ARRANGEMENT)
     assert sig.evidence["matches"][0]["match"] == "entityType.subtype contains 'trust'"
+
+
+# ---------------------------------------------------------------------
+# FATF grey list — June 2026 plenary
+# ---------------------------------------------------------------------
+
+
+def test_fatf_grey_list_june_2026_membership() -> None:
+    # Added at the June 2026 plenary.
+    assert "BA" in FATF_GREY_LIST_CODES  # Bosnia and Herzegovina
+    assert "IQ" in FATF_GREY_LIST_CODES  # Iraq
+    # Removed at the June 2026 plenary.
+    assert "DZ" not in FATF_GREY_LIST_CODES  # Algeria
+    assert "NA" not in FATF_GREY_LIST_CODES  # Namibia
+    assert len(FATF_GREY_LIST_CODES) == 22
+
+
+def test_fatf_grey_signal_fires_for_newly_added_jurisdiction() -> None:
+    bods = [_entity("E1", jurisdiction_code="IQ", jurisdiction_name="Iraq")]
+    signals = assess_amla("openaleph", {"entity_id": "X"}, bods)
+    sig = next(s for s in signals if s.code == FATF_GREY_LIST)
+    assert sig.confidence == "medium"
+    assert "June 2026" in sig.summary
+    assert sig.evidence["jurisdictions"][0]["code"] == "IQ"
+
+
+def test_fatf_grey_signal_does_not_fire_for_removed_jurisdiction() -> None:
+    # Algeria came off the grey list in June 2026 — no FATF_GREY_LIST signal.
+    bods = [_entity("E1", jurisdiction_code="DZ", jurisdiction_name="Algeria")]
+    signals = assess_amla("openaleph", {"entity_id": "X"}, bods)
+    assert FATF_GREY_LIST not in {s.code for s in signals}
 
 
 # ---------------------------------------------------------------------
