@@ -46,6 +46,14 @@ These adapters are committed and tested but **not exposed as live sources**. Eac
 | `acra_singapore` | Singapore ACRA Business Registry | Singapore-OGL-1.0 | jurisdiction `SG` from GLEIF (`RA000509`) | Not in `REGISTRY`, not wired. Entity data (UEN, name, status, type, registration date, address) from the data.gov.sg monthly CSVs, built into a local SQLite DB; entity statements only. Activate via `ACRA_SINGAPORE_DB_FILE` |
 | `cyprus_drcor` | Cyprus DRCOR — Registrar of Companies | CC-BY-4.0 | `cy_he` from GLEIF (`RA000161`) | Not in `REGISTRY`, not wired. Organisations, registered office, and officials (directors/secretaries; no shareholders) from three monthly data.gov.cy CSVs, built into a local SQLite DB via `scripts/extract_cyprus.py`; entity + officer statements. data.gov.cy exposes no query API (`/api/1/datastore/query` returns 404). Activate via `CYPRUS_DRCOR_DB_FILE` |
 
+## Signpost sources (not mapped to BODS)
+
+These are **not** `SourceAdapter`s and are deliberately excluded from the active-adapter count above. They contribute no BODS statements or graph nodes; instead they flag the availability of richer data elsewhere and link out to it. They match on the subject LEI and render at the bottom of the results page, beneath the data-source cards and the ESG box.
+
+| ID | Name | License | Entry point | Description |
+|----|------|---------|-------------|-------------|
+| `meip` | OECD-UNSD Multinational Enterprise Information Platform | [OECD Terms](https://www.oecd.org/termsandconditions/) (attribution) | LEI matched against the vendored Global Register | **Signpost.** The annual "Global Register" of the 500 largest MNEs and their 126k+ subsidiaries. When the subject LEI is one of the ~30k LEI-carrying subsidiaries (or one of the 500 MNE heads), OpenCheck shows a card with the subsidiary/parent-MNE context, alternative names, address, and cross-reference identifiers (LEI, OpenCorporates, Refinitiv PermID, S&P Capital IQ — corroborated against GLEIF's own), and links users to the OECD site to download and reuse the full dataset. Vendored tables built from the annual CSV by `backend/scripts/build_meip.py`; no live API. |
+
 ## Notes
 
 NC-licensed sources (OpenSanctions, EveryPolitician) propagate their non-commercial obligations through `/deepen` and `/export`. The exported `LICENSES.md` warns reviewers before they re-publish. (OpenTender / DIGIWHIST procurement was retired from `REGISTRY` and is parked for a future live opentender.eu integration.)
