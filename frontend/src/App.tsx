@@ -11,6 +11,7 @@ import {
   type BodsBreakdown,
   type BodsCountsEvent,
   type CrossSourceLink,
+  type MeipMatch,
   type PossiblySameEntity,
   type RiskSignal,
   type SourceHit,
@@ -40,6 +41,7 @@ import {
   type SourceBucket,
 } from "./components/cdd/SourceBucketCard";
 import { EsgPanel } from "./components/cdd/EsgPanel";
+import { MeipSignpost } from "./components/cdd/MeipSignpost";
 import { SecuritiesSection } from "./components/cdd/SecuritiesSection";
 
 // FullCheck (enhanced due diligence) view — lazy so Cytoscape/graph code only
@@ -162,6 +164,7 @@ export default function App() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [crossSourceLinks, setCrossSourceLinks] = useState<CrossSourceLink[]>([]);
   const [possiblySame, setPossiblySame] = useState<PossiblySameEntity[]>([]);
+  const [meip, setMeip] = useState<MeipMatch | null>(null);
   const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
   const [applicableSources, setApplicableSources] = useState<string[]>([]);
   const [completedSources, setCompletedSources] = useState<Set<string>>(new Set());
@@ -322,6 +325,7 @@ export default function App() {
         setErrors({});
         setCrossSourceLinks([]);
         setPossiblySame([]);
+        setMeip(null);
         setRiskSignals([]);
         setApplicableSources([]);
         setCompletedSources(new Set());
@@ -363,6 +367,7 @@ export default function App() {
           },
           onCrossSourceLinks: (e) => setCrossSourceLinks(e.links),
           onPossiblySame: (e) => setPossiblySame(e.pairs),
+          onMeip: (e) => setMeip(e.match),
           onRiskSignals: (e) => setRiskSignals(e.signals),
           onBodsCounts: (e: BodsCountsEvent) => {
             setBodsCountMap(e.counts);
@@ -678,6 +683,7 @@ export default function App() {
                   setErrors({});
                   setCrossSourceLinks([]);
                   setPossiblySame([]);
+                  setMeip(null);
                   setRiskSignals([]);
                   setApplicableSources([]);
                   setCompletedSources(new Set());
@@ -1310,6 +1316,10 @@ export default function App() {
         {(esgBuckets.length > 0 || pendingEsgSources.length > 0) && (
           <EsgPanel buckets={esgBuckets} pendingCount={pendingEsgSources.length} bodsCountMap={bodsCountMap} bodsBreakdownMap={bodsBreakdownMap} />
         )}
+
+        {/* MEIP signpost — bottom of the results page, beneath the richer
+            data-source cards and the ESG box. Not a BODS source. */}
+        <MeipSignpost match={meip} />
 
         {streamingLei && !streaming && totalHits > 0 && (
           <ExportPanel
