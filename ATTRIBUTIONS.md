@@ -337,6 +337,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Attribution:** per-collection, e.g. "Data from [collection name] in OpenAleph, licensed [license]."
 - **Note:** The OpenAleph adapter is implemented but currently disabled in the registry. Its API is name-keyed rather than identifier-keyed, which does not fit the LEI-anchored flow cleanly yet.
 
+## OECD-UNSD Multinational Enterprise Information Platform (MEIP)
+
+- **Data:** the annual "Global Register" of subsidiaries of the world's 500 largest multinational enterprises — subsidiary names, jurisdictions, alternative names, addresses, and cross-reference identifiers (LEI, OpenCorporates, Refinitiv PermID, S&P Capital IQ) for the ~30,000 subsidiaries that carry an LEI, plus the 500 MNE heads.
+- **Platform:** <https://www.oecd.org/en/data/dashboards/oecd-unsd-multinational-enterprise-information-platform.html>
+- **License:** [OECD Terms and Conditions](https://www.oecd.org/termsandconditions/) — reuse permitted with attribution.
+- **Attribution:** "Contains data from the OECD-UNSD Multinational Enterprise Information Platform (MEIP)."
+- **Entry point:** subject LEI matched against the vendored MEIP register (`backend/opencheck/data/meip_subsidiaries.json` / `meip_mne_heads.json`, built from the annual Global Register CSV by `backend/scripts/build_meip.py`).
+- **Category:** **Signpost — not mapped to BODS.** MEIP does not contribute BODS statements or graph nodes. When the subject LEI is in the register, OpenCheck shows a signpost card at the bottom of the results page (beneath the data-source cards and the ESG box) that surfaces the identifiers + MNE context and points users to the OECD site to download and reuse the full dataset. MEIP identifiers are cross-checked against GLEIF's own; the `DUNL` column is not used (it only routes to the S&P Capital IQ id already captured).
+
 ---
 
 ## BODS — Beneficial Ownership Data Standard
