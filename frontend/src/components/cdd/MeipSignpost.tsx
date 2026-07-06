@@ -154,10 +154,10 @@ export function MeipSignpost({ match }: { match: MeipMatch | null }) {
         </svg>
         <div className="min-w-0 flex-1">
           <p className="text-[13px] leading-[1.6] text-oo-ink">
-            This entity is one of{" "}
-            <strong className="font-semibold">126,000+ subsidiaries of the world's 500
-            largest multinationals</strong> mapped by the OECD-UNSD Multinational
-            Enterprise Information Platform.
+            This entity appears on the OECD-UNSD Multinational Enterprise
+            Information Platform, which annually maps the{" "}
+            <strong className="font-semibold">126,000+ subsidiaries of the world's
+            500 largest multinationals</strong>.
           </p>
           <a
             href={MEIP_URL}
