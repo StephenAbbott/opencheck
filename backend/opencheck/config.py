@@ -83,6 +83,11 @@ class Settings(BaseSettings):
     )
     opensanctions_api_key: str | None = Field(default=None, alias="OPENSANCTIONS_API_KEY")
     openaleph_api_key: str | None = Field(default=None, alias="OPENALEPH_API_KEY")
+    # Wikirate REST API (https://wikirate.org/use_the_API) — sent as the
+    # X-API-Key header. Effectively required: anonymous server-side requests
+    # are blocked by Wikirate's Cloudflare bot protection (verified
+    # 2026-07-07), so the adapter skips silently when unset. 60 req/min.
+    wikirate_api_key: str | None = Field(default=None, alias="WIKIRATE_API_KEY")
 
     # --- OpenFIGI (securities enrichment: ISIN → FIGI / security type) ---
     # Free key from https://www.openfigi.com/api — sent as the X-OPENFIGI-APIKEY

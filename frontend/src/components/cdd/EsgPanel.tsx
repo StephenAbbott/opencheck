@@ -237,6 +237,7 @@ function EitiCard({ hit }: { hit: SourceHit }) {
   return (
     <div className="rounded-oo border border-emerald-200 bg-emerald-50/40 overflow-hidden">
       <div className="px-5 pt-4 pb-4 border-b border-emerald-200/60">
+        <SourceTag sourceId="eiti" />
         <div className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
           {hit.name}
         </div>
@@ -298,6 +299,180 @@ function EitiCard({ hit }: { hit: SourceHit }) {
           International Secretariat, eiti.org
         </p>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------
+// WikirateCard — community-researched ESG metric answers
+// ---------------------------------------------------------------------
+
+interface WikirateAnswer {
+  metric_designer: string | null;
+  metric_name: string | null;
+  year: number | null;
+  value: unknown;
+  answer_url: string | null;
+}
+
+interface WikirateBundle {
+  card_id: number;
+  name: string;
+  wikirate_url: string;
+  matched_by: string;
+  identifiers: Record<string, unknown>;
+  total_answers: number;
+  latest_answers: WikirateAnswer[];
+}
+
+function formatAnswerValue(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "number") {
+    return Math.abs(value) >= 1000 ? value.toLocaleString() : String(value);
+  }
+  if (Array.isArray(value)) return value.slice(0, 3).join(", ");
+  const text = String(value);
+  return text.length > 60 ? `${text.slice(0, 57)}…` : text;
+}
+
+function WikirateCard({ hit }: { hit: SourceHit }) {
+  const raw = hit.raw as unknown as WikirateBundle;
+  const answers = (raw.latest_answers ?? []).slice(0, 6);
+  const total = raw.total_answers ?? 0;
+
+  return (
+    <div className="rounded-oo border border-emerald-200 bg-emerald-50/40 overflow-hidden">
+      <div className="px-5 pt-4 pb-4">
+        <SourceTag sourceId="wikirate" />
+        <div className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
+          {hit.name}
+        </div>
+        <div className="text-[11px] font-mono text-emerald-700/70 mt-0.5">
+          {raw.matched_by === "wikidata_qid" ? "Wikidata match" : "LEI match"} ·
+          card ~{raw.card_id}
+        </div>
+
+        <div className="mt-4">
+          <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-700/50 mb-1">
+            ESG data points ·{" "}
+            <a
+              href={raw.wikirate_url}
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-emerald-900"
+            >
+              Wikirate
+            </a>
+          </div>
+          <div className="flex items-end gap-3">
+            <span className="font-head font-bold leading-none text-[2.6rem] text-emerald-800 tabular-nums">
+              {total.toLocaleString()}
+            </span>
+            <div className="pb-1">
+              <div className="text-[13px] font-semibold text-emerald-700">
+                metric answers
+              </div>
+              <div className="text-[11px] text-emerald-600/70">
+                community-researched · latest value per metric below
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {answers.length > 0 && (
+          <div className="mt-4 space-y-1.5">
+            {answers.map((a, i) => (
+              <div
+                key={`${a.metric_name}-${i}`}
+                className="flex items-baseline justify-between gap-3"
+              >
+                <span className="text-[11px] text-emerald-900/70 font-medium min-w-0 truncate">
+                  {a.answer_url ? (
+                    <a
+                      href={a.answer_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:underline"
+                    >
+                      {a.metric_name ?? "Metric"}
+                    </a>
+                  ) : (
+                    a.metric_name ?? "Metric"
+                  )}
+                  {a.metric_designer && (
+                    <span className="text-emerald-700/50"> · {a.metric_designer}</span>
+                  )}
+                </span>
+                <span className="text-[11px] font-mono text-emerald-900/60 shrink-0">
+                  {a.year && <span className="text-emerald-700/50">{a.year} · </span>}
+                  {formatAnswerValue(a.value)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <a
+          href={raw.wikirate_url}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 inline-block text-[12px] font-semibold text-emerald-800 underline underline-offset-2 hover:text-emerald-950"
+        >
+          View all {total.toLocaleString()} data points on wikirate.org →
+        </a>
+
+        <p className="mt-3 text-[10px] text-emerald-700/50">
+          Open ESG metric answers researched by the Wikirate community ·
+          Wikirate.org, CC BY 4.0
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Source attribution — every ESG card and tile names its data origin
+// ---------------------------------------------------------------------
+
+const ESG_SOURCE_META: Record<
+  string,
+  { org: string; href: string; licence: string }
+> = {
+  climatetrace: {
+    org: "Global Energy Monitor · Climate TRACE",
+    href: "https://climatetrace.org/",
+    licence: "CC BY 4.0",
+  },
+  eiti: {
+    org: "EITI International Secretariat",
+    href: "https://eiti.org/",
+    licence: "open data, attribution",
+  },
+  wikirate: {
+    org: "Wikirate",
+    href: "https://wikirate.org/",
+    licence: "CC BY 4.0",
+  },
+};
+
+function SourceTag({ sourceId }: { sourceId: string }) {
+  const meta = ESG_SOURCE_META[sourceId];
+  if (!meta) return null;
+  return (
+    <div className="mb-2 -mt-0.5 flex items-center gap-1.5">
+      <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+      <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-700/60">
+        Data from{" "}
+        <a
+          href={meta.href}
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2 hover:text-emerald-900"
+        >
+          {meta.org}
+        </a>{" "}
+        · {meta.licence}
+      </span>
     </div>
   );
 }
@@ -390,6 +565,7 @@ function ClimateTRACECard({
   return (
     <div className="rounded-oo border border-emerald-200 bg-emerald-50/40 overflow-hidden">
       <div className="px-5 pt-4 pb-3 border-b border-emerald-200/60">
+        <SourceTag sourceId="climatetrace" />
         <div className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
           {hit.name}
           {hit.is_stub && (
@@ -591,6 +767,113 @@ function ClimateTRACECard({
 }
 
 // ---------------------------------------------------------------------
+// Summary tiles — one per ESG hit; the full card expands on click
+// ---------------------------------------------------------------------
+
+function tileStats(hit: SourceHit): { stat: string; unit: string; sub: string } {
+  if (hit.source_id === "eiti") {
+    const raw = hit.raw as unknown as EitiBundle;
+    const years = raw.years ?? [];
+    const span =
+      years.length > 1
+        ? `${years[years.length - 1]}–${years[0]}`
+        : years[0] ?? "";
+    if ((raw.total_usd ?? 0) > 0) {
+      return {
+        stat: formatUsd(raw.total_usd),
+        unit: "to governments",
+        sub: span ? `USD disclosed · ${span}` : "USD disclosed",
+      };
+    }
+    return {
+      stat: years.length.toLocaleString(),
+      unit: `reporting year${years.length === 1 ? "" : "s"}`,
+      sub: span,
+    };
+  }
+  if (hit.source_id === "wikirate") {
+    const raw = hit.raw as unknown as WikirateBundle;
+    return {
+      stat: (raw.total_answers ?? 0).toLocaleString(),
+      unit: "ESG data points",
+      sub: "community-researched metrics",
+    };
+  }
+  // climatetrace / GEM
+  const raw = hit.raw as Record<string, unknown>;
+  const emissions = (raw.emissions ?? {}) as { total_co2e_tonnes?: number; year?: number };
+  const projects = (raw.projects ?? null) as GeotProjects | null;
+  const totalCo2e = emissions.total_co2e_tonnes ?? 0;
+  const [liveProjects] = projects?.total ?? [0];
+  if (totalCo2e > 0) {
+    const fmt = formatCo2e(totalCo2e);
+    return {
+      stat: fmt.value,
+      unit: fmt.unit,
+      sub:
+        liveProjects > 0
+          ? `${emissions.year ?? 2024} · ${liveProjects.toLocaleString()} live projects`
+          : `${emissions.year ?? 2024} · direct assets`,
+    };
+  }
+  if (liveProjects > 0) {
+    return {
+      stat: liveProjects.toLocaleString(),
+      unit: `live project${liveProjects === 1 ? "" : "s"}`,
+      sub: "GEM Ownership Tracker",
+    };
+  }
+  return { stat: "—", unit: "", sub: "no emissions or project data" };
+}
+
+function EsgTile({
+  hit,
+  expanded,
+  onToggle,
+}: {
+  hit: SourceHit;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const meta = ESG_SOURCE_META[hit.source_id];
+  const { stat, unit, sub } = tileStats(hit);
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={expanded}
+      className={`text-left rounded-oo border px-4 py-3 transition-colors ${
+        expanded
+          ? "border-emerald-400 bg-emerald-100/70"
+          : "border-emerald-200 bg-emerald-50/40 hover:bg-emerald-100/50"
+      }`}
+    >
+      <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-700/60 mb-1.5">
+        {meta?.org ?? hit.source_id}
+      </div>
+      <div className="flex items-baseline gap-2">
+        <span className="font-head font-bold leading-none text-[1.7rem] text-emerald-800 tabular-nums">
+          {stat}
+        </span>
+        <span className="text-[12px] font-semibold text-emerald-700">{unit}</span>
+      </div>
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <span className="text-[11px] text-emerald-600/70 truncate">{sub}</span>
+        <span className="flex items-center gap-1 shrink-0 text-[11px] font-mono text-emerald-700">
+          {expanded ? "Hide" : "Detail"}
+          <svg
+            width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"
+            className={`transition-transform ${expanded ? "rotate-90" : ""}`}
+          >
+            <path d="M4.5 2.5 L8 6 L4.5 9.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </div>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------
 // EsgPanel — collapsible ESG section
 // ---------------------------------------------------------------------
 
@@ -606,7 +889,15 @@ export function EsgPanel({
   bodsBreakdownMap?: Record<string, BodsBreakdown>;
 }) {
   const [collapsed, setCollapsed] = useState(false);
-  const hitCount = buckets.reduce((n, b) => n + b.hits.length, 0);
+  // Per-hit expansion for the summary tiles. Unset entries fall back to the
+  // default rule: a lone ESG hit shows its full card without an extra click;
+  // two or more start as tiles only.
+  const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
+  const allHits = buckets.flatMap((b) => b.hits);
+  const hitCount = allHits.length;
+  const isExpanded = (key: string) => expandedMap[key] ?? hitCount === 1;
+  const toggle = (key: string) =>
+    setExpandedMap((m) => ({ ...m, [key]: !isExpanded(key) }));
 
   return (
     <section className="mb-8">
@@ -670,7 +961,7 @@ export function EsgPanel({
               >
                 Climate TRACE
               </a>{" "}
-              (CC BY 4.0) and the{" "}
+              (CC BY 4.0), the{" "}
               <a
                 href="https://eiti.org/"
                 target="_blank"
@@ -679,16 +970,47 @@ export function EsgPanel({
               >
                 EITI
               </a>{" "}
-              (open data, attribution). Emissions are satellite-derived
-              estimates for directly owned assets; payments to governments
-              are company disclosures under the EITI Standard — not a
-              beneficial ownership or sanctions check.
+              (open data, attribution) and{" "}
+              <a
+                href="https://wikirate.org/"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2 hover:text-emerald-900"
+              >
+                Wikirate
+              </a>{" "}
+              (CC BY 4.0). Emissions are satellite-derived estimates for
+              directly owned assets; payments to governments are company
+              disclosures under the EITI Standard; Wikirate metrics are
+              community-researched — not a beneficial ownership or
+              sanctions check.
             </p>
 
-            {buckets.map((bucket) =>
-              bucket.hits.map((hit) =>
+            {/* Summary tiles — one per hit, each naming its data origin.
+                Clicking a tile expands the full card below the grid. */}
+            {allHits.length > 0 && (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {allHits.map((hit) => {
+                  const key = `${hit.source_id}:${hit.hit_id}`;
+                  return (
+                    <EsgTile
+                      key={key}
+                      hit={hit}
+                      expanded={isExpanded(key)}
+                      onToggle={() => toggle(key)}
+                    />
+                  );
+                })}
+              </div>
+            )}
+
+            {allHits
+              .filter((hit) => isExpanded(`${hit.source_id}:${hit.hit_id}`))
+              .map((hit) =>
                 hit.source_id === "eiti" ? (
                   <EitiCard key={`${hit.source_id}:${hit.hit_id}`} hit={hit} />
+                ) : hit.source_id === "wikirate" ? (
+                  <WikirateCard key={`${hit.source_id}:${hit.hit_id}`} hit={hit} />
                 ) : (
                   <ClimateTRACECard
                     key={`${hit.source_id}:${hit.hit_id}`}
@@ -697,8 +1019,7 @@ export function EsgPanel({
                     preloadedBreakdown={bodsBreakdownMap[`${hit.source_id}:${hit.hit_id}`]}
                   />
                 )
-              )
-            )}
+              )}
 
             {Array.from({ length: pendingCount }).map((_, i) => (
               <SkeletonSourceCard key={`esg-pending-${i}`} />

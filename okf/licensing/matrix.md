@@ -45,6 +45,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | Sudski registar — Croatian Court Register (`sudreg_croatia`) | `HR-OpenData` | yes | yes | no |
 | UR — Latvian Register of Enterprises (`ur_latvia`) | `Open Government Data (PSI Directive)` | yes | yes | no |
 | Wikidata (`wikidata`) | `CC0-1.0` | yes | no | no |
+| Wikirate (`wikirate`) | `CC-BY-4.0` | yes | yes | no |
 | Zefix — Swiss Commercial Registry (`zefix`) | `CC-BY-4.0` | yes | yes | no |
 
 # How combined licensing is assessed

@@ -48,6 +48,11 @@ def _isolated(monkeypatch, tmp_path):
 
     monkeypatch.setattr(_eiti, "_index", {})
     monkeypatch.setattr(_eiti, "_norm_index", {})
+    # Pin the Wikirate key to unset — a developer .env with WIKIRATE_API_KEY
+    # would otherwise fire live wikirate.org calls during a lookup.
+    import opencheck.sources.wikirate as _wr
+
+    monkeypatch.setattr(_wr, "_api_key", lambda: None)
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()

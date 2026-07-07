@@ -40,6 +40,7 @@ from .sec_edgar import SecEdgarAdapter
 from .sudreg_croatia import SudregCroatiaAdapter
 from .ur_latvia import UrLatviaAdapter
 from .wikidata import WikidataAdapter
+from .wikirate import WikirateAdapter
 from .zefix import ZefixAdapter
 
 REGISTRY: dict[str, SourceAdapter] = {
@@ -75,6 +76,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "sec_edgar": SecEdgarAdapter(),
     "sudreg_croatia": SudregCroatiaAdapter(),
     "ur_latvia": UrLatviaAdapter(),
+    "wikirate": WikirateAdapter(),
     "zefix": ZefixAdapter(),
 }
 

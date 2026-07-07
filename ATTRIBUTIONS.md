@@ -338,6 +338,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** GLEIF `registeredAs` + jurisdiction matched against EITI national identifications (verified formats: GB Companies House numbers, NO orgnr, NL KvK-adjacent)
 - **Category:** ESG — payments-to-governments card in the ESG panel, alongside GEM/Climate TRACE
 
+## Wikirate
+
+- **Data:** Open, community-researched corporate ESG metric answers (environment, human rights, supply chains, governance) from metric designers such as the World Benchmarking Alliance, Net Zero Tracker, Fashion Revolution and the Business & Human Rights Resource Centre. OpenCheck shows the total number of data points plus the latest answer per metric (sampled) and links out to wikirate.org for the full record. Wikirate Company cards independently publish LEI, Wikidata QID, OpenCorporates ID, UK company number, SEC CIK, ABN/ACN and ISIN identifiers, making Wikirate a strong cross-source corroborator. Wikirate is a GODIN member.
+- **API:** Decko card REST API — <https://wikirate.org/use_the_API>; company resolution via `GET /Companies.json?filter[company_identifier[value]]={LEI|QID}` (the flat `filter[company_identifier]` shape 500s server-side, verified 2026-07-07); answers via `GET /~{card_id}+Answer.json` (`filter[year]=latest`, `view=count`)
+- **License:** CC BY 4.0 — stated in every API response
+- **Attribution:** "Wikirate.org, licensed under CC BY 4.0" — <https://wikirate.org/Attribution_Guide>
+- **Entry point:** LEI (Wikidata Q-ID fallback); requires `WIKIRATE_API_KEY` (Cloudflare blocks anonymous server-side requests; the `X-API-Key` header bypasses it); rate limit 60 req/min
+- **Category:** ESG — metric-answers card in the ESG panel, alongside GEM/Climate TRACE and EITI
+
 ## OpenAleph
 
 - **Data:** investigative data collections (company registries, leaks, sanctions lists, court records)

@@ -772,6 +772,44 @@ def _bh_eiti(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+# Wikirate Company-card identifier fields → OpenCheck identifier keys, for
+# reconciler corroboration. Wikirate independently publishes these on the
+# card, so asserting them is legitimate under the corroboration rule.
+# ``open_corporates_id`` is deliberately excluded: it is the bare OC company
+# number, not OpenCheck's jurisdiction-scoped ``ocid``.
+_WIKIRATE_IDENTIFIER_KEYS = {
+    "legal_entity_identifier": "lei",
+    "wikidata_id": "wikidata_qid",
+    "uk_company_number": "gb_coh",
+    "sec_central_index_key": "edgar_cik",
+}
+
+
+def _bh_wikirate(r: dict, ctx: _LookupCtx) -> SourceHit:
+    card_id = r.get("card_id")
+    total = r.get("total_answers") or 0
+    parts = ["Wikirate ESG metrics"]
+    if total > 0:
+        parts.append(f"{total:,} data point{'s' if total != 1 else ''}")
+    years = [a.get("year") for a in r.get("latest_answers") or [] if a.get("year")]
+    if years:
+        parts.append(f"latest {max(years)}")
+    identifiers: dict[str, str] = {}
+    for field, key in _WIKIRATE_IDENTIFIER_KEYS.items():
+        value = (r.get("identifiers") or {}).get(field)
+        if isinstance(value, list):
+            value = value[0] if value else None
+        if value:
+            identifiers[key] = str(value)
+    return _hit(
+        "wikirate", str(card_id),
+        name=r.get("name") or ctx.legal_name or str(card_id),
+        summary=" · ".join(parts),
+        identifiers=identifiers,
+        raw=r,
+    )
+
+
 def _edgar_hit(cik: str, legal_name: str) -> SourceHit:
     return _hit(
         "sec_edgar", cik,
@@ -905,6 +943,15 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
     ct_adapter = REGISTRY.get("climatetrace")
     if ct_adapter is not None and hasattr(ct_adapter, "fetch_by_lei") and _want("climatetrace"):
         tasks.append(("climatetrace", ct_adapter.fetch_by_lei(ctx.lei)))
+    # Wikirate keys on LEI with a Wikidata-QID fallback — both resolve via
+    # the same company_identifier filter. The adapter returns None without
+    # a WIKIRATE_API_KEY (Cloudflare blocks anonymous server-side calls).
+    wr_adapter = REGISTRY.get("wikirate")
+    if wr_adapter is not None and hasattr(wr_adapter, "fetch_by_lei") and _want("wikirate"):
+        tasks.append((
+            "wikirate",
+            wr_adapter.fetch_by_lei(ctx.lei, qid=ctx.qid, legal_name=ctx.legal_name),
+        ))
     # EITI keys on the GLEIF anchor's (jurisdiction, registeredAs) pair — the
     # identification numbers EITI publishes are national registry numbers, so
     # this matches any LEI holder in any of EITI's 65 implementing countries,
@@ -938,6 +985,8 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
         return _bh_climatetrace(result, ctx) if result.get("entity_id") else None
     if source_id == "eiti":
         return _bh_eiti(result, ctx) if result.get("identification") else None
+    if source_id == "wikirate":
+        return _bh_wikirate(result, ctx) if result.get("card_id") else None
     if result.get("is_stub"):
         return None
     if source_id == "opencorporates":

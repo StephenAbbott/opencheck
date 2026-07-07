@@ -51,6 +51,7 @@ from .mapper import (
     map_sudreg_croatia,
     map_ur_latvia,
     map_wikidata,
+    map_wikirate,
     map_zefix,
 )
 from .senzing import map_to_senzing, to_senzing_jsonl
@@ -100,6 +101,7 @@ __all__ = [
     "map_sudreg_croatia",
     "map_ur_latvia",
     "map_wikidata",
+    "map_wikirate",
     "map_zefix",
     "map_to_senzing",
     "to_senzing_jsonl",
