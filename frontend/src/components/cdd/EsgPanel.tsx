@@ -661,7 +661,7 @@ export function EsgPanel({
               >
                 Global Energy Monitor
               </a>{" "}
-              (CC BY 4.0) and{" "}
+              (CC BY 4.0),{" "}
               <a
                 href="https://climatetrace.org/"
                 target="_blank"
@@ -670,9 +670,19 @@ export function EsgPanel({
               >
                 Climate TRACE
               </a>{" "}
-              (CC BY 4.0). Emissions are satellite-derived estimates for
-              directly owned assets — not a beneficial ownership or
-              sanctions check.
+              (CC BY 4.0) and the{" "}
+              <a
+                href="https://eiti.org/"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2 hover:text-emerald-900"
+              >
+                EITI
+              </a>{" "}
+              (open data, attribution). Emissions are satellite-derived
+              estimates for directly owned assets; payments to governments
+              are company disclosures under the EITI Standard — not a
+              beneficial ownership or sanctions check.
             </p>
 
             {buckets.map((bucket) =>
