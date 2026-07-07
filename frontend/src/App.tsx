@@ -2438,8 +2438,19 @@ function CrossSourceIdentifiersTable({
  * matches already appear in the cross-source identifiers table above. Renders
  * nothing when there are no candidates.
  */
+// How many possibly-same pairs are visible before the rest collapse behind
+// the "Show more" toggle. Multi-source subjects (e.g. DNO ASA) can flag many
+// pairs, which otherwise dominates the results page.
+const POSSIBLY_SAME_PREVIEW_COUNT = 2;
+
 function PossiblySameTable({ pairs }: { pairs: PossiblySameEntity[] }) {
+  const [expanded, setExpanded] = useState(false);
   if (pairs.length === 0) return null;
+  const hiddenCount = pairs.length - POSSIBLY_SAME_PREVIEW_COUNT;
+  const visible =
+    expanded || hiddenCount <= 0
+      ? pairs
+      : pairs.slice(0, POSSIBLY_SAME_PREVIEW_COUNT);
   return (
     <>
       <p className="text-[12px] text-oo-muted mb-3">
@@ -2462,7 +2473,7 @@ function PossiblySameTable({ pairs }: { pairs: PossiblySameEntity[] }) {
           </tr>
         </thead>
         <tbody>
-          {pairs.map((p) => (
+          {visible.map((p) => (
             <tr key={`${p.a}~${p.b}`} className="border-t border-oo-rule align-top">
               <td className="py-2 pr-3 text-oo-ink">
                 <div className="break-words">{p.a_name || p.a}</div>
@@ -2483,6 +2494,18 @@ function PossiblySameTable({ pairs }: { pairs: PossiblySameEntity[] }) {
           ))}
         </tbody>
       </table>
+      {hiddenCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className="mt-3 text-[12px] font-medium text-oo-blue hover:text-oo-burst underline underline-offset-2"
+        >
+          {expanded
+            ? "Show fewer"
+            : `Show ${hiddenCount} more possible duplicate${hiddenCount === 1 ? "" : "s"}`}
+        </button>
+      )}
     </>
   );
 }

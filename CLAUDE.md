@@ -322,6 +322,12 @@ Specific rules:
 
 ## Other conventions
 
+- **Every new phase row in `docs/status.md` must end with a commit citation**
+  — `Commit \`hash\`.` or `Commits \`a\`, \`b\`.` (short hashes in backticks).
+  The `/changelog` page derives its GitHub links from exactly this clause
+  (`extractCommits` in `frontend/src/lib/changelog.ts`); a row without it
+  renders on the changelog with no link. Phases 68–70 dropped the
+  convention and lost their links (restored in `6ecc723`).
 - API keys go in `.env` only — never committed to the repo.
 - Schema files use `extra="allow"` via `_Base` so unknown API fields don't break validation.
 - `validate_raw()` is called at the end of `fetch()` on the fully-assembled bundle, before returning.
