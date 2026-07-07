@@ -20,6 +20,7 @@ from .climatetrace import ClimateTRACEAdapter
 from .companies_house import CompaniesHouseAdapter
 from .corporations_canada import CorporationsCanadaAdapter
 from .cro import CroAdapter
+from .eiti import EitiAdapter
 from .everypolitician import EveryPoliticianAdapter
 from .firmenbuch import FirmenbuchAdapter
 from .gleif import GleifAdapter
@@ -54,6 +55,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "companies_house": CompaniesHouseAdapter(),
     "cro": CroAdapter(),
     "cvr_denmark": CvrDenmarkAdapter(),
+    "eiti": EitiAdapter(),
     "firmenbuch": FirmenbuchAdapter(),
     "gleif": GleifAdapter(),
     "inpi": InpiAdapter(),

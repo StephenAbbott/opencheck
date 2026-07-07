@@ -42,6 +42,12 @@ def _isolated(monkeypatch, tmp_path):
 
     monkeypatch.setattr(_ct, "_lei_index", {})
     monkeypatch.setattr(_ct, "_entity_index", {})
+    # Same for the EITI organisation index — a mocked GB anchor with
+    # registeredAs would otherwise fire live eiti.org revenue calls.
+    import opencheck.sources.eiti as _eiti
+
+    monkeypatch.setattr(_eiti, "_index", {})
+    monkeypatch.setattr(_eiti, "_norm_index", {})
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()

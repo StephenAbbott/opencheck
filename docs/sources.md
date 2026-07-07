@@ -35,6 +35,7 @@ Thirty active adapters, each implementing the same `SourceAdapter` protocol (`se
 | `everypolitician` | EveryPolitician | CC BY-NC 4.0 | LEI search | Global database of political office-holders (served via OpenSanctions PEPs dataset) |
 | `wikidata` | Wikidata | CC0-1.0 | Q-ID via SPARQL | A free and open knowledge base that can be read and edited by both humans and machines |
 | `climatetrace` | Global Energy Monitor / Climate TRACE | CC-BY-4.0 | LEI | **ESG** — asset-level CO₂ emissions (Climate TRACE) plus energy and heavy-industry ownership reach (GEM Global Energy Ownership Tracker): the entity's direct and group-wide power/industrial assets and live projects with per-sector breakdowns; no API key required |
+| `eiti` | EITI — Extractive Industries Transparency Initiative | EITI open data (attribution) | national registry number via GLEIF `registeredAt`/`registeredAs` (any of EITI's 65 implementing countries) | **ESG** — company-level payments to governments (taxes, royalties, licence fees) with GFS revenue classification, USD-normalised, per reporting year; organisation matching via the committed `eiti_organisations.json.gz` index (the API's identification filter is not implemented server-side), live payment rows from `/api/v2.0/revenue?organisation=`; no API key required |
 
 ## Inactive / bulk-only adapters
 

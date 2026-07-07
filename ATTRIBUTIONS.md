@@ -329,6 +329,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Category:** ESG — this data is surfaced in a separate Environmental, Social, and Governance (ESG) Data panel in the OpenCheck UI, distinct from the customer due diligence sources above
 - **Note:** OpenCheck uses the GEM ownership data directly under its CC BY 4.0 licence. The OpenSanctions GEM dataset is **not** used, as OpenSanctions applies a CC BY-NC 4.0 licence to all its datasets (including the GEM-derived one), which would restrict commercial use. The source file is re-downloaded on each server start because Render's filesystem is ephemeral.
 
+## EITI — Extractive Industries Transparency Initiative
+
+- **Data:** Company-level payments to governments (taxes, royalties, licence fees and other fiscal flows) disclosed under the EITI Standard by 65+ implementing countries, with GFS revenue classification and USD-normalised amounts. Organisation matching uses the committed index `backend/opencheck/data/eiti_organisations.json.gz`, built by `backend/scripts/build_eiti_index.py` from the full `/api/v2.0/organisation` table (the API's documented `identification` filter is not implemented server-side, verified 2026-07-07). Per-company payment rows are fetched live from `/api/v2.0/revenue?organisation={id}`.
+- **API:** <https://eiti.org/api> — OAS spec at <https://eiti.org/openapi/rest?_format=json>
+- **License:** EITI content-use policy — free republication with credit; open-data commitment at <https://eiti.org/open-data>
+- **Attribution:** "EITI International Secretariat, eiti.org"
+- **Entry point:** GLEIF `registeredAs` + jurisdiction matched against EITI national identifications (verified formats: GB Companies House numbers, NO orgnr, NL KvK-adjacent)
+- **Category:** ESG — payments-to-governments card in the ESG panel, alongside GEM/Climate TRACE
+
 ## OpenAleph
 
 - **Data:** investigative data collections (company registries, leaks, sanctions lists, court records)

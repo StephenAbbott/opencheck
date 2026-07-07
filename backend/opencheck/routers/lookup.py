@@ -736,6 +736,42 @@ def _bh_bods_gleif(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+# Countries where the EITI identification format has been verified to match
+# an OpenCheck derived-identifier key — lets the reconciler show legitimate
+# cross-source corroboration (EITI independently publishes these numbers).
+_EITI_IDENTIFIER_KEY_BY_COUNTRY = {
+    "GB": "gb_coh",
+    "NO": "no_orgnr",
+    "NL": "kvk_number",
+}
+
+
+def _bh_eiti(r: dict, ctx: _LookupCtx) -> SourceHit:
+    country = r.get("country") or ""
+    ident = r.get("identification") or ""
+    years = r.get("years") or []
+    total_usd = r.get("total_usd") or 0.0
+    parts = [f"EITI {country}"]
+    if years:
+        parts.append(
+            f"{len(years)} reporting year{'s' if len(years) != 1 else ''} "
+            f"({years[-1]}–{years[0]})" if len(years) > 1 else f"reported {years[0]}"
+        )
+    if total_usd > 0:
+        if total_usd >= 1_000_000:
+            parts.append(f"${total_usd / 1_000_000:.1f}M USD to governments")
+        else:
+            parts.append(f"${total_usd:,.0f} USD to governments")
+    ident_key = _EITI_IDENTIFIER_KEY_BY_COUNTRY.get(country, "eiti_identification")
+    return _hit(
+        "eiti", f"{country}:{ident}",
+        name=r.get("entity_name") or ctx.legal_name or ident,
+        summary=" · ".join(parts),
+        identifiers={ident_key: ident},
+        raw=r,
+    )
+
+
 def _edgar_hit(cik: str, legal_name: str) -> SourceHit:
     return _hit(
         "sec_edgar", cik,
@@ -869,6 +905,24 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
     ct_adapter = REGISTRY.get("climatetrace")
     if ct_adapter is not None and hasattr(ct_adapter, "fetch_by_lei") and _want("climatetrace"):
         tasks.append(("climatetrace", ct_adapter.fetch_by_lei(ctx.lei)))
+    # EITI keys on the GLEIF anchor's (jurisdiction, registeredAs) pair — the
+    # identification numbers EITI publishes are national registry numbers, so
+    # this matches any LEI holder in any of EITI's 65 implementing countries,
+    # not just those with a dedicated OpenCheck register adapter.
+    eiti_adapter = REGISTRY.get("eiti")
+    if (
+        eiti_adapter is not None
+        and hasattr(eiti_adapter, "fetch_by_registration")
+        and ctx.registered_as
+        and ctx.jurisdiction
+        and _want("eiti")
+    ):
+        tasks.append((
+            "eiti",
+            eiti_adapter.fetch_by_registration(
+                ctx.jurisdiction, ctx.registered_as, legal_name=ctx.legal_name
+            ),
+        ))
     bg_adapter = REGISTRY.get("bods_gleif")
     if bg_adapter is not None and hasattr(bg_adapter, "fetch_by_lei") and _want("bods_gleif"):
         tasks.append(("bods_gleif", bg_adapter.fetch_by_lei(ctx.lei)))
@@ -882,6 +936,8 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
     if source_id == "climatetrace":
         # Climate TRACE stubs still carry GEM CSV data worth showing.
         return _bh_climatetrace(result, ctx) if result.get("entity_id") else None
+    if source_id == "eiti":
+        return _bh_eiti(result, ctx) if result.get("identification") else None
     if result.get("is_stub"):
         return None
     if source_id == "opencorporates":

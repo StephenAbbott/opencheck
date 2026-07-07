@@ -38,3 +38,4 @@
 # ESG / climate sources
 
 * [Global Energy Monitor / Climate TRACE](/sources/climatetrace.md) - Global fossil-fuel asset ownership data (GEM) combined with satellite-derived emissions estimates (Climate TRACE). LEI resolution uses the GLEIF-certified GEM Entity ID mapping (June 2026). Enables ESG and climate risk screening by LEI.
+* [EITI — Extractive Industries Transparency Initiative](/sources/eiti.md) - Company-level payments to governments (taxes, royalties, licence fees) disclosed under the EITI Standard by 65+ implementing countries, with GFS revenue classification.

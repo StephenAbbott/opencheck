@@ -458,6 +458,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "rpvs_slovakia": "RPVS — Slovak Public Sector Partners Register",
         "sec_edgar": "SEC EDGAR — U.S. Securities and Exchange Commission",
         "sudreg_croatia": "Sudski registar — Croatian Court Register",
+        "eiti": "EITI — Extractive Industries Transparency Initiative",
         "ur_latvia": "UR — Latvian Register of Enterprises (data.gov.lv)",
         "ares": "ARES — Czech Administrativní registr ekonomických subjektů",
         "wikidata": "Wikidata",
@@ -2909,6 +2910,64 @@ def map_sudreg_croatia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
 
 _SUDREG_SOURCE_URL = "https://sudreg.pravosudje.hr"
+
+
+# ----------------------------------------------------------------------
+# EITI — Extractive Industries Transparency Initiative
+# ----------------------------------------------------------------------
+
+# National identifier schemes for the countries whose EITI identification
+# format has been verified against an org-id.guide scheme OpenCheck already
+# emits. Other countries carry the identification without a scheme code.
+_EITI_SCHEME_BY_COUNTRY: dict[str, tuple[str, str]] = {
+    "GB": ("GB-COH", "Companies House"),
+    "NO": ("NO-BRC", "Brønnøysundregistrene"),
+    "NL": ("NL-KVK", "Kamer van Koophandel"),
+}
+
+
+def map_eiti(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map an EITI fetch bundle to BODS v0.4 statements.
+
+    Emits one entity statement for the disclosing company. EITI payment
+    data describes fiscal flows, not ownership or control, so no person
+    or relationship statements are emitted. (When EITI's data strategy
+    delivers BODS-native company/SOE publication, this mapper is the
+    natural place to consume it.)
+    """
+    if not bundle or bundle.get("is_stub"):
+        return
+
+    identification: str = (bundle.get("identification") or "").strip()
+    country: str = (bundle.get("country") or "").strip().upper()
+    name: str = (bundle.get("entity_name") or "").strip()
+    if not identification or not name:
+        return
+
+    scheme = _EITI_SCHEME_BY_COUNTRY.get(country)
+    identifier: dict[str, str] = {"id": identification}
+    if scheme:
+        identifier["scheme"] = scheme[0]
+        identifier["schemeName"] = f"{scheme[1]} (via EITI disclosure)"
+    else:
+        identifier["schemeName"] = "National registry identifier (via EITI disclosure)"
+
+    jurisdiction_obj = _country_obj(country) if country else None
+    jur_tuple: tuple[str, str] | None = (
+        (jurisdiction_obj["name"], jurisdiction_obj["code"])
+        if jurisdiction_obj
+        else None
+    )
+
+    entity = make_entity_statement(
+        source_id="eiti",
+        local_id=f"{country}:{identification}",
+        name=name,
+        jurisdiction=jur_tuple,
+        identifiers=[identifier],
+        source_url="https://eiti.org/",
+    )
+    yield entity
 
 
 def _sudreg_address(block: dict[str, Any]) -> list[dict[str, str]]:

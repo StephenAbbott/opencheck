@@ -201,6 +201,108 @@ function statusFootnote(statuses: Record<string, number>): string | null {
 }
 
 // ---------------------------------------------------------------------
+// EitiCard — payments-to-governments card for an EITI hit
+// ---------------------------------------------------------------------
+
+interface EitiRevenueYear {
+  year: string | null;
+  organisation_id: string;
+  total_usd: number;
+  rows: { label: string | null; revenue: number | null; currency: string | null; gfs_label: string | null }[];
+}
+
+interface EitiBundle {
+  country: string;
+  identification: string;
+  entity_name: string | null;
+  organisations: { id: string; year: string | null; label: string | null }[];
+  revenue_years: EitiRevenueYear[];
+  streams: Record<string, number>;
+  total_usd: number;
+  years: string[];
+}
+
+function formatUsd(v: number): string {
+  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `$${Math.round(v / 1_000).toLocaleString()}k`;
+  return `$${Math.round(v).toLocaleString()}`;
+}
+
+function EitiCard({ hit }: { hit: SourceHit }) {
+  const raw = hit.raw as unknown as EitiBundle;
+  const streams = Object.entries(raw.streams ?? {}).slice(0, 6);
+  const maxStream = streams.length ? Math.max(...streams.map(([, v]) => v)) : 0;
+  const years = raw.years ?? [];
+
+  return (
+    <div className="rounded-oo border border-emerald-200 bg-emerald-50/40 overflow-hidden">
+      <div className="px-5 pt-4 pb-4 border-b border-emerald-200/60">
+        <div className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
+          {hit.name}
+        </div>
+        <div className="text-[11px] font-mono text-emerald-700/70 mt-0.5">
+          {raw.country} · national ID {raw.identification}
+        </div>
+
+        <div className="mt-4">
+          <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-700/50 mb-1">
+            Payments to governments ·{" "}
+            <a
+              href="https://eiti.org/open-data"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-emerald-900"
+            >
+              EITI
+            </a>
+          </div>
+          <div className="flex items-end gap-3">
+            <span className="font-head font-bold leading-none text-[2.6rem] text-emerald-800 tabular-nums">
+              {raw.total_usd > 0 ? formatUsd(raw.total_usd) : years.length.toLocaleString()}
+            </span>
+            <div className="pb-1">
+              <div className="text-[13px] font-semibold text-emerald-700">
+                {raw.total_usd > 0 ? "USD disclosed" : `reporting year${years.length === 1 ? "" : "s"}`}
+              </div>
+              <div className="text-[11px] text-emerald-600/70">
+                {years.length > 0 &&
+                  (years.length > 1
+                    ? `${years[years.length - 1]}–${years[0]} · ${years.length} reporting years`
+                    : `reported ${years[0]}`)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {streams.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {streams.map(([label, value]) => (
+              <div key={label}>
+                <div className="flex items-baseline justify-between mb-1">
+                  <span className="text-[11px] text-emerald-900/70 font-medium">{label}</span>
+                  <span className="text-[11px] font-mono text-emerald-900/60">{formatUsd(value)}</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-emerald-100 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-emerald-500"
+                    style={{ width: `${maxStream > 0 ? (value / maxStream) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <p className="mt-3 text-[10px] text-emerald-700/50">
+          GFS-classified fiscal disclosures under the EITI Standard · EITI
+          International Secretariat, eiti.org
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------
 // ClimateTRACECard — card for a Climate TRACE / GEM hit
 // ---------------------------------------------------------------------
 
@@ -574,14 +676,18 @@ export function EsgPanel({
             </p>
 
             {buckets.map((bucket) =>
-              bucket.hits.map((hit) => (
-                <ClimateTRACECard
-                  key={`${hit.source_id}:${hit.hit_id}`}
-                  hit={hit}
-                  preloadedStmtCount={bodsCountMap[`${hit.source_id}:${hit.hit_id}`]}
-                  preloadedBreakdown={bodsBreakdownMap[`${hit.source_id}:${hit.hit_id}`]}
-                />
-              ))
+              bucket.hits.map((hit) =>
+                hit.source_id === "eiti" ? (
+                  <EitiCard key={`${hit.source_id}:${hit.hit_id}`} hit={hit} />
+                ) : (
+                  <ClimateTRACECard
+                    key={`${hit.source_id}:${hit.hit_id}`}
+                    hit={hit}
+                    preloadedStmtCount={bodsCountMap[`${hit.source_id}:${hit.hit_id}`]}
+                    preloadedBreakdown={bodsBreakdownMap[`${hit.source_id}:${hit.hit_id}`]}
+                  />
+                )
+              )
             )}
 
             {Array.from({ length: pendingCount }).map((_, i) => (

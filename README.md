@@ -8,7 +8,7 @@ Try the demo at **https://opencheck.world/**
 
 ## What is OpenCheck?
 
-You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries [GLEIF](https://www.gleif.org/) first, derives every cross-source identifier it can (UK Companies House number, Norwegian organisation number, Irish company registration number, Finnish Y-tunnus, Latvian registration number, Lithuanian entity code, Estonian registry code, Czech IČO, Polish KRS number, Austrian Firmenbuchnummer, Slovak IČO, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, Canadian corporation number, Belgian enterprise number, Danish CVR number, Croatian MBS, Maltese registration number, Brazilian CNPJ, New Zealand company number, Australian ACN/ABN, OpenCorporates ID, Wikidata Q-ID, and more), and uses those bridges to fan out across 32 national and international corporate data sources.
+You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries [GLEIF](https://www.gleif.org/) first, derives every cross-source identifier it can (UK Companies House number, Norwegian organisation number, Irish company registration number, Finnish Y-tunnus, Latvian registration number, Lithuanian entity code, Estonian registry code, Czech IČO, Polish KRS number, Austrian Firmenbuchnummer, Slovak IČO, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, Canadian corporation number, Belgian enterprise number, Danish CVR number, Croatian MBS, Maltese registration number, Brazilian CNPJ, New Zealand company number, Australian ACN/ABN, OpenCorporates ID, Wikidata Q-ID, and more), and uses those bridges to fan out across 33 national and international corporate data sources.
 
 Everything maps into [BODS v0.4](https://standard.openownership.org/en/0.4.0/). Cross-source links and risk signals are computed deterministically, and the whole bundle is one click away from a downloadable export (JSON / JSONL / XML / ZIP, plus [Senzing JSON](https://www.senzing.com/docs/entity_specification/) entity records for entity resolution).
 
@@ -16,17 +16,11 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 69** — OECD-UNSD MEIP signpost source
+**Latest: Phase 70** — EITI: payments to governments as a new ESG source
 
-A new *kind* of source that behaves differently from every other: it is deliberately **not mapped to BODS** and adds nothing to the ownership graph. The OECD-UNSD [Multinational Enterprise Information Platform (MEIP)](https://www.oecd.org/en/data/dashboards/oecd-unsd-multinational-enterprise-information-platform.html) publishes an annual register of the world's 500 largest multinationals and their 126,000+ subsidiaries. When the subject LEI is in that register, OpenCheck shows a **signpost card** at the bottom of the results page — beneath the data-source cards and the ESG box — that:
+OpenCheck now surfaces company-level **payments to governments** (taxes, royalties, licence fees) disclosed under the [EITI Standard](https://eiti.org/) by 65 implementing countries, with GFS revenue classification and USD-normalised amounts. The adapter keys on the GLEIF anchor's `(jurisdiction, registeredAs)` pair — EITI identifications are national registry numbers (verified: UK Companies House numbers, Norwegian orgnr, Dutch KvK) — making it the first source to use GLEIF's `registeredAs` globally across every jurisdiction rather than through per-country derivers. Because the EITI API's documented identification filter isn't implemented server-side, matching happens against a committed index built by `scripts/build_eiti_index.py` (246 KB, 6,197 identifications, 56 countries), with per-company payment rows fetched live from `/api/v2.0/revenue`. A new EITI card renders in the ESG panel alongside GEM/Climate TRACE: payments headline, GFS stream breakdown, and reporting years. Verified end-to-end with Equinor UK (4 reporting years, 2018–2021).
 
-1. **Proves the match, both ways.** *Subsidiary* mode shows the entity's immediate parent and ultimate parent MNE; *MNE-head* mode shows "one of the 500 largest MNEs" plus a subsidiary count.
-2. **Corroborates against GLEIF.** The identifiers MEIP publishes (OpenCorporates, S&P Capital IQ, alongside the LEI and Refinitiv PermID) are cross-checked against GLEIF's own and flagged where they agree — a light cross-source trust signal.
-3. **Points to the source.** A clear link to download and reuse the full 126k+-subsidiary dataset on the OECD site.
-
-Vendored from the annual Global Register CSV (`build_meip.py` → two LEI-keyed JSON tables); no live API. Listed under a new "signpost sources" section in [docs/sources.md](docs/sources.md), separate from the BODS-mapped adapters.
-
-*Previous: [Phase 68 — FullCheck network reconciliation + source provenance](docs/status.md)*
+*Previous: [Phase 69 — OECD-UNSD MEIP signpost source](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
