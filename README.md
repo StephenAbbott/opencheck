@@ -16,11 +16,11 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 70** — EITI: payments to governments as a new ESG source
+**Latest: Phase 71** — Wikirate: open ESG metric answers + ESG summary tiles
 
-OpenCheck now surfaces company-level **payments to governments** (taxes, royalties, licence fees) disclosed under the [EITI Standard](https://eiti.org/) by 65 implementing countries, with GFS revenue classification and USD-normalised amounts. The adapter keys on the GLEIF anchor's `(jurisdiction, registeredAs)` pair — EITI identifications are national registry numbers (verified: UK Companies House numbers, Norwegian orgnr, Dutch KvK) — making it the first source to use GLEIF's `registeredAs` globally across every jurisdiction rather than through per-country derivers. Because the EITI API's documented identification filter isn't implemented server-side, matching happens against a committed index built by `scripts/build_eiti_index.py` (246 KB, 6,197 identifications, 56 countries), with per-company payment rows fetched live from `/api/v2.0/revenue`. A new EITI card renders in the ESG panel alongside GEM/Climate TRACE: payments headline, GFS stream breakdown, and reporting years. Verified end-to-end with Equinor UK (4 reporting years, 2018–2021).
+OpenCheck now surfaces open, community-researched **ESG metric answers** from [Wikirate](https://wikirate.org/) (CC BY 4.0, GODIN member) — thousands of metrics on environment, human rights, supply chains and governance from designers such as the World Benchmarking Alliance and Net Zero Tracker. The adapter keys on the LEI (with a Wikidata-QID fallback) via Wikirate's `company_identifier` filter, shows the total data-point count plus the latest answer per metric, and links out to wikirate.org for the full record. Wikirate company cards independently publish LEI, Wikidata, Companies House and SEC CIK identifiers, so the hit corroborates identifiers across sources. With three ESG sources (GEM/Climate TRACE, EITI, Wikirate) the ESG panel now opens as compact summary tiles — one per source, each naming its data origin and headline stat — with full cards expanding on click. Requires `WIKIRATE_API_KEY`. Verified end-to-end with BP plc (2,290 data points).
 
-*Previous: [Phase 69 — OECD-UNSD MEIP signpost source](docs/status.md)*
+*Previous: [Phase 70 — EITI: payments to governments](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
