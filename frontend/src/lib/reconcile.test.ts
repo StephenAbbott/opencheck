@@ -193,6 +193,162 @@ describe("reconcileBods", () => {
     expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(2);
   });
 
+  // ── Identifier-TYPE collision guards (issue #25, item 1) ─────────────────
+  // The jurisdiction bridge is whitelist-gated to national-register schemes:
+  // a tax / VAT / CIK number that coincidentally equals a different entity's
+  // company number in the same jurisdiction must never merge them.
+
+  it("does not merge a Polish tax id (PL-NIP) with a same-digits register number (PL-KRS)", () => {
+    // NIP and KRS are both 10 bare digits — the canonical cross-type collision.
+    const { statements } = reconcileBods([
+      {
+        statementId: "krs", recordType: "entity",
+        recordDetails: { name: "Spółka Jedna", jurisdiction: { code: "PL" },
+          identifiers: [{ scheme: "PL-KRS", id: "0000123456" }] },
+        source: { description: "KRS" },
+      },
+      {
+        statementId: "nip", recordType: "entity",
+        recordDetails: { name: "Spółka Druga", jurisdiction: { code: "PL" },
+          identifiers: [{ scheme: "PL-NIP", id: "0000123456" }] },
+        source: { description: "OpenCorporates" },
+      },
+    ]);
+    expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(2);
+  });
+
+  it("does not merge a US SEC CIK with a same-digits state registration number", () => {
+    const { statements } = reconcileBods([
+      {
+        statementId: "cik", recordType: "entity",
+        recordDetails: { name: "Listed Corp", jurisdiction: { code: "US" },
+          identifiers: [{ scheme: "US-SEC-CIK", id: "313807" }] },
+        source: { description: "SEC EDGAR" },
+      },
+      {
+        statementId: "state", recordType: "entity",
+        // Unschemed number from GLEIF registeredAs — a state registry number.
+        recordDetails: { name: "Unrelated LLC", jurisdiction: { code: "US" },
+          identifiers: [{ scheme: "", id: "313807" }] },
+        source: { description: "GLEIF" },
+      },
+    ]);
+    expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(2);
+  });
+
+  it("does not bridge AT-UID (a VAT scheme that doesn't contain the string 'VAT')", () => {
+    const { statements } = reconcileBods([
+      {
+        statementId: "fb", recordType: "entity",
+        recordDetails: { name: "Alpen GmbH", jurisdiction: { code: "AT" },
+          identifiers: [{ scheme: "AT-FB", id: "123456" }] },
+        source: { description: "Firmenbuch" },
+      },
+      {
+        statementId: "uid", recordType: "entity",
+        recordDetails: { name: "Anders GmbH", jurisdiction: { code: "AT" },
+          identifiers: [{ scheme: "AT-UID", id: "123456" }] },
+        source: { description: "OpenCorporates" },
+      },
+    ]);
+    expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(2);
+  });
+
+  it("bridges the same register number under different register labels (CA-CORP ↔ CA-CC)", () => {
+    // Verified live on Canada Basketball: Corporations Canada emits CA-CORP,
+    // OpenCorporates passes through CA-CC — same number, same entity. The
+    // non-register denylist must not break this (a whitelist would have).
+    const { statements } = reconcileBods([
+      {
+        statementId: "cc-corp", recordType: "entity",
+        recordDetails: { name: "CANADA BASKETBALL", jurisdiction: { code: "CA" },
+          identifiers: [{ scheme: "CA-CORP", id: "0343587" }] },
+        source: { description: "Corporations Canada" },
+      },
+      {
+        statementId: "oc", recordType: "entity",
+        recordDetails: { name: "CANADA BASKETBALL", jurisdiction: { code: "CA" },
+          identifiers: [{ scheme: "CA-CC", id: "0343587" }] },
+        source: { description: "OpenCorporates" },
+      },
+    ]);
+    expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(1);
+  });
+
+  it("does not bridge CA-BN (tax) but keeps NZ-NZBN (register) — segment matching, not substring", () => {
+    const { statements } = reconcileBods([
+      // CA-BN vs CA-CORP same digits → must NOT merge ("BN" segment is tax).
+      {
+        statementId: "ca-corp", recordType: "entity",
+        recordDetails: { name: "Maple Corp", jurisdiction: { code: "CA" },
+          identifiers: [{ scheme: "CA-CORP", id: "1067752" }] },
+        source: { description: "Corporations Canada" },
+      },
+      {
+        statementId: "ca-bn", recordType: "entity",
+        recordDetails: { name: "Other Corp", jurisdiction: { code: "CA" },
+          identifiers: [{ scheme: "CA-BN", id: "1067752" }] },
+        source: { description: "OpenCorporates" },
+      },
+      // NZ-NZBN vs unschemed same digits → MUST merge (NZBN is the register
+      // number; the "BN" rule must not substring-match it).
+      {
+        statementId: "nz-reg", recordType: "entity",
+        recordDetails: { name: "Kiwi Ltd", jurisdiction: { code: "NZ" },
+          identifiers: [{ scheme: "NZ-NZBN", id: "9429000000000" }] },
+        source: { description: "NZ Companies" },
+      },
+      {
+        statementId: "nz-gleif", recordType: "entity",
+        recordDetails: { name: "KIWI LIMITED", jurisdiction: { code: "NZ" },
+          identifiers: [{ scheme: "", id: "9429000000000" }] },
+        source: { description: "GLEIF" },
+      },
+    ]);
+    const ents = statements.filter((s) => s.recordType === "entity");
+    // 4 raw → 3: the NZ pair merges, the CA pair stays apart.
+    expect(ents).toHaveLength(3);
+  });
+
+  it("still bridges an unschemed registeredAs number to its register scheme", () => {
+    // The whitelist must not break the bridge's purpose: "" (GLEIF) ↔ DK-CVR.
+    const { statements } = reconcileBods([
+      {
+        statementId: "gleif", recordType: "entity",
+        recordDetails: { name: "Novo Nordisk A/S", jurisdiction: { code: "DK" },
+          identifiers: [{ scheme: "", id: "24256790" }] },
+        source: { description: "GLEIF" },
+      },
+      {
+        statementId: "cvr", recordType: "entity",
+        recordDetails: { name: "NOVO NORDISK A/S", jurisdiction: { code: "DK" },
+          identifiers: [{ scheme: "DK-CVR", id: "24256790" }] },
+        source: { description: "CVR" },
+      },
+    ]);
+    expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(1);
+  });
+
+  it("identical scheme+value still merges even for non-register schemes", () => {
+    // Scheme-scoped merging is untouched by the bridge whitelist: two sources
+    // asserting the SAME US-SEC-CIK are the same entity.
+    const { statements } = reconcileBods([
+      {
+        statementId: "a", recordType: "entity",
+        recordDetails: { name: "Listed Corp", jurisdiction: { code: "US" },
+          identifiers: [{ scheme: "US-SEC-CIK", id: "313807" }] },
+        source: { description: "SEC EDGAR" },
+      },
+      {
+        statementId: "b", recordType: "entity",
+        recordDetails: { name: "Listed Corp.", jurisdiction: { code: "US" },
+          identifiers: [{ scheme: "US-SEC-CIK", id: "313807" }] },
+        source: { description: "Wikirate" },
+      },
+    ]);
+    expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(1);
+  });
+
   it("does not cross-merge same-value ids in different jurisdictions", () => {
     const { statements } = reconcileBods([
       {

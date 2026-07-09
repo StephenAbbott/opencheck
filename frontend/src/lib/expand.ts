@@ -119,6 +119,30 @@ export function frontierAnchors(
   return out;
 }
 
+/** Dedupe a raw frontier by canonical node id (the reconcile remap).
+ *
+ * The frontier is computed on RAW statements so live traversal keys stay
+ * valid, but the FullCheck display is reconciled — several per-source
+ * duplicates of one entity can sit on the raw frontier. Deduping by
+ * canonical id keeps the "Add next layer — N" count equal to what the user
+ * sees and expands each real-world entity once. The first raw anchor per
+ * canonical id survives (its statementId is what expansion bookkeeping
+ * tracks). */
+export function dedupeFrontier(
+  anchors: FrontierAnchor[],
+  remap: Record<string, string>
+): FrontierAnchor[] {
+  const seen = new Set<string>();
+  const out: FrontierAnchor[] = [];
+  for (const f of anchors) {
+    const cid = remap[f.anchor] ?? f.anchor;
+    if (seen.has(cid)) continue;
+    seen.add(cid);
+    out.push(f);
+  }
+  return out;
+}
+
 /** Merge two BODS bundles, de-duplicating by statementId (base wins). */
 export function mergeStatements(base: Stmt[], extra: Stmt[]): Stmt[] {
   const seen = new Set(base.map((s) => s.statementId as string));

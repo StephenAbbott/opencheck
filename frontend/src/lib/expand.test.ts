@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  dedupeFrontier,
   isEntityStatement,
   subjectLei,
   mergeStatements,
@@ -8,6 +9,7 @@ import {
   mergeSignals,
   signalsBeyond,
   type EdgeLite,
+  type FrontierAnchor,
 } from "./expand";
 import type { RiskSignal } from "./api";
 
@@ -109,5 +111,37 @@ describe("mergeStatements", () => {
     expect(ids).toEqual(["e1", "e2", "e3"]);
     // base copy of e2 is kept, not the duplicate.
     expect((merged.find((s) => s.statementId === "e2")!.recordDetails as Stmt).name).not.toBe("dup");
+  });
+});
+
+describe("dedupeFrontier", () => {
+  // Three raw anchors; g-shell and ch-shell are per-source duplicates of the
+  // same reconciled entity, "other" stands alone (issue #25, item 3: the
+  // "Add next layer — N" count must match the visible reconciled node count).
+  const raw: FrontierAnchor[] = [
+    { lei: "21380068P1DRHMJ8KU70", anchor: "g-shell" },
+    { lei: "21380068P1DRHMJ8KU70", anchor: "ch-shell" },
+    { lei: "5493001KJTIIGC8Y1R12", anchor: "other" },
+  ];
+  const remap = {
+    "g-shell": "recon:LEI:21380068P1DRHMJ8KU70",
+    "ch-shell": "recon:LEI:21380068P1DRHMJ8KU70",
+  };
+
+  it("collapses per-source duplicates of one entity to a single anchor", () => {
+    const out = dedupeFrontier(raw, remap);
+    expect(out).toHaveLength(2);
+    // First raw anchor per canonical id survives (expansion bookkeeping
+    // tracks raw statementIds).
+    expect(out[0].anchor).toBe("g-shell");
+    expect(out[1].anchor).toBe("other");
+  });
+
+  it("is a no-op when nothing reconciles", () => {
+    expect(dedupeFrontier(raw, {})).toHaveLength(3);
+  });
+
+  it("handles an empty frontier", () => {
+    expect(dedupeFrontier([], remap)).toEqual([]);
   });
 });

@@ -30,6 +30,7 @@ import {
   type NetworkExportFormat,
 } from "../lib/api";
 import {
+  dedupeFrontier,
   frontierAnchors,
   mergeStatements,
   mergeSignals,
@@ -188,16 +189,7 @@ export default function BodsGraphExplorer({
   // matches what the user sees and each entity is expanded once.
   const frontier = useMemo(() => {
     const raw = frontierAnchors(allStatements, rawEdges, expandedIds, direction);
-    if (!recon) return raw;
-    const seen = new Set<string>();
-    const deduped: typeof raw = [];
-    for (const f of raw) {
-      const cid = recon.remap[f.anchor] ?? f.anchor;
-      if (seen.has(cid)) continue;
-      seen.add(cid);
-      deduped.push(f);
-    }
-    return deduped;
+    return recon ? dedupeFrontier(raw, recon.remap) : raw;
   }, [allStatements, rawEdges, expandedIds, direction, recon]);
   const noun = direction === "subsidiaries" ? "subsidiaries" : "owners/controllers";
   const helperText =

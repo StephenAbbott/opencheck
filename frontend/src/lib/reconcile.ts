@@ -33,6 +33,59 @@ const rd = (s: Stmt): Stmt => (s.recordDetails ?? {}) as Stmt;
 const sourceOf = (s: Stmt): string =>
   String(((s.source ?? {}) as Stmt).description ?? "").trim();
 
+/** Scheme-name segments that mark a NON-REGISTER identifier type — tax/VAT
+ *  numbers, securities/regulator ids, classification codes. These are barred
+ *  from the jurisdiction+bare-value bridge in identKeys: a tax or CIK number
+ *  that coincidentally equals a different entity's company number in the same
+ *  jurisdiction must never merge them. Known collision classes across our
+ *  sources: PL-NIP (tax) vs PL-KRS (register) are both 10 bare digits; a
+ *  US-SEC-CIK can equal an unrelated state registration number; AT-UID is a
+ *  VAT number that doesn't contain the string "VAT".
+ *
+ *  Matching is by exact scheme SEGMENT (split on "-"/"_"), not substring —
+ *  "BN" must catch CA-BN (tax business number) without catching NZ-NZBN
+ *  (the register number). A denylist rather than a register-scheme whitelist
+ *  because scheme labels are open-ended in practice — OpenCorporates
+ *  passes through org-id-style codes (CA-CC, US-DE, …) that legitimately
+ *  bridge to national-adapter labels for the same number (verified live:
+ *  Canada Basketball's 0343587 arrives as both CA-CORP and CA-CC); a
+ *  whitelist silently drops those real merges. Non-register identifiers
+ *  still merge scheme-scoped (`XI-VAT:value` etc.) — an identical
+ *  scheme+value means the same entity. When adding an adapter that emits a
+ *  new tax/securities/classification scheme, extend this set.
+ */
+const NON_REGISTER_SEGMENTS = new Set([
+  "VAT", // generic VAT (DK-VAT, XI-VAT, …)
+  "UID", // AT-UID — Austrian VAT
+  "TVA", // French VAT
+  "MOMS", // Nordic VAT
+  "MWST", // Swiss/German VAT
+  "KMKR", // EE-KMKR — Estonian VAT
+  "DIC", // CZ-DIC — Czech tax id
+  "NIP", // PL-NIP — Polish tax id
+  "OIB", // HR-OIB — Croatian tax/personal id
+  "BN", // CA-BN — Canadian business (tax) number
+  "EIN", // US federal EIN
+  "FEIN", // US federal EIN (alt label)
+  "UTR", // GB unique taxpayer reference
+  "TAX", // generic tax markers
+  "CIK", // US-SEC-CIK — SEC filer id
+  "ISIN", // securities
+  "CUSIP", // securities
+  "NACE", // activity classification
+  "SIC", // activity classification
+  "TOL", // FI-TOL — Finnish activity classification
+]);
+
+/** True when a labelled scheme may join the jurisdiction bridge: none of its
+ *  segments (after the jurisdiction prefix) marks a non-register type. */
+function isRegisterLikeScheme(scheme: string): boolean {
+  return scheme
+    .split(/[-_]/)
+    .slice(1)
+    .every((seg) => !NON_REGISTER_SEGMENTS.has(seg));
+}
+
 /** Normalised identifier keys for an entity statement. LEIs are global (scheme
  *  ignored); everything else is scoped by its scheme so company numbers from
  *  different registers never collide.
@@ -62,14 +115,17 @@ function identKeys(s: Stmt): string[] {
     const scheme = String(i.scheme ?? "?").trim().toUpperCase();
     keys.push(`${scheme}:${val}`);
     // Jurisdiction+bare-value key bridges the same registration number under
-    // different scheme labels (CVR / COA / empty). Exclude VAT schemes — a VAT
-    // number coincidentally equal to a different entity's company number in the
-    // same jurisdiction must not merge them; VAT still merges scheme-scoped
-    // (`<JUR>-VAT:value` / `XI-VAT:value`), since a shared VAT means same entity.
+    // different scheme labels (CVR / COA / CC / empty). Unschemed identifiers
+    // (GLEIF registeredAs and friends) always join; labelled schemes join only
+    // when jurisdiction-prefixed AND register-like — tax/VAT/securities/
+    // classification types are barred (see NON_REGISTER_SEGMENTS), so a
+    // PL-NIP, US-SEC-CIK or AT-UID that coincidentally equals a different
+    // entity's company number in the same jurisdiction never merges them.
+    // Non-register identifiers still merge scheme-scoped (`XI-VAT:value`
+    // etc.), since an identical scheme+value means the same entity.
     if (
       jur &&
-      (scheme === "" || scheme.startsWith(`${jur}-`)) &&
-      !scheme.includes("VAT") &&
+      (scheme === "" || (scheme.startsWith(`${jur}-`) && isRegisterLikeScheme(scheme))) &&
       !val.includes("/")
     ) {
       keys.push(`JUR:${jur}:${val}`);
