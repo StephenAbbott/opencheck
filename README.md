@@ -16,11 +16,11 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 71** — Wikirate: open ESG metric answers + ESG summary tiles
+**Latest: Phase 72** — Shareable social cards: live entity summaries in link previews
 
-OpenCheck now surfaces open, community-researched **ESG metric answers** from [Wikirate](https://wikirate.org/) (CC BY 4.0, GODIN member) — thousands of metrics on environment, human rights, supply chains and governance from designers such as the World Benchmarking Alliance and Net Zero Tracker. The adapter keys on the LEI (with a Wikidata-QID fallback) via Wikirate's `company_identifier` filter, shows the total data-point count plus the latest answer per metric, and links out to wikirate.org for the full record. Wikirate company cards independently publish LEI, Wikidata, Companies House and SEC CIK identifiers, so the hit corroborates identifiers across sources. With three ESG sources (GEM/Climate TRACE, EITI, Wikirate) the ESG panel now opens as compact summary tiles — one per source, each naming its data origin and headline stat — with full cards expanding on click. Requires `WIKIRATE_API_KEY`. Verified end-to-end with BP plc (2,290 data points).
+Sharing an OpenCheck lookup now produces a link whose preview is a **live summary card** for the entity — name, risk-signal count and the first three signal flags in OpenCheck's risk colours — instead of the generic brand image. Cards render server-side with Pillow at `GET /og/{lei}.png` from the same pipeline results the page shows, with a teaser variant when no recent lookup is cached. Social crawlers don't execute JavaScript, so a new crawler-readable `GET /share/{lei}` page carries the per-entity Open Graph/Twitter tags and instantly redirects humans to the app; the subject card's new "Copy share link" button hands out that URL.
 
-*Previous: [Phase 70 — EITI: payments to governments](docs/status.md)*
+*Previous: [Phase 71 — Wikirate: open ESG metric answers](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
