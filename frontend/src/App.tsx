@@ -160,6 +160,7 @@ export default function App() {
   // streamingLei is set once GLEIF resolves (replaces the old `result !== null` guard).
   const [streamingLei, setStreamingLei] = useState<string | null>(null);
   const [legalName, setLegalName] = useState<string | null>(null);
+  const [subjectJurisdiction, setSubjectJurisdiction] = useState<string | null>(null);
   const [hits, setHits] = useState<SourceHit[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [crossSourceLinks, setCrossSourceLinks] = useState<CrossSourceLink[]>([]);
@@ -345,6 +346,7 @@ export default function App() {
             anchored = true;
             setStreamingLei(e.lei);
             setLegalName(e.legal_name);
+            setSubjectJurisdiction(e.jurisdiction);
             setStreaming(true);
             resolve({ lei: e.lei, legal_name: e.legal_name });
           },
@@ -506,6 +508,16 @@ export default function App() {
         .map((s) => s.id)
     );
   }, [sourcesQuery.data]);
+
+  // source_id → display name, shared by the bucket cards and the
+  // cross-source identifier chips (which scroll to the matching card).
+  const sourceNameIndex = useMemo<Record<string, string>>(
+    () =>
+      sourcesQuery.data
+        ? Object.fromEntries(sourcesQuery.data.sources.map((s) => [s.id, s.name]))
+        : {},
+    [sourcesQuery.data]
+  );
 
   // Group hits by source_id for the per-source bucket cards.
   // Built progressively from streaming hits — updates on every onHit / onSourceError.
@@ -786,11 +798,11 @@ export default function App() {
             <span className="text-[10px] font-semibold uppercase tracking-wide text-oo-blue border border-[#cfd6f5] bg-[#eef1fb] rounded-full px-1.5 py-0.5">
               New
             </span>
+            <span className="text-oo-ink">Network screening</span>
+            <span aria-hidden>·</span>
             <span className="text-oo-ink">Company timelines</span>
             <span aria-hidden>·</span>
-            <span className="text-oo-ink">AI-written summaries</span>
-            <span aria-hidden>·</span>
-            <span className="text-oo-ink">Accessible PDF reports</span>
+            <span className="text-oo-ink">ESG data</span>
             <span className="text-oo-muted">— every claim links to its source.</span>
           </p>
         )}
@@ -1145,6 +1157,7 @@ export default function App() {
         {!streamingLei && !lookupMutation.isPending && !streaming && !lookupMutation.isError && !nameSearchMutation.data && !nameSearchMutation.isPending && !nationalIdSearchMutation.data && !nationalIdSearchMutation.isPending && (
           <>
             <ExampleLeiPicker onPick={lookupLei} disabled={lookupMutation.isPending || streaming} />
+            <ShareCardShowcase />
             <HowItWorks />
           </>
         )}
@@ -1168,7 +1181,15 @@ export default function App() {
           </div>
         )}
 
-        {streamingLei && <SubjectCard lei={streamingLei} legalName={legalName} />}
+        {streamingLei && (
+          <SubjectCard
+            lei={streamingLei}
+            legalName={legalName}
+            jurisdiction={subjectJurisdiction}
+            signals={aggregatedCodes}
+            screening={streaming}
+          />
+        )}
 
         {streamingLei && (
           <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3" role="group" aria-label="Check mode">
@@ -1214,7 +1235,7 @@ export default function App() {
         {streamingLei && <NarrativePanel lei={streamingLei} legalName={legalName} />}
 
         {aggregatedCodes.length > 0 && (
-          <section className="mb-8">
+          <section className="mb-8" id="risk-signals">
             <SectionLabel>Risk signals</SectionLabel>
             <div className="flex flex-wrap gap-2">
               {aggregatedCodes.map((sig) => (
@@ -1234,6 +1255,7 @@ export default function App() {
             <CrossSourceIdentifiersTable
               links={crossSourceLinks}
               gleifMapped={gleifMappedIds}
+              sourceNames={sourceNameIndex}
             />
           </section>
         )}
@@ -1287,7 +1309,7 @@ export default function App() {
             )}
             <div className="space-y-4">
               {cddBuckets.map((b) => (
-                <div key={b.sourceId}>
+                <div key={b.sourceId} id={`source-${b.sourceId}`} className="scroll-mt-4">
                   <SourceBucketCard
                     bucket={b}
                     lei={streamingLei ?? undefined}
@@ -1296,12 +1318,12 @@ export default function App() {
                     bodsBreakdownMap={bodsBreakdownMap}
                     onRetry={b.error ? () => retrySource(b.sourceId) : undefined}
                     retrying={retryingSources.has(b.sourceId)}
+                    footnote={
+                      b.sourceId === "gleif" && gleifChildrenInfo && gleifChildrenInfo.total > 100
+                        ? `Showing the first ${gleifChildrenInfo.fetched} of ${gleifChildrenInfo.total.toLocaleString()} direct subsidiaries in BODS statements (GLEIF Level 2)`
+                        : undefined
+                    }
                   />
-                  {b.sourceId === "gleif" && gleifChildrenInfo && gleifChildrenInfo.total > 100 && (
-                    <p className="text-[12px] text-oo-muted mt-2 px-1">
-                      Showing the first {gleifChildrenInfo.fetched} of {gleifChildrenInfo.total.toLocaleString()} direct subsidiaries in BODS statements (GLEIF Level 2)
-                    </p>
-                  )}
                 </div>
               ))}
               {pendingCddSources.map((id) => (
@@ -2283,6 +2305,39 @@ const HOW_IT_WORKS_STEPS = [
   },
 ] as const;
 
+/**
+ * ShareCardShowcase — homepage preview of the output: the live shareable
+ * summary card every lookup generates. Shows what a result looks like before
+ * the first query, and advertises the share-link feature. The image is a
+ * committed render of the BP curated example (regenerate with
+ * `opencheck.og_image.render_share_card` if the design changes).
+ */
+function ShareCardShowcase() {
+  return (
+    <section className="mb-10 bg-white border border-oo-rule rounded-oo p-7">
+      <SectionLabel>Share what you find</SectionLabel>
+      <div className="mt-2 flex flex-col lg:flex-row lg:items-center gap-6">
+        <div className="lg:max-w-[300px] shrink-0">
+          <p className="text-[13px] text-oo-muted leading-[1.65]">
+            Every lookup generates a <span className="text-oo-ink font-medium">live summary card</span> —
+            the entity, its risk-signal count, and the first flags in OpenCheck's
+            risk colours. Copy the share link from any result and the card appears
+            wherever you paste it: Slack, LinkedIn, X, WhatsApp.
+          </p>
+        </div>
+        <img
+          src="/share-card-example.png"
+          width={1200}
+          height={630}
+          alt="Example shareable summary card for BP P.L.C. showing 3 risk signals: trust or arrangement, non-EU jurisdiction, and three or more ownership layers, with a prompt to visit opencheck.world for details"
+          className="w-full max-w-[560px] h-auto rounded-oo border border-oo-rule shadow-oo-card"
+          loading="lazy"
+        />
+      </div>
+    </section>
+  );
+}
+
 function HowItWorks() {
   return (
     <section className="mb-10 bg-white border border-oo-rule rounded-oo p-7">
@@ -2353,12 +2408,21 @@ const SCHEME_LABELS: Record<string, string> = {
   name: "Name match",
 };
 
+/** Short display name for a source chip — the lead clause of the registry
+ *  name ("EITI — Extractive Industries…" → "EITI"). */
+function shortSourceName(sourceId: string, names: Record<string, string>): string {
+  const full = names[sourceId] ?? sourceId;
+  return full.split(" — ")[0].split(" (")[0].trim();
+}
+
 function CrossSourceIdentifiersTable({
   links,
   gleifMapped,
+  sourceNames = {},
 }: {
   links: CrossSourceLink[];
   gleifMapped: { scheme: string; value: string }[];
+  sourceNames?: Record<string, string>;
 }) {
   const hasRows = links.length > 0 || gleifMapped.length > 0;
   if (!hasRows) return null;
@@ -2390,12 +2454,19 @@ function CrossSourceIdentifiersTable({
             <td className="py-2 text-right">
               <span className="inline-flex flex-wrap gap-1 justify-end">
                 {link.hits.map((h) => (
-                  <span
+                  <button
                     key={h.source_id}
-                    className="text-[11px] bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5 font-mono text-oo-muted"
+                    type="button"
+                    title={`${sourceNames[h.source_id] ?? h.source_id} — jump to this source's results`}
+                    onClick={() =>
+                      document
+                        .getElementById(`source-${h.source_id}`)
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                    }
+                    className="text-[11px] bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5 text-oo-muted hover:text-oo-ink hover:border-[#cfd6f5] transition-colors"
                   >
-                    {h.source_id}
-                  </span>
+                    {shortSourceName(h.source_id, sourceNames)}
+                  </button>
                 ))}
               </span>
             </td>
@@ -2476,8 +2547,22 @@ function PossiblySameTable({ pairs }: { pairs: PossiblySameEntity[] }) {
           {visible.map((p) => (
             <tr key={`${p.a}~${p.b}`} className="border-t border-oo-rule align-top">
               <td className="py-2 pr-3 text-oo-ink">
-                <div className="break-words">{p.a_name || p.a}</div>
-                <div className="break-words text-oo-muted">{p.b_name || p.b}</div>
+                <div className="break-words">
+                  {p.a_name || p.a}
+                  {p.a_source && (
+                    <span className="ml-1.5 align-middle text-[10px] bg-oo-bg border border-oo-rule rounded px-1 py-0.5 text-oo-muted whitespace-nowrap">
+                      {p.a_source}
+                    </span>
+                  )}
+                </div>
+                <div className="break-words text-oo-muted">
+                  {p.b_name || p.b}
+                  {p.b_source && (
+                    <span className="ml-1.5 align-middle text-[10px] bg-oo-bg border border-oo-rule rounded px-1 py-0.5 text-oo-muted whitespace-nowrap">
+                      {p.b_source}
+                    </span>
+                  )}
+                </div>
               </td>
               <td className="py-2 pr-3 font-mono text-[12px] text-oo-muted">
                 {p.jurisdiction || "—"}

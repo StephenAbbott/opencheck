@@ -310,4 +310,28 @@ def test_possibly_same_carries_names_for_display() -> None:
     d = pairs[0].to_dict()
     assert {d["a_name"], d["b_name"]} == {"Acme Ltd", "ACME LTD."}
     assert d["jurisdiction"] == "GB"
-    assert set(d) == {"a", "b", "reason", "a_name", "b_name", "jurisdiction"}
+    assert set(d) == {"a", "b", "reason", "a_name", "b_name", "jurisdiction", "a_source", "b_source"}
+
+
+def test_possibly_same_carries_per_record_sources() -> None:
+    """Each record in a pair carries the source that asserted it — the key
+    context for the human reviewing a name-only match (issue #25 follow-up)."""
+    a = _ent("a", "Acme Ltd", "GB")
+    a["source"] = {"description": "GLEIF"}
+    b = _ent("b", "ACME LTD.", "GB")
+    b["source"] = {"description": "OpenCorporates"}
+    pairs = possibly_same_entities([a, b])
+    assert len(pairs) == 1
+    d = pairs[0].to_dict()
+    # Pair ordering is by sorted statementId ("a" < "b").
+    assert d["a_source"] == "GLEIF"
+    assert d["b_source"] == "OpenCorporates"
+
+
+def test_possibly_same_sources_default_empty_when_absent() -> None:
+    pairs = possibly_same_entities([
+        _ent("a", "Acme Ltd", "GB"),
+        _ent("b", "ACME LTD.", "GB"),
+    ])
+    assert pairs[0].to_dict()["a_source"] == ""
+    assert pairs[0].to_dict()["b_source"] == ""

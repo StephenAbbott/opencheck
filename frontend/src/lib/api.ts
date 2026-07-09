@@ -67,6 +67,9 @@ export interface PossiblySameEntity {
   a_name: string;
   b_name: string;
   jurisdiction: string;
+  /** Which source asserted each record — context for the human review. */
+  a_source?: string;
+  b_source?: string;
 }
 
 /** One identifier surfaced by the MEIP signpost. `corroborated` = GLEIF also

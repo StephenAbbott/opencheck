@@ -172,6 +172,9 @@ export function SecuritiesSection({ lei }: { lei: string }) {
             <span className="font-semibold">{meta.total.toLocaleString()}</span>{" "}
             secur{meta.total === 1 ? "ity" : "ities"} mapped to this LEI
           </span>
+          <span className="text-[11px] font-mono text-oo-muted bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5">
+            context · not in graph
+          </span>
           {meta.total > 0 && (
             <button
               type="button"

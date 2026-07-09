@@ -799,6 +799,7 @@ export function SourceBucketCard({
   bodsBreakdownMap = {},
   onRetry,
   retrying = false,
+  footnote,
 }: {
   bucket: SourceBucket;
   /** Resolved LEI for the current lookup — keys the Time Machine timeline. */
@@ -809,6 +810,8 @@ export function SourceBucketCard({
   /** Re-run this source via /lookup-source — shown on error cards. */
   onRetry?: () => void;
   retrying?: boolean;
+  /** Caption rendered inside the card footer (e.g. subsidiary truncation note). */
+  footnote?: string;
 }) {
   const [showTimeline, setShowTimeline] = useState(false);
   // The Time Machine timeline is entity-level. Offer it on the sources that
@@ -921,6 +924,11 @@ export function SourceBucketCard({
       )}
       {bucket.boAccess && !bucket.error && (
         <BoAccessFootnote notice={bucket.boAccess} />
+      )}
+      {footnote && (
+        <p className="px-5 py-2.5 border-t border-oo-rule text-[12px] text-oo-muted">
+          {footnote}
+        </p>
       )}
     </article>
     {showTimeline && timelineLei && (

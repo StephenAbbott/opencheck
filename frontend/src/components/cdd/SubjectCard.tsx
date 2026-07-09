@@ -1,16 +1,39 @@
 import { useState } from "react";
 import { BASE_URL } from "../../lib/api";
+import type { RiskSignal } from "../../lib/api";
+import { RiskChip } from "../risk/RiskChip";
+
+/** How many signal chips show inline before the "+N more" link. */
+const SIGNAL_PREVIEW_COUNT = 4;
 
 /**
- * SubjectCard — top-of-page summary of the LEI lookup subject, plus the
- * "Copy share link" affordance. The share link points at the backend
- * /share/{lei} page rather than the SPA URL: social crawlers don't run
- * JavaScript, and that page carries per-entity Open Graph tags with a
- * live summary card (/og/{lei}.png) before redirecting humans here.
+ * SubjectCard — top-of-page summary of the LEI lookup subject: name,
+ * jurisdiction flag, LEI, a compact risk-signal summary (the headline
+ * finding, promoted from further down the page), and the share link.
+ *
+ * The signal summary mirrors the share card's hierarchy — name → count →
+ * top chips — so the page and its social preview agree on what matters.
+ * `signals` should be the aggregated (distinct-code) list; `screening`
+ * keeps the row honest while sources are still streaming.
  */
-export function SubjectCard({ lei, legalName }: { lei: string; legalName: string | null }) {
+export function SubjectCard({
+  lei,
+  legalName,
+  jurisdiction,
+  signals = [],
+  screening = false,
+}: {
+  lei: string;
+  legalName: string | null;
+  jurisdiction?: string | null;
+  signals?: RiskSignal[];
+  screening?: boolean;
+}) {
   const [copied, setCopied] = useState(false);
   const shareUrl = `${BASE_URL || "https://api.opencheck.world"}/share/${lei}`;
+  const cc = (jurisdiction || "").trim().toLowerCase().split("-")[0];
+  const preview = signals.slice(0, SIGNAL_PREVIEW_COUNT);
+  const overflow = signals.length - preview.length;
 
   return (
     <section className="mb-8 bg-white border border-oo-rule rounded-oo p-7 transition-shadow hover:shadow-oo-card">
@@ -22,6 +45,25 @@ export function SubjectCard({ lei, legalName }: { lei: string; legalName: string
           <h2 className="font-head font-bold text-oo-ink mt-2 leading-tight text-[clamp(1.25rem,2.5vw,1.6rem)]">
             {legalName || `LEI ${lei}`}
           </h2>
+          {/* Identity line — small and muted so the card stays airy on mobile. */}
+          <p className="mt-1.5 flex items-center gap-2 flex-wrap text-[12px] text-oo-muted">
+            {cc && (
+              <span className="inline-flex items-center gap-1.5">
+                <img
+                  src={`/bods-dagre-images/flags/${cc}.svg`}
+                  alt=""
+                  aria-hidden="true"
+                  className="h-3 w-auto rounded-[2px] border border-oo-rule"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+                <span className="uppercase">{cc}</span>
+              </span>
+            )}
+            {cc && <span aria-hidden>·</span>}
+            <span className="font-mono break-all">LEI {lei}</span>
+          </p>
         </div>
         <button
           type="button"
@@ -44,6 +86,36 @@ export function SubjectCard({ lei, legalName }: { lei: string; legalName: string
           {copied ? "Link copied" : "Copy share link"}
         </button>
       </div>
+
+      {/* Compact risk-signal summary — the headline finding, up top. The full
+          strip further down keeps the per-chip evidence and explanation. */}
+      {(signals.length > 0 || !screening) && (
+        <div className="mt-4 pt-4 border-t border-oo-rule flex items-center gap-2 flex-wrap">
+          {signals.length > 0 ? (
+            <>
+              <span className="text-[13px] text-oo-ink shrink-0">
+                <span className="font-head font-bold text-[17px]">{signals.length}</span>{" "}
+                risk signal{signals.length === 1 ? "" : "s"}
+              </span>
+              {preview.map((sig) => (
+                <RiskChip key={sig.code} signal={sig} compact />
+              ))}
+              {overflow > 0 && (
+                <a
+                  href="#risk-signals"
+                  className="text-[12px] font-medium text-oo-blue hover:underline"
+                >
+                  +{overflow} more
+                </a>
+              )}
+            </>
+          ) : (
+            <span className="text-[13px] text-oo-muted">
+              No risk signals surfaced across the sources checked.
+            </span>
+          )}
+        </div>
+      )}
     </section>
   );
 }

@@ -186,6 +186,11 @@ class PossiblySame:
     a_name: str = ""
     b_name: str = ""
     jurisdiction: str = ""
+    # Which source asserted each record — the key context for a human
+    # reviewing a name-only match ("GLEIF vs OpenCorporates" reads very
+    # differently from "OpenAleph vs OpenAleph").
+    a_source: str = ""
+    b_source: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -195,6 +200,8 @@ class PossiblySame:
             "a_name": self.a_name,
             "b_name": self.b_name,
             "jurisdiction": self.jurisdiction,
+            "a_source": self.a_source,
+            "b_source": self.b_source,
         }
 
 
@@ -282,6 +289,10 @@ def possibly_same_entities(bods: list[dict]) -> list[PossiblySame]:
                 by_id = {a["statementId"]: a, b["statementId"]: b}
                 rd_a = by_id[pair[0]].get("recordDetails") or {}
                 rd_b = by_id[pair[1]].get("recordDetails") or {}
+
+                def _src(stmt: dict) -> str:
+                    return str(((stmt.get("source") or {}).get("description")) or "")
+
                 out.append(
                     PossiblySame(
                         pair[0],
@@ -290,6 +301,8 @@ def possibly_same_entities(bods: list[dict]) -> list[PossiblySame]:
                         a_name=str(rd_a.get("name") or ""),
                         b_name=str(rd_b.get("name") or ""),
                         jurisdiction=_entity_jurisdiction(rd_a),
+                        a_source=_src(by_id[pair[0]]),
+                        b_source=_src(by_id[pair[1]]),
                     )
                 )
     return out
