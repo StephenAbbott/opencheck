@@ -101,12 +101,21 @@ export function SubjectCard({
                 <RiskChip key={sig.code} signal={sig} compact />
               ))}
               {overflow > 0 && (
-                <a
-                  href="#risk-signals"
+                // A button, not an <a href="#…">: hash navigation is a
+                // same-document navigation, which fires popstate — and the
+                // app's popstate handler re-runs the ?lei= lookup, making the
+                // page appear to refresh.
+                <button
+                  type="button"
+                  onClick={() =>
+                    document
+                      .getElementById("risk-signals")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }
                   className="text-[12px] font-medium text-oo-blue hover:underline"
                 >
                   +{overflow} more
-                </a>
+                </button>
               )}
             </>
           ) : (

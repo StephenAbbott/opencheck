@@ -161,6 +161,10 @@ export default function App() {
   const [streamingLei, setStreamingLei] = useState<string | null>(null);
   const [legalName, setLegalName] = useState<string | null>(null);
   const [subjectJurisdiction, setSubjectJurisdiction] = useState<string | null>(null);
+  // On mobile, the search inputs collapse once results are on screen (the
+  // tab bar stays); this reopens them. Desktop is unaffected.
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const searchPanelsCollapsed = !!streamingLei && !mobileSearchOpen;
   const [hits, setHits] = useState<SourceHit[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [crossSourceLinks, setCrossSourceLinks] = useState<CrossSourceLink[]>([]);
@@ -347,6 +351,7 @@ export default function App() {
             setStreamingLei(e.lei);
             setLegalName(e.legal_name);
             setSubjectJurisdiction(e.jurisdiction);
+            setMobileSearchOpen(false); // re-collapse the mobile search inputs
             setStreaming(true);
             resolve({ lei: e.lei, legal_name: e.legal_name });
           },
@@ -815,7 +820,7 @@ export default function App() {
               aria-selected={searchMode === "name"}
               aria-controls="panel-name"
               id="tab-name"
-              onClick={() => setSearchMode("name")}
+              onClick={() => { setSearchMode("name"); setMobileSearchOpen(true); }}
               className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors bg-white ${
                 searchMode === "name"
                   ? "text-oo-ink border-b-2 border-oo-blue"
@@ -831,7 +836,7 @@ export default function App() {
               aria-selected={searchMode === "nationalId"}
               aria-controls="panel-national-id"
               id="tab-national-id"
-              onClick={() => setSearchMode("nationalId")}
+              onClick={() => { setSearchMode("nationalId"); setMobileSearchOpen(true); }}
               className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors border-l border-oo-rule bg-white ${
                 searchMode === "nationalId"
                   ? "text-oo-ink border-b-2 border-oo-blue"
@@ -847,7 +852,7 @@ export default function App() {
               aria-selected={searchMode === "lei"}
               aria-controls="panel-lei"
               id="tab-lei"
-              onClick={() => setSearchMode("lei")}
+              onClick={() => { setSearchMode("lei"); setMobileSearchOpen(true); }}
               className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors border-l border-oo-rule bg-white ${
                 searchMode === "lei"
                   ? "text-oo-ink border-b-2 border-oo-blue"
@@ -858,6 +863,10 @@ export default function App() {
               Paste an LEI
             </button>
           </div>
+
+          {/* Panels collapse on mobile once results are on screen — the tab
+              bar stays as a landmark; the prompt row below reopens them. */}
+          <div className={searchPanelsCollapsed ? "hidden sm:block" : ""}>
 
           {/* ── Name search panel ── */}
           {searchMode === "name" && (
@@ -1139,6 +1148,22 @@ export default function App() {
                 </button>
               </div>
             </form>
+          )}
+
+          </div>
+
+          {searchPanelsCollapsed && (
+            <button
+              type="button"
+              onClick={() => setMobileSearchOpen(true)}
+              className="sm:hidden w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[12px] font-medium text-oo-blue hover:bg-oo-bg transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+              Search for a different entity
+            </button>
           )}
         </div>
 
