@@ -168,3 +168,37 @@ def test_share_page_escapes_html_in_names(client: TestClient):
 
 def test_share_page_rejects_invalid_lei(client: TestClient):
     assert client.get("/share/DROP TABLE").status_code == 404
+
+
+def test_share_redirect_is_absolute_even_when_cors_origin_is_wildcard(
+    client: TestClient, monkeypatch
+):
+    """Regression: Render sets OPENCHECK_CORS_ORIGIN='*' (a CORS policy
+    value, not a URL). The redirect target must come from frontend_origin
+    and never render a literal '*/?lei=...'."""
+    monkeypatch.setenv("OPENCHECK_CORS_ORIGIN", "*")
+    from opencheck.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        _seed_replay(LEI, "Rosneft Oil Company", [])
+        body = client.get(f"/share/{LEI}").text
+        assert "*/?lei=" not in body
+        assert f'url=https://opencheck.world/?lei={LEI}' in body
+    finally:
+        get_settings.cache_clear()
+
+
+def test_share_redirect_falls_back_when_frontend_origin_invalid(
+    client: TestClient, monkeypatch
+):
+    monkeypatch.setenv("OPENCHECK_FRONTEND_ORIGIN", "*")
+    from opencheck.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        _seed_replay(LEI, "Rosneft Oil Company", [])
+        body = client.get(f"/share/{LEI}").text
+        assert f'url=https://opencheck.world/?lei={LEI}' in body
+    finally:
+        get_settings.cache_clear()

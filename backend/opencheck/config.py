@@ -62,6 +62,14 @@ class Settings(BaseSettings):
     public_api_base: str = Field(
         default="https://api.opencheck.world", alias="OPENCHECK_PUBLIC_API_BASE"
     )
+    # Public origin of the FRONTEND, used as the /share/{lei} redirect target
+    # and og:url. Deliberately separate from OPENCHECK_CORS_ORIGIN — that is a
+    # CORS *policy* value and is legitimately "*" on Render, which is not a
+    # navigable URL (shipping the two conflated broke share redirects with
+    # a literal "*/?lei=..." target).
+    frontend_origin: str = Field(
+        default="https://opencheck.world", alias="OPENCHECK_FRONTEND_ORIGIN"
+    )
 
     # --- Source credentials ---
     companies_house_api_key: str | None = Field(default=None, alias="COMPANIES_HOUSE_API_KEY")

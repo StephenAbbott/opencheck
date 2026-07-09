@@ -140,7 +140,11 @@ async def share_page(lei: str) -> HTMLResponse:
     """Crawler-readable share page: per-entity OG tags + instant redirect."""
     lei = _clean_lei(lei)
     settings = get_settings()
-    frontend = (settings.cors_origin or "https://opencheck.world").rstrip("/")
+    # Never derive this from cors_origin: that is a CORS policy value and is
+    # "*" on Render — not a URL. Guard against misconfiguration regardless.
+    frontend = (settings.frontend_origin or "").rstrip("/")
+    if not frontend.startswith("http"):
+        frontend = "https://opencheck.world"
     api_base = (settings.public_api_base or "https://api.opencheck.world").rstrip("/")
 
     summary = _summary_from_replay(lei)
