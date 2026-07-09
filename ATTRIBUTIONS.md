@@ -373,3 +373,8 @@ Exports conform to the [Beneficial Ownership Data Standard (BODS)](https://stand
 ---
 
 If you export OpenCheck data that includes content derived from any CC BY-NC source (OpenSanctions, EveryPolitician, some OpenAleph collections) or the CC BY-NC-SA source (OpenTender), your use of that data is constrained by the non-commercial (and, for OpenTender, share-alike) license. OpenCheck warns you about this at export time.
+
+## Bundled fonts (share-card renderer)
+
+- **Bitter** (Bold) — copyright The Bitter Project Authors, licensed under the SIL Open Font License 1.1 (<https://openfontlicense.org>). Bundled at `backend/opencheck/assets/fonts/` for server-side rendering of the `/og/{lei}.png` share card.
+- **DM Sans** (Regular/Medium/Bold) — copyright The DM Sans Project Authors, licensed under the SIL Open Font License 1.1. Same location and purpose.

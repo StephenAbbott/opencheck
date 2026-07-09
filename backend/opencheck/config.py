@@ -56,6 +56,12 @@ class Settings(BaseSettings):
     cors_origin: str = Field(
         default="http://localhost:5173", alias="OPENCHECK_CORS_ORIGIN"
     )
+    # Public origin of THIS API, used to build absolute og:image URLs on the
+    # /share/{lei} page (crawlers need absolute URLs; the request's Host
+    # header is unreliable behind Render's proxy).
+    public_api_base: str = Field(
+        default="https://api.opencheck.world", alias="OPENCHECK_PUBLIC_API_BASE"
+    )
 
     # --- Source credentials ---
     companies_house_api_key: str | None = Field(default=None, alias="COMPANIES_HOUSE_API_KEY")
