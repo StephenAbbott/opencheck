@@ -4,11 +4,6 @@
     "access_url": "https://data.inpi.fr/content/editorial/acces_BE",
     "note": "legifrance.gouv.fr/jorf/article_jo/JORFARTI000051539003"
   },
-  "EE": {
-    "restricted_from": "2026-07-10",
-    "access_url": "https://abiinfo.rik.ee/en/node/366/",
-    "note": ""
-  },
   "SE": {
     "restricted_from": "2026-07-01",
     "access_url": "https://bolagsverket.se/apierochoppnadata/hamtaforetagsinformation/hamtainformationomverklighuvudman.6009.html",

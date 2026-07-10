@@ -175,10 +175,11 @@ def test_bo_direct_ownership_maps_to_o():
     bos = _parse_beneficial_owners(html)
     assert bos[0]["kontrolli_teostamise_viis"] == "O"
 
-# Post-2026-07-10 page: the register replaced the beneficial-owners table
-# with an authentication prompt for anonymous visitors (observed live on the
-# changeover day — issue #28). The scraper must degrade to an empty BO list
-# while everything else still parses.
+# Estonia's 2026-07-10 switch to legitimate-interest BO access was postponed
+# on the day (https://news.err.ee/1610074816/), but a new date will come: when
+# it lands, the register replaces the beneficial-owners table with an
+# authentication prompt (markup observed live during the aborted changeover).
+# These pin the graceful degradation in advance.
 _HTML_BO_WITHDRAWN = _HTML.replace(
     """<table>
 <tr><th>Name</th><th>Personal identification code / date of birth</th><th>Manner of exercising control</th><th>Start - end</th></tr>
@@ -197,7 +198,7 @@ _HTML_BO_WITHDRAWN = _HTML.replace(
 
 
 def test_bo_withdrawal_degrades_gracefully():
-    """No BO table (post-2026-07-10 anonymous view) → empty list, no error,
+    """No BO table (future restricted anonymous view) → empty list, no error,
     and the auth-prompt markup must not confuse the other table parsers."""
     assert _parse_beneficial_owners(_HTML_BO_WITHDRAWN) == []
     assert len(_parse_officers(_HTML_BO_WITHDRAWN)) == 1
@@ -242,8 +243,9 @@ async def test_fetch_full_bundle(adapter):
 
 @pytest.mark.asyncio
 async def test_fetch_full_bundle_without_bo_table(adapter):
-    """End-to-end on the post-2026-07-10 anonymous page shape (issue #28):
-    the bundle carries officers + shareholders and an empty BO list."""
+    """End-to-end on the restricted anonymous page shape: the bundle carries
+    officers + shareholders and an empty BO list. Insurance for whenever
+    Estonia's postponed access restriction takes effect."""
     with respx.mock:
         respx.get(
             "https://ariregister.rik.ee/eng/company/17441866/company_print_json"

@@ -3,15 +3,7 @@
 Fetches data from the public printable page at ariregister.rik.ee without
 any authentication.  The printable-page endpoint is a server-rendered HTML
 page that contains all the data the website shows: general company info,
-board members and shareholders.
-
-Beneficial owners: Estonia withdrew anonymous access to BO data on
-2026-07-10 (AMLD6 transposition) — the public company page now shows an
-authentication prompt where the BO table used to be, so lookups yield no
-beneficial owners. ``_parse_beneficial_owners`` is retained: it degrades to
-an empty list when the table is absent, documents what the register used to
-expose, and picks the data straight back up if access ever returns.
-See https://github.com/StephenAbbott/opencheck/issues/28.
+board members, shareholders, and beneficial owners.
 
 Endpoints used:
   /eng/company/{reg_code}/company_print_json — full company printable page (HTML)
@@ -37,6 +29,7 @@ in bods/mapper.py needs no changes):
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from typing import Any
@@ -59,12 +52,12 @@ _TIMEOUT   = 20.0
 # --- RIK X-Road SOAP open-data API (Time Machine history only) --------------
 # The public scraper above drives the live /lookup. For *historical* data the
 # only machine-readable source is the credentialed SOAP service: detailandmed_v2
-# returns the full registry-card history (ainult_kehtivad=0). Read-only, off
-# the main lookup path. Credentials: ARIREGISTER_USERNAME /
-# ARIREGISTER_PASSWORD (open-data API contract).
-# Beneficial-owner history (tegelikudKasusaajad_v2) was removed 2026-07-10:
-# Estonia withdrew anonymous/open-data BO access (AMLD6 transposition; the
-# replacement Beneficial Owners API is entitlement-gated). Issue #22.
+# returns the full registry-card history (ainult_kehtivad=0), tegelikudKasusaajad_v2
+# the beneficial-owner history. Read-only, off the main lookup path. Credentials:
+# ARIREGISTER_USERNAME / ARIREGISTER_PASSWORD (open-data API contract).
+# NOTE: Estonia's switch to legitimate-interest BO access was postponed on its
+# 2026-07-10 start date (no new date announced) — BO stays available until the
+# revised framework lands. Issues #22/#28 track the eventual removal.
 _SOAP_URL = "https://ariregxmlv6.rik.ee/"
 _SOAP_NS = "http://arireg.x-road.eu/producer/"
 _SOAP_TIMEOUT = 30.0
@@ -94,6 +87,18 @@ def _detail_envelope(user: str, pw: str, reg_code: str) -> str:
         "</prod:keha></prod:detailandmed_v2></soapenv:Body></soapenv:Envelope>"
     )
 
+
+def _bo_envelope(user: str, pw: str, reg_code: str) -> str:
+    """tegelikudKasusaajad_v2 with history on (ainult_kehtivad=0)."""
+    return (
+        f'<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" '
+        f'xmlns:prod="{_SOAP_NS}"><soapenv:Body><prod:tegelikudKasusaajad_v2><prod:keha>'
+        f"<prod:ariregister_kasutajanimi>{_soap_escape(user)}</prod:ariregister_kasutajanimi>"
+        f"<prod:ariregister_parool>{_soap_escape(pw)}</prod:ariregister_parool>"
+        f"<prod:ariregistri_kood>{_soap_escape(reg_code)}</prod:ariregistri_kood>"
+        "<prod:ainult_kehtivad>0</prod:ainult_kehtivad><prod:keel>eng</prod:keel>"
+        "</prod:keha></prod:tegelikudKasusaajad_v2></soapenv:Body></soapenv:Envelope>"
+    )
 
 _HEADERS = {
     "User-Agent": "OpenCheck/1.0 (https://opencheck.world; beneficialownership.co.uk)",
@@ -334,11 +339,6 @@ def _parse_beneficial_owners(html: str) -> list[dict[str, Any]]:
     """Parse the beneficial owners table.
 
     Expected headers: Name | Personal identification code … | Manner … | Start - end
-
-    Since 2026-07-10 the table is no longer served to anonymous visitors
-    (an authentication prompt appears instead), so this returns ``[]`` on
-    current pages. Kept so the adapter degrades gracefully and would pick
-    the data straight back up if public access returned (issue #28).
     """
     rows = _find_table(html, ["Name", "Manner"])
     bos: list[dict[str, Any]] = []
@@ -560,19 +560,17 @@ class AriregisterAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     async def fetch_timeline_data(self, registry_code: str) -> dict[str, Any] | None:
-        """Raw registry-card *history* for the Time Machine.
+        """Raw registry-card + beneficial-owner *history* for the Time Machine.
 
         Calls the RIK X-Road SOAP open-data API with history on
         (``ainult_kehtivad=0``): ``detailandmed_v2`` for the dated registry-card
-        blocks (names, addresses, legal forms, statuses, board members and
-        shareholders). Read-only, lazy, off the main lookup path — the live
-        ``/lookup`` still uses the no-auth public scraper in ``fetch()``.
-
-        Beneficial-owner history (``tegelikudKasusaajad_v2``) was removed on
-        2026-07-10 when Estonia withdrew open-data BO access (issue #22).
+        blocks and ``tegelikudKasusaajad_v2`` for beneficial owners. Read-only,
+        lazy, off the main lookup path — the live ``/lookup`` still uses the
+        no-auth public scraper in ``fetch()``.
 
         Returns ``None`` when not live or when credentials are unset (the
-        feature then simply doesn't contribute Estonian events).
+        feature then simply doesn't contribute Estonian events). The two calls
+        run concurrently and a failure of either is tolerated.
         """
         settings = get_settings()
         if not settings.allow_live:
@@ -598,7 +596,10 @@ class AriregisterAdapter(SourceAdapter):
                 return None
             return r.text
 
-        detail_xml = await _post(_detail_envelope(user, pw, code))
-        if not detail_xml:
+        detail_xml, bo_xml = await asyncio.gather(
+            _post(_detail_envelope(user, pw, code)),
+            _post(_bo_envelope(user, pw, code)),
+        )
+        if not detail_xml and not bo_xml:
             return None
-        return {"registry_code": code, "detail_xml": detail_xml}
+        return {"registry_code": code, "detail_xml": detail_xml, "bo_xml": bo_xml}

@@ -31,19 +31,39 @@ def test_past_date_is_restricted() -> None:
     assert n.access_url and n.access_url.startswith("https://")
 
 
-def test_future_date_is_becoming_restricted_with_date() -> None:
-    n = notice_for("EE", date(2026, 7, 1))
+def test_future_date_is_becoming_restricted_with_date(monkeypatch) -> None:
+    # Synthetic entry: behaviour tests must not depend on the political
+    # calendar (Estonia's 2026-07-10 restriction was postponed on the day,
+    # which retired the real fixture this test used to lean on).
+    import opencheck.bo_access as bo
+    entry = bo.BoAccessEntry(
+        restricted_from=date(2030, 1, 1), access_url="https://example.org/apply"
+    )
+    monkeypatch.setitem(bo.BO_ACCESS, "AT", entry)
+    n = notice_for("AT", date(2029, 12, 1))
     assert n is not None
     assert n.status == "becoming_restricted"
-    assert n.effective_date == "2026-07-10"
+    assert n.effective_date == "2030-01-01"
 
 
-def test_effective_date_boundary_flips_to_restricted_on_the_day() -> None:
+def test_effective_date_boundary_flips_to_restricted_on_the_day(monkeypatch) -> None:
     # On the restriction date itself the message is already "restricted".
-    on_day = notice_for("EE", date(2026, 7, 10))
+    import opencheck.bo_access as bo
+    entry = bo.BoAccessEntry(
+        restricted_from=date(2030, 1, 1), access_url="https://example.org/apply"
+    )
+    monkeypatch.setitem(bo.BO_ACCESS, "AT", entry)
+    on_day = notice_for("AT", date(2030, 1, 1))
     assert on_day is not None and on_day.status == "restricted"
-    day_before = notice_for("EE", date(2026, 7, 9))
+    day_before = notice_for("AT", date(2029, 12, 31))
     assert day_before is not None and day_before.status == "becoming_restricted"
+
+
+def test_estonia_has_no_notice_while_restriction_postponed() -> None:
+    """Estonia's 2026-07-10 legitimate-interest switch was postponed on the
+    day (https://news.err.ee/1610074816/) — current public access remains,
+    so EE must have no entry and no notice until a new date is announced."""
+    assert notice_for("EE", date(2026, 7, 20)) is None
 
 
 def test_null_date_is_restricted() -> None:
