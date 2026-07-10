@@ -63,32 +63,7 @@ _DETAIL_XML = """<?xml version="1.0"?>
  </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
 
-# tegelikudKasusaajad_v2 response: one current BO (start only) + one ended BO.
-_BO_XML = """<?xml version="1.0"?>
-<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
- <SOAP-ENV:Body>
-  <tegelikudKasusaajad_v2Response xmlns="http://arireg.x-road.eu/producer/">
-   <keha>
-    <kasusaajad>
-     <kasusaajate_arv_kokku>2</kasusaajate_arv_kokku>
-     <kasusaaja>
-      <eesnimi>Edith</eesnimi><nimi>Rik</nimi>
-      <kontrolli_teostamise_viis>J</kontrolli_teostamise_viis>
-      <kontrolli_teostamise_viis_tekstina>member of the highest management body</kontrolli_teostamise_viis_tekstina>
-      <algus_kpv>2022-01-31Z</algus_kpv>
-     </kasusaaja>
-     <kasusaaja>
-      <eesnimi>Past</eesnimi><nimi>Beneficiary</nimi>
-      <kontrolli_teostamise_viis_tekstina>direct ownership</kontrolli_teostamise_viis_tekstina>
-      <algus_kpv>2018-01-01Z</algus_kpv><lopp_kpv>2021-12-31Z</lopp_kpv>
-     </kasusaaja>
-    </kasusaajad>
-   </keha>
-  </tegelikudKasusaajad_v2Response>
- </SOAP-ENV:Body>
-</SOAP-ENV:Envelope>"""
-
-_DATA = {"registry_code": "10584597", "detail_xml": _DETAIL_XML, "bo_xml": _BO_XML}
+_DATA = {"registry_code": "10584597", "detail_xml": _DETAIL_XML}
 
 
 def _by(events, change_type):
@@ -120,15 +95,15 @@ def test_identity_history_transitions():
     assert _by(events, ChangeType.STATUS_CHANGED) == []
 
 
-def test_owner_and_bo_events_reconstructed():
+def test_owner_events_reconstructed():
     events = ariregister_change_events(_DATA)
 
     added = _by(events, ChangeType.OWNER_ADDED)
     removed = _by(events, ChangeType.OWNER_REMOVED)
-    # ADDED: board Markus, OSAN Old Owner, BO Edith, BO Past = 4
-    assert len(added) == 4
-    # REMOVED: OSAN Old Owner (ended), BO Past (ended) = 2
-    assert len(removed) == 2
+    # ADDED: board Markus, OSAN Old Owner = 2. REMOVED: OSAN Old Owner = 1.
+    # (Beneficial-owner events were removed 2026-07-10 — issue #22.)
+    assert len(added) == 2
+    assert len(removed) == 1
 
     board = next(e for e in added if "Markus Villig" in (e.counterparty or ""))
     assert board.record_type is RecordType.RELATIONSHIP
@@ -142,14 +117,6 @@ def test_owner_and_bo_events_reconstructed():
     assert owner_out.interest_start_date == "2010-01-01"
     assert owner_out.interest_end_date == "2016-08-06"
 
-    bo = next(e for e in added if "Edith Rik" in (e.counterparty or ""))
-    assert "beneficial owner" in bo.counterparty
-    assert "highest management body" in bo.counterparty
-    assert bo.event_date == "2022-01-31"
-
-    bo_out = next(e for e in removed if "Past Beneficiary" in (e.counterparty or ""))
-    assert bo_out.event_date == "2021-12-31"
-
 
 def test_all_events_effective_high_confidence():
     events = ariregister_change_events(_DATA)
@@ -159,20 +126,17 @@ def test_all_events_effective_high_confidence():
     assert all(e.date_confidence is DateConfidence.HIGH for e in events)
 
 
-def test_bo_branch_is_isolated():
-    """BO events come only from bo_xml — so the whole BO branch can be dropped
-    after 10 July 2026 by simply not passing bo_xml."""
-    detail_only = ariregister_change_events(
-        {"registry_code": "10584597", "detail_xml": _DETAIL_XML, "bo_xml": None}
+def test_bo_history_removed():
+    """Estonia withdrew open-data BO access on 2026-07-10 (issue #22): the
+    emitter must produce no beneficial-owner events, and a legacy ``bo_xml``
+    key from an older caller is ignored rather than parsed."""
+    legacy_bo_xml = "<Envelope><kasusaajad><kasusaaja><eesnimi>Edith</eesnimi><nimi>Rik</nimi><algus_kpv>2022-01-31Z</algus_kpv></kasusaaja></kasusaajad></Envelope>"
+    events = ariregister_change_events(
+        {"registry_code": "10584597", "detail_xml": _DETAIL_XML, "bo_xml": legacy_bo_xml}
     )
-    assert detail_only
-    assert all("beneficial owner" not in (e.counterparty or "") for e in detail_only)
-
-    bo_only = ariregister_change_events(
-        {"registry_code": "10584597", "detail_xml": None, "bo_xml": _BO_XML}
-    )
-    assert len(bo_only) == 3  # Edith added; Past added + removed
-    assert all(e.source_id == "ariregister" for e in bo_only)
+    assert events
+    assert all("beneficial owner" not in (e.counterparty or "") for e in events)
+    assert all("Edith" not in (e.counterparty or "") for e in events)
 
 
 def test_empty_and_malformed_data():

@@ -5,26 +5,26 @@ current-and-historic records** that we reconstruct events from. The dates are
 real registry effective dates (``algus_kpv`` start / ``lopp_kpv`` end), so every
 Estonian event is ``DateBasis.EFFECTIVE`` / ``DateConfidence.HIGH``.
 
-Inputs (fetched by ``AriregisterAdapter.fetch_timeline_data`` over the RIK
-X-Road SOAP open-data API, parsed here from the documented XML responses):
+Input (fetched by ``AriregisterAdapter.fetch_timeline_data`` over the RIK
+X-Road SOAP open-data API, parsed here from the documented XML response):
 
 * ``detailandmed_v2`` with ``ainult_kehtivad=0`` (history on) — the registry
   card's dated blocks: ``arinimed`` (names), ``aadressid`` (addresses),
   ``oiguslikud_vormid`` (legal forms), ``staatused`` (statuses), and the
   persons on / off the card (``kaardile_kantud_isikud`` board + ``OSAN``
-  shareholders; ``kaardivalised_isikud`` ``O`` shareholders);
-* ``tegelikudKasusaajad_v2`` with ``ainult_kehtivad=0`` — beneficial owners
-  (``kasusaaja``) with start dates + manner of control.
+  shareholders; ``kaardivalised_isikud`` ``O`` shareholders).
 
 Identity blocks (names / addresses / legal forms / statuses) are dated intervals
-→ Tier-2 transition events. Persons and beneficial owners are dated holdings →
-Tier-1 ``OWNER_ADDED`` / ``OWNER_REMOVED`` relationship events (role / share /
-control manner ride in ``counterparty``, mirroring the NZ emitter — the codelist
-has no director- or BO-specific type).
+→ Tier-2 transition events. Persons are dated holdings → Tier-1 ``OWNER_ADDED``
+/ ``OWNER_REMOVED`` relationship events (role / share ride in ``counterparty``,
+mirroring the NZ emitter — the codelist has no director-specific type).
 
-NOTE: beneficial-owner events are included for now. RIK's access rules to the
-beneficial-owners database change on 10 July 2026; revisit (and likely drop the
-BO branch) then — it is isolated in ``_bo_events`` for exactly that reason.
+Beneficial-owner history (``tegelikudKasusaajad_v2``) was removed on
+10 July 2026, when Estonia withdrew anonymous/open-data access to the
+beneficial-owners database (AMLD6 transposition; access is now purpose-based
+behind e-ID authentication). Shareholder history — on the registry card since
+1 Sept 2023 — is unaffected and remains the ownership backbone here.
+See https://github.com/StephenAbbott/opencheck/issues/22.
 """
 
 from __future__ import annotations
@@ -203,39 +203,15 @@ def _persons(events: list[ChangeEvent], subject: str, company: ET.Element,
                     _iso(_text(it, "algus_kpv")), _iso(_text(it, "lopp_kpv")))
 
 
-def _bo_events(subject: str, bo_xml: str | None) -> list[ChangeEvent]:
-    """Beneficial owners from ``tegelikudKasusaajad_v2``. Isolated so it can be
-    dropped wholesale when RIK's BO access rules change on 10 July 2026."""
-    root = _parse(bo_xml)
-    container = _first(root, "kasusaajad")
-    if container is None:
-        return []
-    events: list[ChangeEvent] = []
-    for k in container:
-        if _ln(k) != "kasusaaja":
-            continue
-        parts = [_text(k, "eesnimi"), _text(k, "nimi")]
-        name = " ".join(p for p in parts if p).strip()
-        if not name:
-            continue
-        manner = (_text(k, "kontrolli_teostamise_viis_tekstina")
-                  or _text(k, "kontrolli_teostamise_viis") or "").strip()
-        label = f"{name} — beneficial owner" + (f" ({manner})" if manner else "")
-        _emit_owner(events, subject, label,
-                    _iso(_text(k, "algus_kpv")),
-                    _iso(_text(k, "lopp_kpv") or _text(k, "loppemise_kpv")))
-    return events
-
-
 # --------------------------------------------------------------------------- #
 # Public entry point
 # --------------------------------------------------------------------------- #
 
 def ariregister_change_events(data: dict[str, Any]) -> list[ChangeEvent]:
-    """Build Time Machine ChangeEvents from the e-Äriregister SOAP responses.
+    """Build Time Machine ChangeEvents from the e-Äriregister SOAP response.
 
     ``data`` is what ``AriregisterAdapter.fetch_timeline_data`` returns:
-    ``{"registry_code": str, "detail_xml": str|None, "bo_xml": str|None}``.
+    ``{"registry_code": str, "detail_xml": str|None}``.
     """
     if not data:
         return []
@@ -263,7 +239,6 @@ def ariregister_change_events(data: dict[str, Any]) -> list[ChangeEvent]:
         _persons(events, subject, company, "kaardile_kantud_isikud")
         _persons(events, subject, company, "kaardivalised_isikud")
 
-    events += _bo_events(subject, data.get("bo_xml"))
     return events
 
 

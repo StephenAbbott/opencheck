@@ -175,6 +175,35 @@ def test_bo_direct_ownership_maps_to_o():
     bos = _parse_beneficial_owners(html)
     assert bos[0]["kontrolli_teostamise_viis"] == "O"
 
+# Post-2026-07-10 page: the register replaced the beneficial-owners table
+# with an authentication prompt for anonymous visitors (observed live on the
+# changeover day — issue #28). The scraper must degrade to an empty BO list
+# while everything else still parses.
+_HTML_BO_WITHDRAWN = _HTML.replace(
+    """<table>
+<tr><th>Name</th><th>Personal identification code / date of birth</th><th>Manner of exercising control</th><th>Start - end</th></tr>
+<tr><td>Anne-Liis Theisen</td><td>49103275238</td><td>Indirect ownership</td><td>20.02.2026</td></tr>
+<tr><td>Dominik Philipp Matyka</td><td>38212090515</td><td>Indirect ownership</td><td>20.02.2026</td></tr>
+</table>""",
+    """<div class="row mt-4">
+  <div class="col-md-4 text-muted">Beneficial owners</div>
+  <div class="col">
+    <p>To see the beneficial owners data Authentication is required to request access.
+       Please choose a suitable method:</p>
+    <a href="#" class="btn">Authenticate</a>
+  </div>
+</div>""",
+)
+
+
+def test_bo_withdrawal_degrades_gracefully():
+    """No BO table (post-2026-07-10 anonymous view) → empty list, no error,
+    and the auth-prompt markup must not confuse the other table parsers."""
+    assert _parse_beneficial_owners(_HTML_BO_WITHDRAWN) == []
+    assert len(_parse_officers(_HTML_BO_WITHDRAWN)) == 1
+    assert len(_parse_shareholders(_HTML_BO_WITHDRAWN)) == 3
+
+
 # ---------------------------------------------------------------------------
 # Adapter integration (HTTP mocked)
 # ---------------------------------------------------------------------------
@@ -210,6 +239,22 @@ async def test_fetch_full_bundle(adapter):
     assert len(bundle["officers"]) == 1
     assert len(bundle["shareholders"]) == 3
     assert len(bundle["beneficial_owners"]) == 2
+
+@pytest.mark.asyncio
+async def test_fetch_full_bundle_without_bo_table(adapter):
+    """End-to-end on the post-2026-07-10 anonymous page shape (issue #28):
+    the bundle carries officers + shareholders and an empty BO list."""
+    with respx.mock:
+        respx.get(
+            "https://ariregister.rik.ee/eng/company/17441866/company_print_json"
+        ).mock(return_value=Response(200, text=_HTML_BO_WITHDRAWN,
+                                    headers={"content-type": "text/html; charset=utf-8"}))
+        bundle = await adapter.fetch("17441866", legal_name="Nordic Foods 1 OÜ")
+
+    assert not bundle["is_stub"]
+    assert len(bundle["officers"]) == 1
+    assert len(bundle["shareholders"]) == 3
+    assert bundle["beneficial_owners"] == []
 
 @pytest.mark.asyncio
 async def test_fetch_stub_on_404(adapter):
