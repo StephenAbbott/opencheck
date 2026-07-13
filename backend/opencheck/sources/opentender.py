@@ -91,9 +91,13 @@ class OpenTenderAdapter(SourceAdapter):
             name="OpenTender",
             homepage="https://opentender.eu/all/download",
             description=(
-                "Public procurement tender data from 35 jurisdictions, "
-                "covering buyers, bidders, award values, and integrity scores. "
-                "Search surfaces winning suppliers and contracting authorities."
+                "Public procurement tender data covering buyers, bidders, "
+                "award values, and integrity scores. Search surfaces winning "
+                "suppliers and contracting authorities. Coverage is whatever "
+                "the deployed opentender.db was built from — OpenTender "
+                "publishes 35 jurisdictions, but an artifact is normally built "
+                "from a subset (see docs/sources.md); a company outside the "
+                "built countries simply returns no hits."
             ),
             license="CC-BY-NC-SA-4.0",
             attribution=(
