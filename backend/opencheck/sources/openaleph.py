@@ -46,6 +46,7 @@ import hashlib
 import importlib.metadata
 import json
 import re
+import unicodedata
 from typing import Any
 from urllib.parse import quote
 
@@ -58,6 +59,9 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _API_BASE = "https://search.openaleph.org/api/2"
 _CACHE_NS = "openaleph"
+
+# How many collections to surface in the mentions breakdown (issue #23).
+_MENTION_FACET_SIZE = 10
 
 # Anubis bot-protection at search.openaleph.org whitelists requests whose
 # User-Agent matches the openaleph-client pattern ("openaleph/<version>").
@@ -91,6 +95,53 @@ def _sanitise_q(text: str) -> str:
 
 def _schema_for(kind: SearchKind) -> str:
     return "LegalEntity" if kind == SearchKind.ENTITY else "Person"
+
+
+# FtM "names" group — the properties a legitimate name match may live in.
+_NAME_PROPS = ("name", "alias", "previousName")
+
+_NAME_PUNCT = re.compile(r"[^\w\s]", re.UNICODE)
+
+
+def _normalise_name(text: str) -> str:
+    """Casefold + strip punctuation/diacritics + collapse whitespace.
+
+    Mirrors ``reconcile._normalise_name`` — same discipline, same reason: names
+    are compared, never scored.
+    """
+    if not text:
+        return ""
+    folded = unicodedata.normalize("NFKD", text)
+    folded = "".join(c for c in folded if not unicodedata.combining(c))
+    folded = _NAME_PUNCT.sub(" ", folded.casefold())
+    return " ".join(folded.split())
+
+
+def _bears_name(item: dict[str, Any], wanted: str) -> bool:
+    """True when the hit itself carries ``wanted`` among its FtM names.
+
+    The honest test for a *name* search: a hit returned for the query "Canada
+    Basketball" must actually be called Canada Basketball. BM25 relevance is
+    not a match confidence — it ranks within a corpus, so a lone weak result
+    is still rank #1 (Canada Basketball's only hit, an unrelated Honduran
+    cleaning company, scored 6.6 and topped its result set), and a strong
+    score can still be the wrong company ("The Foundation Foundation" returns
+    GB Group plc at 77). Neither an absolute nor a relative score threshold
+    separates those from Ericsson's genuine hits (81–114) — but every genuine
+    hit *bears the name*, and none of the false positives do.
+    """
+    if not wanted:
+        return False
+    props = item.get("properties") or {}
+    for prop in _NAME_PROPS:
+        values = props.get(prop) or []
+        if isinstance(values, str):
+            values = [values]
+        for value in values:
+            if _normalise_name(str(value)) == wanted:
+                return True
+    # Some collections put the display name only in the caption.
+    return _normalise_name(str(item.get("caption") or "")) == wanted
 
 
 class OpenAlephAdapter(SourceAdapter):
@@ -190,12 +241,23 @@ class OpenAlephAdapter(SourceAdapter):
         ]
 
     async def fetch_by_name(self, legal_name: str) -> list[SourceHit]:
-        """Return OpenAleph hits whose name closely matches ``legal_name``.
+        """Return OpenAleph hits that actually *bear* ``legal_name``.
 
-        Used as a last-resort fallback when all identifier-keyed strategies
-        return no results (e.g. entities indexed without leiCode or
-        registrationNumber).  Results are limited to ``LegalEntity`` schema
-        to minimise false positives.
+        Last-resort fallback when every identifier-keyed strategy — including
+        the FtM ``/match`` step — comes back empty. ``/match`` needs
+        ``OPENALEPH_API_KEY`` (the flagship 405s anonymous POSTs), so on a
+        keyless deployment this is the only name-based path; it stays.
+
+        **Gated on name equivalence** (issue #21): Aleph's free-text ``q=``
+        is BM25-ranked, and a rank is not a match — the query "Canada
+        Basketball" returned exactly one hit, an unrelated Honduran cleaning
+        company, which was therefore also the top-scoring hit. Hits are kept
+        only when one of their own FtM names (``name`` / ``alias`` /
+        ``previousName``, or the caption) normalises equal to the subject's
+        legal name. Verified against the live index: this drops the Canada
+        Basketball and "The Foundation Foundation" false positives while
+        keeping every genuine Ericsson AB hit (State Aid Transparency,
+        OpenTender Sweden, European Defence Fund).
         """
         cache_key = f"{_CACHE_NS}/name/{_slug(legal_name)}"
         if not self.info.live_available and not self._cache.has(cache_key):
@@ -207,9 +269,11 @@ class OpenAlephAdapter(SourceAdapter):
             f"/entities?q={quote(q)}&filter:schema=LegalEntity&limit=5",
             cache_key=cache_key,
         )
+        wanted = _normalise_name(legal_name)
         return [
             self._hit(item, SearchKind.ENTITY)
             for item in payload.get("results", [])
+            if _bears_name(item, wanted)
         ]
 
     async def fetch_by_registration(
@@ -368,13 +432,25 @@ class OpenAlephAdapter(SourceAdapter):
         must never be treated as identifier corroboration. Any failure
         (pre-5.3 instance → 404, timeout, auth) degrades to ``None`` rather
         than surfacing an error card.
+
+        Returns ``{total, documents, collections}``. ``collections`` is a
+        breakdown of **which archives mention the entity, with exact counts
+        across all ``total`` mentions** — taken from the ``collection_id``
+        facet, not counted from the sampled documents (issue #23). This
+        matters: the endpoint returns ``total`` alongside only a page of
+        documents, so counting categories over the sample would misreport the
+        rest (Shell: 5 sampled of 61). The ``category`` facet is empty on the
+        flagship, and per-document categories are near-uniformly "library" —
+        collection labels ("Epstein Estate documents from the US Oversight
+        Committee") are both exact and far more informative.
         """
-        cache_key = f"{_CACHE_NS}/mentions/{_slug(entity_id)}"
+        cache_key = f"{_CACHE_NS}/mentions/{_slug(entity_id)}/{limit}"
         if not self.info.live_available and not self._cache.has(cache_key):
             return None
         try:
             payload = await self._get(
-                f"/entities/{quote(entity_id)}/mentions?limit={limit}",
+                f"/entities/{quote(entity_id)}/mentions"
+                f"?limit={limit}&facet=collection_id&facet_size={_MENTION_FACET_SIZE}",
                 cache_key=cache_key,
             )
         except Exception:  # noqa: BLE001
@@ -390,13 +466,20 @@ class OpenAlephAdapter(SourceAdapter):
                     "collection": collection.get("label")
                     or collection.get("foreign_id")
                     or "",
-                    # Collection category (leak / court / news / library…) —
-                    # kept for a future category-based breakdown or signal.
                     "category": collection.get("category") or "",
                     "url": (item.get("links") or {}).get("ui") or "",
                 }
             )
-        return {"total": int(total), "documents": documents}
+
+        collections: list[dict[str, Any]] = []
+        facet = (payload.get("facets") or {}).get("collection_id") or {}
+        for value in (facet.get("values") or [])[:_MENTION_FACET_SIZE]:
+            label = value.get("label") or value.get("id") or ""
+            count = value.get("count") or 0
+            if label and count:
+                collections.append({"label": str(label), "count": int(count)})
+
+        return {"total": int(total), "documents": documents, "collections": collections}
 
     # ------------------------------------------------------------------
     # Fetch

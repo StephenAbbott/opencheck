@@ -302,13 +302,112 @@ async def test_fetch_by_name_strips_quotes_that_break_aleph(httpx_mock: HTTPXMoc
     from urllib.parse import quote
     raw_name = 'Публичное акционерное общество "Нефтяная компания "Роснефть"'
     sanitised = "Публичное акционерное общество Нефтяная компания Роснефть"
+    # The hit must bear the queried name — the name gate (issue #21) rejects
+    # anything else, so this fixture doubles as proof the gate is quote-blind.
+    rosneft = {
+        "id": "aleph-rosneft-001",
+        "schema": "Company",
+        "caption": raw_name,
+        "properties": {"name": [raw_name]},
+        "collection": {"id": 1, "foreign_id": "gleif", "label": "GLEIF"},
+    }
     httpx_mock.add_response(
         url=f"{_API}/entities?q={quote(sanitised)}&filter:schema=LegalEntity&limit=5",
-        json={"results": [_ERICSSON_ENTITY]},
+        json={"results": [rosneft]},
     )
     adapter = OpenAlephAdapter()
     hits = await adapter.fetch_by_name(raw_name)
     assert len(hits) == 1  # request used the sanitised query — no 500
+
+
+# --- name-equivalence gate (issue #21) -------------------------------------
+#
+# Aleph's free-text q= is BM25-ranked, and a rank is not a match: the query
+# "Canada Basketball" returned exactly ONE hit — an unrelated Honduran cleaning
+# company — which was therefore also the top-scoring hit (score 6.6), so no
+# relative cutoff could catch it; and "The Foundation Foundation" returns GB
+# Group plc at score 77, so no absolute cutoff could either. Both were verified
+# against the live index. A hit is kept only when it BEARS the queried name.
+
+_CLEANING_CO = {
+    "id": "aleph-zoe-001",
+    "schema": "Company",
+    "caption": "Empresa de Limpieza y Mantenimiento Zoe",
+    "properties": {"name": ["Empresa de Limpieza y Mantenimiento Zoe"]},
+    "collection": {"id": 9, "foreign_id": "ocds-hn", "label": "OCDS: Honduras"},
+}
+
+
+async def test_fetch_by_name_rejects_hit_that_does_not_bear_the_name(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """The Canada Basketball false positive: a lone, unrelated top hit."""
+    from urllib.parse import quote
+    httpx_mock.add_response(
+        url=f"{_API}/entities?q={quote('Canada Basketball')}&filter:schema=LegalEntity&limit=5",
+        json={"results": [_CLEANING_CO]},
+    )
+    adapter = OpenAlephAdapter()
+    assert await adapter.fetch_by_name("Canada Basketball") == []
+
+
+async def test_fetch_by_name_keeps_only_the_name_bearing_hits(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """Mixed result set: genuine hit kept, high-scoring impostor dropped."""
+    from urllib.parse import quote
+    httpx_mock.add_response(
+        url=f"{_API}/entities?q={quote('Ericsson AB')}&filter:schema=LegalEntity&limit=5",
+        json={"results": [_CLEANING_CO, _ERICSSON_ENTITY]},
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_name("Ericsson AB")
+    assert [h.hit_id for h in hits] == ["aleph-ericsson-001"]
+
+
+async def test_fetch_by_name_gate_is_case_and_punctuation_insensitive(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """Live hits arrive as "ERICSSON AB" for a subject named "Ericsson AB"."""
+    from urllib.parse import quote
+    shouty = {
+        **_ERICSSON_ENTITY,
+        "id": "aleph-ericsson-002",
+        "caption": "ERICSSON AB.",
+        "properties": {"name": ["ERICSSON AB."]},
+    }
+    httpx_mock.add_response(
+        url=f"{_API}/entities?q={quote('Ericsson AB')}&filter:schema=LegalEntity&limit=5",
+        json={"results": [shouty]},
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_name("Ericsson AB")
+    assert len(hits) == 1
+
+
+async def test_fetch_by_name_gate_accepts_alias_and_previous_name(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """An entity legitimately known under an alias still matches."""
+    from urllib.parse import quote
+    aliased = {
+        "id": "aleph-alias-001",
+        "schema": "Company",
+        "caption": "Telefonaktiebolaget LM Ericsson",
+        "properties": {
+            "name": ["Telefonaktiebolaget LM Ericsson"],
+            "alias": ["Ericsson AB"],
+        },
+        "collection": {"id": 7, "foreign_id": "orbis", "label": "Orbis"},
+    }
+    httpx_mock.add_response(
+        url=f"{_API}/entities?q={quote('Ericsson AB')}&filter:schema=LegalEntity&limit=5",
+        json={"results": [aliased]},
+    )
+    adapter = OpenAlephAdapter()
+    hits = await adapter.fetch_by_name("Ericsson AB")
+    assert len(hits) == 1
+    assert hits[0].hit_id == "aleph-alias-001"
 
 
 async def test_fetch_by_name_tolerates_server_error(httpx_mock: HTTPXMock) -> None:
@@ -331,11 +430,19 @@ async def test_fetch_by_name_tolerates_server_error(httpx_mock: HTTPXMock) -> No
 
 async def test_fetch_mentions_parses_documents(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
-        url=f"{_API}/entities/aleph-123/mentions?limit=5",
+        url=f"{_API}/entities/aleph-123/mentions?limit=5&facet=collection_id&facet_size=10",
         json={
             "status": "ok",
             "total": 33,
             "total_type": "eq",
+            "facets": {
+                "collection_id": {
+                    "values": [
+                        {"id": "1", "label": "AskTheEU FOI documents", "count": 20},
+                        {"id": "2", "label": "Leak X", "count": 13},
+                    ]
+                }
+            },
             "results": [
                 {
                     "id": "doc-1",
@@ -365,6 +472,14 @@ async def test_fetch_mentions_parses_documents(httpx_mock: HTTPXMock) -> None:
     assert mentions is not None
     assert mentions["total"] == 33
     assert len(mentions["documents"]) == 2
+    # Issue #23: the breakdown is the collection_id FACET — exact across all 33
+    # mentions — never counted from the 2 sampled documents, which would have
+    # reported 1 + 1 and misrepresented the other 31.
+    assert mentions["collections"] == [
+        {"label": "AskTheEU FOI documents", "count": 20},
+        {"label": "Leak X", "count": 13},
+    ]
+    assert sum(c["count"] for c in mentions["collections"]) == mentions["total"]
     first = mentions["documents"][0]
     assert first["title"] == "Annex1 1.pdf"
     assert first["collection"] == "AskTheEU FOI documents"
@@ -377,7 +492,7 @@ async def test_fetch_mentions_parses_documents(httpx_mock: HTTPXMock) -> None:
 async def test_fetch_mentions_degrades_to_none_on_error(httpx_mock: HTTPXMock) -> None:
     """Pre-5.3 instances 404 on /mentions — enrichment must degrade quietly."""
     httpx_mock.add_response(
-        url=f"{_API}/entities/aleph-123/mentions?limit=5",
+        url=f"{_API}/entities/aleph-123/mentions?limit=5&facet=collection_id&facet_size=10",
         status_code=404,
     )
     adapter = OpenAlephAdapter()
@@ -454,3 +569,32 @@ async def test_lookup_strategies_tolerate_mentions_failure(monkeypatch) -> None:
     result = await lookup_mod._openaleph_strategies(ctx)
     assert len(result) == 1
     assert "mentioned in" not in result[0].summary
+
+
+async def test_fetch_mentions_without_facets_yields_empty_breakdown(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """An instance that returns no facets (or an empty one) must still give a
+    valid mentions payload — the card simply shows no archive chips."""
+    httpx_mock.add_response(
+        url=f"{_API}/entities/aleph-9/mentions?limit=5&facet=collection_id&facet_size=10",
+        json={"status": "ok", "total": 4, "results": [], "facets": {}},
+    )
+    adapter = OpenAlephAdapter()
+    mentions = await adapter.fetch_mentions("aleph-9")
+    assert mentions == {"total": 4, "documents": [], "collections": []}
+
+
+async def test_fetch_mentions_cache_key_includes_limit(httpx_mock: HTTPXMock) -> None:
+    """Regression: the cache key omitted `limit`, so a limit=5 response was
+    replayed for a limit=50 request (found while building the breakdown)."""
+    for limit, total in ((5, 61), (50, 61)):
+        httpx_mock.add_response(
+            url=f"{_API}/entities/aleph-7/mentions"
+            f"?limit={limit}&facet=collection_id&facet_size=10",
+            json={"status": "ok", "total": total, "results": [], "facets": {}},
+        )
+    adapter = OpenAlephAdapter()
+    assert (await adapter.fetch_mentions("aleph-7", limit=5))["total"] == 61
+    # A different limit must issue a *new* request, not replay the cached one.
+    assert (await adapter.fetch_mentions("aleph-7", limit=50))["total"] == 61

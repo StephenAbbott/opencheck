@@ -587,6 +587,76 @@ export function DeepenBlock({
 // HitRow — single result row with three independent drill-down pills
 // ---------------------------------------------------------------------
 
+/**
+ * MentionsBreakdown — which archives mention this entity, and how often.
+ *
+ * OpenAleph 5.3 `/mentions` reports a total alongside only a page of sample
+ * documents, so the counts here come from the `collection_id` **facet** —
+ * exact across every mention, not extrapolated from the sample (issue #23).
+ * A category breakdown was the original idea, but the flagship's category
+ * facet is empty and per-document categories are near-uniformly "library";
+ * collection names ("Epstein Estate documents…") are exact *and* meaningful.
+ *
+ * Strictly informational: mentions are name-derived, never identifier
+ * corroboration, so nothing here feeds a risk signal.
+ */
+function MentionsBreakdown({ hit }: { hit: SourceHit }) {
+  const [expanded, setExpanded] = useState(false);
+  const mentions = (hit.raw as Record<string, unknown> | undefined)
+    ?.openaleph_mentions as
+    | {
+        total?: number;
+        collections?: { label: string; count: number }[];
+        documents?: { title: string; collection: string; url: string }[];
+      }
+    | undefined;
+  const collections = mentions?.collections ?? [];
+  const total = mentions?.total ?? 0;
+  if (!total || collections.length === 0) return null;
+
+  const preview = expanded ? collections : collections.slice(0, 3);
+  const hidden = collections.length - preview.length;
+
+  return (
+    <div className="mt-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {preview.map((c) => (
+          <span
+            key={c.label}
+            title={`${c.count} of ${total} mentions are in “${c.label}”`}
+            className="inline-flex items-center gap-1 text-[11px] bg-oo-bg border border-oo-rule rounded-full pl-1.5 pr-2 py-0.5 text-oo-muted"
+          >
+            <span className="font-mono font-semibold text-oo-ink">{c.count}</span>
+            <span className="truncate max-w-[200px]">{c.label}</span>
+          </span>
+        ))}
+        {hidden > 0 && (
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="text-[11px] font-medium text-oo-blue hover:underline"
+          >
+            +{hidden} more archive{hidden === 1 ? "" : "s"}
+          </button>
+        )}
+        {expanded && collections.length > 3 && (
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="text-[11px] font-medium text-oo-blue hover:underline"
+          >
+            Show fewer
+          </button>
+        )}
+      </div>
+      <p className="mt-1 text-[11px] text-oo-muted/80">
+        Documents mentioning this name — informational only, not a match on
+        identifiers.
+      </p>
+    </div>
+  );
+}
+
 export function HitRow({
   hit,
   riskSignals,
@@ -682,6 +752,7 @@ export function HitRow({
         {titleAccessory && <div className="shrink-0">{titleAccessory}</div>}
       </div>
       <p className="text-[13px] text-oo-muted mt-1 leading-[1.6]">{hit.summary}</p>
+      <MentionsBreakdown hit={hit} />
       {riskSignals.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {riskSignals.map((sig, i) => (
