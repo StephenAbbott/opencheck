@@ -16,11 +16,11 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 72** — Shareable social cards: live entity summaries in link previews
+**Latest: Phase 74** — FollowTheMoney export: take an OpenCheck graph into OpenSanctions / OpenAleph
 
-Sharing an OpenCheck lookup now produces a link whose preview is a **live summary card** for the entity — name, risk-signal count and the first three signal flags in OpenCheck's risk colours — instead of the generic brand image. Cards render server-side with Pillow at `GET /og/{lei}.png` from the same pipeline results the page shows, with a teaser variant when no recent lookup is cached. Social crawlers don't execute JavaScript, so a new crawler-readable `GET /share/{lei}` page carries the per-entity Open Graph/Twitter tags and instantly redirects humans to the app; the subject card's new "Copy share link" button hands out that URL.
+OpenCheck ownership graphs now export as [FollowTheMoney](https://followthemoney.tech/) entities — the data model of OpenSanctions, OpenAleph/Aleph and the `ftm` CLI — via `GET /export?format=ftm`, the FullCheck network export, the ZIP bundles and the MCP server. Companies and people become `Company` / `Person` / `PublicBody` nodes keyed by their BODS statementIds, and each disclosed interest becomes an `Ownership` link (with percentage and direct/indirect type) or a `Directorship` — newline-delimited and ready for `alephclient write-entities`, with nodes always preceding links so streaming loaders resolve references first pass. Fulfils the original project plan's promise to "take data into OpenSanctions / Aleph investigative workflows".
 
-*Previous: [Phase 71 — Wikirate: open ESG metric answers](docs/status.md)*
+*Previous: [Phase 73 — Replay provenance badging: cached results are labelled, never passed off as live](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
