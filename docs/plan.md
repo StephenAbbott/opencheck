@@ -2,7 +2,7 @@
 
 A corporate intelligence tool that checks entities against open data sources, surfaces risk signals and turns any ownership information it finds into BODS so users can download it, visualise it, and take it into other tools.
 
-> **Status:** draft project plan. All design decisions here are provisional and up for revision once prototyping begins.
+> **Status:** historical — the original April 2026 plan, preserved as written. OpenCheck shipped and substantially exceeded this plan (34 sources vs. the 6 specced here; see [`status.md`](status.md) and the [changelog](https://opencheck.world/changelog)), but a few descriptions below no longer match the product. The largest: there is **no chat UI** — the "chatbot-first UX" and LLM intent-classification layer (§1, §7.1, §8.2–8.3) were replaced by a deterministic search-first flow, with the LLM confined to an optional, citation-grounded narrative summary. Ownership graphs render with Cytoscape.js rather than `bods-dagre` (§7.5, BOVS grammar retained); the curated demo corpus (§5) became live-first lookups with a short replay cache; export validation (§7.4) is advisory rather than blocking; and person lookups (§3, Phase 3) remain unbuilt. Divergences are tracked on the project board rather than by revising this document.
 > **Owner:** Stephen Abbott Pugh (Understand Beneficial Ownership; GODIN co-organiser).
 > **Audience for this doc:** primarily the author, as a working spec and roadmap. Sections 1–3 are also usable as a pitch when talking about the project externally.
 
