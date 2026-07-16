@@ -75,7 +75,7 @@ python scripts/extract_bods_subgraphs.py \
 
 The enrichment endpoints (`/subsidiaries`, `/securities`, `/history`, `/nz-associations`) are lazy and panel-only — fetched on demand, cached, and never part of the main lookup synthesis.
 
-`/lookup`, `/lookup-stream`, and `/export?lei=…` all share the same single async generator `_lookup_pipeline()` — the export bundle exactly mirrors what the user saw. Completed pipeline runs are cached in memory for 15 minutes (keyed by LEI; `?refresh=true` bypasses). Lookups are addressable via `?lei=` query parameter in the frontend URL, so results pages are shareable.
+`/lookup`, `/lookup-stream`, and `/export?lei=…` all share the same single async generator `_lookup_pipeline()` — the export bundle exactly mirrors what the user saw. Completed pipeline runs are cached in memory for 15 minutes (keyed by LEI; `?refresh=true` bypasses). Lookups are addressable via `?lei=` query parameter in the frontend URL, so results pages are shareable. Cached replays are always labelled: a replayed stream is prefixed with a `replayed` SSE event (and the sync response carries `replayed` + `fetched_at`) so the UI shows "results from a check run N min ago" with a fresh-check action, rather than letting a cached run masquerade as live.
 
 ## Project structure
 

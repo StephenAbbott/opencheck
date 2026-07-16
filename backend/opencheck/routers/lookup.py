@@ -7,7 +7,8 @@ import json
 import re
 import time
 from dataclasses import dataclass, field as dc_field
-from typing import Any, Literal, AsyncIterator
+from datetime import datetime, timezone
+from typing import Any, Literal, AsyncIterator, NamedTuple
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -98,6 +99,11 @@ class LookupResponse(ReportResponse):
     legal_name: str | None = None
     jurisdiction: str | None = None
     derived_identifiers: dict[str, str] = {}
+    # Provenance: True when served from the short-lived replay cache rather
+    # than a fresh run, with the wall-clock completion time of the original
+    # run. ``?refresh=true`` always yields a fresh run.
+    replayed: bool = False
+    fetched_at: str | None = None
 
 
 @router.get("/deepen", response_model=DeepenResponse)
@@ -1478,10 +1484,23 @@ async def _lookup_pipeline(
 # refresh, a shared URL, or an SSE reconnect replays instantly instead of
 # re-querying every source. Only runs that reached the "done" event are
 # cached; per-source retries and ?refresh=true invalidate/bypass.
+#
+# Replays are never allowed to masquerade as live runs: a replayed stream is
+# prefixed with a "replayed" event carrying the wall-clock completion time of
+# the original run, and the sync /lookup response mirrors it as
+# ``replayed`` / ``fetched_at`` so the UI can badge the result and offer a
+# fresh check.
+
+
+class _ReplayEntry(NamedTuple):
+    stored: float  # monotonic clock, for the TTL check
+    fetched_at: str  # wall-clock UTC ISO 8601 completion time, for display
+    events: list[LookupEvent]
+
 
 _REPLAY_TTL_SECONDS = 15 * 60.0
 _REPLAY_MAX_ENTRIES = 64
-_REPLAY_CACHE: dict[str, tuple[float, list[LookupEvent]]] = {}
+_REPLAY_CACHE: dict[str, _ReplayEntry] = {}
 
 
 def _invalidate_replay(lei: str) -> None:
@@ -1499,8 +1518,16 @@ async def _lookup_pipeline_cached(
 
     if not refresh:
         entry = _REPLAY_CACHE.get(key)
-        if entry is not None and now - entry[0] < _REPLAY_TTL_SECONDS:
-            for event in entry[1]:
+        if entry is not None and now - entry.stored < _REPLAY_TTL_SECONDS:
+            # Provenance first, so the UI knows before any result arrives.
+            yield (
+                "replayed",
+                {
+                    "fetched_at": entry.fetched_at,
+                    "age_seconds": round(now - entry.stored, 1),
+                },
+            )
+            for event in entry.events:
                 yield event
             return
 
@@ -1515,7 +1542,11 @@ async def _lookup_pipeline_cached(
     if completed:
         while len(_REPLAY_CACHE) >= _REPLAY_MAX_ENTRIES:
             _REPLAY_CACHE.pop(next(iter(_REPLAY_CACHE)), None)
-        _REPLAY_CACHE[key] = (now, buffer)
+        _REPLAY_CACHE[key] = _ReplayEntry(
+            stored=now,
+            fetched_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            events=buffer,
+        )
 
 
 # --- endpoints ---------------------------------------------------------------
@@ -1545,11 +1576,16 @@ async def lookup(
     legal_name: str | None = None
     jurisdiction: str | None = None
     derived: dict[str, str] = {}
+    replayed = False
+    fetched_at: str | None = None
 
     async for event, payload in _lookup_pipeline_cached(
         norm_lei, deepen_top=deepen_top, refresh=refresh
     ):
-        if event == "error":
+        if event == "replayed":
+            replayed = True
+            fetched_at = payload["fetched_at"]
+        elif event == "error":
             raise HTTPException(
                 status_code=payload["status"], detail=payload["detail"]
             )
@@ -1593,6 +1629,8 @@ async def lookup(
         legal_name=legal_name,
         jurisdiction=jurisdiction,
         derived_identifiers=derived,
+        replayed=replayed,
+        fetched_at=fetched_at,
     )
 
 

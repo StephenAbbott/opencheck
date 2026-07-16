@@ -59,13 +59,13 @@ def _summary_from_replay(lei: str) -> tuple[str | None, list[dict[str, Any]]] | 
     prefix = f"{lei}:"
     best: tuple[float, list] | None = None
     now = time.monotonic()
-    for key, (ts, events) in lookup_router._REPLAY_CACHE.items():
+    for key, entry in lookup_router._REPLAY_CACHE.items():
         if not key.startswith(prefix):
             continue
-        if now - ts >= lookup_router._REPLAY_TTL_SECONDS:
+        if now - entry.stored >= lookup_router._REPLAY_TTL_SECONDS:
             continue
-        if best is None or ts > best[0]:
-            best = (ts, events)
+        if best is None or entry.stored > best[0]:
+            best = (entry.stored, entry.events)
     if best is None:
         return None
     name: str | None = None

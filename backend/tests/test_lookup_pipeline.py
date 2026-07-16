@@ -8,6 +8,7 @@ pin the single-pipeline contract: both endpoints draw from
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -234,11 +235,46 @@ def test_completed_lookup_is_served_from_replay_cache(
     first = client.get("/lookup", params={"lei": lei}).json()
     second = client.get("/lookup", params={"lei": lei}).json()
     assert calls["n"] == 1
-    assert second == first
 
-    # refresh=true bypasses the cache and re-runs the pipeline.
-    client.get("/lookup", params={"lei": lei, "refresh": "true"})
+    # The replayed response is identical data, but carries provenance so the
+    # UI can badge it — a cached run must never masquerade as a live one.
+    assert first["replayed"] is False and first["fetched_at"] is None
+    assert second["replayed"] is True
+    datetime.fromisoformat(second["fetched_at"])  # valid ISO timestamp
+    strip = lambda r: {k: v for k, v in r.items() if k not in ("replayed", "fetched_at")}  # noqa: E731
+    assert strip(second) == strip(first)
+
+    # refresh=true bypasses the cache, re-runs the pipeline and is live again.
+    third = client.get("/lookup", params={"lei": lei, "refresh": "true"}).json()
     assert calls["n"] == 2
+    assert third["replayed"] is False and third["fetched_at"] is None
+
+
+def test_replayed_stream_is_prefixed_with_provenance_event(
+    client: TestClient, tmp_path: Path
+) -> None:
+    """A replayed /lookup-stream run starts with a `replayed` event carrying
+    the original completion time; a fresh run never emits one."""
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)
+
+    fresh = _stream_events(_stream_body(client, lei))
+    assert [n for n, _ in fresh if n == "replayed"] == []
+
+    replayed = _stream_events(_stream_body(client, lei))
+    assert replayed[0][0] == "replayed"
+    payload = replayed[0][1]
+    datetime.fromisoformat(payload["fetched_at"])
+    assert payload["age_seconds"] >= 0
+    # The rest of the stream is the cached run, unchanged.
+    assert [e for e in replayed[1:]] == fresh
+
+    # refresh=true bypasses the cache → no provenance event.
+    with client.stream(
+        "GET", "/lookup-stream", params={"lei": lei, "refresh": "true"}
+    ) as r:
+        body = r.read().decode()
+    assert "event: replayed" not in body
 
 
 def test_failed_lookup_is_not_cached(client: TestClient, monkeypatch) -> None:

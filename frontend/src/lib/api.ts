@@ -851,7 +851,18 @@ export interface BodsCountsEvent {
   breakdown?: Record<string, BodsBreakdown>;
 }
 
+/**
+ * Emitted first (before any result) when the stream is served from the
+ * backend's short-lived replay cache instead of a fresh run.
+ */
+export interface ReplayedEvent {
+  /** Wall-clock UTC ISO 8601 completion time of the original run. */
+  fetched_at: string;
+  age_seconds: number;
+}
+
 export type LookupStreamHandlers = {
+  onReplayed?: (e: ReplayedEvent) => void;
   onGleifDone?: (e: LookupGleifDoneEvent) => void;
   onSourcesApplicable?: (e: LookupSourcesApplicableEvent) => void;
   onSourceStarted?: (e: SourceStartedEvent) => void;
@@ -900,6 +911,10 @@ export function streamLookup(
     const data = safeParse<LookupStreamErrorEvent>((ev as MessageEvent).data);
     handlers.onError?.(data?.detail ?? "Unknown error");
     es.close();
+  });
+  es.addEventListener("replayed", (ev) => {
+    const data = safeParse<ReplayedEvent>((ev as MessageEvent).data);
+    if (data) handlers.onReplayed?.(data);
   });
   es.addEventListener("gleif_done", (ev) => {
     const data = safeParse<LookupGleifDoneEvent>((ev as MessageEvent).data);

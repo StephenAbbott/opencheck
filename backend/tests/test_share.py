@@ -39,7 +39,11 @@ def _seed_replay(lei: str, name: str, signals: list[dict]) -> None:
         ("risk_signals", {"signals": signals}),
         ("done", {"lei": lei, "bods_issues": [], "license_notices": []}),
     ]
-    lookup_router._REPLAY_CACHE[f"{lei}:5"] = (time.monotonic(), events)
+    lookup_router._REPLAY_CACHE[f"{lei}:5"] = lookup_router._ReplayEntry(
+        stored=time.monotonic(),
+        fetched_at="2026-07-16T12:00:00+00:00",
+        events=events,
+    )
 
 
 def _signals(n: int) -> list[dict]:

@@ -6,6 +6,15 @@ import { RiskChip } from "../risk/RiskChip";
 /** How many signal chips show inline before the "+N more" link. */
 const SIGNAL_PREVIEW_COUNT = 4;
 
+/** "just now" / "1 min ago" / "12 min ago" from an ISO timestamp. */
+export function replayAgeLabel(fetchedAt: string, now: Date = new Date()): string {
+  const then = new Date(fetchedAt).getTime();
+  if (Number.isNaN(then)) return "recently";
+  const mins = Math.max(0, Math.floor((now.getTime() - then) / 60_000));
+  if (mins < 1) return "just now";
+  return `${mins} min ago`;
+}
+
 /**
  * SubjectCard — top-of-page summary of the LEI lookup subject: name,
  * jurisdiction flag, LEI, a compact risk-signal summary (the headline
@@ -22,12 +31,18 @@ export function SubjectCard({
   jurisdiction,
   signals = [],
   screening = false,
+  replayedAt = null,
+  onRefresh,
 }: {
   lei: string;
   legalName: string | null;
   jurisdiction?: string | null;
   signals?: RiskSignal[];
   screening?: boolean;
+  /** ISO completion time of the original run when results are replayed from cache. */
+  replayedAt?: string | null;
+  /** Re-runs the lookup bypassing the replay cache (?refresh=true). */
+  onRefresh?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const shareUrl = `${BASE_URL || "https://api.opencheck.world"}/share/${lei}`;
@@ -64,6 +79,24 @@ export function SubjectCard({
             {cc && <span aria-hidden>·</span>}
             <span className="font-mono break-all">LEI {lei}</span>
           </p>
+          {/* Provenance badge — a replayed (cached) run must never look live.
+              Amber note + a fresh-check action wired to ?refresh=true. */}
+          {replayedAt && (
+            <p className="mt-2 inline-flex items-center gap-2 flex-wrap text-[12px] text-[#92400e] bg-[#fef3c7] border border-[#fde68a] rounded-full px-3 py-1">
+              <span>
+                Results from a check run {replayAgeLabel(replayedAt)} — not re-queried.
+              </span>
+              {onRefresh && (
+                <button
+                  type="button"
+                  onClick={onRefresh}
+                  className="font-semibold underline underline-offset-2 hover:no-underline"
+                >
+                  Run a fresh check
+                </button>
+              )}
+            </p>
+          )}
         </div>
         <button
           type="button"

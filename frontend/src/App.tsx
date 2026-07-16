@@ -186,6 +186,10 @@ export default function App() {
   // True when the SSE connection dropped AFTER the GLEIF anchor resolved —
   // partial results are on screen and a "Resume lookup" banner is shown.
   const [streamDropped, setStreamDropped] = useState(false);
+  // Wall-clock ISO time the on-screen results were originally fetched, when
+  // they came from the backend replay cache rather than a fresh run. Null for
+  // live runs. Drives the "Results from a check N min ago" badge.
+  const [replayedAt, setReplayedAt] = useState<string | null>(null);
   // Source IDs with an in-flight per-source retry (/lookup-source).
   const [retryingSources, setRetryingSources] = useState<Set<string>>(new Set());
 
@@ -310,8 +314,12 @@ export default function App() {
   // "pending" (i.e. showing the loading grid) until the backend emits the
   // gleif_done event confirming the entity; all subsequent streaming state
   // (hits, risk signals, cross-source links) is managed via useState below.
-  const lookupMutation = useMutation<{ lei: string; legal_name: string | null }, Error, string>({
-    mutationFn: (lei: string) =>
+  const lookupMutation = useMutation<
+    { lei: string; legal_name: string | null },
+    Error,
+    { lei: string; refresh?: boolean }
+  >({
+    mutationFn: ({ lei, refresh }) =>
       new Promise((resolve, reject) => {
         if (!isValidLei(lei)) {
           reject(
@@ -339,13 +347,19 @@ export default function App() {
         setBodsBreakdownMap({});
         setStreamDropped(false);
         setRetryingSources(new Set());
+        setReplayedAt(null);
 
         // Tracks whether the GLEIF anchor resolved: a connection drop before
         // it is a hard error; after it, we keep partial results and offer a
         // "Resume lookup" instead.
         let anchored = false;
 
-        const cleanup = streamLookup(lei, {
+        const cleanup = streamLookup(
+          lei,
+          {
+          // Served from the backend replay cache — badge the result with the
+          // original completion time so a cached run never looks live.
+          onReplayed: (e) => setReplayedAt(e.fetched_at),
           onGleifDone: (e) => {
             anchored = true;
             setStreamingLei(e.lei);
@@ -396,12 +410,15 @@ export default function App() {
               reject(new Error(detail));
             }
           },
-        });
+          },
+          5,
+          refresh === true,
+        );
         cleanupRef.current = cleanup;
       }),
   });
 
-  function lookupLei(rawLei: string) {
+  function lookupLei(rawLei: string, opts?: { refresh?: boolean }) {
     const lei = rawLei.trim().toUpperCase();
     setLeiInput(lei);
     setView("main");
@@ -415,7 +432,7 @@ export default function App() {
     // Cancel any in-flight stream before starting a new one.
     cleanupRef.current?.();
     cleanupRef.current = null;
-    lookupMutation.mutate(lei);
+    lookupMutation.mutate({ lei, refresh: opts?.refresh });
   }
 
   // On first load and on back/forward navigation, honour ?lei= in the URL.
@@ -1213,6 +1230,8 @@ export default function App() {
             jurisdiction={subjectJurisdiction}
             signals={aggregatedCodes}
             screening={streaming}
+            replayedAt={replayedAt}
+            onRefresh={() => lookupLei(streamingLei, { refresh: true })}
           />
         )}
 
