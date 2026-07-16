@@ -505,6 +505,7 @@ export default function BodsGraphExplorer({
             <option value="jsonl">BODS · JSONL</option>
             <option value="xml">BODS · XML</option>
             <option value="senzing">Senzing JSON</option>
+            <option value="ftm">FollowTheMoney (Aleph)</option>
             <option value="cypher">Neo4j · Cypher</option>
           </select>
           <button

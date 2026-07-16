@@ -29,7 +29,7 @@ export function ExportPanel({
   contributingSourceIds: string[];
 }) {
   const [format, setFormat] = useState<
-    "zip" | "json" | "jsonl" | "xml" | "senzing"
+    "zip" | "json" | "jsonl" | "xml" | "senzing" | "ftm"
   >("zip");
   const [subsidiaries, setSubsidiaries] = useState(false);
 
@@ -64,7 +64,13 @@ export function ExportPanel({
             value={format}
             onChange={(e) =>
               setFormat(
-                e.target.value as "zip" | "json" | "jsonl" | "xml" | "senzing"
+                e.target.value as
+                  | "zip"
+                  | "json"
+                  | "jsonl"
+                  | "xml"
+                  | "senzing"
+                  | "ftm"
               )
             }
             className="border border-oo-rule rounded px-2 py-1.5 text-[13px] bg-white"
@@ -74,6 +80,7 @@ export function ExportPanel({
             <option value="jsonl">JSONL (newline-delimited)</option>
             <option value="xml">XML (canonical BODS)</option>
             <option value="senzing">Senzing JSON (entity resolution)</option>
+            <option value="ftm">FollowTheMoney (OpenSanctions / Aleph)</option>
           </select>
           <a
             href={href}
@@ -99,6 +106,25 @@ export function ExportPanel({
           (newline-delimited records, ready to load for entity resolution) — one
           record per company and person, with each disclosed ownership/control
           relationship as a Senzing disclosed relationship.
+        </p>
+      )}
+
+      {format === "ftm" && (
+        <p className="mt-3 text-[12px] text-oo-muted leading-[1.6]">
+          FollowTheMoney projects this ownership graph into{" "}
+          <a
+            href="https://followthemoney.tech/"
+            target="_blank"
+            rel="noreferrer"
+            className="underline text-oo-blue hover:text-oo-burst"
+          >
+            FtM entities
+          </a>{" "}
+          (newline-delimited) — companies and people as nodes, each disclosed
+          interest as an Ownership or Directorship link — ready for
+          OpenSanctions matching, OpenAleph/Aleph (via{" "}
+          <span className="font-mono">alephclient write-entities</span>) and the{" "}
+          <span className="font-mono">ftm</span> CLI.
         </p>
       )}
 

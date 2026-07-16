@@ -55,6 +55,7 @@ from .mapper import (
     map_zefix,
 )
 from .senzing import map_to_senzing, to_senzing_jsonl
+from .ftm import map_to_ftm, to_ftm_jsonl
 from .neo4j import to_cypher
 from .validator import validate_shape, ValidationError
 
@@ -105,6 +106,8 @@ __all__ = [
     "map_zefix",
     "map_to_senzing",
     "to_senzing_jsonl",
+    "map_to_ftm",
+    "to_ftm_jsonl",
     "to_cypher",
     "validate_shape",
     "ValidationError",

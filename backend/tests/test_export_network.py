@@ -77,18 +77,30 @@ def test_export_network_senzing(client):
     assert first["DATA_SOURCE"] == "OPENCHECK"
 
 
+def test_export_network_ftm(client):
+    r = client.post("/export-network", json={"bods": _network(), "format": "ftm"})
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("application/x-ndjson")
+    assert "-fullcheck-network-" in r.headers["content-disposition"]
+    entities = [json.loads(ln) for ln in r.text.splitlines() if ln.strip()]
+    assert {e["schema"] for e in entities} >= {"Company", "Person"}
+    for e in entities:
+        assert set(e) == {"id", "schema", "properties"}
+
+
 def test_export_network_zip_bundles_everything(client):
     r = client.post("/export-network", json={"bods": _network(), "format": "zip", "slug": "shell-net"})
     assert r.status_code == 200
     with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
         names = zf.namelist()
         prefix = names[0].split("/", 1)[0]
-        for f in ("bods.json", "bods.jsonl", "bods.xml", "senzing.jsonl", "network.cypher",
-                  "manifest.json", "LICENSES.md"):
+        for f in ("bods.json", "bods.jsonl", "bods.xml", "senzing.jsonl", "ftm.jsonl",
+                  "network.cypher", "manifest.json", "LICENSES.md"):
             assert f"{prefix}/{f}" in names, f
         manifest = json.loads(zf.read(f"{prefix}/manifest.json"))
     assert manifest["kind"] == "fullcheck-network"
     assert manifest["bods_statement_count"] == 3
     assert manifest["senzing_record_count"] >= 1
+    assert manifest["ftm_entity_count"] >= 1
     # GLEIF source resolved from the BODS source blocks → licensing + attribution.
     assert "gleif" in manifest["contributing_source_ids"]

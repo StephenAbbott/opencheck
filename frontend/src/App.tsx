@@ -1849,11 +1849,11 @@ function ApiPage() {
 
         <BtsCard title="Export &amp; licensing">
           <ApiEndpoint
-            path="/export?lei=<LEI>&format=<zip|json|jsonl|xml>&subsidiaries=<bool>"
+            path="/export?lei=<LEI>&format=<zip|json|jsonl|xml|senzing|ftm>&subsidiaries=<bool>"
             params={[
               [
                 "format",
-                "zip ships bods.json + bods.jsonl + bods.xml + manifest.json + LICENSES.md; json / jsonl / xml return the statements only.",
+                "zip ships bods.json + bods.jsonl + bods.xml + senzing.jsonl + ftm.jsonl + manifest.json + LICENSES.md; json / jsonl / xml return the statements only; senzing returns Senzing JSON entity records for entity resolution; ftm returns FollowTheMoney entities for OpenSanctions / OpenAleph workflows.",
               ],
               [
                 "subsidiaries",

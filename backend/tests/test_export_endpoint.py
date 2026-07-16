@@ -257,6 +257,44 @@ def test_export_zip_includes_senzing_jsonl(
     assert manifest["senzing_record_count"] >= 1
 
 
+def test_export_ftm_emits_ftm_entities(
+    client: TestClient, httpx_mock: HTTPXMock
+) -> None:
+    _mock_full(httpx_mock)
+
+    r = client.get("/export", params={"lei": _LEI, "format": "ftm"})
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("application/x-ndjson")
+    assert "-ftm.jsonl" in r.headers["content-disposition"]
+    text = r.content.decode("utf-8")
+    lines = [ln for ln in text.split("\n") if ln.strip()]
+    assert lines, "no entities in ftm export"
+    schemas = set()
+    for ln in lines:
+        obj = json.loads(ln)
+        assert set(obj) == {"id", "schema", "properties"}
+        schemas.add(obj["schema"])
+    # The subject company must be present as an FtM Company carrying its LEI.
+    companies = [json.loads(ln) for ln in lines
+                 if json.loads(ln)["schema"] == "Company"]
+    assert any(_LEI in c["properties"].get("leiCode", []) for c in companies)
+
+
+def test_export_zip_includes_ftm_jsonl(
+    client: TestClient, httpx_mock: HTTPXMock
+) -> None:
+    _mock_full(httpx_mock)
+    r = client.get("/export", params={"lei": _LEI, "format": "zip"})
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        prefix = zf.namelist()[0].split("/", 1)[0]
+        assert f"{prefix}/ftm.jsonl" in zf.namelist()
+        ftm = zf.read(f"{prefix}/ftm.jsonl").decode("utf-8")
+        manifest = json.loads(zf.read(f"{prefix}/manifest.json"))
+    first = json.loads(ftm.splitlines()[0])
+    assert set(first) == {"id", "schema", "properties"}
+    assert manifest["ftm_entity_count"] >= 1
+
+
 def test_export_zip_contains_full_bundle(
     client: TestClient, httpx_mock: HTTPXMock
 ) -> None:

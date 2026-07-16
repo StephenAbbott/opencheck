@@ -36,7 +36,7 @@ would `421` in production.
 | `opencheck_search(query, kind="entity")` | Name → candidate entities with LEIs |
 | `opencheck_resolve_national_id(number, country="", ra_code="")` | National registration number → LEI(s) |
 | `opencheck_lookup(lei, deepen_top=5)` | Identity, identifiers, risk signals, source coverage |
-| `opencheck_export_bods(lei, format="json", deepen_top=3)` | Full ownership graph — BODS v0.4 (`json`/`jsonl`) or Senzing JSON entity records (`senzing`) |
+| `opencheck_export_bods(lei, format="json", deepen_top=3)` | Full ownership graph — BODS v0.4 (`json`/`jsonl`), Senzing JSON entity records (`senzing`), or FollowTheMoney entities (`ftm`) |
 | `opencheck_list_sources()` | Adapter inventory with licence + live status |
 
 `narrative` is deliberately **not** exposed (it spends model tokens per call).
