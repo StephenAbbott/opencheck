@@ -112,3 +112,6 @@ logs/
 # Estonia sweep artefacts (release assets, not committed)
 data/estonia/
 data/ariregister_raw/
+
+# GLEIF autocompletions eval harness response cache (issue #27) — not committed
+backend/scripts/.gleif_eval_cache.json
