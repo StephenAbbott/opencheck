@@ -47,7 +47,7 @@ async def _fake_lookup(lei, deepen_top=5, refresh=False):
 
 
 def test_export_pdf_streams_a_pdf(monkeypatch):
-    monkeypatch.setattr("opencheck.routers.export.lookup", _fake_lookup)
+    monkeypatch.setattr("opencheck.routers.export._lookup_impl", _fake_lookup)
     captured = {}
 
     def _fake_build(report, *, narrative=None):
@@ -70,7 +70,7 @@ def test_export_pdf_streams_a_pdf(monkeypatch):
 
 
 def test_export_pdf_forwards_narrative(monkeypatch):
-    monkeypatch.setattr("opencheck.routers.export.lookup", _fake_lookup)
+    monkeypatch.setattr("opencheck.routers.export._lookup_impl", _fake_lookup)
     seen = {}
 
     def _fake_build(report, *, narrative=None):
@@ -87,7 +87,7 @@ def test_export_pdf_forwards_narrative(monkeypatch):
 
 
 def test_export_pdf_503_when_toolchain_missing(monkeypatch):
-    monkeypatch.setattr("opencheck.routers.export.lookup", _fake_lookup)
+    monkeypatch.setattr("opencheck.routers.export._lookup_impl", _fake_lookup)
 
     def _raise(report, *, narrative=None):
         raise PdfUnavailable("WeasyPrint not installed")

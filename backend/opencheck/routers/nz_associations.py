@@ -11,10 +11,11 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
 from ..nz_associations import assemble_associations
+from ..ratelimit import default_tier, limiter
 
 router = APIRouter()
 
@@ -59,7 +60,10 @@ class AssociationsResponse(BaseModel):
 
 
 @router.get("/nz-associations", response_model=AssociationsResponse)
+@limiter.limit(default_tier)
 async def nz_associations(
+    request: Request,
+    response: Response,
     company_number: str = Query(..., description="NZ company number (digits)."),
 ) -> Any:
     """Director/shareholder cross-company associations for an NZ company."""

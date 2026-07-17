@@ -16,11 +16,11 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 74** — FollowTheMoney export: take an OpenCheck graph into OpenSanctions / OpenAleph
+**Latest: Phase 75** — Per-IP rate limiting: abuse protection for the live public API
 
-OpenCheck ownership graphs now export as [FollowTheMoney](https://followthemoney.tech/) entities — the data model of OpenSanctions, OpenAleph/Aleph and the `ftm` CLI — via `GET /export?format=ftm`, the FullCheck network export, the ZIP bundles and the MCP server. Companies and people become `Company` / `Person` / `PublicBody` nodes keyed by their BODS statementIds, and each disclosed interest becomes an `Ownership` link (with percentage and direct/indirect type) or a `Directorship` — newline-delimited and ready for `alephclient write-entities`, with nodes always preceding links so streaming loaders resolve references first pass. Fulfils the original project plan's promise to "take data into OpenSanctions / Aleph investigative workflows".
+The public API now enforces per-IP budgets so a scripted client can't burn the key-gated upstream quotas (Companies House, NZBN, CVR, OpenSanctions…) or the CPU/Anthropic-token cost of `/export/pdf` and `/narrative`, and degrade the demo for everyone. Three env-tunable tiers via [slowapi](https://slowapi.readthedocs.io/) with in-memory storage (one Render instance — no Redis, zero new infrastructure): 10/min on the full fan-out endpoints (`/lookup`, `/lookup-stream`, `/search`, `/stream`, `/report`, `/export`), 3/min on the expensive synthesis endpoints (`/narrative`, `/export/pdf`, `/export-network`), 60/min on everything else public; `/health` and `/sources` stay unlimited. The client IP is resolved Render-aware (`True-Client-IP` → `X-Forwarded-For` → socket peer), 429s carry `Retry-After`, and a coverage test pins that every new public route must pick a tier.
 
-*Previous: [Phase 73 — Replay provenance badging: cached results are labelled, never passed off as live](docs/status.md)*
+*Previous: [Phase 74 — FollowTheMoney export: take an OpenCheck graph into OpenSanctions / OpenAleph](docs/status.md)*
 
 → [Full development history](docs/status.md)
 

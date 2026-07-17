@@ -18,13 +18,14 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 
 from ..config import get_settings
 from ..narrative import build_evidence_packet
 from ..narrative.summarise import NarrativeUnavailable, summarise
-from .lookup import lookup
+from ..ratelimit import heavy_tier, limiter
+from .lookup import _lookup_impl
 
 router = APIRouter()
 
@@ -48,7 +49,10 @@ class NarrativeResponse(BaseModel):
 
 
 @router.get("/narrative", response_model=NarrativeResponse)
+@limiter.limit(heavy_tier)
 async def narrative(
+    request: Request,
+    response: Response,
     lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),
     deepen_top: int = Query(5, ge=0, le=10),
     refresh: bool = Query(False, description="Bypass the short-lived replay cache."),
@@ -63,7 +67,7 @@ async def narrative(
         )
 
     # Reuse the cached lookup pipeline — identical data to the /lookup page.
-    resp = await lookup(lei=lei, deepen_top=deepen_top, refresh=refresh)
+    resp = await _lookup_impl(lei=lei, deepen_top=deepen_top, refresh=refresh)
     packet = build_evidence_packet(resp.model_dump())
 
     try:

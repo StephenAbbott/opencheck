@@ -71,7 +71,7 @@ async def opencheck_search(query: str, kind: str = "entity") -> dict[str, Any]:
     ``opencheck_lookup``.
     """
     from ..sources import SearchKind
-    from ..routers.search import search as _search
+    from ..routers.search import _search_impl as _search
 
     try:
         k = SearchKind(kind)
@@ -94,7 +94,7 @@ async def opencheck_resolve_national_id(
         country: ISO 3166-1 alpha-2 code (e.g. "GB"), resolved to a GLEIF RA code.
         ra_code: GLEIF Registration Authority code (e.g. "RA000585"); overrides country.
     """
-    from ..routers.lookup import resolve_national_id as _resolve
+    from ..routers.lookup import _resolve_national_id_impl as _resolve
 
     try:
         resp = await _resolve(number=number, country=country, ra_code=ra_code)
@@ -115,7 +115,7 @@ async def opencheck_lookup(lei: str, deepen_top: int = 5) -> dict[str, Any]:
         lei: ISO 17442 Legal Entity Identifier (20 chars).
         deepen_top: How many top sources to deepen (0-10, default 5).
     """
-    from ..routers.lookup import lookup as _lookup
+    from ..routers.lookup import _lookup_impl as _lookup
 
     try:
         resp = await _lookup(lei=lei, deepen_top=deepen_top)
@@ -139,7 +139,7 @@ async def opencheck_export_bods(
         deepen_top: How many top sources to deepen (0-10, default 3).
     """
     from ..bods import map_to_ftm, map_to_senzing
-    from ..routers.lookup import lookup as _lookup
+    from ..routers.lookup import _lookup_impl as _lookup
 
     if format not in ("json", "jsonl", "senzing", "ftm"):
         return {

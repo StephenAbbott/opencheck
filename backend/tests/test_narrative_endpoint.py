@@ -80,7 +80,7 @@ def test_narrative_endpoint_returns_grounded_summary(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
     monkeypatch.setenv("OPENCHECK_NARRATIVE_ENABLED", "true")
     get_settings.cache_clear()
-    monkeypatch.setattr("opencheck.routers.narrative.lookup", _fake_lookup)
+    monkeypatch.setattr("opencheck.routers.narrative._lookup_impl", _fake_lookup)
     monkeypatch.setattr("opencheck.routers.narrative.summarise", _fake_summarise)
 
     client = TestClient(app)

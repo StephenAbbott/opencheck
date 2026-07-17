@@ -10,7 +10,7 @@ from dataclasses import dataclass, field as dc_field
 from datetime import datetime, timezone
 from typing import Any, Literal, AsyncIterator, NamedTuple
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
@@ -25,6 +25,7 @@ from ..icij_check import assess_icij_names
 from ..meip import meip_lookup
 from ..reconcile import possibly_same_entities, reconcile
 from ..risk import RiskSignal, assess_bundle, assess_hits
+from ..ratelimit import default_tier, limiter, lookup_tier
 from ..sources import REGISTRY, SearchKind, SourceHit, SourceInfo
 from ..sources.schemas import SourceSchemaError
 
@@ -107,7 +108,10 @@ class LookupResponse(ReportResponse):
 
 
 @router.get("/deepen", response_model=DeepenResponse)
+@limiter.limit(default_tier)
 async def deepen(
+    request: Request,
+    response: Response,
     source: str = Query(..., description="Adapter id, e.g. 'companies_house'"),
     hit_id: str = Query(..., description="Adapter-local hit id"),
 ) -> DeepenResponse:
@@ -160,7 +164,10 @@ async def deepen(
 
 
 @router.get("/report", response_model=ReportResponse)
+@limiter.limit(lookup_tier)
 async def report(
+    request: Request,
+    response: Response,
     q: str = Query(..., min_length=1),
     kind: SearchKind = Query(SearchKind.ENTITY),
     deepen_top: int = Query(
@@ -1552,17 +1559,11 @@ async def _lookup_pipeline_cached(
 # --- endpoints ---------------------------------------------------------------
 
 
-@router.get("/lookup", response_model=LookupResponse)
-async def lookup(
-    lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),
-    deepen_top: int = Query(5, ge=0, le=10),
-    refresh: bool = Query(False, description="Bypass the short-lived replay cache."),
+async def _lookup_impl(
+    lei: str, deepen_top: int = 5, refresh: bool = False
 ) -> LookupResponse:
-    """Driver endpoint: LEI in, full cross-source synthesis out.
-
-    Collects the events of :func:`_lookup_pipeline` into one response —
-    identical data to /lookup-stream, without the streaming.
-    """
+    """Body of ``/lookup``, callable in-process (MCP tools, /narrative,
+    /export, layer expansion) without going through the rate-limited route."""
     norm_lei = lei.strip().upper()
     hits: list[SourceHit] = []
     errors: dict[str, str] = {}
@@ -1634,6 +1635,23 @@ async def lookup(
     )
 
 
+@router.get("/lookup", response_model=LookupResponse)
+@limiter.limit(lookup_tier)
+async def lookup(
+    request: Request,
+    response: Response,
+    lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),
+    deepen_top: int = Query(5, ge=0, le=10),
+    refresh: bool = Query(False, description="Bypass the short-lived replay cache."),
+) -> LookupResponse:
+    """Driver endpoint: LEI in, full cross-source synthesis out.
+
+    Collects the events of :func:`_lookup_pipeline` into one response —
+    identical data to /lookup-stream, without the streaming.
+    """
+    return await _lookup_impl(lei=lei, deepen_top=deepen_top, refresh=refresh)
+
+
 def _entity_idents(stmt: dict[str, Any]) -> set[str]:
     """Upper-cased identifier values carried by a BODS entity statement."""
     ids = (stmt.get("recordDetails") or {}).get("identifiers") or []
@@ -1693,7 +1711,7 @@ async def _expand_one_layer(
     entity — both with ids remapped onto the anchor — so FullCheck accumulates
     network-wide risk as it expands."""
     norm = lei.strip().upper()
-    resp = await lookup(lei=norm, deepen_top=deepen_top)  # raises 400/404
+    resp = await _lookup_impl(lei=norm, deepen_top=deepen_top)  # raises 400/404
     repl = _anchor_replacements(resp.bods, norm, anchor)
     return _apply_id_remap(resp.bods, repl), _apply_id_remap(resp.risk_signals, repl)
 
@@ -1712,7 +1730,10 @@ async def _subsidiaries_one_layer(
 
 
 @router.get("/expand")
+@limiter.limit(default_tier)
 async def expand(
+    request: Request,
+    response: Response,
     lei: str = Query(..., description="LEI of the corporate node to expand."),
     anchor: str = Query(
         ...,
@@ -1751,7 +1772,10 @@ class ExpandLayerRequest(BaseModel):
 
 
 @router.post("/expand-layer")
-async def expand_layer(req: ExpandLayerRequest) -> dict[str, Any]:
+@limiter.limit(default_tier)
+async def expand_layer(
+    request: Request, response: Response, req: ExpandLayerRequest
+) -> dict[str, Any]:
     """Progressive discovery (batch): take the whole current frontier and go one
     layer deeper on every node at once, in the graph's existing direction.
 
@@ -1801,7 +1825,9 @@ async def expand_layer(req: ExpandLayerRequest) -> dict[str, Any]:
 
 
 @router.get("/lookup-stream")
+@limiter.limit(lookup_tier)
 async def lookup_stream(
+    request: Request,
     lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),
     deepen_top: int = Query(5, ge=0, le=10),
     refresh: bool = Query(False, description="Bypass the short-lived replay cache."),
@@ -1873,7 +1899,10 @@ class ResolveNationalIdResponse(BaseModel):
 
 
 @router.get("/resolve-national-id", response_model=ResolveNationalIdResponse)
+@limiter.limit(default_tier)
 async def resolve_national_id(
+    request: Request,
+    response: Response,
     number: str = Query(
         ...,
         min_length=1,
@@ -1897,6 +1926,14 @@ async def resolve_national_id(
     explicitly — scopes the search to one registry, avoiding false matches from
     coincidental number collisions across jurisdictions.
     """
+    return await _resolve_national_id_impl(number=number, country=country, ra_code=ra_code)
+
+
+async def _resolve_national_id_impl(
+    number: str, country: str = "", ra_code: str = ""
+) -> ResolveNationalIdResponse:
+    """Body of ``/resolve-national-id``, callable in-process (MCP tool)
+    without going through the rate-limited route."""
     num = number.strip()
     code = (ra_code or _RA_BY_COUNTRY.get(country.strip().upper(), "")).strip()
 
@@ -1935,7 +1972,10 @@ class LookupSourceResponse(BaseModel):
 
 
 @router.get("/lookup-source", response_model=LookupSourceResponse)
+@limiter.limit(default_tier)
 async def lookup_source(
+    request: Request,
+    response: Response,
     lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),
     source_id: str = Query(..., description="Adapter id to re-run, e.g. 'kvk'."),
 ) -> LookupSourceResponse:

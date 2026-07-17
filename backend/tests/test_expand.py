@@ -63,7 +63,7 @@ def _patch_lookup(monkeypatch, builder=_layer, signals_builder=None):
             lei=lei, bods=builder(lei), bods_issues=[], risk_signals=sigs
         )
 
-    monkeypatch.setattr("opencheck.routers.lookup.lookup", _fake_lookup)
+    monkeypatch.setattr("opencheck.routers.lookup._lookup_impl", _fake_lookup)
 
 
 def test_expand_remaps_subject_onto_anchor(client, monkeypatch):

@@ -6,10 +6,11 @@ import asyncio
 import json
 from typing import Any, AsyncIterator
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request, Response
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
+from ..ratelimit import limiter, lookup_tier
 from ..reconcile import reconcile
 from ..risk import assess_hits
 from ..sources import REGISTRY, SearchKind, SourceHit
@@ -64,13 +65,9 @@ async def _run_adapters(
     return results, errors
 
 
-@router.get("/search", response_model=SearchResponse)
-async def search(
-    q: str = Query(..., min_length=1, description="Search query."),
-    kind: SearchKind = Query(SearchKind.ENTITY, description="entity or person"),
-) -> SearchResponse:
-    """Fan-out search across registered adapters (non-streaming)."""
-
+async def _search_impl(q: str, kind: SearchKind) -> SearchResponse:
+    """Body of ``/search``, callable in-process (MCP tool) without going
+    through the rate-limited route."""
     results, errors = await _run_adapters(q, kind)
     hits = [hit for adapter_hits in results.values() for hit in adapter_hits]
     links = [link.to_dict() for link in reconcile(hits)]
@@ -85,8 +82,22 @@ async def search(
     )
 
 
+@router.get("/search", response_model=SearchResponse)
+@limiter.limit(lookup_tier)
+async def search(
+    request: Request,
+    response: Response,
+    q: str = Query(..., min_length=1, description="Search query."),
+    kind: SearchKind = Query(SearchKind.ENTITY, description="entity or person"),
+) -> SearchResponse:
+    """Fan-out search across registered adapters (non-streaming)."""
+    return await _search_impl(q=q, kind=kind)
+
+
 @router.get("/stream")
+@limiter.limit(lookup_tier)
 async def stream(
+    request: Request,
     q: str = Query(..., min_length=1),
     kind: SearchKind = Query(SearchKind.ENTITY),
 ) -> EventSourceResponse:

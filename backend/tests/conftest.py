@@ -25,6 +25,14 @@ import pytest
 # opencheck.config is imported. No fixture wrapping needed.
 os.environ.setdefault("OPENCHECK_DISABLE_DOTENV", "1")
 
+# Rate limiting is off for the whole suite: tests hammer the same endpoints
+# from the same fake client and would otherwise trip the per-IP budgets.
+# tests/test_rate_limit.py re-enables the limiter per-fixture (by flipping
+# ``limiter.enabled``), which is why endpoint functions called directly in
+# tests (history, nz_associations, …) work without a Request object — the
+# slowapi wrapper is a pass-through while disabled.
+os.environ.setdefault("OPENCHECK_RATE_LIMIT_ENABLED", "0")
+
 
 def pytest_addoption(parser):
     parser.addoption(
