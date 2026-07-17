@@ -43,6 +43,15 @@ harness measures is whether each endpoint surfaces that LEI for that string. Ful
 per-query provenance is in `backend/scripts/gleif_autocompletions_queries.json`.
 Harvested 2026-07-16 via `api.gleif.org`.
 
+**Correction (issue #34).** The Volkswagen ground truth was moved from
+`549300PSVDV3P50KHS39` to `529900NNUPAGGOMPXZ31` in both the `legal_name` and
+`typo` entries. The first record's legal name matches verbatim, but its GLEIF
+registration status is **DUPLICATE** (entity status `NULL`); its successor is the
+second, canonical **ACTIVE / ISSUED** record. Re-verified live on 2026-07-17:
+with the corrected LEI, fulltext still returns Volkswagen within the top 5
+(rank 4 instead of 2) and autocompletions still misses it entirely, so every
+hit@1 / hit@5 figure below is unchanged.
+
 ## Results (n = 50, run 2026-07-16)
 
 | Endpoint | hit@1 | hit@5 |
