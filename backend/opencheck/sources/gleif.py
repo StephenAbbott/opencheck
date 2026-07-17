@@ -80,6 +80,16 @@ _CH_RA_CODES: dict[str, str] = {
 }
 _CH_RA_DEFAULT = "RA000585"  # England & Wales (the large majority)
 
+# Typo-tolerance fallback for name search (issue #33). When the exact fulltext
+# query returns zero hits, ``search`` retries with each token dropped in turn
+# (leave-one-out) — a single-character typo lives in one token, so the variant
+# that drops it matches on the remaining correct tokens. Bounds and marking:
+_MAX_RELAX_TOKENS = 12  # skip the per-token fan-out for implausibly long names
+_RELAX_RESULT_LIMIT = 10  # cap the relaxed candidate list (mirrors page[size])
+# Appended to the summary of any hit that came from the relaxed fallback rather
+# than an exact match, so callers / UI can flag it as a typo-tolerant suggestion.
+_RELAXED_SUMMARY_SUFFIX = "approximate match"
+
 # GLEIF filter fields for reverse lookup (local-id → LEI).
 # Tried in order; the first that returns results wins.
 _LOCAL_ID_FILTER_FIELDS = [
@@ -133,7 +143,74 @@ class GleifAdapter(SourceAdapter):
             f"/lei-records?filter[fulltext]={quote(query)}&page[size]=10",
             cache_key=cache_key,
         )
-        return [self._entity_hit(item) for item in payload.get("data", [])]
+        hits = [self._entity_hit(item) for item in payload.get("data", [])]
+        if hits:
+            return hits
+        # Zero-result trigger (issue #33): the exact fulltext query matched
+        # nothing, so fall back to a typo-tolerant relaxed search. Clean queries
+        # that already resolve never reach this and pay no extra API calls.
+        return await self._relaxed_search(query)
+
+    async def _relaxed_search(self, query: str) -> list[SourceHit]:
+        """Typo-tolerant fallback for :meth:`search` (issue #33).
+
+        Runs one fulltext search per token with that single token dropped
+        (*leave-one-out*): a one-character typo lives in exactly one token, so
+        the variant that drops the typo'd token matches on the remaining
+        correct tokens. Candidates are ranked by how many leave-one-out
+        variants surfaced them (consensus) — the real entity, whose distinctive
+        tokens survive across variants, floats up — breaking ties on the best
+        (lowest) rank any variant gave it. Each surfaced hit has its summary
+        marked ``approximate match``.
+
+        Returns ``[]`` (no fallback) when live mode is off, or the query has
+        fewer than two tokens (nothing to drop) or an implausibly large token
+        count (guards the per-token API fan-out).
+        """
+        if not self.info.live_available:
+            return []
+        tokens = query.split()
+        if not 2 <= len(tokens) <= _MAX_RELAX_TOKENS:
+            return []
+
+        relaxed_queries = [
+            " ".join(tokens[:i] + tokens[i + 1 :]) for i in range(len(tokens))
+        ]
+        payloads = await asyncio.gather(
+            *(
+                self._get(
+                    f"/lei-records?filter[fulltext]={quote(rq)}&page[size]=10",
+                    cache_key=f"{_CACHE_NS}/search/{_slug(rq)}",
+                )
+                for rq in relaxed_queries
+            )
+        )
+
+        votes: dict[str, int] = {}
+        best_rank: dict[str, int] = {}
+        item_by_lei: dict[str, dict[str, Any]] = {}
+        for payload in payloads:
+            seen: set[str] = set()
+            for rank, item in enumerate(payload.get("data", []), start=1):
+                attrs = item.get("attributes") or {}
+                lei: str = attrs.get("lei") or item.get("id") or ""
+                if not lei or lei in seen:
+                    continue
+                seen.add(lei)
+                votes[lei] = votes.get(lei, 0) + 1
+                best_rank[lei] = min(best_rank.get(lei, rank), rank)
+                item_by_lei.setdefault(lei, item)
+
+        ranked = sorted(votes, key=lambda lei: (-votes[lei], best_rank[lei]))
+        hits: list[SourceHit] = []
+        for lei in ranked[:_RELAX_RESULT_LIMIT]:
+            hit = self._entity_hit(item_by_lei[lei])
+            hits.append(
+                hit.model_copy(
+                    update={"summary": f"{hit.summary} · {_RELAXED_SUMMARY_SUFFIX}"}
+                )
+            )
+        return hits
 
     # ------------------------------------------------------------------
     # Fetch
