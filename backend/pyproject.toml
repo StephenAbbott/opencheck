@@ -38,6 +38,7 @@ dependencies = [
     # MCP server (in-process, mounted at /mcp) — exposes the lookup pipeline as
     # Model Context Protocol tools for AI agents. Streamable-HTTP transport.
     "mcp>=1.2",
+    "slowapi>=0.1.10",
 ]
 
 [project.optional-dependencies]

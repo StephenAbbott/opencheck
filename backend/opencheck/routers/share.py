@@ -22,11 +22,12 @@ import re
 import time
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 
 from ..config import get_settings
 from ..og_image import render_share_card
+from ..ratelimit import default_tier, limiter
 from . import lookup as lookup_router
 
 router = APIRouter(tags=["share"])
@@ -121,7 +122,8 @@ def invalidate_og_cache(lei: str) -> None:
 
 
 @router.get("/og/{lei}.png")
-async def og_image(lei: str) -> Response:
+@limiter.limit(default_tier)
+async def og_image(request: Request, lei: str) -> Response:
     """The shareable summary card for a LEI, as a 1200×630 PNG."""
     lei = _clean_lei(lei)
     png, full = await _card_for(lei)
@@ -136,7 +138,8 @@ async def og_image(lei: str) -> Response:
 
 
 @router.get("/share/{lei}", response_class=HTMLResponse)
-async def share_page(lei: str) -> HTMLResponse:
+@limiter.limit(default_tier)
+async def share_page(request: Request, lei: str) -> HTMLResponse:
     """Crawler-readable share page: per-entity OG tags + instant redirect."""
     lei = _clean_lei(lei)
     settings = get_settings()

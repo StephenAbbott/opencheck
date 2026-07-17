@@ -103,7 +103,7 @@ def _mock_live():
 @pytest.mark.asyncio
 async def test_history_invalid_lei_returns_400():
     with pytest.raises(HTTPException) as exc:
-        await history(lei="not-a-lei", include_noise=False)
+        await history(request=None, response=None, lei="not-a-lei", include_noise=False)
     assert exc.value.status_code == 400
 
 
@@ -111,7 +111,7 @@ async def test_history_invalid_lei_returns_400():
 async def test_history_stub_mode_is_unavailable(monkeypatch):
     monkeypatch.delenv("OPENCHECK_ALLOW_LIVE", raising=False)
     get_settings.cache_clear()
-    resp = await history(lei=_LEI, include_noise=False)
+    resp = await history(request=None, response=None, lei=_LEI, include_noise=False)
     get_settings.cache_clear()
     assert resp.available is False
     assert resp.notable == []
@@ -125,7 +125,7 @@ async def test_history_live_merges_gleif_and_companies_house(monkeypatch):
     get_settings.cache_clear()
     with respx.mock:
         _mock_live()
-        resp = await history(lei=_LEI, include_noise=True)
+        resp = await history(request=None, response=None, lei=_LEI, include_noise=True)
     get_settings.cache_clear()
 
     assert resp.available is True
@@ -164,7 +164,7 @@ async def test_history_degrades_to_gleif_only_without_ch_key(monkeypatch):
     get_settings.cache_clear()
     with respx.mock:
         _mock_live()  # CH route present but should never be called
-        resp = await history(lei=_LEI, include_noise=False)
+        resp = await history(request=None, response=None, lei=_LEI, include_noise=False)
     get_settings.cache_clear()
 
     assert resp.available is True

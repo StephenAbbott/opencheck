@@ -28,8 +28,11 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from slowapi.errors import RateLimitExceeded
+
 from . import __version__
 from .config import get_settings
+from .ratelimit import limiter, rate_limit_exceeded_handler
 from .routers import health, search, lookup, export, narrative, securities, history, nz_associations, share, subsidiaries
 from .routers.search import _ch_ra_code as _ch_ra_code  # re-exported for backward compat
 
@@ -135,6 +138,12 @@ app = FastAPI(
     ),
     lifespan=_lifespan,
 )
+
+# Per-IP rate limiting (see opencheck/ratelimit.py). Budgets are applied with
+# explicit @limiter.limit decorators on the routes themselves; /health,
+# /sources and the mounted /mcp routes are deliberately undecorated.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 
 _cors_origin = get_settings().cors_origin

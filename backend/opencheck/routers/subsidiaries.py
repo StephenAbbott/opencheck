@@ -10,9 +10,10 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
+from ..ratelimit import default_tier, limiter
 from ..subsidiaries import assemble_subsidiaries
 
 router = APIRouter()
@@ -51,7 +52,10 @@ class SubsidiariesResponse(BaseModel):
 
 
 @router.get("/subsidiaries", response_model=SubsidiariesResponse)
+@limiter.limit(default_tier)
 async def subsidiaries(
+    request: Request,
+    response: Response,
     lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),
     format: str = Query("summary", description="'summary' or 'bods' (adds BODS statements)."),
 ) -> Any:

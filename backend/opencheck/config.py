@@ -71,6 +71,23 @@ class Settings(BaseSettings):
         default="https://opencheck.world", alias="OPENCHECK_FRONTEND_ORIGIN"
     )
 
+    # --- Rate limiting / abuse protection (see opencheck/ratelimit.py) ---
+    # Master switch. The test suite turns it off in conftest.py so unrelated
+    # tests never trip budgets; dedicated tests re-enable it per-fixture.
+    rate_limit_enabled: bool = Field(default=True, alias="OPENCHECK_RATE_LIMIT_ENABLED")
+    # Per-IP budget for the fan-out endpoints (/lookup, /lookup-stream, /search,
+    # /stream, /report, /export). Each request dispatches every registered
+    # source adapter, so this is the budget that protects key-gated upstream
+    # quotas (Companies House, NZBN, CVR, OpenSanctions, …).
+    rate_limit_lookup: str = Field(default="10/minute", alias="OPENCHECK_RATE_LIMIT_LOOKUP")
+    # Per-IP budget for the expensive synthesis endpoints (/narrative burns
+    # Anthropic tokens; /export/pdf and /export-network burn CPU).
+    rate_limit_heavy: str = Field(default="3/minute", alias="OPENCHECK_RATE_LIMIT_HEAVY")
+    # Per-IP budget for everything else public (per-source retries, expansion,
+    # history, securities, share pages, …). Generous: normal UI usage fires
+    # several of these per lookup.
+    rate_limit_default: str = Field(default="60/minute", alias="OPENCHECK_RATE_LIMIT_DEFAULT")
+
     # --- Source credentials ---
     companies_house_api_key: str | None = Field(default=None, alias="COMPANIES_HOUSE_API_KEY")
     # Dedicated key for the Time Machine /history filing-history fetch, kept

@@ -109,7 +109,7 @@ async def test_export_bods_tool_senzing_format(monkeypatch) -> None:
     async def _fake_lookup(*, lei, deepen_top=3):
         return SimpleNamespace(lei=lei, bods=bods, bods_issues=[], license_notices=[])
 
-    monkeypatch.setattr("opencheck.routers.lookup.lookup", _fake_lookup)
+    monkeypatch.setattr("opencheck.routers.lookup._lookup_impl", _fake_lookup)
     out = await mcp_server.opencheck_export_bods(
         lei="213800LH1BZH3DI6G760", format="senzing"
     )
@@ -133,7 +133,7 @@ async def test_export_bods_tool_ftm_format(monkeypatch) -> None:
     async def _fake_lookup(*, lei, deepen_top=3):
         return SimpleNamespace(lei=lei, bods=bods, bods_issues=[], license_notices=[])
 
-    monkeypatch.setattr("opencheck.routers.lookup.lookup", _fake_lookup)
+    monkeypatch.setattr("opencheck.routers.lookup._lookup_impl", _fake_lookup)
     out = await mcp_server.opencheck_export_bods(
         lei="213800LH1BZH3DI6G760", format="ftm"
     )

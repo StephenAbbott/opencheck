@@ -125,7 +125,7 @@ _MOCK_LOOKUP_RESPONSE = LookupResponse(
 def client_with_mock():
     """Return a TestClient where the lookup coroutine is mocked."""
     with patch(
-        "opencheck.routers.export.lookup",
+        "opencheck.routers.export._lookup_impl",
         new=AsyncMock(return_value=_MOCK_LOOKUP_RESPONSE),
     ):
         with TestClient(app) as c:

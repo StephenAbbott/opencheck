@@ -15,7 +15,7 @@ from typing import Any, Literal
 
 from bods_xml.canonical import convert as _bods_xml_convert
 from bods_xml.canonical import to_string as _bods_xml_str
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
@@ -31,9 +31,10 @@ from ..bods import (
 from ..bods.senzing import _desc_to_source_id
 from ..licensing import assess as assess_licensing
 from ..licensing import full_matrix
+from ..ratelimit import default_tier, heavy_tier, limiter, lookup_tier
 from ..reporting import PdfUnavailable, build_report_pdf
 from ..sources import REGISTRY, SearchKind
-from .lookup import ReportResponse, _build_report, lookup
+from .lookup import ReportResponse, _build_report, _lookup_impl
 
 router = APIRouter()
 
@@ -43,7 +44,10 @@ _TRAFFIC = {"green": "🟢", "amber": "🟡", "red": "🔴"}
 
 
 @router.get("/license-matrix")
+@limiter.limit(default_tier)
 async def license_matrix(
+    request: Request,
+    response: Response,
     sources: str | None = Query(
         None,
         description=(
@@ -64,7 +68,9 @@ async def license_matrix(
 
 
 @router.get("/export")
+@limiter.limit(lookup_tier)
 async def export(
+    request: Request,
     lei: str | None = Query(
         None,
         description=(
@@ -113,7 +119,7 @@ async def export(
 
     sub_count = 0
     if lei is not None:
-        payload = await lookup(lei, deepen_top)
+        payload = await _lookup_impl(lei=lei, deepen_top=deepen_top)
         slug = _filename_slug(payload.lei)
         export_query = payload.lei
         if subsidiaries:
@@ -212,7 +218,8 @@ class ExportNetworkRequest(BaseModel):
 
 
 @router.post("/export-network")
-async def export_network(req: ExportNetworkRequest) -> Response:
+@limiter.limit(heavy_tier)
+async def export_network(request: Request, req: ExportNetworkRequest) -> Response:
     """Format a FullCheck network (posted BODS) for download.
 
     A FullCheck network is assembled in the browser by progressive expansion, so
@@ -329,7 +336,8 @@ class PdfExportRequest(BaseModel):
 
 
 @router.post("/export/pdf")
-async def export_pdf(req: PdfExportRequest) -> Response:
+@limiter.limit(heavy_tier)
+async def export_pdf(request: Request, req: PdfExportRequest) -> Response:
     """Build an accessible (tagged PDF/UA-1) due-diligence report for an LEI.
 
     Reuses the same cached lookup pipeline as ``/lookup`` (so the PDF can't
@@ -337,7 +345,7 @@ async def export_pdf(req: PdfExportRequest) -> Response:
     it back. Returns 503 when the PDF toolchain (WeasyPrint) is unavailable.
     """
     norm_lei = req.lei.strip().upper()
-    payload = await lookup(norm_lei, req.deepen_top)  # raises 400/404 on bad LEI
+    payload = await _lookup_impl(lei=norm_lei, deepen_top=req.deepen_top)  # raises 400/404 on bad LEI
     report = payload.model_dump()
     try:
         pdf_bytes = await asyncio.to_thread(

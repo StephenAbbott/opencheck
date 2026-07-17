@@ -12,9 +12,10 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
+from ..ratelimit import default_tier, limiter
 from ..timeline.service import fetch_timeline
 
 router = APIRouter()
@@ -64,7 +65,10 @@ class HistoryResponse(BaseModel):
 
 
 @router.get("/history", response_model=HistoryResponse)
+@limiter.limit(default_tier)
 async def history(
+    request: Request,
+    response: Response,
     lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),
     include_noise: bool = Query(
         False, description="Also return every raw change, including Tier-3 noise."

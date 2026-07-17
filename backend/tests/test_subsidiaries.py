@@ -145,5 +145,5 @@ async def test_assemble_large_network_degrades_to_table(monkeypatch):
 
 async def test_endpoint_rejects_bad_lei():
     with pytest.raises(HTTPException) as exc:
-        await subsidiaries_endpoint(lei="not-a-lei", format="summary")
+        await subsidiaries_endpoint(request=None, response=None, lei="not-a-lei", format="summary")
     assert exc.value.status_code == 400

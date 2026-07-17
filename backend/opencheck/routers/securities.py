@@ -10,9 +10,10 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
+from ..ratelimit import default_tier, limiter
 from ..securities import PAGE_SIZE, assemble_securities
 
 router = APIRouter()
@@ -44,7 +45,10 @@ class SecuritiesResponse(BaseModel):
 
 
 @router.get("/securities", response_model=SecuritiesResponse)
+@limiter.limit(default_tier)
 async def securities(
+    request: Request,
+    response: Response,
     lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),
     page: int = Query(1, ge=1, le=500, description="Page of ISINs to return (size 20)."),
 ) -> Any:
