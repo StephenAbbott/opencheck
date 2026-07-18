@@ -644,6 +644,38 @@ def test_map_opentender_handles_empty_bundle() -> None:
     assert list(map_opentender({})) == []
 
 
+def test_map_opentender_handles_present_but_empty_publications() -> None:
+    """Regression for issue #39: ``"publications": []`` is PRESENT (not absent),
+    so ``tender.get("publications", [{}])[0]`` bypasses the ``[{}]`` default and
+    indexes an empty list — IndexError, killing the whole map_opentender call.
+    The tender_url must fall back to the synthesized opentender.eu URL instead
+    of crashing, and no statement's ``humanReadableURL`` should leak through."""
+    tender = _sample_tender()
+    tender["publications"] = []
+    bundle = map_opentender({"tender_id": "OT-DE-2024-1", "tender": tender})
+    statements = list(bundle)
+    assert statements, "expected statements despite empty publications"
+    rels = [s for s in statements if s["recordType"] == "relationship"]
+    assert rels, "expected the winning-bid relationship statement"
+    assert rels[0]["source"]["url"] == (
+        "https://opentender.eu/de/tender/OT-DE-2024-1"
+    )
+
+
+def test_map_opentender_handles_none_publications() -> None:
+    """``"publications": None`` must be treated the same as absent/empty."""
+    tender = _sample_tender()
+    tender["publications"] = None
+    bundle = map_opentender({"tender_id": "OT-DE-2024-1", "tender": tender})
+    statements = list(bundle)
+    assert statements, "expected statements despite publications=None"
+    rels = [s for s in statements if s["recordType"] == "relationship"]
+    assert rels, "expected the winning-bid relationship statement"
+    assert rels[0]["source"]["url"] == (
+        "https://opentender.eu/de/tender/OT-DE-2024-1"
+    )
+
+
 # ---------------------------------------------------------------------
 # Endpoint integration
 # ---------------------------------------------------------------------
