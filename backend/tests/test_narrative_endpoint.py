@@ -94,6 +94,10 @@ def test_narrative_endpoint_returns_grounded_summary(monkeypatch):
     # The packet is returned so the UI can resolve cited ids to evidence.
     assert "facts" in body["packet"]
     assert body["prompt_version"]
+    # Analyst control plane: the run identity dispositions are keyed to.
+    assert len(body["run_id"]) == 16
+    assert body["generated_at"]
+    assert body["uncited_gaps"] == []
 
 
 def test_narrative_endpoint_503_without_key(monkeypatch):

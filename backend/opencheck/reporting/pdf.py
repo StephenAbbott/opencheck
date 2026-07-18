@@ -25,7 +25,12 @@ def render_html_to_pdf(html: str, *, base_url: str = ".") -> bytes:
     return HTML(string=html, base_url=base_url).write_pdf(pdf_variant="pdf/ua-1")
 
 
-def build_report_pdf(report: dict[str, Any], *, narrative: dict[str, Any] | None = None) -> bytes:
+def build_report_pdf(
+    report: dict[str, Any],
+    *,
+    narrative: dict[str, Any] | None = None,
+    dispositions: dict[str, Any] | None = None,
+) -> bytes:
     """Build the report HTML for a lookup result and render it to a tagged PDF."""
-    html = build_report_html(report, narrative=narrative)
+    html = build_report_html(report, narrative=narrative, dispositions=dispositions)
     return render_html_to_pdf(html)

@@ -67,6 +67,15 @@ thead th { background:#f5f5f7; color:#191d23; border-bottom:1px solid #d9d9de; }
 .cites { font-size:8pt; color:#595959; margin-top:2mm; }
 .cite { display:inline-block; background:#eef1fb; color:#27348b; border:0.5px solid #cfd6f5; border-radius:8px; padding:0 2mm; margin:0 1mm 1mm 0; }
 .disclaimer { font-size:7.5pt; color:#595959; margin-top:2mm; border-top:0.5px solid #d9d9de; padding-top:1.5mm; }
+.claims { margin:2mm 0 0; padding-left:5mm; }
+.claims li { margin:0 0 2mm; }
+.disp { display:inline-block; font-size:8pt; font-weight:bold; border:1px solid; border-radius:10px; padding:0.5mm 2.5mm; margin-left:1.5mm; }
+.disp.accepted { color:#1f7a44; border-color:#9bd3ae; background:#eef8f1; }
+.disp.disputed { color:#9f1239; border-color:#e3a3b1; background:#fdf0f3; }
+.disp.needs_review { color:#595959; border-color:#c9c9ce; background:#f5f5f7; }
+.disp-comment { display:block; font-size:8.5pt; color:#595959; border-left:2px solid #d9d9de; padding-left:3mm; margin-top:1mm; }
+.gaps { background:#fdf6e7; border:0.5px solid #e3c890; border-radius:6px; padding:3mm 4mm; margin:2mm 0; }
+.gaps ul { margin:1mm 0 0; padding-left:5mm; }
 .source { border:0.5px solid #d9d9de; border-radius:6px; padding:3mm 4mm; margin:2.5mm 0; break-inside:avoid; }
 .source .head { display:flex; justify-content:space-between; align-items:baseline; gap:4mm; }
 .source .name { font-weight:bold; color:#191d23; font-size:10pt; }
@@ -199,7 +208,105 @@ def _live_check(lei: str | None) -> str:
     )
 
 
-def _summary(narrative: dict[str, Any] | None) -> str:
+_DISPOSITION_LABELS = {
+    "accepted": "Accepted",
+    "disputed": "Disputed",
+    "needs_review": "Needs review",
+}
+
+
+def _cite_labels(packet: dict[str, Any], ids: list[str]) -> list[str]:
+    """Resolve claim citation ids (f/r/g) to short display labels."""
+    facts = {f.get("id"): f for f in packet.get("facts") or []}
+    risks = {r.get("id"): r for r in packet.get("risks") or []}
+    gap_ids = {g.get("id") for g in packet.get("gaps") or []}
+    labels: list[str] = []
+    for i in ids:
+        if i in facts:
+            label = facts[i].get("source_name") or i
+        elif i in risks:
+            label = risks[i].get("label") or risks[i].get("source_name") or i
+        elif i in gap_ids:
+            label = "Limitation"
+        else:
+            label = i
+        if label not in labels:
+            labels.append(label)
+    return labels
+
+
+def _claims_block(narrative: dict[str, Any], dispositions: dict[str, Any] | None) -> str:
+    """The per-claim record: claim text, citations, and the analyst's decision."""
+    claims = narrative.get("claims") or []
+    if not claims:
+        return ""
+    packet = narrative.get("packet") or {}
+    disp_by_claim: dict[str, dict[str, Any]] = {}
+    for d in (dispositions or {}).get("dispositions") or []:
+        if d.get("claim_id"):
+            disp_by_claim[d["claim_id"]] = d
+    items = []
+    for c in claims:
+        cites = "".join(
+            f'<span class="cite">{escape(label)}</span>'
+            for label in _cite_labels(packet, list(c.get("fact_ids") or []))
+        )
+        disp = disp_by_claim.get(c.get("id", ""))
+        disp_html = ""
+        if disp:
+            status = disp.get("status", "")
+            label = _DISPOSITION_LABELS.get(status, status)
+            decided = escape(str(disp.get("decided_at") or "")[:10])
+            disp_html = (
+                f'<span class="disp {escape(status)}">{escape(label)}</span>'
+                + (f' <span class="cites">({decided})</span>' if decided else "")
+            )
+            if disp.get("comment"):
+                disp_html += f'<span class="disp-comment">Analyst note: {escape(disp["comment"])}</span>'
+        items.append(f"<li>{escape(c.get('text', ''))} {cites}{disp_html}</li>")
+    tally = ""
+    if disp_by_claim:
+        counts: dict[str, int] = {}
+        for d in disp_by_claim.values():
+            counts[d.get("status", "")] = counts.get(d.get("status", ""), 0) + 1
+        bits = [
+            f"{counts[s]} {label.lower()}"
+            for s, label in _DISPOSITION_LABELS.items()
+            if counts.get(s)
+        ]
+        undecided = len(claims) - len(disp_by_claim)
+        if undecided > 0:
+            bits.append(f"{undecided} undecided")
+        tally = f'<p class="cites"><strong>Analyst review:</strong> {escape(" · ".join(bits))}</p>'
+    return (
+        "<h3>Claims and analyst dispositions</h3>"
+        + tally
+        + f'<ul class="claims">{"".join(items)}</ul>'
+    )
+
+
+def _gaps_block(narrative: dict[str, Any]) -> str:
+    """"Not verified in this check" — always rendered when the packet has gaps.
+
+    Built from the evidence packet directly (not the model's prose), so a
+    narrative that failed to mention a gap cannot hide it from the record.
+    """
+    gaps = (narrative.get("packet") or {}).get("gaps") or []
+    if not gaps:
+        return ""
+    items = "".join(f"<li>{escape(g.get('statement', ''))}</li>" for g in gaps)
+    return (
+        '<div class="gaps"><h3>Not verified in this check</h3>'
+        "<p>The following could not be verified from the sources consulted. A clean summary "
+        "does not imply these are resolved.</p>"
+        f"<ul>{items}</ul></div>"
+    )
+
+
+def _summary(
+    narrative: dict[str, Any] | None,
+    dispositions: dict[str, Any] | None = None,
+) -> str:
     if not narrative or not narrative.get("summary"):
         return ""
     conf = narrative.get("overall_confidence", "low")
@@ -210,14 +317,25 @@ def _summary(narrative: dict[str, Any] | None) -> str:
     )
     model = escape(narrative.get("model", "Claude"))
     pv = escape(narrative.get("prompt_version", ""))
+    run_id = escape(narrative.get("run_id", ""))
+    generated_at = escape(str(narrative.get("generated_at", ""))[:19])
+    updated_at = escape(str((dispositions or {}).get("updated_at") or "")[:19])
+    run_bits = [b for b in [
+        f"run {run_id}" if run_id else "",
+        f"generated {generated_at}" if generated_at else "",
+        f"dispositions updated {updated_at}" if updated_at else "",
+    ] if b]
     return (
         f'<section aria-labelledby="sum"><h2 id="sum">Summary '
         f'<span class="badge {badge_cls}">{escape(conf)} confidence</span></h2>'
         f'<div class="summary"><p class="lead">{escape(narrative["summary"])}</p>'
         + (f'<p class="cites"><strong>Evidence:</strong> {cites}</p>' if cites else "")
+        + _claims_block(narrative, dispositions)
+        + _gaps_block(narrative)
         + '<p class="disclaimer">AI-generated from OpenCheck’s data. Every statement is grounded in '
         f"the cited sources; nothing is added beyond what they state. Generated by {model}"
         + (f" · prompt {pv}" if pv else "")
+        + (f" · {' · '.join(run_bits)}" if run_bits else "")
         + ".</p></div></section>"
     )
 
@@ -407,7 +525,12 @@ def _generated_line() -> str:
     return f"Report generated by OpenCheck v{__version__} on {stamp}."
 
 
-def build_report_html(report: dict[str, Any], *, narrative: dict[str, Any] | None = None) -> str:
+def build_report_html(
+    report: dict[str, Any],
+    *,
+    narrative: dict[str, Any] | None = None,
+    dispositions: dict[str, Any] | None = None,
+) -> str:
     """Assemble the full, accessible report HTML for a lookup result."""
     bods = report.get("bods") or []
     subject = _subject_entity(bods, report.get("lei"))
@@ -419,7 +542,7 @@ def build_report_html(report: dict[str, Any], *, narrative: dict[str, Any] | Non
         + _cover(report, subject)
         + _identifiers(report, subject)
         + _live_check(report.get("lei"))
-        + _summary(narrative)
+        + _summary(narrative, dispositions)
         + _risk(report)
         + _sources_found(report)
         + _diagrams(report)
