@@ -428,3 +428,90 @@ async def test_dedupe_collapses_duplicate_signals(monkeypatch) -> None:
     bundle = [_person("p1", "Vladimir Putin")]
     signals = await assess_cross_source_names(bundle)
     assert len(signals) == 1
+
+
+# ---------------------------------------------------------------------
+# Degraded-screen visibility
+#
+# An upstream failure must never be indistinguishable from a clean
+# screen — "no RELATED_SANCTIONED signals" has to mean "we asked and
+# nothing came back", not "the probe threw and we swallowed it".
+# ---------------------------------------------------------------------
+
+
+class _FailingAdapter:
+    """Adapter whose search always raises — stands in for an upstream
+    outage (HTTP 5xx, timeout, auth expiry)."""
+
+    async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
+        raise RuntimeError("upstream exploded")
+
+
+async def test_opensanctions_failure_logs_degraded_warning(
+    monkeypatch, caplog
+) -> None:
+    monkeypatch.setitem(REGISTRY, "opensanctions", _FailingAdapter())
+    _stub(monkeypatch, "everypolitician", [])
+
+    bundle = [_person("p1", "Vladimir Putin")]
+    with caplog.at_level("WARNING", logger="opencheck.cross_check"):
+        signals = await assess_cross_source_names(bundle)
+
+    # Still fails soft — the rest of the lookup is unaffected.
+    assert signals == []
+    text = caplog.text
+    assert "degraded" in text
+    assert "opensanctions failed for 1 of 1 name(s)" in text
+    assert "not a clean screen" in text
+    # Privacy: related-party names must not reach hosted logs.
+    assert "Vladimir Putin" not in text
+
+
+async def test_everypolitician_failure_is_reported_separately(
+    monkeypatch, caplog
+) -> None:
+    _stub(monkeypatch, "opensanctions", [])
+    monkeypatch.setitem(REGISTRY, "everypolitician", _FailingAdapter())
+
+    bundle = [_person("p1", "Vladimir Putin")]
+    with caplog.at_level("WARNING", logger="opencheck.cross_check"):
+        await assess_cross_source_names(bundle)
+
+    assert "everypolitician failed for 1 of 1 name(s)" in caplog.text
+    assert "opensanctions failed" not in caplog.text
+
+
+async def test_clean_screen_logs_no_warning(monkeypatch, caplog) -> None:
+    _stub(monkeypatch, "opensanctions", [])
+    _stub(monkeypatch, "everypolitician", [])
+
+    bundle = [_person("p1", "Vladimir Putin")]
+    with caplog.at_level("WARNING", logger="opencheck.cross_check"):
+        assert await assess_cross_source_names(bundle) == []
+
+    assert caplog.text == ""
+
+
+async def test_missing_key_in_live_mode_warns(monkeypatch, caplog) -> None:
+    """Live mode with no key means the screen never runs at all —
+    that is a deployment fault and must be visible in the logs."""
+    monkeypatch.delenv("OPENSANCTIONS_API_KEY", raising=False)
+    get_settings.cache_clear()
+
+    bundle = [_person("p1", "Vladimir Putin")]
+    with caplog.at_level("WARNING", logger="opencheck.cross_check"):
+        assert await assess_cross_source_names(bundle) == []
+
+    assert "OPENSANCTIONS_API_KEY is not set" in caplog.text
+
+
+async def test_offline_mode_is_quiet(monkeypatch, caplog) -> None:
+    """Offline/demo mode is an expected state, not a degradation."""
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
+    get_settings.cache_clear()
+
+    bundle = [_person("p1", "Vladimir Putin")]
+    with caplog.at_level("WARNING", logger="opencheck.cross_check"):
+        assert await assess_cross_source_names(bundle) == []
+
+    assert caplog.text == ""

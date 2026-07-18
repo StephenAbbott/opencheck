@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 import time
 from dataclasses import dataclass, field as dc_field
@@ -30,6 +31,8 @@ from ..sources import REGISTRY, SearchKind, SourceHit, SourceInfo
 from ..sources.schemas import SourceSchemaError
 
 router = APIRouter()
+
+_LOG = logging.getLogger(__name__)
 
 
 def _fmt_source_error(exc: Exception) -> str:
@@ -1143,8 +1146,19 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
                 ctx.ocid = attrs.get("ocid") or None
                 sp = attrs.get("spglobal")
                 ctx.spglobal = (sp[0] if isinstance(sp, list) and sp else sp) or None
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            # Non-fatal, but not free: without ocid the OpenCorporates
+            # dispatch is skipped and without spglobal the MEIP CapIQ
+            # corroboration silently downgrades. Log so a GLEIF outage
+            # doesn't read as "this entity has no OpenCorporates record".
+            _LOG.warning(
+                "GLEIF identifier extraction failed for %s: %s: %s — "
+                "OpenCorporates dispatch and MEIP CapIQ corroboration "
+                "will be skipped for this lookup.",
+                lei,
+                type(exc).__name__,
+                exc,
+            )
     if ctx.ocid:
         ctx.derived["ocid"] = ctx.ocid
 
