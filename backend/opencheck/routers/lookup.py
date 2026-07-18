@@ -756,6 +756,9 @@ _EITI_IDENTIFIER_KEY_BY_COUNTRY = {
     "GB": "gb_coh",
     "NO": "no_orgnr",
     "NL": "kvk_number",
+    # US EITI identifications are federal EINs; matching a US subject means an
+    # EIN was derived for it, so the corroboration key is that EIN.
+    "US": "us_ein",
 }
 
 
@@ -973,14 +976,17 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
     if (
         eiti_adapter is not None
         and hasattr(eiti_adapter, "fetch_by_registration")
-        and ctx.registered_as
+        and (ctx.registered_as or ctx.derived.get("us_ein"))
         and ctx.jurisdiction
         and _want("eiti")
     ):
         tasks.append((
             "eiti",
             eiti_adapter.fetch_by_registration(
-                ctx.jurisdiction, ctx.registered_as, legal_name=ctx.legal_name
+                ctx.jurisdiction,
+                ctx.registered_as,
+                legal_name=ctx.legal_name,
+                us_ein=ctx.derived.get("us_ein", ""),
             ),
         ))
     bg_adapter = REGISTRY.get("bods_gleif")

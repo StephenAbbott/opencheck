@@ -57,6 +57,29 @@ def test_artifact_has_broad_country_coverage() -> None:
 
 
 # ---------------------------------------------------------------------------
+# US EIN matching (issue #26): US EITI identifications are EINs in
+# NN-NNNNNNN form, not the state-registry numbers GLEIF publishes as
+# registeredAs. Matching must be punctuation-insensitive and country-scoped.
+# ---------------------------------------------------------------------------
+
+
+def test_norm_forms_handles_dashed_ein() -> None:
+    """A US EIN (``NN-NNNNNNN``) normalises to its digits so it joins the
+    committed index regardless of the dash."""
+    assert _norm_forms("42-1638663") == ["42-1638663", "421638663"]
+
+
+def test_committed_artifact_matches_us_ein() -> None:
+    """The shipped artifact resolves a US company's EIN in both dashed and
+    digits-only form. Decoys prove the filter binds: a different EIN and the
+    same EIN under the wrong country both fail."""
+    for variant in ("42-1638663", "421638663"):
+        assert _match_identification("US", variant) == "42-1638663", variant
+    assert _match_identification("US", "99-9999999") is None  # wrong EIN
+    assert _match_identification("GB", "42-1638663") is None  # wrong country
+
+
+# ---------------------------------------------------------------------------
 # fetch_by_registration
 # ---------------------------------------------------------------------------
 
@@ -79,6 +102,33 @@ async def test_fetch_by_registration_no_match_returns_none() -> None:
     adapter = EitiAdapter()
     assert await adapter.fetch_by_registration("GB", "99999999") is None
     assert await adapter.fetch_by_registration("", "01285743") is None
+
+
+async def test_fetch_by_registration_matches_via_us_ein() -> None:
+    """US subjects match on a derived EIN tried alongside registeredAs. The
+    state-registry registeredAs does NOT hit the EIN-keyed US bucket (decoy),
+    so the match must come from the EIN passed as ``us_ein``."""
+    adapter = EitiAdapter()
+    # registeredAs here is a state-registry number absent from the US bucket;
+    # if the match came from it (not the EIN) the test would be vacuous.
+    assert await adapter.fetch_by_registration("US", "C1234567") is None
+    bundle = await adapter.fetch_by_registration(
+        "US", "C1234567", legal_name="Alpha Natural Resources, Inc.",
+        us_ein="42-1638663",
+    )
+    assert bundle is not None
+    assert bundle["country"] == "US"
+    assert bundle["identification"] == "42-1638663"
+    assert bundle["is_stub"] is False
+
+
+async def test_fetch_by_registration_wrong_us_ein_returns_none() -> None:
+    """A wrong EIN does not match even when supplied as ``us_ein`` (decoy)."""
+    adapter = EitiAdapter()
+    assert (
+        await adapter.fetch_by_registration("US", "C1234567", us_ein="99-9999999")
+        is None
+    )
 
 
 async def test_live_revenue_aggregation(monkeypatch, httpx_mock: HTTPXMock, tmp_path) -> None:
@@ -168,6 +218,19 @@ def test_dispatch_skips_eiti_without_registration() -> None:
     assert _dispatch(ctx, only="eiti") == []
 
 
+def test_dispatch_includes_eiti_via_derived_us_ein() -> None:
+    """A US subject with a derived EIN but no usable registeredAs still
+    dispatches EITI — the EIN is what keys the US bucket."""
+    ctx = _LookupCtx(lei="X" * 20)
+    ctx.jurisdiction = "US"
+    ctx.registered_as = ""
+    ctx.derived = {"us_ein": "42-1638663"}
+    tasks = _dispatch(ctx, only="eiti")
+    assert [sid for sid, _ in tasks] == ["eiti"]
+    for _, coro in tasks:
+        coro.close()  # avoid un-awaited coroutine warnings
+
+
 def test_bh_eiti_builds_hit_with_corroborating_identifier() -> None:
     ctx = _LookupCtx(lei="X" * 20)
     bundle = {
@@ -192,10 +255,31 @@ def test_bh_eiti_builds_hit_with_corroborating_identifier() -> None:
     assert "$6.3M USD to governments" in hit.summary
 
 
+def test_bh_eiti_us_emits_us_ein_identifier() -> None:
+    """A US EITI match corroborates via the ``us_ein`` key (the EIN is the US
+    federal identifier EITI independently publishes)."""
+    ctx = _LookupCtx(lei="X" * 20)
+    bundle = {
+        "source_id": "eiti",
+        "country": "US",
+        "identification": "42-1638663",
+        "entity_name": "Alpha Natural Resources, Inc.",
+        "organisations": [],
+        "revenue_years": [],
+        "streams": {},
+        "total_usd": 0.0,
+        "years": ["2018"],
+        "is_stub": False,
+    }
+    hit = _bh_eiti(bundle, ctx)
+    assert hit.hit_id == "US:42-1638663"
+    assert hit.identifiers == {"us_ein": "42-1638663"}
+
+
 def test_eiti_identifier_key_map_is_conservative() -> None:
     """Only countries with verified format equivalence map to OpenCheck
     identifier keys; everything else uses the neutral eiti_identification."""
-    assert set(_EITI_IDENTIFIER_KEY_BY_COUNTRY) == {"GB", "NO", "NL"}
+    assert set(_EITI_IDENTIFIER_KEY_BY_COUNTRY) == {"GB", "NO", "NL", "US"}
 
 
 # ---------------------------------------------------------------------------
