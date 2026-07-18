@@ -40,6 +40,7 @@ cytoscape.use(dagre);
 
 interface NodeOverlay {
   id:      string;
+  label:   string;   // node label — disambiguates overlay-button accessible names
   cx:      number;   // screen-space x of node centre
   cy:      number;   // screen-space y of node centre
   r:       number;   // screen-space node radius
@@ -223,9 +224,11 @@ const STYLESHEET: StylesheetStyle[] = [
     } as cytoscape.Css.Edge,
   },
   { selector: "edge[category = 'ownership']", style: { "line-color": "#1565c0", "target-arrow-color": "#1565c0", color: "#1565c0" } as cytoscape.Css.Edge },
-  { selector: "edge[category = 'control']",  style: { "line-color": "#e65100", "target-arrow-color": "#e65100", color: "#e65100" } as cytoscape.Css.Edge },
+  // Control: dotted (non-colour cue vs ownership/unknown; distinct from role's
+  // dashed). Label text is darker than the line for 4.5:1 contrast (WCAG 1.4.3).
+  { selector: "edge[category = 'control']",  style: { "line-color": "#e65100", "target-arrow-color": "#e65100", color: "#9a3412", "line-style": "dotted" } as cytoscape.Css.Edge },
   { selector: "edge[category = 'role']",     style: { "line-color": "#6a1b9a", "target-arrow-color": "#6a1b9a", color: "#6a1b9a", "line-style": "dashed" } as cytoscape.Css.Edge },
-  { selector: "edge[category = 'unknown']",  style: { "line-color": "#888",    "target-arrow-color": "#888",    color: "#888" } as cytoscape.Css.Edge },
+  { selector: "edge[category = 'unknown']",  style: { "line-color": "#888",    "target-arrow-color": "#888",    color: "#595959" } as cytoscape.Css.Edge },
   // POSSIBLY_SAME_AS — dashed, undirected, amber; a "likely same entity" suggestion for review (never a merge).
   {
     selector: "edge[category = 'possiblySame']",
@@ -355,6 +358,7 @@ export default function BODSGraph({
         const pos = node.position();
         next.push({
           id,
+          label:   node.data("label") as string,
           cx:      pos.x * zoom + pan.x,
           cy:      pos.y * zoom + pan.y,
           r:       (node.width() * zoom) / 2,
@@ -501,15 +505,15 @@ export default function BODSGraph({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, model, tableView]);
 
-  // ── Dismiss the risk-badge popover with Escape while it is open ────────────
+  // ── Dismiss the risk-badge popover / edge tooltip with Escape while open ───
   useEffect(() => {
-    if (!signalTooltip) return;
+    if (!signalTooltip && !edgeTooltip) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSignalTooltip(null);
+      if (e.key === "Escape") { setSignalTooltip(null); setEdgeTooltip(null); }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [signalTooltip]);
+  }, [signalTooltip, edgeTooltip]);
 
   function focusMatch(idx: number) {
     const cy = cyRef.current;
@@ -551,12 +555,12 @@ export default function BODSGraph({
       <div className="border-b border-oo-rule">
         <div className="flex items-center flex-wrap gap-1 px-2 py-1 text-xs text-oo-muted">
           {!tableView && <>
-            <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom in"
+            <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom in" aria-label="Zoom in"
               onClick={() => cyRef.current?.zoom({ level: (cyRef.current?.zoom() ?? 1) * 1.3,
                 renderedPosition: { x: (containerRef.current?.clientWidth ?? 0) / 2, y: (containerRef.current?.clientHeight ?? 0) / 2 } })}>
               +
             </button>
-            <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom out"
+            <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom out" aria-label="Zoom out"
               onClick={() => cyRef.current?.zoom({ level: (cyRef.current?.zoom() ?? 1) / 1.3,
                 renderedPosition: { x: (containerRef.current?.clientWidth ?? 0) / 2, y: (containerRef.current?.clientHeight ?? 0) / 2 } })}>
               −
@@ -625,8 +629,8 @@ export default function BODSGraph({
           <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#e8f0fb] border-[#1565c0] text-[#1565c0]">
             <span className="inline-block w-3.5 h-0.5 bg-[#1565c0] rounded-full flex-shrink-0"/>Ownership
           </span>
-          <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#fdf0e8] border-[#e65100] text-[#e65100]">
-            <span className="inline-block w-3.5 h-0.5 bg-[#e65100] rounded-full flex-shrink-0"/>Control
+          <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#fdf0e8] border-[#e65100] text-[#9a3412]">
+            <span className="inline-block w-3.5 flex-shrink-0" style={{borderTop:"1.5px dotted #e65100"}}/>Control
           </span>
           <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#f3eef8] border-[#6a1b9a] text-[#6a1b9a]">
             <span className="inline-block w-3.5 flex-shrink-0" style={{borderTop:"1.5px dashed #6a1b9a"}}/>Role
@@ -739,7 +743,9 @@ export default function BODSGraph({
                 <button
                   type="button"
                   title={item.collapsed ? `Expand ${item.hiddenCount ?? 0} hidden` : "Collapse subsidiaries"}
-                  aria-label={item.collapsed ? `Expand ${item.hiddenCount ?? 0} hidden subsidiaries` : "Collapse subsidiaries"}
+                  aria-label={item.collapsed
+                    ? `Expand ${item.hiddenCount ?? 0} hidden subsidiaries of ${item.label}`
+                    : `Collapse subsidiaries of ${item.label}`}
                   onClick={() => toggleCollapse(item.id)}
                   style={{
                     position: "absolute",

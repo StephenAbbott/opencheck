@@ -360,7 +360,7 @@ Specific rules:
 
 **BOVS arrowhead marker**: injected after draw() — `<marker id="oc-bovs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="strokeWidth" markerWidth="8" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/></marker>`. Applied to all `g.edgePath path` elements.
 
-**Edge categories**: `ownership` (blue #1565c0), `control` (orange #e65100), `role` (purple #6a1b9a, dashed), `unknown` (grey #888).
+**Edge categories**: `ownership` (blue #1565c0), `control` (orange #e65100, dotted), `role` (purple #6a1b9a, dashed), `unknown` (grey #888). Edge label text for control/unknown is darkened (#9a3412 / #595959) for WCAG 4.5:1 contrast; line colours are unchanged.
 
 ---
 

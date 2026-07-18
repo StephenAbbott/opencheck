@@ -47,9 +47,9 @@ export default function FullCheckPanel({
   return (
     <section className="mb-8" aria-label="FullCheck — enhanced due diligence">
       <div className="mb-3 rounded-oo border border-[#1565c0] bg-[#eef4fe] px-4 py-3">
-        <div className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-blue mb-1">
+        <h3 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-blue mb-1">
           FullCheck · Enhanced due diligence
-        </div>
+        </h3>
         <p className="text-[13px] text-oo-ink leading-[1.6]">
           The wider corporate network connected to{" "}
           <span className="font-medium">{legalName ?? lei}</span>. Run FullCheck to

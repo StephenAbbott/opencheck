@@ -443,7 +443,7 @@ export default function BodsGraphExplorer({
       </div>
       )}
       {expandNote && (
-        <p className="mb-2 text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 leading-[1.5]">
+        <p role="status" className="mb-2 text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 leading-[1.5]">
           {expandNote}
         </p>
       )}

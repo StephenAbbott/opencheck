@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useState } from "react";
 import { deepen } from "../../lib/api";
 import type { BodsBreakdown, BoAccessNotice, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
@@ -63,6 +63,7 @@ function BoAccessFootnote({ notice }: { notice: BoAccessNotice }) {
               className="text-oo-blue underline hover:text-oo-burst"
             >
               {linkText}
+              <span className="sr-only"> (opens in new tab)</span>
             </a>
           </>
         )}
@@ -270,8 +271,11 @@ function EntityStatementCard({ stmt }: { stmt: BODSStmt }) {
         })}
         {sourceDesc && <FieldRow label="Source" value={sourceDesc} />}
         <details className="mt-1">
-          <summary className="text-[10px] font-mono text-oo-muted cursor-pointer">
-            {statementId ? statementId.slice(0, 28) + "…" : "Statement ID"}
+          <summary className="text-[10px] text-oo-muted cursor-pointer">
+            Raw statement JSON —{" "}
+            <span className="font-mono">
+              {statementId ? statementId.slice(0, 28) + "…" : "Statement ID"}
+            </span>
           </summary>
           <pre className="mt-1 text-[9px] font-mono bg-white border border-oo-rule rounded p-2 overflow-auto max-h-48">
             {JSON.stringify(stmt, null, 2)}
@@ -330,8 +334,11 @@ function PersonStatementCard({ stmt }: { stmt: BODSStmt }) {
         )}
         {sourceDesc && <FieldRow label="Source" value={sourceDesc} />}
         <details className="mt-1">
-          <summary className="text-[10px] font-mono text-oo-muted cursor-pointer">
-            {statementId ? statementId.slice(0, 28) + "…" : "Statement ID"}
+          <summary className="text-[10px] text-oo-muted cursor-pointer">
+            Raw statement JSON —{" "}
+            <span className="font-mono">
+              {statementId ? statementId.slice(0, 28) + "…" : "Statement ID"}
+            </span>
           </summary>
           <pre className="mt-1 text-[9px] font-mono bg-white border border-oo-rule rounded p-2 overflow-auto max-h-48">
             {JSON.stringify(stmt, null, 2)}
@@ -438,8 +445,11 @@ function RelationshipStatementCard({
         )}
         {sourceDesc && <FieldRow label="Source" value={sourceDesc} />}
         <details className="mt-1">
-          <summary className="text-[10px] font-mono text-oo-muted cursor-pointer">
-            {statementId ? statementId.slice(0, 28) + "…" : "Statement ID"}
+          <summary className="text-[10px] text-oo-muted cursor-pointer">
+            Raw statement JSON —{" "}
+            <span className="font-mono">
+              {statementId ? statementId.slice(0, 28) + "…" : "Statement ID"}
+            </span>
           </summary>
           <pre className="mt-1 text-[9px] font-mono bg-white border border-oo-rule rounded p-2 overflow-auto max-h-48">
             {JSON.stringify(stmt, null, 2)}
@@ -471,8 +481,9 @@ function BODSStatementCards({ statements }: { statements: BODSStmt[] }) {
           );
         return (
           <details key={i} className="text-[11px]">
-            <summary className="font-mono text-oo-muted cursor-pointer">
-              {type || "unknown"} statement
+            <summary className="text-oo-muted cursor-pointer">
+              Raw statement JSON —{" "}
+              <span className="font-mono">{type || "unknown"} statement</span>
             </summary>
             <pre className="mt-1 text-[9px] font-mono bg-white border border-oo-rule rounded p-2 overflow-auto max-h-48">
               {JSON.stringify(stmt, null, 2)}
@@ -536,7 +547,7 @@ export function DeepenBlock({
           <Suspense
             fallback={
               <div
-                className="h-48 rounded-oo border border-oo-rule bg-oo-paper/40 animate-pulse flex items-center justify-center text-[12px] text-oo-muted"
+                className="h-48 rounded-oo border border-oo-rule bg-oo-bg/40 motion-safe:animate-pulse flex items-center justify-center text-[12px] text-oo-muted"
                 role="status"
               >
                 Loading graph…
@@ -677,6 +688,7 @@ export function HitRow({
   const [detail,  setDetail]  = useState<DeepenResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
+  const panelId = useId();
 
   const anyOpen = showDiagram || showStatements || showJson;
 
@@ -738,8 +750,9 @@ export function HitRow({
           {(() => {
             const url = sourceEntityUrl(hit.source_id, hit);
             return url ? (
-              <a href={url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+              <a href={url} target="_blank" rel="noopener noreferrer" className="underline decoration-dotted underline-offset-2">
                 {hit.name}
+                <span className="sr-only"> (opens in new tab)</span>
               </a>
             ) : hit.name;
           })()}
@@ -768,7 +781,8 @@ export function HitRow({
       <button
         type="button"
         onClick={toggleDiagram}
-        aria-pressed={showDiagram}
+        aria-expanded={showDiagram}
+        aria-controls={panelId}
         className="mt-3 w-full flex items-center gap-3 rounded-oo border border-[#bcdcff] bg-[#dceeff] px-3 py-2 text-left transition-colors hover:bg-[#cfe6ff]"
       >
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-oo-blue text-white">
@@ -797,13 +811,13 @@ export function HitRow({
 
       {/* Secondary drill-downs — quieter than the graph CTA. */}
       <div className={`flex flex-wrap gap-4 text-[11px] font-mono ${showGraphStrip ? "mt-2" : "mt-3"}`}>
-        <button type="button" onClick={toggleStatements} aria-pressed={showStatements}
+        <button type="button" onClick={toggleStatements} aria-expanded={showStatements} aria-controls={panelId}
           className={`hover:underline ${showStatements ? "text-oo-blue" : "text-oo-muted hover:text-oo-ink"}`}>
           {showStatements ? "Hide statements" : (
             hasKnownCount ? `${stmtCount} statement${stmtCount === 1 ? "" : "s"}` : "Statements"
           )}
         </button>
-        <button type="button" onClick={toggleJson} aria-pressed={showJson}
+        <button type="button" onClick={toggleJson} aria-expanded={showJson} aria-controls={panelId}
           className={`hover:underline ${showJson ? "text-oo-blue" : "text-oo-muted hover:text-oo-ink"}`}>
           {showJson ? "Hide JSON" : "Raw JSON"}
         </button>
@@ -811,7 +825,7 @@ export function HitRow({
 
       {/* Expanded content */}
       {anyOpen && (
-        <div className="mt-4 bg-oo-bg rounded-oo p-4 text-[12px]">
+        <div id={panelId} className="mt-4 bg-oo-bg rounded-oo p-4 text-[12px]">
           {loading && <p className="text-oo-muted" role="status">Fetching…</p>}
           {error   && <p className="text-red-700" role="alert">{error}</p>}
           {detail  && (
@@ -837,7 +851,7 @@ export function SkeletonSourceCard() {
   return (
     <>
       <span role="status" className="sr-only">Source result still loading</span>
-      <article className="bg-white border border-oo-rule rounded-oo animate-pulse" aria-hidden>
+      <article className="bg-white border border-oo-rule rounded-oo motion-safe:animate-pulse" aria-hidden>
         <header className="px-5 py-3 border-b border-oo-rule flex items-start justify-between gap-3">
           <div className="h-4 bg-oo-rule rounded w-44" />
           <div className="h-3 bg-oo-rule rounded w-12 mt-0.5" />
@@ -912,7 +926,8 @@ export function SourceBucketCard({
     <button
       type="button"
       onClick={() => setShowTimeline((v) => !v)}
-      aria-pressed={showTimeline}
+      aria-expanded={showTimeline}
+      aria-controls={`oc-timeline-${bucket.sourceId}`}
       className="inline-flex items-center gap-1.5 rounded-oo border border-oo-rule bg-white px-2.5 py-1 text-[11px] font-semibold text-oo-ink transition-colors hover:bg-oo-bg"
     >
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
@@ -953,6 +968,7 @@ export function SourceBucketCard({
               className={`text-[11px] font-mono shrink-0 ${stateColor} hover:underline`}
             >
               {stateLabel}
+              <span className="sr-only"> — view record at source (opens in new tab)</span>
             </a>
           ) : (
             <span className={`text-[11px] font-mono shrink-0 ${stateColor}`}>
@@ -1006,7 +1022,9 @@ export function SourceBucketCard({
       )}
     </article>
     {showTimeline && timelineLei && (
-      <HistoryTimeline lei={timelineLei} entityName={timelineName} />
+      <div id={`oc-timeline-${bucket.sourceId}`}>
+        <HistoryTimeline lei={timelineLei} entityName={timelineName} />
+      </div>
     )}
     </>
   );

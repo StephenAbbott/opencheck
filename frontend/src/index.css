@@ -18,7 +18,7 @@
   --oo-light: #dceeff;
   --oo-green: #25cb55;
   --oo-ink: #191d23;
-  --oo-muted: #757575;
+  --oo-muted: #696969; /* WCAG: 4.95:1 on --oo-bg, 5.49:1 on white (was #757575, 4.16:1) */
   --oo-rule: #e5e5e5;
   --oo-bg: #f3f3f5;
 
@@ -35,6 +35,26 @@
 }
 .oc-cite-flash {
   animation: oc-cite-flash 1.6s ease-out;
+}
+
+/* Placeholder text — Tailwind's default #9ca3af is only 2.5:1; the muted
+   token holds 4.5:1+ on both the page background and white (WCAG 1.4.3). */
+input::placeholder,
+textarea::placeholder {
+  color: #696969;
+}
+
+/* Respect the user's reduced-motion preference (WCAG 2.3.3 / 2.2.2). */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .oc-cite-flash {
+    animation: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+  }
 }
 
 html,

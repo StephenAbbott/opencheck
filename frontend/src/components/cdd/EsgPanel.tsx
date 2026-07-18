@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { deepen } from "../../lib/api";
 import type { BodsBreakdown, DeepenResponse, SourceHit } from "../../lib/api";
 import { DeepenBlock, SkeletonSourceCard } from "./SourceBucketCard";
@@ -247,9 +247,9 @@ function EitiCard({ hit }: { hit: SourceHit }) {
     <div className="rounded-oo border border-emerald-200 bg-emerald-50/40 overflow-hidden">
       <div className="px-5 pt-4 pb-4 border-b border-emerald-200/60">
         <SourceTag sourceId="eiti" />
-        <div className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
+        <h3 className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
           {hit.name}
-        </div>
+        </h3>
         <div className="text-[11px] font-mono text-emerald-800 mt-0.5">
           {raw.country} · national ID {raw.identification}
         </div>
@@ -264,6 +264,7 @@ function EitiCard({ hit }: { hit: SourceHit }) {
               className="underline underline-offset-2 hover:text-emerald-900"
             >
               EITI
+              <span className="sr-only"> (opens in new tab)</span>
             </a>
           </div>
           <div className="flex items-end gap-3">
@@ -353,9 +354,9 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
     <div className="rounded-oo border border-emerald-200 bg-emerald-50/40 overflow-hidden">
       <div className="px-5 pt-4 pb-4">
         <SourceTag sourceId="wikirate" />
-        <div className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
+        <h3 className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
           {hit.name}
-        </div>
+        </h3>
         <div className="text-[11px] font-mono text-emerald-800 mt-0.5">
           {raw.matched_by === "wikidata_qid" ? "Wikidata match" : "LEI match"} ·
           card ~{raw.card_id}
@@ -371,6 +372,7 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
               className="underline underline-offset-2 hover:text-emerald-900"
             >
               Wikirate
+              <span className="sr-only"> (opens in new tab)</span>
             </a>
           </div>
           <div className="flex items-end gap-3">
@@ -401,9 +403,10 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
                       href={a.answer_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="hover:underline"
+                      className="underline decoration-dotted underline-offset-2"
                     >
                       {a.metric_name ?? "Metric"}
+                      <span className="sr-only"> (opens in new tab)</span>
                     </a>
                   ) : (
                     a.metric_name ?? "Metric"
@@ -428,6 +431,7 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
           className="mt-3 inline-block text-[12px] font-semibold text-emerald-800 underline underline-offset-2 hover:text-emerald-950"
         >
           View all {total.toLocaleString()} data points on wikirate.org →
+          <span className="sr-only"> (opens in new tab)</span>
         </a>
 
         <p className="mt-3 text-[10px] text-emerald-800">
@@ -479,6 +483,7 @@ function SourceTag({ sourceId }: { sourceId: string }) {
           className="underline underline-offset-2 hover:text-emerald-900"
         >
           {meta.org}
+          <span className="sr-only"> (opens in new tab)</span>
         </a>{" "}
         · {meta.licence}
       </span>
@@ -505,6 +510,7 @@ function ClimateTRACECard({
   const [detail,     setDetail]     = useState<DeepenResponse | null>(null);
   const [loading,    setLoading]    = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const panelId = useId();
 
   const raw = hit.raw as Record<string, unknown>;
   const emissions = (raw.emissions ?? {}) as {
@@ -575,14 +581,14 @@ function ClimateTRACECard({
     <div className="rounded-oo border border-emerald-200 bg-emerald-50/40 overflow-hidden">
       <div className="px-5 pt-4 pb-3 border-b border-emerald-200/60">
         <SourceTag sourceId="climatetrace" />
-        <div className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
+        <h3 className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
           {hit.name}
           {hit.is_stub && (
             <span className="ml-2 text-[11px] font-mono bg-amber-50 text-amber-800 border border-amber-200 rounded px-1.5 py-0.5">
               stub
             </span>
           )}
-        </div>
+        </h3>
         <div className="text-[11px] font-mono text-emerald-800 mt-0.5">
           GEM entity {hit.identifiers.gem_entity_id}
         </div>
@@ -601,6 +607,7 @@ function ClimateTRACECard({
                     className="underline underline-offset-2 hover:text-emerald-900"
                   >
                     Climate TRACE
+                    <span className="sr-only"> (opens in new tab)</span>
                   </a>
                 </div>
                 <div className="flex items-end gap-3">
@@ -632,6 +639,7 @@ function ClimateTRACECard({
                     className="underline underline-offset-2 hover:text-emerald-900"
                   >
                     GEM Ownership Tracker
+                    <span className="sr-only"> (opens in new tab)</span>
                   </a>
                 </div>
                 <div className="flex items-end gap-3">
@@ -715,7 +723,8 @@ function ClimateTRACECard({
         <button
           type="button"
           onClick={toggleDiagram}
-          aria-pressed={showDiagram}
+          aria-expanded={showDiagram}
+          aria-controls={panelId}
           className="mt-3 w-full flex items-center gap-3 rounded-oo border border-emerald-300 bg-emerald-100 px-3 py-2 text-left transition-colors hover:bg-emerald-200/70"
         >
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white">
@@ -744,13 +753,13 @@ function ClimateTRACECard({
 
         {/* Secondary drill-downs — quieter than the graph CTA. */}
         <div className={`flex flex-wrap gap-4 text-[11px] font-mono ${showGraphStrip ? "mt-2" : "mt-3"}`}>
-          <button type="button" onClick={toggleStatements} aria-pressed={showStatements}
+          <button type="button" onClick={toggleStatements} aria-expanded={showStatements} aria-controls={panelId}
             className={`hover:underline ${showStatements ? "text-emerald-800" : "text-emerald-800 hover:text-emerald-900"}`}>
             {showStatements ? "Hide statements" : (
               hasKnownCount ? `${stmtCount} statement${stmtCount === 1 ? "" : "s"}` : "Statements"
             )}
           </button>
-          <button type="button" onClick={toggleJson} aria-pressed={showJson}
+          <button type="button" onClick={toggleJson} aria-expanded={showJson} aria-controls={panelId}
             className={`hover:underline ${showJson ? "text-emerald-800" : "text-emerald-800 hover:text-emerald-900"}`}>
             {showJson ? "Hide JSON" : "Raw JSON"}
           </button>
@@ -758,7 +767,7 @@ function ClimateTRACECard({
       </div>
 
       {anyOpen && (
-        <div className="px-5 py-4 bg-white/60 text-[12px]">
+        <div id={panelId} className="px-5 py-4 bg-white/60 text-[12px]">
           {loading && <p className="text-emerald-700" role="status">Fetching…</p>}
           {fetchError && <p className="text-red-700" role="alert">{fetchError}</p>}
           {detail && (
@@ -898,6 +907,7 @@ export function EsgPanel({
   bodsBreakdownMap?: Record<string, BodsBreakdown>;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const bodyId = useId();
   // Per-hit expansion for the summary tiles. Unset entries fall back to the
   // default rule: a lone ESG hit shows its full card without an extra click;
   // two or more start as tiles only.
@@ -914,9 +924,9 @@ export function EsgPanel({
         <div className="flex-1 h-px bg-emerald-200" />
         <div className="flex items-center gap-2 text-emerald-700">
           <LeafIcon className="w-4 h-4" />
-          <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase">
+          <h2 className="text-[10px] font-semibold tracking-oo-eyebrow uppercase">
             Environmental, Social, and Governance (ESG) Data
-          </span>
+          </h2>
         </div>
         <div className="flex-1 h-px bg-emerald-200" />
       </div>
@@ -925,6 +935,8 @@ export function EsgPanel({
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
+          aria-expanded={!collapsed}
+          aria-controls={bodyId}
           className="w-full flex items-center justify-between px-5 py-3 border-b border-emerald-200 bg-emerald-50/60 hover:bg-emerald-50 transition-colors text-left"
         >
           <div className="flex items-center gap-2.5">
@@ -949,7 +961,7 @@ export function EsgPanel({
         </button>
 
         {!collapsed && (
-          <div className="p-5 space-y-4">
+          <div id={bodyId} className="p-5 space-y-4">
             <p className="text-[12px] leading-[1.65] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">
               <span className="font-semibold">ESG context only.</span> Data
               from{" "}
@@ -960,6 +972,7 @@ export function EsgPanel({
                 className="underline underline-offset-2 hover:text-emerald-900"
               >
                 Global Energy Monitor
+                <span className="sr-only"> (opens in new tab)</span>
               </a>{" "}
               (CC BY 4.0),{" "}
               <a
@@ -969,6 +982,7 @@ export function EsgPanel({
                 className="underline underline-offset-2 hover:text-emerald-900"
               >
                 Climate TRACE
+                <span className="sr-only"> (opens in new tab)</span>
               </a>{" "}
               (CC BY 4.0), the{" "}
               <a
@@ -978,6 +992,7 @@ export function EsgPanel({
                 className="underline underline-offset-2 hover:text-emerald-900"
               >
                 EITI
+                <span className="sr-only"> (opens in new tab)</span>
               </a>{" "}
               (open data, attribution) and{" "}
               <a
@@ -987,6 +1002,7 @@ export function EsgPanel({
                 className="underline underline-offset-2 hover:text-emerald-900"
               >
                 Wikirate
+                <span className="sr-only"> (opens in new tab)</span>
               </a>{" "}
               (CC BY 4.0). Emissions are satellite-derived estimates for
               directly owned assets; payments to governments are company

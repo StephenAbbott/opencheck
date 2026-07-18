@@ -138,6 +138,11 @@ export default function BodsTree({
                 <span className="w-4 flex-shrink-0" />
               )}
               <span className="truncate">{row.label}</span>
+              {/* Identifiers (LEI etc.) — `title` alone is mouse-only; expose
+                  the same text to screen readers (WCAG 1.1.1). */}
+              {row.identifiers.length > 0 && (
+                <span className="sr-only">{row.identifiers.join(" · ")}</span>
+              )}
               {row.isRepeat && (
                 <span className="flex-shrink-0 text-oo-muted" title="Shown in full above">↑</span>
               )}

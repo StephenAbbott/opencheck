@@ -60,6 +60,7 @@ function IdentifierPill({
   return url ? (
     <a href={url} target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
       {inner}
+      <span className="sr-only"> (opens in new tab)</span>
     </a>
   ) : (
     inner
@@ -84,14 +85,14 @@ export function MeipSignpost({ match }: { match: MeipMatch | null }) {
   return (
     <section className="mb-8 bg-white border border-oo-rule rounded-oo overflow-hidden">
       <header className="px-5 py-3 border-b border-oo-rule flex items-center justify-between gap-3">
-        <span className="inline-flex items-center gap-2 font-head font-bold text-[15px] text-oo-ink">
+        <h3 className="inline-flex items-center gap-2 font-head font-bold text-[15px] text-oo-ink">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
             className="text-oo-muted" aria-hidden="true">
             <path d="M3 21h18" /><path d="M5 21V7l7-4 7 4v14" /><path d="M9 21v-4h6v4" />
           </svg>
           OECD-UNSD MEIP
-        </span>
+        </h3>
         <span className="text-[11px] font-mono text-oo-muted bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5">
           signpost · not in graph
         </span>
@@ -110,6 +111,7 @@ export function MeipSignpost({ match }: { match: MeipMatch | null }) {
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
             <path d="M15 3h6v6" /><path d="M10 14 21 3" />
           </svg>
+          <span className="sr-only"> (opens in new tab)</span>
         </a>
         <p className="text-[13px] text-oo-muted mt-1 leading-[1.6]">
           {contextLine}
@@ -173,6 +175,7 @@ export function MeipSignpost({ match }: { match: MeipMatch | null }) {
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
             </svg>
+            <span className="sr-only"> (opens in new tab)</span>
           </a>
         </div>
       </div>
