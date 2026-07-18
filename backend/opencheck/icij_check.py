@@ -68,13 +68,18 @@ Reference: https://offshoreleaks.icij.org/docs/reconciliation
 from __future__ import annotations
 
 import json
+import logging
 import re
 import unicodedata
 from typing import Any
 
+import httpx
+
 from .config import get_settings
 from .http import build_client
 from .risk import OFFSHORE_LEAKS, RiskSignal
+
+_LOG = logging.getLogger(__name__)
 
 _RECONCILE_URL = "https://offshoreleaks.icij.org/api/v1/reconcile"
 
@@ -145,15 +150,49 @@ async def assess_icij_names(
 
     # Batch targets into groups to avoid oversized requests.
     signals: list[RiskSignal] = []
+    failed = 0
+    batches = 0
     for batch_start in range(0, len(targets), _BATCH_SIZE):
         batch = targets[batch_start: batch_start + _BATCH_SIZE]
+        batches += 1
         try:
             batch_signals = await _check_batch(batch, min_score=min_score)
             signals.extend(batch_signals)
-        except Exception:  # noqa: BLE001
-            # Network error, rate limit, or unexpected response shape —
-            # silently skip so the rest of the risk pipeline still runs.
-            pass
+        except httpx.HTTPStatusError as exc:
+            # The endpoint answered but rejected us. A 404 here means the
+            # reconciliation service moved again (it did once already — see
+            # the module docstring); 429 means we're being throttled. Loud
+            # enough to notice without reading raw access logs.
+            failed += 1
+            _LOG.warning(
+                "ICIJ Offshore Leaks reconciliation failed: HTTP %s from %s "
+                "(%d name(s) in this batch skipped).",
+                exc.response.status_code,
+                _RECONCILE_URL,
+                len(batch),
+            )
+        except Exception as exc:  # noqa: BLE001
+            # Network error, timeout, or unexpected response shape. Still
+            # swallowed so one upstream problem can't sink the rest of the
+            # risk pipeline — but no longer silent.
+            failed += 1
+            _LOG.warning(
+                "ICIJ Offshore Leaks reconciliation failed: %s: %s "
+                "(%d name(s) in this batch skipped).",
+                type(exc).__name__,
+                exc,
+                len(batch),
+            )
+
+    if failed:
+        # One line the operator can alert on: screening ran but is degraded,
+        # so an empty OFFSHORE_LEAKS result is not the same as "no matches".
+        _LOG.warning(
+            "ICIJ Offshore Leaks screening degraded: %d of %d batch(es) failed; "
+            "offshore-leaks risk signals may be incomplete for this lookup.",
+            failed,
+            batches,
+        )
 
     return _dedupe(signals)
 

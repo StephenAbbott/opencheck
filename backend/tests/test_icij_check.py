@@ -8,13 +8,17 @@ that exercise ``assess_icij_names`` against a mocked reconciliation API.
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
+from pytest_httpx import HTTPXMock
 
 from opencheck.config import get_settings
 from opencheck.icij_check import (
+    _RECONCILE_URL,
     _collect_targets,
     _dedupe,
     _name_sim,
@@ -181,6 +185,53 @@ def _target(name: str = "Acme BVI Ltd", kind: str = "entity", sid: str = "e1") -
 # ---------------------------------------------------------------------
 # Reconciliation API v0.2 (ICIJ moved to /api/v1/ — the bare path 404s)
 # ---------------------------------------------------------------------
+
+
+async def test_http_error_is_logged_as_a_warning(
+    httpx_mock: HTTPXMock, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A 404 (the reconciliation service moving again) must be visible in the
+    logs — the failure is still swallowed, but no longer silent."""
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    get_settings.cache_clear()
+    httpx_mock.add_response(url=_RECONCILE_URL, method="POST", status_code=404)
+
+    bods = [
+        {
+            "statementId": "e1",
+            "recordType": "entity",
+            "recordDetails": {"name": "ACME BVI LTD"},
+        }
+    ]
+    with caplog.at_level(logging.WARNING):
+        signals = await assess_icij_names(bods)
+
+    assert signals == []  # still degrades gracefully
+    assert "HTTP 404" in caplog.text
+    assert "degraded" in caplog.text
+    get_settings.cache_clear()
+
+
+async def test_network_error_is_logged_as_a_warning(
+    httpx_mock: HTTPXMock, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    get_settings.cache_clear()
+    httpx_mock.add_exception(httpx.ConnectError("connection refused"))
+
+    bods = [
+        {
+            "statementId": "e1",
+            "recordType": "entity",
+            "recordDetails": {"name": "ACME BVI LTD"},
+        }
+    ]
+    with caplog.at_level(logging.WARNING):
+        signals = await assess_icij_names(bods)
+
+    assert signals == []
+    assert "ConnectError" in caplog.text
+    get_settings.cache_clear()
 
 
 def test_reconcile_url_is_the_versioned_api_path() -> None:
