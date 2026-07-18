@@ -922,6 +922,61 @@ async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
     return deduped
 
 
+# OpenTender's DB artifact is normally built from a subset of DIGIWHIST's 35
+# jurisdictions. These are the countries the current artifact covers, each
+# paired with the derived national identifier the pipeline already computes from
+# the GLEIF anchor (via that register adapter's ``lookup_derivers`` — inpi's
+# ``siren``, ares's ``cz_ico``, ariregister's ``ee_registry_code``, prh's
+# ``fi_ytunnus``, etc.). A subject outside these countries simply yields no
+# OpenTender hits. OpenTender is dispatched like openaleph (a list-result
+# registration + name source), not through the single-result ``_REGISTRY_SOURCES``
+# path, so its wiring lives here rather than in a ``_bh_opentender()`` builder.
+_OPENTENDER_COUNTRY_KEYS: tuple[tuple[str, str], ...] = (
+    ("AT", "at_fn"),
+    ("CZ", "cz_ico"),
+    ("DK", "dk_cvr"),
+    ("EE", "ee_registry_code"),
+    ("FI", "fi_ytunnus"),
+    ("FR", "siren"),
+    ("LT", "lt_code"),
+    ("LV", "lv_regcode"),
+)
+
+
+async def _opentender_strategies(ctx: _LookupCtx) -> list[SourceHit]:
+    """OpenTender procurement lookup: identifier-first, name-gated fallback.
+
+    Identifier path (issue #29): for each built country, dispatch the subject's
+    derived national identifier against OpenTender's ``body_ids`` index, scoped
+    to that country and restricted server-side to the id_types that genuinely
+    carry registration numbers. Name path: only when the identifier path yields
+    nothing, fall back to a name search gated on name equivalence (issue #21),
+    so "Orange S.A." never attaches a "Red-Orange e.U." tender.
+    """
+    ot_adapter = REGISTRY.get("opentender")
+    if ot_adapter is None:
+        return []
+    hits: list[SourceHit] = []
+    for country, key in _OPENTENDER_COUNTRY_KEYS:
+        reg = ctx.derived.get(key)
+        if not reg:
+            continue
+        hits.extend(
+            await ot_adapter.fetch_by_registration(country, reg)  # type: ignore[attr-defined]
+        )
+    if not hits and ctx.legal_name:
+        hits = await ot_adapter.fetch_by_name(ctx.legal_name)  # type: ignore[attr-defined]
+    # A tender can be reached via more than one country key (or repeated in the
+    # search fallback) — deduplicate on hit_id, first seen wins.
+    seen: set[str] = set()
+    deduped: list[SourceHit] = []
+    for h in hits:
+        if h.hit_id not in seen:
+            seen.add(h.hit_id)
+            deduped.append(h)
+    return deduped
+
+
 def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]:
     """Build the (source_id, awaitable) dispatch list for this lookup.
 
@@ -953,6 +1008,11 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
         tasks.append(("opensanctions", os_adapter.search(ctx.lei, SearchKind.ENTITY)))
     if REGISTRY.get("openaleph") is not None and _want("openaleph"):
         tasks.append(("openaleph", _openaleph_strategies(ctx)))
+    # OpenTender is a list-result registration + name source (like openaleph):
+    # identifier-first over the body_ids index, name-gated fallback. Dispatched
+    # only when registered — dormant until the DB artifact ships.
+    if REGISTRY.get("opentender") is not None and _want("opentender"):
+        tasks.append(("opentender", _opentender_strategies(ctx)))
     ct_adapter = REGISTRY.get("climatetrace")
     if ct_adapter is not None and hasattr(ct_adapter, "fetch_by_lei") and _want("climatetrace"):
         tasks.append(("climatetrace", ct_adapter.fetch_by_lei(ctx.lei)))
@@ -1279,7 +1339,7 @@ async def _lookup_pipeline(
                 continue
 
             # List-result sources (search-style adapters).
-            if source_id in ("opensanctions", "openaleph"):
+            if source_id in ("opensanctions", "openaleph", "opentender"):
                 list_hits = (
                     [h for h in result if not h.is_stub]
                     if isinstance(result, list)
@@ -2025,7 +2085,7 @@ async def lookup_source(
         except Exception as exc:  # noqa: BLE001
             error = _fmt_source_error(exc)
             continue
-        if sid in ("opensanctions", "openaleph"):
+        if sid in ("opensanctions", "openaleph", "opentender"):
             if isinstance(result, list):
                 hits.extend(h for h in result if not h.is_stub)
         else:

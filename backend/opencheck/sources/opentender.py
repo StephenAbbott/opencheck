@@ -52,6 +52,7 @@ import os
 import re
 import sqlite3
 import threading
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -64,6 +65,58 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 logger = logging.getLogger(__name__)
 
 _CACHE_NS = "opentender"
+
+# BodyIdentifier types that genuinely carry a national company *registration*
+# number, and are therefore safe to key an identifier lookup on (issue #29).
+# Deliberately excludes:
+#   * SOURCE_ID / ETALON_ID — DIGIWHIST-internal record keys, not registrations;
+#   * BVD_ID — a Bureau van Dijk proprietary key, not a public registration;
+#   * VAT — only a handful of rows in the artifact and collides across the EU
+#     VIES space, so near-useless as a registration key here.
+# The extractor stores the raw DIGIWHIST ``type`` in ``body_ids.id_type``, so
+# these names match the on-disk values verbatim.
+_REGISTRATION_ID_TYPES: tuple[str, ...] = (
+    "ORGANIZATION_ID",
+    "TRADE_REGISTER",
+    "HEADER_ICO",
+    "TAX_ID",
+)
+
+_NAME_PUNCT = re.compile(r"[^\w\s]", re.UNICODE)
+
+
+def _normalise_name(text: str) -> str:
+    """Casefold + strip punctuation/diacritics + collapse whitespace.
+
+    Byte-for-byte the same discipline as ``sources.openaleph._normalise_name``
+    (and ``reconcile._normalise_name``): names are *compared*, never scored.
+    """
+    if not text:
+        return ""
+    folded = unicodedata.normalize("NFKD", text)
+    folded = "".join(c for c in folded if not unicodedata.combining(c))
+    folded = _NAME_PUNCT.sub(" ", folded.casefold())
+    return " ".join(folded.split())
+
+
+def _tender_bears_name(tender: dict[str, Any], wanted: str) -> bool:
+    """True when some body in ``tender`` is actually named ``wanted``.
+
+    The honest test for a *name* search over procurement records (issue #21,
+    mirroring ``openaleph._bears_name``): a tender surfaced for the query
+    "Orange S.A." must involve a body that really *is* Orange S.A. OpenTender's
+    FTS matches the token "Orange" against "Red-Orange e.U." and "Orange
+    controls s.r.o." too — neither of which is the subject — so a BM25 rank is
+    not a match. Equality on a body's own name is the only reliable gate, and
+    it keeps genuine name-recall for subjects whose registration id yields
+    nothing. No relevance-score threshold (forbidden by #21).
+    """
+    if not wanted:
+        return False
+    for body in _walk_bodies(tender):
+        if _normalise_name(str(body.get("name") or "")) == wanted:
+            return True
+    return False
 
 # Serialises S3 downloads so concurrent first-requests — or the startup warm-up
 # racing a request — can never stream into the same file at once and corrupt it.
@@ -259,8 +312,13 @@ class OpenTenderAdapter(SourceAdapter):
         )
         rows = cur.fetchall()
         if not rows:
-            # Fall back to prefix MATCH on individual tokens.
-            tokens = [w for w in safe_q.split() if len(w) >= 2]
+            # Fall back to prefix MATCH on individual tokens. Extract
+            # alphanumeric word-runs (not a bare whitespace split): a token
+            # like "S.A." would otherwise reach FTS5 as the prefix term
+            # ``S.A.*`` and raise ``fts5: syntax error near "."``, so any name
+            # with internal punctuation (S.A., e.U., A/S, s.r.o.) would silently
+            # return nothing. ``\w+`` keeps only FTS-safe prefix terms.
+            tokens = [w for w in re.findall(r"\w+", safe_q) if len(w) >= 2]
             if tokens:
                 fts_query = " OR ".join(f"{w}*" for w in tokens)
                 cur = conn.execute(
@@ -339,6 +397,105 @@ class OpenTenderAdapter(SourceAdapter):
             "tender_id": hit_id,
             "tender": tender,
         }
+
+    # ------------------------------------------------------------------
+    # Identifier-first lookup (issue #29)
+    # ------------------------------------------------------------------
+
+    async def fetch_by_registration(
+        self, country: str, registration_number: str
+    ) -> list[SourceHit]:
+        """Return tenders whose bodies carry ``registration_number`` in ``country``.
+
+        Queries the indexed ``body_ids`` table on ``id_value`` (using
+        ``idx_body_ids_lookup``), restricted to the id_types that genuinely
+        carry registration numbers (``_REGISTRATION_ID_TYPES``) and scoped to
+        the tender's ``country`` — so a French SIREN can never collide with a
+        same-digit identifier in another jurisdiction. Degrades to an empty
+        list (never raises) when no DB is available.
+        """
+        reg = (registration_number or "").strip()
+        cc = (country or "").strip().upper()
+        if not reg or not cc:
+            return []
+        conn = self._conn()
+        if conn is None:
+            return []
+        return await asyncio.to_thread(
+            self._db_fetch_by_registration, conn, cc, reg
+        )
+
+    def _db_fetch_by_registration(
+        self, conn: sqlite3.Connection, country: str, reg: str
+    ) -> list[SourceHit]:
+        try:
+            return self._db_fetch_by_registration_impl(conn, country, reg)
+        except sqlite3.DatabaseError as exc:
+            logger.error(
+                "opentender: DB error during registration lookup "
+                "(%s/%s) — returning no results and dropping the connection: %s",
+                country, reg, exc,
+            )
+            self._db = None
+            return []
+
+    def _db_fetch_by_registration_impl(
+        self, conn: sqlite3.Connection, country: str, reg: str
+    ) -> list[SourceHit]:
+        placeholders = ",".join("?" for _ in _REGISTRATION_ID_TYPES)
+        cur = conn.execute(
+            f"""
+            SELECT DISTINCT t.persistent_id, t.data
+            FROM body_ids b
+            JOIN tenders t ON t.persistent_id = b.persistent_id
+            WHERE b.id_value = ?
+              AND b.id_type IN ({placeholders})
+              AND t.country = ?
+            LIMIT 20
+            """,
+            (reg, *_REGISTRATION_ID_TYPES, country),
+        )
+        hits: list[SourceHit] = []
+        for row in cur.fetchall():
+            try:
+                tender = json.loads(row["data"])
+            except (json.JSONDecodeError, TypeError):
+                continue
+            hits.append(self._tender_hit(tender))
+        return hits
+
+    async def fetch_by_name(self, legal_name: str) -> list[SourceHit]:
+        """Return tenders whose bodies are actually *named* ``legal_name``.
+
+        The name-recall fallback for the lookup flow: run the FTS body-name
+        search, then keep only tenders that bear the subject's legal name
+        (``_tender_bears_name``) — gated on name equivalence exactly like
+        ``openaleph.fetch_by_name`` (issue #21), never a relevance score.
+        Degrades to an empty list when no DB is available.
+        """
+        name = (legal_name or "").strip()
+        if not name:
+            return []
+        conn = self._conn()
+        if conn is None:
+            return []
+        return await asyncio.to_thread(self._db_fetch_by_name, conn, name)
+
+    def _db_fetch_by_name(
+        self, conn: sqlite3.Connection, legal_name: str
+    ) -> list[SourceHit]:
+        try:
+            candidates = self._db_search_impl(conn, legal_name)
+        except sqlite3.DatabaseError as exc:
+            logger.error(
+                "opentender: DB error during name lookup (%r) — "
+                "returning no results and dropping the connection: %s",
+                legal_name, exc,
+            )
+            self._db = None
+            return []
+        wanted = _normalise_name(legal_name)
+        return [h for h in candidates if _tender_bears_name(h.raw, wanted)]
 
     # ------------------------------------------------------------------
     # Hit factory
