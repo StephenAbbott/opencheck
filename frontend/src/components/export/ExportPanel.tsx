@@ -59,7 +59,11 @@ export function ExportPanel({
             manifest, and per-source licence notes.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        {/* w-full on mobile so the control row owns its own line and the
+            select can shrink; min-w-0 lets flex actually shrink it below the
+            intrinsic width of the longest <option>, which otherwise pushes
+            the Download button off-screen on narrow viewports. */}
+        <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
           <select
             aria-label="Export format"
             value={format}
@@ -74,7 +78,7 @@ export function ExportPanel({
                   | "ftm"
               )
             }
-            className="border border-oo-rule rounded px-2 py-1.5 text-[13px] bg-white"
+            className="min-w-0 flex-1 sm:flex-none border border-oo-rule rounded px-2 py-1.5 text-[13px] bg-white"
           >
             <option value="zip">ZIP (bods + manifest + licenses)</option>
             <option value="json">JSON (BODS array)</option>
@@ -86,7 +90,7 @@ export function ExportPanel({
           <a
             href={href}
             download
-            className="bg-oo-blue text-white text-[13px] font-medium rounded px-4 py-1.5 hover:bg-oo-burst transition-colors inline-block"
+            className="shrink-0 whitespace-nowrap bg-oo-blue text-white text-[13px] font-medium rounded px-4 py-1.5 hover:bg-oo-burst transition-colors inline-block"
           >
             Download
           </a>
