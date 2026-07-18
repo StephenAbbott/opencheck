@@ -84,6 +84,8 @@ function focusCitation(cite: Cite) {
     const el = document.getElementById(`oc-source-${cite.sourceId}`);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (el.tabIndex < 0) el.tabIndex = -1;
+      el.focus({ preventScroll: true });
       el.classList.add("oc-cite-flash");
       window.setTimeout(() => el.classList.remove("oc-cite-flash"), 1600);
     }

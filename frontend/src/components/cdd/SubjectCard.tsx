@@ -117,7 +117,15 @@ export function SubjectCard({
             />
           </svg>
           {copied ? "Link copied" : "Copy share link"}
+          <span className="sr-only">
+            {" "}
+            — copies a link whose social-media preview shows a live summary card for this entity
+          </span>
         </button>
+        {/* Always-mounted live region so the copied confirmation is announced. */}
+        <span role="status" className="sr-only">
+          {copied ? "Share link copied" : ""}
+        </span>
       </div>
 
       {/* Compact risk-signal summary — the headline finding, up top. The full
@@ -140,11 +148,13 @@ export function SubjectCard({
                 // page appear to refresh.
                 <button
                   type="button"
-                  onClick={() =>
-                    document
-                      .getElementById("risk-signals")
-                      ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                  }
+                  onClick={() => {
+                    const el = document.getElementById("risk-signals");
+                    if (!el) return;
+                    el.scrollIntoView({ behavior: "smooth", block: "start" });
+                    if (el.tabIndex < 0) el.tabIndex = -1;
+                    el.focus({ preventScroll: true });
+                  }}
                   className="text-[12px] font-medium text-oo-blue hover:underline"
                 >
                   +{overflow} more

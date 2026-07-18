@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { getSecurities, type Security, type SecuritiesResponse } from "../../lib/api";
 
 // Entity-level "Securities" section: ISINs linked to the LEI, combining GLEIF
@@ -20,7 +20,7 @@ function SecRow({ s, danger }: { s: Security; danger?: boolean }) {
   // shown once in the banner header — not per row. Rows stay narrow (ISIN +
   // type), which also keeps the box within the viewport on mobile.
   return (
-    <div
+    <li
       className={`flex items-center gap-2 px-2.5 py-1.5 rounded min-w-0 ${
         danger ? "bg-rose-50/60" : "border-b border-oo-rule/60 last:border-b-0"
       }`}
@@ -35,7 +35,7 @@ function SecRow({ s, danger }: { s: Security; danger?: boolean }) {
         {[s.type, s.exchange].filter(Boolean).join(" · ")}
         {s.name ? ` — ${s.name}` : ""}
       </span>
-    </div>
+    </li>
   );
 }
 
@@ -49,6 +49,10 @@ export function SecuritiesSection({ lei }: { lei: string }) {
   const [showAllRegimes, setShowAllRegimes] = useState(false);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("All");
+  const uid = useId();
+  const regimesId = `${uid}-regimes`;
+  const sanctionedListId = `${uid}-sanctioned`;
+  const drawerId = `${uid}-drawer`;
 
   useEffect(() => {
     let cancelled = false;
@@ -139,7 +143,7 @@ export function SecuritiesSection({ lei }: { lei: string }) {
               </span>
             </div>
             {sanctionedRegimes.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1 mb-2">
+              <div id={regimesId} className="flex flex-wrap items-center gap-1 mb-2">
                 {(showAllRegimes ? sanctionedRegimes : sanctionedRegimes.slice(0, 4)).map((r) => (
                   <RegimeChip key={r} label={r} />
                 ))}
@@ -147,6 +151,8 @@ export function SecuritiesSection({ lei }: { lei: string }) {
                   <button
                     type="button"
                     onClick={() => setShowAllRegimes((v) => !v)}
+                    aria-expanded={showAllRegimes}
+                    aria-controls={regimesId}
                     className="font-mono text-[10px] rounded px-1.5 py-0.5 text-rose-700 hover:underline"
                   >
                     {showAllRegimes ? "show fewer" : `+${sanctionedRegimes.length - 4} more`}
@@ -154,15 +160,17 @@ export function SecuritiesSection({ lei }: { lei: string }) {
                 )}
               </div>
             )}
-            <div className="space-y-1">
+            <ul id={sanctionedListId} className="space-y-1">
               {(showAllSanctioned ? sanctioned : sanctioned.slice(0, 2)).map((s) => (
                 <SecRow key={s.isin} s={s} danger />
               ))}
-            </div>
+            </ul>
             {sanctioned.length > 2 && (
               <button
                 type="button"
                 onClick={() => setShowAllSanctioned((v) => !v)}
+                aria-expanded={showAllSanctioned}
+                aria-controls={sanctionedListId}
                 className="mt-1.5 text-[11px] font-semibold text-rose-700 hover:underline"
               >
                 {showAllSanctioned ? "Hide" : `Show all ${sanctioned.length}`}
@@ -184,6 +192,8 @@ export function SecuritiesSection({ lei }: { lei: string }) {
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+              aria-controls={drawerId}
               className="text-[12px] font-medium text-oo-blue hover:text-oo-burst"
             >
               {expanded ? "Hide" : "Browse all"} ↗
@@ -196,7 +206,7 @@ export function SecuritiesSection({ lei }: { lei: string }) {
 
         {/* Drawer */}
         {expanded && meta.total > 0 && (
-          <div className="mt-3 border-t border-oo-rule pt-3">
+          <div id={drawerId} className="mt-3 border-t border-oo-rule pt-3">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <input
                 value={query}
@@ -221,16 +231,17 @@ export function SecuritiesSection({ lei }: { lei: string }) {
                 </button>
               ))}
             </div>
-            <div>
-              {filtered.map((s) => (
-                <SecRow key={s.isin} s={s} danger={s.sanctioned} />
-              ))}
-              {filtered.length === 0 && (
-                <p className="text-[12px] text-oo-muted py-2">No matching securities on the loaded pages.</p>
-              )}
-            </div>
+            {filtered.length > 0 ? (
+              <ul>
+                {filtered.map((s) => (
+                  <SecRow key={s.isin} s={s} danger={s.sanctioned} />
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[12px] text-oo-muted py-2">No matching securities on the loaded pages.</p>
+            )}
             <div className="mt-2 flex items-center gap-3 text-[11px] text-oo-muted font-mono">
-              <span>
+              <span role="status">
                 Showing {loaded.length.toLocaleString()} of {meta.total.toLocaleString()}
               </span>
               {loaded.length < meta.total && (

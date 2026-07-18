@@ -103,6 +103,7 @@ export function ExportPanel({
             className="underline text-oo-blue hover:text-oo-burst"
           >
             Senzing entity specification
+            <span className="sr-only"> (opens in new tab)</span>
           </a>{" "}
           (newline-delimited records, ready to load for entity resolution) — one
           record per company and person, with each disclosed ownership/control
@@ -120,6 +121,7 @@ export function ExportPanel({
             className="underline text-oo-blue hover:text-oo-burst"
           >
             FtM entities
+            <span className="sr-only"> (opens in new tab)</span>
           </a>{" "}
           (newline-delimited) — companies and people as nodes, each disclosed
           interest as an Ownership or Directorship link — ready for

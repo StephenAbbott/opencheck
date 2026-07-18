@@ -249,7 +249,14 @@ export default function App() {
 
   // Focus management — move focus to #main-content on view changes so keyboard
   // and screen reader users are oriented to the new page content (WCAG 2.4.3).
+  // Skipped on the initial mount so it doesn't steal focus from the top of the
+  // document (which would pre-empt the skip link).
+  const viewFocusMounted = useRef(false);
   useEffect(() => {
+    if (!viewFocusMounted.current) {
+      viewFocusMounted.current = true;
+      return;
+    }
     const el = document.getElementById("main-content");
     if (el) el.focus({ preventScroll: true });
   }, [view]);
@@ -257,6 +264,28 @@ export default function App() {
   // Three-mode search: "name" = GLEIF name search; "nationalId" = registration
   // number reverse lookup; "lei" = paste LEI directly.
   const [searchMode, setSearchMode] = useState<"name" | "nationalId" | "lei">("name");
+  // APG tabs keyboard pattern: Left/Right arrows (wrapping), Home and End move
+  // both focus and selection across the search-mode tabs (roving tabindex).
+  const SEARCH_TAB_ORDER = ["name", "nationalId", "lei"] as const;
+  const SEARCH_TAB_IDS: Record<(typeof SEARCH_TAB_ORDER)[number], string> = {
+    name: "tab-name",
+    nationalId: "tab-national-id",
+    lei: "tab-lei",
+  };
+  function onSearchTabKeyDown(e: React.KeyboardEvent<HTMLButtonElement>) {
+    const idx = SEARCH_TAB_ORDER.indexOf(searchMode);
+    let next: number;
+    if (e.key === "ArrowRight") next = (idx + 1) % SEARCH_TAB_ORDER.length;
+    else if (e.key === "ArrowLeft") next = (idx + SEARCH_TAB_ORDER.length - 1) % SEARCH_TAB_ORDER.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = SEARCH_TAB_ORDER.length - 1;
+    else return;
+    e.preventDefault();
+    const mode = SEARCH_TAB_ORDER[next];
+    setSearchMode(mode);
+    setMobileSearchOpen(true);
+    document.getElementById(SEARCH_TAB_IDS[mode])?.focus();
+  }
   const [nameQuery, setNameQuery] = useState("");
   const [nationalIdQuery, setNationalIdQuery] = useState("");
   // ISO 3166-1 alpha-2 country code for the national ID tab; defaults to UK.
@@ -707,6 +736,10 @@ export default function App() {
   const nationalIdFormatOk =
     !nationalIdTouched || validateNationalId(selectedCountry, nationalIdQuery);
 
+  // The hero heading is the page's <h1> on the homepage; once results are on
+  // screen the sr-only report heading below takes over as the <h1> (WCAG 1.3.1).
+  const HeroHeading = streamingLei ? "h2" : "h1";
+
   return (
     <div className="min-h-screen flex flex-col bg-oo-bg">
       {/* Skip-to-content link — visually hidden until focused (WCAG 2.4.1) */}
@@ -767,7 +800,7 @@ export default function App() {
                     window.history.pushState({}, "", url);
                   }
                 }}
-                aria-label="Back to homepage"
+                aria-label="OpenCheck — back to homepage"
                 className="flex items-center gap-2.5 hover:opacity-80 transition-opacity text-left"
               >
                 <OpenCheckIcon className="h-7 w-auto flex-shrink-0" />
@@ -776,10 +809,10 @@ export default function App() {
                 </span>
               </button>
               {sourcesQuery.data && (
-                <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-white/45 font-mono">
+                <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-white/70 font-mono">
                   <span className="text-white/70 font-semibold">{sourcesQuery.data.sources.filter(s => s.is_national_register).length}</span>
                   <span>national registers</span>
-                  <span className="text-white/20">·</span>
+                  <span className="text-white/20" aria-hidden>·</span>
                   <span className="text-white/70 font-semibold">{sourcesQuery.data.sources.filter((s: { is_national_register: boolean }) => !s.is_national_register).length}</span>
                   <span>open sources</span>
                 </span>
@@ -841,9 +874,9 @@ export default function App() {
         <>
         {/* ── Search panel — two-tab design ── */}
         <div className="mb-3">
-          <h2 className="font-head font-bold text-oo-ink leading-tight text-[20px] sm:text-[26px]">
+          <HeroHeading className="font-head font-bold text-oo-ink leading-tight text-[20px] sm:text-[26px]">
             Due diligence on <span className="text-oo-blue">3 million</span> companies, starting from a single ID
-          </h2>
+          </HeroHeading>
           <p className="text-[13px] sm:text-sm text-oo-muted leading-snug mt-2">
             With a Legal Entity Identifier, OpenCheck pulls open corporate data from 34 sources into one graph using the Beneficial Ownership Data Standard
           </p>
@@ -868,8 +901,10 @@ export default function App() {
               type="button"
               role="tab"
               aria-selected={searchMode === "name"}
-              aria-controls="panel-name"
+              aria-controls={searchMode === "name" ? "panel-name" : undefined}
               id="tab-name"
+              tabIndex={searchMode === "name" ? 0 : -1}
+              onKeyDown={onSearchTabKeyDown}
               onClick={() => { setSearchMode("name"); setMobileSearchOpen(true); }}
               className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors bg-white ${
                 searchMode === "name"
@@ -884,8 +919,10 @@ export default function App() {
               type="button"
               role="tab"
               aria-selected={searchMode === "nationalId"}
-              aria-controls="panel-national-id"
+              aria-controls={searchMode === "nationalId" ? "panel-national-id" : undefined}
               id="tab-national-id"
+              tabIndex={searchMode === "nationalId" ? 0 : -1}
+              onKeyDown={onSearchTabKeyDown}
               onClick={() => { setSearchMode("nationalId"); setMobileSearchOpen(true); }}
               className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors border-l border-oo-rule bg-white ${
                 searchMode === "nationalId"
@@ -900,8 +937,10 @@ export default function App() {
               type="button"
               role="tab"
               aria-selected={searchMode === "lei"}
-              aria-controls="panel-lei"
+              aria-controls={searchMode === "lei" ? "panel-lei" : undefined}
               id="tab-lei"
+              tabIndex={searchMode === "lei" ? 0 : -1}
+              onKeyDown={onSearchTabKeyDown}
               onClick={() => { setSearchMode("lei"); setMobileSearchOpen(true); }}
               className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors border-l border-oo-rule bg-white ${
                 searchMode === "lei"
@@ -944,7 +983,8 @@ export default function App() {
                 </div>
               </form>
 
-              <div aria-live="polite" aria-atomic="true">
+              {/* No aria-live here — the role="alert" children announce themselves */}
+              <div>
                 {nameSearchMutation.isError && (
                   <div role="alert" className="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
                     {nameSearchMutation.error?.message ?? "Search failed"}
@@ -1103,7 +1143,8 @@ export default function App() {
                 </div>
               </form>
 
-              <div aria-live="polite" aria-atomic="true">
+              {/* No aria-live here — the role="alert" children announce themselves */}
+              <div>
                 {nationalIdSearchMutation.isError && (
                   <div role="alert" className="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
                     {nationalIdSearchMutation.error?.message ?? "Search failed"}
@@ -1221,7 +1262,8 @@ export default function App() {
           )}
         </div>
 
-        <div aria-live="assertive" aria-atomic="true">
+        {/* No aria-live here — the role="alert" child announces itself */}
+        <div>
           {lookupMutation.isError && (
             <div role="alert" className="mb-6 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
               {lookupMutation.error?.message}
@@ -1258,6 +1300,12 @@ export default function App() {
               Resume lookup
             </button>
           </div>
+        )}
+
+        {streamingLei && (
+          <h1 className="sr-only">
+            Due diligence report: {legalName ?? streamingLei}
+          </h1>
         )}
 
         {streamingLei && (
@@ -1575,9 +1623,9 @@ export default function App() {
             {/* Right: link groups */}
             <div className="flex gap-10 sm:justify-end">
               <div>
-                <div className="text-[10px] font-medium tracking-widest uppercase text-oo-muted mb-3">
+                <h3 className="font-body text-[10px] font-medium tracking-widest uppercase text-oo-muted mb-3">
                   Project
-                </div>
+                </h3>
                 <a
                   href="/api"
                   onClick={(e) => { e.preventDefault(); navigate("api"); }}
@@ -1616,9 +1664,9 @@ export default function App() {
                 </a>
               </div>
               <div>
-                <div className="text-[10px] font-medium tracking-widest uppercase text-oo-muted mb-3">
+                <h3 className="font-body text-[10px] font-medium tracking-widest uppercase text-oo-muted mb-3">
                   Legal
-                </div>
+                </h3>
                 <a
                   href="https://github.com/StephenAbbott/opencheck?tab=License-1-ov-file"
                   target="_blank"
@@ -1716,6 +1764,10 @@ function CopyField({ value }: { value: string }) {
       >
         {copied ? "Copied" : "Copy"}
       </button>
+      {/* Always-mounted status region so the copy confirmation is announced */}
+      <span role="status" className="sr-only">
+        {copied ? "Copied to clipboard" : ""}
+      </span>
     </div>
   );
 }
@@ -2300,7 +2352,7 @@ function ExampleLeiPicker({
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Download Neo4j CSV bundle"
-                className="absolute top-3 right-3 opacity-40 hover:opacity-90 transition-opacity"
+                className="absolute top-3 right-3 opacity-70 hover:opacity-100 transition-opacity"
                 aria-label={`Download Neo4j CSV bundle for ${ex.name}`}
               >
                 <Neo4jIcon />
@@ -2424,17 +2476,17 @@ function HowItWorks() {
   return (
     <section className="mb-10 bg-white border border-oo-rule rounded-oo p-7">
       <SectionLabel>How it works</SectionLabel>
-      <div className="mt-2 max-w-2xl">
+      <ol className="mt-2 max-w-2xl">
         {HOW_IT_WORKS_STEPS.map((step, i) => {
           const isLast = i === HOW_IT_WORKS_STEPS.length - 1;
           return (
-            <div key={step.num} className="flex gap-5">
+            <li key={step.num} className="flex gap-5">
               {/* Left rail — circle node + connector line */}
               <div className="flex flex-col items-center flex-shrink-0" style={{ width: 28 }}>
                 <div
                   className="flex items-center justify-center rounded-full text-white flex-shrink-0"
                   style={{ width: 28, height: 28, background: step.accent }}
-                  aria-label={`Step ${step.num}`}
+                  aria-hidden="true"
                 >
                   {step.icon}
                 </div>
@@ -2449,16 +2501,17 @@ function HowItWorks() {
               {/* Right content */}
               <div className={isLast ? "pb-0" : "pb-6"} style={{ paddingTop: 3 }}>
                 <p className="font-head font-bold text-[14px] text-oo-ink leading-snug">
+                  <span className="sr-only">{`Step ${step.num}: `}</span>
                   {step.title}
                 </p>
                 <p className="text-[13px] leading-[1.65] text-oo-muted mt-1.5">
                   {step.body}
                 </p>
               </div>
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ol>
     </section>
   );
 }
@@ -2650,12 +2703,14 @@ function PossiblySameTable({ pairs }: { pairs: PossiblySameEntity[] }) {
                 {p.jurisdiction || "—"}
               </td>
               <td className="py-2 text-right">
-                <span
-                  title={p.reason}
-                  className="inline-flex items-center gap-1 text-[11px] bg-amber-50 border border-amber-300 text-amber-800 rounded px-1.5 py-0.5"
-                >
+                <span className="inline-flex items-center gap-1 text-[11px] bg-amber-50 border border-amber-300 text-amber-800 rounded px-1.5 py-0.5">
                   likely same
                 </span>
+                {p.reason && (
+                  <span className="block mt-1 text-[11px] text-oo-muted break-words">
+                    {p.reason}
+                  </span>
+                )}
               </td>
             </tr>
           ))}

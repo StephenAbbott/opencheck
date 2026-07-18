@@ -56,6 +56,7 @@ function SourceChip({
     >
       {label}
       <span aria-hidden>↗</span>
+      <span className="sr-only"> (opens in new tab)</span>
     </a>
   );
 }

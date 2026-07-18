@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { getNzAssociations } from "../../lib/api";
 import type {
   NzAssociatedCompany,
@@ -46,6 +46,7 @@ function CompanyRow({ c }: { c: NzAssociatedCompany }) {
         {c.link ? (
           <a href={c.link} target="_blank" rel="noopener noreferrer" className="hover:underline">
             {name}
+            <span className="sr-only"> (opens in new tab)</span>
           </a>
         ) : (
           name
@@ -70,6 +71,7 @@ function CompanyRow({ c }: { c: NzAssociatedCompany }) {
 
 function PersonRow({ p }: { p: NzPersonAssociations }) {
   const [open, setOpen] = useState(false);
+  const detailsId = useId();
   const linked = p.other_company_count > 0;
 
   return (
@@ -113,7 +115,8 @@ function PersonRow({ p }: { p: NzPersonAssociations }) {
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            aria-pressed={open}
+            aria-expanded={open}
+            aria-controls={detailsId}
             className="shrink-0 text-[11px] font-mono text-oo-blue hover:underline"
           >
             {open ? "Hide" : "Show"}
@@ -122,7 +125,7 @@ function PersonRow({ p }: { p: NzPersonAssociations }) {
       </div>
 
       {open && linked && (
-        <ul className="mt-2 rounded-oo border border-oo-rule bg-white px-3 py-1.5">
+        <ul id={detailsId} className="mt-2 rounded-oo border border-oo-rule bg-white px-3 py-1.5">
           {p.companies.map((c) => (
             <CompanyRow key={`${c.number}-${c.roles.join()}`} c={c} />
           ))}
@@ -136,9 +139,16 @@ function PersonRow({ p }: { p: NzPersonAssociations }) {
 // Invitation strip — shown before the lookup and when collapsed again
 // ---------------------------------------------------------------------
 
-function InvitationStrip({ onClick }: { onClick: () => void }) {
+function InvitationStrip({
+  onClick,
+  buttonRef,
+}: {
+  onClick: () => void;
+  buttonRef?: React.Ref<HTMLButtonElement>;
+}) {
   return (
     <button
+      ref={buttonRef}
       type="button"
       onClick={onClick}
       className="mt-3 w-full flex items-center gap-3 rounded-oo border border-[#c7cdf0] bg-[#eef1fb] px-3 py-2 text-left transition-colors hover:bg-[#e6eafb]"
@@ -171,6 +181,18 @@ export function NzAssociations({ companyNumber }: { companyNumber: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const stripRef = useRef<HTMLButtonElement | null>(null);
+
+  // Focus management: the invitation-strip button unmounts when the lookup
+  // runs, so move focus to the results section once data arrives (and when
+  // re-expanding); moving back to the strip button when collapsing.
+  useEffect(() => {
+    if (data && !collapsed) sectionRef.current?.focus({ preventScroll: true });
+  }, [data, collapsed]);
+  useEffect(() => {
+    if (collapsed) stripRef.current?.focus({ preventScroll: true });
+  }, [collapsed]);
 
   async function run() {
     if (loading || data) return;
@@ -193,11 +215,15 @@ export function NzAssociations({ companyNumber }: { companyNumber: string }) {
   // Collapsed after viewing — back to the invitation strip; re-opening keeps
   // the already-fetched data (no second lookup).
   if (data && collapsed) {
-    return <InvitationStrip onClick={() => setCollapsed(false)} />;
+    return <InvitationStrip onClick={() => setCollapsed(false)} buttonRef={stripRef} />;
   }
 
   return (
-    <section className="mt-3 rounded-oo border border-oo-rule bg-oo-bg p-3">
+    <section
+      ref={sectionRef}
+      tabIndex={-1}
+      className="mt-3 rounded-oo border border-oo-rule bg-oo-bg p-3 focus:outline-none"
+    >
       {loading && <p role="status" className="text-[12px] text-oo-muted">Searching the NZ register…</p>}
       {error && <p role="alert" className="text-[12px] text-red-700">{error}</p>}
 
