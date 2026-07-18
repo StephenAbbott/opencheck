@@ -1724,16 +1724,22 @@ function ApiEndpoint({
   path,
   children,
   params,
+  method = "GET",
 }: {
   path: string;
   children: React.ReactNode;
   params?: [string, string][];
+  method?: "GET" | "POST" | "PUT";
 }) {
+  const methodClasses =
+    method === "GET"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+      : "bg-blue-50 text-blue-700 border-blue-200";
   return (
     <div className="py-3.5 border-t border-oo-rule first:border-t-0 first:pt-0">
       <div className="flex items-baseline gap-2 flex-wrap">
-        <span className="font-mono text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded px-1.5 py-0.5">
-          GET
+        <span className={`font-mono text-[10px] font-semibold rounded px-1.5 py-0.5 border ${methodClasses}`}>
+          {method}
         </span>
         <code className="font-mono text-[13px] text-oo-ink break-all">{path}</code>
       </div>
@@ -1906,6 +1912,57 @@ function ApiPage() {
             Per-source licence terms (commercial use, attribution, share-alike) plus a
             combined commercial-use assessment for the listed sources — the data behind
             the export “licensing assistant”.
+          </ApiEndpoint>
+        </BtsCard>
+
+        <BtsCard title="AI narrative &amp; analyst sign-off">
+          <p className="text-[13px] leading-[1.7] text-oo-muted mb-3">
+            An optional AI-written plain-English summary of a lookup, plus the
+            defensible audit trail an analyst builds around it. Generated only on
+            request; each run is identified by a <code className={mono}>run_id</code>{" "}
+            so dispositions stay pinned to the exact narrative they signed off.
+          </p>
+          <ApiEndpoint
+            path="/narrative?lei=<LEI>"
+            params={[
+              ["deepen_top", "How many top hits to deepen before summarising (default 5)."],
+              ["refresh", "Bypass the short-lived replay cache (default false)."],
+            ]}
+          >
+            A cited, plain-English summary of the subject built from the same BODS
+            synthesis as <code className={mono}>/lookup</code> — returns the{" "}
+            <code className={mono}>summary</code>, per-sentence{" "}
+            <code className={mono}>claims</code> with source citations, stated{" "}
+            <code className={mono}>limitations</code>, the <code className={mono}>model</code> /{" "}
+            <code className={mono}>prompt_version</code>, and a <code className={mono}>run_id</code>{" "}
+            identifying this exact run.
+          </ApiEndpoint>
+          <ApiEndpoint
+            method="PUT"
+            path="/narrative/dispositions"
+            params={[
+              ["body", "{ lei, run_id, prompt_version, model, dispositions: [{ claim_id, status, comment }] }"],
+              ["status", "accepted | disputed | needs_review — the analyst's decision per claim."],
+            ]}
+          >
+            Persist the analyst’s claim dispositions for one narrative run (whole-sheet,
+            last-write-wins). No model call — pure metadata around an existing narrative;
+            <code className={mono}>decided_at</code> / <code className={mono}>updated_at</code>{" "}
+            are stamped server-side.
+          </ApiEndpoint>
+          <ApiEndpoint
+            path="/narrative/dispositions?lei=<LEI>&run_id=<id>"
+          >
+            The stored disposition sheet for a <code className={mono}>(lei, run_id)</code> run,
+            or 404 if none has been saved. Rehydrates the sign-off state when the page reloads.
+          </ApiEndpoint>
+          <ApiEndpoint method="POST" path="/export/pdf">
+            An accessible (tagged PDF/UA-1) due-diligence report for an LEI, built from
+            the same cached lookup as <code className={mono}>/lookup</code>. The request
+            body embeds the <code className={mono}>narrative</code> the client already
+            generated (no fresh model call) and, when present, the analyst’s{" "}
+            <code className={mono}>dispositions</code>, so the accept / dispute / needs-review
+            decisions and notes are rendered into the report’s audit trail.
           </ApiEndpoint>
         </BtsCard>
 
