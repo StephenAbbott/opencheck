@@ -166,9 +166,19 @@ class EitiAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     async def fetch_by_registration(
-        self, jurisdiction: str, registered_as: str, legal_name: str = ""
+        self,
+        jurisdiction: str,
+        registered_as: str,
+        legal_name: str = "",
+        us_ein: str = "",
     ) -> dict[str, Any] | None:
-        """Match ``(jurisdiction, registeredAs)`` against the EITI index.
+        """Match a company against the EITI index.
+
+        Tries the GLEIF anchor's ``registeredAs`` first, then a derived
+        ``us_ein`` (EITI's US identifications are federal EINs, not the
+        state-registry numbers GLEIF publishes as ``registeredAs``, so US
+        subjects only join via the EIN). Matching is country-scoped and
+        punctuation-insensitive (``42-1638663`` == ``421638663``).
 
         Returns ``None`` when the company is not in the EITI data. On a
         match, returns the bundle: organisation records from the artifact
@@ -178,6 +188,8 @@ class EitiAdapter(SourceAdapter):
         """
         cc = (jurisdiction or "").strip().upper()
         ident = _match_identification(cc, registered_as)
+        if ident is None and us_ein:
+            ident = _match_identification(cc, us_ein)
         if ident is None:
             return None
         return await self._build_bundle(cc, ident, legal_name=legal_name)
