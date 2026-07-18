@@ -32,9 +32,14 @@ Usage
 
 Notes
 -----
-  - No extra dependencies beyond the standard library; json, gzip, zipfile are used.
+  - Depends only on the standard library plus ``opencheck.opentender_projection``
+    (the shared keep-list) — json, gzip, zipfile do the ingestion work.
   - Processing the full UK NDJSON (~150 k records) takes ~2 min and produces
     a ~400 MB SQLite file; processing all 35 countries will be several GB.
+  - ``--slim`` (default **on**) stores only the tender fields OpenCheck actually
+    consumes, so the artifact is born small (the raw tender JSON is ~87% of an
+    un-slimmed build). Pass ``--no-slim`` to keep the full raw JSON. To slim an
+    existing (un-slimmed) database in place, run ``scripts/slim_opentender.py``.
   - Run with OPENTENDER_DB_FILE=/path/to/opentender.db in your .env to activate
     the adapter, or set OPENTENDER_S3_URL to have the adapter download it at startup.
 
@@ -60,6 +65,8 @@ import sys
 import zipfile
 from pathlib import Path
 from typing import Iterator
+
+from opencheck.opentender_projection import project_tender
 
 logger = logging.getLogger(__name__)
 
@@ -303,8 +310,16 @@ def _insert_tender(
     tender: dict,
     *,
     dry_run: bool = False,
+    slim: bool = True,
 ) -> bool:
-    """Insert one tender into all tables. Returns True if inserted/updated."""
+    """Insert one tender into all tables. Returns True if inserted/updated.
+
+    When *slim* is set (the default), the ``data`` blob is projected down to the
+    fields OpenCheck actually consumes (see ``opencheck.opentender_projection``)
+    so freshly-built databases are born small. The dedicated columns and the
+    FTS / body_ids indexes are still derived from the *full* tender below, so
+    projecting the blob does not affect them.
+    """
     persistent_id = (tender.get("persistentId") or tender.get("id") or "").strip()
     if not persistent_id:
         return False
@@ -321,7 +336,8 @@ def _insert_tender(
     integrity_score = scores.get("integrity")
     transparency_score = scores.get("transparency")
 
-    data_json = json.dumps(tender, ensure_ascii=False)
+    blob = project_tender(tender) if slim else tender
+    data_json = json.dumps(blob, ensure_ascii=False)
 
     if dry_run:
         return True
@@ -425,8 +441,14 @@ def build(
     from_year: int | None = None,
     dry_run: bool = False,
     batch_size: int = 500,
+    slim: bool = True,
 ) -> int:
-    """Build (or update) the SQLite database. Returns the number of tenders processed."""
+    """Build (or update) the SQLite database. Returns the number of tenders processed.
+
+    When *slim* is set (the default), each ``data`` blob is projected to the
+    consumed fields (see ``opencheck.opentender_projection``) so the artifact is
+    born small; pass ``slim=False`` to store the full raw tender JSON.
+    """
     if dry_run:
         logger.info("Dry-run mode — no database writes.")
         conn = sqlite3.connect(":memory:")
@@ -447,7 +469,7 @@ def build(
 
         for tender in _iter_source(path, from_year=from_year):
             try:
-                inserted = _insert_tender(cur, tender, dry_run=dry_run)
+                inserted = _insert_tender(cur, tender, dry_run=dry_run, slim=slim)
                 if inserted:
                     total += 1
                     batch_count += 1
@@ -530,6 +552,16 @@ def main() -> None:
         help="Commit to SQLite after every N tenders (default: 500).",
     )
     parser.add_argument(
+        "--slim",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "Project each stored tender blob down to the fields OpenCheck "
+            "consumes, so the artifact is born small (default: on). "
+            "Pass --no-slim to store the full raw tender JSON."
+        ),
+    )
+    parser.add_argument(
         "--verbose", "-v",
         action="store_true",
         help="Enable debug logging.",
@@ -556,12 +588,18 @@ def main() -> None:
     else:
         logger.info("Date filter: disabled — including all years.")
 
+    if args.slim:
+        logger.info("Slim mode: storing projected tender blobs (consumed fields only).")
+    else:
+        logger.info("Slim mode disabled: storing full raw tender JSON.")
+
     total = build(
         inputs,
         output=args.output,
         from_year=from_year,
         dry_run=args.dry_run,
         batch_size=args.batch_size,
+        slim=args.slim,
     )
 
     if not args.dry_run:
