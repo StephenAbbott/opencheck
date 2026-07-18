@@ -280,8 +280,8 @@ export function HistoryTimeline({
       </header>
 
       <div className="px-5 py-4">
-        {loading && <p className="text-[13px] text-oo-muted">Loading change history…</p>}
-        {error && <p className="text-[13px] text-red-700">{error}</p>}
+        {loading && <p role="status" className="text-[13px] text-oo-muted">Loading change history…</p>}
+        {error && <p role="alert" className="text-[13px] text-red-700">{error}</p>}
 
         {!loading && !error && data && data.notable.length === 0 && (
           <p className="text-[13px] text-oo-muted leading-[1.6]">

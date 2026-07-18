@@ -812,8 +812,8 @@ export function HitRow({
       {/* Expanded content */}
       {anyOpen && (
         <div className="mt-4 bg-oo-bg rounded-oo p-4 text-[12px]">
-          {loading && <p className="text-oo-muted">Fetching…</p>}
-          {error   && <p className="text-red-700">{error}</p>}
+          {loading && <p className="text-oo-muted" role="status">Fetching…</p>}
+          {error   && <p className="text-red-700" role="alert">{error}</p>}
           {detail  && (
             <DeepenBlock
               detail={detail}
@@ -835,17 +835,20 @@ export function HitRow({
 
 export function SkeletonSourceCard() {
   return (
-    <article className="bg-white border border-oo-rule rounded-oo animate-pulse" aria-hidden>
-      <header className="px-5 py-3 border-b border-oo-rule flex items-start justify-between gap-3">
-        <div className="h-4 bg-oo-rule rounded w-44" />
-        <div className="h-3 bg-oo-rule rounded w-12 mt-0.5" />
-      </header>
-      <div className="px-5 py-4 space-y-2.5">
-        <div className="h-3 bg-oo-rule rounded w-3/4" />
-        <div className="h-3 bg-oo-rule rounded w-1/2" />
-        <div className="h-3 bg-oo-rule rounded w-2/3" />
-      </div>
-    </article>
+    <>
+      <span role="status" className="sr-only">Source result still loading</span>
+      <article className="bg-white border border-oo-rule rounded-oo animate-pulse" aria-hidden>
+        <header className="px-5 py-3 border-b border-oo-rule flex items-start justify-between gap-3">
+          <div className="h-4 bg-oo-rule rounded w-44" />
+          <div className="h-3 bg-oo-rule rounded w-12 mt-0.5" />
+        </header>
+        <div className="px-5 py-4 space-y-2.5">
+          <div className="h-3 bg-oo-rule rounded w-3/4" />
+          <div className="h-3 bg-oo-rule rounded w-1/2" />
+          <div className="h-3 bg-oo-rule rounded w-2/3" />
+        </div>
+      </article>
+    </>
   );
 }
 
@@ -960,7 +963,7 @@ export function SourceBucketCard({
       </header>
       {bucket.error && (
         <div className="px-5 py-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-[13px] text-red-700">{bucket.error}</p>
+          <p className="text-[13px] text-red-700" role="alert">{bucket.error}</p>
           {onRetry && (
             <button
               type="button"
@@ -968,7 +971,7 @@ export function SourceBucketCard({
               disabled={retrying}
               className="shrink-0 rounded border border-red-300 px-3 py-1 text-[12px] font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
             >
-              {retrying ? "Retrying…" : "Retry source"}
+              {retrying ? <span role="status">Retrying…</span> : "Retry source"}
             </button>
           )}
         </div>

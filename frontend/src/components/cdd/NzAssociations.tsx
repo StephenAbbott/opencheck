@@ -198,8 +198,8 @@ export function NzAssociations({ companyNumber }: { companyNumber: string }) {
 
   return (
     <section className="mt-3 rounded-oo border border-oo-rule bg-oo-bg p-3">
-      {loading && <p className="text-[12px] text-oo-muted">Searching the NZ register…</p>}
-      {error && <p className="text-[12px] text-red-700">{error}</p>}
+      {loading && <p role="status" className="text-[12px] text-oo-muted">Searching the NZ register…</p>}
+      {error && <p role="alert" className="text-[12px] text-red-700">{error}</p>}
 
       {data && !data.available && (
         <div className="flex items-start justify-between gap-3">

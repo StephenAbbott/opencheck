@@ -45,10 +45,13 @@ function IdentifierPill({
       title={corroborated ? "Also published by GLEIF for this LEI" : undefined}
     >
       {corroborated && (
-        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4" />
-          <path d="M5 8.2 L7 10.2 L11 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <>
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4" />
+            <path d="M5 8.2 L7 10.2 L11 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="sr-only">corroborated by GLEIF</span>
+        </>
       )}
       <span className="text-oo-muted">{label}:</span>
       <span className={corroborated ? "text-emerald-800" : "text-oo-ink"}>{value}</span>

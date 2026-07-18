@@ -497,6 +497,7 @@ export default function BodsGraphExplorer({
           <span className="text-[12px] text-oo-muted">Export network</span>
           <select
             value={exportFormat}
+            aria-label="Export network format"
             onChange={(e) => setExportFormat(e.target.value as NetworkExportFormat)}
             className="border border-oo-rule rounded px-2 py-1 text-[12px] bg-white"
           >

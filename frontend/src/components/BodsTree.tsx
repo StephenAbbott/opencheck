@@ -15,6 +15,13 @@ function typeLabel(recordType: string): string {
   return recordType === "person" || recordType === "personStatement" ? "Person" : "Entity";
 }
 
+/** Country code as text from the flag URL ("/flags/gb.svg" → "GB") — the tree
+ *  row only carries the flag image URL (see flagUrl() in lib/bodsGraph.ts). */
+function jurisdictionCode(flagUrl: string): string {
+  const m = flagUrl.match(/\/([a-z0-9]{2,3})\.svg$/i);
+  return m ? m[1].toUpperCase() : "";
+}
+
 export default function BodsTree({
   rows,
   selectedId,
@@ -110,7 +117,7 @@ export default function BodsTree({
             tabIndex={i === active ? 0 : -1}
             onKeyDown={(e) => onKeyDown(e, i)}
             onClick={() => { setActive(i); onSelect(row.id); }}
-            className={`flex items-center gap-1.5 px-2 py-1 border-b border-oo-rule/60 cursor-pointer outline-none ${
+            className={`flex items-center gap-1.5 px-2 py-1 border-b border-oo-rule/60 cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1565c0] focus-visible:-outline-offset-2 ${
               isSelected ? "bg-[#e8f0fb]" : "hover:bg-oo-bg"
             }`}
             title={row.identifiers.length ? row.identifiers.join(" · ") : undefined}
@@ -146,11 +153,16 @@ export default function BodsTree({
               </span>
             )}
 
-            {/* Jurisdiction flag cell */}
-            <span className="flex-shrink-0 w-5 text-center">
-              {row.flagUrl
-                ? <img src={row.flagUrl} alt="" className="inline-block w-4 h-3 object-cover align-middle border border-black/10" />
-                : null}
+            {/* Jurisdiction cell — flag is decorative; the code is the text
+                equivalent (the model only carries the flag URL, whose filename
+                is the lowercased jurisdiction code). */}
+            <span className="flex-shrink-0 flex items-center gap-1 min-w-[1.25rem]">
+              {row.flagUrl && (
+                <>
+                  <img src={row.flagUrl} alt="" className="inline-block w-4 h-3 object-cover align-middle border border-black/10" />
+                  <span className="text-[10px] text-oo-muted">{jurisdictionCode(row.flagUrl)}</span>
+                </>
+              )}
             </span>
 
             {/* Type cell */}

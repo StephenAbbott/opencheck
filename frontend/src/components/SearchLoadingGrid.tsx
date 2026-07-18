@@ -101,16 +101,16 @@ export default function SearchLoadingGrid({
     <div className="bg-white border border-oo-rule rounded-oo p-4 mb-6">
       {/* Counter row */}
       <div className="flex items-center gap-3 mb-2">
-        <p className="text-[11px] text-oo-muted flex-1">
+        <p role="status" className="text-[11px] text-oo-muted flex-1">
           {allDone ? `Queried ${n} sources` : `Querying ${n} sources…`}
         </p>
-        <span className="text-[10px] font-mono text-oo-muted">
+        <span aria-hidden="true" className="text-[10px] font-mono text-oo-muted">
           {doneCount} / {n}
         </span>
       </div>
 
-      {/* Progress bar */}
-      <div className="h-0.5 bg-oo-rule rounded-full overflow-hidden mb-3">
+      {/* Progress bar — simulated, decorative only */}
+      <div aria-hidden="true" className="h-0.5 bg-oo-rule rounded-full overflow-hidden mb-3">
         <div
           className="h-full rounded-full transition-all duration-300"
           style={{
@@ -120,8 +120,8 @@ export default function SearchLoadingGrid({
         />
       </div>
 
-      {/* Source chips */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+      {/* Source chips — simulated, decorative only */}
+      <div aria-hidden="true" className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
         {sources.map((src, i) => {
           const state = states[i] ?? "idle";
           return (
@@ -149,7 +149,7 @@ export default function SearchLoadingGrid({
               }
             >
               <span
-                className={`flex-shrink-0 rounded-full${state === "querying" ? " animate-pulse" : ""}`}
+                className={`flex-shrink-0 rounded-full${state === "querying" ? " motion-safe:animate-pulse" : ""}`}
                 style={{
                   width: 5,
                   height: 5,

@@ -26,6 +26,11 @@ function SecRow({ s, danger }: { s: Security; danger?: boolean }) {
       }`}
     >
       <span className="font-mono text-[12px] text-oo-ink shrink-0">{s.isin}</span>
+      {danger && (
+        <span className="text-[10px] rounded-full px-1.5 py-0.5 bg-rose-100 text-rose-800 shrink-0">
+          sanctioned
+        </span>
+      )}
       <span className="text-[11px] text-oo-muted truncate min-w-0">
         {[s.type, s.exchange].filter(Boolean).join(" · ")}
         {s.name ? ` — ${s.name}` : ""}
@@ -197,6 +202,7 @@ export function SecuritiesSection({ lei }: { lei: string }) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search ISIN, name, ticker…"
+                aria-label="Search securities by ISIN, name or ticker"
                 className="flex-1 min-w-[160px] text-[12px] font-mono border border-oo-rule rounded px-2 py-1"
               />
               {types.map((t) => (
@@ -204,9 +210,10 @@ export function SecuritiesSection({ lei }: { lei: string }) {
                   key={t}
                   type="button"
                   onClick={() => setTypeFilter(t)}
+                  aria-pressed={typeFilter === t}
                   className={`text-[11px] rounded-full px-2.5 py-0.5 border ${
                     typeFilter === t
-                      ? "bg-[#e8e6fb] border-[#c9c2f4] text-oo-blue"
+                      ? "bg-[#e8e6fb] border-[#c9c2f4] text-oo-blue font-semibold"
                       : "border-oo-rule text-oo-muted hover:text-oo-ink"
                   }`}
                 >

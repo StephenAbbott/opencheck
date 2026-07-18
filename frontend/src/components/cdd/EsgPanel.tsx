@@ -72,10 +72,10 @@ function SectorBars({
         return (
           <div key={sector}>
             <div className="flex items-baseline justify-between mb-1">
-              <span className="text-[11px] text-emerald-900/70 capitalize font-medium">
+              <span className="text-[11px] text-emerald-900 capitalize font-medium">
                 {sector.replace(/-/g, " ")}
               </span>
-              <span className="text-[11px] font-mono text-emerald-900/60">
+              <span className="text-[11px] font-mono text-emerald-900">
                 {fmt.value} {fmt.unit} · {shareOfTotal}%
               </span>
             </div>
@@ -123,28 +123,35 @@ function TrackerTable({ projects }: { projects: GeotProjects }) {
   const maxLive = Math.max(...rows.map(([, v]) => v[0]));
   return (
     <div className="mt-4">
-      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 gap-y-1 items-center">
-        <span />
-        <span className="text-[10px] font-semibold uppercase tracking-oo-eyebrow text-emerald-700/50 text-right">
-          Live
-        </span>
-        <span className="text-[10px] font-semibold uppercase tracking-oo-eyebrow text-emerald-700/50 text-right">
-          Operating
-        </span>
-        <span className="text-[10px] font-semibold uppercase tracking-oo-eyebrow text-emerald-700/50 text-right">
-          ≥50%
-        </span>
-        {rows.map(([tracker, [live, operating, controlled]]) => (
-          <TrackerRow
-            key={tracker}
-            label={TRACKER_LABELS[tracker] ?? tracker.replace(/_/g, " ")}
-            live={live}
-            operating={operating}
-            controlled={controlled}
-            maxLive={maxLive}
-          />
-        ))}
-      </div>
+      <table className="w-full border-collapse">
+        <caption className="sr-only">Asset tracker counts by status</caption>
+        <thead>
+          <tr>
+            <th scope="col"><span className="sr-only">Tracker</span></th>
+            <th scope="col" className="pl-4 text-[10px] font-semibold uppercase tracking-oo-eyebrow text-emerald-800 text-right">
+              Live
+            </th>
+            <th scope="col" className="pl-4 text-[10px] font-semibold uppercase tracking-oo-eyebrow text-emerald-800 text-right">
+              Operating
+            </th>
+            <th scope="col" className="pl-4 text-[10px] font-semibold uppercase tracking-oo-eyebrow text-emerald-800 text-right">
+              ≥50%
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([tracker, [live, operating, controlled]]) => (
+            <TrackerRow
+              key={tracker}
+              label={TRACKER_LABELS[tracker] ?? tracker.replace(/_/g, " ")}
+              live={live}
+              operating={operating}
+              controlled={controlled}
+              maxLive={maxLive}
+            />
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -164,30 +171,32 @@ function TrackerRow({
 }) {
   const pct = maxLive > 0 ? (live / maxLive) * 100 : 0;
   return (
-    <>
-      <div className="min-w-0">
-        <div className="text-[11px] text-emerald-900/70 font-medium truncate">{label}</div>
-        <div className="h-1 rounded-full bg-emerald-100 overflow-hidden mt-0.5">
-          <div
-            className="h-full rounded-full bg-emerald-400"
-            style={{ width: `${pct}%` }}
-          />
+    <tr>
+      <th scope="row" className="w-full max-w-0 pt-1 align-middle text-left font-normal">
+        <div className="min-w-0">
+          <div className="text-[11px] text-emerald-900 font-medium truncate">{label}</div>
+          <div className="h-1 rounded-full bg-emerald-100 overflow-hidden mt-0.5">
+            <div
+              className="h-full rounded-full bg-emerald-400"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
         </div>
-      </div>
-      <span className="text-[12px] font-mono tabular-nums text-emerald-900 text-right">
+      </th>
+      <td className="pl-4 pt-1 align-middle text-[12px] font-mono tabular-nums text-emerald-900 text-right">
         {live.toLocaleString()}
-      </span>
-      <span className="text-[12px] font-mono tabular-nums text-emerald-800/70 text-right">
+      </td>
+      <td className="pl-4 pt-1 align-middle text-[12px] font-mono tabular-nums text-emerald-800 text-right">
         {operating.toLocaleString()}
-      </span>
-      <span
-        className={`text-[12px] font-mono tabular-nums text-right ${
-          controlled > 0 ? "text-emerald-900 font-semibold" : "text-emerald-800/40"
+      </td>
+      <td
+        className={`pl-4 pt-1 align-middle text-[12px] font-mono tabular-nums text-right ${
+          controlled > 0 ? "text-emerald-900 font-semibold" : "text-emerald-800"
         }`}
       >
         {controlled.toLocaleString()}
-      </span>
-    </>
+      </td>
+    </tr>
   );
 }
 
@@ -241,12 +250,12 @@ function EitiCard({ hit }: { hit: SourceHit }) {
         <div className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
           {hit.name}
         </div>
-        <div className="text-[11px] font-mono text-emerald-700/70 mt-0.5">
+        <div className="text-[11px] font-mono text-emerald-800 mt-0.5">
           {raw.country} · national ID {raw.identification}
         </div>
 
         <div className="mt-4">
-          <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-700/50 mb-1">
+          <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mb-1">
             Payments to governments ·{" "}
             <a
               href="https://eiti.org/open-data"
@@ -265,7 +274,7 @@ function EitiCard({ hit }: { hit: SourceHit }) {
               <div className="text-[13px] font-semibold text-emerald-700">
                 {raw.total_usd > 0 ? "USD disclosed" : `reporting year${years.length === 1 ? "" : "s"}`}
               </div>
-              <div className="text-[11px] text-emerald-600/70">
+              <div className="text-[11px] text-emerald-700">
                 {years.length > 0 &&
                   (years.length > 1
                     ? `${years[years.length - 1]}–${years[0]} · ${years.length} reporting years`
@@ -280,8 +289,8 @@ function EitiCard({ hit }: { hit: SourceHit }) {
             {streams.map(([label, value]) => (
               <div key={label}>
                 <div className="flex items-baseline justify-between mb-1">
-                  <span className="text-[11px] text-emerald-900/70 font-medium">{label}</span>
-                  <span className="text-[11px] font-mono text-emerald-900/60">{formatUsd(value)}</span>
+                  <span className="text-[11px] text-emerald-900 font-medium">{label}</span>
+                  <span className="text-[11px] font-mono text-emerald-900">{formatUsd(value)}</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-emerald-100 overflow-hidden">
                   <div
@@ -294,7 +303,7 @@ function EitiCard({ hit }: { hit: SourceHit }) {
           </div>
         )}
 
-        <p className="mt-3 text-[10px] text-emerald-700/50">
+        <p className="mt-3 text-[10px] text-emerald-800">
           GFS-classified fiscal disclosures under the EITI Standard · EITI
           International Secretariat, eiti.org
         </p>
@@ -347,13 +356,13 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
         <div className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
           {hit.name}
         </div>
-        <div className="text-[11px] font-mono text-emerald-700/70 mt-0.5">
+        <div className="text-[11px] font-mono text-emerald-800 mt-0.5">
           {raw.matched_by === "wikidata_qid" ? "Wikidata match" : "LEI match"} ·
           card ~{raw.card_id}
         </div>
 
         <div className="mt-4">
-          <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-700/50 mb-1">
+          <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mb-1">
             ESG data points ·{" "}
             <a
               href={raw.wikirate_url}
@@ -372,7 +381,7 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
               <div className="text-[13px] font-semibold text-emerald-700">
                 metric answers
               </div>
-              <div className="text-[11px] text-emerald-600/70">
+              <div className="text-[11px] text-emerald-700">
                 community-researched · latest value per metric below
               </div>
             </div>
@@ -386,7 +395,7 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
                 key={`${a.metric_name}-${i}`}
                 className="flex items-baseline justify-between gap-3"
               >
-                <span className="text-[11px] text-emerald-900/70 font-medium min-w-0 truncate">
+                <span className="text-[11px] text-emerald-900 font-medium min-w-0 truncate">
                   {a.answer_url ? (
                     <a
                       href={a.answer_url}
@@ -400,11 +409,11 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
                     a.metric_name ?? "Metric"
                   )}
                   {a.metric_designer && (
-                    <span className="text-emerald-700/50"> · {a.metric_designer}</span>
+                    <span className="text-emerald-800"> · {a.metric_designer}</span>
                   )}
                 </span>
-                <span className="text-[11px] font-mono text-emerald-900/60 shrink-0">
-                  {a.year && <span className="text-emerald-700/50">{a.year} · </span>}
+                <span className="text-[11px] font-mono text-emerald-900 shrink-0">
+                  {a.year && <span className="text-emerald-800">{a.year} · </span>}
                   {formatAnswerValue(a.value)}
                 </span>
               </div>
@@ -421,7 +430,7 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
           View all {total.toLocaleString()} data points on wikirate.org →
         </a>
 
-        <p className="mt-3 text-[10px] text-emerald-700/50">
+        <p className="mt-3 text-[10px] text-emerald-800">
           Open ESG metric answers researched by the Wikirate community ·
           Wikirate.org, CC BY 4.0
         </p>
@@ -461,7 +470,7 @@ function SourceTag({ sourceId }: { sourceId: string }) {
   return (
     <div className="mb-2 -mt-0.5 flex items-center gap-1.5">
       <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
-      <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-700/60">
+      <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800">
         Data from{" "}
         <a
           href={meta.href}
@@ -574,7 +583,7 @@ function ClimateTRACECard({
             </span>
           )}
         </div>
-        <div className="text-[11px] font-mono text-emerald-700/70 mt-0.5">
+        <div className="text-[11px] font-mono text-emerald-800 mt-0.5">
           GEM entity {hit.identifiers.gem_entity_id}
         </div>
 
@@ -583,7 +592,7 @@ function ClimateTRACECard({
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
             {formatted ? (
               <div>
-                <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-700/50 mb-1">
+                <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mb-1">
                   Emissions ·{" "}
                   <a
                     href="https://climatetrace.org/"
@@ -602,7 +611,7 @@ function ClimateTRACECard({
                     <div className="text-[13px] font-semibold text-emerald-700">
                       {formatted.unit}
                     </div>
-                    <div className="text-[11px] text-emerald-600/70">
+                    <div className="text-[11px] text-emerald-700">
                       {year} · direct assets
                     </div>
                   </div>
@@ -614,7 +623,7 @@ function ClimateTRACECard({
 
             {liveProjects > 0 && (
               <div>
-                <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-700/50 mb-1">
+                <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mb-1">
                   Projects ·{" "}
                   <a
                     href="https://globalenergymonitor.org/projects/global-energy-ownership-tracker"
@@ -633,7 +642,7 @@ function ClimateTRACECard({
                     <div className="text-[13px] font-semibold text-emerald-700">
                       live project{liveProjects === 1 ? "" : "s"}
                     </div>
-                    <div className="text-[11px] text-emerald-600/70">
+                    <div className="text-[11px] text-emerald-700">
                       {operatingProjects.toLocaleString()} operating ·{" "}
                       {controlledProjects.toLocaleString()} ≥50% controlled
                     </div>
@@ -645,7 +654,7 @@ function ClimateTRACECard({
         )}
 
         {!formatted && liveProjects === 0 && !hit.is_stub && (
-          <p className="mt-3 text-[13px] text-emerald-700/60 italic">
+          <p className="mt-3 text-[13px] text-emerald-800 italic">
             Emissions and project data not available for this entity.
           </p>
         )}
@@ -655,10 +664,10 @@ function ClimateTRACECard({
             <TrackerTable projects={projects} />
             <div className="mt-1.5 flex items-baseline justify-between gap-2 flex-wrap">
               {footnote ? (
-                <span className="text-[11px] text-emerald-700/50">{footnote}</span>
+                <span className="text-[11px] text-emerald-800">{footnote}</span>
               ) : <span />}
               {projects.meta?.release && (
-                <span className="text-[10px] text-emerald-700/40">
+                <span className="text-[10px] text-emerald-800">
                   GEOT {projects.meta.release} · ≥50% effective share = controlled
                 </span>
               )}
@@ -669,7 +678,7 @@ function ClimateTRACECard({
         {ownership &&
           ((ownership.subsidiary_count ?? 0) > 0 ||
             (ownership.group_asset_count ?? 0) > 0) && (
-          <div className="mt-2 text-[11px] text-emerald-800/60">
+          <div className="mt-2 text-[11px] text-emerald-800">
             Group reach: {(ownership.subsidiary_count ?? 0).toLocaleString()}{" "}
             subsidiaries · {(ownership.group_asset_count ?? 0).toLocaleString()}{" "}
             Climate TRACE assets group-wide
@@ -682,17 +691,17 @@ function ClimateTRACECard({
 
         {parents.length > 0 && (
           <div className="mt-3 pt-3 border-t border-emerald-200/60">
-            <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-700/60 mr-2">
+            <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mr-2">
               GEM parent{parents.length === 1 ? "" : "s"}
             </span>
             {parents.map((p) => (
               <span
                 key={p.entity_id}
-                className="inline-block text-[11px] font-mono text-emerald-900/70 bg-emerald-100 border border-emerald-200 rounded px-1.5 py-0.5 mr-1"
+                className="inline-block text-[11px] font-mono text-emerald-900 bg-emerald-100 border border-emerald-200 rounded px-1.5 py-0.5 mr-1"
               >
                 {p.name}
                 {typeof p.share === "number" && (
-                  <span className="text-emerald-700/60"> · {p.share}%</span>
+                  <span className="text-emerald-800"> · {p.share}%</span>
                 )}
               </span>
             ))}
@@ -722,7 +731,7 @@ function ClimateTRACECard({
             <span className="block text-[13px] font-semibold text-emerald-900 leading-tight">
               {showDiagram ? "Hide ownership graph" : "Explore the ownership graph"}
             </span>
-            <span className="block text-[11px] font-mono text-emerald-700/80 truncate">
+            <span className="block text-[11px] font-mono text-emerald-700 truncate">
               {graphMeta}
             </span>
           </span>
@@ -736,13 +745,13 @@ function ClimateTRACECard({
         {/* Secondary drill-downs — quieter than the graph CTA. */}
         <div className={`flex flex-wrap gap-4 text-[11px] font-mono ${showGraphStrip ? "mt-2" : "mt-3"}`}>
           <button type="button" onClick={toggleStatements} aria-pressed={showStatements}
-            className={`hover:underline ${showStatements ? "text-emerald-800" : "text-emerald-700/70 hover:text-emerald-900"}`}>
+            className={`hover:underline ${showStatements ? "text-emerald-800" : "text-emerald-800 hover:text-emerald-900"}`}>
             {showStatements ? "Hide statements" : (
               hasKnownCount ? `${stmtCount} statement${stmtCount === 1 ? "" : "s"}` : "Statements"
             )}
           </button>
           <button type="button" onClick={toggleJson} aria-pressed={showJson}
-            className={`hover:underline ${showJson ? "text-emerald-800" : "text-emerald-700/70 hover:text-emerald-900"}`}>
+            className={`hover:underline ${showJson ? "text-emerald-800" : "text-emerald-800 hover:text-emerald-900"}`}>
             {showJson ? "Hide JSON" : "Raw JSON"}
           </button>
         </div>
@@ -750,8 +759,8 @@ function ClimateTRACECard({
 
       {anyOpen && (
         <div className="px-5 py-4 bg-white/60 text-[12px]">
-          {loading && <p className="text-emerald-700">Fetching…</p>}
-          {fetchError && <p className="text-red-700">{fetchError}</p>}
+          {loading && <p className="text-emerald-700" role="status">Fetching…</p>}
+          {fetchError && <p className="text-red-700" role="alert">{fetchError}</p>}
           {detail && (
             <DeepenBlock
               detail={detail}
@@ -848,7 +857,7 @@ function EsgTile({
           : "border-emerald-200 bg-emerald-50/40 hover:bg-emerald-100/50"
       }`}
     >
-      <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-700/60 mb-1.5">
+      <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mb-1.5">
         {meta?.org ?? hit.source_id}
       </div>
       <div className="flex items-baseline gap-2">
@@ -858,7 +867,7 @@ function EsgTile({
         <span className="text-[12px] font-semibold text-emerald-700">{unit}</span>
       </div>
       <div className="mt-1 flex items-center justify-between gap-2">
-        <span className="text-[11px] text-emerald-600/70 truncate">{sub}</span>
+        <span className="text-[11px] text-emerald-700 truncate">{sub}</span>
         <span className="flex items-center gap-1 shrink-0 text-[11px] font-mono text-emerald-700">
           {expanded ? "Hide" : "Detail"}
           <svg
@@ -924,13 +933,13 @@ export function EsgPanel({
               <span className="font-head font-bold text-[14px] text-emerald-950">
                 Environmental, Social, and Governance (ESG) Data
               </span>
-              <span className="ml-2 text-[11px] font-mono text-emerald-600/70">
+              <span className="ml-2 text-[11px] font-mono text-emerald-700">
                 {hitCount} result{hitCount === 1 ? "" : "s"} · {buckets.length} source{buckets.length === 1 ? "" : "s"}
               </span>
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <span className="text-[11px] text-emerald-600/60 hidden sm:inline">
+            <span className="text-[11px] text-emerald-700 hidden sm:inline">
               ESG / climate risk · not a KYC source
             </span>
             <span className="text-[12px] font-mono text-emerald-700">
@@ -941,7 +950,7 @@ export function EsgPanel({
 
         {!collapsed && (
           <div className="p-5 space-y-4">
-            <p className="text-[12px] leading-[1.65] text-emerald-800/70 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">
+            <p className="text-[12px] leading-[1.65] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">
               <span className="font-semibold">ESG context only.</span> Data
               from{" "}
               <a
@@ -1030,6 +1039,7 @@ export function EsgPanel({
               .map((b) => (
                 <div
                   key={b.sourceId}
+                  role="alert"
                   className="rounded-oo border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700"
                 >
                   <span className="font-semibold">{b.sourceName}:</span>{" "}

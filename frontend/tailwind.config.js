@@ -19,7 +19,7 @@ export default {
           light: "#dceeff",  // image placeholder, header eyebrow
           green: "#25cb55",  // available
           ink: "#191d23",    // body text alias
-          muted: "#757575",  // secondary copy
+          muted: "#696969",  // secondary copy (4.5:1+ on bg and white)
           rule: "#e5e5e5",   // borders / dividers
           bg: "#f3f3f5",     // page bg
         },

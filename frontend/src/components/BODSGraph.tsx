@@ -18,7 +18,7 @@
  * point; risk badge at 315° (NW); collapse toggle at due-south (270°).
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import cytoscape, { type Core, type ElementDefinition, type StylesheetStyle } from "cytoscape";
 import dagre from "cytoscape-dagre";
 import {
@@ -30,6 +30,7 @@ import {
 } from "../lib/bodsGraph";
 import type { RiskSignal } from "../lib/api";
 import type { SameAsCandidate } from "../lib/reconcile";
+import BodsRelationshipTable from "./BodsRelationshipTable";
 
 cytoscape.use(dagre);
 
@@ -278,6 +279,14 @@ export default function BODSGraph({
   const cyRef         = useRef<Core | null>(null);
   const [overlays, setOverlays] = useState<NodeOverlay[]>([]);
   const [edgeTooltip, setEdgeTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
+  // Risk-badge popover — badges are buttons (keyboard-reachable), click toggles
+  // the full signal text; Escape dismisses (see effect below).
+  const [signalTooltip, setSignalTooltip] =
+    useState<{ id: string; x: number; y: number; text: string } | null>(null);
+  // Text-equivalent fallback for the canvas (WCAG 1.1.1/2.1.1): when on, the
+  // relationship table replaces the canvas; the Cytoscape instance is torn
+  // down and rebuilt on toggle (the init effect keys on `tableView`).
+  const [tableView, setTableView] = useState(false);
 
   // ── Search state ───────────────────────────────────────────────────────────
   const [query, setQuery] = useState("");
@@ -293,6 +302,9 @@ export default function BODSGraph({
   const updateOverlaysRef = useRef<(() => void) | null>(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+
+  // statementId → RiskSignal[] — shared by the overlay badges and the table view.
+  const signalMap = useMemo(() => buildSignalMap(signals), [signals]);
 
   function toggleCollapse(id: string) {
     const next = new Set(collapsed);
@@ -328,8 +340,6 @@ export default function BODSGraph({
       maxZoom: 4,
     });
     cyRef.current = cy;
-
-    const signalMap = buildSignalMap(signals);
 
     function updateOverlays() {
       const pan  = cy.pan();
@@ -385,11 +395,13 @@ export default function BODSGraph({
     cy.on("tap", (evt) => {
       if (evt.target === cy) { setEdgeTooltip(null); onSelectRef.current?.(null); }
     });
-    cy.on("viewport", () => setEdgeTooltip(null));
+    cy.on("viewport", () => { setEdgeTooltip(null); setSignalTooltip(null); });
 
     return () => { cy.destroy(); cyRef.current = null; };
+  // `tableView` is a dep so the instance is destroyed when the table replaces
+  // the canvas and rebuilt (fresh container element) when toggled back.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model, signals, sameAs]);
+  }, [model, signalMap, sameAs, tableView]);
 
   // ── Apply collapse: hide/show elements, re-layout the visible subset ───────
   useEffect(() => {
@@ -418,7 +430,7 @@ export default function BODSGraph({
     cy.fit(visEles, 32);
     updateOverlaysRef.current?.();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model, signals, collapsed]);
+  }, [model, signals, collapsed, tableView]);
 
   // ── Apply search over the currently-visible nodes ──────────────────────────
   useEffect(() => {
@@ -449,7 +461,7 @@ export default function BODSGraph({
       if (node.nonempty()) cy.animate({ center: { eles: node } }, { duration: 250 });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, model, collapsed]);
+  }, [query, model, collapsed, tableView]);
 
   // ── Provenance: highlight one source, dim the rest (FullCheck legend) ──────
   useEffect(() => {
@@ -471,7 +483,7 @@ export default function BODSGraph({
       });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [highlightSource, model]);
+  }, [highlightSource, model, tableView]);
 
   // ── Reflect the shared selection into the graph (highlight + centre) ───────
   useEffect(() => {
@@ -487,7 +499,17 @@ export default function BODSGraph({
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, model]);
+  }, [selectedId, model, tableView]);
+
+  // ── Dismiss the risk-badge popover with Escape while it is open ────────────
+  useEffect(() => {
+    if (!signalTooltip) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSignalTooltip(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [signalTooltip]);
 
   function focusMatch(idx: number) {
     const cy = cyRef.current;
@@ -506,6 +528,19 @@ export default function BODSGraph({
     : `${matchIdx + 1} of ${matchIds.length}`;
   const collapsedCount = collapsed.size;
 
+  // Counts for the canvas's accessible name (role="img" — the name is all a
+  // screen-reader user perceives of it; the table view is the full equivalent).
+  const personCount = model.nodes.filter(
+    (n) => n.recordType === "person" || n.recordType === "personStatement"
+  ).length;
+  const entityCount = model.nodes.length - personCount;
+  const graphAriaLabel =
+    `Ownership structure graph${entityName ? ` for ${entityName}` : ""} — ` +
+    `${entityCount} ${entityCount === 1 ? "entity" : "entities"}, ` +
+    `${personCount} ${personCount === 1 ? "person" : "people"}, ` +
+    `${model.edges.length} ${model.edges.length === 1 ? "relationship" : "relationships"}. ` +
+    "Use the table view for a text equivalent.";
+
   if (model.nodes.length === 0) {
     return <p className="text-xs text-oo-muted italic">No BODS statements to visualise.</p>;
   }
@@ -515,57 +550,75 @@ export default function BODSGraph({
       {/* Toolbar */}
       <div className="border-b border-oo-rule">
         <div className="flex items-center flex-wrap gap-1 px-2 py-1 text-xs text-oo-muted">
-          <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom in"
-            onClick={() => cyRef.current?.zoom({ level: (cyRef.current?.zoom() ?? 1) * 1.3,
-              renderedPosition: { x: (containerRef.current?.clientWidth ?? 0) / 2, y: (containerRef.current?.clientHeight ?? 0) / 2 } })}>
-            +
-          </button>
-          <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom out"
-            onClick={() => cyRef.current?.zoom({ level: (cyRef.current?.zoom() ?? 1) / 1.3,
-              renderedPosition: { x: (containerRef.current?.clientWidth ?? 0) / 2, y: (containerRef.current?.clientHeight ?? 0) / 2 } })}>
-            −
-          </button>
-          <button type="button" className="hover:text-oo-blue px-2" title="Fit"
-            onClick={() => cyRef.current?.fit(undefined, 32)}>
-            Fit
-          </button>
-          {collapsedCount > 0 && (
-            <button type="button" className="hover:text-oo-blue px-2" title="Expand all collapsed nodes"
-              onClick={() => onCollapsedChange(new Set())}>
-              Expand all
+          {!tableView && <>
+            <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom in"
+              onClick={() => cyRef.current?.zoom({ level: (cyRef.current?.zoom() ?? 1) * 1.3,
+                renderedPosition: { x: (containerRef.current?.clientWidth ?? 0) / 2, y: (containerRef.current?.clientHeight ?? 0) / 2 } })}>
+              +
             </button>
-          )}
+            <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom out"
+              onClick={() => cyRef.current?.zoom({ level: (cyRef.current?.zoom() ?? 1) / 1.3,
+                renderedPosition: { x: (containerRef.current?.clientWidth ?? 0) / 2, y: (containerRef.current?.clientHeight ?? 0) / 2 } })}>
+              −
+            </button>
+            <button type="button" className="hover:text-oo-blue px-2" title="Fit"
+              onClick={() => cyRef.current?.fit(undefined, 32)}>
+              Fit
+            </button>
+            {collapsedCount > 0 && (
+              <button type="button" className="hover:text-oo-blue px-2" title="Expand all collapsed nodes"
+                onClick={() => onCollapsedChange(new Set())}>
+                Expand all
+              </button>
+            )}
+          </>}
 
-          {/* Search-within-graph */}
-          <div className="flex items-center gap-1 ml-auto">
-            <label htmlFor="bods-graph-search" className="sr-only">Search nodes in the graph</label>
-            <input
-              id="bods-graph-search"
-              type="search"
-              value={query}
-              placeholder="Search nodes…"
-              autoComplete="off"
-              className="px-2 py-0.5 text-xs border border-oo-rule rounded w-32 sm:w-44"
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") { e.preventDefault(); focusMatch(matchIdx + (e.shiftKey ? -1 : 1)); }
-                else if (e.key === "Escape") { e.preventDefault(); setQuery(""); }
-              }}
-            />
-            <button type="button" className="hover:text-oo-blue font-mono px-1 disabled:opacity-30"
-              title="Previous match" aria-label="Previous match"
-              disabled={matchIds.length === 0} onClick={() => focusMatch(matchIdx - 1)}>
-              ‹
-            </button>
-            <button type="button" className="hover:text-oo-blue font-mono px-1 disabled:opacity-30"
-              title="Next match" aria-label="Next match"
-              disabled={matchIds.length === 0} onClick={() => focusMatch(matchIdx + 1)}>
-              ›
-            </button>
-            <span role="status" aria-live="polite" className="min-w-[64px] tabular-nums text-[11px]">
-              {resultLabel}
-            </span>
-          </div>
+          {/* Text-equivalent toggle — always available, on every mount */}
+          <button
+            type="button"
+            className="hover:text-oo-blue px-2"
+            aria-pressed={tableView}
+            onClick={() => {
+              setEdgeTooltip(null);
+              setSignalTooltip(null);
+              setTableView((v) => !v);
+            }}
+          >
+            {tableView ? "View as graph" : "View as table"}
+          </button>
+
+          {/* Search-within-graph (targets the canvas — graph mode only) */}
+          {!tableView && (
+            <div className="flex items-center gap-1 ml-auto">
+              <label htmlFor="bods-graph-search" className="sr-only">Search nodes in the graph</label>
+              <input
+                id="bods-graph-search"
+                type="search"
+                value={query}
+                placeholder="Search nodes…"
+                autoComplete="off"
+                className="px-2 py-0.5 text-xs border border-oo-rule rounded w-32 sm:w-44"
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); focusMatch(matchIdx + (e.shiftKey ? -1 : 1)); }
+                  else if (e.key === "Escape") { e.preventDefault(); setQuery(""); }
+                }}
+              />
+              <button type="button" className="hover:text-oo-blue font-mono px-1 disabled:opacity-30"
+                title="Previous match" aria-label="Previous match"
+                disabled={matchIds.length === 0} onClick={() => focusMatch(matchIdx - 1)}>
+                ‹
+              </button>
+              <button type="button" className="hover:text-oo-blue font-mono px-1 disabled:opacity-30"
+                title="Next match" aria-label="Next match"
+                disabled={matchIds.length === 0} onClick={() => focusMatch(matchIdx + 1)}>
+                ›
+              </button>
+              <span role="status" aria-live="polite" className="min-w-[64px] tabular-nums text-[11px]">
+                {resultLabel}
+              </span>
+            </div>
+          )}
         </div>
         {/* Legend */}
         <div className="flex flex-wrap gap-1.5 px-3 pb-2">
@@ -586,16 +639,26 @@ export default function BODSGraph({
         </div>
       </div>
 
+      {/* Table view — text equivalent of the canvas (WCAG 1.1.1/2.1.1) */}
+      {tableView && (
+        <div className="p-3 max-h-[420px] overflow-auto">
+          <BodsRelationshipTable
+            model={model}
+            signalsByNode={signalMap}
+            entityName={entityName}
+          />
+        </div>
+      )}
+
       {/* Graph container + HTML overlay */}
+      {!tableView && (
       <div style={{ position: "relative" }}>
         <div
           ref={containerRef}
           className="overflow-hidden"
           style={{ width: "100%", height: 420 }}
           role="img"
-          aria-label={entityName
-            ? `Ownership structure graph for ${entityName}`
-            : "Ownership structure graph"}
+          aria-label={graphAriaLabel}
         />
 
         {/* Pixel-perfect icon + flag + risk + collapse overlay */}
@@ -621,33 +684,46 @@ export default function BODSGraph({
               const badgePx = Math.max(18, item.r * 0.55);
               const tooltip = sigs.map(s => `${s.code}: ${s.summary}`).join("\n");
 
+              // The badge is a real button (overlay is pointer-events:none, so
+              // it re-enables pointer events like the collapse toggle below):
+              // click/Enter toggles a popover with the full signal text —
+              // the old non-focusable div's `title` could never show.
+              const toggleSignalTooltip = () =>
+                setSignalTooltip((prev) =>
+                  prev?.id === item.id ? null : { id: item.id, x: sigCx, y: sigCy, text: tooltip }
+                );
+
               if (sigs.length === 1) {
                 sigBadge = (
-                  <div title={tooltip} style={{
+                  <button type="button" title={tooltip} aria-label={tooltip}
+                    onClick={toggleSignalTooltip} style={{
                     position: "absolute", left: sigCx - badgePx * 0.9, top: sigCy - badgePx * 0.45,
                     minWidth: badgePx * 1.8, height: badgePx * 0.9, background: st.bg,
                     border: `1.5px solid ${st.border}`, borderRadius: badgePx,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: Math.max(8, badgePx * 0.42), fontWeight: 700, color: st.text,
                     boxShadow: "0 1px 3px rgba(0,0,0,0.2)", whiteSpace: "nowrap", padding: `0 ${badgePx * 0.3}px`,
+                    pointerEvents: "auto", cursor: "pointer",
                   }}>
                     {st.label}
-                  </div>
+                  </button>
                 );
               } else {
                 sigBadge = (
                   <div style={{ position: "absolute", left: sigCx - badgePx * 0.75, top: sigCy - badgePx * 0.45 }}>
                     <div style={{ position: "absolute", left: 3, top: 3, width: badgePx * 1.5, height: badgePx * 0.9,
                       background: st.bg, border: `1.5px solid ${st.border}`, borderRadius: badgePx, opacity: 0.5 }}/>
-                    <div title={tooltip} style={{
+                    <button type="button" title={tooltip} aria-label={tooltip}
+                      onClick={toggleSignalTooltip} style={{
                       position: "relative", minWidth: badgePx * 1.5, height: badgePx * 0.9, background: st.bg,
                       border: `1.5px solid ${st.border}`, borderRadius: badgePx,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       fontSize: Math.max(8, badgePx * 0.42), fontWeight: 700, color: st.text,
                       boxShadow: "0 1px 4px rgba(0,0,0,0.25)", whiteSpace: "nowrap", padding: `0 ${badgePx * 0.3}px`, gap: 2,
+                      pointerEvents: "auto", cursor: "pointer",
                     }}>
                       {sigs.length} ⚠
-                    </div>
+                    </button>
                   </div>
                 );
               }
@@ -720,7 +796,23 @@ export default function BODSGraph({
             {edgeTooltip.text}
           </div>
         )}
+
+        {/* Risk-badge signal popover (opened by the badge buttons; Escape closes) */}
+        {signalTooltip && (
+          <div style={{
+            position: "absolute",
+            left: Math.min(signalTooltip.x + 12, (containerRef.current?.clientWidth ?? 400) - 220),
+            top:  Math.max(signalTooltip.y - 48, 8),
+            zIndex: 20, pointerEvents: "none", background: "#fff",
+            border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 10px",
+            fontSize: 11, lineHeight: 1.5, maxWidth: 210,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.12)", color: "#1a1a2e", whiteSpace: "pre-wrap",
+          }}>
+            {signalTooltip.text}
+          </div>
+        )}
       </div>
+      )}
     </div>
   );
 }
