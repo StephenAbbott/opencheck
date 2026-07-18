@@ -23,9 +23,16 @@ and EveryPolitician). The two are intentionally separate because:
 Reconciliation API
 ------------------
 
-Endpoint: ``POST https://offshoreleaks.icij.org/reconcile``
+Endpoint: ``POST https://offshoreleaks.icij.org/api/v1/reconcile``
 Content-Type: ``application/x-www-form-urlencoded``
 Body param: ``queries`` — JSON-encoded dict of query objects.
+
+ICIJ moved the service to the ``/api/v1/`` prefix and upgraded it to
+Reconciliation Service API **v0.2**; the bare ``/reconcile`` path now 404s.
+Form-encoded ``queries`` is still the spec-mandated transport in v0.2
+(the service MUST accept it), so only the URL changed for us — but the
+result ``id`` is now a **bare node id** (e.g. ``"12345"``) rather than a
+full URL, so ``_node_url()`` rebuilds the public link from it.
 
 Query object::
 
@@ -41,7 +48,7 @@ Response::
       "q0": {
         "result": [
           {
-            "id": "https://offshoreleaks.icij.org/nodes/12345",
+            "id": "12345",
             "name": "ENTITY NAME",
             "score": 90,
             "match": true,
@@ -69,7 +76,11 @@ from .config import get_settings
 from .http import build_client
 from .risk import OFFSHORE_LEAKS, RiskSignal
 
-_RECONCILE_URL = "https://offshoreleaks.icij.org/reconcile"
+_RECONCILE_URL = "https://offshoreleaks.icij.org/api/v1/reconcile"
+
+# Public (human-readable) node page. The reconciliation result's ``id`` is a
+# bare node identifier under spec v0.2, so the link is rebuilt from it.
+_NODE_URL_TEMPLATE = "https://offshoreleaks.icij.org/nodes/{id}"
 
 # Maximum number of names to check in a single run (bounds total HTTP calls).
 _MAX_TARGETS = 30
@@ -278,7 +289,7 @@ def _signal_from_match(
     if _name_sim(target["name"], matched_name) < _MIN_NAME_SIM:
         return None
 
-    node_url: str = match.get("id") or ""
+    node_url: str = _node_url(match.get("id"))
     description: str = match.get("description") or ""
     dataset = _parse_dataset(description)
     jurisdiction = _parse_jurisdiction(description)
@@ -315,6 +326,22 @@ def _signal_from_match(
 # ---------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------
+
+
+def _node_url(raw_id: Any) -> str:
+    """Public ICIJ node URL for a reconciliation result ``id``.
+
+    Spec v0.2 returns a bare node identifier (``"12345"``), so the link is
+    rebuilt from the template. Values that are already absolute URLs (the
+    pre-v0.2 shape, and any future change back) pass through unchanged, so
+    the evidence link is correct either way.
+    """
+    node_id = str(raw_id or "").strip()
+    if not node_id:
+        return ""
+    if node_id.startswith(("http://", "https://")):
+        return node_id
+    return _NODE_URL_TEMPLATE.format(id=node_id)
 
 
 def _parse_dataset(description: str) -> str:
