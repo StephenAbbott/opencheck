@@ -14,14 +14,30 @@ returns lightweight suggestion objects that each point at one LEI::
 
 This harness runs a fixed fixture of real-world queries (legal names, other /
 alternative-language names, ASCII transliterations of non-Latin names, previous
-/ trading names, and hand-made typos) against BOTH endpoints and reports
+/ trading names, and hand-made typos) against several *strategies* and reports
 hit@1 / hit@5 for the expected LEI, overall and per category. The fixture and
 each expected LEI are grounded in GLEIF's own records — see
 ``gleif_autocompletions_queries.json`` for provenance.
 
+Strategies (issue #33 adds the last two, to close the typo gap #32 found):
+
+* ``fulltext`` — the current ``GleifAdapter.search`` path (fulltext filter).
+* ``autocompletions`` — GLEIF's dedicated typeahead endpoint.
+* ``relax_droplast`` — query relaxation: on zero fulltext hits, retry with
+  trailing tokens progressively removed, taking the first non-empty result.
+* ``relax_loo`` — query relaxation by *leave-one-out*: on zero fulltext hits,
+  retry once per token with that token dropped, then rank the union by how many
+  leave-one-out variants agreed (consensus), tie-breaking on best rank.
+
+Both relaxation strategies fire ONLY when the plain fulltext query returns zero
+results, so on any query fulltext already resolves they return exactly the
+fulltext result (this is how the harness proves clean queries are untouched).
+
 Etiquette: requests are sequential with a small delay, and every response is
-cached to a scratch JSON so re-runs cost zero API calls. The full fixture is
-50 queries * 2 endpoints = 100 requests.
+cached to a scratch JSON (keyed by endpoint+query) so re-runs cost zero API
+calls. The relaxation strategies reuse the ``fulltext`` cache for the plain
+query and add live calls only for the relaxed sub-queries of zero-result
+queries — so the extra API cost is bounded by the number of failing queries.
 
 Usage (from the ``backend`` directory)::
 
@@ -85,9 +101,11 @@ class ResponseCache:
 
 
 # ---------------------------------------------------------------------------
-# The two endpoints. Each returns an ORDERED list of LEIs, de-duplicated
-# (a single entity can surface via several name variants; a user cares about
-# distinct entities, so we rank by first occurrence).
+# Raw endpoints + strategies. A *strategy* turns a typed query into an ORDERED,
+# de-duplicated list of LEIs (a single entity can surface via several name
+# variants; a user cares about distinct entities, so we rank by first
+# occurrence). Simple strategies wrap one raw endpoint; the relaxation
+# strategies compose several ``fulltext`` calls behind a zero-result trigger.
 # ---------------------------------------------------------------------------
 
 
@@ -118,11 +136,6 @@ def _autocompletions_leis(payload: dict[str, Any]) -> list[str]:
     return _dedupe(leis)
 
 
-class Endpoint(NamedTuple):
-    path: Callable[[str], str]
-    extract: Callable[[dict[str, Any]], list[str]]
-
-
 def _fulltext_path(q: str) -> str:
     return f"/lei-records?filter[fulltext]={quote(q)}&page[size]={_PAGE_SIZE}"
 
@@ -131,9 +144,84 @@ def _autocompletions_path(q: str) -> str:
     return f"/autocompletions?field=fulltext&q={quote(q)}"
 
 
-_ENDPOINTS: dict[str, Endpoint] = {
-    "fulltext": Endpoint(_fulltext_path, _fulltext_leis),
-    "autocompletions": Endpoint(_autocompletions_path, _autocompletions_leis),
+# Raw HTTP endpoints (name -> path builder). These are the only real network
+# calls; the strategies below are composed from them via ``FetchFn``.
+_PATHS: dict[str, Callable[[str], str]] = {
+    "fulltext": _fulltext_path,
+    "autocompletions": _autocompletions_path,
+}
+
+# A ``FetchFn`` fetches one raw endpoint for one query and returns its JSON
+# payload (transparently cached). Strategies call it one or more times.
+FetchFn = Callable[[str, str], dict[str, Any]]
+
+
+# --- query relaxation helpers ----------------------------------------------
+
+
+def _relaxed_leave_one_out(tokens: list[str]) -> list[str]:
+    """Every query with exactly one token dropped (``A B C`` -> AB, AC, BC)."""
+    return [" ".join(tokens[:i] + tokens[i + 1 :]) for i in range(len(tokens))]
+
+
+def _relaxed_drop_last(tokens: list[str]) -> list[str]:
+    """Progressively shorter prefixes (``A B C D`` -> ``A B C`` -> ... -> ``A``)."""
+    return [" ".join(tokens[:k]) for k in range(len(tokens) - 1, 0, -1)]
+
+
+def _fulltext(fetch: FetchFn, query: str) -> list[str]:
+    return _fulltext_leis(fetch("fulltext", query))
+
+
+def _autocompletions(fetch: FetchFn, query: str) -> list[str]:
+    return _autocompletions_leis(fetch("autocompletions", query))
+
+
+def _relax_drop_last(fetch: FetchFn, query: str) -> list[str]:
+    """Fulltext, then — only on zero hits — retry with trailing tokens removed."""
+    primary = _fulltext_leis(fetch("fulltext", query))
+    if primary:
+        return primary  # trigger fires ONLY on zero primary results
+    for relaxed in _relaxed_drop_last(query.split()):
+        leis = _fulltext_leis(fetch("fulltext", relaxed))
+        if leis:
+            return leis
+    return primary
+
+
+def _relax_leave_one_out(fetch: FetchFn, query: str) -> list[str]:
+    """Fulltext, then — only on zero hits — leave-one-out consensus retry.
+
+    Runs one fulltext query per token with that token dropped, then ranks the
+    union of results by how many leave-one-out variants surfaced each LEI
+    (a typo'd token yields empty variants, so the true entity — whose correct
+    tokens survive in the variant that drops the typo — still wins), breaking
+    ties on the best (lowest) rank any variant gave it.
+    """
+    primary = _fulltext_leis(fetch("fulltext", query))
+    if primary:
+        return primary  # trigger fires ONLY on zero primary results
+    tokens = query.split()
+    if len(tokens) < 2:
+        return primary
+    votes: dict[str, int] = {}
+    best_rank: dict[str, int] = {}
+    for relaxed in _relaxed_leave_one_out(tokens):
+        for rank, lei in enumerate(_fulltext_leis(fetch("fulltext", relaxed)), start=1):
+            votes[lei] = votes.get(lei, 0) + 1
+            best_rank[lei] = min(best_rank.get(lei, rank), rank)
+    return sorted(votes, key=lambda lei: (-votes[lei], best_rank[lei]))
+
+
+class Strategy(NamedTuple):
+    resolve: Callable[[FetchFn, str], list[str]]
+
+
+_ENDPOINTS: dict[str, Strategy] = {
+    "fulltext": Strategy(_fulltext),
+    "autocompletions": Strategy(_autocompletions),
+    "relax_droplast": Strategy(_relax_drop_last),
+    "relax_loo": Strategy(_relax_leave_one_out),
 }
 
 
@@ -144,7 +232,7 @@ def _fetch(
     cached = cache.get(key)
     if cached is not None:
         return cached
-    path = _ENDPOINTS[endpoint].path(query)
+    path = _PATHS[endpoint](query)
     resp = client.get(f"{_API_BASE}{path}")
     resp.raise_for_status()
     payload: dict[str, Any] = resp.json()
@@ -246,16 +334,19 @@ def main(argv: list[str] | None = None) -> int:
     with httpx.Client(
         timeout=30.0, headers={"User-Agent": _USER_AGENT}, follow_redirects=True
     ) as client:
+
+        def fetch_fn(endpoint: str, subquery: str) -> dict[str, Any]:
+            return _fetch(client, endpoint, subquery, cache, args.delay)
+
         for i, q in enumerate(queries, start=1):
             query = q["query"]
             expected = q["expected_lei"]
             ranks: dict[str, int | None] = {}
             results: dict[str, list[str]] = {}
-            for ep, spec in _ENDPOINTS.items():
+            for ep, strat in _ENDPOINTS.items():
                 leis: list[str]
                 try:
-                    payload = _fetch(client, ep, query, cache, args.delay)
-                    leis = spec.extract(payload)
+                    leis = strat.resolve(fetch_fn, query)
                 except httpx.HTTPError as exc:  # noqa: PERF203
                     errors.append(f"{ep} {query!r}: {exc}")
                     leis = []
@@ -274,7 +365,8 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"[{i:>2}/{len(queries)}] {q['category']:<20} "
                 f"ft={_fmt_rank(ranks['fulltext'])} "
-                f"ac={_fmt_rank(ranks['autocompletions'])}  {query[:48]!r}",
+                f"ac={_fmt_rank(ranks['autocompletions'])} "
+                f"rx={_fmt_rank(ranks['relax_loo'])}  {query[:48]!r}",
                 file=sys.stderr,
             )
 
