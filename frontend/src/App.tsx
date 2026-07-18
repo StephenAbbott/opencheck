@@ -2724,13 +2724,18 @@ function PossiblySameTable({ pairs }: { pairs: PossiblySameEntity[] }) {
       <table className="w-full text-[13px] border-collapse table-fixed">
         <thead>
           <tr>
-            <th className="text-left text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 pr-3 w-[64%]">
+            {/* Narrower Records column and tighter letter-spacing on mobile:
+                at tracking-widest the single words "Jurisdiction" and
+                "Confidence" are wider than an 18% column on a phone, so they
+                overflow their cells and collide. break-words lets them wrap
+                rather than spill. */}
+            <th className="text-left text-[10px] font-medium tracking-wide sm:tracking-widest uppercase text-oo-muted pb-2 pr-3 w-[44%] sm:w-[64%] align-bottom">
               Records
             </th>
-            <th className="text-left text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 pr-3 w-[18%]">
+            <th className="text-left text-[10px] font-medium tracking-wide sm:tracking-widest uppercase text-oo-muted pb-2 pr-3 w-[26%] sm:w-[18%] align-bottom break-words">
               Jurisdiction
             </th>
-            <th className="text-right text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 w-[18%]">
+            <th className="text-right text-[10px] font-medium tracking-wide sm:tracking-widest uppercase text-oo-muted pb-2 w-[30%] sm:w-[18%] align-bottom break-words">
               Confidence
             </th>
           </tr>
