@@ -192,6 +192,9 @@ export default function App() {
   const [replayedAt, setReplayedAt] = useState<string | null>(null);
   // Source IDs with an in-flight per-source retry (/lookup-source).
   const [retryingSources, setRetryingSources] = useState<Set<string>>(new Set());
+  // Screen-reader announcement for per-source failures and retry outcomes,
+  // rendered in the sr-only role="status" region in <main>.
+  const [srAnnouncement, setSrAnnouncement] = useState("");
 
   // Cleanup ref — holds the SSE close function for the current in-flight stream.
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -435,6 +438,14 @@ export default function App() {
     lookupMutation.mutate({ lei, refresh: opts?.refresh });
   }
 
+  // Move focus to #main-content when an action unmounts the focused element
+  // (e.g. picking a search result resets the picker) — without this, focus
+  // drops to <body> for keyboard and screen reader users. The [view] effect
+  // above only covers actual view changes; these paths stay on "main".
+  function focusMain() {
+    document.getElementById("main-content")?.focus({ preventScroll: true });
+  }
+
   // On first load and on back/forward navigation, honour ?lei= in the URL.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -471,14 +482,30 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
+  // Announce per-source failures to screen readers — once per count change,
+  // not once per SSE event, so a burst of source_error events yields a single
+  // summary rather than a stream of announcements.
+  const errorCount = Object.keys(errors).length;
+  const prevErrorCountRef = useRef(0);
+  useEffect(() => {
+    if (errorCount > prevErrorCountRef.current) {
+      setSrAnnouncement(
+        `${errorCount} source${errorCount === 1 ? "" : "s"} could not be queried — retry buttons are available below.`
+      );
+    }
+    prevErrorCountRef.current = errorCount;
+  }, [errorCount]);
+
   /** Re-run a single failed source via /lookup-source (per-source retry). */
   async function retrySource(sourceId: string) {
     if (!streamingLei) return;
     setRetryingSources((prev) => new Set([...prev, sourceId]));
+    const sourceName = sourceNameIndex[sourceId] ?? sourceId;
     try {
       const res = await retryLookupSource(streamingLei, sourceId);
       if (res.error) {
         setErrors((prev) => ({ ...prev, [sourceId]: res.error as string }));
+        setSrAnnouncement(`${sourceName} retry failed.`);
       } else {
         setErrors((prev) => {
           const next = { ...prev };
@@ -489,12 +516,14 @@ export default function App() {
           ...prev.filter((h) => h.source_id !== sourceId),
           ...res.hits,
         ]);
+        setSrAnnouncement(`${sourceName} retried successfully.`);
       }
     } catch (e) {
       setErrors((prev) => ({
         ...prev,
         [sourceId]: e instanceof Error ? e.message : String(e),
       }));
+      setSrAnnouncement(`${sourceName} retry failed.`);
     } finally {
       setRetryingSources((prev) => {
         const next = new Set(prev);
@@ -804,6 +833,10 @@ export default function App() {
           {streaming && legalName && `Loading results for ${legalName}…`}
           {streamingLei && !streaming && legalName && `Lookup complete for ${legalName}. ${totalHits} result${totalHits === 1 ? "" : "s"} found.`}
         </div>
+        {/* Announces per-source failures and retry outcomes */}
+        <div role="status" className="sr-only">
+          {srAnnouncement}
+        </div>
         {view === "main" && (
         <>
         {/* ── Search panel — two-tab design ── */}
@@ -939,6 +972,7 @@ export default function App() {
                             nameSearchMutation.reset();
                             setNameQuery("");
                             lookupLei(r.lei);
+                            focusMain();
                           }}
                           className="w-full text-left px-4 py-3 hover:bg-oo-bg transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-oo-blue/40"
                         >
@@ -988,6 +1022,7 @@ export default function App() {
                           nationalIdSearchMutation.reset();
                           setNationalIdQuery("");
                           lookupLei(results[0].lei);
+                          focusMain();
                         }
                         // Multiple results: show the picker below (same as name search).
                       },
@@ -1083,6 +1118,7 @@ export default function App() {
                         nationalIdSearchMutation.reset();
                         setNationalIdQuery("");
                         setSearchMode("name");
+                        focusMain();
                       }}
                       className="underline hover:no-underline"
                     >
@@ -1107,6 +1143,7 @@ export default function App() {
                             nationalIdSearchMutation.reset();
                             setNationalIdQuery("");
                             lookupLei(r.lei);
+                            focusMain();
                           }}
                           className="w-full text-left px-4 py-3 hover:bg-oo-bg transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-oo-blue/40"
                         >
@@ -1287,7 +1324,7 @@ export default function App() {
               ))}
             </div>
             <p className="text-[12px] text-oo-muted mt-3">
-              Hover a chip for the rule that fired. Signals derived from
+              Select a chip for the rule that fired. Signals derived from
               open data; AMLA-aligned chips read BODS statements.
             </p>
           </section>
@@ -1323,7 +1360,7 @@ export default function App() {
               {totalHits} hit{totalHits === 1 ? "" : "s"} across{" "}
               {cddBuckets.length} source{cddBuckets.length === 1 ? "" : "s"}
               {pendingCddSources.length > 0 && (
-                <span className="text-oo-blue/50 font-normal ml-1.5">
+                <span className="text-oo-blue font-normal ml-1.5">
                   · {pendingCddSources.length} pending…
                 </span>
               )}
@@ -1481,7 +1518,7 @@ export default function App() {
         className="px-6 sm:px-10 lg:px-16 py-4 text-white/90 text-[13px] leading-[1.6]"
         style={{
           background:
-            "linear-gradient(90deg, rgb(7, 116, 95) 0%, rgb(12, 213, 173) 100%)",
+            "linear-gradient(90deg, rgb(7, 116, 95) 0%, rgb(11, 110, 92) 100%)",
         }}
       >
         <div className="max-w-oo-page mx-auto flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -2251,6 +2288,7 @@ function ExampleLeiPicker({
                         evidence: {},
                       }}
                       compact
+                      interactive={false}
                     />
                   ))}
                 </div>

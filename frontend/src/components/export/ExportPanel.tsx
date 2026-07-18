@@ -61,6 +61,7 @@ export function ExportPanel({
         </div>
         <div className="flex items-center gap-2">
           <select
+            aria-label="Export format"
             value={format}
             onChange={(e) =>
               setFormat(

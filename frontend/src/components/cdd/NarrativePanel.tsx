@@ -108,7 +108,10 @@ function CitationChip({ cite }: { cite: Cite }) {
       className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors ${tone}`}
     >
       {cite.confidence && (
-        <span aria-hidden className="text-[9px]">{CONFIDENCE_DOT[cite.confidence] ?? "•"}</span>
+        <>
+          <span aria-hidden className="text-[9px]">{CONFIDENCE_DOT[cite.confidence] ?? "•"}</span>
+          <span className="sr-only">{cite.confidence} confidence</span>
+        </>
       )}
       <span>{cite.label}</span>
     </button>

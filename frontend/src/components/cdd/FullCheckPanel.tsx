@@ -59,12 +59,12 @@ export default function FullCheckPanel({
       </div>
 
       {error && (
-        <p className="text-[13px] text-red-700 bg-red-50 border border-red-200 rounded-oo px-3 py-2">
+        <p role="alert" className="text-[13px] text-red-700 bg-red-50 border border-red-200 rounded-oo px-3 py-2">
           Couldn't load the network: {error}
         </p>
       )}
       {!statements && !error && (
-        <p className="text-[13px] text-oo-muted italic">Loading the network…</p>
+        <p role="status" className="text-[13px] text-oo-muted italic">Loading the network…</p>
       )}
       {statements && (
         <div className="bg-white border border-oo-rule rounded-oo p-4">

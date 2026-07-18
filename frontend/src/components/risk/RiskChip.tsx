@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { RiskSignal } from "../../lib/api";
 
 /**
@@ -103,10 +104,13 @@ export function rank(confidence: string): number {
 export function RiskChip({
   signal,
   compact = false,
+  interactive = true,
 }: {
   signal: RiskSignal;
   compact?: boolean;
+  interactive?: boolean;
 }) {
+  const [open, setOpen] = useState(false);
   const presentation =
     RISK_PRESENTATION[signal.code] ?? {
       label: signal.code,
@@ -115,13 +119,49 @@ export function RiskChip({
   const padding = compact
     ? "px-2 py-0.5 text-[12px] font-medium"
     : "px-3 py-1 text-[13px] font-semibold";
-  return (
-    <span
-      title={`${signal.summary}\n\nSource: ${signal.source_id}/${signal.hit_id}\nConfidence: ${signal.confidence}`}
-      className={`inline-flex items-center gap-1.5 border rounded-full shadow-sm ${padding} ${presentation.classes}`}
-    >
+  const title = `${signal.summary}\n\nSource: ${signal.source_id}/${signal.hit_id}\nConfidence: ${signal.confidence}`;
+  const chipContent = (
+    <>
       <span aria-hidden className="text-[10px]">{CONFIDENCE_DOT[signal.confidence] ?? "•"}</span>
+      <span className="sr-only">{signal.confidence} confidence</span>
       <span>{presentation.label}</span>
-    </span>
+    </>
+  );
+
+  if (!interactive) {
+    return (
+      <span
+        title={title}
+        className={`inline-flex items-center gap-1.5 border rounded-full shadow-sm ${padding} ${presentation.classes}`}
+      >
+        {chipContent}
+        <span className="sr-only">
+          {signal.summary}
+          {signal.source_id ? ` Source: ${signal.source_id}.` : ""}
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        title={title}
+        className={`inline-flex items-center gap-1.5 border rounded-full shadow-sm ${padding} ${presentation.classes}`}
+      >
+        {chipContent}
+      </button>
+      {open && (
+        <span className="basis-full text-left text-[12px] text-oo-ink bg-white border border-oo-rule rounded px-2.5 py-1.5 leading-[1.5]">
+          {signal.summary}
+          {signal.source_id ? <> · Source: {signal.source_id}</> : null}
+          {" · "}
+          {signal.confidence} confidence
+        </span>
+      )}
+    </>
   );
 }
