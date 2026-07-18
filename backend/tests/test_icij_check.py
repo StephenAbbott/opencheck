@@ -178,6 +178,45 @@ def _target(name: str = "Acme BVI Ltd", kind: str = "entity", sid: str = "e1") -
     return {"kind": kind, "statement_id": sid, "name": name}
 
 
+# ---------------------------------------------------------------------
+# Reconciliation API v0.2 (ICIJ moved to /api/v1/ — the bare path 404s)
+# ---------------------------------------------------------------------
+
+
+def test_reconcile_url_is_the_versioned_api_path() -> None:
+    """Regression: ``https://offshoreleaks.icij.org/reconcile`` now 404s.
+    ICIJ serves the reconciliation service under ``/api/v1/``."""
+    from opencheck.icij_check import _RECONCILE_URL
+
+    assert _RECONCILE_URL == "https://offshoreleaks.icij.org/api/v1/reconcile"
+
+
+def test_bare_node_id_is_expanded_to_a_public_node_url() -> None:
+    """Spec v0.2 returns a bare node id, not a URL — the link is rebuilt."""
+    sig = _signal_from_match(_icij_match(node_id="12345"), _target(), min_score=70)
+    assert sig is not None
+    assert sig.evidence["node_url"] == "https://offshoreleaks.icij.org/nodes/12345"
+    assert sig.hit_id == "https://offshoreleaks.icij.org/nodes/12345"
+
+
+def test_absolute_node_url_passes_through_unchanged() -> None:
+    """A full URL (the pre-v0.2 shape) must not be double-prefixed."""
+    sig = _signal_from_match(
+        _icij_match(node_id="https://offshoreleaks.icij.org/nodes/777"),
+        _target(),
+        min_score=70,
+    )
+    assert sig is not None
+    assert sig.evidence["node_url"] == "https://offshoreleaks.icij.org/nodes/777"
+
+
+def test_missing_node_id_yields_empty_node_url() -> None:
+    sig = _signal_from_match(_icij_match(node_id=""), _target(), min_score=70)
+    assert sig is not None
+    assert sig.evidence["node_url"] == ""
+    assert sig.hit_id.startswith("icij:")  # falls back to the slug
+
+
 def test_signal_from_match_high_confidence_when_match_true() -> None:
     sig = _signal_from_match(_icij_match(match=True, score=85), _target(), min_score=70)
     assert sig is not None

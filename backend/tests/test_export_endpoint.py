@@ -102,7 +102,7 @@ def _mock_lei_record_chain(httpx_mock: HTTPXMock, lei: str) -> None:
 def _mock_icij_empty(httpx_mock: HTTPXMock) -> None:
     """Register an ICIJ reconciliation endpoint that returns no matches."""
     httpx_mock.add_response(
-        url="https://offshoreleaks.icij.org/reconcile",
+        url="https://offshoreleaks.icij.org/api/v1/reconcile",
         method="POST",
         json={},
     )
