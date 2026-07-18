@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import asyncio
 import difflib
+import logging
 import re
 import unicodedata
 from typing import Any
@@ -49,6 +50,8 @@ from typing import Any
 from .config import get_settings
 from .risk import RiskSignal
 from .sources import REGISTRY, SearchKind, SourceHit
+
+_LOG = logging.getLogger(__name__)
 
 
 # Risk code names — match strings used by the frontend's
@@ -95,7 +98,18 @@ async def assess_cross_source_names(
         return []
 
     settings = get_settings()
-    if not settings.opensanctions_api_key or not settings.allow_live:
+    if not settings.allow_live:
+        # Offline/demo mode — expected, not a degradation. Debug only.
+        _LOG.debug("Cross-source name screening skipped: live mode is off.")
+        return []
+    if not settings.opensanctions_api_key:
+        # Live mode but no key: the screen genuinely cannot run, and an
+        # empty result would otherwise look identical to a clean screen.
+        _LOG.warning(
+            "Cross-source name screening disabled: OPENSANCTIONS_API_KEY is not "
+            "set while live mode is on. RELATED_SANCTIONED / RELATED_PEP signals "
+            "will be absent for every lookup — this is NOT a clean screen."
+        )
         return []
 
     targets = _collect_targets(bods)[:max_targets]
@@ -110,13 +124,42 @@ async def assess_cross_source_names(
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     signals: list[RiskSignal] = []
+    # Failure bookkeeping. An adapter error must not poison the rest of
+    # the bundle, but it must not pass for "screened, nothing found"
+    # either — a silently-dropped sanctions probe is a false negative.
+    # Counts only: the target names are people/companies from the
+    # subject's ownership graph and must not reach hosted logs.
+    failed_by_source: dict[str, int] = {}
+    target_errors = 0
     for r in results:
-        if isinstance(r, Exception):
-            # An adapter error shouldn't poison the rest of the bundle.
-            # The caller will still see plain risk signals; cross-check
-            # silently skips the target that errored.
+        if isinstance(r, BaseException):
+            target_errors += 1
+            _LOG.warning(
+                "Cross-source screening: probe for one related party raised "
+                "%s: %s (that party was not screened).",
+                type(r).__name__,
+                r,
+            )
             continue
-        signals.extend(r)
+        target_signals, failures = r
+        signals.extend(target_signals)
+        for source_id in failures:
+            failed_by_source[source_id] = failed_by_source.get(source_id, 0) + 1
+
+    if failed_by_source or target_errors:
+        detail = ", ".join(
+            f"{source_id} failed for {count} of {len(targets)} name(s)"
+            for source_id, count in sorted(failed_by_source.items())
+        )
+        if target_errors:
+            extra = f"{target_errors} of {len(targets)} name(s) errored outright"
+            detail = f"{detail}; {extra}" if detail else extra
+        _LOG.warning(
+            "Cross-source screening degraded for this lookup (%s): "
+            "RELATED_SANCTIONED / RELATED_PEP signals may be incomplete — "
+            "an empty result here is not a clean screen.",
+            detail,
+        )
     return _dedupe(signals)
 
 
@@ -223,9 +266,14 @@ def _person_birth_year(rd: dict[str, Any]) -> int | None:
 
 async def _check_target(
     target: dict[str, Any], *, min_score: float
-) -> list[RiskSignal]:
+) -> tuple[list[RiskSignal], set[str]]:
     """Run OS (+ EP for persons) searches for one target and score the
-    matches."""
+    matches.
+
+    Returns ``(signals, failed_source_ids)``. The second element lets the
+    caller distinguish "screened, nothing found" from "the screen never
+    ran" — see the aggregated warning in ``assess_cross_source_names``.
+    """
     name = target["name"]
     kind = SearchKind.PERSON if target["kind"] == _KIND_PERSON else SearchKind.ENTITY
 
@@ -240,15 +288,21 @@ async def _check_target(
     if ep_adapter is not None:
         tasks.append(asyncio.create_task(ep_adapter.search(name, SearchKind.PERSON)))
     if not tasks:
-        return []
+        return [], set()
 
     raw_results = await asyncio.gather(*tasks, return_exceptions=True)
 
     signals: list[RiskSignal] = []
+    failed: set[str] = set()
     # OpenSanctions hits — derive RELATED_PEP / RELATED_SANCTIONED from
     # the topics on the underlying record.
     if os_adapter is not None:
-        os_hits = raw_results[0] if not isinstance(raw_results[0], Exception) else []
+        os_raw = raw_results[0]
+        if isinstance(os_raw, BaseException):
+            failed.add("opensanctions")
+            os_hits: list[SourceHit] = []
+        else:
+            os_hits = os_raw
         for hit in os_hits:
             sig = _signal_from_os(hit, target, min_score=min_score)
             if sig is not None:
@@ -256,16 +310,17 @@ async def _check_target(
     # EveryPolitician hits — every hit is by construction a PEP.
     if ep_adapter is not None:
         ep_index = 0 if os_adapter is None else 1
-        ep_hits = (
-            raw_results[ep_index]
-            if not isinstance(raw_results[ep_index], Exception)
-            else []
-        )
+        ep_raw = raw_results[ep_index]
+        if isinstance(ep_raw, BaseException):
+            failed.add("everypolitician")
+            ep_hits: list[SourceHit] = []
+        else:
+            ep_hits = ep_raw
         for hit in ep_hits:
             sig = _signal_from_ep(hit, target, min_score=min_score)
             if sig is not None:
                 signals.append(sig)
-    return signals
+    return signals, failed
 
 
 def _signal_from_os(
