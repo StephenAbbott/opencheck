@@ -341,3 +341,84 @@ async def test_strategies_noop_when_not_registered(monkeypatch, tmp_path: Path) 
     for _sid, coro in tasks:
         coro.close()
     assert "opentender" not in ids
+
+
+# ---------------------------------------------------------------------------
+# End-to-end: an opentender hit must survive the list-result consume-loop.
+#
+# _opentender_strategies returning hits is not enough — the pipeline only keeps
+# a list-result source's hits if its source_id is in the "list-result sources"
+# tuples (lookup.py consume-loop and lookup_source retry). These tests drive the
+# REAL loops so that a silent drop of "opentender" from those tuples is caught.
+# ---------------------------------------------------------------------------
+
+_VALID_LEI = "213800LH1BZH3DI6G760"  # 20-char, matches _LEI_SHAPE
+
+
+def _fr_orange_tender() -> dict[str, Any]:
+    t = _bidder_tender("FR-orange-1", "FR", "Orange S.A.", id_type="ORGANIZATION_ID", id_value=_SIREN)
+    # A publication keeps the map-only count step off the issue #39 code path.
+    t["publications"] = [{"humanReadableURL": "https://opentender.eu/fr/tender/FR-orange-1"}]
+    return t
+
+
+def _register_and_resolve(monkeypatch, tmp_path: Path):
+    """Register a live opentender adapter and stub _resolve_ctx to a FR/SIREN
+    subject, so the pipeline reaches dispatch + the consume-loop offline."""
+    from opencheck.routers import lookup as lookup_mod
+
+    db = _build_db(tmp_path, [_fr_orange_tender()])
+    _configure(monkeypatch, db)
+    monkeypatch.setitem(REGISTRY, "opentender", OpenTenderAdapter())
+
+    ctx = _LookupCtx(
+        lei=_VALID_LEI,
+        legal_name="Orange S.A.",
+        jurisdiction="FR",
+        derived={"lei": _VALID_LEI, "siren": _SIREN},
+    )
+
+    async def _fake_resolve(_lei: str):
+        return ctx, {"record": {}, "direct_children_total": 0}
+
+    monkeypatch.setattr(lookup_mod, "_resolve_ctx", _fake_resolve)
+    return lookup_mod, ctx
+
+
+async def test_opentender_hit_survives_the_pipeline_consume_loop(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Drives the real ``_lookup_pipeline`` consume-loop. Isolates dispatch to
+    opentender (the tuple under test is NOT patched) and asserts the opentender
+    hit is emitted. Mutation guard: removing "opentender" from the consume-loop
+    list-result tuple makes the hit fall through ``_build_result_hit`` (which
+    returns None for a list) — no hit event — so this fails."""
+    lookup_mod, ctx = _register_and_resolve(monkeypatch, tmp_path)
+
+    def _only_opentender(_ctx, only=None):
+        return [("opentender", lookup_mod._opentender_strategies(_ctx))]
+
+    monkeypatch.setattr(lookup_mod, "_dispatch", _only_opentender)
+
+    opentender_hit_ids: set[str] = set()
+    async for event, payload in lookup_mod._lookup_pipeline(_VALID_LEI, deepen_top=0):
+        if event == "hit" and getattr(payload, "source_id", None) == "opentender":
+            opentender_hit_ids.add(payload.hit_id)
+    assert "FR-orange-1" in opentender_hit_ids
+
+
+async def test_opentender_hit_survives_lookup_source_retry(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Drives the real /lookup-source retry consume path (its own list-result
+    tuple). Mutation guard: removing "opentender" from that tuple drops the hit,
+    so ``resp.hits`` becomes empty and this fails."""
+    lookup_mod, ctx = _register_and_resolve(monkeypatch, tmp_path)
+
+    resp = await lookup_mod.lookup_source(
+        request=None,  # unused by the handler body
+        response=None,
+        lei=_VALID_LEI,
+        source_id="opentender",
+    )
+    assert {h.hit_id for h in resp.hits} == {"FR-orange-1"}
