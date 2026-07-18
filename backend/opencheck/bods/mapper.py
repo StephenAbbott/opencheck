@@ -4361,7 +4361,7 @@ def map_opentender(bundle: dict[str, Any]) -> BODSBundle:
     if not tender_id:
         return result
 
-    tender_url = tender.get("publications", [{}])[0].get("humanReadableURL") or (
+    tender_url = (tender.get("publications") or [{}])[0].get("humanReadableURL") or (
         f"https://opentender.eu/{tender.get('country', '').lower()}/tender/{tender_id}"
     )
 
