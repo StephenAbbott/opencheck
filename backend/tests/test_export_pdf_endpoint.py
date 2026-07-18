@@ -50,9 +50,10 @@ def test_export_pdf_streams_a_pdf(monkeypatch):
     monkeypatch.setattr("opencheck.routers.export._lookup_impl", _fake_lookup)
     captured = {}
 
-    def _fake_build(report, *, narrative=None):
+    def _fake_build(report, *, narrative=None, dispositions=None):
         captured["report"] = report
         captured["narrative"] = narrative
+        captured["dispositions"] = dispositions
         return b"%PDF-1.7\nfake"
 
     monkeypatch.setattr("opencheck.routers.export.build_report_pdf", _fake_build)
@@ -67,14 +68,16 @@ def test_export_pdf_streams_a_pdf(monkeypatch):
     # The lookup result was handed to the builder; no narrative was supplied.
     assert captured["report"]["lei"] == "2138000000000000A001"
     assert captured["narrative"] is None
+    assert captured["dispositions"] is None
 
 
 def test_export_pdf_forwards_narrative(monkeypatch):
     monkeypatch.setattr("opencheck.routers.export._lookup_impl", _fake_lookup)
     seen = {}
 
-    def _fake_build(report, *, narrative=None):
+    def _fake_build(report, *, narrative=None, dispositions=None):
         seen["narrative"] = narrative
+        seen["dispositions"] = dispositions
         return b"%PDF-1.7\n"
 
     monkeypatch.setattr("opencheck.routers.export.build_report_pdf", _fake_build)
@@ -86,10 +89,51 @@ def test_export_pdf_forwards_narrative(monkeypatch):
     assert seen["narrative"]["summary"] == "An entity."
 
 
+def test_export_pdf_falls_back_to_stored_dispositions(monkeypatch, tmp_path):
+    """No dispositions in the request → the stored sheet for run_id is used."""
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setattr("opencheck.routers.export._lookup_impl", _fake_lookup)
+
+    from opencheck.dispositions import ClaimDisposition, DispositionRecord, save_dispositions
+
+    run_id = "0123456789abcdef"
+    save_dispositions(
+        DispositionRecord(
+            lei="2138000000000000A001",
+            run_id=run_id,
+            dispositions=[ClaimDisposition(claim_id="c1", status="accepted")],
+        )
+    )
+
+    seen = {}
+
+    def _fake_build(report, *, narrative=None, dispositions=None):
+        seen["dispositions"] = dispositions
+        return b"%PDF-1.7\n"
+
+    monkeypatch.setattr("opencheck.routers.export.build_report_pdf", _fake_build)
+
+    client = TestClient(app)
+    narrative = {"summary": "An entity.", "run_id": run_id, "packet": {"facts": []}}
+    r = client.post("/export/pdf", json={"lei": "2138000000000000A001", "narrative": narrative})
+    assert r.status_code == 200
+    assert seen["dispositions"]["dispositions"][0]["claim_id"] == "c1"
+
+    # Explicit client-sent dispositions win over the stored record.
+    explicit = {"lei": "2138000000000000A001", "run_id": run_id,
+                "dispositions": [{"claim_id": "c9", "status": "disputed", "comment": None}]}
+    r2 = client.post(
+        "/export/pdf",
+        json={"lei": "2138000000000000A001", "narrative": narrative, "dispositions": explicit},
+    )
+    assert r2.status_code == 200
+    assert seen["dispositions"]["dispositions"][0]["claim_id"] == "c9"
+
+
 def test_export_pdf_503_when_toolchain_missing(monkeypatch):
     monkeypatch.setattr("opencheck.routers.export._lookup_impl", _fake_lookup)
 
-    def _raise(report, *, narrative=None):
+    def _raise(report, *, narrative=None, dispositions=None):
         raise PdfUnavailable("WeasyPrint not installed")
 
     monkeypatch.setattr("opencheck.routers.export.build_report_pdf", _raise)

@@ -24,6 +24,12 @@ class ValidationResult(BaseModel):
     # The summary paragraph, kept only if it survived (see below).
     summary: str = ""
     overall_confidence: str = "low"
+    # Gap ids (``g*``) present in the packet but cited by no surviving claim.
+    # "Clear fallbacks, not silent gaps": the narrative is *required* to state
+    # what could not be verified, so an uncited gap is surfaced as an issue and
+    # the UI/PDF render the gap list directly from the packet regardless — a
+    # model failure can never hide a gap.
+    uncited_gaps: list[str] = Field(default_factory=list)
 
 
 def validate_narrative(
@@ -67,6 +73,17 @@ def validate_narrative(
         # caller can re-prompt or fall back to a claims-only rendering.
         summary = ""
 
+    # Gap-citation rule: every gap in the packet should be acknowledged by at
+    # least one surviving claim. Uncited gaps don't invalidate the narrative
+    # (``ok`` tracks ungrounded claims only) — they are recorded so callers can
+    # render the packet's gap list explicitly instead of trusting the prose.
+    cited: set[str] = set()
+    for claim in valid:
+        cited.update(claim.get("fact_ids") or [])
+    uncited_gaps = sorted(g for g in packet.gap_ids() if g not in cited)
+    for g in uncited_gaps:
+        issues.append(f"gap {g!r} is not cited by any claim")
+
     return ValidationResult(
         ok=ok,
         valid_claims=valid,
@@ -74,4 +91,5 @@ def validate_narrative(
         issues=issues,
         summary=summary,
         overall_confidence=result.get("overall_confidence", "low"),
+        uncited_gaps=uncited_gaps,
     )

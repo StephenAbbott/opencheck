@@ -29,6 +29,7 @@ from ..bods import (
     validate_shape,
 )
 from ..bods.senzing import _desc_to_source_id
+from ..dispositions import load_dispositions
 from ..licensing import assess as assess_licensing
 from ..licensing import full_matrix
 from ..ratelimit import default_tier, heavy_tier, limiter, lookup_tier
@@ -333,6 +334,10 @@ class PdfExportRequest(BaseModel):
     lei: str = Field(..., description="ISO 17442 Legal Entity Identifier.")
     deepen_top: int = Field(5, ge=0, le=10)
     narrative: dict[str, Any] | None = None
+    # Analyst claim dispositions (a DispositionRecord dict) rendered next to
+    # each claim so the PDF is the analyst's defensible record. When omitted,
+    # the stored record for narrative.run_id is used if one exists.
+    dispositions: dict[str, Any] | None = None
 
 
 @router.post("/export/pdf")
@@ -347,9 +352,22 @@ async def export_pdf(request: Request, req: PdfExportRequest) -> Response:
     norm_lei = req.lei.strip().upper()
     payload = await _lookup_impl(lei=norm_lei, deepen_top=req.deepen_top)  # raises 400/404 on bad LEI
     report = payload.model_dump()
+
+    # Fall back to the stored disposition sheet for this narrative run, so a
+    # PDF downloaded in a later session still carries the analyst's decisions.
+    dispositions = req.dispositions
+    run_id = (req.narrative or {}).get("run_id") or ""
+    if dispositions is None and run_id:
+        try:
+            stored = await asyncio.to_thread(load_dispositions, norm_lei, run_id)
+            if stored is not None:
+                dispositions = stored.model_dump(mode="json")
+        except ValueError:
+            dispositions = None  # malformed run_id — render without dispositions
+
     try:
         pdf_bytes = await asyncio.to_thread(
-            build_report_pdf, report, narrative=req.narrative
+            build_report_pdf, report, narrative=req.narrative, dispositions=dispositions
         )
     except PdfUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

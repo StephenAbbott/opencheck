@@ -9,13 +9,24 @@
  *
  * The summary is generated only when the user clicks "Generate summary" so we
  * don't spend a model call on every lookup.
+ *
+ * Analyst control plane: each claim can be marked Accepted / Disputed / Needs
+ * review with an optional note. Dispositions are persisted server-side keyed to
+ * the narrative's `run_id` (a regenerate starts a fresh sheet) and are embedded
+ * in the PDF export, turning the report into the analyst's defensible record.
+ * Curated (pre-baked) example summaries have no live run to bind to, so their
+ * controls are hidden until the user regenerates live.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   downloadReportPdf,
   fetchCuratedNarrative,
   fetchNarrative,
+  getDispositions,
+  putDispositions,
+  type DispositionRecord,
+  type DispositionStatus,
   type EvidencePacket,
   type NarrativeResponse,
 } from "../../lib/api";
@@ -104,6 +115,94 @@ function CitationChip({ cite }: { cite: Cite }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Analyst dispositions
+// ---------------------------------------------------------------------------
+
+interface DispState {
+  status: DispositionStatus;
+  comment: string;
+}
+
+const DISP_OPTIONS: { status: DispositionStatus; label: string; active: string }[] = [
+  { status: "accepted", label: "Accept", active: "bg-emerald-50 text-emerald-700 border-emerald-300" },
+  { status: "disputed", label: "Dispute", active: "bg-rose-50 text-rose-700 border-rose-300" },
+  { status: "needs_review", label: "Needs review", active: "bg-slate-100 text-slate-700 border-slate-400" },
+];
+
+function DispositionControls({
+  claimId,
+  value,
+  commentOpen,
+  onStatus,
+  onComment,
+  onToggleComment,
+}: {
+  claimId: string;
+  value: DispState | undefined;
+  commentOpen: boolean;
+  onStatus: (s: DispositionStatus) => void;
+  onComment: (text: string) => void;
+  onToggleComment: () => void;
+}) {
+  const commentId = `oc-disp-comment-${claimId}`;
+  const hasComment = Boolean(value?.comment);
+  return (
+    <span className="mt-1 flex flex-wrap items-center gap-1">
+      <span
+        role="group"
+        aria-label="Analyst disposition for this statement"
+        className="inline-flex items-center gap-1"
+      >
+        {DISP_OPTIONS.map((opt) => {
+          const selected = value?.status === opt.status;
+          return (
+            <button
+              key={opt.status}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onStatus(opt.status)}
+              className={`rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                selected
+                  ? opt.active
+                  : "bg-white text-oo-muted border-oo-rule hover:border-oo-blue hover:text-oo-blue"
+              }`}
+            >
+              {opt.label}
+              {selected && <span className="sr-only"> (selected)</span>}
+            </button>
+          );
+        })}
+      </span>
+      <button
+        type="button"
+        aria-expanded={commentOpen}
+        aria-controls={commentId}
+        onClick={onToggleComment}
+        className="rounded-full border border-oo-rule bg-white px-2 py-0.5 text-[11px] font-medium text-oo-muted hover:border-oo-blue hover:text-oo-blue transition-colors"
+      >
+        {hasComment ? "Edit note" : "Add note"}
+      </button>
+      {commentOpen && (
+        <span className="basis-full">
+          <label htmlFor={commentId} className="sr-only">
+            Analyst note for this statement
+          </label>
+          <textarea
+            id={commentId}
+            value={value?.comment ?? ""}
+            onChange={(e) => onComment(e.target.value)}
+            maxLength={2000}
+            rows={2}
+            placeholder="Why is this accepted, disputed or held for review?"
+            className="mt-1 w-full rounded-oo border border-oo-rule p-2 text-[12px] text-oo-ink placeholder:text-[#6b7280] focus:border-oo-blue focus:outline-none focus:ring-1 focus:ring-oo-blue/30"
+          />
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function NarrativePanel({ lei }: { lei: string; legalName?: string | null }) {
   const [data, setData] = useState<NarrativeResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -113,6 +212,16 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
   const [collapsed, setCollapsed] = useState(false);
   const [cached, setCached] = useState(false);
 
+  // Analyst dispositions, keyed by claim id. Persisted (debounced) against the
+  // narrative's run_id; hydrated from the server when a stored sheet exists.
+  const [disp, setDisp] = useState<Record<string, DispState>>({});
+  const [commentOpen, setCommentOpen] = useState<Record<string, boolean>>({});
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const dirtyRef = useRef(false);
+  const saveTimerRef = useRef<number | null>(null);
+
+  const canSignOff = Boolean(data?.run_id) && !cached;
+
   // Curated examples ship a pre-baked, cited summary so first-time visitors see
   // the feature instantly with no model call. Reset + try the cache on every
   // entity change; live lookups have no cached file and fall back to the button.
@@ -121,6 +230,10 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     setData(null);
     setError(null);
     setCached(false);
+    setDisp({});
+    setCommentOpen({});
+    setSaveState("idle");
+    dirtyRef.current = false;
     fetchCuratedNarrative(lei).then((cachedNarrative) => {
       if (active && cachedNarrative) {
         setData(cachedNarrative);
@@ -132,12 +245,107 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     };
   }, [lei]);
 
+  // Hydrate any stored disposition sheet for this exact narrative run.
+  useEffect(() => {
+    if (!data?.run_id || cached) return;
+    let active = true;
+    getDispositions(lei, data.run_id).then((record) => {
+      if (!active || !record || dirtyRef.current) return;
+      const next: Record<string, DispState> = {};
+      for (const d of record.dispositions) {
+        next[d.claim_id] = { status: d.status, comment: d.comment ?? "" };
+      }
+      setDisp(next);
+    });
+    return () => {
+      active = false;
+    };
+  }, [lei, data?.run_id, cached]);
+
+  // Debounced persistence: any analyst change is written ~800 ms after the
+  // last edit (whole-sheet overwrite; timestamps are stamped server-side).
+  useEffect(() => {
+    if (!dirtyRef.current || !data?.run_id || cached) return;
+    const runId = data.run_id;
+    const promptVersion = data.prompt_version;
+    const model = data.model;
+    if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(async () => {
+      setSaveState("saving");
+      try {
+        await putDispositions(
+          lei,
+          runId,
+          Object.entries(disp).map(([claimId, d]) => ({
+            claim_id: claimId,
+            status: d.status,
+            comment: d.comment.trim() ? d.comment.trim() : null,
+          })),
+          { prompt_version: promptVersion, model },
+        );
+        setSaveState("saved");
+      } catch {
+        setSaveState("error");
+      }
+    }, 800);
+    return () => {
+      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
+    };
+  }, [disp, data, cached, lei]);
+
+  function setClaimStatus(claimId: string, status: DispositionStatus) {
+    dirtyRef.current = true;
+    setDisp((prev) => {
+      const current = prev[claimId];
+      // Clicking the active status again clears the decision.
+      if (current?.status === status && !current.comment) {
+        const next = { ...prev };
+        delete next[claimId];
+        return next;
+      }
+      return { ...prev, [claimId]: { status, comment: current?.comment ?? "" } };
+    });
+  }
+
+  function setClaimComment(claimId: string, comment: string) {
+    dirtyRef.current = true;
+    setDisp((prev) => {
+      const current = prev[claimId];
+      return {
+        ...prev,
+        [claimId]: { status: current?.status ?? "needs_review", comment },
+      };
+    });
+  }
+
+  function buildRecord(): DispositionRecord | null {
+    if (!data?.run_id || cached) return null;
+    const entries = Object.entries(disp);
+    if (entries.length === 0) return null;
+    return {
+      lei,
+      run_id: data.run_id,
+      prompt_version: data.prompt_version,
+      model: data.model,
+      reviewer: null,
+      dispositions: entries.map(([claimId, d]) => ({
+        claim_id: claimId,
+        status: d.status,
+        comment: d.comment.trim() ? d.comment.trim() : null,
+      })),
+    };
+  }
+
   async function generate() {
     setLoading(true);
     setError(null);
     try {
       setData(await fetchNarrative(lei));
       setCached(false);
+      setDisp({});
+      setCommentOpen({});
+      setSaveState("idle");
+      dirtyRef.current = false;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not generate the summary.");
     } finally {
@@ -149,14 +357,22 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     setPdfBusy(true);
     setPdfError(null);
     try {
-      // Embed the summary in the PDF only if it has been generated here.
-      await downloadReportPdf(lei, data);
+      // Embed the summary in the PDF only if it has been generated here; the
+      // analyst's dispositions ride along so the PDF is the signed-off record.
+      await downloadReportPdf(lei, data, buildRecord());
     } catch (e) {
       setPdfError(e instanceof Error ? e.message : "Could not generate the PDF.");
     } finally {
       setPdfBusy(false);
     }
   }
+
+  const decidedCount = data ? data.claims.filter((c) => disp[c.id]).length : 0;
+  const tally = {
+    accepted: Object.values(disp).filter((d) => d.status === "accepted").length,
+    disputed: Object.values(disp).filter((d) => d.status === "disputed").length,
+    needs_review: Object.values(disp).filter((d) => d.status === "needs_review").length,
+  };
 
   return (
     <section className="mb-8 bg-white border border-oo-rule rounded-oo p-5 lg:p-7 transition-shadow hover:shadow-oo-card">
@@ -219,7 +435,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
         </div>
       )}
       {pdfError && (
-        <p className="mt-2 text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-oo px-3 py-2">
+        <p role="alert" className="mt-2 text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-oo px-3 py-2">
           {pdfError}
         </p>
       )}
@@ -235,7 +451,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
             {loading ? "Generating…" : "Generate summary"}
           </button>
           {error && (
-            <p className="mt-3 text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-oo px-3 py-2">
+            <p role="alert" className="mt-3 text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-oo px-3 py-2">
               {error}
             </p>
           )}
@@ -248,10 +464,31 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
 
           {data.claims.length > 0 && (
             <div className="mt-4 border-t border-oo-rule pt-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-oo-muted mb-2">
-                Evidence
-              </p>
-              <ul className="space-y-2">
+              <div className="flex items-baseline justify-between flex-wrap gap-2 mb-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-oo-muted">
+                  Evidence
+                </p>
+                {canSignOff && (
+                  <p role="status" className="text-[11px] text-oo-muted">
+                    {decidedCount === 0
+                      ? "Review each statement: accept, dispute, or hold for review."
+                      : [
+                          tally.accepted ? `${tally.accepted} accepted` : null,
+                          tally.disputed ? `${tally.disputed} disputed` : null,
+                          tally.needs_review ? `${tally.needs_review} to review` : null,
+                          data.claims.length - decidedCount > 0
+                            ? `${data.claims.length - decidedCount} undecided`
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                    {saveState === "saving" && " · Saving…"}
+                    {saveState === "saved" && " · Saved"}
+                    {saveState === "error" && " · Could not save — changes will retry on next edit"}
+                  </p>
+                )}
+              </div>
+              <ul className="space-y-3">
                 {data.claims.map((c) => {
                   const cites = c.fact_ids
                     .map((id) => resolveCite(data.packet, id))
@@ -264,9 +501,42 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
                           <CitationChip key={`${c.id}-${cite.id}`} cite={cite} />
                         ))}
                       </span>
+                      {canSignOff && (
+                        <DispositionControls
+                          claimId={c.id}
+                          value={disp[c.id]}
+                          commentOpen={Boolean(commentOpen[c.id])}
+                          onStatus={(s) => setClaimStatus(c.id, s)}
+                          onComment={(text) => setClaimComment(c.id, text)}
+                          onToggleComment={() =>
+                            setCommentOpen((prev) => ({ ...prev, [c.id]: !prev[c.id] }))
+                          }
+                        />
+                      )}
                     </li>
                   );
                 })}
+              </ul>
+              {cached && data.claims.length > 0 && (
+                <p className="mt-2 text-[11px] text-oo-muted">
+                  Sign-off (accept / dispute per statement) is available on live summaries —
+                  use &ldquo;Regenerate live&rdquo; below.
+                </p>
+              )}
+            </div>
+          )}
+
+          {data.packet.gaps.length > 0 && (
+            <div className="mt-4 bg-amber-50/60 border border-amber-200 rounded-oo px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-900 mb-1">
+                Not verified in this check
+              </p>
+              <ul className="list-disc pl-5 space-y-0.5">
+                {data.packet.gaps.map((g) => (
+                  <li key={g.id} className="text-[12px] text-amber-900">
+                    {g.statement}
+                  </li>
+                ))}
               </ul>
             </div>
           )}
@@ -297,7 +567,8 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
               <span className="font-medium text-oo-ink">Saved example summary. </span>
             )}
             AI-generated from OpenCheck&rsquo;s data. Every claim is grounded in the cited sources; nothing
-            is added beyond what they state. Generated by {data.model} · prompt {data.prompt_version}.{" "}
+            is added beyond what they state. Generated by {data.model} · prompt {data.prompt_version}
+            {data.run_id ? <> · run <span className="font-mono">{data.run_id}</span></> : null}.{" "}
             <button type="button" onClick={generate} className="text-oo-blue hover:underline">
               {cached ? "Regenerate live" : "Regenerate"}
             </button>

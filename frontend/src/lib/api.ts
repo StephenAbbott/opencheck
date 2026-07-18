@@ -590,10 +590,85 @@ export interface NarrativeResponse {
   overall_confidence: "high" | "medium" | "low";
   model: string;
   prompt_version: string;
+  /** Deterministic id of this exact narrative — dispositions are keyed to it.
+   *  Optional: pre-baked curated narratives predate the field. */
+  run_id?: string;
+  generated_at?: string;
   packet: EvidencePacket;
   validation_ok: boolean;
   dropped_claims: NarrativeClaim[];
   validation_issues: string[];
+  /** Packet gap ids no surviving claim cited ("clear fallbacks, not silent gaps"). */
+  uncited_gaps?: string[];
+}
+
+// ---------------------------------------------------------------------
+// Analyst dispositions — /narrative/dispositions
+// ---------------------------------------------------------------------
+
+export type DispositionStatus = "accepted" | "disputed" | "needs_review";
+
+export interface ClaimDisposition {
+  claim_id: string;
+  status: DispositionStatus;
+  comment: string | null;
+  decided_at?: string | null;
+}
+
+export interface DispositionRecord {
+  lei: string;
+  run_id: string;
+  prompt_version: string;
+  model: string;
+  reviewer: string | null;
+  dispositions: ClaimDisposition[];
+  updated_at?: string | null;
+}
+
+/**
+ * Persist the analyst's claim dispositions for one narrative run (whole-sheet
+ * overwrite; timestamps are stamped server-side). Returns the stored record.
+ */
+export async function putDispositions(
+  lei: string,
+  runId: string,
+  dispositions: { claim_id: string; status: DispositionStatus; comment: string | null }[],
+  meta: { prompt_version?: string; model?: string } = {},
+): Promise<DispositionRecord> {
+  const r = await fetch(`${BASE_URL}/narrative/dispositions`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      lei,
+      run_id: runId,
+      prompt_version: meta.prompt_version ?? "",
+      model: meta.model ?? "",
+      dispositions,
+    }),
+  });
+  if (!r.ok) {
+    let detail = `${r.status} ${r.statusText}`;
+    try {
+      const body = await r.json();
+      if (body?.detail) detail = body.detail;
+    } catch {
+      /* fall through */
+    }
+    throw new Error(detail);
+  }
+  return (await r.json()) as DispositionRecord;
+}
+
+/** Fetch the stored disposition sheet for a narrative run, or null when none exists. */
+export async function getDispositions(
+  lei: string,
+  runId: string,
+): Promise<DispositionRecord | null> {
+  const params = new URLSearchParams({ lei, run_id: runId });
+  const r = await fetch(`${BASE_URL}/narrative/dispositions?${params.toString()}`);
+  if (r.status === 404) return null;
+  if (!r.ok) return null; // hydration is best-effort — the panel still works without it
+  return (await r.json()) as DispositionRecord;
 }
 
 /**
@@ -652,11 +727,16 @@ export async function fetchCuratedNarrative(
 export async function downloadReportPdf(
   lei: string,
   narrative?: NarrativeResponse | null,
+  dispositions?: DispositionRecord | null,
 ): Promise<void> {
   const r = await fetch(`${BASE_URL}/export/pdf`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ lei, narrative: narrative ?? null }),
+    body: JSON.stringify({
+      lei,
+      narrative: narrative ?? null,
+      dispositions: dispositions ?? null,
+    }),
   });
   if (!r.ok) {
     let detail = `${r.status} ${r.statusText}`;
