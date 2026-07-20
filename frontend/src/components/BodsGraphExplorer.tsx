@@ -509,6 +509,7 @@ export default function BodsGraphExplorer({
             <option value="ftm">FollowTheMoney (Aleph)</option>
             <option value="cypher">Neo4j · Cypher</option>
             <option value="gql">BigQuery · GQL (zip)</option>
+            <option value="amlai">Google AML AI (zip)</option>
           </select>
           <button
             type="button"

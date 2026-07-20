@@ -88,6 +88,16 @@ wheels = [
 ]
 
 [[package]]
+name = "bods-aml-ai"
+version = "0.1.0"
+source = { git = "https://github.com/StephenAbbott/bods-aml-ai.git?rev=11d14ca73a1572116fb795e60c4ea1babaff2af8#11d14ca73a1572116fb795e60c4ea1babaff2af8" }
+dependencies = [
+    { name = "click" },
+    { name = "pycountry" },
+    { name = "python-dateutil" },
+]
+
+[[package]]
 name = "bods-ftm"
 version = "0.1.0"
 source = { git = "https://github.com/StephenAbbott/bods-ftm.git#393c0796e6050d4adc3b2dd20144ca72804900f1" }
@@ -1601,6 +1611,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
+    { name = "bods-aml-ai" },
     { name = "bods-gql" },
     { name = "bods-xml" },
     { name = "duckdb" },
@@ -1641,6 +1652,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", specifier = ">=0.39" },
+    { name = "bods-aml-ai", git = "https://github.com/StephenAbbott/bods-aml-ai.git?rev=11d14ca73a1572116fb795e60c4ea1babaff2af8" },
     { name = "bods-ftm", marker = "extra == 'ftm'", git = "https://github.com/StephenAbbott/bods-ftm.git" },
     { name = "bods-gql", git = "https://github.com/StephenAbbott/bods-gql.git?rev=362973e0df8b6cca79eecf9be84ef106edc628f3" },
     { name = "bods-xml", git = "https://github.com/StephenAbbott/bods-xml.git?rev=dc5033c01e50a13ec9b01d12caa1365bc093116a" },

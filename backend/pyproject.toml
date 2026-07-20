@@ -33,6 +33,11 @@ dependencies = [
     # /export?format=gql endpoint. Core install only — the [bigquery] extra
     # (Google Cloud client stack) is deliberately NOT pulled in. Pinned.
     "bods-gql @ git+https://github.com/StephenAbbott/bods-gql.git@362973e0df8b6cca79eecf9be84ef106edc628f3",
+    # bods-aml-ai — BODS → Google AML AI input tables (party /
+    # party_supplementary_data / account_party_link NDJSON). Used by the
+    # /export?format=amlai endpoint via its in-memory transform_statements()
+    # API. Pinned.
+    "bods-aml-ai @ git+https://github.com/StephenAbbott/bods-aml-ai.git@11d14ca73a1572116fb795e60c4ea1babaff2af8",
     # Anthropic SDK — narrative summaries (opencheck.narrative). The import is
     # lazy, so a missing key simply disables the feature; the package is light.
     "anthropic>=0.39",

@@ -21,6 +21,8 @@ from pydantic import BaseModel, Field
 
 from .. import __version__
 from ..bods import (
+    aml_ai_counts,
+    build_aml_ai_files,
     build_gql_files,
     gql_counts,
     map_to_ftm,
@@ -41,7 +43,7 @@ from .lookup import ReportResponse, _build_report, _lookup_impl
 
 router = APIRouter()
 
-_EXPORT_FORMATS = {"json", "jsonl", "zip", "xml", "senzing", "ftm", "gql"}
+_EXPORT_FORMATS = {"json", "jsonl", "zip", "xml", "senzing", "ftm", "gql", "amlai"}
 # One regex for the /export ?format= validation, derived from the set above so
 # the two can't drift (ExportNetworkRequest.format is the third place — a
 # typing.Literal, which must stay a literal; a test pins it to this set).
@@ -104,7 +106,10 @@ async def export(
             "entity records, ready to load into Senzing) | ftm (newline-delimited "
             "FollowTheMoney entities, ready for OpenSanctions / OpenAleph / "
             "alephclient workflows) | gql (zip: BigQuery property-graph CSV "
-            "tables + CREATE PROPERTY GRAPH DDL + 14 GQL queries, via bods-gql)"
+            "tables + CREATE PROPERTY GRAPH DDL + 14 GQL queries, via bods-gql) | "
+            "amlai (zip: Google AML AI input tables — party / "
+            "party_supplementary_data / account_party_link NDJSON, via "
+            "bods-aml-ai)"
         ),
     ),
     subsidiaries: bool = Query(
@@ -220,6 +225,26 @@ async def export(
             },
         )
 
+    if format == "amlai":
+        contributing_ids = sorted({h.source_id for h in payload.hits if not h.is_stub})
+        licenses_md = _build_licenses_md(
+            contributing_ids=contributing_ids,
+            license_notices=payload.license_notices,
+            licensing=assess_licensing(contributing_ids),
+            query=export_query,
+            kind=kind,
+        )
+        body = _build_aml_ai_zip(payload.bods, slug=slug, stamp=stamp, licenses_md=licenses_md)
+        return Response(
+            content=body,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="opencheck-{slug}-{stamp}-aml-ai.zip"'
+                ),
+            },
+        )
+
     # format == "zip"
     body = _build_export_zip(
         payload, q=export_query, kind=kind, slug=slug, stamp=stamp,
@@ -241,7 +266,9 @@ class ExportNetworkRequest(BaseModel):
     network (a BODS bundle) without re-running the lookup."""
 
     bods: list[dict[str, Any]]
-    format: Literal["json", "jsonl", "xml", "senzing", "ftm", "cypher", "gql", "zip"] = "zip"
+    format: Literal[
+        "json", "jsonl", "xml", "senzing", "ftm", "cypher", "gql", "amlai", "zip"
+    ] = "zip"
     slug: str | None = None
 
 
@@ -296,6 +323,20 @@ async def export_network(request: Request, req: ExportNetworkRequest) -> Respons
             "application/zip",
             "bigquery.zip",
         )
+    if req.format == "amlai":
+        contributing_ids = _network_source_ids(bods)
+        licenses_md = _build_licenses_md(
+            contributing_ids=contributing_ids,
+            license_notices=[],
+            licensing=assess_licensing(contributing_ids),
+            query=slug,
+            kind=SearchKind.ENTITY,
+        )
+        return _file(
+            _build_aml_ai_zip(bods, slug=slug, stamp=stamp, licenses_md=licenses_md),
+            "application/zip",
+            "aml-ai.zip",
+        )
     # zip
     body = _build_network_zip(bods, slug=slug, stamp=stamp)
     return Response(
@@ -331,6 +372,20 @@ def _build_gql_zip(
     return buf.getvalue()
 
 
+def _build_aml_ai_zip(
+    bods: list[dict[str, Any]], *, slug: str, stamp: str, licenses_md: str
+) -> bytes:
+    """The Google AML AI package: the three input-table NDJSON files + README
+    (from ``bods/aml_ai.py``), plus the licence notes."""
+    buf = io.BytesIO()
+    base = f"opencheck-{slug}-{stamp}-aml-ai"
+    with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name, content in build_aml_ai_files(bods).items():
+            zf.writestr(f"{base}/{name}", content)
+        zf.writestr(f"{base}/LICENSES.md", licenses_md)
+    return buf.getvalue()
+
+
 def _build_network_zip(bods: list[dict[str, Any]], *, slug: str, stamp: str) -> bytes:
     """Bundle a FullCheck network: BODS (json/jsonl/xml) + Senzing + Cypher +
     manifest + LICENSES.md (most-restrictive licence across contributing sources)."""
@@ -352,6 +407,7 @@ def _build_network_zip(bods: list[dict[str, Any]], *, slug: str, stamp: str) -> 
         "senzing_record_count": len(map_to_senzing(bods)),
         "ftm_entity_count": len(map_to_ftm(bods)),
         **gql_counts(bods),
+        **aml_ai_counts(bods),
         "bods_validation_issues": validate_shape(bods),
         "licensing": licensing.model_dump(),
     }
@@ -550,6 +606,7 @@ def _build_export_zip(
         "senzing_record_count": len(map_to_senzing(payload.bods)),
         "ftm_entity_count": len(map_to_ftm(payload.bods)),
         **gql_counts(payload.bods),
+        **aml_ai_counts(payload.bods),
         "subsidiary_network_included": subsidiary_statement_count > 0,
         "subsidiary_statement_count": subsidiary_statement_count,
         "bods_validation_issues": payload.bods_issues,
