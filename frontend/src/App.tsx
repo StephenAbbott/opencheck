@@ -685,6 +685,16 @@ export default function App() {
     return result;
   }, [hits]);
 
+  // Distinct sources participating in cross-source identifier links — the
+  // headline number for the collapsed reconciliation box ("N identifiers
+  // matched across M sources").
+  const crossLinkedSourceCount = useMemo(() => {
+    const srcs = new Set<string>();
+    for (const link of crossSourceLinks)
+      for (const h of link.hits) srcs.add(h.source_id);
+    return srcs.size;
+  }, [crossSourceLinks]);
+
   // Extract GLEIF direct-children counts from the GLEIF hit's raw dict.
   // The adapter fetches only the first page (≤ 10) so we surface both
   // the fetched count and the total reported by GLEIF pagination.
@@ -1379,21 +1389,60 @@ export default function App() {
         )}
 
         {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && (
-          <section className="mb-8 bg-white border border-oo-rule rounded-oo p-5">
-            <SectionLabel>Cross-source identifiers</SectionLabel>
+          <CollapsedSection
+            htmlId="cross-source-identifiers"
+            label="Cross-source identifiers"
+            summary={
+              crossLinkedSourceCount >= 2 ? (
+                <>
+                  <span className="font-semibold">
+                    {crossSourceLinks.length + gleifMappedIds.length}{" "}
+                    identifier
+                    {crossSourceLinks.length + gleifMappedIds.length === 1
+                      ? ""
+                      : "s"}
+                  </span>{" "}
+                  matched across{" "}
+                  <span className="font-semibold">
+                    {crossLinkedSourceCount} sources
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold">
+                    {gleifMappedIds.length} identifier
+                    {gleifMappedIds.length === 1 ? "" : "s"}
+                  </span>{" "}
+                  mapped by GLEIF
+                </>
+              )
+            }
+          >
             <CrossSourceIdentifiersTable
               links={crossSourceLinks}
               gleifMapped={gleifMappedIds}
               sourceNames={sourceNameIndex}
             />
-          </section>
+          </CollapsedSection>
         )}
 
         {possiblySame.length > 0 && (
-          <section className="mb-8 bg-white border border-oo-rule rounded-oo p-5">
-            <SectionLabel>Possibly the same entity</SectionLabel>
+          <CollapsedSection
+            htmlId="possibly-same"
+            label="Possibly the same entity"
+            summary={
+              <>
+                <span className="font-semibold">
+                  {possiblySame.length} candidate pair
+                  {possiblySame.length === 1 ? "" : "s"}
+                </span>{" "}
+                flagged for review — same name &amp; jurisdiction, no shared
+                identifier
+              </>
+            }
+          >
             <PossiblySameTable pairs={possiblySame} />
-          </section>
+          </CollapsedSection>
         )}
 
         {mode === "full" && streamingLei ? (
@@ -2347,6 +2396,69 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     <h2 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted border-b border-oo-rule pb-2 mb-4">
       {children}
     </h2>
+  );
+}
+
+/**
+ * Collapsed-by-default disclosure box for the reconciliation sections
+ * (cross-source identifiers / possibly-same). The full tables pushed the
+ * source results a long scroll below the fold for casual users, while the
+ * LEI they mostly repeat is already on the SubjectCard — so each box now
+ * renders as a one-line summary that expands in place. Kept in position
+ * above the source cards so the "Confirmed by" jump chips still point
+ * downward at their targets.
+ */
+function CollapsedSection({
+  htmlId,
+  label,
+  summary,
+  children,
+}: {
+  /** id for aria-controls + in-page anchors (e.g. a future SubjectCard badge). */
+  htmlId: string;
+  label: string;
+  summary: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="mb-8 bg-white border border-oo-rule rounded-oo">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={htmlId}
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-3 p-5 text-left group"
+      >
+        <span className="min-w-0">
+          <span className="block text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted">
+            {label}
+          </span>
+          <span className="block text-[13px] text-oo-ink mt-1">{summary}</span>
+        </span>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          className={`shrink-0 text-oo-muted transition-transform group-hover:text-oo-ink ${
+            open ? "rotate-90" : ""
+          }`}
+        >
+          <path d="m9 18 6-6-6-6" />
+        </svg>
+      </button>
+      {open && (
+        <div id={htmlId} className="px-5 pb-5">
+          {children}
+        </div>
+      )}
+    </section>
   );
 }
 
