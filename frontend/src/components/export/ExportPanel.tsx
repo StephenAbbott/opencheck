@@ -30,7 +30,7 @@ export function ExportPanel({
   contributingSourceIds: string[];
 }) {
   const [format, setFormat] = useState<
-    "zip" | "json" | "jsonl" | "xml" | "senzing" | "ftm" | "gql"
+    "zip" | "json" | "jsonl" | "xml" | "senzing" | "ftm" | "gql" | "amlai"
   >("zip");
   const [subsidiaries, setSubsidiaries] = useState(false);
 
@@ -88,6 +88,7 @@ export function ExportPanel({
                   | "senzing"
                   | "ftm"
                   | "gql"
+                  | "amlai"
               )
             }
             className="min-w-0 flex-1 sm:flex-none border border-oo-rule rounded px-2 py-1.5 text-[13px] bg-white"
@@ -99,6 +100,7 @@ export function ExportPanel({
             <option value="senzing">Senzing JSON (entity resolution)</option>
             <option value="ftm">FollowTheMoney (OpenSanctions / Aleph)</option>
             <option value="gql">BigQuery GQL (CSV tables + graph schema)</option>
+            <option value="amlai">Google AML AI (NDJSON input tables)</option>
           </select>
           <a
             href={href}
@@ -164,6 +166,36 @@ export function ExportPanel({
             <span className="sr-only"> (opens in new tab)</span>
           </a>
           , with load instructions in its README.
+        </p>
+      )}
+
+      {format === "amlai" && (
+        <p className="mt-3 text-[12px] text-oo-muted leading-[1.6]">
+          Google AML AI projects this ownership graph into the{" "}
+          <a
+            href="https://docs.cloud.google.com/financial-services/anti-money-laundering/docs/reference/schemas/aml-input-data-model"
+            target="_blank"
+            rel="noreferrer"
+            className="underline text-oo-blue hover:text-oo-burst"
+          >
+            AML AI input data model
+            <span className="sr-only"> (opens in new tab)</span>
+          </a>{" "}
+          — NDJSON tables ready for{" "}
+          <span className="font-mono">bq load</span>. AML AI has no
+          party-to-party relationship table, so ownership is encoded as numeric
+          supplementary-data signals per party plus synthetic “ownership
+          accounts” linking owners to owned entities — generated with{" "}
+          <a
+            href="https://github.com/StephenAbbott/bods-aml-ai"
+            target="_blank"
+            rel="noreferrer"
+            className="underline text-oo-blue hover:text-oo-burst"
+          >
+            bods-aml-ai
+            <span className="sr-only"> (opens in new tab)</span>
+          </a>
+          , with the encoding explained in the bundled README.
         </p>
       )}
 
