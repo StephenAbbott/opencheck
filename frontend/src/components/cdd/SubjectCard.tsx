@@ -87,88 +87,83 @@ export function SubjectCard({
             )}
             {cc && <span aria-hidden>·</span>}
             <span className="font-mono break-all">LEI {lei}</span>
-            {identifierSources >= 2 && onShowIdentifiers && (
-              <button
-                type="button"
-                onClick={onShowIdentifiers}
-                title="Independent sources publish a matching identifier for this entity — jump to the detail"
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-0.5 hover:bg-emerald-100 transition-colors"
-              >
-                <svg
-                  width="11"
-                  height="11"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M20 6 9 17l-5-5" />
-                </svg>
-                Identifier confirmed by {identifierSources} source
-                {identifierSources === 1 ? "" : "s"}
-                <span className="sr-only">
-                  {" "}
-                  — expands the cross-source identifier detail
-                </span>
-              </button>
-            )}
-          </p>
-          {/* Provenance badge — a replayed (cached) run must never look live.
-              Amber note + a fresh-check action wired to ?refresh=true.
-              Rounding is responsive: rounded-full reads as a pill on one
-              desktop line, but on narrow viewports the text wraps to several
-              lines and the full radius turns the badge into an ellipse with
-              the corners clipping into the text — so mobile gets the standard
-              card radius and a touch more vertical padding. */}
-          {replayedAt && (
-            <p className="mt-2 inline-flex items-center gap-2 flex-wrap text-[12px] text-[#92400e] bg-[#fef3c7] border border-[#fde68a] rounded-oo px-3 py-1.5 sm:rounded-full sm:py-1">
-              <span>
-                Results from a check run {replayAgeLabel(replayedAt)} — not re-queried.
-              </span>
-              {onRefresh && (
-                <button
-                  type="button"
-                  onClick={onRefresh}
-                  className="font-semibold underline underline-offset-2 hover:no-underline"
-                >
-                  Run a fresh check
-                </button>
-              )}
-            </p>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            navigator.clipboard?.writeText(shareUrl);
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1500);
-          }}
-          title="Copies a link whose social-media preview shows a live summary card for this entity"
-          className="shrink-0 inline-flex items-center gap-1.5 text-[12px] font-medium text-oo-blue border border-[#cfd6f5] bg-[#eef1fb] hover:bg-[#e2e7f9] rounded-full px-3 py-1.5 transition-colors"
-        >
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path
-              d="M6.5 9.5 L9.5 6.5 M7.5 4.5 l2-2 a2.5 2.5 0 0 1 3.5 3.5 l-2 2 M8.5 11.5 l-2 2 a2.5 2.5 0 0 1-3.5-3.5 l2-2"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
+            {/* Desktop placement: inline with the LEI it qualifies. On
+                mobile the identity column is too narrow — the badge wrapped
+                to three lines and rounded-full turned it into an ellipse —
+                so this instance hides and the copy in the right-hand column
+                (under the share button) takes over. */}
+            <IdentifierBadge
+              count={identifierSources}
+              onClick={onShowIdentifiers}
+              className="hidden sm:inline-flex gap-1 rounded-full px-2.5 py-0.5"
             />
-          </svg>
-          {copied ? "Link copied" : "Copy share link"}
-          <span className="sr-only">
-            {" "}
-            — copies a link whose social-media preview shows a live summary card for this entity
-          </span>
-        </button>
+          </p>
+        </div>
+        <div className="shrink-0 flex flex-col items-end gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard?.writeText(shareUrl);
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 1500);
+            }}
+            title="Copies a link whose social-media preview shows a live summary card for this entity"
+            className="inline-flex items-center gap-1.5 text-[12px] font-medium text-oo-blue border border-[#cfd6f5] bg-[#eef1fb] hover:bg-[#e2e7f9] rounded-full px-3 py-1.5 transition-colors"
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path
+                d="M6.5 9.5 L9.5 6.5 M7.5 4.5 l2-2 a2.5 2.5 0 0 1 3.5 3.5 l-2 2 M8.5 11.5 l-2 2 a2.5 2.5 0 0 1-3.5-3.5 l2-2"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            {copied ? "Link copied" : "Copy share link"}
+            <span className="sr-only">
+              {" "}
+              — copies a link whose social-media preview shows a live summary card for this entity
+            </span>
+          </button>
+          {/* Mobile placement of the identifier badge — right column, under
+              the share button, with the card radius (matching the replay
+              badge) instead of a full pill so wrapped text keeps square-ish
+              corners. max-w keeps a long label from squeezing the entity
+              name in the left column. */}
+          <IdentifierBadge
+            count={identifierSources}
+            onClick={onShowIdentifiers}
+            className="sm:hidden inline-flex gap-1.5 rounded-oo px-3 py-1.5 max-w-[12rem] text-right justify-end"
+          />
+        </div>
         {/* Always-mounted live region so the copied confirmation is announced. */}
         <span role="status" className="sr-only">
           {copied ? "Share link copied" : ""}
         </span>
       </div>
+
+      {/* Provenance badge — a replayed (cached) run must never look live.
+          Amber note + a fresh-check action wired to ?refresh=true. Sits
+          below the header row spanning the card on mobile (flex = full
+          width, so it uses the whitespace instead of stacking tall in the
+          narrow identity column); on sm+ it shrinks back to a content-width
+          pill. Rounding is responsive for the same reason as the identifier
+          badge: wrapped text + rounded-full clips into the corners. */}
+      {replayedAt && (
+        <p className="mt-3 flex sm:inline-flex items-center gap-2 flex-wrap text-[12px] text-[#92400e] bg-[#fef3c7] border border-[#fde68a] rounded-oo px-3 py-1.5 sm:rounded-full sm:py-1">
+          <span>
+            Results from a check run {replayAgeLabel(replayedAt)} — not re-queried.
+          </span>
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="font-semibold underline underline-offset-2 hover:no-underline"
+            >
+              Run a fresh check
+            </button>
+          )}
+        </p>
+      )}
 
       {/* Compact risk-signal summary — the headline finding, up top. The full
           strip further down keeps the per-chip evidence and explanation. */}
@@ -211,5 +206,55 @@ export function SubjectCard({
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * "Identifier confirmed by N sources" badge. Rendered twice by SubjectCard —
+ * inline beside the LEI on sm+ and in the right-hand column on mobile — with
+ * only one instance visible per breakpoint (the hidden one is display:none,
+ * so it also leaves the accessibility tree). Renders nothing below 2 sources:
+ * a lone source confirms nothing. `className` carries the per-placement
+ * layout (visibility, radius, padding); the identity styling lives here.
+ */
+function IdentifierBadge({
+  count,
+  onClick,
+  className,
+}: {
+  count: number;
+  onClick?: () => void;
+  className: string;
+}) {
+  if (count < 2 || !onClick) return null;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title="Independent sources publish a matching identifier for this entity — jump to the detail"
+      className={`items-center text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-colors ${className}`}
+    >
+      <svg
+        width="11"
+        height="11"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        className="shrink-0"
+      >
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+      <span>
+        Identifier confirmed by {count} source{count === 1 ? "" : "s"}
+        <span className="sr-only">
+          {" "}
+          — expands the cross-source identifier detail
+        </span>
+      </span>
+    </button>
   );
 }
