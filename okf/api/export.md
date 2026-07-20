@@ -5,13 +5,14 @@ description: Download a reproducible BODS v0.4 bundle for a subject, with manife
 tags: [api, export, bods, licensing]
 method: GET
 path: /export
-timestamp: 2026-06-14
+timestamp: 2026-07-20
 ---
 
 # Overview
 
-`GET /export?lei=<LEI>&format=<zip|json|jsonl|xml>` (or `?q=<query>`) downloads a
-reproducible [BODS v0.4](/standards/bods.md) bundle for the subject.
+`GET /export?lei=<LEI>&format=<zip|json|jsonl|xml|senzing|ftm|gql>` (or
+`?q=<query>`) downloads a reproducible [BODS v0.4](/standards/bods.md) bundle
+for the subject, or a projection of it into a partner ecosystem's format.
 
 # Formats
 
@@ -20,7 +21,10 @@ reproducible [BODS v0.4](/standards/bods.md) bundle for the subject.
 | `json` | Pretty-printed array of BODS statements. |
 | `jsonl` | Newline-delimited BODS statements. |
 | `xml` | Canonical BODS XML. |
-| `zip` | `bods.json` + `bods.jsonl` + `bods.xml` + `manifest.json` + `LICENSES.md`. |
+| `senzing` | Newline-delimited Senzing JSON entity records (entity resolution). |
+| `ftm` | Newline-delimited FollowTheMoney entities (OpenSanctions / OpenAleph). |
+| `gql` | Zip: BigQuery property-graph CSV tables + `CREATE PROPERTY GRAPH` DDL + 14 GQL (ISO/IEC 39075) queries + README + `LICENSES.md`, via [bods-gql](https://github.com/StephenAbbott/bods-gql). |
+| `zip` | `bods.json` + `bods.jsonl` + `bods.xml` + `senzing.jsonl` + `ftm.jsonl` + `manifest.json` + `LICENSES.md`. |
 
 # Licensing in the bundle
 

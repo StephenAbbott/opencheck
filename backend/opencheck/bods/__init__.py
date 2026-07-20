@@ -57,6 +57,7 @@ from .mapper import (
 from .senzing import map_to_senzing, to_senzing_jsonl
 from .ftm import map_to_ftm, to_ftm_jsonl
 from .neo4j import to_cypher
+from .gql import build_gql_files, gql_counts, map_to_gql
 from .validator import validate_shape, ValidationError
 
 __all__ = [
@@ -109,6 +110,9 @@ __all__ = [
     "map_to_ftm",
     "to_ftm_jsonl",
     "to_cypher",
+    "build_gql_files",
+    "gql_counts",
+    "map_to_gql",
     "validate_shape",
     "ValidationError",
 ]

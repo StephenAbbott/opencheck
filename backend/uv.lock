@@ -98,6 +98,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bods-gql"
+version = "0.1.0"
+source = { git = "https://github.com/StephenAbbott/bods-gql.git?rev=362973e0df8b6cca79eecf9be84ef106edc628f3#362973e0df8b6cca79eecf9be84ef106edc628f3" }
+dependencies = [
+    { name = "click" },
+]
+
+[[package]]
 name = "bods-v04-fixtures"
 version = "0.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -109,7 +117,7 @@ wheels = [
 [[package]]
 name = "bods-xml"
 version = "0.1.0"
-source = { git = "https://github.com/StephenAbbott/bods-xml.git#dc5033c01e50a13ec9b01d12caa1365bc093116a" }
+source = { git = "https://github.com/StephenAbbott/bods-xml.git?rev=dc5033c01e50a13ec9b01d12caa1365bc093116a#dc5033c01e50a13ec9b01d12caa1365bc093116a" }
 dependencies = [
     { name = "lxml" },
 ]
@@ -1593,6 +1601,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
+    { name = "bods-gql" },
     { name = "bods-xml" },
     { name = "duckdb" },
     { name = "fastapi" },
@@ -1633,7 +1642,8 @@ dev = [
 requires-dist = [
     { name = "anthropic", specifier = ">=0.39" },
     { name = "bods-ftm", marker = "extra == 'ftm'", git = "https://github.com/StephenAbbott/bods-ftm.git" },
-    { name = "bods-xml", git = "https://github.com/StephenAbbott/bods-xml.git" },
+    { name = "bods-gql", git = "https://github.com/StephenAbbott/bods-gql.git?rev=362973e0df8b6cca79eecf9be84ef106edc628f3" },
+    { name = "bods-xml", git = "https://github.com/StephenAbbott/bods-xml.git?rev=dc5033c01e50a13ec9b01d12caa1365bc093116a" },
     { name = "duckdb", specifier = ">=1.1" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },

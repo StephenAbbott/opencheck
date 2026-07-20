@@ -170,7 +170,7 @@ export const BASE_URL: string = import.meta.env.DEV
  */
 export function exportUrl(
   lei: string,
-  format: "json" | "jsonl" | "zip" | "xml" | "senzing" | "ftm",
+  format: "json" | "jsonl" | "zip" | "xml" | "senzing" | "ftm" | "gql",
   opts?: { subsidiaries?: boolean }
 ): string {
   const params = new URLSearchParams({ lei, format });
@@ -216,6 +216,7 @@ export type NetworkExportFormat =
   | "senzing"
   | "ftm"
   | "cypher"
+  | "gql"
   | "zip";
 
 /** Export a client-assembled FullCheck network (BODS) in the chosen format and

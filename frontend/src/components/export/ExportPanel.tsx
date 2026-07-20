@@ -30,7 +30,7 @@ export function ExportPanel({
   contributingSourceIds: string[];
 }) {
   const [format, setFormat] = useState<
-    "zip" | "json" | "jsonl" | "xml" | "senzing" | "ftm"
+    "zip" | "json" | "jsonl" | "xml" | "senzing" | "ftm" | "gql"
   >("zip");
   const [subsidiaries, setSubsidiaries] = useState(false);
 
@@ -87,6 +87,7 @@ export function ExportPanel({
                   | "xml"
                   | "senzing"
                   | "ftm"
+                  | "gql"
               )
             }
             className="min-w-0 flex-1 sm:flex-none border border-oo-rule rounded px-2 py-1.5 text-[13px] bg-white"
@@ -97,6 +98,7 @@ export function ExportPanel({
             <option value="xml">XML (canonical BODS)</option>
             <option value="senzing">Senzing JSON (entity resolution)</option>
             <option value="ftm">FollowTheMoney (OpenSanctions / Aleph)</option>
+            <option value="gql">BigQuery GQL (CSV tables + graph schema)</option>
           </select>
           <a
             href={href}
@@ -123,6 +125,45 @@ export function ExportPanel({
           (newline-delimited records, ready to load for entity resolution) — one
           record per company and person, with each disclosed ownership/control
           relationship as a Senzing disclosed relationship.
+        </p>
+      )}
+
+      {format === "gql" && (
+        <p className="mt-3 text-[12px] text-oo-muted leading-[1.6]">
+          BigQuery GQL projects this ownership graph into a{" "}
+          <a
+            href="https://cloud.google.com/bigquery/docs/property-graphs"
+            target="_blank"
+            rel="noreferrer"
+            className="underline text-oo-blue hover:text-oo-burst"
+          >
+            BigQuery property graph
+            <span className="sr-only"> (opens in new tab)</span>
+          </a>{" "}
+          queryable with{" "}
+          <a
+            href="https://www.gqlstandards.org/"
+            target="_blank"
+            rel="noreferrer"
+            className="underline text-oo-blue hover:text-oo-burst"
+          >
+            GQL (ISO/IEC 39075)
+            <span className="sr-only"> (opens in new tab)</span>
+          </a>
+          . The zip holds node/edge CSV tables, the{" "}
+          <span className="font-mono">CREATE PROPERTY GRAPH</span> schema and 14
+          ready-made GQL queries (UBO detection, corporate groups, circular
+          ownership) — generated with{" "}
+          <a
+            href="https://github.com/StephenAbbott/bods-gql"
+            target="_blank"
+            rel="noreferrer"
+            className="underline text-oo-blue hover:text-oo-burst"
+          >
+            bods-gql
+            <span className="sr-only"> (opens in new tab)</span>
+          </a>
+          , with load instructions in its README.
         </p>
       )}
 
