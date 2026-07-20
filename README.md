@@ -16,11 +16,11 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 76** — Markdown report export: the due-diligence report as portable text
+**Latest: Phase 77** — Export menu: every take-away in one place, and "Download data"
 
-The due-diligence report the PDF pipeline assembles is now also downloadable as portable Markdown — same lookup result, same embedded AI summary, claims and analyst dispositions — via `POST /export/markdown`. The renderer mirrors the PDF section by section over the same report dict, with two deliberate divergences: the BOVS diagrams become their text-equivalent relationship tables (wikis, git and LLM pipelines get more from the table than an image), and the QR code becomes the plain live-check URL. Because it needs no WeasyPrint/Pango toolchain, the Markdown route is always available — including on deployments where `/export/pdf` returns 503 — making it the report's built-in fallback format.
+The prime top-right slot on the AI summary card stops advertising only PDF: the "Download PDF" button becomes one grouped **Export** menu — **Report** as PDF or as the new Markdown format (both embed the card's AI summary and analyst dispositions), and **Data**, an honest jump link down to the rebranded **"Download data"** section (BODS bundle, XML, Senzing, FollowTheMoney and friends, with the licensing assistant). Dropdown on desktop, bottom sheet on mobile, full menu keyboard/screen-reader semantics; the jump moves focus to the section heading so assistive-tech users land where sighted users scrolled.
 
-*Previous: [Phase 75 — Per-IP rate limiting: abuse protection for the live public API](docs/status.md)*
+*Previous: [Phase 76 — Markdown report export: the due-diligence report as portable text](docs/status.md)*
 
 → [Full development history](docs/status.md)
 

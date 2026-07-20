@@ -20,6 +20,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  downloadReportMarkdown,
   downloadReportPdf,
   fetchCuratedNarrative,
   fetchNarrative,
@@ -30,6 +31,7 @@ import {
   type EvidencePacket,
   type NarrativeResponse,
 } from "../../lib/api";
+import { ExportMenu } from "../export/ExportMenu";
 import { CONFIDENCE_DOT } from "../risk/RiskChip";
 
 const CONF_BADGE: Record<string, string> = {
@@ -214,6 +216,8 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
   const [error, setError] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [mdBusy, setMdBusy] = useState(false);
+  const [mdError, setMdError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [cached, setCached] = useState(false);
 
@@ -372,6 +376,22 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     }
   }
 
+  async function downloadMarkdown() {
+    setMdBusy(true);
+    setMdError(null);
+    try {
+      // Same embedding rules as the PDF — the Markdown report is the same
+      // record in a portable format, and it works even where PDF is 503.
+      await downloadReportMarkdown(lei, data, buildRecord());
+    } catch (e) {
+      setMdError(
+        e instanceof Error ? e.message : "Could not generate the Markdown report."
+      );
+    } finally {
+      setMdBusy(false);
+    }
+  }
+
   const decidedCount = data ? data.claims.filter((c) => disp[c.id]).length : 0;
   const tally = {
     accepted: Object.values(disp).filter((d) => d.status === "accepted").length,
@@ -393,16 +413,15 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
             A plain-English summary of what OpenCheck found — every statement links to its source.
           </p>
         </div>
-        {/* Pinned in the top-right corner at every width — never overflows the card. */}
-        <button
-          type="button"
-          onClick={downloadPdf}
-          disabled={pdfBusy}
-          title="Download an accessible PDF report of these findings"
-          className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 rounded-oo border border-oo-blue text-oo-blue text-[12px] font-medium px-3 py-1.5 hover:bg-[#eef1fb] disabled:opacity-60"
-        >
-          {pdfBusy ? "Preparing PDF…" : "Download PDF"}
-        </button>
+        {/* Pinned in the top-right corner at every width — never overflows the
+            card. The Export menu lives here (not in a global toolbar) because
+            the report downloads post this card's narrative + dispositions. */}
+        <ExportMenu
+          pdfBusy={pdfBusy}
+          mdBusy={mdBusy}
+          onPdf={downloadPdf}
+          onMarkdown={downloadMarkdown}
+        />
       </div>
 
       {data && (
@@ -439,9 +458,9 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
           </button>
         </div>
       )}
-      {pdfError && (
+      {(pdfError || mdError) && (
         <p role="alert" className="mt-2 text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-oo px-3 py-2">
-          {pdfError}
+          {pdfError ?? mdError}
         </p>
       )}
 
