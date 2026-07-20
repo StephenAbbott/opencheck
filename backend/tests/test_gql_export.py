@@ -84,6 +84,34 @@ def test_ddl_and_queries_use_the_placeholder_dataset():
     assert PLACEHOLDER_DATASET in files["README.md"]
 
 
+def test_varying_row_shapes_share_one_stable_schema():
+    """bods-gql's to_dict() drops None values, so row key sets vary — a later
+    row can carry a column the first row lacked. Live BP data hit exactly
+    this (first mapped entity had no jurisdiction; a later one did) and
+    DictWriter raised. The CSV must use the full dataclass schema instead."""
+    bods = _bods()
+    # First entity: no jurisdiction. Second entity: with jurisdiction.
+    bods.append({
+        "statementId": "ent-2", "recordId": "ent-2", "recordType": "entity",
+        "recordStatus": "new", "statementDate": "2026-01-01",
+        "recordDetails": {"entityType": {"type": "registeredEntity"},
+                          "name": "Nordwind GmbH", "isComponent": False,
+                          "jurisdiction": {"name": "Germany", "code": "DE"}},
+        "source": {"description": "UK Companies House"},
+    })
+    files = build_gql_files(bods)  # must not raise
+    lines = files["entity_nodes.csv"].splitlines()
+    header = lines[0].split(",")
+    assert "jurisdiction_code" in header
+    assert "jurisdiction_name" in header
+    assert len(lines) == 3  # header + both entities
+    # Every data row has exactly the header's column count.
+    import csv as _csv
+    rows = list(_csv.DictReader(io.StringIO(files["entity_nodes.csv"])))
+    assert rows[0]["jurisdiction_code"] == ""
+    assert rows[1]["jurisdiction_code"] == "DE"
+
+
 def test_empty_tables_are_skipped_not_header_only():
     entity_only = [_bods()[0]]
     files = build_gql_files(entity_only)

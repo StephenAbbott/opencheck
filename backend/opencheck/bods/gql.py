@@ -15,10 +15,17 @@ the user's Google Cloud project.
 from __future__ import annotations
 
 import csv
+import dataclasses
 import io
 from typing import Any
 
-from bods_gql.converter.mapper import MappingResult, map_statements
+from bods_gql.converter.mapper import (
+    EntityNode,
+    MappingResult,
+    OwnershipEdge,
+    PersonNode,
+    map_statements,
+)
 from bods_gql.graph_schema.property_graph import generate_create_graph_ddl
 from bods_gql.queries import circular_ownership, corporate_groups, ubo_detection
 
@@ -60,17 +67,30 @@ def gql_counts(bods_statements: list[dict[str, Any]]) -> dict[str, int]:
     }
 
 
-def _rows_to_csv(rows: list[dict[str, Any]]) -> str:
-    """Serialise mapped rows to CSV. Header always present (mirrors the
-    bods-gql CLI field ordering: the keys of ``to_dict()``); an empty table
-    yields an empty string so callers can skip the file entirely."""
+def _rows_to_csv(rows: list[dict[str, Any]], fieldnames: list[str]) -> str:
+    """Serialise mapped rows to CSV against a fixed column schema.
+
+    ``fieldnames`` must be the full dataclass field list, NOT the keys of the
+    first row: bods-gql's ``to_dict()`` drops ``None`` values, so row key sets
+    vary — a later row can carry a column the first row lacked, and
+    ``DictWriter`` raises on unknown keys. (Live BP data hit exactly this:
+    the first mapped entity had no jurisdiction, a later one did.)
+    ``restval=""`` fills the gaps, and every export gets the same stable
+    column set regardless of which fields the data happens to populate.
+
+    An empty table yields an empty string so callers can skip the file.
+    """
     if not rows:
         return ""
     buf = io.StringIO()
-    writer = csv.DictWriter(buf, fieldnames=list(rows[0].keys()))
+    writer = csv.DictWriter(buf, fieldnames=fieldnames, restval="")
     writer.writeheader()
     writer.writerows(rows)
     return buf.getvalue()
+
+
+def _fields(cls: type) -> list[str]:
+    return [f.name for f in dataclasses.fields(cls)]
 
 
 def _readme(counts: dict[str, int], mapping_errors: int) -> str:
@@ -132,12 +152,12 @@ def build_gql_files(bods_statements: list[dict[str, Any]]) -> dict[str, str]:
     """
     result = map_to_gql(bods_statements)
     files: dict[str, str] = {}
-    for name, rows in (
-        ("entity_nodes.csv", [n.to_dict() for n in result.entity_nodes]),
-        ("person_nodes.csv", [n.to_dict() for n in result.person_nodes]),
-        ("ownership_edges.csv", [e.to_dict() for e in result.ownership_edges]),
+    for name, rows, fieldnames in (
+        ("entity_nodes.csv", [n.to_dict() for n in result.entity_nodes], _fields(EntityNode)),
+        ("person_nodes.csv", [n.to_dict() for n in result.person_nodes], _fields(PersonNode)),
+        ("ownership_edges.csv", [e.to_dict() for e in result.ownership_edges], _fields(OwnershipEdge)),
     ):
-        content = _rows_to_csv(rows)
+        content = _rows_to_csv(rows, fieldnames)
         if content:
             files[name] = content
     files["create_property_graph.sql"] = (
