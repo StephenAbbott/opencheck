@@ -202,9 +202,6 @@ export function ExportMenu({
               </span>
               <span>
                 {pdfBusy ? "Preparing PDF…" : "Report as PDF"}
-                <span className="block text-[11px] text-oo-muted">
-                  Accessible, tagged PDF/UA-1
-                </span>
               </span>
             </button>
             <button
@@ -224,9 +221,6 @@ export function ExportMenu({
               </span>
               <span>
                 {mdBusy ? "Preparing Markdown…" : "Report as Markdown"}
-                <span className="block text-[11px] text-oo-muted">
-                  Portable text — wikis, notes, LLM pipelines
-                </span>
               </span>
             </button>
             <div
