@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { exportUrl, getLicenseMatrix } from "../../lib/api";
+import { DATA_SECTION_ID } from "./ExportMenu";
 
 /**
  * Download button + format selector that points at /export, plus a licensing
@@ -45,11 +46,21 @@ export function ExportPanel({
   const href = exportUrl(lei, format, { subsidiaries });
 
   return (
-    <section className="mb-8 bg-white border border-oo-rule rounded-oo p-5">
+    <section
+      id={DATA_SECTION_ID}
+      className="mb-8 bg-white border border-oo-rule rounded-oo p-5 scroll-mt-4"
+    >
       <div className="flex items-baseline justify-between gap-4 flex-wrap">
         <div className="min-w-0">
-          <h2 className="font-head font-bold text-[15px] text-oo-ink">
-            Download BODS bundle
+          {/* tabIndex + data-export-target: the Export menu's "Download data"
+              item scrolls here and moves focus to this heading, so keyboard
+              and screen-reader users land where sighted users scrolled. */}
+          <h2
+            tabIndex={-1}
+            data-export-target
+            className="font-head font-bold text-[15px] text-oo-ink focus:outline-none"
+          >
+            Download data
           </h2>
           <p className="text-[13px] text-oo-muted mt-1 leading-[1.6]">
             Reproducible export for{" "}
