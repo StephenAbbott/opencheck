@@ -719,17 +719,18 @@ export async function fetchCuratedNarrative(
 }
 
 /**
- * Download an accessible (tagged) PDF report for an LEI. POSTs to /export/pdf;
- * the already-generated narrative (if any) is sent so it can be embedded without
- * a fresh model call. Triggers the browser download and resolves when done.
- * Throws with the backend detail on failure (e.g. 503 if PDF is unavailable).
+ * POST a report-export request and trigger the browser download of the
+ * response. Shared by the PDF and Markdown report downloads — same request
+ * body, different route/extension. Throws with the backend detail on failure.
  */
-export async function downloadReportPdf(
+async function downloadReport(
+  path: "/export/pdf" | "/export/markdown",
+  fallbackExt: "pdf" | "md",
   lei: string,
   narrative?: NarrativeResponse | null,
   dispositions?: DispositionRecord | null,
 ): Promise<void> {
-  const r = await fetch(`${BASE_URL}/export/pdf`, {
+  const r = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -750,7 +751,8 @@ export async function downloadReportPdf(
   }
   const blob = await r.blob();
   const cd = r.headers.get("Content-Disposition") ?? "";
-  const filename = /filename="?([^"]+)"?/.exec(cd)?.[1] ?? `opencheck-${lei}.pdf`;
+  const filename =
+    /filename="?([^"]+)"?/.exec(cd)?.[1] ?? `opencheck-${lei}.${fallbackExt}`;
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -759,6 +761,33 @@ export async function downloadReportPdf(
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Download an accessible (tagged) PDF report for an LEI. POSTs to /export/pdf;
+ * the already-generated narrative (if any) is sent so it can be embedded without
+ * a fresh model call. Triggers the browser download and resolves when done.
+ * Throws with the backend detail on failure (e.g. 503 if PDF is unavailable).
+ */
+export async function downloadReportPdf(
+  lei: string,
+  narrative?: NarrativeResponse | null,
+  dispositions?: DispositionRecord | null,
+): Promise<void> {
+  return downloadReport("/export/pdf", "pdf", lei, narrative, dispositions);
+}
+
+/**
+ * Download the due-diligence report as portable Markdown. Same request body
+ * and embedded narrative/dispositions as the PDF, but always available — the
+ * backend needs no PDF toolchain for this route.
+ */
+export async function downloadReportMarkdown(
+  lei: string,
+  narrative?: NarrativeResponse | null,
+  dispositions?: DispositionRecord | null,
+): Promise<void> {
+  return downloadReport("/export/markdown", "md", lei, narrative, dispositions);
 }
 
 /** ISO 17442 LEI: 20-char alphanumeric. */

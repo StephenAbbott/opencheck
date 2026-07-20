@@ -13,6 +13,8 @@ Modules:
   labels) plus the rows for its text-equivalent table.
 - ``html_report`` — assemble the full report HTML from a lookup result (+ an
   optional already-generated narrative).
+- ``markdown_report`` — assemble the same report as portable Markdown (no
+  WeasyPrint required; always available).
 - ``pdf``         — render the HTML to a tagged PDF (WeasyPrint, lazy import).
 """
 
@@ -20,12 +22,14 @@ from __future__ import annotations
 
 from .diagram import SourceDiagram, source_diagram
 from .html_report import build_report_html
+from .markdown_report import build_report_markdown
 from .pdf import PdfUnavailable, build_report_pdf, render_html_to_pdf
 
 __all__ = [
     "SourceDiagram",
     "source_diagram",
     "build_report_html",
+    "build_report_markdown",
     "build_report_pdf",
     "render_html_to_pdf",
     "PdfUnavailable",
