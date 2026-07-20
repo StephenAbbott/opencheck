@@ -10,17 +10,17 @@ Try the demo at **https://opencheck.world/**
 
 You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei). OpenCheck queries [GLEIF](https://www.gleif.org/) first, derives every cross-source identifier it can (UK Companies House number, Norwegian organisation number, Irish company registration number, Finnish Y-tunnus, Latvian registration number, Lithuanian entity code, Estonian registry code, Czech IČO, Polish KRS number, Austrian Firmenbuchnummer, Slovak IČO, French SIREN, Dutch KvK number, Swedish organisation number, Swiss UID, Canadian corporation number, Belgian enterprise number, Danish CVR number, Croatian MBS, Maltese registration number, Brazilian CNPJ, New Zealand company number, Australian ACN/ABN, OpenCorporates ID, Wikidata Q-ID, and more), and uses those bridges to fan out across 34 national and international corporate data sources.
 
-Everything maps into [BODS v0.4](https://standard.openownership.org/en/0.4.0/). Cross-source links and risk signals are computed deterministically, and the whole bundle is one click away from a downloadable export (JSON / JSONL / XML / ZIP, plus [Senzing JSON](https://www.senzing.com/docs/entity_specification/) entity records for entity resolution and [FollowTheMoney](https://followthemoney.tech/) entities for OpenSanctions / OpenAleph investigative workflows).
+Everything maps into [BODS v0.4](https://standard.openownership.org/en/0.4.0/). Cross-source links and risk signals are computed deterministically, and the whole bundle is one click away from a downloadable export (JSON / JSONL / XML / ZIP, plus [Senzing JSON](https://www.senzing.com/docs/entity_specification/) entity records for entity resolution, [FollowTheMoney](https://followthemoney.tech/) entities for OpenSanctions / OpenAleph investigative workflows, and a [BigQuery property-graph](https://cloud.google.com/bigquery/docs/property-graphs) package queryable with GQL).
 
 The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulatory technical standards](https://www.amla.europa.eu/policy/public-consultations/consultation-draft-rts-customer-due-diligence_en) conditions for "complex corporate structures" — trust/arrangement, non-EU jurisdiction, nominee, ≥3 ownership layers, plus the composite threshold rule and an advisory mirror of the subjective obfuscation condition.
 
 ## Status
 
-**Latest: Phase 77** — Export menu: every take-away in one place, and "Download data"
+**Latest: Phase 78** — BigQuery GQL export: query an OpenCheck ownership graph with ISO GQL
 
-The prime top-right slot on the AI summary card stops advertising only PDF: the "Download PDF" button becomes one grouped **Export** menu — **Report** as PDF or as the new Markdown format (both embed the card's AI summary and analyst dispositions), and **Data**, an honest jump link down to the rebranded **"Download data"** section (BODS bundle, XML, Senzing, FollowTheMoney and friends, with the licensing assistant). Dropdown on desktop, bottom sheet on mobile, full menu keyboard/screen-reader semantics; the jump moves focus to the section heading so assistive-tech users land where sighted users scrolled.
+`GET /export?format=gql` packages the assembled BODS bundle as a BigQuery property graph, generated with [bods-gql](https://github.com/StephenAbbott/bods-gql) (now a pinned dependency, core install only — the upstream `[bigquery]` extra split keeps the Google Cloud stack out of the deployment): node/edge CSV tables, the `CREATE PROPERTY GRAPH` DDL, and 14 ready-made GQL (ISO/IEC 39075) queries covering UBO detection, corporate group mapping and circular ownership — plus a README with the `bq load` steps and the bundle's `LICENSES.md`. Available on the Download data panel, the FullCheck network export, and `/export-network`.
 
-*Previous: [Phase 76 — Markdown report export: the due-diligence report as portable text](docs/status.md)*
+*Previous: [Phase 77 — Export menu: every take-away in one place, and "Download data"](docs/status.md)*
 
 → [Full development history](docs/status.md)
 

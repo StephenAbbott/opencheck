@@ -21,6 +21,8 @@ from pydantic import BaseModel, Field
 
 from .. import __version__
 from ..bods import (
+    build_gql_files,
+    gql_counts,
     map_to_ftm,
     map_to_senzing,
     to_cypher,
@@ -39,7 +41,11 @@ from .lookup import ReportResponse, _build_report, _lookup_impl
 
 router = APIRouter()
 
-_EXPORT_FORMATS = {"json", "jsonl", "zip", "xml", "senzing", "ftm"}
+_EXPORT_FORMATS = {"json", "jsonl", "zip", "xml", "senzing", "ftm", "gql"}
+# One regex for the /export ?format= validation, derived from the set above so
+# the two can't drift (ExportNetworkRequest.format is the third place — a
+# typing.Literal, which must stay a literal; a test pins it to this set).
+_EXPORT_FORMAT_PATTERN = f"^({'|'.join(sorted(_EXPORT_FORMATS))})$"
 
 _TRAFFIC = {"green": "🟢", "amber": "🟡", "red": "🔴"}
 
@@ -91,13 +97,14 @@ async def export(
     deepen_top: int = Query(3, ge=0, le=10),
     format: str = Query(
         "zip",
-        pattern="^(json|jsonl|zip|xml|senzing|ftm)$",
+        pattern=_EXPORT_FORMAT_PATTERN,
         description=(
             "json (pretty array) | jsonl (newline-delimited) | zip (bundle) | "
             "xml (canonical BODS XML) | senzing (newline-delimited Senzing JSON "
             "entity records, ready to load into Senzing) | ftm (newline-delimited "
             "FollowTheMoney entities, ready for OpenSanctions / OpenAleph / "
-            "alephclient workflows)"
+            "alephclient workflows) | gql (zip: BigQuery property-graph CSV "
+            "tables + CREATE PROPERTY GRAPH DDL + 14 GQL queries, via bods-gql)"
         ),
     ),
     subsidiaries: bool = Query(
@@ -193,6 +200,26 @@ async def export(
             },
         )
 
+    if format == "gql":
+        contributing_ids = sorted({h.source_id for h in payload.hits if not h.is_stub})
+        licenses_md = _build_licenses_md(
+            contributing_ids=contributing_ids,
+            license_notices=payload.license_notices,
+            licensing=assess_licensing(contributing_ids),
+            query=export_query,
+            kind=kind,
+        )
+        body = _build_gql_zip(payload.bods, slug=slug, stamp=stamp, licenses_md=licenses_md)
+        return Response(
+            content=body,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="opencheck-{slug}-{stamp}-bigquery.zip"'
+                ),
+            },
+        )
+
     # format == "zip"
     body = _build_export_zip(
         payload, q=export_query, kind=kind, slug=slug, stamp=stamp,
@@ -214,7 +241,7 @@ class ExportNetworkRequest(BaseModel):
     network (a BODS bundle) without re-running the lookup."""
 
     bods: list[dict[str, Any]]
-    format: Literal["json", "jsonl", "xml", "senzing", "ftm", "cypher", "zip"] = "zip"
+    format: Literal["json", "jsonl", "xml", "senzing", "ftm", "cypher", "gql", "zip"] = "zip"
     slug: str | None = None
 
 
@@ -255,6 +282,20 @@ async def export_network(request: Request, req: ExportNetworkRequest) -> Respons
         return _file(to_ftm_jsonl(bods).encode("utf-8"), "application/x-ndjson", "ftm.jsonl")
     if req.format == "cypher":
         return _file(to_cypher(bods).encode("utf-8"), "text/plain; charset=utf-8", "cypher")
+    if req.format == "gql":
+        contributing_ids = _network_source_ids(bods)
+        licenses_md = _build_licenses_md(
+            contributing_ids=contributing_ids,
+            license_notices=[],
+            licensing=assess_licensing(contributing_ids),
+            query=slug,
+            kind=SearchKind.ENTITY,
+        )
+        return _file(
+            _build_gql_zip(bods, slug=slug, stamp=stamp, licenses_md=licenses_md),
+            "application/zip",
+            "bigquery.zip",
+        )
     # zip
     body = _build_network_zip(bods, slug=slug, stamp=stamp)
     return Response(
@@ -274,6 +315,20 @@ def _network_source_ids(bods: list[dict[str, Any]]) -> list[str]:
         if sid:
             ids.add(sid)
     return sorted(ids)
+
+
+def _build_gql_zip(
+    bods: list[dict[str, Any]], *, slug: str, stamp: str, licenses_md: str
+) -> bytes:
+    """The BigQuery GQL package: node/edge CSVs + property-graph DDL + the 14
+    GQL queries + README (from ``bods/gql.py``), plus the licence notes."""
+    buf = io.BytesIO()
+    base = f"opencheck-{slug}-{stamp}-bigquery"
+    with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name, content in build_gql_files(bods).items():
+            zf.writestr(f"{base}/{name}", content)
+        zf.writestr(f"{base}/LICENSES.md", licenses_md)
+    return buf.getvalue()
 
 
 def _build_network_zip(bods: list[dict[str, Any]], *, slug: str, stamp: str) -> bytes:
@@ -296,6 +351,7 @@ def _build_network_zip(bods: list[dict[str, Any]], *, slug: str, stamp: str) -> 
         "contributing_source_ids": contributing_ids,
         "senzing_record_count": len(map_to_senzing(bods)),
         "ftm_entity_count": len(map_to_ftm(bods)),
+        **gql_counts(bods),
         "bods_validation_issues": validate_shape(bods),
         "licensing": licensing.model_dump(),
     }
@@ -493,6 +549,7 @@ def _build_export_zip(
         "bods_statement_count": len(payload.bods),
         "senzing_record_count": len(map_to_senzing(payload.bods)),
         "ftm_entity_count": len(map_to_ftm(payload.bods)),
+        **gql_counts(payload.bods),
         "subsidiary_network_included": subsidiary_statement_count > 0,
         "subsidiary_statement_count": subsidiary_statement_count,
         "bods_validation_issues": payload.bods_issues,
