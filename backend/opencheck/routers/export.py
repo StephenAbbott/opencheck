@@ -33,7 +33,7 @@ from ..dispositions import load_dispositions
 from ..licensing import assess as assess_licensing
 from ..licensing import full_matrix
 from ..ratelimit import default_tier, heavy_tier, limiter, lookup_tier
-from ..reporting import PdfUnavailable, build_report_pdf
+from ..reporting import PdfUnavailable, build_report_markdown, build_report_pdf
 from ..sources import REGISTRY, SearchKind
 from .lookup import ReportResponse, _build_report, _lookup_impl
 
@@ -340,6 +340,24 @@ class PdfExportRequest(BaseModel):
     dispositions: dict[str, Any] | None = None
 
 
+async def _resolve_dispositions(
+    req: PdfExportRequest, norm_lei: str
+) -> dict[str, Any] | None:
+    """The dispositions to render: the posted record, else the stored sheet for
+    this narrative run — so a report downloaded in a later session still
+    carries the analyst's decisions."""
+    if req.dispositions is not None:
+        return req.dispositions
+    run_id = (req.narrative or {}).get("run_id") or ""
+    if not run_id:
+        return None
+    try:
+        stored = await asyncio.to_thread(load_dispositions, norm_lei, run_id)
+    except ValueError:
+        return None  # malformed run_id — render without dispositions
+    return stored.model_dump(mode="json") if stored is not None else None
+
+
 @router.post("/export/pdf")
 @limiter.limit(heavy_tier)
 async def export_pdf(request: Request, req: PdfExportRequest) -> Response:
@@ -352,18 +370,7 @@ async def export_pdf(request: Request, req: PdfExportRequest) -> Response:
     norm_lei = req.lei.strip().upper()
     payload = await _lookup_impl(lei=norm_lei, deepen_top=req.deepen_top)  # raises 400/404 on bad LEI
     report = payload.model_dump()
-
-    # Fall back to the stored disposition sheet for this narrative run, so a
-    # PDF downloaded in a later session still carries the analyst's decisions.
-    dispositions = req.dispositions
-    run_id = (req.narrative or {}).get("run_id") or ""
-    if dispositions is None and run_id:
-        try:
-            stored = await asyncio.to_thread(load_dispositions, norm_lei, run_id)
-            if stored is not None:
-                dispositions = stored.model_dump(mode="json")
-        except ValueError:
-            dispositions = None  # malformed run_id — render without dispositions
+    dispositions = await _resolve_dispositions(req, norm_lei)
 
     try:
         pdf_bytes = await asyncio.to_thread(
@@ -379,6 +386,36 @@ async def export_pdf(request: Request, req: PdfExportRequest) -> Response:
         media_type="application/pdf",
         headers={
             "Content-Disposition": f'attachment; filename="opencheck-{slug}-{stamp}.pdf"',
+        },
+    )
+
+
+@router.post("/export/markdown")
+@limiter.limit(heavy_tier)
+async def export_markdown(request: Request, req: PdfExportRequest) -> Response:
+    """Build the due-diligence report as portable Markdown for an LEI.
+
+    Same request body and lookup pipeline as ``/export/pdf`` — the narrative
+    and analyst dispositions are embedded identically — but rendered as plain
+    Markdown with no WeasyPrint dependency, so this route is always available
+    (including on deployments where ``/export/pdf`` returns 503).
+    """
+    norm_lei = req.lei.strip().upper()
+    payload = await _lookup_impl(lei=norm_lei, deepen_top=req.deepen_top)  # raises 400/404 on bad LEI
+    report = payload.model_dump()
+    dispositions = await _resolve_dispositions(req, norm_lei)
+
+    markdown = await asyncio.to_thread(
+        build_report_markdown, report, narrative=req.narrative, dispositions=dispositions
+    )
+
+    slug = _filename_slug(payload.legal_name or payload.lei or norm_lei)
+    stamp = datetime.now(UTC).strftime("%Y%m%d")
+    return Response(
+        content=markdown.encode("utf-8"),
+        media_type="text/markdown; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="opencheck-{slug}-{stamp}.md"',
         },
     )
 

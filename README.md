@@ -16,11 +16,11 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 75** — Per-IP rate limiting: abuse protection for the live public API
+**Latest: Phase 76** — Markdown report export: the due-diligence report as portable text
 
-The public API now enforces per-IP budgets so a scripted client can't burn the key-gated upstream quotas (Companies House, NZBN, CVR, OpenSanctions…) or the CPU/Anthropic-token cost of `/export/pdf` and `/narrative`, and degrade the demo for everyone. Three env-tunable tiers via [slowapi](https://slowapi.readthedocs.io/) with in-memory storage (one Render instance — no Redis, zero new infrastructure): 10/min on the full fan-out endpoints (`/lookup`, `/lookup-stream`, `/search`, `/stream`, `/report`, `/export`), 3/min on the expensive synthesis endpoints (`/narrative`, `/export/pdf`, `/export-network`), 60/min on everything else public; `/health` and `/sources` stay unlimited. The client IP is resolved Render-aware (`True-Client-IP` → `X-Forwarded-For` → socket peer), 429s carry `Retry-After`, and a coverage test pins that every new public route must pick a tier.
+The due-diligence report the PDF pipeline assembles is now also downloadable as portable Markdown — same lookup result, same embedded AI summary, claims and analyst dispositions — via `POST /export/markdown`. The renderer mirrors the PDF section by section over the same report dict, with two deliberate divergences: the BOVS diagrams become their text-equivalent relationship tables (wikis, git and LLM pipelines get more from the table than an image), and the QR code becomes the plain live-check URL. Because it needs no WeasyPrint/Pango toolchain, the Markdown route is always available — including on deployments where `/export/pdf` returns 503 — making it the report's built-in fallback format.
 
-*Previous: [Phase 74 — FollowTheMoney export: take an OpenCheck graph into OpenSanctions / OpenAleph](docs/status.md)*
+*Previous: [Phase 75 — Per-IP rate limiting: abuse protection for the live public API](docs/status.md)*
 
 → [Full development history](docs/status.md)
 
