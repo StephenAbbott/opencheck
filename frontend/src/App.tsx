@@ -369,6 +369,7 @@ export default function App() {
         setHits([]);
         setErrors({});
         setCrossSourceLinks([]);
+        setCrossSourceOpen(false);
         setPossiblySame([]);
         setMeip(null);
         setRiskSignals([]);
@@ -687,13 +688,32 @@ export default function App() {
 
   // Distinct sources participating in cross-source identifier links — the
   // headline number for the collapsed reconciliation box ("N identifiers
-  // matched across M sources").
+  // matched across M sources") and the SubjectCard identifier badge.
   const crossLinkedSourceCount = useMemo(() => {
     const srcs = new Set<string>();
     for (const link of crossSourceLinks)
       for (const h of link.hits) srcs.add(h.source_id);
     return srcs.size;
   }, [crossSourceLinks]);
+
+  // The cross-source identifiers box is collapsed by default but the
+  // SubjectCard badge can pop it open — so its open state lives here
+  // (controlled) rather than inside CollapsedSection.
+  const [crossSourceOpen, setCrossSourceOpen] = useState(false);
+
+  /** SubjectCard badge action: expand the cross-source identifiers box,
+   *  scroll to it and flash it (same affordance as narrative citations). */
+  const showCrossSourceIdentifiers = () => {
+    setCrossSourceOpen(true);
+    const el = document.getElementById("cross-source-identifiers");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (el.tabIndex < 0) el.tabIndex = -1;
+      el.focus({ preventScroll: true });
+      el.classList.add("oc-cite-flash");
+      window.setTimeout(() => el.classList.remove("oc-cite-flash"), 1600);
+    }
+  };
 
   // Extract GLEIF direct-children counts from the GLEIF hit's raw dict.
   // The adapter fetches only the first page (≤ 10) so we surface both
@@ -788,6 +808,7 @@ export default function App() {
                   setHits([]);
                   setErrors({});
                   setCrossSourceLinks([]);
+                  setCrossSourceOpen(false);
                   setPossiblySame([]);
                   setMeip(null);
                   setRiskSignals([]);
@@ -1327,6 +1348,8 @@ export default function App() {
             screening={streaming}
             replayedAt={replayedAt}
             onRefresh={() => lookupLei(streamingLei, { refresh: true })}
+            identifierSources={crossLinkedSourceCount}
+            onShowIdentifiers={showCrossSourceIdentifiers}
           />
         )}
 
@@ -1392,6 +1415,8 @@ export default function App() {
           <CollapsedSection
             htmlId="cross-source-identifiers"
             label="Cross-source identifiers"
+            open={crossSourceOpen}
+            onToggle={setCrossSourceOpen}
             summary={
               crossLinkedSourceCount >= 2 ? (
                 <>
@@ -2412,22 +2437,35 @@ function CollapsedSection({
   htmlId,
   label,
   summary,
+  open: openProp,
+  onToggle,
   children,
 }: {
-  /** id for aria-controls + in-page anchors (e.g. a future SubjectCard badge). */
+  /** id on the section wrapper — in-page anchors (e.g. the SubjectCard
+   *  identifier badge) scroll here. */
   htmlId: string;
   label: string;
   summary: React.ReactNode;
+  /** Controlled open state — omit to let the section manage its own. */
+  open?: boolean;
+  onToggle?: (open: boolean) => void;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
   return (
-    <section className="mb-8 bg-white border border-oo-rule rounded-oo">
+    <section
+      id={htmlId}
+      className="mb-8 bg-white border border-oo-rule rounded-oo scroll-mt-4"
+    >
       <button
         type="button"
         aria-expanded={open}
-        aria-controls={htmlId}
-        onClick={() => setOpen((v) => !v)}
+        aria-controls={`${htmlId}-body`}
+        onClick={() => {
+          onToggle?.(!open);
+          if (openProp === undefined) setOpenState(!open);
+        }}
         className="w-full flex items-center justify-between gap-3 p-5 text-left group"
       >
         <span className="min-w-0">
@@ -2454,7 +2492,7 @@ function CollapsedSection({
         </svg>
       </button>
       {open && (
-        <div id={htmlId} className="px-5 pb-5">
+        <div id={`${htmlId}-body`} className="px-5 pb-5">
           {children}
         </div>
       )}
