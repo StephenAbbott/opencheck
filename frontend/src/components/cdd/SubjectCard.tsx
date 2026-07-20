@@ -80,9 +80,14 @@ export function SubjectCard({
             <span className="font-mono break-all">LEI {lei}</span>
           </p>
           {/* Provenance badge — a replayed (cached) run must never look live.
-              Amber note + a fresh-check action wired to ?refresh=true. */}
+              Amber note + a fresh-check action wired to ?refresh=true.
+              Rounding is responsive: rounded-full reads as a pill on one
+              desktop line, but on narrow viewports the text wraps to several
+              lines and the full radius turns the badge into an ellipse with
+              the corners clipping into the text — so mobile gets the standard
+              card radius and a touch more vertical padding. */}
           {replayedAt && (
-            <p className="mt-2 inline-flex items-center gap-2 flex-wrap text-[12px] text-[#92400e] bg-[#fef3c7] border border-[#fde68a] rounded-full px-3 py-1">
+            <p className="mt-2 inline-flex items-center gap-2 flex-wrap text-[12px] text-[#92400e] bg-[#fef3c7] border border-[#fde68a] rounded-oo px-3 py-1.5 sm:rounded-full sm:py-1">
               <span>
                 Results from a check run {replayAgeLabel(replayedAt)} — not re-queried.
               </span>
