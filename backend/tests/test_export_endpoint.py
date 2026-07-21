@@ -197,6 +197,35 @@ def test_export_json_returns_bods_array(
         assert stmt.get("recordType") in {"entity", "person", "relationship"}
 
 
+def test_export_rdf_emits_trig_named_graphs(
+    client: TestClient, httpx_mock: HTTPXMock
+) -> None:
+    _mock_lei_record_chain(httpx_mock, _LEI)
+    _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
+    _mock_icij_empty(httpx_mock)
+    _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
+    _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
+    _mock_openaleph_name_lookup_empty(httpx_mock, "Demo Holdings P.L.C.")
+    _mock_gem_download_fail(httpx_mock)
+
+    r = client.get("/export", params={"lei": _LEI, "format": "rdf"})
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("application/trig")
+    assert ".trig" in r.headers["content-disposition"]
+
+    from rdflib import Dataset
+
+    ds = Dataset()
+    ds.parse(data=r.text, format="trig")
+    graphs = [g for g in ds.graphs() if len(g)]
+    # One named graph per statement (the GLEIF entity statement at minimum),
+    # each carrying its statement id and a licence (GLEIF -> CC0).
+    assert graphs
+    body = r.text
+    assert "https://vocab.openownership.org/terms#" in body
+    assert "https://creativecommons.org/publicdomain/zero/1.0/" in body
+
+
 def test_export_jsonl_emits_one_statement_per_line(
     client: TestClient, httpx_mock: HTTPXMock
 ) -> None:
