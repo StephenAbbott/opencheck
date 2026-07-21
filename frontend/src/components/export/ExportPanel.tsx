@@ -30,7 +30,7 @@ export function ExportPanel({
   contributingSourceIds: string[];
 }) {
   const [format, setFormat] = useState<
-    "zip" | "json" | "jsonl" | "xml" | "senzing" | "ftm" | "gql" | "amlai"
+    "zip" | "json" | "jsonl" | "xml" | "senzing" | "ftm" | "gql" | "amlai" | "rdf"
   >("zip");
   const [subsidiaries, setSubsidiaries] = useState(false);
 
@@ -89,6 +89,7 @@ export function ExportPanel({
                   | "ftm"
                   | "gql"
                   | "amlai"
+                  | "rdf"
               )
             }
             className="min-w-0 flex-1 sm:flex-none border border-oo-rule rounded px-2 py-1.5 text-[13px] bg-white"
@@ -101,6 +102,7 @@ export function ExportPanel({
             <option value="ftm">FollowTheMoney (OpenSanctions / Aleph)</option>
             <option value="gql">BigQuery GQL (CSV tables + graph schema)</option>
             <option value="amlai">Google AML AI (NDJSON input tables)</option>
+            <option value="rdf">RDF (BODS TriG, linked open data)</option>
           </select>
           <a
             href={href}
@@ -196,6 +198,36 @@ export function ExportPanel({
             <span className="sr-only"> (opens in new tab)</span>
           </a>
           , with the encoding explained in the bundled README.
+        </p>
+      )}
+
+      {format === "rdf" && (
+        <p className="mt-3 text-[12px] text-oo-muted leading-[1.6]">
+          RDF projects this ownership graph into{" "}
+          <a
+            href="https://vocab.openownership.org/pages/4_convertingdata.html"
+            target="_blank"
+            rel="noreferrer"
+            className="underline text-oo-blue hover:text-oo-burst"
+          >
+            BODS RDF
+            <span className="sr-only"> (opens in new tab)</span>
+          </a>{" "}
+          (TriG, one named graph per statement, published{" "}
+          <a
+            href="https://vocab.openownership.org/terms/bods-vocabulary-0.4.0.ttl"
+            target="_blank"
+            rel="noreferrer"
+            className="underline text-oo-blue hover:text-oo-burst"
+          >
+            BODS vocabulary
+            <span className="sr-only"> (opens in new tab)</span>
+          </a>{" "}
+          terms). Every statement carries its source&rsquo;s canonical licence URI, and
+          OpenCheck&rsquo;s risk signals and entity-resolution links travel as{" "}
+          <span className="font-mono">bods:Annotation</span> overlays in a separate
+          named analysis graph — queryable in SPARQL tools or directly in DuckDB via
+          the community <span className="font-mono">rdf</span> extension.
         </p>
       )}
 
