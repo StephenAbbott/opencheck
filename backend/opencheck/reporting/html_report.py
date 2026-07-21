@@ -350,8 +350,47 @@ def _summary_sources(narrative: dict[str, Any]) -> list[str]:
     return names[:6]
 
 
+def _degraded_block(report: dict[str, Any]) -> str:
+    """"Screening limitations" — rendered whenever derived checks degraded.
+
+    Independent of the narrative (unlike ``_gaps_block``): the limitation
+    is a property of the lookup itself, so it must appear in the record
+    even when no narrative was generated. Counts only — degradation
+    records never carry related-party names.
+    """
+    from ..risk import DEGRADATION_REASON_LABELS
+
+    degraded = report.get("degraded_sources") or []
+    if not degraded:
+        return ""
+    reg = _registry()
+    items = []
+    for d in degraded:
+        src = reg.get(d.get("source_id", ""))
+        name = src.info.name if src else (d.get("source_id") or "an upstream source")
+        reason = DEGRADATION_REASON_LABELS.get(
+            d.get("reason", ""), d.get("reason") or "an unknown failure"
+        )
+        affected = ", ".join(
+            c.replace("_", " ").title() for c in d.get("affected_signals") or []
+        )
+        affected_note = f" Signals affected: {escape(affected)}." if affected else ""
+        items.append(
+            f"<li><strong>{escape(name)}</strong> — {escape(d.get('detail') or '')} "
+            f"Reason: {escape(reason)}.{affected_note}</li>"
+        )
+    return (
+        '<div class="gaps"><h3>Screening limitations</h3>'
+        "<p>The following checks did not fully run for this report. The absence of "
+        "their signals is not evidence of absence — an unscreened name is not a "
+        "screened-and-clear name.</p>"
+        f"<ul>{''.join(items)}</ul></div>"
+    )
+
+
 def _risk(report: dict[str, Any]) -> str:
     signals = report.get("risk_signals") or []
+    degraded_block = _degraded_block(report)
     head = (
         '<section aria-labelledby="risk"><h2 id="risk">Risk signals</h2>'
         "<p>Risk signals are structural and jurisdictional indicators for further review, computed "
@@ -359,6 +398,15 @@ def _risk(report: dict[str, Any]) -> str:
         "due-diligence standards. They are not determinations of wrongdoing.</p>"
     )
     if not signals:
+        if degraded_block:
+            # A degraded screen must never be presented as "applied and
+            # returned clear" — qualify the absence and point at the
+            # limitations block.
+            return head + (
+                "<p><strong>No risk signals were raised</strong> for this entity — "
+                "but not every screening check fully ran, so this is not a "
+                "complete clear. See the screening limitations below.</p>"
+            ) + degraded_block + "</section>"
         return head + (
             "<p><strong>No risk signals were raised</strong> for this entity. The checks below were "
             "applied and returned clear: sanctions and PEP screening, FATF-listed jurisdictions, "
@@ -378,7 +426,7 @@ def _risk(report: dict[str, Any]) -> str:
             f'{escape(sig.get("summary") or "")} '
             f'<span class="src">— {escape(src_name)}</span></div>'
         )
-    return head + "".join(items) + "</section>"
+    return head + "".join(items) + degraded_block + "</section>"
 
 
 def _sources_found(report: dict[str, Any]) -> str:

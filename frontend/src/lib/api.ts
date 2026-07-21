@@ -108,6 +108,23 @@ export interface RiskSignal {
   evidence: Record<string, unknown>;
 }
 
+/** One derived risk check that did not fully run for this lookup (issue
+ * #50). An empty risk_signals list alongside a non-empty degraded list is
+ * NOT a clean screen — the affected signals were never fully screened.
+ * Carries counts only, never related-party names. */
+export interface DegradedSource {
+  /** Upstream adapter id ("opensanctions", "icij", ...); "opencheck" when
+   *  the failure happened before reaching any upstream. */
+  source_id: string;
+  /** Which derived check degraded ("cross_source_names", "icij_offshore_leaks"). */
+  check: string;
+  /** Risk codes whose absence is now unreliable. */
+  affected_signals: string[];
+  /** Human-readable failure summary — counts only. */
+  detail: string;
+  reason: "upstream_error" | "timeout" | "not_configured" | "rate_limited";
+}
+
 export interface SearchResponse {
   query: string;
   kind: SearchKind;
@@ -130,6 +147,7 @@ export interface LookupResponse {
   possibly_same_entities: PossiblySameEntity[];
   meip: MeipMatch | null;
   risk_signals: RiskSignal[];
+  degraded_sources: DegradedSource[];
   bods: Record<string, unknown>[];
   bods_issues: string[];
   license_notices: { source_id: string; hit_id: string; notice: string }[];
@@ -854,6 +872,8 @@ export interface MeipEvent {
 
 export interface RiskSignalsEvent {
   signals: RiskSignal[];
+  /** Derived checks that did not fully run — empty/absent when clean. */
+  degraded_sources?: DegradedSource[];
 }
 
 export type StreamHandlers = {

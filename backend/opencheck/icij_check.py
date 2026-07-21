@@ -77,7 +77,13 @@ import httpx
 
 from .config import get_settings
 from .http import build_client
-from .risk import OFFSHORE_LEAKS, RiskSignal
+from .risk import (
+    OFFSHORE_LEAKS,
+    DegradedSource,
+    RiskSignal,
+    classify_degradation_reason,
+    pick_degradation_reason,
+)
 
 _LOG = logging.getLogger(__name__)
 
@@ -120,19 +126,30 @@ _DATASET_LABELS: dict[str, str] = {
 # ---------------------------------------------------------------------
 
 
+#: Name of this derived check in ``DegradedSource.check`` records.
+CHECK_NAME = "icij_offshore_leaks"
+
+
 async def assess_icij_names(
     bods: list[dict[str, Any]],
     *,
     max_targets: int = _MAX_TARGETS,
     min_score: int = _MIN_SCORE,
+    degraded: list[DegradedSource] | None = None,
 ) -> list[RiskSignal]:
     """Return ``OFFSHORE_LEAKS`` risk signals for entities and persons in
     the BODS bundle whose names match a record in the ICIJ Offshore Leaks
     database.
 
+    ``degraded`` is an optional out-collector (issue #50): when one or
+    more reconciliation batches fail, a :class:`DegradedSource` record is
+    appended so callers can surface that the offshore-leaks screen is
+    incomplete — an empty result is then not a clean screen. Records
+    carry counts only, never the names being screened.
+
     No-op (returns ``[]``) when:
 
-    * Live mode is off.
+    * Live mode is off (offline/demo mode — expected, not a degradation).
     * The bundle has no person/entity statements.
     * The ICIJ reconciliation API is unreachable (errors are swallowed so
       one network problem doesn't poison the rest of the risk pipeline).
@@ -152,6 +169,8 @@ async def assess_icij_names(
     signals: list[RiskSignal] = []
     failed = 0
     batches = 0
+    skipped_names = 0
+    reason_counts: dict[str, int] = {}
     for batch_start in range(0, len(targets), _BATCH_SIZE):
         batch = targets[batch_start: batch_start + _BATCH_SIZE]
         batches += 1
@@ -164,6 +183,9 @@ async def assess_icij_names(
             # the module docstring); 429 means we're being throttled. Loud
             # enough to notice without reading raw access logs.
             failed += 1
+            skipped_names += len(batch)
+            reason = classify_degradation_reason(exc)
+            reason_counts[reason] = reason_counts.get(reason, 0) + 1
             _LOG.warning(
                 "ICIJ Offshore Leaks reconciliation failed: HTTP %s from %s "
                 "(%d name(s) in this batch skipped).",
@@ -176,6 +198,9 @@ async def assess_icij_names(
             # swallowed so one upstream problem can't sink the rest of the
             # risk pipeline — but no longer silent.
             failed += 1
+            skipped_names += len(batch)
+            reason = classify_degradation_reason(exc)
+            reason_counts[reason] = reason_counts.get(reason, 0) + 1
             _LOG.warning(
                 "ICIJ Offshore Leaks reconciliation failed: %s: %s "
                 "(%d name(s) in this batch skipped).",
@@ -193,6 +218,21 @@ async def assess_icij_names(
             failed,
             batches,
         )
+        if degraded is not None:
+            degraded.append(
+                DegradedSource(
+                    source_id="icij",
+                    check=CHECK_NAME,
+                    affected_signals=[OFFSHORE_LEAKS],
+                    detail=(
+                        f"{failed} of {batches} reconciliation batch(es) "
+                        f"failed; {skipped_names} of {len(targets)} name(s) "
+                        "were not screened against the Offshore Leaks "
+                        "database."
+                    ),
+                    reason=pick_degradation_reason(reason_counts),
+                )
+            )
 
     return _dedupe(signals)
 

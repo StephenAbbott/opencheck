@@ -25,7 +25,7 @@ from ..ftm import subject_to_ftm_entity
 from ..icij_check import assess_icij_names
 from ..meip import meip_lookup
 from ..reconcile import possibly_same_entities, reconcile
-from ..risk import RiskSignal, assess_bundle, assess_hits
+from ..risk import DegradedSource, RiskSignal, assess_bundle, assess_hits
 from ..ratelimit import default_tier, limiter, lookup_tier
 from ..sources import REGISTRY, SearchKind, SourceHit, SourceInfo
 from ..sources.schemas import SourceSchemaError
@@ -93,6 +93,13 @@ class ReportResponse(BaseModel):
     possibly_same_entities: list[dict[str, Any]] = []
     #: OECD-UNSD MEIP signpost match for the subject LEI, or None. Not BODS.
     meip: dict[str, Any] | None = None
+    #: Derived risk checks that did not fully run for this result (issue
+    #: #50) — empty when every screen completed. Each record carries
+    #: source_id / check / affected_signals / detail / reason (closed
+    #: vocabulary: upstream_error, timeout, not_configured, rate_limited).
+    #: An empty risk_signals list with a non-empty degraded_sources list
+    #: is NOT a clean screen. Never contains related-party names.
+    degraded_sources: list[dict[str, Any]] = []
 
 
 class LookupResponse(ReportResponse):
@@ -223,11 +230,13 @@ async def _build_report(
                 }
             )
 
+    degraded: list[DegradedSource] = []
     cross_signals = [
-        s.to_dict() for s in await assess_cross_source_names(bods_all)
+        s.to_dict()
+        for s in await assess_cross_source_names(bods_all, degraded=degraded)
     ]
     icij_signals = [
-        s.to_dict() for s in await assess_icij_names(bods_all)
+        s.to_dict() for s in await assess_icij_names(bods_all, degraded=degraded)
     ]
 
     all_signals = _merge_signals(
@@ -245,6 +254,7 @@ async def _build_report(
         bods_issues=bods_issues,
         license_notices=license_notices,
         possibly_same_entities=[p.to_dict() for p in possibly_same_entities(bods_all)],
+        degraded_sources=[d.to_dict() for d in degraded],
     )
 
 
@@ -1477,9 +1487,10 @@ async def _lookup_pipeline(
         {"pairs": [p.to_dict() for p in possibly_same_entities(bods_all)]},
     )
 
+    degraded: list[DegradedSource] = []
     cross_raw, icij_raw = await asyncio.gather(
-        assess_cross_source_names(bods_all),
-        assess_icij_names(bods_all),
+        assess_cross_source_names(bods_all, degraded=degraded),
+        assess_icij_names(bods_all, degraded=degraded),
     )
     # Sanctioned-securities chip: cheap in-memory lookup of the subject LEI in
     # the OpenSanctions securities index (no network). No-op when the index
@@ -1496,7 +1507,14 @@ async def _lookup_pipeline(
         [s.to_dict() for s in icij_raw],
         sec_signals,
     )
-    yield ("risk_signals", {"signals": merged})
+    # degraded_sources rides on the same event as the signals so every
+    # consumer (SSE UI, sync /lookup, replay cache, narrative, exports)
+    # sees the two together — an empty signals list plus a non-empty
+    # degraded list must never be split apart into "clean screen".
+    yield (
+        "risk_signals",
+        {"signals": merged, "degraded_sources": [d.to_dict() for d in degraded]},
+    )
 
     yield ("done", {
         "lei": lei,
@@ -1589,6 +1607,7 @@ async def _lookup_impl(
     errors: dict[str, str] = {}
     links: list[dict[str, Any]] = []
     signals: list[dict[str, Any]] = []
+    degraded_sources: list[dict[str, Any]] = []
     bods_all: list[dict[str, Any]] = []
     same_pairs: list[dict[str, Any]] = []
     meip_match: dict[str, Any] | None = None
@@ -1630,6 +1649,7 @@ async def _lookup_impl(
             meip_match = payload["match"]
         elif event == "risk_signals":
             signals = payload["signals"]
+            degraded_sources = payload.get("degraded_sources") or []
         elif event == "done":
             bods_issues = payload["bods_issues"]
             license_notices = payload["license_notices"]
@@ -1646,6 +1666,7 @@ async def _lookup_impl(
         license_notices=license_notices,
         possibly_same_entities=same_pairs,
         meip=meip_match,
+        degraded_sources=degraded_sources,
         lei=norm_lei,
         legal_name=legal_name,
         jurisdiction=jurisdiction,

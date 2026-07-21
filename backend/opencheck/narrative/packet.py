@@ -276,19 +276,37 @@ def build_evidence_packet(
             )
         )
 
+    # Degraded upstream screens (issue #50). A derived check that did not
+    # fully run means the absence of its signals is NOT evidence of absence.
+    degraded = report.get("degraded_sources") or []
+
     # Absence of risk is itself an evidenced finding (the engine ran and raised
     # nothing) — give the model a fact to cite so it can say so without
-    # fabricating a citation.
+    # fabricating a citation. When screening was degraded the finding must
+    # carry that caveat inline: a clean screen the model can cite unqualified
+    # would let the narrative assert absence that was never established.
     if not risks:
+        if degraded:
+            statement = (
+                "The OpenCheck risk engine identified no structural or "
+                "jurisdictional risk signals for this entity; however, "
+                f"{len(degraded)} screening check(s) did not fully run "
+                "(see the gaps), so the absence of related-party sanctions, "
+                "PEP or offshore-leaks signals is not conclusive."
+            )
+            confidence = "medium"
+        else:
+            statement = (
+                "The OpenCheck risk engine ran against the available data and identified "
+                "no structural or jurisdictional risk signals for this entity."
+            )
+            confidence = "high"
         facts.append(
             Fact(
                 id=f"f{len(facts) + 1}",
-                statement=(
-                    "The OpenCheck risk engine ran against the available data and identified "
-                    "no structural or jurisdictional risk signals for this entity."
-                ),
+                statement=statement,
                 source_name="OpenCheck risk engine",
-                confidence="high",
+                confidence=confidence,
             )
         )
 
@@ -325,6 +343,25 @@ def build_evidence_packet(
         adapter = REGISTRY.get(sid)
         name = adapter.info.name if adapter else sid
         gaps.append(f"{name} could not be queried ({err}).")
+    # Degraded derived screens are gaps in their own right — each one is a
+    # citable finding the narrative can (and must) lean on instead of
+    # asserting a clean screen. Counts only; never related-party names.
+    from ..risk import DEGRADATION_REASON_LABELS  # lazy import to avoid cycles
+
+    for d in degraded:
+        sid = d.get("source_id") or ""
+        adapter = REGISTRY.get(sid)
+        name = adapter.info.name if adapter else sid or "an upstream source"
+        reason = DEGRADATION_REASON_LABELS.get(
+            d.get("reason", ""), d.get("reason") or "an unknown failure"
+        )
+        affected = ", ".join(d.get("affected_signals") or []) or "derived risk"
+        detail = d.get("detail") or ""
+        gaps.append(
+            f"Screening against {name} did not fully run because {reason}. "
+            f"{detail} The absence of {affected} signals is therefore not "
+            "conclusive — this is not a clean screen."
+        )
     for notice in report.get("license_notices") or []:
         gaps.append(notice.get("notice", ""))
 
