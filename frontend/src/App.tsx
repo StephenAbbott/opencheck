@@ -21,6 +21,7 @@ import {
   type GleifSearchResult,
 } from "./lib/gleifNationalId";
 import { COUNTRY_OPTIONS, RA_CODES, validateNationalId } from "./lib/raCodes";
+import { countLeiConfirmingSources } from "./lib/identifierBadge";
 import {
   OpenCheckIcon,
   GleifIcon,
@@ -688,13 +689,25 @@ export default function App() {
 
   // Distinct sources participating in cross-source identifier links — the
   // headline number for the collapsed reconciliation box ("N identifiers
-  // matched across M sources") and the SubjectCard identifier badge.
+  // matched across M sources"). NOT the SubjectCard badge number: that badge
+  // sits next to the LEI, so it counts only LEI-confirming sources (below).
   const crossLinkedSourceCount = useMemo(() => {
     const srcs = new Set<string>();
     for (const link of crossSourceLinks)
       for (const h of link.hits) srcs.add(h.source_id);
     return srcs.size;
   }, [crossSourceLinks]);
+
+  // Distinct sources that independently publish the subject's LEI — the
+  // SubjectCard badge number. Scoped to the LEI because the badge renders
+  // beside it; see countLeiConfirmingSources for the rationale.
+  const leiConfirmedSourceCount = useMemo(
+    () =>
+      streamingLei
+        ? countLeiConfirmingSources(crossSourceLinks, streamingLei)
+        : 0,
+    [crossSourceLinks, streamingLei],
+  );
 
   // The cross-source identifiers box is collapsed by default but the
   // SubjectCard badge can pop it open — so its open state lives here
@@ -1348,7 +1361,7 @@ export default function App() {
             screening={streaming}
             replayedAt={replayedAt}
             onRefresh={() => lookupLei(streamingLei, { refresh: true })}
-            identifierSources={crossLinkedSourceCount}
+            identifierSources={leiConfirmedSourceCount}
             onShowIdentifiers={showCrossSourceIdentifiers}
           />
         )}
