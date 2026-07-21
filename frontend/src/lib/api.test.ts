@@ -32,3 +32,9 @@ describe("exportUrl", () => {
     }
   });
 });
+
+it("builds an rdf export URL", () => {
+  const url = exportUrl(_LEI, "rdf");
+  expect(url).toContain("/export?");
+  expect(url).toContain("format=rdf");
+});

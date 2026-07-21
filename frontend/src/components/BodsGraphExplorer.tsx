@@ -508,6 +508,7 @@ export default function BodsGraphExplorer({
             <option value="senzing">Senzing JSON</option>
             <option value="ftm">FollowTheMoney (Aleph)</option>
             <option value="cypher">Neo4j · Cypher</option>
+            <option value="rdf">RDF · TriG</option>
             <option value="gql">BigQuery · GQL (zip)</option>
             <option value="amlai">Google AML AI (zip)</option>
           </select>

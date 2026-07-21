@@ -188,7 +188,7 @@ export const BASE_URL: string = import.meta.env.DEV
  */
 export function exportUrl(
   lei: string,
-  format: "json" | "jsonl" | "zip" | "xml" | "senzing" | "ftm" | "gql" | "amlai",
+  format: "json" | "jsonl" | "zip" | "xml" | "senzing" | "ftm" | "gql" | "amlai" | "rdf",
   opts?: { subsidiaries?: boolean }
 ): string {
   const params = new URLSearchParams({ lei, format });
@@ -236,6 +236,7 @@ export type NetworkExportFormat =
   | "cypher"
   | "gql"
   | "amlai"
+  | "rdf"
   | "zip";
 
 /** Export a client-assembled FullCheck network (BODS) in the chosen format and
