@@ -307,6 +307,107 @@ class RiskSignal:
 
 
 # ----------------------------------------------------------------------
+# Degraded upstream screens (issue #50)
+# ----------------------------------------------------------------------
+#
+# Derived risk checks (cross-source name screening, ICIJ offshore-leaks
+# reconciliation) produce "evidence of absence" signals: an empty result
+# normally means "screened, nothing found". When the upstream call fails,
+# that empty result silently masquerades as a clean screen. DegradedSource
+# is the structured record that breaks the ambiguity — it rides on the
+# same response block as the risk signals so the UI, PDF and narrative can
+# all say "this screen did not fully run".
+
+#: Closed reason vocabulary — additions need UI + docs updates.
+DEGRADED_UPSTREAM_ERROR = "upstream_error"
+DEGRADED_TIMEOUT = "timeout"
+DEGRADED_NOT_CONFIGURED = "not_configured"
+DEGRADED_RATE_LIMITED = "rate_limited"
+
+#: Tie-break order when one source fails for several reasons in one run —
+#: most systemic first (a config gap explains everything else).
+_DEGRADED_REASON_PRIORITY = [
+    DEGRADED_NOT_CONFIGURED,
+    DEGRADED_RATE_LIMITED,
+    DEGRADED_TIMEOUT,
+    DEGRADED_UPSTREAM_ERROR,
+]
+
+
+@dataclass
+class DegradedSource:
+    """One upstream screen that did not fully run for this lookup.
+
+    PRIVACY: ``detail`` must only ever carry counts and source/check
+    names — never the related-party names that were being screened
+    (they are people and companies from the subject's ownership graph).
+    ``test_degraded_sources.py`` enforces this.
+    """
+
+    #: Adapter id of the upstream that failed ("opensanctions", "icij", …);
+    #: "opencheck" when the failure happened before reaching any upstream.
+    source_id: str
+    #: Which derived check degraded ("cross_source_names", "icij_offshore_leaks").
+    check: str
+    #: Risk codes whose absence is now unreliable (e.g. RELATED_SANCTIONED).
+    affected_signals: list[str]
+    #: Human-readable summary — counts only, never names.
+    detail: str
+    #: One of the DEGRADED_* constants above.
+    reason: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "source_id": self.source_id,
+            "check": self.check,
+            "affected_signals": self.affected_signals,
+            "detail": self.detail,
+            "reason": self.reason,
+        }
+
+
+#: Plain-English phrasing per reason, shared by the narrative packet and
+#: the PDF/markdown report builders.
+DEGRADATION_REASON_LABELS: dict[str, str] = {
+    DEGRADED_UPSTREAM_ERROR: "the upstream service errored",
+    DEGRADED_TIMEOUT: "the upstream service timed out",
+    DEGRADED_NOT_CONFIGURED: "the required API credential is not configured",
+    DEGRADED_RATE_LIMITED: "the upstream service rate-limited the request",
+}
+
+
+def classify_degradation_reason(exc: BaseException) -> str:
+    """Map an upstream exception onto the closed reason vocabulary."""
+    import asyncio
+
+    import httpx
+
+    if isinstance(exc, (httpx.TimeoutException, asyncio.TimeoutError)):
+        return DEGRADED_TIMEOUT
+    if isinstance(exc, httpx.HTTPStatusError):
+        if exc.response.status_code == 429:
+            return DEGRADED_RATE_LIMITED
+        return DEGRADED_UPSTREAM_ERROR
+    return DEGRADED_UPSTREAM_ERROR
+
+
+def pick_degradation_reason(reason_counts: dict[str, int]) -> str:
+    """Single headline reason for a source that failed in mixed ways:
+    the most frequent, tie-broken by how systemic the reason is."""
+    if not reason_counts:
+        return DEGRADED_UPSTREAM_ERROR
+    return max(
+        reason_counts,
+        key=lambda r: (
+            reason_counts[r],
+            -_DEGRADED_REASON_PRIORITY.index(r)
+            if r in _DEGRADED_REASON_PRIORITY
+            else -len(_DEGRADED_REASON_PRIORITY),
+        ),
+    )
+
+
+# ----------------------------------------------------------------------
 # Rules over SourceHit (search-time data)
 # ----------------------------------------------------------------------
 

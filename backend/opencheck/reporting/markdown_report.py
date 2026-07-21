@@ -209,8 +209,47 @@ def _summary(
     return lines
 
 
+def _degraded_lines(report: dict[str, Any]) -> list[str]:
+    """"Screening limitations" — mirrors the HTML report's block.
+
+    Independent of the narrative: the limitation belongs to the lookup
+    itself. Counts only — degradation records never carry related-party
+    names.
+    """
+    from ..risk import DEGRADATION_REASON_LABELS
+
+    degraded = report.get("degraded_sources") or []
+    if not degraded:
+        return []
+    reg = _registry()
+    lines = [
+        "### Screening limitations",
+        "",
+        "The following checks did not fully run for this report. The absence of "
+        "their signals is not evidence of absence — an unscreened name is not a "
+        "screened-and-clear name.",
+        "",
+    ]
+    for d in degraded:
+        src = reg.get(d.get("source_id", ""))
+        name = src.info.name if src else (d.get("source_id") or "an upstream source")
+        reason = DEGRADATION_REASON_LABELS.get(
+            d.get("reason", ""), d.get("reason") or "an unknown failure"
+        )
+        affected = ", ".join(
+            c.replace("_", " ").title() for c in d.get("affected_signals") or []
+        )
+        affected_note = f" Signals affected: {affected}." if affected else ""
+        lines.append(
+            f"- **{name}** — {d.get('detail') or ''} Reason: {reason}.{affected_note}"
+        )
+    lines.append("")
+    return lines
+
+
 def _risk(report: dict[str, Any]) -> list[str]:
     signals = report.get("risk_signals") or []
+    degraded_lines = _degraded_lines(report)
     lines = [
         "## Risk signals",
         "",
@@ -220,6 +259,16 @@ def _risk(report: dict[str, Any]) -> list[str]:
         "",
     ]
     if not signals:
+        if degraded_lines:
+            # A degraded screen must never read as "applied and returned
+            # clear" — qualify the absence and append the limitations.
+            lines += [
+                "**No risk signals were raised** for this entity — but not every "
+                "screening check fully ran, so this is not a complete clear. See "
+                "the screening limitations below.",
+                "",
+            ]
+            return lines + degraded_lines
         lines += [
             "**No risk signals were raised** for this entity. The checks below were applied and "
             "returned clear: sanctions and PEP screening, FATF-listed jurisdictions, non-EU/EEA "
@@ -235,7 +284,7 @@ def _risk(report: dict[str, Any]) -> list[str]:
         label = sig.get("code", "").replace("_", " ").title()
         lines.append(f"- **{label}** ({conf}) — {sig.get('summary') or ''} — *{src_name}*")
     lines.append("")
-    return lines
+    return lines + degraded_lines
 
 
 def _sources_found(report: dict[str, Any]) -> list[str]:

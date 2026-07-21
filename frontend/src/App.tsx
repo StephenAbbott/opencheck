@@ -11,6 +11,7 @@ import {
   type BodsBreakdown,
   type BodsCountsEvent,
   type CrossSourceLink,
+  type DegradedSource,
   type MeipMatch,
   type PossiblySameEntity,
   type RiskSignal,
@@ -172,6 +173,10 @@ export default function App() {
   const [possiblySame, setPossiblySame] = useState<PossiblySameEntity[]>([]);
   const [meip, setMeip] = useState<MeipMatch | null>(null);
   const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
+  // Derived checks that did not fully run (issue #50) — rendered as a
+  // warning above the risk panel; empty signals + non-empty degraded is
+  // NOT a clean screen.
+  const [degradedSources, setDegradedSources] = useState<DegradedSource[]>([]);
   const [applicableSources, setApplicableSources] = useState<string[]>([]);
   const [completedSources, setCompletedSources] = useState<Set<string>>(new Set());
   const [streaming, setStreaming] = useState(false);
@@ -374,6 +379,7 @@ export default function App() {
         setPossiblySame([]);
         setMeip(null);
         setRiskSignals([]);
+        setDegradedSources([]);
         setApplicableSources([]);
         setCompletedSources(new Set());
         setStreaming(false);
@@ -423,7 +429,10 @@ export default function App() {
           onCrossSourceLinks: (e) => setCrossSourceLinks(e.links),
           onPossiblySame: (e) => setPossiblySame(e.pairs),
           onMeip: (e) => setMeip(e.match),
-          onRiskSignals: (e) => setRiskSignals(e.signals),
+          onRiskSignals: (e) => {
+            setRiskSignals(e.signals);
+            setDegradedSources(e.degraded_sources ?? []);
+          },
           onBodsCounts: (e: BodsCountsEvent) => {
             setBodsCountMap(e.counts);
             if (e.breakdown) setBodsBreakdownMap(e.breakdown);
@@ -825,6 +834,7 @@ export default function App() {
                   setPossiblySame([]);
                   setMeip(null);
                   setRiskSignals([]);
+                  setDegradedSources([]);
                   setApplicableSources([]);
                   setCompletedSources(new Set());
                   setStreaming(false);
@@ -1409,6 +1419,22 @@ export default function App() {
 
         {streamingLei && <NarrativePanel lei={streamingLei} legalName={legalName} />}
 
+        {/* Screening-degradation warning (issue #50) — rendered above the
+            risk panel, and independently of it: zero signals with a
+            degraded screen is exactly the case that must NOT read as a
+            clean screen. */}
+        {degradedSources.length > 0 && (
+          <DegradedScreensNotice
+            degraded={degradedSources}
+            sourceNames={sourceNameIndex}
+            onRetry={
+              streamingLei && !streaming
+                ? () => lookupLei(streamingLei, { refresh: true })
+                : undefined
+            }
+          />
+        )}
+
         {aggregatedCodes.length > 0 && (
           <section className="mb-8" id="risk-signals">
             <SectionLabel>Risk signals</SectionLabel>
@@ -1948,12 +1974,25 @@ function ApiPage() {
             <strong className="text-oo-ink font-semibold">Primary entry point.</strong>{" "}
             Resolves the company across every source and returns a unified BODS v0.4
             view — subject, related people and entities, ownership-or-control
-            relationships, cross-source links and risk signals.
+            relationships, cross-source links and risk signals. The response also
+            carries <code className={mono}>degraded_sources</code> (empty when every
+            screen completed): derived checks — related-party sanctions/PEP
+            screening, ICIJ offshore-leaks reconciliation — that did not fully run,
+            each with <code className={mono}>source_id</code>, <code className={mono}>check</code>,{" "}
+            <code className={mono}>affected_signals</code>, a counts-only{" "}
+            <code className={mono}>detail</code> and a closed-vocabulary{" "}
+            <code className={mono}>reason</code> (<code className={mono}>upstream_error</code>,{" "}
+            <code className={mono}>timeout</code>, <code className={mono}>not_configured</code>,{" "}
+            <code className={mono}>rate_limited</code>). An empty{" "}
+            <code className={mono}>risk_signals</code> list alongside a non-empty{" "}
+            <code className={mono}>degraded_sources</code> list is not a clean screen.
           </ApiEndpoint>
           <ApiEndpoint path="/lookup-stream?lei=<LEI>">
             The same synthesis streamed as Server-Sent Events (<code className={mono}>gleif_done</code>,
             per-source <code className={mono}>hit</code> / <code className={mono}>source_error</code>,
             then <code className={mono}>done</code>) so a client can render progressively.
+            The <code className={mono}>risk_signals</code> event carries the same{" "}
+            <code className={mono}>degraded_sources</code> field as <code className={mono}>/lookup</code>.
           </ApiEndpoint>
           <ApiEndpoint path="/lookup-source?lei=<LEI>&source_id=<id>">
             Re-run a single source for an existing lookup (the per-source “retry” in the UI).
@@ -2868,6 +2907,110 @@ function CrossSourceIdentifiersTable({
 // the "Show more" toggle. Multi-source subjects (e.g. DNO ASA) can flag many
 // pairs, which otherwise dominates the results page.
 const POSSIBLY_SAME_PREVIEW_COUNT = 2;
+
+/** Human phrasing for the closed degradation-reason vocabulary. */
+const DEGRADED_REASON_LABELS: Record<string, string> = {
+  upstream_error: "the upstream service errored",
+  timeout: "the upstream service timed out",
+  not_configured: "the required API credential is not configured",
+  rate_limited: "the upstream service rate-limited the request",
+};
+
+/**
+ * Warning box for degraded upstream screens (issue #50). Sits above the
+ * risk panel and renders whenever the backend reports that a derived
+ * check (related-party sanctions/PEP screening, ICIJ offshore-leaks
+ * reconciliation) did not fully run — including when there are zero risk
+ * signals, which is precisely the case that must not pass for a clean
+ * screen. Details are counts only; the backend never sends the
+ * related-party names that were being screened.
+ */
+function DegradedScreensNotice({
+  degraded,
+  sourceNames = {},
+  onRetry,
+}: {
+  degraded: DegradedSource[];
+  sourceNames?: Record<string, string>;
+  /** Re-runs the lookup bypassing the replay cache; absent while streaming. */
+  onRetry?: () => void;
+}) {
+  if (degraded.length === 0) return null;
+  return (
+    <section
+      role="status"
+      aria-label="Screening incomplete"
+      className="mb-8 rounded-oo border border-amber-300 bg-amber-50 p-5"
+    >
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-start gap-3 min-w-0">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="mt-0.5 h-4 w-4 shrink-0 text-amber-600"
+            aria-hidden="true"
+          >
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+            <path d="M12 9v4" />
+            <path d="M12 17h.01" />
+          </svg>
+          <div className="min-w-0">
+            <p className="font-head font-bold text-[14px] text-amber-900">
+              Screening incomplete — {degraded.length} check
+              {degraded.length === 1 ? "" : "s"} did not fully run
+            </p>
+            <ul className="mt-2 space-y-1.5 text-[12.5px] leading-[1.6] text-amber-900">
+              {degraded.map((d, i) => (
+                <li key={`${d.source_id}:${d.check}:${i}`}>
+                  <span className="font-semibold">
+                    {d.source_id === "opencheck"
+                      ? "OpenCheck"
+                      : shortSourceName(d.source_id, sourceNames)}
+                  </span>{" "}
+                  — {d.detail}{" "}
+                  <span className="text-amber-800">
+                    ({DEGRADED_REASON_LABELS[d.reason] ?? d.reason})
+                  </span>
+                  {d.affected_signals.length > 0 && (
+                    <span className="ml-1.5 inline-flex flex-wrap gap-1 align-middle">
+                      {d.affected_signals.map((code) => (
+                        <span
+                          key={code}
+                          className="text-[10px] font-semibold uppercase tracking-wide bg-white/70 border border-amber-300 rounded px-1.5 py-0.5 text-amber-900"
+                        >
+                          {RISK_PRESENTATION[code]?.label ??
+                            code.replace(/_/g, " ")}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-[12px] text-amber-800">
+              The absence of the signals above is not evidence of absence —
+              an empty result here is not a clean screen.
+            </p>
+          </div>
+        </div>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="shrink-0 rounded border border-amber-400 px-3 py-1.5 text-[12px] font-semibold text-amber-900 transition-colors hover:bg-amber-100"
+          >
+            Re-run screening
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
 
 function PossiblySameTable({ pairs }: { pairs: PossiblySameEntity[] }) {
   const [expanded, setExpanded] = useState(false);

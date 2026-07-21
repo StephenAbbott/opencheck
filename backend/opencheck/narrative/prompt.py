@@ -10,7 +10,7 @@ import json
 
 from .packet import EvidencePacket
 
-PROMPT_VERSION = "2026-06-24-v4"
+PROMPT_VERSION = "2026-07-21-v5"
 
 # Compliance-analyst tone, single executive paragraph, hard grounding rules.
 SYSTEM_PROMPT = """\
@@ -59,6 +59,12 @@ ABSOLUTE RULES — these protect the integrity of the summary:
    owner was disclosed", a source that could not be queried, a non-commercial
    data licence). Absence of evidence is a finding.
 8. If there are no risk signals, say so plainly. Do not manufacture concern.
+   EXCEPTION: when a gap records that a screening check did not fully run (a
+   degraded screen), never assert a clean or absent finding for the affected
+   signal types — condition the statement on that gap and cite its `g` id
+   (e.g. "no related-party sanctions matches were found, but the sanctions
+   screen did not fully run, so this is not conclusive"). An unscreened name
+   is not a screened-and-clear name.
 9. When the subject is `name-matched`, never let "no risk signals were identified"
    stand as reassurance on its own: condition it on the unconfirmed
    identification (e.g. "no signals were raised, but screening is only as reliable

@@ -48,7 +48,13 @@ import unicodedata
 from typing import Any
 
 from .config import get_settings
-from .risk import RiskSignal
+from .risk import (
+    DEGRADED_NOT_CONFIGURED,
+    DegradedSource,
+    RiskSignal,
+    classify_degradation_reason,
+    pick_degradation_reason,
+)
 from .sources import REGISTRY, SearchKind, SourceHit
 
 _LOG = logging.getLogger(__name__)
@@ -60,6 +66,21 @@ RELATED_PEP = "RELATED_PEP"
 RELATED_SANCTIONED = "RELATED_SANCTIONED"
 RELATED_SANCTIONS_LINKED = "RELATED_SANCTIONS_LINKED"
 RELATED_DEBARMENT = "RELATED_DEBARMENT"
+
+#: Name of this derived check in ``DegradedSource.check`` records.
+CHECK_NAME = "cross_source_names"
+
+#: Which signals each upstream source contributes — the codes whose absence
+#: becomes unreliable when that source's probes fail (issue #50).
+_AFFECTED_BY_SOURCE: dict[str, list[str]] = {
+    "opensanctions": [
+        RELATED_SANCTIONED,
+        RELATED_SANCTIONS_LINKED,
+        RELATED_DEBARMENT,
+        RELATED_PEP,
+    ],
+    "everypolitician": [RELATED_PEP],
+}
 
 
 # OpenSanctions topic taxonomy. Same shape as the regular ``risk.py``
@@ -83,16 +104,26 @@ async def assess_cross_source_names(
     *,
     max_targets: int = 25,
     min_score: float = 0.88,
+    degraded: list[DegradedSource] | None = None,
 ) -> list[RiskSignal]:
     """Return scoped ``RELATED_*`` risk signals for related parties in
     the BODS bundle that match an OpenSanctions / EveryPolitician
     record by name.
 
+    ``degraded`` is an optional out-collector (issue #50): when the screen
+    could not fully run — missing API key in live mode, upstream errors,
+    timeouts — a :class:`DegradedSource` record per affected source is
+    appended so callers can surface "this is not a clean screen" instead
+    of letting the empty result pass for one. Records carry counts only,
+    never the related-party names being screened.
+
     No-op (returns ``[]``) when:
 
-    * Live mode is off or no OpenSanctions API key is configured —
-      we can't ask the upstream sources.
-    * The bundle has no person/entity statements.
+    * Live mode is off — offline/demo mode is expected, not a degradation.
+    * The bundle has no person/entity statements (nothing to screen, so
+      nothing degraded either).
+    * No OpenSanctions API key is configured in live mode — ``[]`` with
+      ``not_configured`` degradation records.
     """
     if not bods:
         return []
@@ -102,6 +133,11 @@ async def assess_cross_source_names(
         # Offline/demo mode — expected, not a degradation. Debug only.
         _LOG.debug("Cross-source name screening skipped: live mode is off.")
         return []
+
+    targets = _collect_targets(bods)[:max_targets]
+    if not targets:
+        return []
+
     if not settings.opensanctions_api_key:
         # Live mode but no key: the screen genuinely cannot run, and an
         # empty result would otherwise look identical to a clean screen.
@@ -110,10 +146,21 @@ async def assess_cross_source_names(
             "set while live mode is on. RELATED_SANCTIONED / RELATED_PEP signals "
             "will be absent for every lookup — this is NOT a clean screen."
         )
-        return []
-
-    targets = _collect_targets(bods)[:max_targets]
-    if not targets:
+        if degraded is not None:
+            for source_id, affected in _AFFECTED_BY_SOURCE.items():
+                degraded.append(
+                    DegradedSource(
+                        source_id=source_id,
+                        check=CHECK_NAME,
+                        affected_signals=list(affected),
+                        detail=(
+                            "OPENSANCTIONS_API_KEY is not configured while live "
+                            f"mode is on; {len(targets)} related-party name(s) "
+                            "were not screened."
+                        ),
+                        reason=DEGRADED_NOT_CONFIGURED,
+                    )
+                )
         return []
 
     # Run the OS + EP probes concurrently — both adapters are cheap
@@ -128,12 +175,16 @@ async def assess_cross_source_names(
     # the bundle, but it must not pass for "screened, nothing found"
     # either — a silently-dropped sanctions probe is a false negative.
     # Counts only: the target names are people/companies from the
-    # subject's ownership graph and must not reach hosted logs.
-    failed_by_source: dict[str, int] = {}
+    # subject's ownership graph and must not reach hosted logs or the
+    # DegradedSource records built from these tallies.
+    failed_by_source: dict[str, dict[str, int]] = {}
     target_errors = 0
+    target_error_reasons: dict[str, int] = {}
     for r in results:
         if isinstance(r, BaseException):
             target_errors += 1
+            reason = classify_degradation_reason(r)
+            target_error_reasons[reason] = target_error_reasons.get(reason, 0) + 1
             _LOG.warning(
                 "Cross-source screening: probe for one related party raised "
                 "%s: %s (that party was not screened).",
@@ -143,13 +194,14 @@ async def assess_cross_source_names(
             continue
         target_signals, failures = r
         signals.extend(target_signals)
-        for source_id in failures:
-            failed_by_source[source_id] = failed_by_source.get(source_id, 0) + 1
+        for source_id, reason in failures.items():
+            by_reason = failed_by_source.setdefault(source_id, {})
+            by_reason[reason] = by_reason.get(reason, 0) + 1
 
     if failed_by_source or target_errors:
         detail = ", ".join(
-            f"{source_id} failed for {count} of {len(targets)} name(s)"
-            for source_id, count in sorted(failed_by_source.items())
+            f"{source_id} failed for {sum(reasons.values())} of {len(targets)} name(s)"
+            for source_id, reasons in sorted(failed_by_source.items())
         )
         if target_errors:
             extra = f"{target_errors} of {len(targets)} name(s) errored outright"
@@ -160,6 +212,43 @@ async def assess_cross_source_names(
             "an empty result here is not a clean screen.",
             detail,
         )
+        if degraded is not None:
+            for source_id, reasons in sorted(failed_by_source.items()):
+                count = sum(reasons.values())
+                degraded.append(
+                    DegradedSource(
+                        source_id=source_id,
+                        check=CHECK_NAME,
+                        affected_signals=list(
+                            _AFFECTED_BY_SOURCE.get(source_id, [])
+                        ),
+                        detail=(
+                            f"Search failed for {count} of {len(targets)} "
+                            "related-party name(s); those parties were not "
+                            "screened against this source."
+                        ),
+                        reason=pick_degradation_reason(reasons),
+                    )
+                )
+            if target_errors:
+                # The probe died before reaching either upstream, so no
+                # single source can be blamed — every RELATED_* code is
+                # potentially incomplete.
+                degraded.append(
+                    DegradedSource(
+                        source_id="opencheck",
+                        check=CHECK_NAME,
+                        affected_signals=list(
+                            _AFFECTED_BY_SOURCE["opensanctions"]
+                        ),
+                        detail=(
+                            f"Screening errored for {target_errors} of "
+                            f"{len(targets)} related-party name(s) before "
+                            "reaching the upstream sources."
+                        ),
+                        reason=pick_degradation_reason(target_error_reasons),
+                    )
+                )
     return _dedupe(signals)
 
 
@@ -266,11 +355,12 @@ def _person_birth_year(rd: dict[str, Any]) -> int | None:
 
 async def _check_target(
     target: dict[str, Any], *, min_score: float
-) -> tuple[list[RiskSignal], set[str]]:
+) -> tuple[list[RiskSignal], dict[str, str]]:
     """Run OS (+ EP for persons) searches for one target and score the
     matches.
 
-    Returns ``(signals, failed_source_ids)``. The second element lets the
+    Returns ``(signals, failed_sources)`` where ``failed_sources`` maps a
+    source id to a closed-vocabulary degradation reason. It lets the
     caller distinguish "screened, nothing found" from "the screen never
     ran" — see the aggregated warning in ``assess_cross_source_names``.
     """
@@ -288,18 +378,18 @@ async def _check_target(
     if ep_adapter is not None:
         tasks.append(asyncio.create_task(ep_adapter.search(name, SearchKind.PERSON)))
     if not tasks:
-        return [], set()
+        return [], {}
 
     raw_results = await asyncio.gather(*tasks, return_exceptions=True)
 
     signals: list[RiskSignal] = []
-    failed: set[str] = set()
+    failed: dict[str, str] = {}
     # OpenSanctions hits — derive RELATED_PEP / RELATED_SANCTIONED from
     # the topics on the underlying record.
     if os_adapter is not None:
         os_raw = raw_results[0]
         if isinstance(os_raw, BaseException):
-            failed.add("opensanctions")
+            failed["opensanctions"] = classify_degradation_reason(os_raw)
             os_hits: list[SourceHit] = []
         else:
             os_hits = os_raw
@@ -312,7 +402,7 @@ async def _check_target(
         ep_index = 0 if os_adapter is None else 1
         ep_raw = raw_results[ep_index]
         if isinstance(ep_raw, BaseException):
-            failed.add("everypolitician")
+            failed["everypolitician"] = classify_degradation_reason(ep_raw)
             ep_hits: list[SourceHit] = []
         else:
             ep_hits = ep_raw

@@ -86,13 +86,25 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
     codes = ", ".join(dict.fromkeys(r["code"] for r in risk if r.get("code"))) or "none"
     sources = _sources_summary(payload.hits, payload.errors)
     found = sum(1 for s in sources if s.get("found"))
+    degraded = getattr(payload, "degraded_sources", None) or []
 
+    # An AI consumer must never read "Risk signals: none" as a clean screen
+    # when a screening check didn't fully run — say so in the summary line
+    # it is most likely to quote.
+    degraded_note = (
+        f" CAUTION: {len(degraded)} screening check(s) did not fully run "
+        "(see degraded_sources) — the absence of their signals is not a "
+        "clean screen."
+        if degraded
+        else ""
+    )
     summary = (
         f"{payload.legal_name or 'Entity'} (LEI {payload.lei}"
         f"{', ' + payload.jurisdiction if payload.jurisdiction else ''}). "
         f"Risk signals: {codes}. "
         f"{found} of {len(sources)} sources returned data; "
         f"{len(bods)} BODS statements ({relationships} ownership/control relationships)."
+        f"{degraded_note}"
     )
 
     return {
@@ -103,6 +115,7 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         "identifiers": _subject_identifiers(bods, payload.lei),
         "derived_identifiers": payload.derived_identifiers or {},
         "risk_signals": risk,
+        "degraded_sources": degraded,
         "sources": sources,
         "counts": {
             "bods_statements": len(bods),
