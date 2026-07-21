@@ -45,10 +45,13 @@ export function SubjectCard({
   replayedAt?: string | null;
   /** Re-runs the lookup bypassing the replay cache (?refresh=true). */
   onRefresh?: () => void;
-  /** Distinct sources publishing a shared identifier for this subject.
-   *  The badge only renders from 2 (a lone source confirms nothing).
-   *  Deliberately worded "Identifier confirmed by" — the sources agree on
-   *  the identifier, they do not corroborate each other's substance. */
+  /** Distinct sources independently publishing the subject's LEI — not
+   *  sources sharing just any identifier (QID, national number, …): the
+   *  badge renders beside the LEI, so its number must be scoped to the LEI
+   *  (see countLeiConfirmingSources in lib/identifierBadge.ts). The badge
+   *  only renders from 2 (a lone source confirms nothing). Deliberately
+   *  worded "Identifier confirmed by" — the sources agree on the
+   *  identifier, they do not corroborate each other's substance. */
   identifierSources?: number;
   /** Expands + scrolls to the cross-source identifiers box. */
   onShowIdentifiers?: () => void;
@@ -243,7 +246,7 @@ function IdentifierBadge({
     <button
       type="button"
       onClick={onClick}
-      title="Independent sources publish a matching identifier for this entity — jump to the detail"
+      title="Independent sources publish this entity's LEI — jump to the cross-source detail"
       className={`items-center text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-colors ${className}`}
     >
       <svg
