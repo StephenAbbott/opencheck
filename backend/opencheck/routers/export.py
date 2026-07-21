@@ -29,6 +29,7 @@ from ..bods import (
     map_to_senzing,
     to_cypher,
     to_ftm_jsonl,
+    to_rdf,
     to_senzing_jsonl,
     validate_shape,
 )
@@ -43,7 +44,7 @@ from .lookup import ReportResponse, _build_report, _lookup_impl
 
 router = APIRouter()
 
-_EXPORT_FORMATS = {"json", "jsonl", "zip", "xml", "senzing", "ftm", "gql", "amlai"}
+_EXPORT_FORMATS = {"json", "jsonl", "zip", "xml", "senzing", "ftm", "gql", "amlai", "rdf"}
 # One regex for the /export ?format= validation, derived from the set above so
 # the two can't drift (ExportNetworkRequest.format is the third place — a
 # typing.Literal, which must stay a literal; a test pins it to this set).
@@ -109,7 +110,11 @@ async def export(
             "tables + CREATE PROPERTY GRAPH DDL + 14 GQL queries, via bods-gql) | "
             "amlai (zip: Google AML AI input tables — party / "
             "party_supplementary_data / account_party_link NDJSON, via "
-            "bods-aml-ai)"
+            "bods-aml-ai) | rdf (BODS RDF as TriG: one named graph per "
+            "statement per the Open Ownership conversion pattern, canonical "
+            "licence URI on every statement, and OpenCheck's risk signals / "
+            "entity-resolution links as bods:Annotation overlays in a "
+            "separate analysis graph)"
         ),
     ),
     subsidiaries: bool = Query(
@@ -205,6 +210,26 @@ async def export(
             },
         )
 
+    if format == "rdf":
+        body = to_rdf(
+            payload.bods,
+            fmt="trig",
+            anchor_lei=getattr(payload, "lei", None),
+            run_date=datetime.now(UTC).strftime("%Y-%m-%d"),
+            risk_signals=payload.risk_signals,
+            possibly_same_entities=payload.possibly_same_entities,
+            degraded_sources=payload.degraded_sources,
+        ).encode("utf-8")
+        return Response(
+            content=body,
+            media_type="application/trig",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="opencheck-{slug}-{stamp}.trig"'
+                ),
+            },
+        )
+
     if format == "gql":
         contributing_ids = sorted({h.source_id for h in payload.hits if not h.is_stub})
         licenses_md = _build_licenses_md(
@@ -267,7 +292,7 @@ class ExportNetworkRequest(BaseModel):
 
     bods: list[dict[str, Any]]
     format: Literal[
-        "json", "jsonl", "xml", "senzing", "ftm", "cypher", "gql", "amlai", "zip"
+        "json", "jsonl", "xml", "senzing", "ftm", "cypher", "gql", "amlai", "rdf", "zip"
     ] = "zip"
     slug: str | None = None
 
@@ -309,6 +334,10 @@ async def export_network(request: Request, req: ExportNetworkRequest) -> Respons
         return _file(to_ftm_jsonl(bods).encode("utf-8"), "application/x-ndjson", "ftm.jsonl")
     if req.format == "cypher":
         return _file(to_cypher(bods).encode("utf-8"), "text/plain; charset=utf-8", "cypher")
+    if req.format == "rdf":
+        # Client-assembled network: data statements only — the analytical
+        # overlay needs a lookup run, so it ships via GET /export?format=rdf.
+        return _file(to_rdf(bods, fmt="trig").encode("utf-8"), "application/trig", "trig")
     if req.format == "gql":
         contributing_ids = _network_source_ids(bods)
         licenses_md = _build_licenses_md(
