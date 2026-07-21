@@ -12,7 +12,12 @@ Usage (from backend/):
     python scripts/export_rdf_bulk.py --in ../data/estonia/estonia-2026-07-04.jsonl.gz \
         --out ../data/estonia/estonia-2026-07-04.nq --fallback-license \
         "https://creativecommons.org/publicdomain/zero/1.0/"
-    python scripts/rdf_demo_queries.py [--nq ../data/estonia/estonia-2026-07-04.nq]
+    python scripts/rdf_demo_queries.py [--nq ../data/estonia/estonia-2026-07-04.nq[.gz]]
+
+A ``.gz`` argument (e.g. the release asset ``estonia-2026-07-04.nq.gz``) is
+transparently decompressed to a temporary file first — duck_rdf cannot read
+gzipped NQuads itself (it refuses the double extension, and with a
+``file_type`` hint it parses the compressed bytes raw).
 
 Expected numbers (precomputed from estonia-2026-07-04) are asserted, so this
 doubles as an integrity check of the JSONL → RDF conversion.
@@ -21,13 +26,36 @@ doubles as an integrity check of the JSONL → RDF conversion.
 from __future__ import annotations
 
 import argparse
+import gzip
+import os
+import shutil
+import tempfile
 import time
+from contextlib import contextmanager
 
 import duckdb
 
 B = "https://vocab.openownership.org/terms#"
 RDFT = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
+
+
+@contextmanager
+def _maybe_gunzip(path: str):
+    """Yield a path duck_rdf can read: ``.gz`` inputs are decompressed to a
+    temporary ``.nq`` (deleted afterwards); anything else passes through."""
+    if not path.endswith(".gz"):
+        yield path
+        return
+    with tempfile.NamedTemporaryFile(suffix=".nq", delete=False) as tmp:
+        tmp_path = tmp.name
+        print(f"decompressing {path} → {tmp_path} …")
+        with gzip.open(path, "rb") as src:
+            shutil.copyfileobj(src, tmp)
+    try:
+        yield tmp_path
+    finally:
+        os.unlink(tmp_path)
 
 
 def timed(con, title, sql, expect=None, check=None):
@@ -46,13 +74,15 @@ def timed(con, title, sql, expect=None, check=None):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--nq", default="../data/estonia/estonia-2026-07-04.nq")
+    parser.add_argument("--nq", default="../data/estonia/estonia-2026-07-04.nq",
+                        help="NQuads file; .gz accepted (decompressed to a temp file)")
     args = parser.parse_args()
 
     con = duckdb.connect()
     con.execute("INSTALL rdf FROM community; LOAD rdf;")
     t0 = time.time()
-    con.execute(f"CREATE TABLE t AS SELECT * FROM read_rdf('{args.nq}')")
+    with _maybe_gunzip(args.nq) as nq_path:
+        con.execute(f"CREATE TABLE t AS SELECT * FROM read_rdf('{nq_path}')")
     n = con.execute("SELECT count(*) FROM t").fetchone()[0]
     print(f"loaded {n:,} quads in {time.time() - t0:.1f}s")
 
