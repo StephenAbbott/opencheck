@@ -66,7 +66,11 @@ export function SubjectCard({
           <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-blue">
             Subject
           </p>
-          <h2 className="font-head font-bold text-oo-ink mt-2 leading-tight text-[clamp(1.25rem,2.5vw,1.6rem)]">
+          {/* break-words: long single words (e.g. "Aktiengesellschaft") must
+              wrap inside the min-w-0 column instead of overflowing under the
+              right-hand column — that overflow is what made the identifier
+              badge appear to cover the name on phones. */}
+          <h2 className="font-head font-bold text-oo-ink mt-2 leading-tight break-words text-[clamp(1.25rem,2.5vw,1.6rem)]">
             {legalName || `LEI ${lei}`}
           </h2>
           {/* Identity line — small and muted so the card stays airy on mobile. */}
@@ -87,11 +91,13 @@ export function SubjectCard({
             )}
             {cc && <span aria-hidden>·</span>}
             <span className="font-mono break-all">LEI {lei}</span>
-            {/* Desktop placement: inline with the LEI it qualifies. On
-                mobile the identity column is too narrow — the badge wrapped
-                to three lines and rounded-full turned it into an ellipse —
-                so this instance hides and the copy in the right-hand column
-                (under the share button) takes over. */}
+            {/* Desktop placement: inline pill beside the LEI it qualifies.
+                Hidden on mobile, where the identity column is too narrow
+                (~150px beside the share button) — the block placement below
+                the header row takes over there. Both placements are in
+                normal document flow, so neither can paint over the entity
+                name (the old right-column mobile placement did exactly that
+                once a long name overflowed its squeezed column). */}
             <IdentifierBadge
               count={identifierSources}
               onClick={onShowIdentifiers}
@@ -124,22 +130,26 @@ export function SubjectCard({
               — copies a link whose social-media preview shows a live summary card for this entity
             </span>
           </button>
-          {/* Mobile placement of the identifier badge — right column, under
-              the share button, with the card radius (matching the replay
-              badge) instead of a full pill so wrapped text keeps square-ish
-              corners. max-w keeps a long label from squeezing the entity
-              name in the left column. */}
-          <IdentifierBadge
-            count={identifierSources}
-            onClick={onShowIdentifiers}
-            className="sm:hidden inline-flex gap-1.5 rounded-oo px-3 py-1.5 max-w-[12rem] text-right justify-end"
-          />
         </div>
         {/* Always-mounted live region so the copied confirmation is announced. */}
         <span role="status" className="sr-only">
           {copied ? "Share link copied" : ""}
         </span>
       </div>
+
+      {/* Mobile placement of the identifier badge — full card width available
+          below the header row, so it renders on one line directly under the
+          LEI it qualifies (the LEI line is the bottom of the identity
+          column). Same responsive treatment as the amber replay box: card
+          radius, content width, in normal flow — it pushes content down
+          rather than overlapping it. Hidden on sm+ where the inline pill
+          beside the LEI takes over; the hidden instance is display:none so
+          only one is in the accessibility tree. */}
+      <IdentifierBadge
+        count={identifierSources}
+        onClick={onShowIdentifiers}
+        className="sm:hidden inline-flex gap-1.5 max-w-full text-left rounded-oo px-3 py-1.5 mt-3"
+      />
 
       {/* Provenance badge — a replayed (cached) run must never look live.
           Amber note + a fresh-check action wired to ?refresh=true. Sits
@@ -211,11 +221,13 @@ export function SubjectCard({
 
 /**
  * "Identifier confirmed by N sources" badge. Rendered twice by SubjectCard —
- * inline beside the LEI on sm+ and in the right-hand column on mobile — with
- * only one instance visible per breakpoint (the hidden one is display:none,
- * so it also leaves the accessibility tree). Renders nothing below 2 sources:
- * a lone source confirms nothing. `className` carries the per-placement
- * layout (visibility, radius, padding); the identity styling lives here.
+ * an inline pill beside the LEI on sm+, and a full-width-capable box directly
+ * below the header row (i.e. under the LEI) on mobile — with only one
+ * instance visible per breakpoint (the hidden one is display:none, so it
+ * also leaves the accessibility tree). Both are in normal document flow and
+ * can never overlap the entity name. Renders nothing below 2 sources: a lone
+ * source confirms nothing. `className` carries the per-placement layout
+ * (visibility, radius, padding); the identity styling lives here.
  */
 function IdentifierBadge({
   count,
