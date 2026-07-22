@@ -19,12 +19,15 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   lookup,
+  personAppointments,
   personCheck,
+  type PersonAppointmentsResponse,
   type PersonCheckResponse,
   type PersonMatch,
 } from "../../lib/api";
 import {
   extractConnectedPeople,
+  possiblySamePeople,
   type ConnectedPerson,
   type Stmt,
 } from "../../lib/backgroundCheck";
@@ -85,6 +88,7 @@ export default function BackgroundCheckPanel({
     () => (statements ? extractConnectedPeople(statements) : []),
     [statements]
   );
+  const samePairs = useMemo(() => possiblySamePeople(people), [people]);
 
   const runCheck = async (person: ConnectedPerson) => {
     setChecks((c) => ({ ...c, [person.key]: { status: "running" } }));
@@ -207,6 +211,26 @@ export default function BackgroundCheckPanel({
               </button>
             </span>
           </div>
+          {samePairs.length > 0 && (
+            <div className="mb-4 rounded-oo border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-amber-800 mb-1">
+                Possibly the same person — review
+              </p>
+              <ul className="list-none p-0 m-0 space-y-0.5">
+                {samePairs.map((pair) => (
+                  <li
+                    key={`${pair.a}|${pair.b}`}
+                    className="text-[12px] text-amber-900 leading-[1.6]"
+                  >
+                    Two entries named{" "}
+                    <span className="font-medium">{pair.name}</span> ({pair.reason}
+                    ) — they are listed separately below; review before treating
+                    them as one individual.
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <ul className="space-y-4 list-none p-0 m-0">
             {people.map((person) => (
               <li key={person.key}>
@@ -356,6 +380,27 @@ function CheckResult({
         </p>
       )}
 
+      {result.cross_source_links.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-1.5">
+            Same person across sources
+          </p>
+          <ul className="space-y-1 list-none p-0 m-0">
+            {result.cross_source_links.map((link, i) => (
+              <li
+                key={i}
+                className="text-[11px] text-oo-ink leading-[1.6] rounded-oo border border-oo-rule bg-white px-3 py-1.5"
+              >
+                {link.hits.map((h) => h.source_id).join(" and ")} describe the
+                same record — matched on shared identifier{" "}
+                <span className="font-mono">{link.key}</span> ={" "}
+                <span className="font-mono">{link.key_value}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {strong.length > 0 && (
         <div>
           <p className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-1.5">
@@ -442,8 +487,37 @@ function CheckResult({
   );
 }
 
+type ApptState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "done"; data: PersonAppointmentsResponse }
+  | { status: "error"; message: string };
+
 function MatchRow({ match }: { match: PersonMatch }) {
   const pct = Math.round(match.name_score * 100);
+  const [appts, setAppts] = useState<ApptState>({ status: "idle" });
+  const [apptsOpen, setApptsOpen] = useState(false);
+  // Companies House officer hits carry the register's stable officer id
+  // as hit_id — the identifier-backed appointments view hangs off it.
+  const isChOfficer = match.hit.source_id === "companies_house" && !match.hit.is_stub;
+  const apptsId = `appts-${match.hit.source_id}-${match.hit.hit_id.replace(/[^a-zA-Z0-9]/g, "-")}`;
+
+  const loadAppointments = async () => {
+    if (apptsOpen) {
+      setApptsOpen(false);
+      return;
+    }
+    setApptsOpen(true);
+    if (appts.status === "done") return;
+    setAppts({ status: "loading" });
+    try {
+      const data = await personAppointments(match.hit.hit_id);
+      setAppts({ status: "done", data });
+    } catch (e) {
+      setAppts({ status: "error", message: (e as Error).message });
+    }
+  };
+
   return (
     <li className="rounded-oo border border-oo-rule bg-white px-3 py-2">
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -471,6 +545,87 @@ function MatchRow({ match }: { match: PersonMatch }) {
         {match.hit.summary || "No summary from source."}{" "}
         <span className="font-mono">via {match.hit.source_id}</span>
       </p>
+      {isChOfficer && (
+        <div className="mt-1.5">
+          <button
+            type="button"
+            onClick={loadAppointments}
+            aria-expanded={apptsOpen}
+            aria-controls={apptsId}
+            className="text-[11px] text-violet-800 underline hover:no-underline"
+          >
+            {apptsOpen ? "Hide appointments" : "View appointments across companies"}
+          </button>
+          <div id={apptsId}>
+            {apptsOpen && appts.status === "loading" && (
+              <p className="text-[11px] text-oo-muted italic mt-1">
+                Loading appointments…
+              </p>
+            )}
+            {apptsOpen && appts.status === "error" && (
+              <p className="text-[11px] text-red-700 mt-1" role="alert">
+                Could not load appointments: {appts.message}
+              </p>
+            )}
+            {apptsOpen && appts.status === "done" && (
+              <AppointmentsList data={appts.data} />
+            )}
+          </div>
+        </div>
+      )}
     </li>
+  );
+}
+
+function AppointmentsList({ data }: { data: PersonAppointmentsResponse }) {
+  if (data.is_stub) {
+    return (
+      <p className="text-[11px] text-oo-muted mt-1">
+        Live Companies House access is not configured — appointments
+        unavailable in offline mode.
+      </p>
+    );
+  }
+  return (
+    <div className="mt-1.5 rounded-oo border border-violet-100 bg-violet-50/40 px-3 py-2">
+      <p className="text-[11px] text-oo-ink mb-1.5">
+        <span className="font-medium">{data.name ?? "This officer"}</span>
+        {data.birth_date && (
+          <span className="text-oo-muted"> (b. {data.birth_date})</span>
+        )}{" "}
+        — {data.total_results ?? data.appointments.length} appointment
+        {(data.total_results ?? data.appointments.length) === 1 ? "" : "s"} under
+        this officer record, {data.active_count} active. The register asserts
+        these belong to one officer identifier — this is stronger evidence than
+        a name match.
+      </p>
+      <ul className="space-y-1 list-none p-0 m-0">
+        {data.appointments.map((a, i) => (
+          <li key={i} className="text-[11px] leading-[1.5] text-oo-ink">
+            <span className="font-medium">{a.company_name}</span>
+            {a.company_number && (
+              <span className="font-mono text-oo-muted"> {a.company_number}</span>
+            )}
+            {a.role && <span> — {a.role}</span>}
+            {a.appointed_on && (
+              <span className="text-oo-muted font-mono text-[10px]">
+                {" "}
+                ({a.appointed_on}
+                {a.resigned_on ? ` → ${a.resigned_on}` : " → present"})
+              </span>
+            )}
+            {a.resigned_on ? (
+              <span className="ml-1 text-[10px] text-oo-muted">resigned</span>
+            ) : (
+              a.company_status === "active" && (
+                <span className="ml-1 text-[10px] text-emerald-700">active</span>
+              )
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className="text-[10px] text-oo-muted mt-1.5">{data.caveat}</p>
+      <p className="text-[10px] text-oo-muted mt-0.5">{data.attribution}</p>
+    </div>
   );
 }

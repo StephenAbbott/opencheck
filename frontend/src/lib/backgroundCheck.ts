@@ -70,7 +70,7 @@ function personName(rd: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
-function normaliseName(name: string): string {
+export function normaliseName(name: string): string {
   return name
     .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "")
@@ -102,6 +102,50 @@ export function describeRoleInterest(interest: Record<string, unknown>): string 
     return `${words} — ${min ?? "?"}–${max ?? "?"}%`;
   }
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+export interface PossiblySamePerson {
+  /** keys of the two ConnectedPerson entries */
+  a: string;
+  b: string;
+  name: string;
+  reason: string;
+}
+
+/**
+ * Same-name pairs that may describe one individual — HUMAN-REVIEW
+ * suggestions only, never auto-merged (mirrors the entity report's
+ * "possibly the same entity" pattern).
+ *
+ * Suggested only when the birth years don't positively disagree: two
+ * records with the same name and *different* birth years are treated as
+ * genuinely different people, but when either side lacks a birth year
+ * the extraction keeps them separate and this flags the pair for review.
+ */
+export function possiblySamePeople(
+  people: ConnectedPerson[]
+): PossiblySamePerson[] {
+  const pairs: PossiblySamePerson[] = [];
+  for (let i = 0; i < people.length; i++) {
+    for (let j = i + 1; j < people.length; j++) {
+      const a = people[i];
+      const b = people[j];
+      if (normaliseName(a.name) !== normaliseName(b.name)) continue;
+      // Same name + same birth year would already have merged; same
+      // name + two conflicting birth years is a real distinction.
+      if (a.birthYear !== undefined && b.birthYear !== undefined) continue;
+      pairs.push({
+        a: a.key,
+        b: b.key,
+        name: a.name,
+        reason:
+          a.birthYear === undefined && b.birthYear === undefined
+            ? "same name, no birth year on either record"
+            : "same name, birth year missing on one record",
+      });
+    }
+  }
+  return pairs;
 }
 
 /**

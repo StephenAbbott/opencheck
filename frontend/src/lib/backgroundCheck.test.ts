@@ -160,3 +160,44 @@ describe("birthYearOf", () => {
     expect(birthYearOf(undefined)).toBeUndefined();
   });
 });
+
+describe("possiblySamePeople", () => {
+  const person = (key: string, name: string, birthYear?: number) => ({
+    key,
+    name,
+    birthYear,
+    birthDate: birthYear ? String(birthYear) : undefined,
+    nationalities: [],
+    statementIds: [key],
+    sources: [],
+    roles: [],
+  });
+
+  it("flags same-name pairs when a birth year is missing", async () => {
+    const { possiblySamePeople } = await import("./backgroundCheck");
+    const pairs = possiblySamePeople([
+      person("a", "Jane Example", 1980),
+      person("b", "JANE EXAMPLE"),
+    ]);
+    expect(pairs).toHaveLength(1);
+    expect(pairs[0].reason).toContain("birth year missing on one record");
+  });
+
+  it("does not flag same-name pairs with conflicting birth years", async () => {
+    const { possiblySamePeople } = await import("./backgroundCheck");
+    const pairs = possiblySamePeople([
+      person("a", "Jane Example", 1980),
+      person("b", "Jane Example", 1955),
+    ]);
+    expect(pairs).toHaveLength(0);
+  });
+
+  it("does not flag different names", async () => {
+    const { possiblySamePeople } = await import("./backgroundCheck");
+    const pairs = possiblySamePeople([
+      person("a", "Jane Example"),
+      person("b", "John Other"),
+    ]);
+    expect(pairs).toHaveLength(0);
+  });
+});

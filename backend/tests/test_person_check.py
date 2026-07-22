@@ -180,3 +180,155 @@ def test_source_errors_are_reported_not_silent(
     assert r.status_code == 200
     by_id = {s["source_id"]: s for s in r.json()["sources"]}
     assert by_id["opensanctions"]["error"] == "TimeoutError: boom"
+
+
+# ---------------------------------------------------------------------
+# Phase C — cross-source links (Q-ID bridging among strong matches)
+# ---------------------------------------------------------------------
+
+
+def test_cross_source_links_bridge_strong_matches_only(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    strong_os = SourceHit(
+        source_id="opensanctions",
+        hit_id="os-1",
+        kind=SearchKind.PERSON,
+        name="Jane Example",
+        summary="",
+        identifiers={"opensanctions_id": "os-1", "wikidata_qid": "Q100"},
+        raw={},
+        is_stub=False,
+    )
+    strong_wd = SourceHit(
+        source_id="wikidata",
+        hit_id="Q100",
+        kind=SearchKind.PERSON,
+        name="Jane Example",
+        summary="",
+        identifiers={"wikidata_qid": "Q100"},
+        raw={},
+        is_stub=False,
+    )
+    weak_wd = SourceHit(
+        source_id="wikidata",
+        hit_id="Q999",
+        kind=SearchKind.PERSON,
+        name="A Completely Different Name",
+        summary="",
+        identifiers={"wikidata_qid": "Q999"},
+        raw={},
+        is_stub=False,
+    )
+
+    async def fake_run_adapters(q, kind):
+        return {"opensanctions": [strong_os], "wikidata": [strong_wd, weak_wd]}, {}
+
+    monkeypatch.setattr(
+        "opencheck.routers.person_check._run_adapters", fake_run_adapters
+    )
+
+    r = client.get("/person-check", params={"name": "Jane Example"})
+    assert r.status_code == 200
+    links = r.json()["cross_source_links"]
+    assert len(links) >= 1
+    qid_link = next(l for l in links if l["key"] == "wikidata_qid")
+    assert qid_link["key_value"] == "Q100"
+    linked_ids = {h["hit_id"] for h in qid_link["hits"]}
+    assert linked_ids == {"os-1", "Q100"}
+    # The weak Q999 hit must not appear in any link.
+    for link in links:
+        assert all(h["hit_id"] != "Q999" for h in link["hits"])
+
+
+# ---------------------------------------------------------------------
+# Phase C — /person-appointments
+# ---------------------------------------------------------------------
+
+
+_OFFICER_BUNDLE = {
+    "source_id": "companies_house",
+    "officer_id": "zS_RY9pRYlJ9XwGJEOFtkJgrf8s",
+    "appointments": {
+        "name": "Jane EXAMPLE",
+        "date_of_birth": {"year": 1980, "month": 6},
+        "total_results": 2,
+        "items": [
+            {
+                "officer_role": "director",
+                "appointed_on": "2015-01-01",
+                "appointed_to": {
+                    "company_name": "ACME LTD",
+                    "company_number": "01234567",
+                    "company_status": "active",
+                },
+            },
+            {
+                "officer_role": "director",
+                "appointed_on": "2010-01-01",
+                "resigned_on": "2014-12-31",
+                "appointed_to": {
+                    "company_name": "OLD CO LTD",
+                    "company_number": "07654321",
+                    "company_status": "dissolved",
+                },
+            },
+        ],
+    },
+}
+
+
+def test_person_appointments_maps_officer_bundle(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def fake_fetch(hit_id):
+        assert hit_id == "zS_RY9pRYlJ9XwGJEOFtkJgrf8s"
+        return _OFFICER_BUNDLE
+
+    # Patch the registry INSTANCE, not the class — other test modules may
+    # leave instance-level attributes on the shared adapter, which would
+    # shadow a class-level patch when the whole suite runs.
+    monkeypatch.setattr(REGISTRY["companies_house"], "fetch", fake_fetch)
+    r = client.get(
+        "/person-appointments",
+        params={"officer_id": "zS_RY9pRYlJ9XwGJEOFtkJgrf8s"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["name"] == "Jane EXAMPLE"
+    assert body["birth_date"] == "1980-06"
+    assert body["total_results"] == 2
+    assert body["active_count"] == 1
+    assert body["appointments"][0]["company_name"] == "ACME LTD"
+    assert body["appointments"][1]["resigned_on"] == "2014-12-31"
+    assert body["caveat"]
+    # BODS evidence: the personStatement must carry the officer id.
+    persons = [
+        s
+        for s in body["bods"]
+        if s.get("recordType") in ("person", "personStatement")
+    ]
+    assert persons, "expected a personStatement in the BODS output"
+    ids = persons[0].get("recordDetails", {}).get("identifiers", [])
+    assert any(i.get("id") == "zS_RY9pRYlJ9XwGJEOFtkJgrf8s" for i in ids)
+
+
+def test_person_appointments_stub_mode(client: TestClient) -> None:
+    r = client.get(
+        "/person-appointments", params={"officer_id": "zS_RY9pRYlJ9XwGJEOFtkX"}
+    )
+    assert r.status_code == 200
+    assert r.json()["is_stub"] is True
+
+
+def test_person_appointments_rejects_company_bundle(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def fake_fetch(hit_id):
+        return {"source_id": "companies_house", "company_number": "01234567"}
+
+    monkeypatch.setattr(REGISTRY["companies_house"], "fetch", fake_fetch)
+    r = client.get(
+        "/person-appointments", params={"officer_id": "notanofficer"}
+    )
+    assert r.status_code == 404

@@ -41,11 +41,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Query, Request, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
+from ..bods import map_companies_house
 from ..cross_check import _birth_year_compatible, _name_score
 from ..ratelimit import limiter, lookup_tier
+from ..reconcile import reconcile
 from ..risk import assess_hits
 from ..sources import REGISTRY, SearchKind, SourceHit
 from .search import _run_adapters
@@ -101,6 +103,12 @@ class PersonCheckResponse(BaseModel):
     weak_match_count: int
     sources: list[CheckedSource]
     caveats: list[str]
+    #: Identifier-backed links between STRONG matches only (shared
+    #: wikidata_qid / opensanctions_id / …) — the person-world version of
+    #: the entity report's cross-source panel. Weak matches are excluded:
+    #: bridging two below-threshold hits would manufacture a same-person
+    #: claim the name evidence doesn't support.
+    cross_source_links: list[dict[str, Any]] = []
 
 
 def _score_hit(
@@ -175,7 +183,129 @@ async def _person_check_impl(
         weak_match_count=sum(1 for m in matches if not m.strong),
         sources=sources,
         caveats=list(_CAVEATS),
+        cross_source_links=[link.to_dict() for link in reconcile(strong_hits)],
     )
+
+
+class AppointmentItem(BaseModel):
+    """One Companies House appointment held by an officer."""
+
+    company_name: str
+    company_number: str | None = None
+    company_status: str | None = None
+    role: str | None = None
+    appointed_on: str | None = None
+    resigned_on: str | None = None
+
+
+class PersonAppointmentsResponse(BaseModel):
+    """A person's appointments across companies (Phase C enrichment).
+
+    This is the identifier-backed view: unlike the name-based screen,
+    everything here hangs off one stable Companies House officer id, so
+    "the same person across companies" is the register's own assertion,
+    not a name match.
+    """
+
+    officer_id: str
+    name: str | None
+    birth_date: str | None
+    is_stub: bool
+    total_results: int | None
+    active_count: int
+    appointments: list[AppointmentItem]
+    #: BODS statements for the officer + appointments (personStatement
+    #: carries the GB-COH-OFFICER identifier) — traceable evidence.
+    bods: list[dict[str, Any]]
+    attribution: str
+    caveat: str
+
+
+_APPOINTMENTS_CAVEAT = (
+    "Appointments are as recorded by Companies House for this officer "
+    "identifier. The same individual may hold further appointments under "
+    "other officer identifiers — Companies House does not guarantee one "
+    "identifier per person."
+)
+
+
+async def _person_appointments_impl(officer_id: str) -> PersonAppointmentsResponse:
+    adapter = REGISTRY.get("companies_house")
+    if adapter is None:  # pragma: no cover — registry always has CH
+        raise HTTPException(status_code=503, detail="Companies House adapter unavailable")
+
+    bundle = await adapter.fetch(officer_id)
+    if bundle.get("is_stub"):
+        return PersonAppointmentsResponse(
+            officer_id=officer_id,
+            name=None,
+            birth_date=None,
+            is_stub=True,
+            total_results=None,
+            active_count=0,
+            appointments=[],
+            bods=[],
+            attribution=adapter.info.attribution,
+            caveat=_APPOINTMENTS_CAVEAT,
+        )
+    if "officer_id" not in bundle:
+        # The id dispatched to the company path — not an officer id.
+        raise HTTPException(
+            status_code=404,
+            detail="Not a Companies House officer id.",
+        )
+
+    envelope = bundle.get("appointments") or {}
+    dob = envelope.get("date_of_birth")
+    birth_date: str | None = None
+    if isinstance(dob, dict) and dob.get("year"):
+        birth_date = (
+            f"{int(dob['year']):04d}-{int(dob['month']):02d}"
+            if dob.get("month")
+            else f"{int(dob['year']):04d}"
+        )
+
+    items: list[AppointmentItem] = []
+    for item in envelope.get("items") or []:
+        appointed_to = item.get("appointed_to") or {}
+        items.append(
+            AppointmentItem(
+                company_name=appointed_to.get("company_name") or "Unknown company",
+                company_number=appointed_to.get("company_number"),
+                company_status=appointed_to.get("company_status"),
+                role=item.get("officer_role"),
+                appointed_on=item.get("appointed_on"),
+                resigned_on=item.get("resigned_on"),
+            )
+        )
+
+    return PersonAppointmentsResponse(
+        officer_id=officer_id,
+        name=envelope.get("name"),
+        birth_date=birth_date,
+        is_stub=False,
+        total_results=envelope.get("total_results"),
+        active_count=sum(1 for i in items if not i.resigned_on),
+        appointments=items,
+        bods=list(map_companies_house(bundle)),
+        attribution=adapter.info.attribution,
+        caveat=_APPOINTMENTS_CAVEAT,
+    )
+
+
+@router.get("/person-appointments", response_model=PersonAppointmentsResponse)
+@limiter.limit(lookup_tier)
+async def person_appointments(
+    request: Request,
+    response: Response,
+    officer_id: str = Query(
+        ...,
+        min_length=8,
+        description="Companies House officer id (from a /person-check hit).",
+    ),
+) -> PersonAppointmentsResponse:
+    """All Companies House appointments for one officer id."""
+    return await _person_appointments_impl(officer_id)
 
 
 @router.get("/person-check", response_model=PersonCheckResponse)
