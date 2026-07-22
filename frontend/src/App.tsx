@@ -1433,13 +1433,20 @@ export default function App() {
                 <span className="font-head font-bold text-[15px] text-oo-ink">BackgroundCheck</span>
               </div>
               <p className="text-[12px] text-oo-muted mt-1 leading-[1.5]">
-                Screen the people connected to this entity — officers, PSCs and owners.
+                Screen the people connected to this entity — officers, directors and beneficial owners.
               </p>
             </button>
           </div>
         )}
 
-        {streamingLei && <NarrativePanel lei={streamingLei} legalName={legalName} />}
+        {/* Entity-scoped panels (AI summary, risk signals, cross-source
+            identifiers, possibly-same pairs) are hidden in BackgroundCheck
+            mode — that view is about the connected people, not the subject
+            entity. The screening-degradation notice stays: it reports
+            related-party screening gaps, which are exactly about people. */}
+        {streamingLei && mode !== "background" && (
+          <NarrativePanel lei={streamingLei} legalName={legalName} />
+        )}
 
         {/* Screening-degradation warning (issue #50) — rendered above the
             risk panel, and independently of it: zero signals with a
@@ -1457,7 +1464,7 @@ export default function App() {
           />
         )}
 
-        {aggregatedCodes.length > 0 && (
+        {aggregatedCodes.length > 0 && mode !== "background" && (
           <section className="mb-8" id="risk-signals">
             <SectionLabel>Risk signals</SectionLabel>
             <div className="flex flex-wrap gap-2">
@@ -1472,7 +1479,7 @@ export default function App() {
           </section>
         )}
 
-        {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && (
+        {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && mode !== "background" && (
           <CollapsedSection
             htmlId="cross-source-identifiers"
             label="Cross-source identifiers"
@@ -1512,7 +1519,7 @@ export default function App() {
           </CollapsedSection>
         )}
 
-        {possiblySame.length > 0 && (
+        {possiblySame.length > 0 && mode !== "background" && (
           <CollapsedSection
             htmlId="possibly-same"
             label="Possibly the same entity"

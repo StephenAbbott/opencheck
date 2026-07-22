@@ -37,7 +37,16 @@ const CHECK_ALL_CAP = 8;
 type CheckState =
   | { status: "idle" }
   | { status: "running" }
-  | { status: "done"; result: PersonCheckResponse }
+  | {
+      status: "done";
+      result: PersonCheckResponse;
+      /** Wall-clock time the check completed — shown so a re-run's
+       * freshness is explicit. */
+      fetchedAt: string;
+      /** Result region visibility — users can hide a completed check's
+       * matches without discarding them. */
+      open: boolean;
+    }
   | { status: "error"; message: string };
 
 export default function BackgroundCheckPanel({
@@ -51,6 +60,9 @@ export default function BackgroundCheckPanel({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [checks, setChecks] = useState<Record<string, CheckState>>({});
   const [checkingAll, setCheckingAll] = useState(false);
+  const [checkAllProgress, setCheckAllProgress] = useState<
+    { done: number; total: number } | null
+  >(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,7 +90,15 @@ export default function BackgroundCheckPanel({
     setChecks((c) => ({ ...c, [person.key]: { status: "running" } }));
     try {
       const result = await personCheck(person.name, person.birthYear);
-      setChecks((c) => ({ ...c, [person.key]: { status: "done", result } }));
+      setChecks((c) => ({
+        ...c,
+        [person.key]: {
+          status: "done",
+          result,
+          fetchedAt: new Date().toISOString(),
+          open: true,
+        },
+      }));
     } catch (e) {
       setChecks((c) => ({
         ...c,
@@ -87,19 +107,30 @@ export default function BackgroundCheckPanel({
     }
   };
 
+  const toggleOpen = (key: string) => {
+    setChecks((c) => {
+      const state = c[key];
+      if (state?.status !== "done") return c;
+      return { ...c, [key]: { ...state, open: !state.open } };
+    });
+  };
+
   const runAll = async () => {
     setCheckingAll(true);
     try {
       const targets = people
         .filter((p) => checks[p.key]?.status !== "done")
         .slice(0, CHECK_ALL_CAP);
+      setCheckAllProgress({ done: 0, total: targets.length });
       // Sequential on purpose — a courteous request rate to upstreams.
-      for (const p of targets) {
+      for (let i = 0; i < targets.length; i++) {
         // eslint-disable-next-line no-await-in-loop
-        await runCheck(p);
+        await runCheck(targets[i]);
+        setCheckAllProgress({ done: i + 1, total: targets.length });
       }
     } finally {
       setCheckingAll(false);
+      setCheckAllProgress(null);
     }
   };
 
@@ -154,16 +185,27 @@ export default function BackgroundCheckPanel({
             <p className="text-[12px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted">
               {people.length} connected {people.length === 1 ? "person" : "people"}
             </p>
-            <button
-              type="button"
-              onClick={runAll}
-              disabled={checkingAll}
-              className="rounded-oo border border-violet-300 bg-white px-3 py-1.5 text-[12px] font-medium text-violet-800 hover:bg-violet-50 disabled:opacity-50"
-            >
-              {checkingAll
-                ? "Checking…"
-                : `Check ${people.length > CHECK_ALL_CAP ? `first ${CHECK_ALL_CAP}` : "all"}`}
-            </button>
+            <span className="flex items-center gap-2">
+              {checkAllProgress && (
+                <span
+                  className="text-[11px] text-violet-800"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {checkAllProgress.done} of {checkAllProgress.total} checked…
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={runAll}
+                disabled={checkingAll}
+                className="rounded-oo border border-violet-300 bg-white px-3 py-1.5 text-[12px] font-medium text-violet-800 hover:bg-violet-50 disabled:opacity-50"
+              >
+                {checkingAll
+                  ? "Checking…"
+                  : `Check ${people.length > CHECK_ALL_CAP ? `first ${CHECK_ALL_CAP}` : "all"}`}
+              </button>
+            </span>
           </div>
           <ul className="space-y-4 list-none p-0 m-0">
             {people.map((person) => (
@@ -172,6 +214,7 @@ export default function BackgroundCheckPanel({
                   person={person}
                   state={checks[person.key] ?? { status: "idle" }}
                   onCheck={() => runCheck(person)}
+                  onToggle={() => toggleOpen(person.key)}
                 />
               </li>
             ))}
@@ -186,10 +229,12 @@ function PersonCard({
   person,
   state,
   onCheck,
+  onToggle,
 }: {
   person: ConnectedPerson;
   state: CheckState;
   onCheck: () => void;
+  onToggle: () => void;
 }) {
   const resultId = `bgc-result-${person.key.replace(/[^a-z0-9]/gi, "-")}`;
   return (
@@ -232,20 +277,31 @@ function PersonCard({
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={onCheck}
-          disabled={state.status === "running"}
-          aria-expanded={state.status === "done"}
-          aria-controls={resultId}
-          className="shrink-0 rounded-oo bg-violet-700 px-3.5 py-2 text-[12px] font-semibold text-white hover:bg-violet-800 disabled:opacity-60"
-        >
-          {state.status === "running"
-            ? "Checking…"
-            : state.status === "done"
-              ? "Re-run check"
-              : "Run background check"}
-        </button>
+        <span className="shrink-0 flex items-center gap-2">
+          {state.status === "done" && (
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-expanded={state.open}
+              aria-controls={resultId}
+              className="rounded-oo border border-violet-300 bg-white px-3 py-2 text-[12px] font-medium text-violet-800 hover:bg-violet-50"
+            >
+              {state.open ? "Hide" : "Show"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onCheck}
+            disabled={state.status === "running"}
+            className="rounded-oo bg-violet-700 px-3.5 py-2 text-[12px] font-semibold text-white hover:bg-violet-800 disabled:opacity-60"
+          >
+            {state.status === "running"
+              ? "Checking…"
+              : state.status === "done"
+                ? "Re-run check"
+                : "Run background check"}
+          </button>
+        </span>
       </div>
       <div id={resultId}>
         {state.status === "error" && (
@@ -253,13 +309,21 @@ function PersonCard({
             Check failed: {state.message}
           </p>
         )}
-        {state.status === "done" && <CheckResult result={state.result} />}
+        {state.status === "done" && state.open && (
+          <CheckResult result={state.result} fetchedAt={state.fetchedAt} />
+        )}
       </div>
     </div>
   );
 }
 
-function CheckResult({ result }: { result: PersonCheckResponse }) {
+function CheckResult({
+  result,
+  fetchedAt,
+}: {
+  result: PersonCheckResponse;
+  fetchedAt: string;
+}) {
   const [showWeak, setShowWeak] = useState(false);
   const strong = result.matches.filter((m) => m.strong);
   const weak = result.matches.filter((m) => !m.strong);
@@ -344,6 +408,14 @@ function CheckResult({ result }: { result: PersonCheckResponse }) {
         </div>
       )}
 
+      <p className="text-[10px] text-oo-muted">
+        Checked at{" "}
+        <time dateTime={fetchedAt}>
+          {new Date(fetchedAt).toLocaleTimeString()}
+        </time>{" "}
+        — results reflect the sources at that moment; re-run to refresh.
+      </p>
+
       <details>
         <summary className="text-[10px] text-oo-muted cursor-pointer">
           Checked {checkedOk.length} source{checkedOk.length === 1 ? "" : "s"} —
@@ -391,7 +463,7 @@ function MatchRow({ match }: { match: PersonMatch }) {
           }`}
           title="Name similarity between the queried person and this record"
         >
-          {match.strong ? "potential match" : "weak"} · {pct}%
+          {match.strong ? "potential match" : "below threshold"} · {pct}%
           {!match.birth_year_compatible && " · birth year differs"}
         </span>
       </div>
