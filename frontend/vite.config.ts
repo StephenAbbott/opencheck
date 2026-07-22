@@ -53,6 +53,7 @@ const proxyRoutes: Record<string, { target: string; changeOrigin: boolean }> = {
   "/history":         { target: backendTarget, changeOrigin: true },
   "/securities":      { target: backendTarget, changeOrigin: true },
   "/nz-associations": { target: backendTarget, changeOrigin: true },
+  "/person-check":    { target: backendTarget, changeOrigin: true },
   "/narrative":       { target: backendTarget, changeOrigin: true },
   "/license-matrix":  { target: backendTarget, changeOrigin: true },
 };
