@@ -24,7 +24,7 @@ from urllib.parse import quote
 
 from ..cache import Cache
 from ..config import get_settings
-from ..http import build_client
+from ..http import build_client, sanitize_name_query
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _API_BASE = "https://api.opensanctions.org"
@@ -89,6 +89,13 @@ class OpenSanctionsAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
+        # The /search endpoint sits on a Lucene query parser: an unbalanced
+        # double quote (e.g. the ASCII gershayim in Israeli names, בע"מ) is
+        # a 400 — sanitise before it reaches the URL. Identity for clean
+        # names, so their cache keys are unchanged.
+        query = sanitize_name_query(query)
+        if not query:
+            return []
         schema = _schema_for(kind)
         cache_key = f"{_CACHE_NS}/search/{schema}/{_slug(query)}"
         # A demo fixture for this query overrides the live_available check

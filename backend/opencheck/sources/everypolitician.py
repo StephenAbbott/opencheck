@@ -24,7 +24,7 @@ from urllib.parse import quote
 
 from ..cache import Cache
 from ..config import get_settings
-from ..http import build_client
+from ..http import build_client, sanitize_name_query
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _API_BASE = "https://api.opensanctions.org"
@@ -72,6 +72,12 @@ class EveryPoliticianAdapter(SourceAdapter):
 
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
         if kind != SearchKind.PERSON:
+            return []
+        # Same Lucene-backed /search API as the OpenSanctions adapter — an
+        # unbalanced double quote in a person name is a 400. Sanitise first;
+        # identity for clean names, so their cache keys are unchanged.
+        query = sanitize_name_query(query)
+        if not query:
             return []
         cache_key = f"{_CACHE_NS}/search/{_slug(query)}"
         if not self.info.live_available and not self._cache.has(cache_key):
