@@ -1544,7 +1544,7 @@ export default function App() {
                 <span className="font-head font-bold text-[15px] text-oo-ink">QuickCheck</span>
               </div>
               <p className="text-[12px] text-oo-muted mt-1 leading-[1.5]">
-                Fast screening of this entity for immediate risks.
+                Fast customer due diligence screening of this entity for immediate risks.
               </p>
             </button>
             <button
