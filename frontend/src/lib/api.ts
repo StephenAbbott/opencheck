@@ -535,6 +535,48 @@ export async function getSubsidiaries(
   return (await r.json()) as SubsidiariesResponse;
 }
 
+// --- BackgroundCheck (person screening) — SPIKE feat/background-check -------
+
+/** One hit from /person-check, scored against the queried name. */
+export interface PersonMatch {
+  hit: SourceHit;
+  name_score: number;
+  birth_year_compatible: boolean;
+  strong: boolean;
+}
+
+/** Per-source outcome for a person check — powers the honest
+ * "what was checked" footer (a no-hit source is still shown). */
+export interface PersonCheckSource {
+  source_id: string;
+  name: string;
+  license: string;
+  attribution: string;
+  homepage: string;
+  live: boolean;
+  hit_count: number;
+  error: string | null;
+}
+
+export interface PersonCheckResponse {
+  query: string;
+  birth_year: number | null;
+  matches: PersonMatch[];
+  risk_signals: RiskSignal[];
+  weak_match_count: number;
+  sources: PersonCheckSource[];
+  caveats: string[];
+}
+
+export async function personCheck(
+  name: string,
+  birthYear?: number
+): Promise<PersonCheckResponse> {
+  const params = new URLSearchParams({ name });
+  if (birthYear) params.set("birth_year", String(birthYear));
+  return getJson(`/person-check?${params.toString()}`);
+}
+
 export async function lookup(lei: string): Promise<LookupResponse> {
   const params = new URLSearchParams({ lei });
   const r = await fetch(`${BASE_URL}/lookup?${params.toString()}`);

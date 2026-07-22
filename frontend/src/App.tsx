@@ -49,6 +49,9 @@ import { SecuritiesSection } from "./components/cdd/SecuritiesSection";
 // FullCheck (enhanced due diligence) view — lazy so Cytoscape/graph code only
 // loads when a user switches into FullCheck mode.
 const FullCheckPanel = lazy(() => import("./components/cdd/FullCheckPanel"));
+const BackgroundCheckPanel = lazy(
+  () => import("./components/cdd/BackgroundCheckPanel")
+);
 
 
 /**
@@ -180,9 +183,10 @@ export default function App() {
   const [applicableSources, setApplicableSources] = useState<string[]>([]);
   const [completedSources, setCompletedSources] = useState<Set<string>>(new Set());
   const [streaming, setStreaming] = useState(false);
-  // QuickCheck (subject screening, default) vs FullCheck (network EDD). Reset to
+  // QuickCheck (subject screening, default) vs FullCheck (network EDD) vs
+  // BackgroundCheck (screening the people connected to the entity). Reset to
   // QuickCheck on each new lookup so the headline experience is always QuickCheck.
-  const [mode, setMode] = useState<"quick" | "full">("quick");
+  const [mode, setMode] = useState<"quick" | "full" | "background">("quick");
   // Maps "source_id:hit_id" → BODS statement count; populated by the bods_counts SSE event.
   const [bodsCountMap, setBodsCountMap] = useState<Record<string, number>>({});
   // Same key → entity / relationship split, for the source-card graph CTA subtitle.
@@ -1377,7 +1381,7 @@ export default function App() {
         )}
 
         {streamingLei && (
-          <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3" role="group" aria-label="Check mode">
+          <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3" role="group" aria-label="Check mode">
             <button
               type="button"
               aria-pressed={mode === "quick"}
@@ -1412,6 +1416,24 @@ export default function App() {
               </div>
               <p className="text-[12px] text-oo-muted mt-1 leading-[1.5]">
                 Map the wider corporate network for enhanced due diligence.
+              </p>
+            </button>
+            <button
+              type="button"
+              aria-pressed={mode === "background"}
+              onClick={() => setMode("background")}
+              className={`text-left rounded-oo border-2 p-4 transition-colors ${
+                mode === "background"
+                  ? "border-oo-blue bg-[#eef1fb]"
+                  : "border-oo-rule bg-white hover:border-[#cfd6f5]"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-oo-blue" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 20c.8-3.5 3.6-5.5 7-5.5s6.2 2 7 5.5" /></svg>
+                <span className="font-head font-bold text-[15px] text-oo-ink">BackgroundCheck</span>
+              </div>
+              <p className="text-[12px] text-oo-muted mt-1 leading-[1.5]">
+                Screen the people connected to this entity — officers, PSCs and owners.
               </p>
             </button>
           </div>
@@ -1512,6 +1534,10 @@ export default function App() {
         {mode === "full" && streamingLei ? (
           <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading FullCheck…</p>}>
             <FullCheckPanel lei={streamingLei} legalName={legalName} signals={riskSignals} />
+          </Suspense>
+        ) : mode === "background" && streamingLei ? (
+          <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading BackgroundCheck…</p>}>
+            <BackgroundCheckPanel lei={streamingLei} legalName={legalName} />
           </Suspense>
         ) : (
           <>
