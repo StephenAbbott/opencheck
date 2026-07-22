@@ -345,10 +345,22 @@ function formatAnswerValue(value: unknown): string {
   return text.length > 60 ? `${text.slice(0, 57)}…` : text;
 }
 
+// `wikirate_url` (the ``~{card_id}`` form) is stable and encoding-proof for
+// machine use (BODS provenance, API refetches), but Wikirate's own HTML
+// front-end redirects that numbered-card form to a sign-in page for
+// anonymous visitors. The named-card form (e.g. "Shell_plc") reaches the
+// entity page directly with no redirect, so browser-facing links use a
+// slug built from the company name instead of the card id.
+function wikirateEntityUrl(name: string): string {
+  const slug = name.trim().replace(/\.+$/, "").replace(/\s+/g, "_");
+  return `https://wikirate.org/${encodeURIComponent(slug)}`;
+}
+
 function WikirateCard({ hit }: { hit: SourceHit }) {
   const raw = hit.raw as unknown as WikirateBundle;
   const answers = (raw.latest_answers ?? []).slice(0, 6);
   const total = raw.total_answers ?? 0;
+  const entityUrl = wikirateEntityUrl(raw.name);
 
   return (
     <div className="rounded-oo border border-emerald-200 bg-emerald-50/40 overflow-hidden">
@@ -366,7 +378,7 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
           <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mb-1">
             ESG data points ·{" "}
             <a
-              href={raw.wikirate_url}
+              href={entityUrl}
               target="_blank"
               rel="noreferrer"
               className="underline underline-offset-2 hover:text-emerald-900"
@@ -425,7 +437,7 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
         )}
 
         <a
-          href={raw.wikirate_url}
+          href={entityUrl}
           target="_blank"
           rel="noreferrer"
           className="mt-3 inline-block text-[12px] font-semibold text-emerald-800 underline underline-offset-2 hover:text-emerald-950"
