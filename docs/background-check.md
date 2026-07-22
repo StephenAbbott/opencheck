@@ -93,6 +93,21 @@ person + relationship statements joins for free.
 - The plan-§4.5 PEP coverage caveat now rides on **every** person-check
   response (third caveat) and the result footer renders all caveats.
 
+## Phase E — person report as a first-class artefact (2026-07-22)
+
+- **Shareable person report URL** — `?person=<name>&person_birth_year=<yyyy>`
+  renders `PersonReportPage` (same evidence-based CheckResult block as
+  BackgroundCheck) with copy-link, re-run and back; pushState/popstate beside
+  `?lei=`, person param takes render precedence, entity state untouched.
+- **Person BODS subgraph download** — person statements + their relationship
+  statements + subject entity statements as a valid flat BODS array (source
+  blocks kept; full licence bundle remains the entity export's job).
+- **MCP tool `opencheck_person_check`** — evidence-shaped agent access
+  (signals from strong matches only, raw payloads dropped, caveats included).
+- **TENTATIVE homepage "Person name" tab** — isolated in commit `3ff518d`
+  for a clean single-commit revert; Stephen's instinct is entity-anchored
+  person search only. Panel copy signposts BackgroundCheck for role context.
+
 ## Known gaps (for the de-spike ticket)
 
 - CH PSC/director person statements (from the entity bundle) still carry no
@@ -102,7 +117,9 @@ person + relationship statements joins for free.
 - ~~EveryPolitician first-class promotion~~ — shipped in Phase D
   (positions-held history, Poliloom attribution, coverage caveat on every
   person report).
-- No shareable person-report URL and no MCP tool exposure yet.
+- ~~Shareable person-report URL and MCP tool~~ — shipped in Phase E.
+- Decide the fate of the tentative homepage person tab (`3ff518d`) after
+  trying it in situ.
 - Live `/person-check` + `/person-appointments` runs against real keys are
   Stephen's local step — the adapters are the same code paths
   `/search?kind=person` exercises in production.
