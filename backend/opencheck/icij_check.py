@@ -76,7 +76,7 @@ from typing import Any
 import httpx
 
 from .config import get_settings
-from .http import build_client
+from .http import build_client, sanitize_name_query
 from .risk import (
     OFFSHORE_LEAKS,
     DegradedSource,
@@ -177,26 +177,31 @@ async def assess_icij_names(
         try:
             batch_signals = await _check_batch(batch, min_score=min_score)
             signals.extend(batch_signals)
+            continue
         except httpx.HTTPStatusError as exc:
             # The endpoint answered but rejected us. A 404 here means the
             # reconciliation service moved again (it did once already — see
             # the module docstring); 429 means we're being throttled. Loud
             # enough to notice without reading raw access logs.
-            failed += 1
-            skipped_names += len(batch)
-            reason = classify_degradation_reason(exc)
-            reason_counts[reason] = reason_counts.get(reason, 0) + 1
             _LOG.warning(
                 "ICIJ Offshore Leaks reconciliation failed: HTTP %s from %s "
-                "(%d name(s) in this batch skipped).",
+                "(batch of %d name(s)).",
                 exc.response.status_code,
                 _RECONCILE_URL,
                 len(batch),
             )
+            if not _retry_per_name(exc):
+                failed += 1
+                skipped_names += len(batch)
+                reason = classify_degradation_reason(exc)
+                reason_counts[reason] = reason_counts.get(reason, 0) + 1
+                continue
         except Exception as exc:  # noqa: BLE001
             # Network error, timeout, or unexpected response shape. Still
             # swallowed so one upstream problem can't sink the rest of the
-            # risk pipeline — but no longer silent.
+            # risk pipeline — but no longer silent. No per-name retry: these
+            # failures are service-level, so ten more requests would only
+            # add latency (and load) to an upstream that is already down.
             failed += 1
             skipped_names += len(batch)
             reason = classify_degradation_reason(exc)
@@ -206,6 +211,36 @@ async def assess_icij_names(
                 "(%d name(s) in this batch skipped).",
                 type(exc).__name__,
                 exc,
+                len(batch),
+            )
+            continue
+
+        # Deterministic upstream rejection (4xx/5xx, but not 404/429): one
+        # poison query — e.g. a name whose unbalanced double quote breaks
+        # ICIJ's Lucene parser with a bare 500 — sinks the whole batch. Retry
+        # each name individually so a bad name only loses itself instead of
+        # taking up to nine clean names down with it.
+        batch_skipped = 0
+        for target in batch:
+            try:
+                signals.extend(await _check_batch([target], min_score=min_score))
+            except Exception as exc:  # noqa: BLE001
+                batch_skipped += 1
+                reason = classify_degradation_reason(exc)
+                reason_counts[reason] = reason_counts.get(reason, 0) + 1
+                _LOG.warning(
+                    "ICIJ Offshore Leaks per-name retry failed: %s: %s "
+                    "(1 name skipped).",
+                    type(exc).__name__,
+                    exc,
+                )
+        if batch_skipped:
+            failed += 1
+            skipped_names += batch_skipped
+        else:
+            _LOG.info(
+                "ICIJ Offshore Leaks per-name retry recovered all %d name(s) "
+                "from a failed batch.",
                 len(batch),
             )
 
@@ -304,17 +339,42 @@ def _person_name(rd: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------
 
 
+def _retry_per_name(exc: httpx.HTTPStatusError) -> bool:
+    """Whether a failed batch is worth retrying one name at a time.
+
+    True for deterministic rejections (400/422/500-style), where a single
+    poison query is the likely culprit. False for 429 (throttled — more
+    requests make it worse) and 404 (the service moved — every retry would
+    404 too; see the module docstring, it has moved once already).
+    """
+    status = exc.response.status_code
+    return status not in (404, 429)
+
+
 async def _check_batch(
     targets: list[dict[str, Any]],
     *,
     min_score: int,
 ) -> list[RiskSignal]:
     """POST one batch of names to the ICIJ reconciliation API and parse
-    the results into risk signals."""
-    queries: dict[str, Any] = {
-        f"q{i}": {"query": t["name"], "limit": 3}
-        for i, t in enumerate(targets)
-    }
+    the results into risk signals.
+
+    Names are sanitised before they reach the query dict — the reconcile
+    endpoint 500s on any query containing an unbalanced double quote (the
+    ASCII gershayim in Israeli company names, בע"מ). Names that sanitise
+    to nothing are skipped: an empty query is meaningless to screen.
+    """
+    queries: dict[str, Any] = {}
+    keyed_targets: dict[str, dict[str, Any]] = {}
+    for i, t in enumerate(targets):
+        q = sanitize_name_query(t["name"])
+        if not q:
+            continue
+        key = f"q{i}"
+        queries[key] = {"query": q, "limit": 3}
+        keyed_targets[key] = t
+    if not queries:
+        return []
 
     async with build_client() as client:
         response = await client.post(
@@ -325,8 +385,7 @@ async def _check_batch(
         raw = response.json()
 
     signals: list[RiskSignal] = []
-    for i, target in enumerate(targets):
-        query_key = f"q{i}"
+    for query_key, target in keyed_targets.items():
         query_result = raw.get(query_key) or {}
         results = query_result.get("result") or []
         for match in results:
