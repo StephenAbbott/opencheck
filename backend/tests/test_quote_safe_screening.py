@@ -292,3 +292,43 @@ async def test_icij_no_per_name_fallback_on_timeout(
     assert len(httpx_mock.get_requests()) == 1
     assert degraded[0].reason == DEGRADED_TIMEOUT
     assert "2 of 2 name(s)" in degraded[0].detail
+
+
+# ---------------------------------------------------------------------
+# The A/S bug (diagnosed live 2026-07-22 on HORNSEA 1 LIMITED,
+# LEI 2138002S3XGZ38WN5Q72): ``/`` opens a Lucene REGEX, so Danish and
+# Norwegian company names ending ``A/S`` are an unterminated regular
+# expression to the same parsers the gershayim broke. Hornsea 1's
+# Ørsted parent chain carries eleven ``A/S`` entities — 8 of 25
+# OpenSanctions probes and all 3 ICIJ batches failed on every lookup.
+# ---------------------------------------------------------------------
+
+
+def test_sanitize_strips_slash_the_hornsea_bug() -> None:
+    # Real names from the Hornsea 1 curated bundle.
+    assert sanitize_name_query("ØRSTED A/S") == "ØRSTED A S"
+    assert sanitize_name_query("ØRSTED WIND POWER A/S") == "ØRSTED WIND POWER A S"
+    assert sanitize_name_query("INEOS E&P A/S") == "INEOS E&P A S"  # single & kept
+
+
+def test_sanitize_strips_remaining_lucene_syntax() -> None:
+    # Grouping / range / boost / fuzzy / wildcard / field syntax.
+    assert sanitize_name_query("ORSTED POWER (UK) LIMITED") == "ORSTED POWER UK LIMITED"
+    assert sanitize_name_query("ACME [HOLDINGS] {X}") == "ACME HOLDINGS X"
+    assert sanitize_name_query("ACME^2 ~1 *? :Y") == "ACME 2 1 Y"
+    # Boolean operator pairs go; single & and | are not syntax.
+    assert sanitize_name_query("SMITH && JONES || CO") == "SMITH JONES CO"
+    # Leading - / + are NOT / MUST operators; mid-word hyphens are names.
+    assert sanitize_name_query("-BAD +HALLE") == "BAD HALLE"
+    assert sanitize_name_query("ANNE-MARIE SMITH") == "ANNE-MARIE SMITH"
+
+
+def test_sanitize_still_identity_on_clean_names_post_extension() -> None:
+    for name in (
+        "UNILEVER PLC",
+        "PAULA'S CHOICE EUROPE B.V.",
+        "ENECOGEN V.O.F.",
+        "2W PERMIAN SOLAR, LLC",
+        "ANNE-MARIE SMITH",
+    ):
+        assert sanitize_name_query(name) == name

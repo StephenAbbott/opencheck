@@ -27,8 +27,20 @@ _USER_AGENT = f"OpenCheck/{__version__} (+https://github.com/StephenAbbott/openc
 # unbalanced one is a parse error the upstream surfaces as HTTP 400
 # (OpenSanctions/yente: ``token_mgr_error: Lexical error … <EOF>``) or a bare
 # HTTP 500 (ICIJ Offshore Leaks reconcile). ``\`` is Lucene's escape
-# character and can truncate the same way.
-_LUCENE_BREAKERS = re.compile(r'["\\]')
+# character and can truncate the same way. ``/`` opens a *regular expression*
+# in Lucene syntax, so Danish/Norwegian company names ending ``A/S`` are an
+# unterminated regex — diagnosed live 2026-07-22 on HORNSEA 1 LIMITED
+# (LEI 2138002S3XGZ38WN5Q72), whose Ørsted parent chain carries eleven
+# ``A/S`` entities: 8 of 25 OpenSanctions probes and all 3 ICIJ batches
+# failed. The remaining set (grouping/range/boost/fuzzy/wildcard/field
+# syntax, boolean-operator pairs, and a term-leading ``-``/``+``) is
+# replaced for the same reason: OpenCheck never intends query syntax when
+# screening a name.
+_LUCENE_BREAKERS = re.compile(
+    r'["\\/:^~\[\]{}()!*?]'  # single-character syntax
+    r"|&&|\|\|"              # boolean operator pairs (single & and | are safe)
+    r"|(?<!\S)[-+](?=\S)"    # - / + only when they lead a term (NOT / MUST)
+)
 
 
 def sanitize_name_query(name: str) -> str:
@@ -40,13 +52,15 @@ def sanitize_name_query(name: str) -> str:
     (400) and ICIJ Offshore Leaks (500) until sanitised (diagnosed live
     2026-07-22 on Unilever PLC's Israeli subsidiaries).
 
-    OpenCheck never intends phrase-query or escape semantics when screening
-    a name, so quote and backslash are replaced with spaces — upstream
-    tokenisers split on punctuation anyway, so recall is unaffected — and
-    whitespace is collapsed. Names without these characters pass through
-    unchanged, so cache keys derived from the sanitised query are stable
-    for them. May return ``""`` (e.g. a name that was only quotes); callers
-    must skip the search rather than send an empty query.
+    OpenCheck never intends phrase-query, regex, wildcard, fuzzy, field or
+    boolean semantics when screening a name, so Lucene syntax characters are
+    replaced with spaces — upstream tokenisers split on punctuation anyway,
+    so recall is unaffected — and whitespace is collapsed. Mid-word hyphens
+    (``ANNE-MARIE``), apostrophes, dots, single ``&`` (``E&P``) and ``|``
+    are kept: they are not syntax. Names without syntax characters pass
+    through unchanged, so cache keys derived from the sanitised query are
+    stable for them. May return ``""`` (e.g. a name that was only quotes);
+    callers must skip the search rather than send an empty query.
     """
     if not name:
         return ""
