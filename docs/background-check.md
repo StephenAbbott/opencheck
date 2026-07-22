@@ -54,6 +54,19 @@ payloads, so Estonian officers/BOs/shareholders (mapped by `map_ariregister`)
 appear automatically with their role labels. Any future source that emits
 person + relationship statements joins for free.
 
+## Phase B hardening (2026-07-22)
+
+- Vite dev proxy entry for `/person-check` (missing entries serve index.html →
+  "Unexpected token '<'"); `origin/main` merged in so name queries go through
+  `sanitize_name_query()` (quote-safe, `e458677`).
+- First-review UX changes: entity-scoped panels (AI summary, risk signals,
+  cross-source identifiers, possibly-same) hidden while BackgroundCheck is
+  active; mode-card copy avoids the PSC acronym; per-person Hide/Show for
+  completed results; "N of M checked…" progress on Check all; checked-at
+  timestamps; weak matches labelled "below threshold".
+- Docs: `docs/status.md` Phase 82 row (+ regenerated changelog JSON),
+  `okf/api/person-check.md` (+ index, viz) — `generate_okf.py --check` clean.
+
 ## Known gaps (for the de-spike ticket)
 
 - CH PSC/director person statements carry no officer identifier — a later
@@ -61,5 +74,7 @@ person + relationship statements joins for free.
   to their full cross-company appointment history.
 - EveryPolitician remains cross-check-only as a PEP source in the entity flow;
   its promotion to a first-class source card is planned, not built.
-- No shareable person-report URL, no MCP tool exposure, no OKF/api concept
-  for the new endpoint yet.
+- No shareable person-report URL and no MCP tool exposure yet.
+- Live `/person-check` run against real keys still pending on Stephen's
+  machine (cloud sessions have no API keys) — the endpoint's adapters are the
+  same code paths `/search?kind=person` exercises in production.
