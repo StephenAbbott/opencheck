@@ -67,14 +67,30 @@ person + relationship statements joins for free.
 - Docs: `docs/status.md` Phase 82 row (+ regenerated changelog JSON),
   `okf/api/person-check.md` (+ index, viz) — `generate_okf.py --check` clean.
 
+## Phase C — person identity enrichment (2026-07-22)
+
+- **`GET /person-appointments?officer_id=`** — every CH appointment under one
+  officer id (register-asserted same-person, stronger than a name match);
+  "View appointments across companies" on strong CH matches. The BODS output
+  carries the `GB-COH-OFFICER` identifier.
+- **Q-ID bridging** — `/person-check` reconciles strong matches only into
+  `cross_source_links`; "Same person across sources" panel. Weak matches
+  excluded by design.
+- **Wikidata human filter** — person searches post-filter to P31→Q5 via one
+  batched SPARQL query, failing open on errors (fixes the painting/song noise
+  found in the Phase B live smoke; benefits `/search?kind=person` too).
+- **Possibly-same-person review** — same-name pairs with a missing birth year
+  flagged for human review in the people list, never auto-merged.
+
 ## Known gaps (for the de-spike ticket)
 
-- CH PSC/director person statements carry no officer identifier — a later
-  phase should enrich via `/search/officers` + appointments to link a person
-  to their full cross-company appointment history.
+- CH PSC/director person statements (from the entity bundle) still carry no
+  officer identifier — the people *list* is name-keyed; only screen matches
+  gain the officer-id-backed appointments view. Wiring the bundle's persons
+  to officer ids remains open.
 - EveryPolitician remains cross-check-only as a PEP source in the entity flow;
   its promotion to a first-class source card is planned, not built.
 - No shareable person-report URL and no MCP tool exposure yet.
-- Live `/person-check` run against real keys still pending on Stephen's
-  machine (cloud sessions have no API keys) — the endpoint's adapters are the
-  same code paths `/search?kind=person` exercises in production.
+- Live `/person-check` + `/person-appointments` runs against real keys are
+  Stephen's local step — the adapters are the same code paths
+  `/search?kind=person` exercises in production.
