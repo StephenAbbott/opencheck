@@ -1,8 +1,10 @@
-# BackgroundCheck — screening the people connected to an entity (SPIKE)
+# BackgroundCheck — screening the people connected to an entity
 
-> **Status:** spike, on branch `feat/background-check`. Full initial thoughts,
-> design critique and the phased implementation plan live on the Notion ticket
-> *"Feature: Risk checks on people linked to an entity (BackgroundCheck)"*.
+> **Status:** shipped as Phase 82 — merged to `main` via
+> [PR #69](https://github.com/StephenAbbott/opencheck/pull/69) (Phases A–E;
+> Phase F parked). Full initial thoughts, design critique and the phased
+> implementation plan live on the Notion ticket *"Feature: Risk checks on
+> people linked to an entity (BackgroundCheck)"*.
 
 OpenCheck's headline flow screens the **entity**. The people connected to it —
 officers, PSCs, beneficial owners — were only screened indirectly (the
@@ -118,8 +120,9 @@ person + relationship statements joins for free.
   (positions-held history, Poliloom attribution, coverage caveat on every
   person report).
 - ~~Shareable person-report URL and MCP tool~~ — shipped in Phase E.
-- Decide the fate of the tentative homepage person tab (`3ff518d`) after
-  trying it in situ.
+- Homepage person tab: **kept** (decision 2026-07-22). Watch-item: four tabs
+  may squeeze on narrow mobile screens — revisit label lengths / layout if it
+  bites; `git revert 3ff518d` remains the clean removal path.
 - Live `/person-check` + `/person-appointments` runs against real keys are
   Stephen's local step — the adapters are the same code paths
   `/search?kind=person` exercises in production.
