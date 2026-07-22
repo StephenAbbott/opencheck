@@ -49,7 +49,7 @@ def test_descriptor_shape() -> None:
     assert d["transport"] == "streamable-http"
     assert d["endpoint"].endswith("/mcp")
     assert d["tools"] == TOOL_NAMES
-    assert len(TOOL_NAMES) == 5
+    assert len(TOOL_NAMES) == 6
 
 
 def test_descriptor_route_served_with_cors(client: TestClient) -> None:
@@ -252,3 +252,26 @@ def test_shape_lookup_summary_is_a_string() -> None:
     shaped = shaping.shape_lookup(_fake_lookup_payload())
     assert isinstance(shaped["summary"], str)
     assert "213800LH1BZH3DI6G760" in shaped["summary"]
+
+
+async def test_person_check_tool_shapes_response(monkeypatch) -> None:
+    """opencheck_person_check drops raw payloads but keeps evidence."""
+    from opencheck.mcp.server import opencheck_person_check
+
+    result = await opencheck_person_check(name="Jane Example")
+    assert result["query"] == "Jane Example"
+    assert "strong_matches" in result
+    assert "caveats" in result and len(result["caveats"]) == 3
+    assert "hint" in result
+    # Raw hit payloads must not leak through the shaper.
+    for m in result["strong_matches"]:
+        assert "raw" not in m
+
+
+async def test_person_check_tool_validates_input() -> None:
+    from opencheck.mcp.server import opencheck_person_check
+
+    assert "error" in await opencheck_person_check(name="x")
+    assert "error" in await opencheck_person_check(
+        name="Jane Example", birth_year=1500
+    )
