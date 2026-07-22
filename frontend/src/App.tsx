@@ -52,6 +52,23 @@ const FullCheckPanel = lazy(() => import("./components/cdd/FullCheckPanel"));
 const BackgroundCheckPanel = lazy(
   () => import("./components/cdd/BackgroundCheckPanel")
 );
+const PersonReportPage = lazy(
+  () => import("./components/cdd/PersonReportPage")
+);
+
+/** Parse `?person=` + `?person_birth_year=` from a search string. */
+function personReportFromSearch(
+  search: string
+): { name: string; birthYear?: number } | null {
+  const params = new URLSearchParams(search);
+  const name = (params.get("person") ?? "").trim();
+  if (!name) return null;
+  const by = Number(params.get("person_birth_year"));
+  return {
+    name,
+    birthYear: Number.isInteger(by) && by >= 1900 && by <= 2100 ? by : undefined,
+  };
+}
 
 
 /**
@@ -465,6 +482,31 @@ export default function App() {
       }),
   });
 
+  // ── Person report (Phase E) — URL-addressable via ?person= ─────────
+  const [personReport, setPersonReport] = useState<
+    { name: string; birthYear?: number } | null
+  >(() => personReportFromSearch(window.location.search));
+
+  /** Open the person report page, reflected in the URL for sharing. */
+  function openPersonReport(name: string, birthYear?: number) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("person", name);
+    if (birthYear) url.searchParams.set("person_birth_year", String(birthYear));
+    else url.searchParams.delete("person_birth_year");
+    window.history.pushState({}, "", url);
+    setPersonReport({ name, birthYear });
+    window.scrollTo({ top: 0 });
+  }
+
+  /** Close the person report and drop its URL params. */
+  function closePersonReport() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("person");
+    url.searchParams.delete("person_birth_year");
+    window.history.pushState({}, "", url);
+    setPersonReport(null);
+  }
+
   function lookupLei(rawLei: string, opts?: { refresh?: boolean }) {
     const lei = rawLei.trim().toUpperCase();
     setLeiInput(lei);
@@ -504,6 +546,12 @@ export default function App() {
         setView(v);
         return;
       }
+      // Person report (Phase E) — ?person= takes render precedence; the
+      // entity state underneath is left untouched so back/forward between
+      // the two is instant.
+      const person = personReportFromSearch(window.location.search);
+      setPersonReport(person);
+      if (person) return;
       // Back on main — honour ?lei= if present, otherwise clear results.
       const lei = fromUrl(new URLSearchParams(window.location.search).get("lei"));
       if (lei && isValidLei(lei)) {
@@ -928,7 +976,22 @@ export default function App() {
         <div role="status" className="sr-only">
           {srAnnouncement}
         </div>
-        {view === "main" && (
+        {view === "main" && personReport && (
+          <Suspense
+            fallback={
+              <p className="text-[13px] text-oo-muted italic">
+                Loading person report…
+              </p>
+            }
+          >
+            <PersonReportPage
+              name={personReport.name}
+              birthYear={personReport.birthYear}
+              onBack={closePersonReport}
+            />
+          </Suspense>
+        )}
+        {view === "main" && !personReport && (
         <>
         {/* ── Search panel — two-tab design ── */}
         <div className="mb-3">
@@ -1544,7 +1607,11 @@ export default function App() {
           </Suspense>
         ) : mode === "background" && streamingLei ? (
           <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading BackgroundCheck…</p>}>
-            <BackgroundCheckPanel lei={streamingLei} legalName={legalName} />
+            <BackgroundCheckPanel
+              lei={streamingLei}
+              legalName={legalName}
+              onOpenReport={openPersonReport}
+            />
           </Suspense>
         ) : (
           <>

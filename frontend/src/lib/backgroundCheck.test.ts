@@ -201,3 +201,32 @@ describe("possiblySamePeople", () => {
     expect(pairs).toHaveLength(0);
   });
 });
+
+describe("extractPersonSubgraph", () => {
+  it("returns entities, person and relationships in reference order", async () => {
+    const { extractPersonSubgraph } = await import("./backgroundCheck");
+    const bundle = [
+      entity("e1", "Acme Ltd"),
+      entity("e2", "Unrelated BV"),
+      person("p1", "Jane Example"),
+      person("p2", "Someone Else"),
+      rel("r1", "e1", "p1", [{ details: "Director" }]),
+      rel("r2", "e2", "p2", [{ details: "Director" }]),
+    ];
+    const sub = extractPersonSubgraph(bundle, ["p1"]);
+    expect(sub.map((s) => s.statementId)).toEqual(["e1", "p1", "r1"]);
+  });
+
+  it("includes all statements for a cross-source-merged person", async () => {
+    const { extractPersonSubgraph } = await import("./backgroundCheck");
+    const bundle = [
+      entity("e1", "Acme Ltd"),
+      person("p1", "Jane Example"),
+      person("p2", "JANE EXAMPLE", {}, "UK PSC bulk"),
+      rel("r1", "e1", "p1", [{ details: "Director" }]),
+      rel("r2", "e1", "p2", [{ details: "PSC" }], "UK PSC bulk"),
+    ];
+    const sub = extractPersonSubgraph(bundle, ["p1", "p2"]);
+    expect(sub.map((s) => s.statementId)).toEqual(["e1", "p1", "p2", "r1", "r2"]);
+  });
+});

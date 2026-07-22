@@ -29,6 +29,7 @@ import {
 } from "../../lib/api";
 import {
   extractConnectedPeople,
+  extractPersonSubgraph,
   possiblySamePeople,
   type ConnectedPerson,
   type Stmt,
@@ -57,9 +58,12 @@ type CheckState =
 export default function BackgroundCheckPanel({
   lei,
   legalName,
+  onOpenReport,
 }: {
   lei: string;
   legalName: string | null;
+  /** Open the URL-addressable person report page (Phase E). */
+  onOpenReport?: (name: string, birthYear?: number) => void;
 }) {
   const [statements, setStatements] = useState<Stmt[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -241,6 +245,16 @@ export default function BackgroundCheckPanel({
                   state={checks[person.key] ?? { status: "idle" }}
                   onCheck={() => runCheck(person)}
                   onToggle={() => toggleOpen(person.key)}
+                  onOpenReport={
+                    onOpenReport
+                      ? () => onOpenReport(person.name, person.birthYear)
+                      : undefined
+                  }
+                  onDownloadBods={
+                    statements
+                      ? () => downloadPersonBods(statements, person)
+                      : undefined
+                  }
                 />
               </li>
             ))}
@@ -251,16 +265,35 @@ export default function BackgroundCheckPanel({
   );
 }
 
+/** Download the person's BODS subgraph as a flat statement JSON array. */
+function downloadPersonBods(statements: Stmt[], person: ConnectedPerson) {
+  const subgraph = extractPersonSubgraph(statements, person.statementIds);
+  const blob = new Blob([JSON.stringify(subgraph, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const slug = person.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  a.download = `opencheck-person-${slug || "person"}-bods.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function PersonCard({
   person,
   state,
   onCheck,
   onToggle,
+  onOpenReport,
+  onDownloadBods,
 }: {
   person: ConnectedPerson;
   state: CheckState;
   onCheck: () => void;
   onToggle: () => void;
+  onOpenReport?: () => void;
+  onDownloadBods?: () => void;
 }) {
   const resultId = `bgc-result-${person.key.replace(/[^a-z0-9]/gi, "-")}`;
   return (
@@ -300,6 +333,29 @@ function PersonCard({
           {person.sources.length > 0 && (
             <p className="text-[10px] text-oo-muted mt-1.5">
               Recorded by: {person.sources.join(" · ")}
+            </p>
+          )}
+          {(onOpenReport || onDownloadBods) && (
+            <p className="text-[11px] mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+              {onOpenReport && (
+                <button
+                  type="button"
+                  onClick={onOpenReport}
+                  className="text-violet-800 underline hover:no-underline"
+                >
+                  Open person report page →
+                </button>
+              )}
+              {onDownloadBods && (
+                <button
+                  type="button"
+                  onClick={onDownloadBods}
+                  title="This person's statements + relationships + the companies they point at, as a flat BODS v0.4 array. Each statement keeps its source block; for the full licence bundle use the entity's Download data section."
+                  className="text-oo-muted underline hover:no-underline"
+                >
+                  Download BODS (person subgraph)
+                </button>
+              )}
             </p>
           )}
         </div>
@@ -343,7 +399,7 @@ function PersonCard({
   );
 }
 
-function CheckResult({
+export function CheckResult({
   result,
   fetchedAt,
 }: {

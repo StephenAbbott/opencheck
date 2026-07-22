@@ -104,6 +104,50 @@ export function describeRoleInterest(interest: Record<string, unknown>): string 
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+/**
+ * Extract the BODS subgraph for one person: their person statements, every
+ * relationship statement naming them as interested party, and the entity
+ * statements those relationships point at. The result is a valid flat BODS
+ * statement array — each statement keeps its `source` block, so provenance
+ * and attribution travel with the download.
+ */
+export function extractPersonSubgraph(
+  statements: Stmt[],
+  personStatementIds: string[]
+): Stmt[] {
+  const wanted = new Set(personStatementIds);
+  const subjectIds = new Set<string>();
+  const persons: Stmt[] = [];
+  const relationships: Stmt[] = [];
+
+  for (const s of statements) {
+    const id = str(s.statementId);
+    const recordType = str(s.recordType) ?? str(s.statementType);
+    if (id && wanted.has(id)) {
+      persons.push(s);
+      continue;
+    }
+    if (recordType === "relationship" || recordType === "ownershipOrControlStatement") {
+      const rd = rec(s.recordDetails);
+      const party = str(rd.interestedParty);
+      if (party && wanted.has(party)) {
+        relationships.push(s);
+        const subject = str(rd.subject);
+        if (subject) subjectIds.add(subject);
+      }
+    }
+  }
+
+  const entities = statements.filter((s) => {
+    const id = str(s.statementId);
+    return id !== undefined && subjectIds.has(id);
+  });
+
+  // BODS ordering convention: referenced statements before the statements
+  // that reference them.
+  return [...entities, ...persons, ...relationships];
+}
+
 export interface PossiblySamePerson {
   /** keys of the two ConnectedPerson entries */
   a: string;
