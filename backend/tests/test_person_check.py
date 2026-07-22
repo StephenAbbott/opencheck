@@ -51,7 +51,7 @@ def test_person_check_returns_expected_shape(client: TestClient) -> None:
     assert body["birth_year"] is None
     assert isinstance(body["matches"], list)
     assert isinstance(body["risk_signals"], list)
-    assert len(body["caveats"]) == 2
+    assert len(body["caveats"]) == 3
 
     source_ids = {s["source_id"] for s in body["sources"]}
     # Every person-capable registry adapter must be accounted for.
@@ -332,3 +332,128 @@ def test_person_appointments_rejects_company_bundle(
         "/person-appointments", params={"officer_id": "notanofficer"}
     )
     assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------
+# Phase D — /person-positions (EveryPolitician first-class PEP source)
+# ---------------------------------------------------------------------
+
+
+_EP_ENTITY_BUNDLE = {
+    "source_id": "everypolitician",
+    "entity_id": "Q9545-peps",
+    "entity": {
+        "id": "Q9545-peps",
+        "schema": "Person",
+        "caption": "Tony Blair",
+        "properties": {
+            "wikidataId": ["Q9545"],
+            "country": ["gb"],
+            "position": ["Prime Minister of the United Kingdom"],
+            "positionOccupancies": [
+                {
+                    "schema": "Occupancy",
+                    "properties": {
+                        "post": [
+                            {
+                                "caption": "Prime Minister of the United Kingdom",
+                                "properties": {"country": ["gb"]},
+                            }
+                        ],
+                        "startDate": ["1997-05-02"],
+                        "endDate": ["2007-06-27"],
+                    },
+                },
+                {
+                    "schema": "Occupancy",
+                    "properties": {
+                        "post": [
+                            {
+                                "caption": "Member of Parliament",
+                                "properties": {"country": ["gb"]},
+                            }
+                        ],
+                        "startDate": ["2001-06-07"],
+                        "endDate": ["2005-04-11"],
+                    },
+                },
+                {
+                    "schema": "Occupancy",
+                    "properties": {
+                        "post": [{"caption": "Middle East envoy", "properties": {}}],
+                        "startDate": ["2007-06-27"],
+                    },
+                },
+            ],
+        },
+    },
+}
+
+
+def test_person_positions_parses_occupancies(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def fake_fetch(hit_id):
+        assert hit_id == "Q9545-peps"
+        return _EP_ENTITY_BUNDLE
+
+    monkeypatch.setattr(REGISTRY["everypolitician"], "fetch", fake_fetch)
+    r = client.get("/person-positions", params={"entity_id": "Q9545-peps"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["name"] == "Tony Blair"
+    assert body["wikidata_qid"] == "Q9545"
+    assert body["countries"] == ["GB"]
+    assert body["source_url"].endswith("/entities/Q9545-peps/")
+    assert body["maintenance_note"]
+    assert "non-PEP" in body["caveat"]
+
+    labels = [p["label"] for p in body["positions"]]
+    # Most recent start first.
+    assert labels == [
+        "Middle East envoy",
+        "Member of Parliament",
+        "Prime Minister of the United Kingdom",
+    ]
+    envoy = body["positions"][0]
+    assert envoy["current"] is True
+    assert envoy["end_date"] is None
+    pm = body["positions"][2]
+    assert pm["country"] == "GB"
+    assert pm["start_date"] == "1997-05-02"
+    assert pm["current"] is False
+
+
+def test_person_positions_falls_back_to_position_strings(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    bundle = {
+        "source_id": "everypolitician",
+        "entity_id": "x-1",
+        "entity": {
+            "caption": "Jane Example",
+            "properties": {"position": ["Senator", "Mayor"]},
+        },
+    }
+
+    async def fake_fetch(hit_id):
+        return bundle
+
+    monkeypatch.setattr(REGISTRY["everypolitician"], "fetch", fake_fetch)
+    r = client.get("/person-positions", params={"entity_id": "x-1234"})
+    assert r.status_code == 200
+    labels = [p["label"] for p in r.json()["positions"]]
+    assert labels == ["Senator", "Mayor"]
+
+
+def test_person_positions_stub_mode(client: TestClient) -> None:
+    r = client.get("/person-positions", params={"entity_id": "Q9545-peps"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["is_stub"] is True
+    assert body["positions"] == []
+
+
+def test_person_check_carries_pep_coverage_caveat(client: TestClient) -> None:
+    r = client.get("/person-check", params={"name": "Jane Example"})
+    assert any("non-PEP" in c for c in r.json()["caveats"])

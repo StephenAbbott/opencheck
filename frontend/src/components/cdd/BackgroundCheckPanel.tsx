@@ -21,9 +21,11 @@ import {
   lookup,
   personAppointments,
   personCheck,
+  personPositions,
   type PersonAppointmentsResponse,
   type PersonCheckResponse,
   type PersonMatch,
+  type PersonPositionsResponse,
 } from "../../lib/api";
 import {
   extractConnectedPeople,
@@ -461,6 +463,16 @@ function CheckResult({
         — results reflect the sources at that moment; re-run to refresh.
       </p>
 
+      {result.caveats.length > 0 && (
+        <ul className="list-none p-0 m-0 space-y-0.5">
+          {result.caveats.map((c, i) => (
+            <li key={i} className="text-[10px] text-oo-muted leading-[1.5]">
+              {c}
+            </li>
+          ))}
+        </ul>
+      )}
+
       <details>
         <summary className="text-[10px] text-oo-muted cursor-pointer">
           Checked {checkedOk.length} source{checkedOk.length === 1 ? "" : "s"} —
@@ -487,20 +499,30 @@ function CheckResult({
   );
 }
 
-type ApptState =
+type FetchState<T> =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "done"; data: PersonAppointmentsResponse }
+  | { status: "done"; data: T }
   | { status: "error"; message: string };
+
+type ApptState = FetchState<PersonAppointmentsResponse>;
+type PositionsState = FetchState<PersonPositionsResponse>;
 
 function MatchRow({ match }: { match: PersonMatch }) {
   const pct = Math.round(match.name_score * 100);
   const [appts, setAppts] = useState<ApptState>({ status: "idle" });
   const [apptsOpen, setApptsOpen] = useState(false);
+  const [positions, setPositions] = useState<PositionsState>({ status: "idle" });
+  const [positionsOpen, setPositionsOpen] = useState(false);
   // Companies House officer hits carry the register's stable officer id
   // as hit_id — the identifier-backed appointments view hangs off it.
   const isChOfficer = match.hit.source_id === "companies_house" && !match.hit.is_stub;
+  // EveryPolitician hits carry the OpenSanctions PEP entity id as hit_id
+  // — the positions-held history hangs off it (Phase D: EP first-class).
+  const isEpRecord =
+    match.hit.source_id === "everypolitician" && !match.hit.is_stub;
   const apptsId = `appts-${match.hit.source_id}-${match.hit.hit_id.replace(/[^a-zA-Z0-9]/g, "-")}`;
+  const positionsId = `positions-${match.hit.hit_id.replace(/[^a-zA-Z0-9]/g, "-")}`;
 
   const loadAppointments = async () => {
     if (apptsOpen) {
@@ -515,6 +537,22 @@ function MatchRow({ match }: { match: PersonMatch }) {
       setAppts({ status: "done", data });
     } catch (e) {
       setAppts({ status: "error", message: (e as Error).message });
+    }
+  };
+
+  const loadPositions = async () => {
+    if (positionsOpen) {
+      setPositionsOpen(false);
+      return;
+    }
+    setPositionsOpen(true);
+    if (positions.status === "done") return;
+    setPositions({ status: "loading" });
+    try {
+      const data = await personPositions(match.hit.hit_id);
+      setPositions({ status: "done", data });
+    } catch (e) {
+      setPositions({ status: "error", message: (e as Error).message });
     }
   };
 
@@ -573,7 +611,112 @@ function MatchRow({ match }: { match: PersonMatch }) {
           </div>
         </div>
       )}
+      {isEpRecord && (
+        <div className="mt-1.5">
+          <button
+            type="button"
+            onClick={loadPositions}
+            aria-expanded={positionsOpen}
+            aria-controls={positionsId}
+            className="text-[11px] text-violet-800 underline hover:no-underline"
+          >
+            {positionsOpen ? "Hide positions held" : "View positions held"}
+          </button>
+          <div id={positionsId}>
+            {positionsOpen && positions.status === "loading" && (
+              <p className="text-[11px] text-oo-muted italic mt-1">
+                Loading positions…
+              </p>
+            )}
+            {positionsOpen && positions.status === "error" && (
+              <p className="text-[11px] text-red-700 mt-1" role="alert">
+                Could not load positions: {positions.message}
+              </p>
+            )}
+            {positionsOpen && positions.status === "done" && (
+              <PositionsList data={positions.data} />
+            )}
+          </div>
+        </div>
+      )}
     </li>
+  );
+}
+
+function PositionsList({ data }: { data: PersonPositionsResponse }) {
+  if (data.is_stub) {
+    return (
+      <p className="text-[11px] text-oo-muted mt-1">
+        Live OpenSanctions access is not configured — positions unavailable in
+        offline mode.
+      </p>
+    );
+  }
+  return (
+    <div className="mt-1.5 rounded-oo border border-violet-100 bg-violet-50/40 px-3 py-2">
+      <p className="text-[11px] text-oo-ink mb-1.5">
+        <span className="font-medium">{data.name ?? "This record"}</span>
+        {data.countries.length > 0 && (
+          <span className="text-oo-muted"> · {data.countries.join(", ")}</span>
+        )}{" "}
+        — {data.positions.length} recorded position
+        {data.positions.length === 1 ? "" : "s"}
+        {data.wikidata_qid && (
+          <span className="text-oo-muted">
+            {" "}
+            · keyed to Wikidata{" "}
+            <a
+              href={`https://www.wikidata.org/wiki/${data.wikidata_qid}`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono underline hover:no-underline"
+            >
+              {data.wikidata_qid}
+            </a>
+          </span>
+        )}
+      </p>
+      {data.positions.length > 0 ? (
+        <ul className="space-y-1 list-none p-0 m-0">
+          {data.positions.map((p, i) => (
+            <li key={i} className="text-[11px] leading-[1.5] text-oo-ink">
+              <span className="font-medium">{p.label}</span>
+              {p.country && (
+                <span className="font-mono text-oo-muted"> {p.country}</span>
+              )}
+              {(p.start_date || p.end_date) && (
+                <span className="text-oo-muted font-mono text-[10px]">
+                  {" "}
+                  ({p.start_date ?? "…"}
+                  {p.current ? " → present" : p.end_date ? ` → ${p.end_date}` : ""})
+                </span>
+              )}
+              {p.current && (
+                <span className="ml-1 text-[10px] text-violet-700 font-medium">
+                  current
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-[11px] text-oo-muted">
+          No dated positions on this record.
+        </p>
+      )}
+      <p className="text-[10px] text-oo-muted mt-1.5">{data.caveat}</p>
+      <p className="text-[10px] text-oo-muted mt-0.5">
+        {data.attribution} {data.maintenance_note}{" "}
+        <a
+          href={data.source_url}
+          target="_blank"
+          rel="noreferrer"
+          className="underline hover:no-underline"
+        >
+          View record on OpenSanctions →
+        </a>
+      </p>
+    </div>
   );
 }
 

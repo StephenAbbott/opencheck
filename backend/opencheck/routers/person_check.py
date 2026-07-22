@@ -70,6 +70,12 @@ _CAVEATS = [
         "and jurisdiction, and absence from these sources is not proof of "
         "absence."
     ),
+    (
+        "PEP coverage (EveryPolitician / OpenSanctions) is stronger for "
+        "well-digitised polities than for smaller or less-documented "
+        "national and regional legislatures — a non-hit is not proof of "
+        "non-PEP status."
+    ),
 ]
 
 
@@ -306,6 +312,169 @@ async def person_appointments(
 ) -> PersonAppointmentsResponse:
     """All Companies House appointments for one officer id."""
     return await _person_appointments_impl(officer_id)
+
+
+class PositionItem(BaseModel):
+    """One political position held, from the EveryPolitician record."""
+
+    label: str
+    country: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    #: True when the record carries a start but no end date — held now,
+    #: as far as the dataset knows.
+    current: bool = False
+
+
+class PersonPositionsResponse(BaseModel):
+    """Positions held by one EveryPolitician / OpenSanctions PEP record.
+
+    Phase D — EveryPolitician as a first-class PEP source: the full
+    positions-held history behind a PEP match, with dates and countries,
+    rather than just the single-line summary on the search hit.
+    """
+
+    entity_id: str
+    name: str | None
+    is_stub: bool
+    positions: list[PositionItem]
+    wikidata_qid: str | None
+    countries: list[str]
+    #: Canonical record URL on OpenSanctions for onward verification.
+    source_url: str
+    attribution: str
+    maintenance_note: str
+    caveat: str
+
+
+_EP_MAINTENANCE_NOTE = (
+    "EveryPolitician is maintained by OpenSanctions through the Poliloom "
+    "crowdsourcing pipeline; records are keyed to Wikidata Q-IDs and kept "
+    "in sync with Wikidata."
+)
+
+_EP_COVERAGE_CAVEAT = (
+    "Coverage is stronger for well-digitised polities than for smaller or "
+    "less-documented national and regional legislatures. Positions listed "
+    "here are what the dataset records — not necessarily a complete "
+    "political history, and a non-hit is not proof of non-PEP status."
+)
+
+
+def _first(value: Any) -> Any:
+    """First element of an FtM property list (or the value itself)."""
+    if isinstance(value, list):
+        return value[0] if value else None
+    return value
+
+
+def _parse_positions(entity: dict[str, Any]) -> list[PositionItem]:
+    """Positions held, from a yente FtM Person entity.
+
+    Prefers ``positionOccupancies`` (nested Occupancy entities carrying
+    the post, its country, and start/end dates); falls back to the plain
+    ``position`` string list when occupancies are absent. Defensive
+    throughout — FtM property shapes vary with dataset vintage.
+    """
+    props = entity.get("properties") or {}
+    items: list[PositionItem] = []
+
+    for occ in props.get("positionOccupancies") or []:
+        if not isinstance(occ, dict):
+            continue
+        oprops = occ.get("properties") or {}
+        post = _first(oprops.get("post"))
+        label: str | None = None
+        country: str | None = None
+        if isinstance(post, dict):
+            label = post.get("caption")
+            pprops = post.get("properties") or {}
+            raw_country = _first(pprops.get("country"))
+            if isinstance(raw_country, str):
+                country = raw_country.upper()
+        elif isinstance(post, str):
+            label = post
+        start = _first(oprops.get("startDate"))
+        end = _first(oprops.get("endDate"))
+        items.append(
+            PositionItem(
+                label=label or "Position (unnamed)",
+                country=country,
+                start_date=start if isinstance(start, str) else None,
+                end_date=end if isinstance(end, str) else None,
+                current=bool(start) and not end,
+            )
+        )
+
+    if not items:
+        for pos in props.get("position") or []:
+            if isinstance(pos, str):
+                items.append(PositionItem(label=pos))
+
+    # Most recent first; undated entries last (two stable passes).
+    items.sort(key=lambda p: p.start_date or "", reverse=True)
+    items.sort(key=lambda p: p.start_date is None)
+    return items
+
+
+async def _person_positions_impl(entity_id: str) -> PersonPositionsResponse:
+    adapter = REGISTRY.get("everypolitician")
+    if adapter is None:  # pragma: no cover — registry always has EP
+        raise HTTPException(status_code=503, detail="EveryPolitician adapter unavailable")
+
+    bundle = await adapter.fetch(entity_id)
+    source_url = f"https://www.opensanctions.org/entities/{entity_id}/"
+    if bundle.get("is_stub"):
+        return PersonPositionsResponse(
+            entity_id=entity_id,
+            name=None,
+            is_stub=True,
+            positions=[],
+            wikidata_qid=None,
+            countries=[],
+            source_url=source_url,
+            attribution=adapter.info.attribution,
+            maintenance_note=_EP_MAINTENANCE_NOTE,
+            caveat=_EP_COVERAGE_CAVEAT,
+        )
+
+    entity = bundle.get("entity") or {}
+    props = entity.get("properties") or {}
+    wikidata = _first(props.get("wikidataId"))
+    countries = [
+        c.upper() for c in (props.get("country") or []) if isinstance(c, str)
+    ]
+
+    return PersonPositionsResponse(
+        entity_id=entity_id,
+        name=entity.get("caption"),
+        is_stub=False,
+        positions=_parse_positions(entity),
+        wikidata_qid=wikidata if isinstance(wikidata, str) else None,
+        countries=countries,
+        source_url=source_url,
+        attribution=adapter.info.attribution,
+        maintenance_note=_EP_MAINTENANCE_NOTE,
+        caveat=_EP_COVERAGE_CAVEAT,
+    )
+
+
+@router.get("/person-positions", response_model=PersonPositionsResponse)
+@limiter.limit(lookup_tier)
+async def person_positions(
+    request: Request,
+    response: Response,
+    entity_id: str = Query(
+        ...,
+        min_length=4,
+        description=(
+            "OpenSanctions entity id of the EveryPolitician PEP record "
+            "(from a /person-check hit)."
+        ),
+    ),
+) -> PersonPositionsResponse:
+    """Positions held for one EveryPolitician / OpenSanctions PEP record."""
+    return await _person_positions_impl(entity_id)
 
 
 @router.get("/person-check", response_model=PersonCheckResponse)

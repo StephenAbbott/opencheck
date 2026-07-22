@@ -601,6 +601,35 @@ export async function personAppointments(
   return getJson(`/person-appointments?${params.toString()}`);
 }
 
+/** One political position held (EveryPolitician / OpenSanctions PEPs). */
+export interface PositionItem {
+  label: string;
+  country: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  current: boolean;
+}
+
+export interface PersonPositionsResponse {
+  entity_id: string;
+  name: string | null;
+  is_stub: boolean;
+  positions: PositionItem[];
+  wikidata_qid: string | null;
+  countries: string[];
+  source_url: string;
+  attribution: string;
+  maintenance_note: string;
+  caveat: string;
+}
+
+export async function personPositions(
+  entityId: string
+): Promise<PersonPositionsResponse> {
+  const params = new URLSearchParams({ entity_id: entityId });
+  return getJson(`/person-positions?${params.toString()}`);
+}
+
 export async function personCheck(
   name: string,
   birthYear?: number
