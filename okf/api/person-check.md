@@ -4,7 +4,7 @@ title: Person check
 description: On-demand screening of one named person across every person-capable source, plus officer appointments (BackgroundCheck).
 tags: [api, person, screening, pep, sanctions]
 method: GET
-path: /person-check, /person-appointments
+path: /person-check, /person-appointments, /person-positions
 timestamp: 2026-07-22
 ---
 
@@ -21,6 +21,10 @@ timestamp: 2026-07-22
   appointment recorded under one officer identifier, with the BODS
   `personStatement` carrying the `GB-COH-OFFICER` identifier. Unlike the
   name-based screen, this is the register's own same-person assertion.
+- `GET /person-positions?entity_id=<id>` — the positions-held history behind
+  an EveryPolitician / OpenSanctions PEP record: post, country and start/end
+  dates, most recent first, keyed to the record's Wikidata Q-ID, with
+  Poliloom maintenance attribution and the PEP coverage caveat.
 
 The person-check response contains every hit **scored against the queried
 name** (`name_score`, `birth_year_compatible`, `strong`), deterministic risk

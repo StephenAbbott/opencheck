@@ -82,14 +82,26 @@ person + relationship statements joins for free.
 - **Possibly-same-person review** — same-name pairs with a missing birth year
   flagged for human review in the people list, never auto-merged.
 
+## Phase D — EveryPolitician as a first-class PEP source (2026-07-22)
+
+- **`GET /person-positions?entity_id=`** — the positions-held history behind
+  an EP/OpenSanctions PEP record (FtM `positionOccupancies` → post, country,
+  start/end dates; falls back to plain `position` strings), most recent
+  first, open-ended positions marked *current*. "View positions held" on
+  strong EP matches, with the Wikidata Q-ID key, Poliloom maintenance note,
+  and canonical OpenSanctions record link.
+- The plan-§4.5 PEP coverage caveat now rides on **every** person-check
+  response (third caveat) and the result footer renders all caveats.
+
 ## Known gaps (for the de-spike ticket)
 
 - CH PSC/director person statements (from the entity bundle) still carry no
   officer identifier — the people *list* is name-keyed; only screen matches
   gain the officer-id-backed appointments view. Wiring the bundle's persons
   to officer ids remains open.
-- EveryPolitician remains cross-check-only as a PEP source in the entity flow;
-  its promotion to a first-class source card is planned, not built.
+- ~~EveryPolitician first-class promotion~~ — shipped in Phase D
+  (positions-held history, Poliloom attribution, coverage caveat on every
+  person report).
 - No shareable person-report URL and no MCP tool exposure yet.
 - Live `/person-check` + `/person-appointments` runs against real keys are
   Stephen's local step — the adapters are the same code paths
