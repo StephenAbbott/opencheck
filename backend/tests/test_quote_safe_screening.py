@@ -314,6 +314,9 @@ def test_sanitize_strips_slash_the_hornsea_bug() -> None:
 def test_sanitize_strips_remaining_lucene_syntax() -> None:
     # Grouping / range / boost / fuzzy / wildcard / field syntax.
     assert sanitize_name_query("ORSTED POWER (UK) LIMITED") == "ORSTED POWER UK LIMITED"
+    # Elasticsearch extras: < and > "can't be escaped at all" per the ES
+    # docs, and = is in its reserved set too.
+    assert sanitize_name_query("ACME <HOLDINGS> A=B") == "ACME HOLDINGS A B"
     assert sanitize_name_query("ACME [HOLDINGS] {X}") == "ACME HOLDINGS X"
     assert sanitize_name_query("ACME^2 ~1 *? :Y") == "ACME 2 1 Y"
     # Boolean operator pairs go; single & and | are not syntax.
@@ -321,6 +324,8 @@ def test_sanitize_strips_remaining_lucene_syntax() -> None:
     # Leading - / + are NOT / MUST operators; mid-word hyphens are names.
     assert sanitize_name_query("-BAD +HALLE") == "BAD HALLE"
     assert sanitize_name_query("ANNE-MARIE SMITH") == "ANNE-MARIE SMITH"
+    # Mid-token + is literal to the parser and real in names.
+    assert sanitize_name_query("BP+AMOCO INTERNATIONAL LIMITED") == "BP+AMOCO INTERNATIONAL LIMITED"
 
 
 def test_sanitize_still_identity_on_clean_names_post_extension() -> None:

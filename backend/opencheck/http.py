@@ -36,10 +36,16 @@ _USER_AGENT = f"OpenCheck/{__version__} (+https://github.com/StephenAbbott/openc
 # syntax, boolean-operator pairs, and a term-leading ``-``/``+``) is
 # replaced for the same reason: OpenCheck never intends query syntax when
 # screening a name.
+# The character class below is Elasticsearch's documented query_string
+# reserved set (a superset of classic Lucene): + - = && || > < ! ( ) { }
+# [ ] ^ " ~ * ? : \ / — the docs note that < and > "can't be escaped at
+# all", so replacement is the only safe handling. Mid-token - and + are
+# NOT operators (only term-leading ones are) and appear in real names
+# ("ANNE-MARIE", "BP+AMOCO"), so those are kept.
 _LUCENE_BREAKERS = re.compile(
-    r'["\\/:^~\[\]{}()!*?]'  # single-character syntax
-    r"|&&|\|\|"              # boolean operator pairs (single & and | are safe)
-    r"|(?<!\S)[-+](?=\S)"    # - / + only when they lead a term (NOT / MUST)
+    r'["\\/:^~\[\]{}()!*?<>=]'  # single-character syntax
+    r"|&&|\|\|"                 # boolean operator pairs (single & and | are safe)
+    r"|(?<!\S)[-+](?=\S)"       # - / + only when they lead a term (NOT / MUST)
 )
 
 
