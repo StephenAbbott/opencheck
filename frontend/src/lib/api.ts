@@ -535,6 +535,110 @@ export async function getSubsidiaries(
   return (await r.json()) as SubsidiariesResponse;
 }
 
+// --- BackgroundCheck (person screening) — SPIKE feat/background-check -------
+
+/** One hit from /person-check, scored against the queried name. */
+export interface PersonMatch {
+  hit: SourceHit;
+  name_score: number;
+  birth_year_compatible: boolean;
+  strong: boolean;
+}
+
+/** Per-source outcome for a person check — powers the honest
+ * "what was checked" footer (a no-hit source is still shown). */
+export interface PersonCheckSource {
+  source_id: string;
+  name: string;
+  license: string;
+  attribution: string;
+  homepage: string;
+  live: boolean;
+  hit_count: number;
+  error: string | null;
+}
+
+export interface PersonCheckResponse {
+  query: string;
+  birth_year: number | null;
+  matches: PersonMatch[];
+  risk_signals: RiskSignal[];
+  weak_match_count: number;
+  sources: PersonCheckSource[];
+  caveats: string[];
+  /** Identifier-backed links between strong matches only (shared Q-ID /
+   * OpenSanctions id) — the person-world cross-source panel. */
+  cross_source_links: CrossSourceLink[];
+}
+
+/** One Companies House appointment held by an officer. */
+export interface AppointmentItem {
+  company_name: string;
+  company_number: string | null;
+  company_status: string | null;
+  role: string | null;
+  appointed_on: string | null;
+  resigned_on: string | null;
+}
+
+export interface PersonAppointmentsResponse {
+  officer_id: string;
+  name: string | null;
+  birth_date: string | null;
+  is_stub: boolean;
+  total_results: number | null;
+  active_count: number;
+  appointments: AppointmentItem[];
+  bods: Record<string, unknown>[];
+  attribution: string;
+  caveat: string;
+}
+
+export async function personAppointments(
+  officerId: string
+): Promise<PersonAppointmentsResponse> {
+  const params = new URLSearchParams({ officer_id: officerId });
+  return getJson(`/person-appointments?${params.toString()}`);
+}
+
+/** One political position held (EveryPolitician / OpenSanctions PEPs). */
+export interface PositionItem {
+  label: string;
+  country: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  current: boolean;
+}
+
+export interface PersonPositionsResponse {
+  entity_id: string;
+  name: string | null;
+  is_stub: boolean;
+  positions: PositionItem[];
+  wikidata_qid: string | null;
+  countries: string[];
+  source_url: string;
+  attribution: string;
+  maintenance_note: string;
+  caveat: string;
+}
+
+export async function personPositions(
+  entityId: string
+): Promise<PersonPositionsResponse> {
+  const params = new URLSearchParams({ entity_id: entityId });
+  return getJson(`/person-positions?${params.toString()}`);
+}
+
+export async function personCheck(
+  name: string,
+  birthYear?: number
+): Promise<PersonCheckResponse> {
+  const params = new URLSearchParams({ name });
+  if (birthYear) params.set("birth_year", String(birthYear));
+  return getJson(`/person-check?${params.toString()}`);
+}
+
 export async function lookup(lei: string): Promise<LookupResponse> {
   const params = new URLSearchParams({ lei });
   const r = await fetch(`${BASE_URL}/lookup?${params.toString()}`);

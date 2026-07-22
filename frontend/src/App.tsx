@@ -49,6 +49,26 @@ import { SecuritiesSection } from "./components/cdd/SecuritiesSection";
 // FullCheck (enhanced due diligence) view — lazy so Cytoscape/graph code only
 // loads when a user switches into FullCheck mode.
 const FullCheckPanel = lazy(() => import("./components/cdd/FullCheckPanel"));
+const BackgroundCheckPanel = lazy(
+  () => import("./components/cdd/BackgroundCheckPanel")
+);
+const PersonReportPage = lazy(
+  () => import("./components/cdd/PersonReportPage")
+);
+
+/** Parse `?person=` + `?person_birth_year=` from a search string. */
+function personReportFromSearch(
+  search: string
+): { name: string; birthYear?: number } | null {
+  const params = new URLSearchParams(search);
+  const name = (params.get("person") ?? "").trim();
+  if (!name) return null;
+  const by = Number(params.get("person_birth_year"));
+  return {
+    name,
+    birthYear: Number.isInteger(by) && by >= 1900 && by <= 2100 ? by : undefined,
+  };
+}
 
 
 /**
@@ -180,9 +200,10 @@ export default function App() {
   const [applicableSources, setApplicableSources] = useState<string[]>([]);
   const [completedSources, setCompletedSources] = useState<Set<string>>(new Set());
   const [streaming, setStreaming] = useState(false);
-  // QuickCheck (subject screening, default) vs FullCheck (network EDD). Reset to
+  // QuickCheck (subject screening, default) vs FullCheck (network EDD) vs
+  // BackgroundCheck (screening the people connected to the entity). Reset to
   // QuickCheck on each new lookup so the headline experience is always QuickCheck.
-  const [mode, setMode] = useState<"quick" | "full">("quick");
+  const [mode, setMode] = useState<"quick" | "full" | "background">("quick");
   // Maps "source_id:hit_id" → BODS statement count; populated by the bods_counts SSE event.
   const [bodsCountMap, setBodsCountMap] = useState<Record<string, number>>({});
   // Same key → entity / relationship split, for the source-card graph CTA subtitle.
@@ -269,14 +290,18 @@ export default function App() {
 
   // Three-mode search: "name" = GLEIF name search; "nationalId" = registration
   // number reverse lookup; "lei" = paste LEI directly.
-  const [searchMode, setSearchMode] = useState<"name" | "nationalId" | "lei">("name");
+  // TENTATIVE (Phase E): the "person" tab is under evaluation — Stephen's
+  // instinct is to keep person search as a follow-on from entity pages.
+  // It is deliberately isolated in its own commit for a clean revert.
+  const [searchMode, setSearchMode] = useState<"name" | "nationalId" | "lei" | "person">("name");
   // APG tabs keyboard pattern: Left/Right arrows (wrapping), Home and End move
   // both focus and selection across the search-mode tabs (roving tabindex).
-  const SEARCH_TAB_ORDER = ["name", "nationalId", "lei"] as const;
+  const SEARCH_TAB_ORDER = ["name", "nationalId", "lei", "person"] as const;
   const SEARCH_TAB_IDS: Record<(typeof SEARCH_TAB_ORDER)[number], string> = {
     name: "tab-name",
     nationalId: "tab-national-id",
     lei: "tab-lei",
+    person: "tab-person",
   };
   function onSearchTabKeyDown(e: React.KeyboardEvent<HTMLButtonElement>) {
     const idx = SEARCH_TAB_ORDER.indexOf(searchMode);
@@ -293,6 +318,9 @@ export default function App() {
     document.getElementById(SEARCH_TAB_IDS[mode])?.focus();
   }
   const [nameQuery, setNameQuery] = useState("");
+  // TENTATIVE person tab inputs (Phase E — see searchMode note above).
+  const [personQuery, setPersonQuery] = useState("");
+  const [personBirthYear, setPersonBirthYear] = useState("");
   const [nationalIdQuery, setNationalIdQuery] = useState("");
   // ISO 3166-1 alpha-2 country code for the national ID tab; defaults to UK.
   const [selectedCountry, setSelectedCountry] = useState("GB");
@@ -461,6 +489,31 @@ export default function App() {
       }),
   });
 
+  // ── Person report (Phase E) — URL-addressable via ?person= ─────────
+  const [personReport, setPersonReport] = useState<
+    { name: string; birthYear?: number } | null
+  >(() => personReportFromSearch(window.location.search));
+
+  /** Open the person report page, reflected in the URL for sharing. */
+  function openPersonReport(name: string, birthYear?: number) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("person", name);
+    if (birthYear) url.searchParams.set("person_birth_year", String(birthYear));
+    else url.searchParams.delete("person_birth_year");
+    window.history.pushState({}, "", url);
+    setPersonReport({ name, birthYear });
+    window.scrollTo({ top: 0 });
+  }
+
+  /** Close the person report and drop its URL params. */
+  function closePersonReport() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("person");
+    url.searchParams.delete("person_birth_year");
+    window.history.pushState({}, "", url);
+    setPersonReport(null);
+  }
+
   function lookupLei(rawLei: string, opts?: { refresh?: boolean }) {
     const lei = rawLei.trim().toUpperCase();
     setLeiInput(lei);
@@ -500,6 +553,12 @@ export default function App() {
         setView(v);
         return;
       }
+      // Person report (Phase E) — ?person= takes render precedence; the
+      // entity state underneath is left untouched so back/forward between
+      // the two is instant.
+      const person = personReportFromSearch(window.location.search);
+      setPersonReport(person);
+      if (person) return;
       // Back on main — honour ?lei= if present, otherwise clear results.
       const lei = fromUrl(new URLSearchParams(window.location.search).get("lei"));
       if (lei && isValidLei(lei)) {
@@ -924,7 +983,22 @@ export default function App() {
         <div role="status" className="sr-only">
           {srAnnouncement}
         </div>
-        {view === "main" && (
+        {view === "main" && personReport && (
+          <Suspense
+            fallback={
+              <p className="text-[13px] text-oo-muted italic">
+                Loading person report…
+              </p>
+            }
+          >
+            <PersonReportPage
+              name={personReport.name}
+              birthYear={personReport.birthYear}
+              onBack={closePersonReport}
+            />
+          </Suspense>
+        )}
+        {view === "main" && !personReport && (
         <>
         {/* ── Search panel — two-tab design ── */}
         <div className="mb-3">
@@ -940,11 +1014,11 @@ export default function App() {
             <span className="text-[10px] font-semibold uppercase tracking-wide text-oo-blue border border-[#cfd6f5] bg-[#eef1fb] rounded-full px-1.5 py-0.5">
               New
             </span>
+            <span className="text-oo-ink">Person screening</span>
+            <span aria-hidden>·</span>
+            <span className="text-oo-ink">RDF/GQL export</span>
+            <span aria-hidden>·</span>
             <span className="text-oo-ink">Network screening</span>
-            <span aria-hidden>·</span>
-            <span className="text-oo-ink">Company timelines</span>
-            <span aria-hidden>·</span>
-            <span className="text-oo-ink">ESG data</span>
             <span className="text-oo-muted">— every claim links to its source.</span>
           </p>
         )}
@@ -1004,6 +1078,24 @@ export default function App() {
             >
               <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M8 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-2"/><path d="M12 12h4m-4 4h4m-8-4h.01M8 16h.01"/></svg>
               Paste an LEI
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={searchMode === "person"}
+              aria-controls={searchMode === "person" ? "panel-person" : undefined}
+              id="tab-person"
+              tabIndex={searchMode === "person" ? 0 : -1}
+              onKeyDown={onSearchTabKeyDown}
+              onClick={() => { setSearchMode("person"); setMobileSearchOpen(true); }}
+              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors border-l border-oo-rule bg-white ${
+                searchMode === "person"
+                  ? "text-oo-ink border-b-2 border-oo-blue"
+                  : "text-oo-muted hover:text-oo-ink"
+              }`}
+            >
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.5 3.6-5.5 7-5.5s6.2 2 7 5.5"/></svg>
+              Person name
             </button>
           </div>
 
@@ -1299,6 +1391,65 @@ export default function App() {
             </form>
           )}
 
+          {/* ── Person search panel (TENTATIVE, Phase E) ── */}
+          {searchMode === "person" && (
+            <div id="panel-person" role="tabpanel" aria-labelledby="tab-person" className="p-4">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const name = personQuery.trim();
+                  if (name.length < 2) return;
+                  const by = Number(personBirthYear);
+                  openPersonReport(
+                    name,
+                    Number.isInteger(by) && by >= 1900 && by <= 2100 ? by : undefined
+                  );
+                }}
+              >
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    id="person-input"
+                    type="search"
+                    value={personQuery}
+                    onChange={(e) => setPersonQuery(e.target.value)}
+                    placeholder="Search by person name"
+                    autoComplete="off"
+                    aria-label="Person name"
+                    className="flex-1 border border-oo-rule rounded px-3 py-2.5 bg-oo-bg sm:bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
+                  />
+                  <input
+                    type="text"
+                    value={personBirthYear}
+                    onChange={(e) => setPersonBirthYear(e.target.value)}
+                    placeholder="Birth year (optional)"
+                    inputMode="numeric"
+                    pattern="[0-9]{4}"
+                    maxLength={4}
+                    aria-label="Birth year (optional, corroborates name matches)"
+                    className="w-full sm:w-44 border border-oo-rule rounded px-3 py-2.5 bg-oo-bg sm:bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
+                  />
+                  <button
+                    type="submit"
+                    disabled={personQuery.trim().length < 2}
+                    className="w-full sm:w-auto bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
+                  >
+                    Screen person
+                  </button>
+                </div>
+              </form>
+              <p className="text-[11px] text-oo-muted leading-[1.6] mt-3">
+                Screens a person by name across every person-capable source
+                (Companies House officers, OpenSanctions, EveryPolitician,
+                Wikidata, OpenAleph) for PEP, sanctions and offshore-leaks
+                signals. Name-based: results are potential matches with their
+                evidence shown, never confirmed identities. Adding a birth year
+                helps corroborate matches. Tip: for people connected to a
+                company, the BackgroundCheck view on the company's report gives
+                the same screening with role context attached.
+              </p>
+            </div>
+          )}
+
           </div>
 
           {searchPanelsCollapsed && (
@@ -1377,7 +1528,7 @@ export default function App() {
         )}
 
         {streamingLei && (
-          <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3" role="group" aria-label="Check mode">
+          <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3" role="group" aria-label="Check mode">
             <button
               type="button"
               aria-pressed={mode === "quick"}
@@ -1393,7 +1544,7 @@ export default function App() {
                 <span className="font-head font-bold text-[15px] text-oo-ink">QuickCheck</span>
               </div>
               <p className="text-[12px] text-oo-muted mt-1 leading-[1.5]">
-                Fast screening of this entity for immediate risks.
+                Fast customer due diligence screening of this entity for immediate risks.
               </p>
             </button>
             <button
@@ -1414,10 +1565,35 @@ export default function App() {
                 Map the wider corporate network for enhanced due diligence.
               </p>
             </button>
+            <button
+              type="button"
+              aria-pressed={mode === "background"}
+              onClick={() => setMode("background")}
+              className={`text-left rounded-oo border-2 p-4 transition-colors ${
+                mode === "background"
+                  ? "border-oo-blue bg-[#eef1fb]"
+                  : "border-oo-rule bg-white hover:border-[#cfd6f5]"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-oo-blue" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 20c.8-3.5 3.6-5.5 7-5.5s6.2 2 7 5.5" /></svg>
+                <span className="font-head font-bold text-[15px] text-oo-ink">BackgroundCheck</span>
+              </div>
+              <p className="text-[12px] text-oo-muted mt-1 leading-[1.5]">
+                Screen the people connected to this entity — officers, directors and beneficial owners.
+              </p>
+            </button>
           </div>
         )}
 
-        {streamingLei && <NarrativePanel lei={streamingLei} legalName={legalName} />}
+        {/* Entity-scoped panels (AI summary, risk signals, cross-source
+            identifiers, possibly-same pairs) are hidden in BackgroundCheck
+            mode — that view is about the connected people, not the subject
+            entity. The screening-degradation notice stays: it reports
+            related-party screening gaps, which are exactly about people. */}
+        {streamingLei && mode !== "background" && (
+          <NarrativePanel lei={streamingLei} legalName={legalName} />
+        )}
 
         {/* Screening-degradation warning (issue #50) — rendered above the
             risk panel, and independently of it: zero signals with a
@@ -1435,7 +1611,7 @@ export default function App() {
           />
         )}
 
-        {aggregatedCodes.length > 0 && (
+        {aggregatedCodes.length > 0 && mode !== "background" && (
           <section className="mb-8" id="risk-signals">
             <SectionLabel>Risk signals</SectionLabel>
             <div className="flex flex-wrap gap-2">
@@ -1450,7 +1626,7 @@ export default function App() {
           </section>
         )}
 
-        {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && (
+        {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && mode !== "background" && (
           <CollapsedSection
             htmlId="cross-source-identifiers"
             label="Cross-source identifiers"
@@ -1490,7 +1666,7 @@ export default function App() {
           </CollapsedSection>
         )}
 
-        {possiblySame.length > 0 && (
+        {possiblySame.length > 0 && mode !== "background" && (
           <CollapsedSection
             htmlId="possibly-same"
             label="Possibly the same entity"
@@ -1512,6 +1688,14 @@ export default function App() {
         {mode === "full" && streamingLei ? (
           <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading FullCheck…</p>}>
             <FullCheckPanel lei={streamingLei} legalName={legalName} signals={riskSignals} />
+          </Suspense>
+        ) : mode === "background" && streamingLei ? (
+          <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading BackgroundCheck…</p>}>
+            <BackgroundCheckPanel
+              lei={streamingLei}
+              legalName={legalName}
+              onOpenReport={openPersonReport}
+            />
           </Suspense>
         ) : (
           <>

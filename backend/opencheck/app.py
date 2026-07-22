@@ -33,7 +33,7 @@ from slowapi.errors import RateLimitExceeded
 from . import __version__
 from .config import get_settings
 from .ratelimit import limiter, rate_limit_exceeded_handler
-from .routers import health, search, lookup, export, narrative, securities, history, nz_associations, share, subsidiaries
+from .routers import health, search, lookup, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries
 from .routers.search import _ch_ra_code as _ch_ra_code  # re-exported for backward compat
 
 log = logging.getLogger(__name__)
@@ -181,6 +181,7 @@ app.include_router(narrative.router)
 app.include_router(securities.router)
 app.include_router(history.router)
 app.include_router(nz_associations.router)
+app.include_router(person_check.router)
 app.include_router(subsidiaries.router)
 app.include_router(share.router)
 

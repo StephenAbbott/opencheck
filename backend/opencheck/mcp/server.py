@@ -175,6 +175,37 @@ async def opencheck_export_bods(
 
 
 @mcp.tool()
+async def opencheck_person_check(
+    name: str, birth_year: int | None = None
+) -> dict[str, Any]:
+    """Screen one person for PEP / sanctions / offshore-leaks signals.
+
+    BackgroundCheck for agents: fans the name out across every
+    person-capable source (Companies House officers, OpenSanctions,
+    EveryPolitician, Wikidata, OpenAleph), scores each hit against the
+    queried name, and derives risk signals from strong matches only.
+
+    Args:
+        name: Person name to screen (e.g. an officer or beneficial owner
+            from an opencheck_lookup result).
+        birth_year: Known birth year — corroborates name matches where
+            the source record carries a date of birth.
+
+    Screening is name-based: results are potential matches with their
+    evidence, never confirmed identities, and a non-hit is not proof of
+    absence. Heed the caveats in the response.
+    """
+    from ..routers.person_check import _person_check_impl as _check
+
+    if len(name.strip()) < 2:
+        return {"error": "name must be at least 2 characters"}
+    if birth_year is not None and not 1900 <= birth_year <= 2026:
+        return {"error": "birth_year must be between 1900 and 2026"}
+    resp = await _check(name=name.strip(), birth_year=birth_year)
+    return shaping.shape_person_check(resp)
+
+
+@mcp.tool()
 async def opencheck_list_sources() -> dict[str, Any]:
     """List the data sources OpenCheck consults, with licence and live status."""
     from ..routers.health import sources as _sources
@@ -189,5 +220,6 @@ TOOL_NAMES = [
     "opencheck_resolve_national_id",
     "opencheck_lookup",
     "opencheck_export_bods",
+    "opencheck_person_check",
     "opencheck_list_sources",
 ]

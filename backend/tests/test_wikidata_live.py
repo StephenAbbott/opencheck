@@ -52,6 +52,24 @@ async def test_search_returns_wbsearchentities_hits(httpx_mock: HTTPXMock) -> No
         },
     )
 
+    # Person searches now post-filter to instance-of-human (Q5) with a
+    # batched SPARQL query — mock it confirming both candidates are human.
+    httpx_mock.add_response(
+        url=(
+            "https://query.wikidata.org/sparql"
+            "?query=SELECT+%3Fitem+WHERE+%7B+VALUES+%3Fitem+%7B+wd%3AQ7747"
+            "+wd%3AQ34020+%7D+%3Fitem+wdt%3AP31+wd%3AQ5+%7D"
+        ),
+        json={
+            "results": {
+                "bindings": [
+                    {"item": {"value": "http://www.wikidata.org/entity/Q7747"}},
+                    {"item": {"value": "http://www.wikidata.org/entity/Q34020"}},
+                ]
+            }
+        },
+    )
+
     adapter = WikidataAdapter()
     hits = await adapter.search("putin", SearchKind.PERSON)
 

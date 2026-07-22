@@ -163,3 +163,53 @@ def shape_sources(payload: Any) -> dict[str, Any]:
         for s in payload.sources
     ]
     return {"count": len(rows), "sources": rows}
+
+
+def shape_person_check(payload: Any) -> dict[str, Any]:
+    """Flatten a ``PersonCheckResponse`` into an agent-friendly report.
+
+    Raw hit payloads are dropped (they can be large and carry
+    licence-suppressed content); everything a consumer needs to act —
+    scores, signals with their match evidence, per-source outcomes,
+    identifier bridges and the caveats — is kept.
+    """
+
+    def _match(m: Any) -> dict[str, Any]:
+        return {
+            "source": m.hit.source_id,
+            "hit_id": m.hit.hit_id,
+            "name": m.hit.name,
+            "summary": m.hit.summary,
+            "identifiers": m.hit.identifiers,
+            "name_score": m.name_score,
+            "birth_year_compatible": m.birth_year_compatible,
+            "is_stub": m.hit.is_stub,
+        }
+
+    strong = [_match(m) for m in payload.matches if m.strong]
+    return {
+        "query": payload.query,
+        "birth_year": payload.birth_year,
+        "risk_signals": payload.risk_signals,
+        "strong_matches": strong,
+        "weak_match_count": payload.weak_match_count,
+        "cross_source_links": payload.cross_source_links,
+        "sources_checked": [
+            {
+                "id": s.source_id,
+                "name": s.name,
+                "license": s.license,
+                "live": s.live,
+                "hit_count": s.hit_count,
+                "error": s.error,
+            }
+            for s in payload.sources
+        ],
+        "caveats": payload.caveats,
+        "hint": (
+            "Risk signals derive from strong matches only (name similarity "
+            ">= 0.88 with compatible birth year); each carries its match "
+            "evidence. A failed source means that person was NOT screened "
+            "there — never treat this as a clean screen."
+        ),
+    }

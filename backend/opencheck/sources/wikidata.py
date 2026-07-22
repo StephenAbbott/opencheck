@@ -368,7 +368,45 @@ class WikidataAdapter(SourceAdapter):
             hit = self._hit(item, kind)
             if hit is not None:
                 hits.append(hit)
+        if kind == SearchKind.PERSON and hits:
+            # wbsearchentities matches labels/aliases with no type filter,
+            # so a person query returns paintings, songs and films named
+            # after people ("Tony Blair", 1999 single by Chumbawamba) —
+            # exact-name noise that a person screen must not rank as a
+            # match. Keep only instance-of-human (Q5) items.
+            hits = await self._filter_to_humans(hits)
         return hits
+
+    async def _filter_to_humans(self, hits: list[SourceHit]) -> list[SourceHit]:
+        """Keep only hits whose item is an instance of human (P31 → Q5).
+
+        One batched SPARQL VALUES query for the whole hit list. Fails
+        OPEN: if the query errors or times out (``_sparql`` returns an
+        empty dict), the unfiltered hits are returned — a Wikidata outage
+        must degrade to "noisier results", never to "person vanished".
+        """
+        qids = [h.hit_id for h in hits if h.hit_id.startswith("Q")]
+        if not qids:
+            return hits
+        cache_key = f"{_CACHE_NS}/humans/{_slug('|'.join(sorted(qids)))}"
+        values = " ".join(f"wd:{q}" for q in qids)
+        query = (
+            "SELECT ?item WHERE { VALUES ?item { %s } ?item wdt:P31 wd:Q5 }"
+            % values
+        )
+        try:
+            payload = await self._sparql(query, cache_key=cache_key)
+        except Exception:  # noqa: BLE001 — transport errors also fail open
+            return hits
+        bindings = payload.get("results", {}).get("bindings")
+        if bindings is None:
+            return hits  # SPARQL failure — fail open
+        humans = {
+            b["item"]["value"].rsplit("/", 1)[-1]
+            for b in bindings
+            if isinstance(b.get("item"), dict) and b["item"].get("value")
+        }
+        return [h for h in hits if not h.hit_id.startswith("Q") or h.hit_id in humans]
 
     # ------------------------------------------------------------------
     # LEI → Q-ID lookup (used by the LEI-anchored /lookup endpoint)
