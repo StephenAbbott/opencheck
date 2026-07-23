@@ -48,6 +48,7 @@ import unicodedata
 from typing import Any
 
 from .config import get_settings
+from .matching import is_matchable_name
 from .risk import (
     DEGRADED_NOT_CONFIGURED,
     DegradedSource,
@@ -418,6 +419,15 @@ def _signal_from_os(
 ) -> RiskSignal | None:
     if hit.is_stub:
         return None
+    # Single-token person names ("Fernández", "Ivanov") are too generic to
+    # base a related-party match on — a bare surname collides across unrelated
+    # people (ftmg drops single-token names from matching). Entities keep
+    # single-token names, which are distinctive ("Gazprom").
+    if target["kind"] == _KIND_PERSON and not (
+        is_matchable_name(_normalise(target["name"]))
+        and is_matchable_name(_normalise(hit.name))
+    ):
+        return None
     score = _name_score(target["name"], hit.name)
     if score < min_score:
         return None
@@ -479,6 +489,13 @@ def _signal_from_ep(
     hit: SourceHit, target: dict[str, Any], *, min_score: float
 ) -> RiskSignal | None:
     if hit.is_stub:
+        return None
+    # EveryPolitician hits are always persons — apply the same single-token
+    # guard as the OpenSanctions path.
+    if not (
+        is_matchable_name(_normalise(target["name"]))
+        and is_matchable_name(_normalise(hit.name))
+    ):
         return None
     score = _name_score(target["name"], hit.name)
     if score < min_score:

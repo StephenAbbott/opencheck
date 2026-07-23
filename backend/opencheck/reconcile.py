@@ -25,6 +25,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Iterable
 
+from .matching import canonical_identifier, is_matchable_name
 from .sources import SearchKind, SourceHit
 
 
@@ -128,6 +129,10 @@ def reconcile(hits: Iterable[SourceHit]) -> list[CrossSourceLink]:
     for norm, group in person_groups.items():
         if len(group) < 2:
             continue
+        # Single-token names ("Ivanov") are too generic to bridge two people
+        # on name alone (ftmg drops single-token names from matching).
+        if not is_matchable_name(norm):
+            continue
         # Don't pretend two stubs match.
         if any(hit.is_stub for hit in group):
             continue
@@ -226,12 +231,19 @@ def _identifier_keys(stmt: dict) -> set[str]:
     jur = _entity_jurisdiction(rd)
     keys: set[str] = set()
     for i in rd.get("identifiers") or []:
-        val = str(i.get("id") or "").strip().upper()
-        if not val:
+        raw = str(i.get("id") or "").strip().upper()
+        if not raw:
             continue
-        if _LEI_RE.match(val):
-            keys.add(f"LEI:{val}")
+        if _LEI_RE.match(raw):
+            keys.add(f"LEI:{raw}")
             continue
+        # Canonicalise the value the way ftmg does (StrictFormat: strip
+        # separators/punctuation) so the SAME registration number written
+        # differently across sources ("556056-6258" vs "5560566258") produces
+        # one merge key — two records that share it are correctly treated as
+        # identifier-linked rather than surfaced as a name-only "possibly same"
+        # pair. Falls back to the raw value when StrictFormat yields nothing.
+        val = canonical_identifier(raw, min_len=0) or raw
         scheme = str(i.get("scheme") or "?").strip().upper()
         keys.add(f"{scheme}:{val}")
         if jur and (scheme == "" or scheme.startswith(f"{jur}-")) and "VAT" not in scheme and "/" not in val:
