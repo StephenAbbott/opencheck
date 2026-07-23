@@ -598,3 +598,39 @@ async def test_fetch_mentions_cache_key_includes_limit(httpx_mock: HTTPXMock) ->
     assert (await adapter.fetch_mentions("aleph-7", limit=5))["total"] == 61
     # A different limit must issue a *new* request, not replay the cached one.
     assert (await adapter.fetch_mentions("aleph-7", limit=50))["total"] == 61
+
+
+# ---------------------------------------------------------------------------
+# _match_corroborated — identifier/URL normalisation guards (ftmg-derived)
+# ---------------------------------------------------------------------------
+
+
+def test_match_corroborated_lei_ignores_formatting() -> None:
+    subject = {"leiCode": ["549300MLH00Y3BN4HD49"]}
+    hit = {"leiCode": ["549300mlh00y3bn4hd49"]}
+    assert OpenAlephAdapter._match_corroborated(subject, hit) is True
+
+
+def test_match_corroborated_registration_number_hyphen_insensitive() -> None:
+    subject = {"registrationNumber": ["556056-6258"]}
+    hit = {"registrationNumber": ["5560566258"]}
+    assert OpenAlephAdapter._match_corroborated(subject, hit) is True
+
+
+def test_match_corroborated_ignores_short_registration_numbers() -> None:
+    # A 4-char code is too collision-prone to corroborate on (ftmg <7 guard).
+    subject = {"registrationNumber": ["1234"]}
+    hit = {"registrationNumber": ["1234"]}
+    assert OpenAlephAdapter._match_corroborated(subject, hit) is False
+
+
+def test_match_corroborated_oc_url_trailing_slash() -> None:
+    subject = {"opencorporatesUrl": ["https://opencorporates.com/companies/gb/12345678"]}
+    hit = {"opencorporatesUrl": ["https://opencorporates.com/companies/gb/12345678/"]}
+    assert OpenAlephAdapter._match_corroborated(subject, hit) is True
+
+
+def test_match_corroborated_false_when_nothing_shared() -> None:
+    subject = {"leiCode": ["549300MLH00Y3BN4HD49"]}
+    hit = {"leiCode": ["213800LH1BZH3DI6G760"]}
+    assert OpenAlephAdapter._match_corroborated(subject, hit) is False

@@ -3582,16 +3582,49 @@ _FTM_EDGE_SCHEMAS: dict[str, tuple[str, str, str | None]] = {
     "ProjectParticipant": ("participant", "project",     None),
 }
 
+# FtM datasets whose ``Ownership`` edges express genuine *beneficial* ownership
+# rather than legal/registered ownership. FtM ``Ownership`` is by default a
+# registered-ownership relation (a company-registry shareholder, a GLEIF RR
+# parent) — NOT necessarily a beneficial owner — so OpenSanctions'
+# followthemoney-graph makes no BO claim when loading it, and neither should
+# we by default. We only assert ``beneficialOwnershipOrControl: true`` when the
+# edge (or its subject entity) carries a dataset that publishes actual
+# beneficial-ownership declarations. Conservative allow-list — extend only with
+# a dataset whose ownership edges are demonstrably beneficial ownership.
+#   * ``openownership`` — the Open Ownership register republished in FtM
+#     (https://www.opensanctions.org/datasets/openownership/); its entire
+#     purpose is beneficial-ownership data.
+_FTM_BO_ASSERTING_DATASETS: frozenset[str] = frozenset({"openownership"})
 
-def _ftm_edge_interest(policy: str, edge_props: dict[str, Any]) -> dict[str, Any]:
-    """Build the BODS interest dict for a mapped FtM edge entity."""
+
+def _ftm_asserts_beneficial_ownership(datasets: set[str]) -> bool:
+    """True when a FtM ownership edge's datasets assert *beneficial* ownership."""
+    return bool(datasets & _FTM_BO_ASSERTING_DATASETS)
+
+
+def _ftm_edge_interest(
+    policy: str, edge_props: dict[str, Any], datasets: set[str] | None = None
+) -> dict[str, Any]:
+    """Build the BODS interest dict for a mapped FtM edge entity.
+
+    ``datasets`` is the set of FtM dataset names carried by the edge / subject;
+    it decides whether an ``Ownership`` edge may assert
+    ``beneficialOwnershipOrControl`` (see ``_FTM_BO_ASSERTING_DATASETS``).
+    """
     role = (edge_props.get("role") or [""])[0] or ""
     if policy == "ownership":
+        # ``directOrIndirect: "direct"`` is retained: FtM ownership edges are
+        # direct links in the graph (the immediate holder), even when the BO
+        # claim itself is unknown.
         interest: dict[str, Any] = {
             "type": "shareholding",
             "directOrIndirect": "direct",
-            "beneficialOwnershipOrControl": True,
         }
+        # Only claim beneficial ownership when the source dataset actually
+        # publishes it; otherwise leave the flag unset ("not stated") rather
+        # than asserting a registered holding is a beneficial one.
+        if _ftm_asserts_beneficial_ownership(datasets or set()):
+            interest["beneficialOwnershipOrControl"] = True
         pct = _ftm_percentage(edge_props)
         if pct is not None:
             interest["share"] = {"exact": pct}
@@ -3716,7 +3749,10 @@ def _ftm_edge_relationships(
             if not src_nodes or not tgt_nodes:
                 continue
 
-            interest = _ftm_edge_interest(policy, edge_props)
+            edge_datasets = set(entry.get("datasets") or []) | set(
+                payload.get("datasets") or []
+            )
+            interest = _ftm_edge_interest(policy, edge_props, edge_datasets)
 
             for src in src_nodes:
                 for tgt in tgt_nodes:
@@ -3839,20 +3875,27 @@ def map_ftm(
                 rel_ip_sid = related_stmt["statementId"]
                 rel_ip_type = related_type
 
+            legacy_interest: dict[str, Any] = {
+                "type": interest_type,
+                "directOrIndirect": "direct",
+                "details": f"FtM property '{key}'",
+            }
+            # As with nested Ownership edges: only assert beneficial ownership
+            # when the dataset publishes it, otherwise leave the flag unset.
+            legacy_datasets = set(payload.get("datasets") or []) | set(
+                related.get("datasets") or []
+            )
+            if interest_type == "shareholding" and _ftm_asserts_beneficial_ownership(
+                legacy_datasets
+            ):
+                legacy_interest["beneficialOwnershipOrControl"] = True
             rel = make_relationship_statement(
                 source_id=source_id,
                 local_id=f"{payload.get('id', '?')}:{key}:{related.get('id', '?')}",
                 subject_statement_id=rel_subject_sid,
                 interested_party_statement_id=rel_ip_sid,
                 interested_party_type=rel_ip_type,
-                interests=[
-                    {
-                        "type": interest_type,
-                        "directOrIndirect": "direct",
-                        "beneficialOwnershipOrControl": interest_type == "shareholding",
-                        "details": f"FtM property '{key}'",
-                    }
-                ],
+                interests=[legacy_interest],
                 source_url=subject.get("source", {}).get("url"),
             )
             result.statements.append(rel)

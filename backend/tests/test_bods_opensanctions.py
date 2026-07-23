@@ -119,12 +119,15 @@ def test_ownership_owner_relationship_interest_type_and_percentage():
 
     # Find the relationship for Bp International (100%)
     rel_stmts = _stmts_by_type(result, "relationship")
-    # Both must be shareholding
+    # Both must be shareholding. This BP fixture carries no BO-asserting
+    # dataset (it is registry/GLEIF-style *legal* ownership), so the
+    # beneficialOwnershipOrControl flag must be left unset rather than
+    # claiming a registered holding is a beneficial one (R3).
     for rel in rel_stmts:
         interests = rel["recordDetails"]["interests"]
         assert len(interests) == 1
         assert interests[0]["type"] == "shareholding"
-        assert interests[0]["beneficialOwnershipOrControl"] is True
+        assert "beneficialOwnershipOrControl" not in interests[0]
 
     # One must have exact share 100.0
     pcts = {

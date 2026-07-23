@@ -55,6 +55,7 @@ import httpx
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
+from ..matching import canonical_identifier, canonical_url
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _API_BASE = "https://search.openaleph.org/api/2"
@@ -321,13 +322,26 @@ class OpenAlephAdapter(SourceAdapter):
         cls, subject_props: dict[str, Any], hit_props: dict[str, Any]
     ) -> bool:
         """True when the hit's own properties share an identifier with the
-        subject — the strongest signal that both describe the same entity."""
+        subject — the strongest signal that both describe the same entity.
+
+        Values are canonicalised the way OpenSanctions' ftmg does before it
+        treats them as a shared key: leiCode / registrationNumber via
+        ``canonical_identifier`` (StrictFormat + the 7-char minimum, so a
+        coincidental short code can't corroborate), opencorporatesUrl via
+        ``canonical_url`` (trailing-slash / scheme differences don't defeat
+        the match).
+        """
         for prop in cls._MATCH_CORROBORATING_PROPS:
+            normalise = canonical_url if prop == "opencorporatesUrl" else canonical_identifier
             subject_values = {
-                str(v).strip().upper() for v in (subject_props.get(prop) or []) if v
+                norm
+                for v in (subject_props.get(prop) or [])
+                if (norm := normalise(v)) is not None
             }
             hit_values = {
-                str(v).strip().upper() for v in (hit_props.get(prop) or []) if v
+                norm
+                for v in (hit_props.get(prop) or [])
+                if (norm := normalise(v)) is not None
             }
             if subject_values & hit_values:
                 return True

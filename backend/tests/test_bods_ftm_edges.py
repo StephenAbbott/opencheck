@@ -364,6 +364,56 @@ def test_edge_with_both_sides_nested_links_the_two_parties() -> None:
     assert rel["interests"][0]["share"] == {"exact": 40.0}
 
 
+def _ownership_edge(pct: str = "60") -> dict[str, Any]:
+    return {
+        "id": "own-bo",
+        "schema": "Ownership",
+        "properties": {
+            "percentage": [pct],
+            "owner": ["Q123"],
+            "asset": [
+                {
+                    "id": "co-owned",
+                    "schema": "Company",
+                    "properties": {"name": ["Owned Ltd"]},
+                }
+            ],
+        },
+    }
+
+
+def test_ownership_does_not_assert_beneficial_ownership_by_default() -> None:
+    """FtM Ownership is registered/legal ownership unless a BO dataset says
+    otherwise (R3): the flag must be unset, not True."""
+    payload = _person_payload(ownershipOwner=[_ownership_edge()])
+    bundle = map_ftm(payload, source_id="opensanctions")
+    (rel,) = _rels(bundle)
+    (interest,) = rel["interests"]
+    assert interest["type"] == "shareholding"
+    assert "beneficialOwnershipOrControl" not in interest
+    # directOrIndirect is retained; share still captured.
+    assert interest["directOrIndirect"] == "direct"
+    assert interest["share"] == {"exact": 60.0}
+
+
+def test_ownership_asserts_bo_when_openownership_dataset_present_on_edge() -> None:
+    edge = _ownership_edge()
+    edge["datasets"] = ["openownership"]
+    payload = _person_payload(ownershipOwner=[edge])
+    bundle = map_ftm(payload, source_id="opensanctions")
+    (rel,) = _rels(bundle)
+    assert rel["interests"][0]["beneficialOwnershipOrControl"] is True
+
+
+def test_ownership_asserts_bo_when_subject_carries_bo_dataset() -> None:
+    """The dataset signal can live on the subject entity, not just the edge."""
+    payload = _person_payload(ownershipOwner=[_ownership_edge()])
+    payload["datasets"] = ["openownership"]
+    bundle = map_ftm(payload, source_id="opensanctions")
+    (rel,) = _rels(bundle)
+    assert rel["interests"][0]["beneficialOwnershipOrControl"] is True
+
+
 def test_out_of_scope_edges_emit_nothing() -> None:
     edge = {
         "id": "pay-1",
