@@ -1586,12 +1586,15 @@ export default function App() {
           </div>
         )}
 
-        {/* Entity-scoped panels (AI summary, risk signals, cross-source
-            identifiers, possibly-same pairs) are hidden in BackgroundCheck
-            mode — that view is about the connected people, not the subject
-            entity. The screening-degradation notice stays: it reports
-            related-party screening gaps, which are exactly about people. */}
-        {streamingLei && mode !== "background" && (
+        {/* Entity-scoped panels (risk signals, cross-source identifiers,
+            possibly-same pairs) are hidden in BackgroundCheck mode — that
+            view is about the connected people, not the subject entity. The
+            screening-degradation notice stays: it reports related-party
+            screening gaps, which are exactly about people.
+            The AI summary box is additionally hidden in FullCheck mode: it
+            sits above the network map and pushed the FullCheck content
+            (the actual reason for switching modes) far down the page. */}
+        {streamingLei && mode === "quick" && (
           <NarrativePanel lei={streamingLei} legalName={legalName} />
         )}
 
