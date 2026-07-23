@@ -38,6 +38,9 @@ export interface ConnectedPerson {
   nationalities: string[];
   statementIds: string[];
   sources: string[];
+  /** Normalised "scheme:value" identifiers (e.g. wikidata Q-id, CH officer
+   * id) collected across the person's statements — feeds cluster matching. */
+  identifiers: string[];
   roles: ConnectedPersonRole[];
 }
 
@@ -78,6 +81,16 @@ export function normaliseName(name: string): string {
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/**
+ * Order-insensitive match key: sort the normalised name tokens so
+ * "NELSON PELTZ" and "PELTZ, Nelson" (Companies House's surname-first officer
+ * format) collapse to the same key and merge. The displayed name stays the
+ * first-seen original.
+ */
+export function nameMatchKey(name: string): string {
+  return normaliseName(name).split(" ").filter(Boolean).sort().join(" ");
 }
 
 export function birthYearOf(birthDate?: string): number | undefined {
@@ -148,50 +161,6 @@ export function extractPersonSubgraph(
   return [...entities, ...persons, ...relationships];
 }
 
-export interface PossiblySamePerson {
-  /** keys of the two ConnectedPerson entries */
-  a: string;
-  b: string;
-  name: string;
-  reason: string;
-}
-
-/**
- * Same-name pairs that may describe one individual — HUMAN-REVIEW
- * suggestions only, never auto-merged (mirrors the entity report's
- * "possibly the same entity" pattern).
- *
- * Suggested only when the birth years don't positively disagree: two
- * records with the same name and *different* birth years are treated as
- * genuinely different people, but when either side lacks a birth year
- * the extraction keeps them separate and this flags the pair for review.
- */
-export function possiblySamePeople(
-  people: ConnectedPerson[]
-): PossiblySamePerson[] {
-  const pairs: PossiblySamePerson[] = [];
-  for (let i = 0; i < people.length; i++) {
-    for (let j = i + 1; j < people.length; j++) {
-      const a = people[i];
-      const b = people[j];
-      if (normaliseName(a.name) !== normaliseName(b.name)) continue;
-      // Same name + same birth year would already have merged; same
-      // name + two conflicting birth years is a real distinction.
-      if (a.birthYear !== undefined && b.birthYear !== undefined) continue;
-      pairs.push({
-        a: a.key,
-        b: b.key,
-        name: a.name,
-        reason:
-          a.birthYear === undefined && b.birthYear === undefined
-            ? "same name, no birth year on either record"
-            : "same name, birth year missing on one record",
-      });
-    }
-  }
-  return pairs;
-}
-
 /**
  * Extract natural persons + their roles from a BODS bundle.
  * Order: bundle insertion order of first appearance (subject-first for
@@ -227,7 +196,7 @@ export function extractConnectedPeople(statements: Stmt[]): ConnectedPerson[] {
     if (!name) return undefined;
     const birthDate = str(rd.birthDate);
     const birthYear = birthYearOf(birthDate);
-    const key = `${normaliseName(name)}|${birthYear ?? ""}`;
+    const key = `${nameMatchKey(name)}|${birthYear ?? ""}`;
     let person = people.get(key);
     if (!person) {
       person = {
@@ -238,6 +207,7 @@ export function extractConnectedPeople(statements: Stmt[]): ConnectedPerson[] {
         nationalities: [],
         statementIds: [],
         sources: [],
+        identifiers: [],
         roles: [],
       };
       people.set(key, person);
@@ -250,6 +220,14 @@ export function extractConnectedPeople(statements: Stmt[]): ConnectedPerson[] {
       const label = str(n.name) ?? str(n.code);
       if (label && !person.nationalities.includes(label)) {
         person.nationalities.push(label);
+      }
+    }
+    for (const idObj of arr(rd.identifiers).map(rec)) {
+      const scheme = str(idObj.scheme) ?? str(idObj.schemeName);
+      const value = str(idObj.id);
+      const idKey = (scheme && value ? `${scheme}:${value}` : value)?.toLowerCase();
+      if (idKey && !person.identifiers.includes(idKey)) {
+        person.identifiers.push(idKey);
       }
     }
     if (!person.statementIds.includes(id)) person.statementIds.push(id);
