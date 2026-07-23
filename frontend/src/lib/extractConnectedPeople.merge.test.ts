@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractConnectedPeople } from "./backgroundCheck";
+import { extractConnectedPeople, nameMatchKey } from "./backgroundCheck";
 import { clusterConnectedPeople } from "./clusterPeople";
 import type { Stmt } from "./backgroundCheck";
 
@@ -71,5 +71,31 @@ describe("order-insensitive merge key on the real Unilever capture", () => {
     expect(clusters[0].confidence).toBe("medium");
     expect(clusters[0].pairs[0].evidence).toMatch(/missing on one/);
     expect(singletons).toHaveLength(10);
+  });
+});
+
+describe("honorific-title stripping (HSBC-style Companies House names)", () => {
+  it("gives titled and untitled forms of the same name the same match key", () => {
+    expect(nameMatchKey("FAIRBAIRN, Carolyn Julie, Dame")).toBe(
+      nameMatchKey("CAROLYN JULIE FAIRBAIRN")
+    );
+    expect(nameMatchKey("MEADE KURIBRENA, Jose Antonio, Dr.")).toBe(
+      nameMatchKey("JOSE ANTONIO MEADE KURIBRENA")
+    );
+    // a real name that merely looks like a title is not stripped to nothing
+    expect(nameMatchKey("Miss")).toBe("miss");
+  });
+
+  it("merges a Companies House titled officer with the OpenCorporates form", () => {
+    const people = extractConnectedPeople([
+      person("ch", "FAIRBAIRN, Carolyn Julie, Dame", 1960, "UK Companies House"),
+      person("oc", "CAROLYN JULIE FAIRBAIRN", 1960, "OpenCorporates"),
+    ]);
+    expect(people).toHaveLength(1);
+    expect(people[0].sources).toEqual(
+      expect.arrayContaining(["UK Companies House", "OpenCorporates"])
+    );
+    // merged outright — not merely surfaced as a cluster
+    expect(clusterConnectedPeople(people).clusters).toHaveLength(0);
   });
 });

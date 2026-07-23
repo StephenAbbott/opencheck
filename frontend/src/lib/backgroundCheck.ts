@@ -84,13 +84,33 @@ export function normaliseName(name: string): string {
 }
 
 /**
- * Order-insensitive match key: sort the normalised name tokens so
- * "NELSON PELTZ" and "PELTZ, Nelson" (Companies House's surname-first officer
- * format) collapse to the same key and merge. The displayed name stays the
- * first-seen original.
+ * Courtesy titles / honorifics that carry no identity. Companies House officer
+ * names embed them ("FAIRBAIRN, Carolyn Julie, Dame"); OpenCorporates does not,
+ * so they are stripped before name matching to avoid blocking a merge.
+ */
+const HONORIFICS: ReadonlySet<string> = new Set([
+  "mr", "mrs", "ms", "miss", "mx", "dr", "prof", "professor", "sir", "dame",
+  "lord", "lady", "rev", "reverend", "hon", "honourable", "honorable",
+]);
+
+/**
+ * Normalised name tokens with honorific titles removed (falls back to the full
+ * token list if stripping would leave nothing).
+ */
+export function nameTokens(name: string): string[] {
+  const toks = normaliseName(name).split(" ").filter(Boolean);
+  const stripped = toks.filter((t) => !HONORIFICS.has(t));
+  return stripped.length > 0 ? stripped : toks;
+}
+
+/**
+ * Order-insensitive match key: sort the (title-stripped) normalised name tokens
+ * so "NELSON PELTZ" and "PELTZ, Nelson" — and "Carolyn Julie Fairbairn" and
+ * "FAIRBAIRN, Carolyn Julie, Dame" — collapse to the same key and merge. The
+ * displayed name stays the first-seen original.
  */
 export function nameMatchKey(name: string): string {
-  return normaliseName(name).split(" ").filter(Boolean).sort().join(" ");
+  return [...nameTokens(name)].sort().join(" ");
 }
 
 export function birthYearOf(birthDate?: string): number | undefined {

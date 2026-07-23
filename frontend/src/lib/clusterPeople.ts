@@ -21,7 +21,7 @@
  * Pure and deterministic — unit-tested in clusterPeople.test.ts.
  */
 
-import { normaliseName, type ConnectedPerson } from "./backgroundCheck";
+import { nameTokens, type ConnectedPerson } from "./backgroundCheck";
 
 /** A ConnectedPerson optionally carrying normalised "scheme:value" identifiers. */
 export type ClusterablePerson = ConnectedPerson & { identifiers?: string[] };
@@ -59,7 +59,7 @@ export interface ClusterResult {
 // ---- name similarity -------------------------------------------------------
 
 function tokens(name: string): string[] {
-  return normaliseName(name).split(" ").filter(Boolean);
+  return nameTokens(name);
 }
 
 /** Dice coefficient over character bigrams — robust to spelling/transliteration drift. */
@@ -110,8 +110,8 @@ export interface NameSimilarity {
 }
 
 export function nameSimilarity(aName: string, bName: string): NameSimilarity {
-  const a = normaliseName(aName);
-  const b = normaliseName(bName);
+  const a = tokens(aName).join(" ");
+  const b = tokens(bName).join(" ");
   if (a === b) return { score: 1, note: "identical name" };
 
   const ta = tokens(aName);
