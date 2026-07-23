@@ -182,6 +182,17 @@ export function extractPersonSubgraph(
 }
 
 /**
+ * A person is a *current* connection to the entity if they hold at least one
+ * role with no end date. People whose every recorded role has ended are
+ * "former" connections; people with no recorded roles are treated as current
+ * (we cannot prove the connection has ended, so we do not hide them).
+ */
+export function isCurrentConnection(person: ConnectedPerson): boolean {
+  if (person.roles.length === 0) return true;
+  return person.roles.some((role) => !role.endDate);
+}
+
+/**
  * Extract natural persons + their roles from a BODS bundle.
  * Order: bundle insertion order of first appearance (subject-first for
  * a typical lookup bundle, mirroring cross_check target ordering).
