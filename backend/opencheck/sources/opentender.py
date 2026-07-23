@@ -285,6 +285,106 @@ class OpenTenderAdapter(SourceAdapter):
         return hits
 
     # ------------------------------------------------------------------
+    # Identifier-first dispatch (called by the lookup pipeline)
+    # ------------------------------------------------------------------
+
+    async def fetch_by_registration(
+        self, country: str, registration_number: str, legal_name: str = ""
+    ) -> list[SourceHit]:
+        """Return tenders in which the *identified* body took part.
+
+        This is the identifier-first path (issue #29): rather than an FTS
+        ``MATCH`` over body names — which conflates "Orange" with the genuine
+        but unrelated bodies "Red-Orange e.U." and "Orange controls s.r.o." —
+        it keys on the national registration number the pipeline already
+        derives from the GLEIF anchor (``siren`` / ``cz_ico`` / ``ee_registry_code``
+        / ``fi_business_id`` …). Keying on Orange S.A.'s SIREN returns only
+        Orange's telecoms contracts; keying on EDF's SIREN returns only EDF's
+        energy contracts — the precise inverse of the name search's noise.
+
+        The query hits the indexed ``body_ids`` table on ``id_value``, restricted
+        to the id types that genuinely carry registration numbers
+        (``ORGANIZATION_ID`` / ``TRADE_REGISTER`` / ``HEADER_ICO`` / ``TAX_ID``);
+        the internal keys (``SOURCE_ID`` / ``BVD_ID`` / ``ETALON_ID``) are excluded.
+        It is scoped to the subject's ``country`` (already stored ISO-normalised
+        in ``tenders.country`` — DIGIWHIST ``UK`` is persisted as ``GB``) so a
+        registration number cannot collide across national registries.
+
+        Returns an empty list in demo/stub mode (no DB), when the identifier or
+        country is absent, or when nothing matches — identifier dispatch has no
+        relevance fallback, by design. ``legal_name`` is accepted for parity
+        with the other ``fetch_by_registration`` adapters and is unused: the
+        identifier *is* the identity match, so no name gate is applied (a name
+        filter would wrongly drop a subsidiary whose registered name differs).
+        """
+        reg = (registration_number or "").strip()
+        cc = (country or "").strip().upper()
+        if not reg or not cc:
+            return []
+
+        conn = self._conn()
+        if conn is not None:
+            return await asyncio.to_thread(
+                self._db_fetch_by_registration, conn, cc, reg
+            )
+        # No live DB (demo/stub mode): identifier dispatch yields nothing —
+        # there is no fixture cache for the registration path.
+        return []
+
+    def _db_fetch_by_registration(
+        self, conn: sqlite3.Connection, country: str, registration_number: str
+    ) -> list[SourceHit]:
+        """Registration-keyed lookup, hardened against a corrupt DB that slipped
+        past the connect-time integrity check (defence in depth)."""
+        try:
+            return self._db_fetch_by_registration_impl(
+                conn, country, registration_number
+            )
+        except sqlite3.DatabaseError as exc:
+            logger.error(
+                "opentender: DB error during registration lookup (%s/%s) — "
+                "returning no results and dropping the connection so it "
+                "revalidates next request: %s",
+                country, registration_number, exc,
+            )
+            self._db = None
+            return []
+
+    def _db_fetch_by_registration_impl(
+        self, conn: sqlite3.Connection, country: str, registration_number: str
+    ) -> list[SourceHit]:
+        """Join ``body_ids`` (registration id types only) back to ``tenders``,
+        scoped by country, on any normalised form of the registration number."""
+        forms = _id_forms(registration_number)
+        if not forms:
+            return []
+
+        value_ph = ",".join("?" * len(forms))
+        type_ph = ",".join("?" * len(_REGISTRATION_ID_TYPES))
+        cur = conn.execute(
+            f"""
+            SELECT DISTINCT t.persistent_id, t.data
+            FROM body_ids b
+            JOIN tenders t ON t.persistent_id = b.persistent_id
+            WHERE b.id_value IN ({value_ph})
+              AND b.id_type IN ({type_ph})
+              AND t.country = ?
+            LIMIT 20
+            """,
+            (*forms, *_REGISTRATION_ID_TYPES, country),
+        )
+        rows = cur.fetchall()
+
+        hits: list[SourceHit] = []
+        for row in rows:
+            try:
+                tender = json.loads(row["data"])
+            except (json.JSONDecodeError, TypeError):
+                continue
+            hits.append(self._tender_hit(tender))
+        return hits
+
+    # ------------------------------------------------------------------
     # Fetch
     # ------------------------------------------------------------------
 
@@ -506,6 +606,42 @@ def warm_opentender_db() -> None:
 
 
 _LEI_SHAPE = re.compile(r"^[A-Z0-9]{20}$")
+
+#: DIGIWHIST ``body_ids.id_type`` values that genuinely carry a *national
+#: registration number* — the key a GLEIF-derived local id can match. Excludes
+#: ``SOURCE_ID`` / ``BVD_ID`` / ``ETALON_ID`` (internal DIGIWHIST / Bureau van
+#: Dijk house keys) and ``VAT`` (near-absent in the artifact — 6 rows — and a
+#: distinct scheme). ``ORGANIZATION_ID`` is the national registration number.
+_REGISTRATION_ID_TYPES: tuple[str, ...] = (
+    "ORGANIZATION_ID",
+    "TRADE_REGISTER",
+    "HEADER_ICO",
+    "TAX_ID",
+)
+
+_ID_DIGITS_RE = re.compile(r"\D+")
+
+
+def _id_forms(value: str) -> list[str]:
+    """Candidate comparison forms for a national registration number.
+
+    DIGIWHIST stores identifiers verbatim while GLEIF may publish the same
+    number spaced, punctuated or zero-padded. Exact string first, then
+    digits-only, then leading-zero-stripped — mirrors ``eiti._norm_forms`` so
+    ``0056.58.214`` matches ``005658214`` and ``01285743`` matches ``1285743``.
+    """
+    value = (value or "").strip()
+    if not value:
+        return []
+    forms = [value]
+    digits = _ID_DIGITS_RE.sub("", value)
+    if digits and digits not in forms:
+        forms.append(digits)
+    if digits:
+        stripped = digits.lstrip("0")
+        if stripped and stripped not in forms:
+            forms.append(stripped)
+    return forms
 
 
 def _walk_bodies(tender: dict[str, Any]):
