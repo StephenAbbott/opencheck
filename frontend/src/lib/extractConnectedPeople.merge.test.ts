@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { extractConnectedPeople, nameMatchKey } from "./backgroundCheck";
+import {
+  extractConnectedPeople,
+  isCurrentConnection,
+  nameMatchKey,
+} from "./backgroundCheck";
+import type { ConnectedPerson } from "./backgroundCheck";
 import { clusterConnectedPeople } from "./clusterPeople";
 import type { Stmt } from "./backgroundCheck";
 
@@ -97,5 +102,43 @@ describe("honorific-title stripping (HSBC-style Companies House names)", () => {
     );
     // merged outright — not merely surfaced as a cluster
     expect(clusterConnectedPeople(people).clusters).toHaveLength(0);
+  });
+});
+
+describe("isCurrentConnection", () => {
+  const withRoles = (roles: ConnectedPerson["roles"]): ConnectedPerson => ({
+    key: "k",
+    name: "X",
+    nationalities: [],
+    statementIds: [],
+    sources: [],
+    identifiers: [],
+    roles,
+  });
+
+  it("is current when at least one role has no end date", () => {
+    expect(
+      isCurrentConnection(
+        withRoles([
+          { label: "Former PSC", endDate: "2019-01-01" },
+          { label: "Director" }, // still current
+        ])
+      )
+    ).toBe(true);
+  });
+
+  it("is former when every role has ended", () => {
+    expect(
+      isCurrentConnection(
+        withRoles([
+          { label: "Ceased PSC", endDate: "2021-03-15" },
+          { label: "Resigned director", endDate: "2020-06-30" },
+        ])
+      )
+    ).toBe(false);
+  });
+
+  it("treats a person with no recorded roles as current (cannot prove otherwise)", () => {
+    expect(isCurrentConnection(withRoles([]))).toBe(true);
   });
 });

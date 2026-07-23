@@ -30,6 +30,7 @@ import {
 import {
   extractConnectedPeople,
   extractPersonSubgraph,
+  isCurrentConnection,
   type ConnectedPerson,
   type Stmt,
 } from "../../lib/backgroundCheck";
@@ -73,6 +74,7 @@ export default function BackgroundCheckPanel({
   const [checkAllProgress, setCheckAllProgress] = useState<
     { done: number; total: number } | null
   >(null);
+  const [showFormer, setShowFormer] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,9 +97,19 @@ export default function BackgroundCheckPanel({
     () => (statements ? extractConnectedPeople(statements) : []),
     [statements]
   );
-  const { clusters, singletons } = useMemo(
-    () => clusterConnectedPeople(people),
+  // Current connections front and centre; people whose every role has ended
+  // are "former" connections, tucked behind a toggle so the list stays current.
+  const currentPeople = useMemo(
+    () => people.filter(isCurrentConnection),
     [people]
+  );
+  const formerPeople = useMemo(
+    () => people.filter((p) => !isCurrentConnection(p)),
+    [people]
+  );
+  const { clusters, singletons } = useMemo(
+    () => clusterConnectedPeople(currentPeople),
+    [currentPeople]
   );
   const personByKey = useMemo(
     () =>
@@ -148,7 +160,7 @@ export default function BackgroundCheckPanel({
   const runAll = async () => {
     setCheckingAll(true);
     try {
-      const targets = people
+      const targets = currentPeople
         .filter((p) => checks[p.key]?.status !== "done")
         .slice(0, CHECK_ALL_CAP);
       setCheckAllProgress({ done: 0, total: targets.length });
@@ -213,7 +225,8 @@ export default function BackgroundCheckPanel({
         <>
           <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
             <p className="text-[12px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted">
-              {people.length} connected {people.length === 1 ? "person" : "people"}
+              {currentPeople.length} current{" "}
+              {currentPeople.length === 1 ? "connection" : "connections"}
             </p>
             <span className="flex items-center gap-2">
               {checkAllProgress && (
@@ -233,7 +246,7 @@ export default function BackgroundCheckPanel({
               >
                 {checkingAll
                   ? "Checking…"
-                  : `Check ${people.length > CHECK_ALL_CAP ? `first ${CHECK_ALL_CAP}` : "all"}`}
+                  : `Check ${currentPeople.length > CHECK_ALL_CAP ? `first ${CHECK_ALL_CAP}` : "all"}`}
               </button>
             </span>
           </div>
@@ -290,6 +303,45 @@ export default function BackgroundCheckPanel({
               );
             })}
           </ul>
+
+          {formerPeople.length > 0 && (
+            <div className="mt-5">
+              <button
+                type="button"
+                onClick={() => setShowFormer((v) => !v)}
+                aria-expanded={showFormer}
+                className="text-[12px] text-oo-muted underline hover:no-underline"
+              >
+                {showFormer ? "Hide" : "Show"} {formerPeople.length} former{" "}
+                {formerPeople.length === 1 ? "connection" : "connections"} (roles
+                that have ended)
+              </button>
+              {showFormer && (
+                <ul className="mt-3 space-y-4 list-none p-0 m-0 opacity-80">
+                  {formerPeople.map((person) => (
+                    <li key={person.key}>
+                      <PersonCard
+                        person={person}
+                        state={checks[person.key] ?? { status: "idle" }}
+                        onCheck={() => runCheck(person)}
+                        onToggle={() => toggleOpen(person.key)}
+                        onOpenReport={
+                          onOpenReport
+                            ? () => onOpenReport(person.name, person.birthYear)
+                            : undefined
+                        }
+                        onDownloadBods={
+                          statements
+                            ? () => downloadPersonBods(statements, person)
+                            : undefined
+                        }
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </>
       )}
     </section>
