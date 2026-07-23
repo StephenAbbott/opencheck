@@ -671,6 +671,22 @@ _REGISTRY_SOURCE_INDEX: dict[str, _RegistrySource] = {
     s.source_id: s for s in _REGISTRY_SOURCES
 }
 
+# Official company registers emit officers / PSCs / beneficial owners into the
+# entity bundle; OpenCorporates likewise contributes officer person statements.
+# These "person-capable" sources are always deepened, even past the deepen_top
+# cap — otherwise the connected-people list depends on a nondeterministic
+# completion-order race (issue #73). The leak/sanctions list-search sources
+# (OpenSanctions, OpenAleph, EveryPolitician) are deliberately NOT here: they
+# have no registry hit builder, can be numerous/slow, and are not authoritative
+# registers.
+_PERSON_CAPABLE_SOURCES: frozenset[str] = frozenset(_REGISTRY_SOURCE_INDEX) | {
+    "opencorporates",
+    # Wikidata is not a company register but carries person identity data
+    # (Q-ids, the identifier spine for people) and contributes person records
+    # to the bundle, so it is kept in the always-deepen set too.
+    "wikidata",
+}
+
 
 def _local_id_for(spec: _RegistrySource, derived: dict[str, str]) -> str | None:
     for key in spec.derived_keys:
@@ -1413,15 +1429,10 @@ async def _lookup_pipeline(
     # ("N entities · M relationships") before the source is deepened on demand.
     bods_breakdown: dict[str, dict[str, int]] = {}
 
-    deepen_pairs = deepened_bundles[:deepen_top]
-    # Stored-bundle sources (GLEIF, UK PSC) are always deepened, even past the
-    # top-N cap, so a curated example never drops its canonical OO graph behind
-    # other hits.
-    _seen_pairs = set(deepen_pairs)
-    for pair in deepened_bundles[deepen_top:]:
-        if pair not in _seen_pairs and _stored_bundle_key(pair[0], ctx) == pair[1]:
-            deepen_pairs.append(pair)
-            _seen_pairs.add(pair)
+    # Person-capable registers + stored OO bundles are always deepened, even
+    # past the top-N cap, so the connected-people list and canonical graphs
+    # don't depend on a nondeterministic completion-order race (issue #73).
+    deepen_pairs = _select_deepen_pairs(deepened_bundles, deepen_top, ctx)
     deepen_raw = await asyncio.gather(
         *[
             # Deepen usually replays the adapter's cached fetch, but give it
@@ -2155,6 +2166,37 @@ def _stored_bundle_hit(source_id: str, key: str, ctx: "_LookupCtx") -> SourceHit
         summary, ids = f"GB-COH {key}", {"gb_coh": key}
     return _hit(source_id, key, name=ctx.legal_name or "",
                 summary=summary, identifiers=ids, raw={})
+
+
+def _select_deepen_pairs(
+    deepened_bundles: list[tuple[str, str]],
+    deepen_top: int,
+    ctx: "_LookupCtx",
+) -> list[tuple[str, str]]:
+    """Choose which (source_id, hit_id) bundles to deepen (map + risk-assess).
+
+    The top ``deepen_top`` by arrival order, plus two carve-outs that are always
+    deepened even past the cap so results don't depend on a nondeterministic
+    completion-order race (issue #73):
+
+    * person-capable sources — official company registers + OpenCorporates,
+      which emit the officers / PSCs / beneficial owners the people list is
+      built from;
+    * stored OO bundles (GLEIF, UK PSC), whose canonical graph must never drop
+      behind other hits.
+
+    Arrival order is preserved and duplicates are removed, so the selection is a
+    deterministic function of the (deduplicated) input.
+    """
+    deepen_pairs = list(deepened_bundles[:deepen_top])
+    seen = set(deepen_pairs)
+    for pair in deepened_bundles[deepen_top:]:
+        if pair in seen:
+            continue
+        if pair[0] in _PERSON_CAPABLE_SOURCES or _stored_bundle_key(pair[0], ctx) == pair[1]:
+            deepen_pairs.append(pair)
+            seen.add(pair)
+    return deepen_pairs
 
 
 async def _count_only(source_id: str, hit_id: str) -> dict[str, int] | None:

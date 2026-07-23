@@ -506,3 +506,35 @@ def test_build_derived_skips_malformed_local_id() -> None:
     _build_derived(ctx, BV_RA_CODE)  # Bolagsverket — strict normaliser
     assert "se_org_number" not in ctx.derived
     assert ctx.derived["lei"] == "X" * 20
+
+
+def test_select_deepen_pairs_keeps_person_sources_past_cap():
+    """Register / person sources are never dropped behind the deepen_top cap,
+    and the selection is deterministic (issue #73)."""
+    from opencheck.routers.lookup import (
+        _PERSON_CAPABLE_SOURCES,
+        _select_deepen_pairs,
+    )
+
+    assert "companies_house" in _PERSON_CAPABLE_SOURCES
+    assert "opencorporates" in _PERSON_CAPABLE_SOURCES
+    assert "wikidata" in _PERSON_CAPABLE_SOURCES
+    # Leak / sanctions list-search sources must NOT be carved out.
+    assert "openaleph" not in _PERSON_CAPABLE_SOURCES
+    assert "opensanctions" not in _PERSON_CAPABLE_SOURCES
+
+    bundles = [
+        ("gleif", "L1"),
+        ("wikidata", "Q"),
+        ("wikirate", "w"),
+        ("openaleph", "a"),
+        ("openaleph", "b"),            # fills the top-5 by arrival order
+        ("companies_house", "GB123"),  # 6th - dropped by the old hard cap
+        ("openaleph", "c"),            # 7th - not person-capable, stays dropped
+    ]
+    pairs = _select_deepen_pairs(bundles, 5, None)
+
+    assert pairs[:5] == bundles[:5]                      # top-5 preserved, in order
+    assert ("companies_house", "GB123") in pairs         # register carved in past cap
+    assert ("openaleph", "c") not in pairs               # non-register 7th stays out
+    assert _select_deepen_pairs(bundles, 5, None) == pairs  # deterministic
