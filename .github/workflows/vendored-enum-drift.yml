@@ -1,7 +1,8 @@
 name: Drift checks
 
 # Fails the build when generated/vendored artefacts drift from their source:
-#  - the vendored Companies House enumerations vs upstream api-enumerations, and
+#  - the vendored Companies House enumerations vs upstream api-enumerations,
+#  - the vendored FtM edge-schema table vs the installed followthemoney model, and
 #  - the OKF knowledge bundle's generated concepts vs the live source registry.
 # Runs on every push/PR, and weekly so upstream enum changes are caught even when
 # nobody has pushed. To fix a failure, run the named script locally (without
@@ -39,4 +40,20 @@ jobs:
         working-directory: backend
       - name: OKF bundle conformant + in sync with the registry
         run: uv run --no-dev python scripts/generate_okf.py --check
+        working-directory: backend
+
+  ftm-edges:
+    # The FtM check imports opencheck.bods.mapper + followthemoney, so it needs
+    # the backend deps with the ftm extra (pyicu build: g++/libicu-dev/pkg-config).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v5
+      - name: System deps for the ftm extra (followthemoney -> pyicu)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends g++ libicu-dev pkg-config
+      - name: Install backend (with ftm extra)
+        run: uv sync --no-dev --extra ftm
+        working-directory: backend
+      - name: Vendored FtM edge table matches the followthemoney model
+        run: uv run --no-dev python scripts/check_ftm_edges.py --check
         working-directory: backend
