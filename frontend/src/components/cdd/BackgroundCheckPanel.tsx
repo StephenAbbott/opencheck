@@ -30,10 +30,11 @@ import {
 import {
   extractConnectedPeople,
   extractPersonSubgraph,
-  possiblySamePeople,
   type ConnectedPerson,
   type Stmt,
 } from "../../lib/backgroundCheck";
+import { clusterConnectedPeople } from "../../lib/clusterPeople";
+import { ClusterGroup } from "./ClusterGroup";
 import { RiskChip } from "../risk/RiskChip";
 
 /** Cap for the "Check all" convenience action — keeps the fan-out to
@@ -94,7 +95,26 @@ export default function BackgroundCheckPanel({
     () => (statements ? extractConnectedPeople(statements) : []),
     [statements]
   );
-  const samePairs = useMemo(() => possiblySamePeople(people), [people]);
+  const { clusters, singletons } = useMemo(
+    () => clusterConnectedPeople(people),
+    [people]
+  );
+  const personByKey = useMemo(
+    () =>
+      Object.fromEntries(people.map((p) => [p.key, p])) as Record<
+        string,
+        ConnectedPerson
+      >,
+    [people]
+  );
+  const nameByKey = useMemo(
+    () =>
+      Object.fromEntries(people.map((p) => [p.key, p.name])) as Record<
+        string,
+        string
+      >,
+    [people]
+  );
 
   const runCheck = async (person: ConnectedPerson) => {
     setChecks((c) => ({ ...c, [person.key]: { status: "running" } }));
@@ -217,47 +237,58 @@ export default function BackgroundCheckPanel({
               </button>
             </span>
           </div>
-          {samePairs.length > 0 && (
-            <div className="mb-4 rounded-oo border border-amber-200 bg-amber-50 px-4 py-3">
-              <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-amber-800 mb-1">
-                Possibly the same person — review
-              </p>
-              <ul className="list-none p-0 m-0 space-y-0.5">
-                {samePairs.map((pair) => (
-                  <li
-                    key={`${pair.a}|${pair.b}`}
-                    className="text-[12px] text-amber-900 leading-[1.6]"
-                  >
-                    Two entries named{" "}
-                    <span className="font-medium">{pair.name}</span> ({pair.reason}
-                    ) — they are listed separately below; review before treating
-                    them as one individual.
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
           <ul className="space-y-4 list-none p-0 m-0">
-            {people.map((person) => (
-              <li key={person.key}>
-                <PersonCard
-                  person={person}
-                  state={checks[person.key] ?? { status: "idle" }}
-                  onCheck={() => runCheck(person)}
-                  onToggle={() => toggleOpen(person.key)}
-                  onOpenReport={
-                    onOpenReport
-                      ? () => onOpenReport(person.name, person.birthYear)
-                      : undefined
-                  }
-                  onDownloadBods={
-                    statements
-                      ? () => downloadPersonBods(statements, person)
-                      : undefined
-                  }
-                />
+            {clusters.map((cluster) => (
+              <li key={cluster.keys.join("|")}>
+                <ClusterGroup cluster={cluster} nameByKey={nameByKey}>
+                  {cluster.keys.map((key) => {
+                    const person = personByKey[key];
+                    return (
+                      <PersonCard
+                        key={key}
+                        person={person}
+                        state={checks[key] ?? { status: "idle" }}
+                        onCheck={() => runCheck(person)}
+                        onToggle={() => toggleOpen(key)}
+                        onOpenReport={
+                          onOpenReport
+                            ? () => onOpenReport(person.name, person.birthYear)
+                            : undefined
+                        }
+                        onDownloadBods={
+                          statements
+                            ? () => downloadPersonBods(statements, person)
+                            : undefined
+                        }
+                      />
+                    );
+                  })}
+                </ClusterGroup>
               </li>
             ))}
+            {singletons.map((key) => {
+              const person = personByKey[key];
+              return (
+                <li key={key}>
+                  <PersonCard
+                    person={person}
+                    state={checks[key] ?? { status: "idle" }}
+                    onCheck={() => runCheck(person)}
+                    onToggle={() => toggleOpen(key)}
+                    onOpenReport={
+                      onOpenReport
+                        ? () => onOpenReport(person.name, person.birthYear)
+                        : undefined
+                    }
+                    onDownloadBods={
+                      statements
+                        ? () => downloadPersonBods(statements, person)
+                        : undefined
+                    }
+                  />
+                </li>
+              );
+            })}
           </ul>
         </>
       )}
