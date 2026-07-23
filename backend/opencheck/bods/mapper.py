@@ -3532,7 +3532,103 @@ def _ftm_percentage(op: dict[str, Any]) -> float | None:
         return None
 
 
-def _ftm_nested_schemas(
+# ----------------------------------------------------------------------
+# Vendored FtM edge-schema table (model-driven edge handling)
+# ----------------------------------------------------------------------
+# Vendored from followthemoney 4.10.0: every schema declared with
+# ``edge: true`` in the FtM model, with its declared source/target property
+# names. Nested API payloads (yente ``GET /entities/{id}``) embed these edge
+# entities under the *reverse* property names on adjacent entities — on BOTH
+# sides of the edge. A Company carries Ownership edges under
+# ``ownershipOwner``/``ownershipAsset``; a Person carries Directorship edges
+# under ``directorshipDirector``, Family under ``familyPerson``, Associate
+# under ``associates``, Occupancy under ``positionOccupancies``. The mapper
+# must therefore recognise an edge entity wherever it appears and never treat
+# the edge wrapper itself as a party (doing so emitted phantom entity
+# statements named after edge captions, e.g. "director of Acme Ltd").
+#
+# Drift guard: ``scripts/check_ftm_edges.py`` (CI: vendored-enum-drift.yml,
+# ``ftm-edges`` job) compares this table against the installed followthemoney
+# model, so upstream schema changes fail the build instead of silently
+# desynchronising — same pattern as the vendored CH enums.
+#
+# The third element is OpenCheck's own BODS mapping policy, not FtM data:
+#   "ownership"      → shareholding (+ percentage → share.exact)
+#   "directorship"   → role-based interest (seniorManagingOfficial default)
+#   "membership"     → otherInfluenceOrControl
+#   "representation" → nominee (the agent acts for the client)
+#   "unknown"        → unknownInterest
+#   None             → no BODS relationship statement. Family/Associate are
+#                      screening context, not ownership-or-control; Occupancy
+#                      is consumed by person_check (PEP positions); the rest
+#                      are out of BODS scope.
+_FTM_EDGE_SCHEMAS: dict[str, tuple[str, str, str | None]] = {
+    # schema:           (source_prop,   target_prop,    bods_policy)
+    "Ownership":         ("owner",       "asset",        "ownership"),
+    "Directorship":      ("director",    "organization", "directorship"),
+    "Membership":        ("member",      "organization", "membership"),
+    "Representation":    ("agent",       "client",       "representation"),
+    "UnknownLink":       ("subject",     "object",       "unknown"),
+    "Family":            ("person",      "relative",     None),
+    "Associate":         ("person",      "associate",    None),
+    "Employment":        ("employee",    "employer",     None),
+    "Occupancy":         ("holder",      "post",         None),
+    "Succession":        ("predecessor", "successor",    None),
+    "Payment":           ("payer",       "beneficiary",  None),
+    "Debt":              ("debtor",      "creditor",     None),
+    "ContractAward":     ("contract",    "supplier",     None),
+    "CourtCaseParty":    ("party",       "case",         None),
+    "Documentation":     ("document",    "entity",       None),
+    "ProjectParticipant": ("participant", "project",     None),
+}
+
+
+def _ftm_edge_interest(policy: str, edge_props: dict[str, Any]) -> dict[str, Any]:
+    """Build the BODS interest dict for a mapped FtM edge entity."""
+    role = (edge_props.get("role") or [""])[0] or ""
+    if policy == "ownership":
+        interest: dict[str, Any] = {
+            "type": "shareholding",
+            "directOrIndirect": "direct",
+            "beneficialOwnershipOrControl": True,
+        }
+        pct = _ftm_percentage(edge_props)
+        if pct is not None:
+            interest["share"] = {"exact": pct}
+        return interest
+
+    if policy == "directorship":
+        interest = {
+            "type": _FTM_ROLE_TO_INTEREST_TYPE.get(
+                role.lower().strip(), "seniorManagingOfficial"
+            )
+        }
+        if role:
+            interest["details"] = role
+    elif policy == "membership":
+        interest = {"type": "otherInfluenceOrControl", "details": role or "FtM Membership"}
+    elif policy == "representation":
+        interest = {"type": "nominee"}
+        if role:
+            interest["details"] = role
+    else:  # "unknown"
+        interest = {"type": "unknownInterest"}
+        if role:
+            interest["details"] = role
+
+    start = (edge_props.get("startDate") or [None])[0]
+    if start:
+        interest["startDate"] = start
+    end = (edge_props.get("endDate") or [None])[0]
+    if end:
+        interest["endDate"] = end
+    return interest
+
+
+_FTM_SUBJECT = object()  # sentinel: this edge endpoint is the payload subject
+
+
+def _ftm_edge_relationships(
     payload: dict[str, Any],
     subject_sid: str,
     subject_type: str,
@@ -3540,24 +3636,25 @@ def _ftm_nested_schemas(
     source_url_builder: Any,
     result: BODSBundle,
 ) -> None:
-    """Process nested Ownership/Directorship FtM objects in the entity payload.
+    """Map nested FtM *edge entities* to BODS relationship statements.
 
-    OpenSanctions embeds relationship data as nested schema objects under
-    these property keys:
+    Scans every property value of ``payload`` for dicts whose ``schema`` is in
+    the vendored ``_FTM_EDGE_SCHEMAS`` table (rather than hand-listing reverse
+    property keys), then resolves the edge's declared source/target sides:
 
-    * ``ownershipOwner``  — Ownership entries where this entity is the *owner*
-      (i.e. it holds stakes in other entities).  The ``asset`` side is a nested
-      entity dict; the ``owner`` side is a plain string ID (the subject).
-    * ``ownershipAsset``  — Ownership entries where this entity is the *asset*
-      (i.e. it is owned by others).  The ``owner`` side is a nested entity dict;
-      the ``asset`` side is a plain string ID (the subject).
-    * ``directorshipOrganization`` — Directorship entries where this entity is
-      the *organization* being directed.  The ``director`` side is a nested
-      person/entity dict.
+    * a nested party dict on a side → its own entity/person statement;
+    * the subject's own id (string or re-nested dict), or an otherwise-empty
+      side opposite a populated one → the subject statement (yente renders the
+      subject's side of an edge as a bare string id, or omits it);
+    * edge schemas with policy ``None`` emit nothing — and, crucially, the
+      edge wrapper itself is never mistaken for a party.
 
-    For each resolved pair we emit a BODS entity/person statement for the
-    related party and a relationship statement linking subject and party.
+    Direction rule: the BODS ``interestedParty`` is the edge *source*
+    (owner / director / member / agent) and the BODS ``subject`` is the edge
+    *target* (asset / organization / client) — this matches FtM edge
+    semantics for every mapped schema.
     """
+    subject_ftm_id = payload.get("id")
     props = payload.get("properties") or {}
     subject_url: str | None = (
         source_url_builder(payload.get("id", ""))
@@ -3565,111 +3662,116 @@ def _ftm_nested_schemas(
         else None
     )
 
-    # ---- ownershipOwner: subject is the OWNER; asset is a subsidiary --------
-    for entry in props.get("ownershipOwner") or []:
-        if not isinstance(entry, dict):
+    seen_edge_ids: set[str] = set()
+    for values in props.values():
+        if not isinstance(values, list):
             continue
-        op = entry.get("properties") or {}
-        for asset in op.get("asset") or []:
-            if not isinstance(asset, dict):
+        for entry in values:
+            if not isinstance(entry, dict):
                 continue
-            asset_stmt = _ftm_statement(
-                asset, source_id=source_id, source_url_builder=source_url_builder
-            )
-            if asset_stmt is None:
+            schema = entry.get("schema") or ""
+            spec = _FTM_EDGE_SCHEMAS.get(schema)
+            if spec is None:
                 continue
-            result.statements.append(asset_stmt)
-            pct = _ftm_percentage(op)
-            interest: dict[str, Any] = {
-                "type": "shareholding",
-                "directOrIndirect": "direct",
-                "beneficialOwnershipOrControl": True,
-            }
-            if pct is not None:
-                interest["share"] = {"exact": pct}
-            rel = make_relationship_statement(
-                source_id=source_id,
-                local_id=entry.get("id") or f"own:{payload.get('id')}:{asset.get('id')}",
-                subject_statement_id=asset_stmt["statementId"],
-                interested_party_statement_id=subject_sid,
-                interested_party_type=subject_type,
-                interests=[interest],
-                source_url=subject_url,
-            )
-            result.statements.append(rel)
+            source_prop, target_prop, policy = spec
+            edge_id = entry.get("id")
+            if edge_id:
+                if edge_id in seen_edge_ids:
+                    continue  # same edge nested under two property keys
+                seen_edge_ids.add(edge_id)
+            if policy is None:
+                continue
+            edge_props = entry.get("properties") or {}
 
-    # ---- ownershipAsset: subject is the ASSET; owner holds a stake ----------
-    for entry in props.get("ownershipAsset") or []:
-        if not isinstance(entry, dict):
-            continue
-        op = entry.get("properties") or {}
-        for owner in op.get("owner") or []:
-            if not isinstance(owner, dict):
-                continue
-            owner_stmt = _ftm_statement(
-                owner, source_id=source_id, source_url_builder=source_url_builder
-            )
-            if owner_stmt is None:
-                continue
-            result.statements.append(owner_stmt)
-            owner_type = "entity" if owner_stmt["recordType"] == "entity" else "person"
-            pct = _ftm_percentage(op)
-            interest = {
-                "type": "shareholding",
-                "directOrIndirect": "direct",
-                "beneficialOwnershipOrControl": True,
-            }
-            if pct is not None:
-                interest["share"] = {"exact": pct}
-            rel = make_relationship_statement(
-                source_id=source_id,
-                local_id=entry.get("id") or f"own:{owner.get('id')}:{payload.get('id')}",
-                subject_statement_id=subject_sid,
-                interested_party_statement_id=owner_stmt["statementId"],
-                interested_party_type=owner_type,
-                interests=[interest],
-                source_url=subject_url,
-            )
-            result.statements.append(rel)
+            def _side(prop_name: str) -> tuple[list[dict[str, Any]], bool]:
+                parties: list[dict[str, Any]] = []
+                has_subject = False
+                for value in edge_props.get(prop_name) or []:
+                    if isinstance(value, dict):
+                        if value.get("id") and value.get("id") == subject_ftm_id:
+                            has_subject = True
+                        elif (value.get("schema") or "") in _FTM_EDGE_SCHEMAS:
+                            continue  # never treat an edge entity as a party
+                        else:
+                            parties.append(value)
+                    elif isinstance(value, str) and value == subject_ftm_id:
+                        has_subject = True
+                return parties, has_subject
 
-    # ---- directorshipOrganization: subject is the ORG; director holds role --
-    for entry in props.get("directorshipOrganization") or []:
-        if not isinstance(entry, dict):
-            continue
-        dp = entry.get("properties") or {}
-        role = (dp.get("role") or [""])[0]
-        interest_type = _FTM_ROLE_TO_INTEREST_TYPE.get(
-            role.lower().strip(), "seniorManagingOfficial"
-        )
-        for director in dp.get("director") or []:
-            if not isinstance(director, dict):
+            src_parties, src_is_subject = _side(source_prop)
+            tgt_parties, tgt_is_subject = _side(target_prop)
+            # yente often omits the subject's side entirely — default an
+            # empty side to the subject when the opposite side has parties.
+            if not src_parties and not src_is_subject and tgt_parties:
+                src_is_subject = True
+            if not tgt_parties and not tgt_is_subject and src_parties:
+                tgt_is_subject = True
+
+            src_nodes: list[Any] = list(src_parties)
+            if src_is_subject:
+                src_nodes.append(_FTM_SUBJECT)
+            tgt_nodes: list[Any] = list(tgt_parties)
+            if tgt_is_subject:
+                tgt_nodes.append(_FTM_SUBJECT)
+            if not src_nodes or not tgt_nodes:
                 continue
-            dir_stmt = _ftm_statement(
-                director, source_id=source_id, source_url_builder=source_url_builder
-            )
-            if dir_stmt is None:
-                continue
-            result.statements.append(dir_stmt)
-            dir_type = "entity" if dir_stmt["recordType"] == "entity" else "person"
-            interest = {"type": interest_type}
-            if role:
-                interest["details"] = role
-            start = (dp.get("startDate") or [None])[0]
-            if start:
-                interest["startDate"] = start
-            end = (dp.get("endDate") or [None])[0]
-            if end:
-                interest["endDate"] = end
-            rel = make_relationship_statement(
-                source_id=source_id,
-                local_id=entry.get("id") or f"dir:{director.get('id')}:{payload.get('id')}",
-                subject_statement_id=subject_sid,
-                interested_party_statement_id=dir_stmt["statementId"],
-                interested_party_type=dir_type,
-                interests=[interest],
-                source_url=subject_url,
-            )
-            result.statements.append(rel)
+
+            interest = _ftm_edge_interest(policy, edge_props)
+
+            for src in src_nodes:
+                for tgt in tgt_nodes:
+                    if src is _FTM_SUBJECT and tgt is _FTM_SUBJECT:
+                        continue
+                    src_ref = (
+                        subject_ftm_id if src is _FTM_SUBJECT else src.get("id", "?")
+                    )
+                    tgt_ref = (
+                        subject_ftm_id if tgt is _FTM_SUBJECT else tgt.get("id", "?")
+                    )
+                    if src_ref == tgt_ref:
+                        continue
+
+                    if src is _FTM_SUBJECT:
+                        ip_sid, ip_type = subject_sid, subject_type
+                    else:
+                        stmt = _ftm_statement(
+                            src,
+                            source_id=source_id,
+                            source_url_builder=source_url_builder,
+                        )
+                        if stmt is None:
+                            continue
+                        result.statements.append(stmt)
+                        ip_sid = stmt["statementId"]
+                        ip_type = (
+                            "entity" if stmt["recordType"] == "entity" else "person"
+                        )
+                    if tgt is _FTM_SUBJECT:
+                        subj_sid = subject_sid
+                    else:
+                        stmt = _ftm_statement(
+                            tgt,
+                            source_id=source_id,
+                            source_url_builder=source_url_builder,
+                        )
+                        if stmt is None:
+                            continue
+                        result.statements.append(stmt)
+                        subj_sid = stmt["statementId"]
+
+                    # Composite local id: stays stable per edge AND unique per
+                    # endpoint pair when one edge fans out to several parties.
+                    local_id = f"{edge_id or schema.lower()}:{src_ref}:{tgt_ref}"
+                    rel = make_relationship_statement(
+                        source_id=source_id,
+                        local_id=local_id,
+                        subject_statement_id=subj_sid,
+                        interested_party_statement_id=ip_sid,
+                        interested_party_type=ip_type,
+                        interests=[dict(interest)],
+                        source_url=subject_url,
+                    )
+                    result.statements.append(rel)
 
 
 def map_ftm(
@@ -3697,23 +3799,25 @@ def map_ftm(
     subject_type = "entity" if subject["recordType"] == "entity" else "person"
 
     # --- Legacy flat-property relationships (older FtM API shape) -----------
-    # Some sources still use flat property arrays (``ownersOf``, ``owners``,
-    # ``directorshipDirector``, ``associates``) rather than the nested
-    # Ownership/Directorship schema objects.  Handle them here.
-    # ``directorshipOrganization`` is intentionally absent; newer payloads put
-    # it as a nested Directorship object, handled by _ftm_nested_schemas below.
+    # Some sources still use flat property arrays (``ownersOf``, ``owners``)
+    # whose entries are the related party dicts themselves. Handle them here.
+    # Anything whose entries are nested *edge entities* (Ownership,
+    # Directorship, Associate, ...) is handled generically by
+    # _ftm_edge_relationships below via the vendored _FTM_EDGE_SCHEMAS table —
+    # do NOT add reverse-property keys like ``directorshipDirector`` back to
+    # this table (doing so emitted phantom entities named after edge captions).
     props = payload.get("properties") or {}
     legacy_control_props = {
         "ownersOf": "shareholding",
         "owners": "shareholding",
-        "directorshipDirector": "appointmentOfBoard",
-        "associates": "otherInfluenceOrControl",
     }
     for key, interest_type in legacy_control_props.items():
         for related in props.get(key) or []:
             # FtM emits either string IDs or nested entity dicts.
             if not isinstance(related, dict):
                 continue
+            if (related.get("schema") or "") in _FTM_EDGE_SCHEMAS:
+                continue  # edge entity — handled by _ftm_edge_relationships
             related_stmt = _ftm_statement(
                 related,
                 source_id=source_id,
@@ -3753,9 +3857,11 @@ def map_ftm(
             )
             result.statements.append(rel)
 
-    # --- Nested Ownership/Directorship schema objects (current FtM shape) ----
-    # ownershipOwner, ownershipAsset, directorshipOrganization
-    _ftm_nested_schemas(
+    # --- Nested edge entities (current FtM/yente shape) ----------------------
+    # Any edge schema from _FTM_EDGE_SCHEMAS, wherever it is nested
+    # (ownershipOwner, ownershipAsset, directorshipOrganization,
+    # directorshipDirector, membershipMember, agencyClient, ...).
+    _ftm_edge_relationships(
         payload,
         subject_sid=subject_sid,
         subject_type=subject_type,
