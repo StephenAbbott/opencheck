@@ -321,3 +321,120 @@ def test_is_matchable_name_dense_script_fix():
     assert not is_matchable_name(None)
     # A single dense character is still too generic.
     assert not is_matchable_name("金")
+
+
+# --- Phase E: transliterated alternates + language codes --------------------
+
+from opencheck.bods.mapper import make_entity_statement, make_person_statement  # noqa: E402
+from opencheck.sources.wikidata import _summarise_bindings  # noqa: E402
+
+
+def test_transliterate_display():
+    assert names.transliterate_display("Газпром") == "Gazprom"
+    assert names.transliterate_display("ЛУКОЙЛ") == "LUKOIL"
+    assert names.transliterate_display("ΑΛΦΑ Τράπεζα") == "ALFA Trapeza"
+    # No Cyrillic/Greek → nothing to add
+    assert names.transliterate_display("Plain Latin Ltd") is None
+    assert names.transliterate_display("Café Sté") is None
+    assert names.transliterate_display("") is None
+    assert names.transliterate_display(None) is None
+
+
+def test_normalise_language_code():
+    assert names.normalise_language_code("en") == "eng"
+    assert names.normalise_language_code("el") == "ell"
+    assert names.normalise_language_code("zh-Hans") == "zho"
+    assert names.normalise_language_code("xx") is None
+    assert names.normalise_language_code("") is None
+    assert names.normalise_language_code(None) is None
+
+
+def test_entity_statement_gains_transliterated_alternate():
+    stmt = make_entity_statement(
+        source_id="wikidata", local_id="Q102673", name="Аэрофлот"
+    )
+    assert "Aeroflot" in stmt["recordDetails"]["alternateNames"]
+    # Latin names: no alternateNames key manufactured
+    plain = make_entity_statement(
+        source_id="wikidata", local_id="Q1", name="Plain Ltd"
+    )
+    assert "alternateNames" not in plain["recordDetails"]
+
+
+def test_person_statement_gains_typed_transliteration():
+    stmt = make_person_statement(
+        source_id="wikidata", local_id="Q000", full_name="Алексей Миллер"
+    )
+    entries = stmt["recordDetails"]["names"]
+    assert entries[0] == {"type": "legal", "fullName": "Алексей Миллер"}
+    assert {"type": "transliteration", "fullName": "Aleksei Miller"} in entries
+    # Latin person: only the legal entry
+    plain = make_person_statement(
+        source_id="wikidata", local_id="Q001", full_name="Jane Smith"
+    )
+    assert plain["recordDetails"]["names"] == [
+        {"type": "legal", "fullName": "Jane Smith"}
+    ]
+
+
+def _label_row(label: str, lang: str) -> dict:
+    return {
+        "label": {"value": label},
+        "labelLang": {"value": lang},
+        "instance": {"value": "http://www.wikidata.org/entity/Q4830453"},
+        "instanceLabel": {"value": "business"},
+    }
+
+
+def test_wikidata_summary_captures_multilingual_labels():
+    rows = [
+        _label_row("Газпром", "ru"),
+        _label_row("Gazprom", "en"),
+        _label_row("Γκαζπρόμ", "el"),
+    ]
+    summary = _summarise_bindings("Q102180", rows)
+    assert summary["label"] == "Gazprom"  # English preferred for display
+    langs = {e["language"]: e["label"] for e in summary["labels"]}
+    assert langs == {"ru": "Газпром", "en": "Gazprom", "el": "Γκαζπρόμ"}
+
+
+def test_wikidata_summary_single_language_unchanged():
+    # Old-shape fixtures (label rows without labelLang) still work.
+    rows = [{
+        "label": {"value": "Acme Corp"},
+        "instance": {"value": "http://www.wikidata.org/entity/Q4830453"},
+        "instanceLabel": {"value": "business"},
+    }]
+    summary = _summarise_bindings("Q1", rows)
+    assert summary["label"] == "Acme Corp"
+    assert summary["labels"] == []
+
+
+def test_map_wikidata_multilingual_alternate_names():
+    from opencheck.bods import map_wikidata
+
+    bundle = {
+        "source_id": "wikidata",
+        "qid": "Q102180",
+        "summary": {
+            "qid": "Q102180",
+            "label": "Gazprom",
+            "labels": [
+                {"language": "el", "label": "Γκαζπρόμ"},
+                {"language": "en", "label": "Gazprom"},
+                {"language": "ru", "label": "Газпром"},
+            ],
+            "is_person": False,
+            "is_entity": True,
+            "instance_of": [{"qid": "Q4830453", "label": "business"}],
+            "identifiers": {},
+            "positions": [],
+            "citizenships": [],
+            "parent_orgs": [],
+        },
+    }
+    result = map_wikidata(bundle)
+    ent = next(s for s in result.statements if s["recordType"] == "entity")
+    alts = ent["recordDetails"]["alternateNames"]
+    assert "Γκαζπρόμ" in alts and "Газпром" in alts
+    assert "Gazprom" not in alts  # the display label is not its own alternate

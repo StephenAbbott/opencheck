@@ -20,6 +20,7 @@ from typing import Any, Iterable
 
 import pycountry
 
+from .. import names as _names_mod
 from ..elf import resolve_elf
 from .ch_constants import describe_company_type, describe_officer_role
 from .psc_natures import describe_nature, describe_statement, describe_super_secure
@@ -293,6 +294,12 @@ def make_entity_statement(
     if addresses:
         record_details["addresses"] = addresses
     alternate_names = list(alternate_names)
+    # Phase E (rigour adoption): a Cyrillic/Greek primary name gains a
+    # deterministic Latin transliteration as an alternate, so downstream
+    # consumers (search, exports, screening) always have a Latin form.
+    translit = _names_mod.transliterate_display(name)
+    if translit and translit != name and translit not in alternate_names:
+        alternate_names.append(translit)
     if alternate_names:
         record_details["alternateNames"] = alternate_names
 
@@ -326,10 +333,16 @@ def make_person_statement(
     statement_id = _stable_id(source_id, "person", local_id)
     record_id = statement_id  # see make_entity_statement for reasoning
 
+    person_names: list[dict[str, str]] = [{"type": "legal", "fullName": full_name}]
+    # Phase E (rigour adoption): Cyrillic/Greek person names carry a typed
+    # transliteration entry (BODS v0.4 nameType codelist: "transliteration").
+    _translit = _names_mod.transliterate_display(full_name)
+    if _translit and _translit != full_name:
+        person_names.append({"type": "transliteration", "fullName": _translit})
     record_details: dict[str, Any] = {
         "isComponent": False,
         "personType": person_type,
-        "names": [{"type": "legal", "fullName": full_name}],
+        "names": person_names,
     }
     identifiers = list(identifiers)
     if identifiers:
@@ -4399,6 +4412,14 @@ def map_wikidata(bundle: dict[str, Any]) -> BODSBundle:
     # such cases.
     entity_type = "registeredEntity" if summary.get("is_entity") else "unknownEntity"
     jurisdiction = _wikidata_jurisdiction(summary.get("country") or {})
+    # Phase E (rigour adoption): multilingual labels captured by the adapter
+    # (previously pinned to @en) become alternate names — the display name
+    # stays the English label. Order: sorted by language tag, deduped.
+    other_labels = list(dict.fromkeys(
+        e["label"]
+        for e in summary.get("labels") or []
+        if e.get("label") and e["label"] != label
+    ))
     entity = make_entity_statement(
         source_id="wikidata",
         local_id=qid,
@@ -4406,6 +4427,7 @@ def map_wikidata(bundle: dict[str, Any]) -> BODSBundle:
         jurisdiction=jurisdiction,
         identifiers=base_identifiers,
         founding_date=_normalise_wikidata_date(summary.get("inception")),
+        alternate_names=other_labels,
         entity_type=entity_type,
         source_url=source_url,
     )

@@ -251,3 +251,74 @@ def has_dense_script(text: str) -> bool:
     return any(
         lo <= ord(ch) <= hi for ch in text or "" for lo, hi in _DENSE_RANGES
     )
+
+
+# --- Phase E: transliterated alternates + language codes --------------------
+
+def transliterate_display(text: str | None) -> str | None:
+    """A case-preserving Latin form of a Cyrillic/Greek name, or ``None``
+    when the text contains no Cyrillic/Greek (nothing worth adding).
+
+    Unlike the lowercase comparable forms above this is emitted into BODS
+    output (entity ``alternateNames`` strings, person ``names`` entries with
+    ``type: transliteration``), so casing is preserved character-wise:
+    ``Газпром`` → ``Gazprom``, ``ЛУКОЙЛ`` → ``LUKOIL``. Same deterministic
+    tables as the comparable pipeline — no ICU dependence.
+    """
+    if not text:
+        return None
+    if not any(ch.casefold() in _SCRIPT_FOLDS for ch in text):
+        return None
+    out: list[str] = []
+    for ch in text:
+        low = ch.casefold()
+        mapped = _SCRIPT_FOLDS.get(low)
+        if mapped is None and low not in _SCRIPT_FOLDS:
+            # Accented Greek/Cyrillic (ά, ё́…) arrive precomposed — map the
+            # decomposed base letter and drop the accent; anything genuinely
+            # non-Greek/Cyrillic (Latin é, CJK…) passes through unchanged.
+            base = unicodedata.normalize("NFD", low)[:1]
+            if base in _SCRIPT_FOLDS:
+                mapped = _SCRIPT_FOLDS[base]
+        if mapped is None:
+            out.append(ch)
+        elif ch != low:  # source char was uppercase
+            out.append(mapped[:1].upper() + mapped[1:])
+        else:
+            out.append(mapped)
+    return "".join(out)
+
+
+def normalise_language_code(code: str | None) -> str | None:
+    """Normalise a language identifier to an ISO 639-2/3 alpha-3 code.
+
+    Prefers rigour's ``iso_639_alpha3`` (accepts 2/3-letter codes, some
+    names, BCP-47 tags like ``zh-Hans``); falls back to pycountry — a hard
+    dependency already — for base installs. ``None`` when unrecognised.
+    """
+    if not code or not str(code).strip():
+        return None
+    raw = str(code).strip()
+    try:  # pragma: no cover - exercised via the ftm extra in CI/prod
+        from rigour.langs import iso_639_alpha3
+
+        # rigour 0.x does not parse BCP-47 subtags (2.x does) — retry with
+        # the primary subtag before giving up.
+        resolved = iso_639_alpha3(raw) or iso_639_alpha3(
+            raw.lower().split("-")[0].split("_")[0]
+        )
+        if resolved:
+            return resolved
+    except ImportError:  # pragma: no cover - base install
+        pass
+    import pycountry
+
+    key = raw.lower().split("-")[0].split("_")[0]
+    try:
+        lang = (
+            pycountry.languages.get(alpha_2=key)
+            or pycountry.languages.get(alpha_3=key)
+        )
+    except LookupError:
+        return None
+    return getattr(lang, "alpha_3", None) if lang else None
