@@ -22,6 +22,16 @@
   --oo-rule: #e5e5e5;
   --oo-bg: #f3f3f5;
 
+  /* Brand-mark tier (frontend/public/logo.svg, OpenCheckIcon) -- mirrors
+     tailwind.config.js oo.mark / oo.node. See CLAUDE.md "Brand: Check-mode
+     badges" for the check-mode badge system these feed. */
+  --oo-mark-navy: #0d1b3e;
+  --oo-mark-line: #93c5fd;
+  --oo-mark-check-blue: #2563eb;
+  --oo-node-green: #22c55e;
+  --oo-node-blue: #3b82f6;
+  --oo-node-purple: #7c3aed;
+
   --font-body: "DM Sans", system-ui, sans-serif;
   --font-head: "Bitter", Georgia, serif;
   --font-mono: "DM Mono", ui-monospace, SFMono-Regular, monospace;

@@ -1,0 +1,42 @@
+{
+  "_note": "ILLUSTRATIVE SAMPLE ONLY — not for production. The real, LEI-keyed artifact is eiti_soe_index.json.gz, produced by scripts/build_eiti_soe_index.py against live SOE Datasette + GLEIF data. LEIs below are format-valid dummies.",
+  "meta": {
+    "built": "YYYY-MM-DD",
+    "source": "https://soe-database.eiti.org/eiti_database",
+    "source_snapshot": "YYYY-MM-DD",
+    "companies": 99,
+    "resolved_lei": 0,
+    "resolved_high": 0,
+    "resolved_medium": 0,
+    "resolved_low": 0,
+    "resolved_by_oc_id": 0,
+    "resolved_by_name": 0,
+    "unresolved": 0,
+    "license": "EITI open data (free reuse with attribution)",
+    "attribution": "EITI International Secretariat, eiti.org"
+  },
+  "index": {
+    "5493001KJTIIGC8Y1R12": {
+      "lei": "5493001KJTIIGC8Y1R12",
+      "match_method": "opencorporates_id",
+      "match_confidence": "high",
+      "soe": {
+        "company_name": "Ghana National Petroleum Corporation",
+        "original_company_name": "GHANA NATIONAL PETROLEUM CORPORATION",
+        "country": "GH",
+        "iso_alpha2": "GH",
+        "sector": "Oil & Gas",
+        "commodities": ["oil", "gas"],
+        "company_type": "State-owned enterprise",
+        "government_entity": "Ministry of Energy",
+        "opencorporates_id": "gh/CS000000001",
+        "eiti_id_company": "eiti-co-123",
+        "eiti_id_government": "eiti-gov-9",
+        "audited_financial_statement": "https://example.org/gnpc.pdf",
+        "public_listing_or_website": "https://gnpcghana.com",
+        "years": ["2018", "2019"],
+        "soe_list": true
+      }
+    }
+  }
+}

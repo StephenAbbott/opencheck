@@ -4,7 +4,7 @@ title: "OpenAleph"
 description: "The open source platform that securely stores large amounts of data and makes it searchable for easy collaboration."
 resource: "https://openaleph.org/"
 tags: ["cdd", "aggregator", "per-collection", "commercial-conditional"]
-timestamp: "2026-06-23"
+timestamp: "2026-07-24"
 source_id: "openaleph"
 license: "per-collection"
 commercial_use: "conditional"

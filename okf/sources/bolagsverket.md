@@ -4,7 +4,7 @@ title: "Bolagsverket \u2014 Swedish Companies Registration Office"
 description: "Swedish company data from Bolagsverket's open data API (v\u00e4rdefulla datam\u00e4ngder), including entity details and registered address."
 resource: "https://www.bolagsverket.se/"
 tags: ["cdd", "national-register", "SE-PSI", "commercial-yes"]
-timestamp: "2026-06-23"
+timestamp: "2026-07-24"
 source_id: "bolagsverket"
 license: "SE-PSI"
 commercial_use: "yes"

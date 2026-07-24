@@ -4,7 +4,7 @@ title: "Receita Federal \u2014 CNPJ register (Brazil)"
 description: "Brazilian company data from the Receita Federal CNPJ register (open data), including the QSA \u2014 partners and administrators. Served key-lessly via OpenCNPJ with a BrasilAPI fallback."
 resource: "https://www.gov.br/receitafederal/"
 tags: ["cdd", "national-register", "BR-Open-Data", "commercial-conditional"]
-timestamp: "2026-06-23"
+timestamp: "2026-07-24"
 source_id: "cnpj_brazil"
 license: "BR-Open-Data"
 commercial_use: "conditional"

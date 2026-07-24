@@ -4,7 +4,7 @@ title: "New Zealand Companies Register (NZBN)"
 description: "New Zealand company data from the NZBN API (Companies Office / MBIE): entity details, directors, shareholders with share allocations, and the ultimate holding company."
 resource: "https://companies-register.companiesoffice.govt.nz/"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-06-23"
+timestamp: "2026-07-24"
 source_id: "nz_companies"
 license: "CC-BY-4.0"
 commercial_use: "yes"

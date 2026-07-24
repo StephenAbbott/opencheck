@@ -4,7 +4,7 @@ title: "KvK \u2014 Netherlands Chamber of Commerce"
 description: "Dutch company data from the Netherlands Chamber of Commerce (KvK) open-data API, sourced via the KvK registration number."
 resource: "https://www.kvk.nl/"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-06-23"
+timestamp: "2026-07-24"
 source_id: "kvk"
 license: "CC-BY-4.0"
 commercial_use: "yes"

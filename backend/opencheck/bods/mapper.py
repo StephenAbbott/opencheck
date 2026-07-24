@@ -459,6 +459,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "sec_edgar": "SEC EDGAR — U.S. Securities and Exchange Commission",
         "sudreg_croatia": "Sudski registar — Croatian Court Register",
         "eiti": "EITI — Extractive Industries Transparency Initiative",
+        "eiti_soe": "EITI State-Owned Enterprises Database",
         "ur_latvia": "UR — Latvian Register of Enterprises (data.gov.lv)",
         "ares": "ARES — Czech Administrativní registr ekonomických subjektů",
         "wikidata": "Wikidata",
@@ -2969,6 +2970,108 @@ def map_eiti(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         source_url="https://eiti.org/",
     )
     yield entity
+
+
+def map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map an EITI SOE Database bundle to BODS v0.4 statements.
+
+    Emits the state-owned enterprise as an entity, the controlling government
+    body as a ``stateBody`` entity, and a ``controlByLegalFramework``
+    relationship between them. That relationship shape is exactly what the risk
+    engine's ``_state_controlled_signals`` reads to raise ``STATE_CONTROLLED`` —
+    so the state-ownership signal falls out of the BODS graph with no bespoke
+    risk rule (and EITI is a far more authoritative source for it than the
+    existing Wikidata path).
+
+    The SOE database does **not** publish the LEI (OpenCheck derives it at
+    index-build time), so ``lei`` is deliberately NOT asserted as a BODS
+    identifier here — only the identifiers EITI itself publishes (its EITI id
+    and, where present, the OpenCorporates id).
+
+    When EITI ships its planned BODS-native SOE dataset, this mapper is the
+    natural place to consume it — the graph shape emitted here already matches.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return
+
+    lei: str = (bundle.get("lei") or "").strip().upper()
+    name: str = (bundle.get("entity_name") or "").strip()
+    if not lei or not name:
+        return
+
+    country: str = (bundle.get("country") or "").strip().upper()
+    jurisdiction_obj = _country_obj(country) if country else None
+    jur_tuple: tuple[str, str] | None = (
+        (jurisdiction_obj["name"], jurisdiction_obj["code"])
+        if jurisdiction_obj
+        else None
+    )
+
+    identifiers: list[dict[str, str]] = []
+    eiti_id = (bundle.get("eiti_id_company") or "").strip()
+    if eiti_id:
+        identifiers.append(
+            {
+                "id": eiti_id,
+                "scheme": "XI-EITI",
+                "schemeName": "EITI State-Owned Enterprises Database",
+            }
+        )
+    oc_id = (bundle.get("opencorporates_id") or "").strip()
+    if oc_id:
+        identifiers.append(
+            {
+                "id": oc_id,
+                "schemeName": "OpenCorporates company number (via EITI SOE database)",
+            }
+        )
+
+    soe = make_entity_statement(
+        source_id="eiti_soe",
+        local_id=lei,
+        name=name,
+        jurisdiction=jur_tuple,
+        identifiers=identifiers,
+        entity_type="registeredEntity",
+        entity_details="State-owned enterprise (EITI SOE database)",
+        source_url="https://soe-database.eiti.org/",
+    )
+    yield soe
+
+    gov_name = (bundle.get("government_entity") or "").strip()
+    if not gov_name:
+        return
+
+    gov_local = f"{lei}:gov:{(bundle.get('eiti_id_government') or gov_name)}"
+    government = make_entity_statement(
+        source_id="eiti_soe",
+        local_id=gov_local,
+        name=gov_name,
+        jurisdiction=jur_tuple,
+        entity_type="stateBody",
+        source_url="https://soe-database.eiti.org/",
+    )
+    yield government
+
+    yield make_relationship_statement(
+        source_id="eiti_soe",
+        local_id=f"{lei}:state-control",
+        subject_statement_id=soe["statementId"],
+        interested_party_statement_id=government["statementId"],
+        interested_party_type="entity",
+        interests=[
+            {
+                "type": "controlByLegalFramework",
+                "directOrIndirect": "direct",
+                "beneficialOwnershipOrControl": True,
+                "details": (
+                    f"State-owned enterprise controlled by {gov_name} "
+                    "(EITI SOE database)."
+                ),
+            }
+        ],
+        source_url="https://soe-database.eiti.org/",
+    )
 
 
 # ----------------------------------------------------------------------

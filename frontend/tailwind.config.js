@@ -22,6 +22,27 @@ export default {
           muted: "#696969",  // secondary copy (4.5:1+ on bg and white)
           rule: "#e5e5e5",   // borders / dividers
           bg: "#f3f3f5",     // page bg
+
+          // Brand-mark tier (frontend/public/logo.svg, components/icons/index.tsx
+          // OpenCheckIcon). Deliberately distinct from the UI tokens above --
+          // the logo/mark has always used its own navy + blue pair, shipping
+          // alongside the UI's oo.navy / oo.blue in production. Formalised
+          // here (2026-07-23) so logo- and social-asset work (e.g.
+          // outputs/mode-badges/) references named tokens instead of
+          // re-hardcoding hex values. See CLAUDE.md "Brand: Check-mode badges".
+          mark: {
+            navy: "#0d1b3e",      // logo mark navy / badge background
+            line: "#93c5fd",      // logo network-edge colour
+            checkBlue: "#2563eb", // "Check" wordmark colour in logo.svg
+          },
+          // The logo's three fixed network-node colours (logo.svg + OpenCheckIcon).
+          // Also the accent colour for each check-mode badge in
+          // outputs/mode-badges/ -- one node colour per mode.
+          node: {
+            green: "#22c55e",  // QuickCheck badge accent
+            blue: "#3b82f6",   // FullCheck badge accent
+            purple: "#7c3aed", // BackgroundCheck badge accent
+          },
         },
       },
       fontFamily: {

@@ -27,6 +27,7 @@
 
 # Aggregators & cross-border databases
 
+* [EITI State-Owned Enterprises Database](/sources/eiti_soe.md) - State-owned enterprises reported through the EITI across implementing countries, with a state-ownership classification, commodities, audited-financial-statement links and stock listings. Surfaces a state-ownership context signal by LEI.
 * [EveryPolitician](/sources/everypolitician.md) - EveryPolitician is a global database of political office-holders, from rulers, law-makers to judges and more.
 * [GLEIF](/sources/gleif.md) - Legal entity information from the Global Legal Entity Identifier Foundation.
 * [OpenAleph](/sources/openaleph.md) - The open source platform that securely stores large amounts of data and makes it searchable for easy collaboration.

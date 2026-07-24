@@ -390,6 +390,67 @@ Specific rules:
 
 ---
 
+## Brand: Check-mode badges (QuickCheck / FullCheck / BackgroundCheck)
+
+Reusable circular badges for social-media overlays, one per check mode —
+generated 2026-07-23, shipped as transparent PNG (1280×1280, 2x) + SVG in
+`outputs/mode-badges/`. Regenerate via the Cowork skill `checkmode-badges`
+(delivered as a `.skill` file to Stephen) rather than hand-editing the PNGs
+— needed again for a 4th mode or any re-brand.
+
+**Palette — reused from the shipped design system, nothing invented.** The
+hex values already existed hardcoded in `frontend/public/logo.svg` and
+`OpenCheckIcon` (`components/icons/index.tsx`); this pass formalised them
+as named tokens (`oo.mark.*` / `oo.node.*` in `tailwind.config.js`,
+mirrored as `--oo-mark-*` / `--oo-node-*` in `index.css`):
+
+| Token | Hex | Source | Badge |
+|---|---|---|---|
+| `oo.mark.navy` | `#0d1b3e` | logo.svg mark navy | badge background (all 3) |
+| `oo.mark.line` | `#93c5fd` | logo.svg network-edge colour | FullCheck glyph edges |
+| `oo.mark.checkBlue` | `#2563eb` | logo.svg "Check" wordmark colour | — |
+| `oo.node.green` | `#22c55e` | logo.svg / `OpenCheckIcon` network node | **QuickCheck** accent |
+| `oo.node.blue` | `#3b82f6` | logo.svg / `OpenCheckIcon` network node | **FullCheck** accent |
+| `oo.node.purple` | `#7c3aed` | logo.svg / `OpenCheckIcon` network node | **BackgroundCheck** accent (near-matches the PEP/RELATED_PEP violet `#6d28d9` in the risk-signal system above — fitting for a people-screening mode) |
+
+**Note this is a brand-mark tier, deliberately distinct from the UI's
+`oo.navy` (`#191d23`) / `oo.blue` (`#3d30d4`)** — the logo has always
+shipped with its own darker navy and a different blue than the app chrome;
+that split already existed in production, this just names it rather than
+introducing a new one.
+
+**Badge construction (per mode):** `oo.mark.navy` circle, 640×640 CSS px
+(2x device scale factor → 1280×1280 PNG output), double stroke ring in the
+mode's `oo.node.*` accent (10px solid + 1.5px/50%-opacity hairline
+inside it), drop shadow tinted `rgba(61,48,212,0.38)` — same hue as the
+`oo-card` shadow token, just stronger, so the badge still reads as a stamp
+over an arbitrary photo background. Centred icon, "Bitter" 700 white
+wordmark below it, short accent-coloured underline rule.
+
+Icons: QuickCheck = ⚡ (Noto Color Emoji), BackgroundCheck = 👤 (Noto Color
+Emoji), FullCheck = the network image with linked nodes as shown in the
+OpenCheck logo — literally the same 3-node triangle from `logo.svg` /
+`OpenCheckIcon` (identical node/edge coordinates, not a redrawn shape).
+**Gotcha:** the triangle's outer nodes sit at the SVG viewBox edges (x=0,
+y=0, y=72 with r=11) — pad the viewBox by the node radius on every side or
+the outer nodes render as clipped half-circles.
+
+Fonts: Bitter (headings) + DM Sans (body), matching the app exactly —
+self-hosted as base64-embedded `woff2` in the generation script rather
+than a live Google Fonts fetch, since headless-Chromium screenshot
+generation shouldn't depend on network access being available at render
+time.
+
+Files: `outputs/mode-badges/{quickcheck,fullcheck,backgroundcheck}-badge.png`
++ `fullcheck-badge.svg` (fully vector, no emoji-font dependency, safe to
+recolour/edit by hand). Dated per-post share cards (e.g.
+`outputs/backgroundcheck-share-2026-07-23.png`) drop the relevant badge
+into a 1200×630 layout following the existing `opencheck-social-*.html`
+convention — OpenCheck logo top-left, Bitter headline, accent-coloured
+top/bottom bars, `opencheck.world` in `oo.blue`.
+
+---
+
 ## Datafordeler CVR API (Denmark) — hard-won constraints
 
 These are non-obvious and cost significant debugging time. Do not deviate from them.

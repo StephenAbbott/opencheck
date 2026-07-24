@@ -4,7 +4,7 @@ title: "PRH \u2014 Finnish Patent and Registration Office"
 description: "Finnish company data from the Patentti- ja rekisterihallitus (PRH) via the YTJ Open Data API, including entity details for all organisations registered in Finland. Officer data is not publicly available."
 resource: "https://www.prh.fi/en/index.html"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-06-23"
+timestamp: "2026-07-24"
 source_id: "prh"
 license: "CC-BY-4.0"
 commercial_use: "yes"

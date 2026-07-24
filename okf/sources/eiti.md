@@ -4,7 +4,7 @@ title: "EITI \u2014 Extractive Industries Transparency Initiative"
 description: "Company-level payments to governments (taxes, royalties, licence fees) disclosed under the EITI Standard by 65+ implementing countries, with GFS revenue classification."
 resource: "https://eiti.org/"
 tags: ["esg", "aggregator", "EITI open data (free reuse with attribution)", "commercial-yes"]
-timestamp: "2026-07-07"
+timestamp: "2026-07-24"
 source_id: "eiti"
 license: "EITI open data (free reuse with attribution)"
 commercial_use: "yes"
