@@ -4,7 +4,7 @@ title: "UK Companies House"
 description: "Legal and beneficial ownership information from the UK corporate registry."
 resource: "https://find-and-update.company-information.service.gov.uk/"
 tags: ["cdd", "national-register", "OGL-3.0", "commercial-yes"]
-timestamp: "2026-06-23"
+timestamp: "2026-07-24"
 source_id: "companies_house"
 license: "OGL-3.0"
 commercial_use: "yes"

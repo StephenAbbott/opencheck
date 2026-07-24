@@ -4,7 +4,7 @@ title: "CRO \u2014 Companies Registration Office Ireland"
 description: "Irish company data from the Companies Registration Office (CRO), sourced via the CRO Open Data Portal (CC BY 4.0). Provides entity details for all registered Irish companies."
 resource: "https://cro.ie/"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-06-23"
+timestamp: "2026-07-24"
 source_id: "cro"
 license: "CC-BY-4.0"
 commercial_use: "yes"

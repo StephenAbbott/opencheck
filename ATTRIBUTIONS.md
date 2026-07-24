@@ -338,6 +338,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** GLEIF `registeredAs` + jurisdiction matched against EITI national identifications (verified formats: GB Companies House numbers, NO orgnr, NL KvK-adjacent)
 - **Category:** ESG — payments-to-governments card in the ESG panel, alongside GEM/Climate TRACE
 
+## EITI State-Owned Enterprises Database
+
+- **Data:** State-owned enterprises reported through the EITI (~100 SOEs across implementing countries), published via a Datasette instance at <https://soe-database.eiti.org/eiti_database>. Provides the state-ownership classification plus SOE context (sector, commodities, audited-financial-statement links, stock-exchange listings, `opencorporates_id`). Distinct from the main EITI adapter (payments to governments): its value is a state-ownership context signal, not payments. Each SOE is resolved to an LEI once, at index-build time, via GLEIF (`opencorporates_id` → reverse lookup, name+country fallback) by `backend/scripts/build_eiti_soe_index.py`, producing the committed `backend/opencheck/data/eiti_soe_index.json.gz`. The SOE database does not publish the LEI, so it is not asserted as a cross-source identifier.
+- **API:** Datasette JSON/CSV/SQL — <https://soe-database.eiti.org/eiti_database/companies.json>
+- **License:** EITI content-use policy — free republication with credit; open-data commitment at <https://eiti.org/open-data>. (Used directly from EITI rather than via the OpenSanctions `eiti_soe` mirror, which applies CC BY-NC 4.0.)
+- **Attribution:** "EITI International Secretariat, eiti.org"
+- **Entry point:** subject LEI matched against the committed SOE index
+- **Category:** CDD — surfaces the `STATE_CONTROLLED` risk signal via a `stateBody` government + `controlByLegalFramework` relationship in the BODS mapping
+
 ## Wikirate
 
 - **Data:** Open, community-researched corporate ESG metric answers (environment, human rights, supply chains, governance) from metric designers such as the World Benchmarking Alliance, Net Zero Tracker, Fashion Revolution and the Business & Human Rights Resource Centre. OpenCheck shows the total number of data points plus the latest answer per metric (sampled) and links out to wikirate.org for the full record. Wikirate Company cards independently publish LEI, Wikidata QID, OpenCorporates ID, UK company number, SEC CIK, ABN/ACN and ISIN identifiers, making Wikirate a strong cross-source corroborator. Wikirate is a GODIN member.

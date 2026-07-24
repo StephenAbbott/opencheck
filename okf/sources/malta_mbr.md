@@ -4,7 +4,7 @@ title: "Malta Business Registry (MBR)"
 description: "Maltese company data from the Malta Business Registry (MBR) Open Data API (CC BY 4.0). Provides core entity details \u2014 name, status, legal form, registered office and registration date \u2014 for companies on the Maltese register."
 resource: "https://mbr.mt/"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-06-23"
+timestamp: "2026-07-24"
 source_id: "malta_mbr"
 license: "CC-BY-4.0"
 commercial_use: "yes"

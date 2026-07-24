@@ -4,7 +4,7 @@ title: "KRS \u2014 Polish National Court Register"
 description: "Entity data from Poland's National Court Register (Krajowy Rejestr S\u0105dowy / KRS), maintained by the Ministry of Justice. Provides company name, NIP, REGON, legal form, registered address, share capital, board composition, and primary business activity (PKD code). Note: personal data (names, PESEL) is masked in the public API extract."
 resource: "https://ekrs.ms.gov.pl/"
 tags: ["cdd", "national-register", "PL-OGD", "commercial-yes"]
-timestamp: "2026-06-23"
+timestamp: "2026-07-24"
 source_id: "krs_poland"
 license: "PL-OGD"
 commercial_use: "yes"

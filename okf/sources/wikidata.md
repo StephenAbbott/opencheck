@@ -4,7 +4,7 @@ title: "Wikidata"
 description: "A free and open knowledge base that can be read and edited by both humans and machines."
 resource: "https://www.wikidata.org/wiki/Wikidata:Main_Page"
 tags: ["cdd", "aggregator", "CC0-1.0", "commercial-yes"]
-timestamp: "2026-06-23"
+timestamp: "2026-07-24"
 source_id: "wikidata"
 license: "CC0-1.0"
 commercial_use: "yes"

@@ -1006,7 +1006,7 @@ export default function App() {
             Conduct due diligence on <span className="text-oo-blue">3 million</span> companies, starting from a single ID
           </HeroHeading>
           <p className="text-[13px] sm:text-sm text-oo-muted leading-snug mt-2">
-            With a Legal Entity Identifier, OpenCheck pulls open corporate data from 34 sources into one graph using the Beneficial Ownership Data Standard
+            With a Legal Entity Identifier, OpenCheck pulls open corporate data from 35 sources into one graph using the Beneficial Ownership Data Standard
           </p>
         </div>
         {!streamingLei && (
@@ -2858,7 +2858,7 @@ const HOW_IT_WORKS_STEPS = [
     num: "3",
     accent: "#3d30d4" as const,
     icon: <StepNetworkIcon className="h-[15px] w-[15px]" />,
-    title: "34 open sources, in parallel",
+    title: "35 open sources, in parallel",
     body: (
       <>
         Each source is queried with the identifier it understands, and the

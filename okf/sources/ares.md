@@ -4,7 +4,7 @@ title: "ARES (Czechia)"
 description: "Czech ARES business register (Administrativn\u00ed registr ekonomick\u00fdch subjekt\u016f), aggregating data from the commercial register (Obchodn\u00ed rejst\u0159\u00edk), trade licence register, and other sub-registers.  Published by the Ministry of Finance under CC BY 4.0."
 resource: "https://ares.gov.cz/"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-06-23"
+timestamp: "2026-07-24"
 source_id: "ares"
 license: "CC-BY-4.0"
 commercial_use: "yes"

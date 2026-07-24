@@ -4,7 +4,7 @@ title: "Sudski registar \u2014 Croatian Court Register"
 description: "Croatian company data from the Sudski registar (Court Register) public API, including legal name, MBS and OIB identifiers, legal form, status, founding date, registered seat and share capital."
 resource: "https://sudreg.pravosudje.hr"
 tags: ["cdd", "national-register", "HR-OpenData", "commercial-yes"]
-timestamp: "2026-06-23"
+timestamp: "2026-07-24"
 source_id: "sudreg_croatia"
 license: "HR-OpenData"
 commercial_use: "yes"

@@ -4,7 +4,7 @@ title: "Wikirate"
 description: "Open, collaboratively-researched corporate ESG metric answers (environment, human rights, supply chains, governance) from designers such as the World Benchmarking Alliance and Net Zero Tracker. GODIN member; publishes LEI, Wikidata, OpenCorporates and other identifiers."
 resource: "https://wikirate.org/"
 tags: ["esg", "aggregator", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-07-07"
+timestamp: "2026-07-24"
 source_id: "wikirate"
 license: "CC-BY-4.0"
 commercial_use: "yes"

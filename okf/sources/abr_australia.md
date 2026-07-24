@@ -4,7 +4,7 @@ title: "Australian Business Register (ABN Lookup)"
 description: "Australian company and business data \u2014 ABN, ACN, entity name and type, ABN/GST status, registered state and postcode, and business (trading) names \u2014 from the Australian Business Register's free ABN Lookup web services. Entity-level only; no officer or ownership data."
 resource: "https://abr.business.gov.au/"
 tags: ["cdd", "national-register", "CC-BY-3.0-AU", "commercial-yes"]
-timestamp: "2026-06-23"
+timestamp: "2026-07-24"
 source_id: "abr_australia"
 license: "CC-BY-3.0-AU"
 commercial_use: "yes"

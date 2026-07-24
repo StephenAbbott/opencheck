@@ -817,6 +817,34 @@ def _bh_eiti(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_eiti_soe(r: dict, ctx: _LookupCtx) -> SourceHit:
+    parts = ["State-owned enterprise"]
+    if r.get("sector"):
+        parts.append(str(r["sector"]))
+    commodities = r.get("commodities") or []
+    if commodities:
+        parts.append(", ".join(commodities[:3]))
+    if r.get("country"):
+        parts.append(str(r["country"]))
+    # Corroboration rule: the SOE database does NOT publish the LEI (OpenCheck
+    # derives it at index-build time), so `lei` is intentionally omitted from
+    # identifiers. Only the identifiers EITI itself publishes are asserted.
+    # `eiti_soe_id` is informational (EITI's own id). `ocid` is intentionally
+    # NOT asserted from the SOE database's opencorporates_id: like the Wikirate
+    # precedent, its format may differ from OpenCheck's jurisdiction-scoped
+    # `ocid`, and a mismatched assert would create a false corroboration.
+    identifiers: dict[str, str] = {}
+    if r.get("eiti_id_company"):
+        identifiers["eiti_soe_id"] = str(r["eiti_id_company"])
+    return _hit(
+        "eiti_soe", ctx.lei,
+        name=r.get("entity_name") or ctx.legal_name or ctx.lei,
+        summary=" · ".join(parts),
+        identifiers=identifiers,
+        raw=r,
+    )
+
+
 # Wikirate Company-card identifier fields → OpenCheck identifier keys, for
 # reconciler corroboration. Wikirate independently publishes these on the
 # card, so asserting them is legitimate under the corroboration rule.
@@ -1021,6 +1049,12 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
     bg_adapter = REGISTRY.get("bods_gleif")
     if bg_adapter is not None and hasattr(bg_adapter, "fetch_by_lei") and _want("bods_gleif"):
         tasks.append(("bods_gleif", bg_adapter.fetch_by_lei(ctx.lei)))
+    # EITI SOE Database — LEI-keyed offline match against the committed index.
+    # A hit means the LEI is a state-owned enterprise; its BODS (a stateBody
+    # government + control relationship) drives the STATE_CONTROLLED signal.
+    soe_adapter = REGISTRY.get("eiti_soe")
+    if soe_adapter is not None and hasattr(soe_adapter, "fetch_by_lei") and _want("eiti_soe"):
+        tasks.append(("eiti_soe", soe_adapter.fetch_by_lei(ctx.lei)))
     return tasks
 
 
@@ -1033,6 +1067,8 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
         return _bh_climatetrace(result, ctx) if result.get("entity_id") else None
     if source_id == "eiti":
         return _bh_eiti(result, ctx) if result.get("identification") else None
+    if source_id == "eiti_soe":
+        return _bh_eiti_soe(result, ctx) if result.get("is_state_owned") else None
     if source_id == "wikirate":
         return _bh_wikirate(result, ctx) if result.get("card_id") else None
     if result.get("is_stub"):
