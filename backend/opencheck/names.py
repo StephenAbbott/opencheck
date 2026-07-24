@@ -47,15 +47,18 @@ environment, ICU or not).
 
 from __future__ import annotations
 
+import difflib
 import re
 import unicodedata
 
 try:  # pragma: no cover - exercised via the ftm extra in CI/prod
     from rigour.names import replace_org_types_compare as _rigour_org_compare
+    from rigour.text import levenshtein_similarity as _rigour_lev_sim
 
     _HAS_RIGOUR_NAMES = True
 except ImportError:  # pragma: no cover - base install without the ftm extra
     _rigour_org_compare = None  # type: ignore[assignment]
+    _rigour_lev_sim = None  # type: ignore[assignment]
     _HAS_RIGOUR_NAMES = False
 
 # --- Layer 1: non-decomposable Latin letters --------------------------------
@@ -192,3 +195,59 @@ def despace(comparable: str) -> str:
     secondary merge key so tokenisation artefacts still collide
     ("ørsted … a/s" → "…a s" vs "… AS" → "…as" ⇒ both "…as")."""
     return comparable.replace(" ", "")
+
+
+# --- Phase D: the shared name-similarity scorer -----------------------------
+
+def name_similarity(a: str | None, b: str | None) -> float:
+    """Similarity in [0.0, 1.0] between two raw names — THE scorer behind
+    RELATED_PEP / RELATED_SANCTIONED and BackgroundCheck person screening
+    (threshold 0.88, one concept product-wide).
+
+    Composition (max of):
+
+    * ``difflib.SequenceMatcher`` on the shared comparable forms — the
+      historical scorer, unchanged, so every pair that matched before still
+      matches with at least its old score;
+    * the same ratio on TOKEN-SORTED forms — name-order invariance
+      ("Doe, John" ↔ "John Doe", NZ Companies Office "LastName First"),
+      deterministic in every environment;
+    * rigour's ``levenshtein_similarity`` when installed (edit-budgeted:
+      ≤4 edits and ≤20% of length — strict, so it only ever adds
+      near-typo matches like "Jóhn Smíth" spelled slightly differently).
+
+    Scores can only rise relative to the old scorer — a deliberate
+    recall-first choice for a "possibly related, human reviews it" surface;
+    scripts/eval_name_matching.py quantifies the movement on the demo corpus.
+    """
+    na, nb = normalise_name(a or ""), normalise_name(b or "")
+    if not na or not nb:
+        return 0.0
+    if na == nb:
+        return 1.0
+    score = difflib.SequenceMatcher(a=na, b=nb).ratio()
+    sa, sb = " ".join(sorted(na.split())), " ".join(sorted(nb.split()))
+    if (sa, sb) != (na, nb):
+        score = max(score, difflib.SequenceMatcher(a=sa, b=sb).ratio())
+    if _HAS_RIGOUR_NAMES:
+        score = max(score, _rigour_lev_sim(na, nb))
+    return score
+
+
+# Unicode blocks whose scripts write names without spaces — a "single token"
+# guard calibrated for space-separated scripts must not apply to them.
+_DENSE_RANGES = (
+    (0x3040, 0x30FF),   # Hiragana + Katakana
+    (0x4E00, 0x9FFF),   # CJK Unified Ideographs
+    (0x3400, 0x4DBF),   # CJK Extension A
+    (0xAC00, 0xD7AF),   # Hangul syllables
+    (0xF900, 0xFAFF),   # CJK Compatibility Ideographs
+)
+
+
+def has_dense_script(text: str) -> bool:
+    """True when the text contains characters from a script that does not
+    separate name parts with spaces (CJK, kana, Hangul)."""
+    return any(
+        lo <= ord(ch) <= hi for ch in text or "" for lo, hi in _DENSE_RANGES
+    )

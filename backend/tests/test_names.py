@@ -259,3 +259,65 @@ def test_possibly_same_exact_name_pairs_unchanged():
         [_ent("s1", "Acme Widgets", "GB"), _ent("s2", "Acme Widgets", "GB")]
     )
     assert len(pairs) == 1
+
+
+# --- Phase D: shared scorer + dense-script matchability ---------------------
+
+from opencheck.matching import is_matchable_name  # noqa: E402
+
+
+def test_name_similarity_order_invariant():
+    assert names.name_similarity("Doe, John", "John Doe") >= 0.99
+    # NZ Companies Office order: "LastName First Middle"
+    assert names.name_similarity("SMITH John Andrew", "John Andrew Smith") >= 0.99
+
+
+def test_name_similarity_never_below_old_scorer():
+    import difflib as _d
+
+    cases = [
+        ("Vladimir Putin", "Vladimir Putln"),
+        ("Gazprom Export", "Газпром Экспорт"),
+        ("Jane O'Brien", "Jane OBrien"),
+        ("Acme Widgets Ltd", "Acme Widgets Limited"),
+    ]
+    for a, b in cases:
+        na, nb = names.normalise_name(a), names.normalise_name(b)
+        old = 1.0 if na == nb else _d.SequenceMatcher(a=na, b=nb).ratio()
+        assert names.name_similarity(a, b) >= old, (a, b)
+
+
+@pytest.mark.skipif(
+    not names._HAS_RIGOUR_NAMES, reason="rigour not installed (ftm extra)"
+)
+def test_name_similarity_rigour_typo_component():
+    # Edit-budgeted Levenshtein: one substitution in a long name scores high.
+    assert names.name_similarity("Konstantin Ernstov", "Konstantin Ernstev") >= 0.88
+
+
+def test_name_similarity_distinct_names_stay_low():
+    assert names.name_similarity("HORNSEA 1 LIMITED", "Unilever PLC") < 0.5
+    assert names.name_similarity("", "anything") == 0.0
+
+
+def test_has_dense_script():
+    assert names.has_dense_script("田中太郎")
+    assert names.has_dense_script("株式会社日立")
+    assert names.has_dense_script("김민준")
+    assert not names.has_dense_script("John Smith")
+    assert not names.has_dense_script("Газпром")
+
+
+def test_is_matchable_name_dense_script_fix():
+    # Previously blocked: CJK names have no internal spaces.
+    assert is_matchable_name("田中太郎")
+    assert is_matchable_name("김민준")
+    # Still blocked: single Latin/Cyrillic tokens are too generic.
+    assert not is_matchable_name("Ivanov")
+    assert not is_matchable_name("fernandez")
+    # Unchanged: multi-token names match, empty doesn't.
+    assert is_matchable_name("john smith")
+    assert not is_matchable_name("")
+    assert not is_matchable_name(None)
+    # A single dense character is still too generic.
+    assert not is_matchable_name("金")

@@ -128,5 +128,14 @@ def is_matchable_name(normalised_name: str | None) -> bool:
     a cross-source match on. Callers pass their own normalised form (e.g.
     ``cross_check._normalise`` or ``reconcile._normalise_name``) so this stays
     agnostic to which normaliser produced it.
+
+    Phase D (rigour adoption): CJK/kana/Hangul names carry no spaces at all,
+    so the single-token guard silently blocked EVERY name in those scripts.
+    A dense-script name of ≥2 characters is matchable.
     """
-    return bool(normalised_name) and " " in normalised_name.strip()
+    if not normalised_name:
+        return False
+    text = normalised_name.strip()
+    if " " in text:
+        return True
+    return names.has_dense_script(text) and len(text) >= 2
