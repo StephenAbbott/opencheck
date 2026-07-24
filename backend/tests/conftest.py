@@ -33,6 +33,13 @@ os.environ.setdefault("OPENCHECK_DISABLE_DOTENV", "1")
 # slowapi wrapper is a pass-through while disabled.
 os.environ.setdefault("OPENCHECK_RATE_LIMIT_ENABLED", "0")
 
+# Identifier check-digit enforcement is off for the whole suite: dozens of
+# long-standing fixtures use deliberately fake, shape-valid LEIs
+# ("2138000000000000A001", "LEI0000000000000ACME", …) that would fail the
+# ISO 17442 mod-97 gate. tests/test_identifiers.py re-enables it per-fixture
+# (env var + get_settings.cache_clear()) to pin the enforced behaviour.
+os.environ.setdefault("OPENCHECK_IDENTIFIER_CHECKSUMS_ENFORCED", "0")
+
 
 def pytest_addoption(parser):
     parser.addoption(

@@ -47,6 +47,8 @@ import re
 from functools import lru_cache
 from typing import Any
 
+from .. import identifiers
+
 DATA_SOURCE = "OPENCHECK"
 DOMAIN = "OPENCHECK"
 
@@ -85,7 +87,8 @@ _INTEREST_ROLE = {
     "unknownInterest": "INTERESTED_PARTY_OF",
 }
 
-_LEI_RE = re.compile(r"^[0-9A-Z]{18}[0-9]{2}$")
+# LEI classification (shared) — see the note in bods/ftm.py.
+_classify_lei = identifiers.classify_lei
 
 
 def _camel_to_upper(value: str) -> str:
@@ -174,7 +177,7 @@ def _identifier_features(
         scheme_name = (ident.get("schemeName") or "").strip()
         haystack = f"{scheme} {scheme_name}".upper()
 
-        if "LEI" in haystack or _LEI_RE.match(value):
+        if "LEI" in haystack or _classify_lei(value):
             out.append({"LEI_NUMBER": value})
             continue
 

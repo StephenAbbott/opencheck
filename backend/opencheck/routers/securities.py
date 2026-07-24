@@ -7,22 +7,25 @@ lazily by the frontend's Securities section so a lookup never pays for it.
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
+from .. import identifiers
 from ..ratelimit import default_tier, limiter
 from ..securities import PAGE_SIZE, assemble_securities
 
 router = APIRouter()
 
-_LEI_SHAPE = re.compile(r"^[A-Z0-9]{20}$")
+_LEI_SHAPE = identifiers.LEI_PATH_SHAPE  # + check digits below when enforced
 
 
 class Security(BaseModel):
     isin: str
+    # ISO 6166 shape + Luhn check digit (advisory data-quality flag; the
+    # security is surfaced either way). See opencheck/identifiers.py.
+    checksum_valid: bool = True
     type: str | None = None
     name: str | None = None
     ticker: str | None = None
@@ -62,4 +65,7 @@ async def securities(
                 "alphanumeric strings (e.g. 7LTWFZYICNSX8D621K86)."
             ),
         )
+    check_digit_error = identifiers.lei_check_digit_error(norm_lei)
+    if check_digit_error:
+        raise HTTPException(status_code=400, detail=check_digit_error)
     return await assemble_securities(norm_lei, page=page, page_size=PAGE_SIZE)

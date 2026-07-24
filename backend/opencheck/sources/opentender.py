@@ -57,6 +57,7 @@ from typing import Any
 
 import httpx
 
+from .. import identifiers
 from ..cache import Cache
 from ..config import get_settings
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
@@ -505,7 +506,7 @@ def warm_opentender_db() -> None:
     OpenTenderAdapter()._ensure_db()
 
 
-_LEI_SHAPE = re.compile(r"^[A-Z0-9]{20}$")
+_LEI_SHAPE = identifiers.LEI_PATH_SHAPE  # shared shape (see identifiers.py)
 
 
 def _walk_bodies(tender: dict[str, Any]):
@@ -539,7 +540,9 @@ def _looks_like_lei(value: str) -> bool:
     shape so the cross-source reconciler can bridge to GLEIF on the LEI
     regardless of how the publisher tagged it.
     """
-    return bool(_LEI_SHAPE.match(value.upper()))
+    # Strict shape + (when enforced) check digits: an ETALON_ID that merely
+    # looks LEI-shaped must not bridge to GLEIF on a bad checksum.
+    return identifiers.classify_lei(value)
 
 
 def _bridge_identifier(ident: dict[str, Any]) -> tuple[str | None, str | None]:

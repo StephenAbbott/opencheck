@@ -88,6 +88,18 @@ class Settings(BaseSettings):
     # several of these per lookup.
     rate_limit_default: str = Field(default="60/minute", alias="OPENCHECK_RATE_LIMIT_DEFAULT")
 
+    # --- Identifier checksum enforcement (see opencheck/identifiers.py) ---
+    # Master switch for check-digit *enforcement*: LEI mod-97 fast-fail at the
+    # API boundaries, checksum-aware LEI classification in the BODS mappers /
+    # reconciler / source adapters, and national-ID check-digit warnings on
+    # /resolve-national-id. Shape validation always applies regardless. The
+    # test suite turns this off in conftest.py (long-standing fixtures use
+    # deliberately fake, shape-valid LEIs); dedicated tests re-enable it —
+    # the same arrangement as the rate limiter above.
+    identifier_checksums_enforced: bool = Field(
+        default=True, alias="OPENCHECK_IDENTIFIER_CHECKSUMS_ENFORCED"
+    )
+
     # --- Source credentials ---
     companies_house_api_key: str | None = Field(default=None, alias="COMPANIES_HOUSE_API_KEY")
     # Dedicated key for the Time Machine /history filing-history fetch, kept

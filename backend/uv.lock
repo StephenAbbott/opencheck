@@ -1634,6 +1634,7 @@ dependencies = [
 [package.optional-dependencies]
 ftm = [
     { name = "bods-ftm" },
+    { name = "rigour" },
 ]
 
 [package.dev-dependencies]
@@ -1667,6 +1668,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.6" },
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "rdflib", specifier = ">=7.0" },
+    { name = "rigour", marker = "extra == 'ftm'", specifier = ">=0.14,<3" },
     { name = "segno", specifier = ">=1.6" },
     { name = "slowapi", specifier = ">=0.1.10" },
     { name = "sse-starlette", specifier = ">=2.1" },
