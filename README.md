@@ -16,14 +16,13 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 84** — Identifier validation: ISO 17442 LEI check digits, via OpenSanctions' rigour
+**Latest: Phase 85** — rigour Phases B–E: one name normaliser, org-type merge keys, shared scoring, languages
+
+The remaining phases of the rigour adoption plan land as one arc. A shared `opencheck/names.py` replaces five divergent hand-rolled name normalisers with a single deterministic pipeline (extended fold tables + bounded Cyrillic/Greek→Latin transliteration — identical output whether or not ICU is installed), so native and transliterated forms of the same name finally match, and Cyprus's Greek-script `ΗΕ` registration numbers reconcile with GLEIF's Latin `HE` form. Possibly-same merge keys become org-type aware through rigour's curated legal-form data ('Tesco Stores Limited' ≡ 'TESCO STORES LTD', ооо ≡ GmbH ≡ Ltd) with a despaced key for Danish `A/S`↔`AS`. One shared similarity scorer now backs both the related-party screens and BackgroundCheck — provably never scoring below the old one, adding name-order invariance ('Doe, John' ↔ 'John Doe') and edit-budgeted typo tolerance — and CJK names are no longer silently excluded from matching. Non-Latin names gain deterministic Latin alternates in BODS output (typed `transliteration` entries for persons), and Wikidata labels are captured in ten languages instead of English only. Commits `85a288d`, `07a8645`, `8b5abe7`, `956128c`.
+
+**Previous: Phase 84** — Identifier validation: ISO 17442 LEI check digits, via OpenSanctions' rigour
 
 First phase of adopting [rigour](https://github.com/opensanctions/rigour) (MIT), OpenSanctions' data cleaning and validation library. A shared `opencheck/identifiers.py` replaces the LEI regex that had been copy-pasted across eleven call sites, and OpenCheck now validates LEI **check digits** (ISO 17442 mod 97-10) for the first time: a mistyped LEI fails fast at the API boundary with an explanation instead of a silent GLEIF 404, and checksum-invalid values are no longer classified as LEIs in the BODS exports, the cross-source reconciler, or the Wikidata/OpenTender adapters. Also new: an ISIN Luhn data-quality flag on securities, advisory check-digit warnings on `/resolve-national-id`, and python-stdnum check-digit gates for Finnish, Swedish and Brazilian registration numbers that skip upstream queries doomed to fail. Validation prefers `rigour.ids` — the exact implementation OpenSanctions runs — with a parity-tested pure-Python fallback for ICU-less dev installs. Commit `52bc981`.
-
-**Previous: Phase 83** — EITI State-Owned Enterprises Database as a new open data source
-
-A new LEI-keyed source (`eiti_soe`) surfacing state-owned enterprises reported through the EITI, distinct from the existing `eiti` payments adapter. The SOE data carries no native LEI, so each SOE is resolved to an LEI at index-build time via GLEIF into a committed index; the BODS mapping emits a `stateBody` government plus a `controlByLegalFramework` relationship, which raises the existing `STATE_CONTROLLED` risk signal with no risk-engine or frontend changes. Category `cdd`; licence clean (used directly from EITI, not the CC-BY-NC OpenSanctions mirror). ([commit 7f54617](https://github.com/StephenAbbott/opencheck/commit/7f54617f469bb2eaae462db7339b9abf0c9f66d7))
-
 
 → [Full development history](docs/status.md)
 
