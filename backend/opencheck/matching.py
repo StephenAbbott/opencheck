@@ -33,6 +33,8 @@ from __future__ import annotations
 
 import re
 
+from . import names
+
 try:  # pragma: no cover - exercised via the ftm extra in CI/prod
     from rigour.ids import StrictFormat
     from rigour.urls import clean_url_compare
@@ -88,6 +90,13 @@ def canonical_identifier(
     text = str(value).strip()
     if not text:
         return None
+    # Phase B (rigour adoption): fold Greek/Cyrillic capitals that are visual
+    # homoglyphs of Latin ones BEFORE canonicalising. Cyprus registration
+    # numbers arrive in Greek script (``ΗΕ 489243``) while GLEIF publishes the
+    # Latin form (``HE 489243``); without this fold the fallback stripped the
+    # Greek letters to an empty string and even the rigour path produced a
+    # different key (``EE...``) than the Latin side (``HE...``).
+    text = names.fold_homoglyphs(text)
     norm = _normalise_identifier_value(text)
     if len(norm) < min_len:
         return None

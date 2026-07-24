@@ -31,6 +31,7 @@ import re
 from typing import Any
 from urllib.parse import quote
 
+from . import names
 from .cache import Cache
 from .config import get_settings
 from .http import build_client
@@ -66,7 +67,10 @@ _cache = Cache()
 # --------------------------------------------------------------------------- #
 
 def _norm_name(s: str | None) -> str:
-    return " ".join((s or "").lower().split())
+    """Shared comparable form (Phase B) — see ``opencheck/names.py``. Both
+    sides of the exact-name key go through the same function, and the old
+    lowercase+split had no diacritic handling at all."""
+    return names.normalise_name(s or "")
 
 
 def _norm_addr(s: str | None) -> str:

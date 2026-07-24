@@ -70,11 +70,11 @@ from __future__ import annotations
 import json
 import logging
 import re
-import unicodedata
 from typing import Any
 
 import httpx
 
+from . import names
 from .config import get_settings
 from .http import build_client, sanitize_name_query
 from .risk import (
@@ -509,25 +509,11 @@ def _parse_jurisdiction(description: str) -> str:
     return ""
 
 
-_NON_DECOMPOSABLE_FOLDS = {
-    "ł": "l", "Ł": "L",
-    "ø": "o", "Ø": "O",
-    "æ": "ae", "Æ": "Ae",
-    "œ": "oe", "Œ": "Oe",
-    "ð": "d", "Ð": "D",
-    "þ": "th", "Þ": "Th",
-    "ß": "ss",
-}
-
-
 def _normalise(name: str) -> str:
-    if not name:
-        return ""
-    folded = "".join(_NON_DECOMPOSABLE_FOLDS.get(c, c) for c in name)
-    decomposed = unicodedata.normalize("NFKD", folded)
-    ascii_only = "".join(c for c in decomposed if not unicodedata.combining(c))
-    cleaned = re.sub(r"[^\w\s]", " ", ascii_only.lower())
-    return re.sub(r"\s+", " ", cleaned).strip()
+    """Shared comparable form (Phase B) — see ``opencheck/names.py``. The
+    verbatim duplicate of cross_check's normaliser (and its second copy of
+    the fold table) is gone."""
+    return names.normalise_name(name)
 
 
 def _name_sim(a: str, b: str) -> float:

@@ -21,11 +21,10 @@ Weak bridges (``possibly-same-as``) — surfaced separately, not merged:
 from __future__ import annotations
 
 import re
-import unicodedata
 from dataclasses import dataclass, field
 from typing import Iterable
 
-from . import identifiers
+from . import identifiers, names
 from .matching import canonical_identifier, is_matchable_name
 from .sources import SearchKind, SourceHit
 
@@ -162,13 +161,11 @@ def reconcile(hits: Iterable[SourceHit]) -> list[CrossSourceLink]:
 
 
 def _normalise_name(name: str) -> str:
-    """Lower, strip diacritics, collapse whitespace, drop punctuation."""
-    if not name:
-        return ""
-    decomposed = unicodedata.normalize("NFKD", name)
-    ascii_only = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
-    cleaned = re.sub(r"[^\w\s]", " ", ascii_only.lower())
-    return re.sub(r"\s+", " ", cleaned).strip()
+    """Shared comparable form (Phase B) — see ``opencheck/names.py``. This
+    module's local normaliser had NO fold table, so ``Ørsted`` bridged in
+    cross_check but not here; delegating closes that gap."""
+    return names.normalise_name(name)
+
 
 
 # ---------------------------------------------------------------------
