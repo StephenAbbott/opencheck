@@ -8,19 +8,24 @@ normal desktop environment is the right place). It writes
 
 Pipeline
 --------
-1. Pull the canonical SOE roster from the Datasette ``SOE List`` view and the
-   ``companies`` table (for ``opencorporates_id`` / ``eiti_id_company``), and
-   join them on normalised name + ISO country.
+1. Build the SOE roster **directly from the Datasette ``companies`` table** —
+   the table that actually carries ``opencorporates_id``, ``eiti_id_company``
+   and ``iso_alpha2_code``. Group its payment rows into distinct SOEs (keyed on
+   ``eiti_id_company``, falling back to normalised name + ISO). The ``SOE List``
+   view is used only as *optional* enrichment for the audited-financial-statement
+   and stock-listing fields — never as the roster, because its ``Country`` field
+   spells countries out and can't be joined reliably (that mismatch is why the
+   first index resolved 0 SOEs via ``opencorporates_id``).
 2. Resolve each SOE to an LEI via the public GLEIF API:
      * ``opencorporates_id`` → GLEIF ``entity.registeredAs`` reverse lookup,
        confirmed by country  → confidence "high".
      * else name + country search                                → "medium"/"low".
-3. Emit a gzipped, LEI-keyed artifact plus a ``meta`` coverage report.
+3. Emit a gzipped, LEI-keyed artifact plus a ``meta`` coverage report (including
+   how many SOEs actually carry an ``opencorporates_id``, so a low OC-id hit
+   rate is visibly a data gap rather than a silent join bug).
 
 The adapter, schema, mapper and tests do NOT depend on running this — they use
-fixtures. This only populates the real artifact and prints resolution coverage,
-which is the honest way to learn how many of the ~100 SOEs actually join
-OpenCheck's LEI universe before trusting the source in the UI.
+fixtures. This only populates the real artifact and prints resolution coverage.
 
 Usage:
     python3 scripts/build_eiti_soe_index.py [--limit N] [--out PATH] [--sleep S]
@@ -54,9 +59,8 @@ _DEFAULT_OUT = (
 _WS_RE = re.compile(r"\s+")
 _NON_ALNUM_RE = re.compile(r"[^a-z0-9 ]+")
 
-# Minimal country-name → ISO alpha-2 helper for the SOE List "Country" field.
-# The companies table already carries iso_alpha2_code; this only covers the
-# view, which spells countries out. Extend as needed.
+# Country-name → ISO alpha-2, only needed for the SOE List *enrichment* view
+# (the companies roster carries iso_alpha2_code directly). Extend as needed.
 _COUNTRY_ISO = {
     "afghanistan": "AF", "albania": "AL", "argentina": "AR", "chad": "TD",
     "colombia": "CO", "democratic republic of congo": "CD", "ghana": "GH",
@@ -143,54 +147,75 @@ def _resolve_lei(
     return None, "", ""
 
 
+def _soe_roster(companies: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Group companies-table payment rows into distinct SOEs.
+
+    Keyed on ``eiti_id_company`` where present (stable), else normalised
+    name + ISO. The representative row prefers one carrying an
+    ``opencorporates_id``. Aggregates the set of reporting years.
+    """
+    soes: dict[str, dict[str, Any]] = {}
+    for c in companies:
+        name = (c.get("company_name") or c.get("original_company_name") or "").strip()
+        if not name:
+            continue
+        iso = _iso(c.get("iso_alpha2_code") or c.get("country") or "")
+        eid = (c.get("eiti_id_company") or "").strip()
+        gkey = eid or f"name:{_norm_name(name)}|{iso}"
+        agg = soes.setdefault(
+            gkey, {"name": name, "iso": iso, "years": set(), "row": c}
+        )
+        if c.get("year"):
+            agg["years"].add(str(c["year"]))
+        # Prefer a representative row that carries an opencorporates_id.
+        if c.get("opencorporates_id") and not agg["row"].get("opencorporates_id"):
+            agg["row"] = c
+    return soes
+
+
 def build(limit: int | None, out: Path, sleep: float) -> None:
     with httpx.Client(timeout=60, follow_redirects=True) as client:
-        print("Fetching SOE List view …", file=sys.stderr)
-        roster = _fetch_datasette(client, SOE_LIST_URL)
-        print(f"  {len(roster)} SOE roster rows", file=sys.stderr)
-        print("Fetching companies table (for opencorporates_id / eiti ids) …",
-              file=sys.stderr)
+        print("Fetching companies table (roster + identifiers) …", file=sys.stderr)
         companies = _fetch_datasette(client, COMPANIES_URL)
-        print(f"  {len(companies)} company rows", file=sys.stderr)
+        print(f"  {len(companies)} company payment rows", file=sys.stderr)
+        # SOE List is optional enrichment only (audited financials / listings).
+        try:
+            roster_rows = _fetch_datasette(client, SOE_LIST_URL)
+            print(f"  {len(roster_rows)} SOE List rows (enrichment)", file=sys.stderr)
+        except Exception as exc:  # noqa: BLE001
+            print(f"  ! SOE List fetch failed ({exc}); continuing from companies only",
+                  file=sys.stderr)
+            roster_rows = []
 
-    # Enrichment lookup: normalised (name, iso) -> best company row.
-    enrich: dict[tuple[str, str], dict[str, Any]] = {}
-    for c in companies:
-        key = (_norm_name(c.get("company_name") or c.get("original_company_name") or ""),
-               _iso(c.get("iso_alpha2_code") or c.get("country") or ""))
-        if key[0] and (key not in enrich or c.get("opencorporates_id")):
-            enrich[key] = c
+    # SOE List enrichment keyed by (normalised name, iso): AFS + listing fields.
+    listing: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in roster_rows:
+        k = (_norm_name(row.get("SOE") or ""), _iso(row.get("Country") or ""))
+        if k[0]:
+            listing.setdefault(k, row)
 
-    # Distinct SOEs from the roster (a company may appear per year).
-    soes: dict[tuple[str, str], dict[str, Any]] = {}
-    for row in roster:
-        name = row.get("SOE") or row.get("company_name") or ""
-        iso = _iso(row.get("Country") or row.get("country") or "")
-        key = (_norm_name(name), iso)
-        if not key[0]:
-            continue
-        agg = soes.setdefault(key, {"name": name, "iso": iso, "years": set(), "rows": []})
-        if row.get("Year"):
-            agg["years"].add(str(row["Year"]))
-        agg["rows"].append(row)
+    soes = _soe_roster(companies)
 
     index: dict[str, dict[str, Any]] = {}
     counts = {"total": 0, "high": 0, "medium": 0, "low": 0, "unresolved": 0,
-              "by_oc_id": 0, "by_name": 0}
+              "by_oc_id": 0, "by_name": 0, "with_oc_id": 0}
 
     items = list(soes.items())
     if limit:
         items = items[:limit]
 
     with httpx.Client(timeout=60, follow_redirects=True) as client:
-        for key, agg in items:
+        for _gkey, agg in items:
             counts["total"] += 1
-            c = enrich.get(key, {})
+            c = agg["row"]
             oc_id = (c.get("opencorporates_id") or "").strip()
-            first = agg["rows"][0]
+            if oc_id:
+                counts["with_oc_id"] += 1
             name = agg["name"]
             iso = agg["iso"]
-            print(f"[{counts['total']}/{len(items)}] {name} ({iso}) …", file=sys.stderr)
+            enrich = listing.get((_norm_name(name), iso), {})
+            print(f"[{counts['total']}/{len(items)}] {name} ({iso}) "
+                  f"{'oc:' + oc_id if oc_id else 'no-oc'} …", file=sys.stderr)
             lei, method, conf = _resolve_lei(
                 client, oc_id=oc_id, name=name, iso=iso, sleep=sleep
             )
@@ -199,7 +224,9 @@ def build(limit: int | None, out: Path, sleep: float) -> None:
                 continue
             counts[conf] += 1
             counts["by_oc_id" if method == "opencorporates_id" else "by_name"] += 1
-            commodities = c.get("company_commodities") or first.get("Commodities") or ""
+            commodities = (
+                c.get("company_commodities") or enrich.get("Commodities") or ""
+            )
             index[lei.upper()] = {
                 "lei": lei.upper(),
                 "match_method": method,
@@ -209,7 +236,7 @@ def build(limit: int | None, out: Path, sleep: float) -> None:
                     "original_company_name": c.get("original_company_name"),
                     "country": iso,
                     "iso_alpha2": iso,
-                    "sector": c.get("company_sector") or first.get("Sector"),
+                    "sector": c.get("company_sector") or enrich.get("Sector"),
                     "commodities": [s.strip() for s in re.split(r"[;,]", commodities) if s.strip()],
                     "company_type": c.get("company_type") or "State-owned enterprise",
                     "government_entity": c.get("government_entity"),
@@ -217,12 +244,12 @@ def build(limit: int | None, out: Path, sleep: float) -> None:
                     "eiti_id_company": c.get("eiti_id_company"),
                     "eiti_id_government": c.get("eiti_id_government"),
                     "audited_financial_statement": (
-                        first.get("Audited Financial Statement or Equivalent")
-                        or c.get("company_audited_financial_statement_or_equivalent")
+                        c.get("company_audited_financial_statement_or_equivalent")
+                        or enrich.get("Audited Financial Statement or Equivalent")
                     ),
                     "public_listing_or_website": (
-                        first.get("Public Listing or Website")
-                        or c.get("company_public_listing_or_website")
+                        c.get("company_public_listing_or_website")
+                        or enrich.get("Public Listing or Website")
                     ),
                     "years": sorted(agg["years"]),
                     "soe_list": True,
@@ -235,6 +262,7 @@ def build(limit: int | None, out: Path, sleep: float) -> None:
             "source": SOE_BASE,
             "source_snapshot": _dt.date.today().isoformat(),
             "companies": counts["total"],
+            "with_opencorporates_id": counts["with_oc_id"],
             "resolved_lei": len(index),
             "resolved_high": counts["high"],
             "resolved_medium": counts["medium"],
@@ -254,14 +282,15 @@ def build(limit: int | None, out: Path, sleep: float) -> None:
 
     m = payload["meta"]
     print("\n=== EITI SOE index coverage ===", file=sys.stderr)
-    print(f"  SOEs processed : {m['companies']}", file=sys.stderr)
-    print(f"  resolved to LEI: {m['resolved_lei']} "
+    print(f"  SOEs processed     : {m['companies']}", file=sys.stderr)
+    print(f"  with OpenCorp. id  : {m['with_opencorporates_id']}", file=sys.stderr)
+    print(f"  resolved to LEI    : {m['resolved_lei']} "
           f"(high {m['resolved_high']}, medium {m['resolved_medium']}, low {m['resolved_low']})",
           file=sys.stderr)
-    print(f"  by OC id / name: {m['resolved_by_oc_id']} / {m['resolved_by_name']}",
+    print(f"  by OC id / by name : {m['resolved_by_oc_id']} / {m['resolved_by_name']}",
           file=sys.stderr)
-    print(f"  unresolved     : {m['unresolved']}", file=sys.stderr)
-    print(f"  written        : {out}", file=sys.stderr)
+    print(f"  unresolved         : {m['unresolved']}", file=sys.stderr)
+    print(f"  written            : {out}", file=sys.stderr)
 
 
 def main() -> None:

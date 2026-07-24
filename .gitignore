@@ -115,3 +115,9 @@ data/ariregister_raw/
 
 # GLEIF autocompletions eval harness response cache (issue #27) — not committed
 backend/scripts/.gleif_eval_cache.json
+
+# Session artefacts — never commit
+_to_delete/
+*.bundle
+unilever.json
+tmp_opencheck_audit.tgz
