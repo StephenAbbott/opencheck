@@ -8,8 +8,9 @@ The bundle is assembled from three Wikirate REST calls (Decko card JSON):
   ``filter[company_identifier]`` documented elsewhere 500s server-side
   (verified 2026-07-07).
 * ``GET /~{card_id}+Answer.json?view=count`` — total metric answers.
-* ``GET /~{card_id}+Answer.json?filter[year]=latest&limit=N`` — latest
-  answer per metric (sample).
+* ``GET /~{card_id}+Answer.json?filter[metric_type][]=researched&sort_by=year&sort_dir=desc&limit=N``
+  — researched-only answers, most recent year first (sample; per the
+  Wikirate team, 2026-07-24).
 
 Only fields the BODS mapper and the frontend card read are declared;
 everything else passes through via ``extra="allow"``.
@@ -25,7 +26,7 @@ from . import _Base
 
 
 class WikirateAnswer(_Base):
-    """One metric answer (latest value for one metric)."""
+    """One researched metric answer, from the most-recent-year-first sample."""
 
     metric_designer: str | None = None
     metric_name: str | None = None

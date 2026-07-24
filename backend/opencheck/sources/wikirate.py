@@ -8,9 +8,9 @@ Resource Centre. Wikirate is a GODIN member and publishes rich company
 identifiers — LEI, Wikidata QID, OpenCorporates ID, UK company number,
 SEC CIK, ABN/ACN, ISINs — making it a strong cross-source corroborator.
 
-OpenCheck shows a high-level summary (total data points + the latest
-answer per metric, sampled) and links out to wikirate.org for the full
-record, per Wikirate's community model.
+OpenCheck shows a high-level summary (total data points + a sample of
+the most recent researched answers) and links out to wikirate.org for
+the full record, per Wikirate's community model.
 
 Hard-won API constraints (verified live 2026-07-07)
 ----------------------------------------------------
@@ -26,9 +26,15 @@ Hard-won API constraints (verified live 2026-07-07)
 * **Card paths**: company names with trailing dots ("BP plc.") break
   naive ``{slug}+Answer.json`` URLs. Always address cards by numeric id
   (``/~{card_id}+Answer.json``) — stable and encoding-proof.
-* **Answers**: ``filter[year]=latest`` returns the latest answer per
-  metric; ``view=count`` returns a bare integer total (it ignores
-  other filters). Sort params (``filter[sort_by]``) are ignored.
+* **Answers**: ``view=count`` returns a bare integer total (it ignores
+  other filters). Per direct recommendation from the Wikirate team
+  (2026-07-24), the answers list query sends
+  ``filter[metric_type][]=researched&sort_by=year&sort_dir=desc`` —
+  this restricts the list to human-researched answers (excluding
+  derived/calculated ones) and orders them most-recent-year-first.
+  This supersedes the earlier ``filter[year]=latest`` approach (which
+  returned one answer per metric) and the earlier finding that sort
+  params were ignored.
 * Rate limit: 60 requests/minute; this adapter spends 3 per lookup.
 """
 
@@ -246,7 +252,12 @@ class WikirateAdapter(SourceAdapter):
         try:
             payload = await self._get_json(
                 f"/~{card_id}+Answer.json",
-                params={"filter[year]": "latest", "limit": _MAX_LATEST_ANSWERS},
+                params={
+                    "filter[metric_type][]": ["researched"],
+                    "sort_by": "year",
+                    "sort_dir": "desc",
+                    "limit": _MAX_LATEST_ANSWERS,
+                },
             )
         except Exception as exc:  # noqa: BLE001
             log.warning("Wikirate answers fetch failed for ~%s: %s", card_id, exc)
