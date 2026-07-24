@@ -48,7 +48,7 @@ _CACHE_NS = "wikidata"
 # controlling entity" relationships; the mapper emits ``otherInfluenceOrControl``
 # interests with ``beneficialOwnershipOrControl: false``.
 _FETCH_QUERY = """
-SELECT ?label ?description ?instance ?instanceLabel
+SELECT ?label ?labelLang ?description ?instance ?instanceLabel
        ?dob ?dod ?citizenship ?citizenshipLabel
        ?position ?positionLabel ?positionStart ?positionEnd
        ?lei ?openCorporates ?isin
@@ -56,7 +56,11 @@ SELECT ?label ?description ?instance ?instanceLabel
        ?parentOrg ?parentOrgLabel ?ownedBy ?ownedByLabel
 WHERE {
   BIND(wd:%(qid)s AS ?qid)
-  OPTIONAL { ?qid rdfs:label ?label FILTER(LANG(?label) = "en") }
+  OPTIONAL {
+    ?qid rdfs:label ?label
+    FILTER(LANG(?label) IN ("en", "de", "fr", "es", "pt", "ru", "uk", "el", "zh", "ar"))
+    BIND(LANG(?label) AS ?labelLang)
+  }
   OPTIONAL { ?qid schema:description ?description FILTER(LANG(?description) = "en") }
   OPTIONAL { ?qid wdt:P31 ?instance }
   OPTIONAL { ?qid wdt:P569 ?dob }
@@ -731,7 +735,12 @@ def _summarise_bindings(qid: str, bindings: list[dict[str, Any]]) -> dict[str, A
     identifiers: dict[str, str] = {}
     parent_orgs: dict[str, str] = {}  # qid → label, merged from P749 + P127
 
+    labels: dict[str, str] = {}  # BCP-47 lang → label (Phase E)
     for row in bindings:
+        row_label = _bv(row, "label")
+        row_lang = _bv(row, "labelLang")
+        if row_label and row_lang and row_lang not in labels:
+            labels[row_lang] = row_label
         label = label or _bv(row, "label")
         description = description or _bv(row, "description")
         dob = dob or _bv(row, "dob")
@@ -803,9 +812,16 @@ def _summarise_bindings(qid: str, bindings: list[dict[str, Any]]) -> dict[str, A
     # etc. The mapper uses this to choose entityStatement vs personStatement.
     is_entity = bool(instance_of) and not is_person
 
+    # Prefer the English label for display; any other captured language is
+    # surfaced via ``labels`` and mapped to alternateNames downstream.
+    if labels:
+        label = labels.get("en") or label or next(iter(labels.values()))
     return {
         "qid": qid,
         "label": label,
+        "labels": [
+            {"language": lang, "label": lbl} for lang, lbl in sorted(labels.items())
+        ],
         "description": description,
         "is_person": is_person,
         "is_entity": is_entity,

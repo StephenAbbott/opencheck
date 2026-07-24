@@ -41,12 +41,11 @@ Scope notes
 from __future__ import annotations
 
 import asyncio
-import difflib
 import logging
 import re
-import unicodedata
 from typing import Any
 
+from . import names
 from .config import get_settings
 from .matching import is_matchable_name
 from .risk import (
@@ -546,46 +545,22 @@ def _make_signal(
 # ---------------------------------------------------------------------
 
 
-# Stand-alone non-ASCII letters that NFKD does NOT decompose. Real
-# OpenSanctions / EveryPolitician records sometimes carry the
-# transliterated form, sometimes the native one — we fold them so a
-# Polish ``ł`` matches an English ``l`` and similar.
-_NON_DECOMPOSABLE_FOLDS = {
-    "ł": "l", "Ł": "L",
-    "ø": "o", "Ø": "O",
-    "æ": "ae", "Æ": "Ae",
-    "œ": "oe", "Œ": "Oe",
-    "ð": "d", "Ð": "D",
-    "þ": "th", "Þ": "Th",
-    "ß": "ss",
-}
-
-
 def _normalise(name: str) -> str:
-    """Lower-case, strip diacritics, drop punctuation, collapse spaces.
-
-    Beyond the standard NFKD pass we also fold a small set of
-    stand-alone non-ASCII letters (``ł``, ``ø``, ``æ`` etc.) that NFKD
-    leaves in place — they're common in central / northern European
-    person names and we want them to match the transliterated form.
-    """
-    if not name:
-        return ""
-    folded = "".join(_NON_DECOMPOSABLE_FOLDS.get(c, c) for c in name)
-    decomposed = unicodedata.normalize("NFKD", folded)
-    ascii_only = "".join(c for c in decomposed if not unicodedata.combining(c))
-    cleaned = re.sub(r"[^\w\s]", " ", ascii_only.lower())
-    return re.sub(r"\s+", " ", cleaned).strip()
+    """Shared comparable form (Phase B, rigour adoption): see
+    ``opencheck/names.py``. Identical output to the old local normaliser for
+    Latin-script names (its fold table is a subset of the shared one); adds
+    Cyrillic/Greek transliteration so native vs transliterated forms of the
+    same person can finally score as similar instead of ~0."""
+    return names.normalise_name(name)
 
 
 def _name_score(a: str, b: str) -> float:
-    """Similarity in [0.0, 1.0] for two names."""
-    na, nb = _normalise(a), _normalise(b)
-    if not na or not nb:
-        return 0.0
-    if na == nb:
-        return 1.0
-    return difflib.SequenceMatcher(a=na, b=nb).ratio()
+    """Similarity in [0.0, 1.0] for two names — the shared Phase-D scorer
+    (see ``names.name_similarity``): the historical difflib ratio plus
+    token-sort order invariance and, with rigour installed, its
+    edit-budgeted Levenshtein. Also reused by BackgroundCheck person
+    screening (routers/person_check.py) at the same 0.88 threshold."""
+    return names.name_similarity(a, b)
 
 
 def _extract_topics(raw: dict[str, Any]) -> list[str]:

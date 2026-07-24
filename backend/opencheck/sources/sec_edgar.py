@@ -35,6 +35,7 @@ import xml.etree.ElementTree as ET
 from typing import Any
 from urllib.parse import quote
 
+from .. import names
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -116,7 +117,13 @@ def _normalise_company_name(name: str) -> str:
         "Netflix, Inc."           -> "NETFLIX"
         "Walt Disney Co"          -> "WALT DISNEY"
     """
-    s = re.sub(r"[^A-Z0-9 ]+", " ", (name or "").upper())
+    # Phase C (rigour adoption): the shared fold pipeline supplies the base
+    # form (diacritics, ø/æ/ß folds, Cyrillic/Greek transliteration) so a
+    # GLEIF "MÜLLER" matches an EDGAR "MULLER". The trailing legal-form token
+    # strip stays local: rigour 0.14's org-type data does not cover bare
+    # "COMPANY"/"CO" (it would regress "THE WALT DISNEY COMPANY" ↔
+    # "Walt Disney Co") — revisit when followthemoney unlocks rigour 2.x.
+    s = names.normalise_name(name or "").upper()
     tokens = s.split()
     while tokens and tokens[0] == "THE":
         tokens = tokens[1:]

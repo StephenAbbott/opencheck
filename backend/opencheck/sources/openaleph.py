@@ -46,12 +46,12 @@ import hashlib
 import importlib.metadata
 import json
 import re
-import unicodedata
 from typing import Any
 from urllib.parse import quote
 
 import httpx
 
+from .. import names
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -105,17 +105,8 @@ _NAME_PUNCT = re.compile(r"[^\w\s]", re.UNICODE)
 
 
 def _normalise_name(text: str) -> str:
-    """Casefold + strip punctuation/diacritics + collapse whitespace.
-
-    Mirrors ``reconcile._normalise_name`` — same discipline, same reason: names
-    are compared, never scored.
-    """
-    if not text:
-        return ""
-    folded = unicodedata.normalize("NFKD", text)
-    folded = "".join(c for c in folded if not unicodedata.combining(c))
-    folded = _NAME_PUNCT.sub(" ", folded.casefold())
-    return " ".join(folded.split())
+    """Shared comparable form (Phase B) — see ``opencheck/names.py``."""
+    return names.normalise_name(text)
 
 
 def _bears_name(item: dict[str, Any], wanted: str) -> bool:
