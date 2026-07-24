@@ -17,6 +17,7 @@ from opencheck.sources import REGISTRY, SearchKind
 from opencheck.sources.opentender import (
     OpenTenderAdapter,
     _bridge_identifier,
+    _id_forms,
     _slug,
 )
 
@@ -92,23 +93,32 @@ def _make_db(tmp_path: Path, tenders: list[dict]) -> Path:
                 json.dumps(tender),
             ),
         )
-        # FTS entries for buyers + bidders.
-        for body in tender.get("buyers") or []:
+        # FTS + body_ids entries for buyers + bidders (mirrors the extract
+        # script: names go to the FTS index, every bodyIds[] entry goes to the
+        # flat body_ids identifier index with its raw id_value).
+        def _index_body(body: dict, role: str) -> None:
             name = (body.get("name") or "").strip()
             if name:
                 cur.execute(
                     "INSERT INTO body_names_fts (persistent_id, name, role) VALUES (?,?,?)",
-                    (pid, name, "buyer"),
+                    (pid, name, role),
                 )
+            for ident in body.get("bodyIds") or []:
+                id_value = str(ident.get("id") or "").strip()
+                if not id_value:
+                    continue
+                cur.execute(
+                    "INSERT INTO body_ids (persistent_id, id_type, id_scope, id_value) "
+                    "VALUES (?,?,?,?)",
+                    (pid, str(ident.get("type") or ""), str(ident.get("scope") or ""), id_value),
+                )
+
+        for body in tender.get("buyers") or []:
+            _index_body(body, "buyer")
         for lot in tender.get("lots") or []:
             for bid in lot.get("bids") or []:
                 for body in bid.get("bidders") or []:
-                    name = (body.get("name") or "").strip()
-                    if name:
-                        cur.execute(
-                            "INSERT INTO body_names_fts (persistent_id, name, role) VALUES (?,?,?)",
-                            (pid, name, "bidder"),
-                        )
+                    _index_body(body, "bidder")
     conn.commit()
     conn.close()
     return db_path
@@ -441,6 +451,229 @@ async def test_db_search_no_results_returns_empty(monkeypatch, tmp_path: Path) -
     adapter = OpenTenderAdapter()
     hits = await adapter.search("zzznomatch9999", SearchKind.ENTITY)
     assert hits == []
+
+
+# ---------------------------------------------------------------------
+# Identifier-first dispatch — fetch_by_registration (issue #29)
+# ---------------------------------------------------------------------
+
+# Orange S.A. — SIREN 380129866 — a genuine telecoms supplier the derived
+# national ID resolves to. The lot bidder carries the SIREN as ORGANIZATION_ID.
+_ORANGE_TENDER = {
+    "id": "cf-fr-orange",
+    "persistentId": "FR_orange_telecom_1",
+    "title": "FOURNITURE DE SERVICE DE TELECOMMUNICATIONS",
+    "country": "FR",
+    "isAwarded": True,
+    "buyers": [{"name": "Ministère de l'Intérieur", "bodyIds": []}],
+    "lots": [
+        {
+            "bids": [
+                {
+                    "isWinning": True,
+                    "bidders": [
+                        {
+                            "name": "Orange S.A.",
+                            "bodyIds": [
+                                {"id": "380129866", "type": "ORGANIZATION_ID", "scope": "FR"}
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+    ],
+}
+
+# Red-Orange e.U. — an Austrian furniture supplier that a name-keyed FTS MATCH
+# on "Orange" wrongly surfaces (issue #29). Different entity, different country,
+# different registration number — identifier dispatch must NOT return it.
+_RED_ORANGE_TENDER = {
+    "id": "cf-at-redorange",
+    "persistentId": "AT_red_orange_furniture_1",
+    "title": "Büromöbel Rahmenvereinbarung",
+    "country": "AT",
+    "isAwarded": True,
+    "buyers": [{"name": "Stadt Wien", "bodyIds": []}],
+    "lots": [
+        {
+            "bids": [
+                {
+                    "isWinning": True,
+                    "bidders": [
+                        {
+                            "name": "Red-Orange e.U.",
+                            "bodyIds": [
+                                {"id": "999888777", "type": "ORGANIZATION_ID", "scope": "AT"}
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+    ],
+}
+
+
+def _live_adapter(monkeypatch, tmp_path: Path, tenders: list[dict]) -> OpenTenderAdapter:
+    db_path = _make_db(tmp_path, tenders)
+    monkeypatch.setenv("OPENTENDER_DB_FILE", str(db_path))
+    get_settings.cache_clear()
+    return OpenTenderAdapter()
+
+
+async def test_fetch_by_registration_matches_by_national_id(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Keying on Orange S.A.'s SIREN returns Orange's telecoms tender — the
+    identifier-first inverse of the name search."""
+    adapter = _live_adapter(monkeypatch, tmp_path, [_ORANGE_TENDER, _RED_ORANGE_TENDER])
+    hits = await adapter.fetch_by_registration("FR", "380129866", legal_name="Orange S.A.")
+    assert len(hits) == 1
+    assert hits[0].hit_id == "FR_orange_telecom_1"
+    assert hits[0].name == "FOURNITURE DE SERVICE DE TELECOMMUNICATIONS"
+
+
+async def test_fetch_by_registration_rejects_name_token_collision(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """The #29 regression: a name MATCH on 'Orange' surfaces the unrelated
+    Austrian 'Red-Orange e.U.', but the identifier path keyed on Orange's SIREN
+    never returns it."""
+    adapter = _live_adapter(monkeypatch, tmp_path, [_ORANGE_TENDER, _RED_ORANGE_TENDER])
+
+    # Name search is the buggy path: 'Orange' pulls in Red-Orange e.U. as noise.
+    name_hits = await adapter.search("Orange", SearchKind.ENTITY)
+    name_ids = {h.hit_id for h in name_hits}
+    assert "AT_red_orange_furniture_1" in name_ids  # the false positive
+
+    # Identifier dispatch keyed on Orange's SIREN excludes the collision.
+    id_hits = await adapter.fetch_by_registration("FR", "380129866")
+    id_ids = {h.hit_id for h in id_hits}
+    assert id_ids == {"FR_orange_telecom_1"}
+    assert "AT_red_orange_furniture_1" not in id_ids
+
+
+async def test_fetch_by_registration_is_country_scoped(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """The same registration number in a different country is not returned —
+    scoping prevents cross-registry id collisions."""
+    adapter = _live_adapter(monkeypatch, tmp_path, [_ORANGE_TENDER])
+    # Right number, wrong country.
+    assert await adapter.fetch_by_registration("CZ", "380129866") == []
+
+
+async def test_fetch_by_registration_ignores_internal_id_types(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """A body that carries the value only under an internal key (SOURCE_ID /
+    BVD_ID / ETALON_ID) is not a registration-number match."""
+    tender = {
+        "id": "cf-fr-internal",
+        "persistentId": "FR_internal_only",
+        "title": "Internal-keyed tender",
+        "country": "FR",
+        "lots": [
+            {
+                "bids": [
+                    {
+                        "isWinning": True,
+                        "bidders": [
+                            {
+                                "name": "Some Supplier",
+                                "bodyIds": [
+                                    {"id": "552081317", "type": "SOURCE_ID", "scope": "FR"},
+                                    {"id": "552081317", "type": "BVD_ID", "scope": "FR"},
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            }
+        ],
+    }
+    adapter = _live_adapter(monkeypatch, tmp_path, [tender])
+    assert await adapter.fetch_by_registration("FR", "552081317") == []
+
+
+async def test_fetch_by_registration_normalises_id_forms(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """A punctuated / zero-padded GLEIF registeredAs matches the raw DIGIWHIST
+    id_value stored verbatim."""
+    tender = {
+        "id": "cf-cz-ico",
+        "persistentId": "CZ_ico_1",
+        "title": "Czech works contract",
+        "country": "CZ",
+        "lots": [
+            {
+                "bids": [
+                    {
+                        "isWinning": True,
+                        "bidders": [
+                            {
+                                "name": "Stavby s.r.o.",
+                                "bodyIds": [
+                                    {"id": "45274649", "type": "HEADER_ICO", "scope": "CZ"}
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            }
+        ],
+    }
+    adapter = _live_adapter(monkeypatch, tmp_path, [tender])
+    # GLEIF might publish it zero-padded / spaced; both normalise to the raw form.
+    hits = await adapter.fetch_by_registration("CZ", "0045274649")
+    assert {h.hit_id for h in hits} == {"CZ_ico_1"}
+
+
+async def test_fetch_by_registration_empty_without_db() -> None:
+    """Demo/stub mode (no DB) yields nothing — identifier dispatch has no
+    relevance fallback."""
+    adapter = OpenTenderAdapter()
+    assert await adapter.fetch_by_registration("FR", "380129866") == []
+
+
+async def test_fetch_by_registration_empty_on_blank_inputs(
+    monkeypatch, tmp_path: Path
+) -> None:
+    adapter = _live_adapter(monkeypatch, tmp_path, [_ORANGE_TENDER])
+    assert await adapter.fetch_by_registration("FR", "") == []
+    assert await adapter.fetch_by_registration("", "380129866") == []
+
+
+async def test_fetch_by_registration_no_match_returns_empty(
+    monkeypatch, tmp_path: Path
+) -> None:
+    adapter = _live_adapter(monkeypatch, tmp_path, [_ORANGE_TENDER])
+    assert await adapter.fetch_by_registration("FR", "000000000") == []
+
+
+async def test_fetch_by_registration_degrades_to_empty_when_db_corrupt(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """A malformed DB must degrade gracefully (empty), never raise
+    'database disk image is malformed' up the lookup pipeline."""
+    db_path = _make_db(tmp_path, [_ORANGE_TENDER])
+    _truncate(db_path)
+    monkeypatch.setenv("OPENTENDER_DB_FILE", str(db_path))
+    get_settings.cache_clear()
+
+    adapter = OpenTenderAdapter()
+    assert await adapter.fetch_by_registration("FR", "380129866") == []
+    assert not db_path.exists()  # corrupt file removed so a re-download can run
+
+
+def test_id_forms_normalisation() -> None:
+    assert _id_forms("380129866") == ["380129866"]
+    assert _id_forms("0045274649") == ["0045274649", "45274649"]
+    assert _id_forms("0056.58.214") == ["0056.58.214", "005658214", "5658214"]
+    assert _id_forms("") == []
+    assert _id_forms("   ") == []
 
 
 # ---------------------------------------------------------------------
