@@ -278,14 +278,32 @@ def possibly_same_entities(bods: list[dict]) -> list[PossiblySame]:
     passing the founding-date tiebreaker. Run on the assembled BODS bundle."""
     ents = [s for s in (bods or []) if s.get("recordType") == "entity" and s.get("statementId")]
     id_keys = {s["statementId"]: _identifier_keys(s) for s in ents}
-    groups: dict[tuple[str, str], list[dict]] = {}
+    groups: dict[tuple[str, str, str], list[dict]] = {}
     for s in ents:
         rd = s.get("recordDetails") or {}
-        nm = _normalise_name(rd.get("name") or "")
+        raw = rd.get("name") or ""
         jur = _entity_jurisdiction(rd)
-        if not nm or not jur:  # both required — name alone over-merges
+        if not raw or not jur:  # both required — name alone over-merges
             continue
-        groups.setdefault((nm, jur), []).append(s)
+        # Phase C (rigour adoption): candidate keys are org-type aware, so
+        # "Foo Ltd" / "Foo Limited" / cross-language equivalents group, plus
+        # a despaced secondary key for tokenisation artefacts ("A/S" ↔ "AS" —
+        # not in rigour's org-type aliases). An entity joins every key's
+        # group; pairs are deduped downstream via ``seen``.
+        org = names.org_comparable_name(raw, generic=True)
+        if not org:
+            continue
+        # The despaced key is computed from the PLAIN normalised form, not the
+        # org-typed one: rigour aliases bare "AS" (→ jsc) but not "A/S", so
+        # despacing the org form would put "…A/S" and "…AS" in different
+        # groups. Despacing the plain form collides them ("…a s" and "…as"
+        # both despace to "…as").
+        keys = {
+            ("org", org, jur),
+            ("despace", names.despace(names.normalise_name(raw)), jur),
+        }
+        for key in keys:
+            groups.setdefault(key, []).append(s)
 
     out: list[PossiblySame] = []
     seen: set[tuple[str, str]] = set()

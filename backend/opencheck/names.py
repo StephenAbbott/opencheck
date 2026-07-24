@@ -50,6 +50,14 @@ from __future__ import annotations
 import re
 import unicodedata
 
+try:  # pragma: no cover - exercised via the ftm extra in CI/prod
+    from rigour.names import replace_org_types_compare as _rigour_org_compare
+
+    _HAS_RIGOUR_NAMES = True
+except ImportError:  # pragma: no cover - base install without the ftm extra
+    _rigour_org_compare = None  # type: ignore[assignment]
+    _HAS_RIGOUR_NAMES = False
+
 # --- Layer 1: non-decomposable Latin letters --------------------------------
 # NFKD does not decompose these; both deleted _NON_DECOMPOSABLE_FOLDS tables
 # (cross_check, icij_check) are strict subsets. Lowercase only — callers fold
@@ -155,3 +163,32 @@ def normalise_name(name: str | None) -> str:
         return ""
     cleaned = _PUNCT_TO_SPACE.sub(" ", fold_ascii(name))
     return _SQUASH.sub(" ", cleaned).strip()
+
+
+def org_comparable_name(name: str | None, *, generic: bool = True) -> str:
+    """Comparable form for ORGANISATION names (Phase C).
+
+    Runs rigour's curated org-type normalisation over the casefolded raw name
+    BEFORE the shared fold pipeline (org types must be recognised before
+    punctuation-stripping mangles them): spelled-out legal forms collapse to
+    their abbreviation and, with ``generic=True``, to a cross-language class —
+    "Unilever Public Limited Company" ≡ "Unilever PLC", "ооо газпром" ≡
+    "gazprom llc"-class. Without rigour (base install) this degrades to plain
+    ``normalise_name`` — dev-only divergence, same caveat as ``matching.py``.
+
+    Note: "A/S" is NOT in rigour's alias data, so Danish suffixes are handled
+    by the despaced secondary key (``despace``), not org-type replacement.
+    """
+    if not name:
+        return ""
+    text = name
+    if _HAS_RIGOUR_NAMES:
+        text = _rigour_org_compare(text.casefold(), generic=generic)
+    return normalise_name(text)
+
+
+def despace(comparable: str) -> str:
+    """Space-stripped variant of an already-comparable form, used as a
+    secondary merge key so tokenisation artefacts still collide
+    ("ørsted … a/s" → "…a s" vs "… AS" → "…as" ⇒ both "…as")."""
+    return comparable.replace(" ", "")

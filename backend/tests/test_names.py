@@ -187,3 +187,75 @@ def test_canonical_identifier_folds_cyprus_greek_numbers():
 def test_canonical_identifier_latin_behaviour_unchanged():
     assert canonical_identifier("GB-12 345 678") == "GB12345678"
     assert canonical_identifier("short", min_len=7) is None
+
+
+# --- Phase C: org-type-aware merge keys -------------------------------------
+
+import pytest  # noqa: E402
+
+from opencheck.reconcile import possibly_same_entities  # noqa: E402
+
+
+def _ent(sid: str, name: str, jur: str = "DK", founding: str | None = None):
+    rd = {"name": name, "jurisdiction": {"code": jur}}
+    if founding:
+        rd["foundingDate"] = founding
+    return {
+        "recordType": "entity",
+        "statementId": sid,
+        "recordDetails": rd,
+        "source": {"description": f"src-{sid}"},
+    }
+
+
+@pytest.mark.skipif(
+    not names._HAS_RIGOUR_NAMES, reason="rigour not installed (ftm extra)"
+)
+def test_org_comparable_name_equivalences():
+    assert names.org_comparable_name("Unilever Public Limited Company") == (
+        names.org_comparable_name("Unilever PLC")
+    )
+    assert names.org_comparable_name("Tesco Stores Limited") == (
+        names.org_comparable_name("TESCO STORES LTD")
+    )
+    # cross-language generic class: Russian ооо ≡ German GmbH ≡ Ltd
+    assert names.org_comparable_name("Acme GmbH") == names.org_comparable_name(
+        "Acme Limited"
+    )
+
+
+def test_despace():
+    assert names.despace("orsted wind power a s") == "orstedwindpoweras"
+    assert names.despace("") == ""
+
+
+def test_possibly_same_merges_org_type_variants():
+    if not names._HAS_RIGOUR_NAMES:
+        pytest.skip("rigour not installed (ftm extra)")
+    pairs = possibly_same_entities(
+        [_ent("s1", "Tesco Stores Limited", "GB"), _ent("s2", "TESCO STORES LTD", "GB")]
+    )
+    assert len(pairs) == 1
+    assert {pairs[0].a, pairs[0].b} == {"s1", "s2"}
+
+
+def test_possibly_same_merges_danish_as_variants():
+    # A/S vs AS collide via the despaced plain-form key — no rigour needed.
+    pairs = possibly_same_entities(
+        [_ent("s1", "Ørsted Wind Power A/S"), _ent("s2", "ORSTED WIND POWER AS")]
+    )
+    assert len(pairs) == 1
+
+
+def test_possibly_same_still_requires_jurisdiction_match():
+    pairs = possibly_same_entities(
+        [_ent("s1", "Tesco Stores Limited", "GB"), _ent("s2", "Tesco Stores Limited", "IE")]
+    )
+    assert pairs == []
+
+
+def test_possibly_same_exact_name_pairs_unchanged():
+    pairs = possibly_same_entities(
+        [_ent("s1", "Acme Widgets", "GB"), _ent("s2", "Acme Widgets", "GB")]
+    )
+    assert len(pairs) == 1
