@@ -180,3 +180,29 @@ async def test_mapper_skips_stub_and_nameless(adapter):
 
     assert list(map_eiti_soe({"is_stub": True})) == []
     assert list(map_eiti_soe({"lei": _LEI_MATCH})) == []  # no entity_name
+
+
+async def test_mapper_gates_state_control_on_low_confidence():
+    """A low-confidence (name-only) match must NOT emit the stateBody + control
+    relationship — that would raise a false STATE_CONTROLLED on a possibly-wrong
+    entity. The SOE entity is still emitted so its enrichment surfaces."""
+    from opencheck.bods import map_eiti_soe
+
+    bundle = {
+        "lei": _LEI_MATCH,
+        "entity_name": "Some SOE",
+        "country": "GH",
+        "government_entity": "Ministry of Energy",
+        "eiti_id_company": "eiti-co-1",
+        "eiti_id_government": "eiti-gov-1",
+        "match_confidence": "low",
+        "is_stub": False,
+    }
+    low = list(map_eiti_soe(bundle))
+    assert [s["recordType"] for s in low] == ["entity"]
+    assert low[0]["recordDetails"]["entityType"]["type"] == "registeredEntity"
+
+    # medium / high still emit the full state-control shape.
+    bundle["match_confidence"] = "medium"
+    kinds = {s["recordType"] for s in map_eiti_soe(bundle)}
+    assert kinds == {"entity", "relationship"}

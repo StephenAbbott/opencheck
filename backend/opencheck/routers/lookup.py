@@ -826,6 +826,8 @@ def _bh_eiti_soe(r: dict, ctx: _LookupCtx) -> SourceHit:
         parts.append(", ".join(commodities[:3]))
     if r.get("country"):
         parts.append(str(r["country"]))
+    if (r.get("match_confidence") or "").lower() == "low":
+        parts.append("possible name match")
     # Corroboration rule: the SOE database does NOT publish the LEI (OpenCheck
     # derives it at index-build time), so `lei` is intentionally omitted from
     # identifiers. Only the identifiers EITI itself publishes are asserted.

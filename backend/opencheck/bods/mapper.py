@@ -3039,7 +3039,11 @@ def map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     yield soe
 
     gov_name = (bundle.get("government_entity") or "").strip()
-    if not gov_name:
+    # Only assert state control (which raises the STATE_CONTROLLED signal) when
+    # the LEI match is reasonably trustworthy. A low-confidence name match still
+    # surfaces the SOE entity and its enrichment, but must not raise a
+    # state-control signal on a possibly-wrong entity.
+    if not gov_name or (bundle.get("match_confidence") or "medium").lower() == "low":
         return
 
     gov_local = f"{lei}:gov:{(bundle.get('eiti_id_government') or gov_name)}"
