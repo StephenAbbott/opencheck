@@ -7,18 +7,18 @@ returns the BODS statements for the graph / export. Never on the main lookup.
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
+from .. import identifiers
 from ..ratelimit import default_tier, limiter
 from ..subsidiaries import assemble_subsidiaries
 
 router = APIRouter()
 
-_LEI_SHAPE = re.compile(r"^[A-Z0-9]{20}$")
+_LEI_SHAPE = identifiers.LEI_PATH_SHAPE  # + check digits below when enforced
 
 
 class SubChild(BaseModel):
@@ -66,4 +66,7 @@ async def subsidiaries(
             status_code=400,
             detail=f"{norm!r} is not a valid LEI (20-character alphanumeric).",
         )
+    check_digit_error = identifiers.lei_check_digit_error(norm)
+    if check_digit_error:
+        raise HTTPException(status_code=400, detail=check_digit_error)
     return await assemble_subsidiaries(norm, include_bods=(format == "bods"))

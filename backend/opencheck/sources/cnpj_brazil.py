@@ -43,6 +43,7 @@ import logging
 import re
 from typing import Any
 
+from .. import identifiers
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -73,7 +74,13 @@ def normalise_cnpj(cnpj: str | int) -> str:
 
 
 def is_valid_cnpj(cnpj: str) -> bool:
-    return bool(_CNPJ_RE.match(normalise_cnpj(cnpj)))
+    """Format check, plus both CNPJ check digits when enforcement is on
+    (see opencheck/identifiers.py) — an invalid check digit cannot exist in
+    the registry, so the OpenCNPJ/BrasilAPI round-trip is skipped."""
+    norm = normalise_cnpj(cnpj)
+    return bool(_CNPJ_RE.match(norm)) and identifiers.national_checksum_ok(
+        "br_cnpj", norm
+    )
 
 
 def _company_url(cnpj: str) -> str:

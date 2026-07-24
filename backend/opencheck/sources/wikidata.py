@@ -21,19 +21,18 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import re
 from typing import Any
 
 import httpx
 
-# 20-char ISO 17442 LEI — same shape as ``opentender._LEI_SHAPE`` but
-# kept local so wikidata can be imported without pulling in opentender.
-_LEI_SHAPE = re.compile(r"^[A-Z0-9]{20}$")
-
+from .. import identifiers
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+
+# 20-char ISO 17442 LEI shape (shared; see opencheck/identifiers.py).
+_LEI_SHAPE = identifiers.LEI_PATH_SHAPE
 
 _SEARCH_API = "https://www.wikidata.org/w/api.php"
 _CACHE_NS = "wikidata"
@@ -424,6 +423,12 @@ class WikidataAdapter(SourceAdapter):
         """
         lei = lei.strip().upper()
         if not _LEI_SHAPE.match(lei):
+            return None
+        # Additionally drop check-digit-invalid LEIs when enforcement is on —
+        # P1278 values are hand-entered and typos happen.
+        if identifiers.checksums_enforced() and not identifiers.is_valid_lei(
+            lei, checksum=True
+        ):
             return None
 
         cache_key = f"{_CACHE_NS}/by_lei/{lei}"

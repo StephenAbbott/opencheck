@@ -9,18 +9,18 @@ Lazy by design — fetched by the frontend on demand, never on the main lookup.
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
+from .. import identifiers
 from ..ratelimit import default_tier, limiter
 from ..timeline.service import fetch_timeline
 
 router = APIRouter()
 
-_LEI_SHAPE = re.compile(r"^[A-Z0-9]{20}$")
+_LEI_SHAPE = identifiers.LEI_PATH_SHAPE  # + check digits below when enforced
 
 
 class HistoryEntry(BaseModel):
@@ -84,6 +84,9 @@ async def history(
                 "alphanumeric strings (e.g. 213800IN6LSRGTZSOS29)."
             ),
         )
+    check_digit_error = identifiers.lei_check_digit_error(norm_lei)
+    if check_digit_error:
+        raise HTTPException(status_code=400, detail=check_digit_error)
 
     tl = await fetch_timeline(norm_lei)
 

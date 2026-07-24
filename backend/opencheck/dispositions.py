@@ -25,6 +25,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from . import identifiers
 from .cache import data_root
 
 # 3.10-compatible alias for datetime.UTC.
@@ -32,7 +33,10 @@ UTC = timezone.utc
 
 DispositionStatus = Literal["accepted", "disputed", "needs_review"]
 
-_LEI_RE = re.compile(r"^[A-Z0-9]{20}$")
+# Path-safety shape only (shared; see opencheck/identifiers.py). Deliberately
+# NO check-digit enforcement here: disposition files stored before Phase A
+# were keyed on shape-valid LEIs and must stay readable.
+_LEI_RE = identifiers.LEI_PATH_SHAPE
 _RUN_ID_RE = re.compile(r"^[0-9a-f]{16}$")
 
 MAX_COMMENT_LENGTH = 2000

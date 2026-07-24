@@ -55,6 +55,7 @@ import re
 import time
 from typing import Any
 
+from .. import identifiers
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -224,6 +225,17 @@ class BolagsverketAdapter(SourceAdapter):
             return {
                 "source_id": self.id,
                 "org_number": hit_id,
+                "company": None,
+                "legal_name": legal_name,
+                "is_stub": True,
+            }
+        # Luhn check digit when enforcement is on (see identifiers.py): a
+        # failing organisationsnummer cannot exist in the register, so skip
+        # the API call and stub out exactly like a malformed number.
+        if not identifiers.national_checksum_ok("se_orgnr", org_number):
+            return {
+                "source_id": self.id,
+                "org_number": org_number,
                 "company": None,
                 "legal_name": legal_name,
                 "is_stub": True,

@@ -28,6 +28,7 @@ import urllib.request
 from typing import Any
 from urllib.parse import quote
 
+from . import identifiers
 from .config import get_settings
 from .http import build_client
 
@@ -155,6 +156,10 @@ def _row(
     figi = figi or {}
     row: dict[str, Any] = {
         "isin": isin,
+        # Data-quality flag (Phase A, rigour adoption): ISO 6166 shape +
+        # Luhn check digit. Invalid ISINs are surfaced, never dropped — the
+        # row still shows whatever GLEIF/OpenFIGI published.
+        "checksum_valid": identifiers.is_valid_isin(isin, checksum=None),
         "type": figi.get("type"),
         "name": figi.get("name"),
         "ticker": figi.get("ticker"),

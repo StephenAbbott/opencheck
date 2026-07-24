@@ -25,6 +25,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Iterable
 
+from . import identifiers
 from .matching import canonical_identifier, is_matchable_name
 from .sources import SearchKind, SourceHit
 
@@ -95,6 +96,18 @@ def reconcile(hits: Iterable[SourceHit]) -> list[CrossSourceLink]:
         for hit in hits:
             value = hit.identifiers.get(key)
             if not value or value.upper() in {"Q0", "STUB000000000000LEI0", "00000000"}:
+                continue
+            # Malformed identifiers must not become strong bridges: QIDs are
+            # shape-checked (``Q`` + digits, no ``Q0``/leading zeros — see
+            # identifiers.is_valid_qid), LEIs additionally checksum-checked
+            # when enforcement is on.
+            if key == "wikidata_qid" and not identifiers.is_valid_qid(value):
+                continue
+            if (
+                key == "lei"
+                and identifiers.checksums_enforced()
+                and not identifiers.is_valid_lei(value, checksum=True)
+            ):
                 continue
             groups.setdefault(value, []).append(hit)
 
@@ -210,7 +223,7 @@ class PossiblySame:
         }
 
 
-_LEI_RE = re.compile(r"^[0-9A-Z]{18}[0-9]{2}$")
+_LEI_RE = identifiers.LEI_STRICT_SHAPE
 
 
 def _entity_jurisdiction(rd: dict) -> str:
@@ -234,7 +247,7 @@ def _identifier_keys(stmt: dict) -> set[str]:
         raw = str(i.get("id") or "").strip().upper()
         if not raw:
             continue
-        if _LEI_RE.match(raw):
+        if identifiers.classify_lei(raw):
             keys.add(f"LEI:{raw}")
             continue
         # Canonicalise the value the way ftmg does (StrictFormat: strip

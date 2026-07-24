@@ -68,6 +68,16 @@ ftm = [
     # and sync with `--extra ftm`; dev environments without ICU still
     # work via the built-in converter (parity-tested).
     "bods-ftm @ git+https://github.com/StephenAbbott/bods-ftm.git",
+    # rigour — OpenSanctions' data cleaning/validation library (MIT). Already
+    # in this extra's tree transitively (bods-ftm → followthemoney → rigour);
+    # pinned explicitly so an upstream dependency shuffle can't silently drop
+    # the checksum validators opencheck/identifiers.py and matching.py prefer.
+    # bods-ftm's followthemoney (3.8.x) currently resolves this to rigour 0.x
+    # — the ids/urls APIs we use are stable across 0.14→2.x — and the <3
+    # ceiling forces a review when a followthemoney upgrade pulls in the
+    # Rust-cored 2.x line, whose curated datasets change normalisation
+    # output (i.e. matching behaviour).
+    "rigour>=0.14,<3",
 ]
 llm = [
     # Phase 2+: intent extraction and narrative phrasing.

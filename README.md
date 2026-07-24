@@ -16,13 +16,14 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 83** — EITI State-Owned Enterprises Database as a new open data source
+**Latest: Phase 84** — Identifier validation: ISO 17442 LEI check digits, via OpenSanctions' rigour
+
+First phase of adopting [rigour](https://github.com/opensanctions/rigour) (MIT), OpenSanctions' data cleaning and validation library. A shared `opencheck/identifiers.py` replaces the LEI regex that had been copy-pasted across eleven call sites, and OpenCheck now validates LEI **check digits** (ISO 17442 mod 97-10) for the first time: a mistyped LEI fails fast at the API boundary with an explanation instead of a silent GLEIF 404, and checksum-invalid values are no longer classified as LEIs in the BODS exports, the cross-source reconciler, or the Wikidata/OpenTender adapters. Also new: an ISIN Luhn data-quality flag on securities, advisory check-digit warnings on `/resolve-national-id`, and python-stdnum check-digit gates for Finnish, Swedish and Brazilian registration numbers that skip upstream queries doomed to fail. Validation prefers `rigour.ids` — the exact implementation OpenSanctions runs — with a parity-tested pure-Python fallback for ICU-less dev installs. Commit `52bc981`.
+
+**Previous: Phase 83** — EITI State-Owned Enterprises Database as a new open data source
 
 A new LEI-keyed source (`eiti_soe`) surfacing state-owned enterprises reported through the EITI, distinct from the existing `eiti` payments adapter. The SOE data carries no native LEI, so each SOE is resolved to an LEI at index-build time via GLEIF into a committed index; the BODS mapping emits a `stateBody` government plus a `controlByLegalFramework` relationship, which raises the existing `STATE_CONTROLLED` risk signal with no risk-engine or frontend changes. Category `cdd`; licence clean (used directly from EITI, not the CC-BY-NC OpenSanctions mirror). ([commit 7f54617](https://github.com/StephenAbbott/opencheck/commit/7f54617f469bb2eaae462db7339b9abf0c9f66d7))
 
-**Previous: Phase 82** — BackgroundCheck: risk checks on the people connected to an entity
-
-A third check mode alongside QuickCheck and FullCheck brings the **people** behind an entity — officers, directors and beneficial owners — to the fore, returning to the original plan's unbuilt "person lookups" phase. The connected-people list is extracted from the assembled BODS bundle itself (source-agnostic: Estonian beneficial owners surface exactly like UK officers), and each person can be screened on demand across every person-capable source (Companies House officers, OpenSanctions, EveryPolitician, Wikidata, OpenAleph) via `GET /person-check`. Evidence discipline throughout: screening is name-based, so risk signals derive only from **strong matches** (name similarity ≥ 0.88 with a compatible birth year), every signal carries its match evidence, failed sources render as "not screened", and a clean screen is never presented as proof of absence. Identifier-backed enrichment goes deeper: Companies House officer ids unlock a person's appointments across companies, EveryPolitician records open into dated positions-held timelines (Poliloom-maintained, keyed to Wikidata Q-IDs), and Wikidata person searches now filter to actual humans. Person reports are first-class artefacts — shareable via `?person=` URLs, downloadable as BODS person subgraphs, exposed to agents through the `opencheck_person_check` MCP tool, and reachable from a new homepage person-name search tab. (PR #69)
 
 → [Full development history](docs/status.md)
 

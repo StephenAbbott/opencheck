@@ -49,6 +49,8 @@ import json
 import re
 from typing import Any
 
+from .. import identifiers
+
 # BODS entityType.type → FtM schema.
 _ENTITY_SCHEMA = {
     "registeredEntity": "Company",
@@ -86,7 +88,12 @@ _INTEREST_LABEL = {
     "unknownInterest": "unknown interest",
 }
 
-_LEI_RE = re.compile(r"^[0-9A-Z]{18}[0-9]{2}$")
+# LEI classification (shared; see opencheck/identifiers.py): strict ISO 17442
+# shape, plus the check digits when OPENCHECK_IDENTIFIER_CHECKSUMS_ENFORCED is
+# on — so a coincidentally LEI-shaped registration number is not mislabelled
+# ``leiCode``. Source-asserted LEI schemes ("LEI" in the haystack) are trusted
+# as before.
+_classify_lei = identifiers.classify_lei
 
 
 def _camel_to_words(value: str) -> str:
@@ -161,7 +168,7 @@ def _add_identifiers(props: _Props, identifiers: list[dict[str, Any]], *, person
             continue
         scheme = (ident.get("scheme") or "").strip()
         haystack = f"{scheme} {ident.get('schemeName') or ''}".upper()
-        if "LEI" in haystack or _LEI_RE.match(value):
+        if "LEI" in haystack or _classify_lei(value):
             props.add("leiCode", value)
         elif "WIKIDATA" in haystack:
             props.add("wikidataId", value)

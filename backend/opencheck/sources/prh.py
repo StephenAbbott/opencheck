@@ -43,6 +43,7 @@ import re
 from typing import Any
 from urllib.parse import quote
 
+from .. import identifiers
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -83,7 +84,13 @@ def normalise_ytunnus(ytunnus: str) -> str:
 
 
 def is_valid_ytunnus(ytunnus: str) -> bool:
-    return bool(_YTUNNUS_RE.match(normalise_ytunnus(ytunnus)))
+    """Format check, plus the mod-11 check digit when enforcement is on
+    (see opencheck/identifiers.py) — an invalid check digit cannot exist in
+    the PRH register, so the query is skipped rather than burned."""
+    norm = normalise_ytunnus(ytunnus)
+    return bool(_YTUNNUS_RE.match(norm)) and identifiers.national_checksum_ok(
+        "fi_ytunnus", norm
+    )
 
 
 def _slug(text: str) -> str:

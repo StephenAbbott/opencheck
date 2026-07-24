@@ -18,13 +18,13 @@ from __future__ import annotations
 
 import asyncio
 import html
-import re
 import time
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 
+from .. import identifiers
 from ..config import get_settings
 from ..og_image import render_share_card
 from ..ratelimit import default_tier, limiter
@@ -32,7 +32,7 @@ from . import lookup as lookup_router
 
 router = APIRouter(tags=["share"])
 
-_LEI_RE = re.compile(r"^[0-9A-Z]{18}[0-9]{2}$")
+_LEI_RE = identifiers.LEI_STRICT_SHAPE  # + check digits below when enforced
 
 # In-memory PNG cache: LEI -> (monotonic ts, png bytes, is_full_card).
 # Full cards live longer than teasers, which should upgrade as soon as a
@@ -45,7 +45,7 @@ _OG_CACHE: dict[str, tuple[float, bytes, bool]] = {}
 
 def _clean_lei(lei: str) -> str:
     lei = (lei or "").strip().upper()
-    if not _LEI_RE.match(lei):
+    if not _LEI_RE.match(lei) or identifiers.lei_check_digit_error(lei):
         raise HTTPException(status_code=404, detail="Not a valid LEI.")
     return lei
 

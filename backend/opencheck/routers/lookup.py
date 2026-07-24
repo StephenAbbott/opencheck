@@ -17,6 +17,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from .. import __version__
 from .. import bods as _bods
+from .. import identifiers
 from ..bods import BODSBundle, validate_shape
 from ..sources.base import LookupDeriver, raw_redaction_notice
 from .. import bods_data
@@ -52,8 +53,10 @@ def _mapper_for(source_id: str) -> Any | None:
 
 _NC_LICENSES = {"CC-BY-NC-4.0", "CC-BY-NC-SA-4.0"}
 
-# 20-char ISO 17442 LEI, alphanumeric uppercase.
-_LEI_SHAPE = re.compile(r"^[A-Z0-9]{20}$")
+# 20-char ISO 17442 LEI shape (shared; see opencheck/identifiers.py). Check
+# digits are additionally enforced via lei_check_digit_error when
+# OPENCHECK_IDENTIFIER_CHECKSUMS_ENFORCED is on (the default).
+_LEI_SHAPE = identifiers.LEI_PATH_SHAPE
 
 
 class SearchResponse(BaseModel):
@@ -1267,6 +1270,10 @@ async def _lookup_pipeline(
             ),
         })
         return
+    check_digit_error = identifiers.lei_check_digit_error(lei)
+    if check_digit_error:
+        yield ("error", {"status": 400, "detail": check_digit_error})
+        return
 
     gleif = REGISTRY["gleif"]
     yield ("source_started", {"source_id": "gleif", "source_name": gleif.info.name})
@@ -1986,6 +1993,10 @@ class ResolveNationalIdResponse(BaseModel):
     country: str | None = None
     ra_code: str | None = None
     matches: list[NationalIdMatch]
+    # Advisory only (Phase A, rigour adoption): set when the number fails its
+    # national scheme's check digit — the query still runs, this just explains
+    # an otherwise-mystifying empty result. None when no validator applies.
+    checksum_warning: str | None = None
 
 
 @router.get("/resolve-national-id", response_model=ResolveNationalIdResponse)
@@ -2027,6 +2038,11 @@ async def _resolve_national_id_impl(
     num = number.strip()
     code = (ra_code or _RA_BY_COUNTRY.get(country.strip().upper(), "")).strip()
 
+    # Advisory check-digit validation (never blocks the query — the registry
+    # is the authority): only for countries whose GLEIF registry number is
+    # unambiguously a python-stdnum scheme (see identifiers.py).
+    checksum_warning = identifiers.national_id_checksum_warning(country, num)
+
     adapter = REGISTRY.get("gleif")
     if adapter is None or not hasattr(adapter, "search_by_local_id"):
         raise HTTPException(status_code=503, detail="GLEIF adapter unavailable")
@@ -2049,6 +2065,7 @@ async def _resolve_national_id_impl(
         country=(country.strip().upper() or None),
         ra_code=(code or None),
         matches=matches,
+        checksum_warning=checksum_warning,
     )
 
 
@@ -2085,6 +2102,9 @@ async def lookup_source(
                 "213800LH1BZH3DI6G760)."
             ),
         )
+    check_digit_error = identifiers.lei_check_digit_error(norm_lei)
+    if check_digit_error:
+        raise HTTPException(status_code=400, detail=check_digit_error)
 
     try:
         ctx, _gleif_bundle = await _resolve_ctx(norm_lei)
