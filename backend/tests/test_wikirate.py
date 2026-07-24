@@ -2,8 +2,9 @@
 
 HTTP is mocked with respx. Fixtures mirror the live API shapes verified
 2026-07-07: the nested ``filter[company_identifier[value]]`` param, the
-``~{card_id}`` addressing, bare-integer ``view=count`` responses, and
-``filter[year]=latest`` answer items.
+``~{card_id}`` addressing, and bare-integer ``view=count`` responses.
+Per the Wikirate team (2026-07-24), the answers list now queries
+``filter[metric_type][]=researched&sort_by=year&sort_dir=desc``.
 """
 
 from __future__ import annotations
@@ -81,7 +82,12 @@ def _mock_answers(respx_mock) -> None:
         return_value=httpx.Response(200, json=2290)
     )
     respx_mock.get(
-        f"{BASE}/~637+Answer.json", params={"filter[year]": "latest"}
+        f"{BASE}/~637+Answer.json",
+        params={
+            "filter[metric_type][]": "researched",
+            "sort_by": "year",
+            "sort_dir": "desc",
+        },
     ).mock(return_value=httpx.Response(200, json=ANSWER_ITEMS))
 
 
