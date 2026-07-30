@@ -18,12 +18,16 @@ from pytest_httpx import HTTPXMock
 
 from opencheck.config import get_settings
 from opencheck.icij_check import (
+    _MIN_NAME_SIM,
     _RECONCILE_URL,
+    _RESULTS_PER_TYPE,
+    _SCREENED_TYPES,
     _collect_targets,
     _dedupe,
     _name_sim,
     _node_type,
     _normalise,
+    _screenable,
     _parse_collection,
     _parse_dataset,
     _parse_jurisdiction,
@@ -76,13 +80,43 @@ def test_name_sim_exact_match() -> None:
 
 
 def test_name_sim_partial_overlap() -> None:
-    # "acme holdings ltd" vs "acme holdings" shares 2/3 tokens → 2/3
     sim = _name_sim("Acme Holdings Ltd", "ACME HOLDINGS")
     assert 0.6 < sim < 1.0
 
 
 def test_name_sim_no_overlap() -> None:
-    assert _name_sim("Vladimir Putin", "John Smith") < 0.2
+    # Two unrelated names must land well clear of the screening gate. The
+    # shared scorer is character-based, so unrelated strings still share some
+    # letters — what matters is the margin below _MIN_NAME_SIM, not zero.
+    assert _name_sim("Vladimir Putin", "John Smith") < 0.5
+    assert _name_sim("Vladimir Putin", "John Smith") < _MIN_NAME_SIM
+
+
+def test_name_sim_is_the_shared_phase_d_scorer() -> None:
+    """The bespoke token-Jaccard scorer is gone: this module must use the
+    same scorer as every other matching surface, so improvements there land
+    here too."""
+    from opencheck import names
+
+    for a, b in (
+        ("CHAUMET INTERNATIONAL SA.", "BRONTE INTERNATIONAL SA"),
+        ("MOET HENNESSY INTERNATIONAL", "HENNESSY INTERNATIONAL LIMITED"),
+        ("GLENCORE PLC", "Glencore plc"),
+    ):
+        assert _name_sim(a, b) == names.name_similarity(a, b)
+
+
+def test_name_sim_separates_boilerplate_collisions_from_real_matches() -> None:
+    """The old unweighted token-overlap scored both of these 0.500 — a false
+    positive and a true match, indistinguishable — because INTERNATIONAL / SA
+    / LIMITED counted as evidence."""
+    collision = _name_sim("CHAUMET INTERNATIONAL SA.", "BRONTE INTERNATIONAL SA")
+    real = _name_sim("MOET HENNESSY INTERNATIONAL", "HENNESSY INTERNATIONAL LIMITED")
+    assert collision < real
+    # Both still sit under the calibrated gate for THIS surface: company
+    # names against 800k offshore records need 0.93, not the 0.88 used for
+    # person screening. See _MIN_NAME_SIM.
+    assert collision < _MIN_NAME_SIM
 
 
 def test_name_sim_empty_returns_zero() -> None:
@@ -193,13 +227,14 @@ def test_node_type_reads_types_and_legacy_type() -> None:
 
 
 def test_signal_summary_reads_cleanly_on_v02_description() -> None:
-    """Regression on the garbled production copy seen on LVMH MOET
-    HENNESSY LOUIS VUITTON (LEI IOG4E947OATN0KJYSD45)."""
+    """Regression on the garbled production copy once seen on LVMH MOET
+    HENNESSY LOUIS VUITTON (LEI IOG4E947OATN0KJYSD45) — the whole ICIJ
+    description sentence was being pasted into the summary."""
     sig = _signal_from_match(
         {
             "id": "10171805",
-            "name": "HENNESSY INTERNATIONAL LIMITED",
-            "score": 83,
+            "name": "GLENCORE INTERNATIONAL AG",
+            "score": 100,
             "match": False,
             "types": [{"id": ".../oldb/entity", "name": "Entity"}],
             "description": "Entity node extracted from the Panama Papers data.",
@@ -207,18 +242,69 @@ def test_signal_summary_reads_cleanly_on_v02_description() -> None:
         {
             "kind": "entity",
             "statement_id": "stmt-1",
-            "name": "MOET HENNESSY INTERNATIONAL",
+            "name": "GLENCORE INTERNATIONAL AG",
         },
         min_score=70,
     )
     assert sig is not None
     assert sig.summary == (
-        "Related entity 'MOET HENNESSY INTERNATIONAL' matches a record in "
-        "the Panama Papers (ICIJ score 83/100)."
+        "Related entity 'GLENCORE INTERNATIONAL AG' matches a record in "
+        "the Panama Papers (ICIJ score 100/100)."
     )
     assert sig.evidence["dataset"] == "Panama Papers"
     assert sig.evidence["node_type"] == "Entity"
     assert sig.evidence["collection"] == ""
+
+
+def test_intermediary_match_is_worded_as_a_different_finding() -> None:
+    """An Intermediary node is the law firm / formation agent that ARRANGED
+    the structure, not a party named in it — so it must not be folded into
+    the generic "matches a record" wording."""
+    sig = _signal_from_match(
+        {
+            "id": "77",
+            "name": "GLENCORE INTERNATIONAL AG",
+            "score": 100,
+            "match": True,
+            "types": [{"id": ".../oldb/intermediary", "name": "Intermediary"}],
+            "description": "Intermediary node extracted from the Panama Papers data.",
+        },
+        {
+            "kind": "entity",
+            "statement_id": "stmt-2",
+            "name": "GLENCORE INTERNATIONAL AG",
+        },
+        min_score=70,
+    )
+    assert sig is not None
+    assert sig.summary == (
+        "Related entity 'GLENCORE INTERNATIONAL AG' appears as an "
+        "offshore-services intermediary in the Panama Papers "
+        "(ICIJ score 100/100)."
+    )
+    assert sig.evidence["node_type"] == "Intermediary"
+
+
+def test_boilerplate_collision_no_longer_fires() -> None:
+    """Measured false positive: two unrelated Turkish banks sharing only
+    legal-form tokens. Fired under the old 0.45 token-overlap gate."""
+    sig = _signal_from_match(
+        {
+            "id": "1",
+            "name": "TURKIYE GARANTI BANKASI ANONIM SIRKETI",
+            "score": 77,
+            "match": False,
+            "types": [{"id": ".../oldb/entity", "name": "Entity"}],
+            "description": "Entity node extracted from the Panama Papers data.",
+        },
+        {
+            "kind": "entity",
+            "statement_id": "stmt-3",
+            "name": "TÜRKİYE FİNANS KATILIM BANKASI",
+        },
+        min_score=70,
+    )
+    assert sig is None
 
 
 def test_signal_summary_names_the_sub_collection() -> None:
@@ -505,8 +591,10 @@ async def test_no_op_when_only_anonymous_entities() -> None:
 
 async def test_emits_signal_on_reconciliation_match(monkeypatch) -> None:
     """Mock the ICIJ API to return a high-confidence match and verify the signal."""
+    # Query keys are per-name AND per-node-type now; the Entity slot carries
+    # the match, the other scoped slots come back empty as they would live.
     api_response = {
-        "q0": {
+        "q0-entity": {
             "result": [
                 {
                     "id": "https://offshoreleaks.icij.org/nodes/12345",
@@ -516,7 +604,9 @@ async def test_emits_signal_on_reconciliation_match(monkeypatch) -> None:
                     "description": "Panama Papers · Panama",
                 }
             ]
-        }
+        },
+        "q0-officer": {"result": []},
+        "q0-intermediary": {"result": []},
     }
 
     mock_response = MagicMock()
@@ -609,6 +699,58 @@ async def test_max_targets_limits_batch_size(monkeypatch) -> None:
         bods = [_entity(f"e{i}", f"Company {i}") for i in range(20)]
         await assess_icij_names(bods, max_targets=5)
 
-    # 5 targets with batch_size=10 → 1 batch with 5 queries
+    # 5 targets, batched 8 names per request → 1 request, and each name is
+    # asked once per screened node type.
+    assert len(posted_queries) == 1
     total_queries = sum(len(q) for q in posted_queries)
-    assert total_queries == 5
+    assert total_queries == 5 * len(_SCREENED_TYPES)
+
+
+async def test_batch_is_type_scoped_and_excludes_address() -> None:
+    """Every outgoing query carries exactly one node type, Address is never
+    asked for, and a batch stays inside the service's declared batchSize."""
+    posted_queries: list[dict[str, Any]] = []
+
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json = MagicMock(return_value={})
+
+    async def capture_post(url, **kwargs):
+        posted_queries.append(json.loads((kwargs.get("data") or {})["queries"]))
+        return mock_response
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.post = capture_post
+
+    with patch("opencheck.icij_check.build_client", return_value=mock_client):
+        bods = [_entity(f"e{i}", f"Company Number {i}") for i in range(20)]
+        await assess_icij_names(bods, max_targets=20)
+
+    asked_types: set[str] = set()
+    for batch in posted_queries:
+        # The manifest declares batchSize 25 — never exceed it.
+        assert len(batch) <= 25
+        for spec in batch.values():
+            # A LIST of types is silently ignored by the service, so each
+            # query must carry exactly one scalar type.
+            assert isinstance(spec["type"], str)
+            asked_types.add(spec["type"])
+            assert spec["limit"] == _RESULTS_PER_TYPE
+
+    assert asked_types == set(_SCREENED_TYPES.values())
+    assert not any("address" in t for t in asked_types)
+
+
+def test_screenable_guard_blocks_names_that_erode_to_nothing() -> None:
+    """The "S +" trap: an LVMH subsidiary whose sanitised name is one
+    character matches an ICIJ officer node named "s" at score 100 / sim 1.00.
+    Real one-word company names must survive the guard."""
+    from opencheck.http import sanitize_name_query
+
+    assert not _screenable(sanitize_name_query("S +"))
+    assert not _screenable("")
+    assert not _screenable("AB")
+    for keep in ("KENZO", "CELINE", "BERLUTI", "PRIMAE", "UFIPAR", "LVMH"):
+        assert _screenable(sanitize_name_query(keep)), keep
