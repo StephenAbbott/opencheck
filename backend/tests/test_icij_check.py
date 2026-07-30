@@ -22,7 +22,9 @@ from opencheck.icij_check import (
     _collect_targets,
     _dedupe,
     _name_sim,
+    _node_type,
     _normalise,
+    _parse_collection,
     _parse_dataset,
     _parse_jurisdiction,
     _signal_from_match,
@@ -123,6 +125,118 @@ def test_parse_jurisdiction_no_separator() -> None:
 
 def test_parse_jurisdiction_empty() -> None:
     assert _parse_jurisdiction("") == ""
+
+
+# ---------------------------------------------------------------------
+# Reconciliation v0.2 description sentences. ICIJ replaced the
+# bullet-separated "Panama Papers · British Virgin Islands" with a
+# free-text sentence, "<NodeType> node extracted from the <Dataset>
+# data." — confirmed live 2026-07-30 across all four node types. The
+# bullet parser matched none of it, so the whole sentence landed in the
+# user-facing summary ("matches a record in the Entity node extracted
+# from the Panama Papers data.") and jurisdiction was always empty.
+# ---------------------------------------------------------------------
+
+_V02_DESCRIPTIONS = [
+    ("Entity node extracted from the Panama Papers data.", "Panama Papers", ""),
+    (
+        "Address node extracted from the Paradise Papers - Appleby data.",
+        "Paradise Papers",
+        "Appleby",
+    ),
+    (
+        "Officer node extracted from the Paradise Papers - Aruba corporate registry data.",
+        "Paradise Papers",
+        "Aruba corporate registry",
+    ),
+    ("Entity node extracted from the Offshore Leaks data.", "Offshore Leaks", ""),
+    ("Entity node extracted from the Bahamas Leaks data.", "Bahamas Leaks", ""),
+]
+
+
+@pytest.mark.parametrize("description,dataset,collection", _V02_DESCRIPTIONS)
+def test_parse_v02_sentence_descriptions(
+    description: str, dataset: str, collection: str
+) -> None:
+    assert _parse_dataset(description) == dataset
+    assert _parse_collection(description) == collection
+    # A leak sub-collection is not a jurisdiction — "Appleby" is a law firm.
+    assert _parse_jurisdiction(description) == ""
+
+
+def test_parse_dataset_never_returns_prose() -> None:
+    """An unparsed sentence yields "" so the caller falls back to the
+    generic label, rather than pasting prose into the summary."""
+    assert _parse_dataset("Something else entirely extracted from nowhere") == ""
+
+
+def test_parse_dataset_unknown_sentence_leak_passes_through() -> None:
+    # A leak ICIJ adds later should still be named, once isolated from prose.
+    assert (
+        _parse_dataset("Entity node extracted from the Some New Leak data.")
+        == "Some New Leak"
+    )
+
+
+def test_parse_collection_legacy_and_empty() -> None:
+    assert _parse_collection("Panama Papers · British Virgin Islands") == ""
+    assert _parse_collection("") == ""
+
+
+def test_node_type_reads_types_and_legacy_type() -> None:
+    # v0.2 renamed the field from "type" to "types"; both are read.
+    assert _node_type({"types": [{"id": ".../oldb/address", "name": "Address"}]}) == "Address"
+    assert _node_type({"type": [{"id": "/type/entity", "name": "Entity"}]}) == "Entity"
+    assert _node_type({"types": ["Officer"]}) == "Officer"
+    assert _node_type({}) == ""
+    assert _node_type({"types": "Entity"}) == ""
+
+
+def test_signal_summary_reads_cleanly_on_v02_description() -> None:
+    """Regression on the garbled production copy seen on LVMH MOET
+    HENNESSY LOUIS VUITTON (LEI IOG4E947OATN0KJYSD45)."""
+    sig = _signal_from_match(
+        {
+            "id": "10171805",
+            "name": "HENNESSY INTERNATIONAL LIMITED",
+            "score": 83,
+            "match": False,
+            "types": [{"id": ".../oldb/entity", "name": "Entity"}],
+            "description": "Entity node extracted from the Panama Papers data.",
+        },
+        {
+            "kind": "entity",
+            "statement_id": "stmt-1",
+            "name": "MOET HENNESSY INTERNATIONAL",
+        },
+        min_score=70,
+    )
+    assert sig is not None
+    assert sig.summary == (
+        "Related entity 'MOET HENNESSY INTERNATIONAL' matches a record in "
+        "the Panama Papers (ICIJ score 83/100)."
+    )
+    assert sig.evidence["dataset"] == "Panama Papers"
+    assert sig.evidence["node_type"] == "Entity"
+    assert sig.evidence["collection"] == ""
+
+
+def test_signal_summary_names_the_sub_collection() -> None:
+    sig = _signal_from_match(
+        {
+            "id": "1",
+            "name": "ACME HOLDINGS LIMITED",
+            "score": 91,
+            "match": True,
+            "types": [{"id": ".../oldb/entity", "name": "Entity"}],
+            "description": "Entity node extracted from the Paradise Papers - Appleby data.",
+        },
+        {"kind": "entity", "statement_id": "stmt-2", "name": "ACME HOLDINGS LIMITED"},
+        min_score=70,
+    )
+    assert sig is not None
+    assert "the Paradise Papers (Appleby)" in sig.summary
+    assert sig.evidence["collection"] == "Appleby"
 
 
 # ---------------------------------------------------------------------

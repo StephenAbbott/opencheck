@@ -52,8 +52,8 @@ Response::
             "name": "ENTITY NAME",
             "score": 90,
             "match": true,
-            "type": [{"id": "/type/entity", "name": "Entity"}],
-            "description": "Panama Papers · British Virgin Islands"
+            "types": [{"id": ".../schema/oldb/entity", "name": "Entity"}],
+            "description": "Entity node extracted from the Panama Papers data."
           }
         ]
       }
@@ -61,6 +61,14 @@ Response::
 
 Scores are on a 0–100 scale.  ``match: true`` means ICIJ judges it a
 high-confidence match.
+
+Two more v0.2 shape changes, confirmed live 2026-07-30: the node type moved
+from ``type`` to ``types`` (both are read), and ``description`` is now a
+free-text sentence — ``"<NodeType> node extracted from the <Dataset>
+data."``, where the dataset may carry a sub-collection ("Paradise Papers -
+Appleby") — rather than the bullet-separated ``"Panama Papers · British
+Virgin Islands"``. ``_parse_dataset`` / ``_parse_collection`` /
+``_parse_jurisdiction`` handle both.
 
 Reference: https://offshoreleaks.icij.org/docs/reconciliation
 """
@@ -108,9 +116,16 @@ _MIN_SCORE = 70
 # false positives when the ICIJ index blends multiple transliterations.
 _MIN_NAME_SIM = 0.45
 
-# Human-friendly labels for ICIJ dataset descriptions.  The ``description``
-# field in reconciliation results typically looks like
-# "Panama Papers · British Virgin Islands" — we extract the dataset part.
+# Pulls the dataset out of a v0.2 description sentence — see
+# ``_parse_collection`` for the shapes this was verified against.
+_SENTENCE_RE = re.compile(r"extracted from the\s+(.+?)\s+data\b", re.IGNORECASE)
+
+# Guard for the passthrough of an unrecognised dataset name: prose that got
+# this far is a description shape we do not parse yet, not a leak label.
+_PROSE_RE = re.compile(r"\b(node|extracted|from)\b", re.IGNORECASE)
+
+# Human-friendly labels for ICIJ dataset descriptions. Keys are the dataset
+# name as it appears in the description, lower-cased.
 _DATASET_LABELS: dict[str, str] = {
     "panama papers": "Panama Papers",
     "paradise papers": "Paradise Papers",
@@ -431,13 +446,18 @@ def _signal_from_match(
     description: str = match.get("description") or ""
     dataset = _parse_dataset(description)
     jurisdiction = _parse_jurisdiction(description)
+    collection = _parse_collection(description)
+    node_type = _node_type(match)
 
     relation = "Related party" if target["kind"] == _KIND_PERSON else "Related entity"
     dataset_label = f"the {dataset}" if dataset else "the ICIJ Offshore Leaks database"
-    jur_note = f" ({jurisdiction})" if jurisdiction else ""
+    # Legacy descriptions carried a jurisdiction; current ones carry a leak
+    # sub-collection. Either narrows the record usefully in the same slot.
+    qualifier = jurisdiction or collection
+    qual_note = f" ({qualifier})" if qualifier else ""
 
     summary = (
-        f"{relation} '{target['name']}' matches a record in {dataset_label}{jur_note} "
+        f"{relation} '{target['name']}' matches a record in {dataset_label}{qual_note} "
         f"(ICIJ score {score}/100)."
     )
 
@@ -455,6 +475,8 @@ def _signal_from_match(
             "icij_match": is_high_confidence,
             "dataset": dataset,
             "jurisdiction": jurisdiction,
+            "collection": collection,
+            "node_type": node_type,
             "node_url": node_url,
             "kind": target["kind"],
         },
@@ -485,27 +507,96 @@ def _node_url(raw_id: Any) -> str:
 def _parse_dataset(description: str) -> str:
     """Extract the leak dataset name from an ICIJ description string.
 
-    ICIJ descriptions look like ``"Panama Papers · British Virgin Islands"``.
-    We return a normalised label like ``"Panama Papers"``, or ``""`` if
-    unrecognised.
+    Two shapes are handled, because the service changed under us (see
+    :func:`_parse_collection`):
+
+    * v0.2 sentence — ``"Entity node extracted from the Panama Papers
+      data."`` → ``"Panama Papers"``.
+    * Legacy bullet — ``"Panama Papers · British Virgin Islands"`` →
+      ``"Panama Papers"``.
+
+    An unrecognised dataset passes through as-is — a future leak should still
+    be named — but only once it has been isolated from the surrounding prose.
+    Text that still reads as a sentence returns ``""`` instead, so the caller
+    falls back to "the ICIJ Offshore Leaks database"; pasting a whole
+    description into user-facing copy is what this function used to do, and
+    it read as "matches a record in the Entity node extracted from the Panama
+    Papers data.".
     """
     if not description:
         return ""
-    parts = re.split(r"[·•|/]", description)
-    first = parts[0].strip().lower()
-    return _DATASET_LABELS.get(first, parts[0].strip())
+    source = _SENTENCE_RE.search(description)
+    raw = source.group(1) if source else re.split(r"[·•|/]", description)[0]
+    # "Paradise Papers - Appleby" → leak name, sub-collection.
+    leak = raw.split(" - ", 1)[0].strip()
+    known = _DATASET_LABELS.get(leak.lower())
+    if known:
+        return known
+    return "" if _PROSE_RE.search(leak) else leak
+
+
+def _parse_collection(description: str) -> str:
+    """Extract the sub-collection an ICIJ node came from, if any.
+
+    ICIJ's reconciliation v0.2 descriptions are free-text sentences of the
+    form ``"<NodeType> node extracted from the <Dataset> data."``, where the
+    dataset may carry a sub-collection: ``"Paradise Papers - Appleby"``,
+    ``"Paradise Papers - Malta corporate registry"``. Confirmed live
+    2026-07-30 across the four node types the service returns (Entity,
+    Officer, Intermediary, Address).
+
+    Deliberately NOT reported as a jurisdiction: "Appleby" is a law firm and
+    "Malta corporate registry" is a leak sub-source, so labelling either as
+    the record's jurisdiction would assert something ICIJ has not said. See
+    :func:`_parse_jurisdiction`, which stays keyed to the legacy shape that
+    really did carry one.
+    """
+    if not description:
+        return ""
+    source = _SENTENCE_RE.search(description)
+    if source is None:
+        return ""
+    parts = source.group(1).split(" - ", 1)
+    return parts[1].strip() if len(parts) == 2 else ""
 
 
 def _parse_jurisdiction(description: str) -> str:
-    """Extract the jurisdiction part from an ICIJ description string.
+    """Extract the jurisdiction part from a legacy ICIJ description string.
 
     ``"Panama Papers · British Virgin Islands"`` → ``"British Virgin Islands"``
+
+    The current (v0.2) sentence shape carries no jurisdiction, so this
+    returns ``""`` for it rather than guessing — the sub-collection goes to
+    :func:`_parse_collection` instead.
     """
-    if not description:
+    if not description or _SENTENCE_RE.search(description):
         return ""
     parts = re.split(r"[·•|/]", description)
     if len(parts) >= 2:
         return parts[1].strip()
+    return ""
+
+
+def _node_type(match: dict[str, Any]) -> str:
+    """ICIJ node type for a result — ``Entity``, ``Officer``,
+    ``Intermediary`` or ``Address``.
+
+    Spec v0.2 renamed the field from ``type`` to ``types``; both are read so
+    the type survives a change back. Recorded as evidence because the four
+    types are not equally meaningful as a screening hit — an ``Address``
+    match says a name resembles a street address in the leaks, not that a
+    related party appears in them.
+    """
+    raw = match.get("types") or match.get("type") or []
+    if not isinstance(raw, list):
+        return ""
+    for item in raw:
+        if isinstance(item, dict):
+            name = (item.get("name") or "").strip()
+        else:
+            name = str(item or "").strip()
+        if name:
+            return name
     return ""
 
 

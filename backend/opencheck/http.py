@@ -39,14 +39,29 @@ _USER_AGENT = f"OpenCheck/{__version__} (+https://github.com/StephenAbbott/openc
 # The character class below is Elasticsearch's documented query_string
 # reserved set (a superset of classic Lucene): + - = && || > < ! ( ) { }
 # [ ] ^ " ~ * ? : \ / — the docs note that < and > "can't be escaped at
-# all", so replacement is the only safe handling. Mid-token - and + are
-# NOT operators (only term-leading ones are) and appear in real names
-# ("ANNE-MARIE", "BP+AMOCO"), so those are kept.
+# all", so replacement is the only safe handling. Only a - or + with a
+# non-space character on BOTH sides is part of the name ("ANNE-MARIE",
+# "BP+AMOCO"); anything else is an operator, including a DANGLING one with
+# no operand after it — diagnosed live 2026-07-30 on LVMH MOET HENNESSY
+# LOUIS VUITTON (LEI IOG4E947OATN0KJYSD45), whose subsidiary is legally
+# named "S +": the trailing + survived the earlier term-leading-only rule
+# and 500'd ICIJ's parser on every lookup.
 _LUCENE_BREAKERS = re.compile(
     r'["\\/:^~\[\]{}()!*?<>=]'  # single-character syntax
     r"|&&|\|\|"                 # boolean operator pairs (single & and | are safe)
-    r"|(?<!\S)[-+](?=\S)"       # - / + only when they lead a term (NOT / MUST)
+    r"|(?<!\S)[-+]"             # - / + leading a term (NOT / MUST)
+    r"|[-+](?!\S)"              # - / + with no operand after it ("S +")
 )
+
+# Lucene's word-form boolean operators are the same dangling-operand hazard
+# as a trailing ``+``: ``AND``/``OR`` at either edge of a query has nothing to
+# join, which the ICIJ reconcile parser answers with a bare HTTP 500
+# ("AND DIGITAL", a real UK company, and any name ending "… AND"). They are
+# case-SENSITIVE to the parser, so lower-casing the edge token disarms the
+# operator while keeping the word — upstream analysers lower-case anyway, so
+# unlike character replacement this costs no recall at all. ``NOT`` is a
+# unary prefix operator and parses fine at the start, so it is left alone.
+_BOOL_WORDS = frozenset({"AND", "OR"})
 
 
 def sanitize_name_query(name: str) -> str:
@@ -63,15 +78,27 @@ def sanitize_name_query(name: str) -> str:
     replaced with spaces — upstream tokenisers split on punctuation anyway,
     so recall is unaffected — and whitespace is collapsed. Mid-word hyphens
     (``ANNE-MARIE``), apostrophes, dots, single ``&`` (``E&P``) and ``|``
-    are kept: they are not syntax. Names without syntax characters pass
-    through unchanged, so cache keys derived from the sanitised query are
-    stable for them. May return ``""`` (e.g. a name that was only quotes);
-    callers must skip the search rather than send an empty query.
+    are kept: they are not syntax. A ``AND``/``OR`` first or last token is
+    lower-cased rather than dropped (see :data:`_BOOL_WORDS`). Names without
+    syntax characters pass through unchanged, so cache keys derived from the
+    sanitised query are stable for them. May return ``""`` (e.g. a name that
+    was only quotes); callers must skip the search rather than send an empty
+    query.
     """
     if not name:
         return ""
     cleaned = _LUCENE_BREAKERS.sub(" ", name)
-    return re.sub(r"\s+", " ", cleaned).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    if not cleaned:
+        return ""
+    # Disarm a dangling word-form boolean at either edge. Only the edges: a
+    # mid-query AND/OR has operands on both sides and parses fine, and
+    # "BLACK AND WHITE LTD" should keep its exact casing.
+    tokens = cleaned.split(" ")
+    for edge in (0, len(tokens) - 1):
+        if tokens[edge] in _BOOL_WORDS:
+            tokens[edge] = tokens[edge].lower()
+    return " ".join(tokens)
 
 
 def build_client() -> httpx.AsyncClient:
