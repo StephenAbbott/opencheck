@@ -337,3 +337,60 @@ def test_sanitize_still_identity_on_clean_names_post_extension() -> None:
         "ANNE-MARIE SMITH",
     ):
         assert sanitize_name_query(name) == name
+
+
+# ---------------------------------------------------------------------
+# The dangling-operator bug (diagnosed live 2026-07-30 on LVMH MOET
+# HENNESSY LOUIS VUITTON, LEI IOG4E947OATN0KJYSD45). Its subsidiary is
+# legally named ``S +``. A ``+`` is only NOT an operator when it sits
+# between two non-space characters, but the earlier rule keyed on the
+# character AFTER it (``(?<!\S)[-+](?=\S)``), so a trailing operator with
+# no operand survived sanitisation and 500'd ICIJ's parser — 1 of 3
+# batches failed on every LVMH lookup, and the per-name fallback from the
+# gershayim fix correctly narrowed the loss to this one name.
+# ---------------------------------------------------------------------
+
+
+def test_sanitize_strips_dangling_operator_the_lvmh_bug() -> None:
+    # The real name from the LVMH ownership chain.
+    assert sanitize_name_query("S +") == "S"
+    # Same hazard with the other operator character, and repeated.
+    assert sanitize_name_query("S -") == "S"
+    assert sanitize_name_query("X ++") == "X"
+    assert sanitize_name_query("S.A. -") == "S.A."
+    # A - / + surrounded by spaces has no operand either side.
+    assert sanitize_name_query("A - B") == "A B"
+    # Still kept where it is genuinely part of the name (both sides bound).
+    assert sanitize_name_query("ANNE-MARIE SMITH") == "ANNE-MARIE SMITH"
+    assert sanitize_name_query("BP+AMOCO INTERNATIONAL LIMITED") == "BP+AMOCO INTERNATIONAL LIMITED"
+    # ...and still stripped where it leads a term (the original NOT / MUST case).
+    assert sanitize_name_query("-BAD +HALLE") == "BAD HALLE"
+    # A name that is only operators sanitises to nothing; callers skip it.
+    assert sanitize_name_query("+ -") == ""
+
+
+def test_sanitize_disarms_edge_boolean_words() -> None:
+    """``AND``/``OR`` at either edge is a dangling operand, so it is
+    lower-cased (operators are case-sensitive) rather than dropped."""
+    # "AND Digital" is a real UK company; upper-cased it 500s ICIJ.
+    assert sanitize_name_query("AND DIGITAL") == "and DIGITAL"
+    assert sanitize_name_query("FOO BAR AND") == "FOO BAR and"
+    assert sanitize_name_query("OR FOO") == "or FOO"
+    assert sanitize_name_query("AND") == "and"
+    # Mid-query booleans have operands on both sides — casing preserved.
+    assert sanitize_name_query("BLACK AND WHITE LTD") == "BLACK AND WHITE LTD"
+    assert sanitize_name_query("SMITH OR JONES HOLDINGS") == "SMITH OR JONES HOLDINGS"
+    # NOT is a unary prefix operator and parses fine with an operand.
+    assert sanitize_name_query("NOT ALWAYS LTD") == "NOT ALWAYS LTD"
+
+
+def test_sanitize_still_identity_on_clean_names_post_dangling_fix() -> None:
+    for name in (
+        "LVMH MOET HENNESSY LOUIS VUITTON",
+        "LVMH Watch & Jewellery Hong Kong Limited",
+        "CHAUMET INTERNATIONAL SA.",
+        "MAKE UP FOR EVER",
+        "ANNE-MARIE SMITH",
+        "BP+AMOCO INTERNATIONAL LIMITED",
+    ):
+        assert sanitize_name_query(name) == name
