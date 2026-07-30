@@ -37,10 +37,17 @@ full URL, so ``_node_url()`` rebuilds the public link from it.
 Query object::
 
     {
-      "q0": {"query": "ENTITY NAME", "limit": 3},
-      "q1": {"query": "PERSON NAME", "limit": 3},
+      "q0-entity":       {"query": "A NAME", "limit": 2, "type": ".../entity"},
+      "q0-officer":      {"query": "A NAME", "limit": 2, "type": ".../officer"},
+      "q0-intermediary": {"query": "A NAME", "limit": 2, "type": ".../intermediary"},
       ...
     }
+
+Each name is asked for once per screened node type (see ``_SCREENED_TYPES``,
+which excludes ``Address`` and explains why). A per-query ``type`` is honoured
+independently inside a batch, so this costs queries rather than round trips —
+but a *list* of types in one query object is silently ignored by the service,
+which is why they cannot be combined.
 
 Response::
 
@@ -104,17 +111,67 @@ _NODE_URL_TEMPLATE = "https://offshoreleaks.icij.org/nodes/{id}"
 # Maximum number of names to check in a single run (bounds total HTTP calls).
 _MAX_TARGETS = 30
 
-# Maximum queries per API batch (stay conservative to avoid request-size issues).
-_BATCH_SIZE = 10
+# Node types we screen against, mapped to their schema URI.
+#
+# ``Address`` is DELIBERATELY ABSENT. ICIJ also indexes postal addresses, and
+# comparing a company name to an address string is a category error: measured
+# live 2026-07-30 over 14 real subjects / 350 names, Address took **57.8% of
+# every result set and produced 0 signals** — 0 of 1,959 Address results
+# cleared the similarity gate, best seen 0.429. Worse, because ICIJ's result
+# ordering is NOT score-descending, those addresses displaced real matches out
+# of the result window: Glencore plc and BP p.l.c. each returned zero
+# offshore-leaks signals in production while exact, score-100 matches for
+# ``Glencore plc``, ``Glencore International AG``, ``Glencore Group Funding
+# Ltd`` and BP's ``BRITANNIC TRADING LIMITED`` sat in the database unseen.
+#
+# Scoping is done server-side, one query per type. A LIST of types in a single
+# query object is silently ignored by the service (no error, unfiltered
+# results), so the types must be asked for separately — but each query object
+# in a batch carries its own ``type`` and is honoured independently, so this
+# costs queries, not round trips.
+_SCHEMA_BASE = "https://offshoreleaks.icij.org/schema/oldb/"
+_SCREENED_TYPES: dict[str, str] = {
+    "Entity": _SCHEMA_BASE + "entity",
+    "Officer": _SCHEMA_BASE + "officer",
+    "Intermediary": _SCHEMA_BASE + "intermediary",
+}
+
+# Results requested per name per type. Two, because ICIJ genuinely holds the
+# same organisation as separate nodes across leaks (``Glencore plc`` appears
+# three times), and those are distinct evidence. Going deeper than two only
+# reaches the marginal tail — measured: 18 signals at 2, 19 at 3.
+_RESULTS_PER_TYPE = 2
+
+# Names per API batch. Each name costs len(_SCREENED_TYPES) queries and the
+# service manifest declares ``batchSize: 25``, so 8 names = 24 queries fits
+# inside one request.
+_BATCH_SIZE = 8
 
 # ICIJ score threshold (0–100). Matches below this are ignored unless
 # ``match: true`` — ICIJ's own high-confidence flag overrides the threshold.
 _MIN_SCORE = 70
 
-# Secondary sanity check: even if ICIJ scores high, the returned name must
-# share at least this much similarity with what we searched, to guard against
-# false positives when the ICIJ index blends multiple transliterations.
-_MIN_NAME_SIM = 0.45
+# Secondary sanity check: even if ICIJ scores high, the returned name must be
+# this similar to what we searched. Uses the shared Phase-D scorer (see
+# ``_name_sim``).
+#
+# 0.93 is calibrated for THIS surface and is deliberately stricter than the
+# product-wide 0.88 used for person screening. Screening a company name
+# against 800k offshore records is dominated by legal-form boilerplate:
+# "CASTROL HOLDINGS INTERNATIONAL LIMITED" vs "COSCO INTERNATIONAL HOLDINGS
+# LIMITED" scores 0.92 on shared filler alone. Measured over the corpus above,
+# every confident match sits at 0.93+ (most at 1.00) while the false positives
+# cluster in 0.85–0.92; the cut takes corpus precision from 45% to ~85%.
+_MIN_NAME_SIM = 0.93
+
+# A name has to be specific enough to screen. "S +" — the real GLEIF legal
+# name of an LVMH subsidiary — sanitises to "S", which matches an ICIJ officer
+# node literally named "s" at score 100 and similarity 1.00: a high-confidence
+# offshore-leaks hit off a single character. Length of the comparable form is
+# the right test here; ``matching.is_matchable_name`` is NOT, since its
+# single-token rule is calibrated for person names and would discard perfectly
+# specific one-word companies (KENZO, CELINE, BERLUTI).
+_MIN_COMPARABLE_CHARS = 3
 
 # Pulls the dataset out of a v0.2 description sentence — see
 # ``_parse_collection`` for the shapes this was verified against.
@@ -374,20 +431,31 @@ async def _check_batch(
     """POST one batch of names to the ICIJ reconciliation API and parse
     the results into risk signals.
 
+    Each name is asked for once per screened node type (see
+    ``_SCREENED_TYPES``), so a batch of N names sends N × 3 query objects in
+    a single request — the service honours a per-query ``type`` independently
+    within a batch, so type scoping costs queries, not round trips.
+
     Names are sanitised before they reach the query dict — the reconcile
     endpoint 500s on any query containing an unbalanced double quote (the
-    ASCII gershayim in Israeli company names, בע"מ). Names that sanitise
-    to nothing are skipped: an empty query is meaningless to screen.
+    ASCII gershayim in Israeli company names, בע"מ) or a dangling Lucene
+    operator ("S +"). Names that sanitise to nothing, or that are too short
+    to be worth screening (``_MIN_COMPARABLE_CHARS``), are skipped.
     """
     queries: dict[str, Any] = {}
     keyed_targets: dict[str, dict[str, Any]] = {}
     for i, t in enumerate(targets):
         q = sanitize_name_query(t["name"])
-        if not q:
+        if not _screenable(q):
             continue
-        key = f"q{i}"
-        queries[key] = {"query": q, "limit": 3}
-        keyed_targets[key] = t
+        for type_name, type_uri in _SCREENED_TYPES.items():
+            key = f"q{i}-{type_name.lower()}"
+            queries[key] = {
+                "query": q,
+                "limit": _RESULTS_PER_TYPE,
+                "type": type_uri,
+            }
+            keyed_targets[key] = t
     if not queries:
         return []
 
@@ -456,10 +524,23 @@ def _signal_from_match(
     qualifier = jurisdiction or collection
     qual_note = f" ({qualifier})" if qualifier else ""
 
-    summary = (
-        f"{relation} '{target['name']}' matches a record in {dataset_label}{qual_note} "
-        f"(ICIJ score {score}/100)."
-    )
+    # An Intermediary node is not the same finding as an Entity or Officer
+    # one: ICIJ uses it for the go-between that ARRANGED an offshore
+    # structure — a law firm or company-formation agent (Appleby, Mossack
+    # Fonseca). A related party turning up in that role is a materially
+    # different fact from being named in the leak as an owner or officer, so
+    # it is worded differently rather than folded into "matches a record".
+    if node_type == "Intermediary":
+        summary = (
+            f"{relation} '{target['name']}' appears as an offshore-services "
+            f"intermediary in {dataset_label}{qual_note} "
+            f"(ICIJ score {score}/100)."
+        )
+    else:
+        summary = (
+            f"{relation} '{target['name']}' matches a record in {dataset_label}"
+            f"{qual_note} (ICIJ score {score}/100)."
+        )
 
     return RiskSignal(
         code=OFFSHORE_LEAKS,
@@ -608,20 +689,34 @@ def _normalise(name: str) -> str:
 
 
 def _name_sim(a: str, b: str) -> float:
-    """Simple token-overlap similarity — more lenient than SequenceMatcher
-    for all-caps ICIJ names vs mixed-case BODS names."""
-    na, nb = _normalise(a), _normalise(b)
-    if not na or not nb:
-        return 0.0
-    if na == nb:
-        return 1.0
-    tokens_a = set(na.split())
-    tokens_b = set(nb.split())
-    if not tokens_a or not tokens_b:
-        return 0.0
-    intersection = tokens_a & tokens_b
-    union = tokens_a | tokens_b
-    return len(intersection) / len(union)
+    """Similarity between a searched name and an ICIJ result name.
+
+    Delegates to the Phase-D shared scorer, ``names.name_similarity`` — the
+    same one behind RELATED_PEP / RELATED_SANCTIONED and BackgroundCheck.
+    This used to be a bespoke unweighted token-overlap (Jaccard) score, which
+    counted legal-form boilerplate as evidence and so could not tell a real
+    match from a collision: "CHAUMET INTERNATIONAL SA." vs "BRONTE
+    INTERNATIONAL SA" and "MOET HENNESSY INTERNATIONAL" vs "HENNESSY
+    INTERNATIONAL LIMITED" both scored exactly 0.500, one false and one true.
+    The shared scorer separates them (0.766 / 0.877) and, unlike a second
+    private scorer, improves here whenever the shared one improves.
+
+    Kept as a named seam rather than inlined: it is the single place where
+    this module's matching semantics can be swapped or instrumented.
+    """
+    return names.name_similarity(a, b)
+
+
+def _screenable(sanitised_query: str) -> bool:
+    """Whether a sanitised name is specific enough to be worth screening.
+
+    See ``_MIN_COMPARABLE_CHARS`` — this is the guard against a name that
+    erodes to one or two characters and then matches the whole database.
+    """
+    if not sanitised_query:
+        return False
+    comparable = _normalise(sanitised_query).replace(" ", "")
+    return len(comparable) >= _MIN_COMPARABLE_CHARS
 
 
 def _slug(name: str) -> str:

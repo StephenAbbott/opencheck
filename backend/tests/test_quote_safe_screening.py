@@ -167,6 +167,21 @@ def _posted_queries(request: httpx.Request) -> dict[str, Any]:
     return json.loads(parse_qs(request.content.decode())["queries"][0])
 
 
+def _names_in(queries: dict[str, Any]) -> set[str]:
+    """Distinct names in a posted batch.
+
+    Each name is now asked once per screened node type, so the number of
+    query OBJECTS is a multiple of the number of names — batch-vs-per-name
+    retry has to be told apart by name count, not query count.
+    """
+    return {spec["query"] for spec in queries.values()}
+
+
+def _entity_slot(queries: dict[str, Any]) -> str:
+    """The query key carrying the Entity-scoped slot for the first name."""
+    return next(k for k in queries if k.endswith("-entity"))
+
+
 async def test_icij_queries_are_sanitised(
     _live_icij: Any, httpx_mock: HTTPXMock
 ) -> None:
@@ -174,7 +189,7 @@ async def test_icij_queries_are_sanitised(
     await assess_icij_names([_entity("e1", _HEBREW_LTD)])
     (request,) = httpx_mock.get_requests()
     queries = _posted_queries(request)
-    assert queries["q0"]["query"] == "יוניליוור ישראל מזון בע מ"
+    assert {spec["query"] for spec in queries.values()} == {"יוניליוור ישראל מזון בע מ"}
 
 
 async def test_icij_quote_only_names_are_skipped_without_http(
@@ -201,12 +216,14 @@ async def test_icij_per_name_fallback_only_loses_the_poison_name(
 
     def route(request: httpx.Request) -> httpx.Response:
         queries = _posted_queries(request)
-        if len(queries) > 1:  # the batch → deterministic rejection
+        if len(_names_in(queries)) > 1:  # the batch → deterministic rejection
             return httpx.Response(500, json={"code": 500, "message": "Server Error"})
-        (query,) = queries.values()
-        if "POISON" in query["query"]:
+        (name,) = _names_in(queries)
+        if "POISON" in name:
             return httpx.Response(500, json={"code": 500, "message": "Server Error"})
-        return httpx.Response(201, json={"q0": {"result": [clean_match]}})
+        return httpx.Response(
+            201, json={_entity_slot(queries): {"result": [clean_match]}}
+        )
 
     httpx_mock.add_callback(route, url=_RECONCILE_URL, method="POST", is_reusable=True)
 
@@ -236,9 +253,9 @@ async def test_icij_fallback_full_recovery_is_not_degraded(
 
     def route(request: httpx.Request) -> httpx.Response:
         queries = _posted_queries(request)
-        if len(queries) > 1:
+        if len(_names_in(queries)) > 1:
             return httpx.Response(500, json={"code": 500, "message": "Server Error"})
-        return httpx.Response(201, json={"q0": {"result": []}})
+        return httpx.Response(201, json={k: {"result": []} for k in queries})
 
     httpx_mock.add_callback(route, url=_RECONCILE_URL, method="POST", is_reusable=True)
 
