@@ -63,21 +63,25 @@ ftm = [
     # Canonical BODS↔FtM conversion for the OpenAleph POST /api/2/match
     # flow (opencheck/ftm.py prefers this and falls back to a built-in
     # minimal converter when absent). An extra rather than a hard dep
-    # because followthemoney → pyicu builds from source against ICU
-    # headers: the Docker image and CI install g++/libicu-dev/pkg-config
-    # and sync with `--extra ftm`; dev environments without ICU still
-    # work via the built-in converter (parity-tested).
-    "bods-ftm @ git+https://github.com/StephenAbbott/bods-ftm.git",
+    # because followthemoney → normality 3.x → pyicu builds from source
+    # against ICU headers (pyicu is a HARD dep under FtM 4.x, sdist-only):
+    # the Docker image and CI install g++/libicu-dev/pkg-config and sync
+    # with `--extra ftm`; dev environments without ICU still work via the
+    # built-in converter (parity-tested). macOS dev installs of this extra
+    # need `brew install icu4c pkg-config` (keg-only: set PKG_CONFIG_PATH).
+    # Pinned to the FtM 4.x upgrade commit (bods-ftm PR #1, merged
+    # 2026-08-01) — followthemoney>=4.8,<5, which unlocks rigour 2.x.
+    "bods-ftm @ git+https://github.com/StephenAbbott/bods-ftm.git@9347d80f0f6582a4de02e3439b109b37fd311111",
     # rigour — OpenSanctions' data cleaning/validation library (MIT). Already
     # in this extra's tree transitively (bods-ftm → followthemoney → rigour);
     # pinned explicitly so an upstream dependency shuffle can't silently drop
     # the checksum validators opencheck/identifiers.py and matching.py prefer.
-    # bods-ftm's followthemoney (3.8.x) currently resolves this to rigour 0.x
-    # — the ids/urls APIs we use are stable across 0.14→2.x — and the <3
-    # ceiling forces a review when a followthemoney upgrade pulls in the
-    # Rust-cored 2.x line, whose curated datasets change normalisation
-    # output (i.e. matching behaviour).
-    "rigour>=0.14,<3",
+    # The Rust-cored 2.x line (ICU transliteration, org-type data, script
+    # detection compiled in; wheels for linux/macOS/win cp310–cp314).
+    # Floor 2.2 = the APIs names.py's documented switch points target; the
+    # <3 ceiling forces a review at the next major, since rigour's curated
+    # datasets change normalisation output (i.e. matching behaviour).
+    "rigour>=2.2,<3",
 ]
 llm = [
     # Phase 2+: intent extraction and narrative phrasing.
