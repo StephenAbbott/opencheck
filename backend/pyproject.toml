@@ -49,7 +49,10 @@ dependencies = [
     "segno>=1.6",
     # MCP server (in-process, mounted at /mcp) — exposes the lookup pipeline as
     # Model Context Protocol tools for AI agents. Streamable-HTTP transport.
-    "mcp>=1.2",
+    # Pinned <2: SDK v2 (MCP spec 2026-07-28) renames FastMCP→MCPServer and
+    # splits mcp.types out — the import would fail and app.py's defensive mount
+    # would silently drop /mcp. Migration tracked on the "Update MCP" ticket.
+    "mcp>=1.28,<2",
     "slowapi>=0.1.10",
 ]
 

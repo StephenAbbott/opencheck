@@ -1661,7 +1661,7 @@ requires-dist = [
     { name = "duckdb", specifier = ">=1.1" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
-    { name = "mcp", specifier = ">=1.2" },
+    { name = "mcp", specifier = ">=1.28,<2" },
     { name = "openaleph-client", specifier = ">=1.1" },
     { name = "pycountry", specifier = ">=24.6" },
     { name = "pydantic", specifier = ">=2.9" },
