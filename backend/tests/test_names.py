@@ -23,8 +23,10 @@ import pathlib
 import re
 import unicodedata
 
+import pytest
+
 from opencheck import names
-from opencheck.matching import canonical_identifier
+from opencheck.matching import canonical_identifier, is_matchable_name
 
 # --- Reference: the deleted cross_check/icij_check normaliser --------------
 
@@ -130,6 +132,94 @@ def test_cjk_passes_through_unchanged():
     assert names.normalise_name("株式会社日立製作所") == "株式会社日立製作所"
 
 
+# --- Switch point cashed 2026-08-01: rigour 2.x maybe_ascii (hybrid) --------
+
+
+@pytest.mark.skipif(
+    not names._HAS_RIGOUR_NAMES, reason="rigour not installed (ftm extra)"
+)
+def test_armenian_georgian_gain_latin_comparable_form():
+    # rigour 2.x maybe_ascii covers the scripts the curated tables never did.
+    assert names.normalise_name("Ամերիաբանկ") == "ameriabank"
+    assert names.normalise_name("ԱՄԵՐԻԱԲԱՆԿ") == "ameriabank"
+    assert names.normalise_name("թիվի կոմպանի") == names.normalise_name(
+        "Թիվի Կոմպանի"
+    )
+    assert names.normalise_name("თიბისი ბანკი") == "tibisi bank i"
+    # Native and published-Latin forms of the same bank now collide.
+    assert names.name_similarity("Ամերիաբանկ", "Ameriabank") == 1.0
+
+
+def test_armenian_georgian_pass_through_without_rigour(monkeypatch):
+    # Base install (no ftm extra): accepted degradation — pass-through,
+    # exactly the pre-switch behaviour. Pinned so the parity question stays
+    # "acceptable degradation", never silent drift.
+    monkeypatch.setattr(names, "_HAS_RIGOUR_NAMES", False)
+    assert names.normalise_name("Ամերիաբանկ") == "ամերիաբանկ"
+    assert names.transliterate_display("Ամերիաբանկ") is None
+
+
+def test_cyrillic_greek_stay_on_curated_tables():
+    # Product decision 2026-08-01: Cyrillic/Greek remain table-driven in BOTH
+    # paths. rigour's ISO-9-flavoured scheme diverges from the
+    # OpenSanctions-published Latin forms the tables target — a full
+    # maybe_ascii replacement would score ЛУКОЙЛ ↔ Lukoil at 0.83 (< 0.88).
+    assert names.normalise_name("ЛУКОЙЛ") == "lukoil"  # not "lukojl"
+    assert names.normalise_name("Чехов") == "chekhov"  # not "cehov"
+    assert names.normalise_name("Ельцин") == "eltsin"  # not "el cin"
+
+
+@pytest.mark.skipif(
+    not names._HAS_RIGOUR_NAMES, reason="rigour not installed (ftm extra)"
+)
+def test_rigour_translit_scheme_still_diverges():
+    # Canary for the hybrid decision: if rigour ever switches its Cyrillic
+    # scheme to BGN/PCGN-style output, this fails — revisit whether the
+    # tables can retire.
+    from rigour.text.translit import maybe_ascii
+
+    assert maybe_ascii("ЛУКОЙЛ") != "LUKOIL"
+
+
+@pytest.mark.skipif(
+    not names._HAS_RIGOUR_NAMES, reason="rigour not installed (ftm extra)"
+)
+def test_rigour_org_type_gaps_still_hold():
+    # Switch points re-verified and KEPT 2026-08-01 (rigour 2.3.1). Canaries:
+    # when a future rigour closes either gap, the failing assertion is the
+    # signal to cash in the corresponding simplification.
+    from rigour.names import replace_org_types_compare
+
+    # Gap 1 — bare "COMPANY"/"CO" untouched, so sec_edgar keeps its local
+    # trailing-token strip (delete it when this fails).
+    assert (
+        replace_org_types_compare("the walt disney company", generic=True)
+        == "the walt disney company"
+    )
+    assert (
+        replace_org_types_compare("walt disney co", generic=True)
+        == "walt disney co"
+    )
+    # Gap 2 — "A/S" not aliased (bare "AS" is), so reconcile's despaced key
+    # keeps using the PLAIN normalised form (simplify when this fails).
+    assert (
+        replace_org_types_compare("ørsted a/s", generic=True) == "ørsted a/s"
+    )
+    assert replace_org_types_compare("orsted as", generic=True) != "orsted as"
+
+
+def test_hangul_stays_dense_not_romanised():
+    # Deliberately excluded from the rigour pass: RR romanisation
+    # (김정은 → gimjeong-eun) mismatches the published Latin form
+    # (Kim Jong-un) and would re-break the dense-script matchability guard.
+    # (NFKD decomposes Hangul syllables to conjoining Jamo — same glyphs,
+    # different codepoints — which is pre-existing normalise_name behaviour.)
+    assert names.normalise_name("김정은") == unicodedata.normalize(
+        "NFKD", "김정은"
+    )
+    assert is_matchable_name("김정은")
+
+
 def test_extended_latin_folds():
     assert names.normalise_name("Đorđe Straße") == "dorde strasse"
     assert names.normalise_name("İstanbul Holding") == "istanbul holding"
@@ -191,7 +281,6 @@ def test_canonical_identifier_latin_behaviour_unchanged():
 
 # --- Phase C: org-type-aware merge keys -------------------------------------
 
-import pytest  # noqa: E402
 
 from opencheck.reconcile import possibly_same_entities  # noqa: E402
 
@@ -263,7 +352,7 @@ def test_possibly_same_exact_name_pairs_unchanged():
 
 # --- Phase D: shared scorer + dense-script matchability ---------------------
 
-from opencheck.matching import is_matchable_name  # noqa: E402
+
 
 
 def test_name_similarity_order_invariant():
@@ -308,6 +397,43 @@ def test_has_dense_script():
     assert not names.has_dense_script("Газпром")
 
 
+# Cases both the rigour 2.x path and the range fallback must agree on —
+# including the blocks the pre-switch ranges missed (Jamo, halfwidth
+# katakana, CJK Extension B).
+_DENSE_AGREEMENT_CASES = [
+    ("田中太郎", True),
+    ("김민준", True),
+    (unicodedata.normalize("NFKD", "김정은"), True),  # conjoining Jamo
+    ("ㄱㄴ", True),          # compatibility Jamo
+    ("ｷﾑｼﾞｮﾝｳﾝ", True),      # halfwidth katakana
+    ("\U00020000", True),   # CJK Extension B
+    ("John Smith", False),
+    ("Газпром", False),
+    ("ไทยยูเนี่ยน", False),   # Thai: spaceless but not in DENSE_SCRIPTS either
+    ("", False),
+]
+
+
+def test_has_dense_script_switch_point_agreement(monkeypatch):
+    # Switch point cashed 2026-08-01: rigour's is_dense_script and the
+    # extra-less range fallback must give the same answer on every pinned
+    # case, so "identical output everywhere" holds for the corpus we care
+    # about and the fallback question stays acceptable degradation.
+    for text, expected in _DENSE_AGREEMENT_CASES:
+        assert names.has_dense_script(text) is expected, (text, "current path")
+    monkeypatch.setattr(names, "_HAS_RIGOUR_NAMES", False)
+    for text, expected in _DENSE_AGREEMENT_CASES:
+        assert names.has_dense_script(text) is expected, (text, "fallback")
+
+
+def test_normalised_korean_names_are_matchable():
+    # The latent bug the switch exposed: normalise_name NFKD-decomposes
+    # Hangul syllables to conjoining Jamo, which the old syllables-only
+    # ranges did not recognise — so every normalised Korean name silently
+    # failed is_matchable_name. Both paths now get this right.
+    assert is_matchable_name(names.normalise_name("김정은"))
+
+
 def test_is_matchable_name_dense_script_fix():
     # Previously blocked: CJK names have no internal spaces.
     assert is_matchable_name("田中太郎")
@@ -340,13 +466,41 @@ def test_transliterate_display():
     assert names.transliterate_display(None) is None
 
 
+@pytest.mark.skipif(
+    not names._HAS_RIGOUR_NAMES, reason="rigour not installed (ftm extra)"
+)
+def test_transliterate_display_armenian_georgian():
+    # Switch point cashed 2026-08-01: rigour's maybe_ascii preserves case,
+    # so Armenian/Georgian names gain display alternates too.
+    assert names.transliterate_display("Ամերիաբանկ") == "Ameriabank"
+    # Mixed script: Cyrillic via the tables, Armenian via rigour, one pass.
+    assert names.transliterate_display("Банк Ամերիաբանկ") == "Bank Ameriabank"
+    # Hangul: still nothing worth adding (excluded from the rigour pass).
+    assert names.transliterate_display("김정은") is None
+
+
 def test_normalise_language_code():
     assert names.normalise_language_code("en") == "eng"
     assert names.normalise_language_code("el") == "ell"
     assert names.normalise_language_code("zh-Hans") == "zho"
+    assert names.normalise_language_code("zh_Hant") == "zho"
+    assert names.normalise_language_code("pt-BR") == "por"
     assert names.normalise_language_code("xx") is None
     assert names.normalise_language_code("") is None
     assert names.normalise_language_code(None) is None
+
+
+def test_normalise_language_code_fallback_without_rigour(monkeypatch):
+    # Switch point cashed 2026-08-01: rigour 2.x parses BCP-47 natively, so
+    # the 0.x-era primary-subtag retry is gone. Base installs still resolve
+    # subtagged codes — the pycountry fallback does its own subtag split.
+    import sys
+
+    monkeypatch.setitem(sys.modules, "rigour.langs", None)
+    assert names.normalise_language_code("zh-Hans") == "zho"
+    assert names.normalise_language_code("en-GB") == "eng"
+    assert names.normalise_language_code("en") == "eng"
+    assert names.normalise_language_code("xx-YY") is None
 
 
 def test_entity_statement_gains_transliterated_alternate():

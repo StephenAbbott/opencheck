@@ -297,7 +297,10 @@ def possibly_same_entities(bods: list[dict]) -> list[PossiblySame]:
         # org-typed one: rigour aliases bare "AS" (→ jsc) but not "A/S", so
         # despacing the org form would put "…A/S" and "…AS" in different
         # groups. Despacing the plain form collides them ("…a s" and "…as"
-        # both despace to "…as").
+        # both despace to "…as"). Re-verified against rigour 2.3.1
+        # (2026-08-01): "A/S" is still not in the alias data, so the twist
+        # stays — tests/test_names.py pins the gap as a canary that fails
+        # when a future rigour covers it (then simplify here).
         keys = {
             ("org", org, jur),
             ("despace", names.despace(names.normalise_name(raw)), jur),

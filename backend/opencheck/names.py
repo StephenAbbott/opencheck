@@ -17,9 +17,15 @@ This module is the one place name normalisation happens. Design constraints:
   ``normality.ascii_text`` output differs between the two (ICU-less fallback
   renders ``Ø`` as ``O/``). Every transform here is a plain table or stdlib
   Unicode operation, so prod, CI and ICU-less dev produce identical strings.
-  rigour's own transliteration helpers (``maybe_ascii``) only exist in the
-  Rust-cored 2.x line, which followthemoney 3.8.x caps us below — revisit
-  when bods-ftm upgrades (see the rigour-adoption plan on Notion).
+  rigour 2.x (unlocked by the bods-ftm followthemoney-4.x upgrade, PR #89)
+  adds a Rust-cored ``maybe_ascii`` — deterministic wherever rigour installs,
+  no ICU — which extends the pipeline to Armenian and Georgian (see the
+  hybrid note above ``_RIGOUR_TRANSLIT_RUNS``). The curated Cyrillic/Greek
+  tables deliberately remain the authority for those two scripts: rigour's
+  scheme is ISO-9-flavoured (``Чехов`` → ``Cehov``, ``ЛУКОЙЛ`` → ``LUKOJL``)
+  and systematically diverges from the BGN/PCGN-style Latin forms
+  OpenSanctions publishes, which would push native ↔ published-Latin pairs
+  below the 0.88 screening threshold (``lukojl`` ↔ ``lukoil`` scores 0.83).
 * **Comparable forms, not display forms.** Output feeds matching, merge keys
   and screening comparisons; it is never shown to users. Original names are
   always preserved in hits/statements.
@@ -36,7 +42,10 @@ Layers (compose in this order):
    transliterated forms of the same name finally score as similar instead
    of ~0. Other scripts (CJK, Arabic…) pass through unchanged — matching
    them via lossy romanisation would manufacture noise.
-4. Punctuation → space, lowercase, squash.
+4. rigour 2.x ``maybe_ascii`` over Armenian/Georgian runs only (``ftm``
+   extra installed; no-op otherwise) — the scripts the tables never
+   covered. See ``_RIGOUR_TRANSLIT_RUNS`` for why the pass is bounded.
+5. Punctuation → space, lowercase, squash.
 
 ``fold_homoglyphs`` is separate and serves *identifiers*: uppercase Greek and
 Cyrillic letters that are visual homoglyphs of Latin capitals (Cyprus company
@@ -54,11 +63,15 @@ import unicodedata
 try:  # pragma: no cover - exercised via the ftm extra in CI/prod
     from rigour.names import replace_org_types_compare as _rigour_org_compare
     from rigour.text import levenshtein_similarity as _rigour_lev_sim
+    from rigour.text.scripts import is_dense_script as _rigour_is_dense
+    from rigour.text.translit import maybe_ascii as _rigour_maybe_ascii
 
     _HAS_RIGOUR_NAMES = True
 except ImportError:  # pragma: no cover - base install without the ftm extra
     _rigour_org_compare = None  # type: ignore[assignment]
     _rigour_lev_sim = None  # type: ignore[assignment]
+    _rigour_is_dense = None  # type: ignore[assignment]
+    _rigour_maybe_ascii = None  # type: ignore[assignment]
     _HAS_RIGOUR_NAMES = False
 
 # --- Layer 1: non-decomposable Latin letters --------------------------------
@@ -106,6 +119,47 @@ _GREEK = {
 
 _SCRIPT_FOLDS = {**_CYRILLIC, **_GREEK}
 
+# --- Layer 4: rigour 2.x transliteration for the scripts the tables never
+# covered (SWITCH POINT — cashed in 2026-08-01, hybrid form) -----------------
+#
+# rigour 2.x's Rust-cored ``maybe_ascii`` admits Latin, Cyrillic, Greek,
+# Armenian, Georgian and Hangul. We run it over **Armenian and Georgian runs
+# only**:
+#
+# * Cyrillic/Greek stay on the curated tables above. rigour's scheme is
+#   ISO-9-flavoured and diverges from the BGN/PCGN-style forms OpenSanctions
+#   publishes (``Чехов`` → ``Cehov`` vs ``chekhov``, ``ЛУКОЙЛ`` → ``LUKOJL``
+#   vs ``lukoil``, ``Ельцин`` → ``El'cin`` whose apostrophe splits the
+#   token) — a full replacement pushes native ↔ published-Latin pairs below
+#   the 0.88 screening threshold. Product decision 2026-08-01: tables remain
+#   authoritative for those two scripts.
+# * Hangul is deliberately excluded. Its Revised-Romanization output
+#   (``김정은`` → ``gimjeong-eun``) does not resemble the published Latin
+#   form (``Kim Jong-un``), so it buys no matches — and romanising would
+#   turn single-token Hangul names Latin, silently re-breaking the
+#   ``is_matchable_name`` dense-script guard Phase D fixed.
+# * CJK/kana keep passing through (dense-script guard, same as before;
+#   rigour does not admit them either).
+#
+# Armenian/Georgian names therefore gain a Latin comparable form in
+# ``ftm``-extra environments (``Ամերիաբանկ`` → ``ameriabank``); base installs
+# keep pass-through — an accepted degradation, pinned in tests/test_names.py.
+_RIGOUR_TRANSLIT_RUNS = re.compile(
+    "["
+    "\\u0530-\\u058F\\uFB13-\\uFB17"  # Armenian + Armenian ligatures
+    "\\u10A0-\\u10FF\\u2D00-\\u2D2F\\u1C90-\\u1CBF"  # Georgian, Nuskhuri, Mtavruli
+    "]+"
+)
+
+
+def _rigour_translit_runs(text: str) -> str:
+    """Apply rigour's ``maybe_ascii`` to Armenian/Georgian runs only."""
+    if not _HAS_RIGOUR_NAMES:
+        return text
+    return _RIGOUR_TRANSLIT_RUNS.sub(
+        lambda m: _rigour_maybe_ascii(m.group(0)), text
+    )
+
 # --- Homoglyphs (uppercase, for identifiers) --------------------------------
 # Greek and Cyrillic capitals that are visual homoglyphs of Latin capitals.
 # Deliberately NOT phonetic: Greek Η romanises as "i" in names, but in an
@@ -139,8 +193,9 @@ def fold_ascii(text: str) -> str:
     """Casefold + fold to a deterministic lowercase quasi-ASCII form.
 
     Latin diacritics stripped, non-decomposables folded, Cyrillic/Greek
-    transliterated; other scripts pass through unchanged. No punctuation or
-    whitespace handling — compose via ``normalise_name``.
+    transliterated (tables), Armenian/Georgian transliterated (rigour 2.x,
+    ``ftm`` extra only); other scripts pass through unchanged. No punctuation
+    or whitespace handling — compose via ``normalise_name``.
     """
     if not text:
         return ""
@@ -148,7 +203,9 @@ def fold_ascii(text: str) -> str:
     folded = "".join(_LATIN_FOLDS.get(ch, ch) for ch in folded)
     decomposed = unicodedata.normalize("NFKD", folded)
     stripped = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
-    return "".join(_SCRIPT_FOLDS.get(ch, ch) for ch in stripped)
+    return _rigour_translit_runs(
+        "".join(_SCRIPT_FOLDS.get(ch, ch) for ch in stripped)
+    )
 
 
 def normalise_name(name: str | None) -> str:
@@ -179,8 +236,10 @@ def org_comparable_name(name: str | None, *, generic: bool = True) -> str:
     "gazprom llc"-class. Without rigour (base install) this degrades to plain
     ``normalise_name`` — dev-only divergence, same caveat as ``matching.py``.
 
-    Note: "A/S" is NOT in rigour's alias data, so Danish suffixes are handled
-    by the despaced secondary key (``despace``), not org-type replacement.
+    Note: "A/S" is NOT in rigour's alias data (re-verified in 2.3.1,
+    2026-08-01 — canary in tests/test_names.py), so Danish suffixes are
+    handled by the despaced secondary key (``despace``), not org-type
+    replacement.
     """
     if not name:
         return ""
@@ -236,39 +295,68 @@ def name_similarity(a: str | None, b: str | None) -> float:
 
 # Unicode blocks whose scripts write names without spaces — a "single token"
 # guard calibrated for space-separated scripts must not apply to them.
+# SWITCH POINT (cashed 2026-08-01): with rigour 2.x installed this is
+# ``rigour.text.scripts.is_dense_script`` (Unicode script properties, so it
+# also covers blocks the ranges below miss); the ranges remain as the
+# extra-less fallback, extended with the blocks whose omission the switch
+# exposed — most importantly conjoining Jamo: ``normalise_name`` NFKD-
+# decomposes Hangul syllables to Jamo, so the old syllables-only ranges made
+# ``is_matchable_name`` silently reject every normalised Korean name.
 _DENSE_RANGES = (
+    (0x1100, 0x11FF),   # Hangul Jamo (NFKD output of Hangul syllables)
     (0x3040, 0x30FF),   # Hiragana + Katakana
-    (0x4E00, 0x9FFF),   # CJK Unified Ideographs
+    (0x3130, 0x318F),   # Hangul Compatibility Jamo
     (0x3400, 0x4DBF),   # CJK Extension A
+    (0x4E00, 0x9FFF),   # CJK Unified Ideographs
+    (0xA960, 0xA97F),   # Hangul Jamo Extended-A
     (0xAC00, 0xD7AF),   # Hangul syllables
+    (0xD7B0, 0xD7FF),   # Hangul Jamo Extended-B
     (0xF900, 0xFAFF),   # CJK Compatibility Ideographs
+    (0xFF65, 0xFF9F),   # Halfwidth Katakana
+    (0x20000, 0x2FA1F),  # CJK Extensions B–F + Compatibility Supplement
+    (0x30000, 0x3134F),  # CJK Extension G
 )
 
 
 def has_dense_script(text: str) -> bool:
     """True when the text contains characters from a script that does not
-    separate name parts with spaces (CJK, kana, Hangul)."""
+    separate name parts with spaces (CJK, kana, Hangul).
+
+    rigour 2.x path and range fallback agree on every case pinned in
+    tests/test_names.py; the rigour path additionally covers any block the
+    ranges above still miss, since it asks Unicode script properties.
+    """
+    if not text:
+        return False
+    if _HAS_RIGOUR_NAMES:
+        return _rigour_is_dense(text)
     return any(
-        lo <= ord(ch) <= hi for ch in text or "" for lo, hi in _DENSE_RANGES
+        lo <= ord(ch) <= hi for ch in text for lo, hi in _DENSE_RANGES
     )
 
 
 # --- Phase E: transliterated alternates + language codes --------------------
 
 def transliterate_display(text: str | None) -> str | None:
-    """A case-preserving Latin form of a Cyrillic/Greek name, or ``None``
-    when the text contains no Cyrillic/Greek (nothing worth adding).
+    """A case-preserving Latin form of a Cyrillic/Greek (or, with rigour 2.x
+    installed, Armenian/Georgian) name, or ``None`` when the text contains
+    nothing transliterable (nothing worth adding).
 
     Unlike the lowercase comparable forms above this is emitted into BODS
     output (entity ``alternateNames`` strings, person ``names`` entries with
     ``type: transliteration``), so casing is preserved character-wise:
-    ``Газпром`` → ``Gazprom``, ``ЛУКОЙЛ`` → ``LUKOIL``. Same deterministic
-    tables as the comparable pipeline — no ICU dependence.
+    ``Газпром`` → ``Gazprom``, ``ЛУКОЙЛ`` → ``LUKOIL``. Cyrillic/Greek use
+    the same deterministic tables as the comparable pipeline — no ICU
+    dependence; Armenian/Georgian use rigour's Rust-cored ``maybe_ascii``
+    (``Ամերիաբանկ`` → ``Ameriabank``), which also preserves case and is
+    absent-without-the-extra by design (same hybrid rationale as
+    ``_RIGOUR_TRANSLIT_RUNS``; Hangul stays excluded).
     """
     if not text:
         return None
     if not any(ch.casefold() in _SCRIPT_FOLDS for ch in text):
-        return None
+        rigoured = _rigour_translit_runs(text)
+        return rigoured if rigoured != text else None
     out: list[str] = []
     for ch in text:
         low = ch.casefold()
@@ -286,7 +374,9 @@ def transliterate_display(text: str | None) -> str | None:
             out.append(mapped[:1].upper() + mapped[1:])
         else:
             out.append(mapped)
-    return "".join(out)
+    # Mixed-script edge: any Armenian/Georgian runs alongside the
+    # Cyrillic/Greek still get their rigour pass.
+    return _rigour_translit_runs("".join(out))
 
 
 def normalise_language_code(code: str | None) -> str | None:
@@ -302,11 +392,11 @@ def normalise_language_code(code: str | None) -> str | None:
     try:  # pragma: no cover - exercised via the ftm extra in CI/prod
         from rigour.langs import iso_639_alpha3
 
-        # rigour 0.x does not parse BCP-47 subtags (2.x does) — retry with
-        # the primary subtag before giving up.
-        resolved = iso_639_alpha3(raw) or iso_639_alpha3(
-            raw.lower().split("-")[0].split("_")[0]
-        )
+        # SWITCH POINT (cashed 2026-08-01): rigour 2.x parses BCP-47 tags
+        # natively (``zh-Hans`` → ``zho``), so the 0.x-era primary-subtag
+        # retry is dead code and gone. The pycountry fallback below still
+        # does its own subtag split for base installs.
+        resolved = iso_639_alpha3(raw)
         if resolved:
             return resolved
     except ImportError:  # pragma: no cover - base install
