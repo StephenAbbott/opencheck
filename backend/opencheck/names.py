@@ -63,12 +63,14 @@ import unicodedata
 try:  # pragma: no cover - exercised via the ftm extra in CI/prod
     from rigour.names import replace_org_types_compare as _rigour_org_compare
     from rigour.text import levenshtein_similarity as _rigour_lev_sim
+    from rigour.text.scripts import is_dense_script as _rigour_is_dense
     from rigour.text.translit import maybe_ascii as _rigour_maybe_ascii
 
     _HAS_RIGOUR_NAMES = True
 except ImportError:  # pragma: no cover - base install without the ftm extra
     _rigour_org_compare = None  # type: ignore[assignment]
     _rigour_lev_sim = None  # type: ignore[assignment]
+    _rigour_is_dense = None  # type: ignore[assignment]
     _rigour_maybe_ascii = None  # type: ignore[assignment]
     _HAS_RIGOUR_NAMES = False
 
@@ -291,20 +293,43 @@ def name_similarity(a: str | None, b: str | None) -> float:
 
 # Unicode blocks whose scripts write names without spaces — a "single token"
 # guard calibrated for space-separated scripts must not apply to them.
+# SWITCH POINT (cashed 2026-08-01): with rigour 2.x installed this is
+# ``rigour.text.scripts.is_dense_script`` (Unicode script properties, so it
+# also covers blocks the ranges below miss); the ranges remain as the
+# extra-less fallback, extended with the blocks whose omission the switch
+# exposed — most importantly conjoining Jamo: ``normalise_name`` NFKD-
+# decomposes Hangul syllables to Jamo, so the old syllables-only ranges made
+# ``is_matchable_name`` silently reject every normalised Korean name.
 _DENSE_RANGES = (
+    (0x1100, 0x11FF),   # Hangul Jamo (NFKD output of Hangul syllables)
     (0x3040, 0x30FF),   # Hiragana + Katakana
-    (0x4E00, 0x9FFF),   # CJK Unified Ideographs
+    (0x3130, 0x318F),   # Hangul Compatibility Jamo
     (0x3400, 0x4DBF),   # CJK Extension A
+    (0x4E00, 0x9FFF),   # CJK Unified Ideographs
+    (0xA960, 0xA97F),   # Hangul Jamo Extended-A
     (0xAC00, 0xD7AF),   # Hangul syllables
+    (0xD7B0, 0xD7FF),   # Hangul Jamo Extended-B
     (0xF900, 0xFAFF),   # CJK Compatibility Ideographs
+    (0xFF65, 0xFF9F),   # Halfwidth Katakana
+    (0x20000, 0x2FA1F),  # CJK Extensions B–F + Compatibility Supplement
+    (0x30000, 0x3134F),  # CJK Extension G
 )
 
 
 def has_dense_script(text: str) -> bool:
     """True when the text contains characters from a script that does not
-    separate name parts with spaces (CJK, kana, Hangul)."""
+    separate name parts with spaces (CJK, kana, Hangul).
+
+    rigour 2.x path and range fallback agree on every case pinned in
+    tests/test_names.py; the rigour path additionally covers any block the
+    ranges above still miss, since it asks Unicode script properties.
+    """
+    if not text:
+        return False
+    if _HAS_RIGOUR_NAMES:
+        return _rigour_is_dense(text)
     return any(
-        lo <= ord(ch) <= hi for ch in text or "" for lo, hi in _DENSE_RANGES
+        lo <= ord(ch) <= hi for ch in text for lo, hi in _DENSE_RANGES
     )
 
 

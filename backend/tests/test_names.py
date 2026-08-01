@@ -370,6 +370,43 @@ def test_has_dense_script():
     assert not names.has_dense_script("Газпром")
 
 
+# Cases both the rigour 2.x path and the range fallback must agree on —
+# including the blocks the pre-switch ranges missed (Jamo, halfwidth
+# katakana, CJK Extension B).
+_DENSE_AGREEMENT_CASES = [
+    ("田中太郎", True),
+    ("김민준", True),
+    (unicodedata.normalize("NFKD", "김정은"), True),  # conjoining Jamo
+    ("ㄱㄴ", True),          # compatibility Jamo
+    ("ｷﾑｼﾞｮﾝｳﾝ", True),      # halfwidth katakana
+    ("\U00020000", True),   # CJK Extension B
+    ("John Smith", False),
+    ("Газпром", False),
+    ("ไทยยูเนี่ยน", False),   # Thai: spaceless but not in DENSE_SCRIPTS either
+    ("", False),
+]
+
+
+def test_has_dense_script_switch_point_agreement(monkeypatch):
+    # Switch point cashed 2026-08-01: rigour's is_dense_script and the
+    # extra-less range fallback must give the same answer on every pinned
+    # case, so "identical output everywhere" holds for the corpus we care
+    # about and the fallback question stays acceptable degradation.
+    for text, expected in _DENSE_AGREEMENT_CASES:
+        assert names.has_dense_script(text) is expected, (text, "current path")
+    monkeypatch.setattr(names, "_HAS_RIGOUR_NAMES", False)
+    for text, expected in _DENSE_AGREEMENT_CASES:
+        assert names.has_dense_script(text) is expected, (text, "fallback")
+
+
+def test_normalised_korean_names_are_matchable():
+    # The latent bug the switch exposed: normalise_name NFKD-decomposes
+    # Hangul syllables to conjoining Jamo, which the old syllables-only
+    # ranges did not recognise — so every normalised Korean name silently
+    # failed is_matchable_name. Both paths now get this right.
+    assert is_matchable_name(names.normalise_name("김정은"))
+
+
 def test_is_matchable_name_dense_script_fix():
     # Previously blocked: CJK names have no internal spaces.
     assert is_matchable_name("田中太郎")
