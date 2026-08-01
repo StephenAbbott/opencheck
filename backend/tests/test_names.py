@@ -483,9 +483,24 @@ def test_normalise_language_code():
     assert names.normalise_language_code("en") == "eng"
     assert names.normalise_language_code("el") == "ell"
     assert names.normalise_language_code("zh-Hans") == "zho"
+    assert names.normalise_language_code("zh_Hant") == "zho"
+    assert names.normalise_language_code("pt-BR") == "por"
     assert names.normalise_language_code("xx") is None
     assert names.normalise_language_code("") is None
     assert names.normalise_language_code(None) is None
+
+
+def test_normalise_language_code_fallback_without_rigour(monkeypatch):
+    # Switch point cashed 2026-08-01: rigour 2.x parses BCP-47 natively, so
+    # the 0.x-era primary-subtag retry is gone. Base installs still resolve
+    # subtagged codes — the pycountry fallback does its own subtag split.
+    import sys
+
+    monkeypatch.setitem(sys.modules, "rigour.langs", None)
+    assert names.normalise_language_code("zh-Hans") == "zho"
+    assert names.normalise_language_code("en-GB") == "eng"
+    assert names.normalise_language_code("en") == "eng"
+    assert names.normalise_language_code("xx-YY") is None
 
 
 def test_entity_statement_gains_transliterated_alternate():

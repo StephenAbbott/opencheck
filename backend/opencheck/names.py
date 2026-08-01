@@ -392,11 +392,11 @@ def normalise_language_code(code: str | None) -> str | None:
     try:  # pragma: no cover - exercised via the ftm extra in CI/prod
         from rigour.langs import iso_639_alpha3
 
-        # rigour 0.x does not parse BCP-47 subtags (2.x does) — retry with
-        # the primary subtag before giving up.
-        resolved = iso_639_alpha3(raw) or iso_639_alpha3(
-            raw.lower().split("-")[0].split("_")[0]
-        )
+        # SWITCH POINT (cashed 2026-08-01): rigour 2.x parses BCP-47 tags
+        # natively (``zh-Hans`` → ``zho``), so the 0.x-era primary-subtag
+        # retry is dead code and gone. The pycountry fallback below still
+        # does its own subtag split for base installs.
+        resolved = iso_639_alpha3(raw)
         if resolved:
             return resolved
     except ImportError:  # pragma: no cover - base install
