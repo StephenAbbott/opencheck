@@ -68,7 +68,7 @@ async def test_registered_tools_match_declared_names() -> None:
     tools = await mcp_server.mcp.list_tools()
     assert sorted(t.name for t in tools) == sorted(TOOL_NAMES)
     # Every tool exposes an input schema for agents.
-    assert all(t.inputSchema for t in tools)
+    assert all(t.input_schema for t in tools)
 
 
 # --------------------------------------------------------------------------

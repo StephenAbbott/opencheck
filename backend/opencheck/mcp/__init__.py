@@ -11,14 +11,24 @@ from __future__ import annotations
 from typing import Any
 
 from .. import __version__
-from .server import TOOL_NAMES, mcp
+from .server import _TRANSPORT_SECURITY, TOOL_NAMES, mcp
 
 _PUBLIC_BASE = "https://api.opencheck.world"
 
 
 def asgi_app():
-    """Build the streamable-HTTP ASGI app (also creates ``mcp.session_manager``)."""
-    return mcp.streamable_http_app()
+    """Build the streamable-HTTP ASGI app (also creates ``mcp.session_manager``).
+
+    SDK v2 moved the transport settings here from the ``MCPServer`` constructor.
+    ``host`` is set to the public hostname so the SDK does not auto-enable its
+    localhost DNS-rebinding allowlist (we pass explicit settings anyway).
+    """
+    return mcp.streamable_http_app(
+        streamable_http_path="/mcp",
+        stateless_http=True,
+        transport_security=_TRANSPORT_SECURITY,
+        host="api.opencheck.world",
+    )
 
 
 def descriptor() -> dict[str, Any]:

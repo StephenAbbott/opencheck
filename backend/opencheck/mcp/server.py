@@ -10,8 +10,9 @@ shares the 15-minute replay cache and the startup cache warm-up, and can never
 diverge from the REST path. Responses are flattened by ``shaping`` into compact,
 agent-readable structures; licence notices are preserved end to end.
 
-Transport is streamable HTTP (``stateless_http=True``) so the server mounts onto
-the existing FastAPI app and is reachable remotely at ``/mcp``.
+Transport is streamable HTTP (``stateless_http=True``, configured on the ASGI
+factory in ``__init__``) so the server mounts onto the existing FastAPI app and
+is reachable remotely at ``/mcp``.
 """
 
 from __future__ import annotations
@@ -20,7 +21,8 @@ import json
 from typing import Any
 
 from fastapi import HTTPException
-from mcp.server.fastmcp import FastMCP
+from mcp.server.caching import CacheHint
+from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 
 from . import shaping
@@ -46,12 +48,16 @@ _TRANSPORT_SECURITY = TransportSecuritySettings(enable_dns_rebinding_protection=
 # (see app.py) rather than mounted under a prefix — a ``Mount`` at ``/mcp`` would
 # 307-redirect a bare ``POST /mcp`` to ``/mcp/``, and many MCP clients don't
 # replay the POST across that redirect, so the connector silently fails.
-mcp = FastMCP(
+#
+# SDK v2 (spec 2026-07-28): transport settings moved off the constructor onto
+# ``streamable_http_app()`` — see ``asgi_app()`` in ``__init__``. ``cache_hints``
+# (SEP-2549) marks ``tools/list`` as long-lived and public: the tool inventory
+# only changes on deploy, so clients may cache it for 24h and share it across
+# users.
+mcp = MCPServer(
     "opencheck",
     instructions=_INSTRUCTIONS,
-    stateless_http=True,
-    streamable_http_path="/mcp",
-    transport_security=_TRANSPORT_SECURITY,
+    cache_hints={"tools/list": CacheHint(ttl_ms=24 * 60 * 60 * 1000, scope="public")},
 )
 
 
