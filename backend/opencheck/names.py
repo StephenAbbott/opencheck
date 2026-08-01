@@ -236,8 +236,10 @@ def org_comparable_name(name: str | None, *, generic: bool = True) -> str:
     "gazprom llc"-class. Without rigour (base install) this degrades to plain
     ``normalise_name`` — dev-only divergence, same caveat as ``matching.py``.
 
-    Note: "A/S" is NOT in rigour's alias data, so Danish suffixes are handled
-    by the despaced secondary key (``despace``), not org-type replacement.
+    Note: "A/S" is NOT in rigour's alias data (re-verified in 2.3.1,
+    2026-08-01 — canary in tests/test_names.py), so Danish suffixes are
+    handled by the despaced secondary key (``despace``), not org-type
+    replacement.
     """
     if not name:
         return ""

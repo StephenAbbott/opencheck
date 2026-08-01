@@ -181,6 +181,33 @@ def test_rigour_translit_scheme_still_diverges():
     assert maybe_ascii("ЛУКОЙЛ") != "LUKOIL"
 
 
+@pytest.mark.skipif(
+    not names._HAS_RIGOUR_NAMES, reason="rigour not installed (ftm extra)"
+)
+def test_rigour_org_type_gaps_still_hold():
+    # Switch points re-verified and KEPT 2026-08-01 (rigour 2.3.1). Canaries:
+    # when a future rigour closes either gap, the failing assertion is the
+    # signal to cash in the corresponding simplification.
+    from rigour.names import replace_org_types_compare
+
+    # Gap 1 — bare "COMPANY"/"CO" untouched, so sec_edgar keeps its local
+    # trailing-token strip (delete it when this fails).
+    assert (
+        replace_org_types_compare("the walt disney company", generic=True)
+        == "the walt disney company"
+    )
+    assert (
+        replace_org_types_compare("walt disney co", generic=True)
+        == "walt disney co"
+    )
+    # Gap 2 — "A/S" not aliased (bare "AS" is), so reconcile's despaced key
+    # keeps using the PLAIN normalised form (simplify when this fails).
+    assert (
+        replace_org_types_compare("ørsted a/s", generic=True) == "ørsted a/s"
+    )
+    assert replace_org_types_compare("orsted as", generic=True) != "orsted as"
+
+
 def test_hangul_stays_dense_not_romanised():
     # Deliberately excluded from the rigour pass: RR romanisation
     # (김정은 → gimjeong-eun) mismatches the published Latin form

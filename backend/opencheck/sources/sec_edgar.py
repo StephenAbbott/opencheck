@@ -120,9 +120,13 @@ def _normalise_company_name(name: str) -> str:
     # Phase C (rigour adoption): the shared fold pipeline supplies the base
     # form (diacritics, ø/æ/ß folds, Cyrillic/Greek transliteration) so a
     # GLEIF "MÜLLER" matches an EDGAR "MULLER". The trailing legal-form token
-    # strip stays local: rigour 0.14's org-type data does not cover bare
+    # strip stays local: rigour's org-type data does not cover bare
     # "COMPANY"/"CO" (it would regress "THE WALT DISNEY COMPANY" ↔
-    # "Walt Disney Co") — revisit when followthemoney unlocks rigour 2.x.
+    # "Walt Disney Co"). SWITCH POINT re-verified and KEPT 2026-08-01:
+    # rigour 2.3.1 still leaves both "the walt disney company" and
+    # "walt disney co" untouched — tests/test_names.py pins the gap as a
+    # canary that fails when a future rigour covers it (then delete the
+    # local strip; tests/test_sec_edgar_resolve.py pins the Disney match).
     s = names.normalise_name(name or "").upper()
     tokens = s.split()
     while tokens and tokens[0] == "THE":
