@@ -16,13 +16,13 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 90** — monthly GLEIF refresh automation for the entity pages
+**Latest: Phase 91** — IndexNow: pushing the month's changed entity pages to search engines
+
+The monthly GLEIF refresh now ends by pushing every changed or newly issued LEI's entity page to IndexNow-participating engines (Bing, Seznam, Naver, Yandex …) in 10,000-URL batches — typically 100–300k URLs a month, mapped through the same slug logic as the pages themselves so submitted URLs always equal the canonical URLs. Ownership is proved by a `/indexnow/{key}.txt` echo route; without the key configured, everything no-ops. Google is unaffected — its discovery stays sitemap/`lastmod` via Search Console. Commit `bfe8407`.
+
+**Previous: Phase 90** — monthly GLEIF refresh automation for the entity pages
 
 The 3.4M entity pages now keep themselves current: a monthly GitHub Actions workflow rebuilds `entity_pages.sqlite` in full from the latest GLEIF Golden Copy publish, refuses to ship a partial build (≥3.3M entities and a verified publish date required), replaces the `entity-pages-latest` release asset the backend downloads at boot, and triggers a Render redeploy. Full rebuild beats the originally-planned 31-day delta on a stateless runner: same bytes downloaded, no month-boundary gap risk, self-healing. Commit `94fd8f4`.
-
-**Previous: Phase 89** — privacy-respecting analytics: GoatCounter, wired so subjects can never leak
-
-Cookie-less GoatCounter now counts visits on both surfaces — the SPA and the server-rendered entity/browse pages — with the ticket's privacy constraint enforced at a single choke-point: recorded paths are rolled up to fixed buckets (`?lei=` lookups become `/lookup`, entity pages become `/entity`), so no Legal Entity Identifier, person name or query string ever reaches analytics, and feature usage is counted as anonymous events (`lookup_run`, `pdf_export`, `share_link`, …) rather than subjects. Per-entity search interest comes from Google Search Console instead. Privacy notes ship in the entity-page footer and a new "Privacy & analytics" card on the About page; setting `OPENCHECK_GOATCOUNTER_ENDPOINT` to empty removes every trace. Commit `42d8c0f`.
 
 → [Full development history](docs/status.md)
 

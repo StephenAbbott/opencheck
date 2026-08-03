@@ -399,3 +399,45 @@ def test_not_found_page_has_no_analytics(client: TestClient) -> None:
     """404s are noindex and shouldn't count as pageviews."""
     body = client.get("/entity/2138000000000000Z999-nope").text
     assert "gc.zgo.at" not in body
+
+
+# ---------------------------------------------------------------------------
+# Phase 91 — IndexNow (SEO Phase D)
+# ---------------------------------------------------------------------------
+
+
+def test_indexnow_key_route(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENCHECK_INDEXNOW_KEY", "abc123def456")
+    get_settings.cache_clear()
+    r = client.get("/indexnow/abc123def456.txt")
+    assert r.status_code == 200
+    assert r.text == "abc123def456"
+    assert client.get("/indexnow/wrong-key.txt").status_code == 404
+    get_settings.cache_clear()
+
+
+def test_indexnow_key_route_404_when_unconfigured(client: TestClient) -> None:
+    assert client.get("/indexnow/anything.txt").status_code == 404
+
+
+def test_indexnow_urls_match_db_slugs(tmp_path: Path) -> None:
+    """The URLs submitted to IndexNow must equal the pages' canonical URLs —
+    both sides go through slugify_name, pinned here end to end."""
+    from submit_indexnow import batched, payload_for, urls_from_delta
+
+    delta = _write_csv(tmp_path / "delta.csv", LEI2_HEADER, LEI2_ROWS + LEI2_ROWS[:1])
+    import csv as _csv
+
+    with open(delta, encoding="utf-8") as fh:
+        urls = list(urls_from_delta(_csv.DictReader(fh), "https://opencheck.world"))
+    # Deduplicated (the duplicate ACME row collapses) and slug-identical.
+    assert len(urls) == len(LEI2_ROWS)
+    assert f"https://opencheck.world/entity/{ACME_LEI}-acme-widgets-sons-ltd" in urls
+    assert f"https://opencheck.world/entity/{GREEK_LEI}-hellenic-gears-sa" in urls
+
+    batches = list(batched(urls, size=4))
+    assert [len(b) for b in batches] == [4, 2]
+    body = payload_for(batches[0], "k123")
+    assert body["host"] == "opencheck.world"
+    assert body["keyLocation"] == "https://opencheck.world/indexnow/k123.txt"
+    assert body["urlList"] == batches[0]
