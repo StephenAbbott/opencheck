@@ -79,7 +79,6 @@ The frontend renders ownership graphs with [Cytoscape.js](https://js.cytoscape.o
 
 ## Roadmap
 
-- **Live opentender.eu integration** — the adapter is wired but `live_available=False` for now.
 - **A "complex offshore" demo subject** that fires every AMLA chip simultaneously.
 - **BODS RDF / SPARQL backbone** via Oxigraph — load the assembled BODS bundle into a triple store, expose `/sparql` for the published Open Ownership red-flag queries.
 

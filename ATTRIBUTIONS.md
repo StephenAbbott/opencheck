@@ -316,14 +316,6 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Attribution:** "Contains procurement notice data from Tenders Electronic Daily (TED), © European Union, via ted.europa.eu."
 - **Entry point:** LEI + GLEIF `registeredAs` + derived national registration numbers via the `organisation-identifier-tenderer` search field
 
-## OpenTender (DIGIWHIST)
-
-- **Data:** public procurement tender data from 35 jurisdictions
-- **Portal:** <https://opentender.eu/>
-- **License:** [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-- **Attribution:** "Procurement data from OpenTender (DIGIWHIST), licensed CC BY-NC-SA 4.0."
-- **Entry point:** LEI string search
-
 ## Global Energy Monitor (GEM) / Climate TRACE
 
 - **Data (GEM):** Ownership of fossil-fuel infrastructure assets worldwide — power plants, oil and gas fields, coal mines, pipelines, and related facilities. The ownership tracker (`all_entities.csv` and related files inside `ownership.zip`, with fresher bi-monthly copies in the Climate TRACE GCS bucket at `storage.googleapis.com/climate_trace/ownership/`) maps facility owners to named legal entities with LEI codes where known. OpenCheck downloads this data at startup and uses it to bridge LEI → GEM entity ID, enabling ESG screening by LEI.
@@ -390,7 +382,7 @@ Exports conform to the [Beneficial Ownership Data Standard (BODS)](https://stand
 
 ---
 
-If you export OpenCheck data that includes content derived from any CC BY-NC source (OpenSanctions, EveryPolitician, some OpenAleph collections) or the CC BY-NC-SA source (OpenTender), your use of that data is constrained by the non-commercial (and, for OpenTender, share-alike) license. OpenCheck warns you about this at export time.
+If you export OpenCheck data that includes content derived from any CC BY-NC source (OpenSanctions, EveryPolitician, some OpenAleph collections), your use of that data is constrained by the non-commercial license. OpenCheck warns you about this at export time.
 
 ## Bundled fonts (share-card renderer)
 

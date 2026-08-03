@@ -30,7 +30,7 @@ Search by company name, enter a local registration number, or paste a 20-charact
    - **OpenCorporates** — fetched by `ocid` (e.g. `gb/00102498`), a field GLEIF returns on Level 1 records; delivers company profile, current officers, and network relationships (from the live API or the OC Relationships bulk file) as BODS statements.
    - **SEC EDGAR** — for US-jurisdiction entities, searches by legal name via the EDGAR company-search atom feed to find the subject company's CIK, then retrieves the most recent Schedule 13D and 13G filings (major shareholders reporting >5 % of any registered equity class, mandatory XML format since December 2024) as BODS statements. No API key required.
    - **OpenAleph** — LEI → OC URL → registration numbers → legal name cascade; delivers entity records from open knowledge bases indexed by OCCRP's AlephData platform. Timeout 60 s. No API key required.
-   - **OpenSanctions / OpenTender** — search by the LEI string.
+   - **OpenSanctions** — search by the LEI string.
    - **Wikidata** — direct SPARQL fetch on the resolved Q-ID.
 5. Maps each source's payload into BODS v0.4 statements, runs the cross-source reconciler, runs the risk-signal service, **cross-checks every related person and entity in the BODS bundle against OpenSanctions + EveryPolitician by name** — fuzzy-matched with optional birth-year compatibility — to surface scoped `RELATED_PEP` / `RELATED_SANCTIONED` signals, and **cross-checks all names against the ICIJ Offshore Leaks reconciliation API** to surface `OFFSHORE_LEAKS` signals for any Panama Papers / Pandora Papers / Paradise Papers matches.
 6. Returns one unified report.

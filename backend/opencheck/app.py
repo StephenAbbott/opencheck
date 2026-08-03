@@ -72,21 +72,6 @@ async def _warm_caches_background() -> None:
     except Exception as exc:  # noqa: BLE001
         log.warning("Startup cache warm-up failed (lazy fallback remains): %s", exc)
 
-    # OpenTender DB: pre-download + verify off the request path so the first
-    # lookup never blocks on (and never races) a large S3 fetch. No-op unless
-    # OpenTender is registered AND OPENTENDER_DB_FILE is configured — the
-    # registry guard (in warm_opentender_db) stops a retired source from pulling
-    # a multi-hundred-MB DB onto Render's 2 GB-capped /tmp on every cold start.
-    # Failures are non-fatal (lazy fallback).
-    try:
-        from .sources.opentender import warm_opentender_db
-
-        await asyncio.to_thread(warm_opentender_db)
-    except asyncio.CancelledError:
-        raise
-    except Exception as exc:  # noqa: BLE001
-        log.warning("OpenTender DB warm-up failed (lazy fallback remains): %s", exc)
-
     # Sanctioned-securities index: load the file/URL off the event loop so the
     # first /securities request doesn't block on a download.
     try:

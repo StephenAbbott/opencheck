@@ -271,7 +271,7 @@ def warm_entity_pages_db() -> dict[str, Any]:
     """Download the DB at boot when configured by URL. Non-fatal.
 
     Called from the app lifespan's background warm-up (same pattern as the
-    climatetrace/OpenTender/securities warms). Supports plain ``.sqlite``
+    climatetrace/securities warms). Supports plain ``.sqlite``
     and ``.gz`` artifacts; downloads to a temp name then renames, so a
     half-written file never becomes the live DB.
     """

@@ -27,7 +27,6 @@ _DELIBERATELY_UNREGISTERED = {
     "bods_uk_psc",      # Open Ownership bulk BODS (UK PSC)
     "brightquery",      # paid source, not enabled
     "cyprus_drcor",     # bulk download only
-    "opentender",       # retired from the registry
 }
 
 
