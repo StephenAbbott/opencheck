@@ -620,6 +620,10 @@ def render_entity_page(
     if row.direct_parent_lei and row.direct_parent_lei in related:
         parent_url = f"{frontend}{related[row.direct_parent_lei].path}"
 
+    # rel="nofollow" on the CTA: with ~3.4M entity pages each linking to
+    # /?lei={LEI}, a followed link would hand crawlers 3.4M parameter-URL
+    # crawl targets (duplicate SPA shells). Humans are unaffected. The full
+    # ?lei= → /entity URL unification is a ticketed future phase.
     cta_href = f"{frontend}/?lei={row.lei}"
     # CTA click → the entity_page_cta feature event (Phase 89) — only when
     # analytics is on, so a disabled endpoint leaves zero GoatCounter traces.
@@ -657,7 +661,7 @@ GLEIF Golden Copy; a full OpenCheck runs live checks across 30+ open data
 sources — company registries, sanctions and watchlists, beneficial ownership
 registers and investigative datasets — mapped to the Beneficial Ownership Data
 Standard (BODS).</p>
-<a class="cta" href="{html.escape(cta_href)}"{cta_onclick}>Run the full OpenCheck</a>
+<a class="cta" href="{html.escape(cta_href)}" rel="nofollow"{cta_onclick}>Run the full OpenCheck</a>
 <p class="cta-note">Free, no sign-up. Live lookups run only when you start them.</p>
 <dl>{dl}</dl>
 {children_html}
