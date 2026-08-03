@@ -1,0 +1,88 @@
+name: Refresh entity-pages DB (GLEIF Golden Copy)
+
+# Phase E of the SEO entity-pages plan (Phase 90): keeps the ~3.4M-entity
+# SQLite behind opencheck.world/entity/* current with GLEIF's Golden Copy.
+#
+# Monthly, this job rebuilds entity_pages.sqlite IN FULL from the latest
+# Golden Copy publish and replaces the `entity-pages-latest` release asset —
+# the stable URL the backend downloads at boot (OPENCHECK_ENTITY_PAGES_DB_URL).
+#
+# Why a full rebuild rather than the plan's 31-day delta: the runner is
+# stateless, so a delta run would first have to download the previous DB
+# (~the same bytes as the full CSV) and would inherit the delta window's gap
+# risk on month boundaries. A full rebuild costs roughly the same wall-clock,
+# needs no prior state, and self-heals any drift. `--delta LastMonth` remains
+# available for local/manual use.
+#
+# Prerequisites (one-off, already in place since Phase 88 go-live):
+#   * a published Release tagged `entity-pages-latest`.
+#   * optional repo secret RENDER_DEPLOY_HOOK_URL (shared with the securities
+#     refresh) to redeploy the backend so the new DB is picked up immediately —
+#     otherwise it loads on the next deploy/restart.
+on:
+  schedule:
+    - cron: "30 6 1 * *" # 1st of the month, 06:30 UTC — after GLEIF's 02:00 publish
+  workflow_dispatch: {}
+
+permissions:
+  contents: write # required to upload the release asset
+
+concurrency:
+  group: refresh-entity-pages-db
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install the builder's one dependency
+        # The builder imports opencheck.entity_pages (stdlib-only) and uses
+        # httpx for the Golden Copy downloads — no need for the full uv env.
+        run: pip install httpx
+
+      - name: Build entity_pages.sqlite from the latest Golden Copy publish
+        run: |
+          python3 backend/scripts/build_entity_pages_db.py \
+            --out /tmp/entity_pages.sqlite | tee build.log
+
+      - name: Sanity-check the output (guard against a broken/partial build)
+        run: |
+          python3 - <<'PY'
+          import json, sqlite3, sys
+          conn = sqlite3.connect("/tmp/entity_pages.sqlite")
+          n = conn.execute("SELECT COUNT(*) FROM entities").fetchone()[0]
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          print(f"{n:,} entities; publish: {meta.get('source_publish_date')}")
+          # The active LEI population passed 3M in Q1 2026 and only grows;
+          # a shrunken build means a truncated download or a CDF change.
+          if n < 3_300_000:
+              sys.exit(f"Refusing to publish: only {n:,} entities — likely a partial build.")
+          if not meta.get("source_publish_date"):
+              sys.exit("Refusing to publish: no source_publish_date in meta.")
+          with open("summary.txt", "w") as fh:
+              fh.write(f"{n:,} entities from GLEIF Golden Copy {meta.get('source_publish_date')}\n")
+          PY
+          {
+            echo "### Entity-pages DB refresh"
+            cat summary.txt
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Compress
+        run: gzip -9 -f /tmp/entity_pages.sqlite
+
+      - name: Replace the `entity-pages-latest` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload entity-pages-latest /tmp/entity_pages.sqlite.gz --clobber
+          gh release edit entity-pages-latest \
+            --notes "$(cat summary.txt) Rebuilt automatically by refresh-entity-pages-db on $(date -u +%Y-%m-%d)."
+
+      - name: Trigger a Render redeploy (optional)
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        if: ${{ env.HOOK != '' }}
+        run: curl -fsS -X POST "$HOOK"
