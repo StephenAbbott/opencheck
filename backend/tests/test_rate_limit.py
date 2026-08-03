@@ -170,6 +170,7 @@ _EXEMPT_PATHS = {
     "/browse",
     "/browse/{country}",
     "/robots.txt",
+    "/indexnow/{key}.txt",  # Phase 91: static key echo for IndexNow verification
 }
 
 

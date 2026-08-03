@@ -103,6 +103,11 @@ class Settings(BaseSettings):
         default="https://opencheck.goatcounter.com/count",
         alias="OPENCHECK_GOATCOUNTER_ENDPOINT",
     )
+    # IndexNow shared key (Phase 91 — SEO Phase D). Served back at
+    # /indexnow/{key}.txt so search engines can verify ownership of the
+    # URLs the monthly refresh submits. Same value as the GitHub Actions
+    # secret INDEXNOW_KEY. Unset = key route 404s and submission is skipped.
+    indexnow_key: str | None = Field(default=None, alias="OPENCHECK_INDEXNOW_KEY")
 
     # --- Rate limiting / abuse protection (see opencheck/ratelimit.py) ---
     # Master switch. The test suite turns it off in conftest.py so unrelated

@@ -86,3 +86,14 @@ jobs:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         if: ${{ env.HOOK != '' }}
         run: curl -fsS -X POST "$HOOK"
+
+      - name: Submit the month's changed URLs to IndexNow (optional)
+        # Phase 91 (SEO Phase D): push the LastMonth delta's entity URLs to
+        # IndexNow-participating engines (Bing, Seznam, Naver, Yandex …).
+        # Google ignores IndexNow — its discovery stays sitemap/lastmod-driven.
+        # Skips itself when the INDEXNOW_KEY secret is unset; the key must
+        # match OPENCHECK_INDEXNOW_KEY on the backend, which serves it at
+        # /indexnow/{key}.txt for engine-side verification.
+        env:
+          INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
+        run: python3 backend/scripts/submit_indexnow.py --delta LastMonth

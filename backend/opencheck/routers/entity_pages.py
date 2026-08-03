@@ -383,3 +383,23 @@ async def robots_txt() -> PlainTextResponse:
     return PlainTextResponse(
         "\n".join(lines), headers={"Cache-Control": "public, max-age=86400"}
     )
+
+
+# ---------------------------------------------------------------------------
+# IndexNow key file (Phase 91 — SEO Phase D)
+# ---------------------------------------------------------------------------
+
+
+@router.api_route("/indexnow/{key}.txt", methods=["GET", "HEAD"], response_class=PlainTextResponse)
+async def indexnow_key(key: str) -> PlainTextResponse:
+    """Prove ownership of the host to IndexNow-participating engines.
+
+    The monthly refresh submits changed entity URLs to api.indexnow.org
+    (scripts/submit_indexnow.py) with keyLocation pointing here; engines
+    fetch it and expect the body to equal the key. 404 for anything but
+    the configured key, and for everything while no key is configured.
+    """
+    configured = (get_settings().indexnow_key or "").strip()
+    if not configured or key != configured:
+        raise HTTPException(status_code=404, detail="Unknown key.")
+    return PlainTextResponse(configured, headers={"Cache-Control": "public, max-age=86400"})
