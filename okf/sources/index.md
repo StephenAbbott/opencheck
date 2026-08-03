@@ -34,6 +34,7 @@
 * [OpenCorporates](/sources/opencorporates.md) - The world's largest open legal-entity database, providing a single unified set of company records from government registries.
 * [OpenSanctions](/sources/opensanctions.md) - Sanctions lists, PEPs, debarments, and regulatory actions from the OpenSanctions open-source database.
 * [SEC EDGAR (Schedule 13D/13G)](/sources/sec_edgar.md) - Major shareholders (>5 % beneficial owners) of US-listed companies from mandatory SEC Schedule 13D and 13G filings. Coverage is limited to XML filings submitted from December 2024 onward.
+* [TED — Tenders Electronic Daily (EU procurement)](/sources/ted_eu.md) - EU public procurement notices from Tenders Electronic Daily (OJ S): contract awards where the entity appears as a tenderer or winner, matched on eForms organisation identifiers (eForms era, ≈2024 onwards).
 * [Wikidata](/sources/wikidata.md) - A free and open knowledge base that can be read and edited by both humans and machines.
 
 # ESG / climate sources

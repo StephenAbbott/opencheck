@@ -850,6 +850,40 @@ def _bh_eiti_soe(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_ted_eu(r: dict, ctx: _LookupCtx) -> SourceHit:
+    total = int(r.get("total_notice_count") or 0)
+    wins = int(r.get("confirmed_wins") or 0)
+    notices = r.get("notices") or []
+    parts = [f"{total} EU award notice{'s' if total != 1 else ''}"]
+    if wins:
+        parts.append(f"{wins} confirmed win{'s' if wins != 1 else ''}")
+    latest = next(
+        (n.get("publication_date") for n in notices if n.get("publication_date")),
+        "",
+    )
+    if latest:
+        parts.append(f"latest {latest}")
+    parts.append("eForms era (≈2024+) only")
+    # Corroboration rule: TED publishes whatever identifier the buyer entered
+    # (eForms BT-501) — usually a national registration number whose scheme is
+    # not machine-readable, so national ids are NOT asserted back. The LEI is
+    # asserted only when a matched notice actually carried the LEI string
+    # (fill rate is zero as of 2026-08, so today this never fires — it exists
+    # for when LEI adoption in eForms materialises).
+    identifiers: dict[str, str] = {}
+    matched = [str(v) for v in (r.get("matched_company_ids") or [])]
+    if ctx.lei and any(v.strip().upper() == ctx.lei.upper() for v in matched):
+        identifiers["lei"] = ctx.lei
+    hit_id = "|".join(r.get("identifiers_queried") or []) or ctx.lei
+    return _hit(
+        "ted_eu", hit_id,
+        name=r.get("legal_name") or ctx.legal_name or ctx.lei,
+        summary=" · ".join(parts),
+        identifiers=identifiers,
+        raw=r,
+    )
+
+
 # Wikirate Company-card identifier fields → OpenCheck identifier keys, for
 # reconciler corroboration. Wikirate independently publishes these on the
 # card, so asserting them is legitimate under the corroboration rule.
@@ -1060,6 +1094,28 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
     soe_adapter = REGISTRY.get("eiti_soe")
     if soe_adapter is not None and hasattr(soe_adapter, "fetch_by_lei") and _want("eiti_soe"):
         tasks.append(("eiti_soe", soe_adapter.fetch_by_lei(ctx.lei)))
+    # TED keys on the GLEIF anchor's identifiers (LEI + registeredAs + derived
+    # national numbers) — eForms BT-501 values are national registration
+    # numbers today (LEI fill rate is zero as of 2026-08), so this matches any
+    # LEI holder in a TED-relevant jurisdiction, not just those with a
+    # dedicated register adapter. The jurisdiction gate lives in the adapter.
+    ted_adapter = REGISTRY.get("ted_eu")
+    if (
+        ted_adapter is not None
+        and hasattr(ted_adapter, "fetch_by_identifiers")
+        and (ctx.registered_as or ctx.lei)
+        and _want("ted_eu")
+    ):
+        tasks.append((
+            "ted_eu",
+            ted_adapter.fetch_by_identifiers(
+                ctx.lei,
+                ctx.registered_as,
+                ctx.jurisdiction,
+                derived=ctx.derived,
+                legal_name=ctx.legal_name,
+            ),
+        ))
     return tasks
 
 
@@ -1076,6 +1132,9 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
         return _bh_eiti_soe(result, ctx) if result.get("is_state_owned") else None
     if source_id == "wikirate":
         return _bh_wikirate(result, ctx) if result.get("card_id") else None
+    if source_id == "ted_eu":
+        # A zero-notice result is a legitimate absence, not a hit.
+        return _bh_ted_eu(result, ctx) if result.get("total_notice_count") else None
     if result.get("is_stub"):
         return None
     if source_id == "opencorporates":

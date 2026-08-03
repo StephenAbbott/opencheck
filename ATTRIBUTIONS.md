@@ -307,13 +307,14 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Attribution:** "Wikidata structured data, CC0 1.0."
 - **Entry point:** Q-ID resolved via SPARQL on property P1278 (LEI)
 
-## OpenTender (DIGIWHIST)
+## TED — Tenders Electronic Daily (EU public procurement)
 
-- **Data:** public procurement tender data from 35 jurisdictions
-- **Portal:** <https://opentender.eu/>
-- **License:** [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-- **Attribution:** "Procurement data from OpenTender (DIGIWHIST), licensed CC BY-NC-SA 4.0."
-- **Entry point:** LEI string search
+- **Data:** EU public procurement notices from the Supplement to the Official Journal of the EU (OJ S) — contract award notices where an entity appears as tenderer or winner, matched on eForms organisation identifiers (BT-501)
+- **API:** <https://api.ted.europa.eu/v3/notices/search> (Search API v3, anonymous) and per-notice eForms XML at `https://ted.europa.eu/en/notice/{publication-number}/xml`
+- **Portal:** <https://ted.europa.eu/>
+- **License:** free reuse, for commercial or non-commercial purposes, under [Commission Decision 2011/833/EU](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32011D0833) (source acknowledgement required); TED metadata is CC0 1.0
+- **Attribution:** "Contains procurement notice data from Tenders Electronic Daily (TED), © European Union, via ted.europa.eu."
+- **Entry point:** LEI + GLEIF `registeredAs` + derived national registration numbers via the `organisation-identifier-tenderer` search field
 
 ## Global Energy Monitor (GEM) / Climate TRACE
 
@@ -381,7 +382,7 @@ Exports conform to the [Beneficial Ownership Data Standard (BODS)](https://stand
 
 ---
 
-If you export OpenCheck data that includes content derived from any CC BY-NC source (OpenSanctions, EveryPolitician, some OpenAleph collections) or the CC BY-NC-SA source (OpenTender), your use of that data is constrained by the non-commercial (and, for OpenTender, share-alike) license. OpenCheck warns you about this at export time.
+If you export OpenCheck data that includes content derived from any CC BY-NC source (OpenSanctions, EveryPolitician, some OpenAleph collections), your use of that data is constrained by the non-commercial license. OpenCheck warns you about this at export time.
 
 ## Bundled fonts (share-card renderer)
 

@@ -4,7 +4,7 @@ title: "Licensing compatibility matrix"
 description: "Per-source licence terms (commercial use, attribution, share-alike) for combining OpenCheck data in exports. Most-restrictive licence wins."
 resource: "/license-matrix"
 tags: ["licensing", "export", "compliance"]
-timestamp: "2026-07-24"
+timestamp: "2026-08-03"
 ---
 
 # Source licence matrix
@@ -44,6 +44,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | RPVS Slovakia (`rpvs_slovakia`) | `CC-BY-4.0` | yes | yes | no |
 | SEC EDGAR (Schedule 13D/13G) (`sec_edgar`) | `Public Domain` | yes | no | no |
 | Sudski registar — Croatian Court Register (`sudreg_croatia`) | `HR-OpenData` | yes | yes | no |
+| TED — Tenders Electronic Daily (EU procurement) (`ted_eu`) | `EU open data — Commission Decision 2011/833/EU (free reuse incl. commercial, with attribution)` | yes | yes | no |
 | UR — Latvian Register of Enterprises (`ur_latvia`) | `Open Government Data (PSI Directive)` | yes | yes | no |
 | Wikidata (`wikidata`) | `CC0-1.0` | yes | no | no |
 | Wikirate (`wikirate`) | `CC-BY-4.0` | yes | yes | no |

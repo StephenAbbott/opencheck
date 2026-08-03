@@ -39,6 +39,7 @@ from .rpo_slovakia import RpoSlovakiaAdapter
 from .rpvs_slovakia import RpvsSlovakiaAdapter
 from .sec_edgar import SecEdgarAdapter
 from .sudreg_croatia import SudregCroatiaAdapter
+from .ted_eu import TedEuAdapter
 from .ur_latvia import UrLatviaAdapter
 from .wikidata import WikidataAdapter
 from .wikirate import WikirateAdapter
@@ -77,6 +78,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "rpvs_slovakia": RpvsSlovakiaAdapter(),
     "sec_edgar": SecEdgarAdapter(),
     "sudreg_croatia": SudregCroatiaAdapter(),
+    "ted_eu": TedEuAdapter(),
     "ur_latvia": UrLatviaAdapter(),
     "wikirate": WikirateAdapter(),
     "zefix": ZefixAdapter(),

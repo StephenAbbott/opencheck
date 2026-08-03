@@ -19,7 +19,7 @@ This module centralises all of it:
   to production. Same belt-and-braces pattern as ``opencheck/matching.py``.
 * ``classify_lei`` — "is this identifier value an LEI?" for the data paths
   that route identifiers by shape (BODS mappers, reconciler merge keys,
-  Wikidata/OpenTender adapters).
+  Wikidata/TED adapters).
 
 Checksum enforcement is governed by ``Settings.identifier_checksums_enforced``
 (``OPENCHECK_IDENTIFIER_CHECKSUMS_ENFORCED``, default on). The test suite

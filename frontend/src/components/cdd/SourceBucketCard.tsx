@@ -146,6 +146,10 @@ function sourceEntityUrl(sourceId: string, hit: SourceHit): string | null {
     }
     case "inpi":
       return `https://data.inpi.fr/entreprises/${id}`;
+    case "ted_eu": {
+      const notices = raw.notices as { url?: string }[] | undefined;
+      return notices?.[0]?.url || "https://ted.europa.eu/";
+    }
     case "zefix":
       return `https://www.zefix.ch/en/search/entity/list?name=${encodeURIComponent(id)}`;
     case "sudreg_croatia":
@@ -668,6 +672,119 @@ function MentionsBreakdown({ hit }: { hit: SourceHit }) {
   );
 }
 
+/**
+ * TedAwardsList — EU procurement award notices from TED (ted_eu source).
+ *
+ * Shows the notices where the entity appears as a tenderer/winner, with the
+ * per-notice role resolved from the eForms XML winner chain ("won" /
+ * "tendered"; "unknown" when the chain could not be resolved). Two coverage
+ * disclosures are mandatory: TED identifier search only covers the eForms
+ * era (≈2024 onwards), and awards won via subsidiaries sit under the
+ * subsidiary's own identifier — absence is not evidence of no contracts.
+ */
+function TedAwardsList({ hit }: { hit: SourceHit }) {
+  const [expanded, setExpanded] = useState(false);
+  if (hit.source_id !== "ted_eu") return null;
+  const raw = hit.raw as Record<string, unknown> | undefined;
+  const notices = (raw?.notices ?? []) as {
+    publication_number: string;
+    publication_date?: string;
+    title?: string;
+    buyer_name?: string;
+    buyer_country?: string;
+    total_value?: number | string | null;
+    currency?: string;
+    role?: string;
+    url?: string;
+  }[];
+  const total = (raw?.total_notice_count as number) ?? notices.length;
+  if (!notices.length) return null;
+
+  const shown = expanded ? notices : notices.slice(0, 5);
+  const hidden = notices.length - shown.length;
+  const roleBadge = (role?: string) =>
+    role === "won" ? (
+      <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded px-1.5 py-0.5">
+        won
+      </span>
+    ) : role === "tendered" ? (
+      <span className="text-[10px] font-semibold bg-oo-bg text-oo-muted border border-oo-rule rounded px-1.5 py-0.5">
+        tendered
+      </span>
+    ) : (
+      <span className="text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 rounded px-1.5 py-0.5">
+        unconfirmed
+      </span>
+    );
+
+  return (
+    <div className="mt-2">
+      <ul className="space-y-1.5">
+        {shown.map((n) => (
+          <li
+            key={n.publication_number}
+            className="text-[12px] leading-[1.5] border border-oo-rule rounded-oo bg-white px-2.5 py-1.5"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <a
+                href={n.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-oo-ink underline decoration-dotted underline-offset-2 min-w-0"
+              >
+                {n.title || `Notice ${n.publication_number}`}
+                <span className="sr-only"> (opens in new tab)</span>
+              </a>
+              <span className="shrink-0">{roleBadge(n.role)}</span>
+            </div>
+            <div className="text-oo-muted mt-0.5">
+              {[
+                n.buyer_name &&
+                  `${n.buyer_name}${n.buyer_country ? ` (${n.buyer_country})` : ""}`,
+                n.total_value &&
+                  `${Number(n.total_value).toLocaleString()} ${n.currency || ""}`.trim(),
+                n.publication_date,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-1 flex items-center gap-2">
+        {hidden > 0 && (
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="text-[11px] font-medium text-oo-blue hover:underline"
+          >
+            +{hidden} more notice{hidden === 1 ? "" : "s"}
+          </button>
+        )}
+        {expanded && notices.length > 5 && (
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="text-[11px] font-medium text-oo-blue hover:underline"
+          >
+            Show fewer
+          </button>
+        )}
+        {total > notices.length && (
+          <span className="text-[11px] text-oo-muted/80">
+            {total} notices in total — showing the latest {notices.length}.
+          </span>
+        )}
+      </div>
+      <p className="mt-1 text-[11px] text-oo-muted/80">
+        eForms-era notices only (≈2024 onwards) — earlier awards are not
+        searchable by identifier. Awards won via subsidiaries appear under the
+        subsidiary&apos;s identifier.
+      </p>
+    </div>
+  );
+}
+
 export function HitRow({
   hit,
   riskSignals,
@@ -766,6 +883,7 @@ export function HitRow({
       </div>
       <p className="text-[13px] text-oo-muted mt-1 leading-[1.6]">{hit.summary}</p>
       <MentionsBreakdown hit={hit} />
+      <TedAwardsList hit={hit} />
       {riskSignals.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {riskSignals.map((sig, i) => (

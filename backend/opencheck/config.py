@@ -283,18 +283,6 @@ class Settings(BaseSettings):
     sudreg_client_id: str | None = Field(default=None, alias="SUDREG_CLIENT_ID")
     sudreg_client_secret: str | None = Field(default=None, alias="SUDREG_CLIENT_SECRET")
 
-    # --- OpenTender (DIGIWHIST) ---
-    # Pre-built SQLite index. Build with: python scripts/extract_opentender.py
-    # Source: https://opentender.eu/all/download (CC BY-NC-SA 4.0)
-    # Set OPENTENDER_DB_FILE to the local path once you have built the DB.
-    # On ephemeral-filesystem hosts (Render), upload the DB to S3 and set
-    # OPENTENDER_S3_URL so the adapter can download it at startup.
-    opentender_db_file: str | None = Field(default=None, alias="OPENTENDER_DB_FILE")
-    opentender_s3_url: str | None = Field(default=None, alias="OPENTENDER_S3_URL")
-    # Optional SHA-256 of the S3 artifact. When set, a download whose checksum
-    # doesn't match is rejected (defends against truncated/corrupt downloads).
-    opentender_db_sha256: str | None = Field(default=None, alias="OPENTENDER_DB_SHA256")
-
     # --- Open Ownership BODS bulk data (GLEIF + UK PSC) ---
     # Pre-extracted Parquet files. Build with: python scripts/setup_bods_data.py
     # S3 source URLs are fetched once and extracted locally.

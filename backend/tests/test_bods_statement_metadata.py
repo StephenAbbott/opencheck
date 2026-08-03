@@ -74,7 +74,7 @@ _THIRD_PARTY_SOURCES = {
     "gleif",
     "openaleph",
     "opensanctions",
-    "opentender",
+    "ted_eu",
     "wikidata",
 }
 
