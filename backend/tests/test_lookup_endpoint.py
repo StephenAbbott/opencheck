@@ -116,6 +116,25 @@ def _mock_icij_empty(httpx_mock: HTTPXMock) -> None:
         json={},
     )
 
+def _mock_ted_empty(httpx_mock: HTTPXMock) -> None:
+    """Register a TED Search API endpoint that returns no notices.
+
+    Optional + reusable: the ted_eu adapter only fires for TED-relevant
+    jurisdictions and some tests run more than one lookup.
+    """
+    httpx_mock.add_response(
+        url="https://api.ted.europa.eu/v3/notices/search",
+        method="POST",
+        json={
+            "notices": [],
+            "totalNoticeCount": 0,
+            "iterationNextToken": None,
+            "timedOut": False,
+        },
+        is_optional=True,
+        is_reusable=True,
+    )
+
 
 def _mock_openaleph_lei_lookup_empty(httpx_mock: HTTPXMock, lei: str) -> None:
     """Mock the OpenAleph fetch_by_lei call to return no results."""
@@ -179,6 +198,7 @@ def test_lookup_drives_full_synthesis_for_a_gb_lei(
     )
     _mock_wikidata_lei_lookup_empty(httpx_mock, lei)
     _mock_icij_empty(httpx_mock)
+    _mock_ted_empty(httpx_mock)
     # OpenAleph: all four strategies return empty.
     _mock_openaleph_lei_lookup_empty(httpx_mock, lei)
     _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
@@ -269,6 +289,7 @@ def test_lookup_lower_case_lei_is_normalised(
     )
     _mock_wikidata_lei_lookup_empty(httpx_mock, lei)
     _mock_icij_empty(httpx_mock)
+    _mock_ted_empty(httpx_mock)
     # OpenAleph: strategies 1 (leiCode) and 4 (name) fire; no registeredAs in fixture.
     _mock_openaleph_lei_lookup_empty(httpx_mock, lei)
     _mock_openaleph_name_lookup_empty(httpx_mock, "Demo Co")

@@ -216,3 +216,50 @@ async def test_nz_companies_live_fetch_maps_to_valid_bods():
     assert bods, "NZ bundle produced no BODS statements"
     assert validate_shape(bods) == []
     assert any(s["recordType"] == "entity" for s in bods), "no entity statement"
+
+
+# --- TED — Tenders Electronic Daily (EU open data, no key) --------------------
+
+
+def test_ted_eu_is_key_free_and_live():
+    info = REGISTRY["ted_eu"].info
+    assert info.requires_api_key is False
+    assert info.live_available is True
+
+
+async def test_ted_eu_live_search_confirms_orange_wins():
+    """Query the live TED Search API with Orange SA's SIREN (the identifier
+    OpenCheck derives from GLEIF ``registeredAs``) and confirm the API shape
+    and the XML winner chain still parse. Orange had 5 award notices at
+    investigation time (2026-08-03) — assert a floor of 3 so the test can't
+    rot on notice archival, and assert at least one notice resolves to a
+    confirmed role via the eForms XML.
+
+    This is exactly the API-drift risk the live tier exists for: the Search
+    API response keys, the expert-search grammar, and the eForms XML
+    structure are all outside OpenCheck's control."""
+    from opencheck.bods import map_ted_eu
+
+    adapter = REGISTRY["ted_eu"]
+    bundle = await adapter.fetch_by_identifiers(
+        "969500MCOONR8990S771",  # Orange SA LEI (fill rate zero today — see adapter)
+        "380129866",  # SIREN, the key that actually matches
+        "FR",
+        legal_name="ORANGE",
+    )
+
+    assert bundle is not None, "TED bundle unexpectedly None in live mode"
+    assert bundle["total_notice_count"] >= 3, (
+        "TED identifier search returned fewer notices than the investigation "
+        "floor — the organisation-identifier-tenderer field or scope semantics "
+        "may have changed"
+    )
+    assert bundle["notices"], "no notices in bundle despite non-zero count"
+    assert any(n["confirmed"] for n in bundle["notices"]), (
+        "no notice resolved to a confirmed role — the eForms notice XML "
+        "structure (NoticeResult winner chain) may have changed"
+    )
+
+    bods = list(map_ted_eu(bundle))
+    assert bods, "TED bundle produced no BODS statements"
+    assert validate_shape(bods) == []

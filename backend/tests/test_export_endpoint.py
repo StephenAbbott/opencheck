@@ -107,6 +107,25 @@ def _mock_icij_empty(httpx_mock: HTTPXMock) -> None:
         json={},
     )
 
+def _mock_ted_empty(httpx_mock: HTTPXMock) -> None:
+    """Register a TED Search API endpoint that returns no notices.
+
+    Optional + reusable: the ted_eu adapter only fires for TED-relevant
+    jurisdictions and some tests run more than one lookup.
+    """
+    httpx_mock.add_response(
+        url="https://api.ted.europa.eu/v3/notices/search",
+        method="POST",
+        json={
+            "notices": [],
+            "totalNoticeCount": 0,
+            "iterationNextToken": None,
+            "timedOut": False,
+        },
+        is_optional=True,
+        is_reusable=True,
+    )
+
 
 def _mock_wikidata_lei_lookup_empty(httpx_mock: HTTPXMock, lei: str) -> None:
     query = 'SELECT ?item WHERE { ?item wdt:P1278 "%s" } LIMIT 1' % lei
@@ -176,6 +195,7 @@ def test_export_json_returns_bods_array(
     _mock_lei_record_chain(httpx_mock, _LEI)
     _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
     _mock_icij_empty(httpx_mock)
+    _mock_ted_empty(httpx_mock)
     _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
     _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
     _mock_openaleph_name_lookup_empty(httpx_mock, "Demo Holdings P.L.C.")
@@ -203,6 +223,7 @@ def test_export_rdf_emits_trig_named_graphs(
     _mock_lei_record_chain(httpx_mock, _LEI)
     _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
     _mock_icij_empty(httpx_mock)
+    _mock_ted_empty(httpx_mock)
     _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
     _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
     _mock_openaleph_name_lookup_empty(httpx_mock, "Demo Holdings P.L.C.")
@@ -232,6 +253,7 @@ def test_export_jsonl_emits_one_statement_per_line(
     _mock_lei_record_chain(httpx_mock, _LEI)
     _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
     _mock_icij_empty(httpx_mock)
+    _mock_ted_empty(httpx_mock)
     _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
     _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
     _mock_openaleph_name_lookup_empty(httpx_mock, "Demo Holdings P.L.C.")
@@ -330,6 +352,7 @@ def test_export_zip_contains_full_bundle(
     _mock_lei_record_chain(httpx_mock, _LEI)
     _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
     _mock_icij_empty(httpx_mock)
+    _mock_ted_empty(httpx_mock)
     _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
     _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
     _mock_openaleph_name_lookup_empty(httpx_mock, "Demo Holdings P.L.C.")
@@ -362,6 +385,7 @@ def test_export_zip_licenses_md_lists_gleif(
     _mock_lei_record_chain(httpx_mock, _LEI)
     _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
     _mock_icij_empty(httpx_mock)
+    _mock_ted_empty(httpx_mock)
     _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
     _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
     _mock_openaleph_name_lookup_empty(httpx_mock, "Demo Holdings P.L.C.")
@@ -396,6 +420,7 @@ def _mock_full(httpx_mock: HTTPXMock) -> None:
     _mock_lei_record_chain(httpx_mock, _LEI)
     _mock_wikidata_lei_lookup_empty(httpx_mock, _LEI)
     _mock_icij_empty(httpx_mock)
+    _mock_ted_empty(httpx_mock)
     _mock_openaleph_lei_lookup_empty(httpx_mock, _LEI)
     _mock_openaleph_reg_lookup_empty(httpx_mock, "gb", "00102498")
     _mock_openaleph_name_lookup_empty(httpx_mock, "Demo Holdings P.L.C.")
