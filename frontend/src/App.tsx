@@ -260,7 +260,9 @@ export default function App() {
   // Dynamic document title — updates on lookup results and view changes.
   useEffect(() => {
     if (legalName && view === "main") {
-      document.title = `${legalName} — OpenCheck`;
+      // Hyphen, not em-dash: matches the server-rendered /entity pages'
+      // exact "NAME OF SUBJECT - OpenCheck" template from the SEO ticket.
+      document.title = `${legalName} - OpenCheck`;
     } else if (view === "sources") {
       document.title = "Data Sources — OpenCheck";
     } else if (view === "behind") {
@@ -543,6 +545,15 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const fromUrl = (q: string | null) => (q ?? "").trim().toUpperCase();
+    // Phase 88: /entity/{LEI}-{slug} is normally served by the backend as a
+    // server-rendered page. If the SPA receives it (split-deploy fallback, or
+    // a stale deep link), treat it as a deep link: normalise to the app's
+    // canonical ?lei= form and run the check the visitor asked for. The ?lei=
+    // read below then re-reads the rewritten URL, so a single lookup fires.
+    const entityMatch = window.location.pathname.match(/^\/entity\/([0-9A-Za-z]{20})(?:-|\/|$)/);
+    if (entityMatch && isValidLei(entityMatch[1].toUpperCase())) {
+      window.history.replaceState({}, "", `/?lei=${entityMatch[1].toUpperCase()}`);
+    }
     const initial = fromUrl(new URLSearchParams(window.location.search).get("lei"));
     if (initial && isValidLei(initial)) lookupLei(initial);
 

@@ -33,7 +33,7 @@ from slowapi.errors import RateLimitExceeded
 from . import __version__
 from .config import get_settings
 from .ratelimit import limiter, rate_limit_exceeded_handler
-from .routers import health, search, lookup, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries
+from .routers import health, search, lookup, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries, entity_pages
 from .routers.search import _ch_ra_code as _ch_ra_code  # re-exported for backward compat
 
 log = logging.getLogger(__name__)
@@ -97,6 +97,20 @@ async def _warm_caches_background() -> None:
         raise
     except Exception as exc:  # noqa: BLE001
         log.warning("Securities index warm-up failed (lazy fallback remains): %s", exc)
+
+    # SEO entity pages: download the prebuilt GLEIF-derived SQLite when
+    # configured by URL (Render's disk is ephemeral, so every deploy starts
+    # without it). Until it lands, /entity, /sitemaps and /browse answer 503
+    # with Retry-After — crawlers back off rather than record dead URLs.
+    try:
+        from .entity_pages import warm_entity_pages_db
+
+        stats = await asyncio.to_thread(warm_entity_pages_db)
+        log.info("Entity pages warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Entity pages DB warm-up failed (503s until present): %s", exc)
 
 
 # The MCP streamable-HTTP session manager is single-use per instance (its
@@ -184,6 +198,7 @@ app.include_router(nz_associations.router)
 app.include_router(person_check.router)
 app.include_router(subsidiaries.router)
 app.include_router(share.router)
+app.include_router(entity_pages.router)
 
 
 # ---------------------------------------------------------------------------
@@ -204,3 +219,75 @@ if _MCP_ASGI is not None:
     # POST /mcp → /mcp/, which breaks MCP clients that don't replay POST bodies
     # across redirects. A direct route serves /mcp with no redirect.
     app.router.routes.extend(_MCP_ASGI.routes)
+
+
+# ---------------------------------------------------------------------------
+# Optional single-service mode: serve the built SPA from this process.
+#
+# Phase 88 (SEO entity pages) needs opencheck.world to serve /entity/*,
+# /sitemaps/* and /browse as real server-rendered HTML. Render static-site
+# rewrites cannot proxy to another service (only redirect — wrong for SEO),
+# so the cutover puts the whole site behind this app: set
+# OPENCHECK_FRONTEND_DIST to a built frontend (the backend Docker image bakes
+# one at /app/frontend_dist) and point the custom domain at this service.
+# Unset (the default), nothing below registers and the split deploy is
+# unchanged.
+# ---------------------------------------------------------------------------
+_frontend_dist = get_settings().frontend_dist_dir
+if _frontend_dist:
+    from pathlib import Path as _Path
+
+    from fastapi.responses import FileResponse
+
+    _DIST = _Path(_frontend_dist).resolve()
+    _INDEX = _DIST / "index.html"
+    if not _INDEX.exists():
+        log.warning("OPENCHECK_FRONTEND_DIST=%s has no index.html; not serving SPA", _DIST)
+    else:
+
+        @app.middleware("http")
+        async def _spa_view_negotiation(request: Request, call_next):  # type: ignore[no-untyped-def]
+            """Serve the SPA shell for /sources when a *browser* navigates there.
+
+            In the split deploy the SPA view ``opencheck.world/sources`` and
+            the JSON inventory ``api.opencheck.world/sources`` live on
+            different hosts. Single-service mode folds them onto one path, so
+            disambiguate by Accept header: page navigations send
+            ``text/html`` first, while the SPA's own ``fetch("/sources")``
+            (and every API client) does not. The other SPA views (/about,
+            /api, /changelog) collide with nothing and just fall through to
+            the catch-all below.
+            """
+            if (
+                request.method in ("GET", "HEAD")
+                and request.url.path == "/sources"
+                and request.headers.get("accept", "").lstrip().startswith("text/html")
+            ):
+                return FileResponse(_INDEX, headers={"Cache-Control": "no-cache"})
+            return await call_next(request)
+
+        @app.get("/{spa_path:path}", include_in_schema=False)
+        async def spa_fallback(spa_path: str) -> FileResponse:
+            """Static files from the dist, index.html for everything else.
+
+            Registered after every API route, so it only sees paths nothing
+            else claimed — the SPA's client-routed views (/, /sources,
+            /about, …) and the build's asset files. Hashed assets cache
+            forever; the HTML shell never caches (matching the static-site
+            headers in render.yaml).
+            """
+            candidate = (_DIST / spa_path).resolve() if spa_path else _INDEX
+            inside = candidate.is_relative_to(_DIST)  # traversal guard
+            if inside and candidate.is_file():
+                immutable = spa_path.startswith("assets/")
+                return FileResponse(
+                    candidate,
+                    headers={
+                        "Cache-Control": (
+                            "public, max-age=31536000, immutable"
+                            if immutable
+                            else "no-cache"
+                        )
+                    },
+                )
+            return FileResponse(_INDEX, headers={"Cache-Control": "no-cache"})

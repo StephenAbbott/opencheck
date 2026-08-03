@@ -160,6 +160,16 @@ _EXEMPT_PATHS = {
     "/health",  # Render's health check probes this continuously
     "/sources",  # static inventory, backs the frontend footer
     "/.well-known/mcp.json",  # ARD discovery descriptor (static dict)
+    # Phase 88 SEO entity pages: crawler-facing by design — per-IP 429s to
+    # Googlebot collapse the crawl rate, and every handler is a sub-ms local
+    # SQLite read (no third-party API is ever touched). See the serving
+    # notes in opencheck/routers/entity_pages.py.
+    "/entity/{token}",
+    "/sitemaps/sitemap-index.xml",
+    "/sitemaps/entities-{shard}.xml",
+    "/browse",
+    "/browse/{country}",
+    "/robots.txt",
 }
 
 

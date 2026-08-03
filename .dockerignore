@@ -1,0 +1,13 @@
+# Applies to builds with the repo root as context (backend/Dockerfile via
+# render.yaml). Keeps the huge/irrelevant trees out of the build context —
+# the frontend-build stage runs its own npm ci, and the Python image never
+# needs node_modules or git history.
+.git
+**/node_modules
+frontend/dist
+frontend/*.timestamp-*.mjs
+.pytest_cache
+pytest-cache-files-*
+_to_delete
+*.bundle
+outputs
