@@ -75,29 +75,13 @@ services:
       #   value: /app/frontend_dist
 
   # ------------------------------------------------------------------ #
-  # Frontend — Vite build served as a static site                       #
+  # Frontend static site — RETIRED (Phase 88 single-service cutover)    #
+  #                                                                     #
+  # Since 2026-08-03 the SPA is served by opencheck-api itself          #
+  # (OPENCHECK_FRONTEND_DIST=/app/frontend_dist, baked into the Docker  #
+  # image) and the opencheck.world custom domain points at that         #
+  # service — Render static-site rewrites cannot proxy /entity/* to     #
+  # another service, which forced the single-service arrangement.       #
+  # The old `opencheck` static site is suspended in the dashboard and   #
+  # removed from this Blueprint so a future sync doesn't resurrect it.  #
   # ------------------------------------------------------------------ #
-  - type: web
-    name: opencheck
-    env: static
-    buildCommand: cd frontend && npm install && npm run build
-    staticPublishPath: ./frontend/dist
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: no-cache
-      # ARD / ai-catalog discovery manifest must be CORS-readable by crawlers.
-      # https://agenticresourcediscovery.org/how_to_publish/
-      - path: /.well-known/ai-catalog.json
-        name: Access-Control-Allow-Origin
-        value: "*"
-    routes:
-      # Single-page app: all paths fall back to index.html
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      # Set this to your backend URL after the backend service is deployed.
-      # Example: https://api.opencheck.world
-      - key: VITE_API_BASE_URL
-        sync: false

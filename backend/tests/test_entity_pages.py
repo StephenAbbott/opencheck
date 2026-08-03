@@ -229,8 +229,9 @@ def test_entity_page_furniture_exact(client: TestClient) -> None:
     # JSON-LD Organization with leiCode.
     assert '"@type": "Organization"' in body
     assert f'"leiCode": "{ACME_LEI}"' in body
-    # CTA deep-links into the SPA's user-initiated live check.
-    assert f'href="https://opencheck.world/?lei={ACME_LEI}"' in body
+    # CTA deep-links into the SPA's user-initiated live check — nofollow, so
+    # crawlers don't treat 3.4M ?lei= parameter URLs as crawl targets.
+    assert f'href="https://opencheck.world/?lei={ACME_LEI}" rel="nofollow"' in body
     # Parent link resolved to the parent's canonical path.
     assert f'href="/entity/{PARENT_LEI}-acme-holdings-plc"' in body
     # Cacheable + ETagged.
