@@ -1,6 +1,6 @@
 # OpenCheck — Sources
 
-Thirty-one active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`). Three further adapters are committed but inactive (bulk-data only) — see [Inactive / bulk-only adapters](#inactive--bulk-only-adapters) below.
+Thirty-five active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`). Three further adapters are committed but inactive (bulk-data only) — see [Inactive / bulk-only adapters](#inactive--bulk-only-adapters) below.
 
 | ID | Name | License | Entry point | Description |
 |----|------|---------|-------------|-------------|
