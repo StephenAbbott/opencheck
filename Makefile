@@ -14,7 +14,7 @@ DEMO_DIR   ?= data/demo
 NEO4J_OUT  ?= data/demo/neo4j
 SLIDES_OUT ?= data/demo/slides
 
-.PHONY: help build-demo validate-demo export-neo4j slides test lint
+.PHONY: help build-demo validate-demo export-neo4j slides test lint entity-pages-db entity-pages-refresh entity-pages-sample
 
 help:
 	@echo ""
@@ -80,3 +80,24 @@ test:
 
 lint:
 	cd backend && ruff check opencheck tests scripts && mypy opencheck
+
+## -------------------------------------------------------------------------
+## Phase 88 — SEO entity pages (GLEIF Golden Copy -> entity_pages.sqlite)
+## -------------------------------------------------------------------------
+
+ENTITY_PAGES_DB ?= backend/data/entity_pages.sqlite
+
+# Full rebuild (~500MB download, ~3.4M records).
+entity-pages-db:
+	cd backend && uv run python scripts/build_entity_pages_db.py \
+		--out ../$(ENTITY_PAGES_DB)
+
+# Monthly refresh: upsert GLEIF's 31-day delta into the existing DB.
+entity-pages-refresh:
+	cd backend && uv run python scripts/build_entity_pages_db.py \
+		--out ../$(ENTITY_PAGES_DB) --delta LastMonth
+
+# Small sample DB for local dev of the /entity, /sitemaps and /browse routes.
+entity-pages-sample:
+	cd backend && uv run python scripts/build_entity_pages_db.py \
+		--out ../$(ENTITY_PAGES_DB) --sample 50000 --skip-rr

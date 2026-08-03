@@ -56,6 +56,23 @@ services:
       # ARIREGISTER_DB_FILE and BCE_BELGIUM_DB_FILE are intentionally omitted.
       # Both adapters return stub responses when no DB path is set.
       # To activate locally, set these in .env pointing at the downloaded .db files.
+      # --- Phase 88: SEO entity pages ---
+      # URL of the prebuilt GLEIF-derived entity_pages.sqlite(.gz) (e.g. a
+      # GitHub Release asset from the monthly refresh). Downloaded at boot
+      # (Render's disk is ephemeral); /entity, /sitemaps and /browse answer
+      # 503 until it lands. Leave unset to disable entity pages entirely.
+      - key: OPENCHECK_ENTITY_PAGES_DB_URL
+        sync: false
+      # --- Phase 88 cutover switch (single-service mode) ---
+      # Render static-site rewrites CANNOT proxy /entity/* to this service
+      # (verified: https://render.com/docs/redirects-rewrites — rewrites are
+      # same-site only; redirects would index the api host instead). The
+      # cutover therefore serves the SPA from the backend: set this to
+      # /app/frontend_dist (baked into the Docker image), then point the
+      # opencheck.world custom domain at THIS service and retire the static
+      # site. Unset = split deploy unchanged, SPA not served from here.
+      # - key: OPENCHECK_FRONTEND_DIST
+      #   value: /app/frontend_dist
 
   # ------------------------------------------------------------------ #
   # Frontend — Vite build served as a static site                       #

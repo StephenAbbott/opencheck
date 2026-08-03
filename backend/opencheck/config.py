@@ -71,6 +71,30 @@ class Settings(BaseSettings):
         default="https://opencheck.world", alias="OPENCHECK_FRONTEND_ORIGIN"
     )
 
+    # --- SEO entity pages (see opencheck/entity_pages.py) ---
+    # Local path of entity_pages.sqlite (built by scripts/build_entity_pages_db.py).
+    # When unset but a URL is set, the DB is downloaded at boot to /tmp — the
+    # arrangement for Render, whose disk is ephemeral. When neither is set the
+    # /entity, /sitemaps and /browse routes answer 503 (with Retry-After).
+    entity_pages_db_file: str | None = Field(
+        default=None, alias="OPENCHECK_ENTITY_PAGES_DB_FILE"
+    )
+    # URL of a prebuilt entity_pages.sqlite (optionally .gz), e.g. a GitHub
+    # Release asset published by the monthly refresh job.
+    entity_pages_db_url: str | None = Field(
+        default=None, alias="OPENCHECK_ENTITY_PAGES_DB_URL"
+    )
+    # Directory of a built frontend (frontend/dist). When set, the backend
+    # serves the SPA itself — the single-service arrangement that lets
+    # opencheck.world serve /entity/* pages from one origin: Render
+    # static-site rewrites cannot proxy to another service (verified against
+    # Render's docs, 2026-08-03), so the fallback documented on the SEO
+    # ticket applies. Unset by default: the existing static-site deploy is
+    # untouched until the cutover flips this on.
+    frontend_dist_dir: str | None = Field(
+        default=None, alias="OPENCHECK_FRONTEND_DIST"
+    )
+
     # --- Rate limiting / abuse protection (see opencheck/ratelimit.py) ---
     # Master switch. The test suite turns it off in conftest.py so unrelated
     # tests never trip budgets; dedicated tests re-enable it per-fixture.

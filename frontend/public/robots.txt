@@ -1,4 +1,12 @@
 User-agent: *
 Allow: /
 
+# Legacy single-URL sitemap (homepage only).
 Sitemap: https://opencheck.world/sitemap.xml
+
+# Phase 88 entity pages: ~3.4M /entity/{LEI}-{slug} URLs, sharded 50k/file.
+# Served by the backend; live on this host once the single-service cutover
+# (OPENCHECK_FRONTEND_DIST — see render.yaml) puts the API behind
+# opencheck.world. Until then Search Console will report this index as
+# unreadable, which is expected and harmless.
+Sitemap: https://opencheck.world/sitemaps/sitemap-index.xml

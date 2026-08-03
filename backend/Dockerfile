@@ -1,4 +1,23 @@
 # syntax=docker/dockerfile:1.7
+
+# ---------------------------------------------------------------------------
+# Stage 1 — build the SPA so the API image can serve it (single-service mode).
+#
+# Phase 88: Render static-site rewrites can't proxy /entity/* to this API,
+# so the SEO cutover serves the whole site from the backend. The dist is
+# baked into every image but INERT until OPENCHECK_FRONTEND_DIST is set —
+# the existing split deploy keeps working unchanged.
+# ---------------------------------------------------------------------------
+FROM node:20-alpine AS frontend-build
+WORKDIR /fe
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci
+# gen-changelog.mjs (prebuild hook) reads ../../docs/status.md relative to
+# frontend/scripts/, i.e. /docs/status.md from /fe/scripts/.
+COPY docs/status.md /docs/status.md
+COPY frontend/ ./
+RUN npm run build
+
 FROM python:3.11-slim
 
 # System dependencies:
@@ -54,6 +73,10 @@ COPY data/ /app/data/
 # find /app/data (where the pre-extracted BODS bundles + demo fixtures live).
 # This is the deterministic counterpart to _find_project_root() in cache.py.
 ENV OPENCHECK_DATA_ROOT=/app/data
+
+# Built SPA for single-service mode (see the frontend-build stage header).
+# Activate by setting OPENCHECK_FRONTEND_DIST=/app/frontend_dist.
+COPY --from=frontend-build /fe/dist /app/frontend_dist
 
 EXPOSE 8000
 
