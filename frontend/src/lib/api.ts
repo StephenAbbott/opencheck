@@ -5,6 +5,8 @@
  * Phase 2 surface: /lookup-stream (SSE, LEI-anchored progressive lookup).
  */
 
+import { trackEvent } from "./analytics";
+
 export type SearchKind = "entity" | "person";
 
 /** EU/EEA beneficial-ownership access notice for a national register, computed
@@ -209,6 +211,7 @@ export async function expandNode(
   lei: string,
   anchor: string
 ): Promise<ExpandResponse> {
+  trackEvent("graph_expand"); // feature event; no subject identifiers recorded
   const params = new URLSearchParams({ lei, anchor });
   return getJson<ExpandResponse>(`/expand?${params.toString()}`);
 }
@@ -271,6 +274,7 @@ export async function expandLayer(
   items: { lei: string; anchor: string }[],
   direction: "owners" | "subsidiaries" = "owners"
 ): Promise<ExpandLayerResponse> {
+  trackEvent("graph_expand"); // feature event; no subject identifiers recorded
   const r = await fetch(`${BASE_URL}/expand-layer`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

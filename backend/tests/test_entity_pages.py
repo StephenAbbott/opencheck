@@ -358,3 +358,44 @@ def test_backend_robots_txt(client: TestClient) -> None:
     assert "Disallow: /export" in r.text
     assert "Allow: /entity/" in r.text
     assert "Sitemap: https://opencheck.world/sitemaps/sitemap-index.xml" in r.text
+
+
+# ---------------------------------------------------------------------------
+# Phase 89 — GoatCounter on the server-rendered pages
+# ---------------------------------------------------------------------------
+
+
+def test_entity_page_goatcounter_bucket_and_cta_event(client: TestClient) -> None:
+    """The snippet records the fixed '/entity' bucket — never the LEI —
+    and the CTA fires the entity_page_cta event."""
+    r = client.get(f"/entity/{ACME_LEI}-acme-widgets-sons-ltd")
+    body = r.text
+    assert "window.goatcounter={path:'/entity'}" in body
+    assert 'data-goatcounter="https://opencheck.goatcounter.com/count"' in body
+    assert "entity_page_cta" in body
+    assert "cookies or fingerprinting" in body  # privacy note in the footer
+
+
+def test_browse_page_goatcounter_bucket(client: TestClient) -> None:
+    r = client.get("/browse/GB")
+    assert "window.goatcounter={path:'/browse'}" in r.text
+
+
+def test_goatcounter_disabled_by_empty_endpoint(
+    db_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OPENCHECK_ENTITY_PAGES_DB_FILE", str(db_path))
+    monkeypatch.setenv("OPENCHECK_GOATCOUNTER_ENDPOINT", "")
+    get_settings.cache_clear()
+    ep.reset_store_for_tests()
+    c = TestClient(app)
+    body = c.get(f"/entity/{ACME_LEI}-acme-widgets-sons-ltd").text
+    assert "goatcounter" not in body.lower()
+    get_settings.cache_clear()
+    ep.reset_store_for_tests()
+
+
+def test_not_found_page_has_no_analytics(client: TestClient) -> None:
+    """404s are noindex and shouldn't count as pageviews."""
+    body = client.get("/entity/2138000000000000Z999-nope").text
+    assert "gc.zgo.at" not in body

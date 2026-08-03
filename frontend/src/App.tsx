@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { trackEvent } from "./lib/analytics";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import SearchLoadingGrid from "./components/SearchLoadingGrid";
 import {
@@ -520,6 +521,7 @@ export default function App() {
     const lei = rawLei.trim().toUpperCase();
     setLeiInput(lei);
     setView("main");
+    trackEvent("lookup_run"); // feature event only — the LEI is never recorded
     // Shareable URLs: reflect the lookup in ?lei= so refresh and copy/paste
     // re-run it (the backend replay cache makes repeats near-instant).
     const url = new URL(window.location.href);
@@ -1561,7 +1563,7 @@ export default function App() {
             <button
               type="button"
               aria-pressed={mode === "full"}
-              onClick={() => setMode("full")}
+              onClick={() => { if (mode !== "full") trackEvent("fullcheck_run"); setMode("full"); }}
               className={`text-left rounded-oo border-2 p-4 transition-colors ${
                 mode === "full"
                   ? "border-oo-blue bg-[#eef1fb]"
@@ -1579,7 +1581,7 @@ export default function App() {
             <button
               type="button"
               aria-pressed={mode === "background"}
-              onClick={() => setMode("background")}
+              onClick={() => { if (mode !== "background") trackEvent("backgroundcheck_run"); setMode("background"); }}
               className={`text-left rounded-oo border-2 p-4 transition-colors ${
                 mode === "background"
                   ? "border-oo-blue bg-[#eef1fb]"
@@ -2645,6 +2647,28 @@ function BehindTheScenesPage() {
               </li>
             ))}
           </ul>
+        </BtsCard>
+
+        {/* Privacy / analytics (Phase 89) */}
+        <BtsCard title="Privacy & analytics">
+          <p className="text-[13.5px] leading-[1.75] text-oo-muted">
+            OpenCheck counts visits with{" "}
+            <a
+              href="https://www.goatcounter.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="underline text-oo-blue hover:text-oo-burst"
+            >
+              GoatCounter
+            </a>
+            , an open-source, cookie-less analytics tool: no cookies, no
+            fingerprinting, no cross-site tracking. The entities you look up
+            stay private &mdash; recorded paths are rolled up to fixed buckets
+            (for example every lookup counts as <code>/lookup</code>), so no
+            Legal Entity Identifier, person name or query string is ever
+            sent to analytics. Feature usage is counted as anonymous event
+            names only.
+          </p>
         </BtsCard>
 
       </div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { trackEvent } from "../../lib/analytics";
 import { BASE_URL } from "../../lib/api";
 import type { RiskSignal } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
@@ -113,6 +114,7 @@ export function SubjectCard({
             type="button"
             onClick={() => {
               navigator.clipboard?.writeText(shareUrl);
+              trackEvent("share_link");
               setCopied(true);
               window.setTimeout(() => setCopied(false), 1500);
             }}
