@@ -243,6 +243,7 @@ async def browse_index(request: Request) -> Response:
         for code, n in countries
     )
     head = ep._head(
+        analytics_bucket="/browse",
         title="Browse entities by country - OpenCheck",
         description=(
             "Every legal entity with a Legal Entity Identifier, by country of "
@@ -304,6 +305,7 @@ async def browse_country(request: Request, country: str, page: int = 1) -> Respo
         else ""
     )
     head = ep._head(
+        analytics_bucket="/browse",
         title=f"Entities registered in {name}{suffix} - OpenCheck",
         description=(
             f"Legal entities registered in {name} with a Legal Entity Identifier "

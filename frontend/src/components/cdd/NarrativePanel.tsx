@@ -19,6 +19,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { trackEvent } from "../../lib/analytics";
 import {
   downloadReportMarkdown,
   downloadReportPdf,
@@ -369,6 +370,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
       // Embed the summary in the PDF only if it has been generated here; the
       // analyst's dispositions ride along so the PDF is the signed-off record.
       await downloadReportPdf(lei, data, buildRecord());
+      trackEvent("pdf_export");
     } catch (e) {
       setPdfError(e instanceof Error ? e.message : "Could not generate the PDF.");
     } finally {

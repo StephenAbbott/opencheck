@@ -94,6 +94,15 @@ class Settings(BaseSettings):
     frontend_dist_dir: str | None = Field(
         default=None, alias="OPENCHECK_FRONTEND_DIST"
     )
+    # GoatCounter endpoint for the server-rendered entity/browse pages
+    # (Phase 89 — privacy-respecting analytics). Cookie-less; pages record
+    # only fixed path buckets ("/entity", "/browse"), never LEIs or query
+    # strings. Set to an empty string to disable analytics on these pages.
+    # The SPA's endpoint is baked into frontend/src/lib/analytics.ts.
+    goatcounter_endpoint: str = Field(
+        default="https://opencheck.goatcounter.com/count",
+        alias="OPENCHECK_GOATCOUNTER_ENDPOINT",
+    )
 
     # --- Rate limiting / abuse protection (see opencheck/ratelimit.py) ---
     # Master switch. The test suite turns it off in conftest.py so unrelated

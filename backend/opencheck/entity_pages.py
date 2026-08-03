@@ -387,6 +387,26 @@ _PAGE_CSS = """
 """
 
 
+def _goatcounter_snippet(bucket: str) -> str:
+    """The GoatCounter loader for server-rendered pages (Phase 89).
+
+    ``bucket`` overrides the recorded path (``/entity``, ``/browse``) so no
+    LEI, slug or country code ever reaches analytics — the same privacy
+    contract as the SPA's ``canonicalPath`` (frontend/src/lib/analytics.ts).
+    Disabled when ``OPENCHECK_GOATCOUNTER_ENDPOINT`` is set to empty.
+    """
+    from .config import get_settings
+
+    endpoint = (get_settings().goatcounter_endpoint or "").strip()
+    if not endpoint:
+        return ""
+    return (
+        f"<script>window.goatcounter={{path:{bucket!r}}}</script>"
+        f'<script data-goatcounter="{html.escape(endpoint)}" async '
+        'src="https://gc.zgo.at/count.js"></script>'
+    )
+
+
 def _head(
     *,
     title: str,
@@ -395,8 +415,11 @@ def _head(
     og_image: str | None = None,
     extra: str = "",
     noindex: bool = False,
+    analytics_bucket: str | None = None,
 ) -> str:
     robots = '<meta name="robots" content="noindex">' if noindex else ""
+    if analytics_bucket:
+        extra += _goatcounter_snippet(analytics_bucket)
     og_img = (
         f'<meta property="og:image" content="{html.escape(og_image)}">'
         f'<meta property="og:image:width" content="1200">'
@@ -441,11 +464,22 @@ def _header_html(frontend: str) -> str:
 
 
 def _footer_html(frontend: str, built: str | None) -> str:
+    from .config import get_settings
+
     built_note = f" Reference data refreshed {html.escape(built)}." if built else ""
+    # Privacy note only when analytics is actually on (Phase 89).
+    privacy = (
+        "<p>Privacy: visits are counted without cookies or fingerprinting via "
+        '<a href="https://www.goatcounter.com/">GoatCounter</a>; no entity '
+        "identifiers or query strings are recorded.</p>"
+        if (get_settings().goatcounter_endpoint or "").strip()
+        else ""
+    )
     return (
         "<footer><p>Reference data: GLEIF Golden Copy, published without "
         'restriction by the <a href="https://www.gleif.org/">Global Legal Entity '
         f"Identifier Foundation</a>.{built_note}</p>"
+        f"{privacy}"
         f'<p><a href="{html.escape(frontend)}/about">About OpenCheck</a> · '
         f'<a href="{html.escape(frontend)}/sources">Data sources</a> · '
         '<a href="/browse">Browse entities by country</a> · '
@@ -587,6 +621,14 @@ def render_entity_page(
         parent_url = f"{frontend}{related[row.direct_parent_lei].path}"
 
     cta_href = f"{frontend}/?lei={row.lei}"
+    # CTA click → the entity_page_cta feature event (Phase 89) — only when
+    # analytics is on, so a disabled endpoint leaves zero GoatCounter traces.
+    cta_onclick = (
+        " onclick=\"window.goatcounter&amp;&amp;window.goatcounter"
+        ".count({path:'entity_page_cta',event:true})\""
+        if _goatcounter_snippet("/entity")
+        else ""
+    )
     browse_link = (
         f'<a href="/browse/{row.country}">More entities registered in '
         f"{html.escape(country_name(row.country) or row.country)}</a>"
@@ -600,6 +642,7 @@ def render_entity_page(
         canonical=canonical,
         og_image=f"{api_base}/og/{row.lei}.png",
         extra=_json_ld(row, canonical, parent_url),
+        analytics_bucket="/entity",
     )
     return f"""{head}
 <body>
@@ -614,7 +657,7 @@ GLEIF Golden Copy; a full OpenCheck runs live checks across 30+ open data
 sources — company registries, sanctions and watchlists, beneficial ownership
 registers and investigative datasets — mapped to the Beneficial Ownership Data
 Standard (BODS).</p>
-<a class="cta" href="{html.escape(cta_href)}">Run the full OpenCheck</a>
+<a class="cta" href="{html.escape(cta_href)}"{cta_onclick}>Run the full OpenCheck</a>
 <p class="cta-note">Free, no sign-up. Live lookups run only when you start them.</p>
 <dl>{dl}</dl>
 {children_html}
