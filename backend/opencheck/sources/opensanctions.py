@@ -9,7 +9,8 @@ consumers (exports, reports) can warn before re-publishing.
 Live endpoints (Phase 2):
 
 * ``GET /search/default?q=<query>&schema=<Company|Person>&topic=...`` — entity/person search,
-  scoped to risk-relevant topics only (sanctions, PEPs, debarment, reg. actions).
+  scoped to risk-relevant topics only (OpenSanctions' ``target_topics``:
+  sanctions, export controls, debarment, PEPs, criminality, reg. actions).
 * ``GET /entities/{entity_id}`` — full FtM entity with nested related parties.
 
 Authentication: ``Authorization: ApiKey <key>``. Gated on
@@ -30,24 +31,71 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 _API_BASE = "https://api.opensanctions.org"
 _CACHE_NS = "opensanctions"
 
-# Risk-relevant topics for screening (sanctions, PEPs, debarment, regulatory
-# actions). Purely-descriptive topics like ``corp.public`` and ``corp.listed``
-# are intentionally excluded — entities that appear in OpenSanctions only
-# because they are referenced in enrichment/KYB datasets (e.g. GLEIF, GEM,
-# ESMA) should not surface as hits in a risk-screening search.
-# Source: https://www.opensanctions.org/docs/topics/
+# Risk-relevant topics for screening. Purely-descriptive topics like
+# ``corp.public`` and ``corp.listed`` are intentionally excluded — entities
+# that appear in OpenSanctions only because they are referenced in
+# enrichment/KYB datasets (e.g. GLEIF, GEM, ESMA) should not surface as hits
+# in a risk-screening search.
+#
+# This mirrors OpenSanctions' own ``target_topics`` — their curated set of
+# "this is a risk flag, not a description" topics — rather than a hand-picked
+# subset. Keeping the two in step means new datasets are picked up
+# automatically instead of being silently filtered out. The previous
+# nine-topic subset dropped ``us_bis_mieu`` entirely (every topic-bearing
+# entity in it carries only ``export.control``) and hid the 11 entities in
+# ``sa_pcct_terrorism_list`` tagged ``crime.terror`` without ``sanction``.
+#
+# Source of truth: https://data.opensanctions.org/meta/model.json → ``target_topics``
+# Human-readable: https://www.opensanctions.org/docs/topics/
+# Verified against the model published 2026-08-05 (28 topics).
 _RISK_TOPICS: tuple[str, ...] = (
+    # Sanctions and adjacent designations.
     "sanction",
     "sanction.linked",
+    "sanction.control",
     "sanction.counter",
+    # Export controls and trade restrictions.
+    "export.control",
+    "export.control.linked",
+    "export.risk",
+    # Investment restrictions.
+    "invest.ban",
+    "invest.risk",
+    # Procurement exclusion and corporate disqualification.
     "debarment",
+    "corp.disqual",
+    # Political exposure.
     "role.pep",
     "role.rca",
-    "poi",
+    "role.oligarch",
+    # Criminality.
+    "crime",
+    "crime.boss",
+    "crime.fin",
+    "crime.fraud",
+    "crime.terror",
+    "crime.theft",
+    "crime.traffick",
+    "crime.war",
+    "wanted",
+    # Maritime risk.
+    "mare.shadow",
+    "mare.detained",
+    # Regulatory action and residual watchlisting.
     "reg.action",
     "reg.warn",
+    "poi",
 )
 _TOPIC_PARAMS = "&".join(f"topic={t}" for t in _RISK_TOPICS)
+
+# The topic scope shapes the *request* but is not part of the cache key below
+# unless we put it there — so widening ``_RISK_TOPICS`` would otherwise keep
+# serving responses cached under the old, narrower scope indefinitely
+# (``_get`` reads the cache with no ``max_age_days``). Fingerprinting the
+# scope into the key makes this and every future change self-invalidating.
+# Entries under a superseded fingerprint are orphaned and can be deleted from
+# ``data/cache/live/opensanctions/search/`` at leisure.
+_TOPIC_FINGERPRINT = hashlib.sha256(_TOPIC_PARAMS.encode("utf-8")).hexdigest()[:8]
 
 
 def _slug(text: str) -> str:
@@ -97,7 +145,7 @@ class OpenSanctionsAdapter(SourceAdapter):
         if not query:
             return []
         schema = _schema_for(kind)
-        cache_key = f"{_CACHE_NS}/search/{schema}/{_slug(query)}"
+        cache_key = f"{_CACHE_NS}/search/{schema}/{_TOPIC_FINGERPRINT}/{_slug(query)}"
         # A demo fixture for this query overrides the live_available check
         # so the app can demo offline.
         if not self.info.live_available and not self._cache.has(cache_key):
