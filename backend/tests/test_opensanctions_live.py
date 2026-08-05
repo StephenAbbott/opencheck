@@ -7,14 +7,59 @@ from pytest_httpx import HTTPXMock
 
 from opencheck.config import get_settings
 from opencheck.sources import SearchKind
-from opencheck.sources.opensanctions import OpenSanctionsAdapter
+from opencheck.sources.opensanctions import _RISK_TOPICS, _TOPIC_PARAMS, OpenSanctionsAdapter
 
 _API = "https://api.opensanctions.org"
-_TOPIC_PARAMS = (
-    "topic=sanction&topic=sanction.linked&topic=sanction.counter"
-    "&topic=debarment&topic=role.pep&topic=role.rca&topic=poi"
-    "&topic=reg.action&topic=reg.warn"
+
+# OpenSanctions' ``target_topics`` as published in
+# https://data.opensanctions.org/meta/model.json on 2026-08-05. The adapter's
+# ``_RISK_TOPICS`` is meant to mirror this exactly; the drift canary below
+# fails if someone narrows the list by hand again. When OpenSanctions adds a
+# target topic, update this constant in the same commit as ``_RISK_TOPICS``.
+_PUBLISHED_TARGET_TOPICS = frozenset(
+    {
+        "corp.disqual",
+        "crime",
+        "crime.boss",
+        "crime.fin",
+        "crime.fraud",
+        "crime.terror",
+        "crime.theft",
+        "crime.traffick",
+        "crime.war",
+        "debarment",
+        "export.control",
+        "export.control.linked",
+        "export.risk",
+        "invest.ban",
+        "invest.risk",
+        "mare.detained",
+        "mare.shadow",
+        "poi",
+        "reg.action",
+        "reg.warn",
+        "role.oligarch",
+        "role.pep",
+        "role.rca",
+        "sanction",
+        "sanction.control",
+        "sanction.counter",
+        "sanction.linked",
+        "wanted",
+    }
 )
+
+
+def test_risk_topics_mirror_opensanctions_target_topics() -> None:
+    """The screening scope must not silently narrow.
+
+    A hand-picked subset is how ``us_bis_mieu`` (``export.control`` only) came
+    to be filtered out of screening results entirely — see the comment on
+    ``_RISK_TOPICS``. This is an offline canary against the last-verified
+    published list; ``tests/live`` covers drift against the live model.
+    """
+    assert set(_RISK_TOPICS) == _PUBLISHED_TARGET_TOPICS
+    assert len(_RISK_TOPICS) == len(set(_RISK_TOPICS)), "duplicate topic"
 
 
 @pytest.fixture(autouse=True)

@@ -14,7 +14,11 @@ import pytest
 
 from opencheck.config import get_settings
 from opencheck.sources import SearchKind
-from opencheck.sources.opensanctions import OpenSanctionsAdapter, _slug
+from opencheck.sources.opensanctions import (
+    _TOPIC_FINGERPRINT,
+    OpenSanctionsAdapter,
+    _slug,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -37,7 +41,13 @@ def _seed_demo_fixture(tmp_path: Path, cache_key: str, payload: dict) -> None:
 
 async def test_search_serves_demo_fixture_when_not_live(tmp_path: Path) -> None:
     """allow_live=false + no key + demo fixture → demo wins, no stub."""
-    cache_key = f"opensanctions/search/Person/{_slug('rosneft')}"
+    # Search keys are scoped by ``_TOPIC_FINGERPRINT`` so that widening
+    # ``_RISK_TOPICS`` invalidates responses cached under the old, narrower
+    # topic scope. Derive it rather than hardcoding: a curated search fixture
+    # has to be filed under the *current* fingerprint to be served, and must
+    # be re-filed whenever the topic list changes. (Entity keys are unscoped —
+    # ``/entities/{id}`` takes no topic filter — see the fetch tests below.)
+    cache_key = f"opensanctions/search/Person/{_TOPIC_FINGERPRINT}/{_slug('rosneft')}"
     _seed_demo_fixture(
         tmp_path,
         cache_key,
