@@ -22,6 +22,15 @@ def _reset_window():
 
 
 @pytest.fixture
+def _reset_totals():
+    """Cumulative counters are process-global; reset around tests that
+    assert on them so ordering never matters."""
+    memwatch.totals = memwatch._Totals()
+    yield
+    memwatch.totals = memwatch._Totals()
+
+
+@pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
 
@@ -128,6 +137,54 @@ def test_middleware_disabled_by_setting(client: TestClient, caplog, monkeypatch)
         assert memwatch.window.snapshot_and_reset()["requests"] == 1
     finally:
         get_settings.cache_clear()
+
+
+# ----------------------------------------------------------------------
+# /memstats — cumulative aggregate counters
+# ----------------------------------------------------------------------
+
+
+def test_memstats_reports_cumulative_totals(client: TestClient, _reset_totals):
+    client.get("/og/not-a-lei.png", headers={"user-agent": "Googlebot/2.1"})
+    client.get(
+        "/sources",
+        headers={
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
+        },
+    )
+    r = client.get("/memstats")
+    assert r.status_code == 200
+    assert r.headers["cache-control"] == "no-store"
+    body = r.json()
+    for field in ("started_at", "uptime_s", "rss_mb", "limit_mb", "pct",
+                  "og_cache", "replay_cache", "totals"):
+        assert field in body, f"missing {field}"
+    assert body["rss_mb"] > 1
+    t = body["totals"]
+    # /og (bot), /sources (human), and the /memstats request itself.
+    assert t["requests"] == 3
+    assert t["by_bucket"]["/og"] == 1
+    assert t["by_bucket"]["/sources"] == 1
+    assert t["by_bucket"]["/memstats"] == 1
+    # Only the Googlebot /og fetch counts as bot traffic (TestClient sends
+    # its own httpx UA on the /memstats request... which IS bot-marked).
+    assert t["bot_by_bucket"]["/og"] == 1
+    assert "/sources" not in t["bot_by_bucket"]
+
+
+def test_memstats_is_aggregate_only(client: TestClient, _reset_totals):
+    """Privacy contract: no IPs, UAs, LEIs or query strings ever appear."""
+    lei = "253400JT3MQWNDKMJE44"
+    client.get(f"/entity/{lei}-some-name", headers={"user-agent": "Googlebot/2.1"})
+    body = client.get("/memstats").text
+    assert lei not in body
+    assert "Googlebot" not in body
+    assert "user-agent" not in body.lower()
+
+
+def test_memstats_in_robots_disallow(client: TestClient):
+    assert "Disallow: /memstats" in client.get("/robots.txt").text
 
 
 # ----------------------------------------------------------------------

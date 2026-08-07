@@ -358,6 +358,7 @@ _DISALLOWED_API_PREFIXES = [
     "/license-matrix",
     "/share",
     "/mcp",
+    "/memstats",
 ]
 
 
