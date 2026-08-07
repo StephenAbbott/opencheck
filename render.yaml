@@ -32,6 +32,15 @@ services:
     envVars:
       - key: OPENCHECK_ALLOW_LIVE
         value: "true"
+      # Cap glibc malloc arenas. Long-running Python with threadpools
+      # (asyncio.to_thread for OG-card renders, SQLite reads, warm-ups)
+      # fragments per-thread malloc arenas, which shows up as RSS that climbs
+      # between traffic spikes and never returns — a contributor to the
+      # 2026-08-05/06 OOM restarts on the 512 MB instance. 2 is the standard
+      # container setting (same trade Heroku/Cloud Foundry ship by default):
+      # slightly more allocator contention, materially lower fragmentation.
+      - key: MALLOC_ARENA_MAX
+        value: "2"
       # Allow all origins so the static frontend can call the API.
       # Once the custom domain is live you can tighten this to the frontend
       # origin: OPENCHECK_CORS_ORIGIN = https://opencheck.world

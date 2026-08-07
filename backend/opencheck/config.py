@@ -126,6 +126,29 @@ class Settings(BaseSettings):
     # several of these per lookup.
     rate_limit_default: str = Field(default="60/minute", alias="OPENCHECK_RATE_LIMIT_DEFAULT")
 
+    # --- Memory + traffic instrumentation (see opencheck/memwatch.py) ---
+    # Interval (seconds) between "memwatch" memory-report log lines. 0 disables
+    # the reporter (the access log below is controlled separately). Added after
+    # the 2026-08-05/06 Render OOM restarts so the next one is diagnosable
+    # from the log stream alone.
+    memwatch_interval_s: float = Field(default=30.0, alias="OPENCHECK_MEMWATCH_INTERVAL")
+    # RSS as a percentage of the container memory limit above which the
+    # memwatch line escalates to WARNING (and, when tracemalloc is on, dumps
+    # the top Python allocation sites).
+    memwatch_warn_pct: float = Field(default=85.0, alias="OPENCHECK_MEMWATCH_WARN_PCT")
+    # Opt-in tracemalloc tracing for the high-water dump. Off by default:
+    # tracing costs extra memory (it records every allocation's traceback),
+    # which is exactly what an OOM-bound instance can't spare. Turn on
+    # temporarily when the memwatch lines alone don't name the culprit.
+    memwatch_tracemalloc: bool = Field(default=False, alias="OPENCHECK_MEMWATCH_TRACEMALLOC")
+    # Per-request access-log lines (method, path, status, duration, UA, bot
+    # flag). uvicorn's own access log has no User-Agent, which makes crawler
+    # traffic invisible — this replaces it for diagnosis purposes.
+    access_log_enabled: bool = Field(default=True, alias="OPENCHECK_ACCESS_LOG")
+    # Override for the container memory limit (MB) used in the memwatch pct
+    # calculation. Unset = read from cgroups (correct on Render/Docker).
+    memory_limit_mb: float | None = Field(default=None, alias="OPENCHECK_MEMORY_LIMIT_MB")
+
     # --- Identifier checksum enforcement (see opencheck/identifiers.py) ---
     # Master switch for check-digit *enforcement*: LEI mod-97 fast-fail at the
     # API boundaries, checksum-aware LEI classification in the BODS mappers /
