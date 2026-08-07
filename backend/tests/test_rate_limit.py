@@ -171,6 +171,9 @@ _EXEMPT_PATHS = {
     "/browse/{country}",
     "/robots.txt",
     "/indexnow/{key}.txt",  # Phase 91: static key echo for IndexNow verification
+    # Aggregate memory/traffic counters (memwatch) — a single dict dump,
+    # cheap by construction, probed by the weekly /og-share scheduled check.
+    "/memstats",
 }
 
 

@@ -219,6 +219,51 @@ class _Window:
 
 window = _Window()
 
+
+class _Totals:
+    """Cumulative counters since process start (i.e. since the last deploy —
+    Render restarts reset them, which is fine for share-of-traffic reading).
+    These back the public ``/memstats`` endpoint so the weekly ``/og``-share
+    check can run against production without credentials or log access."""
+
+    def __init__(self) -> None:
+        self.started = time.time()
+        self.requests = 0
+        self.bots = 0
+        self.by_bucket: Counter[str] = Counter()
+        self.bot_by_bucket: Counter[str] = Counter()
+
+
+totals = _Totals()
+
+
+def stats() -> dict[str, Any]:
+    """Aggregate-only snapshot for ``/memstats``.
+
+    Deliberately contains NO per-request data: no IPs, no User-Agents, no
+    LEIs, no query strings — only counts per first-path-segment bucket and
+    the same memory figures the memwatch log line reports. That keeps a
+    public, unauthenticated endpoint consistent with the project's
+    privacy posture (cf. the GoatCounter path-bucket contract)."""
+    rss = current_rss_mb()
+    limit = memory_limit_mb()
+    og, replay = _cache_sizes()
+    return {
+        "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(totals.started)),
+        "uptime_s": int(time.time() - totals.started),
+        "rss_mb": round(rss, 1),
+        "limit_mb": round(limit, 0) if limit else None,
+        "pct": round(rss / limit * 100, 1) if limit else None,
+        "og_cache": og,
+        "replay_cache": replay,
+        "totals": {
+            "requests": totals.requests,
+            "bots": totals.bots,
+            "by_bucket": dict(totals.by_bucket),
+            "bot_by_bucket": dict(totals.bot_by_bucket),
+        },
+    }
+
 #: Paths whose access-log lines are pure noise (Render pings /health every
 #: few seconds; hashed SPA assets are static file serving). They still count
 #: in the window buckets, so a burst would show on the memwatch line.
@@ -246,9 +291,13 @@ async def access_log_middleware(
 
     window.requests += 1
     window.by_bucket[b] += 1
+    totals.requests += 1
+    totals.by_bucket[b] += 1
     if bot:
         window.bots += 1
         window.bot_by_bucket[b] += 1
+        totals.bots += 1
+        totals.bot_by_bucket[b] += 1
     window.inflight += 1
     window.inflight_peak = max(window.inflight_peak, window.inflight)
 

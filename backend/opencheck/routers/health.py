@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from .. import __version__
+from .. import __version__, memwatch
 from ..bo_access import notice_for
 from ..config import get_settings
 from ..sources import REGISTRY, SourceInfo
@@ -31,6 +32,21 @@ async def health() -> HealthResponse:
         version=__version__,
         allow_live=settings.allow_live,
     )
+
+
+@router.get("/memstats")
+async def memstats() -> JSONResponse:
+    """Aggregate memory + traffic counters since the last deploy.
+
+    Public and unauthenticated by design: it powers the weekly scheduled
+    check that decides whether crawler traffic on ``/og`` justifies moving
+    the entity pages to a static generic og:image (see the memwatch module
+    doc). Contains ONLY aggregate counts per path bucket and the process
+    memory figures — no IPs, User-Agents, LEIs or query strings, matching
+    the GoatCounter path-bucket privacy contract. Undecorated (no rate
+    limit), like /health: it is a single dict dump, cheap by construction.
+    """
+    return JSONResponse(memwatch.stats(), headers={"Cache-Control": "no-store"})
 
 
 @router.get("/sources", response_model=SourcesResponse)
