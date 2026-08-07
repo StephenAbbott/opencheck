@@ -30,7 +30,7 @@ from fastapi.responses import JSONResponse
 
 from slowapi.errors import RateLimitExceeded
 
-from . import __version__
+from . import __version__, memwatch
 from .config import get_settings
 from .ratelimit import limiter, rate_limit_exceeded_handler
 from .routers import health, search, lookup, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries, entity_pages
@@ -116,6 +116,10 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     """
     global _mcp_session_started
     warmup = asyncio.create_task(_warm_caches_background())
+    # Periodic memory/traffic report (opencheck/memwatch.py) — one log line
+    # every OPENCHECK_MEMWATCH_INTERVAL seconds so an OOM kill is diagnosable
+    # from the Render log stream after the fact.
+    memwatch_task = asyncio.create_task(memwatch.run())
     async with AsyncExitStack() as stack:
         if _MCP is not None and not _mcp_session_started:
             await stack.enter_async_context(_MCP.session_manager.run())
@@ -125,6 +129,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         finally:
             if not warmup.done():
                 warmup.cancel()
+            if not memwatch_task.done():
+                memwatch_task.cancel()
 
 
 app = FastAPI(
@@ -276,3 +282,10 @@ if _frontend_dist:
                     },
                 )
             return FileResponse(_INDEX, headers={"Cache-Control": "no-cache"})
+
+
+# Access log + per-window request counters (opencheck/memwatch.py). Registered
+# LAST so Starlette makes it the OUTERMOST middleware — it must observe every
+# request, including ones the SPA view-negotiation middleware above answers
+# without calling further into the stack.
+app.middleware("http")(memwatch.access_log_middleware)

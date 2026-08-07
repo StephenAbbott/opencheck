@@ -120,6 +120,57 @@ def test_og_image_teaser_when_no_cached_lookup(client: TestClient, monkeypatch):
     assert "max-age=60" in r.headers["cache-control"]
 
 
+class _FakeStore:
+    """Stands in for entity_pages.EntityStore — only .get() is used here."""
+
+    def __init__(self, names: dict[str, str]):
+        self._names = names
+
+    def get(self, lei: str):
+        import types
+
+        name = self._names.get(lei)
+        return types.SimpleNamespace(name=name) if name else None
+
+
+def test_og_teaser_name_comes_from_entity_pages_store(client: TestClient, monkeypatch):
+    """With an entity-pages DB loaded, a teaser card must NOT touch GLEIF —
+    crawlers fetching per-LEI og:images drove full GLEIF record builds into
+    429s (observed live 2026-08-06)."""
+    import opencheck.entity_pages as ep
+
+    monkeypatch.setattr(ep, "get_store", lambda: _FakeStore({LEI: "Rosneft Oil Company"}))
+
+    async def boom(lei: str):  # any GLEIF fallback is a regression
+        raise AssertionError("teaser must not fall back to GLEIF when a store is loaded")
+
+    monkeypatch.setattr(share_router.lookup_router, "_resolve_ctx", boom)
+    r = client.get(f"/og/{LEI}.png")
+    assert r.status_code == 200
+    assert r.content.startswith(_PNG_MAGIC)
+
+
+def test_og_teaser_unknown_lei_in_store_stays_local(client: TestClient, monkeypatch):
+    """LEI absent from the Golden Copy (e.g. issued since the monthly
+    refresh) → nameless teaser, still no upstream call."""
+    import opencheck.entity_pages as ep
+
+    monkeypatch.setattr(ep, "get_store", lambda: _FakeStore({}))
+
+    async def boom(lei: str):
+        raise AssertionError("unknown-LEI teaser must not fan out to GLEIF")
+
+    monkeypatch.setattr(share_router.lookup_router, "_resolve_ctx", boom)
+    r = client.get(f"/og/{LEI}.png")
+    assert r.status_code == 200
+    assert r.content.startswith(_PNG_MAGIC)
+
+
+def test_render_gate_bounds_concurrency():
+    assert share_router._RENDER_CONCURRENCY <= 4
+    assert share_router._render_gate._value == share_router._RENDER_CONCURRENCY
+
+
 def test_og_image_rejects_invalid_lei(client: TestClient):
     assert client.get("/og/not-a-lei.png").status_code == 404
     assert client.get("/og/253400JT3MQWNDKMJE4.png").status_code == 404
