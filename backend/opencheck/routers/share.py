@@ -42,6 +42,16 @@ _OG_TTL_TEASER = 120.0
 _OG_MAX_ENTRIES = 128
 _OG_CACHE: dict[str, tuple[float, bytes, bool]] = {}
 
+# Cap concurrent Pillow renders. Every entity page advertises a per-LEI
+# og:image, so a crawler sweep produces ~zero cache hits (128 entries vs
+# 3.4M LEIs) and each miss renders a 2× supersampled 2400×1260 canvas
+# (~10 MB+ transient) in the asyncio.to_thread pool. Unbounded, a burst of
+# image fetches ran the 512 MB instance into the ground (OOM restarts,
+# 2026-08-05/06). Two at a time keeps the transient footprint ~20 MB while
+# a burst queues here instead of in RAM.
+_RENDER_CONCURRENCY = 2
+_render_gate = asyncio.Semaphore(_RENDER_CONCURRENCY)
+
 
 def _clean_lei(lei: str) -> str:
     lei = (lei or "").strip().upper()
@@ -79,14 +89,48 @@ def _summary_from_replay(lei: str) -> tuple[str | None, list[dict[str, Any]]] | 
     return name, signals
 
 
+def _store_name(lei: str) -> tuple[str | None, bool]:
+    """(name, resolved) from the local entity-pages SQLite, without touching
+    the network.
+
+    ``resolved=True`` means the store answered authoritatively — either with
+    a name or with "no such LEI in the current Golden Copy" (``name=None``,
+    which renders the LEI-only teaser). ``resolved=False`` means no store is
+    configured/loaded and the caller may fall back to the GLEIF path."""
+    try:
+        from ..entity_pages import get_store
+
+        store = get_store()
+        if store is None:
+            return None, False
+        row = store.get(lei)
+        return (row.name if row else None), True
+    except Exception:  # noqa: BLE001 — fall back rather than fail the card
+        return None, False
+
+
 async def _teaser_name(lei: str) -> str | None:
-    """Entity name via the GLEIF anchor, for cards without cached results."""
+    """Entity name for cards without cached results.
+
+    The local entity-pages DB answers first (a sub-ms indexed SQLite read).
+    This matters far beyond latency: every one of the ~3.4M entity pages
+    advertises ``og:image=/og/{LEI}.png``, and before this short-circuit a
+    crawler fetching those images drove a *full* GLEIF record build per
+    card — record + parents + children + reporting exceptions + a Wikidata
+    SPARQL probe — which burned the GLEIF per-IP quota into 429s (observed
+    live 2026-08-06) and stacked memory alongside the renders. The GLEIF
+    fallback only runs when no entity-pages DB is loaded at all; an LEI the
+    current Golden Copy lacks (issued since the monthly refresh) renders
+    the LEI-only teaser rather than re-opening the fan-out to bots."""
+    name, resolved = _store_name(lei)
+    if resolved:
+        return name
     try:
         ctx, _ = await lookup_router._resolve_ctx(lei)
         return ctx.legal_name or None
     except lookup_router._LookupAbort as abort:
         if abort.status == 404:
-            raise HTTPException(status_code=404, detail="LEI not found.")
+            raise HTTPException(status_code=404, detail="LEI not found.") from abort
         return None
     except Exception:  # noqa: BLE001 — a teaser without a name still works
         return None
@@ -104,11 +148,13 @@ async def _card_for(lei: str) -> tuple[bytes, bool]:
     summary = _summary_from_replay(lei)
     if summary is not None:
         name, signals = summary
-        png = await asyncio.to_thread(render_share_card, name, lei, signals)
+        async with _render_gate:
+            png = await asyncio.to_thread(render_share_card, name, lei, signals)
         full = True
     else:
         name = await _teaser_name(lei)
-        png = await asyncio.to_thread(render_share_card, name, lei, None)
+        async with _render_gate:
+            png = await asyncio.to_thread(render_share_card, name, lei, None)
         full = False
     while len(_OG_CACHE) >= _OG_MAX_ENTRIES:
         _OG_CACHE.pop(next(iter(_OG_CACHE)), None)
