@@ -145,6 +145,16 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `mt_crn` (Maltese registration number, e.g. `C 113927`) derived from GLEIF RA code `RA000443`
 - **Note:** No API key or registration required (EU High-Value Dataset under the Open Data Directive). The list endpoint is cursor-paginated with no name filter, so the source is entered via the LEI lookup flow rather than free-text search.
 
+## Ministry of Corporate Affairs — Company Master Data (India)
+
+- **Data:** CIN, company name, status, class/category/sub-category, authorised and paid-up capital, registration date, Registrar of Companies, registered office address, listing status, and NIC industrial classification, from the "Registrars of Companies (RoC)-wise Company Master Data" resource (~3.67M companies) on the Open Government Data (OGD) Platform India. Entity-level only — no officers or beneficial owners — mapped to a single BODS entity statement.
+- **Portal / API:** <https://www.data.gov.in/catalog/company-master-data> · API: `https://api.data.gov.in/resource/4dbe5667-7b6b-41d7-82af-211562424d9a`
+- **License:** [Government Open Data License – India (GODL)](https://data.gov.in/government-open-data-license-india)
+- **Attribution:** "Contains Ministry of Corporate Affairs Company Master Data, published by the Open Government Data (OGD) Platform India and used under the Government Open Data License – India. MCA and the OGD Platform do not endorse this use."
+- **Entry point:** `in_cin` (21-character CIN) derived from GLEIF RA code `RA000394` (Ministry of Corporate Affairs); queried as an exact `filters[CIN]` match.
+- **Auth:** `DATA_GOV_IN_API_KEY` — a free data.gov.in account key (JanParichay/MeriPehchaan login required to register).
+- **Note:** all API fields are exact-match keyword type (names stored uppercase), so name search is exact-only; the LEI → CIN bridge is the primary flow.
+
 ## New Zealand Companies Register (NZBN)
 
 - **Data:** company details (name, status, type, registration date, registered address, trading and previous names) **plus directors, shareholders with share allocations, and the ultimate holding company** from the NZBN `FullEntity` endpoint. Mapped to a BODS entity statement, `seniorManagingOfficial` relationships for directors, `shareholding` relationships carrying `share.exact` for shareholders, and an `otherInfluenceOrControl` relationship for the ultimate holding company.
