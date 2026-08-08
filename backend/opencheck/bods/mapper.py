@@ -461,6 +461,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "krs_poland": "KRS — Polish National Court Register (Krajowy Rejestr Sądowy)",
         "kvk": "KvK — Netherlands Chamber of Commerce",
         "malta_mbr": "Malta Business Registry (MBR)",
+        "mca_india": "MCA — Ministry of Corporate Affairs Company Master Data (India)",
         "nz_companies": "New Zealand Companies Register (NZBN)",
         "openaleph": "OpenAleph",
         "opencorporates": "OpenCorporates",
@@ -500,6 +501,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "krs_poland",
         "kvk",
         "malta_mbr",
+        "mca_india",
         "nz_companies",
         "opencorporates",
         "prh",
@@ -8480,6 +8482,99 @@ def map_abr_australia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     if abn_status and abn_status != "active":
         # ABN Lookup gives a status (e.g. "Cancelled") but not always a date.
         record_details["dissolutionDate"] = (bundle.get("abn_status_from") or "unknown")
+    stmt["recordDetails"] = record_details
+
+    yield stmt
+
+
+# ---------------------------------------------------------------------------
+# India — Ministry of Corporate Affairs Company Master Data (data.gov.in, GODL)
+# ---------------------------------------------------------------------------
+#
+# The MCA master data is entity-level firmographic data only — no officers or
+# beneficial owners — so this mapper produces a single entity statement.
+
+# CompanyStatus values that mean the company has ceased to exist on the
+# register. Deliberately conservative: in-progress states ("Under Process of
+# Striking Off", "Under Liquidation") and inactive-but-registered states
+# ("Dormant") are NOT treated as dissolution.
+_MCA_TERMINAL_STATUSES = frozenset({
+    "strike off",
+    "struck off",
+    "dissolved",
+    "amalgamated",
+    "liquidated",
+    "converted to llp",
+    "converted to llp and dissolved",
+})
+
+
+def map_mca_india(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Yield a BODS v0.4 entity statement for an Indian MCA company.
+
+    Identifier: ``IN-MCA`` (the 21-character CIN). The registered office
+    address becomes a registered address; the registration date becomes
+    ``foundingDate``; terminal register statuses set ``dissolutionDate``
+    ("unknown" — the master data carries no event date).
+    """
+    if not bundle or bundle.get("is_stub"):
+        return
+
+    cin = (bundle.get("cin") or "").strip().upper()
+    name = (bundle.get("name") or "").strip()
+    if not cin or not name:
+        return
+
+    source_url = bundle.get("link") or (
+        "https://www.data.gov.in/resource/registrars-companies-roc-wise-company-master-data"
+    )
+
+    identifiers = [{
+        "id": cin,
+        "scheme": "IN-MCA",
+        "schemeName": "Corporate Identification Number (CIN) — Ministry of Corporate Affairs",
+    }]
+
+    addresses: list[dict[str, Any]] = []
+    address = (bundle.get("address") or "").strip()
+    if address:
+        addresses.append(_addr("registered", address, "IN"))
+
+    stmt = make_entity_statement(
+        source_id="mca_india",
+        local_id=cin,
+        name=name,
+        jurisdiction=("India", "IN"),
+        identifiers=identifiers,
+        founding_date=(bundle.get("registration_date") or None),
+        addresses=addresses,
+        source_url=source_url,
+    )
+
+    record_details = stmt.get("recordDetails") or {}
+
+    # Entity type subtype from the register's class ("Public" / "Private" /
+    # "One Person Company"); category + sub-category as details.
+    company_class = (bundle.get("company_class") or "").strip()
+    detail_bits = [
+        b for b in (
+            (bundle.get("category") or "").strip(),
+            (bundle.get("sub_category") or "").strip(),
+        ) if b
+    ]
+    if company_class or detail_bits:
+        entity_type: dict[str, Any] = {"type": "registeredEntity"}
+        if company_class:
+            entity_type["subtype"] = company_class
+        if detail_bits:
+            entity_type["details"] = " — ".join(detail_bits)
+        record_details["entityType"] = entity_type
+
+    # Terminal register status → dissolution (date not published).
+    status = (bundle.get("status") or "").strip().lower()
+    if status in _MCA_TERMINAL_STATUSES:
+        record_details["dissolutionDate"] = "unknown"
+
     stmt["recordDetails"] = record_details
 
     yield stmt

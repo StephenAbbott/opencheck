@@ -633,6 +633,16 @@ def _bh_abr_australia(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_mca_india(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    return _hit(
+        "mca_india", local_id,
+        name=(r.get("name") or "").strip() or ctx.legal_name or "",
+        summary=f"IN-CIN {r.get('cin') or local_id}".strip(),
+        identifiers={"in_cin": r.get("cin") or local_id},
+        raw=r,
+    )
+
+
 @dataclass(frozen=True)
 class _RegistrySource:
     """Dispatch + hit-build spec for a derived-identifier registry adapter."""

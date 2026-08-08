@@ -272,6 +272,12 @@ class Settings(BaseSettings):
     # Free GUID from https://abr.business.gov.au/Documentation/WebServiceRegistration
     abn_guid: str | None = Field(default=None, alias="ABN_GUID")
 
+    # --- India MCA Company Master Data (data.gov.in, GODL) ---
+    # OGD Platform India API key: register at data.gov.in (JanParichay /
+    # MeriPehchaan login), then My Account → Generate API key. Also unlocks
+    # every other data.gov.in resource, not just MCA.
+    data_gov_in_api_key: str | None = Field(default=None, alias="DATA_GOV_IN_API_KEY")
+
     # --- Belgian Crossroads Bank for Enterprises (BCE / KBO) ---
     # Pre-built SQLite index. Build with: python scripts/extract_bce.py
     # Source: https://kbopub.economie.fgov.be/kbo-open-data/
