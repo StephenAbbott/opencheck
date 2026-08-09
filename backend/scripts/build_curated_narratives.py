@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 """Pre-bake AI summaries for the curated homepage examples.
 
-Curated examples use deterministic, pre-extracted bulk BODS data, so their
-narratives are stable. Generating them once and serving the result as a static
-file (``frontend/public/curated-narratives/<lei>.json``) means a first-time
-visitor sees an instant, fully-cited summary with **no model call** — while live
-lookups keep the on-demand "Generate summary" button.
+Serving each curated example's summary as a static file
+(``frontend/public/curated-narratives/<lei>.json``) means a first-time visitor
+sees an instant, fully-cited summary with **no model call** — while live lookups
+keep the on-demand "Generate summary" button. Bulk-BODS examples (BP, Rosneft,
+Taqa) are deterministic; the live-lookup examples are a snapshot of the report
+at generation time.
 
 Run once (and whenever the prompt or curated set changes), then commit the JSON:
 
     cd backend
     ANTHROPIC_API_KEY=sk-ant-... uv run python scripts/build_curated_narratives.py
+
+Pass LEIs as arguments to (re)generate a subset only:
+
+    ... uv run python scripts/build_curated_narratives.py 5493005044RTLQ5RZU70
 
 Options via env:
     OPENCHECK_API_BASE        default https://api.opencheck.world
@@ -40,10 +45,10 @@ from opencheck.narrative.summarise import DEFAULT_MODEL, summarise  # noqa: E402
 CURATED_LEIS = [
     "213800LH1BZH3DI6G760",  # BP P.L.C.
     "253400JT3MQWNDKMJE44",  # Rosneft
-    "2138008KTNTDICZU8L25",  # Bank Saderat PLC
-    "2138002S3XGZ38WN5Q72",  # Hornsea 1 Limited
     "213800E11LI1SCETU492",  # Taqa Bratani Limited
-    "213800AG2V6YE68H5N63",  # Newcastle United FC
+    "5493005044RTLQ5RZU70",  # Eesti Energia AS
+    "W9NG6WMZIYEU8VEDOG48",  # Ørsted A/S
+    "FRDRIPF3EKNDJ2CQJL29",  # Eli Lilly and Company
 ]
 
 
@@ -77,9 +82,19 @@ def main() -> int:
     base = os.environ.get("OPENCHECK_API_BASE", "https://api.opencheck.world").rstrip("/")
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Optional argv subset: regenerate only the listed LEIs (must be curated).
+    targets = list(CURATED_LEIS)
+    if len(sys.argv) > 1:
+        requested = [a.strip().upper() for a in sys.argv[1:]]
+        unknown = [lei for lei in requested if lei not in CURATED_LEIS]
+        if unknown:
+            print(f"Not in CURATED_LEIS: {', '.join(unknown)}", file=sys.stderr)
+            return 1
+        targets = requested
+
     ok = 0
     with httpx.Client(timeout=120.0) as client:
-        for lei in CURATED_LEIS:
+        for lei in targets:
             try:
                 r = client.get(f"{base}/lookup", params={"lei": lei, "deepen_top": 5})
                 r.raise_for_status()
@@ -94,7 +109,7 @@ def main() -> int:
             print(f"✓ {lei} → {out.relative_to(REPO)}  ({conf} confidence)")
             ok += 1
 
-    print(f"\nGenerated {ok}/{len(CURATED_LEIS)} curated summaries with {model}.")
+    print(f"\nGenerated {ok}/{len(targets)} curated summaries with {model}.")
     return 0 if ok else 1
 
 

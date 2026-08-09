@@ -18,5 +18,12 @@ cd backend
 ANTHROPIC_API_KEY=sk-ant-... uv run python scripts/build_curated_narratives.py
 ```
 
+Pass LEIs as arguments to regenerate a subset only (e.g. after adding a new
+curated example, without churning the existing files):
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... uv run python scripts/build_curated_narratives.py 5493005044RTLQ5RZU70
+```
+
 Then commit the updated `*.json` files. They are bundled into the static site at
 build time (Vite copies `public/` into `dist/`).
