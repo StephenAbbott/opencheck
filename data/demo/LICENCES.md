@@ -65,3 +65,18 @@ apply to OpenCheck or to the demo graph.
 
 See `CLAUDE.md` § "Phase 8 — AuraDB deferral" for the recorded decision
 and named revisit trigger.
+
+---
+
+## Live-export Neo4j zips (curated examples not in the bulk demo set)
+
+Three of the homepage's curated examples are **live lookups**, not part of the
+bulk demo graph above: Eesti Energia AS (`5493005044RTLQ5RZU70.zip`),
+Ørsted A/S (`W9NG6WMZIYEU8VEDOG48.zip`) and Eli Lilly and Company
+(`FRDRIPF3EKNDJ2CQJL29.zip`) in `data/demo/neo4j/`. Each is a point-in-time
+snapshot of `GET /export?lei=<LEI>&format=jsonl` converted with
+`bods-neo4j to-csv`, and combines sources beyond UK PSC / GLEIF — including
+sources with **non-commercial** (OpenSanctions, CC-BY-NC-4.0) or conditional
+(OpenCorporates OC-Terms) licences. The OGL v3.0 / CC0 terms in this file do
+**not** cover those three zips: each carries its own `LICENCES.md` inside the
+archive with the per-source matrix and the combined-use verdict.

@@ -30,6 +30,18 @@ The import.cypher file can be run against a Neo4j 5.x instance started with:
 
     docker compose up -d   # from the bods-neo4j repo, or any Neo4j 5.x instance
 
+Live-export zips
+----------------
+Curated examples that are NOT in the bulk demo set (no {lei}.jsonl in
+data/demo/) get their per-entity zip from a live-export snapshot instead, so
+this script neither rebuilds nor removes them. To (re)generate one:
+
+    curl "https://api.opencheck.world/export?lei=<LEI>&format=jsonl" -o /tmp/<LEI>.jsonl
+    bods-neo4j to-csv /tmp/<LEI>.jsonl -o /tmp/<LEI>-csv
+    # zip the CSVs + import.cypher as data/demo/neo4j/<LEI>.zip, and include a
+    # LICENCES.md built with routers.export._build_licenses_md — live exports
+    # combine sources beyond OGL/CC0 (see data/demo/LICENCES.md).
+
 Exit codes: 0 = success, 1 = error.
 """
 

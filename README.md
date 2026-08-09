@@ -16,13 +16,13 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 93** — India: MCA Company Master Data adapter (world's largest active-LEI country)
+**Latest: Phase 94** — Curated examples refresh: Eesti Energia, Ørsted, Eli Lilly
+
+The homepage picker swaps three UK bulk-BODS subjects (Bank Saderat, Hornsea 1, Newcastle United) for three live-lookup examples — Eesti Energia AS (Estonian energy company), Ørsted A/S (Danish offshore energy company) and Eli Lilly and Company (American pharmaceutical giant) — alongside the unchanged BP, Rosneft and Taqa Bratani. Each new example ships with live-verified risk signals on its card, an instant pre-baked AI summary, and a downloadable Neo4j CSV bundle snapshotted from the live `/export` pipeline with per-source licence notes inside the zip; a new `bulkBods` flag keeps the "pre-extracted data" banner on the bulk-BODS trio only. Commit `b862556`.
+
+**Previous: Phase 93** — India: MCA Company Master Data adapter (world's largest active-LEI country)
 
 A new `mca_india` source brings India's national company register extract — ~3.67M companies from the Ministry of Corporate Affairs Company Master Data on the Open Government Data Platform (data.gov.in), used under the GODL licence — into the LEI-anchored lookup: GLEIF's `RA000394` → 21-character CIN → one exact `filters[CIN]` query, returning name, status, class/category, capital, registration date, RoC and registered office, mapped to a BODS entity statement. Ships in stub mode against live-captured fixtures: registration for a personal `DATA_GOV_IN_API_KEY` is currently blocked for non-Indian users (JanParichay SMS OTP never reaches foreign numbers — escalated to NIC and the OGD team), so the adapter goes live by setting one env var the day a key lands. Commit `1a633db`.
-
-**Previous: Phase 92** — TED: live "has this entity won EU public contracts?"
-
-A new `ted_eu` source answers the question the retired OpenTender bulk pipeline couldn't: one anonymous query to the TED Search API v3 on eForms organisation identifiers (LEI + the national registration numbers OpenCheck already derives from GLEIF), then per-notice winner confirmation from the eForms XML — each award notice labelled won / tendered with values, dates and contract references. Coverage is the eForms era (≈2024 onwards) and the card says so; TED's licence (Commission Decision 2011/833/EU) permits commercial reuse, unlike OpenTender's NC-SA. The LEI fill rate in notices is zero today (0 of 5,031 sampled identifiers) — it's queried anyway, so the lookup self-upgrades as eForms LEI adoption grows. Commit `4094020`.
 
 → [Full development history](docs/status.md)
 

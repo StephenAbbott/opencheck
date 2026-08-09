@@ -106,6 +106,11 @@ interface ExampleLei {
   signals?: ExampleSignal[];
   /** GitHub raw URL for the per-entity Neo4j CSV zip */
   neo4jZipUrl?: string;
+  /** True when the example's graph is served from the pre-extracted Open
+   *  Ownership bulk BODS datasets (UK PSC / GLEIF) — drives the blue
+   *  "Curated example — pre-extracted data" banner on the results page.
+   *  Examples without it run as ordinary live lookups. */
+  bulkBods?: boolean;
 }
 
 const _NEO4J_BASE =
@@ -122,6 +127,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/213800LH1BZH3DI6G760.zip`,
+    bulkBods: true,
   },
   {
     lei: "253400JT3MQWNDKMJE44",
@@ -133,26 +139,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/253400JT3MQWNDKMJE44.zip`,
-  },
-  {
-    lei: "2138008KTNTDICZU8L25",
-    name: "Bank Saderat PLC",
-    hint: "Iran-linked UK bank",
-    signals: [
-      { code: "SANCTIONED", confidence: "high" },
-      { code: "NON_EU_JURISDICTION", confidence: "high" },
-      { code: "RELATED_SANCTIONED", confidence: "high" },
-    ],
-    neo4jZipUrl: `${_NEO4J_BASE}/2138008KTNTDICZU8L25.zip`,
-  },
-  {
-    lei: "2138002S3XGZ38WN5Q72",
-    name: "Hornsea 1 Limited",
-    hint: "UK offshore wind",
-    signals: [
-      { code: "NON_EU_JURISDICTION", confidence: "high" },
-    ],
-    neo4jZipUrl: `${_NEO4J_BASE}/2138002S3XGZ38WN5Q72.zip`,
+    bulkBods: true,
   },
   {
     lei: "213800E11LI1SCETU492",
@@ -163,15 +150,40 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "RELATED_SANCTIONS_LINKED", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/213800E11LI1SCETU492.zip`,
+    bulkBods: true,
   },
   {
-    lei: "213800AG2V6YE68H5N63",
-    name: "Newcastle United FC",
-    hint: "Saudi-owned football club",
+    lei: "5493005044RTLQ5RZU70",
+    name: "Eesti Energia AS",
+    hint: "Estonian energy company",
     signals: [
+      { code: "STATE_CONTROLLED", confidence: "medium" },
+      { code: "RELATED_PEP", confidence: "high" },
+      { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
+    ],
+    neo4jZipUrl: `${_NEO4J_BASE}/5493005044RTLQ5RZU70.zip`,
+  },
+  {
+    lei: "W9NG6WMZIYEU8VEDOG48",
+    name: "Ørsted A/S",
+    hint: "Danish offshore energy company",
+    signals: [
+      { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
+      { code: "OFFSHORE_LEAKS", confidence: "medium" },
+      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
+    ],
+    neo4jZipUrl: `${_NEO4J_BASE}/W9NG6WMZIYEU8VEDOG48.zip`,
+  },
+  {
+    lei: "FRDRIPF3EKNDJ2CQJL29",
+    name: "Eli Lilly and Company",
+    hint: "American pharmaceutical giant",
+    signals: [
+      { code: "RELATED_PEP", confidence: "high" },
+      { code: "OFFSHORE_LEAKS", confidence: "high" },
       { code: "NON_EU_JURISDICTION", confidence: "high" },
     ],
-    neo4jZipUrl: `${_NEO4J_BASE}/213800AG2V6YE68H5N63.zip`,
+    neo4jZipUrl: `${_NEO4J_BASE}/FRDRIPF3EKNDJ2CQJL29.zip`,
   },
 ];
 
@@ -1726,7 +1738,7 @@ export default function App() {
                 </span>
               )}
             </SectionLabel>
-            {streamingLei && EXAMPLE_LEIS.some((e) => e.lei === streamingLei) && (
+            {streamingLei && EXAMPLE_LEIS.some((e) => e.lei === streamingLei && e.bulkBods) && (
               <div className="mb-4 flex items-start gap-3 rounded-oo border border-blue-200 bg-blue-50 px-4 py-3 text-[13px] leading-[1.6] text-blue-900">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.657 4.03 3 9 3s9-1.343 9-3V5"/><path d="M3 12c0 1.657 4.03 3 9 3s9-1.343 9-3"/></svg>
                 <span>
