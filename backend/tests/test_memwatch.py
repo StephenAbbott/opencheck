@@ -183,8 +183,10 @@ def test_memstats_is_aggregate_only(client: TestClient, _reset_totals):
     assert "user-agent" not in body.lower()
 
 
-def test_memstats_in_robots_disallow(client: TestClient):
-    assert "Disallow: /memstats" in client.get("/robots.txt").text
+def test_memstats_not_in_robots_disallow(client: TestClient):
+    """/memstats must stay fetchable by robots.txt-respecting clients — the
+    weekly monitoring routine reads it with one and stops if it's disallowed."""
+    assert "Disallow: /memstats" not in client.get("/robots.txt").text
 
 
 # ----------------------------------------------------------------------

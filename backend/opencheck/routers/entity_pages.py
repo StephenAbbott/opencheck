@@ -358,7 +358,9 @@ _DISALLOWED_API_PREFIXES = [
     "/license-matrix",
     "/share",
     "/mcp",
-    "/memstats",
+    # NOTE: /memstats is deliberately NOT listed — it's the public aggregate
+    # stats endpoint, and the weekly Cowork monitoring routine reads it with a
+    # robots.txt-respecting fetcher. Nothing crawlable of value lives there.
 ]
 
 
