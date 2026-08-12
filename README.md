@@ -16,9 +16,9 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 95** — Nigeria CAC: the first African beneficial-ownership register
+**Latest: Phase 95** — Nigeria CAC: the first African beneficial ownership register
 
-A new `cac_nigeria` source brings the Corporate Affairs Commission Persons with Significant Control register ([bor.cac.gov.ng](https://bor.cac.gov.ng)) — Africa's first public beneficial-ownership register — into the lookup as a source card for 10 example companies. The CAC's official API is restricted to Nigerian government agencies, so rather than scrape the site's private API at request time, a curated set of 10 LEI-anchored companies is harvested once and committed as an offline LEI-keyed index; `map_cac_nigeria` maps the five statutory CAMA PSC conditions to BODS v0.4 (with `beneficialOwnershipOrControl` asserted only for natural persons, and only the CAC-published RC number — not the derived LEI — asserted, per the corroboration rule). A live adapter is deferred pending engagement with the CAC and Oasis Management; the vendored source is the scaffold it slots into. GLEIF RA code `RA000469`. Not added to the homepage examples. PR [#104](https://github.com/StephenAbbott/opencheck/pull/104).
+A new `cac_nigeria` source brings the Corporate Affairs Commission Persons with Significant Control register ([bor.cac.gov.ng](https://bor.cac.gov.ng)) — Africa's first public beneficial ownership register — into the lookup as a source card for 10 example companies. The CAC's official API is restricted to Nigerian government agencies, so rather than scrape the site's private API at request time, a curated set of 10 LEI-anchored companies is harvested once and committed as an offline LEI-keyed index; `map_cac_nigeria` maps the five statutory CAMA PSC conditions to BODS v0.4 (with `beneficialOwnershipOrControl` asserted only for natural persons, and only the CAC-published RC number — not the derived LEI — asserted, per the corroboration rule). A live adapter is deferred pending engagement with the CAC and Oasis Management; the vendored source is the scaffold it slots into. GLEIF RA code `RA000469`. Not added to the homepage examples. PR [#104](https://github.com/StephenAbbott/opencheck/pull/104).
 
 **Previous: Phase 94** — Curated examples refresh: Eesti Energia, Ørsted, Eli Lilly
 
