@@ -444,6 +444,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "bods_gleif": "GLEIF — Global LEI Foundation (BODS bulk dataset)",
         "bods_uk_psc": "UK Companies House — Persons with Significant Control (BODS bulk dataset)",
         "bolagsverket": "Bolagsverket — Swedish Companies Registration Office",
+        "cac_nigeria": "CAC — Corporate Affairs Commission (Nigeria) Persons with Significant Control register",
         "brreg": "Brønnøysundregistrene — Norwegian Register Centre",
         "brightquery": "BrightQuery / OpenData.org",
         "climatetrace": "Global Energy Monitor / Climate TRACE",
@@ -489,6 +490,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "bods_uk_psc",
         "bolagsverket",
         "brreg",
+        "cac_nigeria",
         "companies_house",
         "corporations_canada",
         "cyprus_drcor",
@@ -7138,6 +7140,194 @@ def map_bods_uk_psc(bundle: dict[str, Any]) -> BODSBundle:
     adapter; this function makes them visible to the _MAPPERS dispatch.
     """
     return iter(bundle.get("bods_statements", []))
+
+
+# ----------------------------------------------------------------------
+# Nigeria CAC — Persons with Significant Control → BODS v0.4
+# ----------------------------------------------------------------------
+
+
+def _cac_interests(psc: dict[str, Any], boc: bool) -> list[dict[str, Any]]:
+    """Map the five statutory CAMA PSC conditions to BODS interest types.
+
+    ``boc`` (beneficialOwnershipOrControl) is asserted True only for natural
+    persons — the ultimate beneficial owners. Corporate / intermediate owners
+    are legal owners in the chain, so their interests are flagged False (BODS
+    guidance: do not assert beneficial ownership on an entity party).
+    """
+    out: list[dict[str, Any]] = []
+
+    def _share(v: Any) -> dict[str, Any] | None:
+        return {"exact": v} if isinstance(v, (int, float)) and 0 < v <= 100 else None
+
+    start = psc.get("notified") or None
+
+    def _mk(itype: str, share_val: Any = None, details: str | None = None) -> dict[str, Any]:
+        i: dict[str, Any] = {
+            "type": itype,
+            "directOrIndirect": "direct",
+            "beneficialOwnershipOrControl": boc,
+        }
+        s = _share(share_val)
+        if s:
+            i["share"] = s
+        if details:
+            i["details"] = details
+        if start:
+            i["startDate"] = start
+        return i
+
+    if psc.get("shares"):
+        out.append(_mk("shareholding", psc.get("share_pct_direct")))
+    if psc.get("voting"):
+        out.append(_mk("votingRights", psc.get("voting_pct_direct")))
+    if psc.get("appoint_board"):
+        out.append(_mk("appointmentOfBoard"))
+    if psc.get("sig_influence_company"):
+        out.append(_mk(
+            "otherInfluenceOrControl",
+            details="Significant influence or control over the company/LLP (CAMA condition 4)",
+        ))
+    if psc.get("sig_influence_trust_firm"):
+        out.append(_mk(
+            "otherInfluenceOrControl",
+            details="Significant influence or control over a trust or firm (CAMA condition 5)",
+        ))
+    if not out:
+        out.append({
+            "type": "unknownInterest",
+            "directOrIndirect": "unknown",
+            "beneficialOwnershipOrControl": boc,
+        })
+    return out
+
+
+def _cac_merge_interests(lists: list[list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    """Combine interests from several PSC rows for the same (subject, owner):
+    dedupe by (type, details), keeping the variant with the largest share."""
+    best: dict[tuple[str, str | None], dict[str, Any]] = {}
+    order: list[tuple[str, str | None]] = []
+    for lst in lists:
+        for i in lst:
+            key = (i["type"], i.get("details"))
+            if key not in best:
+                best[key] = i
+                order.append(key)
+            else:
+                new_s = i.get("share", {}).get("exact")
+                old_s = best[key].get("share", {}).get("exact")
+                if new_s is not None and (old_s is None or new_s > old_s):
+                    best[key] = i
+    return [best[k] for k in order]
+
+
+def map_cac_nigeria(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map a CacNigeriaAdapter bundle to BODS v0.4 statements.
+
+    Yields one entityStatement for the Nigerian company, and per beneficial
+    owner (person / entity / arrangement / unknown) a person- or
+    entityStatement plus an ownership-or-control relationshipStatement. Owners
+    are deduped by canonical name so a shared owner (e.g. Dangote Industries)
+    reuses one statement. The five CAMA PSC conditions map to BODS interest
+    types (see ``_cac_interests``).
+    """
+    if not bundle or bundle.get("is_stub"):
+        return
+
+    record: dict[str, Any] = bundle.get("record") or {}
+    rc: str = str(record.get("rc") or "")
+    name: str = (record.get("company") or "").strip()
+    if not name or not rc:
+        return
+
+    source_url = "https://bor.cac.gov.ng"
+    cac_id = {
+        "id": rc,
+        "scheme": "NG-CAC",
+        "schemeName": "Nigeria Corporate Affairs Commission",
+    }
+
+    # ── 1. Subject company entity statement ───────────────────────────────
+    subject_stmt = make_entity_statement(
+        source_id="cac_nigeria",
+        local_id=rc,
+        name=name,
+        jurisdiction=("Nigeria", "NG"),
+        identifiers=[cac_id],
+        source_url=source_url,
+    )
+    yield subject_stmt
+    subject_id: str = subject_stmt["statementId"]
+
+    # ── 2. Group PSC rows by canonical owner, emit owners + relationships ──
+    groups: dict[str, dict[str, Any]] = {}
+    for psc in record.get("pscs") or []:
+        owner = (psc.get("owner_name") or "").strip()
+        if not owner:
+            continue
+        kind = psc.get("owner_kind") or "entity"
+        g = groups.setdefault(owner, {"kind": kind, "psc": psc, "ilists": []})
+        g["ilists"].append(_cac_interests(psc, boc=(kind == "person")))
+
+    emitted: set[str] = set()
+    for owner, g in groups.items():
+        kind = g["kind"]
+        psc = g["psc"]
+        owner_rc = psc.get("owner_rc") or None
+        juris = psc.get("owner_jurisdiction") or None
+
+        if kind == "person":
+            local_id = f"person:{owner}"
+            nationalities = []
+            nat = psc.get("nationality") or ""
+            co = _country_obj(nat) if nat else None
+            if co:
+                nationalities = [co]
+            if local_id not in emitted:
+                yield make_person_statement(
+                    source_id="cac_nigeria",
+                    local_id=local_id,
+                    full_name=owner,
+                    nationalities=nationalities,
+                    source_url=source_url,
+                )
+                emitted.add(local_id)
+            ip_id = _stable_id("cac_nigeria", "person", local_id)
+        else:
+            entity_type = {
+                "arrangement": "arrangement",
+                "unknown": "unknownEntity",
+            }.get(kind, "registeredEntity")
+            local_id = f"entity:{owner_rc or owner}"
+            idents = []
+            if owner_rc:
+                idents = [{
+                    "id": str(owner_rc),
+                    "scheme": "NG-CAC",
+                    "schemeName": "Nigeria Corporate Affairs Commission",
+                }]
+            if local_id not in emitted:
+                yield make_entity_statement(
+                    source_id="cac_nigeria",
+                    local_id=local_id,
+                    name=owner,
+                    jurisdiction=("Nigeria", "NG") if juris == "NG" else None,
+                    identifiers=idents,
+                    entity_type=entity_type,
+                    source_url=source_url,
+                )
+                emitted.add(local_id)
+            ip_id = _stable_id("cac_nigeria", "entity", local_id)
+
+        yield make_relationship_statement(
+            source_id="cac_nigeria",
+            local_id=f"{rc}:{owner}",
+            subject_statement_id=subject_id,
+            interested_party_statement_id=ip_id,
+            interested_party_type="person" if kind == "person" else "entity",
+            interests=_cac_merge_interests(g["ilists"]),
+            source_url=source_url,
+        )
 
 
 # ----------------------------------------------------------------------
