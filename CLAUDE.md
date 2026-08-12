@@ -618,6 +618,7 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | Canada | corporations_canada | RA000072 |
 | Denmark | cvr_denmark | RA000170 |
 | Croatia | sudreg_croatia | RA000156 |
+| Nigeria | cac_nigeria | RA000469 — Corporate Affairs Commission (verified live 2026-08-12; Africa's first public BO register). Offline curated example set of 10 LEI-anchored companies (`data/cac_nigeria_psc.json`); a live adapter is deferred pending CAC / Oasis Management engagement. LEI-keyed dispatch (not an RA deriver); asserts only the CAC-published RC number (`ng_cac_rc`), not the derived LEI. |
 
 ---
 
