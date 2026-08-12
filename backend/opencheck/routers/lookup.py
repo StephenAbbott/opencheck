@@ -860,6 +860,28 @@ def _bh_eiti_soe(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_cac_nigeria(r: dict, ctx: _LookupCtx) -> SourceHit:
+    record = r.get("record") or {}
+    pscs = record.get("pscs") or []
+    n = len(pscs)
+    parts = [f"{n} person{'s' if n != 1 else ''} with significant control"]
+    parts.append("Nigeria CAC public register")
+    # Corroboration rule: the CAC BOR publishes the RC number, NOT the LEI
+    # (OpenCheck derives the LEI via GLEIF at build time). Assert only the RC —
+    # the identifier the register itself publishes — never `lei`.
+    identifiers: dict[str, str] = {}
+    rc = (r.get("identifiers") or {}).get("ng_cac_rc") or record.get("rc")
+    if rc:
+        identifiers["ng_cac_rc"] = str(rc)
+    return _hit(
+        "cac_nigeria", ctx.lei,
+        name=record.get("company") or ctx.legal_name or ctx.lei,
+        summary=" · ".join(parts),
+        identifiers=identifiers,
+        raw=r,
+    )
+
+
 def _bh_ted_eu(r: dict, ctx: _LookupCtx) -> SourceHit:
     total = int(r.get("total_notice_count") or 0)
     wins = int(r.get("confirmed_wins") or 0)
@@ -1104,6 +1126,13 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
     soe_adapter = REGISTRY.get("eiti_soe")
     if soe_adapter is not None and hasattr(soe_adapter, "fetch_by_lei") and _want("eiti_soe"):
         tasks.append(("eiti_soe", soe_adapter.fetch_by_lei(ctx.lei)))
+    # Nigeria CAC — LEI-keyed offline match against the committed PSC index
+    # (curated example set; the CAC's official API is government-only). A hit
+    # means the LEI is in the curated set; its BODS carries the CAC-published
+    # beneficial ownership.
+    cac_adapter = REGISTRY.get("cac_nigeria")
+    if cac_adapter is not None and hasattr(cac_adapter, "fetch_by_lei") and _want("cac_nigeria"):
+        tasks.append(("cac_nigeria", cac_adapter.fetch_by_lei(ctx.lei)))
     # TED keys on the GLEIF anchor's identifiers (LEI + registeredAs + derived
     # national numbers) — eForms BT-501 values are national registration
     # numbers today (LEI fill rate is zero as of 2026-08), so this matches any
@@ -1140,6 +1169,8 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
         return _bh_eiti(result, ctx) if result.get("identification") else None
     if source_id == "eiti_soe":
         return _bh_eiti_soe(result, ctx) if result.get("is_state_owned") else None
+    if source_id == "cac_nigeria":
+        return _bh_cac_nigeria(result, ctx) if result.get("record") else None
     if source_id == "wikirate":
         return _bh_wikirate(result, ctx) if result.get("card_id") else None
     if source_id == "ted_eu":

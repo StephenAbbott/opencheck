@@ -1,0 +1,57 @@
+{
+  "note": "CAC BOR (Nigeria Corporate Affairs Commission) Persons with Significant Control records, harvested via the public search API at borapp.cac.gov.ng on 2026-08-12. governingLaw=CAMA and register=Corporate Affairs Commission for all records. Percentage/flag anomalies are preserved verbatim from source (see mapping notes).",
+  "raCode": "RA000469",
+  "source": "https://bor.cac.gov.ng",
+  "harvested": "2026-08-12",
+  "conditionsLegend": {
+    "c1_shares": "holds shares or interest (>=5%)",
+    "c2_voting": "holds voting rights (>=5%)",
+    "c3_appoint": "right to appoint/remove majority of directors",
+    "c4_sigInflCo": "otherwise significant influence or control over company/LLP",
+    "c5_sigInflTrustFirm": "significant influence or control over a trust or firm"
+  },
+  "entities": [
+    {"company":"DANGOTE CEMENT PLC","rc":"208767","lei":"029200697A0R1BH0A835","leiStatus":"ISSUED","status":"ACTIVE","pscs":[
+      {"ownerNameRaw":"LTD DANGOTE INDUSTRIES","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"Nigerian","dob":null,"notified":"2023-05-07","c1_shares":true,"shrDir":96.6,"shrInd":0,"c2_voting":false,"voteDir":null,"voteInd":null,"c3_appoint":true,"c4_sigInflCo":false,"c5_sigInflTrustFirm":false}
+    ]},
+    {"company":"GUINNESS NIGERIA PLC.","rc":"771","lei":"0292002192H7C7H2H732","leiStatus":"ISSUED","status":"ACTIVE","pscs":[
+      {"ownerNameRaw":"LIMITED ATALANTAF","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"","dob":null,"notified":"2023-01-10","c1_shares":true,"shrDir":null,"shrInd":0,"c2_voting":false,"voteDir":null,"voteInd":null,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":false},
+      {"ownerNameRaw":"","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"","dob":null,"notified":"2023-01-10","c1_shares":true,"shrDir":null,"shrInd":0,"c2_voting":false,"voteDir":null,"voteInd":null,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":false},
+      {"ownerNameRaw":"OVERSEAS LIMITED GUINNNESS","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"","dob":null,"notified":"2023-01-10","c1_shares":true,"shrDir":null,"shrInd":0,"c2_voting":false,"voteDir":null,"voteInd":null,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":false}
+    ]},
+    {"company":"ACCESS HOLDINGS PLC","rc":"1755118","lei":"0292005048H3P6V8I753","leiStatus":"ISSUED","status":"ACTIVE","pscs":[
+      {"ownerNameRaw":"STANBIC NOMINEES NIGERIA LIMITED STANBIC NOMINEES NIGERIA LIMITED 375064","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"NIGERIA","dob":"1983-12-31T23:00:00.000+00:00","notified":"2023-06-01","c1_shares":true,"shrDir":0,"shrInd":0,"c2_voting":true,"voteDir":0,"voteInd":0,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":false},
+      {"ownerNameRaw":"UNITED ALLIANCE COMPANY OF NIGERIA LIMITED [409034] UNITED ALLIANCE COMPANY OF NIGERIA LIMITED [409034]","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"NIGERIA","dob":"1983-12-31T23:00:00.000+00:00","notified":"2023-06-01","c1_shares":true,"shrDir":0,"shrInd":0,"c2_voting":true,"voteDir":0,"voteInd":0,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":false}
+    ]},
+    {"company":"TRANSCORP HOTELS PLC","rc":"248514","lei":"0292007167E0P6YH4A58","leiStatus":"ISSUED","status":"ACTIVE","pscs":[
+      {"ownerNameRaw":"INCORPORATED MINISTRY OF FINANCE","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"","dob":null,"notified":"2022-04-26","c1_shares":true,"shrDir":null,"shrInd":0,"c2_voting":false,"voteDir":null,"voteInd":null,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":false}
+    ]},
+    {"company":"ZENITH BANK PLC","rc":"150224","lei":"029200268F8M5YI5I629","leiStatus":"ISSUED","status":"ACTIVE","pscs":[
+      {"ownerNameRaw":"OVIA JIM","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"","dob":null,"notified":"2023-05-10","c1_shares":true,"shrDir":19.3,"shrInd":0,"c2_voting":false,"voteDir":null,"voteInd":null,"c3_appoint":true,"c4_sigInflCo":false,"c5_sigInflTrustFirm":false},
+      {"ownerNameRaw":"","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"","dob":null,"notified":"2023-05-10","c1_shares":true,"shrDir":null,"shrInd":0,"c2_voting":false,"voteDir":null,"voteInd":null,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":false},
+      {"ownerNameRaw":"","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"","dob":null,"notified":"2023-05-10","c1_shares":true,"shrDir":null,"shrInd":0,"c2_voting":false,"voteDir":null,"voteInd":null,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":false},
+      {"ownerNameRaw":"","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"","dob":null,"notified":"2023-05-10","c1_shares":true,"shrDir":null,"shrInd":0,"c2_voting":false,"voteDir":null,"voteInd":null,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":false}
+    ]},
+    {"company":"MTN NIGERIA COMMUNICATIONS PLC","rc":"395010","lei":"0292003626J3K6UG9D04","leiStatus":"ISSUED","status":"ACTIVE","pscs":[
+      {"ownerNameRaw":"Paul Deon Norman","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"SOUTH AFRICA","dob":"1978-08-01T23:00:00.000+00:00","notified":"2023-06-21","c1_shares":true,"shrDir":73,"shrInd":0,"c2_voting":true,"voteDir":73,"voteInd":0,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":false}
+    ]},
+    {"company":"BUA CEMENT PLC","rc":"1193879","lei":"0292005368B9N9B7I135","leiStatus":"ISSUED","status":"ACTIVE","pscs":[
+      {"ownerNameRaw":"OTHERS","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"","dob":null,"notified":"2022-08-04","c1_shares":true,"shrDir":null,"shrInd":0,"c2_voting":true,"voteDir":null,"voteInd":null,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":false},
+      {"ownerNameRaw":"","corpName":"BUA INDUSTRIES LIMITED","isCorpFlag":true,"ownerRc":"","nationality":"","dob":null,"notified":"2022-08-04","c1_shares":true,"shrDir":null,"shrInd":0,"c2_voting":true,"voteDir":null,"voteInd":null,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":false},
+      {"ownerNameRaw":"ABDUL SAMAD RABIU","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"","dob":null,"notified":"2022-08-04","c1_shares":true,"shrDir":0,"shrInd":0,"c2_voting":true,"voteDir":0,"voteInd":0,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":false},
+      {"ownerNameRaw":"ABDUL SAMAD RABIU","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"","dob":null,"notified":"2021-12-14","c1_shares":true,"shrDir":90,"shrInd":0,"c2_voting":true,"voteDir":90,"voteInd":0,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":true}
+    ]},
+    {"company":"NESTLE NIGERIA PLC","rc":"6540","lei":"0292002173F4KD5E5347","leiStatus":"ISSUED","status":"ACTIVE","pscs":[
+      {"ownerNameRaw":"BOLA-SADIPE FEMI","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"NIGERIA","dob":null,"notified":"2022-09-08","c1_shares":true,"shrDir":50,"shrInd":0,"c2_voting":true,"voteDir":0,"voteInd":0,"c3_appoint":true,"c4_sigInflCo":false,"c5_sigInflTrustFirm":false},
+      {"ownerNameRaw":"TAHIR BASHIR","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"NIGERIA","dob":null,"notified":"2022-09-08","c1_shares":true,"shrDir":50,"shrInd":0,"c2_voting":true,"voteDir":0,"voteInd":0,"c3_appoint":true,"c4_sigInflCo":false,"c5_sigInflTrustFirm":false}
+    ]},
+    {"company":"DANGOTE SUGAR REFINERY PLC","rc":"613748","lei":"029200564G7N0Y86H603","leiStatus":"LAPSED","status":"ACTIVE","pscs":[
+      {"ownerNameRaw":"","corpName":"DANGOTE INDUSTRIES LIMITED","isCorpFlag":true,"ownerRc":"","nationality":"","dob":null,"notified":"2023-07-29","c1_shares":true,"shrDir":66.9,"shrInd":0,"c2_voting":true,"voteDir":66.87,"voteInd":0,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":true},
+      {"ownerNameRaw":"DANGOTE ALIKO","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"","dob":null,"notified":"2023-07-29","c1_shares":true,"shrDir":5.4,"shrInd":0,"c2_voting":true,"voteDir":5.38,"voteInd":null,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":true}
+    ]},
+    {"company":"PRESCO PLC","rc":"174370","lei":"0292006198H4N0UI7E51","leiStatus":"LAPSED","status":"ACTIVE","pscs":[
+      {"ownerNameRaw":"ZPC/SIPML RSA FUND II - MAIN A/C","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"NIGERIA","dob":null,"notified":"2022-08-29","c1_shares":false,"shrDir":null,"shrInd":0,"c2_voting":false,"voteDir":null,"voteInd":0,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":true},
+      {"ownerNameRaw":"SIAT SA","corpName":"","isCorpFlag":false,"ownerRc":"","nationality":"NIGERIA","dob":null,"notified":"2022-08-29","c1_shares":false,"shrDir":null,"shrInd":0,"c2_voting":false,"voteDir":null,"voteInd":0,"c3_appoint":true,"c4_sigInflCo":true,"c5_sigInflTrustFirm":true}
+    ]}
+  ]
+}
