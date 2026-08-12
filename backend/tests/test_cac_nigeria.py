@@ -1,4 +1,4 @@
-"""Tests for the Nigeria CAC beneficial-ownership adapter + mapper.
+"""Tests for the Nigeria CAC beneficial ownership adapter + mapper.
 
 Two layers:
 * Fixture-driven unit tests (no committed artifact) for the adapter contract

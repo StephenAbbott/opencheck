@@ -1,8 +1,8 @@
-"""Nigeria CAC beneficial-ownership register adapter — CDD category.
+"""Nigeria CAC beneficial ownership register adapter — CDD category.
 
 Serves beneficial ownership (Persons with Significant Control) data from the
 Nigerian **Corporate Affairs Commission** public register at
-``bor.cac.gov.ng`` — Africa's first public beneficial-ownership register (CAC;
+``bor.cac.gov.ng`` — Africa's first public beneficial ownership register (CAC;
 Open Ownership partner country; BODS-relevant). GLEIF Registration Authority
 code ``RA000469``.
 
@@ -90,7 +90,7 @@ def _reset_index_for_tests() -> None:
 
 
 class CacNigeriaAdapter(SourceAdapter):
-    """Nigeria CAC beneficial-ownership register adapter — CDD category."""
+    """Nigeria CAC beneficial ownership register adapter — CDD category."""
 
     id = "cac_nigeria"
 
@@ -107,7 +107,7 @@ class CacNigeriaAdapter(SourceAdapter):
             description=(
                 "Beneficial ownership (Persons with Significant Control) from "
                 "Nigeria's Corporate Affairs Commission public register — "
-                "Africa's first public beneficial-ownership register. Curated "
+                "Africa's first public beneficial ownership register. Curated "
                 "example set: 10 LEI-anchored Nigerian companies harvested from "
                 "the CAC's public search register and mapped to BODS v0.4. Not a "
                 "live feed — the CAC's official API is restricted to Nigerian "

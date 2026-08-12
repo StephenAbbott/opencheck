@@ -2,7 +2,7 @@
 """Build the committed, LEI-keyed CAC Nigeria PSC index.
 
 OpenCheck is anchored end-to-end on the LEI, but the Nigerian Corporate Affairs
-Commission (CAC) beneficial-ownership register (``bor.cac.gov.ng``) is keyed on
+Commission (CAC) beneficial ownership register (``bor.cac.gov.ng``) is keyed on
 the company RC number and publishes **no** LEI. Identity resolution is therefore
 done **once, offline** (like the ``eiti_soe`` adapter):
 
