@@ -2981,7 +2981,7 @@ function ShareCardShowcase() {
           src="/share-card-example.png"
           width={1200}
           height={630}
-          alt="Example shareable summary card for BP P.L.C. showing 3 risk signals: trust or arrangement, non-EU jurisdiction, and three or more ownership layers, with a prompt to visit opencheck.world for details"
+          alt="Example shareable summary card for BP P.L.C. showing 4 risk signals, the first three named: non-EU jurisdiction, three or more ownership layers, and complex corporate structure (AMLA), with a prompt to visit opencheck.world for details"
           className="w-full max-w-[560px] h-auto rounded-oo border border-oo-rule shadow-oo-card"
           loading="lazy"
         />
