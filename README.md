@@ -16,13 +16,13 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 96** — OpenAleph text-based percolation: the upstream feature OpenCheck asked for, wired into the lookup
+**Latest: Phase 97** — OpenAleph graph screening: every related party checked in two percolation calls
+
+Phase 2 of the percolation build-out — the headline use case from OpenCheck's upstream feature request [openaleph/openaleph#105](https://github.com/openaleph/openaleph/issues/105). After the ownership graph is assembled, every person and entity in it is screened against the OpenAleph instance in just two `POST /api/2/beta/percolate` calls: persons broadly (measured high-precision live), entities scoped to watchlist topics (unfiltered entity percolation drowns in registry-record noise). Each hit's `surface_forms` attribute the match back to the exact graph node bearing that name; the shared cross_check gates and topic ladder then classify it into `RELATED_SANCTIONED` / `RELATED_DEBARMENT` / `RELATED_SANCTIONS_LINKED` / `RELATED_PEP` signals — reaching national sanctions lists, disqualified-directors registers and leak archives the other screening passes don't cover — while sub-signal matches surface in a new informational "Archive matches — OpenAleph" section. A screen that could not run records itself as degraded rather than passing for clean. Commit `c1742ca`.
+
+**Previous: Phase 96** — OpenAleph text-based percolation: the upstream feature OpenCheck asked for, wired into the lookup
 
 OpenCheck's upstream feature request ([openaleph/openaleph#105](https://github.com/openaleph/openaleph/issues/105)) shipped in OpenAleph [5.3.1](https://github.com/openaleph/openaleph/releases/tag/5.3.1) as `POST /api/2/beta/percolate` — POST arbitrary text, get back the stored entities whose name-percolator queries fire on it, with per-hit `surface_forms` telling you exactly which input phrase matched. Phase 1 of the build-out adds `percolate_text()` to the OpenAleph adapter and a new percolation-based subject-name strategy in the lookup cascade, tried after the FtM `/match` step and before the Lucene `q=` fallback: the legal name travels as raw JSON body text — never through Aleph's query_string parser — so the reserved-syntax bug class (nested quotes, `A/S`, dangling `+`) structurally cannot occur on this path, while the bears-the-name gate and the keyless `q=` fallback both stay. Groundwork for Phase 2, screening every related party in the ownership graph against the OpenAleph instance in a single call. Commit `54e23ea`.
-
-**Previous: Phase 95** — Nigeria CAC: the first African beneficial ownership register
-
-A new `cac_nigeria` source brings the Corporate Affairs Commission Persons with Significant Control register ([bor.cac.gov.ng](https://bor.cac.gov.ng)) — Africa's first public beneficial ownership register — into the lookup as a source card for 10 example companies. The CAC's official API is restricted to Nigerian government agencies, so rather than scrape the site's private API at request time, a curated set of 10 LEI-anchored companies is harvested once and committed as an offline LEI-keyed index; `map_cac_nigeria` maps the five statutory CAMA PSC conditions to BODS v0.4 (with `beneficialOwnershipOrControl` asserted only for natural persons, and only the CAC-published RC number — not the derived LEI — asserted, per the corroboration rule). A live adapter is deferred pending engagement with the CAC and Oasis Management; the vendored source is the scaffold it slots into. GLEIF RA code `RA000469`. Not added to the homepage examples. PR [#104](https://github.com/StephenAbbott/opencheck/pull/104).
 
 → [Full development history](docs/status.md)
 
