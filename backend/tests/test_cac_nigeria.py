@@ -184,6 +184,10 @@ async def test_hit_builder_asserts_rc_not_lei(adapter):
     assert hit.identifiers == {"ng_cac_rc": "111111"}
     assert "lei" not in hit.identifiers  # corroboration rule
     assert hit.is_stub is False
+    # Subtitle counts PSC filings (register rows), not persons/owners: declared
+    # parties may be companies or be listed by control rather than ownership.
+    assert "PSC filing" in hit.summary
+    assert "with significant control" not in hit.summary
 
 
 async def test_build_result_hit_gates_on_record(adapter):

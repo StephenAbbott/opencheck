@@ -864,7 +864,12 @@ def _bh_cac_nigeria(r: dict, ctx: _LookupCtx) -> SourceHit:
     record = r.get("record") or {}
     pscs = record.get("pscs") or []
     n = len(pscs)
-    parts = [f"{n} person{'s' if n != 1 else ''} with significant control"]
+    # Count of PSC declaration rows in the register, not distinct owners: the
+    # declared parties may be people or companies, and may be listed by virtue
+    # of control rather than ownership, so "filings" is the accurate framing
+    # (matches the CAC's own `numberOfPsc` field). The BODS diagram may show
+    # fewer nodes because map_cac_nigeria dedupes owners by canonical name.
+    parts = [f"{n} PSC filing{'s' if n != 1 else ''}"]
     parts.append("Nigeria CAC public register")
     # Corroboration rule: the CAC BOR publishes the RC number, NOT the LEI
     # (OpenCheck derives the LEI via GLEIF at build time). Assert only the RC —
