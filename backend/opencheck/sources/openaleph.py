@@ -24,6 +24,16 @@ Live endpoints used:
   before the free-text name fallback. Requires an API key on the flagship
   instance — the edge returns 405 for anonymous POSTs to this path even
   though the app route allows them.
+* ``POST /api/2/beta/percolate`` — text-based percolation (OpenAleph 5.3.1;
+  the endpoint requested in openaleph/openaleph#105 and shipped via PRs
+  #107/#120): POST arbitrary text, get back the stored entities whose
+  percolator queries — ``match_phrase`` clauses over the FtM names group,
+  slop 2 — fire against it. The text travels as a JSON body, **never**
+  through the Lucene query_string parser, so the reserved-syntax bug class
+  (quotes, ``A/S``, dangling ``+``) cannot occur on this path. Same edge
+  behaviour as ``/match``: anonymous POSTs 405, an API key is required
+  (verified live 2026-08-13). Beta-namespaced upstream — the path lives in
+  ``_PERCOLATE_PATH`` so promotion to ``/api/2/percolate`` is one line.
 
 LEI-anchored lookup strategy (used in /lookup flow):
   1. ``fetch_by_lei(lei)``  — filter on ``leiCode`` (FtM identifier type, exact-match).
@@ -60,6 +70,15 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _API_BASE = "https://search.openaleph.org/api/2"
 _CACHE_NS = "openaleph"
+
+# Text-based percolation (OpenAleph 5.3.1). Beta-namespaced upstream (PR
+# #120); kept as a single constant so promotion to the stable path is a
+# one-line change here.
+_PERCOLATE_PATH = "/beta/percolate"
+
+# Server-side body cap (ALEPH_PERCOLATE_MAX_TEXT, default 100k chars).
+# Oversized text 400s — truncate client-side instead of erroring.
+_PERCOLATE_MAX_TEXT = 100_000
 
 # How many collections to surface in the mentions breakdown (issue #23).
 _MENTION_FACET_SIZE = 10
@@ -418,6 +437,134 @@ class OpenAlephAdapter(SourceAdapter):
             else:
                 other_hits.append(hit)
         return corroborated_hits + other_hits
+
+    # ------------------------------------------------------------------
+    # Text-based percolation (OpenAleph 5.3.1 — POST /api/2/beta/percolate)
+    # ------------------------------------------------------------------
+
+    async def percolate_text(
+        self,
+        text: str,
+        *,
+        schema: str | None = None,
+        topics: tuple[str, ...] = (),
+        limit: int = 25,
+    ) -> list[dict[str, Any]] | None:
+        """Return stored entities whose percolator queries fire on ``text``.
+
+        Wraps the 5.3.1 text-based percolation endpoint (the feature
+        requested in openaleph/openaleph#105): the caller supplies arbitrary
+        text and gets back the FtM entities whose *names* appear in it.
+        Each result item carries ``percolator_match`` (canonical ``name``
+        vs ``other_name`` alias tier), ``surface_forms`` (the exact phrase
+        of ours that fired — ``highlight=true`` is always sent) and
+        ``score``, alongside the usual properties + collection block.
+
+        The distinction between the two empty-ish returns is deliberate
+        and callers must preserve it:
+
+        * ``None`` — the screen **could not run**: no API key configured
+          (the flagship edge 405s anonymous POSTs, verified live
+          2026-08-13), a pre-5.3.1 instance (404), or any HTTP/timeout
+          failure. Never let this pass for a clean screen.
+        * ``[]`` — the screen ran and nothing matched.
+
+        Filters: ``schema`` → ``filter:schema``; each entry of ``topics``
+        → a repeated ``filter:properties.topics`` param (OR semantics).
+        Percolation latency scales with the filtered candidate set
+        (~1.8 s unfiltered on the 2.1M-entity flagship vs ~10 ms
+        topic-scoped) — callers should always pass a selective filter.
+
+        Live finding (2026-08-13) that shapes how callers should filter:
+        unfiltered/LegalEntity percolation over well-known company names
+        drowns in near-duplicate registry records (Shell + BP → 43 hits,
+        the top 15 all Companies House PSC / CorpWatch copies), while
+        ``schema="Person"`` is high-precision (Igor Sechin → 8 watchlist
+        records; non-notable executives → nothing).
+        """
+        settings = get_settings()
+        if not settings.openaleph_api_key:
+            return None
+        text = (text or "").strip()
+        if not text:
+            return []
+        # Server rejects oversized bodies with 400 — truncate instead.
+        text = text[:_PERCOLATE_MAX_TEXT]
+
+        # Cache on the text AND every request parameter — a percolate
+        # response is only replayable for the identical filter set (the
+        # mentions cache-key bug taught this: limit was omitted and a
+        # limit=5 payload answered a limit=50 request).
+        filter_sig = f"{schema or ''}|{'|'.join(topics)}|{limit}"
+        cache_key = f"{_CACHE_NS}/percolate/{_slug(text)}/{_slug(filter_sig)}"
+        if not self.info.live_available and not self._cache.has(cache_key):
+            return None
+
+        cached = self._cache.get_payload(cache_key)
+        if cached is not None:
+            payload = cached[0]
+        else:
+            # Build the query string by hand like the GET paths above —
+            # the ``filter:`` prefix must reach Aleph verbatim.
+            query = f"limit={limit}&highlight=true"
+            if schema:
+                query += f"&filter:schema={quote(schema)}"
+            for topic in topics:
+                query += f"&filter:properties.topics={quote(topic)}"
+            headers = {
+                "User-Agent": _OA_USER_AGENT,
+                "Authorization": f"ApiKey {settings.openaleph_api_key}",
+            }
+            try:
+                async with build_client() as client:
+                    response = await client.post(
+                        f"{_API_BASE}{_PERCOLATE_PATH}?{query}",
+                        json={"text": text},
+                        headers=headers,
+                    )
+                    if not response.is_success:
+                        return None
+                    payload = response.json()
+            except Exception:  # noqa: BLE001
+                return None
+            self._cache.put(cache_key, payload)
+
+        return list(payload.get("results") or [])
+
+    async def fetch_by_name_percolate(self, legal_name: str) -> list[SourceHit]:
+        """Resolve the subject by name via percolation instead of Lucene.
+
+        Tried in the lookup cascade after the FtM ``/match`` step and
+        before the free-text ``q=`` fallback. The legal name is sent as
+        raw JSON body text — no query parser — so names that break (or
+        used to break) Aleph's query_string parser (Rosneft's nested
+        quotes, Danish ``A/S``, LVMH's dangling ``+``) go through
+        verbatim, and only entities whose own stored names fire on the
+        text come back.
+
+        **The ``_bears_name`` gate stays.** Percolation is necessary but
+        not sufficient for a subject-name match: an entity named just
+        "Shell" fires on the text "Shell Midstream Partners", and slop 2
+        admits inserted tokens. A hit is kept only when one of its own
+        FtM names normalises equal to the subject's legal name — the
+        same honesty test the ``q=`` fallback applies (issue #21).
+
+        Key-gated like ``/match``: without ``OPENALEPH_API_KEY`` (or on
+        any percolation failure) this returns ``[]`` and the cascade
+        falls through to the ``q=`` fallback, so keyless deployments
+        behave exactly as before.
+        """
+        results = await self.percolate_text(
+            legal_name, schema="LegalEntity", limit=5
+        )
+        if not results:
+            return []
+        wanted = _normalise_name(legal_name)
+        return [
+            self._hit(item, SearchKind.ENTITY)
+            for item in results
+            if _bears_name(item, wanted)
+        ]
 
     # ------------------------------------------------------------------
     # Mentions enrichment (OpenAleph 5.3 — reverse percolation)

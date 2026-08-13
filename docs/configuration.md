@@ -24,7 +24,7 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 | `CORPORATIONS_CANADA_API_KEY` | API key for the ISED Corporations Canada API Gateway. |
 | `FIRMENBUCH_API_KEY` | Free API key for the Austrian Firmenbuch (Justiz Online) SOAP service. |
 | `OPENSANCTIONS_API_KEY` | OpenSanctions API key (also unlocks the EveryPolitician PEPs dataset). |
-| `OPENALEPH_API_KEY` | OpenAleph API key (optional — unlocks restricted collections **and enables the FtM `POST /api/2/match` step** in the lookup cascade: the flagship instance rejects anonymous POSTs to that path, so without the key the step is skipped and only the free-text name fallback runs). Set on Render as well as in `.env`. |
+| `OPENALEPH_API_KEY` | OpenAleph API key (optional — unlocks restricted collections **and enables the two POST steps** in the lookup cascade: the FtM `POST /api/2/match` step and the text-based percolation name step (`POST /api/2/beta/percolate`, OpenAleph 5.3.1). The flagship instance rejects anonymous POSTs to both paths, so without the key both steps are skipped and only the free-text name fallback runs). Set on Render as well as in `.env`. |
 | `WIKIRATE_API_KEY` | Wikirate REST API key (effectively required for the `wikirate` ESG source — anonymous server-side requests are blocked by Wikirate's Cloudflare bot protection; the adapter skips silently without it). Sent as the `X-API-Key` header; rate limit 60 req/min. Set on Render as well as in `.env`. |
 | `WIKIDATA_SPARQL_ENDPOINT` | Override the default Wikidata Query Service endpoint. |
 | `OPENCHECK_AMLA_EQUIVALENT_JURISDICTIONS` | Comma-separated ISO codes added to the EU+EEA set used by `NON_EU_JURISDICTION` (e.g. `GB,CH`). |
