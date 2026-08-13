@@ -54,6 +54,26 @@ class TestNormaliseCompanyName:
         # "Group" is a real name token, not a legal-form suffix.
         assert _normalise_company_name("Foo Group") == "FOO GROUP"
 
+    def test_strips_dangling_and_after_legal_suffix(self) -> None:
+        # Regression: "Eli Lilly and Company" produced no SEC EDGAR hit
+        # because it normalised to "ELI LILLY AND" (the legal-form strip
+        # removes "COMPANY" but left "AND" dangling), which never matches
+        # company_tickers.json's "ELI LILLY & Co" -> "ELI LILLY" and also
+        # broke the browse-edgar prefix search fallback.
+        assert _normalise_company_name("Eli Lilly and Company") == "ELI LILLY"
+        assert _normalise_company_name("ELI LILLY & Co") == "ELI LILLY"
+        assert (
+            _normalise_company_name("Eli Lilly and Company")
+            == _normalise_company_name("ELI LILLY & Co")
+        )
+
+    def test_does_not_overstrip_mid_name_conjunction(self) -> None:
+        # "AND" is only a dangling connector when it ends up trailing after
+        # a legal-form suffix is stripped — a real mid-name conjunction like
+        # "Barnes and Noble" must be preserved.
+        assert _normalise_company_name("Barnes and Noble") == "BARNES AND NOBLE"
+        assert _normalise_company_name("Barnes and Noble, Inc.") == "BARNES AND NOBLE"
+
 
 def _adapter_with_tickers(monkeypatch, tmp_path) -> SecEdgarAdapter:
     from opencheck.config import get_settings
@@ -143,6 +163,126 @@ async def test_resolve_cik_fallback_picks_exact_normalised_match(monkeypatch, tm
 async def test_search_returns_empty_for_person(monkeypatch, tmp_path) -> None:
     adapter = _adapter_with_tickers(monkeypatch, tmp_path)
     assert await adapter.search("anything", SearchKind.PERSON) == []
+
+
+# ---------------------------------------------------------------------------
+# _get_text retry/backoff on transient EDGAR errors
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_text_retries_transient_503_then_succeeds(monkeypatch, tmp_path) -> None:
+    """A single transient 503 (as the fragile browse-edgar cgi-bin search
+    endpoint occasionally returns) is retried and does not surface as an
+    error to the caller."""
+    from opencheck.config import get_settings
+
+    adapter = _adapter_with_tickers(monkeypatch, tmp_path)
+
+    resp_503 = MagicMock(status_code=503, headers={})
+    resp_503.raise_for_status = MagicMock(
+        side_effect=Exception("Server error '503 Service Unavailable'")
+    )
+    resp_ok = MagicMock(status_code=200, text="<feed></feed>")
+    resp_ok.raise_for_status = MagicMock()
+
+    client = AsyncMock()
+    client.__aenter__.return_value = client
+    client.__aexit__.return_value = None
+    client.get = AsyncMock(side_effect=[resp_503, resp_ok])
+
+    sleeps: list[float] = []
+
+    async def _fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    monkeypatch.setattr("opencheck.sources.sec_edgar.asyncio.sleep", _fake_sleep)
+
+    with patch("opencheck.sources.sec_edgar.build_client", return_value=client):
+        text = await adapter._get_text(
+            "https://www.sec.gov/cgi-bin/browse-edgar?company=ELI+LILLY+AND",
+            cache_key="test/retry-503",
+        )
+
+    assert text == "<feed></feed>"
+    assert client.get.call_count == 2
+    assert len(sleeps) == 1
+    get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_get_text_raises_after_exhausting_retries(monkeypatch, tmp_path) -> None:
+    """A persistent 503 (a genuine EDGAR outage, not a one-off blip) still
+    surfaces as an error once retries are exhausted, rather than retrying
+    forever or silently swallowing the failure."""
+    from opencheck.config import get_settings
+    from opencheck.sources.sec_edgar import _MAX_RETRIES
+
+    adapter = _adapter_with_tickers(monkeypatch, tmp_path)
+
+    def _resp_503() -> MagicMock:
+        resp = MagicMock(status_code=503, headers={})
+        resp.raise_for_status = MagicMock(
+            side_effect=Exception("Server error '503 Service Unavailable'")
+        )
+        return resp
+
+    client = AsyncMock()
+    client.__aenter__.return_value = client
+    client.__aexit__.return_value = None
+    client.get = AsyncMock(side_effect=[_resp_503() for _ in range(_MAX_RETRIES + 1)])
+
+    async def _fake_sleep(seconds: float) -> None:
+        return None
+
+    monkeypatch.setattr("opencheck.sources.sec_edgar.asyncio.sleep", _fake_sleep)
+
+    with patch("opencheck.sources.sec_edgar.build_client", return_value=client):
+        with pytest.raises(RuntimeError, match="SEC EDGAR request failed"):
+            await adapter._get_text(
+                "https://www.sec.gov/cgi-bin/browse-edgar?company=X",
+                cache_key="test/retry-exhausted",
+            )
+
+    # 1 initial attempt + _MAX_RETRIES retries, no more.
+    assert client.get.call_count == _MAX_RETRIES + 1
+    get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_get_text_honours_retry_after_header(monkeypatch, tmp_path) -> None:
+    """A Retry-After header on a 429 is honoured (capped at
+    _RETRY_BACKOFF_MAX) rather than the default exponential backoff."""
+    from opencheck.config import get_settings
+
+    adapter = _adapter_with_tickers(monkeypatch, tmp_path)
+
+    resp_429 = MagicMock(status_code=429, headers={"Retry-After": "3"})
+    resp_429.raise_for_status = MagicMock(side_effect=Exception("429"))
+    resp_ok = MagicMock(status_code=200, text="ok")
+    resp_ok.raise_for_status = MagicMock()
+
+    client = AsyncMock()
+    client.__aenter__.return_value = client
+    client.__aexit__.return_value = None
+    client.get = AsyncMock(side_effect=[resp_429, resp_ok])
+
+    sleeps: list[float] = []
+
+    async def _fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    monkeypatch.setattr("opencheck.sources.sec_edgar.asyncio.sleep", _fake_sleep)
+
+    with patch("opencheck.sources.sec_edgar.build_client", return_value=client):
+        text = await adapter._get_text(
+            "https://www.sec.gov/cgi-bin/browse-edgar?company=X",
+            cache_key="test/retry-after",
+        )
+
+    assert text == "ok"
+    assert sleeps == [3.0]
+    get_settings.cache_clear()
 
 
 # ---------------------------------------------------------------------------

@@ -28,6 +28,7 @@ Coverage is limited to publicly-traded US companies with shareholders holding
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import re
@@ -74,6 +75,18 @@ _STRUCTURED_FROM = "2024-12-18"
 # without hammering EDGAR on every request.
 _CACHE_TTL_DAYS = 7
 
+# Retry configuration for transient EDGAR errors (429 rate-limiting, 5xx
+# outages — e.g. the 503s the fragile browse-edgar cgi-bin search endpoint
+# occasionally returns). Kept short: a single lookup can make many
+# sequential EDGAR requests (ticker index, per-form-type atom feeds, one
+# primary_doc.xml per filing) inside one ~30s per-source time budget (see
+# routers/lookup.py:_source_budget), so retries must not eat that budget on
+# their own. Mirrors the established retry pattern in sources/kvk.py.
+_MAX_RETRIES = 2
+_RETRY_BACKOFF_BASE = 1.0  # seconds; doubled on each attempt
+_RETRY_BACKOFF_MAX = 8.0  # cap, regardless of Retry-After or backoff
+_RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
+
 # EDGAR citizenship/organisation codes → ISO 3166-1 alpha-2.
 _US_STATES: frozenset[str] = frozenset({
     "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
@@ -102,6 +115,15 @@ _LEGAL_FORM_SUFFIXES: frozenset[str] = frozenset({
     "SE", "AB", "AS", "OYJ", "SPA", "GMBH", "KG", "BV",
 })
 
+# Spelled-out equivalent of "&" left dangling once a trailing legal-form
+# suffix is stripped from names like "Eli Lilly and Company" (GLEIF spells
+# the conjunction out; EDGAR's conformed name uses "&", which the shared
+# punctuation-to-space fold already discards before this point, e.g.
+# "ELI LILLY & Co" -> "ELI LILLY CO" -> "ELI LILLY"). Only stripped when it
+# ends up trailing (see the loop below), so a mid-name conjunction like
+# "Barnes and Noble" is untouched.
+_TRAILING_CONNECTOR_TOKENS: frozenset[str] = frozenset({"AND"})
+
 
 def _normalise_company_name(name: str) -> str:
     """Normalise a company name for cross-source matching.
@@ -116,6 +138,8 @@ def _normalise_company_name(name: str) -> str:
         "THE WALT DISNEY COMPANY" -> "WALT DISNEY"
         "Netflix, Inc."           -> "NETFLIX"
         "Walt Disney Co"          -> "WALT DISNEY"
+        "Eli Lilly and Company"   -> "ELI LILLY"
+        "ELI LILLY & Co"          -> "ELI LILLY"
     """
     # Phase C (rigour adoption): the shared fold pipeline supplies the base
     # form (diacritics, ø/æ/ß folds, Cyrillic/Greek transliteration) so a
@@ -131,7 +155,10 @@ def _normalise_company_name(name: str) -> str:
     tokens = s.split()
     while tokens and tokens[0] == "THE":
         tokens = tokens[1:]
-    while tokens and tokens[-1] in _LEGAL_FORM_SUFFIXES:
+    while tokens and (
+        tokens[-1] in _LEGAL_FORM_SUFFIXES
+        or tokens[-1] in _TRAILING_CONNECTOR_TOKENS
+    ):
         tokens = tokens[:-1]
     return " ".join(tokens)
 
@@ -885,10 +912,14 @@ class SecEdgarAdapter(SourceAdapter):
         (filing-list atom feeds); leave ``None`` for immutable ones (individual
         filing XMLs which never change after submission).
 
+        Transient failures (429 rate-limiting, 5xx outages) are retried with
+        exponential backoff — honouring ``Retry-After`` when EDGAR sends one
+        — up to ``_MAX_RETRIES`` times before giving up.
+
         Returns ``""`` on 404 or for optional resources (individual filing
-        XMLs) that may not exist.  Raises ``RuntimeError`` on 403/429/5xx
-        so callers can propagate the failure rather than silently producing
-        empty results.
+        XMLs) that may not exist.  Raises ``RuntimeError`` on 403, or on
+        429/5xx once retries are exhausted, so callers can propagate the
+        failure rather than silently producing empty results.
         """
         cached = self._cache.get_payload(cache_key, max_age_days=max_age_days)
         if cached is not None:
@@ -896,7 +927,27 @@ class SecEdgarAdapter(SourceAdapter):
 
         try:
             async with build_client() as client:
-                resp = await client.get(url, headers=self._edgar_headers())
+                resp = None
+                delay = _RETRY_BACKOFF_BASE
+                for attempt in range(_MAX_RETRIES + 1):
+                    resp = await client.get(url, headers=self._edgar_headers())
+                    if resp.status_code not in _RETRYABLE_STATUS_CODES:
+                        break
+                    if attempt == _MAX_RETRIES:
+                        # Exhausted retries — fall through and let the
+                        # status-code checks below surface the failure.
+                        break
+                    retry_after = resp.headers.get("Retry-After")
+                    if retry_after is not None:
+                        try:
+                            wait = min(float(retry_after), _RETRY_BACKOFF_MAX)
+                        except ValueError:
+                            wait = delay
+                    else:
+                        wait = min(delay, _RETRY_BACKOFF_MAX)
+                    await asyncio.sleep(wait)
+                    delay *= 2
+
                 if resp.status_code == 404:
                     self._cache.put(cache_key, "")
                     return ""
@@ -906,13 +957,17 @@ class SecEdgarAdapter(SourceAdapter):
                         "is set to a valid address in your environment"
                     )
                 if resp.status_code == 429:
-                    raise RuntimeError("SEC EDGAR rate-limited this request (429)")
+                    raise RuntimeError(
+                        "SEC EDGAR rate-limited this request (429) after "
+                        f"{_MAX_RETRIES} retries"
+                    )
                 resp.raise_for_status()
                 text = resp.text
         except RuntimeError:
             raise
         except Exception as exc:
-            # Network-level failure (timeout, DNS, SSL) — treat as transient.
+            # Network-level failure (timeout, DNS, SSL) or an unretried 5xx —
+            # treat as transient.
             raise RuntimeError(f"SEC EDGAR request failed: {exc}") from exc
 
         self._cache.put(cache_key, text)
