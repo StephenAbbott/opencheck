@@ -44,6 +44,7 @@ import {
   SkeletonSourceCard,
   type SourceBucket,
 } from "./components/cdd/SourceBucketCard";
+import { OpenAlephArchiveMatches } from "./components/cdd/OpenAlephArchiveMatches";
 import { EsgPanel } from "./components/cdd/EsgPanel";
 import { MeipSignpost } from "./components/cdd/MeipSignpost";
 import { SecuritiesSection } from "./components/cdd/SecuritiesSection";
@@ -1662,55 +1663,9 @@ export default function App() {
           </section>
         )}
 
-        {/* Informational OpenAleph percolation matches (Phase 96) —
-            related-party names found in archive/watchlist collections whose
-            topics map to no RELATED_* code (leaks, court records, poi,
-            disqualified directors). Name-derived: rendered as context, never
-            as a risk signal and never as identifier corroboration. */}
-        {oaScreening.length > 0 && mode !== "background" && (
-          <section className="mb-8" id="openaleph-screening">
-            <SectionLabel>Archive matches — OpenAleph</SectionLabel>
-            <ul className="space-y-1.5">
-              {oaScreening.map((m) => (
-                <li
-                  key={`${m.statement_id}:${m.entity_id}`}
-                  className="text-[13px] text-oo-ink leading-[1.6]"
-                >
-                  <span className="font-semibold">{m.search_name}</span>{" "}
-                  <span className="text-oo-muted">
-                    {m.kind === "person" ? "(related party)" : "(related entity)"}{" "}
-                    matched
-                    {m.matched_name &&
-                    m.matched_name.toLowerCase() !== m.search_name.toLowerCase()
-                      ? ` ‘${m.matched_name}’`
-                      : ""}{" "}
-                    in{" "}
-                  </span>
-                  {m.url ? (
-                    <a
-                      href={m.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-oo-blue hover:underline underline-offset-2"
-                    >
-                      {m.collection || "an OpenAleph collection"}
-                    </a>
-                  ) : (
-                    <span>{m.collection || "an OpenAleph collection"}</span>
-                  )}
-                  {m.topics.length > 0 && (
-                    <span className="text-oo-muted"> · {m.topics.join(", ")}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <p className="text-[12px] text-oo-muted mt-3">
-              Informational only — name matches from OpenAleph collections
-              that map to no risk signal. A name match is never treated as
-              identifier confirmation.
-            </p>
-          </section>
-        )}
+        {/* "Archive matches — OpenAleph" (informational percolation matches,
+            Phase 97) renders underneath the OpenAleph source card in the
+            sources list below — see OpenAlephArchiveMatches. */}
 
         {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && mode !== "background" && (
           <CollapsedSection
@@ -1836,11 +1791,23 @@ export default function App() {
                         : undefined
                     }
                   />
+                  {/* Informational percolation matches (Phase 97) sit with
+                      the source they came from. */}
+                  {b.sourceId === "openaleph" && oaScreening.length > 0 && (
+                    <OpenAlephArchiveMatches matches={oaScreening} />
+                  )}
                 </div>
               ))}
               {pendingCddSources.map((id) => (
                 <SkeletonSourceCard key={id} />
               ))}
+              {/* Percolation can match related parties even when the subject
+                  lookup produced no OpenAleph card — keep the matches
+                  visible in that case rather than dropping them. */}
+              {oaScreening.length > 0 &&
+                !cddBuckets.some((b) => b.sourceId === "openaleph") && (
+                  <OpenAlephArchiveMatches matches={oaScreening} />
+                )}
             </div>
           </section>
         )}
