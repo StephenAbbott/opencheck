@@ -6,6 +6,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from opencheck.config import get_settings
+from opencheck.risk import _KNOWN_SANCTION_TOPICS
 from opencheck.sources import SearchKind
 from opencheck.sources.opensanctions import _RISK_TOPICS, _TOPIC_PARAMS, OpenSanctionsAdapter
 
@@ -60,6 +61,24 @@ def test_risk_topics_mirror_opensanctions_target_topics() -> None:
     """
     assert set(_RISK_TOPICS) == _PUBLISHED_TARGET_TOPICS
     assert len(_RISK_TOPICS) == len(set(_RISK_TOPICS)), "duplicate topic"
+
+
+def test_sanction_family_is_fully_classified() -> None:
+    """Every published ``sanction.*`` topic must have an explicit class.
+
+    Retrieving a topic is not the same as understanding it. ``sanction.control``
+    was inside ``_RISK_TOPICS`` (so those entities were fetched) while every
+    classifier funnelled it through a ``startswith("sanction")`` catch-all into
+    the softest bucket — a subsidiary of a designated party read as ordinary
+    adjacency. This canary fails the build when OpenSanctions adds a
+    sanction-family subtopic, forcing a decision about what it *means* instead
+    of letting the fallback answer silently.
+
+    Classify the new topic in ``risk._KNOWN_SANCTION_TOPICS`` (and give it a
+    signal if it deserves one), then add it here in the same commit.
+    """
+    published = {t for t in _PUBLISHED_TARGET_TOPICS if t.startswith("sanction")}
+    assert published == set(_KNOWN_SANCTION_TOPICS)
 
 
 @pytest.fixture(autouse=True)

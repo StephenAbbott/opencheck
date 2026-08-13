@@ -49,10 +49,14 @@ from . import names
 from .config import get_settings
 from .matching import is_matchable_name
 from .risk import (
+    _DEBARMENT_TOPICS,
+    _PEP_TOPICS,
+    _SANCTION_TOPIC_PREFIX,
     DEGRADED_NOT_CONFIGURED,
     DegradedSource,
     RiskSignal,
     classify_degradation_reason,
+    classify_sanction_topics,
     pick_degradation_reason,
 )
 from .sources import REGISTRY, SearchKind, SourceHit
@@ -64,6 +68,7 @@ _LOG = logging.getLogger(__name__)
 # RISK_PRESENTATION map.
 RELATED_PEP = "RELATED_PEP"
 RELATED_SANCTIONED = "RELATED_SANCTIONED"
+RELATED_SANCTIONS_CONTROLLED = "RELATED_SANCTIONS_CONTROLLED"
 RELATED_SANCTIONS_LINKED = "RELATED_SANCTIONS_LINKED"
 RELATED_DEBARMENT = "RELATED_DEBARMENT"
 
@@ -75,6 +80,7 @@ CHECK_NAME = "cross_source_names"
 _AFFECTED_BY_SOURCE: dict[str, list[str]] = {
     "opensanctions": [
         RELATED_SANCTIONED,
+        RELATED_SANCTIONS_CONTROLLED,
         RELATED_SANCTIONS_LINKED,
         RELATED_DEBARMENT,
         RELATED_PEP,
@@ -83,15 +89,13 @@ _AFFECTED_BY_SOURCE: dict[str, list[str]] = {
 }
 
 
-# OpenSanctions topic taxonomy. Same shape as the regular ``risk.py``
-# rules; duplicated here so the cross-check can be reasoned about
-# in isolation. Direct listings ("sanction" / "sanction.counter") differ
-# from "sanction.linked" (associated, not itself sanctioned) — never conflate.
-_PEP_TOPICS = {"role.pep", "role.rca", "role.spouse", "role.family"}
-_SANCTION_TOPIC_PREFIX = "sanction"
-_DIRECT_SANCTION_TOPICS = {"sanction", "sanction.counter"}
-_LINKED_SANCTION_TOPICS = {"sanction.linked"}
-_DEBARMENT_TOPICS = {"debarment"}
+# OpenSanctions topic taxonomy — imported from ``risk.py``, which owns it,
+# and re-exported here because ``openaleph_check`` reuses this module's
+# ladder. These sets used to be a second hand-maintained copy "so the
+# cross-check can be reasoned about in isolation"; in practice that meant
+# ``sanction.control`` was mis-classified identically in every copy. The
+# sanction family is now split by ``classify_sanction_topics`` — never
+# hand-roll a ``startswith("sanction")`` test again.
 
 
 # ---------------------------------------------------------------------
@@ -433,17 +437,22 @@ def _signal_from_os(
     if not _birth_year_compatible(target.get("birth_year"), hit):
         return None
     topics = _extract_topics(hit.raw or {})
-    direct_sanction = any(t in _DIRECT_SANCTION_TOPICS for t in topics)
-    linked_sanction = any(
-        t in _LINKED_SANCTION_TOPICS
-        or (t.startswith(_SANCTION_TOPIC_PREFIX) and t not in _DIRECT_SANCTION_TOPICS)
-        for t in topics
-    )
+    sanctions = classify_sanction_topics(topics)
+    direct_sanction = bool(sanctions.direct)
+    controlled = bool(sanctions.control)
+    linked_sanction = bool(sanctions.linked or sanctions.unknown)
     is_debarred = any(t in _DEBARMENT_TOPICS for t in topics)
     is_pep = any(t in _PEP_TOPICS for t in topics)
     # Priority (one signal per related hit): a direct sanctions listing
-    # outranks a confirmed debarment, which outranks a mere sanctions link,
-    # which outranks PEP status.
+    # outranks sitting inside a sanctioned party's ownership chain, which
+    # outranks a confirmed debarment, which outranks mere adjacency, which
+    # outranks PEP status.
+    #
+    # Unlike ``risk.py`` — which reports every fact it finds about the subject
+    # — this path emits at most one signal per related hit, so the ranking is
+    # the whole decision. ``sanction.linked`` being a superset of
+    # ``sanction.control`` upstream is handled for free: control is checked
+    # first and returns.
     if direct_sanction:
         return _make_signal(
             code=RELATED_SANCTIONED,
@@ -451,6 +460,17 @@ def _signal_from_os(
             hit=hit,
             score=score,
             summary_extra=f"sanctioned per OpenSanctions ({_topic_blurb(topics)})",
+        )
+    if controlled:
+        return _make_signal(
+            code=RELATED_SANCTIONS_CONTROLLED,
+            target=target,
+            hit=hit,
+            score=score,
+            summary_extra=(
+                "inside a sanctioned party's ownership chain per OpenSanctions "
+                f"({_topic_blurb(topics)})"
+            ),
         )
     if is_debarred:
         return _make_signal(

@@ -124,9 +124,9 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     name: "BP P.L.C.",
     hint: "UK oil major",
     signals: [
-      { code: "TRUST_OR_ARRANGEMENT", confidence: "high" },
       { code: "NON_EU_JURISDICTION", confidence: "high" },
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
+      { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/213800LH1BZH3DI6G760.zip`,
     bulkBods: true,
@@ -137,8 +137,8 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "Russian state oil",
     signals: [
       { code: "SANCTIONED", confidence: "high" },
-      { code: "NON_EU_JURISDICTION", confidence: "high" },
-      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
+      { code: "RELATED_SANCTIONS_CONTROLLED", confidence: "high" },
+      { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/253400JT3MQWNDKMJE44.zip`,
     bulkBods: true,
@@ -149,7 +149,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "UAE-owned UK oil & gas",
     signals: [
       { code: "NON_EU_JURISDICTION", confidence: "high" },
-      { code: "RELATED_SANCTIONS_LINKED", confidence: "high" },
+      { code: "RELATED_SANCTIONS_CONTROLLED", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/213800E11LI1SCETU492.zip`,
     bulkBods: true,

@@ -11,7 +11,10 @@ Risk signals fall into three groups:
 ## Source-derived signals
 
 - `PEP` — OpenSanctions `role.pep`-family topic, every EveryPolitician hit, or a Wikidata person with a currently-held position (P39 with no P582 end qualifier).
-- `SANCTIONED` — OpenSanctions topic starting with `sanction`.
+- `SANCTIONED` — OpenSanctions `sanction` or `sanction.counter` topic: the record is itself the subject of a designation. Never fires on the adjacency subtopics below.
+- `SANCTIONS_CONTROLLED` — OpenSanctions `sanction.control`: the record is a direct or **indirect** subsidiary, asset or vessel of a designated party. No percentage threshold and no depth limit are applied upstream (an end-dated shareholding stops the chain), so this is the starting point for an ownership-and-control test such as OFAC's 50 Percent Rule, not the answer to one. High confidence — the ownership assertion is deterministic; what is uncertain is the legal threshold, which the signal's summary states rather than discounting into the confidence level.
+- `SANCTIONS_LINKED` — OpenSanctions `sanction.linked`: one-hop adjacency to a designated party (ownership, directorship, membership, employment, association, family, succession, or the company↔securities relationship). Upstream declares this topic a **superset** of `sanction.control`, so a controlled entity carries both and only `SANCTIONS_CONTROLLED` is surfaced. Any unrecognised `sanction.*` subtopic degrades to this signal — conservatively, and with a logged warning; `tests/test_opensanctions_live.py::test_sanction_family_is_fully_classified` fails the build when upstream adds one.
+- `DEBARMENT` — OpenSanctions `debarment`: excluded from public contracts or procurement. A confirmed adverse listing, distinct from financial sanctions.
 - `OFFSHORE_LEAKS` — a name in the BODS bundle matches a record in the ICIJ Offshore Leaks database (Panama Papers, Paradise Papers, Pandora Papers, Bahamas Leaks, Offshore Leaks) via the ICIJ reconciliation API; or an OpenAleph hit in an ICIJ-family collection (OpenAleph is currently disabled in `REGISTRY` but this signal also fires via the ICIJ name cross-check, which requires no API key).
 - `OPAQUE_OWNERSHIP` — BODS bundle contains a `personStatement` with `personType=unknownPerson` or an `entityStatement` with `entityType=anonymousEntity`.
 
@@ -44,7 +47,12 @@ Both signals are derived purely from the BODS jurisdiction codes — they fire i
 For every `personStatement` and `entityStatement` in the assembled BODS bundle, OpenCheck searches OpenSanctions (and EveryPolitician for persons) by name. Matches above a similarity threshold of 0.88 — with optional birth-year compatibility (±1 year, only when both sides supply a DOB) — produce **scoped** signals attached to the matching related-party's `statementId` (in `evidence.subject_statement_id`), not the subject. That means a sanctioned PSC behind an otherwise clean shell company surfaces on the right node in the graph.
 
 - `RELATED_PEP` — a related person matches an OpenSanctions PEP record or appears in EveryPolitician.
-- `RELATED_SANCTIONED` — a related person or entity matches an OpenSanctions `sanction*` record.
+- `RELATED_SANCTIONED` — a related person or entity matches an OpenSanctions record carrying `sanction` or `sanction.counter`.
+- `RELATED_SANCTIONS_CONTROLLED` — the match carries `sanction.control`: a related party inside a designated party's ownership chain.
+- `RELATED_SANCTIONS_LINKED` — the match carries `sanction.linked` only: plain adjacency.
+- `RELATED_DEBARMENT` — the match carries `debarment`.
+
+Unlike the subject-level rules above, this path emits **at most one signal per related hit**, so the codes are a strict priority ladder: direct listing > ownership chain > debarment > adjacency > PEP. The same ladder is imported by the OpenAleph percolation screen, so the two cannot diverge.
 
 The normaliser folds standalone non-ASCII letters (Polish `ł`, Norwegian `ø`, German `ß`, Icelandic `ð`/`þ`, French `œ`) so transliterated and native spellings match. Bounded at `max_targets=25` per lookup to keep the OpenSanctions request volume sane on large PSC chains. The cross-check is a no-op when live mode is off or no OpenSanctions API key is configured.
 

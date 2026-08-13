@@ -64,14 +64,12 @@ from . import names
 from .config import get_settings
 from .cross_check import (
     _DEBARMENT_TOPICS,
-    _DIRECT_SANCTION_TOPICS,
     _KIND_PERSON,
-    _LINKED_SANCTION_TOPICS,
     _PEP_TOPICS,
-    _SANCTION_TOPIC_PREFIX,
     RELATED_DEBARMENT,
     RELATED_PEP,
     RELATED_SANCTIONED,
+    RELATED_SANCTIONS_CONTROLLED,
     RELATED_SANCTIONS_LINKED,
     _birth_year_compatible,
     _collect_targets,
@@ -85,6 +83,7 @@ from .risk import (
     DEGRADED_UPSTREAM_ERROR,
     DegradedSource,
     RiskSignal,
+    classify_sanction_topics,
 )
 from .sources import REGISTRY, SearchKind
 
@@ -97,6 +96,7 @@ CHECK_NAME = "openaleph_percolation"
 #: unreliable when the percolation calls fail (issue #50).
 _AFFECTED_SIGNALS = [
     RELATED_SANCTIONED,
+    RELATED_SANCTIONS_CONTROLLED,
     RELATED_SANCTIONS_LINKED,
     RELATED_DEBARMENT,
     RELATED_PEP,
@@ -111,6 +111,7 @@ _AFFECTED_SIGNALS = [
 _WATCHLIST_TOPICS: tuple[str, ...] = (
     "sanction",
     "sanction.counter",
+    "sanction.control",
     "sanction.linked",
     "debarment",
 )
@@ -419,12 +420,10 @@ def _signal_from_percolate(
     the caller sends those to the informational screening block instead.
     """
     topics = _extract_topics(item)
-    direct_sanction = any(t in _DIRECT_SANCTION_TOPICS for t in topics)
-    linked_sanction = any(
-        t in _LINKED_SANCTION_TOPICS
-        or (t.startswith(_SANCTION_TOPIC_PREFIX) and t not in _DIRECT_SANCTION_TOPICS)
-        for t in topics
-    )
+    sanctions = classify_sanction_topics(topics)
+    direct_sanction = bool(sanctions.direct)
+    controlled = bool(sanctions.control)
+    linked_sanction = bool(sanctions.linked or sanctions.unknown)
     is_debarred = any(t in _DEBARMENT_TOPICS for t in topics)
     is_pep = any(t in _PEP_TOPICS for t in topics)
 
@@ -433,6 +432,11 @@ def _signal_from_percolate(
 
     if direct_sanction:
         code, extra = RELATED_SANCTIONED, f"sanctioned{coll_note}"
+    elif controlled:
+        code, extra = (
+            RELATED_SANCTIONS_CONTROLLED,
+            f"inside a sanctioned party's ownership chain{coll_note}",
+        )
     elif is_debarred:
         code, extra = (
             RELATED_DEBARMENT,
