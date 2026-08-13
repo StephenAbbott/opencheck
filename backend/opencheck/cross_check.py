@@ -49,10 +49,14 @@ from . import names
 from .config import get_settings
 from .matching import is_matchable_name
 from .risk import (
+    _DEBARMENT_TOPICS,
+    _PEP_TOPICS,
+    _SANCTION_TOPIC_PREFIX,
     DEGRADED_NOT_CONFIGURED,
     DegradedSource,
     RiskSignal,
     classify_degradation_reason,
+    classify_sanction_topics,
     pick_degradation_reason,
 )
 from .sources import REGISTRY, SearchKind, SourceHit
@@ -83,15 +87,13 @@ _AFFECTED_BY_SOURCE: dict[str, list[str]] = {
 }
 
 
-# OpenSanctions topic taxonomy. Same shape as the regular ``risk.py``
-# rules; duplicated here so the cross-check can be reasoned about
-# in isolation. Direct listings ("sanction" / "sanction.counter") differ
-# from "sanction.linked" (associated, not itself sanctioned) — never conflate.
-_PEP_TOPICS = {"role.pep", "role.rca", "role.spouse", "role.family"}
-_SANCTION_TOPIC_PREFIX = "sanction"
-_DIRECT_SANCTION_TOPICS = {"sanction", "sanction.counter"}
-_LINKED_SANCTION_TOPICS = {"sanction.linked"}
-_DEBARMENT_TOPICS = {"debarment"}
+# OpenSanctions topic taxonomy — imported from ``risk.py``, which owns it,
+# and re-exported here because ``openaleph_check`` reuses this module's
+# ladder. These sets used to be a second hand-maintained copy "so the
+# cross-check can be reasoned about in isolation"; in practice that meant
+# ``sanction.control`` was mis-classified identically in every copy. The
+# sanction family is now split by ``classify_sanction_topics`` — never
+# hand-roll a ``startswith("sanction")`` test again.
 
 
 # ---------------------------------------------------------------------
@@ -433,12 +435,12 @@ def _signal_from_os(
     if not _birth_year_compatible(target.get("birth_year"), hit):
         return None
     topics = _extract_topics(hit.raw or {})
-    direct_sanction = any(t in _DIRECT_SANCTION_TOPICS for t in topics)
-    linked_sanction = any(
-        t in _LINKED_SANCTION_TOPICS
-        or (t.startswith(_SANCTION_TOPIC_PREFIX) and t not in _DIRECT_SANCTION_TOPICS)
-        for t in topics
-    )
+    sanctions = classify_sanction_topics(topics)
+    direct_sanction = bool(sanctions.direct)
+    # ``sanctions.control`` is folded in with plain adjacency for now so that
+    # extracting the classifier is behaviour-preserving. Next step it gets its
+    # own rung, immediately below a direct listing and above debarment.
+    linked_sanction = bool(sanctions.control or sanctions.linked or sanctions.unknown)
     is_debarred = any(t in _DEBARMENT_TOPICS for t in topics)
     is_pep = any(t in _PEP_TOPICS for t in topics)
     # Priority (one signal per related hit): a direct sanctions listing

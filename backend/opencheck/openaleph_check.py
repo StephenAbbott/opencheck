@@ -64,11 +64,8 @@ from . import names
 from .config import get_settings
 from .cross_check import (
     _DEBARMENT_TOPICS,
-    _DIRECT_SANCTION_TOPICS,
     _KIND_PERSON,
-    _LINKED_SANCTION_TOPICS,
     _PEP_TOPICS,
-    _SANCTION_TOPIC_PREFIX,
     RELATED_DEBARMENT,
     RELATED_PEP,
     RELATED_SANCTIONED,
@@ -85,6 +82,7 @@ from .risk import (
     DEGRADED_UPSTREAM_ERROR,
     DegradedSource,
     RiskSignal,
+    classify_sanction_topics,
 )
 from .sources import REGISTRY, SearchKind
 
@@ -419,12 +417,11 @@ def _signal_from_percolate(
     the caller sends those to the informational screening block instead.
     """
     topics = _extract_topics(item)
-    direct_sanction = any(t in _DIRECT_SANCTION_TOPICS for t in topics)
-    linked_sanction = any(
-        t in _LINKED_SANCTION_TOPICS
-        or (t.startswith(_SANCTION_TOPIC_PREFIX) and t not in _DIRECT_SANCTION_TOPICS)
-        for t in topics
-    )
+    sanctions = classify_sanction_topics(topics)
+    direct_sanction = bool(sanctions.direct)
+    # Folded in with plain adjacency for now — see the same note in
+    # ``cross_check._signal_from_os``; the two ladders move together.
+    linked_sanction = bool(sanctions.control or sanctions.linked or sanctions.unknown)
     is_debarred = any(t in _DEBARMENT_TOPICS for t in topics)
     is_pep = any(t in _PEP_TOPICS for t in topics)
 

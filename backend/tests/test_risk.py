@@ -12,6 +12,7 @@ from opencheck.risk import (
     assess_bundle,
     assess_hit,
     assess_hits,
+    classify_sanction_topics,
 )
 from opencheck.sources import SearchKind, SourceHit
 
@@ -83,6 +84,45 @@ def test_sanction_linked_is_not_sanctioned() -> None:
     linked = next(s for s in signals if s.code == SANCTIONS_LINKED)
     assert linked.confidence == "medium"
     assert "not itself sanctioned" in linked.summary
+
+
+def test_classify_sanction_topics_splits_the_family() -> None:
+    """The classifier separates the four meanings; the call sites rank them.
+
+    ``sanction.linked`` is declared upstream as a superset of
+    ``sanction.control``, so the real-world shape for a subsidiary of a
+    sanctioned party is *both* topics on one record.
+    """
+    both = classify_sanction_topics(["corp.public", "sanction.control", "sanction.linked"])
+    assert both.control == ("sanction.control",)
+    assert both.linked == ("sanction.linked",)
+    assert both.direct == ()
+    assert both.unknown == ()
+
+    direct = classify_sanction_topics(["sanction", "sanction.counter"])
+    assert direct.direct == ("sanction", "sanction.counter")
+    assert not direct.control and not direct.linked
+
+    assert not classify_sanction_topics(["role.pep", "debarment"])
+
+
+def test_classify_sanction_topics_flags_unknown_subtopics(caplog) -> None:
+    """A new upstream ``sanction.*`` subtopic still degrades to "linked", but
+    it must never do so *silently* — that is exactly how ``sanction.control``
+    spent months being reported as plain adjacency."""
+    with caplog.at_level("WARNING"):
+        result = classify_sanction_topics(["sanction.somethingnew"])
+    assert result.unknown == ("sanction.somethingnew",)
+    assert result.linked == ()
+    assert "sanction.somethingnew" in caplog.text
+
+
+def test_unknown_sanction_subtopic_still_reports_as_linked() -> None:
+    """End-to-end conservative default: an unrecognised subtopic must never
+    escalate to SANCTIONED."""
+    hit = _hit("opensanctions", "NK-future", topics=["sanction.somethingnew"])
+    codes = {s.code for s in assess_hit(hit)}
+    assert codes == {SANCTIONS_LINKED}
 
 
 def test_debarment_signal_from_opensanctions_topic() -> None:
