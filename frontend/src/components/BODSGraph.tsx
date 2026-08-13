@@ -59,8 +59,8 @@ export const SIGNAL_STYLE: Record<string, SignalStyle> = {
   RELATED_SANCTIONED:       { bg:"#ffe4e6", border:"#be123c", text:"#be123c", label:"RS", severity:7 },
   // Owned by a designated party (OpenSanctions `sanction.control`) — its own
   // tier between a direct listing and plain adjacency.
-  SANCTIONS_CONTROLLED:         { bg:"#fef2f2", border:"#b91c1c", text:"#991b1b", label:"SC",  severity:6 },
-  RELATED_SANCTIONS_CONTROLLED: { bg:"#fef2f2", border:"#b91c1c", text:"#991b1b", label:"RSC", severity:6 },
+  SANCTIONS_CONTROLLED:         { bg:"#ffe4e6", border:"#9f1239", text:"#9f1239", label:"SC",  severity:6 },
+  RELATED_SANCTIONS_CONTROLLED: { bg:"#ffe4e6", border:"#9f1239", text:"#9f1239", label:"RSC", severity:6 },
   SANCTIONS_LINKED:         { bg:"#fef3c7", border:"#b45309", text:"#b45309", label:"SL", severity:3 },
   RELATED_SANCTIONS_LINKED: { bg:"#fef3c7", border:"#b45309", text:"#b45309", label:"RSL", severity:3 },
   DEBARMENT:                { bg:"#ffedd5", border:"#c2410c", text:"#9a3412", label:"Db", severity:4 },

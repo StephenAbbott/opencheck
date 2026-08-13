@@ -159,8 +159,8 @@ def _interest_phrase(interest: dict[str, Any]) -> str:
 _RISK_LABELS = {
     "SANCTIONED": "Sanctioned",
     "RELATED_SANCTIONED": "Related party sanctioned",
-    "SANCTIONS_CONTROLLED": "Controlled by a sanctioned party",
-    "RELATED_SANCTIONS_CONTROLLED": "Related party controlled by a sanctioned party",
+    "SANCTIONS_CONTROLLED": "Sanction ownership or control",
+    "RELATED_SANCTIONS_CONTROLLED": "Related party under sanction ownership or control",
     "SANCTIONS_LINKED": "Linked to a sanctioned party",
     "RELATED_SANCTIONS_LINKED": "Related party linked to a sanctioned party",
     "DEBARMENT": "Debarred from public contracts",

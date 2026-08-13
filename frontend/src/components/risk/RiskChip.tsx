@@ -21,9 +21,12 @@ export const RISK_PRESENTATION: Record<
     label: "Sanctioned securities",
     classes: "bg-rose-50 text-rose-700 border-rose-300 font-semibold",
   },
+  // Label mirrors OpenSanctions' own display name for the `sanction.control`
+  // topic, so a user cross-checking a record on opensanctions.org sees the
+  // same words in both tools.
   SANCTIONS_CONTROLLED: {
-    label: "Controlled by sanctioned party",
-    classes: "bg-red-50 text-red-800 border-red-300 font-semibold",
+    label: "Sanction ownership or control",
+    classes: "bg-rose-100 text-rose-800 border-rose-400 font-semibold",
   },
   SANCTIONS_LINKED: {
     label: "Sanctions-linked",
@@ -78,8 +81,8 @@ export const RISK_PRESENTATION: Record<
     classes: "bg-rose-50 text-rose-700 border-rose-300 font-semibold",
   },
   RELATED_SANCTIONS_CONTROLLED: {
-    label: "Related — controlled by sanctioned party",
-    classes: "bg-red-50 text-red-800 border-red-300 font-semibold",
+    label: "Related sanction ownership or control",
+    classes: "bg-rose-100 text-rose-800 border-rose-400 font-semibold",
   },
   RELATED_SANCTIONS_LINKED: {
     label: "Related sanctions-linked",

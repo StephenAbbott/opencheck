@@ -407,7 +407,7 @@ Specific rules:
 
 **Signal codes and colours** (bg / text):
 - `SANCTIONED`, `RELATED_SANCTIONED` → rose (#ffe4e6 / #be123c)
-- `SANCTIONS_CONTROLLED`, `RELATED_SANCTIONS_CONTROLLED` → red (#fef2f2 / #991b1b) — OpenSanctions `sanction.control`; sits between SANCTIONED and SANCTIONS_LINKED in both colour and `SIGNAL_STYLE.severity` (7 / **6** / 3)
+- `SANCTIONS_CONTROLLED`, `RELATED_SANCTIONS_CONTROLLED` → deep rose (#ffe4e6 / #9f1239) — OpenSanctions `sanction.control`; deliberately the same rose family as SANCTIONED one shade darker, **not** the red of `FATF_BLACK_LIST` (#fee2e2 / #991b1b): an earlier red-50/red-800 pass was indistinguishable from FATF on the rendered share card. Sits between SANCTIONED and SANCTIONS_LINKED in both colour and `SIGNAL_STYLE.severity` (7 / **6** / 3). Chip label mirrors OpenSanctions' own display name, "Sanction ownership or control"; `og_image.py` carries the shorter "Sanction control" because the long form truncates in the share card's fixed-width pill
 - `SANCTIONS_LINKED`, `RELATED_SANCTIONS_LINKED` → amber (#fef3c7 / #b45309)
 - `FATF_BLACK_LIST` → red (#fee2e2 / #991b1b)
 - `PEP`, `RELATED_PEP` → violet (#f5f3ff / #6d28d9)
