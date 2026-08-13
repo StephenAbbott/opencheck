@@ -8,6 +8,7 @@ from opencheck.risk import (
     OPAQUE_OWNERSHIP,
     PEP,
     SANCTIONED,
+    SANCTIONS_CONTROLLED,
     SANCTIONS_LINKED,
     assess_bundle,
     assess_hit,
@@ -84,6 +85,60 @@ def test_sanction_linked_is_not_sanctioned() -> None:
     linked = next(s for s in signals if s.code == SANCTIONS_LINKED)
     assert linked.confidence == "medium"
     assert "not itself sanctioned" in linked.summary
+
+
+def test_sanction_control_is_its_own_signal_not_mere_adjacency() -> None:
+    """A subsidiary of a designated party is not "standing next to" one.
+
+    OpenSanctions declares ``sanction.linked`` a superset of
+    ``sanction.control``, so the real-world payload carries both topics. Only
+    the stronger signal should surface — the weaker chip is the same fact
+    stated less precisely.
+    """
+    hit = _hit(
+        "opensanctions",
+        "NK-subsidiary",
+        topics=["corp.public", "sanction.control", "sanction.linked"],
+    )
+    signals = assess_hit(hit)
+    codes = {s.code for s in signals}
+    assert codes == {SANCTIONS_CONTROLLED}
+    assert SANCTIONS_LINKED not in codes
+    assert SANCTIONED not in codes
+
+    controlled = signals[0]
+    # The ownership assertion is deterministic — OpenSanctions walked the
+    # chain. What is uncertain is the legal threshold, and that belongs in the
+    # copy, not in the confidence dot.
+    assert controlled.confidence == "high"
+    assert controlled.evidence["topics"] == ["sanction.control"]
+    assert "not itself designated" in controlled.summary
+    assert "50 Percent Rule" in controlled.summary
+
+
+def test_direct_listing_and_control_both_reported() -> None:
+    """An entity can be designated in its own right *and* sit inside another
+    designated party's ownership chain. Both are real, separate facts, so both
+    are reported (Stephen's call, 2026-08-13) — unlike the linked/control
+    superset, where one is merely a vaguer statement of the other."""
+    hit = _hit(
+        "opensanctions",
+        "NK-both",
+        topics=["sanction", "sanction.control", "sanction.linked"],
+    )
+    codes = {s.code for s in assess_hit(hit)}
+    assert codes == {SANCTIONED, SANCTIONS_CONTROLLED}
+    assert SANCTIONS_LINKED not in codes
+
+
+def test_plain_adjacency_is_not_upgraded_to_control() -> None:
+    """The guard in the other direction: a director or family member of a
+    designated party carries ``sanction.linked`` alone and must stay in the
+    softer bucket."""
+    hit = _hit("opensanctions", "NK-director", topics=["sanction.linked"])
+    signals = assess_hit(hit)
+    assert [s.code for s in signals] == [SANCTIONS_LINKED]
+    assert signals[0].confidence == "medium"
 
 
 def test_classify_sanction_topics_splits_the_family() -> None:

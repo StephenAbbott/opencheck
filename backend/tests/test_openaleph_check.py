@@ -201,6 +201,26 @@ async def test_topic_ladder_priority_and_pep(fake_percolate) -> None:
     assert codes == {"RELATED_PEP", "RELATED_DEBARMENT"}
 
 
+async def test_control_outranks_debarment_in_the_shared_ladder(fake_percolate) -> None:
+    """The OpenAleph screen imports the cross_check ladder, so the new
+    ownership-chain rung applies here too — one classifier, one ordering."""
+    fake_percolate(
+        [
+            _percolate_item(
+                "Igor Sechin",
+                surface_form="Igor Sechin",
+                topics=["sanction.control", "sanction.linked", "debarment"],
+                entity_id="oa-control",
+                collection="OpenSanctions Default",
+            ),
+        ],
+        [],
+    )
+    signals = await assess_openaleph_names(_BUNDLE)
+    assert {s.code for s in signals} == {"RELATED_SANCTIONS_CONTROLLED"}
+    assert "ownership chain" in signals[0].summary
+
+
 async def test_entity_pep_topic_never_fires_related_pep(fake_percolate) -> None:
     """Entities can't be PEPs — a role.pep-tagged entity hit maps to no
     signal and lands in the informational block instead (cross_check rule)."""

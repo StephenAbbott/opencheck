@@ -283,6 +283,39 @@ async def test_debarment_outranks_sanction_linked(monkeypatch) -> None:
     assert signals[0].hit_id == "NK-v"
 
 
+async def test_control_outranks_debarment_and_adjacency(monkeypatch) -> None:
+    """Ladder position for a related entity inside a sanctioned party's
+    ownership chain: below a direct listing, above a debarment.
+
+    The payload carries ``sanction.linked`` too (upstream superset) plus a
+    debarment — only the ownership-chain signal surfaces, because this path
+    emits one signal per hit.
+    """
+    from opencheck.cross_check import RELATED_SANCTIONS_CONTROLLED
+
+    _stub(monkeypatch, "opensanctions",
+          [_os_entity_hit("NK-sub", "Rosneft Trading SA",
+                          ["sanction.control", "sanction.linked", "debarment"])])
+    _stub(monkeypatch, "everypolitician", [])
+
+    signals = await assess_cross_source_names([_entity("e1", "Rosneft Trading SA")])
+    assert [s.code for s in signals] == [RELATED_SANCTIONS_CONTROLLED]
+    assert "ownership chain" in signals[0].summary
+
+
+async def test_direct_listing_still_outranks_control(monkeypatch) -> None:
+    """A related party that is itself designated reports as sanctioned, not as
+    somebody else's subsidiary."""
+    from opencheck.cross_check import RELATED_SANCTIONED
+
+    _stub(monkeypatch, "opensanctions",
+          [_os_entity_hit("NK-d", "Designated Co", ["sanction", "sanction.control"])])
+    _stub(monkeypatch, "everypolitician", [])
+
+    signals = await assess_cross_source_names([_entity("e1", "Designated Co")])
+    assert [s.code for s in signals] == [RELATED_SANCTIONED]
+
+
 async def test_emits_related_pep_for_pep_topic_or_everypolitician(
     monkeypatch,
 ) -> None:

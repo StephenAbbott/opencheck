@@ -68,6 +68,7 @@ _LOG = logging.getLogger(__name__)
 # RISK_PRESENTATION map.
 RELATED_PEP = "RELATED_PEP"
 RELATED_SANCTIONED = "RELATED_SANCTIONED"
+RELATED_SANCTIONS_CONTROLLED = "RELATED_SANCTIONS_CONTROLLED"
 RELATED_SANCTIONS_LINKED = "RELATED_SANCTIONS_LINKED"
 RELATED_DEBARMENT = "RELATED_DEBARMENT"
 
@@ -79,6 +80,7 @@ CHECK_NAME = "cross_source_names"
 _AFFECTED_BY_SOURCE: dict[str, list[str]] = {
     "opensanctions": [
         RELATED_SANCTIONED,
+        RELATED_SANCTIONS_CONTROLLED,
         RELATED_SANCTIONS_LINKED,
         RELATED_DEBARMENT,
         RELATED_PEP,
@@ -437,15 +439,20 @@ def _signal_from_os(
     topics = _extract_topics(hit.raw or {})
     sanctions = classify_sanction_topics(topics)
     direct_sanction = bool(sanctions.direct)
-    # ``sanctions.control`` is folded in with plain adjacency for now so that
-    # extracting the classifier is behaviour-preserving. Next step it gets its
-    # own rung, immediately below a direct listing and above debarment.
-    linked_sanction = bool(sanctions.control or sanctions.linked or sanctions.unknown)
+    controlled = bool(sanctions.control)
+    linked_sanction = bool(sanctions.linked or sanctions.unknown)
     is_debarred = any(t in _DEBARMENT_TOPICS for t in topics)
     is_pep = any(t in _PEP_TOPICS for t in topics)
     # Priority (one signal per related hit): a direct sanctions listing
-    # outranks a confirmed debarment, which outranks a mere sanctions link,
-    # which outranks PEP status.
+    # outranks sitting inside a sanctioned party's ownership chain, which
+    # outranks a confirmed debarment, which outranks mere adjacency, which
+    # outranks PEP status.
+    #
+    # Unlike ``risk.py`` — which reports every fact it finds about the subject
+    # — this path emits at most one signal per related hit, so the ranking is
+    # the whole decision. ``sanction.linked`` being a superset of
+    # ``sanction.control`` upstream is handled for free: control is checked
+    # first and returns.
     if direct_sanction:
         return _make_signal(
             code=RELATED_SANCTIONED,
@@ -453,6 +460,17 @@ def _signal_from_os(
             hit=hit,
             score=score,
             summary_extra=f"sanctioned per OpenSanctions ({_topic_blurb(topics)})",
+        )
+    if controlled:
+        return _make_signal(
+            code=RELATED_SANCTIONS_CONTROLLED,
+            target=target,
+            hit=hit,
+            score=score,
+            summary_extra=(
+                "inside a sanctioned party's ownership chain per OpenSanctions "
+                f"({_topic_blurb(topics)})"
+            ),
         )
     if is_debarred:
         return _make_signal(

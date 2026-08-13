@@ -20,10 +20,22 @@ Source-derived signals
   Fires only when an OpenSanctions hit/bundle has a direct ``sanction`` (or
   ``sanction.counter``) topic.
 
-* ``SANCTIONS_LINKED`` — connected to a sanctioned party but not itself
-  sanctioned. Fires on the OpenSanctions ``sanction.linked`` topic. Kept
-  distinct from ``SANCTIONED`` so an associated entity (e.g. Vale S.A.) is
-  never reported as sanctioned.
+* ``SANCTIONS_CONTROLLED`` — inside a sanctioned party's ownership chain:
+  a direct or indirect subsidiary, asset or vessel. Fires on the
+  OpenSanctions ``sanction.control`` topic, which carries no percentage
+  threshold and no depth limit (an end-dated holding stops the chain).
+  The starting point for an ownership-and-control test such as OFAC's
+  50 Percent Rule — not the answer to one. Ranked between ``SANCTIONED``
+  and ``SANCTIONS_LINKED``: being *owned by* a designated party is a
+  materially stronger fact than standing next to one.
+
+* ``SANCTIONS_LINKED`` — adjacent to a sanctioned party but neither
+  designated nor owned by one. Fires on the OpenSanctions
+  ``sanction.linked`` topic (and, conservatively, on any unrecognised
+  ``sanction.*`` subtopic). Kept distinct from ``SANCTIONED`` so an
+  associated entity (e.g. Vale S.A.) is never reported as sanctioned, and
+  suppressed when ``SANCTIONS_CONTROLLED`` fires because upstream declares
+  it a superset of ``sanction.control``.
 
 * ``DEBARMENT`` — debarred / excluded from public contracts or procurement
   (e.g. World Bank, AfDB, EU debarment lists). Fires on the OpenSanctions
@@ -100,6 +112,7 @@ _LOG = logging.getLogger(__name__)
 # Codes — source-derived
 PEP = "PEP"
 SANCTIONED = "SANCTIONED"
+SANCTIONS_CONTROLLED = "SANCTIONS_CONTROLLED"
 SANCTIONS_LINKED = "SANCTIONS_LINKED"
 DEBARMENT = "DEBARMENT"
 OFFSHORE_LEAKS = "OFFSHORE_LEAKS"
@@ -656,14 +669,40 @@ def _opensanctions_topic_signals_from_entity(
                 evidence={"topics": direct_topics, "statement_id": stmt_id},
             )
         )
-    # Linked/associated ("sanction.linked", or any unrecognised "sanction.*")
+    # Ownership chain ("sanction.control") → SANCTIONS_CONTROLLED. Fires
+    # independently of SANCTIONED: an entity can be designated in its own
+    # right *and* sit inside another designated party's ownership chain, and
+    # both facts are worth reporting.
+    control_topics = list(sanctions.control)
+    if control_topics:
+        out.append(
+            RiskSignal(
+                code=SANCTIONS_CONTROLLED,
+                confidence="high",
+                summary=(
+                    "OpenSanctions places this record in a sanctioned party's "
+                    "ownership chain — a direct or indirect subsidiary, asset "
+                    "or vessel. It is not itself designated. No percentage "
+                    "threshold is applied, so whether an ownership-and-control "
+                    "test (such as OFAC's 50 Percent Rule) brings it into scope "
+                    f"depends on the stake and the regime ({', '.join(control_topics)})."
+                ),
+                source_id=source_id,
+                hit_id=hit_id,
+                evidence={"topics": control_topics, "statement_id": stmt_id},
+            )
+        )
+    # Plain adjacency ("sanction.linked", or any unrecognised "sanction.*")
     # → SANCTIONS_LINKED. Not itself sanctioned, so a separate, softer signal.
     #
-    # ``sanctions.control`` is folded in here for now so that extracting the
-    # classifier is behaviour-preserving. It becomes its own, higher-severity
-    # SANCTIONS_CONTROLLED signal in the next step — being owned by a
-    # sanctioned party is not the same as standing next to one.
-    linked_topics = sorted(sanctions.control + sanctions.linked + sanctions.unknown)
+    # ``sanction.linked`` is a declared SUPERSET of ``sanction.control``
+    # upstream, so a controlled entity always carries both topics. Suppress
+    # the weaker chip when control fires — it is the same fact stated less
+    # precisely, not an additional one. (Contrast SANCTIONED above, which is
+    # a genuinely different fact and so co-exists with everything.)
+    linked_topics = (
+        [] if control_topics else sorted(sanctions.linked + sanctions.unknown)
+    )
     if linked_topics:
         out.append(
             RiskSignal(

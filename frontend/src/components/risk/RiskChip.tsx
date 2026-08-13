@@ -21,6 +21,10 @@ export const RISK_PRESENTATION: Record<
     label: "Sanctioned securities",
     classes: "bg-rose-50 text-rose-700 border-rose-300 font-semibold",
   },
+  SANCTIONS_CONTROLLED: {
+    label: "Controlled by sanctioned party",
+    classes: "bg-red-50 text-red-800 border-red-300 font-semibold",
+  },
   SANCTIONS_LINKED: {
     label: "Sanctions-linked",
     classes: "bg-amber-50 text-amber-800 border-amber-300",
@@ -72,6 +76,10 @@ export const RISK_PRESENTATION: Record<
   RELATED_SANCTIONED: {
     label: "Related sanctioned",
     classes: "bg-rose-50 text-rose-700 border-rose-300 font-semibold",
+  },
+  RELATED_SANCTIONS_CONTROLLED: {
+    label: "Related — controlled by sanctioned party",
+    classes: "bg-red-50 text-red-800 border-red-300 font-semibold",
   },
   RELATED_SANCTIONS_LINKED: {
     label: "Related sanctions-linked",

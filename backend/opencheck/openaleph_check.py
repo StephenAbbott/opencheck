@@ -69,6 +69,7 @@ from .cross_check import (
     RELATED_DEBARMENT,
     RELATED_PEP,
     RELATED_SANCTIONED,
+    RELATED_SANCTIONS_CONTROLLED,
     RELATED_SANCTIONS_LINKED,
     _birth_year_compatible,
     _collect_targets,
@@ -95,6 +96,7 @@ CHECK_NAME = "openaleph_percolation"
 #: unreliable when the percolation calls fail (issue #50).
 _AFFECTED_SIGNALS = [
     RELATED_SANCTIONED,
+    RELATED_SANCTIONS_CONTROLLED,
     RELATED_SANCTIONS_LINKED,
     RELATED_DEBARMENT,
     RELATED_PEP,
@@ -109,6 +111,7 @@ _AFFECTED_SIGNALS = [
 _WATCHLIST_TOPICS: tuple[str, ...] = (
     "sanction",
     "sanction.counter",
+    "sanction.control",
     "sanction.linked",
     "debarment",
 )
@@ -419,9 +422,8 @@ def _signal_from_percolate(
     topics = _extract_topics(item)
     sanctions = classify_sanction_topics(topics)
     direct_sanction = bool(sanctions.direct)
-    # Folded in with plain adjacency for now — see the same note in
-    # ``cross_check._signal_from_os``; the two ladders move together.
-    linked_sanction = bool(sanctions.control or sanctions.linked or sanctions.unknown)
+    controlled = bool(sanctions.control)
+    linked_sanction = bool(sanctions.linked or sanctions.unknown)
     is_debarred = any(t in _DEBARMENT_TOPICS for t in topics)
     is_pep = any(t in _PEP_TOPICS for t in topics)
 
@@ -430,6 +432,11 @@ def _signal_from_percolate(
 
     if direct_sanction:
         code, extra = RELATED_SANCTIONED, f"sanctioned{coll_note}"
+    elif controlled:
+        code, extra = (
+            RELATED_SANCTIONS_CONTROLLED,
+            f"inside a sanctioned party's ownership chain{coll_note}",
+        )
     elif is_debarred:
         code, extra = (
             RELATED_DEBARMENT,

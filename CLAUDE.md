@@ -407,6 +407,8 @@ Specific rules:
 
 **Signal codes and colours** (bg / text):
 - `SANCTIONED`, `RELATED_SANCTIONED` → rose (#ffe4e6 / #be123c)
+- `SANCTIONS_CONTROLLED`, `RELATED_SANCTIONS_CONTROLLED` → red (#fef2f2 / #991b1b) — OpenSanctions `sanction.control`; sits between SANCTIONED and SANCTIONS_LINKED in both colour and `SIGNAL_STYLE.severity` (7 / **6** / 3)
+- `SANCTIONS_LINKED`, `RELATED_SANCTIONS_LINKED` → amber (#fef3c7 / #b45309)
 - `FATF_BLACK_LIST` → red (#fee2e2 / #991b1b)
 - `PEP`, `RELATED_PEP` → violet (#f5f3ff / #6d28d9)
 - `COMPLEX_CORPORATE_STRUCTURE` → red (#fef2f2 / #b91c1c)
