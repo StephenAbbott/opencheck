@@ -16,13 +16,13 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 95** — Nigeria CAC: the first African beneficial ownership register
+**Latest: Phase 96** — OpenAleph text-based percolation: the upstream feature OpenCheck asked for, wired into the lookup
+
+OpenCheck's upstream feature request ([openaleph/openaleph#105](https://github.com/openaleph/openaleph/issues/105)) shipped in OpenAleph [5.3.1](https://github.com/openaleph/openaleph/releases/tag/5.3.1) as `POST /api/2/beta/percolate` — POST arbitrary text, get back the stored entities whose name-percolator queries fire on it, with per-hit `surface_forms` telling you exactly which input phrase matched. Phase 1 of the build-out adds `percolate_text()` to the OpenAleph adapter and a new percolation-based subject-name strategy in the lookup cascade, tried after the FtM `/match` step and before the Lucene `q=` fallback: the legal name travels as raw JSON body text — never through Aleph's query_string parser — so the reserved-syntax bug class (nested quotes, `A/S`, dangling `+`) structurally cannot occur on this path, while the bears-the-name gate and the keyless `q=` fallback both stay. Groundwork for Phase 2, screening every related party in the ownership graph against the OpenAleph instance in a single call. Commit `54e23ea`.
+
+**Previous: Phase 95** — Nigeria CAC: the first African beneficial ownership register
 
 A new `cac_nigeria` source brings the Corporate Affairs Commission Persons with Significant Control register ([bor.cac.gov.ng](https://bor.cac.gov.ng)) — Africa's first public beneficial ownership register — into the lookup as a source card for 10 example companies. The CAC's official API is restricted to Nigerian government agencies, so rather than scrape the site's private API at request time, a curated set of 10 LEI-anchored companies is harvested once and committed as an offline LEI-keyed index; `map_cac_nigeria` maps the five statutory CAMA PSC conditions to BODS v0.4 (with `beneficialOwnershipOrControl` asserted only for natural persons, and only the CAC-published RC number — not the derived LEI — asserted, per the corroboration rule). A live adapter is deferred pending engagement with the CAC and Oasis Management; the vendored source is the scaffold it slots into. GLEIF RA code `RA000469`. Not added to the homepage examples. PR [#104](https://github.com/StephenAbbott/opencheck/pull/104).
-
-**Previous: Phase 94** — Curated examples refresh: Eesti Energia, Ørsted, Eli Lilly
-
-The homepage picker swaps three UK bulk-BODS subjects (Bank Saderat, Hornsea 1, Newcastle United) for three live-lookup examples — Eesti Energia AS (Estonian energy company), Ørsted A/S (Danish offshore energy company) and Eli Lilly and Company (American pharmaceutical giant) — alongside the unchanged BP, Rosneft and Taqa Bratani. Each new example ships with live-verified risk signals on its card, an instant pre-baked AI summary, and a downloadable Neo4j CSV bundle snapshotted from the live `/export` pipeline with per-source licence notes inside the zip; a new `bulkBods` flag keeps the "pre-extracted data" banner on the bulk-BODS trio only. Commit `b862556`.
 
 → [Full development history](docs/status.md)
 
