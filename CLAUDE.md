@@ -228,10 +228,11 @@ SEC EDGAR are handled inside `_dispatch()` / `_lookup_pipeline()` directly.
   (strategy cascade). Budgets are capped sanity-tested in
   `tests/test_lookup_pipeline.py` (must be ≤ 120 s).
 
-### OpenAleph: FtM /match step + mentions enrichment
+### OpenAleph: FtM /match step, percolation + mentions enrichment
 
 - The OpenAleph strategy cascade is: leiCode → OC URL → registration
-  numbers → **FtM `POST /api/2/match`** → free-text `q=` name fallback.
+  numbers → **FtM `POST /api/2/match`** → **percolate name
+  (`POST /api/2/beta/percolate`)** → free-text `q=` name fallback.
   The match step converts the subject to an FtM Company via
   `opencheck/ftm.py` — bods-ftm's `entity_statement_to_ftm()` when
   installed (the `ftm` extra; Docker + CI ship the ICU toolchain
@@ -246,6 +247,24 @@ SEC EDGAR are handled inside `_dispatch()` / `_lookup_pipeline()` directly.
   `raw["identifier_corroborated"]` and ranked first; others survive only
   at ≥ 25% of the top hit's score (relative — FtM/BM25 scores vary with
   name length/rarity, so never use absolute thresholds).
+- Text-based percolation (OpenAleph 5.3.1, Phase 96 — the endpoint
+  OpenCheck requested in [openaleph/openaleph#105](https://github.com/openaleph/openaleph/issues/105)):
+  `percolate_text()` POSTs arbitrary text to `/api/2/beta/percolate`
+  (beta-namespaced upstream; path lives in `_PERCOLATE_PATH`) and returns
+  the stored entities whose name-percolator queries fire on it, each with
+  `percolator_match` / `surface_forms` / `score`. **`None` ≠ `[]`**:
+  `None` = screen could not run (no key — the edge 405s anonymous POSTs
+  like /match — or 404 pre-5.3.1, or HTTP failure); `[]` = ran, nothing
+  matched. `fetch_by_name_percolate()` uses it as the subject-name
+  strategy (schema=LegalEntity, `_bears_name`-gated — percolation matches
+  partial names, slop 2); the name goes as raw JSON body text, **never**
+  through the Lucene query_string parser, so the reserved-syntax bug
+  class (quotes / `A/S` / dangling `+`) can't occur on this path. The
+  `q=` fallback stays for keyless deployments. Hard-won live findings
+  (2026-08-13): always pass a selective filter — unfiltered/LegalEntity
+  percolation over famous names drowns in near-duplicate registry
+  records, while `filter:schema=Person` is high-precision; latency ~1.8 s
+  unfiltered on the 2.1M-entity flagship vs ~10 ms topic-scoped.
 - Mentions enrichment (OpenAleph 5.3 `/entities/{id}/mentions`): top
   OpenAleph hits get "· mentioned in N documents" + `raw.openaleph_mentions`
   (title/collection/category/url per doc). Informational only — mentions

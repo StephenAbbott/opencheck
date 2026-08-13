@@ -994,7 +994,8 @@ def _build_gleif_hit(ctx: _LookupCtx, gleif_bundle: dict[str, Any]) -> SourceHit
 
 
 async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
-    """OpenAleph cascade: LEI → OC URL → registration numbers → name."""
+    """OpenAleph cascade: LEI → OC URL → registration numbers →
+    FtM match → percolate name → q= name fallback."""
     oa_adapter = REGISTRY.get("openaleph")
     if oa_adapter is None:
         return []
@@ -1026,6 +1027,17 @@ async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
         )
         if ftm_entity and hasattr(oa_adapter, "match_entity"):
             oa = await oa_adapter.match_entity(ftm_entity)  # type: ignore[attr-defined]
+    if not oa and ctx.legal_name and hasattr(oa_adapter, "fetch_by_name_percolate"):
+        # Percolation-based reverse name lookup (OpenAleph 5.3.1,
+        # POST /api/2/beta/percolate — the endpoint requested in
+        # openaleph/openaleph#105). The legal name travels as raw JSON
+        # body text, never through the Lucene query_string parser, so
+        # the reserved-syntax bug class (quotes, A/S, dangling +)
+        # cannot occur on this path, and only entities whose own stored
+        # names fire on the text come back (still _bears_name-gated).
+        # Key-gated like /match; degrades to no hits without one, and
+        # the q= fallback below still runs.
+        oa = await oa_adapter.fetch_by_name_percolate(ctx.legal_name)
     if not oa and ctx.legal_name:
         oa = await oa_adapter.fetch_by_name(ctx.legal_name)  # type: ignore[attr-defined]
     # OpenAleph can index the same entity under multiple collection aliases,
