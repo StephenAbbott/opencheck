@@ -125,7 +125,8 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "UK oil major",
     signals: [
       { code: "NON_EU_JURISDICTION", confidence: "high" },
-      { code: "OFFSHORE_LEAKS", confidence: "high" },
+      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
+      { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/213800LH1BZH3DI6G760.zip`,
     bulkBods: true,
