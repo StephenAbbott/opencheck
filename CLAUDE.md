@@ -269,6 +269,24 @@ SEC EDGAR are handled inside `_dispatch()` / `_lookup_pipeline()` directly.
   OpenAleph hits get "· mentioned in N documents" + `raw.openaleph_mentions`
   (title/collection/category/url per doc). Informational only — mentions
   are name-derived and never count as identifier corroboration.
+- Related-party graph screening (`opencheck/openaleph_check.py`, Phase 97):
+  `assess_openaleph_names(bods, degraded=, screening=)` runs in the risk
+  stage alongside `assess_cross_source_names` / `assess_icij_names` (same
+  `asyncio.gather`). ALL related-party names → **two** percolation calls:
+  persons broad (`filter:schema=Person` — measured high-precision), entities
+  topic-scoped (`_WATCHLIST_TOPICS` — unfiltered entity percolation drowns
+  in registry-record noise). `surface_forms` → `names.normalise_name` →
+  `subject_statement_id` attribution; then the cross_check gates (0.88
+  similarity vs the hit's own names, single-token person guard, birth-year)
+  and the cross_check topic ladder → `RELATED_*` signals with
+  `source_id="openaleph"` (graph badges work unchanged). Gated matches with
+  no signal-mapping topic (poi, corp.disqual, leak/court collections) go to
+  the `screening` out-collector → `openaleph_screening` on the
+  `risk_signals` event / LookupResponse / ReportResponse → the "Archive
+  matches — OpenAleph" section in App.tsx. Informational, never identifier
+  corroboration. No key / HTTP failure → `DegradedSource` records
+  (issue #50) — never a silent clean screen. OS+OA duplicate signals for
+  the same node are deliberately kept (dedupe keys include source_id).
 
 ### Replay cache, shareable URLs, per-source retry (Phase 47)
 

@@ -127,6 +127,30 @@ export interface DegradedSource {
   reason: "upstream_error" | "timeout" | "not_configured" | "rate_limited";
 }
 
+/** One informational related-party match from OpenAleph percolation
+ * (Phase 96): an attributed, similarity-gated hit whose topics map to no
+ * RELATED_* risk code — leak/court collections, poi, corp.disqual.
+ * Name-derived — never identifier corroboration. */
+export interface OpenAlephScreeningMatch {
+  /** BODS statementId of the related party the match attributes to. */
+  statement_id: string;
+  /** The related-party name that was screened. */
+  search_name: string;
+  kind: "person" | "entity";
+  /** The OpenAleph record's own (closest) name. */
+  matched_name: string;
+  entity_id: string;
+  /** Collection label, e.g. "Russian Oligarch Database". */
+  collection: string;
+  /** Public OpenAleph UI link for the matched record. */
+  url: string;
+  topics: string[];
+  /** The exact phrase of ours the percolator fired on. */
+  surface_form: string;
+  percolator_match: string[];
+  score: number;
+}
+
 export interface SearchResponse {
   query: string;
   kind: SearchKind;
@@ -150,6 +174,7 @@ export interface LookupResponse {
   meip: MeipMatch | null;
   risk_signals: RiskSignal[];
   degraded_sources: DegradedSource[];
+  openaleph_screening?: OpenAlephScreeningMatch[];
   bods: Record<string, unknown>[];
   bods_issues: string[];
   license_notices: { source_id: string; hit_id: string; notice: string }[];
@@ -983,6 +1008,8 @@ export interface RiskSignalsEvent {
   signals: RiskSignal[];
   /** Derived checks that did not fully run — empty/absent when clean. */
   degraded_sources?: DegradedSource[];
+  /** Informational OpenAleph percolation matches — empty/absent when none. */
+  openaleph_screening?: OpenAlephScreeningMatch[];
 }
 
 export type StreamHandlers = {

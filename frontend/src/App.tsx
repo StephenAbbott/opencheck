@@ -14,6 +14,7 @@ import {
   type CrossSourceLink,
   type DegradedSource,
   type MeipMatch,
+  type OpenAlephScreeningMatch,
   type PossiblySameEntity,
   type RiskSignal,
   type SourceHit,
@@ -210,6 +211,10 @@ export default function App() {
   // warning above the risk panel; empty signals + non-empty degraded is
   // NOT a clean screen.
   const [degradedSources, setDegradedSources] = useState<DegradedSource[]>([]);
+  // Informational OpenAleph percolation matches (Phase 96) — related-party
+  // names found in archive/watchlist collections whose topics map to no
+  // RELATED_* code. Name-derived; never identifier corroboration.
+  const [oaScreening, setOaScreening] = useState<OpenAlephScreeningMatch[]>([]);
   const [applicableSources, setApplicableSources] = useState<string[]>([]);
   const [completedSources, setCompletedSources] = useState<Set<string>>(new Set());
   const [streaming, setStreaming] = useState(false);
@@ -423,6 +428,7 @@ export default function App() {
         setMeip(null);
         setRiskSignals([]);
         setDegradedSources([]);
+        setOaScreening([]);
         setApplicableSources([]);
         setCompletedSources(new Set());
         setStreaming(false);
@@ -475,6 +481,7 @@ export default function App() {
           onRiskSignals: (e) => {
             setRiskSignals(e.signals);
             setDegradedSources(e.degraded_sources ?? []);
+            setOaScreening(e.openaleph_screening ?? []);
           },
           onBodsCounts: (e: BodsCountsEvent) => {
             setBodsCountMap(e.counts);
@@ -919,6 +926,7 @@ export default function App() {
                   setMeip(null);
                   setRiskSignals([]);
                   setDegradedSources([]);
+                  setOaScreening([]);
                   setApplicableSources([]);
                   setCompletedSources(new Set());
                   setStreaming(false);
@@ -1650,6 +1658,56 @@ export default function App() {
             <p className="text-[12px] text-oo-muted mt-3">
               Select a chip for the rule that fired. Signals derived from
               open data; AMLA-aligned chips read BODS statements.
+            </p>
+          </section>
+        )}
+
+        {/* Informational OpenAleph percolation matches (Phase 96) —
+            related-party names found in archive/watchlist collections whose
+            topics map to no RELATED_* code (leaks, court records, poi,
+            disqualified directors). Name-derived: rendered as context, never
+            as a risk signal and never as identifier corroboration. */}
+        {oaScreening.length > 0 && mode !== "background" && (
+          <section className="mb-8" id="openaleph-screening">
+            <SectionLabel>Archive matches — OpenAleph</SectionLabel>
+            <ul className="space-y-1.5">
+              {oaScreening.map((m) => (
+                <li
+                  key={`${m.statement_id}:${m.entity_id}`}
+                  className="text-[13px] text-oo-ink leading-[1.6]"
+                >
+                  <span className="font-semibold">{m.search_name}</span>{" "}
+                  <span className="text-oo-muted">
+                    {m.kind === "person" ? "(related party)" : "(related entity)"}{" "}
+                    matched
+                    {m.matched_name &&
+                    m.matched_name.toLowerCase() !== m.search_name.toLowerCase()
+                      ? ` ‘${m.matched_name}’`
+                      : ""}{" "}
+                    in{" "}
+                  </span>
+                  {m.url ? (
+                    <a
+                      href={m.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-oo-blue hover:underline underline-offset-2"
+                    >
+                      {m.collection || "an OpenAleph collection"}
+                    </a>
+                  ) : (
+                    <span>{m.collection || "an OpenAleph collection"}</span>
+                  )}
+                  {m.topics.length > 0 && (
+                    <span className="text-oo-muted"> · {m.topics.join(", ")}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p className="text-[12px] text-oo-muted mt-3">
+              Informational only — name matches from OpenAleph collections
+              that map to no risk signal. A name match is never treated as
+              identifier confirmation.
             </p>
           </section>
         )}

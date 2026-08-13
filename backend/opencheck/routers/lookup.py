@@ -24,6 +24,7 @@ from .. import bods_data
 from ..cross_check import assess_cross_source_names
 from ..ftm import subject_to_ftm_entity
 from ..icij_check import assess_icij_names
+from ..openaleph_check import assess_openaleph_names
 from ..meip import meip_lookup
 from ..reconcile import possibly_same_entities, reconcile
 from ..risk import DegradedSource, RiskSignal, assess_bundle, assess_hits
@@ -103,6 +104,12 @@ class ReportResponse(BaseModel):
     #: An empty risk_signals list with a non-empty degraded_sources list
     #: is NOT a clean screen. Never contains related-party names.
     degraded_sources: list[dict[str, Any]] = []
+    #: Informational related-party matches from OpenAleph percolation
+    #: (Phase 96): attributed, similarity-gated hits whose topics map to no
+    #: RELATED_* code — leak/court collections, poi, corp.disqual. Each
+    #: entry carries statement_id / matched_name / collection / url /
+    #: surface_form. Name-derived — never identifier corroboration.
+    openaleph_screening: list[dict[str, Any]] = []
 
 
 class LookupResponse(ReportResponse):
@@ -234,6 +241,7 @@ async def _build_report(
             )
 
     degraded: list[DegradedSource] = []
+    oa_screening: list[dict[str, Any]] = []
     cross_signals = [
         s.to_dict()
         for s in await assess_cross_source_names(bods_all, degraded=degraded)
@@ -241,9 +249,15 @@ async def _build_report(
     icij_signals = [
         s.to_dict() for s in await assess_icij_names(bods_all, degraded=degraded)
     ]
+    oa_signals = [
+        s.to_dict()
+        for s in await assess_openaleph_names(
+            bods_all, degraded=degraded, screening=oa_screening
+        )
+    ]
 
     all_signals = _merge_signals(
-        search_signals, deepen_signals, cross_signals, icij_signals
+        search_signals, deepen_signals, cross_signals, icij_signals, oa_signals
     )
 
     return ReportResponse(
@@ -258,6 +272,7 @@ async def _build_report(
         license_notices=license_notices,
         possibly_same_entities=[p.to_dict() for p in possibly_same_entities(bods_all)],
         degraded_sources=[d.to_dict() for d in degraded],
+        openaleph_screening=oa_screening,
     )
 
 
@@ -1661,9 +1676,11 @@ async def _lookup_pipeline(
     )
 
     degraded: list[DegradedSource] = []
-    cross_raw, icij_raw = await asyncio.gather(
+    oa_screening: list[dict[str, Any]] = []
+    cross_raw, icij_raw, oa_raw = await asyncio.gather(
         assess_cross_source_names(bods_all, degraded=degraded),
         assess_icij_names(bods_all, degraded=degraded),
+        assess_openaleph_names(bods_all, degraded=degraded, screening=oa_screening),
     )
     # Sanctioned-securities chip: cheap in-memory lookup of the subject LEI in
     # the OpenSanctions securities index (no network). No-op when the index
@@ -1678,15 +1695,22 @@ async def _lookup_pipeline(
         deepen_signals,
         [s.to_dict() for s in cross_raw],
         [s.to_dict() for s in icij_raw],
+        [s.to_dict() for s in oa_raw],
         sec_signals,
     )
     # degraded_sources rides on the same event as the signals so every
     # consumer (SSE UI, sync /lookup, replay cache, narrative, exports)
     # sees the two together — an empty signals list plus a non-empty
     # degraded list must never be split apart into "clean screen".
+    # openaleph_screening rides here too: the informational (sub-signal)
+    # percolation matches belong with the signals they didn't become.
     yield (
         "risk_signals",
-        {"signals": merged, "degraded_sources": [d.to_dict() for d in degraded]},
+        {
+            "signals": merged,
+            "degraded_sources": [d.to_dict() for d in degraded],
+            "openaleph_screening": oa_screening,
+        },
     )
 
     yield ("done", {
@@ -1781,6 +1805,7 @@ async def _lookup_impl(
     links: list[dict[str, Any]] = []
     signals: list[dict[str, Any]] = []
     degraded_sources: list[dict[str, Any]] = []
+    oa_screening: list[dict[str, Any]] = []
     bods_all: list[dict[str, Any]] = []
     same_pairs: list[dict[str, Any]] = []
     meip_match: dict[str, Any] | None = None
@@ -1823,6 +1848,7 @@ async def _lookup_impl(
         elif event == "risk_signals":
             signals = payload["signals"]
             degraded_sources = payload.get("degraded_sources") or []
+            oa_screening = payload.get("openaleph_screening") or []
         elif event == "done":
             bods_issues = payload["bods_issues"]
             license_notices = payload["license_notices"]
@@ -1840,6 +1866,7 @@ async def _lookup_impl(
         possibly_same_entities=same_pairs,
         meip=meip_match,
         degraded_sources=degraded_sources,
+        openaleph_screening=oa_screening,
         lei=norm_lei,
         legal_name=legal_name,
         jurisdiction=jurisdiction,
