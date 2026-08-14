@@ -337,11 +337,11 @@ def _process_results(
             hit = _as_hit(item, target)
             if not _birth_year_compatible(target.get("birth_year"), hit):
                 continue
-            signal = _signal_from_percolate(
+            hit_signals = _signals_from_percolate(
                 item, target, best_name, matched_form, score
             )
-            if signal is not None:
-                signals.append(signal)
+            if hit_signals:
+                signals.extend(hit_signals)
             elif screening is not None:
                 key = (target["statement_id"], str(item.get("id") or ""))
                 if key not in seen_screening:
@@ -405,78 +405,76 @@ def _ui_url(item: dict[str, Any]) -> str:
     return str((item.get("links") or {}).get("ui") or "")
 
 
-def _signal_from_percolate(
+def _signals_from_percolate(
     item: dict[str, Any],
     target: dict[str, Any],
     matched_name: str,
     surface_form: str,
     score: float,
-) -> RiskSignal | None:
-    """Run the hit's topics through the cross_check signal ladder.
+) -> list[RiskSignal]:
+    """Every fact this percolation hit asserts about the related party.
 
-    Same priority order as ``cross_check._signal_from_os``: a direct
-    sanctions listing outranks a debarment, which outranks a sanctions
-    link, which outranks PEP status. Returns ``None`` when no topic maps —
-    the caller sends those to the informational screening block instead.
+    Shares the classification and the reporting rule with
+    ``cross_check._signals_from_os``: each rung fires on its own merit, and
+    the only suppression is ``sanction.linked`` when ``sanction.control``
+    fires (upstream declares linked a superset of control). Returns ``[]``
+    when no topic maps to a signal — the caller sends those to the
+    informational screening block instead.
+
+    Order is most-severe-first.
     """
     topics = _extract_topics(item)
     sanctions = classify_sanction_topics(topics)
-    direct_sanction = bool(sanctions.direct)
     controlled = bool(sanctions.control)
-    linked_sanction = bool(sanctions.linked or sanctions.unknown)
-    is_debarred = any(t in _DEBARMENT_TOPICS for t in topics)
-    is_pep = any(t in _PEP_TOPICS for t in topics)
 
     collection = _collection_label(item)
     coll_note = f" via '{collection}'" if collection else ""
+    relation = "Related party" if target["kind"] == _KIND_PERSON else "Related entity"
 
-    if direct_sanction:
-        code, extra = RELATED_SANCTIONED, f"sanctioned{coll_note}"
-    elif controlled:
-        code, extra = (
+    out: list[RiskSignal] = []
+
+    def add(code: str, extra: str) -> None:
+        out.append(
+            RiskSignal(
+                code=code,
+                confidence="high" if score >= 0.95 else "medium",
+                summary=(
+                    f"{relation} '{target['name']}' matches a record on openaleph: "
+                    f"{extra} ({_topic_blurb(topics)})."
+                ),
+                source_id="openaleph",
+                hit_id=str(item.get("id") or ""),
+                evidence={
+                    "subject_statement_id": target["statement_id"],
+                    "matched_name": matched_name,
+                    "search_name": target["name"],
+                    "surface_form": surface_form,
+                    "percolator_match": list(item.get("percolator_match") or []),
+                    "score": round(score, 3),
+                    "kind": target["kind"],
+                    "collection": collection,
+                    "collection_url": _ui_url(item),
+                    "topics": topics,
+                },
+            )
+        )
+
+    if sanctions.direct:
+        add(RELATED_SANCTIONED, f"sanctioned{coll_note}")
+    if controlled:
+        add(
             RELATED_SANCTIONS_CONTROLLED,
             f"inside a sanctioned party's ownership chain{coll_note}",
         )
-    elif is_debarred:
-        code, extra = (
-            RELATED_DEBARMENT,
-            f"debarred from public contracts{coll_note}",
-        )
-    elif linked_sanction:
-        code, extra = (
-            RELATED_SANCTIONS_LINKED,
-            f"linked to sanctioned entities{coll_note}",
-        )
-    elif is_pep and target["kind"] == _KIND_PERSON:
-        # Entities can never be PEPs — only natural persons hold political
-        # office (same rule as cross_check).
-        code, extra = RELATED_PEP, f"PEP{coll_note}"
-    else:
-        return None
-
-    relation = "Related party" if target["kind"] == _KIND_PERSON else "Related entity"
-    return RiskSignal(
-        code=code,
-        confidence="high" if score >= 0.95 else "medium",
-        summary=(
-            f"{relation} '{target['name']}' matches a record on openaleph: "
-            f"{extra} ({_topic_blurb(topics)})."
-        ),
-        source_id="openaleph",
-        hit_id=str(item.get("id") or ""),
-        evidence={
-            "subject_statement_id": target["statement_id"],
-            "matched_name": matched_name,
-            "search_name": target["name"],
-            "surface_form": surface_form,
-            "percolator_match": list(item.get("percolator_match") or []),
-            "score": round(score, 3),
-            "kind": target["kind"],
-            "collection": _collection_label(item),
-            "collection_url": _ui_url(item),
-            "topics": topics,
-        },
-    )
+    if any(t in _DEBARMENT_TOPICS for t in topics):
+        add(RELATED_DEBARMENT, f"debarred from public contracts{coll_note}")
+    if not controlled and (sanctions.linked or sanctions.unknown):
+        add(RELATED_SANCTIONS_LINKED, f"linked to sanctioned entities{coll_note}")
+    # Entities can never be PEPs — only natural persons hold political
+    # office (same rule as cross_check).
+    if target["kind"] == _KIND_PERSON and any(t in _PEP_TOPICS for t in topics):
+        add(RELATED_PEP, f"PEP{coll_note}")
+    return out
 
 
 def _screening_entry(
