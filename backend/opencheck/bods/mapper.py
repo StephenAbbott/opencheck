@@ -233,14 +233,21 @@ def _publication_details_block(publication_date: str | None = None) -> dict[str,
     by the BODS v0.4 schema.
 
     Semantics (per BODS dates guidance):
-      publicationDate  — the date the information was added to the public
-                         registry or made available via an API.  For PSC
-                         registers this is the notification date; for SEC
-                         filings it is the filing date; for GLEIF it is
-                         the LEI record's last-update date.  When no
-                         source-specific date is available we fall back to
-                         today's date — the date on which OpenCheck
-                         retrieved and published the statement.
+      publicationDate  — the date **this** statement was published, by the
+                         publisher named in this same block. That publisher is
+                         OpenCheck, so the date is OpenCheck's, and the default
+                         (today) is nearly always the right answer.
+
+    This used to hold the *source's* date instead — a PSC notification date, a
+    SEC filing date, a GLEIF last-update date — which put a register's
+    declaration into a field describing OpenCheck's publication. Those belong in
+    ``statementDate``: "the date this statement was declared by the source".
+    Open Ownership's own published bundles model it exactly that way
+    (statementDate 2024-06-06, publicationDate 2025-02-28, publisher Open
+    Ownership). See ``_statement_date``.
+
+    The parameter survives for the rare case where a caller genuinely knows a
+    different OpenCheck publication date — replaying an archived run, say.
     """
     return {
         "bodsVersion": "0.4",
@@ -786,7 +793,14 @@ def _ch_director_statements(
             interested_party_type="person",
             interests=[interest],
             source_url=company_url,
-            publication_date=appointed_on or None,
+            # appointed_on is when the appointment BEGAN — already carried as
+            # interest.startDate above. It is neither when the register
+            # declared it (Companies House publishes no per-officer
+            # notification date) nor when OpenCheck published, so it belongs in
+            # neither statementDate nor publicationDate. Emitting it as a
+            # publication date meant a director appointed in 1998 produced a
+            # statement OpenCheck "published" in 1998. statementDate falls back
+            # to the retrieval date; publicationDate is today.
         )
         rel_sid = rel["statementId"]
         if rel_sid not in seen_sids:
@@ -872,7 +886,9 @@ def _ch_psc_statement_statements(
                 interested_party_unspecified={"reason": reason, "description": description},
                 interests=interests,
                 source_url=company_url,
-                publication_date=(ceased_on or item.get("notified_on") or None),
+                # When the register was told, not when we published. A closed
+                # record is declared at cessation, so ceased_on wins.
+                statement_date=(ceased_on or item.get("notified_on") or None),
                 record_status="closed" if ceased_on else "new",
             )
         )
@@ -1027,7 +1043,9 @@ def _emit_company_statements(
             interested_party_type=ip_type,
             interests=interests,
             source_url=company_url,
-            publication_date=(ceased_on or psc.get("notified_on") or None),
+            # When the register was told, not when we published. A closed
+            # record is declared at cessation, so ceased_on wins.
+            statement_date=(ceased_on or psc.get("notified_on") or None),
             record_status="closed" if ceased_on else "new",
         )
         rel_sid = rel["statementId"]
@@ -1568,6 +1586,9 @@ def map_gleif(bundle: dict[str, Any]) -> BODSBundle:
         return result
 
     subject_url = f"https://www.gleif.org/lei/{lei}"
+    # The subject record's own last-update date, reused for the Level 2
+    # relationship statements it reports.
+    subject_statement_date = _gleif_registration_date(subject_attrs)
     subject_statement = _gleif_entity_statement(
         lei, subject_entity_block, subject_url, attrs=subject_attrs
     )
@@ -1587,21 +1608,41 @@ def map_gleif(bundle: dict[str, Any]) -> BODSBundle:
         ),
     ):
         if parent:
-            result.extend(_gleif_parent_statements(lei, subject_sid, kind, parent))
+            result.extend(
+                _gleif_parent_statements(
+                    lei, subject_sid, kind, parent, subject_statement_date
+                )
+            )
         elif exception:
             result.extend(
-                _gleif_exception_statements(lei, subject_sid, kind, exception)
+                _gleif_exception_statements(
+                    lei, subject_sid, kind, exception, subject_statement_date
+                )
             )
 
     for child in bundle.get("direct_children") or []:
-        result.extend(_gleif_child_statements(lei, subject_sid, child))
+        result.extend(
+            _gleif_child_statements(lei, subject_sid, child, subject_statement_date)
+        )
 
     return result
 
 
 def _gleif_parent_statements(
-    lei: str, subject_sid: str, kind: str, parent: dict[str, Any]
+    lei: str,
+    subject_sid: str,
+    kind: str,
+    parent: dict[str, Any],
+    subject_statement_date: str | None = None,
 ) -> list[dict[str, Any]]:
+    """Emit entity + relationship statements for one GLEIF Level 2 parent.
+
+    ``subject_statement_date`` is the subject LEI record's
+    ``registration.lastUpdateDate``. GLEIF's parent endpoints return the
+    *parent's* Level 1 record, not the relationship (RR) record, so the RR's own
+    update date is not available to us; the subject's is the closest thing we
+    genuinely hold, since the Level 2 relationship is reported by the subject.
+    """
     parent_attrs = parent.get("attributes") or parent
     parent_entity_block = parent_attrs.get("entity") or {}
     parent_lei = parent_attrs.get("lei") or parent.get("id") or ""
@@ -1629,12 +1670,16 @@ def _gleif_parent_statements(
             }
         ],
         source_url=parent_url,
+        statement_date=subject_statement_date,
     )
     return [parent_statement, rel]
 
 
 def _gleif_child_statements(
-    lei: str, subject_sid: str, child: dict[str, Any]
+    lei: str,
+    subject_sid: str,
+    child: dict[str, Any],
+    subject_statement_date: str | None = None,
 ) -> list[dict[str, Any]]:
     """Emit entity + relationship statements for one GLEIF direct subsidiary.
 
@@ -1671,6 +1716,7 @@ def _gleif_child_statements(
             }
         ],
         source_url=child_url,
+        statement_date=subject_statement_date,
     )
     return [child_statement, rel]
 
@@ -1730,7 +1776,11 @@ def map_gleif_subsidiaries(
 
 
 def _gleif_exception_statements(
-    lei: str, subject_sid: str, kind: str, exception: dict[str, Any]
+    lei: str,
+    subject_sid: str,
+    kind: str,
+    exception: dict[str, Any],
+    subject_statement_date: str | None = None,
 ) -> list[dict[str, Any]]:
     """Emit bridging anonymousEntity / unknownPerson + relationship for an exception."""
     attrs = exception.get("attributes") or exception
@@ -1778,6 +1828,7 @@ def _gleif_exception_statements(
             }
         ],
         source_url=f"https://www.gleif.org/lei/{lei}",
+        statement_date=subject_statement_date,
     )
     return [bridge, rel]
 
@@ -1820,6 +1871,17 @@ def _gleif_id_values(value: Any) -> list[str]:
             seen.add(s)
             out.append(s)
     return out
+
+
+def _gleif_registration_date(attrs: dict[str, Any] | None) -> str | None:
+    """GLEIF ``registration.lastUpdateDate`` as a plain ISO date.
+
+    GLEIF publishes it with a time component (e.g. "2023-03-31T07:01:00Z");
+    BODS date fields want ``YYYY-MM-DD``, so take the date portion.
+    """
+    registration = (attrs or {}).get("registration") or {}
+    last_update = registration.get("lastUpdateDate") or ""
+    return last_update[:10] or None
 
 
 def _gleif_entity_statement(
@@ -1972,11 +2034,11 @@ def _gleif_entity_statement(
             seen_names.add(n)
             alternate_names.append(n)
 
-    # GLEIF registration.lastUpdateDate is ISO 8601 with time component
-    # (e.g. "2023-03-31T07:01:00Z") — take the date portion only.
-    registration = (attrs or {}).get("registration") or {}
-    last_update = registration.get("lastUpdateDate") or ""
-    gleif_publication_date = last_update[:10] or None
+    # GLEIF's registration.lastUpdateDate is when GLEIF last asserted this
+    # record's contents — the source's own declaration date, so it is a
+    # statementDate. It is NOT a publicationDate: publicationDetails describes
+    # OpenCheck's publication of this statement, and OpenCheck published it now.
+    gleif_statement_date = _gleif_registration_date(attrs)
 
     # entity.creationDate → foundingDate (ISO 8601 date or datetime; take date part).
     creation_date_raw = entity_block.get("creationDate") or ""
@@ -1998,7 +2060,7 @@ def _gleif_entity_statement(
         founding_date=founding_date,
         dissolution_date=dissolution_date,
         source_url=source_url,
-        publication_date=gleif_publication_date,
+        statement_date=gleif_statement_date,
     )
 
     # Resolve GLEIF's ISO 20275 legal-form code (entity.legalForm.id, e.g.
@@ -2690,7 +2752,9 @@ def _inpi_individu_statements(
         interested_party_type="person",
         interests=[interest],
         source_url=source_url,
-        publication_date=start_date,
+        # start_date is when the role began (already interest.startDate), not
+        # when the RNE declared it or when OpenCheck published — same class of
+        # error as the Companies House officer path above.
     )
     rel_sid = rel["statementId"]
     if rel_sid not in seen_sids:
@@ -5579,6 +5643,12 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
         f"https://www.sec.gov/cgi-bin/browse-edgar"
         f"?action=getcompany&CIK={issuer_cik}&type=SCHEDULE+13D"
     )
+    # The issuer block is read off the filings, so the latest filing date is
+    # when the SEC last published these details.
+    latest_filed = max(
+        (f.get("filed") or "" for f in filings),
+        default="",
+    ) or None
     subject_entity = make_entity_statement(
         source_id="sec_edgar",
         local_id=issuer_cik,
@@ -5587,6 +5657,7 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
         identifiers=issuer_identifiers,
         addresses=issuer_addresses,
         source_url=subject_url,
+        statement_date=latest_filed,
     )
     result.statements.append(subject_entity)
     subject_sid = subject_entity["statementId"]
@@ -5630,6 +5701,7 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
                 nationalities=nationalities,
                 identifiers=reporter_identifiers,
                 source_url=filing_url,
+                statement_date=filing.get("filed") or None,
             )
             party_type = "person"
         else:
@@ -5645,6 +5717,7 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
                 jurisdiction=jur,
                 identifiers=reporter_identifiers,
                 source_url=filing_url,
+                statement_date=filing.get("filed") or None,
             )
             party_type = "entity"
 
@@ -5668,7 +5741,10 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
             interested_party_type=party_type,
             interests=[shareholding],
             source_url=filing_url,
-            publication_date=filing.get("filed") or None,
+            # The 13D/13G filing date — when this holding was declared to the
+            # SEC. That is the source's declaration date, so it is the
+            # statementDate.
+            statement_date=filing.get("filed") or None,
         )
         result.statements.append(rel_stmt)
 
