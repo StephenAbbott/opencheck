@@ -269,29 +269,38 @@ async def test_debarment_emits_related_debarment(monkeypatch) -> None:
     assert "debarred from public contracts" in signals[0].summary
 
 
-async def test_debarment_outranks_sanction_linked(monkeypatch) -> None:
-    """When a related hit is both sanctions-linked and debarred, the confirmed
-    debarment is the single signal surfaced (the Vale S.A. related case)."""
-    from opencheck.cross_check import RELATED_DEBARMENT
+async def test_debarment_and_adjacency_are_both_reported(monkeypatch) -> None:
+    """A related hit that is both sanctions-linked and debarred reports both.
+
+    These are two independent facts about the same party, so the old
+    one-signal-per-hit ladder was discarding one of them. Order stays
+    most-severe-first so a caller taking ``[0]`` gets the headline (the
+    Vale S.A. related case).
+    """
+    from opencheck.cross_check import RELATED_DEBARMENT, RELATED_SANCTIONS_LINKED
 
     _stub(monkeypatch, "opensanctions",
           [_os_entity_hit("NK-v", "Vale S.A.", ["corp.public", "sanction.linked", "debarment"])])
     _stub(monkeypatch, "everypolitician", [])
 
     signals = await assess_cross_source_names([_entity("e1", "Vale S.A.")])
-    assert [s.code for s in signals] == [RELATED_DEBARMENT]
-    assert signals[0].hit_id == "NK-v"
+    assert [s.code for s in signals] == [RELATED_DEBARMENT, RELATED_SANCTIONS_LINKED]
+    assert all(s.hit_id == "NK-v" for s in signals)
 
 
-async def test_control_outranks_debarment_and_adjacency(monkeypatch) -> None:
-    """Ladder position for a related entity inside a sanctioned party's
-    ownership chain: below a direct listing, above a debarment.
+async def test_control_suppresses_adjacency_but_not_debarment(monkeypatch) -> None:
+    """The one suppression that survives multi-signal reporting.
 
-    The payload carries ``sanction.linked`` too (upstream superset) plus a
-    debarment — only the ownership-chain signal surfaces, because this path
-    emits one signal per hit.
+    ``sanction.linked`` is a declared superset of ``sanction.control``, so a
+    controlled entity always carries both and the weaker chip is the same
+    fact stated less precisely — dropped. A debarment is a genuinely
+    different fact, so it is kept alongside.
     """
-    from opencheck.cross_check import RELATED_SANCTIONS_CONTROLLED
+    from opencheck.cross_check import (
+        RELATED_DEBARMENT,
+        RELATED_SANCTIONS_CONTROLLED,
+        RELATED_SANCTIONS_LINKED,
+    )
 
     _stub(monkeypatch, "opensanctions",
           [_os_entity_hit("NK-sub", "Rosneft Trading SA",
@@ -299,21 +308,28 @@ async def test_control_outranks_debarment_and_adjacency(monkeypatch) -> None:
     _stub(monkeypatch, "everypolitician", [])
 
     signals = await assess_cross_source_names([_entity("e1", "Rosneft Trading SA")])
-    assert [s.code for s in signals] == [RELATED_SANCTIONS_CONTROLLED]
+    codes = [s.code for s in signals]
+    assert codes == [RELATED_SANCTIONS_CONTROLLED, RELATED_DEBARMENT]
+    assert RELATED_SANCTIONS_LINKED not in codes
     assert "ownership chain" in signals[0].summary
 
 
-async def test_direct_listing_still_outranks_control(monkeypatch) -> None:
-    """A related party that is itself designated reports as sanctioned, not as
-    somebody else's subsidiary."""
-    from opencheck.cross_check import RELATED_SANCTIONED
+async def test_designated_and_controlled_both_reported(monkeypatch) -> None:
+    """A related party designated in its own right *and* inside another
+    designated party's ownership chain reports both — matching what
+    ``risk.py`` already does for the subject. Being sanctioned and being
+    owned by someone sanctioned are different facts."""
+    from opencheck.cross_check import RELATED_SANCTIONED, RELATED_SANCTIONS_CONTROLLED
 
     _stub(monkeypatch, "opensanctions",
           [_os_entity_hit("NK-d", "Designated Co", ["sanction", "sanction.control"])])
     _stub(monkeypatch, "everypolitician", [])
 
     signals = await assess_cross_source_names([_entity("e1", "Designated Co")])
-    assert [s.code for s in signals] == [RELATED_SANCTIONED]
+    assert [s.code for s in signals] == [
+        RELATED_SANCTIONED,
+        RELATED_SANCTIONS_CONTROLLED,
+    ]
 
 
 async def test_emits_related_pep_for_pep_topic_or_everypolitician(

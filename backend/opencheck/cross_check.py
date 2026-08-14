@@ -398,9 +398,7 @@ async def _check_target(
         else:
             os_hits = os_raw
         for hit in os_hits:
-            sig = _signal_from_os(hit, target, min_score=min_score)
-            if sig is not None:
-                signals.append(sig)
+            signals.extend(_signals_from_os(hit, target, min_score=min_score))
     # EveryPolitician hits — every hit is by construction a PEP.
     if ep_adapter is not None:
         ep_index = 0 if os_adapter is None else 1
@@ -417,11 +415,25 @@ async def _check_target(
     return signals, failed
 
 
-def _signal_from_os(
+def _signals_from_os(
     hit: SourceHit, target: dict[str, Any], *, min_score: float
-) -> RiskSignal | None:
+) -> list[RiskSignal]:
+    """Every fact this OpenSanctions hit asserts about the related party.
+
+    Previously returned at most one signal, chosen by a priority ladder. That
+    made a related party who is *both* designated and inside another
+    designated party's ownership chain report only as sanctioned — losing a
+    fact that ``risk.py`` reports for the subject. The two paths now agree:
+    each rung fires on its own merit, and the only suppression is
+    ``sanction.linked`` when ``sanction.control`` fires, because upstream
+    declares linked a superset of control — the same fact stated less
+    precisely, not an additional one.
+
+    Order is preserved most-severe-first so a caller taking ``[0]`` still
+    gets the headline finding.
+    """
     if hit.is_stub:
-        return None
+        return []
     # Single-token person names ("Fernández", "Ivanov") are too generic to
     # base a related-party match on — a bare surname collides across unrelated
     # people (ftmg drops single-token names from matching). Entities keep
@@ -430,78 +442,52 @@ def _signal_from_os(
         is_matchable_name(_normalise(target["name"]))
         and is_matchable_name(_normalise(hit.name))
     ):
-        return None
+        return []
     score = _name_score(target["name"], hit.name)
     if score < min_score:
-        return None
+        return []
     if not _birth_year_compatible(target.get("birth_year"), hit):
-        return None
+        return []
     topics = _extract_topics(hit.raw or {})
+    blurb = _topic_blurb(topics)
     sanctions = classify_sanction_topics(topics)
-    direct_sanction = bool(sanctions.direct)
     controlled = bool(sanctions.control)
-    linked_sanction = bool(sanctions.linked or sanctions.unknown)
-    is_debarred = any(t in _DEBARMENT_TOPICS for t in topics)
-    is_pep = any(t in _PEP_TOPICS for t in topics)
-    # Priority (one signal per related hit): a direct sanctions listing
-    # outranks sitting inside a sanctioned party's ownership chain, which
-    # outranks a confirmed debarment, which outranks mere adjacency, which
-    # outranks PEP status.
-    #
-    # Unlike ``risk.py`` — which reports every fact it finds about the subject
-    # — this path emits at most one signal per related hit, so the ranking is
-    # the whole decision. ``sanction.linked`` being a superset of
-    # ``sanction.control`` upstream is handled for free: control is checked
-    # first and returns.
-    if direct_sanction:
-        return _make_signal(
-            code=RELATED_SANCTIONED,
-            target=target,
-            hit=hit,
-            score=score,
-            summary_extra=f"sanctioned per OpenSanctions ({_topic_blurb(topics)})",
+
+    out: list[RiskSignal] = []
+
+    def add(code: str, extra: str) -> None:
+        out.append(
+            _make_signal(
+                code=code, target=target, hit=hit, score=score, summary_extra=extra
+            )
         )
+
+    if sanctions.direct:
+        add(RELATED_SANCTIONED, f"sanctioned per OpenSanctions ({blurb})")
     if controlled:
-        return _make_signal(
-            code=RELATED_SANCTIONS_CONTROLLED,
-            target=target,
-            hit=hit,
-            score=score,
-            summary_extra=(
-                "inside a sanctioned party's ownership chain per OpenSanctions "
-                f"({_topic_blurb(topics)})"
-            ),
+        add(
+            RELATED_SANCTIONS_CONTROLLED,
+            f"inside a sanctioned party's ownership chain per OpenSanctions ({blurb})",
         )
-    if is_debarred:
-        return _make_signal(
-            code=RELATED_DEBARMENT,
-            target=target,
-            hit=hit,
-            score=score,
-            summary_extra=f"debarred from public contracts per OpenSanctions ({_topic_blurb(topics)})",
+    if any(t in _DEBARMENT_TOPICS for t in topics):
+        add(
+            RELATED_DEBARMENT,
+            f"debarred from public contracts per OpenSanctions ({blurb})",
         )
-    if linked_sanction:
-        return _make_signal(
-            code=RELATED_SANCTIONS_LINKED,
-            target=target,
-            hit=hit,
-            score=score,
-            summary_extra=f"linked to sanctioned entities per OpenSanctions ({_topic_blurb(topics)})",
+    # Suppressed when control fires — see the docstring.
+    if not controlled and (sanctions.linked or sanctions.unknown):
+        add(
+            RELATED_SANCTIONS_LINKED,
+            f"linked to sanctioned entities per OpenSanctions ({blurb})",
         )
     # Entities can never be PEPs by definition — only natural persons
     # hold political office. Skip the RELATED_PEP path for entity
     # targets even when OpenSanctions tags an entity record with a
     # ``role.pep`` topic (which it sometimes does for legal vehicles
     # owned by a PEP).
-    if is_pep and target["kind"] == _KIND_PERSON:
-        return _make_signal(
-            code=RELATED_PEP,
-            target=target,
-            hit=hit,
-            score=score,
-            summary_extra=f"PEP per OpenSanctions ({_topic_blurb(topics)})",
-        )
-    return None
+    if target["kind"] == _KIND_PERSON and any(t in _PEP_TOPICS for t in topics):
+        add(RELATED_PEP, f"PEP per OpenSanctions ({blurb})")
+    return out
 
 
 def _signal_from_ep(

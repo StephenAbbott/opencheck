@@ -201,9 +201,9 @@ async def test_topic_ladder_priority_and_pep(fake_percolate) -> None:
     assert codes == {"RELATED_PEP", "RELATED_DEBARMENT"}
 
 
-async def test_control_outranks_debarment_in_the_shared_ladder(fake_percolate) -> None:
-    """The OpenAleph screen imports the cross_check ladder, so the new
-    ownership-chain rung applies here too — one classifier, one ordering."""
+async def test_control_suppresses_adjacency_in_the_shared_ladder(fake_percolate) -> None:
+    """The OpenAleph screen shares cross_check's reporting rule, so the same
+    multi-signal behaviour applies here — one classifier, one rule."""
     fake_percolate(
         [
             _percolate_item(
@@ -217,7 +217,9 @@ async def test_control_outranks_debarment_in_the_shared_ladder(fake_percolate) -
         [],
     )
     signals = await assess_openaleph_names(_BUNDLE)
-    assert {s.code for s in signals} == {"RELATED_SANCTIONS_CONTROLLED"}
+    codes = [s.code for s in signals]
+    assert codes == ["RELATED_SANCTIONS_CONTROLLED", "RELATED_DEBARMENT"]
+    assert "RELATED_SANCTIONS_LINKED" not in codes
     assert "ownership chain" in signals[0].summary
 
 

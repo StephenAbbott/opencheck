@@ -52,7 +52,7 @@ For every `personStatement` and `entityStatement` in the assembled BODS bundle, 
 - `RELATED_SANCTIONS_LINKED` — the match carries `sanction.linked` only: plain adjacency.
 - `RELATED_DEBARMENT` — the match carries `debarment`.
 
-Unlike the subject-level rules above, this path emits **at most one signal per related hit**, so the codes are a strict priority ladder: direct listing > ownership chain > debarment > adjacency > PEP. The same ladder is imported by the OpenAleph percolation screen, so the two cannot diverge.
+These follow the **same reporting rule as the subject-level signals**: every fact a matched record asserts is reported, so a related party that is designated *and* inside another designated party's ownership chain surfaces both `RELATED_SANCTIONED` and `RELATED_SANCTIONS_CONTROLLED`. The one suppression is `RELATED_SANCTIONS_LINKED` when `RELATED_SANCTIONS_CONTROLLED` fires — upstream declares `sanction.linked` a superset of `sanction.control`, so the weaker code is the same fact stated less precisely rather than an additional one. Signals are ordered most-severe-first (direct listing → ownership chain → debarment → adjacency → PEP), so a consumer taking the first still gets the headline finding. The OpenAleph percolation screen shares this rule, so the two cannot diverge.
 
 The normaliser folds standalone non-ASCII letters (Polish `ł`, Norwegian `ø`, German `ß`, Icelandic `ð`/`þ`, French `œ`) so transliterated and native spellings match. Bounded at `max_targets=25` per lookup to keep the OpenSanctions request volume sane on large PSC chains. The cross-check is a no-op when live mode is off or no OpenSanctions API key is configured.
 
