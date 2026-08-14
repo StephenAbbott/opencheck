@@ -399,6 +399,12 @@ class AresAdapter(SourceAdapter):
         )
         entity_type = _LEGAL_FORMS.get(pf_code, f"Legal form {pf_code}" if pf_code else "")
         incorporation_date = aggregate.get("datumVzniku")
+        # datumAktualizace — when ARES last refreshed this record. Verified
+        # live 2026-08-14 on ekonomicke-subjekty/27082440, alongside
+        # datumVzniku (which is the company's founding date, not a
+        # declaration). The record-level update date is the register's own
+        # assertion date, so it becomes the BODS statementDate.
+        last_updated = aggregate.get("datumAktualizace")
         vat_number = aggregate.get("dic")
         status = _resolve_status(aggregate)
 
@@ -410,6 +416,7 @@ class AresAdapter(SourceAdapter):
             "legal_form_code": pf_code,
             "status": status,
             "incorporation_date": incorporation_date,
+            "last_updated": last_updated,
             "vat_number": vat_number,
             "link": _or_url(ico),
         }

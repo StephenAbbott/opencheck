@@ -119,8 +119,16 @@ Sources publishing a declaration date OpenCheck uses today:
 | `gleif` | `registration.lastUpdateDate` | Moves with each LEI record update; also used for the Level 2 relationship statements the subject reports |
 | `companies_house` | PSC `notified_on`, or `ceased_on` for a closed record | A closed record asserts "this ended", declared at cessation |
 | `sec_edgar` | 13D/13G filing date | Issuer details use the most recent filing |
+| `bods_gleif`, `bods_uk_psc` | Open Ownership's own `statementDate` | Passed through verbatim from the bulk Parquet — re-deriving it would replace a real declaration date with our processing date |
+| `krs_poland` | `dataOstatniegoWpisu` | "Date of the last entry" in the court register. Not `dataRejestracjiWKRS`, the original registration |
+| `ur_latvia` | officer `last_modified_at`, else `registered_on` | When UR last revised the officer record |
+| `ares` | `datumAktualizace` | When ARES last refreshed the record. Not `datumVzniku`, the founding date |
+| `brreg` | `rollegrupper[].sistEndret` | When Enhetsregisteret last changed that group of roles |
+| `ted_eu` | latest notice `publication-date` | TED's publication of the notice is the declaration |
 
-Everything else falls back to the retrieval date. Note that an interest's
+Everything else falls back to the retrieval date.
+
+Three registers were investigated and have **no** usable declaration date, recorded here so the question does not get re-opened: **Estonia** (the scraped page exposes only a founding date), **Denmark** (Datafordeler CVR is bitemporal, but the adapter's queries request only `virkningFra`/`virkningTil` — validity time, not transaction time), and **Brazil** (probed live against both OpenCNPJ and BrasilAPI; every `data_*` field is an event or founding date, and `data_situacao_cadastral` is the status-effective date, not a declaration). Note that an interest's
 *start* date is not a declaration date: a director appointed in 1998 was not
 declared in 1998 and certainly was not published by OpenCheck in 1998, so
 `appointed_on` (Companies House officers) and the INPI role start date appear

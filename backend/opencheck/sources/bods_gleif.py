@@ -532,7 +532,8 @@ class BODSGleifAdapter(SourceAdapter):
                         """
                         SELECT statementid,
                                recordDetails_subject,
-                               recordDetails_interestedParty
+                               recordDetails_interestedParty,
+                               statementdate
                         FROM read_parquet(?)
                         WHERE recordDetails_subject = ?
                            OR recordDetails_interestedParty = ?
@@ -633,6 +634,13 @@ def _build_entity_statement(
     """Reconstruct a BODS 0.4 entityStatement from a Flatterer-flatten row."""
     statementid = row.get("statementid") or ""
     pub_date = row.get("publicationdetails_publicationdate") or row.get("publicationdetails_date") or ""
+    # Open Ownership's published bundles carry their own ``statementDate`` —
+    # the date the source declared the fact, distinct from OO's
+    # ``publicationDate``. The flattened Parquet keeps it as ``statementdate``.
+    # Passing it straight through is the whole point of serving OO's canonical
+    # output: re-deriving a date here would replace a real declaration date
+    # with our processing date.
+    statement_date = (row.get("statementdate") or "")[:10]
 
     record_details: dict[str, Any] = {
         "isComponent": False,
@@ -672,6 +680,8 @@ def _build_entity_statement(
     }
     if pub_date:
         stmt["publicationDetails"]["publicationDate"] = pub_date[:10]
+    if statement_date:
+        stmt["statementDate"] = statement_date
 
     source_url = row.get("source_url") or ""
     if source_url:
@@ -690,12 +700,14 @@ def _build_relationship_statement(
       0 — statementid
       1 — recordDetails_subject (entity statementId)
       2 — recordDetails_interestedParty (entity statementId — GLEIF has entity-entity links)
+      3 — statementdate (Open Ownership's own declaration date)
     """
     statementid = row[0] or ""
     subject = row[1] or ""
     interested_party = row[2] or ""
+    statement_date = ((row[3] if len(row) > 3 else "") or "")[:10]
 
-    return {
+    stmt: dict[str, Any] = {
         "statementId": statementid,
         "recordId": statementid,
         "statementType": "relationshipStatement",
@@ -710,3 +722,6 @@ def _build_relationship_statement(
             "publisher": {"name": "OpenCheck (via Open Ownership GLEIF bulk data)"},
         },
     }
+    if statement_date:
+        stmt["statementDate"] = statement_date
+    return stmt
