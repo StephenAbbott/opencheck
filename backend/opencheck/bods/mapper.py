@@ -3890,6 +3890,78 @@ _FTM_EDGE_SCHEMAS: dict[str, tuple[str, str, str | None]] = {
     "ProjectParticipant": ("participant", "project",     None),
 }
 
+# ----------------------------------------------------------------------
+# beneficialOwnershipOrControl — one policy, stated once
+# ----------------------------------------------------------------------
+# BODS distinguishes three states: true, false, and absent ("not stated").
+# Collapsing "absent" into "true" is the error this policy exists to prevent.
+#
+# A shareholding is a LEGAL holding. Whether it is also a BENEFICIAL one is a
+# separate fact that only a register, or a beneficial-ownership declaration
+# regime, can supply. Equating the two is the error the nominee concept exists
+# to name — and it is the wrong direction of error for a transparency tool,
+# because over-claiming beneficial ownership is a reputational assertion about
+# a named person that travels into every export (RDF, FtM, Senzing, BigQuery),
+# well beyond any caveat the UI can attach.
+#
+# The reasoning was already written down for the FtM path
+# (_FTM_BO_ASSERTING_DATASETS below): "otherwise leave the flag unset ('not
+# stated') rather than asserting a registered holding is a beneficial one." It
+# had simply never been applied to the commercial-register mappers, which
+# inferred the flag from the shape of the interest — `interest_type in
+# ("shareholding", "votingRights")` for OpenCorporates network relationships,
+# `kind == "person"` for New Zealand, and a hard-coded True for every SEC
+# 13D/13G filer.
+#
+# Sources that publish or validate an actual beneficial-ownership declaration,
+# and may therefore assert the flag. Extend only with a source whose ownership
+# records are demonstrably beneficial ownership, not merely registered holdings.
+_BO_ASSERTING_SOURCES: frozenset[str] = frozenset({
+    "bods_uk_psc",      # UK PSC register — a BO regime; the flag is copied verbatim
+    "bods_gleif",       # Open Ownership's processed output; flag copied verbatim
+    "companies_house",  # PSC records are BO declarations under the UK regime
+    "rpvs_slovakia",    # Register of Public Sector Partners — verified KUV
+    "ur_latvia",        # Latvian BO register records
+    "cac_nigeria",      # CAC Persons with Significant Control register
+    "ariregister",      # Estonian register files BO alongside shareholders
+})
+
+
+def source_may_assert_beneficial_ownership(source_id: str) -> bool:
+    """True when *source_id* publishes or validates BO declarations.
+
+    Every other source describes registered/legal holdings. For those, omit
+    ``beneficialOwnershipOrControl`` entirely rather than guessing — see
+    ``set_beneficial_ownership``.
+    """
+    return source_id in _BO_ASSERTING_SOURCES
+
+
+def set_beneficial_ownership(
+    interest: dict[str, Any],
+    source_id: str,
+    *,
+    asserted: bool | None = None,
+) -> dict[str, Any]:
+    """Set ``beneficialOwnershipOrControl`` on *interest*, or leave it unset.
+
+    ``asserted`` is what the SOURCE said:
+
+    * ``True`` / ``False`` — the register stated it. Emitted as given, for any
+      source, because an explicit statement outranks our classification.
+    * ``None`` — the source said nothing. The flag is emitted only if the
+      source is one that publishes BO declarations at all; otherwise it is
+      omitted, which BODS reads as "not stated".
+
+    Mutates and returns *interest* so it can be used inline.
+    """
+    if asserted is not None:
+        interest["beneficialOwnershipOrControl"] = asserted
+    elif source_may_assert_beneficial_ownership(source_id):
+        interest["beneficialOwnershipOrControl"] = True
+    return interest
+
+
 # FtM datasets whose ``Ownership`` edges express genuine *beneficial* ownership
 # rather than legal/registered ownership. FtM ``Ownership`` is by default a
 # registered-ownership relation (a company-registry shareholder, a GLEIF RR
@@ -5050,13 +5122,17 @@ def _oc_build_interests_from_relationship(rel: dict[str, Any]) -> list[dict[str,
             return {"maximum": mx}
         return {}
 
+    # A percentage on an OpenCorporates network relationship makes the holding
+    # more precise, not more beneficial: it is still a registered stake between
+    # two companies, and OC publishes no BO declaration. Same rule as the
+    # type-inferred fallback below.
     if pmin_own is not None or pmax_own is not None:
         entry: dict[str, Any] = {
             "type": "shareholding",
             "directOrIndirect": "direct",
-            "beneficialOwnershipOrControl": True,
             "share": _share_obj(pmin_own, pmax_own),
         }
+        set_beneficial_ownership(entry, "opencorporates")
         if start:
             entry["startDate"] = start
         interests.append(entry)
@@ -5065,9 +5141,9 @@ def _oc_build_interests_from_relationship(rel: dict[str, Any]) -> list[dict[str,
         entry = {
             "type": "votingRights",
             "directOrIndirect": "direct",
-            "beneficialOwnershipOrControl": True,
             "share": _share_obj(pmin_vot, pmax_vot),
         }
+        set_beneficial_ownership(entry, "opencorporates")
         if start:
             entry["startDate"] = start
         interests.append(entry)
@@ -5078,12 +5154,16 @@ def _oc_build_interests_from_relationship(rel: dict[str, Any]) -> list[dict[str,
         interest_type = _OC_RELATIONSHIP_TYPE_TO_INTEREST.get(
             rel_type.lower(), "otherInfluenceOrControl"
         )
+        # OpenCorporates network relationships are structural links between
+        # registered entities, not beneficial-ownership declarations. Inferring
+        # the flag from the interest TYPE asserted beneficial ownership that no
+        # register had stated — see set_beneficial_ownership.
         entry = {
             "type": interest_type,
             "directOrIndirect": "direct",
-            "beneficialOwnershipOrControl": interest_type in ("shareholding", "votingRights"),
             "details": f"OpenCorporates relationship: {rel_type}" if rel_type else "OpenCorporates network relationship",
         }
+        set_beneficial_ownership(entry, "opencorporates")
         if start:
             entry["startDate"] = start
         interests.append(entry)
@@ -5581,6 +5661,42 @@ def _iso2_to_country_name(iso2: str) -> str:
     return country.name if country else iso2
 
 
+# SEC Schedule 13D/13G ``typeOfReportingPerson`` codes that describe a filer
+# acting in a CUSTODIAL or ADVISORY capacity rather than as the beneficial
+# owner. A 13D/13G "beneficial owner" is an SEC-rules term meaning voting or
+# dispositive power — an investment adviser voting client shares has it without
+# any economic interest in the shares. The evidence to tell the two apart was
+# already in the bundle (sec_edgar.py parses type_code alongside sole/shared
+# voting power) and was simply never read: the mapper hard-coded
+# beneficialOwnershipOrControl: True for every filer.
+_SEC_CUSTODIAL_REPORTER_CODES: frozenset[str] = frozenset({
+    "IA",  # Investment adviser
+    "BD",  # Broker-dealer
+    "IC",  # Investment company
+    "EP",  # Employee benefit plan / ERISA
+    "SA",  # Savings association
+    "BK",  # Bank
+    "IN",  # (see below — natural persons are NOT custodial; excluded in code)
+})
+# "IN" is a natural person and is emphatically not custodial; it is listed above
+# only to make the omission deliberate rather than accidental.
+_SEC_CUSTODIAL_REPORTER_CODES = _SEC_CUSTODIAL_REPORTER_CODES - {"IN"}
+
+
+def _sec_beneficial_ownership(reporter: dict[str, Any]) -> bool | None:
+    """What, if anything, a 13D/13G filing says about beneficial ownership.
+
+    Returns ``None`` — "not stated" — when the filer reports in a custodial or
+    advisory capacity, because the filing then asserts voting/dispositive power
+    without asserting that the filer benefits. Returns ``True`` for an ordinary
+    filer, where the SEC's own beneficial-ownership test has been met.
+    """
+    code = (reporter.get("type_code") or "").strip().upper()
+    if code in _SEC_CUSTODIAL_REPORTER_CODES:
+        return None
+    return True
+
+
 def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
     """Map a SEC EDGAR 13D/13G bundle to BODS v0.4.
 
@@ -5738,8 +5854,34 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
         shareholding: dict[str, Any] = {
             "type": "shareholding",
             "directOrIndirect": "direct",
-            "beneficialOwnershipOrControl": True,
         }
+        set_beneficial_ownership(
+            shareholding, "sec_edgar", asserted=_sec_beneficial_ownership(reporter)
+        )
+        # Sole vs shared power is a materially different claim and was being
+        # discarded; where the filing distinguishes them, say so.
+        sole = reporter.get("sole_voting_power")
+        shared = reporter.get("shared_voting_power")
+        if sole is not None or shared is not None:
+            power_parts = []
+            if sole:
+                power_parts.append(f"sole voting power over {sole:,.0f} shares")
+            if shared:
+                power_parts.append(f"shared voting power over {shared:,.0f} shares")
+            if power_parts:
+                shareholding["details"] = "; ".join(power_parts)
+        type_code = (reporter.get("type_code") or "").strip().upper()
+        if type_code in _SEC_CUSTODIAL_REPORTER_CODES:
+            note = (
+                f"Filed as reporting-person type {type_code} "
+                "(custodial/advisory capacity); the filing asserts voting or "
+                "dispositive power, not that the filer is the beneficiary."
+            )
+            shareholding["details"] = (
+                f"{shareholding['details']}. {note}"
+                if shareholding.get("details")
+                else note
+            )
         if percent is not None:
             shareholding["share"] = {"exact": percent}
 
@@ -6270,11 +6412,15 @@ def map_nz_companies(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         for s in _emit_party.pending:
             yield s
         _emit_party.pending = []  # type: ignore[attr-defined]
+        # Being a natural person is not a beneficial-ownership declaration.
+        # NZ files share allocations; whether the holder benefits is a separate
+        # question the register does not answer. (Open: whether NZBN exposes a
+        # beneficiallyHeld-equivalent — needs a live probe.)
         interest = {
             "type": "shareholding",
             "directOrIndirect": "direct",
-            "beneficialOwnershipOrControl": kind == "person",
         }
+        set_beneficial_ownership(interest, "nz_companies")
         if sh.get("percent") is not None:
             interest["share"] = {"exact": sh["percent"]}
         if sh.get("jointly_held"):
