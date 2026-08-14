@@ -193,6 +193,15 @@ observations**. What's missing today is (a) letting `statementDate` reflect each
 modification's date rather than "now", and (b) computing `recordStatus` from the
 change instead of always emitting `new`.
 
+*Update (Phase 100):* (a) is now partly done. `statementDate` is no longer
+"now" — it is the register's own declaration date where the source publishes
+one (GLEIF `registration.lastUpdateDate`, Companies House PSC
+`notified_on`/`ceased_on`, SEC 13D/13G filing date), falling back to the
+retrieval date from Phase 99 and only then to today. For GLEIF that is exactly
+the "each modification's date" this section asks for, since `lastUpdateDate`
+moves with each LEI record update. (b) is untouched — `recordStatus` is still
+`new` everywhere except ceased Companies House PSCs.
+
 **Interop check before we encode this ourselves:** Open Ownership's
 [`bodspipelines` GLEIF mapping](https://github.com/openownership/bodspipelines/tree/main/bodspipelines/pipelines/gleif)
 already encodes the GLEIF lifecycle into `recordId` / `recordStatus` for the

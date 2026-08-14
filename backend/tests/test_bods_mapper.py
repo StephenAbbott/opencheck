@@ -291,11 +291,15 @@ def test_ceased_pscs_emit_closed_record() -> None:
     # via the shared recordId; the removed replacesStatements field must NOT appear.
     assert c["recordId"] != c["statementId"]
     assert "replacesStatements" not in c, "replacesStatements was removed in BODS 0.4"
-    # Cessation date stamped on every interest and on the publication date.
+    # Cessation date stamped on every interest and, as the register's own
+    # declaration of the closure, on statementDate. NOT on publicationDate:
+    # publicationDetails describes OpenCheck's publication of this statement
+    # (publisher: OpenCheck), which happened today.
     assert all(
         i.get("endDate") == "2024-01-01" for i in c["recordDetails"]["interests"]
     )
-    assert c["publicationDetails"]["publicationDate"] == "2024-01-01"
+    assert c["statementDate"] == "2024-01-01"
+    assert c["publicationDetails"]["publicationDate"] != "2024-01-01"
 
 
 def test_relationship_recordid_stable_across_lifecycle() -> None:

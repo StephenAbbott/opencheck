@@ -101,6 +101,31 @@ unmarked default, since badging it would tell a reader nothing they had not
 already assumed. The API carries the same information in `source_liveness`
 (keyed by `source_id`) and on each hit's `liveness` / `retrieved_at`.
 
+### Which date goes where
+
+Four clocks, kept apart:
+
+| Field | Question it answers | Where it comes from |
+|-------|---------------------|---------------------|
+| `interests[].startDate` / `endDate` | When was it true? | the register |
+| `statementDate` | When did the source declare it? | the register's own declaration date where published, else the retrieval date, else today |
+| `source.retrievedAt` | When did OpenCheck download it? | the liveness table above |
+| `publicationDetails.publicationDate` | When did OpenCheck publish this statement? | today |
+
+Sources publishing a declaration date OpenCheck uses today:
+
+| Source | Field | Note |
+|--------|-------|------|
+| `gleif` | `registration.lastUpdateDate` | Moves with each LEI record update; also used for the Level 2 relationship statements the subject reports |
+| `companies_house` | PSC `notified_on`, or `ceased_on` for a closed record | A closed record asserts "this ended", declared at cessation |
+| `sec_edgar` | 13D/13G filing date | Issuer details use the most recent filing |
+
+Everything else falls back to the retrieval date. Note that an interest's
+*start* date is not a declaration date: a director appointed in 1998 was not
+declared in 1998 and certainly was not published by OpenCheck in 1998, so
+`appointed_on` (Companies House officers) and the INPI role start date appear
+only as `interests[].startDate`.
+
 ## Notes
 
 NC-licensed sources (OpenSanctions, EveryPolitician) propagate their non-commercial obligations through `/deepen` and `/export`. The exported `LICENSES.md` warns reviewers before they re-publish. (OpenTender / DIGIWHIST procurement was retired and its code removed — the live `ted_eu` adapter answers the EU-procurement question against TED directly, under a licence that permits commercial reuse.)
