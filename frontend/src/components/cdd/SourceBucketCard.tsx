@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useId, useState } from "react";
 import { deepen } from "../../lib/api";
 import type { BodsBreakdown, BoAccessNotice, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
+import { LivenessBadge, type SourceLiveness } from "./LivenessBadge";
 import { HistoryTimeline } from "./HistoryTimeline";
 import { NzAssociations } from "./NzAssociations";
 
@@ -1006,6 +1007,7 @@ export function SourceBucketCard({
   onRetry,
   retrying = false,
   footnote,
+  liveness,
 }: {
   bucket: SourceBucket;
   /** Resolved LEI for the current lookup — keys the Time Machine timeline. */
@@ -1018,6 +1020,9 @@ export function SourceBucketCard({
   retrying?: boolean;
   /** Caption rendered inside the card footer (e.g. subsidiary truncation note). */
   footnote?: string;
+  /** How current this source's payload is — badged in the header when it is
+   *  anything other than a fresh live call. */
+  liveness?: SourceLiveness;
 }) {
   const [showTimeline, setShowTimeline] = useState(false);
   // The Time Machine timeline is entity-level. Offer it on the sources that
@@ -1074,6 +1079,7 @@ export function SourceBucketCard({
           <h3 className="font-head font-bold text-[15px] text-oo-ink">
             {bucket.sourceName}
           </h3>
+          {!bucket.error && <LivenessBadge info={liveness} className="mt-1" />}
         </div>
         {(() => {
           const firstHit = bucket.hits.find((h) => !h.is_stub);

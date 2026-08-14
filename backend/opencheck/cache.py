@@ -19,8 +19,11 @@ import json
 import os
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from . import provenance
 
 
 def _find_project_root(start_file: Path) -> Path:
@@ -95,18 +98,48 @@ class Cache:
     # ---- reads ----
 
     def get(self, key: str) -> CacheHit | None:
-        """Return a cache hit from ``demos/`` first, else ``live/``."""
+        """Return a cache hit from ``demos/`` first, else ``live/``.
+
+        Every hit is reported to the provenance recorder (a no-op outside a
+        lookup), so a payload served from disk is never later described as
+        having been fetched live.
+        """
         for tier, base in (("demos", self._demos()), ("live", self._live())):
             path = base / f"{key}.json"
             if path.is_file():
                 with path.open("r", encoding="utf-8") as fh:
-                    return CacheHit(
-                        payload=json.load(fh),
-                        tier=tier,
-                        path=path,
-                        retrieved_at=path.stat().st_mtime,
-                    )
+                    payload = json.load(fh)
+                hit = CacheHit(
+                    payload=payload,
+                    tier=tier,
+                    path=path,
+                    retrieved_at=path.stat().st_mtime,
+                )
+                self._record_provenance(hit)
+                return hit
         return None
+
+    @staticmethod
+    def _record_provenance(hit: CacheHit) -> None:
+        if hit.tier == "demos":
+            # A committed fixture. Its mtime is when git wrote the file here,
+            # which says nothing about when the data left the register — so no
+            # retrieval time is claimed.
+            provenance.record_curated("Committed demo fixture")
+            return
+        cached_at = hit.retrieved_at
+        # Prefer the wrapper's own timestamp: the file mtime can be later than
+        # the fetch if the entry was rewritten, and copying a cache tree
+        # rewrites mtimes wholesale.
+        if isinstance(hit.payload, dict) and "_cached_at" in hit.payload:
+            try:
+                cached_at = float(hit.payload["_cached_at"])
+            except (TypeError, ValueError):
+                pass
+        provenance.record_cached(
+            datetime.fromtimestamp(cached_at, tz=timezone.utc),
+            "OpenCheck response cache",
+        )
 
     def has(self, key: str) -> bool:
         """Cheap presence check — used by adapters to decide whether to

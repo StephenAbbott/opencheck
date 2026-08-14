@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, ClassVar, Literal
 
@@ -152,6 +153,39 @@ class SourceHit(BaseModel):
         default=True,
         description="True when this hit was produced by the Phase 0 stub path.",
     )
+    liveness: str = Field(
+        default="stub",
+        description=(
+            "How current this payload is: 'live' (fetched now), 'cached' "
+            "(OpenCheck response cache), 'snapshot' (bulk dataset), 'curated' "
+            "(committed fixture) or 'stub' (placeholder). Defaults to 'stub' "
+            "so a source that declares nothing under-claims rather than "
+            "over-claims."
+        ),
+    )
+    retrieved_at: datetime | None = Field(
+        default=None,
+        description=(
+            "When OpenCheck actually obtained this payload from the source, or "
+            "None when nothing was fetched (stub and curated data). Feeds BODS "
+            "``source.retrievedAt``, which the dates guidance requires a "
+            "republisher to state."
+        ),
+    )
+
+    @field_serializer("retrieved_at")
+    def _serialize_retrieved_at(
+        self, value: datetime | None, _info: Any
+    ) -> str | None:
+        if value is None:
+            return None
+        moment = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        return (
+            moment.astimezone(timezone.utc)
+            .replace(microsecond=0)
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
 
     @field_serializer("raw")
     def _redact_raw(self, raw: dict[str, Any], _info: Any) -> dict[str, Any]:

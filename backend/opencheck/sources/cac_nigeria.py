@@ -40,9 +40,11 @@ import asyncio
 import json
 import logging
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .. import provenance
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 log = logging.getLogger(__name__)
@@ -56,6 +58,27 @@ _INDEX_PATH = Path(
 
 # Lazy module-level singleton (LEI -> record). Tests may set this directly.
 _index: dict[str, dict[str, Any]] | None = None
+
+#: Date the committed index was harvested from the CAC register, read from the
+#: file's own ``meta.harvested``. This is a genuine retrieval date — unlike the
+#: file's mtime, which only records when git wrote it to this machine — so it is
+#: what the BODS ``source.retrievedAt`` reports for this adapter.
+_harvested_at: datetime | None = None
+
+
+def _load_and_declare() -> dict[str, dict[str, Any]]:
+    """Load the index and declare the payload as curated, never live.
+
+    The index is a committed example set, not a call to the register. This
+    fetch touches neither the HTTP client nor the response cache, so without an
+    explicit declaration it would resolve to 'stub' and under-claim.
+    """
+    index = _get_index()
+    provenance.record_curated(
+        "Curated CAC BOR example set committed to the repository",
+        harvested_at=_harvested_at,
+    )
+    return index
 
 
 def _get_index() -> dict[str, dict[str, Any]]:
@@ -72,6 +95,15 @@ def _get_index() -> dict[str, dict[str, Any]]:
                 if len(str(k).strip()) == 20
             }
             meta = data.get("meta") or {}
+            global _harvested_at
+            harvested = str(meta.get("harvested") or "").strip()
+            if harvested:
+                try:
+                    _harvested_at = datetime.fromisoformat(harvested).replace(
+                        tzinfo=timezone.utc
+                    )
+                except ValueError:
+                    _harvested_at = None
             log.info(
                 "CAC Nigeria index loaded: %s entities (%s harvest)",
                 meta.get("entities", len(_index)),
@@ -133,7 +165,7 @@ class CacNigeriaAdapter(SourceAdapter):
     async def fetch_by_lei(self, lei: str) -> dict[str, Any] | None:
         """Return the CAC PSC bundle for a LEI, or ``None`` when not in the set."""
         lei_norm = (lei or "").strip().upper()
-        index = await asyncio.to_thread(_get_index)
+        index = await asyncio.to_thread(_load_and_declare)
         record = index.get(lei_norm)
         if record is None:
             return None
@@ -142,7 +174,7 @@ class CacNigeriaAdapter(SourceAdapter):
     async def fetch(self, hit_id: str) -> dict[str, Any]:
         """Fetch by LEI hit id (deepen / retry path)."""
         lei_norm = (hit_id or "").strip().upper()
-        index = await asyncio.to_thread(_get_index)
+        index = await asyncio.to_thread(_load_and_declare)
         record = index.get(lei_norm)
         if record is None:
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
