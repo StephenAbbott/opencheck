@@ -21,6 +21,7 @@ from typing import Any, Iterable
 import pycountry
 
 from .. import names as _names_mod
+from .. import provenance as _provenance
 from ..elf import resolve_elf
 from .ch_constants import describe_company_type, describe_officer_role
 from .psc_natures import describe_nature, describe_statement, describe_super_secure
@@ -263,6 +264,7 @@ def make_entity_statement(
     entity_details: str | None = None,
     source_url: str | None = None,
     publication_date: str | None = None,
+    statement_date: str | None = None,
 ) -> dict[str, Any]:
     statement_id = _stable_id(source_id, "entity", local_id)
     # bods-dagre v0.4 resolves graph edges by matching the relationship's
@@ -309,7 +311,7 @@ def make_entity_statement(
         "declarationSubject": record_id,
         "recordType": "entity",
         "recordStatus": "new",
-        "statementDate": _today(),
+        "statementDate": _statement_date(statement_date),
         "publicationDetails": _publication_details_block(publication_date),
         "recordDetails": record_details,
         "source": _source_block(source_id, source_url),
@@ -328,6 +330,7 @@ def make_person_statement(
     identifiers: Iterable[dict[str, str]] = (),
     source_url: str | None = None,
     publication_date: str | None = None,
+    statement_date: str | None = None,
     political_exposure: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     statement_id = _stable_id(source_id, "person", local_id)
@@ -364,7 +367,7 @@ def make_person_statement(
         "declarationSubject": record_id,
         "recordType": "person",
         "recordStatus": "new",
-        "statementDate": _today(),
+        "statementDate": _statement_date(statement_date),
         "publicationDetails": _publication_details_block(publication_date),
         "recordDetails": record_details,
         "source": _source_block(source_id, source_url),
@@ -382,6 +385,7 @@ def make_relationship_statement(
     interests: Iterable[dict[str, Any]] = (),
     source_url: str | None = None,
     publication_date: str | None = None,
+    statement_date: str | None = None,
     record_status: str = "new",
 ) -> dict[str, Any]:
     """Build a BODS v0.4 relationship statement.
@@ -418,7 +422,7 @@ def make_relationship_statement(
         "declarationSubject": subject_statement_id,
         "recordType": "relationship",
         "recordStatus": record_status,
-        "statementDate": _today(),
+        "statementDate": _statement_date(statement_date),
         "publicationDetails": _publication_details_block(publication_date),
         "recordDetails": {
             "isComponent": False,
@@ -518,11 +522,42 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
     block: dict[str, Any] = {
         "type": ["officialRegister"] if source_id in _official_registers else ["thirdParty"],
         "description": source_names.get(source_id, source_id),
-        "retrievedAt": datetime.utcnow().isoformat(timespec="seconds") + "Z",
     }
+    # ``retrievedAt`` is a factual claim about when OpenCheck downloaded the
+    # data, not a timestamp of when this function happened to run. It is
+    # emitted only where the pipeline actually observed a retrieval — so stub
+    # output, and curated fixtures whose real retrieval date is unknown, carry
+    # no claim at all. (Previously every statement asserted datetime.utcnow()
+    # at mapping time, which was false for cached, snapshot, curated and stub
+    # payloads alike.)
+    retrieved_at = _provenance.current_mapping_provenance().retrieved_at_iso()
+    if retrieved_at:
+        block["retrievedAt"] = retrieved_at
     if source_url:
         block["url"] = source_url
     return block
+
+
+def _statement_date(explicit: str | None = None) -> str:
+    """The date the source claimed this was true.
+
+    Precedence:
+
+    1. A date the source itself supplies (a filing or last-update date),
+       passed in by the individual mapper where it has one.
+    2. The date OpenCheck retrieved the payload. For a months-old bulk
+       snapshot this is far closer to the truth than today's date, and the
+       BODS dates guidance's consolidation reading — "the date on which
+       several sources of information were resolved to make a coherent
+       claim" — covers using it.
+    3. Today, for stub and curated payloads where neither exists.
+    """
+    if explicit:
+        return explicit
+    retrieved = _provenance.current_mapping_provenance().retrieved_at
+    if retrieved is not None:
+        return retrieved.date().isoformat()
+    return _today()
 
 
 # ----------------------------------------------------------------------

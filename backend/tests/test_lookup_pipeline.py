@@ -538,3 +538,59 @@ def test_select_deepen_pairs_keeps_person_sources_past_cap():
     assert ("companies_house", "GB123") in pairs         # register carved in past cap
     assert ("openaleph", "c") not in pairs               # non-register 7th stays out
     assert _select_deepen_pairs(bundles, 5, None) == pairs  # deterministic
+
+
+def test_replay_does_not_advance_retrieved_at(client: TestClient, tmp_path: Path) -> None:
+    """A replayed run reports when the data was originally retrieved.
+
+    The replay cache stores completed events verbatim, so provenance stamped at
+    fetch time travels with them. The risk this pins is a future change that
+    re-derives retrievedAt at serve time — a bundle replayed 14 minutes later
+    would then claim to have been fetched 14 minutes after it was.
+    """
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)
+
+    first = client.get("/lookup", params={"lei": lei}).json()
+    second = client.get("/lookup", params={"lei": lei}).json()
+    assert second["replayed"] is True
+
+    def stamps(payload: dict) -> dict[str, object]:
+        return {
+            h["source_id"]: (h.get("liveness"), h.get("retrieved_at"))
+            for h in payload["hits"]
+        }
+
+    assert stamps(second) == stamps(first)
+    assert second.get("source_liveness") == first.get("source_liveness")
+
+    # And the BODS statements themselves must not have re-stamped.
+    def retrieved(payload: dict) -> list[str]:
+        return sorted(
+            s["source"]["retrievedAt"]
+            for s in payload["bods"]
+            if "retrievedAt" in (s.get("source") or {})
+        )
+
+    assert retrieved(second) == retrieved(first)
+
+
+def test_stored_bundle_sources_report_as_snapshot(
+    client: TestClient, tmp_path: Path
+) -> None:
+    """Pre-extracted Open Ownership bundles are a bulk snapshot, not a live call.
+
+    They also carry Open Ownership's own publicationDate, which is a far better
+    statement of currency than the moment we happened to serve them.
+    """
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)
+
+    payload = client.get("/lookup", params={"lei": lei}).json()
+    liveness = payload.get("source_liveness") or {}
+    assert liveness, "expected per-source liveness on the response"
+
+    # Nothing in a test run reaches a real register, so nothing may claim to.
+    assert "live" not in {v["liveness"] for v in liveness.values()}, (
+        f"a source claimed to be live in an offline test run: {liveness}"
+    )

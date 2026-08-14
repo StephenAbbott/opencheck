@@ -60,6 +60,47 @@ These are **not** `SourceAdapter`s and are deliberately excluded from the active
 |----|------|---------|-------------|-------------|
 | `meip` | OECD-UNSD Multinational Enterprise Information Platform | [OECD Terms](https://www.oecd.org/termsandconditions/) (attribution) | LEI matched against the vendored Global Register | **Signpost.** The annual "Global Register" of the 500 largest MNEs and their 126k+ subsidiaries. When the subject LEI is one of the ~30k LEI-carrying subsidiaries (or one of the 500 MNE heads), OpenCheck shows a card with the subsidiary/parent-MNE context, alternative names, address, and cross-reference identifiers (LEI, OpenCorporates, Refinitiv PermID, S&P Capital IQ — corroborated against GLEIF's own), and links users to the OECD site to download and reuse the full dataset. Vendored tables built from the annual CSV by `backend/scripts/build_meip.py`; no live API. |
 
+## Data currency
+
+OpenCheck republishes other people's data, so every source card and every BODS
+statement declares how current its payload actually is. The BODS
+[dates guidance](https://standard.openownership.org/en/main/standard/modelling/dates-guidance.html)
+is firm about this: `source.retrievedAt` applies "only where data is being
+republished", and a republisher **must** state when it downloaded the data.
+
+Liveness is resolved per fetch, not declared per adapter — a live-capable
+adapter serving a cached response is `cached`, not `live` — and a lookup that
+mixes cached and fresh requests reports the **worst** liveness and the
+**oldest** retrieval time, because a bundle is only as fresh as its stalest
+component.
+
+| Mode | What it means | `retrievedAt` |
+|------|---------------|---------------|
+| `live` | Fetched from the source during this lookup | the HTTP fetch time |
+| `cached` | Served from OpenCheck's response cache (`data/cache/live/`) | when the cache entry was written |
+| `snapshot` | Read from a bulk dataset (`bods_uk_psc`, `bods_gleif`, and pre-extracted Open Ownership subgraphs) | the dataset's own publication date, or the local extract's date |
+| `curated` | A fixture committed to the repository (`cac_nigeria`, demo fixtures) | the declared harvest date, else **omitted** |
+| `stub` | Placeholder data — no source was contacted | **omitted entirely** |
+
+Two omissions are deliberate. **Stub output never claims a retrieval time**: a
+placeholder must not carry provenance. And a **committed fixture with no
+declared harvest date claims none either** — a checked-out file's mtime records
+when git wrote it to that machine, which says nothing about when the data left
+the register. `cac_nigeria` is the exception that proves the rule: its index
+declares `meta.harvested`, a genuine harvest date, so it reports one.
+
+Sources that are structurally never live: `cac_nigeria` (curated example set —
+the CAC's official API is restricted to Nigerian government agencies),
+`bods_uk_psc` and `bods_gleif` (bulk Parquet), and the pre-extracted Open
+Ownership subgraphs that `gleif` and `companies_house` serve as canonical
+output. Everything else is live-capable and degrades to `cached` or `stub`
+depending on configuration.
+
+The frontend badges anything that is not a fresh live call; `live` is the
+unmarked default, since badging it would tell a reader nothing they had not
+already assumed. The API carries the same information in `source_liveness`
+(keyed by `source_id`) and on each hit's `liveness` / `retrieved_at`.
+
 ## Notes
 
 NC-licensed sources (OpenSanctions, EveryPolitician) propagate their non-commercial obligations through `/deepen` and `/export`. The exported `LICENSES.md` warns reviewers before they re-publish. (OpenTender / DIGIWHIST procurement was retired and its code removed — the live `ted_eu` adapter answers the EU-procurement question against TED directly, under a licence that permits commercial reuse.)

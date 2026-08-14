@@ -13,6 +13,7 @@ import {
   type BodsCountsEvent,
   type CrossSourceLink,
   type DegradedSource,
+  type SourceLiveness,
   type MeipMatch,
   type OpenAlephScreeningMatch,
   type PossiblySameEntity,
@@ -212,6 +213,12 @@ export default function App() {
   // warning above the risk panel; empty signals + non-empty degraded is
   // NOT a clean screen.
   const [degradedSources, setDegradedSources] = useState<DegradedSource[]>([]);
+  // How current each source's payload is, keyed by source_id. Arrives on the
+  // risk_signals event alongside degraded_sources — the two answer the same
+  // shape of question: what in this result should not be read at face value.
+  const [sourceLiveness, setSourceLiveness] = useState<
+    Record<string, SourceLiveness>
+  >({});
   // Informational OpenAleph percolation matches (Phase 96) — related-party
   // names found in archive/watchlist collections whose topics map to no
   // RELATED_* code. Name-derived; never identifier corroboration.
@@ -429,6 +436,7 @@ export default function App() {
         setMeip(null);
         setRiskSignals([]);
         setDegradedSources([]);
+        setSourceLiveness({});
         setOaScreening([]);
         setApplicableSources([]);
         setCompletedSources(new Set());
@@ -482,6 +490,7 @@ export default function App() {
           onRiskSignals: (e) => {
             setRiskSignals(e.signals);
             setDegradedSources(e.degraded_sources ?? []);
+            setSourceLiveness(e.source_liveness ?? {});
             setOaScreening(e.openaleph_screening ?? []);
           },
           onBodsCounts: (e: BodsCountsEvent) => {
@@ -927,6 +936,7 @@ export default function App() {
                   setMeip(null);
                   setRiskSignals([]);
                   setDegradedSources([]);
+                  setSourceLiveness({});
                   setOaScreening([]);
                   setApplicableSources([]);
                   setCompletedSources(new Set());
@@ -1785,6 +1795,7 @@ export default function App() {
                     bodsBreakdownMap={bodsBreakdownMap}
                     onRetry={b.error ? () => retrySource(b.sourceId) : undefined}
                     retrying={retryingSources.has(b.sourceId)}
+                    liveness={sourceLiveness[b.sourceId]}
                     footnote={
                       b.sourceId === "gleif" && gleifChildrenInfo && gleifChildrenInfo.total > 100
                         ? `Showing the first ${gleifChildrenInfo.fetched} of ${gleifChildrenInfo.total.toLocaleString()} direct subsidiaries in BODS statements (GLEIF Level 2)`

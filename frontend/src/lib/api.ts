@@ -6,6 +6,9 @@
  */
 
 import { trackEvent } from "./analytics";
+import type { Liveness, SourceLiveness } from "../components/cdd/LivenessBadge";
+
+export type { Liveness, SourceLiveness };
 
 export type SearchKind = "entity" | "person";
 
@@ -49,6 +52,12 @@ export interface SourceHit {
   identifiers: Record<string, string>;
   raw: Record<string, unknown>;
   is_stub: boolean;
+  /** How current this payload is — see LivenessBadge. Defaults to "stub" so a
+   *  source that declares nothing under-claims rather than over-claims. */
+  liveness?: Liveness;
+  /** When OpenCheck actually obtained the payload; null when nothing was
+   *  fetched (stub and curated data). */
+  retrieved_at?: string | null;
 }
 
 export interface CrossSourceLink {
@@ -175,6 +184,9 @@ export interface LookupResponse {
   risk_signals: RiskSignal[];
   degraded_sources: DegradedSource[];
   openaleph_screening?: OpenAlephScreeningMatch[];
+  /** How current each source's payload is, keyed by source_id. Sibling to
+   *  degraded_sources: data that is not current must not read as live. */
+  source_liveness?: Record<string, SourceLiveness>;
   bods: Record<string, unknown>[];
   bods_issues: string[];
   license_notices: { source_id: string; hit_id: string; notice: string }[];
@@ -1010,6 +1022,8 @@ export interface RiskSignalsEvent {
   degraded_sources?: DegradedSource[];
   /** Informational OpenAleph percolation matches — empty/absent when none. */
   openaleph_screening?: OpenAlephScreeningMatch[];
+  /** Per-source currency, keyed by source_id. */
+  source_liveness?: Record<string, SourceLiveness>;
 }
 
 export type StreamHandlers = {

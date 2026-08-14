@@ -20,11 +20,12 @@ statement regardless of type.
 from __future__ import annotations
 
 import re
-from datetime import date, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 import pytest
 
+from opencheck import provenance
 from opencheck.bods.mapper import (
     make_entity_statement,
     make_person_statement,
@@ -135,17 +136,60 @@ class TestSourceBlock:
         )
 
     @pytest.mark.parametrize("source_id", sorted(_ALL_SOURCE_IDS))
-    def test_retrieved_at_is_iso_utc(self, source_id: str):
-        """retrievedAt must be a UTC ISO-8601 timestamp ending in Z."""
-        block = _source_block(source_id, None)
+    def test_retrieved_at_is_iso_utc_when_a_retrieval_happened(self, source_id: str):
+        """retrievedAt must be a UTC ISO-8601 timestamp ending in Z.
+
+        It is emitted only when the pipeline actually observed a retrieval —
+        see the companion test below. This used to be unconditional, so a bulk
+        snapshot, a week-old cache entry and a stub all claimed to have been
+        downloaded at the moment the mapper happened to run.
+        """
+        fetched = datetime(2026, 6, 3, 9, 30, 0, tzinfo=timezone.utc)
+        with provenance.mapping_provenance(
+            provenance.Provenance(liveness="live", retrieved_at=fetched)
+        ):
+            block = _source_block(source_id, None)
         val = block.get("retrievedAt", "")
         assert isinstance(val, str)
         assert val.endswith("Z"), f"retrievedAt {val!r} does not end with 'Z'"
-        # Must parse as an ISO timestamp.
         # Format: YYYY-MM-DDTHH:MM:SSZ
         assert re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", val), (
             f"retrievedAt {val!r} is not in YYYY-MM-DDTHH:MM:SSZ format"
         )
+        assert val == "2026-06-03T09:30:00Z"
+
+    @pytest.mark.parametrize("source_id", sorted(_ALL_SOURCE_IDS))
+    def test_retrieved_at_absent_without_an_observed_retrieval(self, source_id: str):
+        """No provenance means no claim.
+
+        A statement must never assert a download time OpenCheck did not
+        observe. Stub output and curated fixtures reach _source_block with no
+        active provenance and must carry no retrievedAt at all.
+        """
+        block = _source_block(source_id, None)
+        assert "retrievedAt" not in block
+
+    def test_retrieved_at_absent_for_stub_provenance(self):
+        with provenance.mapping_provenance(provenance.STUB_PROVENANCE):
+            block = _source_block("gleif", None)
+        assert "retrievedAt" not in block
+
+    def test_retrieved_at_absent_for_curated_provenance(self):
+        """Curated fixtures know they are curated, but not when they were fetched."""
+        with provenance.mapping_provenance(
+            provenance.Provenance(liveness="curated", retrieved_at=None)
+        ):
+            block = _source_block("cac_nigeria", None)
+        assert "retrievedAt" not in block
+
+    def test_naive_datetime_is_treated_as_utc(self):
+        with provenance.mapping_provenance(
+            provenance.Provenance(
+                liveness="cached", retrieved_at=datetime(2026, 6, 3, 9, 30, 0)
+            )
+        ):
+            block = _source_block("gleif", None)
+        assert block["retrievedAt"] == "2026-06-03T09:30:00Z"
 
     def test_url_absent_when_not_provided(self):
         block = _source_block("gleif", None)

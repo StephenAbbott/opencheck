@@ -36,6 +36,7 @@ import logging
 import re
 import sqlite3
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +44,7 @@ import httpx
 
 from ..cache import Cache
 from ..config import get_settings
+from .. import provenance
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 logger = logging.getLogger(__name__)
@@ -249,6 +251,29 @@ class BODSGleifAdapter(SourceAdapter):
             return f"{base.rstrip('/')}/{filename}"
         return None
 
+    def _declare_snapshot(self) -> None:
+        """Record this payload as a bulk snapshot, not a live register call.
+
+        These adapters read Parquet directly and touch neither the HTTP client
+        nor the response cache, so without an explicit declaration the fetch
+        would resolve to 'stub' and under-claim. For a local artifact the
+        directory's mtime is a genuine retrieval time — it is when OpenCheck
+        downloaded or built the extract. For an S3/HTTPS-backed dataset no date
+        is claimed rather than guessed.
+        """
+        built_at = None
+        detail = "Open Ownership GLEIF bulk dataset (Parquet)"
+        try:
+            local = self._parquet_dir()
+            if local is not None:
+                built_at = datetime.fromtimestamp(
+                    local.stat().st_mtime, tz=timezone.utc
+                )
+                detail += f", local extract of {built_at.date().isoformat()}"
+        except Exception:  # noqa: BLE001 - provenance must never sink a fetch
+            built_at = None
+        provenance.record_snapshot(built_at, detail)
+
     def _parquet_available(self) -> bool:
         """True if at least one Parquet source (local or S3) is configured."""
         return self._parquet_url("entity_statement.parquet") is not None
@@ -403,6 +428,7 @@ class BODSGleifAdapter(SourceAdapter):
 
     async def fetch(self, hit_id: str) -> dict[str, Any]:
         if _DUCKDB_AVAILABLE and self._parquet_available():
+            self._declare_snapshot()
             return await asyncio.to_thread(self._parquet_fetch, hit_id)
 
         return {

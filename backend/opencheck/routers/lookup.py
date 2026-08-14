@@ -18,6 +18,8 @@ from sse_starlette.sse import EventSourceResponse
 from .. import __version__
 from .. import bods as _bods
 from .. import identifiers
+from .. import provenance as _provenance
+from ..provenance import Provenance
 from ..bods import BODSBundle, validate_shape
 from ..sources.base import LookupDeriver, raw_redaction_notice
 from .. import bods_data
@@ -51,6 +53,32 @@ def _mapper_for(source_id: str) -> Any | None:
     is all it takes to wire a mapper — there is no hand-maintained dict.
     """
     return getattr(_bods, f"map_{source_id}", None)
+
+async def _fetch_with_provenance(
+    adapter: Any, hit_id: str, **kwargs: Any
+) -> tuple[dict[str, Any], Provenance]:
+    """Fetch a source payload and record where it actually came from.
+
+    The recorder is populated by ``Cache`` reads and ``build_client()`` calls
+    made anywhere beneath this await, so adapters need no changes. Each source
+    is dispatched in its own asyncio task, and a task copies the context on
+    creation, so concurrent fetches cannot see each other's observations.
+    """
+    with _provenance.recording() as recorder:
+        raw = await adapter.fetch(hit_id, **kwargs)
+    is_stub = bool(raw.get("is_stub")) if isinstance(raw, dict) else False
+    return raw, recorder.resolve(is_stub=is_stub)
+
+
+def _stamp(hit: SourceHit | None, prov: Provenance | None) -> SourceHit | None:
+    """Attach resolved provenance to a hit before it leaves the pipeline."""
+    if hit is None:
+        return None
+    if prov is not None:
+        hit.liveness = prov.liveness
+        hit.retrieved_at = prov.retrieved_at
+    return hit
+
 
 _NC_LICENSES = {"CC-BY-NC-4.0", "CC-BY-NC-SA-4.0"}
 
@@ -110,6 +138,13 @@ class ReportResponse(BaseModel):
     #: entry carries statement_id / matched_name / collection / url /
     #: surface_form. Name-derived — never identifier corroboration.
     openaleph_screening: list[dict[str, Any]] = []
+    #: How current each source's payload is, keyed by source_id: liveness
+    #: ('live' / 'cached' / 'snapshot' / 'curated' / 'stub'), a display label,
+    #: the retrieval time OpenCheck actually observed (null when nothing was
+    #: fetched) and a short detail string. Sibling to degraded_sources: data
+    #: that is not current must not read as live, just as a check that could
+    #: not run must not read as clean. Per-hit values ride on each SourceHit.
+    source_liveness: dict[str, dict[str, Any]] = {}
 
 
 class LookupResponse(ReportResponse):
@@ -145,21 +180,23 @@ async def deepen(
     # (e.g. a Companies House outage) still serves the stored graph.
     override = _bods_data_override(source, hit_id)
     try:
-        raw = await adapter.fetch(hit_id)
+        raw, prov = await _fetch_with_provenance(adapter, hit_id)
     except Exception:
         if override is None:
             raise
-        raw = {"is_stub": True}
+        raw, prov = {"is_stub": True}, _provenance.STUB_PROVENANCE
 
     bods: list[dict[str, Any]] = []
     issues: list[str] = []
     if override is not None:
         bods = override
         issues = validate_shape(bods)
+        prov = _stored_bundle_provenance(source, hit_id)
     else:
         mapper = _mapper_for(source)
         if mapper and not raw.get("is_stub"):
-            bundle: BODSBundle = mapper(raw)
+            with _provenance.mapping_provenance(prov):
+                bundle: BODSBundle = mapper(raw)
             bods = list(bundle)
             issues = validate_shape(bods)
 
@@ -1456,18 +1493,25 @@ async def _lookup_pipeline(
         src_name = REGISTRY[sid].info.name if sid in REGISTRY else sid
         yield ("source_started", {"source_id": sid, "source_name": src_name})
 
-    async def _run(src_id: str, coro: Any) -> tuple[str, Any]:
+    async def _run(src_id: str, coro: Any) -> tuple[str, Any, Provenance]:
         budget = _source_budget(src_id)
-        try:
-            return src_id, await asyncio.wait_for(coro, timeout=budget)
-        except asyncio.TimeoutError:
-            return src_id, TimeoutError(
-                f"source exceeded its {budget:.0f}s time budget"
-            )
-        except Exception as exc:  # noqa: BLE001
-            return src_id, exc
+        # One provenance scope per source. Cache reads and HTTP client
+        # construction beneath this await record themselves into it, so the
+        # resolved value describes what this source actually did.
+        with _provenance.recording() as recorder:
+            try:
+                result = await asyncio.wait_for(coro, timeout=budget)
+            except asyncio.TimeoutError:
+                return src_id, TimeoutError(
+                    f"source exceeded its {budget:.0f}s time budget"
+                ), _provenance.STUB_PROVENANCE
+            except Exception as exc:  # noqa: BLE001
+                return src_id, exc, _provenance.STUB_PROVENANCE
+        is_stub = bool(result.get("is_stub")) if isinstance(result, dict) else False
+        return src_id, result, recorder.resolve(is_stub=is_stub)
 
     errors: dict[str, str] = {}
+    provenances: dict[str, Provenance] = {}
     oc_result_processed = False
     pending = {asyncio.create_task(_run(sid, coro)) for sid, coro in dispatch}
     while pending:
@@ -1475,7 +1519,8 @@ async def _lookup_pipeline(
             pending, return_when=asyncio.FIRST_COMPLETED
         )
         for task in done_set:
-            source_id, result = task.result()
+            source_id, result, source_prov = task.result()
+            provenances[source_id] = source_prov
 
             if isinstance(result, Exception):
                 # A stored OO bundle is canonical — serve it instead of
@@ -1510,6 +1555,7 @@ async def _lookup_pipeline(
                     else []
                 )
                 for sh in list_hits:
+                    _stamp(sh, source_prov)
                     hits.append(sh)
                     deepened_bundles.append((source_id, sh.hit_id))
                     yield ("hit", sh)
@@ -1518,13 +1564,15 @@ async def _lookup_pipeline(
                 })
                 continue
 
-            hit = _build_result_hit(source_id, result, ctx)
+            hit = _stamp(_build_result_hit(source_id, result, ctx), source_prov)
             if hit is None:
                 # No live hit (stub / not found). If a stored OO bundle exists,
                 # surface it anyway so the source card isn't lost to a live outage.
                 bkey = _stored_bundle_key(source_id, ctx)
                 if bkey is not None:
                     hit = _stored_bundle_hit(source_id, bkey, ctx)
+                    provenances[source_id] = _stored_bundle_provenance(source_id)
+                    _stamp(hit, provenances[source_id])
             if hit is not None:
                 hits.append(hit)
                 deepened_bundles.append((source_id, hit.hit_id))
@@ -1711,6 +1759,9 @@ async def _lookup_pipeline(
             "signals": merged,
             "degraded_sources": [d.to_dict() for d in degraded],
             "openaleph_screening": oa_screening,
+            "source_liveness": {
+                sid: prov.to_dict() for sid, prov in sorted(provenances.items())
+            },
         },
     )
 
@@ -1806,6 +1857,7 @@ async def _lookup_impl(
     links: list[dict[str, Any]] = []
     signals: list[dict[str, Any]] = []
     degraded_sources: list[dict[str, Any]] = []
+    source_liveness: dict[str, dict[str, Any]] = {}
     oa_screening: list[dict[str, Any]] = []
     bods_all: list[dict[str, Any]] = []
     same_pairs: list[dict[str, Any]] = []
@@ -1850,6 +1902,7 @@ async def _lookup_impl(
             signals = payload["signals"]
             degraded_sources = payload.get("degraded_sources") or []
             oa_screening = payload.get("openaleph_screening") or []
+            source_liveness = payload.get("source_liveness") or {}
         elif event == "done":
             bods_issues = payload["bods_issues"]
             license_notices = payload["license_notices"]
@@ -1868,6 +1921,7 @@ async def _lookup_impl(
         meip=meip_match,
         degraded_sources=degraded_sources,
         openaleph_screening=oa_screening,
+        source_liveness=source_liveness,
         lei=norm_lei,
         legal_name=legal_name,
         jurisdiction=jurisdiction,
@@ -2367,8 +2421,47 @@ def _stored_bundle_hit(source_id: str, key: str, ctx: "_LookupCtx") -> SourceHit
     summary, ids = key, {}
     if source_id == "companies_house":
         summary, ids = f"GB-COH {key}", {"gb_coh": key}
-    return _hit(source_id, key, name=ctx.legal_name or "",
-                summary=summary, identifiers=ids, raw={})
+    hit = _hit(source_id, key, name=ctx.legal_name or "",
+               summary=summary, identifiers=ids, raw={})
+    return _stamp(hit, _stored_bundle_provenance(source_id, key)) or hit
+
+
+def _stored_bundle_provenance(source_id: str, key: str | None = None) -> Provenance:
+    """Provenance for a pre-extracted Open Ownership bundle.
+
+    These are a bulk snapshot, not a live call, and they carry Open Ownership's
+    own ``publicationDetails.publicationDate`` — the date that dataset was
+    published, which is a far better statement of currency than the date we
+    happen to serve it. The latest publication date across the bundle is used.
+    """
+    spec = _STORED_BUNDLE_SOURCES.get(source_id)
+    if spec is None or not key:
+        return Provenance(liveness="snapshot", detail="Open Ownership bulk dataset")
+    subdir, _ = spec
+    published: str | None = None
+    try:
+        for statement in bods_data.load_bundle(subdir, key) or []:
+            candidate = (statement.get("publicationDetails") or {}).get(
+                "publicationDate"
+            )
+            if isinstance(candidate, str) and (
+                published is None or candidate > published
+            ):
+                published = candidate
+    except Exception:  # noqa: BLE001 - provenance must never sink a lookup
+        published = None
+    retrieved: datetime | None = None
+    if published:
+        try:
+            retrieved = datetime.fromisoformat(published).replace(tzinfo=timezone.utc)
+        except ValueError:
+            retrieved = None
+    return Provenance(
+        liveness="snapshot",
+        retrieved_at=retrieved,
+        detail="Open Ownership bulk dataset"
+        + (f", published {published}" if published else ""),
+    )
 
 
 def _select_deepen_pairs(
@@ -2416,13 +2509,14 @@ async def _count_only(source_id: str, hit_id: str) -> dict[str, int] | None:
         bods: list[dict[str, Any]] = override
     else:
         try:
-            raw = await adapter.fetch(hit_id)
+            raw, prov = await _fetch_with_provenance(adapter, hit_id)
         except Exception:  # noqa: BLE001
             return None
         mapper = _mapper_for(source_id)
         if mapper is None or raw.get("is_stub"):
             return None
-        bods = list(mapper(raw))
+        with _provenance.mapping_provenance(prov):
+            bods = list(mapper(raw))
     return {
         "total": len(bods),
         "entities": sum(1 for s in bods if s.get("recordType") == "entity"),
@@ -2441,21 +2535,23 @@ async def _safe_deepen(source_id: str, hit_id: str) -> dict[str, Any] | None:
     # stands in for the (unavailable) live record.
     override = _bods_data_override(source_id, hit_id)
     try:
-        raw = await adapter.fetch(hit_id)
+        raw, prov = await _fetch_with_provenance(adapter, hit_id)
     except Exception:
         if override is None:
             raise
-        raw = {"is_stub": True}
+        raw, prov = {"is_stub": True}, _provenance.STUB_PROVENANCE
 
     bods: list[dict[str, Any]] = []
     issues: list[str] = []
     if override is not None:
         bods = override
         issues = validate_shape(bods)
+        prov = _stored_bundle_provenance(source_id, hit_id)
     else:
         mapper = _mapper_for(source_id)
         if mapper and not raw.get("is_stub"):
-            bundle: BODSBundle = mapper(raw)
+            with _provenance.mapping_provenance(prov):
+                bundle: BODSBundle = mapper(raw)
             bods = list(bundle)
             issues = validate_shape(bods)
 
