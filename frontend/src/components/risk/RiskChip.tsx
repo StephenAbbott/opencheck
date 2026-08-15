@@ -17,6 +17,15 @@ export const RISK_PRESENTATION: Record<
     label: "Sanctioned",
     classes: "bg-rose-50 text-rose-700 border-rose-200",
   },
+  // Slate, not rose and not amber. OpenSanctions' own label for the
+  // `sanction.counter` topic, and deliberately outside the sanctions colour
+  // ramp: a Russian MFA retaliation listing is a fact about the listing
+  // regime as much as about the person, and rendering it red made a
+  // counter-designation indistinguishable from an OFAC one.
+  COUNTER_SANCTIONED: {
+    label: "Counter-sanctioned",
+    classes: "bg-slate-100 text-slate-700 border-slate-300",
+  },
   SANCTIONED_SECURITY: {
     label: "Sanctioned securities",
     classes: "bg-rose-50 text-rose-700 border-rose-300 font-semibold",
@@ -79,6 +88,10 @@ export const RISK_PRESENTATION: Record<
   RELATED_SANCTIONED: {
     label: "Related sanctioned",
     classes: "bg-rose-50 text-rose-700 border-rose-300 font-semibold",
+  },
+  RELATED_COUNTER_SANCTIONED: {
+    label: "Related counter-sanctioned",
+    classes: "bg-slate-100 text-slate-700 border-slate-300",
   },
   RELATED_SANCTIONS_CONTROLLED: {
     label: "Related sanction ownership or control",

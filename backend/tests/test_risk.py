@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from opencheck.risk import (
+    COUNTER_SANCTIONED,
     DEBARMENT,
     OFFSHORE_LEAKS,
     OPAQUE_OWNERSHIP,
@@ -62,10 +63,31 @@ def test_sanctioned_signal_from_opensanctions_topic() -> None:
     assert signals[0].confidence == "high"
 
 
-def test_counter_sanction_is_treated_as_sanctioned() -> None:
+def test_counter_sanction_is_not_reported_as_sanctioned() -> None:
+    """A Russian MFA retaliation listing is a direct listing of the record,
+    but not a designation by an authority the reader owes anything to.
+    Until Phase 105 it collapsed into SANCTIONED, so a Wall Street Journal
+    journalist on Russia's counter-list rendered identically to an OFAC
+    designation."""
     hit = _hit("opensanctions", "NK-counter", topics=["sanction.counter"])
     signals = assess_hit(hit)
-    assert [s.code for s in signals] == [SANCTIONED]
+    assert [s.code for s in signals] == [COUNTER_SANCTIONED]
+    assert signals[0].confidence == "high"
+    assert signals[0].evidence["topics"] == ["sanction.counter"]
+    summary = signals[0].summary
+    assert "counter-sanctions regime" in summary
+    # The copy must not leave a reader thinking this is a mainstream listing.
+    assert "not a designation by an EU, UK, US, UN" in summary
+
+
+def test_counter_and_real_sanction_both_report() -> None:
+    """Both are listings of the record itself and neither substitutes for
+    the other — a record on OFAC *and* on a counter-list carries two
+    distinct facts, and SANCTIONED must lead."""
+    hit = _hit(
+        "opensanctions", "NK-both", topics=["sanction", "sanction.counter"]
+    )
+    assert [s.code for s in assess_hit(hit)] == [SANCTIONED, COUNTER_SANCTIONED]
 
 
 def test_sanction_linked_is_not_sanctioned() -> None:
@@ -155,7 +177,8 @@ def test_classify_sanction_topics_splits_the_family() -> None:
     assert both.unknown == ()
 
     direct = classify_sanction_topics(["sanction", "sanction.counter"])
-    assert direct.direct == ("sanction", "sanction.counter")
+    assert direct.direct == ("sanction",)
+    assert direct.counter == ("sanction.counter",)
     assert not direct.control and not direct.linked
 
     assert not classify_sanction_topics(["role.pep", "debarment"])

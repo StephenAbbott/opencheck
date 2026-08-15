@@ -223,6 +223,30 @@ async def test_control_suppresses_adjacency_in_the_shared_ladder(fake_percolate)
     assert "ownership chain" in signals[0].summary
 
 
+async def test_counter_sanction_reports_separately_and_last(fake_percolate) -> None:
+    """One classifier, one rule — the percolation screen must split
+    ``sanction.counter`` out of RELATED_SANCTIONED exactly as cross_check
+    does, and rank it last so it is never taken as the headline finding."""
+    fake_percolate(
+        [
+            _percolate_item(
+                "Igor Sechin",
+                surface_form="Igor Sechin",
+                topics=["sanction", "sanction.counter"],
+                entity_id="oa-counter",
+                collection="OpenSanctions Default",
+            ),
+        ],
+        [],
+    )
+    signals = await assess_openaleph_names(_BUNDLE)
+    assert [s.code for s in signals] == [
+        "RELATED_SANCTIONED",
+        "RELATED_COUNTER_SANCTIONED",
+    ]
+    assert "weak democratic institutions" in signals[-1].summary
+
+
 async def test_entity_pep_topic_never_fires_related_pep(fake_percolate) -> None:
     """Entities can't be PEPs — a role.pep-tagged entity hit maps to no
     signal and lands in the informational block instead (cross_check rule)."""

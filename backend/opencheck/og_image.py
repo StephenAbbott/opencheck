@@ -46,6 +46,9 @@ _LAVENDER = "#cecbf6"  # secondary text on indigo
 SIGNAL_STYLE: dict[str, tuple[str, str, str]] = {
     "PEP": ("PEP", "#f5f3ff", "#6d28d9"),
     "SANCTIONED": ("Sanctioned", "#fff1f2", "#be123c"),
+    # Slate, deliberately outside the rose/amber sanctions ramp — a
+    # counter-designation is context, not an adverse finding.
+    "COUNTER_SANCTIONED": ("Counter-sanctioned", "#f1f5f9", "#334155"),
     "SANCTIONED_SECURITY": ("Sanctioned securities", "#fff1f2", "#be123c"),
     "SANCTIONS_CONTROLLED": ("Sanction control", "#ffe4e6", "#9f1239"),
     "SANCTIONS_LINKED": ("Sanctions-linked", "#fffbeb", "#92400e"),
@@ -61,6 +64,7 @@ SIGNAL_STYLE: dict[str, tuple[str, str, str]] = {
     "POSSIBLE_OBFUSCATION": ("Possible obfuscation", "#fefce8", "#854d0e"),
     "RELATED_PEP": ("Related PEP", "#f5f3ff", "#6d28d9"),
     "RELATED_SANCTIONED": ("Related sanctioned", "#fff1f2", "#be123c"),
+    "RELATED_COUNTER_SANCTIONED": ("Related counter-sanctioned", "#f1f5f9", "#334155"),
     "RELATED_SANCTIONS_CONTROLLED": ("Related sanction control", "#ffe4e6", "#9f1239"),
     "RELATED_SANCTIONS_LINKED": ("Related sanctions-linked", "#fffbeb", "#92400e"),
     "RELATED_DEBARMENT": ("Related debarred", "#fff7ed", "#9a3412"),
