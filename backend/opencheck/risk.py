@@ -17,8 +17,20 @@ Source-derived signals
       with no end date — i.e. a *currently held* office
 
 * ``SANCTIONED`` — the entity is itself the subject of a sanctions listing.
-  Fires only when an OpenSanctions hit/bundle has a direct ``sanction`` (or
-  ``sanction.counter``) topic.
+  Fires only when an OpenSanctions hit/bundle has a direct ``sanction``
+  topic.
+
+* ``COUNTER_SANCTIONED`` — designated under a counter-sanctions regime.
+  Fires on the OpenSanctions ``sanction.counter`` topic: a listing issued
+  by a state with weak democratic institutions, typically as a punitive
+  response to foreign sanctions or to suppress domestic opposition.
+  Structurally a direct listing of the entity — which is why it sat inside
+  ``SANCTIONED`` until Phase 105 — but a materially different fact. It is
+  not a designation by an authority most users owe an obligation to, and
+  appearing on such a list is frequently a *consequence* of journalism,
+  sanctions enforcement or human-rights work. Ranked at the bottom of the
+  sanctions ladder in a deliberately non-red palette so it reads as
+  context rather than as an adverse finding.
 
 * ``SANCTIONS_CONTROLLED`` — inside a sanctioned party's ownership chain:
   a direct or indirect subsidiary, asset or vessel. Fires on the
@@ -113,6 +125,7 @@ _LOG = logging.getLogger(__name__)
 # Codes — source-derived
 PEP = "PEP"
 SANCTIONED = "SANCTIONED"
+COUNTER_SANCTIONED = "COUNTER_SANCTIONED"
 SANCTIONS_CONTROLLED = "SANCTIONS_CONTROLLED"
 SANCTIONS_LINKED = "SANCTIONS_LINKED"
 DEBARMENT = "DEBARMENT"
@@ -278,7 +291,13 @@ _PEP_TOPICS = {"role.pep", "role.rca", "role.spouse", "role.family"}
 #   * "sanction"          — the entity is itself the subject of a sanctions
 #                           listing.
 #   * "sanction.counter"  — the entity is listed under a counter-sanctions
-#                           regime (still a direct listing of the entity).
+#                           regime: a designation issued by a state with weak
+#                           democratic institutions, usually retaliation for
+#                           foreign sanctions or suppression of domestic
+#                           opposition. Structurally a direct listing of the
+#                           entity, which is why it was bundled with
+#                           "sanction" until Phase 105 — but not the same
+#                           fact, and not one that should render red.
 #   * "sanction.control"  — the entity is a direct or *indirect* subsidiary,
 #                           asset or vessel of a sanctioned party. Any stake,
 #                           any depth; an end-dated holding stops the chain.
@@ -296,16 +315,20 @@ _PEP_TOPICS = {"role.pep", "role.rca", "role.spouse", "role.family"}
 # Taxonomy per https://www.opensanctions.org/docs/topics/ and
 # https://www.opensanctions.org/articles/2026-08-13-sanction-control/.
 #
-# Direct listings → SANCTIONED. An unrecognised "sanction.*" subtopic is
-# still treated as linked (conservative — we never assert a listing we can't
-# confirm), but it lands in ``SanctionTopics.unknown`` and is logged, so a
-# new upstream subtopic can no longer be absorbed *silently* the way
-# "sanction.control" was.
-_DIRECT_SANCTION_TOPICS = frozenset({"sanction", "sanction.counter"})
+# Direct listings → SANCTIONED; counter-designations → COUNTER_SANCTIONED.
+# An unrecognised "sanction.*" subtopic is still treated as linked
+# (conservative — we never assert a listing we can't confirm), but it lands in
+# ``SanctionTopics.unknown`` and is logged, so a new upstream subtopic can no
+# longer be absorbed *silently* the way "sanction.control" was.
+_DIRECT_SANCTION_TOPICS = frozenset({"sanction"})
+_COUNTER_SANCTION_TOPICS = frozenset({"sanction.counter"})
 _CONTROL_SANCTION_TOPICS = frozenset({"sanction.control"})
 _LINKED_SANCTION_TOPICS = frozenset({"sanction.linked"})
 _KNOWN_SANCTION_TOPICS = (
-    _DIRECT_SANCTION_TOPICS | _CONTROL_SANCTION_TOPICS | _LINKED_SANCTION_TOPICS
+    _DIRECT_SANCTION_TOPICS
+    | _COUNTER_SANCTION_TOPICS
+    | _CONTROL_SANCTION_TOPICS
+    | _LINKED_SANCTION_TOPICS
 )
 _SANCTION_TOPIC_PREFIX = "sanction"
 
@@ -317,19 +340,28 @@ class SanctionTopics:
     Every field is a sorted tuple so it can go straight into a signal's
     ``evidence``. ``unknown`` collects ``sanction.*`` subtopics this build
     does not recognise; callers must keep treating those as linked.
+
+    ``counter`` is kept out of ``direct`` deliberately. Both are listings of
+    the entity itself, but a counter-sanction is issued by a regime the user
+    almost certainly owes no obligation to, so merging them let a Russian
+    MFA retaliation list render identically to an OFAC designation.
     """
 
     direct: tuple[str, ...] = ()
+    counter: tuple[str, ...] = ()
     control: tuple[str, ...] = ()
     linked: tuple[str, ...] = ()
     unknown: tuple[str, ...] = ()
 
     def __bool__(self) -> bool:
-        return bool(self.direct or self.control or self.linked or self.unknown)
+        return bool(
+            self.direct or self.counter or self.control or self.linked or self.unknown
+        )
 
 
 def classify_sanction_topics(topics: Iterable[str]) -> SanctionTopics:
-    """Split sanction-family topics into direct / control / linked / unknown.
+    """Split sanction-family topics into direct / counter / control / linked /
+    unknown.
 
     Single source of truth for ``risk.py``, ``cross_check.py`` and
     ``openaleph_check.py``. Those three each carried their own copy of the
@@ -338,12 +370,15 @@ def classify_sanction_topics(topics: Iterable[str]) -> SanctionTopics:
     three at once. Classify here, rank at the call site.
     """
     direct: list[str] = []
+    counter: list[str] = []
     control: list[str] = []
     linked: list[str] = []
     unknown: list[str] = []
     for topic in topics:
         if topic in _DIRECT_SANCTION_TOPICS:
             direct.append(topic)
+        elif topic in _COUNTER_SANCTION_TOPICS:
+            counter.append(topic)
         elif topic in _CONTROL_SANCTION_TOPICS:
             control.append(topic)
         elif topic in _LINKED_SANCTION_TOPICS:
@@ -359,6 +394,7 @@ def classify_sanction_topics(topics: Iterable[str]) -> SanctionTopics:
             )
     return SanctionTopics(
         direct=tuple(sorted(direct)),
+        counter=tuple(sorted(counter)),
         control=tuple(sorted(control)),
         linked=tuple(sorted(linked)),
         unknown=tuple(sorted(unknown)),
@@ -670,7 +706,7 @@ def _opensanctions_topic_signals_from_entity(
             )
         )
     sanctions = classify_sanction_topics(topics)
-    # Direct listing ("sanction" / "sanction.counter") → SANCTIONED.
+    # Direct listing ("sanction") → SANCTIONED.
     direct_topics = list(sanctions.direct)
     if direct_topics:
         out.append(
@@ -684,6 +720,32 @@ def _opensanctions_topic_signals_from_entity(
                 source_id=source_id,
                 hit_id=hit_id,
                 evidence={"topics": direct_topics, "statement_id": stmt_id},
+            )
+        )
+    # Counter-designation ("sanction.counter") → COUNTER_SANCTIONED. Also a
+    # listing of the entity itself, so it fires alongside SANCTIONED rather
+    # than instead of it — but stated as what it is. High confidence: the
+    # listing is a fact; what the summary declines to assert is that it
+    # carries a compliance obligation for the reader.
+    counter_topics = list(sanctions.counter)
+    if counter_topics:
+        out.append(
+            RiskSignal(
+                code=COUNTER_SANCTIONED,
+                confidence="high",
+                summary=(
+                    "OpenSanctions lists this record under a counter-sanctions "
+                    "regime — a designation issued by a state with weak "
+                    "democratic institutions, typically retaliation for foreign "
+                    "sanctions or suppression of domestic opposition. It is not "
+                    "a designation by an EU, UK, US, UN or other mainstream "
+                    "sanctions authority, and being listed is frequently a "
+                    "consequence of journalism, sanctions enforcement or "
+                    f"human-rights work ({', '.join(counter_topics)})."
+                ),
+                source_id=source_id,
+                hit_id=hit_id,
+                evidence={"topics": counter_topics, "statement_id": stmt_id},
             )
         )
     # Ownership chain ("sanction.control") → SANCTIONS_CONTROLLED. Fires

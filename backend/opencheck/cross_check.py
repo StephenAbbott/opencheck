@@ -68,6 +68,7 @@ _LOG = logging.getLogger(__name__)
 # RISK_PRESENTATION map.
 RELATED_PEP = "RELATED_PEP"
 RELATED_SANCTIONED = "RELATED_SANCTIONED"
+RELATED_COUNTER_SANCTIONED = "RELATED_COUNTER_SANCTIONED"
 RELATED_SANCTIONS_CONTROLLED = "RELATED_SANCTIONS_CONTROLLED"
 RELATED_SANCTIONS_LINKED = "RELATED_SANCTIONS_LINKED"
 RELATED_DEBARMENT = "RELATED_DEBARMENT"
@@ -80,6 +81,7 @@ CHECK_NAME = "cross_source_names"
 _AFFECTED_BY_SOURCE: dict[str, list[str]] = {
     "opensanctions": [
         RELATED_SANCTIONED,
+        RELATED_COUNTER_SANCTIONED,
         RELATED_SANCTIONS_CONTROLLED,
         RELATED_SANCTIONS_LINKED,
         RELATED_DEBARMENT,
@@ -430,7 +432,8 @@ def _signals_from_os(
     precisely, not an additional one.
 
     Order is preserved most-severe-first so a caller taking ``[0]`` still
-    gets the headline finding.
+    gets the headline finding — which is why ``RELATED_COUNTER_SANCTIONED``
+    is emitted last despite being, structurally, a direct listing.
     """
     if hit.is_stub:
         return []
@@ -487,6 +490,17 @@ def _signals_from_os(
     # owned by a PEP).
     if target["kind"] == _KIND_PERSON and any(t in _PEP_TOPICS for t in topics):
         add(RELATED_PEP, f"PEP per OpenSanctions ({blurb})")
+    # Last rung deliberately. A counter-sanction is a direct listing of the
+    # related party, but by a regime the reader almost certainly owes no
+    # obligation to — so it must never be the headline finding a caller gets
+    # from ``[0]``, and must never read as "related party sanctioned".
+    if sanctions.counter:
+        add(
+            RELATED_COUNTER_SANCTIONED,
+            "counter-sanctioned per OpenSanctions — designated by a state with "
+            "weak democratic institutions, not by a mainstream sanctions "
+            f"authority ({blurb})",
+        )
     return out
 
 

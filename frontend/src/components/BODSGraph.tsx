@@ -57,6 +57,11 @@ interface SignalStyle { bg: string; border: string; text: string; label: string;
 export const SIGNAL_STYLE: Record<string, SignalStyle> = {
   SANCTIONED:               { bg:"#ffe4e6", border:"#be123c", text:"#be123c", label:"S",  severity:7 },
   RELATED_SANCTIONED:       { bg:"#ffe4e6", border:"#be123c", text:"#be123c", label:"RS", severity:7 },
+  // Counter-sanctions (OpenSanctions `sanction.counter`): a direct listing,
+  // but by a regime with weak democratic institutions. Severity 2 and slate
+  // — below plain adjacency, and outside the rose/amber ramp entirely.
+  COUNTER_SANCTIONED:         { bg:"#f1f5f9", border:"#475569", text:"#334155", label:"CS",  severity:2 },
+  RELATED_COUNTER_SANCTIONED: { bg:"#f1f5f9", border:"#475569", text:"#334155", label:"RCS", severity:2 },
   // Owned by a designated party (OpenSanctions `sanction.control`) — its own
   // tier between a direct listing and plain adjacency.
   SANCTIONS_CONTROLLED:         { bg:"#ffe4e6", border:"#9f1239", text:"#9f1239", label:"SC",  severity:6 },

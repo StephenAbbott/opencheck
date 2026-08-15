@@ -66,6 +66,7 @@ from .cross_check import (
     _DEBARMENT_TOPICS,
     _KIND_PERSON,
     _PEP_TOPICS,
+    RELATED_COUNTER_SANCTIONED,
     RELATED_DEBARMENT,
     RELATED_PEP,
     RELATED_SANCTIONED,
@@ -96,6 +97,7 @@ CHECK_NAME = "openaleph_percolation"
 #: unreliable when the percolation calls fail (issue #50).
 _AFFECTED_SIGNALS = [
     RELATED_SANCTIONED,
+    RELATED_COUNTER_SANCTIONED,
     RELATED_SANCTIONS_CONTROLLED,
     RELATED_SANCTIONS_LINKED,
     RELATED_DEBARMENT,
@@ -474,6 +476,13 @@ def _signals_from_percolate(
     # office (same rule as cross_check).
     if target["kind"] == _KIND_PERSON and any(t in _PEP_TOPICS for t in topics):
         add(RELATED_PEP, f"PEP{coll_note}")
+    # Last rung — same reasoning as cross_check._signals_from_os.
+    if sanctions.counter:
+        add(
+            RELATED_COUNTER_SANCTIONED,
+            "counter-sanctioned — designated by a state with weak democratic "
+            f"institutions, not by a mainstream sanctions authority{coll_note}",
+        )
     return out
 
 

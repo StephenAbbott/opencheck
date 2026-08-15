@@ -23,9 +23,11 @@ describe("risk signal presentation maps", () => {
     // designated party is a stronger fact than standing next to one.
     for (const code of [
       "SANCTIONED",
+      "COUNTER_SANCTIONED",
       "SANCTIONS_CONTROLLED",
       "SANCTIONS_LINKED",
       "RELATED_SANCTIONED",
+      "RELATED_COUNTER_SANCTIONED",
       "RELATED_SANCTIONS_CONTROLLED",
       "RELATED_SANCTIONS_LINKED",
     ]) {
@@ -41,6 +43,29 @@ describe("risk signal presentation maps", () => {
     );
     expect(SIGNAL_STYLE.DEBARMENT.severity).toBeGreaterThan(
       SIGNAL_STYLE.SANCTIONS_LINKED.severity,
+    );
+    // A counter-designation ranks below plain adjacency. It is a direct
+    // listing structurally, but by a regime the reader owes no obligation
+    // to — so it must never win the graph's worst-severity-wins stacking
+    // over a signal that carries an actual compliance consequence.
+    expect(SIGNAL_STYLE.SANCTIONS_LINKED.severity).toBeGreaterThan(
+      SIGNAL_STYLE.COUNTER_SANCTIONED.severity,
+    );
+    expect(SIGNAL_STYLE.COUNTER_SANCTIONED.severity).toEqual(
+      SIGNAL_STYLE.RELATED_COUNTER_SANCTIONED.severity,
+    );
+  });
+
+  it("keeps counter-sanctions out of the sanctions colour ramp", () => {
+    // The whole point of the split: "Counter-sanctioned" must not read as a
+    // shade of "Sanctioned". Both chips are rose-family; these must not be.
+    for (const code of ["COUNTER_SANCTIONED", "RELATED_COUNTER_SANCTIONED"]) {
+      const classes = RISK_PRESENTATION[code].classes;
+      expect(classes, `${code} must not be rose`).not.toMatch(/rose/);
+      expect(classes, `${code} must not be amber`).not.toMatch(/amber/);
+    }
+    expect(RISK_PRESENTATION.COUNTER_SANCTIONED.label).toEqual(
+      "Counter-sanctioned",
     );
   });
 });

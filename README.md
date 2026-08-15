@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 104** — the nominee signal fires on structure, not on a sentence
+**Latest: Phase 105** — counter-sanctions are not sanctions
+
+OpenSanctions publishes `sanction.counter` as its own topic — designations imposed by countries with weak democratic institutions, often as retaliation for foreign sanctions or to suppress domestic opposition. OpenCheck classified the topic correctly and then discarded the distinction, bundling it with `sanction` so both rendered as one rose "Sanctioned" chip. That was a deliberate call on a narrow point that happens to be true — the entity really is the subject of the listing — but it treated structure as meaning. Found on Liverpool FC, where a connected person name-matched a Wall Street Journal correspondent on Russia's MFA retaliation list and was reported in the same colour as an OFAC designation, for a listing whose cause is frequently journalism or sanctions enforcement. New `COUNTER_SANCTIONED` and `RELATED_COUNTER_SANCTIONED` signals carry the topic at high confidence — the listing is a fact — but at graph severity 2, in slate rather than rose, and emitted last in the related-party ladder so a real designation always leads. Recognising a topic is not the same as knowing what it means.
+
+**Previous: Phase 104** — the nominee signal fires on structure, not on a sentence
 
 `NOMINEE` worked by substring-matching the word "nominee" in a name or a free-text descriptor. It fired correctly on UK Register of Overseas Entities filings, but by accident: the mapper renders each nature-of-control code into an English descriptor, and those descriptors happen to contain the word — so a register stating the identical fact in a code, a boolean or another language was invisible, and a reworded descriptor upstream would have silenced the signal with no test failing. Companies House publishes `natures_of_control` on every PSC record, and six ROE codes state a nominee arrangement outright; those are now read from the raw payload, which the risk engine already receives. The two grades of evidence are reported distinctly: a filed code is high confidence with the code itself in the evidence, so a reviewer can check the filing; a text match is medium, because "Nominee Services Ltd" is a company name, not a declaration. Commit `c5d975d`.
 
-**Previous: Phase 103** — provenance annotations: what the register said, not just what OpenCheck read
-
-The mapper transformed a great deal and recorded none of it. Two findings inverted the planned scope. BODS already models date imprecision exactly where it occurs — `birthDate` legally accepts `YYYY-MM` *because* registers like Companies House publish month and year only, deliberately, for privacy, so rounding it would fabricate a day the register withheld on purpose. And the real loss was vocabulary, not dates: Companies House nature-of-control codes are deliberately not modelled as BODS interest types, so the code identity survived only inside an English prose descriptor — which is exactly why the `NOMINEE` risk signal depends on the word "nominee" appearing in a sentence. Interests now carry a `transformation` annotation naming the register's own code, and imprecise birth dates a `commenting` one stating the source never disclosed the rest. The rule throughout: the statement carries the usable value, the annotation carries the register's words. Also ships `docs/dates.md`, owed since Phase 99. Commit `e67ae55`.
-
-*Earlier: [Phase 102 — beneficial ownership asserted, never inferred](docs/status.md), and everything before it.*
+*Earlier: [Phase 103 — provenance annotations: what the register said, not just what OpenCheck read](docs/status.md), and everything before it.*
 
 
 

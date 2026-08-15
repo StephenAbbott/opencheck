@@ -332,6 +332,50 @@ async def test_designated_and_controlled_both_reported(monkeypatch) -> None:
     ]
 
 
+async def test_counter_sanctioned_related_party_is_not_related_sanctioned(
+    monkeypatch,
+) -> None:
+    """The Liverpool FC case (2026-08-15). A connected person name-matched a
+    record on Russia's MFA retaliation list — a genuine counter-designation
+    of a US journalist — and the report said "Related sanctioned". The
+    counter-designation must surface as its own code, and RELATED_SANCTIONED
+    must not appear at all."""
+    from opencheck.cross_check import RELATED_COUNTER_SANCTIONED, RELATED_SANCTIONED
+
+    _stub(monkeypatch, "opensanctions",
+          [_os_entity_hit("ru-mfa-x", "Counter Listed Co", ["sanction.counter"])])
+    _stub(monkeypatch, "everypolitician", [])
+
+    signals = await assess_cross_source_names([_entity("e1", "Counter Listed Co")])
+    assert [s.code for s in signals] == [RELATED_COUNTER_SANCTIONED]
+    assert RELATED_SANCTIONED not in {s.code for s in signals}
+    assert "weak democratic institutions" in signals[0].summary
+
+
+async def test_counter_sanction_is_ranked_last(monkeypatch) -> None:
+    """Ordering is a contract: consumers take ``[0]`` as the headline
+    finding. A counter-designation is structurally a direct listing, so a
+    naive ladder would put it first — ahead of a real OFAC designation on
+    the same record."""
+    from opencheck.cross_check import (
+        RELATED_COUNTER_SANCTIONED,
+        RELATED_SANCTIONED,
+        RELATED_SANCTIONS_LINKED,
+    )
+
+    _stub(monkeypatch, "opensanctions",
+          [_os_entity_hit("NK-mix", "Mixed Listing Co",
+                          ["sanction", "sanction.counter", "sanction.linked"])])
+    _stub(monkeypatch, "everypolitician", [])
+
+    signals = await assess_cross_source_names([_entity("e1", "Mixed Listing Co")])
+    assert [s.code for s in signals] == [
+        RELATED_SANCTIONED,
+        RELATED_SANCTIONS_LINKED,
+        RELATED_COUNTER_SANCTIONED,
+    ]
+
+
 async def test_emits_related_pep_for_pep_topic_or_everypolitician(
     monkeypatch,
 ) -> None:
