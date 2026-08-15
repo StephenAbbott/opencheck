@@ -574,7 +574,8 @@ def _fetch_relationship_statements(
         """
         SELECT statementid, _link,
                recordDetails_subject,
-               recordDetails_interestedParty
+               recordDetails_interestedParty,
+               statementdate
         FROM read_parquet(?)
         WHERE recordDetails_subject = ?
            OR recordDetails_interestedParty = ?
@@ -589,6 +590,9 @@ def _fetch_relationship_statements(
         rel_link = rel_row[1] or ""
         subject_id = rel_row[2] or ""
         ip_id = rel_row[3] or ""
+        rel_statement_date = str(
+            (rel_row[4] if len(rel_row) > 4 else "") or ""
+        )[:10]
 
         # ----- interests sub-table -----
         interests: list[dict[str, Any]] = []
@@ -654,7 +658,7 @@ def _fetch_relationship_statements(
                 else {"describedByEntityStatement": ip_id}
             ) if ip_id else {}
 
-        stmts.append({
+        rel_stmt: dict[str, Any] = {
             "statementId": rel_statementid,
             "recordId": rel_statementid,
             "statementType": "relationshipStatement",
@@ -668,7 +672,10 @@ def _fetch_relationship_statements(
                 "bodsVersion": "0.4",
                 "publisher": {"name": "OpenCheck (via Open Ownership UK PSC bulk data)"},
             },
-        })
+        }
+        if rel_statement_date:
+            rel_stmt["statementDate"] = rel_statement_date
+        stmts.append(rel_stmt)
 
     return stmts
 
@@ -685,6 +692,10 @@ def _build_entity_statement_psc(
 ) -> dict[str, Any]:
     statementid = row.get("statementid") or ""
     pub_date = row.get("publicationdetails_publicationdate") or ""
+    # Open Ownership's own ``statementDate`` — when the source declared the
+    # fact — travels in the flattened Parquet as ``statementdate``. It is
+    # distinct from OO's publicationDate and must not be re-derived here.
+    statement_date = str(row.get("statementdate") or "")[:10]
 
     record_details: dict[str, Any] = {
         "isComponent": False,
@@ -719,6 +730,8 @@ def _build_entity_statement_psc(
     }
     if pub_date:
         stmt["publicationDetails"]["publicationDate"] = str(pub_date)[:10]
+    if statement_date:
+        stmt["statementDate"] = statement_date
 
     return stmt
 
@@ -738,6 +751,10 @@ def _build_person_statement_psc(
     """
     statementid = row.get("statementid") or ""
     pub_date = row.get("publicationdetails_publicationdate") or ""
+    # Open Ownership's own ``statementDate`` — when the source declared the
+    # fact — travels in the flattened Parquet as ``statementdate``. It is
+    # distinct from OO's publicationDate and must not be re-derived here.
+    statement_date = str(row.get("statementdate") or "")[:10]
 
     # Names sub-table — actual column is ``fullName`` (DuckDB case-insensitive)
     names_url = parquet_url_fn("person_recorddetails_names.parquet")
@@ -804,5 +821,7 @@ def _build_person_statement_psc(
     }
     if pub_date:
         stmt["publicationDetails"]["publicationDate"] = str(pub_date)[:10]
+    if statement_date:
+        stmt["statementDate"] = statement_date
 
     return stmt

@@ -3313,6 +3313,15 @@ def map_ted_eu(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         (n.get("url") for n in notices if n.get("url")), "https://ted.europa.eu/"
     )
 
+    # The most recent notice publication date. TED publishes the notice; that
+    # publication is the declaration. Same precedent as SEC issuer details
+    # taking the latest filing date (Phase 100). Deliberately not
+    # contract_conclusion_date or award_date — those are event dates about the
+    # contract, not TED's assertion about this record.
+    latest_notice = max(
+        (n.get("publication_date") or "" for n in notices), default=""
+    ) or None
+
     entity = make_entity_statement(
         source_id="ted_eu",
         local_id=local_id,
@@ -3320,6 +3329,7 @@ def map_ted_eu(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         identifiers=identifiers,
         entity_details="; ".join(details_parts),
         source_url=source_url,
+        statement_date=latest_notice,
     )
     yield entity
 
@@ -6380,6 +6390,10 @@ def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
         person_local_id = _brreg_person_local_id(person, idx)
         dob = person.get("fodselsdato") or None
+        # sistEndret on the role group: when Enhetsregisteret last changed
+        # these role records. The register's declaration date, not a role
+        # start date — brreg publishes no per-role appointment date.
+        role_last_changed = role.get("_group_last_changed") or None
 
         if person_local_id not in seen_person_ids:
             person_stmt = make_person_statement(
@@ -6388,6 +6402,7 @@ def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 full_name=full_name,
                 birth_date=dob,
                 source_url=source_url,
+                statement_date=role_last_changed,
             )
             yield person_stmt
             seen_person_ids.add(person_local_id)
@@ -6413,6 +6428,7 @@ def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interested_party_type="person",
             interests=interests,
             source_url=source_url,
+            statement_date=role_last_changed,
         )
 
 
@@ -6770,6 +6786,7 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 local_id=off_local_id,
                 full_name=off_name,
                 source_url=source_url,
+                statement_date=last_modified or registered_on,
             )
             ip_type = "person"
         else:
@@ -6789,6 +6806,7 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 jurisdiction=("Latvia", "LV") if corp_regcode else None,
                 identifiers=corp_identifiers,
                 source_url=source_url,
+                statement_date=last_modified or registered_on,
             )
             ip_type = "entity"
 
@@ -6801,7 +6819,12 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 "directOrIndirect": "direct",
                 "beneficialOwnershipOrControl": False,
                 "details": ", ".join(role_desc_parts) if role_desc_parts else governing_body,
-                **({"startDate": registered_on or last_modified} if (registered_on or last_modified) else {}),
+                # registered_on is the UR entry date for this officer record —
+                # the closest thing UR gives us to when the role began.
+                # last_modified_at is when UR last REVISED the record, which is
+                # a declaration date, not a start date: using it here would put
+                # clock two into clock one. It goes to statementDate instead.
+                **({"startDate": registered_on} if registered_on else {}),
             }
         ]
         rel_local_id = f"officer-rel-{regcode}-{off_id or off_name}"
@@ -6813,6 +6836,7 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interested_party_type=ip_type,
             interests=interests,
             source_url=source_url,
+            statement_date=last_modified or registered_on,
         )
 
     # ------------------------------------------------------------------
@@ -7590,6 +7614,11 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         or f"https://or.justice.cz/ias/ui/rejstrik-firma.vysledky?subjektId={ico}&typ=PLATNY"
     )
 
+    # datumAktualizace — when ARES last refreshed the record (live-verified
+    # 2026-08-14). Distinct from datumVzniku, the founding date carried above
+    # as foundingDate.
+    ares_last_updated = entity_rec.get("last_updated") or bundle.get("last_updated")
+
     entity_stmt = make_entity_statement(
         source_id="ares",
         local_id=ico,
@@ -7600,6 +7629,7 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         addresses=addresses,
         entity_type=entity_type,
         source_url=source_url,
+        statement_date=ares_last_updated,
     )
     yield entity_stmt
     entity_stmt_id: str = entity_stmt["statementId"]
@@ -7710,6 +7740,7 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interested_party_type=interested_party_type,
             interests=interests,
             source_url=source_url,
+            statement_date=ares_last_updated,
         )
 
     # ----------------------------------------------------------------
@@ -7795,6 +7826,7 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interested_party_type="person" if director.get("type") == "person" else "entity",
             interests=[dir_interest],
             source_url=source_url,
+            statement_date=ares_last_updated,
         )
 
 
@@ -7887,6 +7919,10 @@ def map_krs_poland(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         addresses=addresses,
         entity_type=entity_type,
         source_url=source_url,
+        # dataOstatniegoWpisu — "date of the last entry" in the KRS. When the
+        # court register last revised this record, i.e. its declaration date.
+        # Not dataRejestracjiWKRS, which is the original registration.
+        statement_date=bundle.get("last_change_date"),
     )
     yield entity_stmt
 

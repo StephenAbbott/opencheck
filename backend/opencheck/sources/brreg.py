@@ -181,10 +181,20 @@ class BrregAdapter(SourceAdapter):
         # Flatten the nested rollegrupper structure into a simple list of
         # individual role dicts, each carrying the group type info.
         roles: list[dict[str, Any]] = []
+        # ``sistEndret`` on each rollegruppe is when Enhetsregisteret last
+        # changed that group of roles — the register's own declaration date for
+        # these records (live-verified 2026-08-14 on orgnr 923609016). It is
+        # NOT stiftelsesdato / registreringsdatoEnhetsregisteret, which are the
+        # entity's founding and first-registration dates.
         for group in (roles_payload or {}).get("rollegrupper") or []:
             group_type = group.get("type") or {}
+            group_last_changed = group.get("sistEndret") or None
             for role in group.get("roller") or []:
-                roles.append({**role, "_group_type": group_type})
+                roles.append({
+                    **role,
+                    "_group_type": group_type,
+                    "_group_last_changed": group_last_changed,
+                })
 
         bundle = {
             "source_id": self.id,
