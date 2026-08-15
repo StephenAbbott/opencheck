@@ -103,7 +103,7 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable
 
 from .bods.mapper import _stable_id as _bods_stable_id
-from .bods.psc_natures import NOMINEE_NATURE_CODES, is_nominee_nature
+from .bods.nominees import NOMINEE_NATURE_CODES, is_nominee_nature
 from .config import get_settings
 from .sources import SearchKind, SourceHit
 

@@ -25,11 +25,8 @@ from __future__ import annotations
 
 import pytest
 
-from opencheck.bods.psc_natures import (
-    NOMINEE_NATURE_CODES,
-    PSC_NATURE_DESCRIPTIONS,
-    is_nominee_nature,
-)
+from opencheck.bods.nominees import NOMINEE_NATURE_CODES, is_nominee_nature
+from opencheck.bods.psc_natures import PSC_NATURE_DESCRIPTIONS
 from opencheck.risk import NOMINEE, assess_bundle
 
 ROE_NOMINEE = "registered-owner-as-nominee-person-england-wales-registered-overseas-entity"
