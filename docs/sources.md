@@ -130,6 +130,8 @@ attach.
 
 ### Which date goes where
 
+Full detail, including how date precision is recorded, is in [Dates](dates.md).
+
 Four clocks, kept apart:
 
 | Field | Question it answers | Where it comes from |

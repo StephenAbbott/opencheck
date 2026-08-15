@@ -16,15 +16,16 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 102** — beneficial ownership is asserted, never inferred
+**Latest: Phase 103** — provenance annotations: what the register said, not just what OpenCheck read
+
+The mapper transformed a great deal and recorded none of it. Two findings inverted the planned scope. BODS already models date imprecision exactly where it occurs — `birthDate` legally accepts `YYYY-MM` *because* registers like Companies House publish month and year only, deliberately, for privacy, so rounding it would fabricate a day the register withheld on purpose. And the real loss was vocabulary, not dates: Companies House nature-of-control codes are deliberately not modelled as BODS interest types, so the code identity survived only inside an English prose descriptor — which is exactly why the `NOMINEE` risk signal depends on the word "nominee" appearing in a sentence. Interests now carry a `transformation` annotation naming the register's own code, and imprecise birth dates a `commenting` one stating the source never disclosed the rest. The rule throughout: the statement carries the usable value, the annotation carries the register's words. Also ships `docs/dates.md`, owed since Phase 99. Commit `e67ae55`.
+
+**Previous: Phase 102** — beneficial ownership is asserted, never inferred
 
 BODS distinguishes `true`, `false` and **absent** ("not stated") for `beneficialOwnershipOrControl`, and OpenCheck was collapsing the third into the first in five places — inferring beneficial ownership from the *shape* of the interest rather than from anything a source had said. A shareholding is a legal holding; whether it is also a beneficial one is a separate fact only a register or a BO declaration regime can supply. The reasoning was already written down for the FollowTheMoney path and had simply never been applied to the commercial-register mappers; it now lives once, with an explicit source classification. SEC EDGAR gets the sharpest fix: a 13D/13G "beneficial owner" is an SEC-rules term meaning voting or dispositive power, so an investment adviser voting client shares qualifies without any economic interest — the `typeOfReportingPerson` code that distinguishes them was parsed all along and never read. Over-claiming here is the wrong direction of error for a transparency tool: it is a reputational assertion about a named person, and it travels into every export well beyond any caveat the interface can attach. Commit `f5333e1`.
 
-**Previous: Phase 101** — register-supplied `statementDate`, second wave
+*Earlier: [Phase 101 — register statementDate, second wave](docs/status.md), and everything before it.*
 
-A sweep of every remaining adapter for a genuine record-level declaration date, wiring the seven that have one. The headline pair is `bods_gleif` / `bods_uk_psc`: Open Ownership's published bundles carry *their own* `statementDate`, OpenCheck was reading every neighbouring Parquet column while discarding that one, and those statements were shipping with no `statementDate` at all. Four more were already parsed and never threaded (Poland's "date of the last entry", Latvia's officer revision date, TED's notice publication date); two needed a live probe to settle and got one — Czechia's `datumAktualizace` and Norway's `rollegrupper[].sistEndret`, both verified against the live APIs. Latvia also had the Phase 100 error inverted: its revision date was standing in for `interests[].startDate`, a declaration date in the "when was it true" clock. Three of the four registers originally proposed turned out to have nothing usable, which is the more useful finding — Estonia publishes only a founding date, Denmark's bitemporal CVR is queried for validity time rather than transaction time, and Brazil, probed live, returns no update stamp at all. Commit `bf9714b`.
-
-*Earlier: [Phase 100 — statementDate from the register](docs/status.md), and everything before it.*
 
 
 
@@ -69,6 +70,7 @@ The BOVS icons and country-flag SVGs are committed under `frontend/public/`, so 
 | Page | Contents |
 |------|----------|
 | [How it works](docs/how-it-works.md) | Step-by-step lookup flow, per-adapter detail, Open Ownership BODS bundles, API surface, project structure |
+| [Dates](docs/dates.md) | The four date clocks, which sources supply a declaration date, how precision is recorded |
 | [Sources](docs/sources.md) | Full adapter table — active sources plus inactive bulk-only adapters, license, entry point, description |
 | [Risk signals](docs/risk-signals.md) | All signal codes: source-derived, AMLA CDD RTS, FATF jurisdiction, state-controlled/SOE, cross-source name match, ICIJ Offshore Leaks |
 | [Subsidiary network](docs/subsidiary-network.md) | Lazy GLEIF Level-2 reveal — direct + ultimate children mapped to BODS, graph (small) or table + export (large) |

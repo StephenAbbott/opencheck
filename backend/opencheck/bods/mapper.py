@@ -23,6 +23,7 @@ import pycountry
 from .. import names as _names_mod
 from .. import provenance as _provenance
 from ..elf import resolve_elf
+from .annotations import annotate, commenting, pointer, transformation
 from .ch_constants import describe_company_type, describe_officer_role
 from .psc_natures import describe_nature, describe_statement, describe_super_secure
 
@@ -70,6 +71,39 @@ _INTEREST_PREFIX = {
 }
 
 _SHARE_BAND_RE = re.compile(r"(\d+)-to-(\d+)-percent")
+
+
+def _birth_date_precision_note(birth_date: str | None) -> dict[str, Any] | None:
+    """Explain an imprecise birthDate rather than leaving it ambiguous.
+
+    BODS permits ``YYYY``, ``YYYY-MM`` and ``YYYY-MM-DD`` for ``birthDate``, so
+    an imprecise value here is correct output, not a defect — Companies House
+    publishes only month and year for PSCs and officers, deliberately, for
+    privacy. But a consumer reading "1975-08" cannot tell a privacy-limited
+    register from a truncation on our side. The annotation says which, and uses
+    motivation ``commenting`` rather than ``transformation`` because nothing
+    was transformed: the value is exactly what the register published.
+
+    Rounding it to a full date would be actively wrong here — it would
+    fabricate a day the register withheld on purpose.
+    """
+    if not birth_date:
+        return None
+    if len(birth_date) == 7:
+        detail = "month and year only"
+    elif len(birth_date) == 4:
+        detail = "year only"
+    else:
+        return None
+    return commenting(
+        pointer("recordDetails", "birthDate"),
+        (
+            f"Source publishes {detail} for this person's date of birth; the "
+            "remaining precision was never disclosed, not withheld or lost by "
+            "OpenCheck. BODS permits an imprecise birthDate for this reason."
+        ),
+        creation_date=_today(),
+    )
 
 
 def _parse_nature(nature: str) -> dict[str, Any]:
@@ -769,6 +803,7 @@ def _ch_director_statements(
             addresses=addresses,
             source_url=company_url,
         )
+        annotate(person, _birth_date_precision_note(birth_date))
         person_sid = person["statementId"]
         if person_sid not in seen_sids:
             stmts.append(person)
@@ -1048,6 +1083,30 @@ def _emit_company_statements(
             statement_date=(ceased_on or psc.get("notified_on") or None),
             record_status="closed" if ceased_on else "new",
         )
+        # The register's own nature-of-control codes. mapper._INTEREST_PREFIX
+        # deliberately does not model them as BODS interest types (nominee
+        # arrangements need an intermediary `arrangement` entity, which is not
+        # implemented), so the code identity survived only inside an English
+        # prose descriptor. That made the NOMINEE risk signal depend on the word
+        # "nominee" appearing in a sentence. Recording the codes machine-readably
+        # costs one annotation and does not pre-empt the arrangement modelling.
+        for interest_idx, nature in enumerate(natures):
+            if interest_idx >= len(rel["recordDetails"].get("interests", [])):
+                break
+            emitted = rel["recordDetails"]["interests"][interest_idx]
+            annotate(
+                rel,
+                transformation(
+                    pointer("recordDetails", "interests", interest_idx, "type"),
+                    (
+                        "Companies House nature-of-control code "
+                        f"'{nature}', mapped to the closest BODS interest type."
+                    ),
+                    transformed_content=emitted.get("type"),
+                    creation_date=_today(),
+                ),
+            )
+
         rel_sid = rel["statementId"]
         if rel_sid not in seen_sids:
             result.statements.append(rel)
@@ -1130,15 +1189,18 @@ def _map_individual_psc(
     etag = psc.get("etag") or psc.get("name", "")
     local_id = f"{company_number}:psc:{etag}"
 
-    return make_person_statement(
-        source_id="companies_house",
-        local_id=local_id,
-        full_name=full_name,
-        person_type="knownPerson",
-        nationalities=nationalities,
-        birth_date=birth_date,
-        addresses=addresses,
-        source_url=source_url,
+    return annotate(
+        make_person_statement(
+            source_id="companies_house",
+            local_id=local_id,
+            full_name=full_name,
+            person_type="knownPerson",
+            nationalities=nationalities,
+            birth_date=birth_date,
+            addresses=addresses,
+            source_url=source_url,
+        ),
+        _birth_date_precision_note(birth_date),
     )
 
 
@@ -1198,6 +1260,7 @@ def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
         ],
         source_url=person_url,
     )
+    annotate(person, _birth_date_precision_note(birth_date))
     result.statements.append(person)
     person_sid = person["statementId"]
 
