@@ -169,7 +169,13 @@ async def test_sanctioned_person_yields_related_sanctioned(fake_percolate) -> No
     sig = signals[0]
     assert sig.code == "RELATED_SANCTIONED"
     assert sig.source_id == "openaleph"
-    assert sig.confidence == "high"  # exact name match
+    # Exact name match, but neither side supplies a birth date or
+    # nationality — capped at medium. "High confidence this is the same
+    # person" is the one claim a name alone cannot support.
+    assert sig.confidence == "medium"
+    assert sig.evidence["name_match_only"] is True
+    assert sig.evidence["corroboration"] == []
+    assert "Possible name match only" in sig.summary
     assert sig.evidence["subject_statement_id"] == "stmt-sechin"
     assert sig.evidence["surface_form"] == "Igor Sechin"
     assert sig.evidence["collection"] == "UK FCDO Sanctions List"

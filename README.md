@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 105** — counter-sanctions are not sanctions
+**Latest: Phase 106** — a name is not an identification
+
+Phase 105 fixed how the Liverpool FC hit was described; this fixes whether it should have attached to that person at all. Measuring the match gate rather than tuning it produced the governing fact: `Michael R. Gordon` and `Michael E. Gordon` — definitively different people — score 0.9375, *above* the 0.9333 of the genuine abbreviation pair. A middle initial is two characters, so no threshold separates them and raising the gate drops true positives first. Discrimination now comes from a second attribute: birth year or nationality, requiring both sides to supply it. That asymmetry was the bug — the Russian MFA record publishes no birth date, and knowing our own side's date was being read as agreement. Person signals are capped when nothing but the name agrees, and every such match now opens "Possible name match only" rather than asserting identity. Entities keep the score-only ladder; an organisation name is distinctive in a way a personal name is not.
+
+**Previous: Phase 105** — counter-sanctions are not sanctions
 
 OpenSanctions publishes `sanction.counter` as its own topic — designations imposed by countries with weak democratic institutions, often as retaliation for foreign sanctions or to suppress domestic opposition. OpenCheck classified the topic correctly and then discarded the distinction, bundling it with `sanction` so both rendered as one rose "Sanctioned" chip. That was a deliberate call on a narrow point that happens to be true — the entity really is the subject of the listing — but it treated structure as meaning. Found on Liverpool FC, where a connected person name-matched a Wall Street Journal correspondent on Russia's MFA retaliation list and was reported in the same colour as an OFAC designation, for a listing whose cause is frequently journalism or sanctions enforcement. New `COUNTER_SANCTIONED` and `RELATED_COUNTER_SANCTIONED` signals carry the topic at high confidence — the listing is a fact — but at graph severity 2, in slate rather than rose, and emitted last in the related-party ladder so a real designation always leads. Recognising a topic is not the same as knowing what it means. Commit `862d436`.
 
-**Previous: Phase 104** — the nominee signal fires on structure, not on a sentence
-
-`NOMINEE` worked by substring-matching the word "nominee" in a name or a free-text descriptor. It fired correctly on UK Register of Overseas Entities filings, but by accident: the mapper renders each nature-of-control code into an English descriptor, and those descriptors happen to contain the word — so a register stating the identical fact in a code, a boolean or another language was invisible, and a reworded descriptor upstream would have silenced the signal with no test failing. Companies House publishes `natures_of_control` on every PSC record, and six ROE codes state a nominee arrangement outright; those are now read from the raw payload, which the risk engine already receives. The two grades of evidence are reported distinctly: a filed code is high confidence with the code itself in the evidence, so a reviewer can check the filing; a text match is medium, because "Nominee Services Ltd" is a company name, not a declaration. Commit `c5d975d`.
-
-*Earlier: [Phase 103 — provenance annotations: what the register said, not just what OpenCheck read](docs/status.md), and everything before it.*
+*Earlier: [Phase 104 — the nominee signal fires on structure, not on a sentence](docs/status.md), and everything before it.*
 
 
 

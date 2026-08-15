@@ -74,6 +74,9 @@ from .cross_check import (
     RELATED_SANCTIONS_LINKED,
     _birth_year_compatible,
     _collect_targets,
+    corroborating_attributes,
+    match_confidence,
+    match_summary,
     _dedupe,
     _extract_topics,
     _topic_blurb,
@@ -431,7 +434,10 @@ def _signals_from_percolate(
 
     collection = _collection_label(item)
     coll_note = f" via '{collection}'" if collection else ""
-    relation = "Related party" if target["kind"] == _KIND_PERSON else "Related entity"
+    # Same corroboration rule as cross_check: percolation matches on names,
+    # so an uncorroborated person hit is a name collision candidate here for
+    # exactly the same reason. One rule, two screens.
+    corroboration = corroborating_attributes(target, item)
 
     out: list[RiskSignal] = []
 
@@ -439,10 +445,12 @@ def _signals_from_percolate(
         out.append(
             RiskSignal(
                 code=code,
-                confidence="high" if score >= 0.95 else "medium",
-                summary=(
-                    f"{relation} '{target['name']}' matches a record on openaleph: "
-                    f"{extra} ({_topic_blurb(topics)})."
+                confidence=match_confidence(target, score, corroboration),
+                summary=match_summary(
+                    target=target,
+                    source_id="openaleph",
+                    summary_extra=f"{extra} ({_topic_blurb(topics)})",
+                    corroboration=corroboration,
                 ),
                 source_id="openaleph",
                 hit_id=str(item.get("id") or ""),
@@ -457,6 +465,10 @@ def _signals_from_percolate(
                     "collection": collection,
                     "collection_url": _ui_url(item),
                     "topics": topics,
+                    "corroboration": list(corroboration),
+                    "name_match_only": bool(
+                        target["kind"] == _KIND_PERSON and not corroboration
+                    ),
                 },
             )
         )
