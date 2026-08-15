@@ -98,6 +98,17 @@ That is unworkable for dates — a `YYYY-MM-DD` field cannot hold
 should use, and the annotation's `description` holds the source's wording.
 Worth raising upstream with Open Ownership.
 
+Since Phase 108 those annotations are **visible in the UI**. Where a rendered
+value has an annotation behind it, the results page marks it with a dotted
+underline and offers a persistent **"as filed"** toggle: switched on, the
+register's own words lead and OpenCheck's value follows in muted text. The
+setting is shared across every source card in a lookup — a lookup renders many
+cards, and finding one in the register's vocabulary and the next in OpenCheck's
+would read as a bug. It defaults to OpenCheck's reading, which is the value
+that is always present and always machine-readable. The toggle only renders
+where a bundle actually carries annotations; companies served from a stored
+Open Ownership bundle bypass the mapper and so never do.
+
 Only **lossy or non-obvious** transformations are annotated. Annotating identity
 mappings would multiply bundle size for no gain, and the deployment is
 memory-bound. Currently annotated:

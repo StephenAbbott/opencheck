@@ -1,9 +1,18 @@
-import { lazy, Suspense, useEffect, useId, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useState, useSyncExternalStore } from "react";
 import { deepen } from "../../lib/api";
 import type { BodsBreakdown, BoAccessNotice, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
 import { LivenessBadge, type SourceLiveness } from "./LivenessBadge";
 import { HistoryTimeline } from "./HistoryTimeline";
+import {
+  annotatedFieldCount,
+  annotationsAt,
+  asFiledText,
+  asFiledToggleLabel,
+  getAsFiled,
+  setAsFiled,
+  subscribeAsFiled,
+} from "../../lib/annotations";
 import { NzAssociations } from "./NzAssociations";
 
 // BodsGraphExplorer pulls in Cytoscape + cytoscape-dagre (~the bulk of the
@@ -193,6 +202,50 @@ function IdentifierPill({ id }: { id: unknown }) {
   );
 }
 
+/** Subscribes to the shared "as filed" setting (see lib/annotations). */
+function useAsFiled(): boolean {
+  return useSyncExternalStore(subscribeAsFiled, getAsFiled, getAsFiled);
+}
+
+/**
+ * A field value that has something the register said behind it.
+ *
+ * When "as filed" is off this is exactly the previous rendering plus a dotted
+ * underline, so the affordance is discoverable without being noisy. When on,
+ * the register's words lead and OpenCheck's value follows in muted text —
+ * never the other way round, because the whole point is to show whose
+ * vocabulary you are reading.
+ */
+function AnnotatedValue({
+  value,
+  annotations,
+}: {
+  value: React.ReactNode;
+  annotations: { description?: string }[];
+}) {
+  const asFiled = useAsFiled();
+  const filed = asFiledText(annotations);
+  if (!filed) return <>{value}</>;
+  if (!asFiled) {
+    return (
+      <span
+        className="underline decoration-dotted decoration-oo-muted/60 underline-offset-2"
+        title={`As filed: ${filed}`}
+      >
+        {value}
+      </span>
+    );
+  }
+  return (
+    <span className="block">
+      <span className="text-oo-ink">{filed}</span>
+      <span className="block text-[10px] text-oo-muted mt-0.5">
+        OpenCheck reads this as {value}
+      </span>
+    </span>
+  );
+}
+
 function FieldRow({
   label,
   value,
@@ -315,7 +368,18 @@ function PersonStatementCard({ stmt }: { stmt: BODSStmt }) {
       </div>
       <div className="px-3 py-2.5 space-y-1.5">
         <FieldRow label="Name" value={fullName || <span className="text-oo-muted italic">unknown</span>} />
-        {birthDate && <FieldRow label="Born" value={birthDate} mono />}
+        {birthDate && (
+          <FieldRow
+            label="Born"
+            value={
+              <AnnotatedValue
+                value={birthDate}
+                annotations={annotationsAt(stmt, "recordDetails", "birthDate")}
+              />
+            }
+            mono
+          />
+        )}
         {nationalities.length > 0 && (
           <FieldRow
             label="Nationality"
@@ -435,9 +499,14 @@ function RelationshipStatementCard({
                 {interests.map((int, i) => {
                   const desc = describeInterest(int);
                   const details = stmtStr(int, "details");
+                  // The register's own nature-of-control code hangs off the
+                  // interest's `type`, which is what describeInterest renders.
+                  const anns = annotationsAt(
+                    stmt, "recordDetails", "interests", i, "type",
+                  );
                   return (
                     <span key={i} className="block">
-                      {desc}
+                      <AnnotatedValue value={desc} annotations={anns} />
                       {details && (
                         <span className="text-oo-muted ml-1">({details})</span>
                       )}
@@ -471,9 +540,30 @@ function BODSStatementCards({ statements }: { statements: BODSStmt[] }) {
     const sid = stmtStr(s, "statementId");
     if (sid) lookup.set(sid, s);
   }
+  const asFiled = useAsFiled();
+  // Only offer the toggle where there is something to toggle. Most sources
+  // annotate nothing — a control that changes nothing is worse than none.
+  const annotated = annotatedFieldCount(statements);
 
   return (
     <div className="space-y-2 mt-2">
+      {annotated > 0 && (
+        <div className="flex items-center justify-between gap-2 text-[10px]">
+          <span className="text-oo-muted">
+            {asFiled
+              ? "Showing the register's own words"
+              : "Dotted underline marks a value OpenCheck transformed"}
+          </span>
+          <button
+            type="button"
+            className="hover:text-oo-blue text-oo-muted underline underline-offset-2 shrink-0"
+            aria-pressed={asFiled}
+            onClick={() => setAsFiled(!asFiled)}
+          >
+            {asFiledToggleLabel(asFiled, annotated)}
+          </button>
+        </div>
+      )}
       {statements.map((stmt, i) => {
         const type = stmtStr(stmt, "recordType");
         if (type === "entity")

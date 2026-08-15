@@ -2322,7 +2322,7 @@ function ApiPage() {
             params={[
               [
                 "format",
-                "zip ships bods.json + bods.jsonl + bods.xml + senzing.jsonl + ftm.jsonl + network.cypher + manifest.json + LICENSES.md; json / jsonl / xml return the statements only; senzing returns Senzing JSON entity records for entity resolution; ftm returns FollowTheMoney entities for OpenSanctions / OpenAleph workflows; gql returns a BigQuery property-graph zip; amlai returns Google AML AI input tables; rdf returns BODS RDF as TriG — one named graph per statement, a canonical licence URI on every statement, and risk signals as bods:Annotation overlays in a separate analysis graph.",
+                "zip ships bods.json + bods.jsonl + bods.xml + senzing.jsonl + ftm.jsonl + network.cypher + manifest.json + LICENSES.md; json / jsonl / xml return the statements only; senzing returns Senzing JSON entity records for entity resolution; ftm returns FollowTheMoney entities for OpenSanctions / OpenAleph workflows; gql returns a BigQuery property-graph zip; amlai returns Google AML AI input tables; rdf returns BODS RDF as TriG — one named graph per statement, a canonical licence URI on every statement, and bods:Annotation in two separated layers: the register's own words (nature-of-control codes, imprecise-date notes) in each statement's graph, and OpenCheck's risk signals and entity-resolution links in a separate analysis graph.",
               ],
               [
                 "subsidiaries",
