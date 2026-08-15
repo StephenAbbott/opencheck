@@ -44,7 +44,20 @@ from rdflib import BNode, Dataset, Literal, Namespace, URIRef
 from rdflib.namespace import RDF, RDFS, XSD
 
 BODS = Namespace("https://vocab.openownership.org/terms#")
-CODES = Namespace("https://standard.openownership.org/codelists#")
+# Codelist values. The rule, from
+# https://vocab.openownership.org/pages/3_quickref.html: "capitalise the code
+# and prefix it with the namespace https://vocab.openownership.org/codelists#
+# (prefixed codes:)". So "legalEntity" → codes:LegalEntity, "transformation"
+# → codes:Transformation.
+#
+# NOTE the published 0.4.0 Turtle declares
+# `@prefix codes: <https://standard.openownership.org/codelists#>`, which is
+# where OpenCheck's original value came from. Open Ownership confirm that
+# declaration is an error in the .ttl; the prose rule above is authoritative.
+# Corrected in Phase 107 — every codelist term OpenCheck emitted in RDF
+# before that (entity types, directOrIndirect, annotation motivations) carried
+# the wrong namespace, including in the published Estonia .nq.gz corpus.
+CODES = Namespace("https://vocab.openownership.org/codelists#")
 STMT = Namespace("https://opencheck.world/statements/")
 REC = Namespace("https://opencheck.world/records/")
 OC = Namespace("https://opencheck.world/ns#")
@@ -116,9 +129,16 @@ def _date_lit(value: Any) -> Literal:
     return Literal(text, datatype=XSD.dateTime if "T" in text else XSD.date)
 
 
-def _code_term(value: str) -> URIRef:
-    """camelCase codelist value → codes: class (registeredEntity → codes:RegisteredEntity)."""
-    return CODES[value[0].upper() + value[1:]] if value else CODES.UnknownEntity
+def _code_term(value: str, *, default: URIRef | None = None) -> URIRef:
+    """camelCase codelist value → codes: term (registeredEntity → codes:RegisteredEntity).
+
+    One rule for every codelist — entity types, ``directOrIndirect`` and
+    annotation ``motivation`` all capitalise the first character and hang off
+    ``codes:``.
+    """
+    if not value:
+        return default if default is not None else CODES.UnknownEntity
+    return CODES[value[0].upper() + value[1:]]
 
 
 def _license_literal_for(stmt: dict[str, Any]) -> Literal | None:
@@ -311,6 +331,100 @@ def _add_relationship(g, rec_uri, rd: dict[str, Any]) -> None:
             g.add((node, BODS.endDate, _date_lit(interest["endDate"])))
 
 
+def _emit_annotation(
+    g: Any,
+    target: URIRef,
+    *,
+    motivation: URIRef,
+    description: str,
+    pointer: str,
+    creation_date: str | None,
+    agent_name: str | None,
+    agent_uri: str | None = None,
+    transformed_content: str | None = None,
+    url: str | None = None,
+) -> BNode:
+    """Write one ``bods:Annotation`` into *g*, hung off *target*.
+
+    Shared by the two kinds of annotation OpenCheck emits, which differ in
+    what they describe and therefore in which graph they belong to:
+
+    * **statement annotations** — what the register said before the mapper
+      transformed it (Phase 103). Part of the statement, so they go in the
+      statement's own named graph.
+    * **analysis annotations** — risk signals, possibly-same links, degraded
+      sources (Phase 81). OpenCheck's conclusions *about* statements, so they
+      go in a separate analysis graph.
+
+    Same predicate, deliberately: both are annotations in the BODS sense.
+    Keeping them in different graphs is what lets a consumer ask for one
+    without getting the other.
+    """
+    node = BNode()
+    g.add((target, BODS.annotation, node))
+    g.add((node, RDF.type, BODS.Annotation))
+    g.add((node, BODS.motivation, motivation))
+    if description:
+        g.add((node, BODS.description, Literal(description)))
+    if pointer:
+        g.add((node, BODS.statementPointerTarget, Literal(pointer)))
+    if creation_date:
+        g.add((node, BODS.creationDate, _date_lit(creation_date)))
+    if transformed_content is not None:
+        g.add((node, BODS.transformedContent, Literal(transformed_content)))
+    if url:
+        uri = _uri_or_none(url)
+        if uri is not None:
+            g.add((node, BODS.url, uri))
+    if agent_name or agent_uri:
+        agent = BNode()
+        g.add((node, BODS.createdBy, agent))
+        g.add((agent, RDF.type, BODS.Agent))
+        if agent_name:
+            g.add((agent, BODS.agentName, Literal(agent_name)))
+        if agent_uri:
+            uri = _uri_or_none(agent_uri)
+            if uri is not None:
+                g.add((agent, BODS.uri, uri))
+    return node
+
+
+def _add_statement_annotations(
+    g: Any, stmt_uri: URIRef, stmt: dict[str, Any]
+) -> None:
+    """Emit the statement's own ``annotations`` array.
+
+    These are the register-provenance annotations from Phase 103 — the
+    nature-of-control code behind an ``otherInfluenceOrControl``, or a note
+    that a ``birthDate`` was published imprecise rather than truncated by us.
+    The pointer is carried through verbatim: Phase 103 generates properly
+    escaped RFC6901 pointers, and re-deriving or flattening them here would
+    throw away the part of that phase that was hardest to get right.
+    """
+    for ann in stmt.get("annotations") or []:
+        if not isinstance(ann, dict):
+            continue
+        created_by = ann.get("createdBy") if isinstance(ann.get("createdBy"), dict) else {}
+        _emit_annotation(
+            g,
+            stmt_uri,
+            motivation=_code_term(
+                str(ann.get("motivation") or ""), default=CODES.Commenting
+            ),
+            description=str(ann.get("description") or ""),
+            pointer=str(ann.get("statementPointerTarget") or ""),
+            creation_date=ann.get("creationDate"),
+            agent_name=(created_by or {}).get("name"),
+            agent_uri=(created_by or {}).get("uri"),
+            transformed_content=(
+                None
+                if ann.get("transformedContent") is None
+                else str(ann["transformedContent"])
+            ),
+            url=ann.get("url"),
+        )
+
+
 def _build_dataset(bods_statements: Iterable[dict[str, Any]]) -> tuple[Dataset, set[str]]:
     ds = Dataset()
     for prefix, ns in (("bods", BODS), ("codes", CODES), ("stmt", STMT), ("rec", REC), ("oc", OC)):
@@ -350,6 +464,7 @@ def _build_dataset(bods_statements: Iterable[dict[str, Any]]) -> tuple[Dataset, 
         if lic is not None:
             g.add((stmt_uri, BODS.license, lic))
         _add_source(g, stmt_uri, stmt)
+        _add_statement_annotations(g, stmt_uri, stmt)
 
         g.add((stmt_uri, BODS.recordDetails, rec_uri))
         rd = stmt.get("recordDetails") or {}
@@ -395,18 +510,15 @@ def _add_annotations(
     ag = ds.graph(graph_uri)
 
     def _annotation(target: URIRef, motivation: URIRef, description: str) -> BNode:
-        node = BNode()
-        ag.add((target, BODS.annotation, node))
-        ag.add((node, RDF.type, BODS.Annotation))
-        ag.add((node, BODS.motivation, motivation))
-        ag.add((node, BODS.description, Literal(description)))
-        ag.add((node, BODS.statementPointerTarget, Literal("/")))  # whole statement (RFC 6901)
-        ag.add((node, BODS.creationDate, Literal(run_date, datatype=XSD.date)))
-        agent = BNode()
-        ag.add((node, BODS.createdBy, agent))
-        ag.add((agent, RDF.type, BODS.Agent))
-        ag.add((agent, BODS.agentName, Literal("OpenCheck risk engine")))
-        return node
+        return _emit_annotation(
+            ag,
+            target,
+            motivation=motivation,
+            description=description,
+            pointer="/",  # the analysis annotations describe the whole statement
+            creation_date=run_date,
+            agent_name="OpenCheck risk engine",
+        )
 
     for signal in risk_signals:
         evidence = signal.get("evidence") or {}

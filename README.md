@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 106** — a name is not an identification
+**Latest: Phase 107** — RDF had the annotation vocabulary all along and never used it
+
+Phase 103 began emitting BODS `annotations` — the register's own nature-of-control code, a note that a birth date was published imprecise rather than truncated — and the RDF export dropped every one. Not for want of vocabulary: `rdf.py` already emitted the full `Annotation` term set, built in Phase 81 and wired only to OpenCheck's own risk signals. The two kinds now share an emitter and are separated by graph rather than predicate: statement annotations in the statement's graph, analysis annotations in the analysis graph, so a consumer can ask for either. Pointers travel verbatim rather than being re-derived. Also corrects a namespace wrong since Phase 81 — codelist terms pointed at `standard.openownership.org/codelists#`, taken from the published Turtle's prefix line, which Open Ownership confirm is an error in that file; the correct base is `vocab.openownership.org/codelists#`, and the published Estonia corpus needs regenerating as a result. Senzing and FtM still drop annotations, which is correct. Commit `6396079`.
+
+**Previous: Phase 106** — a name is not an identification
 
 Phase 105 fixed how the Liverpool FC hit was described; this fixes whether it should have attached to that person at all. Measuring the match gate rather than tuning it produced the governing fact: `Michael R. Gordon` and `Michael E. Gordon` — definitively different people — score 0.9375, *above* the 0.9333 of the genuine abbreviation pair. A middle initial is two characters, so no threshold separates them and raising the gate drops true positives first. Discrimination now comes from a second attribute: birth year or nationality, requiring both sides to supply it. That asymmetry was the bug — the Russian MFA record publishes no birth date, and knowing our own side's date was being read as agreement. Person signals are capped when nothing but the name agrees, and every such match now opens "Possible name match only" rather than asserting identity. Entities keep the score-only ladder; an organisation name is distinctive in a way a personal name is not. Commit `57adc39`.
 
-**Previous: Phase 105** — counter-sanctions are not sanctions
-
-OpenSanctions publishes `sanction.counter` as its own topic — designations imposed by countries with weak democratic institutions, often as retaliation for foreign sanctions or to suppress domestic opposition. OpenCheck classified the topic correctly and then discarded the distinction, bundling it with `sanction` so both rendered as one rose "Sanctioned" chip. That was a deliberate call on a narrow point that happens to be true — the entity really is the subject of the listing — but it treated structure as meaning. Found on Liverpool FC, where a connected person name-matched a Wall Street Journal correspondent on Russia's MFA retaliation list and was reported in the same colour as an OFAC designation, for a listing whose cause is frequently journalism or sanctions enforcement. New `COUNTER_SANCTIONED` and `RELATED_COUNTER_SANCTIONED` signals carry the topic at high confidence — the listing is a fact — but at graph severity 2, in slate rather than rose, and emitted last in the related-party ladder so a real designation always leads. Recognising a topic is not the same as knowing what it means. Commit `862d436`.
-
-*Earlier: [Phase 104 — the nominee signal fires on structure, not on a sentence](docs/status.md), and everything before it.*
+*Earlier: [Phase 105 — counter-sanctions are not sanctions](docs/status.md), and everything before it.*
 
 
 
