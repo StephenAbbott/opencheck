@@ -260,8 +260,12 @@ def test_only_private_terms_are_in_the_oc_namespace():
                       "a": "ent-1", "b": "ent-1", "reason": "self",
                       "b_name": "x", "b_source": "y"}])
     ds = _parse(trig)
+    # standard.openownership.org/codelists# is deliberately NOT allowed: it was
+    # OpenCheck's codelist namespace until Phase 107, taken from the published
+    # 0.4.0 Turtle's @prefix line, which Open Ownership confirm is an error in
+    # the .ttl. Listing only the corrected namespace makes a revert fail here.
     allowed = ("https://vocab.openownership.org/terms#",
-               "https://standard.openownership.org/codelists#",
+               "https://vocab.openownership.org/codelists#",
                "https://opencheck.world/",
                str(RDF), "http://www.w3.org/2000/01/rdf-schema#")
     for g in ds.graphs():
@@ -281,3 +285,164 @@ def test_malformed_identifier_uri_does_not_break_serialisation():
     g = _graph(ds, "ent-1")
     uris = {str(u) for u in g.objects(None, BODS.uri)}
     assert uris == {"http://economie.fgov.be/fr/entreprises/BCE"}
+
+
+# ----------------------------------------------------------------------
+# Statement annotations (Phase 107) — the register's own words in RDF
+# ----------------------------------------------------------------------
+
+
+def _annotated_entity():
+    from opencheck.bods import annotations as A
+
+    stmt = _entity("ent-1", name="Acme Ltd")
+    A.annotate(
+        stmt,
+        A.transformation(
+            A.pointer("recordDetails", "interests", 0, "type"),
+            "Companies House nature-of-control code: "
+            "ownership-of-shares-75-to-100-percent",
+            transformed_content="shareholding",
+            creation_date="2026-08-15",
+        ),
+        A.commenting(
+            A.pointer("recordDetails", "birthDate"),
+            "The register published month and year only.",
+            creation_date="2026-08-15",
+        ),
+    )
+    return stmt
+
+
+def test_statement_annotations_round_trip():
+    """Phase 103 put the register's own vocabulary into the bundle; RDF
+    dropped it on the floor until Phase 107."""
+    ds = _parse(to_rdf([_annotated_entity()]))
+    g = _graph(ds, "ent-1")
+
+    nodes = list(g.objects(STMT["ent-1"], BODS.annotation))
+    assert len(nodes) == 2, "both annotations must reach RDF"
+
+    by_motivation = {g.value(n, BODS.motivation): n for n in nodes}
+    assert set(by_motivation) == {CODES.Transformation, CODES.Commenting}
+
+    t = by_motivation[CODES.Transformation]
+    # The pointer is the whole point — a flattened or re-derived pointer
+    # would throw away the RFC6901 escaping Phase 103 got right.
+    assert g.value(t, BODS.statementPointerTarget) == Literal(
+        "/recordDetails/interests/0/type"
+    )
+    assert "ownership-of-shares-75-to-100-percent" in str(
+        g.value(t, BODS.description)
+    )
+    assert g.value(t, BODS.transformedContent) == Literal("shareholding")
+
+    agent = g.value(t, BODS.createdBy)
+    assert g.value(agent, BODS.agentName) == Literal("OpenCheck")
+    assert g.value(agent, BODS.uri) == URIRef("https://opencheck.world")
+
+
+def test_statement_annotations_live_in_the_statement_graph():
+    """Not the analysis graph. A statement annotation is part of the
+    statement; a risk signal is a conclusion about it. Keeping them in
+    different graphs is what lets a consumer ask for one and not the other."""
+    trig = to_rdf(
+        [_annotated_entity()],
+        anchor_lei=None,
+        run_date="2026-08-15",
+        risk_signals=[
+            {"code": "NOMINEE", "summary": "nominee arrangement",
+             "confidence": "high", "evidence": {"statement_id": "ent-1"}}
+        ],
+    )
+    ds = _parse(trig)
+    stmt_graph = _graph(ds, "ent-1")
+    analysis = [
+        g for g in ds.graphs()
+        if str(g.identifier).startswith("https://opencheck.world/analysis/")
+    ]
+    assert analysis, "risk signals must still produce an analysis graph"
+
+    # Two in the statement graph, one in the analysis graph — never mixed.
+    assert len(list(stmt_graph.objects(STMT["ent-1"], BODS.annotation))) == 2
+    assert len(list(analysis[0].objects(STMT["ent-1"], BODS.annotation))) == 1
+
+    sigs = [
+        o for g in analysis for o in g.objects(None, OC.signalCode)
+    ]
+    assert Literal("NOMINEE") in sigs
+    assert not list(stmt_graph.objects(None, OC.signalCode)), (
+        "analysis terms must not leak into the statement graph"
+    )
+
+
+def test_codelist_terms_use_the_vocab_namespace():
+    """The rule is 'capitalise the code and prefix it with
+    https://vocab.openownership.org/codelists#'
+    (vocab.openownership.org/pages/3_quickref.html). The published 0.4.0
+    Turtle declares standard.openownership.org instead — Open Ownership
+    confirm that .ttl @prefix line is an error, so the prose rule wins."""
+    assert str(CODES) == "https://vocab.openownership.org/codelists#"
+    ds = _parse(to_rdf([_annotated_entity()]))
+    g = _graph(ds, "ent-1")
+    assert (REC["ent-1"], BODS.entityType, CODES.RegisteredEntity) in g
+    motivations = set(g.objects(None, BODS.motivation))
+    assert motivations == {CODES.Transformation, CODES.Commenting}
+    for term in motivations:
+        assert str(term).startswith("https://vocab.openownership.org/codelists#")
+
+
+def test_unannotated_statements_emit_no_annotation_triples():
+    """No empty scaffolding — an unannotated statement must be byte-identical
+    to what Phase 81 produced, so the Estonia-scale corpus does not grow."""
+    ds = _parse(to_rdf([_entity("ent-1", name="Acme Ltd")]))
+    g = _graph(ds, "ent-1")
+    assert not list(g.objects(STMT["ent-1"], BODS.annotation))
+    assert (None, RDF.type, BODS.Annotation) not in g
+
+
+def test_unknown_motivation_falls_back_rather_than_minting_a_term():
+    """A motivation outside the codelist must not silently mint
+    codes:Whatever — it degrades to commenting, which is the weakest claim."""
+    stmt = _entity("ent-1", name="Acme Ltd")
+    stmt["annotations"] = [{
+        "statementPointerTarget": "/recordDetails/name",
+        "motivation": "",
+        "description": "no motivation supplied",
+    }]
+    g = _graph(_parse(to_rdf([stmt])), "ent-1")
+    node = g.value(STMT["ent-1"], BODS.annotation)
+    assert g.value(node, BODS.motivation) == CODES.Commenting
+
+
+def test_annotation_size_cost_is_bounded():
+    """Bulk corpora are the constraint — the published Estonia export is ~82 MB
+    of NQuads, so per-statement overhead compounds.
+
+    Deliberately measured as **triples per annotation, not a size ratio**. A
+    ratio measures the fixture: the same annotation is +45% on a real
+    Companies House statement and +107% on the sparse one in this file,
+    because the denominator differs. Triples-per-annotation is a property of
+    the emitter, which is the thing a regression would change. Nine is the
+    full set — type, annotation link, motivation, description, pointer,
+    creationDate, transformedContent, createdBy, agentName, agent uri — minus
+    the optional ones this fixture omits.
+    """
+    from opencheck.bods import annotations as A
+
+    plain = _entity("ent-1", name="Acme Ltd")
+    annotated = _entity("ent-1", name="Acme Ltd")
+    A.annotate(annotated, A.transformation(
+        A.pointer("recordDetails", "name"),
+        "register said 'ACME LTD.'",
+        transformed_content="Acme Ltd",
+        creation_date="2026-08-15",
+    ))
+
+    before = len(list(_graph(_parse(to_rdf([plain])), "ent-1")))
+    after = len(list(_graph(_parse(to_rdf([annotated])), "ent-1")))
+    per_annotation = after - before
+    assert 0 < per_annotation <= 11, (
+        f"{per_annotation} triples for one annotation — the emitter has grown "
+        "fields, which multiplies across a bulk corpus"
+    )
