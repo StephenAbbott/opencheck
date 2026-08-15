@@ -103,6 +103,7 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable
 
 from .bods.mapper import _stable_id as _bods_stable_id
+from .bods.nominees import NOMINEE_NATURE_CODES, is_nominee_nature
 from .config import get_settings
 from .sources import SearchKind, SourceHit
 
@@ -239,6 +240,22 @@ _TRUST_LEGAL_FORM_FRAGMENTS = (
 )
 
 # "Nominee" terms across English / common European legal-vocabulary.
+# Nominee arrangements come in two grades of evidence, and OpenCheck should not
+# pretend they are the same thing.
+#
+# STRUCTURED: a register states it with a code. The Register of Overseas
+# Entities' six registered-owner-as-nominee-* nature-of-control codes are the
+# case OpenCheck can read today (see bods/psc_natures.NOMINEE_NATURE_CODES).
+#
+# TEXTUAL: the word turns up in a name or a free-text descriptor. Real evidence,
+# but weaker — "Nominee Services Ltd" is a company name, not a filed fact.
+#
+# Until this phase there was only the textual path, and it worked on UK ROE
+# filings *by accident*: the mapper renders each nature code as an English
+# descriptor into interest.details, and those descriptors happen to contain the
+# word "nominee". A register stating the identical fact in a code, a boolean or
+# another language was invisible. The fragments below stay as the fallback for
+# every source that publishes only prose.
 _NOMINEE_FRAGMENTS = (
     "nominee",
     "nomineeshareholder",
@@ -1056,7 +1073,7 @@ def assess_amla(
 
     trust_signal = _trust_or_arrangement_signal(source_id, hit_id, bods)
     non_eu_signal = _non_eu_jurisdiction_signal(source_id, hit_id, bods)
-    nominee_signal = _nominee_signal(source_id, hit_id, bods)
+    nominee_signal = _nominee_signal(source_id, hit_id, bods, raw)
     layers_signal = _layers_signal(source_id, hit_id, bods)
 
     out: list[RiskSignal] = []
@@ -1193,9 +1210,62 @@ def _non_eu_jurisdiction_signal(
     )
 
 
+def _structured_nominee_matches(
+    source_id: str, raw: dict[str, Any]
+) -> list[dict[str, str]]:
+    """Nominee arrangements the SOURCE stated, read from its own codes.
+
+    Companies House / Register of Overseas Entities publish
+    ``natures_of_control`` on each PSC record. Six of those codes say the
+    overseas entity holds UK land or property as a nominee. Reading them
+    directly is the difference between "this register filed a nominee
+    arrangement" and "a sentence somewhere contained the word nominee".
+
+    ``raw`` is the adapter payload, which ``assess_bundle`` already receives —
+    so the codes are read at full fidelity rather than recovered from the
+    English descriptor the mapper renders into ``interest.details``.
+    """
+    if source_id != "companies_house":
+        return []
+
+    matches: list[dict[str, str]] = []
+    for psc in ((raw.get("pscs") or {}).get("items") or []):
+        if not isinstance(psc, dict):
+            continue
+        # A ceased PSC's nominee arrangement is historical, not current.
+        if psc.get("ceased_on"):
+            continue
+        for nature in psc.get("natures_of_control") or []:
+            if is_nominee_nature(str(nature)):
+                matches.append(
+                    {
+                        "statement_id": "",
+                        "psc_name": str(psc.get("name") or ""),
+                        "nature_code": str(nature),
+                        "match": (
+                            "register filed nature-of-control code "
+                            f"'{nature}'"
+                        ),
+                    }
+                )
+    return matches
+
+
 def _nominee_signal(
-    source_id: str, hit_id: str, bods: list[dict[str, Any]]
+    source_id: str,
+    hit_id: str,
+    bods: list[dict[str, Any]],
+    raw: dict[str, Any] | None = None,
 ) -> RiskSignal | None:
+    """AMLA CDD RTS condition (c) — nominee shareholders or directors.
+
+    Structured evidence first: where the source filed a nominee code, that is
+    what the signal reports, and the code travels in the evidence so a reviewer
+    can check the filing rather than trusting our reading of it. Textual
+    matching remains for sources that publish only prose, but a signal built
+    that way says so.
+    """
+    structured = _structured_nominee_matches(source_id, raw or {})
     matches: list[dict[str, str]] = []
     for stmt in bods:
         kind = _stmt_kind(stmt)
@@ -1234,19 +1304,46 @@ def _nominee_signal(
                         "match": "person record mentions nominee",
                     }
                 )
+    # Structured matches are deduplicated against the textual ones they would
+    # otherwise double-count: the mapper renders each nature code into
+    # interest.details, so a ROE filing trips both paths for the same fact.
+    if structured:
+        matched_codes = sorted({m["nature_code"] for m in structured})
+        return RiskSignal(
+            code=NOMINEE,
+            confidence="high",
+            summary=(
+                f"Register filed a nominee arrangement "
+                f"({len(structured)} record(s), "
+                f"{len(matched_codes)} nature-of-control code(s)). "
+                "AMLA CDD RTS condition (c)."
+            ),
+            source_id=source_id,
+            hit_id=hit_id,
+            evidence={
+                "matches": structured,
+                "nature_codes": matched_codes,
+                "basis": "structured",
+            },
+        )
+
     if not matches:
         return None
     return RiskSignal(
         code=NOMINEE,
-        confidence="high",
+        # Textual evidence is weaker than a filed code and should not claim
+        # the same confidence: "Nominee Services Ltd" is a company name, not a
+        # declaration. Structured matches above stay high.
+        confidence="medium",
         summary=(
-            f"Ownership chain includes nominee shareholder/director "
-            f"references ({len(matches)} statement(s)). "
+            f"Ownership chain mentions nominee shareholders/directors "
+            f"({len(matches)} statement(s)) — matched on descriptive text, "
+            "not a filed nominee code. "
             "AMLA CDD RTS condition (c)."
         ),
         source_id=source_id,
         hit_id=hit_id,
-        evidence={"matches": matches},
+        evidence={"matches": matches, "basis": "textual"},
     )
 
 
