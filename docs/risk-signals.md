@@ -51,6 +51,25 @@ Both signals are derived purely from the BODS jurisdiction codes — they fire i
 
 For every `personStatement` and `entityStatement` in the assembled BODS bundle, OpenCheck searches OpenSanctions (and EveryPolitician for persons) by name. Matches above a similarity threshold of 0.88 — with optional birth-year compatibility (±1 year, only when both sides supply a DOB) — produce **scoped** signals attached to the matching related-party's `statementId` (in `evidence.subject_statement_id`), not the subject. That means a sanctioned PSC behind an otherwise clean shell company surfaces on the right node in the graph.
 
+### Corroboration: what a person match rests on
+
+A name match is weak evidence about a *person*, and the scorer cannot be tuned out of it. `Michael R. Gordon` and `Michael E. Gordon` — definitively different people — score **0.9375**, above the 0.9333 of a genuine abbreviation pair (`Michael Gordon` / `Michael R. Gordon`). A middle initial is two characters, so it barely moves a character-similarity score; raising the threshold drops true positives before it drops that pair. `test_conflicting_middle_initials_still_score_above_the_gate` pins the inversion, and fails if it ever reverses — at which point a threshold fix becomes viable and this rule can be revisited.
+
+So discrimination comes from a second attribute. `corroborating_attributes()` reports which of **birth year** (±1) and **nationality** agree, requiring *both* sides to supply the attribute. A hit that publishes no birth date is not corroborated by our knowing one — it is unchecked, and reporting silence as agreement is exactly how the Liverpool FC false positive read as a finding.
+
+Person signals are then capped when nothing but the name agrees — never `high`, since "high confidence this is the same person" is the one claim a name alone cannot support:
+
+| | corroborated | name only |
+|---|---|---|
+| score ≥ 0.95 | `high` | `medium` |
+| 0.88 ≤ score < 0.95 | `medium` | `low` |
+
+The cap is two-tier rather than a flat `low` on purpose. Sanctions screening *is* name-based: an exact match against a designated person is something a reviewer must adjudicate, and filing every such hit under `low` would misreport standard practice as a weak lead. Either way the summary opens with **"Possible name match only"** and names what is missing, so the prose never asserts identity regardless of the rung. `evidence.corroboration` lists the agreeing attributes and `evidence.name_match_only` is the boolean.
+
+**Entities keep the score-only ladder.** An organisation name is distinctive in a way a personal name is not — "Gazprom PJSC" matching "Gazprom" is a finding on its own.
+
+The OpenAleph percolation screen shares all of this: it matches on names for the same reasons, so it imports `match_confidence()` / `match_summary()` rather than keeping a second copy. BackgroundCheck (`/person-check`) is unaffected — it is an explicit person search presenting candidate matches with its own strong/weak split, not an assertion about a node in an ownership graph.
+
 - `RELATED_PEP` — a related person matches an OpenSanctions PEP record or appears in EveryPolitician.
 - `RELATED_SANCTIONED` — a related person or entity matches an OpenSanctions record carrying `sanction`.
 - `RELATED_COUNTER_SANCTIONED` — the match carries `sanction.counter`: a related party designated under a counter-sanctions regime. Emitted **last** in the ladder despite being a direct listing, so it is never the headline finding a consumer takes from `[0]`.

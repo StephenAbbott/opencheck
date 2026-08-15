@@ -296,6 +296,7 @@ def _collect_targets(bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "statement_id": sid,
                     "name": name,
                     "birth_year": _person_birth_year(rd),
+                    "nationalities": _person_nationalities(rd),
                 }
             )
         elif record_type == "entity":
@@ -315,6 +316,7 @@ def _collect_targets(bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "statement_id": sid,
                     "name": name.strip(),
                     "birth_year": None,
+                    "nationalities": (),
                 }
             )
     return out
@@ -352,6 +354,22 @@ def _person_birth_year(rd: dict[str, Any]) -> int | None:
     bd = rd.get("birthDate") or ""
     m = re.match(r"(\d{4})", bd)
     return int(m.group(1)) if m else None
+
+
+def _person_nationalities(rd: dict[str, Any]) -> tuple[str, ...]:
+    """ISO codes from the BODS person statement's ``nationalities``.
+
+    BODS models these as ``[{"name": …, "code": "GB"}, …]``; only the code
+    is usable for comparison, since the name is free text in the
+    register's own language.
+    """
+    out: list[str] = []
+    for nat in rd.get("nationalities") or ():
+        if isinstance(nat, dict):
+            code = nat.get("code")
+            if isinstance(code, str) and code.strip():
+                out.append(code.strip())
+    return tuple(out)
 
 
 # ---------------------------------------------------------------------
@@ -530,6 +548,60 @@ def _signal_from_ep(
     )
 
 
+def match_confidence(
+    target: dict[str, Any], score: float, corroboration: tuple[str, ...]
+) -> str:
+    """Confidence for a name-derived related-party signal.
+
+    Entities keep the historical score-only ladder: an organisation name
+    is distinctive enough that "Gazprom PJSC" matching "Gazprom" is a
+    finding on its own. **Persons are capped one rung down** when nothing
+    but the name agrees — never ``high``, since "high confidence this is
+    the same person" is precisely the claim a name alone cannot support.
+
+    The cap is two-tier rather than a flat ``low``, and the distinction
+    matters. Sanctions screening *is* name-based: an exact match against a
+    designated person is something a reviewer must adjudicate, and burying
+    every such hit at ``low`` would misreport standard practice as a weak
+    lead. The fuzzy band is different — that is where "Michael Gordon" vs
+    "Michael R. Gordon" (0.9333) lives, alongside "Michael R." vs
+    "Michael E." (0.9375, definitively different people). So:
+
+    * exact-ish (``>= 0.95``), uncorroborated → ``medium``
+    * threshold band, uncorroborated        → ``low``
+
+    Either way the summary says "possible name match only", so the *prose*
+    never asserts identity regardless of which rung it lands on.
+    """
+    if target["kind"] == _KIND_PERSON and not corroboration:
+        return "medium" if score >= 0.95 else "low"
+    return "high" if score >= 0.95 else "medium"
+
+
+def match_summary(
+    *,
+    target: dict[str, Any],
+    source_id: str,
+    summary_extra: str,
+    corroboration: tuple[str, ...],
+) -> str:
+    """Signal prose. An uncorroborated person match must not read as an
+    assertion that the related party *is* the listed record."""
+    relation = "Related party" if target["kind"] == _KIND_PERSON else "Related entity"
+    if target["kind"] == _KIND_PERSON and not corroboration:
+        return (
+            f"Possible name match only: {relation.lower()} '{target['name']}' "
+            f"shares a name with a record on {source_id}, with no birth date "
+            f"or nationality in common to confirm they are the same person "
+            f"— {summary_extra}."
+        )
+    via = f" (confirmed on {', '.join(corroboration)})" if corroboration else ""
+    return (
+        f"{relation} '{target['name']}' matches a record "
+        f"on {source_id}{via}: {summary_extra}."
+    )
+
+
 def _make_signal(
     *,
     code: str,
@@ -538,15 +610,15 @@ def _make_signal(
     score: float,
     summary_extra: str,
 ) -> RiskSignal:
-    relation = "Related party" if target["kind"] == _KIND_PERSON else "Related entity"
+    corroboration = corroborating_attributes(target, hit.raw or {})
     return RiskSignal(
         code=code,
-        # High confidence on near-exact matches; medium on the
-        # threshold band.
-        confidence="high" if score >= 0.95 else "medium",
-        summary=(
-            f"{relation} '{target['name']}' matches a record "
-            f"on {hit.source_id}: {summary_extra}."
+        confidence=match_confidence(target, score, corroboration),
+        summary=match_summary(
+            target=target,
+            source_id=hit.source_id,
+            summary_extra=summary_extra,
+            corroboration=corroboration,
         ),
         source_id=hit.source_id,
         hit_id=hit.hit_id,
@@ -556,6 +628,10 @@ def _make_signal(
             "search_name": target["name"],
             "score": round(score, 3),
             "kind": target["kind"],
+            "corroboration": list(corroboration),
+            "name_match_only": bool(
+                target["kind"] == _KIND_PERSON and not corroboration
+            ),
         },
     )
 
@@ -602,30 +678,95 @@ def _topic_blurb(topics: list[str]) -> str:
     return ", ".join(sorted(set(keep))[:3]) if keep else "no topic"
 
 
+def _prop_values(raw: dict[str, Any], *keys: str) -> list[str]:
+    """Collect string values for ``keys`` from an FtM-shaped payload.
+
+    Properties may sit at the top level or under ``properties``, and each
+    may be a bare string or a list. Shared by the birth-year and
+    nationality readers so the two cannot drift.
+    """
+    out: list[str] = []
+    props = raw.get("properties") if isinstance(raw.get("properties"), dict) else {}
+    for container in (props, raw):
+        if not isinstance(container, dict):
+            continue
+        for key in keys:
+            v = container.get(key)
+            if isinstance(v, list):
+                out.extend(str(x) for x in v if x)
+            elif isinstance(v, str) and v:
+                out.append(v)
+    return out
+
+
+def _hit_birth_years(raw: dict[str, Any]) -> set[int]:
+    """Every four-digit year the hit's record offers as a birth date."""
+    years: set[int] = set()
+    for cand in _prop_values(raw, "birthDate", "birthDates"):
+        m = re.match(r"(\d{4})", cand)
+        if m:
+            years.add(int(m.group(1)))
+    return years
+
+
+def _hit_countries(raw: dict[str, Any]) -> set[str]:
+    """Country-ish codes on the hit: nationality, citizenship, country."""
+    return {
+        v.strip().lower()
+        for v in _prop_values(raw, "nationality", "citizenship", "country")
+        if v.strip()
+    }
+
+
+def corroborating_attributes(
+    target: dict[str, Any], raw: dict[str, Any]
+) -> tuple[str, ...]:
+    """Attributes beyond the name on which the target and the hit *agree*.
+
+    A name match on its own is weak evidence about a person: "Michael
+    Gordon" collides across unrelated people, and the scorer cannot help —
+    a middle initial is two characters, so ``Michael R. Gordon`` and
+    ``Michael E. Gordon``, who are definitively different people, score
+    **higher** (0.9375) than a genuine abbreviation pair (0.9333).
+    Tightening the threshold cannot fix that; it drops true positives
+    first. So the discrimination has to come from a second attribute.
+
+    Returns the names of the attributes that agree — empty means the match
+    rests on the name alone. Note the asymmetry this deliberately does not
+    paper over: agreement requires **both** sides to supply the attribute.
+    A hit with no birth date is not corroborated by our knowing one; it is
+    simply unchecked, and reporting silence as agreement is how the
+    Liverpool FC false positive read as a finding.
+    """
+    found: list[str] = []
+    year = target.get("birth_year")
+    if year is not None:
+        hit_years = _hit_birth_years(raw)
+        if hit_years and any(abs(y - year) <= 1 for y in hit_years):
+            found.append("birth_year")
+    ours = {c.lower() for c in (target.get("nationalities") or ()) if c}
+    if ours:
+        theirs = _hit_countries(raw)
+        if theirs and (ours & theirs):
+            found.append("nationality")
+    return tuple(found)
+
+
 def _birth_year_compatible(year: int | None, hit: SourceHit) -> bool:
-    """If we know the target's birth year and the hit's record carries
-    one, require that they agree (off by ≤1 to allow for date precision
-    differences). When either side is missing we leave the match in
-    place — name alone is a useful signal."""
+    """Reject a match whose birth years actively *conflict*.
+
+    Distinct from :func:`corroborating_attributes`: this is the hard
+    filter (drop the match), that is the confidence input (keep it, but
+    say what it rests on). When either side is missing we keep the match
+    — name alone is still worth surfacing — but it will now be reported
+    as a name match only rather than as an assertion.
+    """
     if year is None:
         return True
-    raw = hit.raw or {}
-    candidates: list[str] = []
-    props = raw.get("properties") if isinstance(raw.get("properties"), dict) else {}
-    if isinstance(props, dict):
-        for key in ("birthDate", "birthDates"):
-            v = props.get(key)
-            if isinstance(v, list):
-                candidates.extend(str(x) for x in v if x)
-            elif isinstance(v, str):
-                candidates.append(v)
-    if not candidates:
-        return True  # hit has no DOB — keep
-    for cand in candidates:
-        m = re.match(r"(\d{4})", cand)
-        if m and abs(int(m.group(1)) - year) <= 1:
-            return True
-    return False
+    hit_years = _hit_birth_years(hit.raw or {})
+    if not hit_years:
+        return True  # hit has no DOB — keep, but uncorroborated
+    return any(abs(y - year) <= 1 for y in hit_years)
 
 
 def _dedupe(signals: list[RiskSignal]) -> list[RiskSignal]:

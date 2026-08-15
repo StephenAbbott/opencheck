@@ -225,6 +225,103 @@ async def test_emits_related_sanctioned_for_matching_person(monkeypatch) -> None
     assert s.source_id == "opensanctions"
 
 
+def _os_person_hit(
+    hit_id: str,
+    name: str,
+    topics: list[str],
+    *,
+    birth: str | None = None,
+    country: str | None = None,
+) -> SourceHit:
+    props: dict[str, Any] = {"name": [name], "topics": topics}
+    if birth:
+        props["birthDate"] = [birth]
+    if country:
+        props["country"] = [country]
+    return SourceHit(
+        source_id="opensanctions",
+        hit_id=hit_id,
+        kind=SearchKind.PERSON,
+        name=name,
+        summary="",
+        identifiers={"opensanctions_id": hit_id},
+        raw={"id": hit_id, "schema": "Person", "properties": props, "topics": topics},
+        is_stub=False,
+    )
+
+
+async def test_name_only_person_match_is_not_asserted(monkeypatch) -> None:
+    """The Liverpool FC false positive (2026-08-15).
+
+    A connected "Michael Gordon" name-matched Michael R. Gordon, a Wall
+    Street Journal correspondent on Russia's MFA retaliation list. The
+    record publishes no birth date and no nationality, so nothing beyond
+    the name agrees — and the report asserted a related-party finding
+    anyway. It must now read as a possible match, not a fact.
+    """
+    _stub(monkeypatch, "opensanctions",
+          [_os_person_hit("ru-mfa-x", "Michael R. Gordon", ["sanction.counter"])])
+    _stub(monkeypatch, "everypolitician", [])
+
+    signals = await assess_cross_source_names(
+        [_person("p1", "Michael Gordon", birth="1962-01-01")]
+    )
+    assert len(signals) == 1
+    sig = signals[0]
+    # 0.9333 — under 0.95, so the fuzzy band, so low.
+    assert sig.confidence == "low"
+    assert sig.evidence["name_match_only"] is True
+    assert sig.evidence["corroboration"] == []
+    assert sig.summary.startswith("Possible name match only")
+    # Knowing OUR side's birth date must not read as agreement when the
+    # hit publishes none. That inference is the bug.
+    assert "no birth date or nationality in common" in sig.summary
+
+
+async def test_agreeing_birth_year_restores_full_confidence(monkeypatch) -> None:
+    """With a second attribute agreeing, the match is an assertion again."""
+    _stub(monkeypatch, "opensanctions",
+          [_os_person_hit("NK-p", "Vladimir Putin", ["sanction"], birth="1952-10-07")])
+    _stub(monkeypatch, "everypolitician", [])
+
+    signals = await assess_cross_source_names(
+        [_person("p1", "Vladimir Putin", birth="1952-10-07")]
+    )
+    assert [s.confidence for s in signals] == ["high"]
+    assert signals[0].evidence["corroboration"] == ["birth_year"]
+    assert signals[0].evidence["name_match_only"] is False
+    assert "confirmed on birth_year" in signals[0].summary
+
+
+async def test_entities_keep_the_score_only_ladder(monkeypatch) -> None:
+    """An organisation name is distinctive; a person's is not. Entities
+    must not be dragged down by the person rule."""
+    _stub(monkeypatch, "opensanctions",
+          [_os_entity_hit("NK-g", "Gazprom", ["sanction"])])
+    _stub(monkeypatch, "everypolitician", [])
+
+    signals = await assess_cross_source_names([_entity("e1", "Gazprom")])
+    assert [s.confidence for s in signals] == ["high"]
+    assert signals[0].evidence["name_match_only"] is False
+
+
+def test_conflicting_middle_initials_still_score_above_the_gate() -> None:
+    """Pins *why* the corroboration rule exists rather than a higher
+    threshold. Two definitively different people score HIGHER than a
+    genuine abbreviation pair, so no threshold separates them: raising
+    the gate drops the true positive first.
+    """
+    from opencheck.cross_check import _name_score
+
+    true_pair = _name_score("Michael Gordon", "Michael R. Gordon")
+    false_pair = _name_score("Michael R. Gordon", "Michael E. Gordon")
+    assert false_pair > true_pair, (
+        "if this ever inverts, a threshold fix becomes viable and the "
+        "corroboration rule can be revisited"
+    )
+    assert true_pair >= 0.88 and false_pair >= 0.88
+
+
 def _os_entity_hit(hit_id: str, name: str, topics: list[str]) -> SourceHit:
     return SourceHit(
         source_id="opensanctions",
