@@ -103,6 +103,34 @@ PSC_NATURE_DESCRIPTIONS: dict[str, str] = {
 }
 
 
+# ----------------------------------------------------------------------
+# Nominee arrangements — the machine-readable set
+# ----------------------------------------------------------------------
+# Register of Overseas Entities filings use these six codes to say that the
+# overseas entity holds UK land or property AS A NOMINEE for someone else.
+# That is a nominee arrangement stated by the register, not inferred.
+#
+# They are deliberately NOT mapped to the BODS ``nominee`` interest type (see
+# bods/mapper.py) — BODS models nominee arrangements through an intermediary
+# ``arrangement`` entity with ``nominator``/``nominee`` relationships, and that
+# modelling is not implemented. Until it is, the codes fall through to
+# ``otherInfluenceOrControl``.
+#
+# Which is exactly why this set exists. Before it, the only trace of a nominee
+# arrangement in OpenCheck's output was the word "nominee" appearing inside an
+# English descriptor, and the NOMINEE risk signal worked by substring-matching
+# that sentence. A register that stated the same fact in any other words — or
+# in any other language — was invisible to it.
+NOMINEE_NATURE_CODES: frozenset[str] = frozenset(
+    code for code in PSC_NATURE_DESCRIPTIONS if "registered-owner-as-nominee" in code
+)
+
+
+def is_nominee_nature(code: str) -> bool:
+    """True when a PSC/ROE nature-of-control code states a nominee arrangement."""
+    return (code or "").strip().lower() in NOMINEE_NATURE_CODES
+
+
 SUPER_SECURE_DESCRIPTIONS: dict[str, str] = {
     'super-secure-persons-with-significant-control': "The person with significant control's details are not shown because restrictions on disclosing any of the individual's details are in force",
     'super-secure-beneficial-owner': 'The beneficial owners details are not shown because restrictions on using or disclosing any of the individual’s particulars are in force',

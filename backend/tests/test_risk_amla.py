@@ -274,7 +274,12 @@ def test_nominee_fires_on_interest_details() -> None:
     ]
     signals = assess_amla("companies_house", {"entity_id": "X"}, bods)
     sig = next(s for s in signals if s.code == NOMINEE)
-    assert sig.confidence == "high"
+    # Text-only evidence is real but weaker than a filed code — "Nominee
+    # Services Ltd" is a company name, not a declaration — so it reports
+    # medium and says outright what it matched on.
+    assert sig.confidence == "medium"
+    assert sig.evidence["basis"] == "textual"
+    assert "descriptive text" in sig.summary
     assert "AMLA" in sig.summary
 
 

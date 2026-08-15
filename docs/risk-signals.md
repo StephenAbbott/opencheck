@@ -24,7 +24,11 @@ These mirror the objective conditions in the EU AMLA draft customer due diligenc
 
 - `TRUST_OR_ARRANGEMENT` — entity with `entityType=arrangement` or a legal-form keyword (`trust`, `Stiftung`, `Anstalt`, `fideicomiso`, `Treuhand`, `foundation`). AMLA condition (a).
 - `NON_EU_JURISDICTION` — any entity statement's `incorporatedInJurisdiction.code` outside the EU+EEA. AMLA condition (b). Configurable via `OPENCHECK_AMLA_EQUIVALENT_JURISDICTIONS` (additive, e.g. `GB,CH`) or `OPENCHECK_AMLA_EU_EEA_OVERRIDE` (full replace).
-- `NOMINEE` — relationship interest type/details mentions nominee (English / French / camelCase variants), or person record mentions nominee. AMLA condition (c).
+- `NOMINEE` — a nominee shareholder or director arrangement. AMLA condition (c). Two grades of evidence, reported distinctly:
+  - **structured** (*high* confidence) — the register filed a nominee code. Companies House / Register of Overseas Entities `natures_of_control` codes matching `registered-owner-as-nominee-*` (six of them; see `bods/psc_natures.NOMINEE_NATURE_CODES`). The code travels in the signal's evidence so a reviewer can check the filing rather than our reading of it. Ceased PSCs are excluded — that arrangement has ended.
+  - **textual** (*medium* confidence) — the word "nominee" (or `prête-nom` / `fiduciaire` / camelCase variants) appears in an interest type, an interest's details, or a person record. Real evidence, but weaker than a filed code: "Nominee Services Ltd" is a company name, not a declaration. The summary says outright that it matched on descriptive text.
+
+  `evidence.basis` is `"structured"` or `"textual"`. A filed code reports as structured even though the mapper also renders it into `interest.details` — the same fact must not be reported by its weaker trace.
 - `COMPLEX_OWNERSHIP_LAYERS` — DFS over the BODS relationship graph finds an entity-only chain ≥3 nodes (cycle-safe). Made meaningfully detectable by the Phase 10 Open Ownership bundles, which carry full multi-layer chains.
 - `COMPLEX_CORPORATE_STRUCTURE` — composite (high confidence), fires when `COMPLEX_OWNERSHIP_LAYERS` AND ≥1 of {trust, non-EU, nominee} both fire — the AMLA threshold rule end-to-end.
 - `POSSIBLE_OBFUSCATION` — advisory (low confidence) mirror of AMLA's subjective condition; explicitly notes the legitimate-economic-rationale caveat.
