@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 107** — RDF had the annotation vocabulary all along and never used it
+**Latest: Phase 108** — the register's own words, finally visible
+
+Phase 103 began emitting BODS annotations — the Companies House nature-of-control code behind a rendered interest type, a note that a birth date was published month-and-year-only rather than truncated by OpenCheck — and Phase 107 carried them into RDF. Neither put them in front of a user: nothing in the frontend read them, so the register's words arrived in the browser on every lookup and were discarded at the last step. The results page now marks any transformed value with a dotted underline and offers a persistent "as filed" toggle — on, the register's words lead and OpenCheck's reading follows in muted text, that order deliberately, since the point is showing whose vocabulary you are reading. The setting is shared across every source card rather than held per card, defaults to OpenCheck's reading, and only appears where a bundle actually carries annotations. Pointer matching is exact rather than prefix, so an annotation about one interest can never be attributed to its sibling. Commit `ed448cf`.
+
+**Previous: Phase 107** — RDF had the annotation vocabulary all along and never used it
 
 Phase 103 began emitting BODS `annotations` — the register's own nature-of-control code, a note that a birth date was published imprecise rather than truncated — and the RDF export dropped every one. Not for want of vocabulary: `rdf.py` already emitted the full `Annotation` term set, built in Phase 81 and wired only to OpenCheck's own risk signals. The two kinds now share an emitter and are separated by graph rather than predicate: statement annotations in the statement's graph, analysis annotations in the analysis graph, so a consumer can ask for either. Pointers travel verbatim rather than being re-derived. Also corrects a namespace wrong since Phase 81 — codelist terms pointed at `standard.openownership.org/codelists#`, taken from the published Turtle's prefix line, which Open Ownership confirm is an error in that file; the correct base is `vocab.openownership.org/codelists#`, and the published Estonia corpus needs regenerating as a result. Senzing and FtM still drop annotations, which is correct. Commit `6396079`.
 
-**Previous: Phase 106** — a name is not an identification
-
-Phase 105 fixed how the Liverpool FC hit was described; this fixes whether it should have attached to that person at all. Measuring the match gate rather than tuning it produced the governing fact: `Michael R. Gordon` and `Michael E. Gordon` — definitively different people — score 0.9375, *above* the 0.9333 of the genuine abbreviation pair. A middle initial is two characters, so no threshold separates them and raising the gate drops true positives first. Discrimination now comes from a second attribute: birth year or nationality, requiring both sides to supply it. That asymmetry was the bug — the Russian MFA record publishes no birth date, and knowing our own side's date was being read as agreement. Person signals are capped when nothing but the name agrees, and every such match now opens "Possible name match only" rather than asserting identity. Entities keep the score-only ladder; an organisation name is distinctive in a way a personal name is not. Commit `57adc39`.
-
-*Earlier: [Phase 105 — counter-sanctions are not sanctions](docs/status.md), and everything before it.*
+*Earlier: [Phase 106 — a name is not an identification](docs/status.md), and everything before it.*
 
 
 

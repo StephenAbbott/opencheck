@@ -428,6 +428,8 @@ Specific rules:
 
 **`SourceBucketCard`** passes `detail.risk_signals` to `<BODSGraph signals={...} />`.
 
+**"As filed" annotations (Phase 108)** — `frontend/src/lib/annotations.ts` holds the pure logic plus a **module-scoped** toggle store (`getAsFiled` / `setAsFiled` / `subscribeAsFiled`, read in components via `useSyncExternalStore`). Deliberately not per-card React state: a lookup renders many source cards and they must switch together. Default is OpenCheck's reading, and the toggle only renders when `annotatedFieldCount(statements) > 0`. `annotationsAt()` matches the RFC6901 pointer **exactly** — never a prefix — so an annotation on `/recordDetails/interests/0/type` cannot be attributed to interest 1 or to the whole interest. Unescape `~1` before `~0` or a field named `a~1b` addresses `a/b`. Wired into `PersonStatementCard` (birthDate) and `RelationshipStatementCard` (interest types); add new call sites by passing the annotation array to `<AnnotatedValue>`.
+
 ---
 
 ## Brand: Check-mode badges (QuickCheck / FullCheck / BackgroundCheck)

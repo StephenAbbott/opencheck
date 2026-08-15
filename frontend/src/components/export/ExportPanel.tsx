@@ -223,11 +223,16 @@ export function ExportPanel({
             BODS vocabulary
             <span className="sr-only"> (opens in new tab)</span>
           </a>{" "}
-          terms). Every statement carries its source&rsquo;s canonical licence URI, and
-          OpenCheck&rsquo;s risk signals and entity-resolution links travel as{" "}
-          <span className="font-mono">bods:Annotation</span> overlays in a separate
-          named analysis graph — queryable in SPARQL tools or directly in DuckDB via
-          the community <span className="font-mono">rdf</span> extension.
+          terms). Every statement carries its source&rsquo;s canonical licence URI.
+          Two kinds of{" "}
+          <span className="font-mono">bods:Annotation</span> travel with it, kept in
+          separate named graphs so you can query either without the other: the
+          register&rsquo;s own words — the nature-of-control code behind an interest,
+          or a note that a birth date was published imprecise — sit in each
+          statement&rsquo;s own graph, while OpenCheck&rsquo;s risk signals and
+          entity-resolution links sit in a separate analysis graph. Queryable in
+          SPARQL tools or directly in DuckDB via the community{" "}
+          <span className="font-mono">rdf</span> extension.
         </p>
       )}
 
