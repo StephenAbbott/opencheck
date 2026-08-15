@@ -101,6 +101,33 @@ unmarked default, since badging it would tell a reader nothing they had not
 already assumed. The API carries the same information in `source_liveness`
 (keyed by `source_id`) and on each hit's `liveness` / `retrieved_at`.
 
+### Beneficial ownership is asserted, never inferred
+
+BODS distinguishes three states for `interests[].beneficialOwnershipOrControl`:
+`true`, `false`, and **absent** — "not stated". OpenCheck emits the flag only
+where a source actually said something.
+
+A shareholding is a *legal* holding. Whether it is also a *beneficial* one is a
+separate fact, and only a register or a beneficial ownership declaration regime
+can supply it. Sources that do, and may therefore assert the flag:
+`companies_house` (PSC), `bods_uk_psc`, `bods_gleif`, `ur_latvia`,
+`rpvs_slovakia`, `cac_nigeria`, `ariregister`. Everything else describes
+registered holdings, and omits the flag unless the source states it explicitly —
+an explicit `false` is information, not silence, and is always passed through.
+
+SEC EDGAR is the interesting case. A 13D/13G "beneficial owner" is an SEC-rules
+term meaning voting or dispositive power: an investment adviser voting client
+shares has it without any economic interest. The filing's
+`typeOfReportingPerson` code distinguishes the two, so filers reporting in a
+custodial or advisory capacity (`IA`, `BD`, `IC`, `EP`, `SA`, `BK`) make no
+beneficial ownership claim, and the capacity is stated in the interest's
+`details` rather than silently dropped.
+
+Over-claiming here is the wrong direction of error for a transparency tool: it
+is a reputational assertion about a named person, and it travels into every
+export — RDF, FtM, Senzing, BigQuery — well beyond any caveat the interface can
+attach.
+
 ### Which date goes where
 
 Four clocks, kept apart:

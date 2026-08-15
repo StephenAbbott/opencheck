@@ -16,15 +16,16 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 101** — register-supplied `statementDate`, second wave
+**Latest: Phase 102** — beneficial ownership is asserted, never inferred
+
+BODS distinguishes `true`, `false` and **absent** ("not stated") for `beneficialOwnershipOrControl`, and OpenCheck was collapsing the third into the first in five places — inferring beneficial ownership from the *shape* of the interest rather than from anything a source had said. A shareholding is a legal holding; whether it is also a beneficial one is a separate fact only a register or a BO declaration regime can supply. The reasoning was already written down for the FollowTheMoney path and had simply never been applied to the commercial-register mappers; it now lives once, with an explicit source classification. SEC EDGAR gets the sharpest fix: a 13D/13G "beneficial owner" is an SEC-rules term meaning voting or dispositive power, so an investment adviser voting client shares qualifies without any economic interest — the `typeOfReportingPerson` code that distinguishes them was parsed all along and never read. Over-claiming here is the wrong direction of error for a transparency tool: it is a reputational assertion about a named person, and it travels into every export well beyond any caveat the interface can attach. Commit `f5333e1`.
+
+**Previous: Phase 101** — register-supplied `statementDate`, second wave
 
 A sweep of every remaining adapter for a genuine record-level declaration date, wiring the seven that have one. The headline pair is `bods_gleif` / `bods_uk_psc`: Open Ownership's published bundles carry *their own* `statementDate`, OpenCheck was reading every neighbouring Parquet column while discarding that one, and those statements were shipping with no `statementDate` at all. Four more were already parsed and never threaded (Poland's "date of the last entry", Latvia's officer revision date, TED's notice publication date); two needed a live probe to settle and got one — Czechia's `datumAktualizace` and Norway's `rollegrupper[].sistEndret`, both verified against the live APIs. Latvia also had the Phase 100 error inverted: its revision date was standing in for `interests[].startDate`, a declaration date in the "when was it true" clock. Three of the four registers originally proposed turned out to have nothing usable, which is the more useful finding — Estonia publishes only a founding date, Denmark's bitemporal CVR is queried for validity time rather than transaction time, and Brazil, probed live, returns no update stamp at all. Commit `bf9714b`.
 
-**Previous: Phase 100** — `statementDate` from the register's own declaration date
+*Earlier: [Phase 100 — statementDate from the register](docs/status.md), and everything before it.*
 
-Phase 99 separated the clocks; this wires the first three sources that publish a declaration date of their own — GLEIF `registration.lastUpdateDate`, Companies House PSC `notified_on`/`ceased_on`, and the SEC 13D/13G filing date — so those statements say when the *register* asserted the fact rather than when OpenCheck happened to fetch it. Mostly a correction: all three dates were already parsed, and all three were sitting in `publicationDetails.publicationDate`, which BODS defines as the date this statement was published by the publisher named in the same block. That publisher is OpenCheck, so a PSC notified in 2016 was emitting a statement OpenCheck claimed to have published in 2016. Open Ownership's own bundles model it the right way round, and now so does OpenCheck. Two further sites were passing an interest *start* date — Companies House `appointed_on`, INPI's role start — the first clock copied into the fourth; those are removed rather than promoted, since neither register publishes a notification date and the appointment date already lives where it belongs, on `interests[].startDate`. Commit `a8559ad`.
-
-*Earlier: [Phase 99 — declared source liveness](docs/status.md), and everything before it.*
 
 
 → [Full development history](docs/status.md)

@@ -324,7 +324,11 @@ def test_map_opencorporates_network_subsidiary_emits_relationship() -> None:
     assert len(rels) == 1
     interests = rels[0]["recordDetails"]["interests"]
     assert interests[0]["type"] == "shareholding"
-    assert interests[0]["beneficialOwnershipOrControl"] is True
+    # OpenCorporates network relationships are registered holdings between
+    # companies, not beneficial-ownership declarations. A percentage makes the
+    # holding more precise, not more beneficial — so the flag is omitted, which
+    # BODS reads as "not stated".
+    assert "beneficialOwnershipOrControl" not in interests[0]
     assert interests[0]["share"] == {"minimum": 75.0, "maximum": 100.0}
 
 
