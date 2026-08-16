@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from .. import __version__, memwatch
+from .. import __version__, memwatch, signalstats
 from ..bo_access import notice_for
 from ..config import get_settings
 from ..sources import REGISTRY, SourceInfo
@@ -47,6 +47,30 @@ async def memstats() -> JSONResponse:
     limit), like /health: it is a single dict dump, cheap by construction.
     """
     return JSONResponse(memwatch.stats(), headers={"Cache-Control": "no-store"})
+
+
+@router.get("/signalstats")
+async def signal_stats() -> JSONResponse:
+    """Which sources contributed which risk signals, since the last deploy.
+
+    Answers questions that previously required running lookups by hand and
+    counting: does OpenAleph screening contribute in production and how
+    often relative to OpenSanctions; which sources produce signals so
+    rarely they may not be earning their latency budget; how often each
+    screen is degrading; and whether a change moved the new code's share of
+    signals as predicted. Counted server-side rather than by sweeping
+    ``/lookup``, which would load a free-tier instance, risk rate limits
+    that make degraded results read as "signal absent", pull CC BY-NC data
+    at volume for analytics, and sample whichever LEIs were chosen.
+
+    Same contract as /memstats: public, unauthenticated, undecorated (no
+    rate limit — a single dict dump), and aggregate only. Keys are closed
+    vocabularies — signal codes, adapter ids, check names, degradation
+    reasons — so entity names, LEIs and related-party names cannot appear,
+    matching the ``degraded_sources`` privacy rule. In-process, so the
+    counters reset on deploy and on Render spin-down.
+    """
+    return JSONResponse(signalstats.stats(), headers={"Cache-Control": "no-store"})
 
 
 @router.get("/sources", response_model=SourcesResponse)

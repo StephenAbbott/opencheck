@@ -19,6 +19,7 @@ from .. import __version__
 from .. import bods as _bods
 from .. import identifiers
 from .. import provenance as _provenance
+from .. import signalstats
 from ..provenance import Provenance
 from ..bods import BODSBundle, validate_shape
 from ..sources.base import LookupDeriver, raw_redaction_notice
@@ -1287,10 +1288,27 @@ def _source_budget(source_id: str) -> float:
     return getattr(adapter, "lookup_timeout_s", 30.0) if adapter else 30.0
 
 
-def _merge_signals(*signal_lists: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _merge_signals(
+    *signal_lists: list[dict[str, Any]], record_as: str | None = None
+) -> list[dict[str, Any]]:
     """Deduplicate risk signals: structural codes collapse globally,
     statement-scoped codes key on the subject statement, the rest on
-    (code, source, hit)."""
+    (code, source, hit).
+
+    ``record_as`` opts this call into the ``signalstats`` instrumentation.
+    Counting happens *here* rather than at the call site so that "count
+    after dedup" is true by construction: the rules deciding what a
+    distinct signal even is live in this function, and related-party paths
+    now emit several signals per hit, so pre-dedup numbers would overstate.
+
+    It defaults to ``None`` (don't count) rather than always counting
+    because this helper has two callers — the lookup pipeline, which is the
+    traffic worth measuring, and ``/report``, a hand-run free-text
+    debugging endpoint. Counting both would inflate the per-lookup
+    denominator with debugging runs and quietly corrupt the one ratio the
+    instrumentation exists to produce. An opt-in default also means a
+    future caller cannot skew the numbers merely by existing.
+    """
     merged: dict[tuple, dict[str, Any]] = {}
     for signals in signal_lists:
         for sig in signals:
@@ -1308,7 +1326,10 @@ def _merge_signals(*signal_lists: list[dict[str, Any]]) -> list[dict[str, Any]]:
             else:
                 key = (sig["code"], sig["source_id"], sig["hit_id"])
             merged[key] = sig
-    return list(merged.values())
+    out = list(merged.values())
+    if record_as:
+        signalstats.record_signals(out)
+    return out
 
 
 # --- anchor resolution --------------------------------------------------------
@@ -1747,7 +1768,15 @@ async def _lookup_pipeline(
         [s.to_dict() for s in icij_raw],
         [s.to_dict() for s in oa_raw],
         sec_signals,
+        record_as="lookup",
     )
+    degraded_dicts = [d.to_dict() for d in degraded]
+    # The degradation counters are recorded next to the signal counters for
+    # the same reason degraded_sources rides on the same event as the
+    # signals: a signal count without the count of screens that failed to
+    # run is not a low number, it is an unknown one.
+    signalstats.record_degraded(degraded_dicts)
+    signalstats.record_lookup()
     # degraded_sources rides on the same event as the signals so every
     # consumer (SSE UI, sync /lookup, replay cache, narrative, exports)
     # sees the two together — an empty signals list plus a non-empty
@@ -1758,7 +1787,7 @@ async def _lookup_pipeline(
         "risk_signals",
         {
             "signals": merged,
-            "degraded_sources": [d.to_dict() for d in degraded],
+            "degraded_sources": degraded_dicts,
             "openaleph_screening": oa_screening,
             "source_liveness": {
                 sid: prov.to_dict() for sid, prov in sorted(provenances.items())

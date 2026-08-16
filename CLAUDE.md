@@ -213,6 +213,40 @@ bulk/offline adapters are allowlisted in `_DELIBERATELY_UNREGISTERED`.
 LEI-keyed sources (opensanctions, openaleph, climatetrace, bods_gleif) and
 SEC EDGAR are handled inside `_dispatch()` / `_lookup_pipeline()` directly.
 
+### Risk-signal instrumentation (Phase 110)
+
+`opencheck/signalstats.py` counts risk signals per `(code, source_id)`,
+`degraded_sources` per `(source_id, check, reason)`, and completed pipeline
+runs — exposed at `GET /signalstats`, modelled on the `memwatch` → `/memstats`
+pair (public, unauthenticated, `no-store`, no rate limit, aggregate only).
+It answers "which sources actually contribute which signals" without the
+client-side sweep that alternative would require — a sweep loads a free-tier
+instance, risks rate limits whose degraded results read as "signal absent",
+pulls CC BY-NC data at volume for analytics, and samples whichever LEIs were
+picked.
+
+Three things to know before touching it:
+
+- **Counting lives inside `_merge_signals`**, so "count after dedup" is true
+  by construction — the rules deciding what a distinct signal *is* are in
+  that function, and related-party paths emit several signals per hit, so
+  pre-dedup numbers overstate.
+- **`record_as` is opt-in (`None` by default).** `_merge_signals` has two
+  callers: the pipeline (counted, `record_as="lookup"`) and `/report`, a
+  hand-run debugging endpoint (not counted). Counting `/report` would
+  inflate the per-lookup denominator with debugging traffic. A new caller
+  therefore cannot skew the numbers merely by existing.
+- **`lookups` counts pipeline runs, not sessions.** Replayed runs are served
+  from the replay cache and never reach the pipeline.
+
+Privacy is structural, not policed: the recorders read only `code` /
+`source_id` / `check` / `reason` — never `summary`, `hit_id`, `evidence` or a
+degradation's free-text `detail` — so names and LEIs cannot reach a counter.
+`test_signalstats.py` enforces that with names stuffed into every free-text
+field, and end-to-end through a real lookup. Counters are in-process and
+reset on deploy and Render spin-down; making them durable means scraping the
+endpoint periodically, which is a separate decision.
+
 ### Cold start & per-source time budgets (Phase 47)
 
 - The FastAPI lifespan kicks off `climatetrace.warm_caches()` in a
