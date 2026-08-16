@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 108** — the register's own words, finally visible
+**Latest: Phase 109** — an unbadged node is a claim, and it was the wrong one
+
+On the Rosneft page the risk panel flagged a related party as sanctions-linked; the same node in the OpenSanctions card's ownership graph carried no badge at all. Nothing was misclassified — the two graphs are fed different lists. Cross-source `RELATED_*` signals are assessed against the merged bundle and ride on the top-level risk event, while a source card's graph is handed only that source's own findings, so a cross-source finding structurally could not reach it. In a due-diligence tool an unmarked node does not read as "out of scope", it reads as checked and clean. The fix is a filter rather than a wider pipe: a new `signalScope` module scopes the lookup's signals to a given bundle, keeping one only when it is a related-party code **and** its evidence lands on a statement that bundle actually contains. The badge/node mapping moved into the same module and the filter is built on it, because two copies of that logic drifting apart is the bug being fixed. Scoping stays deliberately narrow — a test pins that structural signals computed over the merged graph stay out — and where scoping contributes anything the card says so rather than letting a badge appear unexplained. The subsidiary network, a third graph render site, had the same gap and worse, passing no signals at all. Commit `PLACEHOLDER`.
+
+**Previous: Phase 108** — the register's own words, finally visible
 
 Phase 103 began emitting BODS annotations — the Companies House nature-of-control code behind a rendered interest type, a note that a birth date was published month-and-year-only rather than truncated by OpenCheck — and Phase 107 carried them into RDF. Neither put them in front of a user: nothing in the frontend read them, so the register's words arrived in the browser on every lookup and were discarded at the last step. The results page now marks any transformed value with a dotted underline and offers a persistent "as filed" toggle — on, the register's words lead and OpenCheck's reading follows in muted text, that order deliberately, since the point is showing whose vocabulary you are reading. The setting is shared across every source card rather than held per card, defaults to OpenCheck's reading, and only appears where a bundle actually carries annotations. Pointer matching is exact rather than prefix, so an annotation about one interest can never be attributed to its sibling. Commit `ed448cf`.
 
-**Previous: Phase 107** — RDF had the annotation vocabulary all along and never used it
-
-Phase 103 began emitting BODS `annotations` — the register's own nature-of-control code, a note that a birth date was published imprecise rather than truncated — and the RDF export dropped every one. Not for want of vocabulary: `rdf.py` already emitted the full `Annotation` term set, built in Phase 81 and wired only to OpenCheck's own risk signals. The two kinds now share an emitter and are separated by graph rather than predicate: statement annotations in the statement's graph, analysis annotations in the analysis graph, so a consumer can ask for either. Pointers travel verbatim rather than being re-derived. Also corrects a namespace wrong since Phase 81 — codelist terms pointed at `standard.openownership.org/codelists#`, taken from the published Turtle's prefix line, which Open Ownership confirm is an error in that file; the correct base is `vocab.openownership.org/codelists#`, and the published Estonia corpus needs regenerating as a result. Senzing and FtM still drop annotations, which is correct. Commit `6396079`.
-
-*Earlier: [Phase 106 — a name is not an identification](docs/status.md), and everything before it.*
+*Earlier: [Phase 107 — RDF had the annotation vocabulary all along](docs/status.md), and everything before it.*
 
 
 

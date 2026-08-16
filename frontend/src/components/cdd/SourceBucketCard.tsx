@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useId, useState, useSyncExternalStore } from "react";
+import { lazy, Suspense, useEffect, useId, useMemo, useState, useSyncExternalStore } from "react";
 import { deepen } from "../../lib/api";
 import type { BodsBreakdown, BoAccessNotice, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
@@ -13,6 +13,8 @@ import {
   setAsFiled,
   subscribeAsFiled,
 } from "../../lib/annotations";
+import { mergeSignals } from "../../lib/expand";
+import { scopeCrossSourceSignals } from "../../lib/signalScope";
 import { NzAssociations } from "./NzAssociations";
 
 // BodsGraphExplorer pulls in Cytoscape + cytoscape-dagre (~the bulk of the
@@ -601,14 +603,37 @@ export function DeepenBlock({
   showDiagram = true,
   showStatements = true,
   showJson = true,
+  subjectSignals = [],
 }: {
   detail: DeepenResponse;
   entityName?: string;
   showDiagram?: boolean;
   showStatements?: boolean;
   showJson?: boolean;
+  /** The lookup's top-level risk signals. Only the cross-source (`RELATED_*`)
+   *  ones that land on a statement in THIS bundle are passed to the graph —
+   *  see lib/signalScope.ts. Defaults to none, so a call site that has no
+   *  subject-level list (EsgPanel) behaves exactly as before. */
+  subjectSignals?: RiskSignal[];
 }) {
   const anyVisible = showDiagram || showStatements || showJson;
+
+  // Cross-source signals are computed against the MERGED bundle and ride on
+  // the top-level risk_signals event, so they never reach a /deepen response.
+  // Without this, a node the risk panel calls sanctions-linked renders here
+  // with no badge at all — which reads as "checked and clean" (Phase 109).
+  const crossSourceSignals = useMemo(
+    () => scopeCrossSourceSignals(subjectSignals, detail.bods),
+    [subjectSignals, detail.bods],
+  );
+  const graphSignals = useMemo(
+    () =>
+      crossSourceSignals.length
+        ? mergeSignals(detail.risk_signals, crossSourceSignals)
+        : detail.risk_signals,
+    [detail.risk_signals, crossSourceSignals],
+  );
+
   if (!anyVisible) return null;
 
   return (
@@ -639,6 +664,16 @@ export function DeepenBlock({
               {detail.bods_issues.length} validation issue{detail.bods_issues.length === 1 ? "" : "s"}
             </p>
           )}
+          {/* Say where the extra badges came from. A cross-source badge
+              appearing on a single source's graph is otherwise unexplained,
+              which invites the mirror image of the confusion being fixed. */}
+          {crossSourceSignals.length > 0 && (
+            <p className="text-[11px] text-oo-muted mb-2 leading-[1.5]">
+              Includes {crossSourceSignals.length} related-party signal
+              {crossSourceSignals.length === 1 ? "" : "s"} from the risk panel above — found by
+              screening this network against other sources, not reported by this source.
+            </p>
+          )}
           <Suspense
             fallback={
               <div
@@ -649,7 +684,7 @@ export function DeepenBlock({
               </div>
             }
           >
-            <BodsGraphExplorer statements={detail.bods} signals={detail.risk_signals} entityName={entityName} />
+            <BodsGraphExplorer statements={detail.bods} signals={graphSignals} entityName={entityName} />
           </Suspense>
         </section>
       )}
@@ -879,12 +914,16 @@ function TedAwardsList({ hit }: { hit: SourceHit }) {
 export function HitRow({
   hit,
   riskSignals,
+  subjectSignals = [],
   preloadedStmtCount,
   preloadedBreakdown,
   titleAccessory,
 }: {
   hit: SourceHit;
   riskSignals: RiskSignal[];
+  /** The lookup's full top-level signal list — scoped per bundle in
+   *  DeepenBlock so cross-source findings can badge this graph too. */
+  subjectSignals?: RiskSignal[];
   preloadedStmtCount?: number;
   preloadedBreakdown?: BodsBreakdown;
   /** Right-aligned control shown inline with the entity title (e.g. See timeline). */
@@ -1044,6 +1083,7 @@ export function HitRow({
               showDiagram={showDiagram}
               showStatements={showStatements}
               showJson={showJson}
+              subjectSignals={subjectSignals}
             />
           )}
         </div>
@@ -1092,6 +1132,7 @@ export function SourceBucketCard({
   bucket,
   lei,
   riskByHit,
+  subjectSignals = [],
   bodsCountMap = {},
   bodsBreakdownMap = {},
   onRetry,
@@ -1103,6 +1144,11 @@ export function SourceBucketCard({
   /** Resolved LEI for the current lookup — keys the Time Machine timeline. */
   lei?: string;
   riskByHit: Record<string, RiskSignal[]>;
+  /** The lookup's full top-level signal list. `riskByHit` only carries the
+   *  signals attributed to a hit in this bucket; cross-source (`RELATED_*`)
+   *  findings are assessed against the merged bundle and are keyed to a
+   *  statement, not a hit — so they need the whole list to be scoped from. */
+  subjectSignals?: RiskSignal[];
   bodsCountMap?: Record<string, number>;
   bodsBreakdownMap?: Record<string, BodsBreakdown>;
   /** Re-run this source via /lookup-source — shown on error cards. */
@@ -1215,6 +1261,7 @@ export function SourceBucketCard({
             key={`${hit.source_id}:${hit.hit_id}`}
             hit={hit}
             riskSignals={riskByHit[`${hit.source_id}:${hit.hit_id}`] ?? []}
+            subjectSignals={subjectSignals}
             preloadedStmtCount={bodsCountMap[`${hit.source_id}:${hit.hit_id}`]}
             preloadedBreakdown={bodsBreakdownMap[`${hit.source_id}:${hit.hit_id}`]}
             titleAccessory={idx === 0 ? timelineButton : undefined}

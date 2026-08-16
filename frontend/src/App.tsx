@@ -1791,6 +1791,7 @@ export default function App() {
                     bucket={b}
                     lei={streamingLei ?? undefined}
                     riskByHit={riskByHit}
+                    subjectSignals={riskSignals}
                     bodsCountMap={bodsCountMap}
                     bodsBreakdownMap={bodsBreakdownMap}
                     onRetry={b.error ? () => retrySource(b.sourceId) : undefined}

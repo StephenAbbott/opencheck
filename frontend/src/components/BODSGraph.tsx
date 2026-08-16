@@ -29,6 +29,10 @@ import {
   type Visibility,
 } from "../lib/bodsGraph";
 import type { RiskSignal } from "../lib/api";
+// buildSignalMap lives in lib/signalScope.ts (Phase 109) — the badge machinery
+// here and the per-source scoping filter must read `evidence` identically, so
+// they share one implementation rather than two that can drift.
+import { buildSignalMap } from "../lib/signalScope";
 import type { SameAsCandidate } from "../lib/reconcile";
 import BodsRelationshipTable from "./BodsRelationshipTable";
 
@@ -90,38 +94,6 @@ const DEFAULT_SIGNAL_STYLE: SignalStyle =
 
 function signalStyle(code: string): SignalStyle {
   return SIGNAL_STYLE[code] ?? DEFAULT_SIGNAL_STYLE;
-}
-
-/** Build a map from BODS statementId → RiskSignal[] from each signal's evidence. */
-function buildSignalMap(signals: RiskSignal[]): Map<string, RiskSignal[]> {
-  const map = new Map<string, RiskSignal[]>();
-  const add = (id: string, sig: RiskSignal) => {
-    if (!id) return;
-    if (!map.has(id)) map.set(id, []);
-    map.get(id)!.push(sig);
-  };
-
-  for (const sig of signals) {
-    const ev = (sig.evidence ?? {}) as Record<string, unknown>;
-    if (typeof ev.statement_id === "string")        add(ev.statement_id, sig);
-    if (typeof ev.subject_statement_id === "string") add(ev.subject_statement_id, sig);
-    for (const key of ["matches", "jurisdictions"] as const) {
-      const arr = ev[key];
-      if (Array.isArray(arr)) {
-        for (const item of arr) {
-          if (item && typeof item === "object" && typeof (item as Record<string,unknown>).statement_id === "string") {
-            add((item as Record<string,unknown>).statement_id as string, sig);
-          }
-        }
-      }
-    }
-    if (Array.isArray(ev.longest_path)) {
-      for (const id of ev.longest_path) {
-        if (typeof id === "string") add(id, sig);
-      }
-    }
-  }
-  return map;
 }
 
 // ---------------------------------------------------------------------------
