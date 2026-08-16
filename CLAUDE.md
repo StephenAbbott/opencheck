@@ -419,14 +419,18 @@ Specific rules:
 - `TRUST_OR_ARRANGEMENT` → indigo (#eef2ff / #4338ca)
 - `COMPLEX_OWNERSHIP_LAYERS` → sky (#f0f9ff / #0369a1)
 
-**Signal→BODS node mapping** (evidence fields):
+**Signal→BODS node mapping** (evidence fields) — owned by `frontend/src/lib/signalScope.ts`, **not** by `BODSGraph.tsx`. Add a new evidence shape there and every consumer picks it up:
 - `SANCTIONED`, `PEP` → `evidence.statement_id` (added in Phase 45 via `_bods_stable_id(source_id, hit_id)` in `risk.py`)
 - `RELATED_SANCTIONED`, `RELATED_PEP` → `evidence.subject_statement_id`
 - `TRUST_OR_ARRANGEMENT`, `NOMINEE`, AMLA composites → `evidence.matches[].statement_id`
 - `NON_EU_JURISDICTION`, `FATF_BLACK_LIST`, `FATF_GREY_LIST` → `evidence.jurisdictions[].statement_id`
 - `COMPLEX_OWNERSHIP_LAYERS` → `evidence.longest_path[]` (array of statementIds)
 
-**`SourceBucketCard`** passes `detail.risk_signals` to `<BODSGraph signals={...} />`.
+**Signal scoping across render sites (Phase 109)** — `RELATED_*` signals are assessed against the **merged** bundle late in `_lookup_pipeline` and ride on the top-level `risk_signals` event; a `/deepen` response carries only that source's own findings. So the three `BodsGraphExplorer` render sites see different lists, and the two per-bundle ones saw no cross-source signals at all: a node the risk panel called sanctions-linked rendered unbadged, i.e. as "checked and clean".
+
+`lib/signalScope.ts` closes that gap. `scopeCrossSourceSignals(signals, statements)` keeps a signal only when its code starts with `RELATED_` **and** `signalStatementIds()` intersects the bundle's `statementId`s; `buildSignalMap()` (moved here from `BODSGraph.tsx`) is built on the same mapping, so the filter and the badge renderer cannot drift — that drift was the bug. Wiring: `App.tsx` → `SourceBucketCard subjectSignals` → `HitRow` → `DeepenBlock` (merged with `detail.risk_signals` via `mergeSignals`, plus a caption naming the count); `FullCheckPanel` → `SubsidiaryNetwork signals`. `EsgPanel`'s `DeepenBlock` defaults to `[]` — deliberate, it has no subject-level list.
+
+Scoping is **RELATED_\* only, on purpose**. Subject-level codes stay out because their evidence is computed over the merged graph: a source bundle usually holds only a fragment of a `longest_path`, so badging `COMPLEX_OWNERSHIP_LAYERS` there would assert something untrue of the graph on screen (same for `FATF_*` via `jurisdictions[]`). `signalScope.test.ts` pins that exclusion — widening it should require editing a test, not relaxing a predicate.
 
 **"As filed" annotations (Phase 108)** — `frontend/src/lib/annotations.ts` holds the pure logic plus a **module-scoped** toggle store (`getAsFiled` / `setAsFiled` / `subscribeAsFiled`, read in components via `useSyncExternalStore`). Deliberately not per-card React state: a lookup renders many source cards and they must switch together. Default is OpenCheck's reading, and the toggle only renders when `annotatedFieldCount(statements) > 0`. `annotationsAt()` matches the RFC6901 pointer **exactly** — never a prefix — so an annotation on `/recordDetails/interests/0/type` cannot be attributed to interest 1 or to the whole interest. Unescape `~1` before `~0` or a field named `a~1b` addresses `a/b`. Wired into `PersonStatementCard` (birthDate) and `RelationshipStatementCard` (interest types); add new call sites by passing the annotation array to `<AnnotatedValue>`.
 

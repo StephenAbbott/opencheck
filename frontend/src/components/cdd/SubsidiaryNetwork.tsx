@@ -1,6 +1,7 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { getSubsidiaries } from "../../lib/api";
-import type { SubsidiariesResponse, SubsidiaryChild } from "../../lib/api";
+import type { RiskSignal, SubsidiariesResponse, SubsidiaryChild } from "../../lib/api";
+import { scopeCrossSourceSignals } from "../../lib/signalScope";
 
 // BodsGraphExplorer pulls in Cytoscape — load it only when a small network is
 // actually rendered as a graph (large networks degrade to a table + export).
@@ -158,7 +159,18 @@ function InvitationStrip({ onClick }: { onClick: () => void }) {
 // SubsidiaryNetwork — lazy GLEIF children reveal (graph or table + export)
 // ---------------------------------------------------------------------
 
-export function SubsidiaryNetwork({ lei, entityName }: { lei: string; entityName?: string }) {
+export function SubsidiaryNetwork({
+  lei,
+  entityName,
+  signals = [],
+}: {
+  lei: string;
+  entityName?: string;
+  /** The lookup's top-level risk signals. This graph is built from a
+   *  separately-fetched GLEIF children bundle, so — like the source cards —
+   *  it saw no cross-source findings at all until Phase 109. */
+  signals?: RiskSignal[];
+}) {
   const [data, setData] = useState<SubsidiariesResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -168,6 +180,10 @@ export function SubsidiaryNetwork({ lei, entityName }: { lei: string; entityName
   const [bods, setBods] = useState<Record<string, unknown>[] | null>(null);
   const [bodsLoading, setBodsLoading] = useState(false);
   const [showGraph, setShowGraph] = useState(false);
+
+  // Only the cross-source signals that land on a statement in the fetched
+  // subsidiaries bundle — see lib/signalScope.ts.
+  const graphSignals = useMemo(() => scopeCrossSourceSignals(signals, bods ?? []), [signals, bods]);
 
   async function run() {
     if (loading || data) return;
@@ -306,7 +322,7 @@ export function SubsidiaryNetwork({ lei, entityName }: { lei: string; entityName
           {isGraphMode && showGraph && bods && (
             <div className="mt-2">
               <Suspense fallback={<p className="text-[12px] text-oo-muted">Loading graph…</p>}>
-                <BodsGraphExplorer statements={bods} entityName={entityName} direction="subsidiaries" fullCheck />
+                <BodsGraphExplorer statements={bods} signals={graphSignals} entityName={entityName} direction="subsidiaries" fullCheck />
               </Suspense>
             </div>
           )}

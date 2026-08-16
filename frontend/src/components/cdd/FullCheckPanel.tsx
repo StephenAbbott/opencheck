@@ -79,7 +79,7 @@ export default function FullCheckPanel({
       )}
 
       <div className="mt-4">
-        <SubsidiaryNetwork lei={lei} entityName={legalName ?? undefined} />
+        <SubsidiaryNetwork lei={lei} entityName={legalName ?? undefined} signals={signals} />
       </div>
     </section>
   );
