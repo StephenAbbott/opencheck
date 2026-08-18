@@ -120,15 +120,26 @@ interface ExampleLei {
 const _NEO4J_BASE =
   "https://github.com/StephenAbbott/opencheck/raw/main/data/demo/neo4j";
 
+// Signals shown on the picker cards. These are CLAIMS ABOUT PRODUCTION
+// OUTPUT and nothing fails when they drift — verify against production
+// (the entity page, or the packet inside the regenerated curated
+// narratives), never by reading the card back.
+//
+// Last verified 2026-08-18 against the post-Phase-111 curated narrative
+// packets. Risk findings only: NON_EU_JURISDICTION is now kind="context"
+// and the results page shows it under a separate "Structural context"
+// heading, which a bare chip strip on a card cannot convey.
+//
+// Ordered by graph severity, then confidence — so the strongest finding
+// leads rather than whichever code sorts first alphabetically.
 const EXAMPLE_LEIS: ExampleLei[] = [
   {
     lei: "213800LH1BZH3DI6G760",
     name: "BP P.L.C.",
     hint: "UK oil major",
     signals: [
-      { code: "NON_EU_JURISDICTION", confidence: "high" },
+      { code: "OFFSHORE_LEAKS", confidence: "high" },
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
-      { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/213800LH1BZH3DI6G760.zip`,
     bulkBods: true,
@@ -139,8 +150,8 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "Russian state oil",
     signals: [
       { code: "SANCTIONED", confidence: "high" },
+      { code: "RELATED_SANCTIONED", confidence: "high" },
       { code: "RELATED_SANCTIONS_CONTROLLED", confidence: "high" },
-      { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/253400JT3MQWNDKMJE44.zip`,
     bulkBods: true,
@@ -150,7 +161,6 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Taqa Bratani Limited",
     hint: "UAE-owned UK oil & gas",
     signals: [
-      { code: "NON_EU_JURISDICTION", confidence: "high" },
       { code: "RELATED_SANCTIONS_CONTROLLED", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/213800E11LI1SCETU492.zip`,
@@ -161,9 +171,9 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Eesti Energia AS",
     hint: "Estonian energy company",
     signals: [
+      { code: "RELATED_PEP", confidence: "medium" },
       { code: "STATE_CONTROLLED", confidence: "medium" },
-      { code: "RELATED_PEP", confidence: "high" },
-      { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
+      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/5493005044RTLQ5RZU70.zip`,
   },
@@ -172,7 +182,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Ørsted A/S",
     hint: "Danish offshore energy company",
     signals: [
-      { code: "COMPLEX_CORPORATE_STRUCTURE", confidence: "high" },
+      { code: "RELATED_PEP", confidence: "medium" },
       { code: "OFFSHORE_LEAKS", confidence: "medium" },
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
     ],
@@ -183,9 +193,9 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Eli Lilly and Company",
     hint: "American pharmaceutical giant",
     signals: [
-      { code: "RELATED_PEP", confidence: "high" },
+      { code: "RELATED_PEP", confidence: "medium" },
       { code: "OFFSHORE_LEAKS", confidence: "high" },
-      { code: "NON_EU_JURISDICTION", confidence: "high" },
+      { code: "OPAQUE_OWNERSHIP", confidence: "medium" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/FRDRIPF3EKNDJ2CQJL29.zip`,
   },
@@ -3006,8 +3016,17 @@ const HOW_IT_WORKS_STEPS = [
  * ShareCardShowcase — homepage preview of the output: the live shareable
  * summary card every lookup generates. Shows what a result looks like before
  * the first query, and advertises the share-link feature. The image is a
- * committed render of the BP curated example (regenerate with
- * `opencheck.og_image.render_share_card` if the design changes).
+ * committed render of the ELI LILLY curated example, chosen because the
+ * copy beside it promises a signal count and a range of risk colours:
+ * Lilly shows three signals in three different colour families (violet
+ * PEP, amber leaks, slate opaque). It replaced BP, which after Phase 111
+ * produces only two low-severity signals and made a thin advert.
+ *
+ * Regenerate with `opencheck.og_image.render_share_card` if the design
+ * changes, or when the subject's production signals change. Pass the FULL
+ * signal list including any kind="context" entries — the generator
+ * filters those itself, and the rendered count is what the alt text below
+ * must match. Verify against production, not against this card.
  */
 function ShareCardShowcase() {
   return (
@@ -3026,7 +3045,7 @@ function ShareCardShowcase() {
           src="/share-card-example.png"
           width={1200}
           height={630}
-          alt="Example shareable summary card for BP P.L.C. showing 4 risk signals, the first three named: non-EU jurisdiction, three or more ownership layers, and complex corporate structure (AMLA), with a prompt to visit opencheck.world for details"
+          alt="Example shareable summary card for Eli Lilly and Company showing 3 risk signals, all three named: related PEP, offshore leaks, and opaque ownership, with a prompt to visit opencheck.world for details"
           className="w-full max-w-[560px] h-auto rounded-oo border border-oo-rule shadow-oo-card"
           loading="lazy"
         />
