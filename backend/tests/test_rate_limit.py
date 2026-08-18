@@ -174,6 +174,12 @@ _EXEMPT_PATHS = {
     # Aggregate memory/traffic counters (memwatch) — a single dict dump,
     # cheap by construction, probed by the weekly /og-share scheduled check.
     "/memstats",
+    # Aggregate risk-signal counters (signalstats, Phase 110) — same
+    # contract as /memstats and undecorated for the same reason: one dict
+    # dump of closed-vocabulary counters, no upstream call. The route's
+    # docstring already states this explicitly; it was simply never added
+    # here when Phase 110 shipped, which turned this guard red on main.
+    "/signalstats",
 }
 
 
