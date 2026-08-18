@@ -1265,13 +1265,26 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
 
 _STRUCTURAL_SIGNAL_CODES = {
     "TRUST_OR_ARRANGEMENT",
-    "NON_EU_JURISDICTION",
     "NOMINEE",
     "COMPLEX_OWNERSHIP_LAYERS",
     "COMPLEX_CORPORATE_STRUCTURE",
     "POSSIBLE_OBFUSCATION",
     "SANCTIONED_SECURITY",
 }
+# NON_EU_JURISDICTION is deliberately NOT structural. Structural codes
+# collapse on ``(code,)`` and the merge below overwrites, so the last
+# source processed wins outright — every jurisdiction node found by
+# earlier sources is dropped from ``evidence.jurisdictions[]`` and the
+# per-node graph overlay that ``buildSignalMap`` drives loses those
+# badges. It is a jurisdiction rule, so it now dedups exactly like the
+# FATF jurisdiction rules, on ``(code, source_id, hit_id)``. The chip
+# strip is unaffected: ``aggregatedCodes`` in App.tsx already collapses
+# the strip by code.
+#
+# NB the same overwrite affects TRUST_OR_ARRANGEMENT and NOMINEE, whose
+# ``evidence.matches[]`` also carries statement_ids read by the graph.
+# Left alone here because changing their dedup semantics is a separate
+# decision — logged as a follow-up on the AMLA ticket.
 _STATEMENT_SCOPED_SIGNAL_CODES = {
     "RELATED_PEP",
     "RELATED_SANCTIONED",
