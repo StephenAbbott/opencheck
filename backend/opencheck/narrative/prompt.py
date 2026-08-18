@@ -10,7 +10,11 @@ import json
 
 from .packet import EvidencePacket
 
-PROMPT_VERSION = "2026-07-21-v5"
+# v6 (Phase 111): context signals. The kind="context" instruction added to
+# rule 5 changes what the model is told to do with NON_EU_JURISDICTION, so a
+# summary generated before and after this bump are not comparable — which is
+# exactly what this constant exists to record.
+PROMPT_VERSION = "2026-08-18-v6"
 
 # Compliance-analyst tone, single executive paragraph, hard grounding rules.
 SYSTEM_PROMPT = """\

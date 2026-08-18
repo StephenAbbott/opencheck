@@ -115,6 +115,13 @@ def _sanctioned_for_lei(lei: str) -> dict[str, dict[str, Any]]:
     return {isin: meta for isin in entry.get("isins") or [] if isin}
 
 
+#: Signal code. Declared as a module constant (NAME == VALUE) rather than
+#: inlined as a literal so ``test_signal_label_coverage`` can enumerate it —
+#: a code that only exists as a string inside a function body is invisible to
+#: that guard, which is how this one reached production with no graph badge.
+SANCTIONED_SECURITY = "SANCTIONED_SECURITY"
+
+
 def sanctioned_securities_signal(lei: str) -> dict[str, Any] | None:
     """A ``SANCTIONED_SECURITY`` risk-signal dict if the LEI has sanctioned
     securities in the index, else ``None``. Shaped like ``RiskSignal.to_dict()``
@@ -133,7 +140,7 @@ def sanctioned_securities_signal(lei: str) -> dict[str, Any] | None:
         + " — its securities are subject to sanctions / investment bans."
     )
     return {
-        "code": "SANCTIONED_SECURITY",
+        "code": SANCTIONED_SECURITY,
         "confidence": "high",
         "summary": summary,
         "source_id": "opensanctions",
