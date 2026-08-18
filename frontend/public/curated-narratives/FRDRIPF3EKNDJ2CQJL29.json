@@ -1,12 +1,12 @@
 {
   "lei": "FRDRIPF3EKNDJ2CQJL29",
   "subject_name": "ELI LILLY AND COMPANY",
-  "summary": "ELI LILLY AND COMPANY (LEI: FRDRIPF3EKNDJ2CQJL29) is identifier-confirmed, registered in Indiana, United States, with cross-references to OpenCorporates (us_in/183025-143) and Wikidata (Q632240). Per GLEIF, the entity's ultimate parent is reported under a GLEIF reporting exception as one or more natural persons, meaning the full ownership chain is not disclosed through the LEI record; this constitutes a medium-confidence structural indicator of opaque ownership warranting further review. GLEIF records confirm ELI LILLY AND COMPANY as the direct accounting-consolidation parent of at least six subsidiaries across multiple jurisdictions, including LILLY VENTURES FUND I LLC, ELI LILLY SERVICES INDIA PRIVATE LIMITED, ELI LILLY AND COMPANY (INDIA) PRIVATE LIMITED, ELI LILLY KINSALE LIMITED, Lilly Nederland Finance B.V., and ELI LILLY GROUP PENSION TRUSTEES LIMITED; the entity is also registered outside the EU/EEA (US-IN), which is a high-confidence jurisdictional structural indicator under AMLA CDD RTS condition (b). Two high-confidence related-party signals were raised: officer Patrik Jonsson (recorded from 2023-05-25 per OpenCorporates) matches records on OpenSanctions and EveryPolitician as a politically exposed person; and officer Christopher Anderson (recorded from 2023-05-25 per OpenCorporates) matches records in both the Panama Papers and the Paradise Papers (Appleby) in the ICIJ Offshore Leaks database, each at a score of 100/100 — these are structural indicators for further review, not determinations of wrongdoing. Material gaps include: Wikirate could not be queried due to a source API schema error, leaving ESG/corporate data unavailable; and the ICIJ Offshore Leaks screen did not fully run (1 of 4 reconciliation batches failed, leaving 8 of 30 names unscreened), so the absence of additional Offshore Leaks signals is not conclusive and this is not a clean screen.",
+  "summary": "ELI LILLY AND COMPANY (LEI: FRDRIPF3EKNDJ2CQJL29) is identifier-confirmed, registered in Indiana, United States, with its identity corroborated across GLEIF, OpenCorporates, and Wikidata. GLEIF reports a GLEIF-level reporting exception at the parent level, indicating that ultimate ownership rests with one or more natural persons whose identities are not disclosed in the LEI record; this constitutes a medium-confidence opaque ownership signal requiring further CDD. The company holds direct accounting-consolidation relationships over at least six subsidiaries spanning the US, India, Ireland, and the Netherlands per GLEIF, and a broad set of officers is recorded across OpenCorporates and Wikidata, including David A. Ricks as CEO and board member from 2017 and Jonathan Haug as senior managing official from 2023. Two structural risk signals were raised: related party Katherine Baicker is a possible name match — unconfirmed by birth date or nationality — to a PEP record on OpenSanctions and an EveryPolitician political office-holder record (medium confidence each); and related party Patrik Jonsson is similarly a possible name match only to PEP records on OpenSanctions and EveryPolitician (medium confidence each); additionally, related party Christopher Anderson matches records in both the Panama Papers and the Paradise Papers (Appleby) at an ICIJ score of 100/100 (high confidence), though this is a name-level match against a common name and does not constitute a finding of wrongdoing. One material gap exists: Wikirate could not be queried due to a source API schema error, so any data that source would have contributed — including headquarters and website fields — is absent from this review.",
   "claims": [],
   "limitations": [],
   "overall_confidence": "low",
   "model": "claude-sonnet-4-6",
-  "prompt_version": "2026-07-21-v5",
+  "prompt_version": "2026-08-18-v6",
   "packet": {
     "subject_name": "ELI LILLY AND COMPANY",
     "lei": "FRDRIPF3EKNDJ2CQJL29",
@@ -108,347 +108,6 @@
       },
       {
         "id": "f9",
-        "statement": "NATIONAL REGISTERED AGENTS, INC holds Officer position: agent, from 2018-01-02 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-2955a1d6129fcaa863ca9e78"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f10",
-        "statement": "Patrik Jonsson holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-7cbade1d35c0ecacf17baeeb"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f11",
-        "statement": "Diogo Rau holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-106061cf03480027b090d437"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f12",
-        "statement": "Jonathan Groff holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-e0964d508818939925f38322"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f13",
-        "statement": "Katie Lodato holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-a5b099ff393ee4824d13bb2b"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f14",
-        "statement": "David Ricks holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-3e3ae80e1b05e1cf3972216c"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f15",
-        "statement": "Christopher Anderson holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-5e680b8829336e834a48fc93"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f16",
-        "statement": "Edgardo Hernandez holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-52a6ade272c55d3fc7101490"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f17",
-        "statement": "Jacob Van Naarden holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-a4ac9b4315505bc876a9a9f1"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f18",
-        "statement": "Anne E. White holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-b580fc1c62b9ee8de50e5fef"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f19",
-        "statement": "Susan Ridlen holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-04ce0acfb5c3c3e8ccbbc6fd"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f20",
-        "statement": "Anat Hakim holds Officer position: other, from 2016-04-21 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-82902b833c8b56694fbeb2ad"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f21",
-        "statement": "Daniel Skovronsky holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-4299495519dbfe4d66fae4ef"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f22",
-        "statement": "Donald A. Zakrowski holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-4016d9a48ed16cf0569a9fe9"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f23",
-        "statement": "Valorie Wanner holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-3917d06c3c6571b1f43eee58"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f24",
-        "statement": "Eric Dozier holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-483d53a0a883cfdbc7bea7e2"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f25",
-        "statement": "Ilya Yuffa holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-4543dd18f8aac1fe631d5f3b"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f26",
-        "statement": "Jonathan Haug holds seniorManagingOfficial, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-4835700ca3614c4e3195cbad"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f27",
-        "statement": "Steffanie R. Lim-Ho holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-16d09ed5de304a8fa54057a2"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f28",
-        "statement": "Melissa Seymour holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-4ab319999a6363330d36c9c7"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f29",
-        "statement": "Lucas Montarce holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-3c403d40fa2e750f27bf3b0f"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f30",
-        "statement": "Katherine Baicker holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-698265b1acc8babbaa68de5a"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f31",
-        "statement": "Kimberly Johnson holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-e7cc214d0e928861076bd23b"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f32",
-        "statement": "Jon Moeller holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-728887cedae248a16dcc3d43"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f33",
-        "statement": "Ralph Alvarez holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-1b86ce6255c88f6bae4b408f"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f34",
-        "statement": "Mary Lynne Hedley holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-28707deacd3879022c776ace"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f35",
-        "statement": "William G. Kaelin holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-c2d9ccae4d9e936888d2a510"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f36",
-        "statement": "J. Erik Fyrwald holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-238ade60cd255468f594e007"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f37",
-        "statement": "Gabrielle Sulzberger holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-e9bebd292606018401133877"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f38",
-        "statement": "Jamere Jackson holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-5c5eba98bf87554d195229f5"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f39",
-        "statement": "Juan Luciano holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
-        "bods_statement_ids": [
-          "opencheck-828d24e84d76c2e7162083d0"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f40",
         "statement": "David A. Ricks holds chief executive officer, from 2017-01-01; board member, from 2017-01-01 in Eli Lilly and Company.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -459,7 +118,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f41",
+        "id": "f10",
         "statement": "Juan R. Luciano holds board member, from 2016-02-01 in Eli Lilly and Company.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -470,7 +129,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f42",
+        "id": "f11",
         "statement": "Karen Walker holds board member, from 2018-12-01 in Eli Lilly and Company.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -481,7 +140,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f43",
+        "id": "f12",
         "statement": "Q105798427 holds board member, from 2013-09-01 in Eli Lilly and Company.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -492,7 +151,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f44",
+        "id": "f13",
         "statement": "Jamere Jackson holds board member, from 2016-10-01 in Eli Lilly and Company.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -503,7 +162,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f45",
+        "id": "f14",
         "statement": "Ralph Alvarez holds board member, from 2009-04-01 in Eli Lilly and Company.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -514,7 +173,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f46",
+        "id": "f15",
         "statement": "Gabrielle Sulzberger holds board member, from 2021-01-25 in Eli Lilly and Company.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -525,7 +184,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f47",
+        "id": "f16",
         "statement": "William G. Kaelin holds board member, from 2012-06-04 in Eli Lilly and Company.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -536,7 +195,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f48",
+        "id": "f17",
         "statement": "Kimberly H. Johnson holds board member, from 2021-02-16 in Eli Lilly and Company.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -547,7 +206,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f49",
+        "id": "f18",
         "statement": "Katherine Baicker holds board member, from 2011-12-12 in Eli Lilly and Company.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -558,7 +217,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f50",
+        "id": "f19",
         "statement": "Mary Lynne Hedley holds board member, from 2022-05-15 in Eli Lilly and Company.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -569,7 +228,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f51",
+        "id": "f20",
         "statement": "Erik Fyrwald holds board member, from 2005-11-01 in Eli Lilly and Company.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -578,6 +237,347 @@
           "opencheck-8854bcb4193461f28d4fd209"
         ],
         "confidence": "medium"
+      },
+      {
+        "id": "f21",
+        "statement": "NATIONAL REGISTERED AGENTS, INC holds Officer position: agent, from 2018-01-02 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-2955a1d6129fcaa863ca9e78"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f22",
+        "statement": "Patrik Jonsson holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-7cbade1d35c0ecacf17baeeb"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f23",
+        "statement": "Diogo Rau holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-106061cf03480027b090d437"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f24",
+        "statement": "Jonathan Groff holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-e0964d508818939925f38322"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f25",
+        "statement": "Katie Lodato holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-a5b099ff393ee4824d13bb2b"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f26",
+        "statement": "David Ricks holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-3e3ae80e1b05e1cf3972216c"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f27",
+        "statement": "Christopher Anderson holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-5e680b8829336e834a48fc93"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f28",
+        "statement": "Edgardo Hernandez holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-52a6ade272c55d3fc7101490"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f29",
+        "statement": "Jacob Van Naarden holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-a4ac9b4315505bc876a9a9f1"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f30",
+        "statement": "Anne E. White holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-b580fc1c62b9ee8de50e5fef"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f31",
+        "statement": "Susan Ridlen holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-04ce0acfb5c3c3e8ccbbc6fd"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f32",
+        "statement": "Anat Hakim holds Officer position: other, from 2016-04-21 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-82902b833c8b56694fbeb2ad"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f33",
+        "statement": "Daniel Skovronsky holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-4299495519dbfe4d66fae4ef"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f34",
+        "statement": "Donald A. Zakrowski holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-4016d9a48ed16cf0569a9fe9"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f35",
+        "statement": "Valorie Wanner holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-3917d06c3c6571b1f43eee58"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f36",
+        "statement": "Eric Dozier holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-483d53a0a883cfdbc7bea7e2"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f37",
+        "statement": "Ilya Yuffa holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-4543dd18f8aac1fe631d5f3b"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f38",
+        "statement": "Jonathan Haug holds seniorManagingOfficial, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-4835700ca3614c4e3195cbad"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f39",
+        "statement": "Steffanie R. Lim-Ho holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-16d09ed5de304a8fa54057a2"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f40",
+        "statement": "Melissa Seymour holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-4ab319999a6363330d36c9c7"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f41",
+        "statement": "Lucas Montarce holds Officer position: other, from 2023-05-25 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-3c403d40fa2e750f27bf3b0f"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f42",
+        "statement": "Katherine Baicker holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-698265b1acc8babbaa68de5a"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f43",
+        "statement": "Kimberly Johnson holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-e7cc214d0e928861076bd23b"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f44",
+        "statement": "Jon Moeller holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-728887cedae248a16dcc3d43"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f45",
+        "statement": "Ralph Alvarez holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-1b86ce6255c88f6bae4b408f"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f46",
+        "statement": "Mary Lynne Hedley holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-28707deacd3879022c776ace"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f47",
+        "statement": "William G. Kaelin holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-c2d9ccae4d9e936888d2a510"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f48",
+        "statement": "J. Erik Fyrwald holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-238ade60cd255468f594e007"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f49",
+        "statement": "Gabrielle Sulzberger holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-e9bebd292606018401133877"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f50",
+        "statement": "Jamere Jackson holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-5c5eba98bf87554d195229f5"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f51",
+        "statement": "Juan Luciano holds Officer position: other, from 2025-01-23 in ELI LILLY AND COMPANY.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/us_in/183025-143",
+        "bods_statement_ids": [
+          "opencheck-828d24e84d76c2e7162083d0"
+        ],
+        "confidence": "high"
       },
       {
         "id": "f52",
@@ -600,57 +600,118 @@
         "rationale": "Ownership chain contains: unknown person in ownership chain.",
         "source_name": "GLEIF",
         "source_id": "gleif",
-        "fact_ids": []
+        "fact_ids": [],
+        "kind": "risk"
       },
       {
         "id": "r2",
         "code": "NON_EU_JURISDICTION",
-        "label": "Non-EU jurisdiction",
-        "confidence": "high",
-        "rationale": "Ownership chain reaches into jurisdictions outside the EU/EEA: US. AMLA CDD RTS condition (b).",
-        "source_name": "Wikidata",
-        "source_id": "wikidata",
-        "fact_ids": []
+        "label": "Outside EU/EEA",
+        "confidence": "low",
+        "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: GB, IN, US-DE, US-IN. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "fact_ids": [],
+        "kind": "context"
       },
       {
         "id": "r3",
-        "code": "RELATED_PEP",
-        "label": "Related party politically exposed",
-        "confidence": "high",
-        "rationale": "Related party 'Patrik Jonsson' matches a record on opensanctions: PEP per OpenSanctions (role.pep).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": []
+        "code": "NON_EU_JURISDICTION",
+        "label": "Outside EU/EEA",
+        "confidence": "low",
+        "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: US. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
+        "source_name": "Wikidata",
+        "source_id": "wikidata",
+        "fact_ids": [],
+        "kind": "context"
       },
       {
         "id": "r4",
-        "code": "RELATED_PEP",
-        "label": "Related party politically exposed",
-        "confidence": "high",
-        "rationale": "Related party 'Patrik Jonsson' matches a record on everypolitician: political office-holder per EveryPolitician.",
-        "source_name": "EveryPolitician",
-        "source_id": "everypolitician",
-        "fact_ids": []
+        "code": "NON_EU_JURISDICTION",
+        "label": "Outside EU/EEA",
+        "confidence": "low",
+        "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: US. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "fact_ids": [],
+        "kind": "context"
       },
       {
         "id": "r5",
+        "code": "NON_EU_JURISDICTION",
+        "label": "Outside EU/EEA",
+        "confidence": "low",
+        "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: US. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
+        "source_name": "OpenAleph",
+        "source_id": "openaleph",
+        "fact_ids": [],
+        "kind": "context"
+      },
+      {
+        "id": "r6",
+        "code": "RELATED_PEP",
+        "label": "Related party politically exposed",
+        "confidence": "medium",
+        "rationale": "Possible name match only: related party 'Katherine Baicker' shares a name with a record on opensanctions, with no birth date or nationality in common to confirm they are the same person — PEP per OpenSanctions (role.pep).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r7",
+        "code": "RELATED_PEP",
+        "label": "Related party politically exposed",
+        "confidence": "medium",
+        "rationale": "Possible name match only: related party 'Katherine Baicker' shares a name with a record on everypolitician, with no birth date or nationality in common to confirm they are the same person — political office-holder per EveryPolitician.",
+        "source_name": "EveryPolitician",
+        "source_id": "everypolitician",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r8",
+        "code": "RELATED_PEP",
+        "label": "Related party politically exposed",
+        "confidence": "medium",
+        "rationale": "Possible name match only: related party 'Patrik Jonsson' shares a name with a record on opensanctions, with no birth date or nationality in common to confirm they are the same person — PEP per OpenSanctions (role.pep).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r9",
+        "code": "RELATED_PEP",
+        "label": "Related party politically exposed",
+        "confidence": "medium",
+        "rationale": "Possible name match only: related party 'Patrik Jonsson' shares a name with a record on everypolitician, with no birth date or nationality in common to confirm they are the same person — political office-holder per EveryPolitician.",
+        "source_name": "EveryPolitician",
+        "source_id": "everypolitician",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r10",
         "code": "OFFSHORE_LEAKS",
         "label": "Offshore Leaks match",
         "confidence": "high",
         "rationale": "Related party 'Christopher Anderson' matches a record in the Panama Papers (ICIJ score 100/100).",
         "source_name": "icij",
         "source_id": "icij",
-        "fact_ids": []
+        "fact_ids": [],
+        "kind": "risk"
       },
       {
-        "id": "r6",
+        "id": "r11",
         "code": "OFFSHORE_LEAKS",
         "label": "Offshore Leaks match",
         "confidence": "high",
         "rationale": "Related party 'Christopher Anderson' matches a record in the Paradise Papers (Appleby) (ICIJ score 100/100).",
         "source_name": "icij",
         "source_id": "icij",
-        "fact_ids": []
+        "fact_ids": [],
+        "kind": "risk"
       }
     ],
     "sources_consulted": [
@@ -661,16 +722,10 @@
         "homepage": "https://search.gleif.org/#/search/"
       },
       {
-        "source_id": "openaleph",
-        "name": "OpenAleph",
-        "license": "per-collection",
-        "homepage": "https://openaleph.org/"
-      },
-      {
-        "source_id": "opencorporates",
-        "name": "OpenCorporates",
-        "license": "OC-Terms",
-        "homepage": "https://opencorporates.com/"
+        "source_id": "wikidata",
+        "name": "Wikidata",
+        "license": "CC0-1.0",
+        "homepage": "https://www.wikidata.org/wiki/Wikidata:Main_Page"
       },
       {
         "source_id": "wikirate",
@@ -679,27 +734,34 @@
         "homepage": "https://wikirate.org/"
       },
       {
-        "source_id": "wikidata",
-        "name": "Wikidata",
-        "license": "CC0-1.0",
-        "homepage": "https://www.wikidata.org/wiki/Wikidata:Main_Page"
+        "source_id": "opencorporates",
+        "name": "OpenCorporates",
+        "license": "OC-Terms",
+        "homepage": "https://opencorporates.com/"
+      },
+      {
+        "source_id": "openaleph",
+        "name": "OpenAleph",
+        "license": "per-collection",
+        "homepage": "https://openaleph.org/"
+      },
+      {
+        "source_id": "sec_edgar",
+        "name": "SEC EDGAR (Schedule 13D/13G)",
+        "license": "Public Domain",
+        "homepage": "https://www.sec.gov/search-filings"
       }
     ],
     "gaps": [
       {
         "id": "g1",
         "statement": "Wikirate could not be queried (SourceSchemaError: wikirate: source API schema changed — 2 field(s) failed: headquarters, website)."
-      },
-      {
-        "id": "g2",
-        "statement": "Screening against icij did not fully run because the upstream service timed out. 1 of 4 reconciliation batch(es) failed; 8 of 30 name(s) were not screened against the Offshore Leaks database. The absence of OFFSHORE_LEAKS signals is therefore not conclusive — this is not a clean screen."
       }
     ]
   },
   "validation_ok": true,
   "dropped_claims": [],
   "validation_issues": [
-    "gap 'g1' is not cited by any claim",
-    "gap 'g2' is not cited by any claim"
+    "gap 'g1' is not cited by any claim"
   ]
 }
