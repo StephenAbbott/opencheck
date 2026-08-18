@@ -3016,11 +3016,17 @@ const HOW_IT_WORKS_STEPS = [
  * ShareCardShowcase — homepage preview of the output: the live shareable
  * summary card every lookup generates. Shows what a result looks like before
  * the first query, and advertises the share-link feature. The image is a
- * committed render of the BP curated example (regenerate with
- * `opencheck.og_image.render_share_card` if the design changes, or when
- * BP's production signals change — pass the FULL signal list including
- * any kind="context" entries, since the generator filters them itself and
- * the rendered count is what the alt text below must match).
+ * committed render of the ELI LILLY curated example, chosen because the
+ * copy beside it promises a signal count and a range of risk colours:
+ * Lilly shows three signals in three different colour families (violet
+ * PEP, amber leaks, slate opaque). It replaced BP, which after Phase 111
+ * produces only two low-severity signals and made a thin advert.
+ *
+ * Regenerate with `opencheck.og_image.render_share_card` if the design
+ * changes, or when the subject's production signals change. Pass the FULL
+ * signal list including any kind="context" entries — the generator
+ * filters those itself, and the rendered count is what the alt text below
+ * must match. Verify against production, not against this card.
  */
 function ShareCardShowcase() {
   return (
@@ -3039,7 +3045,7 @@ function ShareCardShowcase() {
           src="/share-card-example.png"
           width={1200}
           height={630}
-          alt="Example shareable summary card for BP P.L.C. showing 2 risk signals, both named: offshore leaks, and three or more ownership layers, with a prompt to visit opencheck.world for details"
+          alt="Example shareable summary card for Eli Lilly and Company showing 3 risk signals, all three named: related PEP, offshore leaks, and opaque ownership, with a prompt to visit opencheck.world for details"
           className="w-full max-w-[560px] h-auto rounded-oo border border-oo-rule shadow-oo-card"
           loading="lazy"
         />
