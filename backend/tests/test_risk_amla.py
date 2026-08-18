@@ -370,9 +370,15 @@ def test_layers_handles_cycles_safely() -> None:
     assert layers.evidence["layers"] == 3
 
 
-def test_complex_corporate_structure_fires_when_layered_plus_non_eu() -> None:
+def test_complex_corporate_structure_needs_two_conditions_not_one() -> None:
+    """Article 12(1) requires "MORE THAN ONE" condition — i.e. ≥2.
+
+    Three layers plus a single non-EU layer is one condition, so the
+    composite must NOT fire. This is the central proportionality fix: a
+    layered group that merely reaches outside the EU is not, on the RTS's
+    own terms, a complex corporate structure.
+    """
     bods = _three_layer_chain()
-    # Tag the topmost holding with a non-EU jurisdiction.
     bods[2]["recordDetails"]["jurisdiction"] = {
         "code": "VG",
         "name": "British Virgin Islands",
@@ -380,15 +386,32 @@ def test_complex_corporate_structure_fires_when_layered_plus_non_eu() -> None:
     signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
     codes = {s.code for s in signals}
     assert COMPLEX_OWNERSHIP_LAYERS in codes
-    assert NON_EU_JURISDICTION in codes
+    assert NON_EU_JURISDICTION in codes  # standalone signal still reports it
+    assert COMPLEX_CORPORATE_STRUCTURE not in codes
+
+
+def test_complex_corporate_structure_fires_on_two_conditions() -> None:
+    """Non-EU layer (b) PLUS a trust layer (a) = two conditions → fires."""
+    bods = _three_layer_chain()
+    bods[2]["recordDetails"]["jurisdiction"] = {
+        "code": "VG",
+        "name": "British Virgin Islands",
+    }
+    bods[1]["recordDetails"]["entityType"] = {"type": "arrangement"}
+    bods[1]["recordDetails"]["name"] = "The Doe Family Trust"
+    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
+    codes = {s.code for s in signals}
     assert COMPLEX_CORPORATE_STRUCTURE in codes
     composite = next(s for s in signals if s.code == COMPLEX_CORPORATE_STRUCTURE)
-    assert "non-EU jurisdiction" in composite.evidence["triggers"]
+    assert set(composite.evidence["triggers"]) == {
+        "trust/arrangement",
+        "non-EU jurisdiction",
+    }
     assert composite.evidence["layers"] == 3
 
 
 def test_complex_corporate_structure_does_not_fire_without_aggravator() -> None:
-    """Three layers, all UK, no trust, no nominee — not "complex" per AMLA."""
+    """Three layers, all EU, no trust, no nominee — not "complex" per AMLA."""
     signals = assess_amla(
         "companies_house", {"entity_id": "E1"}, _three_layer_chain()
     )
@@ -397,15 +420,37 @@ def test_complex_corporate_structure_does_not_fire_without_aggravator() -> None:
     assert COMPLEX_CORPORATE_STRUCTURE not in codes
 
 
-def test_complex_corporate_structure_fires_with_trust_layer() -> None:
+def test_complex_corporate_structure_does_not_fire_on_trust_alone() -> None:
+    """A trust layer on its own is also only one condition."""
     bods = _three_layer_chain()
     bods[1]["recordDetails"]["entityType"] = {"type": "arrangement"}
     bods[1]["recordDetails"]["name"] = "The Doe Family Trust"
     signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
+    assert COMPLEX_CORPORATE_STRUCTURE not in {s.code for s in signals}
+
+
+def test_non_eu_condition_is_scoped_to_the_layered_path() -> None:
+    """Article 12(1)(b) says "present at any of THESE LAYERS".
+
+    An off-path non-EU entity that is not part of the layered ownership
+    chain still raises the standalone NON_EU_JURISDICTION signal, but it
+    must not count towards the Article 12 composite — even alongside a
+    genuine second condition.
+    """
+    bods = _three_layer_chain()
+    # A trust ON the path — condition (a) is genuinely met.
+    bods[1]["recordDetails"]["entityType"] = {"type": "arrangement"}
+    bods[1]["recordDetails"]["name"] = "The Doe Family Trust"
+    # A non-EU entity with NO relationship edges — not on any layer.
+    bods.append(
+        _entity("E9", name="Unrelated Panama SA", jurisdiction_code="PA")
+    )
+    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
     codes = {s.code for s in signals}
-    assert COMPLEX_CORPORATE_STRUCTURE in codes
-    composite = next(s for s in signals if s.code == COMPLEX_CORPORATE_STRUCTURE)
-    assert "trust/arrangement" in composite.evidence["triggers"]
+    # Bundle-wide standalone signal still reports the Panama entity…
+    assert NON_EU_JURISDICTION in codes
+    # …but it is not on the layered path, so only condition (a) is met.
+    assert COMPLEX_CORPORATE_STRUCTURE not in codes
 
 
 # ---------------------------------------------------------------------
@@ -414,8 +459,14 @@ def test_complex_corporate_structure_fires_with_trust_layer() -> None:
 
 
 def test_possible_obfuscation_fires_with_opacity_and_layered_concern() -> None:
+    """The advisory still catches what the hard composite now declines to.
+
+    Layers + a single non-EU layer is only ONE Article 12 condition, so
+    COMPLEX_CORPORATE_STRUCTURE must not fire — but combined with an
+    unknownPerson this is still worth surfacing for human review, which
+    is exactly what the low-confidence advisory is for.
+    """
     bods = _three_layer_chain()
-    # Add a non-EU layer so the composite signal fires…
     bods[2]["recordDetails"]["jurisdiction"] = {
         "code": "PA",
         "name": "Panama",
@@ -434,7 +485,7 @@ def test_possible_obfuscation_fires_with_opacity_and_layered_concern() -> None:
     signals = assess_bundle("companies_house", {"entity_id": "E1"}, bods)
     codes = {s.code for s in signals}
     assert OPAQUE_OWNERSHIP in codes
-    assert COMPLEX_CORPORATE_STRUCTURE in codes
+    assert COMPLEX_CORPORATE_STRUCTURE not in codes
     assert POSSIBLE_OBFUSCATION in codes
     advisory = next(s for s in signals if s.code == POSSIBLE_OBFUSCATION)
     assert advisory.confidence == "low"
@@ -464,9 +515,16 @@ def test_assess_bundle_returns_amla_signals_inline() -> None:
     """End-to-end: assess_bundle should expose the AMLA signals too."""
     bods = _three_layer_chain()
     bods[2]["recordDetails"]["jurisdiction"] = {"code": "VG"}
+    # Second condition so the composite genuinely fires end-to-end.
+    bods[1]["recordDetails"]["entityType"] = {"type": "arrangement"}
+    bods[1]["recordDetails"]["name"] = "The Doe Family Trust"
     signals = assess_bundle("companies_house", {"entity_id": "E1"}, bods)
     codes = {s.code for s in signals}
-    assert {COMPLEX_OWNERSHIP_LAYERS, NON_EU_JURISDICTION, COMPLEX_CORPORATE_STRUCTURE}.issubset(codes)
+    assert {
+        COMPLEX_OWNERSHIP_LAYERS,
+        NON_EU_JURISDICTION,
+        COMPLEX_CORPORATE_STRUCTURE,
+    }.issubset(codes)
 
 
 # ---------------------------------------------------------------------

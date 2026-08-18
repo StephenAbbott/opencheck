@@ -83,9 +83,12 @@ threshold is met.
 * ``COMPLEX_OWNERSHIP_LAYERS`` — the longest chain of entity nodes in
   the BODS relationship graph has ≥3 corporate layers.
 * ``COMPLEX_CORPORATE_STRUCTURE`` — composite, fires when
-  ``COMPLEX_OWNERSHIP_LAYERS`` and ≥1 of
-  {``TRUST_OR_ARRANGEMENT``, ``NON_EU_JURISDICTION``, ``NOMINEE``} have
-  fired.
+  ``COMPLEX_OWNERSHIP_LAYERS`` and **≥2** of AMLA conditions (a)–(c)
+  {``TRUST_OR_ARRANGEMENT``, non-EU on the layered path, ``NOMINEE``}
+  are met. Article 12(1) of the draft RTS requires "three or more
+  layers ... and, in addition, **more than one** of the following
+  conditions" — i.e. at least two. Condition (d) is deliberately not
+  counted here; see ``POSSIBLE_OBFUSCATION`` below.
 * ``POSSIBLE_OBFUSCATION`` — advisory mirror of AMLA's subjective
   condition ("structure obfuscates or diminishes transparency of
   ownership with no legitimate economic rationale"). Cannot be judged
@@ -1146,37 +1149,56 @@ def assess_amla(
     # FATF jurisdiction signals — independent of the AMLA composite rule.
     out.extend(_fatf_jurisdiction_signals(source_id, hit_id, bods))
 
-    # AMLA "complex corporate structure" = ≥3 layers AND ≥1 of
-    # {trust/arrangement, non-EU, nominee}.
-    if layers_signal is not None and (
-        trust_signal is not None
-        or non_eu_signal is not None
-        or nominee_signal is not None
-    ):
-        triggers = []
+    # AMLA CDD RTS Article 12(1): treat a structure as a complex corporate
+    # structure where there are "three or more layers between the customer
+    # and the beneficial owner and, in addition, MORE THAN ONE of the
+    # following conditions is met":
+    #
+    #   (a) a legal arrangement or similar entity (e.g. a foundation) in
+    #       any of the layers                      -> trust_signal
+    #   (b) the customer and any legal entities present at any of these
+    #       layers are registered outside the EU   -> _non_eu_condition_met
+    #   (c) nominee shareholders or nominee directors involved in the
+    #       structure                              -> nominee_signal
+    #   (d) the structure obfuscates or diminishes transparency of
+    #       ownership with no legitimate economic rationale
+    #
+    # "More than one" means at least TWO conditions, not one. Condition
+    # (d) is NOT counted: its "no legitimate economic rationale" limb is a
+    # judgement that cannot be made from data alone, so it is surfaced
+    # separately and advisorily as POSSIBLE_OBFUSCATION rather than being
+    # allowed to push a structure over this threshold. That makes this
+    # rule deliberately conservative — it can under-fire relative to the
+    # RTS text, but it will not assert a legal conclusion we cannot
+    # evidence.
+    if layers_signal is not None:
+        path_ids = layers_signal.evidence.get("longest_path") or []
+        triggers: list[str] = []
         if trust_signal is not None:
             triggers.append("trust/arrangement")
-        if non_eu_signal is not None:
+        if _non_eu_condition_met(bods, path_ids):
             triggers.append("non-EU jurisdiction")
         if nominee_signal is not None:
             triggers.append("nominee")
-        out.append(
-            RiskSignal(
-                code=COMPLEX_CORPORATE_STRUCTURE,
-                confidence="high",
-                summary=(
-                    "Meets AMLA CDD RTS threshold for a complex corporate "
-                    f"structure: {layers_signal.evidence['layers']} layers "
-                    "of ownership combined with " + ", ".join(triggers) + "."
-                ),
-                source_id=source_id,
-                hit_id=hit_id,
-                evidence={
-                    "layers": layers_signal.evidence["layers"],
-                    "triggers": triggers,
-                },
+
+        if len(triggers) >= 2:
+            out.append(
+                RiskSignal(
+                    code=COMPLEX_CORPORATE_STRUCTURE,
+                    confidence="high",
+                    summary=(
+                        "Meets AMLA CDD RTS threshold for a complex corporate "
+                        f"structure: {layers_signal.evidence['layers']} layers "
+                        "of ownership combined with " + ", ".join(triggers) + "."
+                    ),
+                    source_id=source_id,
+                    hit_id=hit_id,
+                    evidence={
+                        "layers": layers_signal.evidence["layers"],
+                        "triggers": triggers,
+                    },
+                )
             )
-        )
 
     return out
 
@@ -1258,6 +1280,11 @@ def _non_eu_jurisdiction_signal(
         return None
     # Pull a short, deduped list of country codes for the summary.
     codes = sorted({m["code"] for m in non_eu})
+    # NB: this is the standalone signal and stays bundle-wide — it reports
+    # "the chain touches these jurisdictions", which is a different
+    # question from AMLA Article 12(1)(b). The *condition* used by the
+    # COMPLEX_CORPORATE_STRUCTURE composite is scoped to the layered
+    # path; see ``_non_eu_condition_met``.
     return RiskSignal(
         code=NON_EU_JURISDICTION,
         confidence="high",
@@ -1270,6 +1297,50 @@ def _non_eu_jurisdiction_signal(
         hit_id=hit_id,
         evidence={"jurisdictions": non_eu},
     )
+
+
+def _non_eu_condition_met(
+    bods: list[dict[str, Any]], path_ids: list[str]
+) -> bool:
+    """AMLA CDD RTS Article 12(1), point (b) — scoped to the layered path.
+
+    The condition reads: "the customer and any legal entities present at
+    **any of these layers** are registered in jurisdictions outside the
+    EU". Two scoping choices follow from that wording.
+
+    1. "at any of these layers" — we restrict the test to entity nodes on
+       the longest ownership path found by ``_layers_signal``, rather
+       than scanning the whole bundle. A non-EU entity hanging off a side
+       branch that is not part of the layered structure does not satisfy
+       this condition.
+
+    2. The sentence is grammatically conjunctive ("the customer **and**
+       any legal entities"), which read strictly would require *every*
+       entity on the path to be non-EU. That reading would almost never
+       be satisfied and is unlikely to be the drafters' intent, so we
+       treat the condition as met when **any** entity on the path is
+       registered outside the EU. This is the looser of the two readings;
+       revisit when the final RTS is adopted.
+
+    Returns a bool rather than a ``RiskSignal`` because this is an input
+    to the composite, not a finding in its own right.
+    """
+    if not path_ids:
+        return False
+    eu_eea = _eu_eea_codes()
+    on_path = set(path_ids)
+    for stmt in bods:
+        if _stmt_kind(stmt) != "entity":
+            continue
+        if _statement_id(stmt) not in on_path:
+            continue
+        j = _entity_jurisdiction(stmt)
+        if not j:
+            continue
+        code = (j.get("code") or "").upper()
+        if code and code not in eu_eea:
+            return True
+    return False
 
 
 def _structured_nominee_matches(
