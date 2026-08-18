@@ -1241,11 +1241,17 @@ def assess_amla(
     # following conditions is met":
     #
     #   (a) a legal arrangement or similar entity (e.g. a foundation) in
-    #       any of the layers                      -> trust_signal
+    #       any of the layers                      -> _trust_condition_met
     #   (b) the customer and any legal entities present at any of these
     #       layers are registered outside the EU   -> _non_eu_condition_met
     #   (c) nominee shareholders or nominee directors involved in the
     #       structure                              -> nominee_signal
+    #
+    # (a) and (b) are scoped to the layered path because both say "in any
+    # of the(se) layers"; (c) says "involved in the structure", which is
+    # looser, so it stays bundle-wide. The standalone signals remain
+    # bundle-wide in every case — "this bundle contains a trust" and "a
+    # trust sits on the layered chain" are different claims.
     #   (d) the structure obfuscates or diminishes transparency of
     #       ownership with no legitimate economic rationale
     #
@@ -1260,7 +1266,7 @@ def assess_amla(
     if layers_signal is not None:
         path_ids = layers_signal.evidence.get("longest_path") or []
         triggers: list[str] = []
-        if trust_signal is not None:
+        if _trust_condition_met(bods, path_ids):
             triggers.append("trust/arrangement")
         if _non_eu_condition_met(bods, path_ids):
             triggers.append("non-EU jurisdiction")
@@ -1386,6 +1392,35 @@ def _non_eu_jurisdiction_signal(
         source_id=source_id,
         hit_id=hit_id,
         evidence={"jurisdictions": non_eu},
+    )
+
+
+def _trust_condition_met(
+    bods: list[dict[str, Any]], path_ids: list[str]
+) -> bool:
+    """AMLA CDD RTS Article 12(1), point (a) — scoped to the layered path.
+
+    "there is a legal arrangement or a similar legal entity such as a
+    foundation **in any of the layers**". Like point (b), the wording is
+    explicitly scoped to the layers, so a trust sitting on a side branch
+    of the bundle does not satisfy it.
+
+    Point (c) is deliberately NOT scoped this way: it reads "nominee
+    shareholders or nominee directors involved **in the structure**",
+    which is looser than "in any of these layers" and is left bundle-wide.
+
+    Reuses ``_trust_or_arrangement_signal`` rather than duplicating the
+    legal-form keyword matching, so the condition and the standalone
+    signal can never disagree about what counts as a trust.
+    """
+    if not path_ids:
+        return False
+    sig = _trust_or_arrangement_signal("", "", bods)
+    if sig is None:
+        return False
+    on_path = set(path_ids)
+    return any(
+        m.get("statement_id") in on_path for m in sig.evidence.get("matches", [])
     )
 
 
