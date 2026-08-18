@@ -503,6 +503,62 @@ def test_complex_corporate_structure_does_not_fire_on_trust_alone() -> None:
     assert COMPLEX_CORPORATE_STRUCTURE not in {s.code for s in signals}
 
 
+def test_trust_condition_is_scoped_to_the_layered_path() -> None:
+    """Article 12(1)(a) says "in any of the LAYERS", like point (b).
+
+    A trust on a side branch still raises the standalone
+    TRUST_OR_ARRANGEMENT signal, but must not count towards the Article 12
+    composite — even alongside a genuine second condition on the path.
+    """
+    bods = _three_layer_chain()
+    # Condition (b) genuinely met ON the path.
+    bods[2]["recordDetails"]["jurisdiction"] = {"code": "VG", "name": "BVI"}
+    # A trust with NO relationship edges — not on any layer.
+    bods.append(
+        _entity("E9", entity_type="arrangement", name="Unrelated Family Trust")
+    )
+    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
+    codes = {s.code for s in signals}
+    assert TRUST_OR_ARRANGEMENT in codes  # bundle-wide signal still fires
+    # …but only condition (b) is on the path, so one condition, no composite.
+    assert COMPLEX_CORPORATE_STRUCTURE not in codes
+
+
+def test_trust_on_the_path_does_count_towards_the_composite() -> None:
+    """Control: the same trust, this time on a layer, tips it to two."""
+    bods = _three_layer_chain()
+    bods[2]["recordDetails"]["jurisdiction"] = {"code": "VG", "name": "BVI"}
+    bods[1]["recordDetails"]["entityType"] = {"type": "arrangement"}
+    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
+    composite = next(
+        s for s in signals if s.code == COMPLEX_CORPORATE_STRUCTURE
+    )
+    assert set(composite.evidence["triggers"]) == {
+        "trust/arrangement",
+        "non-EU jurisdiction",
+    }
+
+
+def test_nominee_condition_stays_bundle_wide() -> None:
+    """Point (c) reads "involved in the structure", not "in any of these
+    layers" — deliberately looser, so it is NOT path-scoped."""
+    bods = _three_layer_chain()
+    bods[2]["recordDetails"]["jurisdiction"] = {"code": "VG", "name": "BVI"}
+    # A nominee relationship hanging off the bundle, not on the main chain.
+    bods.append(_entity("E9", name="Nominee Holdings"))
+    bods.append(
+        _rel("R9", "E9", "E1", interests=[
+            {"type": "otherInfluenceOrControl",
+             "directOrIndirect": "direct",
+             "details": "registered owner as nominee"},
+        ])
+    )
+    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
+    codes = {s.code for s in signals}
+    assert NOMINEE in codes
+    assert COMPLEX_CORPORATE_STRUCTURE in codes
+
+
 def test_non_eu_condition_is_scoped_to_the_layered_path() -> None:
     """Article 12(1)(b) says "present at any of THESE LAYERS".
 

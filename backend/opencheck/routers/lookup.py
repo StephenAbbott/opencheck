@@ -1263,6 +1263,34 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
     return spec.build(result, local_id, ctx)
 
 
+#: Resolvers for globally-collapsing codes where "last source wins" is
+#: wrong. Called as ``resolver(incumbent, candidate) -> winner``.
+#:
+#: COMPLEX_OWNERSHIP_LAYERS is the case that needs one. Statement ids are
+#: namespaced per source (``_stable_id(source_id, ...)``), so no ownership
+#: edge ever bridges two sources and ``bods_all`` is a concatenation of
+#: disjoint subgraphs rather than one connected graph. Computing the depth
+#: over the merged bundle is therefore *exactly* the maximum of the
+#: per-source depths — verified — which means the correct merged answer is
+#: reachable here without restructuring the per-source pipeline.
+#:
+#: Without this, the depth reported is whichever source happened to be
+#: processed last: a lookup where one source finds a 5-layer chain and
+#: another finds 3 reports 3 or 5 depending purely on ordering, and the
+#: surviving ``longest_path`` is not the chain that justifies the number.
+def _prefer_deeper_chain(
+    incumbent: dict[str, Any], candidate: dict[str, Any]
+) -> dict[str, Any]:
+    inc = (incumbent.get("evidence") or {}).get("layers") or 0
+    cand = (candidate.get("evidence") or {}).get("layers") or 0
+    return candidate if cand > inc else incumbent
+
+
+_COLLAPSE_RESOLVERS = {
+    "COMPLEX_OWNERSHIP_LAYERS": _prefer_deeper_chain,
+}
+
+
 # Codes that collapse GLOBALLY, on ``(code,)`` alone.
 #
 # Membership is not "is this a structural claim?" but a narrower test:
@@ -1278,13 +1306,12 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
 # Stiftung at E1 and Companies House finding a nominee at E7 collapsed to E7
 # alone. They now dedup per source, like the jurisdiction signals.
 #
-# The three that remain are whole-structure claims. COMPLEX_OWNERSHIP_LAYERS
-# has the same evidence-loss problem via ``longest_path`` and does need
-# fixing — but NOT this way: per-source it would fire once per source with
-# different layer counts, and the chip strip picks its winner by confidence
-# rather than depth, so which number a user sees would become arbitrary. It
-# wants the layers computed once over the merged bundle instead. Tracked
-# separately; do not "fix" it by moving it here.
+# The three that remain are whole-structure claims and must NOT be moved
+# out: per source they would fire once per source with conflicting values
+# (different layer counts), and the chip strip picks its winner by
+# confidence rather than depth, so the number shown would be arbitrary.
+# COMPLEX_OWNERSHIP_LAYERS keeps its global collapse and resolves the
+# conflict with ``_prefer_deeper_chain`` above instead.
 _STRUCTURAL_SIGNAL_CODES = {
     "COMPLEX_OWNERSHIP_LAYERS",
     "COMPLEX_CORPORATE_STRUCTURE",
@@ -1344,7 +1371,11 @@ def _merge_signals(
                 )
             else:
                 key = (sig["code"], sig["source_id"], sig["hit_id"])
-            merged[key] = sig
+            incumbent = merged.get(key)
+            resolver = _COLLAPSE_RESOLVERS.get(sig["code"])
+            merged[key] = (
+                resolver(incumbent, sig) if incumbent is not None and resolver else sig
+            )
     out = list(merged.values())
     if record_as:
         signalstats.record_signals(out)

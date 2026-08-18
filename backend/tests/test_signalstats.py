@@ -147,6 +147,8 @@ def test_whole_structure_signals_still_collapse_globally() -> None:
     COMPLEX_OWNERSHIP_LAYERS per-source would fire once per source with
     different layer counts, and the chip strip picks its winner by
     confidence, not depth, so the number shown would become arbitrary.
+    It stays globally collapsed and resolves the conflict with
+    _prefer_deeper_chain instead — see the test below.
     """
     from opencheck.routers.lookup import _STRUCTURAL_SIGNAL_CODES
 
@@ -157,6 +159,34 @@ def test_whole_structure_signals_still_collapse_globally() -> None:
     } <= _STRUCTURAL_SIGNAL_CODES
     for code in ("TRUST_OR_ARRANGEMENT", "NOMINEE", "NON_EU_JURISDICTION"):
         assert code not in _STRUCTURAL_SIGNAL_CODES
+
+
+def test_layer_depth_survives_regardless_of_source_order() -> None:
+    """The reported depth must be the deepest chain found, not the last.
+
+    COMPLEX_OWNERSHIP_LAYERS collapses globally and the merge assigns, so
+    a lookup where one source finds 5 layers and another finds 3 reported
+    3 or 5 depending purely on which source happened to be processed
+    last — and the surviving longest_path was not the chain that
+    justified the number.
+    """
+    deep = _signal(
+        "COMPLEX_OWNERSHIP_LAYERS", source_id="companies_house",
+        evidence={"layers": 5, "longest_path": ["c5", "c4", "c3", "c2", "c1"]},
+    )
+    shallow = _signal(
+        "COMPLEX_OWNERSHIP_LAYERS", source_id="gleif",
+        evidence={"layers": 3, "longest_path": ["g3", "g2", "g1"]},
+    )
+    for first, second in ((deep, shallow), (shallow, deep)):
+        merged = [
+            s for s in _merge_signals([first], [second])
+            if s["code"] == "COMPLEX_OWNERSHIP_LAYERS"
+        ]
+        assert len(merged) == 1
+        assert merged[0]["evidence"]["layers"] == 5
+        # …and the evidence is the chain that demonstrates it.
+        assert merged[0]["evidence"]["longest_path"][0] == "c5"
 
 
 def test_counts_are_post_dedup() -> None:
