@@ -24,14 +24,24 @@ Risk signals fall into three groups:
 These mirror the objective conditions in the EU AMLA draft customer due diligence regulatory technical standards for "complex corporate structures".
 
 - `TRUST_OR_ARRANGEMENT` — entity with `entityType=arrangement` or a legal-form keyword (`trust`, `Stiftung`, `Anstalt`, `fideicomiso`, `Treuhand`, `foundation`). AMLA condition (a).
-- `NON_EU_JURISDICTION` — any entity statement's `incorporatedInJurisdiction.code` outside the EU+EEA. AMLA condition (b). Configurable via `OPENCHECK_AMLA_EQUIVALENT_JURISDICTIONS` (additive, e.g. `GB,CH`) or `OPENCHECK_AMLA_EU_EEA_OVERRIDE` (full replace).
+- `NON_EU_JURISDICTION` — any entity statement's `recordDetails.jurisdiction.code` (BODS v0.4; falls back to a top-level `incorporatedInJurisdiction` dict for v0.3-shaped pass-through fixtures) outside the EU+EEA. Configurable via `OPENCHECK_AMLA_EQUIVALENT_JURISDICTIONS` (additive, e.g. `GB,CH`) or `OPENCHECK_AMLA_EU_EEA_OVERRIDE` (full replace).
+
+  **This is a structural observation, not an adverse finding.** Neither the AMLA draft RTS nor AMLR Annex III treats non-EU status as a risk factor in its own right. Annex III(3) lists only *qualified* categories of third country — FATF-listed, no effective AML/CFT system, significant corruption, sanctioned, terrorist financing, financial secrecy — and AMLR Annex II puts third countries with effective AML/CFT systems in the **lower**-risk column. This signal reports where the ownership chain reaches and feeds AMLA condition (b) in the composite below; it does not assert that a jurisdiction is higher risk. For that, see `FATF_GREY_LIST` / `FATF_BLACK_LIST`.
+
+  Dedups on `(code, source_id, hit_id)` like the FATF jurisdiction signals, so every non-EU node found by every source keeps its graph badge.
 - `NOMINEE` — a nominee shareholder or director arrangement. AMLA condition (c). Two grades of evidence, reported distinctly:
   - **structured** (*high* confidence) — the register filed a nominee code. Companies House / Register of Overseas Entities `natures_of_control` codes matching `registered-owner-as-nominee-*` (six of them; see `bods/psc_natures.NOMINEE_NATURE_CODES`). The code travels in the signal's evidence so a reviewer can check the filing rather than our reading of it. Ceased PSCs are excluded — that arrangement has ended.
   - **textual** (*medium* confidence) — the word "nominee" (or `prête-nom` / `fiduciaire` / camelCase variants) appears in an interest type, an interest's details, or a person record. Real evidence, but weaker than a filed code: "Nominee Services Ltd" is a company name, not a declaration. The summary says outright that it matched on descriptive text.
 
   `evidence.basis` is `"structured"` or `"textual"`. A filed code reports as structured even though the mapper also renders it into `interest.details` — the same fact must not be reported by its weaker trace.
 - `COMPLEX_OWNERSHIP_LAYERS` — DFS over the BODS relationship graph finds an entity-only chain ≥3 nodes (cycle-safe). Made meaningfully detectable by the Phase 10 Open Ownership bundles, which carry full multi-layer chains.
-- `COMPLEX_CORPORATE_STRUCTURE` — composite (high confidence), fires when `COMPLEX_OWNERSHIP_LAYERS` AND ≥1 of {trust, non-EU, nominee} both fire — the AMLA threshold rule end-to-end.
+- `COMPLEX_CORPORATE_STRUCTURE` — composite (high confidence), fires when `COMPLEX_OWNERSHIP_LAYERS` fires **and ≥2** of AMLA conditions (a)–(c) {trust, non-EU on the layered path, nominee} are met.
+
+  Article 12(1) of the draft RTS requires three or more layers "and, in addition, **more than one** of the following conditions is met" — i.e. at least two. Condition (b) is evaluated over the layered ownership path only, per "present at any of **these layers**": a non-EU entity on a side branch raises `NON_EU_JURISDICTION` but does not count here.
+
+  Condition (d) is deliberately excluded — its "no legitimate economic rationale" limb cannot be judged from data, so it is surfaced advisorily as `POSSIBLE_OBFUSCATION` instead of being allowed to push a structure over this threshold. That makes the rule able to under-fire relative to the RTS text, which is the right direction for a claim of this kind.
+
+  Tracks a **draft** RTS (consultation closed 8 May 2026; final text not yet adopted, and AMLA has not yet published all responses). Revisit on adoption.
 - `POSSIBLE_OBFUSCATION` — advisory (low confidence) mirror of AMLA's subjective condition; explicitly notes the legitimate-economic-rationale caveat.
 
 ## Ownership structure (BODS v0.4 derived)
