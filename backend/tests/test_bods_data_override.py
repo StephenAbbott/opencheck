@@ -90,6 +90,58 @@ def test_load_bundle_raises_on_bad_json(tmp_path: Path) -> None:
         bods_data.gleif_bundle_for_lei("BAD0000000000000BAD0")
 
 
+def test_load_bundle_stamps_missing_source_description(tmp_path: Path) -> None:
+    """Bundle statements ship with ``source.type``/``source.url`` only (the
+    extraction script drops Open Ownership's assertedBy names), so the loader
+    stamps the canonical source name. Without it, every narrative-packet fact
+    built from a bundle statement is labelled "an OpenCheck source" with no
+    source-card link — the Phase 111 curated-summary regression."""
+    _seed_bundle(
+        tmp_path,
+        "gleif",
+        "213800LH1BZH3DI6G760",
+        [
+            {  # source present, description missing → stamped
+                "recordType": "entity",
+                "statementId": "e1",
+                "source": {"type": ["officialRegister", "verified"], "url": "https://example.org/gc"},
+            },
+            {  # no source at all → minimal block created
+                "recordType": "relationship",
+                "statementId": "r1",
+            },
+            {  # existing description → never overwritten
+                "recordType": "entity",
+                "statementId": "e2",
+                "source": {"description": "Somewhere else", "url": "https://example.org"},
+            },
+        ],
+    )
+    bundle = bods_data.gleif_bundle_for_lei("213800LH1BZH3DI6G760")
+    assert bundle is not None
+    by_id = {s["statementId"]: s for s in bundle}
+    assert by_id["e1"]["source"]["description"] == "GLEIF"
+    # The rest of the source block stays verbatim.
+    assert by_id["e1"]["source"]["url"] == "https://example.org/gc"
+    assert by_id["e1"]["source"]["type"] == ["officialRegister", "verified"]
+    assert by_id["r1"]["source"] == {"description": "GLEIF"}
+    assert by_id["e2"]["source"]["description"] == "Somewhere else"
+
+
+def test_load_bundle_stamps_uk_description(tmp_path: Path) -> None:
+    """The UK subdir stamps the Companies House display name (must match
+    the adapter's ``SourceInfo.name`` so citation chips link)."""
+    _seed_bundle(
+        tmp_path,
+        "uk",
+        "00102498",
+        [{"recordType": "entity", "statementId": "e1", "source": {"url": "https://example.org"}}],
+    )
+    bundle = bods_data.uk_bundle_for_company_number("00102498")
+    assert bundle is not None
+    assert bundle[0]["source"]["description"] == "UK Companies House"
+
+
 def test_lei_lookup_is_case_insensitive(tmp_path: Path) -> None:
     """Bundle filename + the loader both normalise to upper case."""
     _seed_bundle(
