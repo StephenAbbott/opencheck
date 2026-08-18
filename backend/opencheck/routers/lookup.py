@@ -1263,28 +1263,34 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
     return spec.build(result, local_id, ctx)
 
 
+# Codes that collapse GLOBALLY, on ``(code,)`` alone.
+#
+# Membership is not "is this a structural claim?" but a narrower test:
+# **does the signal's evidence identify particular nodes?** The merge below
+# assigns rather than combines, so a globally-collapsed code keeps only the
+# last-processed source's evidence — and every node named by an earlier
+# source loses the graph badge that ``buildSignalMap`` would have drawn from
+# it. A code may therefore only live here if losing the other sources'
+# evidence costs nothing.
+#
+# TRUST_OR_ARRANGEMENT and NOMINEE were moved OUT for that reason: both carry
+# per-node ``statement_id``s in ``evidence.matches[]``, so GLEIF finding a
+# Stiftung at E1 and Companies House finding a nominee at E7 collapsed to E7
+# alone. They now dedup per source, like the jurisdiction signals.
+#
+# The three that remain are whole-structure claims. COMPLEX_OWNERSHIP_LAYERS
+# has the same evidence-loss problem via ``longest_path`` and does need
+# fixing — but NOT this way: per-source it would fire once per source with
+# different layer counts, and the chip strip picks its winner by confidence
+# rather than depth, so which number a user sees would become arbitrary. It
+# wants the layers computed once over the merged bundle instead. Tracked
+# separately; do not "fix" it by moving it here.
 _STRUCTURAL_SIGNAL_CODES = {
-    "TRUST_OR_ARRANGEMENT",
-    "NOMINEE",
     "COMPLEX_OWNERSHIP_LAYERS",
     "COMPLEX_CORPORATE_STRUCTURE",
     "POSSIBLE_OBFUSCATION",
     "SANCTIONED_SECURITY",
 }
-# NON_EU_JURISDICTION is deliberately NOT structural. Structural codes
-# collapse on ``(code,)`` and the merge below overwrites, so the last
-# source processed wins outright — every jurisdiction node found by
-# earlier sources is dropped from ``evidence.jurisdictions[]`` and the
-# per-node graph overlay that ``buildSignalMap`` drives loses those
-# badges. It is a jurisdiction rule, so it now dedups exactly like the
-# FATF jurisdiction rules, on ``(code, source_id, hit_id)``. The chip
-# strip is unaffected: ``aggregatedCodes`` in App.tsx already collapses
-# the strip by code.
-#
-# NB the same overwrite affects TRUST_OR_ARRANGEMENT and NOMINEE, whose
-# ``evidence.matches[]`` also carries statement_ids read by the graph.
-# Left alone here because changing their dedup semantics is a separate
-# decision — logged as a follow-up on the AMLA ticket.
 _STATEMENT_SCOPED_SIGNAL_CODES = {
     "RELATED_PEP",
     "RELATED_SANCTIONED",

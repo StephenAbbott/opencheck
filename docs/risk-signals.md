@@ -52,6 +52,14 @@ These mirror the objective conditions in the EU AMLA draft customer due diligenc
   **This is a structural observation, not an adverse finding.** Neither the AMLA draft RTS nor AMLR Annex III treats non-EU status as a risk factor in its own right. Annex III(3) lists only *qualified* categories of third country — FATF-listed, no effective AML/CFT system, significant corruption, sanctioned, terrorist financing, financial secrecy — and AMLR Annex II puts third countries with effective AML/CFT systems in the **lower**-risk column. This signal reports where the ownership chain reaches and feeds AMLA condition (b) in the composite below; it does not assert that a jurisdiction is higher risk. For that, see `FATF_GREY_LIST` / `FATF_BLACK_LIST`.
 
   Dedups on `(code, source_id, hit_id)` like the FATF jurisdiction signals, so every non-EU node found by every source keeps its graph badge.
+
+### Dedup: which codes collapse globally
+
+`_merge_signals` in `routers/lookup.py` collapses "structural" codes on `(code,)` alone — and because it assigns rather than combines, only the last-processed source's evidence survives. Membership of that set is therefore **not** "is this a structural claim?" but a narrower test: **does the signal's evidence identify particular nodes?**
+
+`TRUST_OR_ARRANGEMENT`, `NOMINEE` and `NON_EU_JURISDICTION` all carry per-node `statement_id`s (in `evidence.matches[]` / `evidence.jurisdictions[]`) that the graph reads to draw badges, so they dedup **per source**. `COMPLEX_OWNERSHIP_LAYERS`, `COMPLEX_CORPORATE_STRUCTURE`, `POSSIBLE_OBFUSCATION` and `SANCTIONED_SECURITY` are whole-structure claims and still collapse globally.
+
+Known gap: `COMPLEX_OWNERSHIP_LAYERS` loses `longest_path` nodes the same way, but must **not** be fixed by moving it — per source it would report different layer counts and the chip strip picks its winner by confidence rather than depth, making the number shown arbitrary. It needs the layer count computed once over the merged bundle.
 - `NOMINEE` — a nominee shareholder or director arrangement. AMLA condition (c). Two grades of evidence, reported distinctly:
   - **structured** (*high* confidence) — the register filed a nominee code. Companies House / Register of Overseas Entities `natures_of_control` codes matching `registered-owner-as-nominee-*` (six of them; see `bods/psc_natures.NOMINEE_NATURE_CODES`). The code travels in the signal's evidence so a reviewer can check the filing rather than our reading of it. Ceased PSCs are excluded — that arrangement has ended.
   - **textual** (*medium* confidence) — the word "nominee" (or `prête-nom` / `fiduciaire` / camelCase variants) appears in an interest type, an interest's details, or a person record. Real evidence, but weaker than a filed code: "Nominee Services Ltd" is a company name, not a declaration. The summary says outright that it matched on descriptive text.

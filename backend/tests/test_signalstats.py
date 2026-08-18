@@ -113,6 +113,52 @@ def test_non_eu_jurisdiction_dedups_per_source_like_fatf() -> None:
     assert len(_merge_signals([gleif], [dict(gleif)])) == 1
 
 
+@pytest.mark.parametrize("code", ["TRUST_OR_ARRANGEMENT", "NOMINEE"])
+def test_node_scoped_structural_signals_dedup_per_source(code: str) -> None:
+    """Q5: both carry per-node statement_ids and must not collapse globally.
+
+    Structural codes key on ``(code,)`` and the merge assigns rather than
+    combines, so GLEIF finding a Stiftung at E1 and Companies House finding
+    a nominee at E7 collapsed to E7 alone — E1 lost its graph badge. Same
+    defect and same fix as NON_EU_JURISDICTION.
+    """
+    gleif = _signal(
+        code, source_id="gleif",
+        evidence={"matches": [{"statement_id": "E1", "match": "legalForm contains 'stiftung'"}]},
+    )
+    ch = _signal(
+        code, source_id="companies_house",
+        evidence={"matches": [{"statement_id": "E7", "match": "nominee"}]},
+    )
+    merged = _merge_signals([gleif], [ch])
+    kept = {
+        m["statement_id"]
+        for s in merged if s["code"] == code
+        for m in s["evidence"]["matches"]
+    }
+    assert kept == {"E1", "E7"}
+    # Identical (code, source, hit) must still collapse to one.
+    assert len(_merge_signals([gleif], [dict(gleif)])) == 1
+
+
+def test_whole_structure_signals_still_collapse_globally() -> None:
+    """The counterpart guard — do NOT "fix" these the same way.
+
+    COMPLEX_OWNERSHIP_LAYERS per-source would fire once per source with
+    different layer counts, and the chip strip picks its winner by
+    confidence, not depth, so the number shown would become arbitrary.
+    """
+    from opencheck.routers.lookup import _STRUCTURAL_SIGNAL_CODES
+
+    assert {
+        "COMPLEX_OWNERSHIP_LAYERS",
+        "COMPLEX_CORPORATE_STRUCTURE",
+        "POSSIBLE_OBFUSCATION",
+    } <= _STRUCTURAL_SIGNAL_CODES
+    for code in ("TRUST_OR_ARRANGEMENT", "NOMINEE", "NON_EU_JURISDICTION"):
+        assert code not in _STRUCTURAL_SIGNAL_CODES
+
+
 def test_counts_are_post_dedup() -> None:
     """The number reported must be what a user sees, not what was
     generated internally — related-party paths emit several signals per hit

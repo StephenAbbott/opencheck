@@ -182,6 +182,8 @@ _RISK_LABELS = {
     "TRUST_OR_ARRANGEMENT": "Trust / arrangement",
     "NOMINEE": "Nominee arrangement",
     "OPAQUE_OWNERSHIP": "Opaque ownership (super-secure)",
+    "POSSIBLE_OBFUSCATION": "Possible obfuscation (advisory)",
+    "SANCTIONED_SECURITY": "Sanctioned securities",
     "COMPLEX_OWNERSHIP_LAYERS": "Complex ownership layers",
     "COMPLEX_CORPORATE_STRUCTURE": "Complex corporate structure",
     "STATE_CONTROLLED": "State-controlled (possible SOE)",
