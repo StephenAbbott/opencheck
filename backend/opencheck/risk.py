@@ -150,9 +150,15 @@ COMPLEX_OWNERSHIP_LAYERS = "COMPLEX_OWNERSHIP_LAYERS"
 COMPLEX_CORPORATE_STRUCTURE = "COMPLEX_CORPORATE_STRUCTURE"
 POSSIBLE_OBFUSCATION = "POSSIBLE_OBFUSCATION"
 
-# Codes — FATF jurisdiction lists (BODS-derived)
+# Codes — jurisdiction-list signals (BODS-derived).
+#
+# These are the ONLY geographic risk claims OpenCheck makes, and each
+# comes from an authoritative, externally maintained, dated list. Being
+# outside the EU is not itself one of them — see NON_EU_JURISDICTION,
+# which is classified ``kind="context"``.
 FATF_BLACK_LIST = "FATF_BLACK_LIST"
 FATF_GREY_LIST = "FATF_GREY_LIST"
+EU_HIGH_RISK_THIRD_COUNTRY = "EU_HIGH_RISK_THIRD_COUNTRY"
 
 
 # Default EU + EEA member states (ISO 3166-1 alpha-2). The AMLA RTS
@@ -241,6 +247,70 @@ FATF_GREY_LIST_CODES: frozenset[str] = frozenset(
         "VN",  # Vietnam
         "VG",  # British Virgin Islands
         "YE",  # Yemen
+    }
+)
+
+# EU high-risk third countries — the Annex to Commission Delegated
+# Regulation (EU) 2016/1675, as amended. This is a DIFFERENT INSTRUMENT
+# from the FATF lists above and is deliberately a separate signal, not a
+# widening of the FATF code sets.
+#
+# Why separate: the EU list is the legally decisive trigger for mandatory
+# enhanced due diligence under the AML framework; a FATF listing is not,
+# by itself, binding in EU law. The two also diverge in practice, because
+# the Commission adopts its updates months after the FATF plenary that
+# prompted them:
+#
+#   * DZ (Algeria) and NA (Namibia) are on this list but were REMOVED
+#     from the FATF grey list at the June 2026 plenary.
+#   * MM (Myanmar) is FATF black but sits in the EU's Section I.
+#   * BA, BG, IQ, KW, PG are FATF grey but not EU-listed.
+#
+# Folding them together would make the summary text unable to say which
+# instrument applies, and a delisting from one would silently move a
+# signal attributed to the other.
+#
+# Current as of Delegated Regulation (EU) 2026/83 of 4 December 2025
+# (published 9 January 2026, applies from 29 January 2026), which added
+# Bolivia and the British Virgin Islands and removed Burkina Faso, Mali,
+# Mozambique, Nigeria, South Africa and Tanzania. Verified against the
+# EUR-Lex consolidated text 02016R1675-20260129.
+#
+# Re-check after each Commission update — they follow FATF plenaries
+# (typically February, June, October) at a lag of several months.
+# Source: https://eur-lex.europa.eu/eli/reg_del/2026/83/oj/eng
+EU_HRTC_INSTRUMENT = "Delegated Regulation (EU) 2016/1675, as amended to 29 January 2026"
+
+EU_HIGH_RISK_THIRD_COUNTRY_CODES: frozenset[str] = frozenset(
+    {
+        # Section I — written commitment + FATF action plan
+        "AF",  # Afghanistan
+        "DZ",  # Algeria
+        "AO",  # Angola
+        "BO",  # Bolivia
+        "VG",  # British Virgin Islands
+        "CM",  # Cameroon
+        "CI",  # Côte d'Ivoire
+        "CD",  # Democratic Republic of the Congo
+        "HT",  # Haiti
+        "KE",  # Kenya
+        "LA",  # Laos
+        "LB",  # Lebanon
+        "MC",  # Monaco
+        "MM",  # Myanmar
+        "NA",  # Namibia
+        "NP",  # Nepal
+        "SS",  # South Sudan
+        "SY",  # Syria
+        "TT",  # Trinidad and Tobago
+        "VU",  # Vanuatu
+        "VE",  # Venezuela
+        "VN",  # Vietnam
+        "YE",  # Yemen
+        # Section II — seeking technical assistance
+        "IR",  # Iran
+        # Section III — ongoing and substantial risk
+        "KP",  # Democratic People's Republic of Korea
     }
 )
 
@@ -443,6 +513,17 @@ class RiskSignal:
     source_id: str
     hit_id: str
     evidence: dict[str, Any] = field(default_factory=dict)
+    #: ``"risk"`` (default) or ``"context"``. A *context* signal is a
+    #: structural observation that is NOT an adverse finding — it is worth
+    #: showing, and it may feed a composite rule, but it must not be
+    #: presented as a risk or counted in "N risk signals".
+    #:
+    #: This lives on the signal rather than in a per-surface exclusion list
+    #: because the count is rendered independently by the results page, the
+    #: OG share card and the share-page meta description; three hand-kept
+    #: lists would drift the way the curated homepage claims have before.
+    #: Classify once here, and every surface agrees by construction.
+    kind: str = "risk"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -452,6 +533,7 @@ class RiskSignal:
             "source_id": self.source_id,
             "hit_id": self.hit_id,
             "evidence": self.evidence,
+            "kind": self.kind,
         }
 
 
@@ -1146,8 +1228,12 @@ def assess_amla(
         if sig is not None:
             out.append(sig)
 
-    # FATF jurisdiction signals — independent of the AMLA composite rule.
+    # Jurisdiction-list signals — independent of the AMLA composite rule.
+    # These are the only geographic RISK claims OpenCheck makes: both come
+    # from an authoritative, externally maintained, dated list. Anything
+    # else about where a chain reaches is context, not risk.
     out.extend(_fatf_jurisdiction_signals(source_id, hit_id, bods))
+    out.extend(_eu_high_risk_third_country_signals(source_id, hit_id, bods))
 
     # AMLA CDD RTS Article 12(1): treat a structure as a complex corporate
     # structure where there are "three or more layers between the customer
@@ -1287,11 +1373,15 @@ def _non_eu_jurisdiction_signal(
     # path; see ``_non_eu_condition_met``.
     return RiskSignal(
         code=NON_EU_JURISDICTION,
-        confidence="high",
+        confidence="low",
+        kind="context",
         summary=(
-            "Ownership chain reaches into jurisdictions outside the EU/EEA: "
+            "Ownership chain reaches jurisdictions outside the EU/EEA: "
             + ", ".join(codes)
-            + ". AMLA CDD RTS condition (b)."
+            + ". Structural context, not a risk finding — neither the AMLA "
+            "CDD RTS nor AMLR Annex III treats non-EU status as a risk "
+            "factor in itself. Contributes to AMLA Article 12(1) condition "
+            "(b) only where it appears on the layered ownership path."
         ),
         source_id=source_id,
         hit_id=hit_id,
@@ -1634,6 +1724,60 @@ def _fatf_jurisdiction_signals(
         )
 
     return out
+
+
+def _eu_high_risk_third_country_signals(
+    source_id: str, hit_id: str, bods: list[dict[str, Any]]
+) -> list[RiskSignal]:
+    """Fire EU_HIGH_RISK_THIRD_COUNTRY for the EU's own Article 29 list.
+
+    Separate from the FATF signals by design — see the comment on
+    ``EU_HIGH_RISK_THIRD_COUNTRY_CODES``. Confidence is ``high`` because,
+    unlike a FATF listing, an EU designation is a binding legal trigger
+    for enhanced due diligence rather than an international assessment.
+
+    One signal per bundle, aggregating every matching entity, so the
+    graph can badge each node from ``evidence.jurisdictions``.
+    """
+    hits: list[dict[str, str]] = []
+    for stmt in bods:
+        if _stmt_kind(stmt) != "entity":
+            continue
+        j = _entity_jurisdiction(stmt)
+        if not j:
+            continue
+        code = (j.get("code") or "").upper()
+        if not code or code not in EU_HIGH_RISK_THIRD_COUNTRY_CODES:
+            continue
+        hits.append(
+            {
+                "statement_id": _statement_id(stmt),
+                "code": code,
+                "name": j.get("name") or "",
+            }
+        )
+
+    if not hits:
+        return []
+
+    codes = sorted({h["code"] for h in hits})
+    names = sorted({h["name"] for h in hits if h["name"]})
+    label = ", ".join(names) if names else ", ".join(codes)
+    return [
+        RiskSignal(
+            code=EU_HIGH_RISK_THIRD_COUNTRY,
+            confidence="high",
+            summary=(
+                f"Ownership chain reaches into {label}, on the EU list of "
+                "high-risk third countries with strategic AML/CFT "
+                f"deficiencies ({EU_HRTC_INSTRUMENT}). EU-listed "
+                "jurisdictions attract mandatory enhanced due diligence."
+            ),
+            source_id=source_id,
+            hit_id=hit_id,
+            evidence={"jurisdictions": hits, "instrument": EU_HRTC_INSTRUMENT},
+        )
+    ]
 
 
 def _possible_obfuscation_signal(

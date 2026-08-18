@@ -1,0 +1,60 @@
+import { describe, it, expect } from "vitest";
+import {
+  signalKind,
+  isRiskFinding,
+  isContextObservation,
+  partitionByKind,
+} from "./signalKind";
+import type { RiskSignal } from "./api";
+
+function sig(code: string, kind?: "risk" | "context"): RiskSignal {
+  return {
+    code,
+    confidence: "high",
+    summary: `${code} fired`,
+    source_id: "gleif",
+    hit_id: "h1",
+    evidence: {},
+    ...(kind ? { kind } : {}),
+  };
+}
+
+describe("signalKind", () => {
+  it("treats a missing kind as risk", () => {
+    // Lookup responses cached before the field existed must not suddenly
+    // become context and vanish from the risk chip strip.
+    expect(signalKind(sig("SANCTIONED"))).toBe("risk");
+    expect(isRiskFinding(sig("SANCTIONED"))).toBe(true);
+  });
+
+  it("reads an explicit context classification", () => {
+    expect(signalKind(sig("NON_EU_JURISDICTION", "context"))).toBe("context");
+    expect(isContextObservation(sig("NON_EU_JURISDICTION", "context"))).toBe(true);
+    expect(isRiskFinding(sig("NON_EU_JURISDICTION", "context"))).toBe(false);
+  });
+
+  it("keeps the two list-based jurisdiction signals as risk findings", () => {
+    // Jurisdiction RISK comes only from authoritative maintained lists.
+    for (const code of [
+      "FATF_BLACK_LIST",
+      "FATF_GREY_LIST",
+      "EU_HIGH_RISK_THIRD_COUNTRY",
+    ]) {
+      expect(isRiskFinding(sig(code, "risk"))).toBe(true);
+    }
+  });
+
+  it("partitions while preserving order within each group", () => {
+    const [risk, context] = partitionByKind([
+      sig("SANCTIONED", "risk"),
+      sig("NON_EU_JURISDICTION", "context"),
+      sig("FATF_GREY_LIST", "risk"),
+    ]);
+    expect(risk.map((s) => s.code)).toEqual(["SANCTIONED", "FATF_GREY_LIST"]);
+    expect(context.map((s) => s.code)).toEqual(["NON_EU_JURISDICTION"]);
+  });
+
+  it("returns empty groups rather than throwing on an empty input", () => {
+    expect(partitionByKind([])).toEqual([[], []]);
+  });
+});

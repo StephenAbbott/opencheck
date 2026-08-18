@@ -47,7 +47,12 @@ ABSOLUTE RULES — these protect the integrity of the summary:
    signal is and how it was derived, in neutral plain language (e.g. "is
    registered outside the EU/EEA", not "is suspicious"). Do NOT print the internal
    signal codes (e.g. NON_EU_JURISDICTION) in the prose — use the human label or a
-   plain-English description. Always state the signal's confidence. Ownership or
+   plain-English description. Always state the signal's confidence. An item with
+   kind="context" is NOT a risk finding: report it as a structural observation and
+   never count it among the risks, or say the subject was "flagged" for it. Being
+   registered outside the EU/EEA is the main example — it is not, by itself, a risk
+   factor under either the AMLA CDD RTS or AMLR Annex III. Jurisdiction RISK comes
+   only from the FATF and EU high-risk-country lists, which have their own signals. Ownership or
    control by a state or state body (a possible state-owned enterprise) is itself a
    structural indicator, NOT an adverse finding — describe it neutrally; and note
    where an indicator is presence-only (e.g. state control sourced from Wikidata),
