@@ -116,7 +116,17 @@ class EvidencePacket(BaseModel):
 
 
 def _source_name(stmt: dict[str, Any]) -> str:
-    return ((stmt.get("source") or {}).get("description")) or "an OpenCheck source"
+    src = stmt.get("source") or {}
+    if src.get("description"):
+        return src["description"]
+    # BODS 0.4 statements may name their source via ``assertedBy`` rather than
+    # ``description`` (Open Ownership's published bulk output does). Fall back
+    # to the first asserting party's name before giving up — "an OpenCheck
+    # source" is a last resort, not a label.
+    for asserter in src.get("assertedBy") or []:
+        if isinstance(asserter, dict) and asserter.get("name"):
+            return asserter["name"]
+    return "an OpenCheck source"
 
 
 def _source_authority(stmt: dict[str, Any]) -> Confidence:
@@ -200,6 +210,16 @@ def build_evidence_packet(
 
     bods: list[dict[str, Any]] = report.get("bods") or []
     by_id = {s.get("statementId"): s for s in bods if s.get("statementId")}
+    # Relationship statements reference their parties by *statementId* in
+    # OpenCheck's own mapper output, but Open Ownership's published bulk
+    # bundles (served verbatim via ``bods_data``) reference the party's
+    # *recordId* (e.g. "XI-LEI-…", "GB-COH-…"). Index records by recordId as
+    # well — first statement wins, statementIds take precedence — so those
+    # parties resolve to names instead of "a party".
+    for s in bods:
+        rid = s.get("recordId")
+        if rid and rid not in by_id and s.get("recordType") in ("entity", "person"):
+            by_id[rid] = s
 
     lei = report.get("lei")
     subject_name = report.get("legal_name") or report.get("query") or ""

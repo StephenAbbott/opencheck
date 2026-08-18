@@ -36,6 +36,20 @@ from typing import Any
 
 from .cache import data_root
 
+#: Display names stamped onto bundle statements whose ``source`` block lacks a
+#: ``description``. ``extract_bods_subgraphs.py`` carries only ``source.type``
+#: and ``source.url`` through from Open Ownership's Parquet — the assertedBy
+#: names live in sub-tables it doesn't read — so without this every fact built
+#: from a bundle statement can only be labelled "an OpenCheck source" in the
+#: narrative evidence packet (Phase 111 curated regeneration surfaced this on
+#: the TAQA/BP/Rosneft summaries). The names must match the corresponding
+#: adapters' ``SourceInfo.name`` EXACTLY: the packet builder reverse-maps
+#: display name → adapter id to make citation chips link to source cards.
+_SOURCE_DESCRIPTIONS: dict[str, str] = {
+    "gleif": "GLEIF",
+    "uk": "UK Companies House",
+}
+
 
 def _bundle_path(source: str, key: str) -> Path:
     """Return the on-disk JSON-Lines path for a source / key pair.
@@ -60,6 +74,7 @@ def load_bundle(source: str, key: str) -> list[dict[str, Any]] | None:
     path = _bundle_path(source, key)
     if not path.is_file():
         return None
+    description = _SOURCE_DESCRIPTIONS.get(source)
     statements: list[dict[str, Any]] = []
     with path.open("r", encoding="utf-8") as fh:
         for line_no, raw in enumerate(fh, start=1):
@@ -67,7 +82,7 @@ def load_bundle(source: str, key: str) -> list[dict[str, Any]] | None:
             if not raw:
                 continue
             try:
-                statements.append(json.loads(raw))
+                statement = json.loads(raw)
             except json.JSONDecodeError as exc:
                 # Defensive: skip malformed lines rather than crash the
                 # whole lookup. The script that writes these is well-
@@ -75,6 +90,19 @@ def load_bundle(source: str, key: str) -> list[dict[str, Any]] | None:
                 raise ValueError(
                     f"{path}:{line_no}: invalid JSON in BODS bundle"
                 ) from exc
+            # The statements stay verbatim-Open-Ownership except for one
+            # display annotation: a missing ``source.description`` gets the
+            # canonical source name so downstream provenance labels (the
+            # narrative packet's citation chips) never fall back to the
+            # anonymous "an OpenCheck source". An existing description is
+            # never overwritten.
+            if description and isinstance(statement, dict):
+                src = statement.get("source")
+                if src is None:
+                    statement["source"] = {"description": description}
+                elif isinstance(src, dict) and not src.get("description"):
+                    src["description"] = description
+            statements.append(statement)
     return statements
 
 

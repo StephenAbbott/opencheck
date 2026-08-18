@@ -229,6 +229,91 @@ def test_gaps_are_citable_with_stable_ids():
     assert packet.fact_ids() <= packet.evidence_ids()
 
 
+def test_source_name_falls_back_to_asserted_by():
+    """BODS statements may carry ``source.assertedBy`` instead of a
+    ``description`` (Open Ownership's bulk output does) — the packet must use
+    the asserter's name, not the anonymous "an OpenCheck source"."""
+    report = _report()
+    for s in report["bods"]:
+        s["source"] = {
+            "type": ["officialRegister"],
+            "assertedBy": [{"name": "GLEIF"}],
+        }
+    packet = build_evidence_packet(report)
+    named = [f for f in packet.facts if f.bods_statement_ids]
+    assert named and all(f.source_name == "GLEIF" for f in named)
+    # And the display name reverse-maps to the adapter id, so chips link.
+    assert all(f.source_id == "gleif" for f in named)
+
+
+def test_oo_bundle_statements_get_no_anonymous_source_label():
+    """Statements shaped like the stored Open Ownership bundles — recordId
+    party references, ``source.description`` stamped by
+    ``bods_data.load_bundle`` — must produce named, party-resolved facts.
+    Pins the Phase 111 curated-summary regression ("an OpenCheck source"
+    chips and "a party holds … in a party" facts on TAQA/BP/Rosneft)."""
+    report = _report()
+    report["bods"] = [
+        {
+            "statementId": "5d22e636-0000-0000-0000-000000000001",
+            "recordId": "XI-LEI-2138000000000000A001",
+            "recordType": "entity",
+            "recordDetails": {
+                "name": "Northwind Logistics Ltd",
+                "identifiers": [
+                    {"scheme": "XI-LEI", "id": "2138000000000000A001"}
+                ],
+            },
+            "source": {
+                "description": "GLEIF",
+                "type": ["officialRegister", "verified"],
+                "url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
+            },
+        },
+        {
+            "statementId": "5d22e636-0000-0000-0000-000000000002",
+            "recordId": "XI-LEI-2138000000000000B002",
+            "recordType": "entity",
+            "recordDetails": {"name": "Northwind Holdings PLC"},
+            "source": {
+                "description": "GLEIF",
+                "type": ["officialRegister", "verified"],
+                "url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
+            },
+        },
+        {
+            "statementId": "6b287936-0000-0000-0000-000000000003",
+            "recordType": "relationship",
+            "recordDetails": {
+                # Open Ownership bundles reference parties by *recordId*.
+                "subject": "XI-LEI-2138000000000000A001",
+                "interestedParty": "XI-LEI-2138000000000000B002",
+                "interests": [
+                    {
+                        "type": "otherInfluenceOrControl",
+                        "details": "Relationship Type: IS_DIRECTLY_CONSOLIDATED_BY",
+                        "startDate": "2014-01-06",
+                    }
+                ],
+            },
+            "source": {
+                "description": "GLEIF",
+                "type": ["officialRegister", "verified"],
+                "url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
+            },
+        },
+    ]
+    packet = build_evidence_packet(report)
+    assert all(f.source_name != "an OpenCheck source" for f in packet.facts)
+    # recordId-referenced parties resolve to their names, not "a party".
+    rel_fact = next(
+        f for f in packet.facts if "IS_DIRECTLY_CONSOLIDATED_BY" in f.statement
+    )
+    assert "Northwind Holdings PLC" in rel_fact.statement
+    assert "Northwind Logistics Ltd" in rel_fact.statement
+    assert "a party" not in rel_fact.statement
+
+
 # --- validator ---------------------------------------------------------------
 
 
