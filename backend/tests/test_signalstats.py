@@ -79,6 +79,40 @@ def test_merge_signals_counts_only_when_asked() -> None:
     assert signalstats.stats()["signals_total"] == 1
 
 
+def test_non_eu_jurisdiction_dedups_per_source_like_fatf() -> None:
+    """Two sources finding DIFFERENT non-EU nodes must both survive.
+
+    NON_EU_JURISDICTION used to sit in _STRUCTURAL_SIGNAL_CODES, which
+    collapses on ``(code,)`` and overwrites — so the last source
+    processed won outright and every jurisdiction node found by earlier
+    sources was silently dropped from ``evidence.jurisdictions[]``,
+    un-badging those nodes in the graph. It is a jurisdiction rule and
+    must behave like the FATF jurisdiction rules.
+    """
+    gleif = _signal(
+        "NON_EU_JURISDICTION",
+        source_id="gleif",
+        evidence={"jurisdictions": [{"statement_id": "E-GB", "code": "GB"}]},
+    )
+    ch = _signal(
+        "NON_EU_JURISDICTION",
+        source_id="companies_house",
+        evidence={"jurisdictions": [{"statement_id": "E-US", "code": "US"}]},
+    )
+    merged = _merge_signals([gleif], [ch])
+
+    survived = {
+        j["statement_id"]
+        for s in merged
+        if s["code"] == "NON_EU_JURISDICTION"
+        for j in s["evidence"]["jurisdictions"]
+    }
+    assert survived == {"E-GB", "E-US"}
+
+    # Identical (code, source, hit) must still collapse to one.
+    assert len(_merge_signals([gleif], [dict(gleif)])) == 1
+
+
 def test_counts_are_post_dedup() -> None:
     """The number reported must be what a user sees, not what was
     generated internally — related-party paths emit several signals per hit

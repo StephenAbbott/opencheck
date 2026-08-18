@@ -69,6 +69,7 @@ SIGNAL_STYLE: dict[str, tuple[str, str, str]] = {
     "RELATED_SANCTIONS_LINKED": ("Related sanctions-linked", "#fffbeb", "#92400e"),
     "RELATED_DEBARMENT": ("Related debarred", "#fff7ed", "#9a3412"),
     "FATF_BLACK_LIST": ("FATF black list", "#fee2e2", "#991b1b"),
+    "EU_HIGH_RISK_THIRD_COUNTRY": ("EU high-risk country", "#fee2e2", "#b91c1c"),
     "FATF_GREY_LIST": ("FATF grey list", "#fff7ed", "#9a3412"),
 }
 _DEFAULT_STYLE = ("#f1f5f9", "#334155")
@@ -210,6 +211,10 @@ def render_share_card(
             draw.text((px, ty), line, font=_font("dmsans-500", 30 * s), fill="#ffffff")
             ty += 44 * s
     else:
+        # Context signals (e.g. NON_EU_JURISDICTION) are structural
+        # observations, not risk findings — they must neither inflate the
+        # headline count nor occupy one of the three named chip slots.
+        signals = [s for s in signals if s.get("kind", "risk") == "risk"]
         total = len(signals)
         f_count = _font("bitter-700", 120 * s)
         count_text = str(total)

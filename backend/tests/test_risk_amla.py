@@ -7,8 +7,13 @@ These mirror the objective conditions of AMLA's draft CDD RTS for
   (b) jurisdictions outside the EU/EEA
   (c) nominee shareholders/directors anywhere
 
-Plus the threshold rule: ≥3 layers + ≥1 of (a)/(b)/(c) → complex
-corporate structure.
+Plus the threshold rule: ≥3 layers + **≥2** of (a)/(b)/(c) → complex
+corporate structure. Article 12(1) says "more than one of the following
+conditions", i.e. at least two; condition (b) is scoped to the layered
+path.
+
+Plus the two list-based jurisdiction RISK signals (FATF, EU Article 29)
+and the demotion of NON_EU_JURISDICTION to kind="context".
 
 Plus the subjective ``POSSIBLE_OBFUSCATION`` advisory signal.
 
@@ -25,6 +30,9 @@ from opencheck.risk import (
     COMPLEX_OWNERSHIP_LAYERS,
     DEFAULT_EU_EEA_COUNTRY_CODES,
     EU_EEA_COUNTRY_CODES,
+    EU_HIGH_RISK_THIRD_COUNTRY,
+    EU_HIGH_RISK_THIRD_COUNTRY_CODES,
+    FATF_BLACK_LIST,
     FATF_GREY_LIST,
     FATF_GREY_LIST_CODES,
     NOMINEE,
@@ -207,6 +215,51 @@ def test_fatf_grey_signal_does_not_fire_for_removed_jurisdiction() -> None:
     bods = [_entity("E1", jurisdiction_code="DZ", jurisdiction_name="Algeria")]
     signals = assess_amla("openaleph", {"entity_id": "X"}, bods)
     assert FATF_GREY_LIST not in {s.code for s in signals}
+    # …but Algeria IS still EU-listed. The Commission adopts its updates
+    # months after the FATF plenary that prompts them, so the two lists
+    # genuinely diverge — which is why these are separate signals and not
+    # one widened code set.
+    assert EU_HIGH_RISK_THIRD_COUNTRY in {s.code for s in signals}
+
+
+# ---------------------------------------------------------------------
+# EU Article 29 high-risk third countries
+# ---------------------------------------------------------------------
+
+
+def test_eu_hrtc_membership_matches_delegated_regulation_2026_83() -> None:
+    """Delegated Reg (EU) 2026/83, applying from 29 January 2026."""
+    # Added by 2026/83.
+    assert "BO" in EU_HIGH_RISK_THIRD_COUNTRY_CODES  # Bolivia
+    assert "VG" in EU_HIGH_RISK_THIRD_COUNTRY_CODES  # British Virgin Islands
+    # Removed by 2026/83.
+    for code in ("BF", "ML", "MZ", "NG", "ZA", "TZ"):
+        assert code not in EU_HIGH_RISK_THIRD_COUNTRY_CODES
+    # 23 in Section I, plus Iran (II) and DPRK (III).
+    assert len(EU_HIGH_RISK_THIRD_COUNTRY_CODES) == 25
+
+
+def test_eu_hrtc_signal_fires_and_names_the_instrument() -> None:
+    bods = [_entity("E1", jurisdiction_code="VG",
+                    jurisdiction_name="British Virgin Islands")]
+    signals = assess_amla("gleif", {"entity_id": "X"}, bods)
+    sig = next(s for s in signals if s.code == EU_HIGH_RISK_THIRD_COUNTRY)
+    assert sig.confidence == "high"
+    assert sig.kind == "risk"
+    assert "2016/1675" in sig.summary
+    assert sig.evidence["jurisdictions"][0]["code"] == "VG"
+
+
+def test_eu_hrtc_does_not_fire_for_unlisted_jurisdiction() -> None:
+    """The UK is not on the EU list — and must not be."""
+    bods = [_entity("E1", jurisdiction_code="GB", jurisdiction_name="United Kingdom")]
+    signals = assess_amla("companies_house", {"entity_id": "X"}, bods)
+    codes = {s.code for s in signals}
+    assert EU_HIGH_RISK_THIRD_COUNTRY not in codes
+    assert FATF_GREY_LIST not in codes
+    assert FATF_BLACK_LIST not in codes
+    # The only thing a UK entity raises is structural context.
+    assert codes == {NON_EU_JURISDICTION}
 
 
 # ---------------------------------------------------------------------
@@ -214,13 +267,34 @@ def test_fatf_grey_signal_does_not_fire_for_removed_jurisdiction() -> None:
 # ---------------------------------------------------------------------
 
 
-def test_non_eu_jurisdiction_fires_for_panama() -> None:
+def test_non_eu_jurisdiction_is_context_not_risk() -> None:
+    """Non-EU status is a structural observation, not an adverse finding.
+
+    Neither the AMLA CDD RTS nor AMLR Annex III(3) treats being outside
+    the EU as a risk factor in itself, so the signal reports at low
+    confidence and is classified kind="context" — which is what keeps it
+    out of the risk chip strip and out of the "N risk signals" count on
+    the share card and share-page meta description.
+    """
     bods = [_entity("E1", jurisdiction_code="PA", jurisdiction_name="Panama")]
     signals = assess_amla("openaleph", {"entity_id": "X"}, bods)
     sig = next(s for s in signals if s.code == NON_EU_JURISDICTION)
-    assert sig.confidence == "high"
+    assert sig.kind == "context"
+    assert sig.confidence == "low"
+    assert "not a risk finding" in sig.summary
     assert "PA" in sig.summary
     assert sig.evidence["jurisdictions"][0]["code"] == "PA"
+    # And it must survive serialisation — every surface reads this field.
+    assert sig.to_dict()["kind"] == "context"
+
+
+def test_fatf_and_eu_jurisdiction_signals_stay_risk() -> None:
+    """The two list-based jurisdiction signals remain risk findings."""
+    bods = [_entity("E1", jurisdiction_code="IR", jurisdiction_name="Iran")]
+    signals = assess_amla("openaleph", {"entity_id": "X"}, bods)
+    by_code = {s.code: s for s in signals}
+    assert by_code[FATF_BLACK_LIST].kind == "risk"
+    assert by_code[EU_HIGH_RISK_THIRD_COUNTRY].kind == "risk"
 
 
 def test_eu_member_states_do_not_fire_non_eu_signal() -> None:
@@ -370,9 +444,15 @@ def test_layers_handles_cycles_safely() -> None:
     assert layers.evidence["layers"] == 3
 
 
-def test_complex_corporate_structure_fires_when_layered_plus_non_eu() -> None:
+def test_complex_corporate_structure_needs_two_conditions_not_one() -> None:
+    """Article 12(1) requires "MORE THAN ONE" condition — i.e. ≥2.
+
+    Three layers plus a single non-EU layer is one condition, so the
+    composite must NOT fire. This is the central proportionality fix: a
+    layered group that merely reaches outside the EU is not, on the RTS's
+    own terms, a complex corporate structure.
+    """
     bods = _three_layer_chain()
-    # Tag the topmost holding with a non-EU jurisdiction.
     bods[2]["recordDetails"]["jurisdiction"] = {
         "code": "VG",
         "name": "British Virgin Islands",
@@ -380,15 +460,32 @@ def test_complex_corporate_structure_fires_when_layered_plus_non_eu() -> None:
     signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
     codes = {s.code for s in signals}
     assert COMPLEX_OWNERSHIP_LAYERS in codes
-    assert NON_EU_JURISDICTION in codes
+    assert NON_EU_JURISDICTION in codes  # standalone signal still reports it
+    assert COMPLEX_CORPORATE_STRUCTURE not in codes
+
+
+def test_complex_corporate_structure_fires_on_two_conditions() -> None:
+    """Non-EU layer (b) PLUS a trust layer (a) = two conditions → fires."""
+    bods = _three_layer_chain()
+    bods[2]["recordDetails"]["jurisdiction"] = {
+        "code": "VG",
+        "name": "British Virgin Islands",
+    }
+    bods[1]["recordDetails"]["entityType"] = {"type": "arrangement"}
+    bods[1]["recordDetails"]["name"] = "The Doe Family Trust"
+    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
+    codes = {s.code for s in signals}
     assert COMPLEX_CORPORATE_STRUCTURE in codes
     composite = next(s for s in signals if s.code == COMPLEX_CORPORATE_STRUCTURE)
-    assert "non-EU jurisdiction" in composite.evidence["triggers"]
+    assert set(composite.evidence["triggers"]) == {
+        "trust/arrangement",
+        "non-EU jurisdiction",
+    }
     assert composite.evidence["layers"] == 3
 
 
 def test_complex_corporate_structure_does_not_fire_without_aggravator() -> None:
-    """Three layers, all UK, no trust, no nominee — not "complex" per AMLA."""
+    """Three layers, all EU, no trust, no nominee — not "complex" per AMLA."""
     signals = assess_amla(
         "companies_house", {"entity_id": "E1"}, _three_layer_chain()
     )
@@ -397,15 +494,37 @@ def test_complex_corporate_structure_does_not_fire_without_aggravator() -> None:
     assert COMPLEX_CORPORATE_STRUCTURE not in codes
 
 
-def test_complex_corporate_structure_fires_with_trust_layer() -> None:
+def test_complex_corporate_structure_does_not_fire_on_trust_alone() -> None:
+    """A trust layer on its own is also only one condition."""
     bods = _three_layer_chain()
     bods[1]["recordDetails"]["entityType"] = {"type": "arrangement"}
     bods[1]["recordDetails"]["name"] = "The Doe Family Trust"
     signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
+    assert COMPLEX_CORPORATE_STRUCTURE not in {s.code for s in signals}
+
+
+def test_non_eu_condition_is_scoped_to_the_layered_path() -> None:
+    """Article 12(1)(b) says "present at any of THESE LAYERS".
+
+    An off-path non-EU entity that is not part of the layered ownership
+    chain still raises the standalone NON_EU_JURISDICTION signal, but it
+    must not count towards the Article 12 composite — even alongside a
+    genuine second condition.
+    """
+    bods = _three_layer_chain()
+    # A trust ON the path — condition (a) is genuinely met.
+    bods[1]["recordDetails"]["entityType"] = {"type": "arrangement"}
+    bods[1]["recordDetails"]["name"] = "The Doe Family Trust"
+    # A non-EU entity with NO relationship edges — not on any layer.
+    bods.append(
+        _entity("E9", name="Unrelated Panama SA", jurisdiction_code="PA")
+    )
+    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
     codes = {s.code for s in signals}
-    assert COMPLEX_CORPORATE_STRUCTURE in codes
-    composite = next(s for s in signals if s.code == COMPLEX_CORPORATE_STRUCTURE)
-    assert "trust/arrangement" in composite.evidence["triggers"]
+    # Bundle-wide standalone signal still reports the Panama entity…
+    assert NON_EU_JURISDICTION in codes
+    # …but it is not on the layered path, so only condition (a) is met.
+    assert COMPLEX_CORPORATE_STRUCTURE not in codes
 
 
 # ---------------------------------------------------------------------
@@ -414,8 +533,14 @@ def test_complex_corporate_structure_fires_with_trust_layer() -> None:
 
 
 def test_possible_obfuscation_fires_with_opacity_and_layered_concern() -> None:
+    """The advisory still catches what the hard composite now declines to.
+
+    Layers + a single non-EU layer is only ONE Article 12 condition, so
+    COMPLEX_CORPORATE_STRUCTURE must not fire — but combined with an
+    unknownPerson this is still worth surfacing for human review, which
+    is exactly what the low-confidence advisory is for.
+    """
     bods = _three_layer_chain()
-    # Add a non-EU layer so the composite signal fires…
     bods[2]["recordDetails"]["jurisdiction"] = {
         "code": "PA",
         "name": "Panama",
@@ -434,7 +559,7 @@ def test_possible_obfuscation_fires_with_opacity_and_layered_concern() -> None:
     signals = assess_bundle("companies_house", {"entity_id": "E1"}, bods)
     codes = {s.code for s in signals}
     assert OPAQUE_OWNERSHIP in codes
-    assert COMPLEX_CORPORATE_STRUCTURE in codes
+    assert COMPLEX_CORPORATE_STRUCTURE not in codes
     assert POSSIBLE_OBFUSCATION in codes
     advisory = next(s for s in signals if s.code == POSSIBLE_OBFUSCATION)
     assert advisory.confidence == "low"
@@ -464,9 +589,16 @@ def test_assess_bundle_returns_amla_signals_inline() -> None:
     """End-to-end: assess_bundle should expose the AMLA signals too."""
     bods = _three_layer_chain()
     bods[2]["recordDetails"]["jurisdiction"] = {"code": "VG"}
+    # Second condition so the composite genuinely fires end-to-end.
+    bods[1]["recordDetails"]["entityType"] = {"type": "arrangement"}
+    bods[1]["recordDetails"]["name"] = "The Doe Family Trust"
     signals = assess_bundle("companies_house", {"entity_id": "E1"}, bods)
     codes = {s.code for s in signals}
-    assert {COMPLEX_OWNERSHIP_LAYERS, NON_EU_JURISDICTION, COMPLEX_CORPORATE_STRUCTURE}.issubset(codes)
+    assert {
+        COMPLEX_OWNERSHIP_LAYERS,
+        NON_EU_JURISDICTION,
+        COMPLEX_CORPORATE_STRUCTURE,
+    }.issubset(codes)
 
 
 # ---------------------------------------------------------------------

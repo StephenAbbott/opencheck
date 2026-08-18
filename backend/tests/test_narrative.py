@@ -117,8 +117,57 @@ def test_risk_item_uses_registry_source_name():
     assert len(packet.risks) == 1
     risk = packet.risks[0]
     assert risk.code == "NON_EU_JURISDICTION"
-    assert risk.label == "Non-EU jurisdiction"
+    assert risk.label == "Outside EU/EEA"
     assert risk.source_name == "OpenSanctions"
+    # This fixture predates the `kind` field, as cached lookup payloads do.
+    # A missing kind must read as "risk" so old responses behave as before.
+    assert risk.kind == "risk"
+
+
+def test_context_signals_do_not_suppress_the_no_risk_finding():
+    """A chain whose only signal is context has NO risk findings.
+
+    Before `kind` existed, a company flagged solely for reaching outside
+    the EU/EEA lost its "the engine ran and raised nothing" statement —
+    the narrative had a risk item to talk about, so the absence-of-risk
+    finding never fired. That is exactly backwards for a clean company.
+    """
+    report = _report()
+    report["risk_signals"] = [
+        {
+            "code": "NON_EU_JURISDICTION",
+            "confidence": "low",
+            "kind": "context",
+            "summary": "Reaches jurisdictions outside the EU/EEA: GB.",
+            "source_id": "opensanctions",
+        }
+    ]
+    packet = build_evidence_packet(report)
+    # The observation is still available for the model to cite…
+    assert [r.kind for r in packet.risks] == ["context"]
+    # …and the absence-of-risk fact is emitted alongside it.
+    assert any(
+        "identified" in f.statement and "no structural or jurisdictional" in f.statement
+        for f in packet.facts
+    )
+
+
+def test_risk_signals_still_suppress_the_no_risk_finding():
+    """Control for the test above — a real risk finding must suppress it."""
+    report = _report()
+    report["risk_signals"] = [
+        {
+            "code": "EU_HIGH_RISK_THIRD_COUNTRY",
+            "confidence": "high",
+            "kind": "risk",
+            "summary": "Ownership chain reaches into British Virgin Islands.",
+            "source_id": "gleif",
+        }
+    ]
+    packet = build_evidence_packet(report)
+    assert not any(
+        "no structural or jurisdictional" in f.statement for f in packet.facts
+    )
 
 
 def test_facts_and_risks_carry_adapter_source_id():

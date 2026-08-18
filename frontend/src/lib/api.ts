@@ -117,6 +117,11 @@ export interface RiskSignal {
   source_id: string;
   hit_id: string;
   evidence: Record<string, unknown>;
+  /** `"risk"` (default) or `"context"`. A *context* signal is a structural
+   * observation, not an adverse finding — show it, but never present it as
+   * a risk or count it in "N risk signals". Optional so cached responses
+   * predating the field still parse; treat a missing value as `"risk"`. */
+  kind?: "risk" | "context";
 }
 
 /** One derived risk check that did not fully run for this lookup (issue

@@ -57,9 +57,12 @@ export const RISK_PRESENTATION: Record<
     label: "Trust / arrangement",
     classes: "bg-indigo-50 text-indigo-700 border-indigo-200",
   },
+  // Context, not risk (kind="context"). Deliberately slate rather than
+  // orange: it must not read as a warning, and it must not share a palette
+  // with STATE_CONTROLLED, which is a different kind of claim entirely.
   NON_EU_JURISDICTION: {
-    label: "Non-EU jurisdiction",
-    classes: "bg-orange-50 text-orange-700 border-orange-200",
+    label: "Outside EU/EEA",
+    classes: "bg-slate-50 text-slate-700 border-slate-200",
   },
   STATE_CONTROLLED: {
     label: "State-controlled",
@@ -108,6 +111,10 @@ export const RISK_PRESENTATION: Record<
   FATF_BLACK_LIST: {
     label: "FATF black list",
     classes: "bg-red-100 text-red-800 border-red-400 font-semibold",
+  },
+  EU_HIGH_RISK_THIRD_COUNTRY: {
+    label: "EU high-risk country",
+    classes: "bg-red-50 text-red-800 border-red-300 font-semibold",
   },
   FATF_GREY_LIST: {
     label: "FATF grey list",

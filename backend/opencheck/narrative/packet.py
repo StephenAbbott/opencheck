@@ -43,6 +43,11 @@ class RiskItem(BaseModel):
     source_name: str
     source_id: str | None = None  # OpenCheck adapter id, for UI source-card linking
     fact_ids: list[str] = Field(default_factory=list)  # supporting facts, if any
+    #: "risk" or "context". A context item is a structural observation, not
+    #: an adverse finding — the model may cite it, but it must not be
+    #: narrated as a risk, and it does not suppress the "no risks
+    #: identified" finding below.
+    kind: str = "risk"
 
 
 class SourceRef(BaseModel):
@@ -170,8 +175,9 @@ _RISK_LABELS = {
     "PEP": "Politically exposed person",
     "RELATED_PEP": "Related party politically exposed",
     "FATF_BLACK_LIST": "FATF black-list jurisdiction",
+    "EU_HIGH_RISK_THIRD_COUNTRY": "EU high-risk third country",
     "FATF_GREY_LIST": "FATF grey-list jurisdiction",
-    "NON_EU_JURISDICTION": "Non-EU jurisdiction",
+    "NON_EU_JURISDICTION": "Outside EU/EEA",
     "OFFSHORE_LEAKS": "Offshore Leaks match",
     "TRUST_OR_ARRANGEMENT": "Trust / arrangement",
     "NOMINEE": "Nominee arrangement",
@@ -281,6 +287,7 @@ def build_evidence_packet(
                 rationale=sig.get("summary") or "Flagged by the OpenCheck risk engine.",
                 source_name=source_name,
                 source_id=sig.get("source_id") or None,
+                kind=sig.get("kind", "risk"),
             )
         )
 
@@ -293,7 +300,12 @@ def build_evidence_packet(
     # fabricating a citation. When screening was degraded the finding must
     # carry that caveat inline: a clean screen the model can cite unqualified
     # would let the narrative assert absence that was never established.
-    if not risks:
+    # Count risk findings only. A chain whose sole signal is structural
+    # context (e.g. it reaches the UK) has NO risk findings, and the
+    # narrative must still be able to say so — otherwise a clean company
+    # silently loses its "nothing found" statement because of an
+    # observation that was never an adverse finding.
+    if not [r for r in risks if r.kind == "risk"]:
         if degraded:
             statement = (
                 "The OpenCheck risk engine identified no structural or "

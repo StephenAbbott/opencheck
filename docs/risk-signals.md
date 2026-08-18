@@ -19,19 +19,52 @@ Risk signals fall into three groups:
 - `OFFSHORE_LEAKS` — a name in the BODS bundle matches a record in the ICIJ Offshore Leaks database (Panama Papers, Paradise Papers, Pandora Papers, Bahamas Leaks, Offshore Leaks) via the ICIJ reconciliation API; or an OpenAleph hit in an ICIJ-family collection (OpenAleph is currently disabled in `REGISTRY` but this signal also fires via the ICIJ name cross-check, which requires no API key).
 - `OPAQUE_OWNERSHIP` — BODS bundle contains a `personStatement` with `personType=unknownPerson` or an `entityStatement` with `entityType=anonymousEntity`.
 
+## Geographic risk — the standing rule
+
+**OpenCheck emits a geographic *risk* signal only where an authoritative, externally maintained, dated list says so.** Today that means the FATF lists and the EU's Article 29 list, below. Everything else about where an ownership chain reaches is reported as **context** (`kind: "context"`), not risk.
+
+This is not conservatism for its own sake — it follows the framework. AMLR **Annex III(3)** enumerates higher-risk geography as *qualified* categories of third country (FATF-listed, no effective AML/CFT system, significant corruption, sanctioned, terrorist financing, financial secrecy), and **Annex II** places third countries with effective AML/CFT systems in the **lower**-risk column. "Being a third country" is on neither list.
+
+Two things were considered and deliberately **not** built:
+
+- **A jurisdiction-level signal for Annex III(3)(f)(iv)** — "not requiring beneficial ownership information to be recorded or held in a central database or register". Three problems: the ground truth moves faster than any list we could ship (FinCEN removed US domestic BO reporting in August 2026); the criterion turns on whether information is *recorded*, not published, so a register open to law enforcement but closed to the public **satisfies** it while being invisible to a public-data tool; and the only observation actually available to us — "we found no BO data" — conflates *no register exists*, *the register is closed*, and *OpenCheck has no adapter for it yet*. The third case is our coverage gap, and shipping it as jurisdiction risk would turn that gap into an accusation against a country. Where OpenCheck genuinely observes an absence, that is entity-scoped and `OPAQUE_OWNERSHIP` already models it.
+- **An Annex II lower-risk allowlist** — deciding which third countries have "effective AML/CFT systems" means adjudicating FATF mutual-evaluation outcomes that are 5–10 years old and rated across 40 Recommendations and 11 Immediate Outcomes. That is an editorial position to defend and maintain, in order to suppress a chip that is no longer emitted.
+
+### Signal kinds
+
+Every signal carries `kind`: `"risk"` (an adverse finding) or `"context"` (a structural observation). The classification lives on the signal, not in per-surface exclusion lists, because the risk **count** is rendered independently by the results page, the OG share card and the share-page meta description. A missing `kind` is read as `"risk"`, so payloads cached before the field existed behave as before.
+
+## Jurisdiction list signals
+
+- `FATF_BLACK_LIST` — entity registered in a FATF High-Risk Jurisdiction subject to a Call for Action. *high* confidence. Update at each plenary (typically February, June, October).
+- `FATF_GREY_LIST` — entity registered in a FATF Jurisdiction under Increased Monitoring. *medium* confidence.
+- `EU_HIGH_RISK_THIRD_COUNTRY` — entity registered in a jurisdiction on the Annex to **Commission Delegated Regulation (EU) 2016/1675**, as amended. *high* confidence, because unlike a FATF listing an EU designation is a binding trigger for mandatory enhanced due diligence rather than an international assessment.
+
+  Kept as a **separate code** from the FATF signals, not a widening of them. The two instruments diverge in practice, because the Commission adopts its updates months after the FATF plenary that prompted them — as of the current lists, Algeria and Namibia are EU-listed but were removed from the FATF grey list in June 2026, Myanmar is FATF black but sits in the EU's Section I, and Bosnia and Herzegovina, Bulgaria, Iraq, Kuwait and Papua New Guinea are FATF grey but not EU-listed. Folding them together would leave the summary unable to say which instrument applies, and a delisting from one would silently move a signal attributed to the other.
+
 ## AMLA CDD RTS signals (BODS v0.4 derived)
 
 These mirror the objective conditions in the EU AMLA draft customer due diligence regulatory technical standards for "complex corporate structures".
 
 - `TRUST_OR_ARRANGEMENT` — entity with `entityType=arrangement` or a legal-form keyword (`trust`, `Stiftung`, `Anstalt`, `fideicomiso`, `Treuhand`, `foundation`). AMLA condition (a).
-- `NON_EU_JURISDICTION` — any entity statement's `incorporatedInJurisdiction.code` outside the EU+EEA. AMLA condition (b). Configurable via `OPENCHECK_AMLA_EQUIVALENT_JURISDICTIONS` (additive, e.g. `GB,CH`) or `OPENCHECK_AMLA_EU_EEA_OVERRIDE` (full replace).
+- `NON_EU_JURISDICTION` — any entity statement's `recordDetails.jurisdiction.code` (BODS v0.4; falls back to a top-level `incorporatedInJurisdiction` dict for v0.3-shaped pass-through fixtures) outside the EU+EEA. Configurable via `OPENCHECK_AMLA_EQUIVALENT_JURISDICTIONS` (additive, e.g. `GB,CH`) or `OPENCHECK_AMLA_EU_EEA_OVERRIDE` (full replace).
+
+  **This is a structural observation, not an adverse finding.** Neither the AMLA draft RTS nor AMLR Annex III treats non-EU status as a risk factor in its own right. Annex III(3) lists only *qualified* categories of third country — FATF-listed, no effective AML/CFT system, significant corruption, sanctioned, terrorist financing, financial secrecy — and AMLR Annex II puts third countries with effective AML/CFT systems in the **lower**-risk column. This signal reports where the ownership chain reaches and feeds AMLA condition (b) in the composite below; it does not assert that a jurisdiction is higher risk. For that, see `FATF_GREY_LIST` / `FATF_BLACK_LIST`.
+
+  Dedups on `(code, source_id, hit_id)` like the FATF jurisdiction signals, so every non-EU node found by every source keeps its graph badge.
 - `NOMINEE` — a nominee shareholder or director arrangement. AMLA condition (c). Two grades of evidence, reported distinctly:
   - **structured** (*high* confidence) — the register filed a nominee code. Companies House / Register of Overseas Entities `natures_of_control` codes matching `registered-owner-as-nominee-*` (six of them; see `bods/psc_natures.NOMINEE_NATURE_CODES`). The code travels in the signal's evidence so a reviewer can check the filing rather than our reading of it. Ceased PSCs are excluded — that arrangement has ended.
   - **textual** (*medium* confidence) — the word "nominee" (or `prête-nom` / `fiduciaire` / camelCase variants) appears in an interest type, an interest's details, or a person record. Real evidence, but weaker than a filed code: "Nominee Services Ltd" is a company name, not a declaration. The summary says outright that it matched on descriptive text.
 
   `evidence.basis` is `"structured"` or `"textual"`. A filed code reports as structured even though the mapper also renders it into `interest.details` — the same fact must not be reported by its weaker trace.
 - `COMPLEX_OWNERSHIP_LAYERS` — DFS over the BODS relationship graph finds an entity-only chain ≥3 nodes (cycle-safe). Made meaningfully detectable by the Phase 10 Open Ownership bundles, which carry full multi-layer chains.
-- `COMPLEX_CORPORATE_STRUCTURE` — composite (high confidence), fires when `COMPLEX_OWNERSHIP_LAYERS` AND ≥1 of {trust, non-EU, nominee} both fire — the AMLA threshold rule end-to-end.
+- `COMPLEX_CORPORATE_STRUCTURE` — composite (high confidence), fires when `COMPLEX_OWNERSHIP_LAYERS` fires **and ≥2** of AMLA conditions (a)–(c) {trust, non-EU on the layered path, nominee} are met.
+
+  Article 12(1) of the draft RTS requires three or more layers "and, in addition, **more than one** of the following conditions is met" — i.e. at least two. Condition (b) is evaluated over the layered ownership path only, per "present at any of **these layers**": a non-EU entity on a side branch raises `NON_EU_JURISDICTION` but does not count here.
+
+  Condition (d) is deliberately excluded — its "no legitimate economic rationale" limb cannot be judged from data, so it is surfaced advisorily as `POSSIBLE_OBFUSCATION` instead of being allowed to push a structure over this threshold. That makes the rule able to under-fire relative to the RTS text, which is the right direction for a claim of this kind.
+
+  Tracks a **draft** RTS (consultation closed 8 May 2026; final text not yet adopted, and AMLA has not yet published all responses). Revisit on adoption.
 - `POSSIBLE_OBFUSCATION` — advisory (low confidence) mirror of AMLA's subjective condition; explicitly notes the legitimate-economic-rationale caveat.
 
 ## Ownership structure (BODS v0.4 derived)

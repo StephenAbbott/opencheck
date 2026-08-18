@@ -26,6 +26,7 @@ import {
 } from "./lib/gleifNationalId";
 import { COUNTRY_OPTIONS, RA_CODES, validateNationalId } from "./lib/raCodes";
 import { countLeiConfirmingSources } from "./lib/identifierBadge";
+import { partitionByKind } from "./lib/signalKind";
 import {
   OpenCheckIcon,
   GleifIcon,
@@ -873,6 +874,16 @@ export default function App() {
     return Array.from(seen.values());
   }, [riskSignals]);
 
+  // Risk findings vs structural context. The backend classifies each signal
+  // with `kind`, so this split is not a hand-kept list of exceptions here —
+  // the results page, the OG share card and the share-page meta description
+  // all read the same field and cannot drift apart. A missing `kind` means
+  // "risk", so cached responses predating the field behave as before.
+  const [riskCodes, contextCodes] = useMemo(
+    () => partitionByKind(aggregatedCodes),
+    [aggregatedCodes],
+  );
+
   // Sources that are announced (sources_applicable) but not yet completed —
   // used to render skeleton placeholder cards while they are in flight.
   const pendingCddSources = useMemo(
@@ -1562,7 +1573,7 @@ export default function App() {
             lei={streamingLei}
             legalName={legalName}
             jurisdiction={subjectJurisdiction}
-            signals={aggregatedCodes}
+            signals={riskCodes}
             screening={streaming}
             replayedAt={replayedAt}
             onRefresh={() => lookupLei(streamingLei, { refresh: true })}
@@ -1658,17 +1669,39 @@ export default function App() {
           />
         )}
 
-        {aggregatedCodes.length > 0 && mode !== "background" && (
+        {riskCodes.length > 0 && mode !== "background" && (
           <section className="mb-8" id="risk-signals">
             <SectionLabel>Risk signals</SectionLabel>
             <div className="flex flex-wrap gap-2">
-              {aggregatedCodes.map((sig) => (
+              {riskCodes.map((sig) => (
                 <RiskChip key={sig.code} signal={sig} />
               ))}
             </div>
             <p className="text-[12px] text-oo-muted mt-3">
               Select a chip for the rule that fired. Signals derived from
               open data; AMLA-aligned chips read BODS statements.
+            </p>
+          </section>
+        )}
+
+        {/* Structural context — observations that are NOT risk findings.
+            Kept visually and semantically distinct from the strip above:
+            reaching a jurisdiction outside the EU is a fact about the
+            shape of the ownership chain, and neither the AMLA CDD RTS nor
+            AMLR Annex III treats it as a risk factor in itself. */}
+        {contextCodes.length > 0 && mode !== "background" && (
+          <section className="mb-8" id="structural-context">
+            <SectionLabel>Structural context</SectionLabel>
+            <div className="flex flex-wrap gap-2">
+              {contextCodes.map((sig) => (
+                <RiskChip key={sig.code} signal={sig} />
+              ))}
+            </div>
+            <p className="text-[12px] text-oo-muted mt-3">
+              Not risk findings — structural facts about the ownership
+              chain, shown because they are useful and because some feed
+              the AMLA complex-structure test. Jurisdiction risk is
+              reported separately, from the FATF and EU lists.
             </p>
           </section>
         )}
