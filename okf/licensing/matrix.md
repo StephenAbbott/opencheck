@@ -4,7 +4,7 @@ title: "Licensing compatibility matrix"
 description: "Per-source licence terms (commercial use, attribution, share-alike) for combining OpenCheck data in exports. Most-restrictive licence wins."
 resource: "/license-matrix"
 tags: ["licensing", "export", "compliance"]
-timestamp: "2026-08-12"
+timestamp: "2026-08-19"
 ---
 
 # Source licence matrix
@@ -27,6 +27,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | CRO — Companies Registration Office Ireland (`cro`) | `CC-BY-4.0` | yes | yes | no |
 | CVR — Det Centrale Virksomhedsregister (`cvr_denmark`) | `Danish Open Government Data (CVR brugervilkår)` | yes | yes | no |
 | EITI — Extractive Industries Transparency Initiative (`eiti`) | `EITI open data (free reuse with attribution)` | yes | yes | no |
+| EITI countries — national beneficial ownership registers (`eiti_bo`) | `Public registers; DRC and Armenia state no licence — included with attribution (see the artifact manifest for per-register terms)` | conditional | yes | no |
 | EITI State-Owned Enterprises Database (`eiti_soe`) | `EITI open data (free reuse with attribution)` | yes | yes | no |
 | EveryPolitician (`everypolitician`) | `CC-BY-NC-4.0` | no | yes | no |
 | Firmenbuch — Austrian Commercial Register (`firmenbuch`) | `CC-BY-4.0` | yes | yes | no |

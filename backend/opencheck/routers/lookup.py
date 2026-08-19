@@ -940,6 +940,46 @@ def _bh_cac_nigeria(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_eiti_bo(r: dict, ctx: _LookupCtx) -> SourceHit:
+    record = r.get("record") or {}
+    register_id = str(record.get("register_id") or "")
+    parts: list[str] = []
+    if register_id == "drc_itie":
+        owners = (record.get("drc") or {}).get("owners") or []
+        peps = sum(1 for o in owners if o.get("pep"))
+        parts.append(f"{len(owners)} beneficial owner{'s' if len(owners) != 1 else ''}")
+        if peps:
+            parts.append(f"{peps} PEP{'s' if peps != 1 else ''}")
+        parts.append("ITIE-RDC register")
+    elif register_id == "armenia_eregister":
+        arm = record.get("armenia") or {}
+        n = len(arm.get("bods_v02") or [])
+        parts.append(f"BODS v0.2 declaration, {n} statements")
+        parts.append("Armenia State Register")
+    elif register_id == "nigeria_cac":
+        pscs = (record.get("nigeria") or {}).get("pscs") or []
+        parts.append(f"{len(pscs)} PSC filing{'s' if len(pscs) != 1 else ''}")
+        parts.append("Nigeria CAC (NEITI solid-minerals subset)")
+    if record.get("source_date"):
+        parts.append(f"register data {str(record['source_date'])[:10]}")
+    if (record.get("match") or {}).get("confidence") == "medium":
+        parts.append("possible name match")
+    # Corroboration rule: no pooled register publishes the LEI (OpenCheck
+    # derives it at index-build time), so `lei` is intentionally omitted —
+    # only the identifiers the register itself publishes are asserted.
+    identifiers = {k: str(v) for k, v in (r.get("identifiers") or {}).items() if v}
+    return _hit(
+        "eiti_bo", ctx.lei,
+        name=record.get("company_latin")
+        or record.get("company")
+        or ctx.legal_name
+        or ctx.lei,
+        summary=" · ".join(parts),
+        identifiers=identifiers,
+        raw=r,
+    )
+
+
 def _bh_ted_eu(r: dict, ctx: _LookupCtx) -> SourceHit:
     total = int(r.get("total_notice_count") or 0)
     wins = int(r.get("confirmed_wins") or 0)
@@ -1203,6 +1243,13 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
     cac_adapter = REGISTRY.get("cac_nigeria")
     if cac_adapter is not None and hasattr(cac_adapter, "fetch_by_lei") and _want("cac_nigeria"):
         tasks.append(("cac_nigeria", cac_adapter.fetch_by_lei(ctx.lei)))
+    # Pooled EITI national BO registers — LEI-keyed offline match against the
+    # committed pooled index (DRC ITIE-RDC / Armenia State Register / Nigeria
+    # CAC∩NEITI). A hit means the LEI is an extractive company with register-
+    # published beneficial ownership; its BODS carries that ownership.
+    eiti_bo_adapter = REGISTRY.get("eiti_bo")
+    if eiti_bo_adapter is not None and hasattr(eiti_bo_adapter, "fetch_by_lei") and _want("eiti_bo"):
+        tasks.append(("eiti_bo", eiti_bo_adapter.fetch_by_lei(ctx.lei)))
     # TED keys on the GLEIF anchor's identifiers (LEI + registeredAs + derived
     # national numbers) — eForms BT-501 values are national registration
     # numbers today (LEI fill rate is zero as of 2026-08), so this matches any
@@ -1241,6 +1288,8 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
         return _bh_eiti_soe(result, ctx) if result.get("is_state_owned") else None
     if source_id == "cac_nigeria":
         return _bh_cac_nigeria(result, ctx) if result.get("record") else None
+    if source_id == "eiti_bo":
+        return _bh_eiti_bo(result, ctx) if result.get("record") else None
     if source_id == "wikirate":
         return _bh_wikirate(result, ctx) if result.get("card_id") else None
     if source_id == "ted_eu":

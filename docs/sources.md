@@ -1,6 +1,6 @@
 # OpenCheck — Sources
 
-Thirty-six active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`). Three further adapters are committed but inactive (bulk-data only) — see [Inactive / bulk-only adapters](#inactive--bulk-only-adapters) below.
+Thirty-seven active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`). Three further adapters are committed but inactive (bulk-data only) — see [Inactive / bulk-only adapters](#inactive--bulk-only-adapters) below.
 
 | ID | Name | License | Entry point | Description |
 |----|------|---------|-------------|-------------|
@@ -39,6 +39,7 @@ Thirty-six active adapters, each implementing the same `SourceAdapter` protocol 
 | `climatetrace` | Global Energy Monitor / Climate TRACE | CC-BY-4.0 | LEI | **ESG** — asset-level CO₂ emissions (Climate TRACE) plus energy and heavy-industry ownership reach (GEM Global Energy Ownership Tracker): the entity's direct and group-wide power/industrial assets and live projects with per-sector breakdowns; no API key required |
 | `eiti` | EITI — Extractive Industries Transparency Initiative | EITI open data (attribution) | national registry number via GLEIF `registeredAt`/`registeredAs` (any of EITI's 65 implementing countries) | **ESG** — company-level payments to governments (taxes, royalties, licence fees) with GFS revenue classification, USD-normalised, per reporting year; organisation matching via the committed `eiti_organisations.json.gz` index (the API's identification filter is not implemented server-side), live payment rows from `/api/v2.0/revenue?organisation=`; no API key required |
 | `eiti_soe` | EITI State-Owned Enterprises Database | EITI open data (attribution) | LEI matched against the committed SOE index | **CDD** — state-owned-enterprise flag and SOE context (sector, commodities, audited-financial-statement links, stock listings) for the ~100 SOEs reported through the EITI. Distinct from the `eiti` payments adapter; each SOE is resolved to an LEI at index-build time via GLEIF (`opencorporates_id` → reverse lookup, name+country fallback) by `backend/scripts/build_eiti_soe_index.py` → committed `eiti_soe_index.json.gz`. The BODS mapping emits a `stateBody` government + `controlByLegalFramework` relationship, which raises the `STATE_CONTROLLED` signal. The LEI is derived (not published by EITI), so it is not asserted as a cross-source identifier. No API key required |
+| `eiti_bo` | EITI countries — national beneficial ownership registers | Public registers (per-register terms; DRC and Armenia state no licence — included with attribution) | LEI matched against the committed pooled index | **CDD** — beneficial ownership of extractive companies **pooled from the national BO registers of EITI implementing countries** (one source, not one adapter per register — the pooled universe is small, smaller still filtered to LEI holders). Registers at launch: **DRC** ITIE-RDC Registre des propriétaires effectifs (the only EITI BO register anywhere with a bulk download — XLSX export with ownership %, voting rights and PEP flags; Loi n°25/048 du 1 juillet 2025), **Armenia** State Register declarations at old.e-register.am (per-declaration **BODS v0.2 JSON**, upconverted to v0.4 with the originals recorded via annotations; seed list = EITI Armenia's 27 declaring metal-ore mining companies), and **Nigeria** (the `cac_nigeria` harvest filtered to NEITI solid-minerals-covered companies, filter evidence dated per record — the NEITI portal itself is frozen ~2023). Indonesia slot reserved (AHU API in maintenance). Excluded: Tajikistan (all-rights-reserved), Trinidad & Tobago (frozen ~2021). Harvested offline by `backend/scripts/build_eiti_bo_index.py` → committed `eiti_bo_index.json.gz`; **LEI-only at launch** — each company is resolved to an LEI at build time (registration-number equality against GLEIF first, e.g. Zangezur's `27.140.00009`; normalised-name equality as fallback), and unmatched companies stay in the committed raw harvests, counted in the artifact manifest. Asserts only register-published identifiers (`am_regnum`/`am_tin`/`ng_cac_rc`/`cd_nif`), never the derived LEI. Re-run the harvest subcommands + `build` to refresh; when the EITI open data portal (CKAN, with Datopian; due ~Sept 2026) launches, evaluate swapping per-register fetchers for portal sourcing. No API key required |
 | `ted_eu` | TED — Tenders Electronic Daily (EU procurement) | EU open data (Decision 2011/833/EU, incl. commercial) | LEI + GLEIF `registeredAs` + derived national numbers via `organisation-identifier-tenderer` (eForms BT-501) on the TED Search API v3 | **CDD** — EU public procurement award notices where the entity appears as a tenderer/winner. One anonymous search POST (exact `IN()` identifier match; the `~` operator is unsupported on identifier fields), then the newest ≤10 notices are winner-confirmed from the eForms notice XML (`LotResult → LotTender → TenderingParty → Tenderer → CompanyID` chain) and labelled **won** / **tendered** / unconfirmed, with per-lot awarded values, award dates and contract references. **Coverage: eForms era only (≈2024 onwards)** — no history, so "no hits" ≠ "never won"; awards won via subsidiaries sit under the subsidiary's identifier. The LEI is always queried but its fill rate in BT-501 was zero as of 2026-08 (0 in 5,031 sampled identifiers) — recall comes from the national registration numbers; the lookup self-upgrades as LEI adoption in eForms grows. No API key required |
 | `wikirate` | Wikirate | CC-BY-4.0 | LEI (Wikidata Q-ID fallback) via `filter[company_identifier[value]]` | **ESG** — open, community-researched corporate ESG metric answers (environment, human rights, supply chains, governance) from designers such as the World Benchmarking Alliance and Net Zero Tracker; OpenCheck shows totals + a sample of the most recent researched answers (sorted most-recent-year-first) and links out to wikirate.org for the full record; publishes LEI/Wikidata/OpenCorporates/CIK identifiers (strong cross-source corroborator; GODIN member); requires `WIKIRATE_API_KEY` (Cloudflare blocks anonymous server-side requests) |
 
@@ -79,18 +80,21 @@ component.
 | `live` | Fetched from the source during this lookup | the HTTP fetch time |
 | `cached` | Served from OpenCheck's response cache (`data/cache/live/`) | when the cache entry was written |
 | `snapshot` | Read from a bulk dataset (`bods_uk_psc`, `bods_gleif`, and pre-extracted Open Ownership subgraphs) | the dataset's own publication date, or the local extract's date |
-| `curated` | A fixture committed to the repository (`cac_nigeria`, demo fixtures) | the declared harvest date, else **omitted** |
+| `curated` | A fixture committed to the repository (`cac_nigeria`, `eiti_bo`, demo fixtures) | the declared harvest date, else **omitted** |
 | `stub` | Placeholder data — no source was contacted | **omitted entirely** |
 
 Two omissions are deliberate. **Stub output never claims a retrieval time**: a
 placeholder must not carry provenance. And a **committed fixture with no
 declared harvest date claims none either** — a checked-out file's mtime records
 when git wrote it to that machine, which says nothing about when the data left
-the register. `cac_nigeria` is the exception that proves the rule: its index
-declares `meta.harvested`, a genuine harvest date, so it reports one.
+the register. `cac_nigeria` and `eiti_bo` are the exceptions that prove the rule: their
+indexes declare genuine harvest dates (`meta.harvested` / `meta.built`), so
+they report one.
 
 Sources that are structurally never live: `cac_nigeria` (curated example set —
 the CAC's official API is restricted to Nigerian government agencies),
+`eiti_bo` (pooled offline harvest of the DRC, Armenia and Nigeria registers —
+none offers an API),
 `bods_uk_psc` and `bods_gleif` (bulk Parquet), and the pre-extracted Open
 Ownership subgraphs that `gleif` and `companies_house` serve as canonical
 output. Everything else is live-capable and degrades to `cached` or `stub`
@@ -111,7 +115,7 @@ A shareholding is a *legal* holding. Whether it is also a *beneficial* one is a
 separate fact, and only a register or a beneficial ownership declaration regime
 can supply it. Sources that do, and may therefore assert the flag:
 `companies_house` (PSC), `bods_uk_psc`, `bods_gleif`, `ur_latvia`,
-`rpvs_slovakia`, `cac_nigeria`, `ariregister`. Everything else describes
+`rpvs_slovakia`, `cac_nigeria`, `eiti_bo`, `ariregister`. Everything else describes
 registered holdings, and omits the flag unless the source states it explicitly —
 an explicit `false` is information, not silence, and is always passed through.
 

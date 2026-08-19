@@ -22,6 +22,7 @@ from .companies_house import CompaniesHouseAdapter
 from .corporations_canada import CorporationsCanadaAdapter
 from .cro import CroAdapter
 from .eiti import EitiAdapter
+from .eiti_bo import EitiBoAdapter
 from .eiti_soe import EitiSoeAdapter
 from .everypolitician import EveryPoliticianAdapter
 from .firmenbuch import FirmenbuchAdapter
@@ -62,6 +63,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "cro": CroAdapter(),
     "cvr_denmark": CvrDenmarkAdapter(),
     "eiti": EitiAdapter(),
+    "eiti_bo": EitiBoAdapter(),
     "eiti_soe": EitiSoeAdapter(),
     "firmenbuch": FirmenbuchAdapter(),
     "gleif": GleifAdapter(),

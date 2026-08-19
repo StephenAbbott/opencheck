@@ -29,6 +29,7 @@
 
 # Aggregators & cross-border databases
 
+* [EITI countries — national beneficial ownership registers](/sources/eiti_bo.md) - Beneficial ownership of extractive companies pooled from the national BO registers of EITI implementing countries — DRC (ITIE-RDC register, bulk export), Armenia (State Register BODS v0.2 declarations) and Nigeria (CAC PSC register, NEITI solid-minerals subset). Curated offline harvest of 91 companies, of which 3 resolve to an LEI (the launch index is LEI-only). Indonesia slot reserved.
 * [EITI State-Owned Enterprises Database](/sources/eiti_soe.md) - State-owned enterprises reported through the EITI across implementing countries, with a state-ownership classification, commodities, audited-financial-statement links and stock listings. Surfaces a state-ownership context signal by LEI.
 * [EveryPolitician](/sources/everypolitician.md) - EveryPolitician is a global database of political office-holders, from rulers, law-makers to judges and more.
 * [GLEIF](/sources/gleif.md) - Legal entity information from the Global Legal Entity Identifier Foundation.
