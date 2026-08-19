@@ -3048,7 +3048,7 @@ function ShareCardShowcase() {
           src="/share-card-example.png"
           width={1200}
           height={630}
-          alt="Example shareable summary card for Eli Lilly and Company showing 3 risk signals, all three named: related PEP, offshore leaks, and opaque ownership, with a prompt to visit opencheck.world for details"
+          alt="Example shareable summary card for Eli Lilly and Company showing 2 risk signals, both named: related PEP and offshore leaks, with a prompt to visit opencheck.world for details"
           className="w-full max-w-[560px] h-auto rounded-oo border border-oo-rule shadow-oo-card"
           loading="lazy"
         />
