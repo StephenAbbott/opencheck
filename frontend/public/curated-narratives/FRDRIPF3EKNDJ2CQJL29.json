@@ -1,11 +1,11 @@
 {
   "lei": "FRDRIPF3EKNDJ2CQJL29",
   "subject_name": "ELI LILLY AND COMPANY",
-  "summary": "ELI LILLY AND COMPANY (LEI: FRDRIPF3EKNDJ2CQJL29) is identifier-confirmed, registered in Indiana, United States, with cross-references to OpenCorporates (us_in/183025-143) and Wikidata (Q632240). Per GLEIF, the entity's ultimate parent is recorded under a reporting exception indicating ownership by one or more natural persons, leaving the beneficial ownership chain opaque; this constitutes a medium-confidence structural risk signal requiring further review. Key officers identified via OpenCorporates include David Ricks (officer from 2025-01-23) and Jonathan Haug (senior managing official from 2023-05-25), with David A. Ricks also reported as CEO and board member since 2017 per Wikidata; GLEIF records several direct accounting-consolidation subsidiaries including LILLY VENTURES FUND I LLC, ELI LILLY KINSALE LIMITED, and Lilly Nederland Finance B.V., among others. Three related-party risk signals warrant attention: board member Katherine Baicker is a possible name match — unconfirmed by birth date or nationality — with a PEP record on OpenSanctions and a political office-holder record on EveryPolitician (both medium confidence); officer Patrik Jonsson is similarly a possible name match only with PEP and political office-holder records on the same sources (medium confidence); and officer Christopher Anderson matches records in both the Panama Papers and the Paradise Papers (Appleby) at ICIJ score 100/100 (high confidence), though this is a name-level match against a related party and does not constitute a finding of wrongdoing. A material gap exists: Wikirate could not be queried due to a source API schema error, so any data that source would have contributed is unavailable.",
+  "summary": "ELI LILLY AND COMPANY (LEI: FRDRIPF3EKNDJ2CQJL29; Indiana, US registration 183025-143) is identifier-confirmed across GLEIF, OpenCorporates, and Wikidata. GLEIF Level 2 data records no accounting-consolidation parent at either the direct or ultimate level, with permitted reporting exceptions filed on the basis that the entity is controlled by natural persons without an intermediate consolidating legal entity; this is a structural observation under LEI ROC policy and not an adverse finding. The company is recorded as the direct accounting-consolidation parent of at least six subsidiaries spanning the US, India, Ireland, the Netherlands, and the UK, and its key officers include David A. Ricks as CEO and board member (from 2017) and Jonathan Haug as senior managing official (from 2023), alongside a large board and officer cohort recorded in OpenCorporates and Wikidata. Two risk signals require further review: board member Katherine Baicker is a possible name match — unconfirmed by birth date or nationality — to a politically exposed person record on OpenSanctions and a political office-holder record on EveryPolitician (medium confidence each); and officer Christopher Anderson is matched at ICIJ score 100/100 to records in both the Panama Papers and the Paradise Papers (Appleby) (high confidence each), though these are name-based matches against related-party records and do not constitute findings of wrongdoing. A material gap exists: Wikirate could not be queried due to a source API schema error, so any data that source would have contributed is unavailable.",
   "claims": [
     {
       "id": "c1",
-      "text": "ELI LILLY AND COMPANY (LEI: FRDRIPF3EKNDJ2CQJL29) is identifier-confirmed, registered in Indiana, United States, with cross-references to OpenCorporates (us_in/183025-143) and Wikidata (Q632240).",
+      "text": "ELI LILLY AND COMPANY is identifier-confirmed, registered in Indiana, United States, with LEI FRDRIPF3EKNDJ2CQJL29 and US-IN registration number 183025-143.",
       "fact_ids": [
         "f52"
       ],
@@ -13,34 +13,25 @@
     },
     {
       "id": "c2",
-      "text": "Per GLEIF, the entity's ultimate parent is recorded under a reporting exception indicating ownership by one or more natural persons, leaving the beneficial ownership chain opaque; this constitutes a medium-confidence structural risk signal requiring further review.",
+      "text": "GLEIF Level 2 data records no accounting-consolidation parent at the direct level, with a permitted reporting exception filed on the basis that the entity is controlled by natural persons without an intermediate consolidating legal entity.",
       "fact_ids": [
         "f1",
-        "f2",
         "r1"
       ],
       "confidence": "medium"
     },
     {
       "id": "c3",
-      "text": "Key officers identified via OpenCorporates include David Ricks (officer from 2025-01-23) and Jonathan Haug (senior managing official from 2023-05-25).",
+      "text": "GLEIF Level 2 data records no accounting-consolidation parent at the ultimate level, with the same permitted natural-persons reporting exception.",
       "fact_ids": [
-        "f26",
-        "f38"
-      ],
-      "confidence": "high"
-    },
-    {
-      "id": "c4",
-      "text": "David A. Ricks is also reported as CEO and board member since 2017-01-01 per Wikidata.",
-      "fact_ids": [
-        "f9"
+        "f2",
+        "r1"
       ],
       "confidence": "medium"
     },
     {
-      "id": "c5",
-      "text": "GLEIF records several direct accounting-consolidation subsidiaries of ELI LILLY AND COMPANY, including LILLY VENTURES FUND I LLC, ELI LILLY SERVICES INDIA PRIVATE LIMITED, ELI LILLY AND COMPANY (INDIA) PRIVATE LIMITED, ELI LILLY KINSALE LIMITED, Lilly Nederland Finance B.V., and ELI LILLY GROUP PENSION TRUSTEES LIMITED.",
+      "id": "c4",
+      "text": "ELI LILLY AND COMPANY is recorded as the direct accounting-consolidation parent of LILLY VENTURES FUND I LLC, ELI LILLY SERVICES INDIA PRIVATE LIMITED, ELI LILLY AND COMPANY (INDIA) PRIVATE LIMITED, ELI LILLY KINSALE LIMITED, Lilly Nederland Finance B.V., and ELI LILLY GROUP PENSION TRUSTEES LIMITED, per GLEIF.",
       "fact_ids": [
         "f3",
         "f4",
@@ -52,38 +43,87 @@
       "confidence": "medium"
     },
     {
-      "id": "c6",
-      "text": "Board member Katherine Baicker is a possible name match only — unconfirmed by birth date or nationality — with a PEP record on OpenSanctions and a political office-holder record on EveryPolitician (both medium confidence).",
+      "id": "c5",
+      "text": "David A. Ricks is recorded as CEO and board member from 2017-01-01 (Wikidata) and as an officer from 2025-01-23 (OpenCorporates).",
       "fact_ids": [
+        "f9",
+        "f26"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c6",
+      "text": "Jonathan Haug is recorded as senior managing official from 2023-05-25, per OpenCorporates.",
+      "fact_ids": [
+        "f38"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c7",
+      "text": "A large cohort of additional officers and board members is recorded across OpenCorporates and Wikidata, including Juan R. Luciano, Karen Walker, Jamere Jackson, Ralph Alvarez, Gabrielle Sulzberger, William G. Kaelin, Kimberly H. Johnson, Katherine Baicker, Mary Lynne Hedley, Erik Fyrwald, Patrik Jonsson, Diogo Rau, Jonathan Groff, Katie Lodato, Christopher Anderson, Edgardo Hernandez, Jacob Van Naarden, Anne E. White, Susan Ridlen, Anat Hakim, Daniel Skovronsky, Donald A. Zakrowski, Valorie Wanner, Eric Dozier, Ilya Yuffa, Steffanie R. Lim-Ho, Melissa Seymour, Lucas Montarce, and Jon Moeller.",
+      "fact_ids": [
+        "f10",
+        "f11",
+        "f13",
+        "f14",
+        "f15",
+        "f16",
+        "f17",
         "f18",
+        "f19",
+        "f20",
+        "f22",
+        "f23",
+        "f24",
+        "f25",
+        "f27",
+        "f28",
+        "f29",
+        "f30",
+        "f31",
+        "f32",
+        "f33",
+        "f34",
+        "f35",
+        "f36",
+        "f37",
+        "f39",
+        "f40",
+        "f41",
         "f42",
+        "f43",
+        "f44",
+        "f45",
+        "f46",
+        "f47",
+        "f48",
+        "f49",
+        "f50",
+        "f51"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c8",
+      "text": "Board member Katherine Baicker is a possible name match — unconfirmed by birth date or nationality — to a politically exposed person record on OpenSanctions and a political office-holder record on EveryPolitician; both signals carry medium confidence and do not constitute a confirmed PEP finding.",
+      "fact_ids": [
         "r6",
         "r7"
       ],
       "confidence": "medium"
     },
     {
-      "id": "c7",
-      "text": "Officer Patrik Jonsson is similarly a possible name match only — unconfirmed by birth date or nationality — with PEP and political office-holder records on OpenSanctions and EveryPolitician respectively (both medium confidence).",
+      "id": "c9",
+      "text": "Officer Christopher Anderson is matched at ICIJ score 100/100 to records in both the Panama Papers and the Paradise Papers (Appleby); both signals carry high confidence but are name-based matches against a related-party record and are not determinations of wrongdoing.",
       "fact_ids": [
-        "f22",
-        "r8",
-        "r9"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c8",
-      "text": "Officer Christopher Anderson matches records in both the Panama Papers and the Paradise Papers (Appleby) at ICIJ score 100/100 (high confidence); this is a name-level match against a related party and does not constitute a finding of wrongdoing.",
-      "fact_ids": [
-        "f27",
         "r10",
         "r11"
       ],
       "confidence": "high"
     },
     {
-      "id": "c9",
+      "id": "c10",
       "text": "Wikirate could not be queried due to a source API schema error, so any data that source would have contributed is unavailable.",
       "fact_ids": [
         "g1"
@@ -92,14 +132,14 @@
     }
   ],
   "limitations": [
-    "Beneficial ownership is opaque: GLEIF records a reporting exception indicating the ultimate parent is one or more natural persons, with no further identification (f1, f2, r1).",
-    "Wikirate could not be queried due to a source API schema error (g1), leaving a data gap for any metrics or information that source would have provided.",
-    "Board and officer data from Wikidata is sourced from a crowd-sourced knowledge base and should be treated as indicative, not authoritative (f9–f20).",
-    "One board member record in the packet (f12) is identified only by a Wikidata QID (Q105798427) with no resolved name, representing an unresolved person in the governance record.",
-    "All three related-party risk signals (r6–r11) are name-match-only findings with no corroborating identifiers (birth date, nationality) to confirm identity; they require further investigation but are not positive identifications.",
-    "GLEIF subsidiary relationships are reported at medium confidence and reflect accounting consolidation as reported to GLEIF, not independently verified ownership structures."
+    "Wikirate could not be queried (API schema error affecting headquarters and website fields), leaving a data gap for any information that source would have provided (g1).",
+    "GLEIF Level 2 records accounting consolidation, not beneficial ownership; the natural-persons reporting exception means no named ultimate beneficial owner is disclosed in the LEI record.",
+    "Officer and board-member data from Wikidata is sourced from a crowd-sourced knowledge base and should be treated as indicative rather than authoritative; no end-dates are recorded, so current tenure cannot be confirmed from this source alone.",
+    "PEP matches for Katherine Baicker and Patrik Jonsson are name-only matches with no corroborating identifiers (birth date, nationality); positive identification is not established.",
+    "The Panama Papers and Paradise Papers matches for Christopher Anderson are name-based and carry no corroborating identifiers confirming the related party is the same individual as the ICIJ record.",
+    "One board member is recorded in Wikidata only by a Wikidata QID (Q105798427) with no resolved name available in the packet."
   ],
-  "overall_confidence": "medium",
+  "overall_confidence": "high",
   "model": "claude-sonnet-4-6",
   "prompt_version": "2026-08-18-v6",
   "packet": {
@@ -115,7 +155,7 @@
     "facts": [
       {
         "id": "f1",
-        "statement": "Unknown parent (GLEIF reporting exception) holds GLEIF reporting exception: parent is one or more natural persons in ELI LILLY AND COMPANY.",
+        "statement": "Natural person(s) (GLEIF reporting exception) holds GLEIF reporting exception NATURAL_PERSONS: the entity is controlled by natural person(s) without any intermediate legal entity meeting the definition of accounting consolidating parent (ExceptionCategory: DIRECT_ACCOUNTING_CONSOLIDATION_PARENT) in ELI LILLY AND COMPANY.",
         "source_name": "GLEIF",
         "source_id": "gleif",
         "source_url": "https://www.gleif.org/lei/FRDRIPF3EKNDJ2CQJL29",
@@ -126,7 +166,7 @@
       },
       {
         "id": "f2",
-        "statement": "Unknown parent (GLEIF reporting exception) holds GLEIF reporting exception: parent is one or more natural persons in ELI LILLY AND COMPANY.",
+        "statement": "Natural person(s) (GLEIF reporting exception) holds GLEIF reporting exception NATURAL_PERSONS: the entity is controlled by natural person(s) without any intermediate legal entity meeting the definition of accounting consolidating parent (ExceptionCategory: ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT) in ELI LILLY AND COMPANY.",
         "source_name": "GLEIF",
         "source_id": "gleif",
         "source_url": "https://www.gleif.org/lei/FRDRIPF3EKNDJ2CQJL29",
@@ -689,14 +729,14 @@
     "risks": [
       {
         "id": "r1",
-        "code": "OPAQUE_OWNERSHIP",
-        "label": "Opaque ownership (super-secure)",
-        "confidence": "medium",
-        "rationale": "Ownership chain contains: unknown person in ownership chain.",
+        "code": "GLEIF_REPORTING_EXCEPTION",
+        "label": "No parent in GLEIF (permitted reporting exception)",
+        "confidence": "high",
+        "rationale": "No accounting-consolidation parent is reported to GLEIF: NATURAL_PERSONS for the direct and ultimate parent (the entity is controlled directly by natural person(s), with no intermediate legal entity that consolidates it — common for founder-, family-owned and widely held companies). Structural context, not a risk finding — these are permitted exceptions under the LEI ROC policy, and GLEIF Level 2 records accounting consolidation, not beneficial ownership.",
         "source_name": "GLEIF",
         "source_id": "gleif",
         "fact_ids": [],
-        "kind": "risk"
+        "kind": "context"
       },
       {
         "id": "r2",
@@ -726,8 +766,8 @@
         "label": "Outside EU/EEA",
         "confidence": "low",
         "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: US. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
+        "source_name": "OpenAleph",
+        "source_id": "openaleph",
         "fact_ids": [],
         "kind": "context"
       },
@@ -737,8 +777,8 @@
         "label": "Outside EU/EEA",
         "confidence": "low",
         "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: US. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
-        "source_name": "OpenAleph",
-        "source_id": "openaleph",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
         "fact_ids": [],
         "kind": "context"
       },
@@ -829,16 +869,16 @@
         "homepage": "https://wikirate.org/"
       },
       {
-        "source_id": "opencorporates",
-        "name": "OpenCorporates",
-        "license": "OC-Terms",
-        "homepage": "https://opencorporates.com/"
-      },
-      {
         "source_id": "openaleph",
         "name": "OpenAleph",
         "license": "per-collection",
         "homepage": "https://openaleph.org/"
+      },
+      {
+        "source_id": "opencorporates",
+        "name": "OpenCorporates",
+        "license": "OC-Terms",
+        "homepage": "https://opencorporates.com/"
       },
       {
         "source_id": "sec_edgar",
