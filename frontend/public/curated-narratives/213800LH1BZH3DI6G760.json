@@ -1,10 +1,182 @@
 {
   "lei": "213800LH1BZH3DI6G760",
   "subject_name": "BP P.L.C.",
-  "summary": "BP P.L.C. is an identifier-confirmed entity registered in Great Britain (LEI: 213800LH1BZH3DI6G760; GB Companies House number: 00102498), operating as the ultimate consolidating parent of an extensive multinational group spanning energy, chemicals, aviation fuels, renewables, and capital markets across jurisdictions including the US, Australia, Canada, India, the Netherlands, Spain, Greece, and others, as evidenced by GLEIF and UK Companies House. BP P.L.C. directly or ultimately consolidates a large number of subsidiaries, including BP INTERNATIONAL LIMITED (itself a direct parent of numerous operating entities), BP GLOBAL INVESTMENTS LIMITED, BP CORPORATION NORTH AMERICA INC., BP CAPITAL MARKETS P.L.C., BP EUROPA SE, CASTROL HOLDINGS INTERNATIONAL LIMITED, and many others; indicative shareholdings reported by OpenSanctions also include interests in Trans Adriatic Pipeline, Baku-Tbilisi-Ceyhan Pipeline Co., Pan American Energy, and BP Midstream Partners, among others. Key officers recorded at UK Companies House include BENEDICT JOHN SPURWAY MATHEWS (senior managing official from 2019-05-07) and multiple board appointees including TUSHAR MORZARIA (from 2020-09-01), AMANDA JAYNE BLANC (from 2022-09-01), and MARGUERITE EILEEN O'NEILL (from 2026-04-01); Wikidata additionally reports Helge Lund as chairperson from 2018-12-31 and Meg O'Neill as chief executive officer from 2025-12-01, though these are indicative rather than authoritative. One structural risk signal was identified: the ownership chain has three or more corporate layers (medium confidence, per OpenSanctions), meeting the AMLA threshold for complex ownership; separately, a related entity, BRITANNIC TRADING LIMITED, matches a record in the Bahamas Leaks at ICIJ score 100/100 (high confidence), which is a structural indicator warranting further review and is not a determination of wrongdoing. OpenSanctions data is licensed CC-BY-NC-4.0 and may not be used for commercial purposes; no beneficial ownership register disclosure was identified in the packet, and the EITI and OpenAleph sources were consulted but contributed no additional facts.",
-  "claims": [],
-  "limitations": [],
-  "overall_confidence": "low",
+  "summary": "BP P.L.C. is identifier-confirmed, registered in Great Britain (LEI 213800LH1BZH3DI6G760, Companies House 00102498), and operates as the ultimate consolidating parent of an extensive multinational group spanning the UK, US, Australia, Canada, continental Europe, the Middle East, and beyond, as evidenced by GLEIF and UK Companies House records. BP P.L.C. directly and ultimately consolidates a large number of subsidiaries across energy, chemicals, aviation fuels, capital markets, and renewables, including BP INTERNATIONAL LIMITED (itself a direct parent of numerous operating entities), BP GLOBAL INVESTMENTS LIMITED, BP CORPORATION NORTH AMERICA INC., BP CAPITAL MARKETS P.L.C., BP EUROPA SE, and CASTROL HOLDINGS INTERNATIONAL LIMITED, among many others. Key officers recorded at UK Companies House and OpenCorporates include board appointees TUSHAR MORZARIA (from 2020-09-01), JOHANNES ANTONIUS TEYSSEN (from 2021-01-01), AMANDA JAYNE BLANC (from 2022-09-01), SATISH PAI and HINA NAGARAJAN (both from 2023-03-01), KATHERINE ANNE THOMSON (from 2024-02-02), IAN PAUL TYLER (from 2025-04-01), DAVID ALAN HAGER (from 2025-06-02), and MARGUERITE EILEEN O'NEILL (from 2026-04-01); Wikidata (indicative) records Helge Lund as chairperson from 2018-12-31 and Meg O'Neill as CEO from 2025-12-01. One structural risk signal was identified: the ownership chain meets the AMLA threshold of three or more corporate layers (medium confidence, per OpenSanctions); additionally, a related entity, BRITANNIC TRADING LIMITED, matches a Bahamas Leaks record in the ICIJ Offshore Leaks database with a score of 100/100 (high confidence) — this is a structural indicator requiring further review and is not a determination of wrongdoing. A material limitation applies: OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used under that licence.",
+  "claims": [
+    {
+      "id": "c1",
+      "text": "BP P.L.C. is identifier-confirmed, registered in Great Britain with LEI 213800LH1BZH3DI6G760 and Companies House number 00102498.",
+      "fact_ids": [
+        "f337"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c2",
+      "text": "BP P.L.C. is the direct and ultimate consolidating parent of a large multinational group, including BP INTERNATIONAL LIMITED, BP GLOBAL INVESTMENTS LIMITED, BP CORPORATION NORTH AMERICA INC., BP CAPITAL MARKETS P.L.C., BP EUROPA SE, CASTROL HOLDINGS INTERNATIONAL LIMITED, BP FINANCE AUSTRALIA PTY LTD, BP CANADA ENERGY GROUP ULC, BP ITALIA S.P.A., and many others, as recorded by GLEIF and UK Companies House.",
+      "fact_ids": [
+        "f56",
+        "f57",
+        "f91",
+        "f92",
+        "f79",
+        "f80",
+        "f101",
+        "f102",
+        "f143",
+        "f144",
+        "f42",
+        "f43",
+        "f69",
+        "f70",
+        "f119",
+        "f120",
+        "f281",
+        "f322"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c3",
+      "text": "The group's subsidiary network spans the UK, US, Australia, Canada, continental Europe (including Hungary, Poland, the Netherlands, Spain, Italy, Luxembourg, France, Portugal, Greece), the Middle East, South Africa, Singapore, and other jurisdictions, as evidenced by GLEIF consolidation relationships.",
+      "fact_ids": [
+        "f3",
+        "f4",
+        "f54",
+        "f55",
+        "f97",
+        "f98",
+        "f131",
+        "f132",
+        "f65",
+        "f66",
+        "f127",
+        "f128",
+        "f149",
+        "f150",
+        "f115",
+        "f116",
+        "f119",
+        "f120",
+        "f89",
+        "f90",
+        "f117",
+        "f118",
+        "f95",
+        "f96"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c4",
+      "text": "BP P.L.C. holds 75–100% ownership, voting rights, and the right to appoint and remove directors in BP INTERNATIONAL LIMITED, as recorded by UK Companies House from 2016-04-06.",
+      "fact_ids": [
+        "f281"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c5",
+      "text": "BP P.L.C. holds 75–100% ownership, voting rights, and the right to appoint and remove directors in BP GLOBAL INVESTMENTS LIMITED, as recorded by UK Companies House from 2016-04-06.",
+      "fact_ids": [
+        "f322"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c6",
+      "text": "BP P.L.C. holds 75–100% ownership, voting rights, and the right to appoint and remove directors in BP PENSION TRUSTEES LIMITED, as recorded by UK Companies House from 2016-04-06.",
+      "fact_ids": [
+        "f301"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c7",
+      "text": "BP P.L.C. holds 75–100% ownership, voting rights, and the right to appoint and remove directors in BP HOLDINGS NORTH AMERICA LIMITED, as recorded by UK Companies House from 2016-04-06.",
+      "fact_ids": [
+        "f294"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c8",
+      "text": "BP P.L.C. holds 75–100% ownership, voting rights, and the right to appoint and remove directors in BP GAMMA HOLDINGS LIMITED, as recorded by UK Companies House from 2023-04-26.",
+      "fact_ids": [
+        "f253"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c9",
+      "text": "Board appointees recorded at UK Companies House and OpenCorporates include TUSHAR MORZARIA (from 2020-09-01), JOHANNES ANTONIUS TEYSSEN (from 2021-01-01), AMANDA JAYNE BLANC (from 2022-09-01), SATISH PAI (from 2023-03-01), HINA NAGARAJAN (from 2023-03-01), KATHERINE ANNE THOMSON (from 2024-02-02), IAN PAUL TYLER (from 2025-04-01), DAVID ALAN HAGER (from 2025-06-02), and MARGUERITE EILEEN O'NEILL (from 2026-04-01).",
+      "fact_ids": [
+        "f326",
+        "f327",
+        "f330",
+        "f331",
+        "f332",
+        "f333",
+        "f334",
+        "f335",
+        "f336"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c10",
+      "text": "Wikidata (indicative source) records Helge Lund as chairperson from 2018-12-31 and Meg O'Neill as chief executive officer from 2025-12-01; these are reported figures, not authoritatively confirmed.",
+      "fact_ids": [
+        "f178",
+        "f179"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c11",
+      "text": "One structural risk signal was identified: the ownership chain meets the AMLA threshold of three or more corporate layers (medium confidence), as flagged by OpenSanctions.",
+      "fact_ids": [
+        "r2"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c12",
+      "text": "A related entity, BRITANNIC TRADING LIMITED, matches a record in the Bahamas Leaks (ICIJ Offshore Leaks database) with a score of 100/100 (high confidence); this is a structural indicator for further review and is not a determination of wrongdoing or illegality.",
+      "fact_ids": [
+        "r7"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c13",
+      "text": "The ownership chain reaches jurisdictions outside the EU/EEA (including GB, US, AU, AR, BR, CH, KY); this is a structural observation and not itself a risk finding under the AMLA CDD RTS or AMLR Annex III.",
+      "fact_ids": [
+        "r1",
+        "r3",
+        "r4",
+        "r5",
+        "r6"
+      ],
+      "confidence": "low"
+    },
+    {
+      "id": "c14",
+      "text": "A material limitation applies: OpenSanctions data used in this review is licensed CC-BY-NC-4.0 and may not be commercially re-used under that licence.",
+      "fact_ids": [
+        "g1"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "limitations": [
+    "OpenSanctions data is licensed CC-BY-NC-4.0; commercial re-use is not permitted under the source licence (g1).",
+    "Ownership share figures sourced from OpenSanctions and Wikidata are indicative only and should not be treated as authoritative; register-sourced figures (GLEIF, UK Companies House) are authoritative.",
+    "No beneficial owner (natural person) of BP P.L.C. itself was disclosed in the packet; the entity appears to be widely held (indicative shareholders noted from OpenSanctions include Guaranty Nominees Ltd and BlackRock Inc, but no ownership percentages are provided and these are not authoritative).",
+    "The ICIJ Offshore Leaks match relates to a subsidiary (BRITANNIC TRADING LIMITED), not BP P.L.C. directly; further review of that entity is warranted.",
+    "Wikirate and OpenAleph were listed as sources consulted but no facts from those sources appear in the packet."
+  ],
+  "overall_confidence": "high",
   "model": "claude-sonnet-4-6",
   "prompt_version": "2026-08-18-v6",
   "packet": {
@@ -1694,116 +1866,6 @@
       },
       {
         "id": "f153",
-        "statement": "BP PLC holds Parent organisation declared in GEM ownership tracker (not a beneficial ownership assertion) in BP PLC.",
-        "source_name": "Global Energy Monitor / Climate TRACE",
-        "source_id": "climatetrace",
-        "source_url": "https://globalenergymonitor.org/",
-        "bods_statement_ids": [
-          "opencheck-7f694abad61a952c14df266b"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f154",
-        "statement": "BP holds shareholding in Trans Adriatic Pipeline.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-7bdc84c4906bba1551c13048"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f155",
-        "statement": "BP holds shareholding in BP Developments Australia.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-f916fb16a0cd3fa75333d9fb"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f156",
-        "statement": "BP holds shareholding in Rotterdam-Rijn Pijpleiding Maatschappij NV.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-72c68fb2cef962fa1986fc92"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f157",
-        "statement": "BP holds shareholding in BP Alternative Energy North America.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-3de33fbc3fe78161f3261e60"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f158",
-        "statement": "BP holds shareholding in BP Bioenergia Ituiutaba Ltda.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-3cd10d12e72ce5745ac60329"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f159",
-        "statement": "BP holds shareholding in Bp International Ltd.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-c883524eb2a01a9d85436f4a"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f160",
-        "statement": "BP holds shareholding in BP Midstream Partners.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-09b6cfe32b89cc7209401f60"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f161",
-        "statement": "BP holds shareholding in South Caucasus Pipeline Co Ltd.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-ac12da376d9694c9c91ca997"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f162",
-        "statement": "BP holds shareholding in Bp Gamma Holdings.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-c0065e63d08d7ea03a7d63a3"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f163",
         "statement": "BP holds shareholding in Baku-Tbilisi-Ceyhan Pipeline Co.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -1814,128 +1876,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f164",
-        "statement": "BP holds shareholding in Itumbiara Bioenergia.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-1caeb9922580c5d02809ff48"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f165",
-        "statement": "BP holds shareholding in Bahia de Bizkaia Electricidad SL.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-3f5ea33622c8f3d3c334974e"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f166",
-        "statement": "BP holds shareholding in Ruhr Oel GmbH.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-401d6470862f57626153eeab"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f167",
-        "statement": "BP holds shareholding in Pan American Energy.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-f04e87f20d08fe126a91b968"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f168",
-        "statement": "BP holds shareholding in Société du Pipeline Sud-Européen.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-ad7495150abe07646b6e7991"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f169",
-        "statement": "BP holds shareholding in BP Europa.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-a1d184e7f2e22d2d6324727e"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f170",
-        "statement": "BP holds shareholding in BP Holdings North America Ltd.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-ef06b2a26bb9b1580a44ed25"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f171",
-        "statement": "BP holds shareholding in Britoil.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-d2ee79b57ddd8bdd202d860f"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f172",
-        "statement": "BP holds shareholding in Bp Global Investments Ltd.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-8f7a1ac248d0803faf666b44"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f173",
-        "statement": "BP holds shareholding in Tropical Bioenergia.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-080cc644e37855c99c3995c9"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f174",
-        "statement": "BP holds shareholding in Endymion Oil Pipeline Company LLC.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-97c56bf2e19adf7642450a56"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f175",
+        "id": "f154",
         "statement": "BP holds shareholding in Azerbaijan International Operating Co.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -1946,7 +1887,227 @@
         "confidence": "medium"
       },
       {
-        "id": "f176",
+        "id": "f155",
+        "statement": "BP holds shareholding in Bp Gamma Holdings.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-c0065e63d08d7ea03a7d63a3"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f156",
+        "statement": "BP holds shareholding in Itumbiara Bioenergia.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-1caeb9922580c5d02809ff48"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f157",
+        "statement": "BP holds shareholding in Rotterdam-Rijn Pijpleiding Maatschappij NV.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-72c68fb2cef962fa1986fc92"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f158",
+        "statement": "BP holds shareholding in Bp Global Investments Ltd.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-8f7a1ac248d0803faf666b44"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f159",
+        "statement": "BP holds shareholding in BP Europa.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-a1d184e7f2e22d2d6324727e"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f160",
+        "statement": "BP holds shareholding in Britoil.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-d2ee79b57ddd8bdd202d860f"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f161",
+        "statement": "BP holds shareholding in Tropical Bioenergia.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-080cc644e37855c99c3995c9"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f162",
+        "statement": "BP holds shareholding in Endymion Oil Pipeline Company LLC.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-97c56bf2e19adf7642450a56"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f163",
+        "statement": "BP holds shareholding in South Caucasus Pipeline Co Ltd.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-ac12da376d9694c9c91ca997"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f164",
+        "statement": "BP holds shareholding in Pan American Energy.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-f04e87f20d08fe126a91b968"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f165",
+        "statement": "BP holds shareholding in Ruhr Oel GmbH.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-401d6470862f57626153eeab"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f166",
+        "statement": "BP holds shareholding in BP Midstream Partners.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-09b6cfe32b89cc7209401f60"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f167",
+        "statement": "BP holds shareholding in Bahia de Bizkaia Electricidad SL.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-3f5ea33622c8f3d3c334974e"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f168",
+        "statement": "BP holds shareholding in BP Alternative Energy North America.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-3de33fbc3fe78161f3261e60"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f169",
+        "statement": "BP holds shareholding in BP Holdings North America Ltd.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-ef06b2a26bb9b1580a44ed25"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f170",
+        "statement": "BP holds shareholding in BP Developments Australia.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-f916fb16a0cd3fa75333d9fb"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f171",
+        "statement": "BP holds shareholding in BP Bioenergia Ituiutaba Ltda.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-3cd10d12e72ce5745ac60329"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f172",
+        "statement": "BP holds shareholding in Trans Adriatic Pipeline.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-7bdc84c4906bba1551c13048"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f173",
+        "statement": "BP holds shareholding in Bp International Ltd.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-c883524eb2a01a9d85436f4a"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f174",
+        "statement": "BP holds shareholding in Société du Pipeline Sud-Européen.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-ad7495150abe07646b6e7991"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f175",
         "statement": "Guaranty Nominees Ltd holds shareholding in BP.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -1957,13 +2118,24 @@
         "confidence": "medium"
       },
       {
-        "id": "f177",
+        "id": "f176",
         "statement": "BlackRock Inc holds shareholding in BP.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
         "bods_statement_ids": [
           "opencheck-fdfe38d86c1158c0139cf551"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f177",
+        "statement": "BP PLC holds Parent organisation declared in GEM ownership tracker (not a beneficial ownership assertion) in BP PLC.",
+        "source_name": "Global Energy Monitor / Climate TRACE",
+        "source_id": "climatetrace",
+        "source_url": "https://globalenergymonitor.org/",
+        "bods_statement_ids": [
+          "opencheck-7f694abad61a952c14df266b"
         ],
         "confidence": "medium"
       },
@@ -1991,138 +2163,6 @@
       },
       {
         "id": "f180",
-        "statement": "BENEDICT JOHN SPURWAY MATHEWS holds seniorManagingOfficial, from 2019-05-07 in BP P.L.C..",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/gb/00102498",
-        "bods_statement_ids": [
-          "opencheck-70032b277640229240a647cd"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f181",
-        "statement": "TUSHAR MORZARIA holds appointmentOfBoard, from 2020-09-01 in BP P.L.C..",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/gb/00102498",
-        "bods_statement_ids": [
-          "opencheck-1d04b54fa4cc4c0b3a3f6e49"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f182",
-        "statement": "JOHANNES ANTONIUS TEYSSEN holds appointmentOfBoard, from 2021-01-01 in BP P.L.C..",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/gb/00102498",
-        "bods_statement_ids": [
-          "opencheck-992722ae0d237550c1b6b16c"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f183",
-        "statement": "ALIA FAZAL holds seniorManagingOfficial, from 2022-01-04 in BP P.L.C..",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/gb/00102498",
-        "bods_statement_ids": [
-          "opencheck-201f7c554370296473508265"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f184",
-        "statement": "JULIAN THURSTON holds seniorManagingOfficial, from 2022-05-02 in BP P.L.C..",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/gb/00102498",
-        "bods_statement_ids": [
-          "opencheck-354f49d7041641d359d031af"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f185",
-        "statement": "AMANDA JAYNE BLANC holds appointmentOfBoard, from 2022-09-01 in BP P.L.C..",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/gb/00102498",
-        "bods_statement_ids": [
-          "opencheck-f468a8d9476067a1ebc731e3"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f186",
-        "statement": "SATISH PAI holds appointmentOfBoard, from 2023-03-01 in BP P.L.C..",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/gb/00102498",
-        "bods_statement_ids": [
-          "opencheck-cb6d5772a9784c1b2c18993a"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f187",
-        "statement": "HINA NAGARAJAN holds appointmentOfBoard, from 2023-03-01 in BP P.L.C..",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/gb/00102498",
-        "bods_statement_ids": [
-          "opencheck-253818cbb052d5f233e9f859"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f188",
-        "statement": "KATHERINE ANNE THOMSON holds appointmentOfBoard, from 2024-02-02 in BP P.L.C..",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/gb/00102498",
-        "bods_statement_ids": [
-          "opencheck-97e6c086f65ccc16bb8dc43a"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f189",
-        "statement": "IAN PAUL TYLER holds appointmentOfBoard, from 2025-04-01 in BP P.L.C..",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/gb/00102498",
-        "bods_statement_ids": [
-          "opencheck-26869c2e8f837e1f5b75f4cb"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f190",
-        "statement": "DAVID ALAN HAGER holds appointmentOfBoard, from 2025-06-02 in BP P.L.C..",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/gb/00102498",
-        "bods_statement_ids": [
-          "opencheck-283c301be589e1cd9851989f"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f191",
-        "statement": "MARGUERITE EILEEN O‘NEILL holds appointmentOfBoard, from 2026-04-01 in BP P.L.C..",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
-        "source_url": "https://opencorporates.com/companies/gb/00102498",
-        "bods_statement_ids": [
-          "opencheck-a57551b8e131f97ec2545706"
-        ],
-        "confidence": "high"
-      },
-      {
-        "id": "f192",
         "statement": "CASTROL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-12-30; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-12-30; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-12-30 in BP MARINE LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2133,7 +2173,7 @@
         "confidence": "high"
       },
       {
-        "id": "f193",
+        "id": "f181",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP+AMOCO INTERNATIONAL LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2144,7 +2184,7 @@
         "confidence": "high"
       },
       {
-        "id": "f194",
+        "id": "f182",
         "statement": "BP TECHNOLOGY VENTURES LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-11-27; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-11-27; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2018-11-27 in BP SCALE UP FACTORY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2155,7 +2195,7 @@
         "confidence": "high"
       },
       {
-        "id": "f195",
+        "id": "f183",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BRITANNIC ENERGY TRADING LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2166,7 +2206,7 @@
         "confidence": "high"
       },
       {
-        "id": "f196",
+        "id": "f184",
         "statement": "BP P.L.C. holds Relationship Type: ['significant-influence-or-control'], from 2022-10-30 in PENTLAND AVIATION FUELLING SERVICES LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2177,7 +2217,7 @@
         "confidence": "high"
       },
       {
-        "id": "f197",
+        "id": "f185",
         "statement": "KUWAIT PETROLEUM INTERNATIONAL AVIATION COMPANY (U.K.) LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2022-10-30; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2022-10-30 in PENTLAND AVIATION FUELLING SERVICES LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2188,7 +2228,7 @@
         "confidence": "high"
       },
       {
-        "id": "f198",
+        "id": "f186",
         "statement": "BP OIL UK LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent-as-firm', 'voting-rights-25-to-50-percent-as-firm', 'significant-influence-or-control-as-firm'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent-as-firm', 'voting-rights-25-to-50-percent-as-firm', 'significant-influence-or-control-as-firm'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent-as-firm', 'voting-rights-25-to-50-percent-as-firm', 'significant-influence-or-control-as-firm'], from 2016-04-06 in SHELL MEX AND B.P. LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2199,7 +2239,7 @@
         "confidence": "high"
       },
       {
-        "id": "f199",
+        "id": "f187",
         "statement": "BP PENSION TRUSTEES LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in ROPEMAKER PROPERTIES LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2210,7 +2250,7 @@
         "confidence": "high"
       },
       {
-        "id": "f200",
+        "id": "f188",
         "statement": "BP UK RETAINED HOLDINGS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-10-29; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-10-29; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-10-29 in FOSROC EXPANDITE LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2221,7 +2261,7 @@
         "confidence": "high"
       },
       {
-        "id": "f201",
+        "id": "f189",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP (BARBICAN) LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2232,7 +2272,7 @@
         "confidence": "high"
       },
       {
-        "id": "f202",
+        "id": "f190",
         "statement": "BP ALTERNATIVE ENERGY INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-04-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-04-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-04-10 in BP NORTH EAST OFFSHORE WIND LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2243,7 +2283,7 @@
         "confidence": "high"
       },
       {
-        "id": "f203",
+        "id": "f191",
         "statement": "BP P.L.C. previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2017-10-24; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2017-10-24; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2017-10-24 in BP EASTERN MEDITERRANEAN LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2254,7 +2294,7 @@
         "confidence": "high"
       },
       {
-        "id": "f204",
+        "id": "f192",
         "statement": "BP OIL UK LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06 in WALTON-GATWICK PIPELINE COMPANY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2265,7 +2305,7 @@
         "confidence": "high"
       },
       {
-        "id": "f205",
+        "id": "f193",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP CAPITAL MARKETS P.L.C..",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2276,7 +2316,7 @@
         "confidence": "high"
       },
       {
-        "id": "f206",
+        "id": "f194",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP (INDIAN AGENCIES) LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2287,7 +2327,7 @@
         "confidence": "high"
       },
       {
-        "id": "f207",
+        "id": "f195",
         "statement": "BP OIL UK LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-07-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-07-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-07-10 in BP RETAIL PROPERTIES LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2298,7 +2338,7 @@
         "confidence": "high"
       },
       {
-        "id": "f208",
+        "id": "f196",
         "statement": "BP ALTERNATIVE ENERGY INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-04-08; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-04-08; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2024-04-08 in LIGHTSOURCE BP RENEWABLE ENERGY INVESTMENTS HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2309,7 +2349,7 @@
         "confidence": "high"
       },
       {
-        "id": "f209",
+        "id": "f197",
         "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-12-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-12-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-12-19 in BP PIPELINES (SCP) LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2320,7 +2360,7 @@
         "confidence": "high"
       },
       {
-        "id": "f210",
+        "id": "f198",
         "statement": "BP PENSION TRUSTEES LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP INVESTMENT MANAGEMENT LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2331,7 +2371,7 @@
         "confidence": "high"
       },
       {
-        "id": "f211",
+        "id": "f199",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in CASTROL GROUP HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2342,7 +2382,7 @@
         "confidence": "high"
       },
       {
-        "id": "f212",
+        "id": "f200",
         "statement": "BP AFRICA LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP MOCAMBIQUE LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2353,7 +2393,7 @@
         "confidence": "high"
       },
       {
-        "id": "f213",
+        "id": "f201",
         "statement": "BP GAMMA HOLDINGS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-05-04; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-05-04; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-05-04 in BP ETA HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2364,7 +2404,7 @@
         "confidence": "high"
       },
       {
-        "id": "f214",
+        "id": "f202",
         "statement": "BP TECHNOLOGY VENTURES LIMITED previously held Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2021-11-01, to 2022-10-12; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2021-11-01, to 2022-10-12 in GRID EDGE LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2375,7 +2415,7 @@
         "confidence": "high"
       },
       {
-        "id": "f215",
+        "id": "f203",
         "statement": "BP P.L.C. previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2016-12-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2016-12-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2016-12-19 in BP CORPORATE HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2386,7 +2426,7 @@
         "confidence": "high"
       },
       {
-        "id": "f216",
+        "id": "f204",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP CAR FLEET LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2397,7 +2437,7 @@
         "confidence": "high"
       },
       {
-        "id": "f217",
+        "id": "f205",
         "statement": "BP ALTERNATIVE ENERGY INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-11-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-11-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2024-11-19 in BP KOPPA LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2408,7 +2448,7 @@
         "confidence": "high"
       },
       {
-        "id": "f218",
+        "id": "f206",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP TECHNOLOGY VENTURES LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2419,7 +2459,7 @@
         "confidence": "high"
       },
       {
-        "id": "f219",
+        "id": "f207",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in THE BP SHARE PLANS TRUSTEES LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2430,7 +2470,7 @@
         "confidence": "high"
       },
       {
-        "id": "f220",
+        "id": "f208",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in PEARL RIVER DELTA INVESTMENTS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2441,7 +2481,7 @@
         "confidence": "high"
       },
       {
-        "id": "f221",
+        "id": "f209",
         "statement": "INEOS ACETYLS INVESTMENTS LIMITED previously held Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2020-11-03, to 2022-11-07; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2020-11-03, to 2022-11-07 in TRICOYA UK LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2452,7 +2492,7 @@
         "confidence": "high"
       },
       {
-        "id": "f222",
+        "id": "f210",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP AUSTRALIA SWAPS MANAGEMENT LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2463,7 +2503,7 @@
         "confidence": "high"
       },
       {
-        "id": "f223",
+        "id": "f211",
         "statement": "BP INTERNATIONAL LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2020-12-30; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2020-12-30; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2020-12-30 in BP MARINE LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2474,7 +2514,7 @@
         "confidence": "high"
       },
       {
-        "id": "f224",
+        "id": "f212",
         "statement": "BP P.L.C. previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2020-12-18; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2020-12-18; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2020-12-18 in BP (GIBRALTAR) LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2485,7 +2525,7 @@
         "confidence": "high"
       },
       {
-        "id": "f225",
+        "id": "f213",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-11-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-11-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-11-13 in BP CHEMICALS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2496,7 +2536,7 @@
         "confidence": "high"
       },
       {
-        "id": "f226",
+        "id": "f214",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in KENILWORTH OIL COMPANY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2507,7 +2547,7 @@
         "confidence": "high"
       },
       {
-        "id": "f227",
+        "id": "f215",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP MIDDLE EAST LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2518,7 +2558,7 @@
         "confidence": "high"
       },
       {
-        "id": "f228",
+        "id": "f216",
         "statement": "BP INTEGRATED SOLUTIONS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-06-18; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-06-18; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2021-06-18 in BP GLOBAL SOLUTIONS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2529,7 +2569,7 @@
         "confidence": "high"
       },
       {
-        "id": "f229",
+        "id": "f217",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-04-28; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-04-28; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-04-28 in BRITANNIC MARKETING LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2540,7 +2580,7 @@
         "confidence": "high"
       },
       {
-        "id": "f230",
+        "id": "f218",
         "statement": "BP ALTERNATIVE ENERGY INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2021-12-08; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2021-12-08 in MORVEN OFFSHORE WIND HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2551,7 +2591,7 @@
         "confidence": "high"
       },
       {
-        "id": "f231",
+        "id": "f219",
         "statement": "INEOS ACETYLS INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent'] (None–100.0%), from 2020-12-31; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent'] (None–100.0%), from 2020-12-31 in INEOS ACETYLS AMERICAS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2562,7 +2602,7 @@
         "confidence": "high"
       },
       {
-        "id": "f232",
+        "id": "f220",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP ASIA PACIFIC HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2573,7 +2613,7 @@
         "confidence": "high"
       },
       {
-        "id": "f233",
+        "id": "f221",
         "statement": "BP ASIA PACIFIC HOLDINGS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP OIL VIETNAM LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2584,7 +2624,7 @@
         "confidence": "high"
       },
       {
-        "id": "f234",
+        "id": "f222",
         "statement": "BP CHEMICALS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BXL PLASTICS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2595,7 +2635,7 @@
         "confidence": "high"
       },
       {
-        "id": "f235",
+        "id": "f223",
         "statement": "CONSOLIDATED PETROLEUM COMPANY LIMITED(THE) holds Relationship Type: ['ownership-of-shares-75-to-100-percent-as-firm', 'voting-rights-75-to-100-percent-as-firm', 'right-to-appoint-and-remove-directors-as-firm'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent-as-firm', 'voting-rights-75-to-100-percent-as-firm', 'right-to-appoint-and-remove-directors-as-firm'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent-as-firm', 'voting-rights-75-to-100-percent-as-firm', 'right-to-appoint-and-remove-directors-as-firm'], from 2016-04-06 in CONSOLIDATED PETROLEUM SUPPLY COMPANY LIMITED(THE).",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2606,7 +2646,7 @@
         "confidence": "high"
       },
       {
-        "id": "f236",
+        "id": "f224",
         "statement": "BP ALTERNATIVE ENERGY INVESTMENTS LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-07-06, to 2021-08-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-07-06, to 2021-08-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2021-07-06, to 2021-08-06 in MORGAN OFFSHORE WIND LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2617,7 +2657,7 @@
         "confidence": "high"
       },
       {
-        "id": "f237",
+        "id": "f225",
         "statement": "BP GLOBAL INVESTMENTS LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2023-12-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2023-12-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2023-12-19 in BP PIPELINES (SCP) LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2628,7 +2668,7 @@
         "confidence": "high"
       },
       {
-        "id": "f238",
+        "id": "f226",
         "statement": "BP HOLDINGS NORTH AMERICA LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP AMERICA LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2639,7 +2679,7 @@
         "confidence": "high"
       },
       {
-        "id": "f239",
+        "id": "f227",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP CONTINENTAL HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2650,7 +2690,7 @@
         "confidence": "high"
       },
       {
-        "id": "f240",
+        "id": "f228",
         "statement": "INEOS ACETYLS INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent'] (None–100.0%), from 2020-12-31; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent'] (None–100.0%), from 2020-12-31 in INEOS ACETYLS INVESTMENTS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2661,7 +2701,7 @@
         "confidence": "high"
       },
       {
-        "id": "f241",
+        "id": "f229",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP ENERGY EUROPE LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2672,7 +2712,7 @@
         "confidence": "high"
       },
       {
-        "id": "f242",
+        "id": "f230",
         "statement": "ROPEMAKER PROPERTIES LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in ROPEMAKER DEANSGATE LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2683,7 +2723,7 @@
         "confidence": "high"
       },
       {
-        "id": "f243",
+        "id": "f231",
         "statement": "AIR BP LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2018-03-15; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2018-03-15; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'], from 2018-03-15 in AVIATION SERVICE (IRAQ) LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2694,7 +2734,7 @@
         "confidence": "high"
       },
       {
-        "id": "f244",
+        "id": "f232",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in POAT LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2705,7 +2745,7 @@
         "confidence": "high"
       },
       {
-        "id": "f245",
+        "id": "f233",
         "statement": "BP CHEMICALS LIMITED previously held Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2016-04-06, to 2020-11-13; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2016-04-06, to 2020-11-13; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2020-11-13 in INEOS ACETYLS (KOREA) LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2716,7 +2756,7 @@
         "confidence": "high"
       },
       {
-        "id": "f246",
+        "id": "f234",
         "statement": "BP INTERNATIONAL LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2018-04-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2018-04-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2018-04-25 in AIR BP LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2727,7 +2767,7 @@
         "confidence": "high"
       },
       {
-        "id": "f247",
+        "id": "f235",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BTC PIPELINE HOLDING COMPANY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2738,7 +2778,7 @@
         "confidence": "high"
       },
       {
-        "id": "f248",
+        "id": "f236",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BRITANNIC STRATEGIES LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2749,7 +2789,7 @@
         "confidence": "high"
       },
       {
-        "id": "f249",
+        "id": "f237",
         "statement": "BP ETA HOLDINGS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-05-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-05-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-05-10 in BP LAMBDA HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2760,7 +2800,7 @@
         "confidence": "high"
       },
       {
-        "id": "f250",
+        "id": "f238",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP GREECE LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2771,7 +2811,7 @@
         "confidence": "high"
       },
       {
-        "id": "f251",
+        "id": "f239",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2022-03-10; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2022-03-10 in BP ABERDEEN HYDROGEN ENERGY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2782,7 +2822,7 @@
         "confidence": "high"
       },
       {
-        "id": "f252",
+        "id": "f240",
         "statement": "Aberdeen City Council holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2022-03-10; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2022-03-10 in BP ABERDEEN HYDROGEN ENERGY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2793,7 +2833,7 @@
         "confidence": "high"
       },
       {
-        "id": "f253",
+        "id": "f241",
         "statement": "INEOS ACETYLS INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-10-09; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-10-09; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-10-09 in INEOS WORLD-WIDE TECHNICAL SERVICES LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2804,7 +2844,7 @@
         "confidence": "high"
       },
       {
-        "id": "f254",
+        "id": "f242",
         "statement": "BP PENSION TRUSTEES LIMITED holds Relationship Type: ['voting-rights-75-to-100-percent', 'part-right-to-share-surplus-assets-75-to-100-percent'] (None–100.0%), from 2017-06-26; Relationship Type: ['voting-rights-75-to-100-percent', 'part-right-to-share-surplus-assets-75-to-100-percent'] (None–100.0%), from 2017-06-26 in DUNEDIN BUYOUT CO-INVESTMENT I L.P..",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2815,7 +2855,7 @@
         "confidence": "high"
       },
       {
-        "id": "f255",
+        "id": "f243",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP HOLDINGS CANADA LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2826,7 +2866,7 @@
         "confidence": "high"
       },
       {
-        "id": "f256",
+        "id": "f244",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPLORATION COMPANY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2837,7 +2877,7 @@
         "confidence": "high"
       },
       {
-        "id": "f257",
+        "id": "f245",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-07-26; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-07-26; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2024-07-26 in BP BIOFUELS INVESTMENTS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2848,7 +2888,7 @@
         "confidence": "high"
       },
       {
-        "id": "f258",
+        "id": "f246",
         "statement": "BP TECHNOLOGY VENTURES LIMITED previously held Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2017-04-10, to 2018-01-12; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2017-04-10, to 2018-01-12 in ROCKETROUTE LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2859,7 +2899,7 @@
         "confidence": "high"
       },
       {
-        "id": "f259",
+        "id": "f247",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-12-04; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-12-04; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-12-04 in BP UK RETAINED HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2870,7 +2910,7 @@
         "confidence": "high"
       },
       {
-        "id": "f260",
+        "id": "f248",
         "statement": "BP OIL UK LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06 in BRITISH PIPELINE AGENCY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2881,7 +2921,7 @@
         "confidence": "high"
       },
       {
-        "id": "f261",
+        "id": "f249",
         "statement": "BP TECHNOLOGY VENTURES LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2023-07-10; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2023-07-10; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'], from 2023-07-10 in BLUE OCEAN SEISMIC SERVICES LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2892,7 +2932,7 @@
         "confidence": "high"
       },
       {
-        "id": "f262",
+        "id": "f250",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2017-10-24; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2017-10-24; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2017-10-24 in BP EASTERN MEDITERRANEAN LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2903,7 +2943,7 @@
         "confidence": "high"
       },
       {
-        "id": "f263",
+        "id": "f251",
         "statement": "BP OIL UK LIMITED holds Relationship Type: ['ownership-of-shares-50-to-75-percent', 'voting-rights-50-to-75-percent'] (None–75.0%), from 2020-07-10; Relationship Type: ['ownership-of-shares-50-to-75-percent', 'voting-rights-50-to-75-percent'] (None–75.0%), from 2020-07-10 in EXMOOR PROPERTIES GP LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2914,7 +2954,7 @@
         "confidence": "high"
       },
       {
-        "id": "f264",
+        "id": "f252",
         "statement": "BP GLOBAL INVESTMENTS LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2020-12-31; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2020-12-31; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2020-12-31 in INEOS ACETYLS AMERICAS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2925,7 +2965,7 @@
         "confidence": "high"
       },
       {
-        "id": "f265",
+        "id": "f253",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-04-26; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-04-26; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-04-26 in BP GAMMA HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2936,7 +2976,7 @@
         "confidence": "high"
       },
       {
-        "id": "f266",
+        "id": "f254",
         "statement": "BP INTERNATIONAL LIMITED previously held Relationship Type: ['right-to-appoint-and-remove-directors'], from 2016-04-06, to 2022-11-30 in HEATHROW AIRPORT FUEL COMPANY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2947,7 +2987,7 @@
         "confidence": "high"
       },
       {
-        "id": "f267",
+        "id": "f255",
         "statement": "KUWAIT PETROLEUM INTERNATIONAL AVIATION COMPANY (U.K.) LIMITED previously held Relationship Type: ['right-to-appoint-and-remove-directors'], from 2016-06-28, to 2022-11-30 in HEATHROW AIRPORT FUEL COMPANY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2958,7 +2998,7 @@
         "confidence": "high"
       },
       {
-        "id": "f268",
+        "id": "f256",
         "statement": "SHELL U.K. LIMITED previously held Relationship Type: ['right-to-appoint-and-remove-directors'], from 2016-04-06, to 2022-11-30 in HEATHROW AIRPORT FUEL COMPANY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2969,7 +3009,7 @@
         "confidence": "high"
       },
       {
-        "id": "f269",
+        "id": "f257",
         "statement": "ESSO PETROLEUM COMPANY,LIMITED previously held Relationship Type: ['right-to-appoint-and-remove-directors'], from 2016-04-06, to 2022-11-30 in HEATHROW AIRPORT FUEL COMPANY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2980,7 +3020,7 @@
         "confidence": "high"
       },
       {
-        "id": "f270",
+        "id": "f258",
         "statement": "TOTALENERGIES MARKETING UK LIMITED previously held Relationship Type: ['right-to-appoint-and-remove-directors'], from 2016-04-06, to 2022-11-30 in HEATHROW AIRPORT FUEL COMPANY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -2991,7 +3031,7 @@
         "confidence": "high"
       },
       {
-        "id": "f271",
+        "id": "f259",
         "statement": "BP ALTERNATIVE ENERGY INVESTMENTS LIMITED previously held Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2018-01-31, to 2024-04-08; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2018-01-31, to 2024-04-08 in LIGHTSOURCE BP RENEWABLE ENERGY INVESTMENTS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3002,7 +3042,7 @@
         "confidence": "high"
       },
       {
-        "id": "f272",
+        "id": "f260",
         "statement": "BP INTERNATIONAL LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2020-12-31; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2020-12-31; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2020-12-31 in INEOS ACETYLS INVESTMENTS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3013,7 +3053,7 @@
         "confidence": "high"
       },
       {
-        "id": "f273",
+        "id": "f261",
         "statement": "BP GAMMA HOLDINGS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-05-04; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-05-04; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-05-04 in BP ZETA HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3024,7 +3064,7 @@
         "confidence": "high"
       },
       {
-        "id": "f274",
+        "id": "f262",
         "statement": "BP ZETA HOLDINGS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-05-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-05-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-05-10 in BP THETA HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3035,7 +3075,7 @@
         "confidence": "high"
       },
       {
-        "id": "f275",
+        "id": "f263",
         "statement": "BP OIL UK LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPRESS SHOPPING LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3046,7 +3086,7 @@
         "confidence": "high"
       },
       {
-        "id": "f276",
+        "id": "f264",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP OIL VENEZUELA LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3057,7 +3097,7 @@
         "confidence": "high"
       },
       {
-        "id": "f277",
+        "id": "f265",
         "statement": "INEOS ACETYLS INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-11-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-11-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-11-13 in INEOS ACETYLS (KOREA) LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3068,7 +3108,7 @@
         "confidence": "high"
       },
       {
-        "id": "f278",
+        "id": "f266",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-07-11; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-07-11; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-07-11 in BP PENSION ESCROW LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3079,7 +3119,7 @@
         "confidence": "high"
       },
       {
-        "id": "f279",
+        "id": "f267",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-06-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-06-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2021-06-10 in BP INTEGRATED SOLUTIONS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3090,7 +3130,7 @@
         "confidence": "high"
       },
       {
-        "id": "f280",
+        "id": "f268",
         "statement": "BP INTERNATIONAL LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2020-12-16; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2020-12-16; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2020-12-16 in VICEROY INVESTMENTS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3101,7 +3141,7 @@
         "confidence": "high"
       },
       {
-        "id": "f281",
+        "id": "f269",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-03-26; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-03-26; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-03-26 in BP UK FATIMA LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3112,7 +3152,7 @@
         "confidence": "high"
       },
       {
-        "id": "f282",
+        "id": "f270",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP BENEVOLENT FUND TRUSTEES LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3123,7 +3163,7 @@
         "confidence": "high"
       },
       {
-        "id": "f283",
+        "id": "f271",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP OIL YEMEN LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3134,7 +3174,7 @@
         "confidence": "high"
       },
       {
-        "id": "f284",
+        "id": "f272",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP PROPERTIES LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3145,7 +3185,7 @@
         "confidence": "high"
       },
       {
-        "id": "f285",
+        "id": "f273",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in GUANGDONG INVESTMENTS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3156,7 +3196,7 @@
         "confidence": "high"
       },
       {
-        "id": "f286",
+        "id": "f274",
         "statement": "BP ALTERNATIVE ENERGY INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2021-07-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2021-07-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'], from 2021-07-06 in MORGAN OFFSHORE WIND HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3167,7 +3207,7 @@
         "confidence": "high"
       },
       {
-        "id": "f287",
+        "id": "f275",
         "statement": "BTC PIPELINE HOLDING COMPANY LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2023-12-18; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2023-12-18; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2023-12-18 in BP PIPELINES (BTC) LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3178,7 +3218,7 @@
         "confidence": "high"
       },
       {
-        "id": "f288",
+        "id": "f276",
         "statement": "BP ADVANCED MOBILITY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-08-02; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-08-02; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-08-02 in CHARGEMASTER LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3189,7 +3229,7 @@
         "confidence": "high"
       },
       {
-        "id": "f289",
+        "id": "f277",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent-as-firm', 'voting-rights-25-to-50-percent-as-firm', 'significant-influence-or-control-as-firm'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent-as-firm', 'voting-rights-25-to-50-percent-as-firm', 'significant-influence-or-control-as-firm'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent-as-firm', 'voting-rights-25-to-50-percent-as-firm', 'significant-influence-or-control-as-firm'], from 2016-04-06 in CONSOLIDATED PETROLEUM COMPANY LIMITED(THE).",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3200,7 +3240,7 @@
         "confidence": "high"
       },
       {
-        "id": "f290",
+        "id": "f278",
         "statement": "BP OIL UK LIMITED previously held Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06, to 2019-02-01; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06, to 2019-02-01 in UNITED KINGDOM OIL PIPELINES LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3211,7 +3251,7 @@
         "confidence": "high"
       },
       {
-        "id": "f291",
+        "id": "f279",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-04-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-04-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2018-04-25 in AIR BP LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3222,7 +3262,7 @@
         "confidence": "high"
       },
       {
-        "id": "f292",
+        "id": "f280",
         "statement": "BP GAMMA HOLDINGS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-12-03; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-12-03; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2024-12-03 in SNOWMASS HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3233,7 +3273,7 @@
         "confidence": "high"
       },
       {
-        "id": "f293",
+        "id": "f281",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP INTERNATIONAL LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3244,7 +3284,7 @@
         "confidence": "high"
       },
       {
-        "id": "f294",
+        "id": "f282",
         "statement": "BP ASIA PACIFIC HOLDINGS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-05-26; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-05-26; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-05-26 in BP NEW VENTURES MIDDLE EAST LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3255,7 +3295,7 @@
         "confidence": "high"
       },
       {
-        "id": "f295",
+        "id": "f283",
         "statement": "BP ALTERNATIVE ENERGY INVESTMENTS LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-03-06, to 2024-02-05; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-03-06, to 2024-02-05; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-03-06, to 2024-02-05 in SHAFAG (JABRAYIL) SOLAR LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3266,7 +3306,7 @@
         "confidence": "high"
       },
       {
-        "id": "f296",
+        "id": "f284",
         "statement": "BP CHEMICALS LIMITED previously held Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2017-03-29, to 2020-11-03; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2017-03-29, to 2020-11-03 in TRICOYA UK LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3277,7 +3317,7 @@
         "confidence": "high"
       },
       {
-        "id": "f297",
+        "id": "f285",
         "statement": "BP ALTERNATIVE ENERGY INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2021-07-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2021-07-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'], from 2021-07-06 in MONA OFFSHORE WIND HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3288,7 +3328,7 @@
         "confidence": "high"
       },
       {
-        "id": "f298",
+        "id": "f286",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP OIL INTERNATIONAL LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3299,7 +3339,7 @@
         "confidence": "high"
       },
       {
-        "id": "f299",
+        "id": "f287",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-12-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-12-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2018-12-10 in BP SOUTH AMERICA HOLDINGS LTD.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3310,7 +3350,7 @@
         "confidence": "high"
       },
       {
-        "id": "f300",
+        "id": "f288",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP FINANCE P.L.C.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3321,7 +3361,7 @@
         "confidence": "high"
       },
       {
-        "id": "f301",
+        "id": "f289",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP RUSSIAN INVESTMENTS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3332,7 +3372,7 @@
         "confidence": "high"
       },
       {
-        "id": "f302",
+        "id": "f290",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-05-09; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-05-09; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2018-05-09 in BP ADVANCED MOBILITY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3343,7 +3383,7 @@
         "confidence": "high"
       },
       {
-        "id": "f303",
+        "id": "f291",
         "statement": "BP OIL UK LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP OIL LLANDARCY REFINERY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3354,7 +3394,7 @@
         "confidence": "high"
       },
       {
-        "id": "f304",
+        "id": "f292",
         "statement": "BP ALTERNATIVE ENERGY INVESTMENTS LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-10-22, to 2024-03-18; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-10-22, to 2024-03-18; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2021-10-22, to 2024-03-18 in BP LOW CARBON DEVELOPMENT COMPANY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3365,7 +3405,7 @@
         "confidence": "high"
       },
       {
-        "id": "f305",
+        "id": "f293",
         "statement": "BP ETA HOLDINGS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-05-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-05-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-05-10 in BP KAPPA HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3376,7 +3416,7 @@
         "confidence": "high"
       },
       {
-        "id": "f306",
+        "id": "f294",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP HOLDINGS NORTH AMERICA LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3387,7 +3427,7 @@
         "confidence": "high"
       },
       {
-        "id": "f307",
+        "id": "f295",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-12-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-12-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-12-19 in BP CORPORATE HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3398,7 +3438,7 @@
         "confidence": "high"
       },
       {
-        "id": "f308",
+        "id": "f296",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in S&JD ROBERTSON NORTH AIR LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3409,7 +3449,7 @@
         "confidence": "high"
       },
       {
-        "id": "f309",
+        "id": "f297",
         "statement": "BP OIL UK LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06 in WEST LONDON PIPELINE AND STORAGE LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3420,7 +3460,7 @@
         "confidence": "high"
       },
       {
-        "id": "f310",
+        "id": "f298",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP INVESTMENTS ASIA LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3431,7 +3471,7 @@
         "confidence": "high"
       },
       {
-        "id": "f311",
+        "id": "f299",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BRITANNIC TRADING LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3442,7 +3482,7 @@
         "confidence": "high"
       },
       {
-        "id": "f312",
+        "id": "f300",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP SHIPPING LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3453,7 +3493,7 @@
         "confidence": "high"
       },
       {
-        "id": "f313",
+        "id": "f301",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP PENSION TRUSTEES LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3464,7 +3504,7 @@
         "confidence": "high"
       },
       {
-        "id": "f314",
+        "id": "f302",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in CADMAN DBP LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3475,7 +3515,7 @@
         "confidence": "high"
       },
       {
-        "id": "f315",
+        "id": "f303",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-09-08; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-09-08; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-09-08 in BP GAS & POWER INVESTMENTS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3486,7 +3526,7 @@
         "confidence": "high"
       },
       {
-        "id": "f316",
+        "id": "f304",
         "statement": "BP TECHNOLOGY VENTURES LIMITED previously held Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06, to 2021-09-02; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06, to 2021-09-02 in HELIEX POWER LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3497,7 +3537,7 @@
         "confidence": "high"
       },
       {
-        "id": "f317",
+        "id": "f305",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06 in PENTLAND AVIATION FUELLING SERVICES LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3508,7 +3548,7 @@
         "confidence": "high"
       },
       {
-        "id": "f318",
+        "id": "f306",
         "statement": "BP ETA HOLDINGS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-11-30; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-11-30; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-11-30 in BP HYDROGEN AND CCS DEVELOPMENT COMPANY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3519,7 +3559,7 @@
         "confidence": "high"
       },
       {
-        "id": "f319",
+        "id": "f307",
         "statement": "BP ALTERNATIVE ENERGY INVESTMENTS LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-07-06, to 2021-08-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-07-06, to 2021-08-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2021-07-06, to 2021-08-06 in MONA OFFSHORE WIND LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3530,7 +3570,7 @@
         "confidence": "high"
       },
       {
-        "id": "f320",
+        "id": "f308",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP AFRICA LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3541,7 +3581,7 @@
         "confidence": "high"
       },
       {
-        "id": "f321",
+        "id": "f309",
         "statement": "BP GLOBAL INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPLORATION PERSONNEL COMPANY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3552,7 +3592,7 @@
         "confidence": "high"
       },
       {
-        "id": "f322",
+        "id": "f310",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP OIL UK LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3563,7 +3603,7 @@
         "confidence": "high"
       },
       {
-        "id": "f323",
+        "id": "f311",
         "statement": "INEOS ACETYLS INVESTMENTS LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2020-11-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2020-11-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2020-11-13 in BP CHEMICALS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3574,7 +3614,7 @@
         "confidence": "high"
       },
       {
-        "id": "f324",
+        "id": "f312",
         "statement": "CASTROL HOLDINGS INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-12-18; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-12-18; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-12-18 in BP (GIBRALTAR) LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3585,7 +3625,7 @@
         "confidence": "high"
       },
       {
-        "id": "f325",
+        "id": "f313",
         "statement": "BP ASIA PACIFIC HOLDINGS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP BIOFUELS BRAZIL INVESTMENTS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3596,7 +3636,7 @@
         "confidence": "high"
       },
       {
-        "id": "f326",
+        "id": "f314",
         "statement": "INEOS ACETYLS INVESTMENTS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in INEOS AROMATICS HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3607,7 +3647,7 @@
         "confidence": "high"
       },
       {
-        "id": "f327",
+        "id": "f315",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP ALTERNATIVE ENERGY INVESTMENTS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3618,7 +3658,7 @@
         "confidence": "high"
       },
       {
-        "id": "f328",
+        "id": "f316",
         "statement": "BP CHEMICALS LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2020-10-09; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2020-10-09; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2020-10-09 in INEOS WORLD-WIDE TECHNICAL SERVICES LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3629,7 +3669,7 @@
         "confidence": "high"
       },
       {
-        "id": "f329",
+        "id": "f317",
         "statement": "KUWAIT PETROLEUM (U.K. HOLDINGS) LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in KUWAIT PETROLEUM INTERNATIONAL AVIATION COMPANY (U.K.) LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3640,7 +3680,7 @@
         "confidence": "high"
       },
       {
-        "id": "f330",
+        "id": "f318",
         "statement": "CASTROL HOLDINGS INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-12-16; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-12-16; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-12-16 in VICEROY INVESTMENTS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3651,7 +3691,7 @@
         "confidence": "high"
       },
       {
-        "id": "f331",
+        "id": "f319",
         "statement": "ROPEMAKER PROPERTIES LIMITED holds Relationship Type: ['ownership-of-shares-50-to-75-percent', 'voting-rights-50-to-75-percent'] (None–75.0%), from 2018-04-13; Relationship Type: ['ownership-of-shares-50-to-75-percent', 'voting-rights-50-to-75-percent'] (None–75.0%), from 2018-04-13 in HORIZON 38 MANAGEMENT COMPANY LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3662,7 +3702,7 @@
         "confidence": "high"
       },
       {
-        "id": "f332",
+        "id": "f320",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP PENSIONS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3673,7 +3713,7 @@
         "confidence": "high"
       },
       {
-        "id": "f333",
+        "id": "f321",
         "statement": "BP CHEMICALS LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-12-29, to 2018-03-14; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-12-29, to 2018-03-14; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-12-29, to 2018-03-14 in SALTEND CHEMICALS PARK LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3684,7 +3724,7 @@
         "confidence": "high"
       },
       {
-        "id": "f334",
+        "id": "f322",
         "statement": "BP P.L.C. holds Relationship Type: ['ownership-of-shares-75-to-100-percent-as-firm', 'voting-rights-75-to-100-percent-as-firm', 'right-to-appoint-and-remove-directors-as-firm'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent-as-firm', 'voting-rights-75-to-100-percent-as-firm', 'right-to-appoint-and-remove-directors-as-firm'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent-as-firm', 'voting-rights-75-to-100-percent-as-firm', 'right-to-appoint-and-remove-directors-as-firm'], from 2016-04-06 in BP GLOBAL INVESTMENTS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3695,7 +3735,7 @@
         "confidence": "high"
       },
       {
-        "id": "f335",
+        "id": "f323",
         "statement": "BP ZETA HOLDINGS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-05-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-05-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-05-10 in BP IOTA HOLDINGS LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3706,7 +3746,7 @@
         "confidence": "high"
       },
       {
-        "id": "f336",
+        "id": "f324",
         "statement": "BP OIL UK LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP OIL LOGISTICS UK LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3717,7 +3757,7 @@
         "confidence": "high"
       },
       {
-        "id": "f337",
+        "id": "f325",
         "statement": "BP INTERNATIONAL LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2022-01-04; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2022-01-04; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2022-01-04 in BP (ABU DHABI) LIMITED.",
         "source_name": "UK Companies House",
         "source_id": "companies_house",
@@ -3728,7 +3768,128 @@
         "confidence": "high"
       },
       {
-        "id": "f338",
+        "id": "f326",
+        "statement": "TUSHAR MORZARIA holds appointmentOfBoard, from 2020-09-01 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-1d04b54fa4cc4c0b3a3f6e49"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f327",
+        "statement": "JOHANNES ANTONIUS TEYSSEN holds appointmentOfBoard, from 2021-01-01 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-992722ae0d237550c1b6b16c"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f328",
+        "statement": "ALIA FAZAL holds seniorManagingOfficial, from 2022-01-04 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-201f7c554370296473508265"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f329",
+        "statement": "JULIAN THURSTON holds seniorManagingOfficial, from 2022-05-02 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-354f49d7041641d359d031af"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f330",
+        "statement": "AMANDA JAYNE BLANC holds appointmentOfBoard, from 2022-09-01 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-f468a8d9476067a1ebc731e3"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f331",
+        "statement": "SATISH PAI holds appointmentOfBoard, from 2023-03-01 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-cb6d5772a9784c1b2c18993a"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f332",
+        "statement": "HINA NAGARAJAN holds appointmentOfBoard, from 2023-03-01 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-253818cbb052d5f233e9f859"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f333",
+        "statement": "KATHERINE ANNE THOMSON holds appointmentOfBoard, from 2024-02-02 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-97e6c086f65ccc16bb8dc43a"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f334",
+        "statement": "IAN PAUL TYLER holds appointmentOfBoard, from 2025-04-01 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-26869c2e8f837e1f5b75f4cb"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f335",
+        "statement": "DAVID ALAN HAGER holds appointmentOfBoard, from 2025-06-02 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-283c301be589e1cd9851989f"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f336",
+        "statement": "MARGUERITE EILEEN O‘NEILL holds appointmentOfBoard, from 2026-04-01 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-a57551b8e131f97ec2545706"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f337",
         "statement": "BP P.L.C. is a registered entity in GB (XI-LEI 213800LH1BZH3DI6G760, GB-COH 00102498).",
         "source_name": "GLEIF",
         "source_id": "gleif",
@@ -3745,17 +3906,6 @@
         "code": "NON_EU_JURISDICTION",
         "label": "Outside EU/EEA",
         "confidence": "low",
-        "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: GB. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
-        "source_name": "Global Energy Monitor / Climate TRACE",
-        "source_id": "climatetrace",
-        "fact_ids": [],
-        "kind": "context"
-      },
-      {
-        "id": "r2",
-        "code": "NON_EU_JURISDICTION",
-        "label": "Outside EU/EEA",
-        "confidence": "low",
         "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: AR, AU, BR, CH, GB, KY, US. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -3763,7 +3913,7 @@
         "kind": "context"
       },
       {
-        "id": "r3",
+        "id": "r2",
         "code": "COMPLEX_OWNERSHIP_LAYERS",
         "label": "Complex ownership layers",
         "confidence": "medium",
@@ -3772,6 +3922,17 @@
         "source_id": "opensanctions",
         "fact_ids": [],
         "kind": "risk"
+      },
+      {
+        "id": "r3",
+        "code": "NON_EU_JURISDICTION",
+        "label": "Outside EU/EEA",
+        "confidence": "low",
+        "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: GB. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
+        "source_name": "Global Energy Monitor / Climate TRACE",
+        "source_id": "climatetrace",
+        "fact_ids": [],
+        "kind": "context"
       },
       {
         "id": "r4",
@@ -3826,16 +3987,16 @@
         "homepage": "https://search.gleif.org/#/search/"
       },
       {
-        "source_id": "climatetrace",
-        "name": "Global Energy Monitor / Climate TRACE",
-        "license": "CC-BY-4.0",
-        "homepage": "https://globalenergymonitor.org/"
-      },
-      {
         "source_id": "opensanctions",
         "name": "OpenSanctions",
         "license": "CC-BY-NC-4.0",
         "homepage": "https://www.opensanctions.org/"
+      },
+      {
+        "source_id": "climatetrace",
+        "name": "Global Energy Monitor / Climate TRACE",
+        "license": "CC-BY-4.0",
+        "homepage": "https://globalenergymonitor.org/"
       },
       {
         "source_id": "wikidata",
@@ -3850,16 +4011,16 @@
         "homepage": "https://eiti.org/"
       },
       {
-        "source_id": "opencorporates",
-        "name": "OpenCorporates",
-        "license": "OC-Terms",
-        "homepage": "https://opencorporates.com/"
-      },
-      {
         "source_id": "companies_house",
         "name": "UK Companies House",
         "license": "OGL-3.0",
         "homepage": "https://find-and-update.company-information.service.gov.uk/"
+      },
+      {
+        "source_id": "opencorporates",
+        "name": "OpenCorporates",
+        "license": "OC-Terms",
+        "homepage": "https://opencorporates.com/"
       },
       {
         "source_id": "wikirate",
@@ -3883,7 +4044,5 @@
   },
   "validation_ok": true,
   "dropped_claims": [],
-  "validation_issues": [
-    "gap 'g1' is not cited by any claim"
-  ]
+  "validation_issues": []
 }

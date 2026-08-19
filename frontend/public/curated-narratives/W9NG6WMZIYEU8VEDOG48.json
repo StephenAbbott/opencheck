@@ -1,10 +1,223 @@
 {
   "lei": "W9NG6WMZIYEU8VEDOG48",
   "subject_name": "ØRSTED A/S",
-  "summary": "ØRSTED A/S (LEI W9NG6WMZIYEU8VEDOG48, Danish CVR 36213728) is identifier-confirmed and registered in Denmark. The Ministry of Finance on behalf of the Kingdom of Denmark holds a shareholding in the company, with Wikidata indicatively reporting that stake at 50.1% (sourced from the 2019 annual report); additional indicative shareholdings are reported for Andel Energy (7.28%), Goldman Sachs (13.0%), and Capital Group Companies (6.0%), all sourced from Wikidata and to be treated as indicative only. GLEIF records a reporting exception for the ultimate parent, meaning the parent entity is identified but does not consolidate ØRSTED A/S, leaving the ultimate beneficial ownership chain partially opaque; this opacity, combined with an ownership structure of three or more corporate layers, raises structural risk signals (medium confidence) around opaque ownership and complex layering, with a low-confidence advisory signal regarding possible obfuscation that requires confirmation of legitimate economic rationale. A related entity, HORNSEA 1 LIMITED, returns name matches in both the Panama Papers and Bahamas Leaks databases (ICIJ score 88/100, medium confidence each), which are structural indicators for further review and not determinations of wrongdoing. Multiple board members and officers — including Andrew Richard Dingley Brown (næstformand), Karl Johnny Hersvik, Julia Elizabeth King, Julian David Waldron, Trond Ødegård Westlie, Rasmus Errboe, Benny Gøbel, and Ruchit Majmudar — share names with records on the Denmark, Faroe Islands and Greenland PEPs list via OpenAleph, though all are possible name matches only with no birth date or nationality confirmed, and each requires individual verification. OpenSanctions data used in this review is licensed CC-BY-NC-4.0 and may not be commercially re-used without a separate licence.",
-  "claims": [],
-  "limitations": [],
-  "overall_confidence": "low",
+  "summary": "ØRSTED A/S (LEI W9NG6WMZIYEU8VEDOG48, DK CVR 36213728) is identifier-confirmed and registered in Denmark. The Danish state is a reported significant shareholder: Wikidata (indicative, sourced from the 2019 annual report) records the Ministry of Finance of Denmark at approximately 50.1%, Andel Energy at approximately 7.28%, and Goldman Sachs at approximately 13.0% and Capital Group Companies at approximately 6.0%, while OpenSanctions separately records shareholdings by the Ministry of Finance on behalf of the Kingdom of Denmark, Equinor ASA, and Andel; all ownership figures are indicative and not drawn from an authoritative register. GLEIF Level 2 data confirms ØRSTED A/S as the accounting consolidating parent of a large international subsidiary network spanning Denmark, the UK, the US, and Taiwan, while the ultimate parent relationship carries a GLEIF reporting exception — the parent does not consolidate the subject — leaving the top of the ownership chain unresolved. Three structural risk signals were identified by GLEIF (medium confidence): an anonymous entity in the ownership chain (opaque ownership), a corporate structure of three or more layers meeting the AMLA threshold for complex layering, and an advisory possible-obfuscation signal (low confidence) combining opacity with complex layering, which requires confirmation of a legitimate economic rationale before reliance. Additionally, OpenAleph name-match signals (medium confidence, unconfirmed — no shared birth date or nationality) were raised against nine related parties — including directors Lene Skole-Sørensen (formand), Andrew Richard Dingley Brown (næstformand), Trond Ødegård Westlie (direktør), Rasmus Errboe (adm. dir.), and board members Julia Elizabeth King, Karl Johnny Hersvik, Julian David Waldron, Benny Gøbel, and Ruchit Majmudar — via the Denmark, Faroe Islands and Greenland PEPs dataset; none of these constitute confirmed PEP identifications and each requires individual verification. A material licensing limitation applies: OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used without separate authorisation.",
+  "claims": [
+    {
+      "id": "c1",
+      "text": "ØRSTED A/S (LEI W9NG6WMZIYEU8VEDOG48, DK CVR 36213728) is identifier-confirmed and registered in Denmark.",
+      "fact_ids": [
+        "f51"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c2",
+      "text": "Wikidata (indicative, sourced from the 2019 annual report) records the Ministry of Finance of Denmark at approximately 50.1% ownership of Ørsted.",
+      "fact_ids": [
+        "f34"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c3",
+      "text": "Wikidata (indicative, sourced from the 2019 annual report) records Andel Energy at approximately 7.28% ownership of Ørsted.",
+      "fact_ids": [
+        "f33"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c4",
+      "text": "Wikidata (indicative, sourced from the 2016 annual report) records Goldman Sachs at approximately 13.0% and Capital Group Companies at approximately 6.0% ownership of Ørsted.",
+      "fact_ids": [
+        "f31",
+        "f32"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c5",
+      "text": "OpenSanctions separately records shareholdings in Ørsted A/S by the Ministry of Finance on behalf of the Kingdom of Denmark, Equinor ASA, and Andel; all ownership figures from these sources are indicative and not drawn from an authoritative register.",
+      "fact_ids": [
+        "f28",
+        "f29",
+        "f30"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c6",
+      "text": "State ownership is a structural indicator: the Ministry of Finance of Denmark is reported as a significant shareholder, suggesting possible state-owned enterprise status; this is a presence-only indicator from non-register sources and its absence is not evidence to the contrary.",
+      "fact_ids": [
+        "f28",
+        "f34"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c7",
+      "text": "GLEIF Level 2 data confirms ØRSTED A/S as the accounting consolidating parent of a large international subsidiary network spanning Denmark, the UK, the US, and Taiwan.",
+      "fact_ids": [
+        "f3",
+        "f4",
+        "f5",
+        "f6",
+        "f7",
+        "f8",
+        "f9",
+        "f10",
+        "f11",
+        "f12",
+        "f13",
+        "f14",
+        "f15",
+        "f16",
+        "f17",
+        "f18",
+        "f19",
+        "f20",
+        "f21",
+        "f22",
+        "f23",
+        "f24",
+        "f25",
+        "f26"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c8",
+      "text": "The ultimate parent relationship carries a GLEIF reporting exception — the parent does not consolidate the subject — leaving the top of the ownership chain unresolved.",
+      "fact_ids": [
+        "f1",
+        "f2"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c9",
+      "text": "A structural risk signal of opaque ownership (medium confidence) was identified by GLEIF, due to an anonymous entity in the ownership chain.",
+      "fact_ids": [
+        "r1"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c10",
+      "text": "A structural risk signal of complex ownership layers (medium confidence) was identified by GLEIF, with the corporate structure reaching three or more layers, meeting the AMLA threshold.",
+      "fact_ids": [
+        "r3"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c11",
+      "text": "An advisory possible-obfuscation signal (low confidence) was identified by GLEIF, combining opacity with complex layering; this is an AMLA CDD RTS subjective condition requiring confirmation of a legitimate economic rationale before reliance.",
+      "fact_ids": [
+        "r4"
+      ],
+      "confidence": "low"
+    },
+    {
+      "id": "c12",
+      "text": "The ownership chain reaches jurisdictions outside the EU/EEA (GB, TW, US-AZ, US-DE); this is a structural observation and not a risk finding under the AMLA CDD RTS or AMLR Annex III.",
+      "fact_ids": [
+        "r2"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c13",
+      "text": "OpenAleph name-match signals (medium confidence, unconfirmed — no shared birth date or nationality) were raised against board member Andrew Richard Dingley Brown (næstformand, from 2024-03-05) via the Denmark, Faroe Islands and Greenland PEPs dataset; this is not a confirmed PEP identification and requires individual verification.",
+      "fact_ids": [
+        "f38",
+        "r5"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c14",
+      "text": "OpenAleph name-match signals (medium confidence, unconfirmed) were raised against board member Karl Johnny Hersvik (from 2026-04-09) via the Denmark, Faroe Islands and Greenland PEPs dataset; this is not a confirmed PEP identification.",
+      "fact_ids": [
+        "f49",
+        "r6",
+        "r10"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c15",
+      "text": "OpenAleph name-match signals (medium confidence, unconfirmed) were raised against board member Julia Elizabeth King (bestyrelsesmedlem, from 2021-03-01) via the Denmark, Faroe Islands and Greenland PEPs dataset; this is not a confirmed PEP identification.",
+      "fact_ids": [
+        "f35",
+        "r7"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c16",
+      "text": "OpenAleph name-match signals (medium confidence, unconfirmed) were raised against board member Julian David Waldron (bestyrelsesmedlem, from 2025-04-03) via the Denmark, Faroe Islands and Greenland PEPs dataset; this is not a confirmed PEP identification.",
+      "fact_ids": [
+        "f43",
+        "r8"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c17",
+      "text": "OpenAleph name-match signals (medium confidence, unconfirmed) were raised against director Trond Ødegård Westlie (direktør, from 2024-04-01) via the Denmark, Faroe Islands and Greenland PEPs dataset; this is not a confirmed PEP identification.",
+      "fact_ids": [
+        "f39",
+        "r9"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c18",
+      "text": "OpenAleph name-match signals (medium confidence, unconfirmed) were raised against CEO Rasmus Errboe (adm. dir., from 2025-02-01) via the Denmark, Faroe Islands and Greenland PEPs dataset; this is not a confirmed PEP identification.",
+      "fact_ids": [
+        "f42",
+        "r11"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c19",
+      "text": "OpenAleph name-match signals (medium confidence, unconfirmed) were raised against board member Benny Gøbel (bestyrelsesmedlem, from 2011-04-12) via the Denmark, Faroe Islands and Greenland PEPs dataset; this is not a confirmed PEP identification.",
+      "fact_ids": [
+        "f36",
+        "r12"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c20",
+      "text": "OpenAleph name-match signals (medium confidence, unconfirmed) were raised against board member Ruchit Majmudar (bestyrelsesmedlem, from 2026-04-09) via the Denmark, Faroe Islands and Greenland PEPs dataset; this is not a confirmed PEP identification.",
+      "fact_ids": [
+        "f47",
+        "r13"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c21",
+      "text": "OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used without separate authorisation.",
+      "fact_ids": [
+        "g1"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "limitations": [
+    "The ultimate parent of ØRSTED A/S is subject to a GLEIF reporting exception (parent does not consolidate the subject), leaving the top of the ownership chain unresolved (f1, f2).",
+    "All ownership percentage figures (Ministry of Finance of Denmark ~50.1%, Andel Energy ~7.28%, Goldman Sachs ~13.0%, Capital Group Companies ~6.0%) are indicative only, sourced from Wikidata and OpenSanctions aggregators rather than an authoritative national register, and may not reflect current positions (f28–f34).",
+    "Nine related-party PEP signals from OpenAleph are name-matches only, with no birth date or nationality corroboration; none constitute confirmed PEP identifications (r5–r13).",
+    "OpenSanctions data is licensed CC-BY-NC-4.0; commercial re-use is not permitted under the source licence (g1).",
+    "The CVR — Det Centrale Virksomhedsregister was listed as a consulted source but no CVR-specific facts were returned in the packet; the extent of CVR data retrieved is not confirmed.",
+    "No sanctions, adverse media, or debarment screening results are present in the packet for the entity itself; the packet does not confirm these checks were run or were clean."
+  ],
+  "overall_confidence": "medium",
   "model": "claude-sonnet-4-6",
   "prompt_version": "2026-08-18-v6",
   "packet": {
@@ -175,17 +388,28 @@
       },
       {
         "id": "f15",
-        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in ØRSTED WIND POWER HOLDING A/S.",
+        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in BREESEA LIMITED.",
         "source_name": "GLEIF",
         "source_id": "gleif",
-        "source_url": "https://www.gleif.org/lei/2138001I4N44QV4N1858",
+        "source_url": "https://www.gleif.org/lei/213800FUUO6AEPNKR357",
         "bods_statement_ids": [
-          "opencheck-62ee10bd238424b20e695001"
+          "opencheck-44ee5f0457a2e505bb91d3f6"
         ],
         "confidence": "medium"
       },
       {
         "id": "f16",
+        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in ORSTED POWER SALES (UK) LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/213800BXZH7RWO84SI42",
+        "bods_statement_ids": [
+          "opencheck-024e3e12689c72fb81050bf0"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f17",
         "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in ØRSTED WIND POWER DENMARK A/S.",
         "source_name": "GLEIF",
         "source_id": "gleif",
@@ -196,24 +420,13 @@
         "confidence": "medium"
       },
       {
-        "id": "f17",
-        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in SONNINGMAY WIND LIMITED.",
-        "source_name": "GLEIF",
-        "source_id": "gleif",
-        "source_url": "https://www.gleif.org/lei/213800LX24J8JOPTTD69",
-        "bods_statement_ids": [
-          "opencheck-2f27a4ce32ee8947a7f46747"
-        ],
-        "confidence": "medium"
-      },
-      {
         "id": "f18",
-        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in BREESEA LIMITED.",
+        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in ØRSTED WIND POWER HOLDING A/S.",
         "source_name": "GLEIF",
         "source_id": "gleif",
-        "source_url": "https://www.gleif.org/lei/213800FUUO6AEPNKR357",
+        "source_url": "https://www.gleif.org/lei/2138001I4N44QV4N1858",
         "bods_statement_ids": [
-          "opencheck-44ee5f0457a2e505bb91d3f6"
+          "opencheck-62ee10bd238424b20e695001"
         ],
         "confidence": "medium"
       },
@@ -230,12 +443,12 @@
       },
       {
         "id": "f20",
-        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in ORSTED POWER SALES (UK) LIMITED.",
+        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in SONNINGMAY WIND LIMITED.",
         "source_name": "GLEIF",
         "source_id": "gleif",
-        "source_url": "https://www.gleif.org/lei/213800BXZH7RWO84SI42",
+        "source_url": "https://www.gleif.org/lei/213800LX24J8JOPTTD69",
         "bods_statement_ids": [
-          "opencheck-024e3e12689c72fb81050bf0"
+          "opencheck-2f27a4ce32ee8947a7f46747"
         ],
         "confidence": "medium"
       },
@@ -252,50 +465,6 @@
       },
       {
         "id": "f22",
-        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in RACE BANK WIND FARM LIMITED.",
-        "source_name": "GLEIF",
-        "source_id": "gleif",
-        "source_url": "https://www.gleif.org/lei/213800JDY3WNXKILP121",
-        "bods_statement_ids": [
-          "opencheck-3f44af3a7e48f0c287690d21"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f23",
-        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in BURBO EXTENSION LTD.",
-        "source_name": "GLEIF",
-        "source_id": "gleif",
-        "source_url": "https://www.gleif.org/lei/213800MV52QOR3TCID39",
-        "bods_statement_ids": [
-          "opencheck-a5374664e305e5e5b5d4cc71"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f24",
-        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in WALNEY EXTENSION LIMITED.",
-        "source_name": "GLEIF",
-        "source_id": "gleif",
-        "source_url": "https://www.gleif.org/lei/213800XWU7V7WDEQK620",
-        "bods_statement_ids": [
-          "opencheck-9c712830b2d4cc408124f5ae"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f25",
-        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in HORNSEA 1 LIMITED.",
-        "source_name": "GLEIF",
-        "source_id": "gleif",
-        "source_url": "https://www.gleif.org/lei/2138002S3XGZ38WN5Q72",
-        "bods_statement_ids": [
-          "opencheck-ecc01dd78f437bef3e5a8a69"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f26",
         "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in ORSTED WESTERMOST ROUGH LIMITED.",
         "source_name": "GLEIF",
         "source_id": "gleif",
@@ -306,7 +475,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f27",
+        "id": "f23",
         "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in ØRSTED BIOENERGY & THERMAL POWER A/S.",
         "source_name": "GLEIF",
         "source_id": "gleif",
@@ -317,7 +486,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f28",
+        "id": "f24",
         "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in ØRSTED WIND POWER A/S.",
         "source_name": "GLEIF",
         "source_id": "gleif",
@@ -328,7 +497,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f29",
+        "id": "f25",
         "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in ØRSTED INSURANCE A/S.",
         "source_name": "GLEIF",
         "source_id": "gleif",
@@ -339,7 +508,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f30",
+        "id": "f26",
         "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in ØRSTED SALG & SERVICE A/S.",
         "source_name": "GLEIF",
         "source_id": "gleif",
@@ -350,40 +519,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f31",
-        "statement": "Ministry of Finance on behalf of the Kingdom of Denmark holds shareholding in Ørsted A/S.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/gem-own-e100000001607/",
-        "bods_statement_ids": [
-          "opencheck-79b864d16566f8668f88441d"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f32",
-        "statement": "Equinor ASA holds shareholding in Ørsted A/S.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/gem-own-e100000001607/",
-        "bods_statement_ids": [
-          "opencheck-3cccf2291d7e1bab667eaf6c"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f33",
-        "statement": "Andel holds shareholding in Ørsted A/S.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/gem-own-e100000001607/",
-        "bods_statement_ids": [
-          "opencheck-77a20eab626f918e0050dbfc"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f34",
+        "id": "f27",
         "statement": "Ørsted A/S holds Parent organisation declared in GEM ownership tracker (not a beneficial ownership assertion) in Ørsted A/S.",
         "source_name": "Global Energy Monitor / Climate TRACE",
         "source_id": "climatetrace",
@@ -394,7 +530,40 @@
         "confidence": "medium"
       },
       {
-        "id": "f35",
+        "id": "f28",
+        "statement": "Ministry of Finance on behalf of the Kingdom of Denmark holds shareholding in Ørsted A/S.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/gem-own-e100000001607/",
+        "bods_statement_ids": [
+          "opencheck-79b864d16566f8668f88441d"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f29",
+        "statement": "Equinor ASA holds shareholding in Ørsted A/S.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/gem-own-e100000001607/",
+        "bods_statement_ids": [
+          "opencheck-3cccf2291d7e1bab667eaf6c"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f30",
+        "statement": "Andel holds shareholding in Ørsted A/S.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/gem-own-e100000001607/",
+        "bods_statement_ids": [
+          "opencheck-77a20eab626f918e0050dbfc"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f31",
         "statement": "Goldman Sachs holds Ownership declared on Wikidata (P127); 13.0% (indicative); source: http://assets.dongenergy.com/DONGEnergyDocuments/com/Investor/Annual_Report/2016/dong_energy_annual_report_en.pdf in Ørsted.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -405,7 +574,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f36",
+        "id": "f32",
         "statement": "Capital Group Companies holds Ownership declared on Wikidata (P127); 6.0% (indicative); source: http://assets.dongenergy.com/DONGEnergyDocuments/com/Investor/Annual_Report/2016/dong_energy_annual_report_en.pdf in Ørsted.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -416,7 +585,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f37",
+        "id": "f33",
         "statement": "Andel Energy holds Ownership declared on Wikidata (P127); 7.28% (indicative); source: https://orstedcdn.azureedge.net/-/media/annual2019/annual-report-2019.ashx in Ørsted.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -427,7 +596,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f38",
+        "id": "f34",
         "statement": "Ministry of Finance of Denmark holds Ownership declared on Wikidata (P127); 50.1% (indicative); source: https://orstedcdn.azureedge.net/-/media/annual2019/annual-report-2019.ashx in Ørsted.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -438,7 +607,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f39",
+        "id": "f35",
         "statement": "Julia Elizabeth King holds Officer position: bestyrelsesmedlem, from 2021-03-01 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -449,7 +618,7 @@
         "confidence": "high"
       },
       {
-        "id": "f40",
+        "id": "f36",
         "statement": "Benny Gøbel holds Officer position: bestyrelsesmedlem, from 2011-04-12 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -460,7 +629,7 @@
         "confidence": "high"
       },
       {
-        "id": "f41",
+        "id": "f37",
         "statement": "Lene Skole-Sørensen holds Officer position: formand, from 2024-03-05 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -471,7 +640,7 @@
         "confidence": "high"
       },
       {
-        "id": "f42",
+        "id": "f38",
         "statement": "Andrew Richard Dingley Brown holds Officer position: nÆstformand, from 2024-03-05 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -482,7 +651,7 @@
         "confidence": "high"
       },
       {
-        "id": "f43",
+        "id": "f39",
         "statement": "Trond Ødegård Westlie holds Officer position: direktØr, from 2024-04-01 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -493,7 +662,7 @@
         "confidence": "high"
       },
       {
-        "id": "f44",
+        "id": "f40",
         "statement": "PRICEWATERHOUSECOOPERS STATSAUTORISERET REVISIONSPARTNERSELSKAB holds Officer position: bÆredygtighedsrevision, from 2024-03-05 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -504,7 +673,7 @@
         "confidence": "high"
       },
       {
-        "id": "f45",
+        "id": "f41",
         "statement": "Clare Frances McVeigh holds Officer position: suppleant, from 2024-10-04 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -515,7 +684,7 @@
         "confidence": "high"
       },
       {
-        "id": "f46",
+        "id": "f42",
         "statement": "Rasmus Errboe holds Officer position: adm. dir., from 2025-02-01 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -526,7 +695,7 @@
         "confidence": "high"
       },
       {
-        "id": "f47",
+        "id": "f43",
         "statement": "Julian David Waldron holds Officer position: bestyrelsesmedlem, from 2025-04-03 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -537,7 +706,7 @@
         "confidence": "high"
       },
       {
-        "id": "f48",
+        "id": "f44",
         "statement": "Paweł Jacek Matysiak holds Officer position: bestyrelsesmedlem, from 2025-11-22 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -548,7 +717,7 @@
         "confidence": "high"
       },
       {
-        "id": "f49",
+        "id": "f45",
         "statement": "Karen Boesen holds Officer position: bestyrelsesmedlem, from 2026-04-09 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -559,7 +728,7 @@
         "confidence": "high"
       },
       {
-        "id": "f50",
+        "id": "f46",
         "statement": "Helle Kathrine Lenchler holds Officer position: suppleant, from 2026-04-09 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -570,7 +739,7 @@
         "confidence": "high"
       },
       {
-        "id": "f51",
+        "id": "f47",
         "statement": "Ruchit Majmudar holds Officer position: bestyrelsesmedlem, from 2026-04-09 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -581,7 +750,7 @@
         "confidence": "high"
       },
       {
-        "id": "f52",
+        "id": "f48",
         "statement": "Samuel Georg Friedrich Leupold holds Officer position: bestyrelsesmedlem, from 2026-04-09 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -592,7 +761,7 @@
         "confidence": "high"
       },
       {
-        "id": "f53",
+        "id": "f49",
         "statement": "Karl Johnny Hersvik holds Officer position: bestyrelsesmedlem, from 2026-04-09 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -603,7 +772,7 @@
         "confidence": "high"
       },
       {
-        "id": "f54",
+        "id": "f50",
         "statement": "Iulia Iordache holds Officer position: suppleant, from 2026-04-09 in Ørsted A/S.",
         "source_name": "OpenCorporates",
         "source_id": "opencorporates",
@@ -614,7 +783,7 @@
         "confidence": "high"
       },
       {
-        "id": "f55",
+        "id": "f51",
         "statement": "ØRSTED A/S is a registered entity in Denmark (XI-LEI W9NG6WMZIYEU8VEDOG48, 36213728, OpenCorporates dk/36213728, QCC Code QDKRTSBN20, ISO-9362 ORSTDK22XXX, S&P CIQ Company ID 6492833).",
         "source_name": "GLEIF",
         "source_id": "gleif",
@@ -672,28 +841,6 @@
       },
       {
         "id": "r5",
-        "code": "OFFSHORE_LEAKS",
-        "label": "Offshore Leaks match",
-        "confidence": "medium",
-        "rationale": "Related entity 'HORNSEA 1 LIMITED' matches a record in the Panama Papers (ICIJ score 88/100).",
-        "source_name": "icij",
-        "source_id": "icij",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r6",
-        "code": "OFFSHORE_LEAKS",
-        "label": "Offshore Leaks match",
-        "confidence": "medium",
-        "rationale": "Related entity 'HORNSEA 1 LIMITED' matches a record in the Bahamas Leaks (ICIJ score 88/100).",
-        "source_name": "icij",
-        "source_id": "icij",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r7",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -704,7 +851,7 @@
         "kind": "risk"
       },
       {
-        "id": "r8",
+        "id": "r6",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -715,7 +862,7 @@
         "kind": "risk"
       },
       {
-        "id": "r9",
+        "id": "r7",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -726,7 +873,7 @@
         "kind": "risk"
       },
       {
-        "id": "r10",
+        "id": "r8",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -737,7 +884,7 @@
         "kind": "risk"
       },
       {
-        "id": "r11",
+        "id": "r9",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -748,7 +895,7 @@
         "kind": "risk"
       },
       {
-        "id": "r12",
+        "id": "r10",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -759,7 +906,7 @@
         "kind": "risk"
       },
       {
-        "id": "r13",
+        "id": "r11",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -770,7 +917,7 @@
         "kind": "risk"
       },
       {
-        "id": "r14",
+        "id": "r12",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -781,7 +928,7 @@
         "kind": "risk"
       },
       {
-        "id": "r15",
+        "id": "r13",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -800,16 +947,16 @@
         "homepage": "https://search.gleif.org/#/search/"
       },
       {
-        "source_id": "opensanctions",
-        "name": "OpenSanctions",
-        "license": "CC-BY-NC-4.0",
-        "homepage": "https://www.opensanctions.org/"
-      },
-      {
         "source_id": "climatetrace",
         "name": "Global Energy Monitor / Climate TRACE",
         "license": "CC-BY-4.0",
         "homepage": "https://globalenergymonitor.org/"
+      },
+      {
+        "source_id": "opensanctions",
+        "name": "OpenSanctions",
+        "license": "CC-BY-NC-4.0",
+        "homepage": "https://www.opensanctions.org/"
       },
       {
         "source_id": "wikidata",
@@ -830,16 +977,16 @@
         "homepage": "https://wikirate.org/"
       },
       {
-        "source_id": "cvr_denmark",
-        "name": "CVR — Det Centrale Virksomhedsregister",
-        "license": "Danish Open Government Data (CVR brugervilkår)",
-        "homepage": "https://datacvr.virk.dk/"
-      },
-      {
         "source_id": "openaleph",
         "name": "OpenAleph",
         "license": "per-collection",
         "homepage": "https://openaleph.org/"
+      },
+      {
+        "source_id": "cvr_denmark",
+        "name": "CVR — Det Centrale Virksomhedsregister",
+        "license": "Danish Open Government Data (CVR brugervilkår)",
+        "homepage": "https://datacvr.virk.dk/"
       }
     ],
     "gaps": [
@@ -851,7 +998,5 @@
   },
   "validation_ok": true,
   "dropped_claims": [],
-  "validation_issues": [
-    "gap 'g1' is not cited by any claim"
-  ]
+  "validation_issues": []
 }
