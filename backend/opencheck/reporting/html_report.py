@@ -89,8 +89,13 @@ figcaption { font-size:8pt; color:#595959; margin-top:1.5mm; }
 .signal { border-left:3px solid #d9d9de; padding:1mm 0 1mm 4mm; margin:2mm 0; }
 .signal.high { border-left-color:#9f1239; }
 .signal.medium { border-left-color:#8a5a00; }
+/* Context observations are not risk findings — whatever their confidence,
+   they must never carry the risk ramp's rose/amber border (the Phase 105
+   counter-sanction lesson, applied here). Slate, like the frontend. */
+.signal.context { border-left-color:#94a3b8 !important; }
 .signal .h { font-weight:bold; color:#191d23; }
 .signal .src { font-size:8pt; color:#595959; }
+.ctxnote { font-size:8.5pt; color:#595959; margin:0 0 2mm; }
 """
 
 _LOGO = (
@@ -372,7 +377,7 @@ def _degraded_block(report: dict[str, Any]) -> str:
             d.get("reason", ""), d.get("reason") or "an unknown failure"
         )
         affected = ", ".join(
-            c.replace("_", " ").title() for c in d.get("affected_signals") or []
+            _signal_label(c) for c in d.get("affected_signals") or []
         )
         affected_note = f" Signals affected: {escape(affected)}." if affected else ""
         items.append(
@@ -388,8 +393,70 @@ def _degraded_block(report: dict[str, Any]) -> str:
     )
 
 
-def _risk(report: dict[str, Any]) -> str:
+def _signal_label(code: str) -> str:
+    """Curated display label for a signal code.
+
+    ``og_image.SIGNAL_STYLE`` is the backend's hand-maintained label map
+    (kept in sync with ``RISK_PRESENTATION`` in the frontend's RiskChip),
+    so the exported report shows the same names as every other surface —
+    "Opaque ownership", "EU high-risk country" — instead of title-cased
+    code churn ("Eu High Risk Third Country"). Unrecognised future codes
+    fall back to title case so they still render.
+    """
+    from ..og_image import SIGNAL_STYLE  # lazy — Pillow import lives there
+
+    style = SIGNAL_STYLE.get(code)
+    return style[0] if style else code.replace("_", " ").title()
+
+
+def _split_signals_by_kind(report: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Split ``risk_signals`` into (risk findings, context observations).
+
+    Mirrors ``lib/signalKind.ts``: a missing ``kind`` means ``"risk"``, so
+    payloads cached before the field existed behave exactly as they did.
+    The split must happen here as well as in the UI — the exported report
+    is the analyst's defensible record, and presenting "Outside EU/EEA" or
+    a permitted GLEIF reporting exception under a "Risk signals" heading
+    would contradict the results page, share card and OG image.
+    """
     signals = report.get("risk_signals") or []
+    risk = [s for s in signals if (s.get("kind") or "risk") != "context"]
+    context = [s for s in signals if (s.get("kind") or "risk") == "context"]
+    return risk, context
+
+
+#: Named checks in the "returned clear" sentence. Kept as a constant so the
+#: Markdown report states the identical list — and so the next signal-family
+#: change has one string to update, not two.
+_CHECKS_CLEAR = (
+    "sanctions and PEP screening (including debarment, sanction-control and "
+    "leak-archive matches), FATF-listed and EU high-risk third-country "
+    "jurisdictions, trust or nominee arrangements, opaque or withheld "
+    "ownership, and complex ownership structures"
+)
+
+_CONTEXT_NOTE = (
+    "Not risk findings — structural facts about the ownership chain, shown "
+    "because they are useful and because some feed the AMLA complex-structure "
+    "test. Jurisdiction risk is reported separately, from the FATF and EU lists."
+)
+
+
+def _signal_div(sig: dict[str, Any], reg: Any, *, extra_class: str = "") -> str:
+    conf = sig.get("confidence", "medium")
+    src = reg.get(sig.get("source_id", ""))
+    src_name = src.info.name if src else (sig.get("source_id") or "OpenCheck risk engine")
+    label = _signal_label(sig.get("code", ""))
+    return (
+        f'<div class="signal {escape(conf)}{extra_class}"><span class="h">{escape(label)}</span> '
+        f'<span class="badge">{escape(conf)}</span><br>'
+        f'{escape(sig.get("summary") or "")} '
+        f'<span class="src">— {escape(src_name)}</span></div>'
+    )
+
+
+def _risk(report: dict[str, Any]) -> str:
+    risk_sigs, context_sigs = _split_signals_by_kind(report)
     degraded_block = _degraded_block(report)
     head = (
         '<section aria-labelledby="risk"><h2 id="risk">Risk signals</h2>'
@@ -397,36 +464,34 @@ def _risk(report: dict[str, Any]) -> str:
         "deterministically across the assembled statements and aligned with the EU AMLA draft "
         "due-diligence standards. They are not determinations of wrongdoing.</p>"
     )
-    if not signals:
+    reg = _registry()
+    parts = [head]
+    if not risk_sigs:
         if degraded_block:
             # A degraded screen must never be presented as "applied and
             # returned clear" — qualify the absence and point at the
             # limitations block.
-            return head + (
+            parts.append(
                 "<p><strong>No risk signals were raised</strong> for this entity — "
                 "but not every screening check fully ran, so this is not a "
                 "complete clear. See the screening limitations below.</p>"
-            ) + degraded_block + "</section>"
-        return head + (
-            "<p><strong>No risk signals were raised</strong> for this entity. The checks below were "
-            "applied and returned clear: sanctions and PEP screening, FATF-listed jurisdictions, "
-            "non-EU/EEA jurisdiction, trust or nominee arrangements, and complex ownership layers.</p>"
-            "</section>"
+            )
+        else:
+            parts.append(
+                "<p><strong>No risk signals were raised</strong> for this entity. The checks below "
+                f"were applied and returned clear: {_CHECKS_CLEAR}.</p>"
+            )
+    else:
+        parts.extend(_signal_div(s, reg) for s in risk_sigs)
+    if context_sigs:
+        parts.append(
+            '<h3 id="ctx">Structural context</h3>'
+            f'<p class="ctxnote">{_CONTEXT_NOTE}</p>'
         )
-    reg = _registry()
-    items = []
-    for sig in signals:
-        conf = sig.get("confidence", "medium")
-        src = reg.get(sig.get("source_id", ""))
-        src_name = src.info.name if src else (sig.get("source_id") or "OpenCheck risk engine")
-        label = sig.get("code", "").replace("_", " ").title()
-        items.append(
-            f'<div class="signal {escape(conf)}"><span class="h">{escape(label)}</span> '
-            f'<span class="badge">{escape(conf)}</span><br>'
-            f'{escape(sig.get("summary") or "")} '
-            f'<span class="src">— {escape(src_name)}</span></div>'
-        )
-    return head + "".join(items) + degraded_block + "</section>"
+        parts.extend(_signal_div(s, reg, extra_class=" context") for s in context_sigs)
+    parts.append(degraded_block)
+    parts.append("</section>")
+    return "".join(parts)
 
 
 def _sources_found(report: dict[str, Any]) -> str:

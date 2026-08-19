@@ -21,10 +21,14 @@ from typing import Any
 
 from .diagram import source_diagram
 from .html_report import (
+    _CHECKS_CLEAR,
+    _CONTEXT_NOTE,
     _DISPOSITION_LABELS,
     _ID_LABELS,
     LIVE_BASE,
     _cite_labels,
+    _signal_label,
+    _split_signals_by_kind,
     _generated_line,
     _name,
     _registry,
@@ -237,7 +241,7 @@ def _degraded_lines(report: dict[str, Any]) -> list[str]:
             d.get("reason", ""), d.get("reason") or "an unknown failure"
         )
         affected = ", ".join(
-            c.replace("_", " ").title() for c in d.get("affected_signals") or []
+            _signal_label(c) for c in d.get("affected_signals") or []
         )
         affected_note = f" Signals affected: {affected}." if affected else ""
         lines.append(
@@ -247,8 +251,16 @@ def _degraded_lines(report: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _signal_line(sig: dict[str, Any], reg: Any) -> str:
+    conf = sig.get("confidence", "medium")
+    src = reg.get(sig.get("source_id", ""))
+    src_name = src.info.name if src else (sig.get("source_id") or "OpenCheck risk engine")
+    label = _signal_label(sig.get("code", ""))
+    return f"- **{label}** ({conf}) — {sig.get('summary') or ''} — *{src_name}*"
+
+
 def _risk(report: dict[str, Any]) -> list[str]:
-    signals = report.get("risk_signals") or []
+    risk_sigs, context_sigs = _split_signals_by_kind(report)
     degraded_lines = _degraded_lines(report)
     lines = [
         "## Risk signals",
@@ -258,7 +270,8 @@ def _risk(report: dict[str, Any]) -> list[str]:
         "due-diligence standards. They are not determinations of wrongdoing.",
         "",
     ]
-    if not signals:
+    reg = _registry()
+    if not risk_sigs:
         if degraded_lines:
             # A degraded screen must never read as "applied and returned
             # clear" — qualify the absence and append the limitations.
@@ -268,22 +281,24 @@ def _risk(report: dict[str, Any]) -> list[str]:
                 "the screening limitations below.",
                 "",
             ]
-            return lines + degraded_lines
-        lines += [
-            "**No risk signals were raised** for this entity. The checks below were applied and "
-            "returned clear: sanctions and PEP screening, FATF-listed jurisdictions, non-EU/EEA "
-            "jurisdiction, trust or nominee arrangements, and complex ownership layers.",
-            "",
-        ]
-        return lines
-    reg = _registry()
-    for sig in signals:
-        conf = sig.get("confidence", "medium")
-        src = reg.get(sig.get("source_id", ""))
-        src_name = src.info.name if src else (sig.get("source_id") or "OpenCheck risk engine")
-        label = sig.get("code", "").replace("_", " ").title()
-        lines.append(f"- **{label}** ({conf}) — {sig.get('summary') or ''} — *{src_name}*")
-    lines.append("")
+        else:
+            lines += [
+                "**No risk signals were raised** for this entity. The checks below were applied "
+                f"and returned clear: {_CHECKS_CLEAR}.",
+                "",
+            ]
+    else:
+        for sig in risk_sigs:
+            lines.append(_signal_line(sig, reg))
+        lines.append("")
+    if context_sigs:
+        # Context observations are not risk findings — mirror the results
+        # page's separate "Structural context" section rather than letting
+        # them read as adverse findings in the analyst's record.
+        lines += ["### Structural context", "", _CONTEXT_NOTE, ""]
+        for sig in context_sigs:
+            lines.append(_signal_line(sig, reg))
+        lines.append("")
     return lines + degraded_lines
 
 

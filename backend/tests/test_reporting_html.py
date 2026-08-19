@@ -83,6 +83,59 @@ def test_summary_included_only_when_narrative_present():
 def test_no_risk_signals_states_checks_applied():
     html = build_report_html(_report())
     assert "No risk signals were raised" in html
+    # The "returned clear" list must describe the checks the engine actually
+    # runs as risk checks: non-EU/EEA became a context observation in
+    # Phase 111 and the EU high-risk third-country list joined the screen.
+    assert "non-EU/EEA" not in html
+    assert "EU high-risk third-country" in html
+
+
+def test_signal_labels_come_from_curated_map():
+    report = _report()
+    report["risk_signals"] = [
+        {"code": "OPAQUE_OWNERSHIP", "confidence": "high",
+         "summary": "Withheld.", "source_id": ""},
+        {"code": "SOME_FUTURE_CODE", "confidence": "low",
+         "summary": "Unknown.", "source_id": ""},
+    ]
+    html = build_report_html(report)
+    assert "Opaque ownership" in html          # curated label, not "Opaque Ownership"
+    assert "Opaque Ownership" not in html
+    assert "Some Future Code" in html          # unknown codes fall back to title case
+
+
+def test_context_signal_never_renders_under_risk_heading():
+    report = _report()
+    report["risk_signals"] = [
+        {"code": "SANCTIONED", "confidence": "high",
+         "summary": "Listed on a sanctions list.", "source_id": ""},
+        {"code": "NON_EU_JURISDICTION", "confidence": "low", "kind": "context",
+         "summary": "Ownership chain reaches outside the EU/EEA.", "source_id": ""},
+    ]
+    html = build_report_html(report)
+    assert "Structural context" in html
+    assert "Not risk findings" in html
+    # The context signal is marked with the context class; the risk one is not.
+    assert 'class="signal low context"' in html
+    assert 'class="signal high context"' not in html
+    # Ordering: the risk finding renders before the Structural context
+    # heading, the context observation after it.
+    ctx_at = html.index("Structural context")
+    assert html.index("Sanctioned") < ctx_at
+    assert html.index("Non-EU jurisdiction") > ctx_at
+
+
+def test_context_only_report_still_reads_as_no_risk_signals():
+    report = _report()
+    report["risk_signals"] = [
+        {"code": "GLEIF_REPORTING_EXCEPTION", "confidence": "high", "kind": "context",
+         "summary": "No accounting-consolidation parent is reported to GLEIF.",
+         "source_id": ""},
+    ]
+    html = build_report_html(report)
+    assert "No risk signals were raised" in html
+    assert "Structural context" in html
+    assert "No parent in GLEIF (exempt)" in html
 
 
 def test_diagram_and_text_equivalent_present():

@@ -121,11 +121,51 @@ def test_no_risk_signals_states_checks_applied():
 def test_risk_signals_render_with_confidence():
     report = _report()
     report["risk_signals"] = [
-        {"code": "NON_EU_JURISDICTION", "confidence": "high",
-         "summary": "Registered outside the EU/EEA.", "source_id": ""},
+        {"code": "SANCTIONED", "confidence": "high",
+         "summary": "Listed on a sanctions list.", "source_id": ""},
     ]
     md = build_report_markdown(report)
-    assert "- **Non Eu Jurisdiction** (high) — Registered outside the EU/EEA." in md
+    assert "- **Sanctioned** (high) — Listed on a sanctions list." in md
+
+
+def test_signal_labels_come_from_curated_map_not_title_case():
+    report = _report()
+    report["risk_signals"] = [
+        {"code": "OPAQUE_OWNERSHIP", "confidence": "high",
+         "summary": "Withheld.", "source_id": ""},
+        {"code": "EU_HIGH_RISK_THIRD_COUNTRY", "confidence": "high",
+         "summary": "Listed jurisdiction.", "source_id": ""},
+        {"code": "SOME_FUTURE_CODE", "confidence": "low",
+         "summary": "Unknown.", "source_id": ""},
+    ]
+    md = build_report_markdown(report)
+    assert "- **Opaque ownership** (high)" in md          # not "Opaque Ownership"
+    assert "- **EU high-risk country** (high)" in md      # not "Eu High Risk Third Country"
+    assert "- **Some Future Code** (low)" in md           # unknown codes still render
+
+
+def test_context_signals_render_under_structural_context_not_risk():
+    report = _report()
+    report["risk_signals"] = [
+        {"code": "GLEIF_REPORTING_EXCEPTION", "confidence": "high", "kind": "context",
+         "summary": "No accounting-consolidation parent is reported to GLEIF.",
+         "source_id": ""},
+    ]
+    md = build_report_markdown(report)
+    assert "### Structural context" in md
+    assert "Not risk findings" in md
+    # A context-only report still reads as no risk signals raised.
+    assert "**No risk signals were raised**" in md
+    # The context bullet must come after the Structural context heading.
+    assert md.index("### Structural context") < md.index("No parent in GLEIF (exempt)")
+
+
+def test_checks_clear_sentence_matches_current_checks():
+    md = build_report_markdown(_report())
+    # Non-EU/EEA is a context observation since Phase 111 — it must not be
+    # presented as a risk check that "returned clear".
+    assert "non-EU/EEA" not in md
+    assert "EU high-risk third-country" in md
 
 
 def test_pipe_characters_escaped_in_table_cells():

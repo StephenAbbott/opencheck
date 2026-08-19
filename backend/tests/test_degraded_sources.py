@@ -362,4 +362,5 @@ def test_html_limitations_render_alongside_signals() -> None:
     }
     html = _html_risk({"risk_signals": [sig], "degraded_sources": _degraded_dicts()})
     assert "Screening limitations" in html
-    assert "Non Eu Jurisdiction" in html
+    # Curated label from og_image.SIGNAL_STYLE, not title-cased code churn.
+    assert "Non-EU jurisdiction" in html
