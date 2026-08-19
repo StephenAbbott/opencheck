@@ -195,7 +195,10 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     signals: [
       { code: "RELATED_PEP", confidence: "medium" },
       { code: "OFFSHORE_LEAKS", confidence: "high" },
-      { code: "OPAQUE_OWNERSHIP", confidence: "medium" },
+      // Eli Lilly reports NATURAL_PERSONS GLEIF reporting exceptions (a
+      // permitted exception: widely held, no consolidating parent entity) —
+      // context, not the opaque-ownership risk chip it used to mis-show.
+      { code: "GLEIF_REPORTING_EXCEPTION", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/FRDRIPF3EKNDJ2CQJL29.zip`,
   },
@@ -3045,7 +3048,7 @@ function ShareCardShowcase() {
           src="/share-card-example.png"
           width={1200}
           height={630}
-          alt="Example shareable summary card for Eli Lilly and Company showing 3 risk signals, all three named: related PEP, offshore leaks, and opaque ownership, with a prompt to visit opencheck.world for details"
+          alt="Example shareable summary card for Eli Lilly and Company showing 2 risk signals, both named: related PEP and offshore leaks, with a prompt to visit opencheck.world for details"
           className="w-full max-w-[560px] h-auto rounded-oo border border-oo-rule shadow-oo-card"
           loading="lazy"
         />

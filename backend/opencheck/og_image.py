@@ -55,6 +55,8 @@ SIGNAL_STYLE: dict[str, tuple[str, str, str]] = {
     "DEBARMENT": ("Debarred", "#ffedd5", "#7c2d12"),
     "OFFSHORE_LEAKS": ("Offshore leaks", "#fffbeb", "#92400e"),
     "OPAQUE_OWNERSHIP": ("Opaque ownership", "#f1f5f9", "#334155"),
+    # Context, not risk — a permitted GLEIF Level 2 reporting exception.
+    "GLEIF_REPORTING_EXCEPTION": ("No parent in GLEIF (exempt)", "#f8fafc", "#334155"),
     "TRUST_OR_ARRANGEMENT": ("Trust / arrangement", "#eef2ff", "#4338ca"),
     "NON_EU_JURISDICTION": ("Non-EU jurisdiction", "#fff7ed", "#c2410c"),
     "STATE_CONTROLLED": ("State-controlled", "#fff7ed", "#c2410c"),

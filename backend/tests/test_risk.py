@@ -5,6 +5,7 @@ from __future__ import annotations
 from opencheck.risk import (
     COUNTER_SANCTIONED,
     DEBARMENT,
+    GLEIF_REPORTING_EXCEPTION,
     OFFSHORE_LEAKS,
     OPAQUE_OWNERSHIP,
     PEP,
@@ -399,15 +400,38 @@ def test_wikidata_no_pep_for_non_person() -> None:
     assert assess_bundle("wikidata", raw) == []
 
 
-def test_opaque_ownership_unknown_person_in_bods() -> None:
+def test_opaque_ownership_does_not_fire_on_unknown_person() -> None:
+    """unknownPerson means unknown-to-this-source, not deliberately withheld.
+
+    The GLEIF/OO reporting-exception bridges use unknownPerson for the benign
+    NATURAL_PERSONS / NO_KNOWN_PERSON reasons — firing on the type produced
+    the Eli Lilly false positive ("unknown person in ownership chain").
+    """
     raw = {"source_id": "companies_house", "hit_id": "00000000"}
     bods = [
         {"statementType": "entityStatement", "entityType": "registeredEntity"},
         {"statementType": "personStatement", "personType": "unknownPerson"},
     ]
-    signals = assess_bundle("companies_house", raw, bods)
+    assert assess_bundle("companies_house", raw, bods) == []
+
+
+def test_opaque_ownership_anonymous_person_super_secure() -> None:
+    """A CH super-secure PSC (anonymousPerson) is genuine, asserted opacity."""
+    raw = {"source_id": "companies_house", "hit_id": "00000000"}
+    bods = [
+        {"statementType": "entityStatement", "entityType": "registeredEntity"},
+        {
+            "statementId": "anon-1",
+            "statementType": "personStatement",
+            "personType": "anonymousPerson",
+        },
+    ]
+    signals = assess_bundle("companies_house", raw, bods, hit_id="00000000")
     assert [s.code for s in signals] == [OPAQUE_OWNERSHIP]
-    assert "unknown person" in signals[0].evidence["findings"][0]
+    assert signals[0].confidence == "high"
+    assert signals[0].hit_id == "00000000"
+    assert "withheld" in signals[0].summary
+    assert signals[0].evidence["matches"] == [{"statement_id": "anon-1"}]
 
 
 def test_opaque_ownership_anonymous_entity_in_bods() -> None:
@@ -417,6 +441,200 @@ def test_opaque_ownership_anonymous_entity_in_bods() -> None:
     ]
     signals = assess_bundle("openaleph", raw, bods)
     assert [s.code for s in signals] == [OPAQUE_OWNERSHIP]
+
+
+def test_opaque_ownership_unidentified_psc_statement() -> None:
+    """CH 'PSC exists but not identified' → unspecified interestedParty reason."""
+    raw = {"source_id": "companies_house", "hit_id": "00000000"}
+    bods = [
+        {"statementType": "entityStatement", "entityType": "registeredEntity"},
+        {
+            "statementId": "rel-1",
+            "recordType": "relationship",
+            "recordDetails": {
+                "subject": "e-1",
+                "interestedParty": {
+                    "reason": "subjectUnableToConfirmOrIdentifyBeneficialOwner",
+                    "description": (
+                        "The company knows or has reasonable cause to believe"
+                        " that there is a registrable person in relation to the"
+                        " company but it has not identified the registrable person"
+                    ),
+                },
+                "interests": [],
+            },
+        },
+    ]
+    signals = assess_bundle("companies_house", raw, bods, hit_id="00000000")
+    assert [s.code for s in signals] == [OPAQUE_OWNERSHIP]
+    assert signals[0].evidence["matches"] == [{"statement_id": "rel-1"}]
+
+
+def test_opaque_ownership_not_fired_for_no_beneficial_owners() -> None:
+    """'Nobody meets the threshold' is a clean declaration, not opacity."""
+    raw = {"source_id": "companies_house", "hit_id": "00000000"}
+    bods = [
+        {"statementType": "entityStatement", "entityType": "registeredEntity"},
+        {
+            "recordType": "relationship",
+            "recordDetails": {
+                "subject": "e-1",
+                "interestedParty": {
+                    "reason": "noBeneficialOwners",
+                    "description": "No individual or entity with significant control",
+                },
+                "interests": [],
+            },
+        },
+    ]
+    assert assess_bundle("companies_house", raw, bods) == []
+
+
+def _gleif_raw(reason: str, *, kinds: tuple[str, ...] = ("direct",)) -> dict:
+    raw: dict = {
+        "source_id": "gleif",
+        "lei": "LEI00000000000000099",
+        "record": {"attributes": {"lei": "LEI00000000000000099"}},
+        "direct_parent": None,
+        "ultimate_parent": None,
+        "direct_parent_exception": None,
+        "ultimate_parent_exception": None,
+    }
+    for kind in kinds:
+        raw[f"{kind}_parent_exception"] = {
+            "attributes": {
+                "category": f"{kind.upper()}_ACCOUNTING_CONSOLIDATION_PARENT",
+                "reason": reason,
+            }
+        }
+    return raw
+
+
+def test_gleif_natural_persons_exception_is_context_not_opaque() -> None:
+    """Eli Lilly regression: a NATURAL_PERSONS exception (both categories) is a
+    permitted GLEIF reporting exception, not opaque ownership — and no wording
+    may claim an 'unknown person', since GLEIF Level 2 only ever names entities.
+    """
+    raw = _gleif_raw("NATURAL_PERSONS", kinds=("direct", "ultimate"))
+    bods = [{"statementType": "entityStatement", "entityType": "registeredEntity"}]
+    signals = assess_bundle("gleif", raw, bods, hit_id="LEI00000000000000099")
+    codes = [s.code for s in signals]
+    assert OPAQUE_OWNERSHIP not in codes
+    assert codes == [GLEIF_REPORTING_EXCEPTION]
+    sig = signals[0]
+    assert sig.kind == "context"
+    assert sig.confidence == "high"
+    assert sig.hit_id == "LEI00000000000000099"
+    assert "unknown person" not in sig.summary.lower()
+    assert "natural person" in sig.summary.lower()
+    assert "permitted" in sig.summary.lower()
+    # Both categories are reported in the evidence.
+    assert [e["relationship"] for e in sig.evidence["exceptions"]] == [
+        "direct",
+        "ultimate",
+    ]
+    # Bridge statement ids ride in matches[] so the graph can badge the node.
+    assert all(m["statement_id"] for m in sig.evidence["matches"])
+
+
+def test_gleif_benign_exception_reasons_are_context() -> None:
+    for reason in ("NO_KNOWN_PERSON", "NON_CONSOLIDATING", "NO_LEI"):
+        raw = _gleif_raw(reason)
+        signals = assess_bundle(
+            "gleif", raw, [{"statementType": "entityStatement"}], hit_id="X"
+        )
+        codes = [s.code for s in signals]
+        assert codes == [GLEIF_REPORTING_EXCEPTION], reason
+        assert signals[0].kind == "context"
+
+
+def test_gleif_no_lei_exception_wording_says_parent_exists() -> None:
+    raw = _gleif_raw("NO_LEI")
+    signals = assess_bundle(
+        "gleif", raw, [{"statementType": "entityStatement"}], hit_id="X"
+    )
+    assert "a parent exists" in signals[0].summary.lower()
+
+
+def test_gleif_non_public_exception_fires_opaque_ownership() -> None:
+    raw = _gleif_raw("NON_PUBLIC")
+    signals = assess_bundle(
+        "gleif", raw, [{"statementType": "entityStatement"}], hit_id="X"
+    )
+    codes = [s.code for s in signals]
+    assert codes == [OPAQUE_OWNERSHIP]
+    sig = signals[0]
+    assert sig.kind == "risk"
+    assert sig.confidence == "high"
+    assert "NON_PUBLIC" in sig.summary
+    assert sig.evidence["exceptions"][0]["reason"] == "NON_PUBLIC"
+
+
+def test_gleif_deprecated_refusal_reasons_fire_opaque_ownership() -> None:
+    for reason in (
+        "BINDING_LEGAL_COMMITMENTS",
+        "LEGAL_OBSTACLES",
+        "DISCLOSURE_DETRIMENTAL",
+        "DETRIMENT_NOT_EXCLUDED",
+        "CONSENT_NOT_OBTAINED",
+    ):
+        raw = _gleif_raw(reason)
+        signals = assess_bundle(
+            "gleif", raw, [{"statementType": "entityStatement"}], hit_id="X"
+        )
+        assert [s.code for s in signals] == [OPAQUE_OWNERSHIP], reason
+
+
+def test_gleif_mixed_exceptions_fire_both_signals() -> None:
+    raw = _gleif_raw("NATURAL_PERSONS")
+    raw["ultimate_parent_exception"] = {
+        "attributes": {
+            "category": "ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT",
+            "reason": "NON_PUBLIC",
+        }
+    }
+    signals = assess_bundle(
+        "gleif", raw, [{"statementType": "entityStatement"}], hit_id="X"
+    )
+    codes = {s.code for s in signals}
+    assert codes == {OPAQUE_OWNERSHIP, GLEIF_REPORTING_EXCEPTION}
+
+
+def test_gleif_unrecognised_exception_reason_is_context() -> None:
+    """A future ROC reason code must degrade to context, never to a risk chip."""
+    raw = _gleif_raw("SOME_FUTURE_REASON")
+    signals = assess_bundle(
+        "gleif", raw, [{"statementType": "entityStatement"}], hit_id="X"
+    )
+    assert [s.code for s in signals] == [GLEIF_REPORTING_EXCEPTION]
+
+
+def test_gleif_bridge_statements_do_not_double_fire_generic_scan() -> None:
+    """The mapped GLEIF bundle contains the bridging statements — the gleif
+    branch must classify from the raw exception records only, so an
+    anonymousEntity bridge doesn't ALSO fire via the generic statement scan."""
+    from opencheck.bods.mapper import map_gleif
+
+    raw = _gleif_raw("NON_PUBLIC")
+    bods = list(map_gleif(raw))
+    assert any(
+        (s.get("recordDetails") or {}).get("entityType", {}).get("type")
+        == "anonymousEntity"
+        for s in bods
+    )
+    signals = assess_bundle("gleif", raw, bods, hit_id="X")
+    assert [s.code for s in signals] == [OPAQUE_OWNERSHIP]
+
+
+def test_bods_gleif_placeholders_stay_silent() -> None:
+    """The OO bulk dataset flattens away the exception reason — a placeholder
+    there cannot be classified, so no signal fires rather than a wrong one."""
+    raw = {"source_id": "bods_gleif", "hit_id": "XI-LEI-X"}
+    bods = [
+        {"statementType": "personStatement", "personType": "unknownPerson"},
+        {"statementType": "entityStatement", "entityType": "anonymousEntity"},
+    ]
+    assert assess_bundle("bods_gleif", raw, bods) == []
 
 
 def test_no_signals_for_stub_bundle() -> None:

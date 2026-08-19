@@ -53,6 +53,15 @@ export const RISK_PRESENTATION: Record<
     label: "Opaque ownership",
     classes: "bg-slate-100 text-slate-700 border-slate-300",
   },
+  // Context, not risk (kind="context") — a *permitted* GLEIF Level 2
+  // reporting exception (NATURAL_PERSONS, NO_KNOWN_PERSON, NON_CONSOLIDATING,
+  // NO_LEI). Same quiet slate family as NON_EU_JURISDICTION: it must read as
+  // structural information, never as a warning. The NON_PUBLIC family of
+  // exceptions fires OPAQUE_OWNERSHIP instead.
+  GLEIF_REPORTING_EXCEPTION: {
+    label: "No parent in GLEIF (exempt)",
+    classes: "bg-slate-50 text-slate-700 border-slate-200",
+  },
   TRUST_OR_ARRANGEMENT: {
     label: "Trust / arrangement",
     classes: "bg-indigo-50 text-indigo-700 border-indigo-200",

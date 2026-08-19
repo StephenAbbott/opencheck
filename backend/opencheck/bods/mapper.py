@@ -1569,55 +1569,130 @@ _US_STATE_REGISTRY_NAMES: dict[str, str] = {
     "US-WY": "Wyoming Secretary of State",
 }
 
+# Reporting-exception reasons — GLEIF Level 2 Reporting Exceptions Format 2.1
+# (https://www.gleif.org/en/lei-data/access-and-use-lei-data/level-2-data-reporting-exceptions-2-1-format)
+# and the GLEIF Reporting Exception Ontology
+# (https://www.gleif.org/ontology/v1.0/ReportingException/).
+#
+# Modelling follows the Open Ownership / Open Data Services GLEIF → BODS
+# pipeline (https://github.com/openownership/bods-gleif-pipeline): each
+# exception produces a bridging person/entity statement plus a relationship
+# whose interest ``details`` carry the exception reason, and every statement
+# created from an exception carries a ``commenting`` annotation naming the
+# reason — so companies that report "my parent is a natural person" don't
+# silently disappear, and consumers can tell an exception bridge from a
+# real party.
+#
+# BODS types are chosen per reason:
+# * ``unknownPerson`` — NATURAL_PERSONS / NO_KNOWN_PERSON: any controlling
+#   party is a natural person GLEIF does not identify (only entities carry
+#   LEIs), or no controlling person is known at all.
+# * ``unknownEntity`` — NO_LEI / NON_CONSOLIDATING: a parent entity exists
+#   but is not identified in GLEIF (no LEI, or outside the accounting
+#   consolidation net). Not *anonymised* — merely not identified here.
+# * ``anonymousEntity`` — NON_PUBLIC and its five deprecated variants: a
+#   consolidating parent exists and is known but is deliberately withheld
+#   from publication. This is the only genuinely opacity-relevant family
+#   (see ``risk._opaque_ownership_signals``).
+#
 # Exception reason → (interested_party_type, person_type or entity_type,
-#                    human-readable details).
+#                     bridge display name, human-readable details).
 _GLEIF_EXCEPTION_REASONS = {
     "NATURAL_PERSONS": (
         "person",
         "unknownPerson",
-        "GLEIF reporting exception: parent is one or more natural persons",
+        "Natural person(s) (GLEIF reporting exception)",
+        "GLEIF reporting exception NATURAL_PERSONS: the entity is controlled"
+        " by natural person(s) without any intermediate legal entity meeting"
+        " the definition of accounting consolidating parent",
     ),
     "NO_KNOWN_PERSON": (
         "person",
         "unknownPerson",
-        "GLEIF reporting exception: no known person can be identified",
+        "No known controlling person (GLEIF reporting exception)",
+        "GLEIF reporting exception NO_KNOWN_PERSON: there is no known person"
+        " controlling the entity (e.g. diversified shareholding)",
     ),
     "NO_LEI": (
         "entity",
-        "anonymousEntity",
-        "GLEIF reporting exception: parent exists but has no LEI",
+        "unknownEntity",
+        "Parent without an LEI (GLEIF reporting exception)",
+        "GLEIF reporting exception NO_LEI: a parent exists but does not"
+        " consent to have an LEI, so it is not identified in GLEIF",
     ),
     "NON_CONSOLIDATING": (
         "entity",
-        "anonymousEntity",
-        "GLEIF reporting exception: parent does not consolidate the subject",
+        "unknownEntity",
+        "Non-consolidating parent (GLEIF reporting exception)",
+        "GLEIF reporting exception NON_CONSOLIDATING: the entity is"
+        " controlled by legal entities not subject to preparing consolidated"
+        " financial statements",
     ),
     "NON_PUBLIC": (
         "entity",
         "anonymousEntity",
-        "GLEIF reporting exception: parent is known but not publicly disclosable",
+        "Undisclosed parent (GLEIF reporting exception)",
+        "GLEIF reporting exception NON_PUBLIC: a parent exists but the"
+        " relationship is non-public and is not disclosed",
     ),
+    # The five reasons below were deprecated in Reporting Exceptions Format
+    # 2.1 and consolidated under NON_PUBLIC from 2022-03-01; they are kept
+    # for records that still carry the old codes.
     "BINDING_LEGAL_COMMITMENTS": (
         "entity",
         "anonymousEntity",
-        "GLEIF reporting exception: binding legal commitments prevent disclosure",
+        "Undisclosed parent (GLEIF reporting exception)",
+        "GLEIF reporting exception BINDING_LEGAL_COMMITMENTS (deprecated,"
+        " now NON_PUBLIC): binding legal commitments prevent disclosure of"
+        " the parent",
+    ),
+    "LEGAL_OBSTACLES": (
+        "entity",
+        "anonymousEntity",
+        "Undisclosed parent (GLEIF reporting exception)",
+        "GLEIF reporting exception LEGAL_OBSTACLES (deprecated, now"
+        " NON_PUBLIC): obstacles in laws or regulations prevent disclosure"
+        " of the parent",
+    ),
+    "DISCLOSURE_DETRIMENTAL": (
+        "entity",
+        "anonymousEntity",
+        "Undisclosed parent (GLEIF reporting exception)",
+        "GLEIF reporting exception DISCLOSURE_DETRIMENTAL (deprecated, now"
+        " NON_PUBLIC): disclosure would be detrimental to the entity or its"
+        " parent",
     ),
     "DETRIMENT_NOT_EXCLUDED": (
         "entity",
         "anonymousEntity",
-        "GLEIF reporting exception: detriment to parent not excluded by law",
-    ),
-    "AUTHORITIES_DISCRETION": (
-        "entity",
-        "anonymousEntity",
-        "GLEIF reporting exception: regulatory authority has exercised discretion not to require disclosure",
+        "Undisclosed parent (GLEIF reporting exception)",
+        "GLEIF reporting exception DETRIMENT_NOT_EXCLUDED (deprecated, now"
+        " NON_PUBLIC): detriment to the parent from disclosure could not be"
+        " excluded",
     ),
     "CONSENT_NOT_OBTAINED": (
         "entity",
         "anonymousEntity",
-        "GLEIF reporting exception: consent of parent entity not obtained",
+        "Undisclosed parent (GLEIF reporting exception)",
+        "GLEIF reporting exception CONSENT_NOT_OBTAINED (deprecated, now"
+        " NON_PUBLIC): the parent's consent to disclose the relationship"
+        " was not obtained",
     ),
 }
+
+#: Reasons whose bridge party is deliberately withheld (a parent exists,
+#: consolidates, and is known — but is not published). Imported by
+#: ``risk.py`` to drive the OPAQUE_OWNERSHIP classification.
+GLEIF_UNDISCLOSED_REASONS: frozenset[str] = frozenset(
+    {
+        "NON_PUBLIC",
+        "BINDING_LEGAL_COMMITMENTS",
+        "LEGAL_OBSTACLES",
+        "DISCLOSURE_DETRIMENTAL",
+        "DETRIMENT_NOT_EXCLUDED",
+        "CONSENT_NOT_OBTAINED",
+    }
+)
 
 
 def map_gleif(bundle: dict[str, Any]) -> BODSBundle:
@@ -1845,17 +1920,42 @@ def _gleif_exception_statements(
     exception: dict[str, Any],
     subject_statement_date: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Emit bridging anonymousEntity / unknownPerson + relationship for an exception."""
+    """Emit a bridging person/entity statement + relationship for an exception.
+
+    Mirrors the Open Ownership GLEIF pipeline's reporting-exception handling:
+    the bridge and relationship each carry a ``commenting`` annotation naming
+    the exception reason, and the relationship interest ``details`` carry the
+    reason's meaning plus the exception category (and the legal
+    ``ExceptionReference`` when the entity supplied one).
+    """
     attrs = exception.get("attributes") or exception
     # Live GLEIF API uses "reason"; OO SQLite dump uses "exceptionReason".
     reason = (attrs.get("reason") or attrs.get("exceptionReason") or "").upper()
-    ip_type, ip_subtype, details = _GLEIF_EXCEPTION_REASONS.get(
+    category = (attrs.get("category") or attrs.get("exceptionCategory") or "").upper()
+    reference = attrs.get("reference") or attrs.get("exceptionReference") or ""
+    ip_type, ip_subtype, bridge_name, details = _GLEIF_EXCEPTION_REASONS.get(
         reason,
         (
             "entity",
             "unknownEntity",
+            "Unknown parent (GLEIF reporting exception)",
             f"GLEIF reporting exception: {reason or 'unspecified reason'}",
         ),
+    )
+    if category:
+        details += f" (ExceptionCategory: {category})"
+    if reference:
+        details += f"; legal reference: {reference}"
+
+    exception_note = commenting(
+        "/",
+        (
+            f"This statement was created due to a {reason or 'GLEIF'}"
+            f" GLEIF Reporting Exception for {lei}. Reporting exceptions are"
+            " permitted reasons, defined by the LEI ROC policy, for an entity"
+            " not to report an accounting consolidation parent."
+        ),
+        creation_date=_today(),
     )
 
     bridge_local_id = f"{lei}:{kind}-parent-exception:{reason or 'unspecified'}"
@@ -1863,7 +1963,7 @@ def _gleif_exception_statements(
         bridge = make_person_statement(
             source_id="gleif",
             local_id=bridge_local_id,
-            full_name="Unknown parent (GLEIF reporting exception)",
+            full_name=bridge_name,
             person_type=ip_subtype,
             source_url=f"https://www.gleif.org/lei/{lei}",
         )
@@ -1871,10 +1971,11 @@ def _gleif_exception_statements(
         bridge = make_entity_statement(
             source_id="gleif",
             local_id=bridge_local_id,
-            name="Unknown parent (GLEIF reporting exception)",
+            name=bridge_name,
             entity_type=ip_subtype,
             source_url=f"https://www.gleif.org/lei/{lei}",
         )
+    annotate(bridge, dict(exception_note))
 
     rel = make_relationship_statement(
         source_id="gleif",
@@ -1893,6 +1994,7 @@ def _gleif_exception_statements(
         source_url=f"https://www.gleif.org/lei/{lei}",
         statement_date=subject_statement_date,
     )
+    annotate(rel, dict(exception_note))
     return [bridge, rel]
 
 

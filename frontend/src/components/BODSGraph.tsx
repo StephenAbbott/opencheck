@@ -91,6 +91,10 @@ export const SIGNAL_STYLE: Record<string, SignalStyle> = {
   POSSIBLE_OBFUSCATION:     { bg:"#fefce8", border:"#854d0e", text:"#854d0e", label:"?",  severity:1 },
   NOMINEE:                  { bg:"#fdf4ff", border:"#7e22ce", text:"#7e22ce", label:"Nm", severity:1 },
   OPAQUE_OWNERSHIP:         { bg:"#f8fafc", border:"#475569", text:"#475569", label:"O",  severity:1 },
+  // Context, not risk — a permitted GLEIF reporting exception (no parent to
+  // report / parent without an LEI). Lowest severity, like NON_EU_JURISDICTION,
+  // so the exception bridge node is never ranked as a warning.
+  GLEIF_REPORTING_EXCEPTION: { bg:"#f8fafc", border:"#64748b", text:"#475569", label:"Ex", severity:0 },
 };
 
 const DEFAULT_SIGNAL_STYLE: SignalStyle =
