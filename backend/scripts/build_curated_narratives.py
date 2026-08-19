@@ -103,6 +103,16 @@ def main() -> int:
             except Exception as exc:  # noqa: BLE001 — report and continue
                 print(f"✗ {lei}: {exc}", file=sys.stderr)
                 continue
+            # A summary with no claims renders NO evidence section in the
+            # panel — five of the six Phase 111 files shipped that way after
+            # a silent max_tokens truncation. Refuse to write one.
+            if not payload["claims"]:
+                print(
+                    f"✗ {lei}: generated 0 claims — refusing to write "
+                    "(existing file left untouched)",
+                    file=sys.stderr,
+                )
+                continue
             out = OUT_DIR / f"{lei}.json"
             out.write_text(json.dumps(payload, ensure_ascii=False, indent=2))
             conf = payload["overall_confidence"]
