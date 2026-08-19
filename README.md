@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 116** — the exported report now separates risk findings from structural context
+**Latest: Phase 117** — the evidence list no longer crowds out the page it supports
+
+On dense entities (Rosneft: 15 claims, ~4 citation chips each) the AI summary's Evidence section ran two-plus screens deep — automatically, on curated examples. It now starts collapsed to a three-claim preview with one clear call to action ("Show all 15 evidence statements"), while the header keeps the full tally visible ("15 statements, cited to 8 sources") so the grounding promise stays checkable at a glance. Sign-off disables the collapse entirely — disposition controls embedded in the PDF record must never hide — and gaps and limitations remain always-visible. Commit `85dc8c4`.
+
+**Previous: Phase 116** — the exported report now separates risk findings from structural context
 
 The PDF and Markdown report downloads were the last surface still ignoring the risk/context split every other surface has honoured since Phases 111/114: "Outside EU/EEA" and permitted GLEIF reporting exceptions rendered under the **Risk signals** heading of the analyst's defensible record. Both report builders now split on `kind` — context observations move to a slate-bordered **Structural context** block, a context-only report reads "No risk signals were raised" — signal labels come from the curated backend map instead of title-cased code churn, and the "checks applied and returned clear" boilerplate finally describes the screen the engine actually runs. Commit `59a9bcb`.
 
-**Previous: Phase 115** — one pooled source for the EITI countries' beneficial ownership registers
-
-The 2024 EITI stocktake marks 15 countries' BO registers "publicly available"; live verification found four worth pooling and built them as **one source (`eiti_bo`)** rather than one adapter per register — the pooled universe is small, smaller still filtered to LEI holders, so per-register source cards would each sit behind one or two companies. Each register needed a different sourcing approach: the DRC's ITIE-RDC register is the only EITI BO register anywhere with a bulk download (XLSX with ownership %, voting rights and PEP flags); Armenia's State Register publishes per-declaration **BODS v0.2 JSON**, which the mapper upconverts to v0.4 with the originals recorded via annotations; Nigeria reuses the CAC PSC harvest filtered to NEITI solid-minerals-covered companies with dated filter evidence; Indonesia's slot is reserved while the AHU API sits in maintenance. Identity resolution happens once, offline — registration-number equality against GLEIF first (Zangezur's `27.140.00009` matches exactly), name equality as fallback — and the launch index is deliberately **LEI-only**: 3 of 91 harvested companies resolve, the manifest counts the rest, and that gap is itself a finding about LEI coverage in extractives. Tajikistan (all-rights-reserved) and Trinidad & Tobago (frozen ~2021) stay out. Commit `cc8455f`.
-
-*Earlier: [Phase 114 — declining to name a parent is not the same as having something to hide](docs/status.md), and everything before it.*
+*Earlier: [Phase 115 — one pooled source for the EITI countries' beneficial ownership registers](docs/status.md), and everything before it.*
 
 
 

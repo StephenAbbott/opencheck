@@ -32,6 +32,11 @@ import {
   type EvidencePacket,
   type NarrativeResponse,
 } from "../../lib/api";
+import {
+  EVIDENCE_PREVIEW_COUNT,
+  citedSourceLabels,
+  shouldCollapseEvidence,
+} from "../../lib/evidenceDisclosure";
 import { ExportMenu } from "../export/ExportMenu";
 import { CONFIDENCE_DOT } from "../risk/RiskChip";
 
@@ -221,6 +226,11 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
   const [mdError, setMdError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [cached, setCached] = useState(false);
+  // Evidence disclosure: long claim lists start collapsed to a preview (see
+  // lib/evidenceDisclosure.ts for the rules). This flag records only that the
+  // user explicitly expanded — whether the section is collapsible at all is
+  // derived per render, so sign-off becoming active auto-expands it.
+  const [evidenceExpanded, setEvidenceExpanded] = useState(false);
 
   // Analyst dispositions, keyed by claim id. Persisted (debounced) against the
   // narrative's run_id; hydrated from the server when a stored sheet exists.
@@ -243,6 +253,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     setDisp({});
     setCommentOpen({});
     setSaveState("idle");
+    setEvidenceExpanded(false);
     dirtyRef.current = false;
     fetchCuratedNarrative(lei).then((cachedNarrative) => {
       if (active && cachedNarrative) {
@@ -355,6 +366,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
       setDisp({});
       setCommentOpen({});
       setSaveState("idle");
+      setEvidenceExpanded(false);
       dirtyRef.current = false;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not generate the summary.");
@@ -395,6 +407,13 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
   }
 
   const decidedCount = data ? data.claims.filter((c) => disp[c.id]).length : 0;
+  // Long evidence lists start collapsed to a preview — except while sign-off
+  // is active, when the disposition controls must all stay reachable.
+  const evidenceCollapsible = data
+    ? shouldCollapseEvidence(data.claims.length, canSignOff)
+    : false;
+  const evidenceCollapsed = evidenceCollapsible && !evidenceExpanded;
+  const citedSources = data ? citedSourceLabels(data.claims, data.packet) : [];
   const tally = {
     accepted: Object.values(disp).filter((d) => d.status === "accepted").length,
     disputed: Object.values(disp).filter((d) => d.status === "disputed").length,
@@ -493,6 +512,17 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
               <div className="flex items-baseline justify-between flex-wrap gap-2 mb-2">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-oo-muted">
                   Evidence
+                  {/* The full count stays visible even while collapsed, so the
+                      card's grounding promise is asserted at a glance. */}
+                  <span className="normal-case tracking-normal font-normal">
+                    {" "}· {data.claims.length} statement{data.claims.length === 1 ? "" : "s"}
+                    {citedSources.length > 0 && (
+                      <>
+                        , cited to {citedSources.length} source
+                        {citedSources.length === 1 ? "" : "s"}
+                      </>
+                    )}
+                  </span>
                 </p>
                 {canSignOff && (
                   <p role="status" className="text-[11px] text-oo-muted">
@@ -514,8 +544,12 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
                   </p>
                 )}
               </div>
-              <ul className="space-y-3">
-                {data.claims.map((c) => {
+              <div className="relative">
+              <ul id="oc-evidence-claims" className="space-y-3">
+                {(evidenceCollapsed
+                  ? data.claims.slice(0, EVIDENCE_PREVIEW_COUNT)
+                  : data.claims
+                ).map((c) => {
                   const cites = c.fact_ids
                     .map((id) => resolveCite(data.packet, id))
                     .filter((x): x is Cite => x !== null);
@@ -543,6 +577,41 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
                   );
                 })}
               </ul>
+              {evidenceCollapsed && (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-b from-transparent to-white"
+                />
+              )}
+              </div>
+              {evidenceCollapsed && (
+                <button
+                  type="button"
+                  aria-expanded={false}
+                  aria-controls="oc-evidence-claims"
+                  onClick={() => {
+                    setEvidenceExpanded(true);
+                    trackEvent("evidence_expand");
+                  }}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-oo border border-[#cfd6f5] bg-[#eef1fb] px-4 py-2 text-[13px] font-semibold text-oo-blue transition-colors hover:bg-[#e3e8f8]"
+                >
+                  Show all {data.claims.length} evidence statements
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5" aria-hidden>
+                    <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              )}
+              {evidenceCollapsible && !evidenceCollapsed && (
+                <button
+                  type="button"
+                  aria-expanded={true}
+                  aria-controls="oc-evidence-claims"
+                  onClick={() => setEvidenceExpanded(false)}
+                  className="mt-2 text-[12px] font-medium text-oo-blue underline underline-offset-2 hover:text-oo-burst"
+                >
+                  Collapse evidence
+                </button>
+              )}
               {cached && data.claims.length > 0 && (
                 <p className="mt-2 text-[11px] text-oo-muted">
                   Sign-off (accept / dispute per statement) is available on live summaries —
