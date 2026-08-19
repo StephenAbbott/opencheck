@@ -1,10 +1,128 @@
 {
   "lei": "5493005044RTLQ5RZU70",
   "subject_name": "EESTI ENERGIA AS",
-  "summary": "EESTI ENERGIA AS (LEI 5493005044RTLQ5RZU70; EE registry code 10421629) is identifier-confirmed, registered in Estonia. The Government of Estonia is indicatively recorded as controlling owner per Wikidata, making this a possible state-owned enterprise; this is a presence-only indicator sourced from a crowd-sourced knowledge base and is not an authoritative determination. GLEIF data shows the entity has an unknown parent recorded under a reporting exception (parent does not consolidate the subject) and consolidates at least three direct subsidiaries — Enefit OÜ, Enefit Oy, and ENEFIT INDUSTRY AS — with the ownership chain spanning three corporate layers, meeting the AMLA threshold for complex ownership. Four current board members are confirmed by the Estonian e-Business Register: Andrus Durejko and Marlen Tamm (from 2023-04-03), Lauri Karp (from 2024-09-10), and Gerrit Mäesalu (from 2026-06-22); several additional individuals hold positions recorded as \"other means\" by the same register, including Jürgen Ligi (from 2024-08-02), who is flagged by OpenSanctions, EveryPolitician, and OpenAleph as a possible PEP — however, all four signals are name-match only with no birth date or nationality confirmed, so the identification is not conclusive. Two structural risk signals are raised at medium confidence: opaque ownership (an anonymous entity in the chain, per GLEIF) and complex ownership layers (three corporate layers, per GLEIF); the possible state-controlled status is a structural observation, not an adverse finding. No gaps were recorded in the evidence packet.",
-  "claims": [],
-  "limitations": [],
-  "overall_confidence": "low",
+  "summary": "EESTI ENERGIA AS (LEI 5493005044RTLQ5RZU70, Estonian registry code 10421629) is identifier-confirmed and registered in Estonia. The Government of Estonia is reported as a shareholder by OpenSanctions and indicated as controlling owner on Wikidata, making the entity a possible state-owned enterprise; these are indicative findings from aggregator and crowd-sourced sources, not authoritative determinations. The Estonian e-Business Register (high confidence) records four current board members — Andrus Durejko, Marlen Tamm, Lauri Karp, and Gerrit Mäesalu — alongside several supervisory or other-means role-holders including Jürgen Ligi, against whose name multiple PEP matches were returned by OpenSanctions, EveryPolitician, and OpenAleph; all matches are name-only with no corroborating birth date or nationality, so identity is unconfirmed. GLEIF data raises two structural risk signals at medium confidence: an opaque ownership chain containing an anonymous entity, and an ownership structure of three or more corporate layers meeting the AMLA threshold; GLEIF also records a reporting exception whereby an unknown parent does not consolidate the subject. One material limitation applies: OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used under that licence.",
+  "claims": [
+    {
+      "id": "c1",
+      "text": "EESTI ENERGIA AS (LEI 5493005044RTLQ5RZU70, Estonian registry code 10421629) is identifier-confirmed and registered in Estonia.",
+      "fact_ids": [
+        "f25"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c2",
+      "text": "The Government of Estonia is reported as a shareholder in Eesti Energia AS by OpenSanctions, and is indicated as controlling owner on Wikidata, making the entity a possible state-owned enterprise; these are indicative findings from aggregator and crowd-sourced sources, not authoritative determinations.",
+      "fact_ids": [
+        "f9",
+        "f10",
+        "r4"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c3",
+      "text": "The Estonian e-Business Register records four current board members: Andrus Durejko (from 2023-04-03), Marlen Tamm (from 2023-04-03), Lauri Karp (from 2024-09-10), and Gerrit Mäesalu (from 2026-06-22).",
+      "fact_ids": [
+        "f11",
+        "f12",
+        "f13",
+        "f14"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c4",
+      "text": "The Estonian e-Business Register also records several individuals holding other means roles, including Jürgen Ligi (from 2024-08-02), Kristi Klaas (from 2024-06-10), Kaur Kajak (from 2023-04-18), Anne Mere (from 2022-07-19), Anna Broughel (from 2025-06-02), Priit Rohumaa (from 2025-06-02), and Gerrit Mäesalu (from 2026-07-06).",
+      "fact_ids": [
+        "f15",
+        "f16",
+        "f17",
+        "f18",
+        "f19",
+        "f20",
+        "f21",
+        "f22",
+        "f23",
+        "f24"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c5",
+      "text": "Jürgen Ligi, a related party recorded in the Estonian e-Business Register, shares a name with PEP records on OpenSanctions, EveryPolitician, and OpenAleph (including via US CIA World Leaders, Wikidata PEPs, and MySociety's EveryPolitician Legislators); all matches are name-only with no corroborating birth date or nationality, so identity is unconfirmed.",
+      "fact_ids": [
+        "f19",
+        "r5",
+        "r6",
+        "r7",
+        "r8",
+        "r9"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c6",
+      "text": "GLEIF data raises a medium-confidence structural risk signal of opaque ownership, with the ownership chain containing an anonymous entity.",
+      "fact_ids": [
+        "r1"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c7",
+      "text": "GLEIF data raises a medium-confidence structural risk signal of complex ownership layers, with the ownership chain having three corporate layers, meeting the AMLA threshold of three or more.",
+      "fact_ids": [
+        "r2"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c8",
+      "text": "GLEIF records a reporting exception whereby an unknown parent does not consolidate EESTI ENERGIA AS, leaving the ultimate parent unidentified in the LEI record.",
+      "fact_ids": [
+        "f1",
+        "f2"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c9",
+      "text": "EESTI ENERGIA AS is recorded by GLEIF as the direct parent (accounting consolidation) of Enefit OÜ, Enefit Oy, and ENEFIT INDUSTRY AS, and by OpenSanctions as holding a shareholding in Attarat Power Co. and Enefit Green.",
+      "fact_ids": [
+        "f3",
+        "f4",
+        "f5",
+        "f7",
+        "f8"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c10",
+      "text": "The ownership chain structurally reaches jurisdictions outside the EU/EEA (specifically Jordan, JO), noted as a structural observation; this is not a risk finding under the AMLA CDD RTS or AMLR Annex III.",
+      "fact_ids": [
+        "r3"
+      ],
+      "confidence": "low"
+    },
+    {
+      "id": "c11",
+      "text": "OpenSanctions data used in this review is licensed CC-BY-NC-4.0, and commercial re-use of that data is not permitted under the source licence.",
+      "fact_ids": [
+        "g1"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "limitations": [
+    "OpenSanctions is licensed CC-BY-NC-4.0; commercial re-use of data derived from that source is not permitted (g1).",
+    "The GLEIF LEI record contains a reporting exception: an unknown parent does not consolidate EESTI ENERGIA AS, leaving the ultimate beneficial owner unidentified through the LEI chain (f1, f2).",
+    "State ownership and control indicators are sourced from OpenSanctions (aggregator) and Wikidata (crowd-sourced); neither constitutes an authoritative beneficial ownership register disclosure (f9, f10).",
+    "All PEP matches for Jürgen Ligi are name-only across OpenSanctions, EveryPolitician, and OpenAleph — no birth date or nationality corroboration is available to confirm or exclude identity (r5, r6, r7, r8, r9)."
+  ],
+  "overall_confidence": "medium",
   "model": "claude-sonnet-4-6",
   "prompt_version": "2026-08-18-v6",
   "packet": {
@@ -75,17 +193,6 @@
       },
       {
         "id": "f6",
-        "statement": "Government of Estonia holds Controlling owner declared on Wikidata (P127) in Eesti Energia.",
-        "source_name": "Wikidata",
-        "source_id": "wikidata",
-        "source_url": "https://www.wikidata.org/wiki/Q1295560",
-        "bods_statement_ids": [
-          "opencheck-d78c54be2987848a875716f2"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f7",
         "statement": "Eesti Energia AS holds Parent organisation declared in GEM ownership tracker (not a beneficial ownership assertion) in Eesti Energia AS.",
         "source_name": "Global Energy Monitor / Climate TRACE",
         "source_id": "climatetrace",
@@ -96,7 +203,51 @@
         "confidence": "medium"
       },
       {
+        "id": "f7",
+        "statement": "Eesti Energia AS holds shareholding in Attarat Power Co.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/gem-own-e100000000358/",
+        "bods_statement_ids": [
+          "opencheck-2231843684641d83c595143c"
+        ],
+        "confidence": "medium"
+      },
+      {
         "id": "f8",
+        "statement": "Eesti Energia AS holds shareholding in Enefit Green.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/gem-own-e100000000358/",
+        "bods_statement_ids": [
+          "opencheck-9c363124fcd724bbd13f2181"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f9",
+        "statement": "Government of Estonia holds shareholding in Eesti Energia AS.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/gem-own-e100000000358/",
+        "bods_statement_ids": [
+          "opencheck-5e1227c8ea3ca0096d12170d"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f10",
+        "statement": "Government of Estonia holds Controlling owner declared on Wikidata (P127) in Eesti Energia.",
+        "source_name": "Wikidata",
+        "source_id": "wikidata",
+        "source_url": "https://www.wikidata.org/wiki/Q1295560",
+        "bods_statement_ids": [
+          "opencheck-d78c54be2987848a875716f2"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f11",
         "statement": "Andrus Durejko holds Board member (juhatuse liige), from 2023-04-03 in Eesti Energia AS.",
         "source_name": "Estonian e-Business Register (e-Äriregister)",
         "source_id": "ariregister",
@@ -107,7 +258,7 @@
         "confidence": "high"
       },
       {
-        "id": "f9",
+        "id": "f12",
         "statement": "Marlen Tamm holds Board member (juhatuse liige), from 2023-04-03 in Eesti Energia AS.",
         "source_name": "Estonian e-Business Register (e-Äriregister)",
         "source_id": "ariregister",
@@ -118,7 +269,7 @@
         "confidence": "high"
       },
       {
-        "id": "f10",
+        "id": "f13",
         "statement": "Lauri Karp holds Board member (juhatuse liige), from 2024-09-10 in Eesti Energia AS.",
         "source_name": "Estonian e-Business Register (e-Äriregister)",
         "source_id": "ariregister",
@@ -129,7 +280,7 @@
         "confidence": "high"
       },
       {
-        "id": "f11",
+        "id": "f14",
         "statement": "Gerrit Mäesalu holds Board member (juhatuse liige), from 2026-06-22 in Eesti Energia AS.",
         "source_name": "Estonian e-Business Register (e-Äriregister)",
         "source_id": "ariregister",
@@ -140,7 +291,7 @@
         "confidence": "high"
       },
       {
-        "id": "f12",
+        "id": "f15",
         "statement": "Gerrit Mäesalu holds Other means, from 2026-07-06 in Eesti Energia AS.",
         "source_name": "Estonian e-Business Register (e-Äriregister)",
         "source_id": "ariregister",
@@ -151,7 +302,7 @@
         "confidence": "high"
       },
       {
-        "id": "f13",
+        "id": "f16",
         "statement": "Anna Broughel holds Other means, from 2025-06-02 in Eesti Energia AS.",
         "source_name": "Estonian e-Business Register (e-Äriregister)",
         "source_id": "ariregister",
@@ -162,7 +313,7 @@
         "confidence": "high"
       },
       {
-        "id": "f14",
+        "id": "f17",
         "statement": "Priit Rohumaa holds Other means, from 2025-06-02 in Eesti Energia AS.",
         "source_name": "Estonian e-Business Register (e-Äriregister)",
         "source_id": "ariregister",
@@ -173,7 +324,7 @@
         "confidence": "high"
       },
       {
-        "id": "f15",
+        "id": "f18",
         "statement": "Lauri Karp holds Other means, from 2024-09-11 in Eesti Energia AS.",
         "source_name": "Estonian e-Business Register (e-Äriregister)",
         "source_id": "ariregister",
@@ -184,7 +335,7 @@
         "confidence": "high"
       },
       {
-        "id": "f16",
+        "id": "f19",
         "statement": "Jürgen Ligi holds Other means, from 2024-08-02 in Eesti Energia AS.",
         "source_name": "Estonian e-Business Register (e-Äriregister)",
         "source_id": "ariregister",
@@ -195,7 +346,7 @@
         "confidence": "high"
       },
       {
-        "id": "f17",
+        "id": "f20",
         "statement": "Kristi Klaas holds Other means, from 2024-06-10 in Eesti Energia AS.",
         "source_name": "Estonian e-Business Register (e-Äriregister)",
         "source_id": "ariregister",
@@ -206,7 +357,7 @@
         "confidence": "high"
       },
       {
-        "id": "f18",
+        "id": "f21",
         "statement": "Andrus Durejko holds Other means, from 2023-04-18 in Eesti Energia AS.",
         "source_name": "Estonian e-Business Register (e-Äriregister)",
         "source_id": "ariregister",
@@ -217,7 +368,7 @@
         "confidence": "high"
       },
       {
-        "id": "f19",
+        "id": "f22",
         "statement": "Kaur Kajak holds Other means, from 2023-04-18 in Eesti Energia AS.",
         "source_name": "Estonian e-Business Register (e-Äriregister)",
         "source_id": "ariregister",
@@ -228,7 +379,7 @@
         "confidence": "high"
       },
       {
-        "id": "f20",
+        "id": "f23",
         "statement": "Marlen Tamm holds Other means, from 2023-04-18 in Eesti Energia AS.",
         "source_name": "Estonian e-Business Register (e-Äriregister)",
         "source_id": "ariregister",
@@ -239,7 +390,7 @@
         "confidence": "high"
       },
       {
-        "id": "f21",
+        "id": "f24",
         "statement": "Anne Mere holds Other means, from 2022-07-19 in Eesti Energia AS.",
         "source_name": "Estonian e-Business Register (e-Äriregister)",
         "source_id": "ariregister",
@@ -250,7 +401,7 @@
         "confidence": "high"
       },
       {
-        "id": "f22",
+        "id": "f25",
         "statement": "EESTI ENERGIA AS is a registered entity in Estonia (XI-LEI 5493005044RTLQ5RZU70, EE-RIK 10421629, QCC Code QEER9DCGMM, S&P CIQ Company ID 10724925).",
         "source_name": "GLEIF",
         "source_id": "gleif",
@@ -286,6 +437,17 @@
       },
       {
         "id": "r3",
+        "code": "NON_EU_JURISDICTION",
+        "label": "Outside EU/EEA",
+        "confidence": "low",
+        "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: JO. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "context"
+      },
+      {
+        "id": "r4",
         "code": "STATE_CONTROLLED",
         "label": "State-controlled (possible SOE)",
         "confidence": "medium",
@@ -296,7 +458,7 @@
         "kind": "risk"
       },
       {
-        "id": "r4",
+        "id": "r5",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -307,7 +469,7 @@
         "kind": "risk"
       },
       {
-        "id": "r5",
+        "id": "r6",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -318,7 +480,7 @@
         "kind": "risk"
       },
       {
-        "id": "r6",
+        "id": "r7",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -329,7 +491,7 @@
         "kind": "risk"
       },
       {
-        "id": "r7",
+        "id": "r8",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -340,7 +502,7 @@
         "kind": "risk"
       },
       {
-        "id": "r8",
+        "id": "r9",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -359,28 +521,10 @@
         "homepage": "https://search.gleif.org/#/search/"
       },
       {
-        "source_id": "wikidata",
-        "name": "Wikidata",
-        "license": "CC0-1.0",
-        "homepage": "https://www.wikidata.org/wiki/Wikidata:Main_Page"
-      },
-      {
         "source_id": "climatetrace",
         "name": "Global Energy Monitor / Climate TRACE",
         "license": "CC-BY-4.0",
         "homepage": "https://globalenergymonitor.org/"
-      },
-      {
-        "source_id": "ariregister",
-        "name": "Estonian e-Business Register (e-Äriregister)",
-        "license": "CC-BY-4.0",
-        "homepage": "https://ariregister.rik.ee/eng"
-      },
-      {
-        "source_id": "ted_eu",
-        "name": "TED — Tenders Electronic Daily (EU procurement)",
-        "license": "EU open data — Commission Decision 2011/833/EU (free reuse incl. commercial, with attribution)",
-        "homepage": "https://ted.europa.eu/"
       },
       {
         "source_id": "opensanctions",
@@ -389,13 +533,36 @@
         "homepage": "https://www.opensanctions.org/"
       },
       {
+        "source_id": "wikidata",
+        "name": "Wikidata",
+        "license": "CC0-1.0",
+        "homepage": "https://www.wikidata.org/wiki/Wikidata:Main_Page"
+      },
+      {
+        "source_id": "ted_eu",
+        "name": "TED — Tenders Electronic Daily (EU procurement)",
+        "license": "EU open data — Commission Decision 2011/833/EU (free reuse incl. commercial, with attribution)",
+        "homepage": "https://ted.europa.eu/"
+      },
+      {
+        "source_id": "ariregister",
+        "name": "Estonian e-Business Register (e-Äriregister)",
+        "license": "CC-BY-4.0",
+        "homepage": "https://ariregister.rik.ee/eng"
+      },
+      {
         "source_id": "openaleph",
         "name": "OpenAleph",
         "license": "per-collection",
         "homepage": "https://openaleph.org/"
       }
     ],
-    "gaps": []
+    "gaps": [
+      {
+        "id": "g1",
+        "statement": "OpenSanctions is licensed under CC-BY-NC-4.0. Commercial re-use of this data is not permitted under the source license."
+      }
+    ]
   },
   "validation_ok": true,
   "dropped_claims": [],

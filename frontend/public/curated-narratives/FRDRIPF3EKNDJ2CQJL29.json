@@ -1,10 +1,105 @@
 {
   "lei": "FRDRIPF3EKNDJ2CQJL29",
   "subject_name": "ELI LILLY AND COMPANY",
-  "summary": "ELI LILLY AND COMPANY (LEI: FRDRIPF3EKNDJ2CQJL29) is identifier-confirmed, registered in Indiana, United States, with its identity corroborated across GLEIF, OpenCorporates, and Wikidata. GLEIF reports a GLEIF-level reporting exception at the parent level, indicating that ultimate ownership rests with one or more natural persons whose identities are not disclosed in the LEI record; this constitutes a medium-confidence opaque ownership signal requiring further CDD. The company holds direct accounting-consolidation relationships over at least six subsidiaries spanning the US, India, Ireland, and the Netherlands per GLEIF, and a broad set of officers is recorded across OpenCorporates and Wikidata, including David A. Ricks as CEO and board member from 2017 and Jonathan Haug as senior managing official from 2023. Two structural risk signals were raised: related party Katherine Baicker is a possible name match — unconfirmed by birth date or nationality — to a PEP record on OpenSanctions and an EveryPolitician political office-holder record (medium confidence each); and related party Patrik Jonsson is similarly a possible name match only to PEP records on OpenSanctions and EveryPolitician (medium confidence each); additionally, related party Christopher Anderson matches records in both the Panama Papers and the Paradise Papers (Appleby) at an ICIJ score of 100/100 (high confidence), though this is a name-level match against a common name and does not constitute a finding of wrongdoing. One material gap exists: Wikirate could not be queried due to a source API schema error, so any data that source would have contributed — including headquarters and website fields — is absent from this review.",
-  "claims": [],
-  "limitations": [],
-  "overall_confidence": "low",
+  "summary": "ELI LILLY AND COMPANY (LEI: FRDRIPF3EKNDJ2CQJL29) is identifier-confirmed, registered in Indiana, United States, with cross-references to OpenCorporates (us_in/183025-143) and Wikidata (Q632240). Per GLEIF, the entity's ultimate parent is recorded under a reporting exception indicating ownership by one or more natural persons, leaving the beneficial ownership chain opaque; this constitutes a medium-confidence structural risk signal requiring further review. Key officers identified via OpenCorporates include David Ricks (officer from 2025-01-23) and Jonathan Haug (senior managing official from 2023-05-25), with David A. Ricks also reported as CEO and board member since 2017 per Wikidata; GLEIF records several direct accounting-consolidation subsidiaries including LILLY VENTURES FUND I LLC, ELI LILLY KINSALE LIMITED, and Lilly Nederland Finance B.V., among others. Three related-party risk signals warrant attention: board member Katherine Baicker is a possible name match — unconfirmed by birth date or nationality — with a PEP record on OpenSanctions and a political office-holder record on EveryPolitician (both medium confidence); officer Patrik Jonsson is similarly a possible name match only with PEP and political office-holder records on the same sources (medium confidence); and officer Christopher Anderson matches records in both the Panama Papers and the Paradise Papers (Appleby) at ICIJ score 100/100 (high confidence), though this is a name-level match against a related party and does not constitute a finding of wrongdoing. A material gap exists: Wikirate could not be queried due to a source API schema error, so any data that source would have contributed is unavailable.",
+  "claims": [
+    {
+      "id": "c1",
+      "text": "ELI LILLY AND COMPANY (LEI: FRDRIPF3EKNDJ2CQJL29) is identifier-confirmed, registered in Indiana, United States, with cross-references to OpenCorporates (us_in/183025-143) and Wikidata (Q632240).",
+      "fact_ids": [
+        "f52"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c2",
+      "text": "Per GLEIF, the entity's ultimate parent is recorded under a reporting exception indicating ownership by one or more natural persons, leaving the beneficial ownership chain opaque; this constitutes a medium-confidence structural risk signal requiring further review.",
+      "fact_ids": [
+        "f1",
+        "f2",
+        "r1"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c3",
+      "text": "Key officers identified via OpenCorporates include David Ricks (officer from 2025-01-23) and Jonathan Haug (senior managing official from 2023-05-25).",
+      "fact_ids": [
+        "f26",
+        "f38"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c4",
+      "text": "David A. Ricks is also reported as CEO and board member since 2017-01-01 per Wikidata.",
+      "fact_ids": [
+        "f9"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c5",
+      "text": "GLEIF records several direct accounting-consolidation subsidiaries of ELI LILLY AND COMPANY, including LILLY VENTURES FUND I LLC, ELI LILLY SERVICES INDIA PRIVATE LIMITED, ELI LILLY AND COMPANY (INDIA) PRIVATE LIMITED, ELI LILLY KINSALE LIMITED, Lilly Nederland Finance B.V., and ELI LILLY GROUP PENSION TRUSTEES LIMITED.",
+      "fact_ids": [
+        "f3",
+        "f4",
+        "f5",
+        "f6",
+        "f7",
+        "f8"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c6",
+      "text": "Board member Katherine Baicker is a possible name match only — unconfirmed by birth date or nationality — with a PEP record on OpenSanctions and a political office-holder record on EveryPolitician (both medium confidence).",
+      "fact_ids": [
+        "f18",
+        "f42",
+        "r6",
+        "r7"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c7",
+      "text": "Officer Patrik Jonsson is similarly a possible name match only — unconfirmed by birth date or nationality — with PEP and political office-holder records on OpenSanctions and EveryPolitician respectively (both medium confidence).",
+      "fact_ids": [
+        "f22",
+        "r8",
+        "r9"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c8",
+      "text": "Officer Christopher Anderson matches records in both the Panama Papers and the Paradise Papers (Appleby) at ICIJ score 100/100 (high confidence); this is a name-level match against a related party and does not constitute a finding of wrongdoing.",
+      "fact_ids": [
+        "f27",
+        "r10",
+        "r11"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c9",
+      "text": "Wikirate could not be queried due to a source API schema error, so any data that source would have contributed is unavailable.",
+      "fact_ids": [
+        "g1"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "limitations": [
+    "Beneficial ownership is opaque: GLEIF records a reporting exception indicating the ultimate parent is one or more natural persons, with no further identification (f1, f2, r1).",
+    "Wikirate could not be queried due to a source API schema error (g1), leaving a data gap for any metrics or information that source would have provided.",
+    "Board and officer data from Wikidata is sourced from a crowd-sourced knowledge base and should be treated as indicative, not authoritative (f9–f20).",
+    "One board member record in the packet (f12) is identified only by a Wikidata QID (Q105798427) with no resolved name, representing an unresolved person in the governance record.",
+    "All three related-party risk signals (r6–r11) are name-match-only findings with no corroborating identifiers (birth date, nationality) to confirm identity; they require further investigation but are not positive identifications.",
+    "GLEIF subsidiary relationships are reported at medium confidence and reflect accounting consolidation as reported to GLEIF, not independently verified ownership structures."
+  ],
+  "overall_confidence": "medium",
   "model": "claude-sonnet-4-6",
   "prompt_version": "2026-08-18-v6",
   "packet": {
@@ -761,7 +856,5 @@
   },
   "validation_ok": true,
   "dropped_claims": [],
-  "validation_issues": [
-    "gap 'g1' is not cited by any claim"
-  ]
+  "validation_issues": []
 }
