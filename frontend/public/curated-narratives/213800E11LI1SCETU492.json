@@ -1,107 +1,10 @@
 {
   "lei": "213800E11LI1SCETU492",
   "subject_name": "TAQA BRATANI LIMITED",
-  "summary": "TAQA BRATANI LIMITED (LEI 213800E11LI1SCETU492, GB-COH 05975475) is identifier-confirmed and registered in Great Britain. According to UK Companies House data, the company sits within a complex group structure, with multiple parties holding direct and ultimate consolidation relationships recorded via GLEIF since at least 2007, and a reported shareholding in the Brae Group per OpenSanctions; named officers include Alexander Burnett Hutchison (board appointment from 2015-09-17), Franco Polo (board appointment from 2022-12-12), and Christopher Graham Ross Rettie (senior managing official from 2025-03-12). One risk signal has been identified: a related entity, \"Taweelah Asia Power Company - P S C,\" is recorded by OpenSanctions as falling within a sanctioned party's ownership or control chain (high confidence per OpenSanctions); this is a structural indicator requiring further review and does not constitute a determination of wrongdoing. The ownership and consolidation facts in the packet do not name the counterparty entities, limiting the ability to fully assess the beneficial ownership chain. Additionally, OpenSanctions data is licensed under CC-BY-NC-4.0, restricting commercial re-use of that source.",
-  "claims": [
-    {
-      "id": "c1",
-      "text": "TAQA BRATANI LIMITED is identifier-confirmed, registered in Great Britain, with LEI 213800E11LI1SCETU492 and Companies House number 05975475.",
-      "fact_ids": [
-        "f101"
-      ],
-      "confidence": "high"
-    },
-    {
-      "id": "c2",
-      "text": "The company is subject to multiple direct and ultimate consolidation relationships recorded via GLEIF, with the earliest dating from 2007-05-01.",
-      "fact_ids": [
-        "f1",
-        "f2",
-        "f3",
-        "f4",
-        "f5",
-        "f6",
-        "f7",
-        "f8",
-        "f9",
-        "f10",
-        "f11",
-        "f12",
-        "f13"
-      ],
-      "confidence": "high"
-    },
-    {
-      "id": "c3",
-      "text": "TAQA Bratani holds a reported shareholding in the Brae Group, per OpenSanctions.",
-      "fact_ids": [
-        "f14"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c4",
-      "text": "Alexander Burnett Hutchison holds a board appointment in TAQA BRATANI LIMITED from 2015-09-17, per OpenCorporates.",
-      "fact_ids": [
-        "f15"
-      ],
-      "confidence": "high"
-    },
-    {
-      "id": "c5",
-      "text": "Franco Polo holds a board appointment in TAQA BRATANI LIMITED from 2022-12-12, per OpenCorporates.",
-      "fact_ids": [
-        "f16"
-      ],
-      "confidence": "high"
-    },
-    {
-      "id": "c6",
-      "text": "Christopher Graham Ross Rettie holds a senior managing official role in TAQA BRATANI LIMITED from 2025-03-12, per OpenCorporates.",
-      "fact_ids": [
-        "f17"
-      ],
-      "confidence": "high"
-    },
-    {
-      "id": "c7",
-      "text": "A related entity, 'Taweelah Asia Power Company - P S C', is recorded by OpenSanctions as falling within a sanctioned party's ownership or control chain (sanction.control, sanction.linked); this is a structural indicator for further review and not a determination of wrongdoing.",
-      "fact_ids": [
-        "r4"
-      ],
-      "confidence": "high"
-    },
-    {
-      "id": "c8",
-      "text": "The consolidation and ownership facts in the packet do not name the counterparty entities, limiting the ability to fully assess the beneficial ownership chain.",
-      "fact_ids": [
-        "f1",
-        "f2",
-        "f3",
-        "f4",
-        "f5",
-        "f6",
-        "f7",
-        "f8",
-        "f9",
-        "f10",
-        "f11",
-        "f12",
-        "f13"
-      ],
-      "confidence": "high"
-    },
-    {
-      "id": "c9",
-      "text": "OpenSanctions data used in this packet is licensed under CC-BY-NC-4.0, which does not permit commercial re-use.",
-      "fact_ids": [
-        "g1"
-      ],
-      "confidence": "high"
-    }
-  ],
+  "summary": "TAQA BRATANI LIMITED (LEI 213800E11LI1SCETU492, GB Companies House 05975475) is identifier-confirmed, registered in Great Britain. Per GLEIF and UK Companies House, the entity is both directly and ultimately consolidated by شركة أبوظبى الوطنية للطاقة - ش م ع (Abu Dhabi National Energy Company, TAQA) from 2018-01-17, and the Abu Dhabi Government is recorded at UK Companies House as holding significant influence or control from 2016-04-06, making this a structural indicator of possible state ownership or control that warrants appropriate enhanced scrutiny. Current board and senior management appointments recorded at OpenCorporates include Alexander Burnett Hutchison (board, from 2015-09-17), Franco Polo (board, from 2022-12-12), and Christopher Graham Ross Rettie (senior managing official, from 2025-03-12); TAQA Bratani also holds an indicative shareholding in the Brae Group per OpenSanctions. A high-confidence risk signal was raised by OpenSanctions: a related entity in the TAQA group's ownership chain, Taweelah Asia Power Company - P.S.C., is identified as matching a record inside a sanctioned party's ownership chain; this is a structural indicator for further review and is not a determination of wrongdoing. A material licensing limitation applies: OpenSanctions data is licensed under CC-BY-NC-4.0, and commercial re-use is not permitted under that licence.",
+  "claims": [],
   "limitations": [],
-  "overall_confidence": "medium",
+  "overall_confidence": "low",
   "model": "claude-sonnet-4-6",
   "prompt_version": "2026-08-18-v6",
   "packet": {
@@ -117,9 +20,9 @@
     "facts": [
       {
         "id": "f1",
-        "statement": "a party holds Relationship Type: IS_DIRECTLY_CONSOLIDATED_BY, from 2014-01-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "شركة أبوظبى الوطنية للطاقة - ش م ع holds Relationship Type: IS_DIRECTLY_CONSOLIDATED_BY, from 2014-01-06 in TAQA FINANCIAL SERVICES B.V..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
         "source_url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
         "bods_statement_ids": [
           "6b287936-0054-082d-c907-9b6cad450d57"
@@ -128,9 +31,9 @@
       },
       {
         "id": "f2",
-        "statement": "a party holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2014-01-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "شركة أبوظبى الوطنية للطاقة - ش م ع holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2014-01-06 in TAQA FINANCIAL SERVICES B.V..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
         "source_url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
         "bods_statement_ids": [
           "a2a4ac1f-ffeb-aa1a-ddd4-ffa168322cb0"
@@ -139,9 +42,9 @@
       },
       {
         "id": "f3",
-        "statement": "a party holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2007-05-01 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "شركة أبوظبى الوطنية للطاقة - ش م ع holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2007-05-01 in TAQA NEYVELI POWER COMPANY PRIVATE LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
         "source_url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
         "bods_statement_ids": [
           "0f5f7b16-7f64-daa2-5f40-de5103bc7d81"
@@ -150,9 +53,9 @@
       },
       {
         "id": "f4",
-        "statement": "a party holds Relationship Type: IS_DIRECTLY_CONSOLIDATED_BY, from 2007-05-01 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "شركة أبوظبى الوطنية للطاقة - ش م ع holds Relationship Type: IS_DIRECTLY_CONSOLIDATED_BY, from 2007-05-01 in TAQA NEYVELI POWER COMPANY PRIVATE LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
         "source_url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
         "bods_statement_ids": [
           "c0661aa3-ad82-a905-af4e-fb0b9a3539ae"
@@ -161,9 +64,9 @@
       },
       {
         "id": "f5",
-        "statement": "a party holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2011-02-08 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "شركة أبوظبى الوطنية للطاقة - ش م ع holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2011-02-08 in Taweelah Asia Power Company - P S C.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
         "source_url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
         "bods_statement_ids": [
           "2014fc5c-5b0a-53fb-715a-be642e7cdfdc"
@@ -172,9 +75,9 @@
       },
       {
         "id": "f6",
-        "statement": "a party holds Relationship Type: IS_DIRECTLY_CONSOLIDATED_BY, from 2018-01-17 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "شركة أبوظبى الوطنية للطاقة - ش م ع holds Relationship Type: IS_DIRECTLY_CONSOLIDATED_BY, from 2018-01-17 in TAQA BRATANI LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
         "source_url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
         "bods_statement_ids": [
           "1a809f77-e0dd-8e28-4c30-403993ddc927"
@@ -183,9 +86,9 @@
       },
       {
         "id": "f7",
-        "statement": "a party holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2018-01-17 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "شركة أبوظبى الوطنية للطاقة - ش م ع holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2018-01-17 in TAQA BRATANI LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
         "source_url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
         "bods_statement_ids": [
           "3b62efaf-383e-0a10-7e83-a19796230002"
@@ -194,9 +97,9 @@
       },
       {
         "id": "f8",
-        "statement": "a party holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2017-09-27 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "شركة أبوظبى الوطنية للطاقة - ش م ع holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2017-09-27 in EMIRATES SEMBCORP WATER AND POWER COMPANY PJSC.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
         "source_url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
         "bods_statement_ids": [
           "23012ccd-b274-a75d-0229-9ebb034cd6f3"
@@ -205,9 +108,9 @@
       },
       {
         "id": "f9",
-        "statement": "a party holds Relationship Type: IS_DIRECTLY_CONSOLIDATED_BY, from 2023-12-31 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "شركة أبوظبى الوطنية للطاقة - ش م ع holds Relationship Type: IS_DIRECTLY_CONSOLIDATED_BY, from 2023-12-31 in TAQA INDIA POWER VENTURES PRIVATE LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
         "source_url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
         "bods_statement_ids": [
           "b2e2fd4f-46a1-cb0f-b247-b72495e3fea5"
@@ -216,9 +119,9 @@
       },
       {
         "id": "f10",
-        "statement": "a party holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2023-12-31 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "شركة أبوظبى الوطنية للطاقة - ش م ع holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2023-12-31 in TAQA INDIA POWER VENTURES PRIVATE LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
         "source_url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
         "bods_statement_ids": [
           "06cd40e7-605a-1813-8d2f-7941717b7d47"
@@ -227,9 +130,9 @@
       },
       {
         "id": "f11",
-        "statement": "a party holds Relationship Type: IS_DIRECTLY_CONSOLIDATED_BY, from 1995-07-18 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "TAQA Energy B.V. holds Relationship Type: IS_DIRECTLY_CONSOLIDATED_BY, from 1995-07-18 in TAQA Gas Storage B.V..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
         "source_url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
         "bods_statement_ids": [
           "b47fa21d-c877-fc8a-5302-cb4d4754ab76"
@@ -238,9 +141,9 @@
       },
       {
         "id": "f12",
-        "statement": "a party holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2007-01-01 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "شركة أبوظبى الوطنية للطاقة - ش م ع holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2007-01-01 in TAQA Gas Storage B.V..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
         "source_url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
         "bods_statement_ids": [
           "e69f24fa-0a69-ed0d-3907-55bab785ef7b"
@@ -249,9 +152,9 @@
       },
       {
         "id": "f13",
-        "statement": "a party holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2007-02-01 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "شركة أبوظبى الوطنية للطاقة - ش م ع holds Relationship Type: IS_ULTIMATELY_CONSOLIDATED_BY, from 2007-02-01 in TAQA Energy B.V..",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
         "source_url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
         "bods_statement_ids": [
           "e6aa9211-eb7d-484a-a5f2-1bbee970e697"
@@ -304,9 +207,9 @@
       },
       {
         "id": "f18",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP PIPELINES (TANAP) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "4df11d28-b22e-bf13-897d-ed2064153879"
@@ -315,9 +218,9 @@
       },
       {
         "id": "f19",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-12-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-12-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2018-12-10 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-12-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-12-10; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2018-12-10 in BP D230 LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "ff878a87-a9ce-5c90-4303-070abc701f1b"
@@ -326,9 +229,9 @@
       },
       {
         "id": "f20",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in IRAQ PETROLEUM COMPANY LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "1dc30a09-99a4-74bf-c018-0d6817c268ee"
@@ -337,9 +240,9 @@
       },
       {
         "id": "f21",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP SENEGAL INVESTMENTS LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "cceebd92-e707-8f21-0b6a-18771adff680"
@@ -348,9 +251,9 @@
       },
       {
         "id": "f22",
-        "statement": "a party previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2022-05-24; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2022-05-24; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2022-05-24 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2022-05-24; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2022-05-24; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2022-05-24 in AZULE ENERGY EXPLORATION (ANGOLA) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "3203e901-e992-dadc-b485-2e035a3d206c"
@@ -359,9 +262,9 @@
       },
       {
         "id": "f23",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-12-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-12-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-12-19 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-12-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-12-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-12-19 in BP PIPELINES (SCP) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "174072d6-8c4f-018d-220f-24c8be9341c9"
@@ -370,9 +273,9 @@
       },
       {
         "id": "f24",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2018-12-01; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2018-12-01 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "ENQUEST HEATHER LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2018-12-01; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2018-12-01 in SULLOM VOE ASSOCIATION LIMITED (THE).",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "35783884-394b-b75a-0253-4880e443ae79"
@@ -381,9 +284,9 @@
       },
       {
         "id": "f25",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPLORATION BETA LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "08549d9a-4e1b-2db3-f631-a89ecc29336a"
@@ -392,9 +295,9 @@
       },
       {
         "id": "f26",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPLORATION (SOUTH ATLANTIC) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "a70489af-9100-88d9-7560-64658cbdab10"
@@ -403,9 +306,9 @@
       },
       {
         "id": "f27",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "ENQUEST HEATHER LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in ENQUEST HEATHER LEASING LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "4c36b12f-9f35-f5a4-aaf7-6cb3689a0846"
@@ -414,9 +317,9 @@
       },
       {
         "id": "f28",
-        "statement": "a party previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-04-23, to 2024-12-12; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-04-23, to 2024-12-12; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2024-04-23, to 2024-12-12 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-04-23, to 2024-12-12; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-04-23, to 2024-12-12; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2024-04-23, to 2024-12-12 in ARCIUS ENERGY EGYPT LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "728e7716-fbf1-4629-1922-9c7ecc1ce55d"
@@ -425,9 +328,9 @@
       },
       {
         "id": "f29",
-        "statement": "a party holds Relationship Type: ['significant-influence-or-control'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "The Abu Dhabi Government holds Relationship Type: ['significant-influence-or-control'], from 2016-04-06 in TAQA BRATANI LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "2e01f834-f511-b600-d7cf-16f8ff4076e2"
@@ -436,9 +339,9 @@
       },
       {
         "id": "f30",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-02-21; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-02-21; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-02-21 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-02-21; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-02-21; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-02-21 in BP EXPLORATION (PSI) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "c533905a-110a-d316-bc82-cfa28b82735e"
@@ -447,9 +350,9 @@
       },
       {
         "id": "f31",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-06-17; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-06-17; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2021-06-17 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-06-17; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-06-17; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2021-06-17 in BP HOLDINGS IRAQ LTD.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "34b75856-2c45-87bc-3254-3b81e4d7a228"
@@ -458,9 +361,9 @@
       },
       {
         "id": "f32",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP SHAFAG-ASIMAN LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "f88c82c5-d582-fe1d-1a93-d8fdd68a668d"
@@ -469,9 +372,9 @@
       },
       {
         "id": "f33",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "TAQA BRATANI LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06 in SULLOM VOE ASSOCIATION LIMITED (THE).",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "134df828-1413-e902-3b53-0aedbef5bfaf"
@@ -480,9 +383,9 @@
       },
       {
         "id": "f34",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPLORATION (SHAH DENIZ) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "bd56b503-c611-cc9d-0e32-c9c7b3b3b822"
@@ -491,9 +394,9 @@
       },
       {
         "id": "f35",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-12-09; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-12-09; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-12-09 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-12-09; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-12-09; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-12-09 in BP MAURITANIA INVESTMENTS LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "6bbc8985-620f-c747-7a0e-43adc19f246a"
@@ -502,9 +405,9 @@
       },
       {
         "id": "f36",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPLORATION (DELTA) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "5c6c1707-bfa2-0c12-5c98-dd0dfc512dbe"
@@ -513,9 +416,9 @@
       },
       {
         "id": "f37",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2017-01-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2017-01-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2017-01-19 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "ENQUEST NNS HOLDINGS LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2017-01-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2017-01-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2017-01-19 in ENQUEST NNS LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "3203f74b-8212-b1b7-cb88-d2b72fb86796"
@@ -524,9 +427,9 @@
       },
       {
         "id": "f38",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2023-12-20; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2023-12-20; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'], from 2023-12-20 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2023-12-20; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2023-12-20; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'], from 2023-12-20 in BP EXPLORATION MEDITERRANEAN LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "663da6f8-dc12-89c1-bc04-cc4b958fe712"
@@ -535,9 +438,9 @@
       },
       {
         "id": "f39",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-01-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-01-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-01-25 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-01-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-01-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-01-25 in BP (GTA MAURITANIA) FINANCE LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "a83f2e20-f527-69ce-d231-c53de2ed898a"
@@ -546,9 +449,9 @@
       },
       {
         "id": "f40",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPLORATION LIBYA LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "87d8adc8-7b19-eb37-3f42-230e2b6a90b3"
@@ -557,9 +460,9 @@
       },
       {
         "id": "f41",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP ENERGY COLOMBIA LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "35ce32b8-a2c4-b227-36ba-b2376d76e61a"
@@ -568,9 +471,9 @@
       },
       {
         "id": "f42",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPLORATION CHINA LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "9b6e1ea1-55b4-1080-fd5a-dc70edfa1b0a"
@@ -579,9 +482,9 @@
       },
       {
         "id": "f43",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2017-01-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2017-01-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2017-01-19 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "ENQUEST HEATHER LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2017-01-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2017-01-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2017-01-19 in ENQUEST NNS HOLDINGS LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "bd936b4a-5cc3-87d2-e608-ec4968fa7751"
@@ -590,9 +493,9 @@
       },
       {
         "id": "f44",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-04-03; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-04-03; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2021-04-03 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-04-03; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-04-03; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2021-04-03 in GTA FPSO COMPANY LTD.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "924e381f-aac9-3d91-e29c-715faa6785b6"
@@ -601,9 +504,9 @@
       },
       {
         "id": "f45",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-11-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-11-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-11-13 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-11-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-11-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-11-13 in BP ANDAMAN II LTD.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "ca548d58-9294-068f-79bd-d47ed1ed3102"
@@ -612,9 +515,9 @@
       },
       {
         "id": "f46",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPLORATION (MOROCCO) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "3799caac-0d32-5f21-d65a-84f94e278d80"
@@ -623,9 +526,9 @@
       },
       {
         "id": "f47",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP AMOCO EXPLORATION (FAROES) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "43119157-4998-fe11-de14-bdcd00967da7"
@@ -634,9 +537,9 @@
       },
       {
         "id": "f48",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-10-22; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-10-22; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2021-10-22 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "ENQUEST HEATHER LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-10-22; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-10-22; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2021-10-22 in NORTH SEA (GOLDEN EAGLE) RESOURCES LTD..",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "f8d9ffd4-25f2-72d8-7923-42ebf8e0ef5b"
@@ -645,9 +548,9 @@
       },
       {
         "id": "f49",
-        "statement": "a party previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-02-20, to 2024-10-21; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-02-20, to 2024-10-21; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-02-20, to 2024-10-21 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-02-20, to 2024-10-21; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-02-20, to 2024-10-21; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-02-20, to 2024-10-21 in BP CCUS UK LTD.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "d568a81f-5c95-15bf-526e-759597981393"
@@ -656,9 +559,9 @@
       },
       {
         "id": "f50",
-        "statement": "a party previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2022-05-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2022-05-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2022-05-19 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2022-05-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2022-05-19; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2022-05-19 in AZULE ENERGY EXPLORATION ANGOLA (KB) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "cf42ca9c-f7f4-ed85-19e0-f6362797da4f"
@@ -667,9 +570,9 @@
       },
       {
         "id": "f51",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP KARABAGH LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "21f9ec6c-6eaf-e766-53fd-91b4f6c71fe4"
@@ -678,9 +581,9 @@
       },
       {
         "id": "f52",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "ENQUEST HEATHER LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in ENQUEST THISTLE LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "79f0f254-76dd-7ea6-dc83-09793b699257"
@@ -689,9 +592,9 @@
       },
       {
         "id": "f53",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPLORATION (CASPIAN SEA) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "b773e695-2a2d-2ec2-e249-bc7625ed295f"
@@ -700,9 +603,9 @@
       },
       {
         "id": "f54",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BRITOIL LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "de0f6dfa-6268-9793-d979-6275f2e1d9a0"
@@ -711,9 +614,9 @@
       },
       {
         "id": "f55",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-07-16; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-07-16; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-07-16 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-07-16; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-07-16; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-07-16 in BP EXPLORATION PERU LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "d89d762b-5e06-c44f-9c12-6678dad2d946"
@@ -722,9 +625,9 @@
       },
       {
         "id": "f56",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-06-05; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-06-05; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2018-06-05 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "ENQUEST HEATHER LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-06-05; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-06-05; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2018-06-05 in ENQUEST ADVANCE HOLDINGS LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "f24b3cc9-671d-9b9b-8933-82b228a5b107"
@@ -733,9 +636,9 @@
       },
       {
         "id": "f57",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-12-11; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-12-11; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2024-12-11 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-12-11; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-12-11; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2024-12-11 in BP ADUA OPERATING COMPANY LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "9951f91f-70b8-e2c1-a689-32e5f835774e"
@@ -744,9 +647,9 @@
       },
       {
         "id": "f58",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-12-11; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-12-11; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2024-12-11 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-12-11; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-12-11; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2024-12-11 in BP ADUA LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "fbffdad2-e64c-efab-f007-d5a73f3ce5ea"
@@ -755,9 +658,9 @@
       },
       {
         "id": "f59",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06 in VIC CBM LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "081450fa-23f3-832c-b847-d33df9c3ba21"
@@ -766,9 +669,9 @@
       },
       {
         "id": "f60",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2016-04-06 in VIRGINIA INDONESIA CO. CBM LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "7d863482-8cac-40a4-28ea-90b93eb10cf2"
@@ -777,9 +680,9 @@
       },
       {
         "id": "f61",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-02-05; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-02-05; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2018-02-05 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-02-05; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-02-05; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2018-02-05 in BP EXPLORATION (STP) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "d3b66bda-333c-ea8a-4786-8d4525e87866"
@@ -788,9 +691,9 @@
       },
       {
         "id": "f62",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPLORATION (AZERBAIJAN) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "68d0fbd7-c835-5045-16a7-46efc787c288"
@@ -799,9 +702,9 @@
       },
       {
         "id": "f63",
-        "statement": "a party previously held Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2016-04-06, to 2018-02-20; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2016-04-06, to 2018-02-20; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2018-02-20 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED previously held Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2016-04-06, to 2018-02-20; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2016-04-06, to 2018-02-20; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2018-02-20 in SULLOM VOE ASSOCIATION LIMITED (THE).",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "320dab33-9b15-f57d-dc88-2a6af77ef50e"
@@ -810,9 +713,9 @@
       },
       {
         "id": "f64",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-12-18; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-12-18; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-12-18 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-12-18; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2023-12-18; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2023-12-18 in BP PIPELINES (BTC) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "42cc71c9-e527-2e0c-3de6-fa5197214362"
@@ -821,9 +724,9 @@
       },
       {
         "id": "f65",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-07-05; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-07-05; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2021-07-05 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "ENQUEST HEATHER LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-07-05; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2021-07-05; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2021-07-05 in ENQUEST PROGRESS LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "30091d0f-ce05-dfc1-605c-998c31706b62"
@@ -832,9 +735,9 @@
       },
       {
         "id": "f66",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP WEST ARU I LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "9d2f97dd-1d2e-6fe7-c028-182a63f5005a"
@@ -843,9 +746,9 @@
       },
       {
         "id": "f67",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "ENQUEST HEATHER LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in ENQUEST UKCS LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "d1f7ef65-c8a4-fea3-1307-0e787a9a75af"
@@ -854,9 +757,9 @@
       },
       {
         "id": "f68",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-05-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-05-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-05-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-05-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-05-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-05-06 in BP IRAN LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "0b64ec2d-9a22-bf17-e390-f590a953c382"
@@ -865,9 +768,9 @@
       },
       {
         "id": "f69",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2022-04-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2022-04-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2022-04-25 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2022-04-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2022-04-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2022-04-25 in BP AGUNG I LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "ceae6a24-b5b4-9c10-3beb-c813fce07f18"
@@ -876,9 +779,9 @@
       },
       {
         "id": "f70",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP GAS MARKETING LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "2e9a543b-6a7c-d8e7-6245-5174fd755633"
@@ -887,9 +790,9 @@
       },
       {
         "id": "f71",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPLORATION (EPSILON) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "3aec02e6-3697-7f52-f016-053478ea1d4e"
@@ -898,9 +801,9 @@
       },
       {
         "id": "f72",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2022-08-01; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2022-08-01 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2022-08-01; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2022-08-01 in AZULE ENERGY HOLDINGS LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "505cb13a-9efb-1d29-efc7-86e4295e0a7e"
@@ -909,9 +812,9 @@
       },
       {
         "id": "f73",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "ENQUEST HEATHER LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in STRATIC UK HOLDINGS LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "389f92b8-f49d-5883-71eb-46b2b92f95f4"
@@ -920,9 +823,9 @@
       },
       {
         "id": "f74",
-        "statement": "a party previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2023-02-28; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2023-02-28; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2023-02-28 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2023-02-28; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2023-02-28; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2023-02-28 in ENI IS EXPLORATION LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "7f1f680a-5dc4-49af-52dd-0ac9586be317"
@@ -931,9 +834,9 @@
       },
       {
         "id": "f75",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP WEST ARU II LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "2da4a19e-0f1b-e209-f7c7-b9b58501ec5a"
@@ -942,9 +845,9 @@
       },
       {
         "id": "f76",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPLORATION (ALPHA) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "3c2ccd77-f9f9-03d2-9526-60ff58c96e58"
@@ -953,9 +856,9 @@
       },
       {
         "id": "f77",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2017-10-31; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2017-10-31; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2017-10-31 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2017-10-31; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2017-10-31; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2017-10-31 in BP KARABAGH OPERATING COMPANY LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "1b31b347-49a1-fda9-2da8-96adcbcb2241"
@@ -964,9 +867,9 @@
       },
       {
         "id": "f78",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-05-16; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-05-16; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-05-16 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-05-16; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-05-16; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-05-16 in BP EXPLORATION ARGENTINA LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "bc9bab08-2a21-0396-266a-8008c5d19b5c"
@@ -975,9 +878,9 @@
       },
       {
         "id": "f79",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EAST KALIMANTAN CBM LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "09dc76f3-9f3f-d63f-ab85-d25730e8251f"
@@ -986,9 +889,9 @@
       },
       {
         "id": "f80",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-01-29; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-01-29; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-01-29 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-01-29; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-01-29; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-01-29 in BP EXPLORATION (D230) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "c76523f1-d1bb-6816-17d3-2cc74d022385"
@@ -997,9 +900,9 @@
       },
       {
         "id": "f81",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP KUWAIT LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "d8dc45c9-36bf-fadf-a8bd-87714d90a77f"
@@ -1008,9 +911,9 @@
       },
       {
         "id": "f82",
-        "statement": "a party previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-02-20, to 2021-09-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-02-20, to 2021-09-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-02-20, to 2021-09-13 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-02-20, to 2021-09-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-02-20, to 2021-09-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-02-20, to 2021-09-13 in NET ZERO NORTH SEA STORAGE LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "19923d7c-38d6-c92f-7e15-362205310b5e"
@@ -1019,9 +922,9 @@
       },
       {
         "id": "f83",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in ATLANTIC 2/3 UK HOLDINGS LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "a439e195-d4ac-2f58-373c-0ca166816fc2"
@@ -1030,9 +933,9 @@
       },
       {
         "id": "f84",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-07-26; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-07-26; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2018-07-26 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "ENQUEST HEATHER LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-07-26; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2018-07-26; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2018-07-26 in ENQUEST FORWARD HOLDINGS LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "1bdf880e-28ac-32d5-e919-6bab456cba02"
@@ -1041,9 +944,9 @@
       },
       {
         "id": "f85",
-        "statement": "a party previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2023-02-28; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2023-02-28; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2023-02-28 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2023-02-28; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06, to 2023-02-28; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06, to 2023-02-28 in ENI IN AMENAS LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "09b2c6ae-ecb2-b7e1-283d-41b3f7eadb20"
@@ -1052,9 +955,9 @@
       },
       {
         "id": "f86",
-        "statement": "a party previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2022-02-17, to 2022-08-01; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2022-02-17, to 2022-08-01; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2022-02-17, to 2022-08-01 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2022-02-17, to 2022-08-01; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2022-02-17, to 2022-08-01; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2022-02-17, to 2022-08-01 in AZULE ENERGY LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "be3c24e8-41fc-4efc-5c01-a3b251113ace"
@@ -1063,9 +966,9 @@
       },
       {
         "id": "f87",
-        "statement": "a party previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-02-20, to 2021-09-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-02-20, to 2021-09-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-02-20, to 2021-09-13 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED previously held Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-02-20, to 2021-09-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2020-02-20, to 2021-09-13; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2020-02-20, to 2021-09-13 in NET ZERO TEESSIDE POWER LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "ce3c61c4-d8a2-7680-a8aa-e0989bf7b50b"
@@ -1074,9 +977,9 @@
       },
       {
         "id": "f88",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP WEST PAPUA I LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "c282df0a-7598-9017-b58e-99220f1e9e27"
@@ -1085,9 +988,9 @@
       },
       {
         "id": "f89",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP PIPELINES TAP LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "aa103c2b-6ec5-0a74-4e94-450b2f8cf803"
@@ -1096,9 +999,9 @@
       },
       {
         "id": "f90",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "ENQUEST BRITAIN LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in ENQUEST HEATHER LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "0ae915f4-5edf-bbf8-f9e4-298eb8e357ad"
@@ -1107,9 +1010,9 @@
       },
       {
         "id": "f91",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP SUBSEA WELL RESPONSE LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "cf784f5f-3b1f-4555-52b5-7ccb52eb6453"
@@ -1118,9 +1021,9 @@
       },
       {
         "id": "f92",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "Shetland Islands Council holds Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'] (None–50.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in SULLOM VOE ASSOCIATION LIMITED (THE).",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "9b45d4ee-7a6c-2cad-7934-d98bbd95bc58"
@@ -1129,9 +1032,9 @@
       },
       {
         "id": "f93",
-        "statement": "a party previously held Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2017-12-01, to 2018-12-01; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2017-12-01, to 2018-12-01 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "ENQUEST NNS LIMITED previously held Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2017-12-01, to 2018-12-01; Relationship Type: ['ownership-of-shares-25-to-50-percent', 'voting-rights-25-to-50-percent'] (None–50.0%), from 2017-12-01, to 2018-12-01 in SULLOM VOE ASSOCIATION LIMITED (THE).",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "876158de-47e3-8c8d-5cde-a0c36af2a54a"
@@ -1140,9 +1043,9 @@
       },
       {
         "id": "f94",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-04-17; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-04-17; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2024-04-17 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-04-17; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-04-17; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2024-04-17 in BP EXPLORATION (CARIBBEAN) LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "7471e22b-0786-1236-e2f8-1f8070077a69"
@@ -1151,9 +1054,9 @@
       },
       {
         "id": "f95",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2022-04-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2022-04-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2022-04-25 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2022-04-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2022-04-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2022-04-25 in BP AGUNG II LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "17625ea0-5d51-1e4d-71f3-b244d0436f4a"
@@ -1162,9 +1065,9 @@
       },
       {
         "id": "f96",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPLORATION INDONESIA LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "4645c1fd-02c2-be96-1a0f-268c7b91c126"
@@ -1173,9 +1076,9 @@
       },
       {
         "id": "f97",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2016-04-06; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2016-04-06 in BP EXPLORATION NORTH AFRICA LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "43455a1d-6a3f-6e61-0cfa-e320a94ce3fa"
@@ -1184,9 +1087,9 @@
       },
       {
         "id": "f98",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-01-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-01-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-01-25 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-01-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2019-01-25; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2019-01-25 in BP (GTA SENEGAL) FINANCE LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "b56e11aa-3162-73b1-48e2-0d92ff79460e"
@@ -1195,9 +1098,9 @@
       },
       {
         "id": "f99",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-12-17; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-12-17; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2024-12-17 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-12-17; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'] (None–100.0%), from 2024-12-17; Relationship Type: ['ownership-of-shares-75-to-100-percent', 'voting-rights-75-to-100-percent', 'right-to-appoint-and-remove-directors'], from 2024-12-17 in BP ENERGY COMPANY OF KIRKUK LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "5d196045-736b-559e-b1fd-174d7d4dce1b"
@@ -1206,9 +1109,9 @@
       },
       {
         "id": "f100",
-        "statement": "a party holds Relationship Type: ['ownership-of-shares-50-to-75-percent', 'voting-rights-50-to-75-percent'] (None–75.0%), from 2024-10-24; Relationship Type: ['ownership-of-shares-50-to-75-percent', 'voting-rights-50-to-75-percent'] (None–75.0%), from 2024-10-24 in a party.",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "statement": "BP EXPLORATION OPERATING COMPANY LIMITED holds Relationship Type: ['ownership-of-shares-50-to-75-percent', 'voting-rights-50-to-75-percent'] (None–75.0%), from 2024-10-24; Relationship Type: ['ownership-of-shares-50-to-75-percent', 'voting-rights-50-to-75-percent'] (None–75.0%), from 2024-10-24 in ARCIUS ENERGY LIMITED.",
+        "source_name": "UK Companies House",
+        "source_id": "companies_house",
         "source_url": "https://download.companieshouse.gov.uk/en_output.html",
         "bods_statement_ids": [
           "d1e10306-beb5-a0b6-74d7-b67b94de0cb5"
@@ -1218,8 +1121,8 @@
       {
         "id": "f101",
         "statement": "TAQA BRATANI LIMITED is a registered entity in GB (XI-LEI 213800E11LI1SCETU492, GB-COH 05975475).",
-        "source_name": "an OpenCheck source",
-        "source_id": null,
+        "source_name": "GLEIF",
+        "source_id": "gleif",
         "source_url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
         "bods_statement_ids": [
           "5d22e636-3ad9-fef0-2161-879d52a997d2"
@@ -1245,8 +1148,8 @@
         "label": "Outside EU/EEA",
         "confidence": "low",
         "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: GB. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
-        "source_name": "EITI — Extractive Industries Transparency Initiative",
-        "source_id": "eiti",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
         "fact_ids": [],
         "kind": "context"
       },
@@ -1256,8 +1159,8 @@
         "label": "Outside EU/EEA",
         "confidence": "low",
         "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: GB. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
+        "source_name": "EITI — Extractive Industries Transparency Initiative",
+        "source_id": "eiti",
         "fact_ids": [],
         "kind": "context"
       },
@@ -1281,28 +1184,28 @@
         "homepage": "https://search.gleif.org/#/search/"
       },
       {
-        "source_id": "climatetrace",
-        "name": "Global Energy Monitor / Climate TRACE",
-        "license": "CC-BY-4.0",
-        "homepage": "https://globalenergymonitor.org/"
-      },
-      {
         "source_id": "opensanctions",
         "name": "OpenSanctions",
         "license": "CC-BY-NC-4.0",
         "homepage": "https://www.opensanctions.org/"
       },
       {
-        "source_id": "eiti",
-        "name": "EITI — Extractive Industries Transparency Initiative",
-        "license": "EITI open data (free reuse with attribution)",
-        "homepage": "https://eiti.org/"
+        "source_id": "climatetrace",
+        "name": "Global Energy Monitor / Climate TRACE",
+        "license": "CC-BY-4.0",
+        "homepage": "https://globalenergymonitor.org/"
       },
       {
         "source_id": "opencorporates",
         "name": "OpenCorporates",
         "license": "OC-Terms",
         "homepage": "https://opencorporates.com/"
+      },
+      {
+        "source_id": "eiti",
+        "name": "EITI — Extractive Industries Transparency Initiative",
+        "license": "EITI open data (free reuse with attribution)",
+        "homepage": "https://eiti.org/"
       },
       {
         "source_id": "companies_house",
@@ -1332,5 +1235,7 @@
   },
   "validation_ok": true,
   "dropped_claims": [],
-  "validation_issues": []
+  "validation_issues": [
+    "gap 'g1' is not cited by any claim"
+  ]
 }
