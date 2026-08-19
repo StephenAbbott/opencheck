@@ -20,7 +20,13 @@ from .prompt import PROMPT_VERSION, SUMMARY_TOOL, SYSTEM_PROMPT, build_user_mess
 from .validate import ValidationResult, validate_narrative
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
-MAX_TOKENS = 1200
+#: Generous ceiling for the emit_summary tool call. 1200 was too tight for the
+#: prompt-v6 output: the call was truncated mid-`claims`, the API dropped the
+#: incomplete fields, and every downstream default kicked in silently — a
+#: summary with ZERO claims (so the UI's evidence section disappears) and
+#: overall_confidence "low". Five of the six Phase 111 curated files shipped
+#: that way before anyone noticed. Truncation is now also a hard error below.
+MAX_TOKENS = 4000
 
 
 class NarrativeUnavailable(RuntimeError):  # noqa: N818 — public name, kept stable
@@ -38,7 +44,18 @@ class NarrativeResult(BaseModel):
 
 
 def _raw_tool_output(message: Any) -> dict[str, Any]:
-    """Pull the ``emit_summary`` tool input out of an Anthropic message."""
+    """Pull the ``emit_summary`` tool input out of an Anthropic message.
+
+    A ``max_tokens`` stop is a hard error, never a partial result: the API
+    drops the incomplete tool-input fields, which here silently strips the
+    claims (and with them the UI's whole evidence section) while leaving a
+    plausible-looking summary. Better no narrative than an uncited one.
+    """
+    if getattr(message, "stop_reason", None) == "max_tokens":
+        raise NarrativeUnavailable(
+            "narrative generation was truncated at max_tokens — the claims "
+            "would be lost; raise MAX_TOKENS or shorten the packet"
+        )
     for block in message.content:
         if getattr(block, "type", None) == "tool_use" and block.name == "emit_summary":
             return dict(block.input)

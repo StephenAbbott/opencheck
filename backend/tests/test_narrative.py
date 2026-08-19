@@ -314,6 +314,38 @@ def test_oo_bundle_statements_get_no_anonymous_source_label():
     assert "a party" not in rel_fact.statement
 
 
+# --- summariser output handling ----------------------------------------------
+
+
+def test_truncated_model_output_is_an_error_not_an_empty_summary():
+    """A max_tokens stop must raise, never degrade to a claimless summary.
+
+    When the emit_summary call is truncated, the API drops the incomplete
+    tool-input fields — the summary text survives but the claims vanish, so
+    the UI renders a summary with NO evidence section and the default "low"
+    confidence. Five of the six Phase 111 curated files shipped that way.
+    """
+    from opencheck.narrative.summarise import NarrativeUnavailable, _raw_tool_output
+
+    class _Block:
+        type = "tool_use"
+        name = "emit_summary"
+        input = {"summary": "looks fine", "claims": []}
+
+    class _Truncated:
+        stop_reason = "max_tokens"
+        content = [_Block()]
+
+    with pytest.raises(NarrativeUnavailable, match="truncated"):
+        _raw_tool_output(_Truncated())
+
+    class _Complete:
+        stop_reason = "tool_use"
+        content = [_Block()]
+
+    assert _raw_tool_output(_Complete())["summary"] == "looks fine"
+
+
 # --- validator ---------------------------------------------------------------
 
 
