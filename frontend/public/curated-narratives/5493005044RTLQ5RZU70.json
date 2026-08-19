@@ -1,11 +1,11 @@
 {
   "lei": "5493005044RTLQ5RZU70",
   "subject_name": "EESTI ENERGIA AS",
-  "summary": "EESTI ENERGIA AS (LEI 5493005044RTLQ5RZU70, Estonian registry code 10421629) is identifier-confirmed and registered in Estonia. The Government of Estonia is reported as a shareholder by OpenSanctions and indicated as controlling owner on Wikidata, making the entity a possible state-owned enterprise; these are indicative findings from aggregator and crowd-sourced sources, not authoritative determinations. The Estonian e-Business Register (high confidence) records four current board members — Andrus Durejko, Marlen Tamm, Lauri Karp, and Gerrit Mäesalu — alongside several supervisory or other-means role-holders including Jürgen Ligi, against whose name multiple PEP matches were returned by OpenSanctions, EveryPolitician, and OpenAleph; all matches are name-only with no corroborating birth date or nationality, so identity is unconfirmed. GLEIF data raises two structural risk signals at medium confidence: an opaque ownership chain containing an anonymous entity, and an ownership structure of three or more corporate layers meeting the AMLA threshold; GLEIF also records a reporting exception whereby an unknown parent does not consolidate the subject. One material limitation applies: OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used under that licence.",
+  "summary": "EESTI ENERGIA AS (LEI 5493005044RTLQ5RZU70, Estonian registry code 10421629) is identifier-confirmed. The Government of Estonia is reported as a controlling owner and shareholder, per Wikidata and OpenSanctions respectively, making this a possible state-owned enterprise; these are indicative findings from aggregator sources, not authoritative register determinations. The Estonian e-Business Register (e-Äriregister) records four current board members — Andrus Durejko and Marlen Tamm (from 2023-04-03), Lauri Karp (from 2024-09-10), and Gerrit Mäesalu (from 2026-06-22) — alongside several persons recorded under \"other means,\" including Jürgen Ligi (from 2024-08-02). Two structural risk signals are raised: a medium-confidence indicator of complex ownership layers (three or more corporate layers per GLEIF data), and a medium-confidence possible state-controlled enterprise indicator sourced from Wikidata. Additionally, related party Jürgen Ligi is name-matched — without confirmed birth date or nationality — against PEP records on OpenSanctions, EveryPolitician, and OpenAleph (medium confidence each); this is a possible name match only and does not constitute a confirmed PEP association. A material limitation applies: OpenSanctions data is licensed CC-BY-NC-4.0 and may not be used for commercial purposes.",
   "claims": [
     {
       "id": "c1",
-      "text": "EESTI ENERGIA AS (LEI 5493005044RTLQ5RZU70, Estonian registry code 10421629) is identifier-confirmed and registered in Estonia.",
+      "text": "EESTI ENERGIA AS is identifier-confirmed, registered in Estonia with LEI 5493005044RTLQ5RZU70 and Estonian registry code 10421629.",
       "fact_ids": [
         "f25"
       ],
@@ -13,16 +13,24 @@
     },
     {
       "id": "c2",
-      "text": "The Government of Estonia is reported as a shareholder in Eesti Energia AS by OpenSanctions, and is indicated as controlling owner on Wikidata, making the entity a possible state-owned enterprise; these are indicative findings from aggregator and crowd-sourced sources, not authoritative determinations.",
+      "text": "The Government of Estonia is indicatively reported as a controlling owner of Eesti Energia, per Wikidata (a crowd-sourced knowledge base), and as a shareholder per OpenSanctions; these are aggregator-sourced findings, not authoritative register determinations.",
       "fact_ids": [
-        "f9",
-        "f10",
-        "r4"
+        "f7",
+        "f10"
       ],
       "confidence": "medium"
     },
     {
       "id": "c3",
+      "text": "This state-control indicator makes EESTI ENERGIA AS a possible state-owned enterprise; this is a structural observation and not an adverse finding. The indicator is presence-only (Wikidata-sourced), meaning its absence is not evidence to the contrary.",
+      "fact_ids": [
+        "f7",
+        "r3"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c4",
       "text": "The Estonian e-Business Register records four current board members: Andrus Durejko (from 2023-04-03), Marlen Tamm (from 2023-04-03), Lauri Karp (from 2024-09-10), and Gerrit Mäesalu (from 2026-06-22).",
       "fact_ids": [
         "f11",
@@ -33,8 +41,8 @@
       "confidence": "high"
     },
     {
-      "id": "c4",
-      "text": "The Estonian e-Business Register also records several individuals holding other means roles, including Jürgen Ligi (from 2024-08-02), Kristi Klaas (from 2024-06-10), Kaur Kajak (from 2023-04-18), Anne Mere (from 2022-07-19), Anna Broughel (from 2025-06-02), Priit Rohumaa (from 2025-06-02), and Gerrit Mäesalu (from 2026-07-06).",
+      "id": "c5",
+      "text": "The Estonian e-Business Register also records several persons connected to EESTI ENERGIA AS under 'other means,' including Gerrit Mäesalu (from 2026-07-06), Anna Broughel (from 2025-06-02), Priit Rohumaa (from 2025-06-02), Lauri Karp (from 2024-09-11), Jürgen Ligi (from 2024-08-02), Kristi Klaas (from 2024-06-10), Andrus Durejko (from 2023-04-18), Kaur Kajak (from 2023-04-18), Marlen Tamm (from 2023-04-18), and Anne Mere (from 2022-07-19).",
       "fact_ids": [
         "f15",
         "f16",
@@ -50,8 +58,45 @@
       "confidence": "high"
     },
     {
-      "id": "c5",
-      "text": "Jürgen Ligi, a related party recorded in the Estonian e-Business Register, shares a name with PEP records on OpenSanctions, EveryPolitician, and OpenAleph (including via US CIA World Leaders, Wikidata PEPs, and MySociety's EveryPolitician Legislators); all matches are name-only with no corroborating birth date or nationality, so identity is unconfirmed.",
+      "id": "c6",
+      "text": "GLEIF data indicates EESTI ENERGIA AS consolidates at least three direct subsidiaries: Enefit OÜ, Enefit Oy, and ENEFIT INDUSTRY AS.",
+      "fact_ids": [
+        "f3",
+        "f4",
+        "f5"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c7",
+      "text": "OpenSanctions also records EESTI ENERGIA AS as holding shareholdings in Enefit Green and Attarat Power Co.",
+      "fact_ids": [
+        "f8",
+        "f9"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c8",
+      "text": "A medium-confidence structural risk signal identifies complex ownership layers, with the ownership chain reaching three or more corporate layers (the GLEIF-derived AMLA threshold), warranting further review.",
+      "fact_ids": [
+        "r2"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c9",
+      "text": "GLEIF reports a NON_CONSOLIDATING exception for both the direct and ultimate accounting consolidation parent, meaning no consolidating parent is disclosed to GLEIF; this is a permitted exception under LEI ROC policy and is a structural observation, not a risk finding.",
+      "fact_ids": [
+        "f1",
+        "f2",
+        "r1"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c10",
+      "text": "Related party Jürgen Ligi is name-matched — with no birth date or nationality confirmed in common — against PEP records on OpenSanctions, EveryPolitician, and OpenAleph (including via 'US CIA World Leaders,' 'Wikidata Politically Exposed Persons,' and 'MySociety's EveryPolitician Legislators'); all matches are medium confidence and do not constitute a confirmed PEP association.",
       "fact_ids": [
         "f19",
         "r5",
@@ -63,53 +108,8 @@
       "confidence": "medium"
     },
     {
-      "id": "c6",
-      "text": "GLEIF data raises a medium-confidence structural risk signal of opaque ownership, with the ownership chain containing an anonymous entity.",
-      "fact_ids": [
-        "r1"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c7",
-      "text": "GLEIF data raises a medium-confidence structural risk signal of complex ownership layers, with the ownership chain having three corporate layers, meeting the AMLA threshold of three or more.",
-      "fact_ids": [
-        "r2"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c8",
-      "text": "GLEIF records a reporting exception whereby an unknown parent does not consolidate EESTI ENERGIA AS, leaving the ultimate parent unidentified in the LEI record.",
-      "fact_ids": [
-        "f1",
-        "f2"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c9",
-      "text": "EESTI ENERGIA AS is recorded by GLEIF as the direct parent (accounting consolidation) of Enefit OÜ, Enefit Oy, and ENEFIT INDUSTRY AS, and by OpenSanctions as holding a shareholding in Attarat Power Co. and Enefit Green.",
-      "fact_ids": [
-        "f3",
-        "f4",
-        "f5",
-        "f7",
-        "f8"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c10",
-      "text": "The ownership chain structurally reaches jurisdictions outside the EU/EEA (specifically Jordan, JO), noted as a structural observation; this is not a risk finding under the AMLA CDD RTS or AMLR Annex III.",
-      "fact_ids": [
-        "r3"
-      ],
-      "confidence": "low"
-    },
-    {
       "id": "c11",
-      "text": "OpenSanctions data used in this review is licensed CC-BY-NC-4.0, and commercial re-use of that data is not permitted under the source licence.",
+      "text": "OpenSanctions data used in this assessment is licensed CC-BY-NC-4.0; commercial re-use of that data is not permitted under the source licence.",
       "fact_ids": [
         "g1"
       ],
@@ -118,9 +118,10 @@
   ],
   "limitations": [
     "OpenSanctions is licensed CC-BY-NC-4.0; commercial re-use of data derived from that source is not permitted (g1).",
-    "The GLEIF LEI record contains a reporting exception: an unknown parent does not consolidate EESTI ENERGIA AS, leaving the ultimate beneficial owner unidentified through the LEI chain (f1, f2).",
-    "State ownership and control indicators are sourced from OpenSanctions (aggregator) and Wikidata (crowd-sourced); neither constitutes an authoritative beneficial ownership register disclosure (f9, f10).",
-    "All PEP matches for Jürgen Ligi are name-only across OpenSanctions, EveryPolitician, and OpenAleph — no birth date or nationality corroboration is available to confirm or exclude identity (r5, r6, r7, r8, r9)."
+    "State-control and shareholder ownership data for the Government of Estonia are sourced from Wikidata (crowd-sourced) and OpenSanctions (aggregator), not from an authoritative national register; these findings are indicative only.",
+    "GLEIF Level 2 data reflects accounting consolidation, not beneficial ownership; no beneficial owner is disclosed in the GLEIF record.",
+    "The NON_CONSOLIDATING reporting exception means no consolidating parent entity is reported to GLEIF for either the direct or ultimate parent level (f1, f2).",
+    "The PEP signals for Jürgen Ligi are name-match only, with no corroborating identifiers (birth date, nationality) to confirm the related party is the same individual as the PEP record (r5, r6, r7, r8, r9)."
   ],
   "overall_confidence": "medium",
   "model": "claude-sonnet-4-6",
@@ -138,7 +139,7 @@
     "facts": [
       {
         "id": "f1",
-        "statement": "Unknown parent (GLEIF reporting exception) holds GLEIF reporting exception: parent does not consolidate the subject in EESTI ENERGIA AS.",
+        "statement": "Non-consolidating parent (GLEIF reporting exception) holds GLEIF reporting exception NON_CONSOLIDATING: the entity is controlled by legal entities not subject to preparing consolidated financial statements (ExceptionCategory: DIRECT_ACCOUNTING_CONSOLIDATION_PARENT) in EESTI ENERGIA AS.",
         "source_name": "GLEIF",
         "source_id": "gleif",
         "source_url": "https://www.gleif.org/lei/5493005044RTLQ5RZU70",
@@ -149,7 +150,7 @@
       },
       {
         "id": "f2",
-        "statement": "Unknown parent (GLEIF reporting exception) holds GLEIF reporting exception: parent does not consolidate the subject in EESTI ENERGIA AS.",
+        "statement": "Non-consolidating parent (GLEIF reporting exception) holds GLEIF reporting exception NON_CONSOLIDATING: the entity is controlled by legal entities not subject to preparing consolidated financial statements (ExceptionCategory: ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT) in EESTI ENERGIA AS.",
         "source_name": "GLEIF",
         "source_id": "gleif",
         "source_url": "https://www.gleif.org/lei/5493005044RTLQ5RZU70",
@@ -204,12 +205,12 @@
       },
       {
         "id": "f7",
-        "statement": "Eesti Energia AS holds shareholding in Attarat Power Co.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/gem-own-e100000000358/",
+        "statement": "Government of Estonia holds Controlling owner declared on Wikidata (P127) in Eesti Energia.",
+        "source_name": "Wikidata",
+        "source_id": "wikidata",
+        "source_url": "https://www.wikidata.org/wiki/Q1295560",
         "bods_statement_ids": [
-          "opencheck-2231843684641d83c595143c"
+          "opencheck-d78c54be2987848a875716f2"
         ],
         "confidence": "medium"
       },
@@ -226,23 +227,23 @@
       },
       {
         "id": "f9",
+        "statement": "Eesti Energia AS holds shareholding in Attarat Power Co.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/gem-own-e100000000358/",
+        "bods_statement_ids": [
+          "opencheck-2231843684641d83c595143c"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f10",
         "statement": "Government of Estonia holds shareholding in Eesti Energia AS.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/gem-own-e100000000358/",
         "bods_statement_ids": [
           "opencheck-5e1227c8ea3ca0096d12170d"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f10",
-        "statement": "Government of Estonia holds Controlling owner declared on Wikidata (P127) in Eesti Energia.",
-        "source_name": "Wikidata",
-        "source_id": "wikidata",
-        "source_url": "https://www.wikidata.org/wiki/Q1295560",
-        "bods_statement_ids": [
-          "opencheck-d78c54be2987848a875716f2"
         ],
         "confidence": "medium"
       },
@@ -415,14 +416,14 @@
     "risks": [
       {
         "id": "r1",
-        "code": "OPAQUE_OWNERSHIP",
-        "label": "Opaque ownership (super-secure)",
-        "confidence": "medium",
-        "rationale": "Ownership chain contains: anonymous entity in ownership chain.",
+        "code": "GLEIF_REPORTING_EXCEPTION",
+        "label": "No parent in GLEIF (permitted reporting exception)",
+        "confidence": "high",
+        "rationale": "No accounting-consolidation parent is reported to GLEIF: NON_CONSOLIDATING for the direct and ultimate parent (its controlling legal entities are not subject to preparing consolidated financial statements). Structural context, not a risk finding — these are permitted exceptions under the LEI ROC policy, and GLEIF Level 2 records accounting consolidation, not beneficial ownership.",
         "source_name": "GLEIF",
         "source_id": "gleif",
         "fact_ids": [],
-        "kind": "risk"
+        "kind": "context"
       },
       {
         "id": "r2",
@@ -437,17 +438,6 @@
       },
       {
         "id": "r3",
-        "code": "NON_EU_JURISDICTION",
-        "label": "Outside EU/EEA",
-        "confidence": "low",
-        "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: JO. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "context"
-      },
-      {
-        "id": "r4",
         "code": "STATE_CONTROLLED",
         "label": "State-controlled (possible SOE)",
         "confidence": "medium",
@@ -456,6 +446,17 @@
         "source_id": "wikidata",
         "fact_ids": [],
         "kind": "risk"
+      },
+      {
+        "id": "r4",
+        "code": "NON_EU_JURISDICTION",
+        "label": "Outside EU/EEA",
+        "confidence": "low",
+        "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: JO. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "context"
       },
       {
         "id": "r5",
@@ -527,16 +528,16 @@
         "homepage": "https://globalenergymonitor.org/"
       },
       {
-        "source_id": "opensanctions",
-        "name": "OpenSanctions",
-        "license": "CC-BY-NC-4.0",
-        "homepage": "https://www.opensanctions.org/"
-      },
-      {
         "source_id": "wikidata",
         "name": "Wikidata",
         "license": "CC0-1.0",
         "homepage": "https://www.wikidata.org/wiki/Wikidata:Main_Page"
+      },
+      {
+        "source_id": "opensanctions",
+        "name": "OpenSanctions",
+        "license": "CC-BY-NC-4.0",
+        "homepage": "https://www.opensanctions.org/"
       },
       {
         "source_id": "ted_eu",
