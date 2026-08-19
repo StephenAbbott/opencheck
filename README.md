@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 115** — one pooled source for the EITI countries' beneficial ownership registers
+**Latest: Phase 116** — the exported report now separates risk findings from structural context
+
+The PDF and Markdown report downloads were the last surface still ignoring the risk/context split every other surface has honoured since Phases 111/114: "Outside EU/EEA" and permitted GLEIF reporting exceptions rendered under the **Risk signals** heading of the analyst's defensible record. Both report builders now split on `kind` — context observations move to a slate-bordered **Structural context** block, a context-only report reads "No risk signals were raised" — signal labels come from the curated backend map instead of title-cased code churn, and the "checks applied and returned clear" boilerplate finally describes the screen the engine actually runs. Commit `59a9bcb`.
+
+**Previous: Phase 115** — one pooled source for the EITI countries' beneficial ownership registers
 
 The 2024 EITI stocktake marks 15 countries' BO registers "publicly available"; live verification found four worth pooling and built them as **one source (`eiti_bo`)** rather than one adapter per register — the pooled universe is small, smaller still filtered to LEI holders, so per-register source cards would each sit behind one or two companies. Each register needed a different sourcing approach: the DRC's ITIE-RDC register is the only EITI BO register anywhere with a bulk download (XLSX with ownership %, voting rights and PEP flags); Armenia's State Register publishes per-declaration **BODS v0.2 JSON**, which the mapper upconverts to v0.4 with the originals recorded via annotations; Nigeria reuses the CAC PSC harvest filtered to NEITI solid-minerals-covered companies with dated filter evidence; Indonesia's slot is reserved while the AHU API sits in maintenance. Identity resolution happens once, offline — registration-number equality against GLEIF first (Zangezur's `27.140.00009` matches exactly), name equality as fallback — and the launch index is deliberately **LEI-only**: 3 of 91 harvested companies resolve, the manifest counts the rest, and that gap is itself a finding about LEI coverage in extractives. Tajikistan (all-rights-reserved) and Trinidad & Tobago (frozen ~2021) stay out. Commit `cc8455f`.
 
-**Previous: Phase 114** — declining to name a parent is not the same as having something to hide
-
-Eli Lilly's page carried an "Opaque ownership" chip claiming an "unknown person in ownership chain · Source: gleif" — wrong three times over, since GLEIF Level 2 records only ever identify entities, never people. GLEIF reporting exceptions are now classified by their ROC-defined **reason** (`NATURAL_PERSONS`, `NO_KNOWN_PERSON`, `NON_CONSOLIDATING`, …) rather than lumped into one placeholder type, so a permitted exception reads as what it is. Commit `149aa14`.
-
-*Earlier: [Phase 113 — the depth shown depended on which source finished last](docs/status.md), and everything before it.*
+*Earlier: [Phase 114 — declining to name a parent is not the same as having something to hide](docs/status.md), and everything before it.*
 
 
 
