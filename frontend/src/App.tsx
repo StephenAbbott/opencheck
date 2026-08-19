@@ -195,7 +195,10 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     signals: [
       { code: "RELATED_PEP", confidence: "medium" },
       { code: "OFFSHORE_LEAKS", confidence: "high" },
-      { code: "OPAQUE_OWNERSHIP", confidence: "medium" },
+      // Eli Lilly reports NATURAL_PERSONS GLEIF reporting exceptions (a
+      // permitted exception: widely held, no consolidating parent entity) —
+      // context, not the opaque-ownership risk chip it used to mis-show.
+      { code: "GLEIF_REPORTING_EXCEPTION", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/FRDRIPF3EKNDJ2CQJL29.zip`,
   },

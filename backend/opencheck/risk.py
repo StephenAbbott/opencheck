@@ -57,10 +57,23 @@ Source-derived signals
   Fires for OpenAleph hits whose collection is one of the known leak
   collections (Panama / Paradise / Pandora / Bahamas / Offshore Leaks).
 
-* ``OPAQUE_OWNERSHIP`` — ownership chain leads to an unknown person or
-  anonymous entity. Fires when a BODS bundle contains a
-  ``personStatement`` with ``personType == "unknownPerson"`` or an
-  ``entityStatement`` whose ``entityType == "anonymousEntity"``.
+* ``OPAQUE_OWNERSHIP`` — a party exists whose identity is deliberately
+  withheld or could not be obtained. Fires on: GLEIF ``NON_PUBLIC``-family
+  reporting exceptions (a known consolidating parent is not published);
+  ``anonymousPerson`` / ``anonymousEntity`` statements (e.g. Companies
+  House super-secure PSCs); and relationships whose unspecified
+  ``interestedParty`` reason says an owner exists but is unidentified or
+  withholding information. Deliberately does NOT fire on ``unknownPerson``
+  / ``unknownEntity`` statements or on GLEIF's benign exception reasons —
+  see ``GLEIF_REPORTING_EXCEPTION``.
+
+* ``GLEIF_REPORTING_EXCEPTION`` — ``kind="context"``. A GLEIF Level 2
+  reporting exception from the benign/structural family
+  (``NATURAL_PERSONS``, ``NO_KNOWN_PERSON``, ``NON_CONSOLIDATING``,
+  ``NO_LEI``): permitted reasons under the LEI ROC policy for having no
+  accounting-consolidation parent record. Informational only — GLEIF
+  relationships record accounting consolidation, not beneficial
+  ownership, and only entities (never people) are identified in them.
 
 AMLA CDD RTS signals (BODS v0.4 derived)
 ========================================
@@ -117,6 +130,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
+from .bods.mapper import GLEIF_UNDISCLOSED_REASONS
 from .bods.mapper import _stable_id as _bods_stable_id
 from .bods.nominees import NOMINEE_NATURE_CODES, is_nominee_nature
 from .config import get_settings
@@ -134,6 +148,14 @@ SANCTIONS_LINKED = "SANCTIONS_LINKED"
 DEBARMENT = "DEBARMENT"
 OFFSHORE_LEAKS = "OFFSHORE_LEAKS"
 OPAQUE_OWNERSHIP = "OPAQUE_OWNERSHIP"
+
+# Code — GLEIF Level 2 reporting exception, benign family (BODS/raw-derived).
+# ``kind="context"``: the LEI ROC policy defines these as *permitted* reasons
+# not to report an accounting-consolidation parent (controlled directly by
+# natural persons, diversified shareholding, non-consolidating parents, or a
+# parent without an LEI). Surfaced so a reviewer sees WHY no parent appears
+# in GLEIF — but never presented as a risk finding.
+GLEIF_REPORTING_EXCEPTION = "GLEIF_REPORTING_EXCEPTION"
 
 # Code — ownership structure (BODS-derived). Fires when an owner / controlling
 # party is modelled as a state or state body (BODS entityType 'state'/'stateBody',
@@ -744,7 +766,7 @@ def assess_bundle(
         signals.extend(_wikidata_position_signals(raw))
 
     if bods:
-        signals.extend(_opaque_ownership_signals(source_id, raw, bods))
+        signals.extend(_opaque_ownership_signals(source_id, raw, bods, hit_id=hit_id))
         signals.extend(assess_amla(source_id, raw, bods, hit_id=hit_id))
         signals.extend(_state_controlled_signals(source_id, hit_id, bods))
 
@@ -977,17 +999,309 @@ def _wikidata_position_signals(raw: dict[str, Any]) -> list[RiskSignal]:
     ]
 
 
-def _opaque_ownership_signals(
-    source_id: str, raw: dict[str, Any], bods: list[dict[str, Any]]
+# GLEIF reporting-exception reason families (Level 2 Reporting Exceptions
+# Format 2.1 + the GLEIF Reporting Exception Ontology). The undisclosed set
+# is imported from the mapper so the two modules cannot drift.
+#
+# * Exempt/structural — "there is no parent according to the definition
+#   used" (accounting consolidation), or the parent is real but simply not
+#   identified in GLEIF. Permitted exceptions under the LEI ROC policy and
+#   NOT evidence of opacity: Eli Lilly, for instance, reports
+#   ``NATURAL_PERSONS`` for both parents because a widely held issuer has
+#   no consolidating parent entity. → ``GLEIF_REPORTING_EXCEPTION``
+#   (kind="context").
+# * Undisclosed — a consolidating parent exists and is known but is
+#   deliberately withheld from publication (``NON_PUBLIC`` and its five
+#   deprecated pre-2022 variants). → ``OPAQUE_OWNERSHIP``.
+_GLEIF_EXEMPT_REASONS: frozenset[str] = frozenset(
+    {"NATURAL_PERSONS", "NO_KNOWN_PERSON", "NON_CONSOLIDATING", "NO_LEI"}
+)
+
+#: Human phrasing for each exempt reason, used in the context-signal summary.
+_GLEIF_EXEMPT_REASON_TEXT: dict[str, str] = {
+    "NATURAL_PERSONS": (
+        "the entity is controlled directly by natural person(s), with no"
+        " intermediate legal entity that consolidates it — common for"
+        " founder-, family-owned and widely held companies"
+    ),
+    "NO_KNOWN_PERSON": (
+        "no known person controls the entity (e.g. diversified shareholding)"
+    ),
+    "NON_CONSOLIDATING": (
+        "its controlling legal entities are not subject to preparing"
+        " consolidated financial statements"
+    ),
+    "NO_LEI": (
+        "a parent exists but does not consent to have an LEI, so it is not"
+        " identified in GLEIF — national registers may still identify it"
+    ),
+}
+
+_GLEIF_UNDISCLOSED_REASON_TEXT: dict[str, str] = {
+    "NON_PUBLIC": (
+        "a parent exists but the relationship is non-public and is not"
+        " disclosed"
+    ),
+    "BINDING_LEGAL_COMMITMENTS": (
+        "binding legal commitments prevent disclosure of the parent"
+    ),
+    "LEGAL_OBSTACLES": (
+        "obstacles in laws or regulations prevent disclosure of the parent"
+    ),
+    "DISCLOSURE_DETRIMENTAL": (
+        "the entity declares disclosure would be detrimental to it or its"
+        " parent"
+    ),
+    "DETRIMENT_NOT_EXCLUDED": (
+        "detriment to the parent from disclosure could not be excluded"
+    ),
+    "CONSENT_NOT_OBTAINED": (
+        "the parent's consent to disclose the relationship was not obtained"
+    ),
+}
+
+
+def _gleif_exceptions_from_raw(
+    raw: dict[str, Any]
+) -> list[dict[str, str]]:
+    """Extract normalised reporting-exception entries from a GLEIF bundle.
+
+    Returns one entry per declared exception with ``relationship``
+    ("direct"/"ultimate"), ``reason``, ``category``, ``reference`` and the
+    deterministic ``statement_id`` of the bridging statement the mapper
+    emits for it (same ``_stable_id`` inputs — see
+    ``mapper._gleif_exception_statements``).
+    """
+    lei = (raw.get("lei") or "").strip().upper()
+    entries: list[dict[str, str]] = []
+    for kind in ("direct", "ultimate"):
+        exc = raw.get(f"{kind}_parent_exception")
+        if not exc:
+            continue
+        attrs = exc.get("attributes") or exc
+        reason = (attrs.get("reason") or attrs.get("exceptionReason") or "").upper()
+        category = (
+            attrs.get("category") or attrs.get("exceptionCategory") or ""
+        ).upper()
+        reference = attrs.get("reference") or attrs.get("exceptionReference") or ""
+        ip_kind = (
+            "person"
+            if reason in {"NATURAL_PERSONS", "NO_KNOWN_PERSON"}
+            else "entity"
+        )
+        entries.append(
+            {
+                "relationship": kind,
+                "reason": reason,
+                "category": category,
+                "reference": reference,
+                "statement_id": _bods_stable_id(
+                    "gleif",
+                    ip_kind,
+                    f"{lei}:{kind}-parent-exception:{reason or 'unspecified'}",
+                ),
+            }
+        )
+    return entries
+
+
+def _gleif_exception_signals(
+    raw: dict[str, Any], hit_id: str
 ) -> list[RiskSignal]:
-    """BODS bundle with unknown persons or anonymous entities."""
-    hit_id = raw.get("entity_id") or raw.get("hit_id") or ""
+    """Classify GLEIF Level 2 reporting exceptions into signals.
+
+    Undisclosed-parent reasons (the ``NON_PUBLIC`` family) →
+    ``OPAQUE_OWNERSHIP`` (risk). Everything else — including unrecognised
+    future codes — → ``GLEIF_REPORTING_EXCEPTION`` (context): the ROC
+    policy defines exceptions as *permitted* reasons not to report an
+    accounting-consolidation parent, so absence of a parent record is not
+    by itself opacity. GLEIF Level 2 only ever names entities (LEI
+    holders), never people, so no wording here may claim an "unknown
+    person in the ownership chain".
+    """
+    entries = _gleif_exceptions_from_raw(raw)
+    if not entries:
+        return []
+    hit = hit_id or (raw.get("lei") or "")
+    signals: list[RiskSignal] = []
+
+    undisclosed = [e for e in entries if e["reason"] in GLEIF_UNDISCLOSED_REASONS]
+    exempt = [e for e in entries if e["reason"] not in GLEIF_UNDISCLOSED_REASONS]
+
+    if undisclosed:
+        parts = []
+        for e in undisclosed:
+            text = _GLEIF_UNDISCLOSED_REASON_TEXT.get(
+                e["reason"], "the parent is withheld from publication"
+            )
+            parts.append(f"{e['reason']} for the {e['relationship']} parent ({text})")
+        signals.append(
+            RiskSignal(
+                code=OPAQUE_OWNERSHIP,
+                confidence="high",
+                summary=(
+                    "GLEIF records a reporting exception withholding a known"
+                    " parent: " + "; ".join(parts) + ". A consolidating parent"
+                    " exists but is deliberately not published — permitted"
+                    " under the LEI ROC policy, but a transparency gap worth"
+                    " reviewing."
+                ),
+                source_id="gleif",
+                hit_id=hit,
+                evidence={
+                    "exceptions": undisclosed,
+                    # Same shape as the AMLA signals so signalScope.ts /
+                    # buildSignalMap badge the bridging graph node.
+                    "matches": [
+                        {"statement_id": e["statement_id"]} for e in undisclosed
+                    ],
+                },
+            )
+        )
+
+    if exempt:
+        # One line per distinct reason; both categories often carry the same
+        # reason (e.g. Eli Lilly: NATURAL_PERSONS for direct and ultimate).
+        by_reason: dict[str, list[str]] = {}
+        for e in exempt:
+            by_reason.setdefault(e["reason"], []).append(e["relationship"])
+        parts = []
+        for reason, rels in by_reason.items():
+            text = _GLEIF_EXEMPT_REASON_TEXT.get(
+                reason, "a permitted reporting exception was declared"
+            )
+            parts.append(
+                f"{reason or 'unspecified'} for the {' and '.join(rels)}"
+                f" parent ({text})"
+            )
+        signals.append(
+            RiskSignal(
+                code=GLEIF_REPORTING_EXCEPTION,
+                confidence="high",
+                kind="context",
+                summary=(
+                    "No accounting-consolidation parent is reported to GLEIF: "
+                    + "; ".join(parts)
+                    + ". Structural context, not a risk finding — these are"
+                    " permitted exceptions under the LEI ROC policy, and"
+                    " GLEIF Level 2 records accounting consolidation, not"
+                    " beneficial ownership."
+                ),
+                source_id="gleif",
+                hit_id=hit,
+                evidence={
+                    "exceptions": exempt,
+                    "matches": [
+                        {"statement_id": e["statement_id"]} for e in exempt
+                    ],
+                },
+            )
+        )
+    return signals
+
+
+# BODS unspecified-interestedParty reasons that assert genuine opacity: the
+# register says an owner exists but is unidentified or withholding
+# information (Companies House "PSC exists but not identified" / "PSC
+# contacted but no response" families — see mapper._PSC_STATEMENT_REASON).
+# ``noBeneficialOwners`` (nobody meets the threshold) and
+# ``interestedPartyExemptFromDisclosure`` (a lawful exemption, e.g. listed
+# companies) are deliberately absent.
+_OPAQUE_UNSPECIFIED_REASONS: frozenset[str] = frozenset(
+    {
+        "subjectUnableToConfirmOrIdentifyBeneficialOwner",
+        "interestedPartyHasNotProvidedInformation",
+    }
+)
+
+
+def _unspecified_party_reason(stmt: dict[str, Any]) -> tuple[str, str]:
+    """Return ``(reason, description)`` for an unspecified interestedParty.
+
+    Handles both the v0.4 shape the mapper emits (``interestedParty`` is a
+    ``{"reason": ..., "description": ...}`` dict) and the legacy wrapped
+    ``{"unspecified": {"reason": ...}}`` form. Returns ``("", "")`` when the
+    interested party is a normal statement reference.
+    """
+    rd = _record_details(stmt)
+    ip = rd.get("interestedParty")
+    if not isinstance(ip, dict):
+        return "", ""
+    if "unspecified" in ip and isinstance(ip["unspecified"], dict):
+        ip = ip["unspecified"]
+    if any(k.startswith("describedBy") for k in ip):
+        return "", ""
+    return str(ip.get("reason") or ""), str(ip.get("description") or "")
+
+
+def _opaque_ownership_signals(
+    source_id: str,
+    raw: dict[str, Any],
+    bods: list[dict[str, Any]],
+    hit_id: str = "",
+) -> list[RiskSignal]:
+    """Genuine opacity: a party exists whose identity is withheld or unobtainable.
+
+    Three families fire, each directly asserted by the register (so
+    ``high`` confidence):
+
+    * GLEIF ``NON_PUBLIC``-family reporting exceptions — handled via the
+      raw bundle so the reason code drives classification (the benign
+      exception reasons instead produce the ``GLEIF_REPORTING_EXCEPTION``
+      context signal; see ``_gleif_exception_signals``).
+    * ``anonymousPerson`` / ``anonymousEntity`` statements — identifying
+      details deliberately withheld (e.g. a Companies House super-secure
+      PSC protected by court order).
+    * Relationship statements whose unspecified ``interestedParty`` reason
+      says an owner exists but is unidentified or non-cooperative
+      (``subjectUnableToConfirmOrIdentifyBeneficialOwner`` /
+      ``interestedPartyHasNotProvidedInformation``).
+
+    ``unknownPerson`` / ``unknownEntity`` statements do NOT fire: unknown-
+    to-this-source is not the same claim as deliberately-withheld, and the
+    GLEIF/OO reporting-exception bridges use exactly those types for the
+    benign exception reasons.
+    """
+    hit = hit_id or raw.get("entity_id") or raw.get("hit_id") or ""
+
+    # GLEIF bundles carry the exception records raw — classify from the
+    # reason codes and skip the generic statement scan (the bridging
+    # statements would otherwise double-count).
+    if source_id == "gleif":
+        return _gleif_exception_signals(raw, hit)
+
+    # The OO bulk GLEIF dataset flattens away the exception reason, so a
+    # placeholder statement there cannot be classified — stay silent rather
+    # than mislabel a permitted exception as opacity (the live ``gleif``
+    # source covers the same ground with full reason codes).
+    if source_id == "bods_gleif":
+        return []
+
     findings: list[str] = []
+    matches: list[dict[str, str]] = []
     for stmt in bods:
-        if _stmt_kind(stmt) == "person" and _person_type(stmt) == "unknownPerson":
-            findings.append("unknown person in ownership chain")
-        elif _stmt_kind(stmt) == "entity" and _entity_type(stmt) == "anonymousEntity":
-            findings.append("anonymous entity in ownership chain")
+        kind = _stmt_kind(stmt)
+        if kind == "person" and _person_type(stmt) == "anonymousPerson":
+            findings.append(
+                "a person whose identifying details are withheld"
+                " (anonymousPerson — e.g. a super-secure PSC protected by"
+                " court order)"
+            )
+            matches.append({"statement_id": _statement_id(stmt)})
+        elif kind == "entity" and _entity_type(stmt) == "anonymousEntity":
+            findings.append(
+                "an entity whose identifying details are withheld"
+                " (anonymousEntity)"
+            )
+            matches.append({"statement_id": _statement_id(stmt)})
+        elif kind == "relationship":
+            reason, description = _unspecified_party_reason(stmt)
+            if reason in _OPAQUE_UNSPECIFIED_REASONS:
+                findings.append(
+                    description
+                    or "an owner exists but has not been identified"
+                )
+                matches.append({"statement_id": _statement_id(stmt)})
     if not findings:
         return []
     # Dedupe but keep order.
@@ -998,11 +1312,16 @@ def _opaque_ownership_signals(
     return [
         RiskSignal(
             code=OPAQUE_OWNERSHIP,
-            confidence="medium",
-            summary="Ownership chain contains: " + "; ".join(deduped) + ".",
+            confidence="high",
+            summary=(
+                "The register discloses that ownership information is"
+                " withheld or could not be obtained: "
+                + "; ".join(deduped)
+                + "."
+            ),
             source_id=source_id,
-            hit_id=hit_id,
-            evidence={"findings": deduped},
+            hit_id=hit,
+            evidence={"findings": deduped, "matches": matches},
         )
     ]
 

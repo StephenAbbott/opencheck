@@ -593,22 +593,25 @@ def test_possible_obfuscation_fires_with_opacity_and_layered_concern() -> None:
 
     Layers + a single non-EU layer is only ONE Article 12 condition, so
     COMPLEX_CORPORATE_STRUCTURE must not fire — but combined with an
-    unknownPerson this is still worth surfacing for human review, which
-    is exactly what the low-confidence advisory is for.
+    anonymousPerson (identity deliberately withheld, e.g. a super-secure
+    PSC) this is still worth surfacing for human review, which is exactly
+    what the low-confidence advisory is for.
     """
     bods = _three_layer_chain()
     bods[2]["recordDetails"]["jurisdiction"] = {
         "code": "PA",
         "name": "Panama",
     }
-    # …and an unknownPerson at the bottom of the chain so opacity fires.
+    # …and an anonymousPerson at the bottom of the chain so opacity fires
+    # (unknownPerson no longer does — unknown-to-this-source is not the
+    # same claim as deliberately-withheld).
     bods.append(
         {
             "statementId": "P1",
             "recordType": "person",
             "recordDetails": {
-                "personType": "unknownPerson",
-                "names": [{"type": "individual", "fullName": "Unknown"}],
+                "personType": "anonymousPerson",
+                "names": [{"type": "individual", "fullName": "Withheld"}],
             },
         }
     )

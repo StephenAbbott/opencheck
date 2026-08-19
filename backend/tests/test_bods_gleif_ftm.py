@@ -317,7 +317,7 @@ def test_map_gleif_emits_bridge_for_natural_persons_exception() -> None:
     assert validate_shape(bundle) == []
 
 
-def test_map_gleif_emits_anonymous_entity_for_no_lei_exception() -> None:
+def test_map_gleif_emits_unknown_entity_for_no_lei_exception() -> None:
     payload = {
         "lei": "LEI00000000000000002",
         "record": {
@@ -342,11 +342,13 @@ def test_map_gleif_emits_anonymous_entity_for_no_lei_exception() -> None:
     }
     bundle = map_gleif(payload)
     entities = [s for s in bundle if s["recordType"] == "entity"]
-    # subject + anonymousEntity bridge
+    # subject + unknownEntity bridge — NO_LEI means the parent is real but
+    # simply not identified in GLEIF, not deliberately anonymised (that is
+    # the NON_PUBLIC family, which gets anonymousEntity).
     assert len(entities) == 2
     bridge = next(
         e for e in entities
-        if e["recordDetails"]["entityType"]["type"] == "anonymousEntity"
+        if e["recordDetails"]["entityType"]["type"] == "unknownEntity"
     )
     assert "reporting exception" in bridge["recordDetails"]["name"].lower()
 
@@ -395,7 +397,7 @@ def test_map_gleif_exception_live_api_field_names_natural_persons() -> None:
 
 
 def test_map_gleif_exception_live_api_no_lei() -> None:
-    """Live 'reason': 'NO_LEI' (ultimate) should emit an anonymousEntity bridge."""
+    """Live 'reason': 'NO_LEI' (ultimate) should emit an unknownEntity bridge."""
     payload = {
         "lei": "LEI00000000000000011",
         "record": {
@@ -423,7 +425,7 @@ def test_map_gleif_exception_live_api_no_lei() -> None:
     assert len(entities) == 2
     bridge = next(
         e for e in entities
-        if e["recordDetails"]["entityType"]["type"] == "anonymousEntity"
+        if e["recordDetails"]["entityType"]["type"] == "unknownEntity"
     )
     assert "reporting exception" in bridge["recordDetails"]["name"].lower()
     assert validate_shape(bundle) == []
@@ -492,6 +494,126 @@ def test_map_gleif_exception_both_old_and_new_field_names_work() -> None:
             f"field '{field}' did not resolve to NON_CONSOLIDATING: {details}"
         )
         assert validate_shape(bundle) == []
+
+
+def test_map_gleif_exception_bridge_names_are_reason_specific() -> None:
+    """The bridge node name is what the graph displays — it must state the
+    exception, not a generic 'Unknown parent' (the Eli Lilly complaint)."""
+    cases = {
+        "NATURAL_PERSONS": ("person", "Natural person(s)"),
+        "NO_KNOWN_PERSON": ("person", "No known controlling person"),
+        "NO_LEI": ("entity", "Parent without an LEI"),
+        "NON_CONSOLIDATING": ("entity", "Non-consolidating parent"),
+        "NON_PUBLIC": ("entity", "Undisclosed parent"),
+    }
+    for reason, (kind, name_prefix) in cases.items():
+        payload = {
+            "lei": "LEI00000000000000020",
+            "record": {
+                "id": "LEI00000000000000020",
+                "attributes": {
+                    "lei": "LEI00000000000000020",
+                    "entity": {
+                        "legalName": {"name": "Bridge Name Co"},
+                        "jurisdiction": "GB",
+                    },
+                },
+            },
+            "direct_parent": None,
+            "direct_parent_exception": {
+                "attributes": {
+                    "category": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT",
+                    "reason": reason,
+                }
+            },
+            "ultimate_parent": None,
+            "ultimate_parent_exception": None,
+        }
+        stmts = list(map_gleif(payload))
+        bridge = next(s for s in stmts[1:] if s["recordType"] == kind)
+        rd = bridge["recordDetails"]
+        display = rd.get("name") or (rd.get("names") or [{}])[0].get("fullName", "")
+        assert display.startswith(name_prefix), (reason, display)
+        assert validate_shape(stmts) == []
+
+
+def test_map_gleif_non_public_exception_emits_anonymous_entity() -> None:
+    """Only the NON_PUBLIC family (deliberate withholding) is anonymised."""
+    payload = {
+        "lei": "LEI00000000000000021",
+        "record": {
+            "id": "LEI00000000000000021",
+            "attributes": {
+                "lei": "LEI00000000000000021",
+                "entity": {
+                    "legalName": {"name": "Secret Parent Co"},
+                    "jurisdiction": "LU",
+                },
+            },
+        },
+        "direct_parent": None,
+        "direct_parent_exception": {
+            "attributes": {
+                "category": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT",
+                "reason": "NON_PUBLIC",
+                "reference": "Art. 42 of the Exampleland Companies Act",
+            }
+        },
+        "ultimate_parent": None,
+        "ultimate_parent_exception": None,
+    }
+    bundle = map_gleif(payload)
+    bridge = next(
+        s for s in bundle
+        if s["recordType"] == "entity"
+        and (s["recordDetails"].get("entityType") or {}).get("type") == "anonymousEntity"
+    )
+    assert bridge["recordDetails"]["name"].startswith("Undisclosed parent")
+    rel = next(s for s in bundle if s["recordType"] == "relationship")
+    details = rel["recordDetails"]["interests"][0]["details"]
+    # Category + the entity-supplied legal reference both survive into details.
+    assert "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT" in details
+    assert "Art. 42" in details
+    assert validate_shape(bundle) == []
+
+
+def test_map_gleif_exception_statements_carry_oo_style_annotation() -> None:
+    """Every statement created from a reporting exception carries a commenting
+    annotation naming the reason — mirroring the OO bods-gleif-pipeline."""
+    payload = {
+        "lei": "LEI00000000000000022",
+        "record": {
+            "id": "LEI00000000000000022",
+            "attributes": {
+                "lei": "LEI00000000000000022",
+                "entity": {
+                    "legalName": {"name": "Annotated Co"},
+                    "jurisdiction": "US",
+                },
+            },
+        },
+        "direct_parent": None,
+        "direct_parent_exception": {
+            "attributes": {
+                "category": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT",
+                "reason": "NATURAL_PERSONS",
+            }
+        },
+        "ultimate_parent": None,
+        "ultimate_parent_exception": None,
+    }
+    bundle = map_gleif(payload)
+    bridge = next(s for s in bundle if s["recordType"] == "person")
+    rel = next(s for s in bundle if s["recordType"] == "relationship")
+    for stmt in (bridge, rel):
+        anns = stmt.get("annotations") or []
+        assert any(
+            a.get("motivation") == "commenting"
+            and "NATURAL_PERSONS GLEIF Reporting Exception" in a.get("description", "")
+            and "LEI00000000000000022" in a.get("description", "")
+            and a.get("statementPointerTarget") == "/"
+            for a in anns
+        ), stmt["statementId"]
 
 
 # ---------------------------------------------------------------------
