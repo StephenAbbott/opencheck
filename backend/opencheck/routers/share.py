@@ -202,7 +202,15 @@ async def share_page(request: Request, lei: str) -> HTMLResponse:
         # Count risk findings only — context signals are structural
         # observations and saying "4 risk signals" when one of them is
         # "this chain reaches the UK" is the claim this phase removes.
-        risk_count = len([s for s in signals if s.get("kind", "risk") == "risk"])
+        # Distinct codes, not instances — matching the results page's
+        # per-code chip aggregation and the OG card (see og_image.py).
+        risk_count = len(
+            {
+                str(s.get("code") or "")
+                for s in signals
+                if s.get("code") and s.get("kind", "risk") == "risk"
+            }
+        )
         description = (
             f"{risk_count} risk signal{'s' if risk_count != 1 else ''} · "
             "open corporate data from 34 sources · BODS v0.4"

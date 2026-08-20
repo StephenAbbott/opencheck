@@ -223,7 +223,15 @@ def render_share_card(
         # observations, not risk findings — they must neither inflate the
         # headline count nor occupy one of the three named chip slots.
         signals = [s for s in signals if s.get("kind", "risk") == "risk"]
-        total = len(signals)
+        # Count DISTINCT CODES, not signal instances. Since PR #115 the
+        # related-party paths emit one statement-scoped signal per finding,
+        # so an entity with three parties flagged for the same thing carries
+        # three instances of one code — and the results page renders that as
+        # ONE chip (App.tsx aggregates by code before splitting on kind).
+        # Counting instances here made the card claim "7 risk signals" for a
+        # page showing three chips: the same surface-count divergence the
+        # `kind` field was added to prevent, one axis over.
+        total = len({str(s.get("code") or "") for s in signals if s.get("code")})
         f_count = _font("bitter-700", 120 * s)
         count_text = str(total)
         draw.text((px, 44 * s), count_text, font=f_count, fill="#ffffff")

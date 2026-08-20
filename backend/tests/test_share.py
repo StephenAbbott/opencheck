@@ -195,12 +195,34 @@ def test_share_page_carries_entity_og_tags(client: TestClient):
     assert r.status_code == 200
     body = r.text
     assert 'property="og:title" content="Rosneft Oil Company — OpenCheck"' in body
-    assert "7 risk signals" in body
+    # 7 signal INSTANCES cycling 5 codes → the description counts distinct
+    # codes, matching the results page's one-chip-per-code aggregation.
+    assert "5 risk signals" in body
     assert f"/og/{LEI}.png" in body
     assert 'name="twitter:card" content="summary_large_image"' in body
     # Humans get redirected to the frontend lookup URL.
     assert f"?lei={LEI}" in body
     assert 'http-equiv="refresh"' in body
+
+
+def test_share_meta_counts_distinct_codes_not_instances(client: TestClient):
+    """Three related parties flagged for the same thing are three signal
+    INSTANCES of one code — the results page shows one chip, so the meta
+    description must say 1, not 3. Instance-counting made Eli Lilly's card
+    claim "7 risk signals" against a page showing three chips (2026-08-20)."""
+    sigs = [
+        {"code": "RELATED_EXPORT_RISK", "confidence": "high", "summary": "s",
+         "source_id": "t", "hit_id": str(i), "evidence": {}}
+        for i in range(3)
+    ] + [
+        {"code": "NON_EU_JURISDICTION", "confidence": "low", "summary": "s",
+         "source_id": "t", "hit_id": "x", "evidence": {}, "kind": "context"},
+    ]
+    _seed_replay(LEI, "Distinct Codes Ltd", sigs)
+    r = client.get(f"/share/{LEI}")
+    assert r.status_code == 200
+    assert "1 risk signal ·" in r.text
+    assert "3 risk signals" not in r.text
 
 
 def test_share_page_teaser_description(client: TestClient, monkeypatch):
