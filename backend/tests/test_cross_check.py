@@ -473,6 +473,50 @@ async def test_counter_sanction_is_ranked_last(monkeypatch) -> None:
     ]
 
 
+async def test_export_control_emits_related_export_controlled(monkeypatch) -> None:
+    """A matched record tagged `export.control` → RELATED_EXPORT_CONTROLLED
+    (Phase 118). Before, an export-controlled related party produced no
+    signal at all — fetched, matched, silently unclassified."""
+    from opencheck.cross_check import RELATED_EXPORT_CONTROLLED
+
+    _stub(monkeypatch, "opensanctions",
+          [_os_entity_hit("NK-bis", "Acme Ltd", ["export.control"])])
+    _stub(monkeypatch, "everypolitician", [])
+
+    signals = await assess_cross_source_names([_entity("e1", "Acme Ltd")])
+    assert [s.code for s in signals] == [RELATED_EXPORT_CONTROLLED]
+    assert "export-control restrictions" in signals[0].summary
+    assert "export.control" in signals[0].summary  # topic blurb
+
+
+async def test_export_family_no_suppression_and_ladder_order(monkeypatch) -> None:
+    """No suppression within the export family (upstream declares no superset
+    relationship, unlike sanction.linked over sanction.control), and the
+    export-controlled rung outranks plain sanction adjacency: it is a
+    restriction on the party itself, so a caller taking ``[0]`` must get it
+    ahead of `linked to sanctioned entities`."""
+    from opencheck.cross_check import (
+        RELATED_EXPORT_CONTROL_LINKED,
+        RELATED_EXPORT_CONTROLLED,
+        RELATED_EXPORT_RISK,
+        RELATED_SANCTIONS_LINKED,
+    )
+
+    _stub(monkeypatch, "opensanctions",
+          [_os_entity_hit("NK-mix-exp", "Acme Ltd",
+                          ["sanction.linked", "export.control",
+                           "export.control.linked", "export.risk"])])
+    _stub(monkeypatch, "everypolitician", [])
+
+    signals = await assess_cross_source_names([_entity("e1", "Acme Ltd")])
+    assert [s.code for s in signals] == [
+        RELATED_EXPORT_CONTROLLED,
+        RELATED_SANCTIONS_LINKED,
+        RELATED_EXPORT_CONTROL_LINKED,
+        RELATED_EXPORT_RISK,
+    ]
+
+
 async def test_emits_related_pep_for_pep_topic_or_everypolitician(
     monkeypatch,
 ) -> None:

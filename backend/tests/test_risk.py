@@ -5,6 +5,9 @@ from __future__ import annotations
 from opencheck.risk import (
     COUNTER_SANCTIONED,
     DEBARMENT,
+    EXPORT_CONTROL_LINKED,
+    EXPORT_CONTROLLED,
+    EXPORT_RISK,
     GLEIF_REPORTING_EXCEPTION,
     OFFSHORE_LEAKS,
     OPAQUE_OWNERSHIP,
@@ -15,6 +18,7 @@ from opencheck.risk import (
     assess_bundle,
     assess_hit,
     assess_hits,
+    classify_export_topics,
     classify_sanction_topics,
 )
 from opencheck.sources import SearchKind, SourceHit
@@ -213,6 +217,94 @@ def test_debarment_signal_from_opensanctions_topic() -> None:
     assert signals[0].confidence == "high"
     assert "public contracts" in signals[0].summary
     assert SANCTIONED not in {s.code for s in signals}
+
+
+def test_export_control_signal_from_opensanctions_topic() -> None:
+    """`export.control` → EXPORT_CONTROLLED (high). The us_bis_mieu case:
+    all 13 topic-bearing entities on that dataset carry only this topic, and
+    until Phase 118 they were fetched but produced no signal at all."""
+    hit = _hit("opensanctions", "NK-bis", topics=["export.control"])
+    signals = assess_hit(hit)
+    assert [s.code for s in signals] == [EXPORT_CONTROLLED]
+    assert signals[0].confidence == "high"
+    assert "export-control restrictions" in signals[0].summary
+    assert signals[0].evidence["topics"] == ["export.control"]
+
+
+def test_export_control_linked_is_not_export_controlled() -> None:
+    """Adjacency must surface as the softer EXPORT_CONTROL_LINKED (medium),
+    never as EXPORT_CONTROLLED — the sanction.linked lesson, one family
+    over. And `export.control.linked` startswith `export.control`, so this
+    also guards the classifier against a prefix-test regression."""
+    hit = _hit("opensanctions", "NK-adj", topics=["export.control.linked"])
+    signals = assess_hit(hit)
+    assert [s.code for s in signals] == [EXPORT_CONTROL_LINKED]
+    assert signals[0].confidence == "medium"
+    assert "not itself subject" in signals[0].summary
+
+
+def test_export_control_and_linked_both_report() -> None:
+    """No suppression inside the export family: upstream declares no
+    superset relationship among the export topics (contrast
+    sanction.linked ⊃ sanction.control), so both facts report."""
+    hit = _hit(
+        "opensanctions",
+        "NK-both-exp",
+        topics=["export.control", "export.control.linked", "export.risk"],
+    )
+    assert [s.code for s in assess_hit(hit)] == [
+        EXPORT_CONTROLLED,
+        EXPORT_CONTROL_LINKED,
+        EXPORT_RISK,
+    ]
+
+
+def test_export_risk_signal_from_opensanctions_topic() -> None:
+    hit = _hit("opensanctions", "NK-risk", topics=["export.risk"])
+    signals = assess_hit(hit)
+    assert [s.code for s in signals] == [EXPORT_RISK]
+    assert signals[0].confidence == "medium"
+    assert "trade risk" in signals[0].summary
+
+
+def test_classify_export_topics_splits_the_family() -> None:
+    result = classify_export_topics(
+        ["export.control", "export.control.linked", "export.risk", "sanction"]
+    )
+    assert result.control == ("export.control",)
+    assert result.linked == ("export.control.linked",)
+    assert result.risk == ("export.risk",)
+    assert result.unknown == ()
+    assert not classify_export_topics(["sanction", "debarment"])
+
+
+def test_classify_export_topics_flags_unknown_subtopics(caplog) -> None:
+    import logging
+
+    with caplog.at_level(logging.WARNING, logger="opencheck.risk"):
+        result = classify_export_topics(["export.somethingnew"])
+    assert result.unknown == ("export.somethingnew",)
+    assert "Unrecognised OpenSanctions export-family topic" in caplog.text
+
+
+def test_unknown_export_subtopic_still_reports_as_linked() -> None:
+    """Conservative default: an unrecognised export subtopic must never
+    escalate to EXPORT_CONTROLLED."""
+    hit = _hit("opensanctions", "NK-future-exp", topics=["export.somethingnew"])
+    codes = {s.code for s in assess_hit(hit)}
+    assert codes == {EXPORT_CONTROL_LINKED}
+
+
+def test_sanction_and_export_families_are_independent() -> None:
+    """A record can be sanctioned AND export-controlled — four distinct
+    facts here, none suppressing another across family lines."""
+    hit = _hit(
+        "opensanctions",
+        "NK-cross",
+        topics=["sanction", "sanction.control", "export.control"],
+    )
+    codes = [s.code for s in assess_hit(hit)]
+    assert codes == [SANCTIONED, SANCTIONS_CONTROLLED, EXPORT_CONTROLLED]
 
 
 def test_pep_and_sanctions_linked_can_co_occur() -> None:

@@ -6,7 +6,13 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from opencheck.config import get_settings
-from opencheck.risk import _KNOWN_SANCTION_TOPICS
+from opencheck.risk import (
+    _DEBARMENT_TOPICS,
+    _INFORMATIONAL_TOPICS,
+    _KNOWN_EXPORT_TOPICS,
+    _KNOWN_SANCTION_TOPICS,
+    _PEP_TOPICS,
+)
 from opencheck.sources import SearchKind
 from opencheck.sources.opensanctions import _RISK_TOPICS, _TOPIC_PARAMS, OpenSanctionsAdapter
 
@@ -79,6 +85,47 @@ def test_sanction_family_is_fully_classified() -> None:
     """
     published = {t for t in _PUBLISHED_TARGET_TOPICS if t.startswith("sanction")}
     assert published == set(_KNOWN_SANCTION_TOPICS)
+
+
+def test_export_family_is_fully_classified() -> None:
+    """Every published ``export.*`` topic must have an explicit class.
+
+    The export family repeated the ``sanction.control`` failure one family
+    over: all three topics sat in ``_RISK_TOPICS`` (so ``us_bis_mieu``'s
+    entities were fetched) while ``risk.py`` classified none of them — a hit
+    card with the topics visible in its summary line and no risk chip at all.
+    """
+    published = {t for t in _PUBLISHED_TARGET_TOPICS if t.startswith("export")}
+    assert published == set(_KNOWN_EXPORT_TOPICS)
+
+
+def test_every_risk_topic_is_classified_or_allowlisted() -> None:
+    """The canary that closes the whole class, not one family.
+
+    Every topic in ``_RISK_TOPICS`` must either map to a signal family or
+    appear on the explicit informational allowlist in ``risk.py``. "We fetch
+    it but don't understand it" is thereby a build failure, not something
+    discovered by reading a blog post: it would have caught both
+    ``sanction.control`` (Phase 98) and the export family (Phase 118), and it
+    catches the next one without anyone having to notice.
+
+    When OpenSanctions publishes a new target topic: add it to
+    ``_RISK_TOPICS`` and ``_PUBLISHED_TARGET_TOPICS``, then either classify
+    it into a family (give it a signal) or add it to
+    ``risk._INFORMATIONAL_TOPICS`` — a decision, recorded in code, either way.
+    """
+    classified = (
+        set(_KNOWN_SANCTION_TOPICS)
+        | set(_KNOWN_EXPORT_TOPICS)
+        | set(_DEBARMENT_TOPICS)
+        # _PEP_TOPICS includes role.spouse / role.family, which OpenSanctions
+        # does not publish as target topics — intersect so the assertion
+        # covers exactly the published surface.
+        | (set(_PEP_TOPICS) & _PUBLISHED_TARGET_TOPICS)
+    )
+    overlap = classified & _INFORMATIONAL_TOPICS
+    assert not overlap, f"topics both classified and allowlisted: {sorted(overlap)}"
+    assert set(_RISK_TOPICS) == classified | _INFORMATIONAL_TOPICS
 
 
 @pytest.fixture(autouse=True)

@@ -97,10 +97,13 @@ describe("isCrossSourceSignal", () => {
       "RELATED_SANCTIONS_CONTROLLED",
       "RELATED_COUNTER_SANCTIONED",
       "RELATED_DEBARMENT",
+      "RELATED_EXPORT_CONTROLLED",
+      "RELATED_EXPORT_CONTROL_LINKED",
+      "RELATED_EXPORT_RISK",
     ]) {
       expect(isCrossSourceSignal(signal(code, {}))).toBe(true);
     }
-    for (const code of ["SANCTIONED", "PEP", "COMPLEX_OWNERSHIP_LAYERS", "OFFSHORE_LEAKS"]) {
+    for (const code of ["SANCTIONED", "PEP", "COMPLEX_OWNERSHIP_LAYERS", "OFFSHORE_LEAKS", "EXPORT_CONTROLLED"]) {
       expect(isCrossSourceSignal(signal(code, {}))).toBe(false);
     }
   });

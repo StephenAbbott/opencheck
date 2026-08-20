@@ -182,6 +182,12 @@ _RISK_LABELS = {
     "RELATED_SANCTIONS_LINKED": "Related party linked to a sanctioned party",
     "DEBARMENT": "Debarred from public contracts",
     "RELATED_DEBARMENT": "Related party debarred from public contracts",
+    "EXPORT_CONTROLLED": "Subject to export-control restrictions",
+    "RELATED_EXPORT_CONTROLLED": "Related party subject to export-control restrictions",
+    "EXPORT_CONTROL_LINKED": "Linked to an export-controlled party",
+    "RELATED_EXPORT_CONTROL_LINKED": "Related party linked to an export-controlled party",
+    "EXPORT_RISK": "Flagged for trade risk",
+    "RELATED_EXPORT_RISK": "Related party flagged for trade risk",
     "PEP": "Politically exposed person",
     "RELATED_PEP": "Related party politically exposed",
     "FATF_BLACK_LIST": "FATF black-list jurisdiction",
@@ -335,7 +341,8 @@ def build_evidence_packet(
                 "jurisdictional risk signals for this entity; however, "
                 f"{len(degraded)} screening check(s) did not fully run "
                 "(see the gaps), so the absence of related-party sanctions, "
-                "PEP or offshore-leaks signals is not conclusive."
+                "PEP, export-control or offshore-leaks signals is not "
+                "conclusive."
             )
             confidence = "medium"
         else:

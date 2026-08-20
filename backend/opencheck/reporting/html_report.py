@@ -429,10 +429,10 @@ def _split_signals_by_kind(report: dict[str, Any]) -> tuple[list[dict[str, Any]]
 #: Markdown report states the identical list — and so the next signal-family
 #: change has one string to update, not two.
 _CHECKS_CLEAR = (
-    "sanctions and PEP screening (including debarment, sanction-control and "
-    "leak-archive matches), FATF-listed and EU high-risk third-country "
-    "jurisdictions, trust or nominee arrangements, opaque or withheld "
-    "ownership, and complex ownership structures"
+    "sanctions and PEP screening (including debarment, sanction-control, "
+    "export-control and leak-archive matches), FATF-listed and EU high-risk "
+    "third-country jurisdictions, trust or nominee arrangements, opaque or "
+    "withheld ownership, and complex ownership structures"
 )
 
 _CONTEXT_NOTE = (

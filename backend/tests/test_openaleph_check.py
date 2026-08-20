@@ -253,6 +253,34 @@ async def test_counter_sanction_reports_separately_and_last(fake_percolate) -> N
     assert "weak democratic institutions" in signals[-1].summary
 
 
+async def test_export_control_topic_yields_related_export_controlled(
+    fake_percolate,
+) -> None:
+    """One classifier, one rule — the percolation screen classifies the
+    export family exactly as cross_check does (Phase 118), with no
+    suppression inside the family and the collection carried in the
+    summary."""
+    fake_percolate(
+        [
+            _percolate_item(
+                "Igor Sechin",
+                surface_form="Igor Sechin",
+                topics=["export.control", "export.control.linked"],
+                entity_id="oa-export",
+                collection="US BIS Military End Users",
+            ),
+        ],
+        [],
+    )
+    signals = await assess_openaleph_names(_BUNDLE)
+    assert [s.code for s in signals] == [
+        "RELATED_EXPORT_CONTROLLED",
+        "RELATED_EXPORT_CONTROL_LINKED",
+    ]
+    assert "export-control restrictions" in signals[0].summary
+    assert "US BIS Military End Users" in signals[0].summary
+
+
 async def test_entity_pep_topic_never_fires_related_pep(fake_percolate) -> None:
     """Entities can't be PEPs — a role.pep-tagged entity hit maps to no
     signal and lands in the informational block instead (cross_check rule)."""
