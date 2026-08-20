@@ -146,6 +146,9 @@ COUNTER_SANCTIONED = "COUNTER_SANCTIONED"
 SANCTIONS_CONTROLLED = "SANCTIONS_CONTROLLED"
 SANCTIONS_LINKED = "SANCTIONS_LINKED"
 DEBARMENT = "DEBARMENT"
+EXPORT_CONTROLLED = "EXPORT_CONTROLLED"
+EXPORT_CONTROL_LINKED = "EXPORT_CONTROL_LINKED"
+EXPORT_RISK = "EXPORT_RISK"
 OFFSHORE_LEAKS = "OFFSHORE_LEAKS"
 OPAQUE_OWNERSHIP = "OPAQUE_OWNERSHIP"
 
@@ -499,6 +502,118 @@ def classify_sanction_topics(topics: Iterable[str]) -> SanctionTopics:
 # AfDB, EU debarment lists). A confirmed adverse listing of the entity, but a
 # distinct category from financial sanctions — its own signal.
 _DEBARMENT_TOPICS = {"debarment"}
+
+# Export-control topics. Verified against the published model
+# (data.opensanctions.org/meta/model.json, checked 2026-08-20), which labels
+# them "Export controlled" / "Export control-linked" / "Trade risk" and —
+# unlike ``sanction.linked`` over ``sanction.control`` — declares NO superset
+# relationship among them, so no suppression rule applies here:
+#   * "export.control"        — the entity is itself subject to export-control
+#                               restrictions (e.g. the BIS Entity List or
+#                               Military End-User List).
+#   * "export.control.linked" — adjacent to an export-controlled party; the
+#                               record is not itself restricted.
+#   * "export.risk"           — flagged for trade-diversion / trade risk
+#                               (softer than a listing).
+# ``export.control.linked``.startswith(``export.control``) is True, so
+# classification uses exact set membership first — a bare prefix test would
+# misfile the linked topic as control.
+_CONTROL_EXPORT_TOPICS = frozenset({"export.control"})
+_LINKED_EXPORT_TOPICS = frozenset({"export.control.linked"})
+_RISK_EXPORT_TOPICS = frozenset({"export.risk"})
+_KNOWN_EXPORT_TOPICS = (
+    _CONTROL_EXPORT_TOPICS | _LINKED_EXPORT_TOPICS | _RISK_EXPORT_TOPICS
+)
+_EXPORT_TOPIC_PREFIX = "export"
+
+
+# Topics OpenCheck retrieves but deliberately does NOT classify into a risk
+# signal — the explicit "informational only" allowlist (decided 2026-08-20 on
+# the export-control ticket). Matching entities still reach search results and
+# the OpenAleph informational screening block; they raise no chip. The drift
+# canary in tests/test_opensanctions_live.py asserts that every published
+# target topic is either classified by a signal family or listed here — so
+# promoting one of these to a signal (several arguably deserve it: "wanted",
+# "role.oligarch", "invest.ban") is a deliberate edit with its own ticket, and
+# a NEW upstream topic fails the build instead of being fetched but silently
+# not understood, the way "sanction.control" and the export family both were.
+_INFORMATIONAL_TOPICS = frozenset(
+    {
+        "corp.disqual",
+        "crime",
+        "crime.boss",
+        "crime.fin",
+        "crime.fraud",
+        "crime.terror",
+        "crime.theft",
+        "crime.traffick",
+        "crime.war",
+        "invest.ban",
+        "invest.risk",
+        "mare.detained",
+        "mare.shadow",
+        "poi",
+        "reg.action",
+        "reg.warn",
+        "role.oligarch",
+        "wanted",
+    }
+)
+
+
+@dataclass(frozen=True)
+class ExportTopics:
+    """One record's export-control-family topics, split by what they mean.
+
+    Mirrors :class:`SanctionTopics`. ``unknown`` collects ``export.*``
+    subtopics this build does not recognise; callers keep treating those as
+    linked — conservative (we never assert a restriction we can't confirm),
+    and logged, so a new upstream subtopic cannot be absorbed silently the
+    way ``sanction.control`` once was.
+    """
+
+    control: tuple[str, ...] = ()
+    linked: tuple[str, ...] = ()
+    risk: tuple[str, ...] = ()
+    unknown: tuple[str, ...] = ()
+
+    def __bool__(self) -> bool:
+        return bool(self.control or self.linked or self.risk or self.unknown)
+
+
+def classify_export_topics(topics: Iterable[str]) -> ExportTopics:
+    """Split export-family topics into control / linked / risk / unknown.
+
+    Single source of truth for ``risk.py``, ``cross_check.py`` and
+    ``openaleph_check.py`` — the same classify-here / rank-at-the-call-site
+    contract as :func:`classify_sanction_topics`.
+    """
+    control: list[str] = []
+    linked: list[str] = []
+    risk: list[str] = []
+    unknown: list[str] = []
+    for topic in topics:
+        if topic in _CONTROL_EXPORT_TOPICS:
+            control.append(topic)
+        elif topic in _LINKED_EXPORT_TOPICS:
+            linked.append(topic)
+        elif topic in _RISK_EXPORT_TOPICS:
+            risk.append(topic)
+        elif topic.startswith(_EXPORT_TOPIC_PREFIX):
+            unknown.append(topic)
+            _LOG.warning(
+                "Unrecognised OpenSanctions export-family topic %r — treating "
+                "it as export.control.linked. Classify it in risk.py "
+                "(_KNOWN_EXPORT_TOPICS) and update the drift canary in "
+                "tests/test_opensanctions_live.py.",
+                topic,
+            )
+    return ExportTopics(
+        control=tuple(sorted(control)),
+        linked=tuple(sorted(linked)),
+        risk=tuple(sorted(risk)),
+        unknown=tuple(sorted(unknown)),
+    )
 
 # Known ICIJ leak collections on OpenAleph. Match on either the
 # collection foreign_id (preferred) or a fragment of the label.
@@ -916,6 +1031,60 @@ def _opensanctions_topic_signals_from_entity(
                 source_id=source_id,
                 hit_id=hit_id,
                 evidence={"topics": ["debarment"], "statement_id": stmt_id},
+            )
+        )
+    # Export-control family — the sanction pattern minus the suppression rule:
+    # upstream declares no superset relationship among the export topics
+    # (model.json, 2026-08-20), so each fires on its own merit.
+    exports = classify_export_topics(topics)
+    control_export = list(exports.control)
+    if control_export:
+        out.append(
+            RiskSignal(
+                code=EXPORT_CONTROLLED,
+                confidence="high",
+                summary=(
+                    "OpenSanctions lists this record as subject to "
+                    "export-control restrictions — e.g. an entity-list or "
+                    f"military end-user designation ({', '.join(control_export)})."
+                ),
+                source_id=source_id,
+                hit_id=hit_id,
+                evidence={"topics": control_export, "statement_id": stmt_id},
+            )
+        )
+    # Adjacency ("export.control.linked", or any unrecognised "export.*")
+    # → EXPORT_CONTROL_LINKED. Not itself restricted, so a softer signal.
+    linked_export = sorted(exports.linked + exports.unknown)
+    if linked_export:
+        out.append(
+            RiskSignal(
+                code=EXPORT_CONTROL_LINKED,
+                confidence="medium",
+                summary=(
+                    "OpenSanctions links this record to an export-controlled "
+                    "party; the record is not itself subject to export-control "
+                    f"restrictions ({', '.join(linked_export)})."
+                ),
+                source_id=source_id,
+                hit_id=hit_id,
+                evidence={"topics": linked_export, "statement_id": stmt_id},
+            )
+        )
+    risk_export = list(exports.risk)
+    if risk_export:
+        out.append(
+            RiskSignal(
+                code=EXPORT_RISK,
+                confidence="medium",
+                summary=(
+                    "OpenSanctions flags this record for trade risk — e.g. "
+                    "named in export-diversion or circumvention research "
+                    f"({', '.join(risk_export)})."
+                ),
+                source_id=source_id,
+                hit_id=hit_id,
+                evidence={"topics": risk_export, "statement_id": stmt_id},
             )
         )
     return out

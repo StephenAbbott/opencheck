@@ -56,6 +56,50 @@ describe("risk signal presentation maps", () => {
     );
   });
 
+  it("covers the whole export-control family", () => {
+    // Emitted by risk.py (subject) and cross_check.py / openaleph_check.py
+    // (related parties) since Phase 118. An export-control listing is a
+    // restriction on the party itself, so it must outrank debarment and
+    // plain sanction adjacency in the graph's worst-severity-wins stacking,
+    // while staying below sanction control (ownership by a designated
+    // party). Adjacency ties the sanctions-linked tier; "Trade risk"
+    // (export.risk) sits one below that.
+    for (const code of [
+      "EXPORT_CONTROLLED",
+      "EXPORT_CONTROL_LINKED",
+      "EXPORT_RISK",
+      "RELATED_EXPORT_CONTROLLED",
+      "RELATED_EXPORT_CONTROL_LINKED",
+      "RELATED_EXPORT_RISK",
+    ]) {
+      expect(RISK_PRESENTATION[code], `no chip for ${code}`).toBeDefined();
+      expect(SIGNAL_STYLE[code], `no graph badge for ${code}`).toBeDefined();
+    }
+
+    expect(SIGNAL_STYLE.SANCTIONS_CONTROLLED.severity).toBeGreaterThan(
+      SIGNAL_STYLE.EXPORT_CONTROLLED.severity,
+    );
+    expect(SIGNAL_STYLE.EXPORT_CONTROLLED.severity).toBeGreaterThan(
+      SIGNAL_STYLE.DEBARMENT.severity,
+    );
+    expect(SIGNAL_STYLE.EXPORT_CONTROL_LINKED.severity).toEqual(
+      SIGNAL_STYLE.SANCTIONS_LINKED.severity,
+    );
+    expect(SIGNAL_STYLE.EXPORT_CONTROL_LINKED.severity).toBeGreaterThan(
+      SIGNAL_STYLE.EXPORT_RISK.severity,
+    );
+    // Related-party variants rank identically to the subject codes.
+    for (const code of [
+      "EXPORT_CONTROLLED",
+      "EXPORT_CONTROL_LINKED",
+      "EXPORT_RISK",
+    ]) {
+      expect(SIGNAL_STYLE[code].severity).toEqual(
+        SIGNAL_STYLE[`RELATED_${code}`].severity,
+      );
+    }
+  });
+
   it("keeps counter-sanctions out of the sanctions colour ramp", () => {
     // The whole point of the split: "Counter-sanctioned" must not read as a
     // shade of "Sanctioned". Both chips are rose-family; these must not be.

@@ -50,12 +50,14 @@ from .config import get_settings
 from .matching import is_matchable_name
 from .risk import (
     _DEBARMENT_TOPICS,
+    _EXPORT_TOPIC_PREFIX,
     _PEP_TOPICS,
     _SANCTION_TOPIC_PREFIX,
     DEGRADED_NOT_CONFIGURED,
     DegradedSource,
     RiskSignal,
     classify_degradation_reason,
+    classify_export_topics,
     classify_sanction_topics,
     pick_degradation_reason,
 )
@@ -72,6 +74,9 @@ RELATED_COUNTER_SANCTIONED = "RELATED_COUNTER_SANCTIONED"
 RELATED_SANCTIONS_CONTROLLED = "RELATED_SANCTIONS_CONTROLLED"
 RELATED_SANCTIONS_LINKED = "RELATED_SANCTIONS_LINKED"
 RELATED_DEBARMENT = "RELATED_DEBARMENT"
+RELATED_EXPORT_CONTROLLED = "RELATED_EXPORT_CONTROLLED"
+RELATED_EXPORT_CONTROL_LINKED = "RELATED_EXPORT_CONTROL_LINKED"
+RELATED_EXPORT_RISK = "RELATED_EXPORT_RISK"
 
 #: Name of this derived check in ``DegradedSource.check`` records.
 CHECK_NAME = "cross_source_names"
@@ -85,6 +90,9 @@ _AFFECTED_BY_SOURCE: dict[str, list[str]] = {
         RELATED_SANCTIONS_CONTROLLED,
         RELATED_SANCTIONS_LINKED,
         RELATED_DEBARMENT,
+        RELATED_EXPORT_CONTROLLED,
+        RELATED_EXPORT_CONTROL_LINKED,
+        RELATED_EXPORT_RISK,
         RELATED_PEP,
     ],
     "everypolitician": [RELATED_PEP],
@@ -472,6 +480,7 @@ def _signals_from_os(
     topics = _extract_topics(hit.raw or {})
     blurb = _topic_blurb(topics)
     sanctions = classify_sanction_topics(topics)
+    exports = classify_export_topics(topics)
     controlled = bool(sanctions.control)
 
     out: list[RiskSignal] = []
@@ -495,11 +504,30 @@ def _signals_from_os(
             RELATED_DEBARMENT,
             f"debarred from public contracts per OpenSanctions ({blurb})",
         )
+    # Export-control listing outranks plain sanction adjacency: it is a
+    # restriction on the related party itself. No suppression anywhere in the
+    # export family — upstream declares no superset relationship among the
+    # export topics (see risk.py).
+    if exports.control:
+        add(
+            RELATED_EXPORT_CONTROLLED,
+            f"subject to export-control restrictions per OpenSanctions ({blurb})",
+        )
     # Suppressed when control fires — see the docstring.
     if not controlled and (sanctions.linked or sanctions.unknown):
         add(
             RELATED_SANCTIONS_LINKED,
             f"linked to sanctioned entities per OpenSanctions ({blurb})",
+        )
+    if exports.linked or exports.unknown:
+        add(
+            RELATED_EXPORT_CONTROL_LINKED,
+            f"linked to an export-controlled party per OpenSanctions ({blurb})",
+        )
+    if exports.risk:
+        add(
+            RELATED_EXPORT_RISK,
+            f"flagged for trade risk per OpenSanctions ({blurb})",
         )
     # Entities can never be PEPs by definition — only natural persons
     # hold political office. Skip the RELATED_PEP path for entity
@@ -673,7 +701,10 @@ def _topic_blurb(topics: list[str]) -> str:
     keep = [
         t
         for t in topics
-        if t.startswith(_SANCTION_TOPIC_PREFIX) or t in _PEP_TOPICS or t in _DEBARMENT_TOPICS
+        if t.startswith(_SANCTION_TOPIC_PREFIX)
+        or t.startswith(_EXPORT_TOPIC_PREFIX)
+        or t in _PEP_TOPICS
+        or t in _DEBARMENT_TOPICS
     ]
     return ", ".join(sorted(set(keep))[:3]) if keep else "no topic"
 

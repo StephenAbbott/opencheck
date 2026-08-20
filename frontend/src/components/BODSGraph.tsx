@@ -66,15 +66,24 @@ export const SIGNAL_STYLE: Record<string, SignalStyle> = {
   // — below plain adjacency, and outside the rose/amber ramp entirely.
   COUNTER_SANCTIONED:         { bg:"#f1f5f9", border:"#475569", text:"#334155", label:"CS",  severity:2 },
   RELATED_COUNTER_SANCTIONED: { bg:"#f1f5f9", border:"#475569", text:"#334155", label:"RCS", severity:2 },
+  SANCTIONED_SECURITY:      { bg:"#fff1f2", border:"#be123c", text:"#be123c", label:"SS", severity:6 },
   // Owned by a designated party (OpenSanctions `sanction.control`) — its own
   // tier between a direct listing and plain adjacency.
-  SANCTIONED_SECURITY:      { bg:"#fff1f2", border:"#be123c", text:"#be123c", label:"SS", severity:6 },
   SANCTIONS_CONTROLLED:         { bg:"#ffe4e6", border:"#9f1239", text:"#9f1239", label:"SC",  severity:6 },
   RELATED_SANCTIONS_CONTROLLED: { bg:"#ffe4e6", border:"#9f1239", text:"#9f1239", label:"RSC", severity:6 },
   SANCTIONS_LINKED:         { bg:"#fef3c7", border:"#b45309", text:"#b45309", label:"SL", severity:3 },
   RELATED_SANCTIONS_LINKED: { bg:"#fef3c7", border:"#b45309", text:"#b45309", label:"RSL", severity:3 },
   DEBARMENT:                { bg:"#ffedd5", border:"#c2410c", text:"#9a3412", label:"Db", severity:4 },
   RELATED_DEBARMENT:        { bg:"#ffedd5", border:"#c2410c", text:"#9a3412", label:"RDb", severity:4 },
+  // Export-control family (Phase 118): a listing of the party itself, one
+  // tier above debarment and below sanction control; adjacency sits with the
+  // sanctions-linked tier, and "Trade risk" (export.risk) one below that.
+  EXPORT_CONTROLLED:            { bg:"#ffe4e6", border:"#9f1239", text:"#9f1239", label:"E",   severity:5 },
+  RELATED_EXPORT_CONTROLLED:    { bg:"#ffe4e6", border:"#9f1239", text:"#9f1239", label:"RE",  severity:5 },
+  EXPORT_CONTROL_LINKED:        { bg:"#fef3c7", border:"#b45309", text:"#b45309", label:"EL",  severity:3 },
+  RELATED_EXPORT_CONTROL_LINKED:{ bg:"#fef3c7", border:"#b45309", text:"#b45309", label:"REL", severity:3 },
+  EXPORT_RISK:                  { bg:"#fff7ed", border:"#c2410c", text:"#c2410c", label:"Er",  severity:2 },
+  RELATED_EXPORT_RISK:          { bg:"#fff7ed", border:"#c2410c", text:"#c2410c", label:"REr", severity:2 },
   FATF_BLACK_LIST:          { bg:"#fee2e2", border:"#991b1b", text:"#991b1b", label:"F!",  severity:5 },
   EU_HIGH_RISK_THIRD_COUNTRY: { bg:"#fee2e2", border:"#b91c1c", text:"#b91c1c", label:"EU!", severity:4 },
   PEP:                      { bg:"#f5f3ff", border:"#6d28d9", text:"#6d28d9", label:"P",  severity:4 },

@@ -68,6 +68,9 @@ from .cross_check import (
     _PEP_TOPICS,
     RELATED_COUNTER_SANCTIONED,
     RELATED_DEBARMENT,
+    RELATED_EXPORT_CONTROL_LINKED,
+    RELATED_EXPORT_CONTROLLED,
+    RELATED_EXPORT_RISK,
     RELATED_PEP,
     RELATED_SANCTIONED,
     RELATED_SANCTIONS_CONTROLLED,
@@ -87,6 +90,7 @@ from .risk import (
     DEGRADED_UPSTREAM_ERROR,
     DegradedSource,
     RiskSignal,
+    classify_export_topics,
     classify_sanction_topics,
 )
 from .sources import REGISTRY, SearchKind
@@ -104,6 +108,9 @@ _AFFECTED_SIGNALS = [
     RELATED_SANCTIONS_CONTROLLED,
     RELATED_SANCTIONS_LINKED,
     RELATED_DEBARMENT,
+    RELATED_EXPORT_CONTROLLED,
+    RELATED_EXPORT_CONTROL_LINKED,
+    RELATED_EXPORT_RISK,
     RELATED_PEP,
 ]
 
@@ -119,6 +126,9 @@ _WATCHLIST_TOPICS: tuple[str, ...] = (
     "sanction.control",
     "sanction.linked",
     "debarment",
+    "export.control",
+    "export.control.linked",
+    "export.risk",
 )
 
 #: Result cap per percolation call.
@@ -430,6 +440,7 @@ def _signals_from_percolate(
     """
     topics = _extract_topics(item)
     sanctions = classify_sanction_topics(topics)
+    exports = classify_export_topics(topics)
     controlled = bool(sanctions.control)
 
     collection = _collection_label(item)
@@ -482,8 +493,22 @@ def _signals_from_percolate(
         )
     if any(t in _DEBARMENT_TOPICS for t in topics):
         add(RELATED_DEBARMENT, f"debarred from public contracts{coll_note}")
+    # Export-control listing outranks plain sanction adjacency; no
+    # suppression within the export family (same rule as cross_check).
+    if exports.control:
+        add(
+            RELATED_EXPORT_CONTROLLED,
+            f"subject to export-control restrictions{coll_note}",
+        )
     if not controlled and (sanctions.linked or sanctions.unknown):
         add(RELATED_SANCTIONS_LINKED, f"linked to sanctioned entities{coll_note}")
+    if exports.linked or exports.unknown:
+        add(
+            RELATED_EXPORT_CONTROL_LINKED,
+            f"linked to an export-controlled party{coll_note}",
+        )
+    if exports.risk:
+        add(RELATED_EXPORT_RISK, f"flagged for trade risk{coll_note}")
     # Entities can never be PEPs — only natural persons hold political
     # office (same rule as cross_check).
     if target["kind"] == _KIND_PERSON and any(t in _PEP_TOPICS for t in topics):

@@ -45,6 +45,23 @@ export const RISK_PRESENTATION: Record<
     label: "Debarred",
     classes: "bg-orange-100 text-orange-900 border-orange-400 font-semibold",
   },
+  // Export-control family (Phase 118). Labels mirror OpenSanctions' own
+  // display names for the topics ("Export controlled", "Export
+  // control-linked", "Trade risk") — same cross-check rationale as
+  // SANCTIONS_CONTROLLED above. No suppression within the family: upstream
+  // declares no superset relationship among the export topics.
+  EXPORT_CONTROLLED: {
+    label: "Export controlled",
+    classes: "bg-rose-100 text-rose-800 border-rose-400 font-semibold",
+  },
+  EXPORT_CONTROL_LINKED: {
+    label: "Export control-linked",
+    classes: "bg-amber-50 text-amber-800 border-amber-300",
+  },
+  EXPORT_RISK: {
+    label: "Trade risk",
+    classes: "bg-orange-50 text-orange-800 border-orange-300",
+  },
   OFFSHORE_LEAKS: {
     label: "Offshore leaks",
     classes: "bg-amber-50 text-amber-800 border-amber-200",
@@ -115,6 +132,18 @@ export const RISK_PRESENTATION: Record<
   },
   RELATED_DEBARMENT: {
     label: "Related debarred",
+    classes: "bg-orange-50 text-orange-800 border-orange-300",
+  },
+  RELATED_EXPORT_CONTROLLED: {
+    label: "Related export controlled",
+    classes: "bg-rose-100 text-rose-800 border-rose-400 font-semibold",
+  },
+  RELATED_EXPORT_CONTROL_LINKED: {
+    label: "Related export control-linked",
+    classes: "bg-amber-50 text-amber-800 border-amber-300",
+  },
+  RELATED_EXPORT_RISK: {
+    label: "Related trade risk",
     classes: "bg-orange-50 text-orange-800 border-orange-300",
   },
   FATF_BLACK_LIST: {
