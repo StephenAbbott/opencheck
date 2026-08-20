@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 119** — OpenAleph signal volume, measured before mended
+**Latest: Phase 120** — the false positives no threshold could kill, killed by shape
 
-The "31× more `RELATED_SANCTIONED` than OpenSanctions" reading decomposed, on fresh production diagnostics, into ~6 genuine per-collection copies and 19 legal-form false positives — distinct subsidiaries "matching" a record named only «Общество с ограниченной ответственностью» ("Limited Liability Company"). Per-collection copies now collapse to one finding per related party per code, with every copy kept as evidence and summaries reading "listed across N OpenAleph collections"; and names that erode to nothing once legal-form tokens are stripped can no longer match at all. `/signalstats` reports the collapsed numbers automatically. Commit `f7ff4f7`.
+The name-collision survivors of PR #86 all share one anatomy: generic tokens match, the distinctive token differs. A new distinctive-token gate strips legal forms and filler and requires the residues to agree — killing every named collision (including two sitting *above* the old 0.93 threshold and still shipping) while the threshold comes back to 0.87 and recovers the true matches it had cost, LVMH's only offshore-leaks signal among them. Measured on a reproducibly rebuilt 14-subject corpus, with the harness and adjudication committed this time. Commit `c5e6002`.
 
-**Previous: Phase 118** — export-control topics are classified at last
+**Previous: Phase 119** — OpenAleph signal volume, measured before mended
 
-`export.control`, `export.control.linked` and `export.risk` were fetched by search but classified into nothing — `us_bis_mieu`'s 13 topic-bearing entities produced no risk chip at all. Three new signal codes now fire from all three ladders, with related-party variants, and every fetched topic must map to a signal family or an explicit informational allowlist, so the next unclassified family is a build failure rather than a discovery. Commit `931919b`.
+The "31× more `RELATED_SANCTIONED` than OpenSanctions" reading decomposed, on fresh production diagnostics, into ~6 genuine per-collection copies and 19 legal-form false positives — distinct subsidiaries "matching" a record named only «Общество с ограниченной ответственностью» ("Limited Liability Company"). Per-collection copies now collapse to one finding per related party per code, with every copy kept as evidence; names that erode to nothing once legal-form tokens are stripped can no longer match at all. Commit `f7ff4f7`.
 
-*Earlier: [Phase 117 — the evidence list no longer crowds out the page](docs/status.md), [Phase 116 — the exported report separates risk findings from structural context](docs/status.md), [Phase 115 — one pooled source for the EITI countries' beneficial ownership registers](docs/status.md), and everything before it.*
+*Earlier: [Phase 118 — export-control topics classified at last](docs/status.md), [Phase 117 — the evidence list no longer crowds out the page](docs/status.md), [Phase 116 — the exported report separates risk findings from structural context](docs/status.md), [Phase 115 — one pooled source for the EITI countries' beneficial ownership registers](docs/status.md), and everything before it.*
 
 
 

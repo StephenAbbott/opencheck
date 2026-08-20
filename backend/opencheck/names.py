@@ -280,6 +280,172 @@ def org_name_residue(name: str | None) -> str:
     return normalise_name(text)
 
 
+# High-frequency filler tokens in organisation names — tokens that survive
+# rigour's legal-form removal but carry no identifying power on their own.
+# Seeded from the ICIJ false-positive corpus (every collision PR #86 could
+# not kill shares only these plus legal forms) and validated by token
+# frequency over the Phase 120 eval corpus (14 subjects / ~350 chain names /
+# ~9k ICIJ result names — see the eval doc). Deliberately small: a token
+# missing from this list makes the gate STRICTER (the token counts as
+# distinctive and must then agree), so omissions fail safe.
+_GENERIC_ORG_TOKENS = frozenset(
+    {
+        "holding",
+        "holdings",
+        "holdco",
+        "international",
+        "group",
+        "company",
+        "co",
+        "corporate",
+        "services",
+        "service",
+        "investment",
+        "investments",
+        "finance",
+        "financial",
+        "trading",
+        "capital",
+        "management",
+        "ventures",
+        "partners",
+        "enterprise",
+        "enterprises",
+        "global",
+        "worldwide",
+        "industries",
+        # Corpus-frequency additions (Phase 120 `tokens` measurement over
+        # 14 subjects' chains + ICIJ result names): corporate-structure
+        # nouns and connectors that survive legal-form stripping but
+        # identify nothing. "energy" and "bank" are deliberately NOT here
+        # despite ranking high — dropping them would readmit measured
+        # collisions (ENERGEN BIOGAS ↔ BIOGAS ENERGY).
+        "corporation",
+        "corp",
+        "trust",
+        "fund",
+        "the",
+        "and",
+        "of",
+        "de",
+    }
+)
+
+
+def _distinctive_tokens(residue: str) -> list[str]:
+    """Residue tokens minus filler, with runs of single-letter tokens joined.
+
+    Acronym handling matters: legal-form stripping recognises "B.S.C." but
+    not the dot-less "B.S.C" — and recognises the "S.C." *inside* the
+    dotted form, stranding a lone "b" — so "Gulf International Bank B.S.C"
+    vs "… B.S.C." (an exact real-world match, found by the eval harness on
+    the first corpus pass) tokenises to ``… b s c`` on one side and ``… b``
+    on the other. Two rules recover it without weakening the gate: runs of
+    two or more single-letter tokens join into an ordinary token ("bsc"),
+    and an ISOLATED single letter is dropped — one stray letter identifies
+    nothing and mostly records where legal-form stripping tore an acronym.
+    Digits are untouched: "Hornsea 1" keeps its discriminator."""
+    tokens: list[str] = []
+    run: list[str] = []
+
+    def flush() -> None:
+        if len(run) >= 2:
+            tokens.append("".join(run))
+        run.clear()
+
+    for t in residue.split():
+        if len(t) == 1 and t.isalpha():
+            run.append(t)
+            continue
+        flush()
+        tokens.append(t)
+    flush()
+    return [t for t in tokens if t not in _GENERIC_ORG_TOKENS]
+
+
+def _token_agrees(token: str, candidates: list[str]) -> bool:
+    """Exact match, or a SINGLE-edit typo (rigour's Levenshtein with
+    ``max_edits=1``). One edit forgives 'GAZPRM'≈'GAZPROM'; rigour's default
+    budget (≤4 edits, ≤20% of the shorter token) would also forgive
+    'ENERGEN'≈'ENERGY' — the exact collision this predicate exists to kill —
+    because ceil(6 × 0.2) = 2 edits. Stricter fails safe: a genuinely
+    matching pair that differs by more than one edit per token still has the
+    whole-string similarity gate speaking for it, and the eval corpus showed
+    no true match lost to this budget. Tokens shorter than four characters
+    must match exactly — one edit in a short acronym is a different acronym
+    ("U.K." vs "S.K."), not a typo."""
+    if token in candidates:
+        return True
+    if _HAS_RIGOUR_NAMES and len(token) >= 4:
+        return any(_rigour_lev_sim(token, c, 1) > 0.0 for c in candidates)
+    return False
+
+
+def has_org_form_tokens(name: str | None) -> bool:
+    """True when the name carries at least one recognised legal-form token.
+
+    The Phase 120 gate's kind test: BODS person statements sometimes hold
+    corporate officers — "CSC CORPORATE SERVICES (UK) LIMITED" screened as
+    a person matched "HMSA CORPORATE SERVICES (UK) LIMITED" at 0.925 on
+    the eval corpus, and a person-kind bypass would wave it through. A
+    "person" whose name carries a legal form is an organisation for
+    matching purposes; a real personal name never is.
+    """
+    if not name:
+        return False
+    return org_name_residue(name) != normalise_name(name)
+
+
+def distinctive_token_agreement(a: str | None, b: str | None) -> bool:
+    """Do two ORGANISATION names agree on their distinctive tokens?
+
+    The false positives no threshold can kill all share one shape: the
+    generic tokens match and the distinctive token differs — "CASTROL
+    Holdings International Ltd" vs "COSCO International Holdings Ltd"
+    scores 0.92 on shared filler alone, indistinguishable by whole-string
+    similarity from "BIFFA CORPORATE HOLDINGS LIMITED" vs "BIFFA CORPORATE
+    HOLDINGS LTD". This predicate compares only what identifies the
+    organisation: legal forms are stripped (``org_name_residue``), filler
+    is dropped (``_GENERIC_ORG_TOKENS``), and the residues must agree.
+
+    Rules, each earning its keep on a named case from the ICIJ corpus:
+
+    * **Empty residue on either side → no agreement.** "PJLS HOLDINGS
+      LIMITED" vs "HOLDINGS LIMITED" shares everything except a name.
+    * **Numeric / single-character discriminators must be identical on
+      both sides.** "HORNSEA 1 LIMITED" vs "HORNSEA LIMITED" (and
+      "HORNSEA 2") differ precisely in the token a subset rule would
+      forgive.
+    * **Every distinctive token of the shorter residue must agree with one
+      of the longer** — exact or within a strict typo budget. Subset
+      direction matters: "MOET HENNESSY INTERNATIONAL" vs "HENNESSY
+      INTERNATIONAL LIMITED" (a true match PR #86 lost) passes because
+      {hennessy} ⊆ {moet, hennessy}; "ENERGEN BIOGAS" vs "BIOGAS ENERGY"
+      fails because 'energen' agrees with nothing ('energy' is 2 edits
+      over 7 characters — outside the budget).
+
+    Person names carry no legal forms and MUST NOT be routed through this
+    predicate — callers gate on the target's kind. Without rigour (base
+    install), legal-form stripping degrades and typo tolerance is exact
+    match only — dev-only divergence, same caveat as
+    ``org_comparable_name``.
+    """
+    ra, rb = org_name_residue(a), org_name_residue(b)
+    if not ra or not rb:
+        return False
+    ta, tb = _distinctive_tokens(ra), _distinctive_tokens(rb)
+    if not ta or not tb:
+        return False
+
+    def discriminators(tokens: list[str]) -> set[str]:
+        return {t for t in tokens if len(t) == 1 or t.isdigit()}
+
+    if discriminators(ta) != discriminators(tb):
+        return False
+    small, large = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+    return all(_token_agrees(t, large) for t in small)
+
+
 def despace(comparable: str) -> str:
     """Space-stripped variant of an already-comparable form, used as a
     secondary merge key so tokenisation artefacts still collide

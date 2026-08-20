@@ -504,6 +504,73 @@ def test_signal_from_match_name_too_dissimilar_returns_none() -> None:
     assert sig is None
 
 
+def test_distinctive_token_gate_kills_boilerplate_collision() -> None:
+    """The Phase 120 gate: generic tokens matching while the distinctive
+    token differs must never produce a signal — even with ICIJ's own
+    match flag set, since ICIJ rated the ENERGEN/BIOGAS collision 90/100."""
+    sig = _signal_from_match(
+        _icij_match(name="COSCO INTERNATIONAL HOLDINGS LTD", match=True, score=95),
+        _target(name="CASTROL Holdings International Ltd"),
+        min_score=70,
+    )
+    assert sig is None
+
+
+def test_distinctive_token_gate_kills_numbered_spv_collision() -> None:
+    """'HORNSEA 1 LIMITED' vs 'HORNSEA LIMITED' scores 0.9375 — above even
+    the old 0.93 cut — and the corpus re-measurement found the same shape
+    twice more (WIGMORE 1, PRACTICE PLUS/PLAN). The numeric discriminator
+    rule is what kills it."""
+    sig = _signal_from_match(
+        _icij_match(name="HORNSEA LIMITED", match=False, score=88),
+        _target(name="HORNSEA 1 LIMITED"),
+        min_score=70,
+    )
+    assert sig is None
+
+
+def test_lowered_threshold_recovers_named_true_matches() -> None:
+    """The two matches PR #86 lost at 0.93 come back at 0.87: the person
+    pair via the threshold alone (persons bypass the token gate), the org
+    pair via subset agreement on its distinctive residue. The second one
+    is LVMH's only offshore-leaks signal."""
+    person = _signal_from_match(
+        _icij_match(name="NICHOLAS RATCLIFFE", match=False, score=78),
+        _target(name="NICHOLAS PAUL RATCLIFFE", kind="person"),
+        min_score=70,
+    )
+    assert person is not None
+    org = _signal_from_match(
+        _icij_match(name="HENNESSY INTERNATIONAL LIMITED", match=False, score=83),
+        _target(name="MOET HENNESSY INTERNATIONAL"),
+        min_score=70,
+    )
+    assert org is not None
+
+
+def test_corporate_officer_person_target_is_gated() -> None:
+    """BODS person statements sometimes hold corporate officers. A
+    'person' whose name carries a legal form is an organisation for
+    matching purposes — the eval corpus caught 'CSC CORPORATE SERVICES
+    (UK) LIMITED' (person-kind) matching 'HMSA CORPORATE SERVICES (UK)
+    LIMITED' at 0.925, which a kind-only bypass would admit."""
+    sig = _signal_from_match(
+        _icij_match(name="HMSA CORPORATE SERVICES (UK) LIMITED", match=False, score=91),
+        _target(name="CSC CORPORATE SERVICES (UK) LIMITED", kind="person"),
+        min_score=70,
+    )
+    assert sig is None
+
+
+def test_min_name_sim_is_injectable() -> None:
+    """The harness sweeps thresholds through the kwarg instead of
+    monkeypatching the module constant."""
+    match = _icij_match(name="HENNESSY INTERNATIONAL LIMITED", match=False, score=83)
+    target = _target(name="MOET HENNESSY INTERNATIONAL")
+    assert _signal_from_match(match, target, min_score=70, min_name_sim=0.93) is None
+    assert _signal_from_match(match, target, min_score=70, min_name_sim=0.87) is not None
+
+
 def test_signal_evidence_contains_expected_fields() -> None:
     sig = _signal_from_match(_icij_match(), _target(), min_score=70)
     assert sig is not None

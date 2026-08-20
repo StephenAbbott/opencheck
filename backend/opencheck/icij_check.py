@@ -155,14 +155,25 @@ _MIN_SCORE = 70
 # this similar to what we searched. Uses the shared Phase-D scorer (see
 # ``_name_sim``).
 #
-# 0.93 is calibrated for THIS surface and is deliberately stricter than the
-# product-wide 0.88 used for person screening. Screening a company name
-# against 800k offshore records is dominated by legal-form boilerplate:
-# "CASTROL HOLDINGS INTERNATIONAL LIMITED" vs "COSCO INTERNATIONAL HOLDINGS
-# LIMITED" scores 0.92 on shared filler alone. Measured over the corpus above,
-# every confident match sits at 0.93+ (most at 1.00) while the false positives
-# cluster in 0.85–0.92; the cut takes corpus precision from 45% to ~85%.
-_MIN_NAME_SIM = 0.93
+# History: 0.93 (PR #86) was the highest cut that killed the legal-form
+# collisions a character scorer cannot distinguish from true matches
+# ("CASTROL HOLDINGS INTERNATIONAL" vs "COSCO INTERNATIONAL HOLDINGS" at
+# 0.92) — bought at the cost of two named true matches just under it
+# (NICHOLAS PAUL RATCLIFFE 0.878; MOET HENNESSY INTERNATIONAL 0.877, which
+# left LVMH with no offshore-leaks signal at all). Phase 120 moves the
+# boilerplate burden to the distinctive-token gate
+# (``names.distinctive_token_agreement``, applied in
+# ``_signal_from_match``), which kills those collisions BY SHAPE rather
+# than by score — re-measured on the rebuilt 14-subject corpus it also
+# caught two collisions 0.93 had been letting through (WIGMORE 1↔WIGMORE
+# at 0.9375, PRACTICE PLUS↔PRACTICE PLAN at 0.9444). With the gate
+# carrying that load, the threshold returns to 0.87, recovering both named
+# true matches. Measured on the production pool (2 results/type, ≤30
+# targets): precision 69%→≥80%, recall 75%→100% of adjudicated true
+# matches. See scripts/eval_icij_distinctive.py and
+# docs/icij-distinctive-token-evaluation.md; re-measure there whenever the
+# candidate pool changes shape (the PR #86 lesson).
+_MIN_NAME_SIM = 0.87
 
 # A name has to be specific enough to screen. "S +" — the real GLEIF legal
 # name of an LVMH subsidiary — sanitises to "S", which matches an ICIJ officer
@@ -207,6 +218,7 @@ async def assess_icij_names(
     *,
     max_targets: int = _MAX_TARGETS,
     min_score: int = _MIN_SCORE,
+    min_name_sim: float = _MIN_NAME_SIM,
     degraded: list[DegradedSource] | None = None,
 ) -> list[RiskSignal]:
     """Return ``OFFSHORE_LEAKS`` risk signals for entities and persons in
@@ -247,7 +259,9 @@ async def assess_icij_names(
         batch = targets[batch_start: batch_start + _BATCH_SIZE]
         batches += 1
         try:
-            batch_signals = await _check_batch(batch, min_score=min_score)
+            batch_signals = await _check_batch(
+                batch, min_score=min_score, min_name_sim=min_name_sim
+            )
             signals.extend(batch_signals)
             continue
         except httpx.HTTPStatusError as exc:
@@ -295,7 +309,11 @@ async def assess_icij_names(
         batch_skipped = 0
         for target in batch:
             try:
-                signals.extend(await _check_batch([target], min_score=min_score))
+                signals.extend(
+                    await _check_batch(
+                        [target], min_score=min_score, min_name_sim=min_name_sim
+                    )
+                )
             except Exception as exc:  # noqa: BLE001
                 batch_skipped += 1
                 reason = classify_degradation_reason(exc)
@@ -427,6 +445,7 @@ async def _check_batch(
     targets: list[dict[str, Any]],
     *,
     min_score: int,
+    min_name_sim: float = _MIN_NAME_SIM,
 ) -> list[RiskSignal]:
     """POST one batch of names to the ICIJ reconciliation API and parse
     the results into risk signals.
@@ -472,7 +491,9 @@ async def _check_batch(
         query_result = raw.get(query_key) or {}
         results = query_result.get("result") or []
         for match in results:
-            sig = _signal_from_match(match, target, min_score=min_score)
+            sig = _signal_from_match(
+                match, target, min_score=min_score, min_name_sim=min_name_sim
+            )
             if sig is not None:
                 signals.append(sig)
     return signals
@@ -488,6 +509,7 @@ def _signal_from_match(
     target: dict[str, Any],
     *,
     min_score: int,
+    min_name_sim: float = _MIN_NAME_SIM,
 ) -> RiskSignal | None:
     """Convert one ICIJ reconciliation result to an OFFSHORE_LEAKS signal.
 
@@ -495,6 +517,13 @@ def _signal_from_match(
     * The score is below threshold AND ``match`` is not ``True``.
     * The returned name is too dissimilar to the searched name
       (secondary sanity check, guards against ICIJ index collisions).
+    * The target is an ENTITY and the two names disagree on their
+      distinctive tokens (``names.distinctive_token_agreement``) — the
+      Phase 120 gate. Character similarity cannot tell "BIFFA CORPORATE
+      HOLDINGS LTD" (true) from "Barb Holdco Limited" (false): the shared
+      filler dominates the comparison. Person names carry no legal forms
+      and every token is distinctive, so persons rely on the similarity
+      threshold alone.
     """
     score: int = int(match.get("score") or 0)
     is_high_confidence: bool = bool(match.get("match"))
@@ -507,7 +536,25 @@ def _signal_from_match(
         return None
 
     # Secondary name-similarity sanity check.
-    if _name_sim(target["name"], matched_name) < _MIN_NAME_SIM:
+    if _name_sim(target["name"], matched_name) < min_name_sim:
+        return None
+
+    # Distinctive-token gate. Applied even to ICIJ ``match: true`` results
+    # — ICIJ's own scorer rated the ENERGEN/BIOGAS collision 90/100, so
+    # its confidence flag earns no bypass. Entity targets always; person
+    # targets only when either name carries a legal form, because BODS
+    # person statements sometimes hold corporate officers and those are
+    # organisations for matching purposes. Real personal names ("NICHOLAS
+    # PAUL RATCLIFFE") are all distinctive tokens and rely on the
+    # similarity threshold alone.
+    entityish = (
+        target["kind"] != _KIND_PERSON
+        or names.has_org_form_tokens(target["name"])
+        or names.has_org_form_tokens(matched_name)
+    )
+    if entityish and not names.distinctive_token_agreement(
+        target["name"], matched_name
+    ):
         return None
 
     node_url: str = _node_url(match.get("id"))
