@@ -61,6 +61,7 @@ import re
 import unicodedata
 
 try:  # pragma: no cover - exercised via the ftm extra in CI/prod
+    from rigour.names import remove_org_types as _rigour_remove_org_types
     from rigour.names import replace_org_types_compare as _rigour_org_compare
     from rigour.text import levenshtein_similarity as _rigour_lev_sim
     from rigour.text.scripts import is_dense_script as _rigour_is_dense
@@ -68,6 +69,7 @@ try:  # pragma: no cover - exercised via the ftm extra in CI/prod
 
     _HAS_RIGOUR_NAMES = True
 except ImportError:  # pragma: no cover - base install without the ftm extra
+    _rigour_remove_org_types = None  # type: ignore[assignment]
     _rigour_org_compare = None  # type: ignore[assignment]
     _rigour_lev_sim = None  # type: ignore[assignment]
     _rigour_is_dense = None  # type: ignore[assignment]
@@ -246,6 +248,35 @@ def org_comparable_name(name: str | None, *, generic: bool = True) -> str:
     text = name
     if _HAS_RIGOUR_NAMES:
         text = _rigour_org_compare(text.casefold(), generic=generic)
+    return normalise_name(text)
+
+
+def org_name_residue(name: str | None) -> str:
+    """What is left of an ORGANISATION name once every recognised legal-form
+    token is removed (rigour's ``remove_org_types``) and the residue is run
+    through the shared fold pipeline.
+
+    An **empty** residue means the name consists of nothing but legal-form
+    boilerplate — "Общество с ограниченной ответственностью", "Limited
+    Liability Company", "OOO" — and therefore cannot be meaningfully matched
+    *as a name*: any similarity it scores is similarity between legal forms,
+    not between organisations. Callers use that as a match guard (first:
+    the OpenAleph percolation screen, Phase 119, where a Canadian-list
+    record named only by the bare Russian legal form matched nineteen
+    distinct subsidiaries at 0.88+).
+
+    Distinct from :func:`org_comparable_name`, which REPLACES legal forms
+    with a comparable class token ("llc") — correct for equality keys, but
+    it leaves boilerplate-only names non-empty, which is exactly what a
+    guard must not do. Without rigour (base install) this degrades to plain
+    ``normalise_name`` — the guard becomes a no-op, same dev-only
+    divergence as ``org_comparable_name``.
+    """
+    if not name:
+        return ""
+    text = name
+    if _HAS_RIGOUR_NAMES:
+        text = _rigour_remove_org_types(text.casefold())
     return normalise_name(text)
 
 
