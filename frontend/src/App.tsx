@@ -197,10 +197,11 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "RELATED_EXPORT_RISK", confidence: "high" },
       { code: "RELATED_PEP", confidence: "medium" },
       { code: "OFFSHORE_LEAKS", confidence: "high" },
-      // Eli Lilly reports NATURAL_PERSONS GLEIF reporting exceptions (a
-      // permitted exception: widely held, no consolidating parent entity) —
-      // context, not the opaque-ownership risk chip it used to mis-show.
-      { code: "GLEIF_REPORTING_EXCEPTION", confidence: "high" },
+      // Risk signals only. Eli Lilly also reports GLEIF_REPORTING_EXCEPTION
+      // (kind="context": NATURAL_PERSONS — widely held, no consolidating
+      // parent entity), but the picker card has no risk/context split, so a
+      // context entry here would render as a fourth risk chip and overstate
+      // the finding count the entity page shows.
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/FRDRIPF3EKNDJ2CQJL29.zip`,
   },
