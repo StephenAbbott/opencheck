@@ -47,6 +47,19 @@ Design decisions (2026-08-13, from the percolation implementation plan):
   OpenAleph signal for the same person on the same underlying list both
   survive (dedupe keys include ``source_id``), consistent with how the
   OS + EveryPolitician probes coexist in ``cross_check``.
+* **Per-collection copies within THIS screen collapse** (Phase 119): one
+  designation-class fact about one related party surfaces once per
+  percolator collection carrying it, which read as N distinct findings.
+  ``_collapse_collections`` keeps one signal per ``(code,
+  subject_statement_id)`` with every copy preserved in
+  ``evidence.collections`` — see its docstring. The cross-source rule
+  above is unaffected: the collapse never crosses ``source_id``.
+* **Boilerplate-only names never match** (Phase 119): for entity targets,
+  both the target's name and the matched record's best-scoring name must
+  keep a non-empty residue once legal-form tokens are stripped
+  (``names.org_name_residue``). A Canadian-list record named only
+  «Общество с ограниченной ответственностью» matched nineteen distinct
+  subsidiaries at 0.88+ on legal-form similarity alone.
 
 Requires ``OPENALEPH_API_KEY`` (the flagship edge 405s anonymous POSTs to
 the percolate path). Without it — or on any percolation failure — the screen
@@ -262,7 +275,102 @@ async def assess_openaleph_names(
             )
         )
 
-    return _dedupe(signals)
+    return _collapse_collections(_dedupe(signals))
+
+
+def _collapse_collections(signals: list[RiskSignal]) -> list[RiskSignal]:
+    """One finding per related party per code, however many collections carry it.
+
+    OpenAleph percolates against every percolator-indexed collection on the
+    instance, so one designation-class fact about one related party surfaces
+    once per collection that carries it — and occasionally more than once
+    within a single collection (duplicate records: Syzran Refinery appeared
+    twice in Swiss SECO). OpenSanctions returns one canonical,
+    upstream-deduplicated entity for the same fact. Keeping the copies as
+    separate signals made volume read as breadth: a reader seeing four
+    "Related sanctioned" chips for Igor Sechin infers four distinct
+    findings — the Phase 105/106 class of error (a thing misreported as
+    what it isn't), expressed as count rather than classification.
+
+    Collapse per ``(code, evidence.subject_statement_id)``. The survivor is
+    the highest-(confidence, score) copy; every copy is preserved in
+    ``evidence.collections``; ``evidence.collection_count`` counts distinct
+    collections; ``corroboration`` becomes the union across copies (one
+    list may publish the birth year another lacks) and ``name_match_only``
+    is recomputed from it. A multi-collection summary says "listed across N
+    OpenAleph collections" — deliberately never "corroborated": per the
+    SubjectCard rule, aggregation copies inside one instance are not
+    independent sources agreeing about the world.
+
+    Cross-SOURCE duplicates (an OpenSanctions signal and an OpenAleph
+    signal for the same person) are untouched — the collapse never crosses
+    ``source_id``, and the docstring rule at the top of this module still
+    holds. Because ``/signalstats`` counts post-dedup inside
+    ``_merge_signals``, the counter reports the collapsed number
+    automatically: display and instrument agree by construction.
+    """
+    groups: dict[tuple[str, str], list[RiskSignal]] = {}
+    for sig in signals:
+        sub = str((sig.evidence or {}).get("subject_statement_id") or "")
+        groups.setdefault((sig.code, sub), []).append(sig)
+
+    rank = {"high": 3, "medium": 2, "low": 1}
+    out: list[RiskSignal] = []
+    for copies in groups.values():
+        if len(copies) == 1:
+            out.append(copies[0])
+            continue
+        survivor = max(
+            copies,
+            key=lambda s: (
+                rank.get(s.confidence, 0),
+                float((s.evidence or {}).get("score") or 0.0),
+            ),
+        )
+        evidence = dict(survivor.evidence)
+        collections = [
+            {
+                "collection": (s.evidence or {}).get("collection") or "",
+                "collection_url": (s.evidence or {}).get("collection_url") or "",
+                "matched_name": (s.evidence or {}).get("matched_name") or "",
+                "hit_id": s.hit_id,
+                "score": (s.evidence or {}).get("score"),
+            }
+            for s in copies
+        ]
+        labels = sorted({c["collection"] for c in collections if c["collection"]})
+        corroboration = sorted(
+            {a for s in copies for a in ((s.evidence or {}).get("corroboration") or ())}
+        )
+        evidence["collections"] = collections
+        evidence["collection_count"] = len(labels)
+        evidence["corroboration"] = corroboration
+        if evidence.get("kind") == _KIND_PERSON:
+            evidence["name_match_only"] = not corroboration
+        summary = survivor.summary
+        if len(labels) > 1:
+            # The survivor's summary was built with a single-collection
+            # ``via '<label>'`` note (owned by ``_signals_from_percolate``,
+            # so the format is this module's to rely on). State the spread
+            # instead of one arbitrary member of it.
+            listed = f" — listed across {len(labels)} OpenAleph collections"
+            coll_note = f" via '{evidence.get('collection') or ''}'"
+            if evidence.get("collection") and coll_note in summary:
+                summary = summary.replace(coll_note, listed, 1)
+            else:  # pragma: no cover - defensive: no via-note to rewrite
+                summary = f"{summary} Listed across {len(labels)} OpenAleph collections."
+        out.append(
+            RiskSignal(
+                code=survivor.code,
+                confidence=survivor.confidence,
+                summary=summary,
+                source_id=survivor.source_id,
+                hit_id=survivor.hit_id,
+                evidence=evidence,
+                kind=survivor.kind,
+            )
+        )
+    return out
 
 
 async def _none() -> None:
@@ -348,6 +456,20 @@ def _process_results(
                 # Single-token person names ("Fernández") are too generic
                 # to base a related-party match on — same guard as
                 # cross_check / ftmg.
+                continue
+            if target["kind"] != _KIND_PERSON and not (
+                names.org_name_residue(target["name"])
+                and names.org_name_residue(best_name)
+            ):
+                # Entity-side analogue of the guard above: a name that is
+                # nothing but legal-form boilerplate once org types are
+                # stripped cannot be meaningfully matched. Found in
+                # production (Phase 119): a Canadian-list record named only
+                # «Общество с ограниченной ответственностью» — "Limited
+                # Liability Company" in Russian — "matched" nineteen
+                # distinct subsidiaries at 0.88+, all of it legal-form
+                # similarity. Applied to both sides, mirroring
+                # ``icij_check._screenable`` on the query side.
                 continue
             hit = _as_hit(item, target)
             if not _birth_year_compatible(target.get("birth_year"), hit):

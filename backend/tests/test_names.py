@@ -318,6 +318,42 @@ def test_despace():
     assert names.despace("") == ""
 
 
+@pytest.mark.skipif(
+    not names._HAS_RIGOUR_NAMES, reason="rigour not installed (ftm extra)"
+)
+def test_org_name_residue_empty_for_boilerplate_only_names():
+    """A name that is nothing but legal-form tokens must erode to empty —
+    that emptiness is the Phase 119 match guard. Contrast
+    org_comparable_name, which REPLACES the form with a class token ("llc")
+    and so leaves these names non-empty."""
+    for boilerplate in (
+        "Общество с ограниченной ответственностью",  # the production case
+        "Limited Liability Company",
+        "OOO",
+        "GmbH",
+    ):
+        assert names.org_name_residue(boilerplate) == "", boilerplate
+        assert names.org_comparable_name(boilerplate) != ""  # the contrast
+
+
+@pytest.mark.skipif(
+    not names._HAS_RIGOUR_NAMES, reason="rigour not installed (ftm extra)"
+)
+def test_org_name_residue_keeps_the_distinctive_part():
+    # The fold pipeline transliterates the Cyrillic residue.
+    assert names.org_name_residue('Общество с ограниченной ответственностью "РН-Капитал"') == "rn kapital"
+    assert names.org_name_residue("OJSC RN HOLDING") == "rn holding"
+    assert names.org_name_residue("Rosneft Finance S.A.") == "rosneft finance"
+
+
+def test_org_name_residue_person_names_pass_through():
+    """Person names carry no legal forms — the residue is the whole name,
+    so a guard built on emptiness can never misfire on people."""
+    assert names.org_name_residue("Igor Sechin") == "igor sechin"
+    assert names.org_name_residue("") == ""
+    assert names.org_name_residue(None) == ""
+
+
 def test_possibly_same_merges_org_type_variants():
     if not names._HAS_RIGOUR_NAMES:
         pytest.skip("rigour not installed (ftm extra)")

@@ -281,6 +281,200 @@ async def test_export_control_topic_yields_related_export_controlled(
     assert "US BIS Military End Users" in signals[0].summary
 
 
+async def test_per_collection_copies_collapse_to_one_signal(fake_percolate) -> None:
+    """One designation-class fact per related party per code — however many
+    collections (or duplicate records within one collection) carry it.
+    Phase 119: Igor Sechin's OFAC/UK/Japan/Ukraine copies rendered as four
+    'Related sanctioned' findings; a reader infers four distinct facts."""
+    fake_percolate(
+        [
+            _percolate_item(
+                "Igor Sechin",
+                surface_form="Igor Sechin",
+                topics=["sanction"],
+                entity_id="oa-ofac",
+                collection="US OFAC SDN List",
+            ),
+            _percolate_item(
+                "Igor SECHIN",
+                surface_form="Igor Sechin",
+                topics=["sanction"],
+                entity_id="oa-uk",
+                collection="UK FCDO Sanctions List",
+            ),
+            _percolate_item(
+                "Sechin Igor",
+                surface_form="Igor Sechin",
+                topics=["sanction"],
+                entity_id="oa-jp",
+                collection="Japan Economic Sanctions",
+            ),
+            # Duplicate record inside a collection already counted — the
+            # Syzran case: two distinct entity ids, one collection.
+            _percolate_item(
+                "Igor Sechin",
+                surface_form="Igor Sechin",
+                topics=["sanction"],
+                entity_id="oa-ofac-dup",
+                collection="US OFAC SDN List",
+            ),
+        ],
+        [],
+    )
+    signals = await assess_openaleph_names(_BUNDLE)
+    assert [s.code for s in signals] == ["RELATED_SANCTIONED"]
+    sig = signals[0]
+    ev = sig.evidence
+    assert ev["collection_count"] == 3  # distinct collections, not copies
+    assert len(ev["collections"]) == 4  # every copy preserved as evidence
+    assert {c["hit_id"] for c in ev["collections"]} == {
+        "oa-ofac", "oa-uk", "oa-jp", "oa-ofac-dup"
+    }
+    assert "listed across 3 OpenAleph collections" in sig.summary
+    # Never "corroborated" — copies inside one instance are not independent
+    # sources (the SubjectCard wording rule).
+    assert "corroborat" not in sig.summary.lower()
+    # The statement id survives, or the graph badge disappears.
+    assert ev["subject_statement_id"] == "stmt-sechin"
+
+
+async def test_collapse_never_crosses_parties_or_codes(fake_percolate) -> None:
+    """Distinct related parties stay distinct; distinct facts about one
+    party stay distinct. The collapse key is (code, subject_statement_id) —
+    exactly the pair /signalstats' statement-scoped counting relies on."""
+    fake_percolate(
+        [
+            _percolate_item(
+                "Igor Sechin",
+                surface_form="Igor Sechin",
+                topics=["sanction", "debarment"],
+                entity_id="oa-a",
+                collection="List A",
+            ),
+            _percolate_item(
+                "Igor Sechin",
+                surface_form="Igor Sechin",
+                topics=["sanction"],
+                entity_id="oa-b",
+                collection="List B",
+            ),
+            _percolate_item(
+                "Jane Ordinary",
+                surface_form="Jane Ordinary",
+                topics=["sanction"],
+                entity_id="oa-jane",
+                collection="List A",
+            ),
+        ],
+        [],
+    )
+    signals = await assess_openaleph_names(_BUNDLE)
+    by_key = {(s.code, s.evidence["subject_statement_id"]) for s in signals}
+    assert by_key == {
+        ("RELATED_SANCTIONED", "stmt-sechin"),
+        ("RELATED_DEBARMENT", "stmt-sechin"),
+        ("RELATED_SANCTIONED", "stmt-clean"),
+    }
+    sechin_sanctioned = next(
+        s
+        for s in signals
+        if s.code == "RELATED_SANCTIONED"
+        and s.evidence["subject_statement_id"] == "stmt-sechin"
+    )
+    assert sechin_sanctioned.evidence["collection_count"] == 2
+    jane = next(
+        s for s in signals if s.evidence["subject_statement_id"] == "stmt-clean"
+    )
+    # Single copy → untouched: no collections evidence is fabricated.
+    assert "collections" not in jane.evidence
+
+
+async def test_collapse_unions_corroboration_across_copies(fake_percolate) -> None:
+    """One collection may publish the birth year another lacks. The
+    surviving signal's corroboration is the union, its confidence comes
+    from the best copy, and name_match_only is recomputed — a person
+    corroborated anywhere is not a bare name match."""
+    fake_percolate(
+        [
+            _percolate_item(
+                "Igor Sechin",
+                surface_form="Igor Sechin",
+                topics=["sanction"],
+                entity_id="oa-nodob",
+                collection="No-DOB List",
+            ),
+            _percolate_item(
+                "Igor Sechin",
+                surface_form="Igor Sechin",
+                topics=["sanction"],
+                entity_id="oa-dob",
+                collection="DOB List",
+                birth_date="1960-09-07",
+            ),
+        ],
+        [],
+    )
+    signals = await assess_openaleph_names(_BUNDLE)
+    assert len(signals) == 1
+    sig = signals[0]
+    assert sig.confidence == "high"  # the corroborated copy's rung survives
+    assert sig.evidence["corroboration"] == ["birth_year"]
+    assert sig.evidence["name_match_only"] is False
+    assert "Possible name match only" not in sig.summary
+
+
+async def test_boilerplate_only_matched_name_is_rejected(fake_percolate) -> None:
+    """The Phase 119 production find: a Canadian-list record named only
+    «Общество с ограниченной ответственностью» — "Limited Liability
+    Company" in Russian — matched nineteen distinct subsidiaries at 0.88+,
+    every point of it legal-form similarity. A matched name that erodes to
+    nothing once org types are stripped cannot support a match."""
+    from opencheck import names
+
+    target_name = 'Общество с ограниченной ответственностью "РН"'
+    matched_name = "Общество с ограниченной ответственностью"
+    # Self-check: the pair clears the 0.88 score gate, so the residue
+    # guard — not the score — is what rejects it.
+    assert names.name_similarity(target_name, matched_name) >= 0.88
+    bundle = [_entity_stmt("stmt-ooo", target_name)]
+    fake_percolate(
+        [],
+        [
+            _percolate_item(
+                matched_name,
+                surface_form="ОБЩЕСТВО",
+                topics=["sanction"],
+                schema="Company",
+                entity_id="oa-boilerplate",
+                collection="Canadian Consolidated Autonomous Sanctions List",
+            ),
+        ],
+    )
+    signals = await assess_openaleph_names(bundle)
+    assert signals == []
+
+
+async def test_boilerplate_only_target_name_is_rejected(fake_percolate) -> None:
+    """Same guard, other side: a related party whose own recorded name is
+    nothing but a legal form cannot be meaningfully screened by name."""
+    bundle = [_entity_stmt("stmt-bare", "Общество с ограниченной ответственностью")]
+    fake_percolate(
+        [],
+        [
+            _percolate_item(
+                'Общество с ограниченной ответственностью "РН"',
+                surface_form="ОБЩЕСТВО",
+                topics=["sanction"],
+                schema="Company",
+                entity_id="oa-real",
+                collection="Canadian Consolidated Autonomous Sanctions List",
+            ),
+        ],
+    )
+    signals = await assess_openaleph_names(bundle)
+    assert signals == []
+
+
 async def test_entity_pep_topic_never_fires_related_pep(fake_percolate) -> None:
     """Entities can't be PEPs — a role.pep-tagged entity hit maps to no
     signal and lands in the informational block instead (cross_check rule)."""

@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 118** — export-control topics are classified at last
+**Latest: Phase 119** — OpenAleph signal volume, measured before mended
 
-`export.control`, `export.control.linked` and `export.risk` were fetched by search but classified into nothing — `us_bis_mieu`'s 13 topic-bearing entities produced no risk chip at all, the `sanction.control` failure one family over. Three new signal codes now fire from all three ladders (`EXPORT_CONTROLLED`, `EXPORT_CONTROL_LINKED`, `EXPORT_RISK` — upstream's label is "Trade risk"), with related-party variants and no suppression inside the family, since upstream declares no superset relationship among the topics. And the class itself is closed: every fetched topic must now map to a signal family or an explicit informational allowlist, so the next unclassified family is a build failure rather than a discovery. Commit `931919b`.
+The "31× more `RELATED_SANCTIONED` than OpenSanctions" reading decomposed, on fresh production diagnostics, into ~6 genuine per-collection copies and 19 legal-form false positives — distinct subsidiaries "matching" a record named only «Общество с ограниченной ответственностью» ("Limited Liability Company"). Per-collection copies now collapse to one finding per related party per code, with every copy kept as evidence and summaries reading "listed across N OpenAleph collections"; and names that erode to nothing once legal-form tokens are stripped can no longer match at all. `/signalstats` reports the collapsed numbers automatically. Commit `f7ff4f7`.
 
-**Previous: Phase 117** — the evidence list no longer crowds out the page it supports
+**Previous: Phase 118** — export-control topics are classified at last
 
-On dense entities (Rosneft: 15 claims, ~4 citation chips each) the AI summary's Evidence section ran two-plus screens deep — automatically, on curated examples. It now starts collapsed to a three-claim preview with one clear call to action ("Show all 15 evidence statements"), while the header keeps the full tally visible ("15 statements, cited to 8 sources") so the grounding promise stays checkable at a glance. Sign-off disables the collapse entirely — disposition controls embedded in the PDF record must never hide — and gaps and limitations remain always-visible. Commit `85dc8c4`.
+`export.control`, `export.control.linked` and `export.risk` were fetched by search but classified into nothing — `us_bis_mieu`'s 13 topic-bearing entities produced no risk chip at all. Three new signal codes now fire from all three ladders, with related-party variants, and every fetched topic must map to a signal family or an explicit informational allowlist, so the next unclassified family is a build failure rather than a discovery. Commit `931919b`.
 
-*Earlier: [Phase 116 — the exported report separates risk findings from structural context](docs/status.md), [Phase 115 — one pooled source for the EITI countries' beneficial ownership registers](docs/status.md), and everything before it.*
+*Earlier: [Phase 117 — the evidence list no longer crowds out the page](docs/status.md), [Phase 116 — the exported report separates risk findings from structural context](docs/status.md), [Phase 115 — one pooled source for the EITI countries' beneficial ownership registers](docs/status.md), and everything before it.*
 
 
 
