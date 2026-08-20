@@ -1,11 +1,11 @@
 {
   "lei": "5493005044RTLQ5RZU70",
   "subject_name": "EESTI ENERGIA AS",
-  "summary": "EESTI ENERGIA AS (LEI 5493005044RTLQ5RZU70, Estonian registry code 10421629) is identifier-confirmed. The Government of Estonia is reported as a controlling owner and shareholder, per Wikidata and OpenSanctions respectively, making this a possible state-owned enterprise; these are indicative findings from aggregator sources, not authoritative register determinations. The Estonian e-Business Register (e-Äriregister) records four current board members — Andrus Durejko and Marlen Tamm (from 2023-04-03), Lauri Karp (from 2024-09-10), and Gerrit Mäesalu (from 2026-06-22) — alongside several persons recorded under \"other means,\" including Jürgen Ligi (from 2024-08-02). Two structural risk signals are raised: a medium-confidence indicator of complex ownership layers (three or more corporate layers per GLEIF data), and a medium-confidence possible state-controlled enterprise indicator sourced from Wikidata. Additionally, related party Jürgen Ligi is name-matched — without confirmed birth date or nationality — against PEP records on OpenSanctions, EveryPolitician, and OpenAleph (medium confidence each); this is a possible name match only and does not constitute a confirmed PEP association. A material limitation applies: OpenSanctions data is licensed CC-BY-NC-4.0 and may not be used for commercial purposes.",
+  "summary": "EESTI ENERGIA AS (LEI 5493005044RTLQ5RZU70; Estonian registry code 10421629) is identifier-confirmed, registered in Estonia. The Government of Estonia is reported as a controlling owner and shareholder, per Wikidata and OpenSanctions respectively, making this a possible state-owned enterprise; these are indicative findings from non-register sources and are not authoritative determinations. The Estonian e-Business Register records four current board members — Andrus Durejko, Marlen Tamm, Lauri Karp, and Gerrit Mäesalu (all from 2023–2026) — alongside several individuals holding influence by other means, including Jürgen Ligi (from 2024-08-02), who is a possible name match for a politically exposed person across OpenSanctions, EveryPolitician, and OpenAleph; no birth date or nationality was available to confirm identity, so this remains unconfirmed. GLEIF Level 2 data shows no accounting-consolidation parent reported (a permitted NON_CONSOLIDATING exception for both direct and ultimate parent), and the ownership chain has three or more corporate layers, which is a structural indicator warranting further review; EESTI ENERGIA AS is itself recorded as the direct accounting-consolidation parent of Enefit OÜ, Enefit Oy, and ENEFIT INDUSTRY AS. A material licensing limitation applies: OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used without separate authorisation.",
   "claims": [
     {
       "id": "c1",
-      "text": "EESTI ENERGIA AS is identifier-confirmed, registered in Estonia with LEI 5493005044RTLQ5RZU70 and Estonian registry code 10421629.",
+      "text": "EESTI ENERGIA AS (LEI 5493005044RTLQ5RZU70; Estonian registry code 10421629) is identifier-confirmed and registered in Estonia.",
       "fact_ids": [
         "f25"
       ],
@@ -13,7 +13,7 @@
     },
     {
       "id": "c2",
-      "text": "The Government of Estonia is indicatively reported as a controlling owner of Eesti Energia, per Wikidata (a crowd-sourced knowledge base), and as a shareholder per OpenSanctions; these are aggregator-sourced findings, not authoritative register determinations.",
+      "text": "The Government of Estonia is indicatively reported as a controlling owner of Eesti Energia per Wikidata, and as a shareholder per OpenSanctions, making this a possible state-owned enterprise; these are non-register, indicative findings.",
       "fact_ids": [
         "f7",
         "f10"
@@ -22,15 +22,6 @@
     },
     {
       "id": "c3",
-      "text": "This state-control indicator makes EESTI ENERGIA AS a possible state-owned enterprise; this is a structural observation and not an adverse finding. The indicator is presence-only (Wikidata-sourced), meaning its absence is not evidence to the contrary.",
-      "fact_ids": [
-        "f7",
-        "r3"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c4",
       "text": "The Estonian e-Business Register records four current board members: Andrus Durejko (from 2023-04-03), Marlen Tamm (from 2023-04-03), Lauri Karp (from 2024-09-10), and Gerrit Mäesalu (from 2026-06-22).",
       "fact_ids": [
         "f11",
@@ -41,8 +32,8 @@
       "confidence": "high"
     },
     {
-      "id": "c5",
-      "text": "The Estonian e-Business Register also records several persons connected to EESTI ENERGIA AS under 'other means,' including Gerrit Mäesalu (from 2026-07-06), Anna Broughel (from 2025-06-02), Priit Rohumaa (from 2025-06-02), Lauri Karp (from 2024-09-11), Jürgen Ligi (from 2024-08-02), Kristi Klaas (from 2024-06-10), Andrus Durejko (from 2023-04-18), Kaur Kajak (from 2023-04-18), Marlen Tamm (from 2023-04-18), and Anne Mere (from 2022-07-19).",
+      "id": "c4",
+      "text": "The Estonian e-Business Register also records several individuals holding influence by other means, including Gerrit Mäesalu (from 2026-07-06), Anna Broughel (from 2025-06-02), Priit Rohumaa (from 2025-06-02), Lauri Karp (from 2024-09-11), Jürgen Ligi (from 2024-08-02), Kristi Klaas (from 2024-06-10), Andrus Durejko (from 2023-04-18), Kaur Kajak (from 2023-04-18), Marlen Tamm (from 2023-04-18), and Anne Mere (from 2022-07-19).",
       "fact_ids": [
         "f15",
         "f16",
@@ -58,35 +49,19 @@
       "confidence": "high"
     },
     {
+      "id": "c5",
+      "text": "Jürgen Ligi, recorded as holding influence by other means from 2024-08-02, is a possible name match for a politically exposed person across OpenSanctions, EveryPolitician, and OpenAleph; no birth date or nationality was available to confirm identity, so this remains unconfirmed.",
+      "fact_ids": [
+        "f19",
+        "r5",
+        "r6",
+        "r7"
+      ],
+      "confidence": "medium"
+    },
+    {
       "id": "c6",
-      "text": "GLEIF data indicates EESTI ENERGIA AS consolidates at least three direct subsidiaries: Enefit OÜ, Enefit Oy, and ENEFIT INDUSTRY AS.",
-      "fact_ids": [
-        "f3",
-        "f4",
-        "f5"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c7",
-      "text": "OpenSanctions also records EESTI ENERGIA AS as holding shareholdings in Enefit Green and Attarat Power Co.",
-      "fact_ids": [
-        "f8",
-        "f9"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c8",
-      "text": "A medium-confidence structural risk signal identifies complex ownership layers, with the ownership chain reaching three or more corporate layers (the GLEIF-derived AMLA threshold), warranting further review.",
-      "fact_ids": [
-        "r2"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c9",
-      "text": "GLEIF reports a NON_CONSOLIDATING exception for both the direct and ultimate accounting consolidation parent, meaning no consolidating parent is disclosed to GLEIF; this is a permitted exception under LEI ROC policy and is a structural observation, not a risk finding.",
+      "text": "GLEIF Level 2 data shows no accounting-consolidation parent reported for EESTI ENERGIA AS, as both the direct and ultimate parent positions carry a permitted NON_CONSOLIDATING reporting exception.",
       "fact_ids": [
         "f1",
         "f2",
@@ -95,21 +70,35 @@
       "confidence": "medium"
     },
     {
-      "id": "c10",
-      "text": "Related party Jürgen Ligi is name-matched — with no birth date or nationality confirmed in common — against PEP records on OpenSanctions, EveryPolitician, and OpenAleph (including via 'US CIA World Leaders,' 'Wikidata Politically Exposed Persons,' and 'MySociety's EveryPolitician Legislators'); all matches are medium confidence and do not constitute a confirmed PEP association.",
+      "id": "c7",
+      "text": "The ownership chain has three or more corporate layers, which is a structural indicator warranting further review (medium confidence, per GLEIF).",
       "fact_ids": [
-        "f19",
-        "r5",
-        "r6",
-        "r7",
-        "r8",
-        "r9"
+        "r2"
       ],
       "confidence": "medium"
     },
     {
-      "id": "c11",
-      "text": "OpenSanctions data used in this assessment is licensed CC-BY-NC-4.0; commercial re-use of that data is not permitted under the source licence.",
+      "id": "c8",
+      "text": "EESTI ENERGIA AS is recorded as the direct accounting-consolidation parent of Enefit OÜ, Enefit Oy, and ENEFIT INDUSTRY AS per GLEIF.",
+      "fact_ids": [
+        "f3",
+        "f4",
+        "f5"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c9",
+      "text": "EESTI ENERGIA AS also holds shareholdings in Enefit Green and Attarat Power Co., per OpenSanctions.",
+      "fact_ids": [
+        "f8",
+        "f9"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c10",
+      "text": "A material licensing limitation applies: OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used without separate authorisation.",
       "fact_ids": [
         "g1"
       ],
@@ -117,11 +106,11 @@
     }
   ],
   "limitations": [
-    "OpenSanctions is licensed CC-BY-NC-4.0; commercial re-use of data derived from that source is not permitted (g1).",
-    "State-control and shareholder ownership data for the Government of Estonia are sourced from Wikidata (crowd-sourced) and OpenSanctions (aggregator), not from an authoritative national register; these findings are indicative only.",
-    "GLEIF Level 2 data reflects accounting consolidation, not beneficial ownership; no beneficial owner is disclosed in the GLEIF record.",
-    "The NON_CONSOLIDATING reporting exception means no consolidating parent entity is reported to GLEIF for either the direct or ultimate parent level (f1, f2).",
-    "The PEP signals for Jürgen Ligi are name-match only, with no corroborating identifiers (birth date, nationality) to confirm the related party is the same individual as the PEP record (r5, r6, r7, r8, r9)."
+    "OpenSanctions data is licensed CC-BY-NC-4.0; commercial re-use is not permitted under the source licence (g1).",
+    "State ownership/control is sourced from Wikidata (a crowd-sourced knowledge base) and OpenSanctions (an aggregator) — both are indicative, not authoritative; absence of this indicator in other sources is not evidence to the contrary.",
+    "The possible PEP match for Jürgen Ligi is a name-only match with no birth date or nationality available to confirm or exclude identity across OpenSanctions, EveryPolitician, and OpenAleph.",
+    "No beneficial ownership register data was available; GLEIF Level 2 records accounting consolidation only, not beneficial ownership.",
+    "The GLEIF NON_CONSOLIDATING exception means the ultimate controlling legal entities are not identified in the LEI record."
   ],
   "overall_confidence": "medium",
   "model": "claude-sonnet-4-6",
@@ -485,29 +474,7 @@
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
-        "rationale": "Possible name match only: related party 'Jürgen Ligi' shares a name with a record on openaleph, with no birth date or nationality in common to confirm they are the same person — PEP via 'US CIA World Leaders' (role.pep).",
-        "source_name": "OpenAleph",
-        "source_id": "openaleph",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r8",
-        "code": "RELATED_PEP",
-        "label": "Related party politically exposed",
-        "confidence": "medium",
-        "rationale": "Possible name match only: related party 'Jürgen Ligi' shares a name with a record on openaleph, with no birth date or nationality in common to confirm they are the same person — PEP via 'Wikidata Politically Exposed Persons' (role.pep).",
-        "source_name": "OpenAleph",
-        "source_id": "openaleph",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r9",
-        "code": "RELATED_PEP",
-        "label": "Related party politically exposed",
-        "confidence": "medium",
-        "rationale": "Possible name match only: related party 'Jürgen Ligi' shares a name with a record on openaleph, with no birth date or nationality in common to confirm they are the same person — PEP via 'MySociety's EveryPolitician Legislators' (role.pep).",
+        "rationale": "Possible name match only: related party 'Jürgen Ligi' shares a name with a record on openaleph, with no birth date or nationality in common to confirm they are the same person — PEP — listed across 3 OpenAleph collections (role.pep).",
         "source_name": "OpenAleph",
         "source_id": "openaleph",
         "fact_ids": [],
@@ -540,16 +507,16 @@
         "homepage": "https://www.opensanctions.org/"
       },
       {
-        "source_id": "ted_eu",
-        "name": "TED — Tenders Electronic Daily (EU procurement)",
-        "license": "EU open data — Commission Decision 2011/833/EU (free reuse incl. commercial, with attribution)",
-        "homepage": "https://ted.europa.eu/"
-      },
-      {
         "source_id": "ariregister",
         "name": "Estonian e-Business Register (e-Äriregister)",
         "license": "CC-BY-4.0",
         "homepage": "https://ariregister.rik.ee/eng"
+      },
+      {
+        "source_id": "ted_eu",
+        "name": "TED — Tenders Electronic Daily (EU procurement)",
+        "license": "EU open data — Commission Decision 2011/833/EU (free reuse incl. commercial, with attribution)",
+        "homepage": "https://ted.europa.eu/"
       },
       {
         "source_id": "openaleph",
