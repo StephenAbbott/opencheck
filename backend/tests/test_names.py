@@ -354,6 +354,75 @@ def test_org_name_residue_person_names_pass_through():
     assert names.org_name_residue(None) == ""
 
 
+@pytest.mark.skipif(
+    not names._HAS_RIGOUR_NAMES, reason="rigour not installed (ftm extra)"
+)
+def test_distinctive_token_agreement_kills_the_six_collisions():
+    """The false positives no threshold could kill (the Phase 120 ticket's
+    table): generic tokens match, distinctive token differs. Each pair
+    scores 0.86–0.94 on whole-string similarity — the gate is what
+    separates them from true matches."""
+    for a, b in (
+        ("HORNSEA 1 LIMITED", "HORNSEA LIMITED"),
+        ("ENERGEN BIOGAS LIMITED", "BIOGAS ENERGY LIMITED"),
+        ("Maersk Denizcilik Anonim Sirketi", "MARINSA Denizcilik Anonim Sirketi"),
+        ("CASTROL Holdings International Ltd", "COSCO International Holdings Ltd"),
+        ("BIFFA Holdco Limited", "Barb Holdco Limited"),
+        ("CARE UK Holdings Limited", "ALU. Care Holdings Limited"),
+        # Found by the corpus re-measurement — same shapes, new instances,
+        # both ABOVE the old 0.93 threshold:
+        ("WIGMORE 1 LIMITED", "WIGMORE LIMITED"),
+        ("PRACTICE PLUS GROUP HOLDINGS LIMITED", "PRACTICE PLAN GROUP (HOLDINGS) LIMITED"),
+        # A one-edit acronym is a different acronym, not a typo:
+        ("UNILEVER U.K. HOLDINGS LIMITED", "UNILEVER S.K. HOLDINGS LIMITED"),
+    ):
+        assert not names.distinctive_token_agreement(a, b), (a, b)
+
+
+@pytest.mark.skipif(
+    not names._HAS_RIGOUR_NAMES, reason="rigour not installed (ftm extra)"
+)
+def test_distinctive_token_agreement_passes_true_matches():
+    for a, b in (
+        ("BIFFA CORPORATE HOLDINGS LIMITED", "BIFFA CORPORATE HOLDINGS LTD"),
+        # The LVMH recovery: subset agreement on the distinctive residue.
+        ("MOET HENNESSY INTERNATIONAL", "HENNESSY INTERNATIONAL LIMITED"),
+        ("GLENCORE PLC", "Glencore plc"),
+        ("GLENCORE GROUP FUNDING AG", "Glencore Group Funding Ltd."),
+        # Acronym torn by legal-form stripping ("S.C." inside "B.S.C.") —
+        # runs of single letters join, an isolated leftover letter drops:
+        ("Gulf International Bank B.S.C", "Gulf International Bank B.S.C."),
+        ("DAILY MAIL AND GENERAL TRUST P L C", "Daily Mail and General Trust plc"),
+        # Typo tolerance: one edit in a token of ≥4 characters.
+        ("Gazprom Export LLC", "GAZPRM EXPORT"),
+    ):
+        assert names.distinctive_token_agreement(a, b), (a, b)
+
+
+@pytest.mark.skipif(
+    not names._HAS_RIGOUR_NAMES, reason="rigour not installed (ftm extra)"
+)
+def test_distinctive_token_agreement_empty_residue_never_agrees():
+    """Nothing distinctive on either side means nothing to agree ON —
+    "no match", never "perfect match" (the ticket's PJLS question)."""
+    assert not names.distinctive_token_agreement(
+        "PJLS HOLDINGS LIMITED", "HOLDINGS LIMITED"
+    )
+    assert not names.distinctive_token_agreement(
+        "HOLDINGS LIMITED", "HOLDINGS LIMITED"
+    )
+    assert not names.distinctive_token_agreement("", "ACME LTD")
+
+
+def test_has_org_form_tokens_separates_orgs_from_people():
+    if names._HAS_RIGOUR_NAMES:
+        assert names.has_org_form_tokens("CSC CORPORATE SERVICES (UK) LIMITED")
+        assert names.has_org_form_tokens("Acme GmbH")
+    assert not names.has_org_form_tokens("NICHOLAS PAUL RATCLIFFE")
+    assert not names.has_org_form_tokens("")
+    assert not names.has_org_form_tokens(None)
+
+
 def test_possibly_same_merges_org_type_variants():
     if not names._HAS_RIGOUR_NAMES:
         pytest.skip("rigour not installed (ftm extra)")
