@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 117** — the evidence list no longer crowds out the page it supports
+**Latest: Phase 118** — export-control topics are classified at last
+
+`export.control`, `export.control.linked` and `export.risk` were fetched by search but classified into nothing — `us_bis_mieu`'s 13 topic-bearing entities produced no risk chip at all, the `sanction.control` failure one family over. Three new signal codes now fire from all three ladders (`EXPORT_CONTROLLED`, `EXPORT_CONTROL_LINKED`, `EXPORT_RISK` — upstream's label is "Trade risk"), with related-party variants and no suppression inside the family, since upstream declares no superset relationship among the topics. And the class itself is closed: every fetched topic must now map to a signal family or an explicit informational allowlist, so the next unclassified family is a build failure rather than a discovery. Commit `931919b`.
+
+**Previous: Phase 117** — the evidence list no longer crowds out the page it supports
 
 On dense entities (Rosneft: 15 claims, ~4 citation chips each) the AI summary's Evidence section ran two-plus screens deep — automatically, on curated examples. It now starts collapsed to a three-claim preview with one clear call to action ("Show all 15 evidence statements"), while the header keeps the full tally visible ("15 statements, cited to 8 sources") so the grounding promise stays checkable at a glance. Sign-off disables the collapse entirely — disposition controls embedded in the PDF record must never hide — and gaps and limitations remain always-visible. Commit `85dc8c4`.
 
-**Previous: Phase 116** — the exported report now separates risk findings from structural context
-
-The PDF and Markdown report downloads were the last surface still ignoring the risk/context split every other surface has honoured since Phases 111/114: "Outside EU/EEA" and permitted GLEIF reporting exceptions rendered under the **Risk signals** heading of the analyst's defensible record. Both report builders now split on `kind` — context observations move to a slate-bordered **Structural context** block, a context-only report reads "No risk signals were raised" — signal labels come from the curated backend map instead of title-cased code churn, and the "checks applied and returned clear" boilerplate finally describes the screen the engine actually runs. Commit `59a9bcb`.
-
-*Earlier: [Phase 115 — one pooled source for the EITI countries' beneficial ownership registers](docs/status.md), and everything before it.*
+*Earlier: [Phase 116 — the exported report separates risk findings from structural context](docs/status.md), [Phase 115 — one pooled source for the EITI countries' beneficial ownership registers](docs/status.md), and everything before it.*
 
 
 
