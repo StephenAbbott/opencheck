@@ -150,8 +150,8 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "Russian state oil",
     signals: [
       { code: "SANCTIONED", confidence: "high" },
-      { code: "RELATED_SANCTIONED", confidence: "high" },
-      { code: "RELATED_SANCTIONS_CONTROLLED", confidence: "high" },
+      { code: "EXPORT_CONTROLLED", confidence: "high" },
+      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/253400JT3MQWNDKMJE44.zip`,
     bulkBods: true,
@@ -162,6 +162,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "UAE-owned UK oil & gas",
     signals: [
       { code: "RELATED_SANCTIONS_CONTROLLED", confidence: "high" },
+      { code: "RELATED_EXPORT_CONTROL_LINKED", confidence: "high" },
     ],
     neo4jZipUrl: `${_NEO4J_BASE}/213800E11LI1SCETU492.zip`,
     bulkBods: true,
@@ -193,6 +194,7 @@ const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Eli Lilly and Company",
     hint: "American pharmaceutical giant",
     signals: [
+      { code: "RELATED_EXPORT_RISK", confidence: "high" },
       { code: "RELATED_PEP", confidence: "medium" },
       { code: "OFFSHORE_LEAKS", confidence: "high" },
       // Eli Lilly reports NATURAL_PERSONS GLEIF reporting exceptions (a
@@ -3048,7 +3050,7 @@ function ShareCardShowcase() {
           src="/share-card-example.png"
           width={1200}
           height={630}
-          alt="Example shareable summary card for Eli Lilly and Company showing 2 risk signals, both named: related PEP and offshore leaks, with a prompt to visit opencheck.world for details"
+          alt="Example shareable summary card for Eli Lilly and Company showing 7 risk signals found, three of them named — related trade risk, related PEP and offshore leaks, plus 4 more — with a prompt to visit opencheck.world for details"
           className="w-full max-w-[560px] h-auto rounded-oo border border-oo-rule shadow-oo-card"
           loading="lazy"
         />
