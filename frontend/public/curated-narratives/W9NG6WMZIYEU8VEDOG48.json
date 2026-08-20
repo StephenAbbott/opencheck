@@ -1,7 +1,7 @@
 {
   "lei": "W9NG6WMZIYEU8VEDOG48",
   "subject_name": "ØRSTED A/S",
-  "summary": "ØRSTED A/S (LEI W9NG6WMZIYEU8VEDOG48, CVR 36213728) is an identifier-confirmed Danish-registered entity with a large multinational subsidiary structure spanning Denmark, the United Kingdom, the United States, and Taiwan, as evidenced by more than twenty GLEIF Level 2 accounting-consolidation relationships. Ownership is indicatively reported by Wikidata (sourced from a 2019 annual report) as approximately 50.1% held by the Ministry of Finance of Denmark, with further indicative shareholdings attributed to Andel Energy (approx. 7.28%), Goldman Sachs (approx. 13.0% per a 2016 source), and Capital Group Companies (approx. 6.0%); state control by the Danish Ministry of Finance is also reported by OpenSanctions, making this a structural indicator of possible state-owned enterprise status that warrants noting. One structural risk signal was identified: the ownership chain reaches three or more corporate layers (GLEIF, medium confidence), meeting the AMLA complexity threshold. Additionally, nine named officers and directors carry possible name-match PEP signals via OpenAleph against the Denmark, Faroe Islands and Greenland PEPs dataset (medium confidence each), but in every case the match is by name only with no corroborating birth date or nationality, so none constitutes a confirmed PEP identification. GLEIF reports a permitted NON_CONSOLIDATING reporting exception for both the direct and ultimate accounting-consolidation parent, meaning no parent entity is disclosed in the LEI record; separately, OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used without further clearance.",
+  "summary": "ØRSTED A/S (LEI W9NG6WMZIYEU8VEDOG48, CVR 36213728) is an identifier-confirmed Danish-registered entity with a large multinational subsidiary structure spanning Denmark, the United Kingdom, the United States, and Taiwan, as evidenced by more than twenty GLEIF Level 2 accounting-consolidation relationships. Ownership is indicatively reported (via Wikidata, sourced from Ørsted's 2019 annual report) as approximately 50.1% held by the Ministry of Finance of Denmark, with further indicative minority stakes attributed to Andel Energy (7.28%), Goldman Sachs (13.0%, sourced from the 2016 annual report), and Capital Group Companies (6.0%); OpenSanctions additionally records shareholdings by the Government of Denmark, Andel AMBA, and Equinor ASA, though no precise percentages are confirmed from an authoritative register. The Danish state's indicative majority position is a structural indicator of possible state ownership and should be noted as a presence-only signal derived from a non-register source. One structural risk signal was identified: the ownership chain has three or more corporate layers (medium confidence, per GLEIF), meeting the AMLA threshold for complex ownership structures; additionally, eleven related-party officers carry possible PEP name-matches via OpenAleph against the Denmark, Faroe Islands and Greenland PEPs dataset (medium confidence each), but in every case the match is by name only with no corroborating birth date or nationality, so none constitutes a confirmed PEP identification. Material limitations include: GLEIF reports a permitted non-consolidating exception for both the direct and ultimate accounting-consolidation parent, meaning no parent entity is disclosed in the LEI record; ownership percentages from Wikidata are indicative only and sourced from annual reports dated 2016 and 2019 and may not reflect current positions; and OpenSanctions data is licensed CC-BY-NC-4.0, restricting commercial re-use.",
   "claims": [
     {
       "id": "c1",
@@ -44,7 +44,7 @@
     },
     {
       "id": "c3",
-      "text": "Wikidata (sourced from a 2019 annual report) indicatively reports the Ministry of Finance of Denmark as holding approximately 50.1% of Ørsted.",
+      "text": "Ownership is indicatively reported (via Wikidata, sourced from Ørsted's 2019 annual report) as approximately 50.1% held by the Ministry of Finance of Denmark.",
       "fact_ids": [
         "f34"
       ],
@@ -52,65 +52,45 @@
     },
     {
       "id": "c4",
-      "text": "OpenSanctions also reports the Ministry of Finance on behalf of the Kingdom of Denmark as holding a shareholding in Ørsted A/S, constituting a structural indicator of possible state-owned enterprise status.",
+      "text": "Further indicative minority stakes are attributed to Andel Energy (7.28%) and Goldman Sachs (13.0%, sourced from the 2016 annual report) and Capital Group Companies (6.0%), all from Wikidata and not confirmed by an authoritative register.",
       "fact_ids": [
-        "f29"
+        "f31",
+        "f32",
+        "f33"
       ],
       "confidence": "medium"
     },
     {
       "id": "c5",
-      "text": "Wikidata indicatively reports Andel Energy as holding approximately 7.28% of Ørsted (sourced from a 2019 annual report), and OpenSanctions separately reports Andel as holding a shareholding.",
+      "text": "OpenSanctions additionally records shareholdings in Ørsted by the Government of Denmark, Andel AMBA, and Equinor ASA, though no precise percentages are confirmed from an authoritative register.",
       "fact_ids": [
-        "f33",
-        "f28"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c6",
-      "text": "Wikidata indicatively reports Goldman Sachs as holding approximately 13.0% of Ørsted (sourced from a 2016 annual report).",
-      "fact_ids": [
-        "f31"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c7",
-      "text": "Wikidata indicatively reports Capital Group Companies as holding approximately 6.0% of Ørsted (sourced from a 2016 annual report).",
-      "fact_ids": [
-        "f32"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c8",
-      "text": "OpenSanctions also reports Equinor ASA as holding a shareholding in Ørsted A/S.",
-      "fact_ids": [
+        "f28",
+        "f29",
         "f30"
       ],
       "confidence": "medium"
     },
     {
-      "id": "c9",
-      "text": "One structural risk signal was identified: the ownership chain reaches three or more corporate layers, meeting the AMLA complexity threshold (GLEIF, medium confidence).",
+      "id": "c6",
+      "text": "The Danish state's indicative majority position is a structural indicator of possible state ownership and should be noted as a presence-only signal derived from a non-register source.",
+      "fact_ids": [
+        "f30",
+        "f34"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c7",
+      "text": "One structural risk signal was identified: the ownership chain has three or more corporate layers (medium confidence, per GLEIF), meeting the AMLA threshold for complex ownership structures.",
       "fact_ids": [
         "r3"
       ],
       "confidence": "medium"
     },
     {
-      "id": "c10",
-      "text": "Nine named officers and directors — Andrew Richard Dingley Brown (næstformand from 2024-03-05), Karl Johnny Hersvik (bestyrelsesmedlem from 2026-04-09), Julia Elizabeth King (bestyrelsesmedlem from 2021-03-01), Julian David Waldron (bestyrelsesmedlem from 2025-04-03), Trond Ødegård Westlie (direktør from 2024-04-01), Rasmus Errboe (adm. dir. from 2025-02-01), Benny Gøbel (bestyrelsesmedlem from 2011-04-12), and Ruchit Majmudar (bestyrelsesmedlem from 2026-04-09) — carry possible name-match PEP signals via OpenAleph against the Denmark, Faroe Islands and Greenland PEPs dataset (medium confidence each), but in every case the match is by name only with no corroborating birth date or nationality, so none constitutes a confirmed PEP identification.",
+      "id": "c8",
+      "text": "Eleven related-party officers carry possible PEP name-matches via OpenAleph against the Denmark, Faroe Islands and Greenland PEPs dataset (medium confidence each): Andrew Richard Dingley Brown, Karl Johnny Hersvik, Julia Elizabeth King, Julian David Waldron, Trond Ødegård Westlie, Rasmus Errboe, Benny Gøbel, and Ruchit Majmudar, among others.",
       "fact_ids": [
-        "f38",
-        "f49",
-        "f35",
-        "f43",
-        "f39",
-        "f42",
-        "f36",
-        "f47",
         "r4",
         "r5",
         "r6",
@@ -119,23 +99,56 @@
         "r9",
         "r10",
         "r11",
-        "r12"
+        "f38",
+        "f49",
+        "f35",
+        "f43",
+        "f39",
+        "f42",
+        "f36",
+        "f47"
       ],
       "confidence": "medium"
     },
     {
-      "id": "c11",
-      "text": "GLEIF reports a permitted NON_CONSOLIDATING reporting exception for both the direct and ultimate accounting-consolidation parent, meaning no parent entity is disclosed in the LEI record.",
+      "id": "c9",
+      "text": "In every PEP case the match is by name only with no corroborating birth date or nationality, so none constitutes a confirmed PEP identification.",
+      "fact_ids": [
+        "r4",
+        "r5",
+        "r6",
+        "r7",
+        "r8",
+        "r9",
+        "r10",
+        "r11"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c10",
+      "text": "GLEIF reports a permitted non-consolidating exception for both the direct and ultimate accounting-consolidation parent, meaning no parent entity is disclosed in the LEI record.",
       "fact_ids": [
         "f1",
         "f2",
         "r1"
       ],
-      "confidence": "high"
+      "confidence": "medium"
+    },
+    {
+      "id": "c11",
+      "text": "Ownership percentages from Wikidata are indicative only and sourced from annual reports dated 2016 and 2019, and may not reflect current positions.",
+      "fact_ids": [
+        "f31",
+        "f32",
+        "f33",
+        "f34"
+      ],
+      "confidence": "medium"
     },
     {
       "id": "c12",
-      "text": "OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used without further clearance.",
+      "text": "OpenSanctions data is licensed CC-BY-NC-4.0, restricting commercial re-use of that data.",
       "fact_ids": [
         "g1"
       ],
@@ -143,12 +156,11 @@
     }
   ],
   "limitations": [
-    "No accounting-consolidation parent is disclosed in the GLEIF LEI record due to a permitted NON_CONSOLIDATING reporting exception for both direct and ultimate parent (f1, f2); this is a structural absence, not a data error.",
-    "All ownership percentage figures (Ministry of Finance ~50.1%, Andel Energy ~7.28%, Goldman Sachs ~13.0%, Capital Group ~6.0%) are indicative only, sourced from Wikidata referencing annual reports dated 2016 and 2019 — they are not authoritative register data and may be materially out of date (f31, f32, f33, f34).",
-    "All nine PEP signals are name-match only with no corroborating identifiers (birth date, nationality); none is a confirmed PEP identification (r4–r12).",
-    "OpenSanctions data is licensed CC-BY-NC-4.0; commercial re-use is not permitted under the source licence (g1).",
-    "The CVR — Det Centrale Virksomhedsregister was listed as a consulted source but no CVR-specific facts appear in the packet; any findings that might have been drawn from that register are absent.",
-    "Wikirate was listed as a consulted source but no Wikirate-specific facts appear in the packet."
+    "GLEIF reports a permitted non-consolidating exception for both the direct and ultimate accounting-consolidation parent (f1, f2); no parent entity is disclosed in the LEI record.",
+    "All ownership percentages are sourced from Wikidata (a crowd-sourced knowledge base) referencing Ørsted annual reports from 2016 and 2019; they are indicative only and may not reflect current shareholding positions.",
+    "OpenSanctions records shareholdings by the Government of Denmark, Andel AMBA, and Equinor ASA without confirmed percentage figures from an authoritative register.",
+    "All eleven PEP name-matches are unconfirmed: no birth date or nationality was available to corroborate identity; none should be treated as a positive PEP identification without further verification.",
+    "OpenSanctions data is licensed CC-BY-NC-4.0; commercial re-use is not permitted under that licence (g1)."
   ],
   "overall_confidence": "medium",
   "model": "claude-sonnet-4-6",
@@ -332,28 +344,17 @@
       },
       {
         "id": "f16",
-        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in ORSTED POWER SALES (UK) LIMITED.",
+        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in SONNINGMAY WIND LIMITED.",
         "source_name": "GLEIF",
         "source_id": "gleif",
-        "source_url": "https://www.gleif.org/lei/213800BXZH7RWO84SI42",
+        "source_url": "https://www.gleif.org/lei/213800LX24J8JOPTTD69",
         "bods_statement_ids": [
-          "opencheck-024e3e12689c72fb81050bf0"
+          "opencheck-2f27a4ce32ee8947a7f46747"
         ],
         "confidence": "medium"
       },
       {
         "id": "f17",
-        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in ØRSTED WIND POWER DENMARK A/S.",
-        "source_name": "GLEIF",
-        "source_id": "gleif",
-        "source_url": "https://www.gleif.org/lei/213800Z9Y4GC3RCHQK87",
-        "bods_statement_ids": [
-          "opencheck-01317f1a66d37fb4902e9158"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f18",
         "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in ØRSTED WIND POWER HOLDING A/S.",
         "source_name": "GLEIF",
         "source_id": "gleif",
@@ -364,7 +365,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f19",
+        "id": "f18",
         "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in SOUNDMARK WIND LIMITED.",
         "source_name": "GLEIF",
         "source_id": "gleif",
@@ -375,13 +376,24 @@
         "confidence": "medium"
       },
       {
-        "id": "f20",
-        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in SONNINGMAY WIND LIMITED.",
+        "id": "f19",
+        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in ØRSTED WIND POWER DENMARK A/S.",
         "source_name": "GLEIF",
         "source_id": "gleif",
-        "source_url": "https://www.gleif.org/lei/213800LX24J8JOPTTD69",
+        "source_url": "https://www.gleif.org/lei/213800Z9Y4GC3RCHQK87",
         "bods_statement_ids": [
-          "opencheck-2f27a4ce32ee8947a7f46747"
+          "opencheck-01317f1a66d37fb4902e9158"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f20",
+        "statement": "ØRSTED A/S holds GLEIF Level 2 direct-child (accounting consolidation) in ORSTED POWER SALES (UK) LIMITED.",
+        "source_name": "GLEIF",
+        "source_id": "gleif",
+        "source_url": "https://www.gleif.org/lei/213800BXZH7RWO84SI42",
+        "bods_statement_ids": [
+          "opencheck-024e3e12689c72fb81050bf0"
         ],
         "confidence": "medium"
       },
@@ -464,7 +476,7 @@
       },
       {
         "id": "f28",
-        "statement": "Andel holds shareholding in Ørsted A/S.",
+        "statement": "Andel AMBA holds shareholding in Ørsted.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/gem-own-e100000001607/",
@@ -475,23 +487,23 @@
       },
       {
         "id": "f29",
-        "statement": "Ministry of Finance on behalf of the Kingdom of Denmark holds shareholding in Ørsted A/S.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/gem-own-e100000001607/",
-        "bods_statement_ids": [
-          "opencheck-79b864d16566f8668f88441d"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f30",
-        "statement": "Equinor ASA holds shareholding in Ørsted A/S.",
+        "statement": "Equinor ASA holds shareholding in Ørsted.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/gem-own-e100000001607/",
         "bods_statement_ids": [
           "opencheck-3cccf2291d7e1bab667eaf6c"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f30",
+        "statement": "Government of Denmark holds shareholding in Ørsted.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/gem-own-e100000001607/",
+        "bods_statement_ids": [
+          "opencheck-79b864d16566f8668f88441d"
         ],
         "confidence": "medium"
       },
@@ -821,7 +833,7 @@
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
-        "rationale": "Possible name match only: related party 'Karl Johnny Hersvik' shares a name with a record on openaleph, with no birth date or nationality in common to confirm they are the same person — PEP via 'Denmark, Faroe Islands and Greenland PEPs' (role.pep).",
+        "rationale": "Possible name match only: related party 'Rasmus Errboe' shares a name with a record on openaleph, with no birth date or nationality in common to confirm they are the same person — PEP via 'Denmark, Faroe Islands and Greenland PEPs' (role.pep).",
         "source_name": "OpenAleph",
         "source_id": "openaleph",
         "fact_ids": [],
@@ -832,17 +844,6 @@
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
-        "rationale": "Possible name match only: related party 'Rasmus Errboe' shares a name with a record on openaleph, with no birth date or nationality in common to confirm they are the same person — PEP via 'Denmark, Faroe Islands and Greenland PEPs' (role.pep).",
-        "source_name": "OpenAleph",
-        "source_id": "openaleph",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r11",
-        "code": "RELATED_PEP",
-        "label": "Related party politically exposed",
-        "confidence": "medium",
         "rationale": "Possible name match only: related party 'Benny Gøbel' shares a name with a record on openaleph, with no birth date or nationality in common to confirm they are the same person — PEP via 'Denmark, Faroe Islands and Greenland PEPs' (role.pep).",
         "source_name": "OpenAleph",
         "source_id": "openaleph",
@@ -850,7 +851,7 @@
         "kind": "risk"
       },
       {
-        "id": "r12",
+        "id": "r11",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",

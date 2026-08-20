@@ -1,85 +1,85 @@
 {
   "lei": "213800LH1BZH3DI6G760",
   "subject_name": "BP P.L.C.",
-  "summary": "BP P.L.C. is an identifier-confirmed entity registered in Great Britain (LEI: 213800LH1BZH3DI6G760; GB-COH: 00102498), with no accounting-consolidation parent reported to GLEIF — a permitted reporting exception indicating diversified shareholding rather than a single controlling entity. According to GLEIF Level 2 data, BP P.L.C. acts as the ultimate consolidating parent for an extensive multinational group spanning the UK, Europe, North America, Australia, India, South Africa, and the Middle East, with key intermediate holding entities including BP International Limited, BP Global Investments Limited, BP Exploration Operating Company Limited, and BP Corporation North America Inc.; UK Companies House confirms BP P.L.C. holds 75–100% ownership, voting rights, and the right to appoint and remove directors in BP International Limited and BP Global Investments Limited, among many others. Indicative shareholders reported by OpenSanctions include Guaranty Nominees Ltd and BlackRock Inc., though no ownership percentages are provided and these are not authoritative figures. One structural risk signal was identified: the ownership chain reaches three or more corporate layers (medium confidence, per OpenSanctions), meeting the AMLA threshold for complex ownership structure; separately, a related entity — BRITANNIC TRADING LIMITED, a wholly owned subsidiary per UK Companies House — matches a record in the Bahamas Leaks (ICIJ, high confidence), which is a structural indicator requiring further review and is not a determination of wrongdoing. Key officers recorded at UK Companies House and Wikidata include Helge Lund (Chair, from 2018-12-31), Meg O'Neill (CEO, from 2025-12-01), and board members Tushar Morzaria, Johannes Antonius Teyssen, Amanda Jayne Blanc, Satish Pai, Hina Nagarajan, Katherine Anne Thomson, Ian Paul Tyler, David Alan Hager, and Marguerite Eileen O'Neill; note that officer data from Wikidata is indicative only. A material limitation applies: OpenSanctions data is licensed under CC-BY-NC-4.0 and may not be commercially re-used without a separate licence.",
+  "summary": "BP P.L.C. is identifier-confirmed, registered in Great Britain (LEI 213800LH1BZH3DI6G760, GB-COH 00102498), and operates as the ultimate consolidating parent of an extensive multinational group spanning the UK, US, Australia, Canada, India, continental Europe, and other jurisdictions, as evidenced by GLEIF Level 2 data and UK Companies House PSC filings. No accounting-consolidation parent is reported to GLEIF — the direct and ultimate parent fields carry a \"no known person\" permitted exception, consistent with a widely held public company rather than a controlled entity. Key officers recorded at Companies House and OpenCorporates include board appointees Tushar Morzaria (from 2020-09-01), Johannes Antonius Teyssen (from 2021-01-01), Amanda Jayne Blanc (from 2022-09-01), Satish Pai and Hina Nagarajan (both from 2023-03-01), Katherine Anne Thomson (from 2024-02-02), Ian Paul Tyler (from 2025-04-01), David Alan Hager (from 2025-06-02), and Marguerite Eileen O'Neill (from 2026-04-01); Wikidata (indicative) records Helge Lund as chairperson from 2018-12-31 and Meg O'Neill as chief executive officer from 2025-12-01. One structural risk signal was identified: the ownership chain contains at least three corporate layers (medium confidence, per the AMLA threshold of ≥3), derived from OpenSanctions data; additionally, two related entities — BRITANNIC TRADING LIMITED (high confidence, ICIJ score 100/100) and BRITANNIC ENERGY TRADING LIMITED (medium confidence, ICIJ score 78/100) — match records in the Bahamas Leaks, which is a structural indicator warranting further review and does not constitute a finding of wrongdoing. A material limitation applies: OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used under that licence.",
   "claims": [
     {
       "id": "c1",
-      "text": "BP P.L.C. is an identifier-confirmed entity registered in Great Britain, with LEI 213800LH1BZH3DI6G760 and Companies House number 00102498.",
+      "text": "BP P.L.C. is identifier-confirmed, registered in Great Britain with LEI 213800LH1BZH3DI6G760 and Companies House number 00102498.",
       "fact_ids": [
-        "f337"
+        "f338"
       ],
       "confidence": "high"
     },
     {
       "id": "c2",
-      "text": "No accounting-consolidation parent is reported to GLEIF for BP P.L.C. — a permitted reporting exception indicating no known single controlling person (e.g. diversified shareholding), not a risk finding.",
+      "text": "BP P.L.C. is the ultimate consolidating parent of an extensive multinational group, including subsidiaries in the UK, US, Australia, Canada, India, continental Europe, and other jurisdictions, as recorded in GLEIF Level 2 data.",
+      "fact_ids": [
+        "f1",
+        "f2",
+        "f3",
+        "f4",
+        "f5",
+        "f13",
+        "f14",
+        "f15",
+        "f16",
+        "f23",
+        "f24",
+        "f27",
+        "f28",
+        "f30",
+        "f42",
+        "f43",
+        "f50",
+        "f51",
+        "f53",
+        "f56",
+        "f57",
+        "f63",
+        "f64",
+        "f69",
+        "f70",
+        "f79",
+        "f80",
+        "f91",
+        "f92",
+        "f100"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c3",
+      "text": "No accounting-consolidation parent is reported to GLEIF; the direct and ultimate parent fields carry a 'no known person' permitted exception, consistent with a widely held public company.",
       "fact_ids": [
         "r1"
       ],
       "confidence": "high"
     },
     {
-      "id": "c3",
-      "text": "BP P.L.C. is the ultimate consolidating parent for an extensive multinational group, with GLEIF Level 2 data confirming ultimate consolidation relationships across entities in the UK, Europe, North America, Australia, India, South Africa, and the Middle East, including BP International Limited, BP Global Investments Limited, BP Exploration Operating Company Limited, and BP Corporation North America Inc.",
-      "fact_ids": [
-        "f56",
-        "f57",
-        "f91",
-        "f92",
-        "f35",
-        "f36",
-        "f62",
-        "f23",
-        "f24"
-      ],
-      "confidence": "high"
-    },
-    {
       "id": "c4",
-      "text": "UK Companies House confirms BP P.L.C. holds 75–100% ownership, voting rights, and the right to appoint and remove directors in BP International Limited and BP Global Investments Limited, among many other subsidiaries.",
+      "text": "UK Companies House PSC filings confirm BP P.L.C. holds 75–100% ownership, voting rights, and the right to appoint and remove directors in multiple direct subsidiaries including BP INTERNATIONAL LIMITED, BP GLOBAL INVESTMENTS LIMITED, BP HOLDINGS NORTH AMERICA LIMITED, BP AFRICA LIMITED, and others.",
       "fact_ids": [
         "f281",
-        "f322"
+        "f322",
+        "f294",
+        "f308",
+        "f301",
+        "f199",
+        "f243",
+        "f270",
+        "f272",
+        "f207",
+        "f320"
       ],
       "confidence": "high"
     },
     {
       "id": "c5",
-      "text": "Indicative shareholders reported by OpenSanctions include Guaranty Nominees Ltd and BlackRock Inc.; no ownership percentages are provided and these figures are not authoritative.",
-      "fact_ids": [
-        "f176",
-        "f177"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c6",
-      "text": "One structural risk signal was identified: the ownership chain reaches three or more corporate layers (medium confidence), meeting the AMLA threshold for complex ownership structure, per OpenSanctions.",
-      "fact_ids": [
-        "r4"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c7",
-      "text": "A related entity — BRITANNIC TRADING LIMITED, a wholly owned subsidiary per UK Companies House — matches a record in the Bahamas Leaks (ICIJ, high confidence); this is a structural indicator requiring further review and is not a determination of wrongdoing.",
-      "fact_ids": [
-        "r8",
-        "f109",
-        "f110",
-        "f299"
-      ],
-      "confidence": "high"
-    },
-    {
-      "id": "c8",
-      "text": "Key officers recorded at UK Companies House include board members Tushar Morzaria (from 2020-09-01), Johannes Antonius Teyssen (from 2021-01-01), Amanda Jayne Blanc (from 2022-09-01), Satish Pai (from 2023-03-01), Hina Nagarajan (from 2023-03-01), Katherine Anne Thomson (from 2024-02-02), Ian Paul Tyler (from 2025-04-01), David Alan Hager (from 2025-06-02), and Marguerite Eileen O'Neill (from 2026-04-01); and senior managing officials Alia Fazal (from 2022-01-04) and Julian Thurston (from 2022-05-02).",
+      "text": "Board appointees recorded at Companies House and OpenCorporates include Tushar Morzaria (from 2020-09-01), Johannes Antonius Teyssen (from 2021-01-01), Amanda Jayne Blanc (from 2022-09-01), Satish Pai and Hina Nagarajan (both from 2023-03-01), Katherine Anne Thomson (from 2024-02-02), Ian Paul Tyler (from 2025-04-01), David Alan Hager (from 2025-06-02), and Marguerite Eileen O'Neill (from 2026-04-01).",
       "fact_ids": [
         "f326",
         "f327",
-        "f328",
-        "f329",
         "f330",
         "f331",
         "f332",
@@ -91,8 +91,8 @@
       "confidence": "high"
     },
     {
-      "id": "c9",
-      "text": "Wikidata (indicative only) records Helge Lund as Chair from 2018-12-31 and Meg O'Neill as CEO from 2025-12-01.",
+      "id": "c6",
+      "text": "Wikidata (indicative source) records Helge Lund as chairperson from 2018-12-31 and Meg O'Neill as chief executive officer from 2025-12-01.",
       "fact_ids": [
         "f178",
         "f179"
@@ -100,8 +100,36 @@
       "confidence": "medium"
     },
     {
+      "id": "c7",
+      "text": "One structural risk signal was identified: the ownership chain contains at least three corporate layers, meeting the AMLA threshold of ≥3, derived from OpenSanctions data at medium confidence.",
+      "fact_ids": [
+        "r3"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c8",
+      "text": "Related entity BRITANNIC TRADING LIMITED matches a record in the Bahamas Leaks with an ICIJ score of 100/100 (high confidence); this is a structural indicator for further review and does not constitute a finding of wrongdoing.",
+      "fact_ids": [
+        "r8",
+        "f109",
+        "f110"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c9",
+      "text": "Related entity BRITANNIC ENERGY TRADING LIMITED matches a record in the Bahamas Leaks with an ICIJ score of 78/100 (medium confidence); this is a structural indicator for further review and does not constitute a finding of wrongdoing.",
+      "fact_ids": [
+        "r9",
+        "f139",
+        "f140"
+      ],
+      "confidence": "medium"
+    },
+    {
       "id": "c10",
-      "text": "A material limitation applies: OpenSanctions data is licensed under CC-BY-NC-4.0 and may not be commercially re-used without a separate licence.",
+      "text": "OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used under that licence.",
       "fact_ids": [
         "g1"
       ],
@@ -110,11 +138,10 @@
   ],
   "limitations": [
     "OpenSanctions data is licensed CC-BY-NC-4.0; commercial re-use is not permitted under the source licence (g1).",
-    "No accounting-consolidation parent is reported to GLEIF (permitted reporting exception — diversified shareholding); this is not a beneficial ownership disclosure (r1).",
-    "Shareholder data from OpenSanctions (Guaranty Nominees Ltd, BlackRock Inc.) is indicative only — no ownership percentages are provided and the source is not an authoritative register.",
-    "Officer data sourced from Wikidata (Helge Lund, Meg O'Neill) is indicative only and should be verified against primary sources.",
-    "The Bahamas Leaks match relates to a subsidiary (BRITANNIC TRADING LIMITED), not BP P.L.C. directly; the nature and materiality of the match require further review.",
-    "Wikirate and OpenAleph were listed as sources consulted but no facts from those sources appear in the packet."
+    "No accounting-consolidation parent is reported to GLEIF (permitted 'no known person' exception); this reflects the entity's widely held public company status and is not a gap in disclosure per LEI ROC policy (r1).",
+    "Ownership percentages for shareholdings reported via OpenSanctions are not quantified in the packet and are therefore not cited in the summary.",
+    "Officer and chairperson data from Wikidata is indicative only and has not been verified against an official register.",
+    "The ICIJ Offshore Leaks matches relate to subsidiary entities (BRITANNIC TRADING LIMITED and BRITANNIC ENERGY TRADING LIMITED), not to BP P.L.C. directly; the nature and current status of those records require separate investigation."
   ],
   "overall_confidence": "high",
   "model": "claude-sonnet-4-6",
@@ -1806,39 +1833,6 @@
       },
       {
         "id": "f153",
-        "statement": "BP PLC holds Parent organisation declared in GEM ownership tracker (not a beneficial ownership assertion) in BP PLC.",
-        "source_name": "Global Energy Monitor / Climate TRACE",
-        "source_id": "climatetrace",
-        "source_url": "https://globalenergymonitor.org/",
-        "bods_statement_ids": [
-          "opencheck-7f694abad61a952c14df266b"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f154",
-        "statement": "BP holds shareholding in Trans Adriatic Pipeline.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-7bdc84c4906bba1551c13048"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f155",
-        "statement": "BP holds shareholding in BP Developments Australia.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-f916fb16a0cd3fa75333d9fb"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f156",
         "statement": "BP holds shareholding in Rotterdam-Rijn Pijpleiding Maatschappij NV.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -1849,40 +1843,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f157",
-        "statement": "BP holds shareholding in BP Alternative Energy North America.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-3de33fbc3fe78161f3261e60"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f158",
-        "statement": "BP holds shareholding in BP Bioenergia Ituiutaba Ltda.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-3cd10d12e72ce5745ac60329"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f159",
-        "statement": "BP holds shareholding in Bp International Ltd.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-c883524eb2a01a9d85436f4a"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f160",
+        "id": "f154",
         "statement": "BP holds shareholding in BP Midstream Partners.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -1893,41 +1854,8 @@
         "confidence": "medium"
       },
       {
-        "id": "f161",
-        "statement": "BP holds shareholding in South Caucasus Pipeline Co Ltd.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-ac12da376d9694c9c91ca997"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f162",
-        "statement": "BP holds shareholding in Bp Gamma Holdings.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-c0065e63d08d7ea03a7d63a3"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f163",
-        "statement": "BP holds shareholding in Baku-Tbilisi-Ceyhan Pipeline Co.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-c037eda3b89e57fb2f712241"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f164",
-        "statement": "BP holds shareholding in Itumbiara Bioenergia.",
+        "id": "f155",
+        "statement": "BP holds shareholding in Itumbiara Bioenergia SA.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
@@ -1937,40 +1865,40 @@
         "confidence": "medium"
       },
       {
-        "id": "f165",
-        "statement": "BP holds shareholding in Bahia de Bizkaia Electricidad SL.",
+        "id": "f156",
+        "statement": "BP holds shareholding in Bp International Ltd.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
         "bods_statement_ids": [
-          "opencheck-3f5ea33622c8f3d3c334974e"
+          "opencheck-c883524eb2a01a9d85436f4a"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f166",
-        "statement": "BP holds shareholding in Ruhr Oel GmbH.",
+        "id": "f157",
+        "statement": "BP holds shareholding in Azerbaijan International Operating.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
         "bods_statement_ids": [
-          "opencheck-401d6470862f57626153eeab"
+          "opencheck-350ae10373510b2267bced57"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f167",
-        "statement": "BP holds shareholding in Pan American Energy.",
+        "id": "f158",
+        "statement": "BP holds shareholding in BP Alternative Energy North America Inc.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
         "bods_statement_ids": [
-          "opencheck-f04e87f20d08fe126a91b968"
+          "opencheck-3de33fbc3fe78161f3261e60"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f168",
+        "id": "f159",
         "statement": "BP holds shareholding in Société du Pipeline Sud-Européen.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -1981,7 +1909,84 @@
         "confidence": "medium"
       },
       {
-        "id": "f169",
+        "id": "f160",
+        "statement": "BP holds shareholding in Britoil Ltd.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-d2ee79b57ddd8bdd202d860f"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f161",
+        "statement": "BP holds shareholding in Ruhr Oel GmbH.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-401d6470862f57626153eeab"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f162",
+        "statement": "BP holds shareholding in BP Bioenergia Ituiutaba.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-3cd10d12e72ce5745ac60329"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f163",
+        "statement": "BP holds shareholding in Baku-Tbilisi-Ceyhan Pipeline.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-c037eda3b89e57fb2f712241"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f164",
+        "statement": "BP holds shareholding in Bp Gamma Holdings.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-c0065e63d08d7ea03a7d63a3"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f165",
+        "statement": "BP holds shareholding in BP Developments Australia Pty Ltd.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-f916fb16a0cd3fa75333d9fb"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f166",
+        "statement": "BP holds shareholding in Bahia de Bizkaia Electricidad.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-3f5ea33622c8f3d3c334974e"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f167",
         "statement": "BP holds shareholding in BP Europa.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -1992,30 +1997,52 @@
         "confidence": "medium"
       },
       {
-        "id": "f170",
-        "statement": "BP holds shareholding in BP Holdings North America Ltd.",
+        "id": "f168",
+        "statement": "BP holds shareholding in South Caucasus Pipeline.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
         "bods_statement_ids": [
-          "opencheck-ef06b2a26bb9b1580a44ed25"
+          "opencheck-ac12da376d9694c9c91ca997"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f169",
+        "statement": "BP holds shareholding in Trans Adriatic Pipeline.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-7bdc84c4906bba1551c13048"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f170",
+        "statement": "BP holds shareholding in Endymion Oil Pipeline Company.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
+        "bods_statement_ids": [
+          "opencheck-97c56bf2e19adf7642450a56"
         ],
         "confidence": "medium"
       },
       {
         "id": "f171",
-        "statement": "BP holds shareholding in Britoil.",
+        "statement": "BP holds shareholding in Pan American Energy.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
         "bods_statement_ids": [
-          "opencheck-d2ee79b57ddd8bdd202d860f"
+          "opencheck-f04e87f20d08fe126a91b968"
         ],
         "confidence": "medium"
       },
       {
         "id": "f172",
-        "statement": "BP holds shareholding in Bp Global Investments Ltd.",
+        "statement": "BP holds shareholding in Bp Global Investments.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
@@ -2037,28 +2064,17 @@
       },
       {
         "id": "f174",
-        "statement": "BP holds shareholding in Endymion Oil Pipeline Company LLC.",
+        "statement": "BP holds shareholding in BP Holdings North America.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
         "bods_statement_ids": [
-          "opencheck-97c56bf2e19adf7642450a56"
+          "opencheck-ef06b2a26bb9b1580a44ed25"
         ],
         "confidence": "medium"
       },
       {
         "id": "f175",
-        "statement": "BP holds shareholding in Azerbaijan International Operating Co.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
-        "bods_statement_ids": [
-          "opencheck-350ae10373510b2267bced57"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f176",
         "statement": "Guaranty Nominees Ltd holds shareholding in BP.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -2069,8 +2085,8 @@
         "confidence": "medium"
       },
       {
-        "id": "f177",
-        "statement": "BlackRock Inc holds shareholding in BP.",
+        "id": "f176",
+        "statement": "BlackRock holds shareholding in BP.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-WeVRHf893FKkPgHw6XvcS5/",
@@ -2080,24 +2096,35 @@
         "confidence": "medium"
       },
       {
-        "id": "f178",
-        "statement": "Helge Lund holds chairperson, from 2018-12-31 in BP.",
-        "source_name": "Wikidata",
-        "source_id": "wikidata",
-        "source_url": "https://www.wikidata.org/wiki/Q152057",
+        "id": "f177",
+        "statement": "BP PLC holds Parent organisation declared in GEM ownership tracker (not a beneficial ownership assertion) in BP PLC.",
+        "source_name": "Global Energy Monitor / Climate TRACE",
+        "source_id": "climatetrace",
+        "source_url": "https://globalenergymonitor.org/",
         "bods_statement_ids": [
-          "opencheck-a20a626c17183dcb749d9a0c"
+          "opencheck-7f694abad61a952c14df266b"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f179",
+        "id": "f178",
         "statement": "Meg O'Neill holds chief executive officer, from 2025-12-01 in BP.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
         "source_url": "https://www.wikidata.org/wiki/Q152057",
         "bods_statement_ids": [
           "opencheck-e005976090c5541150f02683"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f179",
+        "statement": "Helge Lund holds chairperson, from 2018-12-31 in BP.",
+        "source_name": "Wikidata",
+        "source_id": "wikidata",
+        "source_url": "https://www.wikidata.org/wiki/Q152057",
+        "bods_statement_ids": [
+          "opencheck-a20a626c17183dcb749d9a0c"
         ],
         "confidence": "medium"
       },
@@ -3830,6 +3857,17 @@
       },
       {
         "id": "f337",
+        "statement": "ALASDAIR GEORGE MURRAY holds seniorManagingOfficial, from 2026-08-18 in BP P.L.C..",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
+        "source_url": "https://opencorporates.com/companies/gb/00102498",
+        "bods_statement_ids": [
+          "opencheck-ef8889c95a604aed01584376"
+        ],
+        "confidence": "high"
+      },
+      {
+        "id": "f338",
         "statement": "BP P.L.C. is a registered entity in GB (XI-LEI 213800LH1BZH3DI6G760, GB-COH 00102498).",
         "source_name": "GLEIF",
         "source_id": "gleif",
@@ -3857,17 +3895,6 @@
         "code": "NON_EU_JURISDICTION",
         "label": "Outside EU/EEA",
         "confidence": "low",
-        "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: GB. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
-        "source_name": "Global Energy Monitor / Climate TRACE",
-        "source_id": "climatetrace",
-        "fact_ids": [],
-        "kind": "context"
-      },
-      {
-        "id": "r3",
-        "code": "NON_EU_JURISDICTION",
-        "label": "Outside EU/EEA",
-        "confidence": "low",
         "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: AR, AU, BR, CH, GB, KY, US. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -3875,7 +3902,7 @@
         "kind": "context"
       },
       {
-        "id": "r4",
+        "id": "r3",
         "code": "COMPLEX_OWNERSHIP_LAYERS",
         "label": "Complex ownership layers",
         "confidence": "medium",
@@ -3884,6 +3911,17 @@
         "source_id": "opensanctions",
         "fact_ids": [],
         "kind": "risk"
+      },
+      {
+        "id": "r4",
+        "code": "NON_EU_JURISDICTION",
+        "label": "Outside EU/EEA",
+        "confidence": "low",
+        "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: GB. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
+        "source_name": "Global Energy Monitor / Climate TRACE",
+        "source_id": "climatetrace",
+        "fact_ids": [],
+        "kind": "context"
       },
       {
         "id": "r5",
@@ -3928,6 +3966,17 @@
         "source_id": "icij",
         "fact_ids": [],
         "kind": "risk"
+      },
+      {
+        "id": "r9",
+        "code": "OFFSHORE_LEAKS",
+        "label": "Offshore Leaks match",
+        "confidence": "medium",
+        "rationale": "Related entity 'BRITANNIC ENERGY TRADING LIMITED' matches a record in the Bahamas Leaks (ICIJ score 78/100).",
+        "source_name": "icij",
+        "source_id": "icij",
+        "fact_ids": [],
+        "kind": "risk"
       }
     ],
     "sources_consulted": [
@@ -3938,16 +3987,16 @@
         "homepage": "https://search.gleif.org/#/search/"
       },
       {
-        "source_id": "climatetrace",
-        "name": "Global Energy Monitor / Climate TRACE",
-        "license": "CC-BY-4.0",
-        "homepage": "https://globalenergymonitor.org/"
-      },
-      {
         "source_id": "opensanctions",
         "name": "OpenSanctions",
         "license": "CC-BY-NC-4.0",
         "homepage": "https://www.opensanctions.org/"
+      },
+      {
+        "source_id": "climatetrace",
+        "name": "Global Energy Monitor / Climate TRACE",
+        "license": "CC-BY-4.0",
+        "homepage": "https://globalenergymonitor.org/"
       },
       {
         "source_id": "wikidata",
@@ -3968,16 +4017,16 @@
         "homepage": "https://find-and-update.company-information.service.gov.uk/"
       },
       {
-        "source_id": "wikirate",
-        "name": "Wikirate",
-        "license": "CC-BY-4.0",
-        "homepage": "https://wikirate.org/"
-      },
-      {
         "source_id": "opencorporates",
         "name": "OpenCorporates",
         "license": "OC-Terms",
         "homepage": "https://opencorporates.com/"
+      },
+      {
+        "source_id": "wikirate",
+        "name": "Wikirate",
+        "license": "CC-BY-4.0",
+        "homepage": "https://wikirate.org/"
       },
       {
         "source_id": "openaleph",
