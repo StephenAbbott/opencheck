@@ -9,6 +9,7 @@ import pytest
 import respx
 from httpx import Response
 
+from opencheck import provenance
 from opencheck.sources.ariregister import (
     AriregisterAdapter,
     EE_RA_CODE,
@@ -315,3 +316,59 @@ async def test_search_empty_on_error(adapter):
         )
         hits = await adapter.search("test", SearchKind.ENTITY)
     assert hits == []
+
+
+# ---------------------------------------------------------------------------
+# Provenance/liveness — this adapter bypasses http.build_client() (it needs a
+# bare HTML Accept header and a longer timeout than the shared client gives),
+# so build_client()'s automatic provenance.record_live() never fires. Without
+# the adapter's own record_live() calls, a genuinely live fetch resolves to
+# "stub" liveness and the frontend badges real, current data as "Placeholder
+# data" (see LivenessBadge.tsx) — this is the regression these tests pin.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_fetch_records_live_provenance(adapter):
+    with respx.mock:
+        respx.get(
+            "https://ariregister.rik.ee/eng/company/17441866/company_print_json"
+        ).mock(return_value=Response(200, text=_HTML,
+                                    headers={"content-type": "text/html; charset=utf-8"}))
+        with provenance.recording() as rec:
+            bundle = await adapter.fetch("17441866", legal_name="Nordic Foods 1 OÜ")
+        resolved = rec.resolve(is_stub=bundle["is_stub"])
+
+    assert not bundle["is_stub"]
+    assert resolved.liveness == "live"
+    assert resolved.retrieved_at is not None
+
+
+@pytest.mark.asyncio
+async def test_fetch_stub_stays_stub_liveness_despite_live_attempt(adapter):
+    """A failed lookup still resolves to 'stub' liveness — record_live() fires
+    unconditionally (mirroring build_client()), but provenance.resolve()
+    short-circuits on is_stub, so a 404 never reads as live data."""
+    with respx.mock:
+        respx.get(
+            "https://ariregister.rik.ee/eng/company/99999999/company_print_json"
+        ).mock(return_value=Response(404, text="Not found"))
+        with provenance.recording() as rec:
+            bundle = await adapter.fetch("99999999")
+        resolved = rec.resolve(is_stub=bundle["is_stub"])
+
+    assert bundle["is_stub"]
+    assert resolved.liveness == "stub"
+    assert resolved.retrieved_at is None
+
+
+@pytest.mark.asyncio
+async def test_search_records_live_provenance(adapter):
+    with respx.mock:
+        respx.get("https://ariregister.rik.ee/eng/api/autocomplete").mock(
+            return_value=Response(200, json=_AUTOCOMPLETE_JSON)
+        )
+        with provenance.recording() as rec:
+            await adapter.search("Nordic Foods", SearchKind.ENTITY)
+        resolved = rec.resolve()
+
+    assert resolved.liveness == "live"
