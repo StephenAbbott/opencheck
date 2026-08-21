@@ -36,6 +36,7 @@ from typing import Any
 
 import httpx
 
+from .. import provenance
 from ..config import get_settings
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 
@@ -427,6 +428,14 @@ class AriregisterAdapter(SourceAdapter):
 
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
         """Name or registry-code search via the autocomplete JSON endpoint."""
+        # This adapter talks to ariregister.rik.ee directly rather than through
+        # the shared http.build_client() (it needs a bare HTML Accept header
+        # and a longer timeout — see module docstring), so build_client()'s
+        # automatic provenance.record_live() never fires. Record it here at
+        # the same moment build_client() would: when committing to the
+        # network call, regardless of whether it ultimately succeeds. A
+        # failed search still resolves to "stub" because it returns no hits.
+        provenance.record_live("ariregister autocomplete")
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
             try:
                 r = await client.get(
@@ -495,6 +504,13 @@ class AriregisterAdapter(SourceAdapter):
         }
 
         url = _PRINT_URL.format(reg_code=registry_code)
+        # See the comment in search() — this bypasses build_client(), so the
+        # live observation has to be recorded by hand. Recorded unconditionally
+        # before the request, same as build_client(): a bundle that ends up
+        # is_stub=True still resolves to "stub" regardless (provenance.resolve
+        # short-circuits on is_stub), so this only affects genuinely-fetched
+        # bundles.
+        provenance.record_live("ariregister company printable page")
         try:
             async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
                 r = await client.get(url, headers=_HEADERS, follow_redirects=True)
