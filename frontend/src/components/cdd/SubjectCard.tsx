@@ -95,6 +95,12 @@ export function SubjectCard({
             )}
             {cc && <span aria-hidden>·</span>}
             <span className="font-mono break-all">LEI {lei}</span>
+            {/* Links straight to this entity's raw JSON — the same
+                /lookup?lei= the app itself calls. Scoped to the LEI it sits
+                beside, so it lives in the identity row rather than the
+                share-link corner; costs no extra vertical space on any
+                breakpoint (it just wraps with the rest of the row). */}
+            <ApiLinkChip lei={lei} />
             {/* Desktop placement: inline pill beside the LEI it qualifies.
                 Hidden on mobile, where the identity column is too narrow
                 (~150px beside the share button) — the block placement below
@@ -273,5 +279,47 @@ function IdentifierBadge({
         </span>
       </span>
     </button>
+  );
+}
+
+/**
+ * "API" chip — links straight to this entity's raw JSON (the same
+ * `/lookup?lei=` response the app itself renders from). Deliberately a plain
+ * link, not a copy-to-clipboard button like the share pill above: the target
+ * is useful on its own the moment it opens, no client-side step needed.
+ * Styled like a small mono badge (same family as the api.opencheck.world
+ * path chips) rather than a full pill — this is a secondary, developer-
+ * facing affordance, not competing with "Copy share link" for weight.
+ */
+function ApiLinkChip({ lei }: { lei: string }) {
+  const apiUrl = `${BASE_URL || "https://api.opencheck.world"}/lookup?lei=${lei}`;
+  return (
+    <a
+      href={apiUrl}
+      target="_blank"
+      rel="noreferrer"
+      onClick={() => trackEvent("view_api_json")}
+      title={`View this entity's JSON — GET /lookup?lei=${lei}`}
+      className="inline-flex items-center gap-1 font-mono text-[10px] text-oo-blue bg-oo-bg border border-oo-rule hover:border-[#cfd6f5] hover:bg-[#eef1fb] rounded px-1.5 py-0.5 transition-colors"
+    >
+      <svg
+        width="9"
+        height="9"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m8 6-6 6 6 6M16 6l6 6-6 6" />
+      </svg>
+      API
+      <span className="sr-only">
+        {" "}
+        — opens this entity&apos;s raw JSON response in a new tab
+      </span>
+    </a>
   );
 }
