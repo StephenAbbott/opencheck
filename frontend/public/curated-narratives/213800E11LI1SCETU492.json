@@ -1,11 +1,11 @@
 {
   "lei": "213800E11LI1SCETU492",
   "subject_name": "TAQA BRATANI LIMITED",
-  "summary": "TAQA BRATANI LIMITED (LEI 213800E11LI1SCETU492, GB Companies House 05975475) is identifier-confirmed and registered in Great Britain. According to GLEIF (high confidence), شركة أبوظبى الوطنية للطاقة - ش م ع (Abu Dhabi National Energy Company) is both the direct and ultimate consolidating parent of TAQA BRATANI LIMITED from 2018-01-17; UK Companies House additionally records the Abu Dhabi Government as holding significant influence or control over the company from 2016-04-06, making this a structural indicator of potential state-linked ownership that warrants appropriate enhanced scrutiny. Recorded officers per OpenCorporates include Alexander Burnett Hutchison (board appointment from 2015-09-17), Franco Polo (board appointment from 2022-12-12), and Christopher Graham Ross Rettie (senior managing official from 2025-03-12); TAQA BRATANI LIMITED also holds an indicative shareholding in the Brae Group per OpenSanctions, and holds 25–50% of shares and voting rights in SULLOM VOE ASSOCIATION LIMITED (THE) per UK Companies House. Two risk signals of high confidence were identified via OpenSanctions: a related entity in the group's ownership chain, Taweelah Asia Power Company - P.S.C., is reported as being within a sanctioned party's ownership chain and linked to an export-controlled party — these are structural indicators for further review and are not determinations of wrongdoing by TAQA BRATANI LIMITED itself. One material limitation applies: OpenSanctions data is licensed under CC-BY-NC-4.0, restricting commercial re-use of that source.",
+  "summary": "TAQA BRATANI LIMITED (LEI 213800E11LI1SCETU492; GB Companies House 05975475) is identifier-confirmed, registered in Great Britain. According to GLEIF, شركة أبوظبى الوطنية للطاقة - ش م ع (Abu Dhabi National Energy Company) is both the direct and ultimate consolidating parent of TAQA BRATANI LIMITED from 2018-01-17; UK Companies House additionally records the Abu Dhabi Government as holding significant influence or control over the company from 2016-04-06, making this a structural indicator of potential state-linked ownership that warrants further review. Board and senior management recorded at OpenCorporates include Alexander Burnett Hutchison (board, from 2015-09-17), Franco Polo (board, from 2022-12-12), and Christopher Graham Ross Rettie (senior managing official, from 2025-03-12); TAQA BRATANI LIMITED also holds an indicative shareholding in the Brae Group per OpenSanctions, and holds 25–50% of shares and voting rights in Sullom Voe Association Limited per UK Companies House. Two high-confidence risk signals were identified via OpenSanctions: a related entity in the group's ownership chain, Taweelah Asia Power Company - P.S.C., is recorded as being within a sanctioned party's ownership chain and as linked to an export-controlled party; these are structural signals requiring further review and do not constitute a determination of wrongdoing by TAQA BRATANI LIMITED itself. A material licensing limitation applies: OpenSanctions data is licensed under CC-BY-NC-4.0 and may not be commercially re-used without a separate licence.",
   "claims": [
     {
       "id": "c1",
-      "text": "TAQA BRATANI LIMITED (LEI 213800E11LI1SCETU492, GB Companies House 05975475) is identifier-confirmed and registered in Great Britain.",
+      "text": "TAQA BRATANI LIMITED (LEI 213800E11LI1SCETU492; GB Companies House 05975475) is identifier-confirmed and registered in Great Britain.",
       "fact_ids": [
         "f101"
       ],
@@ -30,7 +30,7 @@
     },
     {
       "id": "c4",
-      "text": "Alexander Burnett Hutchison holds a board appointment in TAQA BRATANI LIMITED from 2015-09-17, per OpenCorporates.",
+      "text": "Alexander Burnett Hutchison has held a board appointment in TAQA BRATANI LIMITED from 2015-09-17, per OpenCorporates.",
       "fact_ids": [
         "f15"
       ],
@@ -38,7 +38,7 @@
     },
     {
       "id": "c5",
-      "text": "Franco Polo holds a board appointment in TAQA BRATANI LIMITED from 2022-12-12, per OpenCorporates.",
+      "text": "Franco Polo has held a board appointment in TAQA BRATANI LIMITED from 2022-12-12, per OpenCorporates.",
       "fact_ids": [
         "f16"
       ],
@@ -54,7 +54,7 @@
     },
     {
       "id": "c7",
-      "text": "TAQA BRATANI LIMITED holds an indicative shareholding in the Brae Group, per OpenSanctions.",
+      "text": "TAQA Bratani Ltd holds an indicative shareholding in the Brae Group, per OpenSanctions.",
       "fact_ids": [
         "f14"
       ],
@@ -62,7 +62,7 @@
     },
     {
       "id": "c8",
-      "text": "TAQA BRATANI LIMITED holds 25–50% of shares and voting rights in SULLOM VOE ASSOCIATION LIMITED (THE) from 2016-04-06, per UK Companies House.",
+      "text": "TAQA BRATANI LIMITED holds 25–50% of shares and voting rights in Sullom Voe Association Limited (The) from 2016-04-06, per UK Companies House.",
       "fact_ids": [
         "f33"
       ],
@@ -70,25 +70,25 @@
     },
     {
       "id": "c9",
-      "text": "A related entity in the group's ownership chain, Taweelah Asia Power Company - P.S.C. (which is ultimately consolidated by شركة أبوظبى الوطنية للطاقة - ش م ع), is reported by OpenSanctions as being within a sanctioned party's ownership chain — a structural risk indicator of high confidence requiring further review.",
+      "text": "A high-confidence risk signal was identified via OpenSanctions: a related entity in the group's ownership chain, Taweelah Asia Power Company - P.S.C., is recorded as being within a sanctioned party's ownership chain. This is a structural signal requiring further review and does not constitute a determination of wrongdoing by TAQA BRATANI LIMITED.",
       "fact_ids": [
-        "f5",
-        "r4"
+        "r4",
+        "f5"
       ],
       "confidence": "high"
     },
     {
       "id": "c10",
-      "text": "Taweelah Asia Power Company - P.S.C. is also reported by OpenSanctions as linked to an export-controlled party — a further structural risk indicator of high confidence requiring further review.",
+      "text": "A high-confidence risk signal was identified via OpenSanctions: Taweelah Asia Power Company - P.S.C. is also recorded as linked to an export-controlled party. This is a structural signal requiring further review and does not constitute a determination of wrongdoing by TAQA BRATANI LIMITED.",
       "fact_ids": [
-        "f5",
-        "r5"
+        "r5",
+        "f5"
       ],
       "confidence": "high"
     },
     {
       "id": "c11",
-      "text": "OpenSanctions data used in this assessment is licensed under CC-BY-NC-4.0, restricting commercial re-use of that source.",
+      "text": "A material licensing limitation applies: OpenSanctions data is licensed under CC-BY-NC-4.0 and may not be commercially re-used without a separate licence.",
       "fact_ids": [
         "g1"
       ],
@@ -96,10 +96,10 @@
     }
   ],
   "limitations": [
-    "OpenSanctions is licensed under CC-BY-NC-4.0; commercial re-use of data derived from that source is not permitted (g1).",
-    "The state-ownership indicator (Abu Dhabi Government significant influence or control, f29) is sourced from UK Companies House and is presence-only — its absence from other sources is not evidence to the contrary.",
-    "The shareholding in the Brae Group (f14) is sourced from OpenSanctions, an aggregator, and should be treated as indicative rather than authoritative.",
-    "Risk signals r4 and r5 relate to a group-level related entity (Taweelah Asia Power Company - P.S.C.) and are not direct findings against TAQA BRATANI LIMITED itself."
+    "OpenSanctions data is licensed under CC-BY-NC-4.0; commercial re-use is not permitted under the source licence (g1).",
+    "The risk signals relating to Taweelah Asia Power Company - P.S.C. (r4, r5) are derived from OpenSanctions matching and relate to a group-level related entity, not directly to TAQA BRATANI LIMITED itself; the precise nature and current status of the sanctions/export-control linkage requires further investigation.",
+    "The shareholding in the Brae Group (f14) is sourced from OpenSanctions at medium confidence and should be treated as indicative only.",
+    "Several sources consulted (Climate TRACE, Wikirate, OpenAleph) did not contribute facts to this packet; the scope of those checks is not detailed."
   ],
   "overall_confidence": "high",
   "model": "claude-sonnet-4-6",
@@ -1292,16 +1292,16 @@
         "homepage": "https://search.gleif.org/#/search/"
       },
       {
-        "source_id": "climatetrace",
-        "name": "Global Energy Monitor / Climate TRACE",
-        "license": "CC-BY-4.0",
-        "homepage": "https://globalenergymonitor.org/"
-      },
-      {
         "source_id": "opensanctions",
         "name": "OpenSanctions",
         "license": "CC-BY-NC-4.0",
         "homepage": "https://www.opensanctions.org/"
+      },
+      {
+        "source_id": "climatetrace",
+        "name": "Global Energy Monitor / Climate TRACE",
+        "license": "CC-BY-4.0",
+        "homepage": "https://globalenergymonitor.org/"
       },
       {
         "source_id": "eiti",

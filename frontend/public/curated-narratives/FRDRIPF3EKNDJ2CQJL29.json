@@ -1,11 +1,11 @@
 {
   "lei": "FRDRIPF3EKNDJ2CQJL29",
   "subject_name": "ELI LILLY AND COMPANY",
-  "summary": "ELI LILLY AND COMPANY (LEI: FRDRIPF3EKNDJ2CQJL29) is identifier-confirmed, registered in Indiana, United States, with its LEI, OpenCorporates, and S&P CIQ identifiers all consistent. GLEIF Level 2 data reports a permitted reporting exception at both the direct and ultimate accounting-consolidation parent levels, indicating the entity is controlled by natural persons without an intermediate consolidating legal entity; this is a structural observation under LEI ROC policy and not an adverse finding. The entity has multiple directly consolidated subsidiaries per GLEIF, including LILLY VENTURES FUND I LLC, ELI LILLY SERVICES INDIA PRIVATE LIMITED, ELI LILLY AND COMPANY (INDIA) PRIVATE LIMITED, ELI LILLY KINSALE LIMITED, Lilly Nederland Finance B.V., and ELI LILLY GROUP PENSION TRUSTEES LIMITED. Key officers include David A. Ricks (CEO and board member per Wikidata; officer per OpenCorporates from 2025-01-23) and Jonathan Haug (senior managing official per OpenCorporates from 2023-05-25), alongside a large number of other officers recorded by OpenCorporates. Two substantive risk signals require further review: ELI LILLY AND COMPANY itself appears on OpenSanctions flagged for trade risk (high confidence, r6/r7/r10); additionally, board member Juan R. Luciano is matched in the Paradise Papers (Barbados corporate registry, ICIJ score 77/100, medium confidence), and officer Christopher Anderson is matched in both the Panama Papers and Paradise Papers (Appleby) (ICIJ score 100/100, high confidence) — all ICIJ matches are name-based and require verification. Two related-party PEP signals are name-match only and unconfirmed: Katherine Baicker (board member) against OpenSanctions and EveryPolitician (medium confidence), and Patrik Jonsson (officer) against OpenSanctions and EveryPolitician (medium confidence). A material gap exists: Wikirate could not be queried due to a source API schema error, so any data that source would have contributed is unavailable.",
+  "summary": "ELI LILLY AND COMPANY (LEI: FRDRIPF3EKNDJ2CQJL29; Indiana, US) is identifier-confirmed via its LEI, OpenCorporates registration (us_in/183025-143), and Wikidata QID (Q632240). GLEIF Level 2 data reports permitted reporting exceptions for both direct and ultimate accounting-consolidation parent, indicating the entity is controlled by natural persons without an intermediate consolidating legal entity; GLEIF also records at least six direct accounting-consolidation subsidiaries across the US, India, Ireland, the Netherlands, and the UK. David A. Ricks is recorded as CEO and board member (from 2017, per Wikidata) and as an officer (from 2025-01-23, per OpenCorporates), with Jonathan Haug recorded as senior managing official and a large number of additional officers on the Indiana register. Two substantive risk signals require attention: OpenSanctions flags ELI LILLY AND COMPANY itself for trade risk (high confidence, appearing across multiple related-entity matches); and ICIJ Offshore Leaks records associate board member Juan R. Luciano with the Paradise Papers (Barbados corporate registry, ICIJ score 77/100, medium confidence) and officer Christopher Anderson with both the Panama Papers and Paradise Papers (Appleby) (ICIJ score 100/100, high confidence) — all three are name-based matches against the related parties and should be independently verified. Additionally, name-only PEP matches (medium confidence, unconfirmed by birth date or nationality) exist for board member Katherine Baicker (OpenSanctions/EveryPolitician) and officer Patrik Jonsson (OpenSanctions/EveryPolitician). A material gap exists: Wikirate could not be queried due to a source API schema error, so any data that source would have contributed is unavailable.",
   "claims": [
     {
       "id": "c1",
-      "text": "ELI LILLY AND COMPANY is identifier-confirmed, registered in Indiana, United States, with LEI FRDRIPF3EKNDJ2CQJL29, OpenCorporates ID us_in/183025-143, and S&P CIQ Company ID 285467.",
+      "text": "ELI LILLY AND COMPANY is identifier-confirmed, registered in Indiana, United States, with LEI FRDRIPF3EKNDJ2CQJL29, OpenCorporates ID us_in/183025-143, and Wikidata QID Q632240.",
       "fact_ids": [
         "f52"
       ],
@@ -13,17 +13,25 @@
     },
     {
       "id": "c2",
-      "text": "GLEIF Level 2 data reports a permitted reporting exception at both the direct and ultimate accounting-consolidation parent levels, indicating the entity is controlled by natural persons without an intermediate consolidating legal entity; this is a structural observation under LEI ROC policy.",
+      "text": "GLEIF Level 2 data reports a permitted reporting exception for the direct accounting-consolidation parent, indicating the entity is controlled by natural persons without an intermediate consolidating legal entity.",
       "fact_ids": [
         "f1",
-        "f2",
         "r1"
       ],
       "confidence": "medium"
     },
     {
       "id": "c3",
-      "text": "ELI LILLY AND COMPANY holds GLEIF Level 2 direct-child (accounting consolidation) relationships in LILLY VENTURES FUND I LLC, ELI LILLY SERVICES INDIA PRIVATE LIMITED, ELI LILLY AND COMPANY (INDIA) PRIVATE LIMITED, ELI LILLY KINSALE LIMITED, Lilly Nederland Finance B.V., and ELI LILLY GROUP PENSION TRUSTEES LIMITED.",
+      "text": "GLEIF Level 2 data reports the same permitted reporting exception for the ultimate accounting-consolidation parent.",
+      "fact_ids": [
+        "f2",
+        "r1"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c4",
+      "text": "GLEIF records ELI LILLY AND COMPANY as the direct accounting-consolidation parent of at least six subsidiaries: LILLY VENTURES FUND I LLC, ELI LILLY SERVICES INDIA PRIVATE LIMITED, ELI LILLY AND COMPANY (INDIA) PRIVATE LIMITED, ELI LILLY KINSALE LIMITED, Lilly Nederland Finance B.V., and ELI LILLY GROUP PENSION TRUSTEES LIMITED.",
       "fact_ids": [
         "f3",
         "f4",
@@ -35,8 +43,8 @@
       "confidence": "medium"
     },
     {
-      "id": "c4",
-      "text": "David A. Ricks holds the role of chief executive officer and board member from 2017-01-01 per Wikidata, and is also recorded as an officer by OpenCorporates from 2025-01-23.",
+      "id": "c5",
+      "text": "David A. Ricks is recorded as CEO and board member of Eli Lilly and Company from 2017-01-01 per Wikidata, and as an officer from 2025-01-23 per OpenCorporates.",
       "fact_ids": [
         "f9",
         "f26"
@@ -44,16 +52,16 @@
       "confidence": "medium"
     },
     {
-      "id": "c5",
-      "text": "Jonathan Haug holds the role of senior managing official per OpenCorporates from 2023-05-25.",
+      "id": "c6",
+      "text": "Jonathan Haug is recorded as senior managing official from 2023-05-25 per OpenCorporates.",
       "fact_ids": [
         "f38"
       ],
       "confidence": "high"
     },
     {
-      "id": "c6",
-      "text": "A large number of additional officers are recorded by OpenCorporates, including Patrik Jonsson, Diogo Rau, Jonathan Groff, Katie Lodato, Christopher Anderson, Edgardo Hernandez, Jacob Van Naarden, Anne E. White, Susan Ridlen, Anat Hakim, Daniel Skovronsky, Donald A. Zakrowski, Valorie Wanner, Eric Dozier, Ilya Yuffa, Steffanie R. Lim-Ho, Melissa Seymour, Lucas Montarce, and others.",
+      "id": "c7",
+      "text": "A large number of additional officers are recorded on the Indiana register, including (among others) Patrik Jonsson, Diogo Rau, Jonathan Groff, Katie Lodato, Christopher Anderson, Edgardo Hernandez, Jacob Van Naarden, Anne E. White, Susan Ridlen, Anat Hakim, Daniel Skovronsky, Donald A. Zakrowski, Valorie Wanner, Eric Dozier, Ilya Yuffa, Steffanie R. Lim-Ho, Melissa Seymour, Lucas Montarce, and others.",
       "fact_ids": [
         "f22",
         "f23",
@@ -77,8 +85,8 @@
       "confidence": "high"
     },
     {
-      "id": "c7",
-      "text": "Board members recorded by Wikidata and/or OpenCorporates include Juan R. Luciano, Karen Walker, Jamere Jackson, Ralph Alvarez, Gabrielle Sulzberger, William G. Kaelin, Kimberly H. Johnson, Katherine Baicker, Mary Lynne Hedley, and Erik Fyrwald.",
+      "id": "c8",
+      "text": "Board members recorded via Wikidata and/or OpenCorporates include Juan R. Luciano, Karen Walker, Jamere Jackson, Ralph Alvarez, Gabrielle Sulzberger, William G. Kaelin, Kimberly H. Johnson, Katherine Baicker, Mary Lynne Hedley, and Erik Fyrwald.",
       "fact_ids": [
         "f10",
         "f11",
@@ -104,57 +112,57 @@
       "confidence": "medium"
     },
     {
-      "id": "c8",
-      "text": "ELI LILLY AND COMPANY itself appears on OpenSanctions flagged for trade risk (high confidence); this signal appears across multiple OpenSanctions records and requires further review.",
+      "id": "c9",
+      "text": "OpenSanctions flags ELI LILLY AND COMPANY for trade risk (high confidence), with this signal appearing across multiple related-entity matches.",
       "fact_ids": [
         "r6",
         "r7",
-        "r10"
+        "r10",
+        "r11"
       ],
       "confidence": "high"
     },
     {
-      "id": "c9",
-      "text": "Board member Juan R. Luciano is matched in the Paradise Papers (Barbados corporate registry) with an ICIJ score of 77/100 (medium confidence); this is a name-based match and requires verification.",
+      "id": "c10",
+      "text": "ICIJ Offshore Leaks records associate board member Juan R. Luciano with the Paradise Papers (Barbados corporate registry) at an ICIJ score of 77/100 (medium confidence); this is a name-based match against the related party and requires independent verification.",
       "fact_ids": [
-        "r13",
+        "r14",
         "f10"
       ],
       "confidence": "medium"
     },
     {
-      "id": "c10",
-      "text": "Officer Christopher Anderson is matched in both the Panama Papers (ICIJ score 100/100, high confidence) and the Paradise Papers (Appleby) (ICIJ score 100/100, high confidence); these are name-based matches and require verification.",
+      "id": "c11",
+      "text": "ICIJ Offshore Leaks records associate officer Christopher Anderson with both the Panama Papers and the Paradise Papers (Appleby) at an ICIJ score of 100/100 (high confidence); these are name-based matches against the related party and require independent verification.",
       "fact_ids": [
-        "r14",
         "r15",
+        "r16",
         "f27"
       ],
       "confidence": "high"
     },
     {
-      "id": "c11",
-      "text": "Katherine Baicker, recorded as a board member, is a possible name match only against a PEP record on OpenSanctions and a political office-holder record on EveryPolitician (medium confidence); no birth date or nationality was available to confirm the match.",
+      "id": "c12",
+      "text": "Name-only PEP matches (medium confidence, unconfirmed by birth date or nationality) exist for board member Katherine Baicker via OpenSanctions and EveryPolitician.",
       "fact_ids": [
         "r8",
         "r9",
-        "f18",
-        "f42"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c12",
-      "text": "Patrik Jonsson, recorded as an officer, is a possible name match only against a PEP record on OpenSanctions and a political office-holder record on EveryPolitician (medium confidence); no birth date or nationality was available to confirm the match.",
-      "fact_ids": [
-        "r11",
-        "r12",
-        "f22"
+        "f18"
       ],
       "confidence": "medium"
     },
     {
       "id": "c13",
+      "text": "Name-only PEP matches (medium confidence, unconfirmed by birth date or nationality) exist for officer Patrik Jonsson via OpenSanctions and EveryPolitician.",
+      "fact_ids": [
+        "r12",
+        "r13",
+        "f22"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c14",
       "text": "Wikirate could not be queried due to a source API schema error, so any data that source would have contributed is unavailable.",
       "fact_ids": [
         "g1"
@@ -163,15 +171,13 @@
     }
   ],
   "limitations": [
-    "Wikirate could not be queried (source API schema error), leaving a gap in any data that source would have provided (g1).",
-    "GLEIF Level 2 records accounting consolidation, not beneficial ownership; no beneficial owner is disclosed in this packet.",
-    "All officer and board member roles sourced from Wikidata are indicative only (crowd-sourced knowledge base) and should not be treated as authoritative.",
-    "All ICIJ Offshore Leaks matches (Juan R. Luciano, Christopher Anderson) are name-based only and require independent verification to confirm identity.",
-    "Both PEP signals for Katherine Baicker and Patrik Jonsson are name-match only with no corroborating identifiers; they are unconfirmed.",
-    "One board member is identified only by a Wikidata QID (Q105798427) with no resolved name in the packet.",
-    "SEC EDGAR (Schedule 13D/13G) was listed as a source consulted but no facts from it appear in the packet."
+    "Wikirate could not be queried (source API schema error affecting headquarters and website fields), leaving any Wikirate-sourced data absent from this review (g1).",
+    "Officer and board-member data from Wikidata is sourced from a crowd-sourced knowledge base and should be treated as indicative rather than authoritative; no start/end dates are confirmed by an official register.",
+    "All ICIJ Offshore Leaks matches (Juan R. Luciano, Christopher Anderson) and PEP matches (Katherine Baicker, Patrik Jonsson) are name-based only, with no corroborating identifiers (birth date, nationality) — positive identification of the related parties with the screened individuals has not been established.",
+    "GLEIF Level 2 records accounting consolidation, not beneficial ownership; the natural-persons reporting exception means no named beneficial owners are disclosed in the LEI record.",
+    "One Wikidata board-member record (f12) is identified only by a Wikidata QID (Q105798427) with no resolved name available in the packet."
   ],
-  "overall_confidence": "medium",
+  "overall_confidence": "high",
   "model": "claude-sonnet-4-6",
   "prompt_version": "2026-08-18-v6",
   "packet": {
@@ -798,8 +804,8 @@
         "label": "Outside EU/EEA",
         "confidence": "low",
         "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: US. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
-        "source_name": "OpenCorporates",
-        "source_id": "opencorporates",
+        "source_name": "OpenAleph",
+        "source_id": "openaleph",
         "fact_ids": [],
         "kind": "context"
       },
@@ -809,8 +815,8 @@
         "label": "Outside EU/EEA",
         "confidence": "low",
         "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: US. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
-        "source_name": "OpenAleph",
-        "source_id": "openaleph",
+        "source_name": "OpenCorporates",
+        "source_id": "opencorporates",
         "fact_ids": [],
         "kind": "context"
       },
@@ -871,10 +877,10 @@
       },
       {
         "id": "r11",
-        "code": "RELATED_PEP",
-        "label": "Related party politically exposed",
-        "confidence": "medium",
-        "rationale": "Possible name match only: related party 'Patrik Jonsson' shares a name with a record on opensanctions, with no birth date or nationality in common to confirm they are the same person — PEP per OpenSanctions (role.pep).",
+        "code": "RELATED_EXPORT_RISK",
+        "label": "Related party flagged for trade risk",
+        "confidence": "high",
+        "rationale": "Related entity 'ELI LILLY AND COMPANY' matches a record on opensanctions: flagged for trade risk per OpenSanctions (export.risk).",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "fact_ids": [],
@@ -885,6 +891,17 @@
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
+        "rationale": "Possible name match only: related party 'Patrik Jonsson' shares a name with a record on opensanctions, with no birth date or nationality in common to confirm they are the same person — PEP per OpenSanctions (role.pep).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r13",
+        "code": "RELATED_PEP",
+        "label": "Related party politically exposed",
+        "confidence": "medium",
         "rationale": "Possible name match only: related party 'Patrik Jonsson' shares a name with a record on everypolitician, with no birth date or nationality in common to confirm they are the same person — political office-holder per EveryPolitician.",
         "source_name": "EveryPolitician",
         "source_id": "everypolitician",
@@ -892,7 +909,7 @@
         "kind": "risk"
       },
       {
-        "id": "r13",
+        "id": "r14",
         "code": "OFFSHORE_LEAKS",
         "label": "Offshore Leaks match",
         "confidence": "medium",
@@ -903,7 +920,7 @@
         "kind": "risk"
       },
       {
-        "id": "r14",
+        "id": "r15",
         "code": "OFFSHORE_LEAKS",
         "label": "Offshore Leaks match",
         "confidence": "high",
@@ -914,7 +931,7 @@
         "kind": "risk"
       },
       {
-        "id": "r15",
+        "id": "r16",
         "code": "OFFSHORE_LEAKS",
         "label": "Offshore Leaks match",
         "confidence": "high",
@@ -945,16 +962,16 @@
         "homepage": "https://wikirate.org/"
       },
       {
-        "source_id": "opencorporates",
-        "name": "OpenCorporates",
-        "license": "OC-Terms",
-        "homepage": "https://opencorporates.com/"
-      },
-      {
         "source_id": "openaleph",
         "name": "OpenAleph",
         "license": "per-collection",
         "homepage": "https://openaleph.org/"
+      },
+      {
+        "source_id": "opencorporates",
+        "name": "OpenCorporates",
+        "license": "OC-Terms",
+        "homepage": "https://opencorporates.com/"
       },
       {
         "source_id": "sec_edgar",

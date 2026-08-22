@@ -1,41 +1,41 @@
 {
   "lei": "253400JT3MQWNDKMJE44",
   "subject_name": "публичное акционерное общество \"Нефтяная компания \"Роснефть\"",
-  "summary": "публичное акционерное общество \"Нефтяная компания \"Роснефть\" (Rosneft PJSC) is identifier-confirmed via LEI 253400JT3MQWNDKMJE44 and INN 1027700043502, registered in Russia (RU). Ownership and control indicators from Wikidata (indicative only) point to the Federal Agency for State Property Management and Rosneftegaz as parent entities, with the Government of Russia noted as a controlling owner; JSC \"ROSNEFTEGAZ\" and BP RUSSIAN INVESTMENTS LIMITED are also reported as shareholders per OpenSanctions, and Igor Sechin has held the role of chief executive officer since 2012-06-09 per OpenSanctions, with Mohammed Saleh Al Sada reported as chairperson from 2023-07-01 per Wikidata. OpenSanctions lists the entity as sanctioned, debarred from public contracts, and subject to export-control restrictions (all high confidence), and flags it for trade risk (medium confidence); additionally, 11 sanctioned securities mapped to this entity are subject to sanctions and investment bans across multiple jurisdictions including Australia, Canada, the EU, the UK, and the US per OpenSanctions. The entity's ownership structure carries a medium-confidence signal of complex ownership layers (three or more corporate layers per OpenSanctions), and numerous subsidiaries and related parties — including Rosneft Deutschland GmbH, РН-Капитал, ДИНК-ИНВЕСТ, РН-ТРЕЙД, РН-РАЗВЕДКА И ДОБЫЧА, Ruhr Oel GmbH, Nizhnevartovskaya GRES, LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ, NAYARA ENERGY LIMITED, and others — are themselves flagged as sanctioned, debarred, export-controlled, or linked to sanctioned parties per OpenSanctions and OpenAleph. Material limitations include: Wikirate could not be queried due to a source API schema error, so data from that source is absent; and OpenSanctions data is licensed CC-BY-NC-4.0, precluding commercial re-use.",
+  "summary": "публичное акционерное общество \"Нефтяная компания \"Роснефть\" (Rosneft PJSC) is identifier-confirmed via LEI 253400JT3MQWNDKMJE44 and INN 1027700043502, registered in Russia (RU). Wikidata (indicative) records the Federal Agency for State Property Management and Rosneftegaz as controlling owners, and the Government of Russia as owner, with JSC \"ROSNEFTEGAZ\" and BP RUSSIAN INVESTMENTS LIMITED also reported as shareholders by OpenSanctions; Igor Sechin has held the role of chief executive officer since 2012-06-09 per OpenSanctions, corroborated by Wikidata, and Mohammed Saleh Al Sada is reported as chairperson from 2023-07-01 per Wikidata. The entity itself is listed as sanctioned, debarred from public contracts, and subject to export-control restrictions (all high confidence, per OpenSanctions), and 11 sanctioned securities are mapped to it across multiple jurisdictions including the US OFAC SDN list, EU, UK, Canada, Australia, and Switzerland (high confidence, OpenSanctions). Multiple subsidiaries and related parties — including OJSC RN HOLDING, LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ, ROSNEFT FINANCE S.A., NAYARA ENERGY LIMITED, Rosneft Deutschland GmbH, and others — are themselves sanctioned, debarred, or subject to export-control restrictions per OpenSanctions and OpenAleph; the ownership chain has been assessed as having three or more corporate layers (medium confidence, OpenSanctions). A material limitation applies: OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used without a separate licence.",
   "claims": [
     {
       "id": "c1",
       "text": "публичное акционерное общество \"Нефтяная компания \"Роснефть\" is identifier-confirmed via LEI 253400JT3MQWNDKMJE44 and INN 1027700043502, registered in Russia (RU).",
       "fact_ids": [
-        "f122"
+        "f124"
       ],
       "confidence": "high"
     },
     {
       "id": "c2",
-      "text": "Wikidata (indicative only) records the Federal Agency for State Property Management and Rosneftegaz as parent entities, and the Government of Russia as a controlling owner of Rosneft.",
+      "text": "Wikidata (indicative) records the Federal Agency for State Property Management and Rosneftegaz as controlling owners, and the Government of Russia as owner.",
       "fact_ids": [
-        "f117",
-        "f118",
-        "f119"
+        "f119",
+        "f120",
+        "f121"
       ],
       "confidence": "medium"
     },
     {
       "id": "c3",
-      "text": "JSC \"ROSNEFTEGAZ\" and BP RUSSIAN INVESTMENTS LIMITED are reported as shareholders in Rosneft per OpenSanctions.",
+      "text": "JSC \"ROSNEFTEGAZ\" and BP RUSSIAN INVESTMENTS LIMITED are reported as shareholders by OpenSanctions.",
       "fact_ids": [
         "f113",
-        "f110"
+        "f115"
       ],
       "confidence": "medium"
     },
     {
       "id": "c4",
-      "text": "Igor Sechin has held the role of chief executive officer (ГЛАВНЫЙ ИСПОЛНИТЕЛЬНЫЙ ДИРЕКТОР) since 2012-06-09 per OpenSanctions, and is also recorded as chief executive officer in Wikidata.",
+      "text": "Igor Sechin has held the role of chief executive officer (ГЛАВНЫЙ ИСПОЛНИТЕЛЬНЫЙ ДИРЕКТОР) since 2012-06-09, per OpenSanctions, corroborated by Wikidata.",
       "fact_ids": [
-        "f116",
-        "f120"
+        "f118",
+        "f122"
       ],
       "confidence": "medium"
     },
@@ -43,13 +43,13 @@
       "id": "c5",
       "text": "Mohammed Saleh Al Sada is reported as chairperson from 2023-07-01 per Wikidata.",
       "fact_ids": [
-        "f121"
+        "f123"
       ],
       "confidence": "medium"
     },
     {
       "id": "c6",
-      "text": "OpenSanctions lists the entity as sanctioned (high confidence).",
+      "text": "The entity itself is listed as sanctioned (high confidence) per OpenSanctions.",
       "fact_ids": [
         "r1"
       ],
@@ -57,7 +57,7 @@
     },
     {
       "id": "c7",
-      "text": "OpenSanctions lists the entity as debarred from public contracts (high confidence).",
+      "text": "The entity is listed as debarred from public contracts (high confidence) per OpenSanctions.",
       "fact_ids": [
         "r2"
       ],
@@ -65,7 +65,7 @@
     },
     {
       "id": "c8",
-      "text": "OpenSanctions lists the entity as subject to export-control restrictions (high confidence).",
+      "text": "The entity is subject to export-control restrictions (high confidence) per OpenSanctions.",
       "fact_ids": [
         "r3"
       ],
@@ -73,123 +73,88 @@
     },
     {
       "id": "c9",
-      "text": "OpenSanctions flags the entity for trade risk (medium confidence).",
+      "text": "11 sanctioned securities are mapped to this entity across multiple jurisdictions including the US OFAC SDN list, EU, UK, Canada, Australia, and Switzerland (high confidence, OpenSanctions).",
       "fact_ids": [
-        "r4"
+        "r65"
       ],
-      "confidence": "medium"
+      "confidence": "high"
     },
     {
       "id": "c10",
-      "text": "11 sanctioned securities mapped to this entity are subject to sanctions and investment bans across multiple jurisdictions including Australia, Canada, the EU, the UK, and the US per OpenSanctions (high confidence).",
+      "text": "Multiple subsidiaries and related parties — including OJSC RN HOLDING, LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ, ROSNEFT FINANCE S.A., and NAYARA ENERGY LIMITED — are themselves sanctioned, debarred, or subject to export-control restrictions per OpenSanctions and OpenAleph.",
       "fact_ids": [
-        "r64"
-      ],
-      "confidence": "high"
-    },
-    {
-      "id": "c11",
-      "text": "The entity's ownership structure carries a medium-confidence signal of complex ownership layers, with three or more corporate layers identified per OpenSanctions.",
-      "fact_ids": [
-        "r8"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c12",
-      "text": "Rosneft directly and ultimately consolidates Rosneft Deutschland GmbH (from 2016-02-24) per GLEIF; Rosneft Deutschland GmbH and the related entity Rosneft Deutschland are flagged as being inside a sanctioned party's ownership chain and linked to an export-controlled party per OpenSanctions.",
-      "fact_ids": [
-        "f1",
-        "f2",
-        "f7",
-        "r10",
-        "r11",
-        "r18",
-        "r19"
-      ],
-      "confidence": "high"
-    },
-    {
-      "id": "c13",
-      "text": "Rosneft ultimately consolidates Общество с ограниченной ответственностью \"ДИНК-ИНВЕСТ\" (from 2013-03-21) and Общество с ограниченной ответственностью \"РН-Капитал\" (from 2017-05-11) per GLEIF; both are flagged as inside a sanctioned party's ownership chain and linked to an export-controlled party per OpenSanctions.",
-      "fact_ids": [
-        "f3",
-        "f4",
-        "r12",
-        "r13",
-        "r14",
-        "r15",
+        "r29",
         "r30",
-        "r31"
-      ],
-      "confidence": "high"
-    },
-    {
-      "id": "c14",
-      "text": "Multiple subsidiaries and related parties — including LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ, NAYARA ENERGY LIMITED, OJSC SYZRAN REFINERY, JSC ACHINSK OIL REFINERY VNK, JSC KUYBYSHEVSKY OIL REFINERY, ZAO VANKORNEFT, TNK Trading International S.A., OJSC RN HOLDING, ROSNEFT FINANCE S.A., National Settlement Depository, RN-Aktiv OOO, Ruhr Oel GmbH, Nizhnevartovskaya GRES, and Rosneftegaz — are themselves flagged as sanctioned, debarred, export-controlled, or linked to sanctioned parties per OpenSanctions and OpenAleph.",
-      "fact_ids": [
-        "r35",
-        "r36",
+        "r31",
+        "r32",
+        "r33",
+        "r34",
         "r37",
-        "r44",
-        "r45",
-        "r46",
-        "r47",
+        "r38",
+        "r39",
+        "r42",
+        "r43",
         "r48",
         "r49",
         "r50",
         "r51",
         "r52",
         "r53",
-        "r54",
         "r55",
         "r56",
         "r57",
-        "r59",
+        "r58",
         "r60",
-        "r61",
-        "r62",
         "r63",
-        "r24",
-        "r25",
-        "r26",
-        "r27"
+        "r64"
       ],
       "confidence": "high"
     },
     {
-      "id": "c15",
-      "text": "Igor Sechin shares a name with a record on OpenAleph flagged as sanctioned, debarred from public contracts, and a politically exposed person; Mohammed Saleh Al Sada shares a name with a record on OpenAleph flagged as a politically exposed person — both are possible name matches only, with no birth date or nationality confirmed.",
+      "id": "c11",
+      "text": "Rosneft Deutschland GmbH, in which Rosneft PJSC holds both direct and ultimate consolidation relationships per GLEIF, is flagged as inside a sanctioned party's ownership chain and linked to an export-controlled party (high confidence, OpenSanctions).",
       "fact_ids": [
-        "r40",
-        "r41",
-        "r42",
-        "r43"
+        "f1",
+        "f2",
+        "r11",
+        "r12"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "c12",
+      "text": "The ownership chain has been assessed as having three or more corporate layers, a structural indicator for further review (medium confidence, OpenSanctions).",
+      "fact_ids": [
+        "r8"
       ],
       "confidence": "medium"
     },
     {
-      "id": "c16",
-      "text": "Wikirate could not be queried due to a source API schema error, so data from that source is absent.",
+      "id": "c13",
+      "text": "Igor Sechin and Mohammed Saleh Al Sada are flagged as possible politically exposed persons via OpenAleph (name-match only, medium confidence); Igor Sechin also has a possible name-match to a sanctioned and debarred individual on OpenAleph, unconfirmed.",
       "fact_ids": [
-        "g1"
+        "r44",
+        "r45",
+        "r46",
+        "r47"
       ],
-      "confidence": "high"
+      "confidence": "medium"
     },
     {
-      "id": "c17",
-      "text": "OpenSanctions data is licensed CC-BY-NC-4.0, precluding commercial re-use of that data.",
+      "id": "c14",
+      "text": "OpenSanctions data is licensed CC-BY-NC-4.0 and commercial re-use is not permitted under the source licence.",
       "fact_ids": [
-        "g2"
+        "g1"
       ],
       "confidence": "high"
     }
   ],
   "limitations": [
-    "Wikirate could not be queried due to a source API schema error (g1); data that source would have provided — including headquarters and website — is absent.",
-    "OpenSanctions is licensed CC-BY-NC-4.0; commercial re-use of data derived from that source is not permitted (g2).",
-    "Ownership and control relationships sourced from Wikidata (f117, f118, f119) and OpenSanctions (f110–f115) are indicative or reported, not authoritative register-confirmed figures; no precise shareholding percentages are available in the packet.",
-    "GLEIF Level 2 data records accounting consolidation, not beneficial ownership; no beneficial owner is disclosed in the packet (r5)."
+    "OpenSanctions is licensed CC-BY-NC-4.0; commercial re-use of data derived from that source is not permitted without a separate licence (g1).",
+    "Ownership and control relationships sourced from Wikidata (f119, f120, f121, f123) are indicative only and not authoritative; absence of a relationship in Wikidata is not evidence of its absence.",
+    "Shareholder percentage stakes are not disclosed in the packet; the relative size of individual shareholdings (e.g. BP RUSSIAN INVESTMENTS LIMITED, QH Oil Investments LLC, National Settlement Depository) cannot be determined from the available evidence.",
+    "The PEP and sanction name-matches for Igor Sechin and Mohammed Saleh Al Sada via OpenAleph are possible name matches only, with no birth date or nationality confirmed — these are not positive identifications.",
+    "No beneficial ownership register data was available; the packet reflects accounting-consolidation relationships (GLEIF Level 2) and reported shareholdings, not confirmed beneficial ownership."
   ],
   "overall_confidence": "high",
   "model": "claude-sonnet-4-6",
@@ -261,149 +226,6 @@
       },
       {
         "id": "f6",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"БАШНЕФТЬ-СТРОЙ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-bac85efbd35908d07f6c56bc"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f7",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Rosneft Deutschland.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-70496955011beed60fc62341"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f8",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ТРЕЙД\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-bcc077b66e6031682b3e15c2"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f9",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-РАЗВЕДКА И ДОБЫЧА\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-89e75fb104c9ba4b227796ae"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f10",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Ruhr Oel GmbH.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-651db52737a3ab13a9ddaa79"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f11",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-РАЗВЕДКА И ДОБЫЧА\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-449e64ef9d7d5c3a9e0f43a6"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f12",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Nizhnevartovskaya GRES.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-2a48b4cfdc03c732faaca7ff"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f13",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «ЛУТО».",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-6d492aa1d3a9116daa97ca15"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f14",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"БАЙКАЛФИНАНСГРУП\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-e46c9e3c5f0f6fff01f4b4ff"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f15",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ТАРГИН 1\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-93ba3c8efa369cf217930c54"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f16",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Общество с ограниченной ответственностью \"РН-Капитал\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-fc7e93add7bdfcd0b59e747a"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f17",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RAO Rosneftegazstroy.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-00ddda52eae2ece1796fcbd1"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f18",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-61ed294fb6a9dd508d7b6b8e"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f19",
         "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ЮНГ-ТЕПЛОНЕФТЬ\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -414,40 +236,40 @@
         "confidence": "medium"
       },
       {
-        "id": "f20",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ.",
+        "id": "f7",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ТУАПСЕНЕФТЕПРОДУКТ - ТОРГОВЛЯ И РЕСТОРАННЫЙ БИЗНЕС\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-a47bcb28bad0ec3cdefec7e3"
+          "opencheck-73702498548f001ce2a62789"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f21",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in АО \"АНХК\".",
+        "id": "f8",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ДУБИНИНСКОЕ\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-74e71e90a117382cd18aa7ca"
+          "opencheck-0a64487b1d1f365d9a3d6660"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f22",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Акціонерне товариство \"ВЕРХНЕЧОНСЬКНЄФТЄГАЗ\".",
+        "id": "f9",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Акціонерне товариство \"ОРЕНБУРГНЄФТЬ\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-3997b740de419995f7820f84"
+          "opencheck-75b58fafe879e938b12d81f5"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f23",
+        "id": "f10",
         "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «РНХ-4».",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -458,128 +280,51 @@
         "confidence": "medium"
       },
       {
-        "id": "f24",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «ЛУТО».",
+        "id": "f11",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Общество с ограниченной ответственностью \"РН-Капитал\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-d10fc05ee237eb91d9e78648"
+          "opencheck-98f3710113e833ecb2055171"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f25",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-РЕСУРС\".",
+        "id": "f12",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in JSC ACHINSK OIL REFINERY VNK.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-28a2d99aaee9425270e96770"
+          "opencheck-02b80cd82e4b738e8399bda8"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f26",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RN-Vankor LLC.",
+        "id": "f13",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «РНХ-1».",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-3ba1d9072836a27a7cbb7ed1"
+          "opencheck-3512d0f72aad48da2503bb83"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f27",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in JSC KUYBYSHEVSKY OIL REFINERY.",
+        "id": "f14",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ТРЕЙД\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-c9b27a61ae208dab730e0dba"
+          "opencheck-77e420b34869ca7fdb29379a"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f28",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-КОММЕРЦИЯ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-4afdef277984710d103bb60c"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f29",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РОСНЕФТЕТРАНС\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-02868fb2ac693fa0e44d73c0"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f30",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"НК\"РОСНЕФТЬ\" - КРАСНОДАРСКАЯ НЕФТЕБАЗА\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-61bc8a2acf722426a9e72dfd"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f31",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «РНХ-5».",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-67a99ad4a40ded1b1f6d430d"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f32",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-АКТИВ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-32db1072bddc21237f2baf8b"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f33",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Rosneft Trade Ltd.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-5371193c5c12874df4b7ad0a"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f34",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-КЕМЕРОВОНЕФТЕПРОДУКТ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-e1329338e3faa32292122ea3"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f35",
+        "id": "f15",
         "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in OJSC RN HOLDING.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -590,128 +335,40 @@
         "confidence": "medium"
       },
       {
-        "id": "f36",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Rosneft Trading SA.",
+        "id": "f16",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"САХАЛИНЭНЕРГОНЕФТЬ\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-bf336d1c57e38645809ea1fc"
+          "opencheck-36fed9bd6475297c26ce6407"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f37",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in TNK Trading International S.A..",
+        "id": "f17",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-8a02cbbfff4e90c95d2ace4c"
+          "opencheck-a47bcb28bad0ec3cdefec7e3"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f38",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \" САНАТОРИЙ \" НЕФТЯНИК КУБАНИ \".",
+        "id": "f18",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РОСНЕФТЕТРАНС\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-c12930f8122653c438809f7e"
+          "opencheck-02868fb2ac693fa0e44d73c0"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f39",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Limited Liability Company \"RN-Komsomolsky NPZ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-3c66bc8d5911e05149635384"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f40",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ZAO VANKORNEFT.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-85887d304b847900935cbe51"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f41",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Акціонерне товариство \"САМОТЛОРНЄФТЄГАЗ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-b97958726375602737d7db87"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f42",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РНХ-2\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-8c36e25418d93b9a2cb6ccdc"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f43",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ПЕРСПЕКТИВА\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-31b3e94c724addd142bc671f"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f44",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ROSNEFT FINANCE S.A..",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-954bbbc002875f3e72cc5e8e"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f45",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in NAYARA ENERGY LIMITED.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-6397d360cace459d048289c0"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f46",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-РЕСУРС\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-03b20ebcad0cc0c892917d18"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f47",
+        "id": "f19",
         "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-РАЗВЕДКА И ДОБЫЧА\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -722,7 +379,293 @@
         "confidence": "medium"
       },
       {
-        "id": "f48",
+        "id": "f20",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ROSNEFT FINANCE S.A..",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-954bbbc002875f3e72cc5e8e"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f21",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Акціонерне товариство \"САМОТЛОРНЄФТЄГАЗ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-b97958726375602737d7db87"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f22",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"НЕФТЕГАЗОВАЯ КОМПАНИЯ \"ИТЕРА\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-4cd86e1f884fbd59bfa125b8"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f23",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RN-Rasvedka i Dobycha LLC.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-25c59226009418881321dc8b"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f24",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in NAYARA ENERGY LIMITED.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-6397d360cace459d048289c0"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f25",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «РНХ-5».",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-67a99ad4a40ded1b1f6d430d"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f26",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-АКТИВ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-1d7e4fb8c37253def4e5b36e"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f27",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Товариство з обмеженою відповідальністю \"Роснафта Марін\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-48807ffbb7347dba37c01134"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f28",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"УЧЕТ И ОТЧЕТНОСТЬ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-0f0e8ac948d7db52b06d6cbd"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f29",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Rosneft Deutschland.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-70496955011beed60fc62341"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f30",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-61ed294fb6a9dd508d7b6b8e"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f31",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"НЕФТЕГАЗОВАЯ КОМПАНИЯ \"ИТЕРА\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-9811bc2af69e4de3fc937c10"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f32",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Общество с ограниченной ответственностью \"РН-Капитал\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-fc7e93add7bdfcd0b59e747a"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f33",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Sanors.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-f0ccb593b6fe4f7037c4400a"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f34",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Rosneft Trade Ltd.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-5371193c5c12874df4b7ad0a"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f35",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in АО “СНПЗ”.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-2e7aac5538d4deda40f50e82"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f36",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ZAO VANKORNEFT.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-85887d304b847900935cbe51"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f37",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"САНАТОРИЙ \"МИНЕРАЛЬНЫЙ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-af15142d3ecf311609fea199"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f38",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-РЕСУРС\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-03b20ebcad0cc0c892917d18"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f39",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-РАЗВЕДКА И ДОБЫЧА\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-89e75fb104c9ba4b227796ae"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f40",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Акціонерне товариство \"ВЕРХНЕЧОНСЬКНЄФТЄГАЗ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-3997b740de419995f7820f84"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f41",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «ЛУТО».",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-d10fc05ee237eb91d9e78648"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f42",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ВОСТОК ИНЖИНИРИНГ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-0a582a505cae247202be6083"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f43",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-РЕСУРС\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-28a2d99aaee9425270e96770"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f44",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ИНОСТРАННЫЕ ПРОЕКТЫ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-706fa33d0ecbde909a8d9c60"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f45",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Limited Liability Company \"RN-Komsomolsky NPZ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-3c66bc8d5911e05149635384"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f46",
         "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \" САНАТОРИЙ \" НЕФТЯНИК КУБАНИ \".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -733,35 +676,57 @@
         "confidence": "medium"
       },
       {
-        "id": "f49",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RN Yuganskneftegaz.",
+        "id": "f47",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-АКТИВ\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-3232df08379160988d627901"
+          "opencheck-fa053cd3faa8b2029964586f"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f48",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОТКРЫТОЕ АКЦИОНЕРНОЕ ОБЩЕСТВО \"ВСЕРОССИЙСКИЙ БАНК РАЗВИТИЯ РЕГИОНОВ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-16cfc80e05980b663d608bf6"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f49",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Общество с ограниченной ответственностью \"РН-Капитал\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-5a00546319908f1b06a25359"
         ],
         "confidence": "medium"
       },
       {
         "id": "f50",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Transalpine Pipeline Group.",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in JSC KUYBYSHEVSKY OIL REFINERY.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-ff01b59c405b04a3c97fc31f"
+          "opencheck-c9b27a61ae208dab730e0dba"
         ],
         "confidence": "medium"
       },
       {
         "id": "f51",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"УЧЕТ И ОТЧЕТНОСТЬ\".",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"БАШНЕФТЬ-СТРОЙ\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-0f0e8ac948d7db52b06d6cbd"
+          "opencheck-bac85efbd35908d07f6c56bc"
         ],
         "confidence": "medium"
       },
@@ -778,347 +743,17 @@
       },
       {
         "id": "f53",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"НЕФТЕГАЗОВАЯ КОМПАНИЯ \"ИТЕРА\".",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Ruhr Oel GmbH.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-9811bc2af69e4de3fc937c10"
+          "opencheck-651db52737a3ab13a9ddaa79"
         ],
         "confidence": "medium"
       },
       {
         "id": "f54",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ЮНГ-ЭНЕРГОНЕФТЬ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-812959e9f47833f966a5eb38"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f55",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"КАСПОЙЛ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-5c862c65ea82879f4d9a3afd"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f56",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ТЕЛЕПОРТ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-174e6878c306555aefe4346f"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f57",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Sakhalinmorneftegaz-Shelf.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-1bcd40e252518494257ee9b7"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f58",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «РНХ-3».",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-703d346c1cf2b9a9c56facba"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f59",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Общество с ограниченной ответственностью \"РН-Капитал\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-98f3710113e833ecb2055171"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f60",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Bayernoil Raffineriegesellschaft.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-2d2426080de3e15901635319"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f61",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ТУАПСЕНЕФТЕПРОДУКТ - САНАТОРИЙ \"СМЕНА\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-1d00b2c20399f12020bd0117"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f62",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «РНХ-1».",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-3512d0f72aad48da2503bb83"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f63",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RN-NeftKapitalInvest LLC.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-bf3d97e519b1b7fd4fdc6d23"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f64",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in АТ \"Всеросійський банк розвитку регіонів\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-16cfc80e05980b663d608bf6"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f65",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-АКТИВ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-1d7e4fb8c37253def4e5b36e"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f66",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ЧАСТНОЕ ОХРАННОЕ ПРЕДПРИЯТИЕ \"КОМСОМОЛЬСКИЙ НЕФТЕПЕРЕРАБАТЫВАЮЩИЙ ЗАВОД - СТРАЖ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-596a6a6164204f46b54595ab"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f67",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RN-Vankor LLC.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-fa14077ec55fd9fad4f426d7"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f68",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"СБЫТ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-521429f2801cea4ec4011c27"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f69",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-КОММЕРЦИЯ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-470ad0b07a1c673b38ff2344"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f70",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-СТРОЙ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-a7139f5d50618ca63359281a"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f71",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ВОСТОК ИНЖИНИРИНГ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-0a582a505cae247202be6083"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f72",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РНХ-6\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-65b02390202ac6014a305fe8"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f73",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"КНГ- ПИТАНИЕ СЕРВИС\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-b589f45ab48a554283ad653d"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f74",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-РАЗВЕДКА И ДОБЫЧА\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-438e85a7f7b05eb8c12d3ca9"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f75",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-РАЗВЕДКА И ДОБЫЧА\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-32d35128244b5b454c365a6c"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f76",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Joint Stock Company \"Novokuybyshevsk Oil Refinery\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-f9e5e300b906f6f054cf1b1a"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f77",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RN-Rasvedka i Dobycha LLC.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-25c59226009418881321dc8b"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f78",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Rosneft-Shell Caspian Ventures Ltd.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-125bc744e44581a02d2d896a"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f79",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Sanors.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-f0ccb593b6fe4f7037c4400a"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f80",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-КОММЕРЦИЯ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-7f5597bd811dd72adeab041d"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f81",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ИНОСТРАННЫЕ ИНВЕСТИЦИИ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-25160a29fece5b9017e8e278"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f82",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ИНОСТРАННЫЕ ПРОЕКТЫ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-706fa33d0ecbde909a8d9c60"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f83",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RN-Aktiv OOO.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-2f4a59d0e161f4b46ebd41ef"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f84",
         "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ТАРГИН 2\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -1129,7 +764,139 @@
         "confidence": "medium"
       },
       {
-        "id": "f85",
+        "id": "f55",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RN Yuganskneftegaz.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-3232df08379160988d627901"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f56",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in TNK Trading International S.A..",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-8a02cbbfff4e90c95d2ace4c"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f57",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"КАСПОЙЛ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-5c862c65ea82879f4d9a3afd"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f58",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RN-Vankor LLC.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-fa14077ec55fd9fad4f426d7"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f59",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РНХ-6\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-65b02390202ac6014a305fe8"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f60",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-СТРОЙ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-a7139f5d50618ca63359281a"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f61",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ТАРГИН 1\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-93ba3c8efa369cf217930c54"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f62",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-РАЗВЕДКА И ДОБЫЧА\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-32d35128244b5b454c365a6c"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f63",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Rosneft-Shell Caspian Ventures Ltd.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-125bc744e44581a02d2d896a"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f64",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-АКТИВ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-32db1072bddc21237f2baf8b"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f65",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Transalpine Pipeline Group.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-ff01b59c405b04a3c97fc31f"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f66",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"НК\"РОСНЕФТЬ\" - КРАСНОДАРСКАЯ НЕФТЕБАЗА\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-61bc8a2acf722426a9e72dfd"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f67",
         "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RN Trade LLC.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -1140,183 +907,51 @@
         "confidence": "medium"
       },
       {
-        "id": "f86",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Товариство з обмеженою відповідальністю \"Роснафта Марін\".",
+        "id": "f68",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \" САНАТОРИЙ \" НЕФТЯНИК КУБАНИ \".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-48807ffbb7347dba37c01134"
+          "opencheck-c12930f8122653c438809f7e"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f87",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ДУБИНИНСКОЕ\".",
+        "id": "f69",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ИНОСТРАННЫЕ ИНВЕСТИЦИИ\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-0a64487b1d1f365d9a3d6660"
+          "opencheck-25160a29fece5b9017e8e278"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f88",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ТУАПСЕНЕФТЕПРОДУКТ - ТОРГОВЛЯ И РЕСТОРАННЫЙ БИЗНЕС\".",
+        "id": "f70",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-РАЗВЕДКА И ДОБЫЧА\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-73702498548f001ce2a62789"
+          "opencheck-438e85a7f7b05eb8c12d3ca9"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f89",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-НЕФТЕПОРТ\".",
+        "id": "f71",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ПЕРСПЕКТИВА\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-48777c3ec6b411bd391385da"
+          "opencheck-31b3e94c724addd142bc671f"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f90",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"НЕФТЕГАЗОВАЯ ПРОИЗВОДСТВЕННАЯ ЭКСПЕДИЦИЯ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-5357d4c39ddb33b73acc0a4a"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f91",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ВОСТОК-ЭНЕРДЖИ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-169f80ad89c37c3782076ed8"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f92",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in JSC ACHINSK OIL REFINERY VNK.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-02b80cd82e4b738e8399bda8"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f93",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ТРЕЙД\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-77e420b34869ca7fdb29379a"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f94",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ЧАСТНОЕ ОХРАННОЕ ПРЕДПРИЯТИЕ \"ВЫМПЕЛ-АСА\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-d1ca8621dc09d68912846f24"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f95",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-ПЕРЕРАБОТКА\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-ffc22905a154eb09ffe84690"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f96",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"НЕФТЕГАЗОВАЯ КОМПАНИЯ \"ИТЕРА\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-4cd86e1f884fbd59bfa125b8"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f97",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ЭКСПЛОРЕЙШН\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-a144aae1d3f9259aca1d336f"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f98",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RN-Astra.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-0857778252978dc75d69aeb2"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f99",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"САНАТОРИЙ \"МИНЕРАЛЬНЫЙ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-af15142d3ecf311609fea199"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f100",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-92669d9275e47c280ffe5134"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f101",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"САХАЛИНЭНЕРГОНЕФТЬ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-36fed9bd6475297c26ce6407"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f102",
+        "id": "f72",
         "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ТРУБОПРОВОДНЫЙ КОНСОРЦИУМ \"БУРГАС - АЛЕКСАНДРУПОЛИС\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -1327,62 +962,18 @@
         "confidence": "medium"
       },
       {
-        "id": "f103",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in АВТОНОМНАЯ НЕКОММЕРЧЕСКАЯ ОРГАНИЗАЦИЯ \"ИННОВАЦИОННЫЙ ИНЖИНИРИНГОВЫЙ ЦЕНТР\".",
+        "id": "f73",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ЧАСТНОЕ ОХРАННОЕ ПРЕДПРИЯТИЕ \"ВЫМПЕЛ-АСА\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-95df21078b1a61b15557148c"
+          "opencheck-d1ca8621dc09d68912846f24"
         ],
         "confidence": "medium"
       },
       {
-        "id": "f104",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ТРЕЙД\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-4bc8cf245a774a3c655c038f"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f105",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-АКТИВ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-fa053cd3faa8b2029964586f"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f106",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ВЕДОМСТВЕННАЯ ОХРАНА\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-56a3b7a998e632741e1685bb"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f107",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Акціонерне товариство \"ОРЕНБУРГНЄФТЬ\".",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
-        "bods_statement_ids": [
-          "opencheck-75b58fafe879e938b12d81f5"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f108",
+        "id": "f74",
         "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"КОМСОМОЛЬСКОЕ НЕФТЕГАЗОДОБЫВАЮЩЕЕ УПРАВЛЕНИЕ\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -1393,35 +984,409 @@
         "confidence": "medium"
       },
       {
-        "id": "f109",
-        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in OJSC SYZRAN REFINERY.",
+        "id": "f75",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-КОММЕРЦИЯ\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-2e7aac5538d4deda40f50e82"
+          "opencheck-7f5597bd811dd72adeab041d"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f76",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ЧАСТНОЕ ОХРАННОЕ ПРЕДПРИЯТИЕ \"КОМСОМОЛЬСКИЙ НЕФТЕПЕРЕРАБАТЫВАЮЩИЙ ЗАВОД - СТРАЖ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-596a6a6164204f46b54595ab"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f77",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Rosneft Trading SA.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-bf336d1c57e38645809ea1fc"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f78",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in АО \"АНХК\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-74e71e90a117382cd18aa7ca"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f79",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"КНГ- ПИТАНИЕ СЕРВИС\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-b589f45ab48a554283ad653d"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f80",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-КОММЕРЦИЯ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-470ad0b07a1c673b38ff2344"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f81",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ТЕЛЕПОРТ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-174e6878c306555aefe4346f"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f82",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-КОММЕРЦИЯ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-4afdef277984710d103bb60c"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f83",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Sakhalinmorneftegaz-Shelf.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-1bcd40e252518494257ee9b7"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f84",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ЮНГ-ЭНЕРГОНЕФТЬ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-812959e9f47833f966a5eb38"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f85",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-КЕМЕРОВОНЕФТЕПРОДУКТ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-e1329338e3faa32292122ea3"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f86",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ТРЕЙД\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-bcc077b66e6031682b3e15c2"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f87",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-92669d9275e47c280ffe5134"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f88",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RAO Rosneftegazstroy.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-00ddda52eae2ece1796fcbd1"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f89",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ВЕДОМСТВЕННАЯ ОХРАНА\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-56a3b7a998e632741e1685bb"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f90",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Bayernoil Raffineriegesellschaft.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-2d2426080de3e15901635319"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f91",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"НЕФТЕГАЗОВАЯ ПРОИЗВОДСТВЕННАЯ ЭКСПЕДИЦИЯ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-5357d4c39ddb33b73acc0a4a"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f92",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RN-Astra.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-0857778252978dc75d69aeb2"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f93",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ТРЕЙД\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-4bc8cf245a774a3c655c038f"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f94",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"СБЫТ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-521429f2801cea4ec4011c27"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f95",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «РНХ-3».",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-703d346c1cf2b9a9c56facba"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f96",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"НЕФТЬ-АКТИВ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-2f4a59d0e161f4b46ebd41ef"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f97",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RN-NeftKapitalInvest LLC.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-bf3d97e519b1b7fd4fdc6d23"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f98",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"БАЙКАЛФИНАНСГРУП\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-e46c9e3c5f0f6fff01f4b4ff"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f99",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ВОСТОК-ЭНЕРДЖИ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-169f80ad89c37c3782076ed8"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f100",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РНХ-2\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-8c36e25418d93b9a2cb6ccdc"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f101",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in RN-Vankor LLC.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-3ba1d9072836a27a7cbb7ed1"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f102",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Nizhnevartovskaya GRES.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-2a48b4cfdc03c732faaca7ff"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f103",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-ПЕРЕРАБОТКА\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-ffc22905a154eb09ffe84690"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f104",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-РАЗВЕДКА И ДОБЫЧА\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-449e64ef9d7d5c3a9e0f43a6"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f105",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-НЕФТЕПОРТ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-48777c3ec6b411bd391385da"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f106",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-АКТИВ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-b3bd9c864adc5bb50e8ee7e6"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f107",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «ЛУТО».",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-6d492aa1d3a9116daa97ca15"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f108",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in АВТОНОМНАЯ НЕКОММЕРЧЕСКАЯ ОРГАНИЗАЦИЯ \"ИННОВАЦИОННЫЙ ИНЖИНИРИНГОВЫЙ ЦЕНТР\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-95df21078b1a61b15557148c"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f109",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ЭКСПЛОРЕЙШН\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-a144aae1d3f9259aca1d336f"
         ],
         "confidence": "medium"
       },
       {
         "id": "f110",
-        "statement": "BP RUSSIAN INVESTMENTS LIMITED holds shareholding in ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\".",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in Joint Stock Company \"Novokuybyshevsk Oil Refinery\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-70537d9d47e3bbd299c3aa36"
+          "opencheck-f9e5e300b906f6f054cf1b1a"
         ],
         "confidence": "medium"
       },
       {
         "id": "f111",
-        "statement": "RAO Rosneftegazstroy holds shareholding in ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\".",
+        "statement": "ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\" holds shareholding in ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ТУАПСЕНЕФТЕПРОДУКТ - САНАТОРИЙ \"СМЕНА\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
         "bods_statement_ids": [
-          "opencheck-a9ce743cfcf6a1ac4603a92d"
+          "opencheck-1d00b2c20399f12020bd0117"
         ],
         "confidence": "medium"
       },
@@ -1449,6 +1414,28 @@
       },
       {
         "id": "f114",
+        "statement": "RAO Rosneftegazstroy holds shareholding in ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-a9ce743cfcf6a1ac4603a92d"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f115",
+        "statement": "BP RUSSIAN INVESTMENTS LIMITED holds shareholding in ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\".",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/NK-nq68oAyhLJDTxPnYfQq8Vg/",
+        "bods_statement_ids": [
+          "opencheck-70537d9d47e3bbd299c3aa36"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f116",
         "statement": "QH Oil Investments LLC holds shareholding in ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -1459,7 +1446,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f115",
+        "id": "f117",
         "statement": "National Settlement Depository holds shareholding in ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -1470,7 +1457,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f116",
+        "id": "f118",
         "statement": "Igor Sečin holds ГЛАВНЫЙ ИСПОЛНИТЕЛЬНЫЙ ДИРЕКТОР, from 2012-06-09 in ОТКРЫТОЕ АКЦТОНЕРНОЕ ОБЩЕСТВО \" НЕФТЯНАЯ КОМПАНИЯ \" РОСНЕФТЬ\".",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
@@ -1481,7 +1468,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f117",
+        "id": "f119",
         "statement": "Federal Agency for State Property Management holds Controlling owner declared on Wikidata (P749) in Rosneft.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -1492,7 +1479,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f118",
+        "id": "f120",
         "statement": "Government of Russia holds Controlling owner declared on Wikidata (P127) in Rosneft.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -1503,7 +1490,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f119",
+        "id": "f121",
         "statement": "Rosneftegaz holds Controlling owner declared on Wikidata (P749) in Rosneft.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -1514,7 +1501,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f120",
+        "id": "f122",
         "statement": "Igor Sechin holds chief executive officer in Rosneft.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -1525,7 +1512,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f121",
+        "id": "f123",
         "statement": "Mohammed Saleh Al Sada holds chairperson, from 2023-07-01 in Rosneft.",
         "source_name": "Wikidata",
         "source_id": "wikidata",
@@ -1536,7 +1523,7 @@
         "confidence": "medium"
       },
       {
-        "id": "f122",
+        "id": "f124",
         "statement": "публичное акционерное общество \"Нефтяная компания \"Роснефть\" is a registered entity in RU (XI-LEI 253400JT3MQWNDKMJE44, RU-INN 1027700043502).",
         "source_name": "GLEIF",
         "source_id": "gleif",
@@ -1649,6 +1636,17 @@
       },
       {
         "id": "r10",
+        "code": "NON_EU_JURISDICTION",
+        "label": "Outside EU/EEA",
+        "confidence": "low",
+        "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: RU. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
+        "source_name": "OpenAleph",
+        "source_id": "openaleph",
+        "fact_ids": [],
+        "kind": "context"
+      },
+      {
+        "id": "r11",
         "code": "RELATED_SANCTIONS_CONTROLLED",
         "label": "Related party under sanction ownership or control",
         "confidence": "high",
@@ -1659,7 +1657,7 @@
         "kind": "risk"
       },
       {
-        "id": "r11",
+        "id": "r12",
         "code": "RELATED_EXPORT_CONTROL_LINKED",
         "label": "Related party linked to an export-controlled party",
         "confidence": "high",
@@ -1670,7 +1668,7 @@
         "kind": "risk"
       },
       {
-        "id": "r12",
+        "id": "r13",
         "code": "RELATED_SANCTIONS_CONTROLLED",
         "label": "Related party under sanction ownership or control",
         "confidence": "high",
@@ -1681,7 +1679,7 @@
         "kind": "risk"
       },
       {
-        "id": "r13",
+        "id": "r14",
         "code": "RELATED_EXPORT_CONTROL_LINKED",
         "label": "Related party linked to an export-controlled party",
         "confidence": "high",
@@ -1692,7 +1690,7 @@
         "kind": "risk"
       },
       {
-        "id": "r14",
+        "id": "r15",
         "code": "RELATED_SANCTIONS_CONTROLLED",
         "label": "Related party under sanction ownership or control",
         "confidence": "high",
@@ -1703,7 +1701,7 @@
         "kind": "risk"
       },
       {
-        "id": "r15",
+        "id": "r16",
         "code": "RELATED_EXPORT_CONTROL_LINKED",
         "label": "Related party linked to an export-controlled party",
         "confidence": "high",
@@ -1714,249 +1712,7 @@
         "kind": "risk"
       },
       {
-        "id": "r16",
-        "code": "RELATED_SANCTIONS_CONTROLLED",
-        "label": "Related party under sanction ownership or control",
-        "confidence": "high",
-        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"БАШНЕФТЬ-СТРОЙ\"' matches a record on opensanctions: inside a sanctioned party's ownership chain per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
         "id": "r17",
-        "code": "RELATED_EXPORT_CONTROL_LINKED",
-        "label": "Related party linked to an export-controlled party",
-        "confidence": "high",
-        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"БАШНЕФТЬ-СТРОЙ\"' matches a record on opensanctions: linked to an export-controlled party per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r18",
-        "code": "RELATED_SANCTIONS_CONTROLLED",
-        "label": "Related party under sanction ownership or control",
-        "confidence": "medium",
-        "rationale": "Related entity 'Rosneft Deutschland' matches a record on opensanctions: inside a sanctioned party's ownership chain per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r19",
-        "code": "RELATED_EXPORT_CONTROL_LINKED",
-        "label": "Related party linked to an export-controlled party",
-        "confidence": "medium",
-        "rationale": "Related entity 'Rosneft Deutschland' matches a record on opensanctions: linked to an export-controlled party per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r20",
-        "code": "RELATED_SANCTIONS_CONTROLLED",
-        "label": "Related party under sanction ownership or control",
-        "confidence": "high",
-        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ТРЕЙД\"' matches a record on opensanctions: inside a sanctioned party's ownership chain per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r21",
-        "code": "RELATED_EXPORT_CONTROL_LINKED",
-        "label": "Related party linked to an export-controlled party",
-        "confidence": "high",
-        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ТРЕЙД\"' matches a record on opensanctions: linked to an export-controlled party per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r22",
-        "code": "RELATED_SANCTIONS_CONTROLLED",
-        "label": "Related party under sanction ownership or control",
-        "confidence": "high",
-        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-РАЗВЕДКА И ДОБЫЧА\"' matches a record on opensanctions: inside a sanctioned party's ownership chain per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r23",
-        "code": "RELATED_EXPORT_CONTROL_LINKED",
-        "label": "Related party linked to an export-controlled party",
-        "confidence": "high",
-        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-РАЗВЕДКА И ДОБЫЧА\"' matches a record on opensanctions: linked to an export-controlled party per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r24",
-        "code": "RELATED_SANCTIONS_CONTROLLED",
-        "label": "Related party under sanction ownership or control",
-        "confidence": "high",
-        "rationale": "Related entity 'Ruhr Oel GmbH' matches a record on opensanctions: inside a sanctioned party's ownership chain per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r25",
-        "code": "RELATED_EXPORT_CONTROL_LINKED",
-        "label": "Related party linked to an export-controlled party",
-        "confidence": "high",
-        "rationale": "Related entity 'Ruhr Oel GmbH' matches a record on opensanctions: linked to an export-controlled party per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r26",
-        "code": "RELATED_SANCTIONS_CONTROLLED",
-        "label": "Related party under sanction ownership or control",
-        "confidence": "high",
-        "rationale": "Related entity 'Nizhnevartovskaya GRES' matches a record on opensanctions: inside a sanctioned party's ownership chain per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r27",
-        "code": "RELATED_EXPORT_CONTROL_LINKED",
-        "label": "Related party linked to an export-controlled party",
-        "confidence": "high",
-        "rationale": "Related entity 'Nizhnevartovskaya GRES' matches a record on opensanctions: linked to an export-controlled party per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r28",
-        "code": "RELATED_SANCTIONS_LINKED",
-        "label": "Related party linked to a sanctioned party",
-        "confidence": "high",
-        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ТАРГИН 1\"' matches a record on opensanctions: linked to sanctioned entities per OpenSanctions (sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r29",
-        "code": "RELATED_SANCTIONS_LINKED",
-        "label": "Related party linked to a sanctioned party",
-        "confidence": "high",
-        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ТАРГИН 1\"' matches a record on opensanctions: linked to sanctioned entities per OpenSanctions (sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r30",
-        "code": "RELATED_SANCTIONS_CONTROLLED",
-        "label": "Related party under sanction ownership or control",
-        "confidence": "high",
-        "rationale": "Related entity 'Общество с ограниченной ответственностью \"РН-Капитал\"' matches a record on opensanctions: inside a sanctioned party's ownership chain per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r31",
-        "code": "RELATED_EXPORT_CONTROL_LINKED",
-        "label": "Related party linked to an export-controlled party",
-        "confidence": "high",
-        "rationale": "Related entity 'Общество с ограниченной ответственностью \"РН-Капитал\"' matches a record on opensanctions: linked to an export-controlled party per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r32",
-        "code": "RELATED_SANCTIONS_CONTROLLED",
-        "label": "Related party under sanction ownership or control",
-        "confidence": "high",
-        "rationale": "Related entity 'RAO Rosneftegazstroy' matches a record on opensanctions: inside a sanctioned party's ownership chain per OpenSanctions (export.control.linked, export.risk, sanction.control).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r33",
-        "code": "RELATED_EXPORT_CONTROL_LINKED",
-        "label": "Related party linked to an export-controlled party",
-        "confidence": "high",
-        "rationale": "Related entity 'RAO Rosneftegazstroy' matches a record on opensanctions: linked to an export-controlled party per OpenSanctions (export.control.linked, export.risk, sanction.control).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r34",
-        "code": "RELATED_EXPORT_RISK",
-        "label": "Related party flagged for trade risk",
-        "confidence": "high",
-        "rationale": "Related entity 'RAO Rosneftegazstroy' matches a record on opensanctions: flagged for trade risk per OpenSanctions (export.control.linked, export.risk, sanction.control).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r35",
-        "code": "RELATED_SANCTIONED",
-        "label": "Related party sanctioned",
-        "confidence": "high",
-        "rationale": "Related entity 'LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ' matches a record on opensanctions: sanctioned per OpenSanctions (debarment, export.control, sanction).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r36",
-        "code": "RELATED_DEBARMENT",
-        "label": "Related party debarred from public contracts",
-        "confidence": "high",
-        "rationale": "Related entity 'LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ' matches a record on opensanctions: debarred from public contracts per OpenSanctions (debarment, export.control, sanction).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r37",
-        "code": "RELATED_EXPORT_CONTROLLED",
-        "label": "Related party subject to export-control restrictions",
-        "confidence": "high",
-        "rationale": "Related entity 'LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ' matches a record on opensanctions: subject to export-control restrictions per OpenSanctions (debarment, export.control, sanction).",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r38",
         "code": "RELATED_SANCTIONS_LINKED",
         "label": "Related party linked to a sanctioned party",
         "confidence": "high",
@@ -1967,7 +1723,7 @@
         "kind": "risk"
       },
       {
-        "id": "r39",
+        "id": "r18",
         "code": "RELATED_SANCTIONS_LINKED",
         "label": "Related party linked to a sanctioned party",
         "confidence": "high",
@@ -1978,7 +1734,282 @@
         "kind": "risk"
       },
       {
+        "id": "r19",
+        "code": "RELATED_SANCTIONS_CONTROLLED",
+        "label": "Related party under sanction ownership or control",
+        "confidence": "high",
+        "rationale": "Related entity 'Общество с ограниченной ответственностью \"РН-Капитал\"' matches a record on opensanctions: inside a sanctioned party's ownership chain per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r20",
+        "code": "RELATED_EXPORT_CONTROL_LINKED",
+        "label": "Related party linked to an export-controlled party",
+        "confidence": "high",
+        "rationale": "Related entity 'Общество с ограниченной ответственностью \"РН-Капитал\"' matches a record on opensanctions: linked to an export-controlled party per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r21",
+        "code": "RELATED_SANCTIONS_LINKED",
+        "label": "Related party linked to a sanctioned party",
+        "confidence": "high",
+        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «РНХ-1»' matches a record on opensanctions: linked to sanctioned entities per OpenSanctions (sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r22",
+        "code": "RELATED_SANCTIONS_LINKED",
+        "label": "Related party linked to a sanctioned party",
+        "confidence": "high",
+        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «РНХ-1»' matches a record on opensanctions: linked to sanctioned entities per OpenSanctions (sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r23",
+        "code": "RELATED_SANCTIONS_LINKED",
+        "label": "Related party linked to a sanctioned party",
+        "confidence": "high",
+        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «РНХ-1»' matches a record on opensanctions: linked to sanctioned entities per OpenSanctions (sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r24",
+        "code": "RELATED_SANCTIONS_LINKED",
+        "label": "Related party linked to a sanctioned party",
+        "confidence": "high",
+        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «РНХ-1»' matches a record on opensanctions: linked to sanctioned entities per OpenSanctions (sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r25",
+        "code": "RELATED_SANCTIONS_LINKED",
+        "label": "Related party linked to a sanctioned party",
+        "confidence": "high",
+        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «РНХ-1»' matches a record on opensanctions: linked to sanctioned entities per OpenSanctions (sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r26",
+        "code": "RELATED_SANCTIONS_LINKED",
+        "label": "Related party linked to a sanctioned party",
+        "confidence": "high",
+        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «РНХ-1»' matches a record on opensanctions: linked to sanctioned entities per OpenSanctions (sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r27",
+        "code": "RELATED_SANCTIONS_CONTROLLED",
+        "label": "Related party under sanction ownership or control",
+        "confidence": "high",
+        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ТРЕЙД\"' matches a record on opensanctions: inside a sanctioned party's ownership chain per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r28",
+        "code": "RELATED_EXPORT_CONTROL_LINKED",
+        "label": "Related party linked to an export-controlled party",
+        "confidence": "high",
+        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"РН-ТРЕЙД\"' matches a record on opensanctions: linked to an export-controlled party per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r29",
+        "code": "RELATED_SANCTIONED",
+        "label": "Related party sanctioned",
+        "confidence": "high",
+        "rationale": "Related entity 'OJSC RN HOLDING' matches a record on opensanctions: sanctioned per OpenSanctions (debarment, export.control, sanction).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r30",
+        "code": "RELATED_DEBARMENT",
+        "label": "Related party debarred from public contracts",
+        "confidence": "high",
+        "rationale": "Related entity 'OJSC RN HOLDING' matches a record on opensanctions: debarred from public contracts per OpenSanctions (debarment, export.control, sanction).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r31",
+        "code": "RELATED_EXPORT_CONTROLLED",
+        "label": "Related party subject to export-control restrictions",
+        "confidence": "high",
+        "rationale": "Related entity 'OJSC RN HOLDING' matches a record on opensanctions: subject to export-control restrictions per OpenSanctions (debarment, export.control, sanction).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r32",
+        "code": "RELATED_SANCTIONED",
+        "label": "Related party sanctioned",
+        "confidence": "high",
+        "rationale": "Related entity 'LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ' matches a record on opensanctions: sanctioned per OpenSanctions (debarment, export.control, sanction).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r33",
+        "code": "RELATED_DEBARMENT",
+        "label": "Related party debarred from public contracts",
+        "confidence": "high",
+        "rationale": "Related entity 'LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ' matches a record on opensanctions: debarred from public contracts per OpenSanctions (debarment, export.control, sanction).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r34",
+        "code": "RELATED_EXPORT_CONTROLLED",
+        "label": "Related party subject to export-control restrictions",
+        "confidence": "high",
+        "rationale": "Related entity 'LIMITED LIABILITY COMPANY RN KRASNODARNEFTEGAZ' matches a record on opensanctions: subject to export-control restrictions per OpenSanctions (debarment, export.control, sanction).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r35",
+        "code": "RELATED_SANCTIONS_CONTROLLED",
+        "label": "Related party under sanction ownership or control",
+        "confidence": "high",
+        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-РАЗВЕДКА И ДОБЫЧА\"' matches a record on opensanctions: inside a sanctioned party's ownership chain per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r36",
+        "code": "RELATED_EXPORT_CONTROL_LINKED",
+        "label": "Related party linked to an export-controlled party",
+        "confidence": "high",
+        "rationale": "Related entity 'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ ООО \"РН-РАЗВЕДКА И ДОБЫЧА\"' matches a record on opensanctions: linked to an export-controlled party per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r37",
+        "code": "RELATED_SANCTIONED",
+        "label": "Related party sanctioned",
+        "confidence": "high",
+        "rationale": "Related entity 'ROSNEFT FINANCE S.A.' matches a record on opensanctions: sanctioned per OpenSanctions (debarment, export.control.linked, sanction).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r38",
+        "code": "RELATED_DEBARMENT",
+        "label": "Related party debarred from public contracts",
+        "confidence": "high",
+        "rationale": "Related entity 'ROSNEFT FINANCE S.A.' matches a record on opensanctions: debarred from public contracts per OpenSanctions (debarment, export.control.linked, sanction).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r39",
+        "code": "RELATED_EXPORT_CONTROL_LINKED",
+        "label": "Related party linked to an export-controlled party",
+        "confidence": "high",
+        "rationale": "Related entity 'ROSNEFT FINANCE S.A.' matches a record on opensanctions: linked to an export-controlled party per OpenSanctions (debarment, export.control.linked, sanction).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
         "id": "r40",
+        "code": "RELATED_SANCTIONS_CONTROLLED",
+        "label": "Related party under sanction ownership or control",
+        "confidence": "medium",
+        "rationale": "Related entity 'RN-Rasvedka i Dobycha LLC' matches a record on opensanctions: inside a sanctioned party's ownership chain per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r41",
+        "code": "RELATED_EXPORT_CONTROL_LINKED",
+        "label": "Related party linked to an export-controlled party",
+        "confidence": "medium",
+        "rationale": "Related entity 'RN-Rasvedka i Dobycha LLC' matches a record on opensanctions: linked to an export-controlled party per OpenSanctions (export.control.linked, sanction.control, sanction.linked).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r42",
+        "code": "RELATED_SANCTIONED",
+        "label": "Related party sanctioned",
+        "confidence": "high",
+        "rationale": "Related entity 'NAYARA ENERGY LIMITED' matches a record on opensanctions: sanctioned per OpenSanctions (export.control.linked, sanction).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r43",
+        "code": "RELATED_EXPORT_CONTROL_LINKED",
+        "label": "Related party linked to an export-controlled party",
+        "confidence": "high",
+        "rationale": "Related entity 'NAYARA ENERGY LIMITED' matches a record on opensanctions: linked to an export-controlled party per OpenSanctions (export.control.linked, sanction).",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r44",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -1989,7 +2020,7 @@
         "kind": "risk"
       },
       {
-        "id": "r41",
+        "id": "r45",
         "code": "RELATED_SANCTIONED",
         "label": "Related party sanctioned",
         "confidence": "medium",
@@ -2000,7 +2031,7 @@
         "kind": "risk"
       },
       {
-        "id": "r42",
+        "id": "r46",
         "code": "RELATED_DEBARMENT",
         "label": "Related party debarred from public contracts",
         "confidence": "medium",
@@ -2011,7 +2042,7 @@
         "kind": "risk"
       },
       {
-        "id": "r43",
+        "id": "r47",
         "code": "RELATED_PEP",
         "label": "Related party politically exposed",
         "confidence": "medium",
@@ -2022,7 +2053,7 @@
         "kind": "risk"
       },
       {
-        "id": "r44",
+        "id": "r48",
         "code": "RELATED_DEBARMENT",
         "label": "Related party debarred from public contracts",
         "confidence": "high",
@@ -2033,18 +2064,7 @@
         "kind": "risk"
       },
       {
-        "id": "r45",
-        "code": "RELATED_DEBARMENT",
-        "label": "Related party debarred from public contracts",
-        "confidence": "high",
-        "rationale": "Related entity 'OJSC SYZRAN REFINERY' matches a record on openaleph: debarred from public contracts via 'US SAM Procurement Exclusions' (debarment).",
-        "source_name": "OpenAleph",
-        "source_id": "openaleph",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r46",
+        "id": "r49",
         "code": "RELATED_DEBARMENT",
         "label": "Related party debarred from public contracts",
         "confidence": "high",
@@ -2055,7 +2075,7 @@
         "kind": "risk"
       },
       {
-        "id": "r47",
+        "id": "r50",
         "code": "RELATED_EXPORT_CONTROLLED",
         "label": "Related party subject to export-control restrictions",
         "confidence": "high",
@@ -2066,7 +2086,7 @@
         "kind": "risk"
       },
       {
-        "id": "r48",
+        "id": "r51",
         "code": "RELATED_DEBARMENT",
         "label": "Related party debarred from public contracts",
         "confidence": "high",
@@ -2077,7 +2097,7 @@
         "kind": "risk"
       },
       {
-        "id": "r49",
+        "id": "r52",
         "code": "RELATED_DEBARMENT",
         "label": "Related party debarred from public contracts",
         "confidence": "high",
@@ -2088,29 +2108,7 @@
         "kind": "risk"
       },
       {
-        "id": "r50",
-        "code": "RELATED_EXPORT_CONTROLLED",
-        "label": "Related party subject to export-control restrictions",
-        "confidence": "high",
-        "rationale": "Related entity 'OJSC SYZRAN REFINERY' matches a record on openaleph: subject to export-control restrictions via 'Taiwan Strategic High-Tech Commodities Entity List' (export.control).",
-        "source_name": "OpenAleph",
-        "source_id": "openaleph",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r51",
-        "code": "RELATED_DEBARMENT",
-        "label": "Related party debarred from public contracts",
-        "confidence": "high",
-        "rationale": "Related entity 'RN-Aktiv OOO' matches a record on openaleph: debarred from public contracts via 'US SAM Procurement Exclusions' (debarment).",
-        "source_name": "OpenAleph",
-        "source_id": "openaleph",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
-        "id": "r52",
+        "id": "r53",
         "code": "RELATED_SANCTIONED",
         "label": "Related party sanctioned",
         "confidence": "high",
@@ -2121,7 +2119,7 @@
         "kind": "risk"
       },
       {
-        "id": "r53",
+        "id": "r54",
         "code": "RELATED_DEBARMENT",
         "label": "Related party debarred from public contracts",
         "confidence": "high",
@@ -2132,7 +2130,7 @@
         "kind": "risk"
       },
       {
-        "id": "r54",
+        "id": "r55",
         "code": "RELATED_DEBARMENT",
         "label": "Related party debarred from public contracts",
         "confidence": "high",
@@ -2143,7 +2141,7 @@
         "kind": "risk"
       },
       {
-        "id": "r55",
+        "id": "r56",
         "code": "RELATED_DEBARMENT",
         "label": "Related party debarred from public contracts",
         "confidence": "high",
@@ -2154,7 +2152,7 @@
         "kind": "risk"
       },
       {
-        "id": "r56",
+        "id": "r57",
         "code": "RELATED_EXPORT_CONTROLLED",
         "label": "Related party subject to export-control restrictions",
         "confidence": "high",
@@ -2165,7 +2163,7 @@
         "kind": "risk"
       },
       {
-        "id": "r57",
+        "id": "r58",
         "code": "RELATED_DEBARMENT",
         "label": "Related party debarred from public contracts",
         "confidence": "high",
@@ -2176,7 +2174,7 @@
         "kind": "risk"
       },
       {
-        "id": "r58",
+        "id": "r59",
         "code": "RELATED_SANCTIONED",
         "label": "Related party sanctioned",
         "confidence": "high",
@@ -2187,7 +2185,7 @@
         "kind": "risk"
       },
       {
-        "id": "r59",
+        "id": "r60",
         "code": "RELATED_EXPORT_CONTROLLED",
         "label": "Related party subject to export-control restrictions",
         "confidence": "high",
@@ -2198,22 +2196,11 @@
         "kind": "risk"
       },
       {
-        "id": "r60",
-        "code": "RELATED_SANCTIONED",
-        "label": "Related party sanctioned",
-        "confidence": "high",
-        "rationale": "Related entity 'Rosneftegaz' matches a record on openaleph: sanctioned via 'Canadian Consolidated Autonomous Sanctions List' (sanction).",
-        "source_name": "OpenAleph",
-        "source_id": "openaleph",
-        "fact_ids": [],
-        "kind": "risk"
-      },
-      {
         "id": "r61",
         "code": "RELATED_SANCTIONED",
         "label": "Related party sanctioned",
         "confidence": "high",
-        "rationale": "Related entity 'OJSC SYZRAN REFINERY' matches a record on openaleph: sanctioned via 'Swiss SECO Sanctions/Embargoes' (sanction).",
+        "rationale": "Related entity 'Rosneftegaz' matches a record on openaleph: sanctioned via 'Canadian Consolidated Autonomous Sanctions List' (sanction).",
         "source_name": "OpenAleph",
         "source_id": "openaleph",
         "fact_ids": [],
@@ -2232,6 +2219,17 @@
       },
       {
         "id": "r63",
+        "code": "RELATED_SANCTIONED",
+        "label": "Related party sanctioned",
+        "confidence": "high",
+        "rationale": "Related entity 'АО “СНПЗ”' matches a record on openaleph: sanctioned via 'Swiss SECO Sanctions/Embargoes' (sanction).",
+        "source_name": "OpenAleph",
+        "source_id": "openaleph",
+        "fact_ids": [],
+        "kind": "risk"
+      },
+      {
+        "id": "r64",
         "code": "RELATED_EXPORT_CONTROLLED",
         "label": "Related party subject to export-control restrictions",
         "confidence": "high",
@@ -2242,7 +2240,7 @@
         "kind": "risk"
       },
       {
-        "id": "r64",
+        "id": "r65",
         "code": "SANCTIONED_SECURITY",
         "label": "Sanctioned securities",
         "confidence": "high",
@@ -2279,25 +2277,21 @@
         "homepage": "https://www.wikidata.org/wiki/Wikidata:Main_Page"
       },
       {
-        "source_id": "wikirate",
-        "name": "Wikirate",
-        "license": "CC-BY-4.0",
-        "homepage": "https://wikirate.org/"
-      },
-      {
         "source_id": "openaleph",
         "name": "OpenAleph",
         "license": "per-collection",
         "homepage": "https://openaleph.org/"
+      },
+      {
+        "source_id": "wikirate",
+        "name": "Wikirate",
+        "license": "CC-BY-4.0",
+        "homepage": "https://wikirate.org/"
       }
     ],
     "gaps": [
       {
         "id": "g1",
-        "statement": "Wikirate could not be queried (SourceSchemaError: wikirate: source API schema changed — 2 field(s) failed: headquarters, website)."
-      },
-      {
-        "id": "g2",
         "statement": "OpenSanctions is licensed under CC-BY-NC-4.0. Commercial re-use of this data is not permitted under the source license."
       }
     ]
