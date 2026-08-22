@@ -25,6 +25,7 @@ from urllib.parse import quote
 
 from ..cache import Cache
 from ..config import get_settings
+from ..findings import finding_opensanctions
 from ..http import build_client, sanitize_name_query
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 
@@ -236,6 +237,7 @@ class OpenSanctionsAdapter(SourceAdapter):
             kind=kind,
             name=caption,
             summary=" · ".join(summary_bits),
+            finding=finding_opensanctions(item),
             identifiers=identifiers,
             raw=item,
             is_stub=False,

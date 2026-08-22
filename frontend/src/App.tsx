@@ -30,7 +30,6 @@ import { partitionByKind } from "./lib/signalKind";
 import {
   OpenCheckIcon,
   GleifIcon,
-  Neo4jIcon,
   StepKeyIcon,
   StepBridgeIcon,
   StepNetworkIcon,
@@ -41,6 +40,10 @@ import { ExportPanel } from "./components/export/ExportPanel";
 import { ChangelogPage } from "./components/ChangelogPage";
 import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
+import { Icon } from "./components/ui";
+import { documentTitleFor, modeParam, parseMode } from "./lib/checkMode";
+import type { CheckMode } from "./lib/checkMode";
+import type { IconName } from "./components/ui";
 import { NarrativePanel } from "./components/cdd/NarrativePanel";
 import {
   SourceBucketCard,
@@ -110,7 +113,6 @@ interface ExampleLei {
   hint?: string;
   signals?: ExampleSignal[];
   /** GitHub raw URL for the per-entity Neo4j CSV zip */
-  neo4jZipUrl?: string;
   /** True when the example's graph is served from the pre-extracted Open
    *  Ownership bulk BODS datasets (UK PSC / GLEIF) — drives the blue
    *  "Curated example — pre-extracted data" banner on the results page.
@@ -118,7 +120,6 @@ interface ExampleLei {
   bulkBods?: boolean;
 }
 
-const _NEO4J_BASE =
   "https://github.com/StephenAbbott/opencheck/raw/main/data/demo/neo4j";
 
 // Signals shown on the picker cards. These are CLAIMS ABOUT PRODUCTION
@@ -142,7 +143,6 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "OFFSHORE_LEAKS", confidence: "high" },
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
     ],
-    neo4jZipUrl: `${_NEO4J_BASE}/213800LH1BZH3DI6G760.zip`,
     bulkBods: true,
   },
   {
@@ -154,7 +154,6 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "EXPORT_CONTROLLED", confidence: "high" },
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
     ],
-    neo4jZipUrl: `${_NEO4J_BASE}/253400JT3MQWNDKMJE44.zip`,
     bulkBods: true,
   },
   {
@@ -165,7 +164,6 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "RELATED_SANCTIONS_CONTROLLED", confidence: "high" },
       { code: "RELATED_EXPORT_CONTROL_LINKED", confidence: "high" },
     ],
-    neo4jZipUrl: `${_NEO4J_BASE}/213800E11LI1SCETU492.zip`,
     bulkBods: true,
   },
   {
@@ -177,7 +175,6 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "STATE_CONTROLLED", confidence: "medium" },
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
     ],
-    neo4jZipUrl: `${_NEO4J_BASE}/5493005044RTLQ5RZU70.zip`,
   },
   {
     lei: "W9NG6WMZIYEU8VEDOG48",
@@ -188,7 +185,6 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "OFFSHORE_LEAKS", confidence: "medium" },
       { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
     ],
-    neo4jZipUrl: `${_NEO4J_BASE}/W9NG6WMZIYEU8VEDOG48.zip`,
   },
   {
     lei: "FRDRIPF3EKNDJ2CQJL29",
@@ -204,7 +200,6 @@ const EXAMPLE_LEIS: ExampleLei[] = [
       // context entry here would render as a fourth risk chip and overstate
       // the finding count the entity page shows.
     ],
-    neo4jZipUrl: `${_NEO4J_BASE}/FRDRIPF3EKNDJ2CQJL29.zip`,
   },
 ];
 
@@ -252,7 +247,14 @@ export default function App() {
   // QuickCheck (subject screening, default) vs FullCheck (network EDD) vs
   // BackgroundCheck (screening the people connected to the entity). Reset to
   // QuickCheck on each new lookup so the headline experience is always QuickCheck.
-  const [mode, setMode] = useState<"quick" | "full" | "background">("quick");
+  /**
+   * Which check the report is showing. Phase 122 made this the report's
+   * top-level structure rather than three cards in the middle of the page,
+   * added Climate & ESG as a fourth (it used to render only inside
+   * QuickCheck, so it was reachable by scrolling and by nothing else), and
+   * put the value in the URL so a shared link opens where you left it.
+   */
+  const [mode, setMode] = useState<CheckMode>("quick");
   // Maps "source_id:hit_id" → BODS statement count; populated by the bods_counts SSE event.
   const [bodsCountMap, setBodsCountMap] = useState<Record<string, number>>({});
   // Same key → entity / relationship split, for the source-card graph CTA subtitle.
@@ -289,7 +291,54 @@ export default function App() {
    * and replaced the whole nav with "← Back" on every sub-page, so /api and
    * /sources were unreachable from each other.
    */
-  const NAV_ITEMS: { view: View; label: string }[] = [
+    /**
+   * The four checks, in the order they escalate: the subject alone, its
+   * network, the people in it — then Climate & ESG, which is a different
+   * question rather than a fourth depth, and is separated in the strip to
+   * say so. Accents are the `oo.node.*` brand tier that already names each
+   * mode's badge, so the tab, the badge and (for ownership and role) the
+   * graph edge are one colour rather than three.
+   */
+  const MODE_TABS: {
+    id: CheckMode;
+    label: string;
+    icon: IconName;
+    accent: string;
+    blurb: string;
+    topic?: boolean;
+  }[] = [
+    {
+      id: "quick",
+      label: "QuickCheck",
+      icon: "quickcheck",
+      accent: "#22c55e",
+      blurb: "Screening this company on its own — sanctions, control, structure. The fastest answer.",
+    },
+    {
+      id: "full",
+      label: "FullCheck",
+      icon: "fullcheck",
+      accent: "#3b82f6",
+      blurb: "Following the ownership chain outwards, then screening everything it reaches.",
+    },
+    {
+      id: "background",
+      label: "BackgroundCheck",
+      icon: "backgroundcheck",
+      accent: "#7c3aed",
+      blurb: "Screening the officers, directors and beneficial owners named in the records.",
+    },
+    {
+      id: "esg",
+      label: "Climate & ESG",
+      icon: "esg",
+      accent: "#0d9488",
+      blurb: "Emissions and asset records published about this company — what it does, rather than who owns it.",
+      topic: true,
+    },
+  ];
+
+const NAV_ITEMS: { view: View; label: string }[] = [
     { view: "main", label: "Search" },
     { view: "sources", label: "Sources" },
     { view: "api", label: "API" },
@@ -323,9 +372,11 @@ export default function App() {
   // Dynamic document title — updates on lookup results and view changes.
   useEffect(() => {
     if (legalName && view === "main") {
-      // Hyphen, not em-dash: matches the server-rendered /entity pages'
-      // exact "NAME OF SUBJECT - OpenCheck" template from the SEO ticket.
-      document.title = `${legalName} - OpenCheck`;
+      // Hyphen, not em-dash on QuickCheck: matches the server-rendered
+      // /entity pages' exact "NAME OF SUBJECT - OpenCheck" template from the
+      // SEO ticket. Other modes append a segment (Phase 122) so restored
+      // tabs are distinguishable.
+      document.title = documentTitleFor(mode, legalName);
     } else if (view === "sources") {
       document.title = "Data Sources — OpenCheck";
     } else if (view === "behind") {
@@ -337,7 +388,7 @@ export default function App() {
     } else {
       document.title = "OpenCheck";
     }
-  }, [legalName, view]);
+  }, [legalName, view, mode]);
 
   // Focus management — move focus to #main-content on view changes so keyboard
   // and screen reader users are oriented to the new page content (WCAG 2.4.3).
@@ -597,11 +648,41 @@ export default function App() {
       url.searchParams.set("lei", lei);
       window.history.pushState({}, "", url);
     }
+    // A lookup started from the search box always opens on QuickCheck; a
+    // deep link with ?mode= is honoured by the popstate/first-load effect
+    // below instead, which runs after this.
     // Cancel any in-flight stream before starting a new one.
     cleanupRef.current?.();
     cleanupRef.current = null;
     lookupMutation.mutate({ lei, refresh: opts?.refresh });
   }
+
+  /**
+   * Switch check mode. The single entry point, because three things have to
+   * happen together and v1 did none of them: the value goes into `?mode=`
+   * so a shared link and a refresh land where you left off; focus moves to
+   * the new panel, since switching unmounts most of the page and focus
+   * would otherwise drop to <body>; and the analytics event fires once per
+   * actual change rather than on every click of an already-active tab.
+   */
+  const selectMode = useCallback((next: CheckMode) => {
+    setMode((current) => {
+      if (current === next) return current;
+      if (next === "full") trackEvent("fullcheck_run");
+      if (next === "background") trackEvent("backgroundcheck_run");
+      const url = new URL(window.location.href);
+      const param = modeParam(next);
+      if (param === null) url.searchParams.delete("mode");
+      else url.searchParams.set("mode", param);
+      window.history.replaceState({}, "", url);
+      // After the panel swaps in. requestAnimationFrame rather than a
+      // timeout so it lands on the next paint whatever the render cost.
+      requestAnimationFrame(() => {
+        document.getElementById(`panel-${next}`)?.focus({ preventScroll: true });
+      });
+      return next;
+    });
+  }, []);
 
   // Move focus to #main-content when an action unmounts the focused element
   // (e.g. picking a search result resets the picker) — without this, focus
@@ -625,7 +706,12 @@ export default function App() {
       window.history.replaceState({}, "", `/?lei=${entityMatch[1].toUpperCase()}`);
     }
     const initial = fromUrl(new URLSearchParams(window.location.search).get("lei"));
-    if (initial && isValidLei(initial)) lookupLei(initial);
+    if (initial && isValidLei(initial)) {
+      lookupLei(initial);
+      // ?mode= is read after lookupLei, which resets to quick: a deep link
+      // to a FullCheck must open on FullCheck, not flash QuickCheck first.
+      setMode(parseMode(new URLSearchParams(window.location.search).get("mode")));
+    }
 
     const onPopState = () => {
       // Handle non-main path views first (back/forward to /sources, /about etc.)
@@ -644,6 +730,7 @@ export default function App() {
       const lei = fromUrl(new URLSearchParams(window.location.search).get("lei"));
       if (lei && isValidLei(lei)) {
         lookupLei(lei);
+        setMode(parseMode(new URLSearchParams(window.location.search).get("mode")));
       } else {
         // Navigated back to the landing page — clear the result view.
         cleanupRef.current?.();
@@ -1652,62 +1739,79 @@ export default function App() {
           />
         )}
 
+        {/* ── Modes as the report's structure (Phase 122) ─────────────
+              Was three equal-weight cards in the middle of the page, chosen
+              after the subject and forgotten on the next lookup. Now a
+              tablist: the subject and verdict above stay put across a
+              switch, the choice is in the URL, and each tab carries the
+              `oo.node.*` accent that already names its badge — so the tab,
+              the badge and (for ownership and role) the graph edge are one
+              colour rather than three.
+
+              Climate & ESG sits after a divider because it is a different
+              question, not a fourth depth of check. It used to render as a
+              section inside QuickCheck, reachable by scrolling and by
+              nothing else. */}
         {streamingLei && (
-          <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3" role="group" aria-label="Check mode">
-            <button
-              type="button"
-              aria-pressed={mode === "quick"}
-              onClick={() => setMode("quick")}
-              className={`text-left rounded-oo border-2 p-4 transition-colors ${
-                mode === "quick"
-                  ? "border-oo-blue bg-[#eef1fb]"
-                  : "border-oo-rule bg-white hover:border-[#cfd6f5]"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-oo-blue" aria-hidden="true"><path d="M13 3 4 14h7l-1 7 9-11h-7z" /></svg>
-                <span className="font-head font-bold text-[15px] text-oo-ink">QuickCheck</span>
-              </div>
-              <p className="text-[12px] text-oo-muted mt-1 leading-[1.5]">
-                Fast customer due diligence screening of this entity for immediate risks.
-              </p>
-            </button>
-            <button
-              type="button"
-              aria-pressed={mode === "full"}
-              onClick={() => { if (mode !== "full") trackEvent("fullcheck_run"); setMode("full"); }}
-              className={`text-left rounded-oo border-2 p-4 transition-colors ${
-                mode === "full"
-                  ? "border-oo-blue bg-[#eef1fb]"
-                  : "border-oo-rule bg-white hover:border-[#cfd6f5]"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-oo-blue" aria-hidden="true"><circle cx="6" cy="6" r="2.3" /><circle cx="18" cy="6" r="2.3" /><circle cx="12" cy="18" r="2.3" /><path d="M8 7.5 10.7 15.6M16 7.5 13.3 15.6M8.5 6h7" /></svg>
-                <span className="font-head font-bold text-[15px] text-oo-ink">FullCheck</span>
-              </div>
-              <p className="text-[12px] text-oo-muted mt-1 leading-[1.5]">
-                Map the wider corporate network for enhanced due diligence.
-              </p>
-            </button>
-            <button
-              type="button"
-              aria-pressed={mode === "background"}
-              onClick={() => { if (mode !== "background") trackEvent("backgroundcheck_run"); setMode("background"); }}
-              className={`text-left rounded-oo border-2 p-4 transition-colors ${
-                mode === "background"
-                  ? "border-oo-blue bg-[#eef1fb]"
-                  : "border-oo-rule bg-white hover:border-[#cfd6f5]"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-oo-blue" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 20c.8-3.5 3.6-5.5 7-5.5s6.2 2 7 5.5" /></svg>
-                <span className="font-head font-bold text-[15px] text-oo-ink">BackgroundCheck</span>
-              </div>
-              <p className="text-[12px] text-oo-muted mt-1 leading-[1.5]">
-                Screen the people connected to this entity — officers, directors and beneficial owners.
-              </p>
-            </button>
+          <div
+            role="tablist"
+            aria-label="Check mode"
+            className="mb-6 flex items-end gap-1 overflow-x-auto border-b border-oo-rule"
+          >
+            {MODE_TABS.map((tab) => {
+              const active = mode === tab.id;
+              return (
+                <div key={tab.id} className={tab.topic ? "flex items-end pl-3 ml-2 border-l border-oo-rule" : "flex items-end"}>
+                  <button
+                    type="button"
+                    role="tab"
+                    id={`tab-${tab.id}`}
+                    aria-selected={active}
+                    aria-controls={`panel-${tab.id}`}
+                    tabIndex={active ? 0 : -1}
+                    onClick={() => selectMode(tab.id)}
+                    onKeyDown={(e) => {
+                      // Left/Right move between tabs (WAI-ARIA tabs pattern);
+                      // the roving tabIndex above keeps one stop in the
+                      // sequence rather than four.
+                      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+                      e.preventDefault();
+                      const i = MODE_TABS.findIndex((t) => t.id === mode);
+                      const next =
+                        e.key === "ArrowRight"
+                          ? MODE_TABS[(i + 1) % MODE_TABS.length]
+                          : MODE_TABS[(i - 1 + MODE_TABS.length) % MODE_TABS.length];
+                      selectMode(next.id);
+                      document.getElementById(`tab-${next.id}`)?.focus();
+                    }}
+                    className={`relative flex shrink-0 items-center gap-2 rounded-t-oo px-4 pb-3 pt-3 text-[14px] min-h-[44px] transition-colors ${
+                      active
+                        ? "-mb-px border border-oo-rule border-b-white bg-white font-bold text-oo-ink"
+                        : "border border-transparent font-medium text-oo-muted hover:text-oo-ink"
+                    }`}
+                  >
+                    {active && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-x-[-1px] top-[-1px] h-[3px] rounded-t-oo"
+                        style={{ background: tab.accent }}
+                      />
+                    )}
+                    {/* The glyph takes the mode accent when active and the
+                        muted text colour otherwise, via currentColor on a
+                        wrapper — Icon itself never takes a colour prop, so
+                        there is exactly one way to colour an icon. */}
+                    <span
+                      className="inline-flex shrink-0"
+                      style={active ? { color: tab.accent } : undefined}
+                    >
+                      <Icon name={tab.icon} size={17} />
+                    </span>
+                    {tab.label}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -1744,7 +1848,7 @@ export default function App() {
         )}
 
 
-        {riskCodes.length > 0 && mode !== "background" && (
+        {riskCodes.length > 0 && mode === "quick" && (
           <section className="mb-8" id="risk-signals">
             <SectionLabel>Risk signals</SectionLabel>
             <div className="flex flex-wrap gap-2">
@@ -1764,7 +1868,7 @@ export default function App() {
             reaching a jurisdiction outside the EU is a fact about the
             shape of the ownership chain, and neither the AMLA CDD RTS nor
             AMLR Annex III treats it as a risk factor in itself. */}
-        {contextCodes.length > 0 && mode !== "background" && (
+        {contextCodes.length > 0 && mode === "quick" && (
           <section className="mb-8" id="structural-context">
             <SectionLabel>Structural context</SectionLabel>
             <div className="flex flex-wrap gap-2">
@@ -1785,7 +1889,7 @@ export default function App() {
             Phase 97) renders underneath the OpenAleph source card in the
             sources list below — see OpenAlephArchiveMatches. */}
 
-        {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && mode !== "background" && (
+        {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && mode === "quick" && (
           <CollapsedSection
             htmlId="cross-source-identifiers"
             label="Cross-source identifiers"
@@ -1825,7 +1929,7 @@ export default function App() {
           </CollapsedSection>
         )}
 
-        {possiblySame.length > 0 && mode !== "background" && (
+        {possiblySame.length > 0 && mode === "quick" && (
           <CollapsedSection
             htmlId="possibly-same"
             label="Possibly the same entity"
@@ -1844,20 +1948,45 @@ export default function App() {
           </CollapsedSection>
         )}
 
+        {/* Each mode's content is a labelled tabpanel with tabIndex={-1},
+            so selectMode can move focus into it after the switch. Without
+            that, switching tab unmounts most of the page and focus falls to
+            <body> — v1's mode cards did exactly that. */}
         {mode === "full" && streamingLei ? (
-          <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading FullCheck…</p>}>
-            <FullCheckPanel lei={streamingLei} legalName={legalName} signals={riskSignals} />
-          </Suspense>
+          <div id="panel-full" role="tabpanel" aria-labelledby="tab-full" tabIndex={-1}>
+            <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading FullCheck…</p>}>
+              <FullCheckPanel lei={streamingLei} legalName={legalName} signals={riskSignals} />
+            </Suspense>
+          </div>
         ) : mode === "background" && streamingLei ? (
-          <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading BackgroundCheck…</p>}>
-            <BackgroundCheckPanel
-              lei={streamingLei}
-              legalName={legalName}
-              onOpenReport={openPersonReport}
-            />
-          </Suspense>
+          <div id="panel-background" role="tabpanel" aria-labelledby="tab-background" tabIndex={-1}>
+            <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading BackgroundCheck…</p>}>
+              <BackgroundCheckPanel
+                lei={streamingLei}
+                legalName={legalName}
+                onOpenReport={openPersonReport}
+              />
+            </Suspense>
+          </div>
+        ) : mode === "esg" && streamingLei ? (
+          <div id="panel-esg" role="tabpanel" aria-labelledby="tab-esg" tabIndex={-1}>
+            {esgBuckets.length > 0 || pendingEsgSources.length > 0 ? (
+              <EsgPanel
+                buckets={esgBuckets}
+                pendingCount={pendingEsgSources.length}
+                bodsCountMap={bodsCountMap}
+                bodsBreakdownMap={bodsBreakdownMap}
+              />
+            ) : (
+              <p className="mb-8 rounded-oo border border-oo-rule bg-white p-5 text-[13px] text-oo-muted">
+                {streaming
+                  ? "Checking the climate and extractives sources…"
+                  : "No emissions or asset records were published about this company by the sources checked. That is an absence of records, not a finding about its emissions."}
+              </p>
+            )}
+          </div>
         ) : (
-          <>
+          <div id="panel-quick" role="tabpanel" aria-labelledby="tab-quick" tabIndex={-1}>
         {(cddBuckets.length > 0 || pendingCddSources.length > 0) && (
           <section className="mb-8">
             <SectionLabel>
@@ -1934,9 +2063,6 @@ export default function App() {
 
         {streamingLei && <SecuritiesSection lei={streamingLei} />}
 
-        {(esgBuckets.length > 0 || pendingEsgSources.length > 0) && (
-          <EsgPanel buckets={esgBuckets} pendingCount={pendingEsgSources.length} bodsCountMap={bodsCountMap} bodsBreakdownMap={bodsBreakdownMap} />
-        )}
 
         {/* MEIP signpost — bottom of the results page, beneath the richer
             data-source cards and the ESG box. Not a BODS source. */}
@@ -1951,7 +2077,7 @@ export default function App() {
               .map((b) => b.sourceId)}
           />
         )}
-          </>
+          </div>
         )}
         </>
         )}
@@ -2610,7 +2736,7 @@ function BehindTheScenesPage() {
         </BtsCard>
 
         {/* QuickCheck vs FullCheck */}
-        <BtsCard title="QuickCheck and FullCheck">
+        <BtsCard title="The four checks">
           <p className="text-[13.5px] leading-[1.75] text-oo-muted mb-3">
             Every lookup opens in{" "}
             <strong className="text-oo-ink font-semibold">QuickCheck</strong> — a
@@ -2631,6 +2757,25 @@ function BehindTheScenesPage() {
             same real-world company across sources into a single node — so three
             sources agreeing reads as corroboration. The network can be exported
             as BODS v0.4 or projected to Neo4j.
+          </p>
+          {/* Phase 122: BackgroundCheck had shipped un-documented here, and
+              Climate & ESG was not a mode at all — it rendered as a section
+              inside QuickCheck. Both are tabs now, so both are described. */}
+          <p className="text-[13px] text-oo-muted leading-[1.7] mt-3">
+            <strong className="text-oo-ink font-semibold">BackgroundCheck</strong>{" "}
+            screens the people rather than the company: the officers, directors
+            and beneficial owners named in the records, each checked against the
+            sanctions, PEP and offshore-leaks sources that can answer for a
+            person. A person the sources could not answer for is reported as
+            unscreened, never as clear.
+          </p>
+          <p className="text-[13px] text-oo-muted leading-[1.7] mt-3">
+            <strong className="text-oo-ink font-semibold">Climate &amp; ESG</strong>{" "}
+            is a different question from the other three, which is why it sits
+            apart in the tab strip: not who owns the company, but what it does —
+            the emissions and asset records published about it and the assets it
+            controls. An empty result there is an absence of published records,
+            not a finding about its emissions.
           </p>
         </BtsCard>
 
@@ -2984,18 +3129,13 @@ function ExampleLeiPicker({
                 </div>
               )}
             </button>
-            {ex.neo4jZipUrl && (
-              <a
-                href={ex.neo4jZipUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Download Neo4j CSV bundle"
-                className="absolute top-3 right-3 opacity-70 hover:opacity-100 transition-opacity"
-                aria-label={`Download Neo4j CSV bundle for ${ex.name}`}
-              >
-                <Neo4jIcon />
-              </a>
-            )}
+            {/* Phase 122: the Neo4j CSV download that used to sit here came
+                off. It is a developer affordance on the app's headline entry
+                point — an icon-only link, explained by a `title` no keyboard
+                or touch user can read, offering a graph-database bundle to
+                someone who has not yet run their first check. The same
+                download lives in the export panel, where it is one of nine
+                formats and is labelled. */}
           </li>
         ))}
       </ul>

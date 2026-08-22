@@ -25,6 +25,14 @@ from ..bods import BODSBundle, validate_shape
 from ..sources.base import LookupDeriver, raw_redaction_notice
 from .. import bods_data
 from ..cross_check import assess_cross_source_names
+from ..findings import (
+    finding_bods_gleif,
+    finding_companies_house,
+    finding_opencorporates,
+    finding_openaleph,
+    finding_ted_eu,
+    finding_wikidata,
+)
 from ..ftm import subject_to_ftm_entity
 from ..icij_check import assess_icij_names
 from ..openaleph_check import assess_openaleph_names
@@ -401,6 +409,7 @@ def _hit(
     identifiers: dict[str, str],
     raw: dict[str, Any],
     is_stub: bool = False,
+    finding: str | None = None,
 ) -> SourceHit:
     return SourceHit(
         source_id=source_id,
@@ -408,6 +417,7 @@ def _hit(
         kind=SearchKind.ENTITY,
         name=name,
         summary=summary,
+        finding=finding,
         identifiers=identifiers,
         raw=raw,
         is_stub=is_stub,
@@ -428,6 +438,9 @@ def _bh_companies_house(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
         "companies_house", local_id,
         name=p.get("company_name", ctx.legal_name or ""),
         summary=f"GB-COH {local_id}",
+        # The finding reads the whole bundle (PSCs, PSC statements, officers),
+        # not just the profile that becomes ``raw``.
+        finding=finding_companies_house(r),
         identifiers={"gb_coh": local_id}, raw=p,
     )
 
@@ -778,6 +791,7 @@ def _bh_opencorporates(r: dict, ctx: _LookupCtx) -> SourceHit:
         "opencorporates", ctx.ocid or "",
         name=c.get("name") or ctx.legal_name or "",
         summary=f"OC {ctx.ocid} · {c.get('current_status', '')}",
+        finding=finding_opencorporates(r),
         identifiers={
             "ocid": ctx.ocid or "",
             "lei": ctx.lei,
@@ -808,6 +822,7 @@ def _bh_wikidata(r: dict, ctx: _LookupCtx) -> SourceHit:
         "wikidata", ctx.qid or "",
         name=s.get("label") or ctx.qid or "",
         summary=s.get("description") or "",
+        finding=finding_wikidata(s),
         identifiers={
             "wikidata_qid": ctx.qid or "",
             "lei": ctx.lei,
@@ -847,6 +862,7 @@ def _bh_bods_gleif(r: dict, ctx: _LookupCtx) -> SourceHit:
         "bods_gleif", statement_id,
         name=name,
         summary="Open Ownership BODS v0.4 (bulk) · LEI match",
+        finding=finding_bods_gleif(r, statement_id),
         identifiers={"lei": ctx.lei, "bods_gleif_statementid": statement_id},
         raw=r,
     )
@@ -1017,6 +1033,7 @@ def _bh_ted_eu(r: dict, ctx: _LookupCtx) -> SourceHit:
         "ted_eu", hit_id,
         name=r.get("legal_name") or ctx.legal_name or ctx.lei,
         summary=" · ".join(parts),
+        finding=finding_ted_eu(r),
         identifiers=identifiers,
         raw=r,
     )
@@ -1168,6 +1185,10 @@ async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
                     f"{h.summary} · mentioned in {total} "
                     f"document{'s' if total != 1 else ''}"
                 )
+                # The adapter built the finding without mentions (it fetches
+                # them here, after the hit exists) — rebuild so the sentence
+                # leads with the document count.
+                h.finding = finding_openaleph(h.raw, mentions)
     return deduped
 
 

@@ -503,6 +503,59 @@ component — new code uses the named steps.
 
 ---
 
+## The four check modes (Phase 122/123)
+
+`quick | full | background | esg`, owned by `frontend/src/lib/checkMode.ts`
+(pure, so it is testable — the frontend suite is logic-only). The mode is
+the report's top-level structure: a tablist under the subject and verdict,
+which stay put across a switch.
+
+- **The mode is in the URL** (`?mode=`), and QuickCheck deliberately writes
+  no parameter — a shared QuickCheck link keeps the short form it has always
+  had. `documentTitleFor` keeps QuickCheck's title byte-identical to the
+  server-rendered `/entity` template (`NAME - OpenCheck`, hyphen not
+  em-dash); only a non-default mode appends a segment.
+- **`selectMode` is the single entry point.** It writes the URL, fires the
+  analytics event once per actual change, and moves focus into
+  `#panel-<mode>` — switching unmounts most of the page, and v1 left focus
+  on `<body>`.
+- **Climate & ESG is a tab, not a section.** It used to render inside
+  QuickCheck, reachable by scrolling and by nothing else. It sits after a
+  divider because it is a different question, not a fourth depth of check.
+- Entity-scoped sections (risk signals, structural context, cross-source
+  identifiers, possibly-same) are guarded `mode === "quick"`. They were
+  `mode !== "background"`, which silently included the new ESG tab.
+
+---
+
+## Source findings: the sentence on a hit row (Phase 123)
+
+`SourceHit.finding` is **a sentence**; `SourceHit.summary` is the identifier
+fragment it has always been (`"GB · registered entity"`), consumed by the
+search-result rows, the share card and `og_image.py`. **Do not repurpose
+`summary`** — a dozen call sites depend on its shape.
+
+Templates live in `backend/opencheck/findings.py`; its module docstring
+carries the ten rules, and every template is built from `clauses_to_sentence`
+so a missing field shortens the sentence rather than emitting `None` or a
+dangling `at %`. The two rules that matter most: **assert nothing about risk
+or corroboration** (that is the signals layer, with its own confidence
+model), and **state absence in the same voice as presence** — silence reads
+as "nothing to see".
+
+Seven adapters have templates (`bods_gleif`, `opensanctions`,
+`companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`). The
+frontend falls back `finding → summary → nothing`
+(`frontend/src/lib/sourceFinding.ts`), so an adapter without one renders
+exactly as it did before. **When you add a template, check what the adapter
+actually parses first** — the first seven turned up six cases where the
+obvious sentence was not supportable: the GLEIF Parquet extract has no
+percentages or parent names, OpenSanctions' dataset slugs cannot be widened
+into regime names without inference, OpenCorporates has `gb` and not
+"England and Wales". Say less rather than more.
+
+---
+
 ## Brand: Check-mode badges (QuickCheck / FullCheck / BackgroundCheck)
 
 Reusable circular badges for social-media overlays, one per check mode —
