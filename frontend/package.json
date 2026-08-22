@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint:design": "node scripts/lint-design-system.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",

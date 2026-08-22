@@ -155,15 +155,61 @@ def _gleif_bundle(**overrides: object) -> dict:
     return bundle
 
 
+def _gleif_parent(lei: str, name: str) -> dict:
+    """A parent endpoint's response body — the parent's **own Level 1 record**,
+    which is why the parent is nameable at all. Confirmed live 2026-08-22: the
+    `attributes` object carries `lei`, `entity`, `registration`, `bic`, `mic`,
+    `ocid`, `gem`, `qcc`, `spglobal`, `conformityFlag`."""
+    return {
+        "type": "lei-records",
+        "id": lei,
+        "attributes": {"lei": lei, "entity": {"legalName": {"name": name}, "jurisdiction": "US"}},
+    }
+
+
 def _gleif_exception(reason: str, *, ultimate: bool = False) -> dict:
-    """A GLEIF reporting-exception payload, shaped as the live API returns it
-    (see test_gleif_live's ``test_fetch_surfaces_reporting_exception``)."""
+    """A GLEIF reporting-exception payload in the **dump** spelling.
+
+    Open Ownership's SQLite dump writes ``exceptionReason``; the live API
+    writes ``reason`` — see ``_gleif_exception_live`` below, and the same split
+    at ``mapper.py``'s own reader. Both spellings must render identically, so
+    both are fixtured.
+    """
     category = (
         "ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT"
         if ultimate
         else "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT"
     )
     return {"attributes": {"exceptionCategory": category, "exceptionReason": reason}}
+
+
+def _gleif_exception_live(reason: str, *, ultimate: bool = False) -> dict:
+    """The exception payload **exactly as the live API returned it** for BP
+    (`213800LH1BZH3DI6G760`), Rosneft and SEB, captured 2026-08-22.
+
+    Note ``reason`` rather than ``exceptionReason``, the null-valued
+    ``validFrom`` / ``validTo`` / ``reference`` keys, and the JSON:API
+    ``id`` / ``type`` / ``relationships`` siblings of ``attributes`` — the
+    reader must walk past all of them.
+    """
+    category = (
+        "ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT"
+        if ultimate
+        else "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT"
+    )
+    return {
+        "type": "reporting-exceptions",
+        "id": f"213800LH1BZH3DI6G760-{category}",
+        "relationships": {"lei-record": {"links": {}}},
+        "attributes": {
+            "validFrom": None,
+            "validTo": None,
+            "lei": "213800LH1BZH3DI6G760",
+            "category": category,
+            "reason": reason,
+            "reference": None,
+        },
+    }
 
 
 def _oc_bundle() -> dict:
@@ -418,6 +464,81 @@ def test_gleif_finding_states_neither_parent_nor_exception_in_the_same_voice() -
     assert finding_gleif(_gleif_bundle(direct_parent=None)) == (
         "No consolidating parent and no reporting exception are on file."
     )
+
+
+def test_gleif_finding_reads_the_live_reason_spelling_not_just_the_dump_one() -> None:
+    """The live API writes ``reason``; the OO dump writes ``exceptionReason``.
+    Reading only the dump spelling would have left every live report with a
+    parent-less GLEIF row and no sentence at all — the same class of mistake
+    as templating the wrong adapter."""
+    dump = _gleif_bundle(
+        direct_parent=None,
+        ultimate_parent=None,
+        direct_parent_exception=_gleif_exception("NO_KNOWN_PERSON"),
+        ultimate_parent_exception=_gleif_exception("NO_KNOWN_PERSON", ultimate=True),
+    )
+    live = _gleif_bundle(
+        direct_parent=None,
+        ultimate_parent=None,
+        direct_parent_exception=_gleif_exception_live("NO_KNOWN_PERSON"),
+        ultimate_parent_exception=_gleif_exception_live("NO_KNOWN_PERSON", ultimate=True),
+    )
+    assert finding_gleif(live) == finding_gleif(dump)
+    assert finding_gleif(live) == (
+        "No consolidating parent is reported at either level: no controlling "
+        "person is known, a permitted exception."
+    )
+
+
+def test_gleif_finding_matches_what_the_live_api_returned_for_real_entities() -> None:
+    """Four sentences captured from live GLEIF on 2026-08-22, so a template
+    change that only satisfies hand-built fixtures still has to satisfy the
+    shapes the API actually serves."""
+    # Bloomberg Finance L.P. — different direct and ultimate parents.
+    split = _gleif_bundle(
+        direct_parent=_gleif_parent("549300B56MD0ZC402L06", "Bloomberg L.P."),
+        ultimate_parent=_gleif_parent("549300RMUDWPHCUQNE66", "Bloomberg Inc."),
+    )
+    assert finding_gleif(split) == "Consolidated by Bloomberg L.P.; ultimately by Bloomberg Inc."
+
+    # Bloomberg L.P. — one entity at both levels, plus 27 direct children.
+    same = _gleif_bundle(
+        direct_parent=_gleif_parent("549300RMUDWPHCUQNE66", "Bloomberg Inc."),
+        ultimate_parent=_gleif_parent("549300RMUDWPHCUQNE66", "Bloomberg Inc."),
+        direct_children_total=27,
+    )
+    assert finding_gleif(same) == (
+        "Consolidated by Bloomberg Inc., its direct and ultimate parent; "
+        "27 direct subsidiaries report to it."
+    )
+
+    # Skandinaviska Enskilda Banken AB — NON_CONSOLIDATING at both levels.
+    seb = _gleif_bundle(
+        direct_parent=None,
+        ultimate_parent=None,
+        direct_parent_exception=_gleif_exception_live("NON_CONSOLIDATING"),
+        ultimate_parent_exception=_gleif_exception_live("NON_CONSOLIDATING", ultimate=True),
+    )
+    assert finding_gleif(seb) == (
+        "No consolidating parent is reported at either level: the parent "
+        "prepares no consolidated accounts, a permitted exception."
+    )
+
+    # BP P.L.C. — 32 direct children, but the exception clause fills the
+    # sentence, so the cap drops the child count. That is the cap working:
+    # who consolidates the entity outranks how many report to it (rule 3).
+    bp = _gleif_bundle(
+        direct_parent=None,
+        ultimate_parent=None,
+        direct_parent_exception=_gleif_exception_live("NO_KNOWN_PERSON"),
+        ultimate_parent_exception=_gleif_exception_live("NO_KNOWN_PERSON", ultimate=True),
+        direct_children_total=32,
+    )
+    finding = finding_gleif(bp)
+    assert finding is not None
+    assert "32 direct subsidiaries" not in finding
+    assert finding.startswith("No consolidating parent is reported at either level")
+    assert len(finding) <= MAX_FINDING_CHARS
 
 
 def test_gleif_finding_is_none_for_a_stub_bundle() -> None:

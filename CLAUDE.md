@@ -431,7 +431,12 @@ Specific rules:
 
 **BOVS arrowhead marker**: injected after draw() — `<marker id="oc-bovs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="strokeWidth" markerWidth="8" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/></marker>`. Applied to all `g.edgePath path` elements.
 
-**Edge categories** (Phase 122 palette): `ownership` (**#3b82f6** = `oo.node.blue`, the FullCheck accent), `control` (orange #e65100, dotted), `role` (**#7c3aed** = `oo.node.purple`, the BackgroundCheck accent, dashed), `unknown` (grey #888). Ownership and role deliberately share the mode-badge node colours: the network mode's accent *is* the ownership edge, and roles are held by people, which is what the people mode screens. Control keeps its orange — the node tier has none, and control must stay distinguishable from both. Edge **label** text is darkened for WCAG 4.5:1 (#1d4ed8 ownership, #9a3412 control, #6d28d9 role, #595959 unknown); the line colours themselves do not reach it at text sizes. `backend/opencheck/reporting/diagram.py` carries the same two values for the exported PDF and **must move with any future change — nothing pins them together**.
+**Edge categories** (Phase 122 palette): `ownership` (**#3b82f6** = `oo.node.blue`, the FullCheck accent), `control` (orange #e65100, dotted), `role` (**#7c3aed** = `oo.node.purple`, the BackgroundCheck accent, dashed), `unknown` (grey #888). Ownership and role deliberately share the mode-badge node colours: the network mode's accent *is* the ownership edge, and roles are held by people, which is what the people mode screens. Control keeps its orange — the node tier has none, and control must stay distinguishable from both. Edge **label** text is darkened for WCAG 4.5:1 (#1d4ed8 ownership, #9a3412 control, #6d28d9 role, #595959 unknown); the line colours themselves do not reach it at text sizes. These values live in **`frontend/src/lib/graphStyle.ts`** (Phase 124), not in
+`BODSGraph.tsx`: the Cytoscape stylesheet and the generated legend both read
+`EDGE_STYLE` from there, so a colour change moves the diagram and its key
+together. `backend/opencheck/reporting/diagram.py` carries the same two values
+for the exported PDF and **must move with any future change — nothing pins them
+together**.
 
 ---
 
@@ -845,3 +850,102 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | `frontend/src/lib/bovsIcons.ts` | Base64 data URIs for 9 BOVS entity/person icons |
 | `frontend/public/bods-dagre-images/` | BOVS icons (SVG) + 265 country flag SVGs |
 | `backend/tests/test_ariregister.py` | HTML-fixture tests for the web scraper adapter |
+
+
+---
+
+## The graph surface (Phase 124)
+
+**One canvas, one text equivalent.** `BodsGraphExplorer` renders `BODSGraph`
+with `BodsTree` in a "Read as text" disclosure underneath. Do not add a second
+view: v1 had a Split/Graph/Tree switch *plus* a "View as table" toggle inside
+BODSGraph *plus* SubsidiaryNetwork's children list, so one report could show two
+different tables of the same statements side by side and a third list below.
+`BodsRelationshipTable` was deleted; if you need something it did, it is in
+BodsTree — signal labels per row (`signalsByNode`, the same `buildSignalMap` the
+canvas badges read) and `TreeRow.isolated` for a party no relationship statement
+names.
+
+**The legend is generated, never hand-written.** `lib/graphStyle.ts` holds
+`SIGNAL_STYLE`, `EDGE_STYLE` and `NODE_MARK`; `buildGraphLegend()` turns them
+into the entries for *this* graph — edge kinds present, signal codes actually
+badged, worst severity first. It lives in `lib/` so the legend can read it
+without importing Cytoscape and so the logic-only frontend suite can pin it
+(`graphStyle.test.ts` fails the build if a badge has no readable name, or an
+edge kind has no non-colour cue). `BODSGraph` re-exports `SIGNAL_STYLE` for
+existing callers, and `backend/tests/test_signal_label_coverage.py` reads the
+new path.
+
+**`possiblySame` edges are synthesised from the `sameAs` prop**, not from
+`model.edges` — anything deriving "what does this graph draw" has to add them
+explicitly.
+
+---
+
+## Saying it where it can be read (Phase 124)
+
+**Do not use `title=` to explain anything.** It is invisible to keyboard,
+invisible on touch, unstyleable, truncates at length and is announced
+inconsistently. There are now zero non-`BtsCard` `title` attributes in
+`frontend/src`, and the Phase 124 sweep found 18 of the 22 were the only place
+something substantive was said.
+
+Use, in order of preference: a **visible** label; `ui/Explain` (a focusable
+button toggling the text in flow) for an explanation long enough to be a choice;
+`ui/Described` + `aria-describedby` for a short one; `sr-only` only where the
+layout genuinely cannot hold the sentence. `sr-only` alone is a last resort —
+`Explain`'s docstring states the rule: hiding a sentence from sighted users and
+showing it to screen readers reproduces the original bug with the audiences
+swapped.
+
+**One word per concept, in `frontend/src/lib/vocab.ts`.** Results, never hits.
+`sourceLabel()` / `sourceList()` for any source id shown to a reader — never a
+raw slug, never `.join(" and ")` over ids. `topicLabel()` for OpenAleph's
+FollowTheMoney topics. `LOOKUP_VERB` / `PERSON_VERB` — there were four verbs for
+two actions. `NOT_IN_GRAPH` for data a source publishes that OpenCheck does not
+map. These are in `lib/` because the frontend suite is logic-only: a term that
+exists only as a literal inside JSX cannot be pinned, which is how the four
+verbs happened.
+
+The ●◐○ confidence glyphs are defined once, in `ui/Chip.tsx`
+(`CONFIDENCE_GLYPH` / `CONFIDENCE_LABEL`), and `ui/ConfidenceLegend` renders
+their meaning visibly beside the chips.
+
+---
+
+## Honest progress and honest failure (Phase 124)
+
+**`SearchLoadingGrid` renders SSE events and nothing else.** The logic is in
+`lib/lookupProgress.ts`: a source is shown only in a state the stream has said
+it is in, `total` is `null` rather than `0` while unknown (0 renders as a
+complete bar), failures are counted separately from successes, and the label
+only reaches the past tense when everything has settled. Before
+`sources_applicable` there are no chips, because there is nothing true to draw.
+**Any source that can appear in `sources_applicable` must eventually emit a
+terminal event** — `source_completed` or `source_error`. `sec_edgar` did not
+when a name resolved to no CIK, and the counter could never reach its own total.
+
+**A panel that fetches outside `_lookup_pipeline` must report its failures.**
+`/securities` and `/subsidiaries` get no `source_error`, are not in
+`sources_applicable` and are not replay-cached, so nothing else knows they
+failed. They report through `lib/panelErrors.ts` to `PanelErrorsNotice` —
+**deliberately not into `degraded_sources`**, which arrives on the same event as
+the signals and the backend-built verdict sentence so the three are provably
+consistent; `onRiskSignals` also overwrites it wholesale. Report recovery as
+well as failure, or a stale warning outlives the thing it warned about.
+
+---
+
+## Design-system lint (Phase 124)
+
+`frontend/scripts/lint-design-system.mjs`, run by the frontend CI job and
+`npm run lint:design`. Two rules: no raw hex outside the token files, no
+`text-[NNpx]` outside the named scale.
+
+**It is a ratchet.** `design-system-baseline.json` records what each file
+carries; a file may never carry more, and a new file may carry none. It also
+fails on a *stale* baseline, so a commit that improves a count must run
+`npm run lint:design -- --update` and lock the gain in. `--update` refuses to
+raise a count without `--allow-increase`. Allowlisted for hex:
+`lib/graphStyle.ts` (Cytoscape takes colour strings, not class names — this is
+the graph's token file) and `lib/bovsIcons.ts` (base64 data URIs).

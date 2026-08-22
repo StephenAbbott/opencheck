@@ -1,15 +1,29 @@
 /**
- * BodsTree — an accessible, tabular tree view of a BODS ownership structure.
+ * BodsTree — the text equivalent of the ownership graph (Phase 124).
  *
- * It is the keyboard- and screen-reader-friendly counterpart to the canvas
- * graph (which is only `role="img"`): a WAI-ARIA `tree` whose rows are laid
- * out as a table (indented name + interest + jurisdiction). It shares the
- * `collapsed` and `selectedId` state with the graph, so expanding/collapsing
- * or selecting in one pane is reflected in the other.
+ * The Cytoscape canvas in BODSGraph is `role="img"`: a screen-reader user
+ * perceives only its accessible name, and nodes and edges are pointer-only.
+ * This is the same structure as a WAI-ARIA `tree` whose rows are laid out as a
+ * table (indented name + signals + interest + jurisdiction), keyboard-navigable
+ * throughout, satisfying WCAG 2.1 SC 1.1.1 / 1.3.1 / 2.1.1 for every mount of
+ * the graph. It shares `collapsed` and `selectedId` with the canvas, so
+ * expanding or selecting in one is reflected in the other.
+ *
+ * **It is the only text equivalent.** Phase 124 retired
+ * `BodsRelationshipTable`, which rendered the same GraphModel as a flat
+ * relationship table from inside BODSGraph's own "View as table" toggle. With
+ * the explorer's Split/Graph/Tree switch on top of that, one report could show
+ * two different tables of the same statements side by side plus a children list
+ * underneath. The tree won because it is navigable and it nests, which is the
+ * shape of the data; the two things the table did better — risk-signal labels
+ * per party, and naming parties with no reported relationships — moved here
+ * rather than being dropped with it.
  */
 
 import { useEffect, useRef, useState } from "react";
 import type { TreeRow } from "../lib/bodsGraph";
+import type { RiskSignal } from "../lib/api";
+import { RISK_PRESENTATION } from "./risk/RiskChip";
 
 function typeLabel(recordType: string): string {
   return recordType === "person" || recordType === "personStatement" ? "Person" : "Entity";
@@ -22,18 +36,31 @@ function jurisdictionCode(flagUrl: string): string {
   return m ? m[1].toUpperCase() : "";
 }
 
+/** Human label for a risk-signal code, falling back to the code de-underscored.
+ *  Carried over from BodsRelationshipTable: the canvas draws 1–3 character
+ *  badges ("RSC", "≥3"), which are unreadable as text, so the equivalent must
+ *  spell the signal out. */
+function signalLabel(code: string): string {
+  return RISK_PRESENTATION[code]?.label ?? code.replace(/_/g, " ");
+}
+
 export default function BodsTree({
   rows,
   selectedId,
   onSelect,
   onToggleCollapse,
   entityName,
+  signalsByNode,
 }: {
   rows: TreeRow[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onToggleCollapse: (id: string) => void;
   entityName?: string;
+  /** Node id → signals scoped to that node (`buildSignalMap`, the same map the
+   *  canvas badges read). Without it a row would say nothing about a party the
+   *  graph has drawn a risk badge on — the equivalent would be incomplete. */
+  signalsByNode?: Map<string, RiskSignal[]>;
 }) {
   const [active, setActive] = useState(0);
   const rowEls = useRef<(HTMLDivElement | null)[]>([]);
@@ -100,7 +127,7 @@ export default function BodsTree({
     <div
       role="tree"
       aria-label={entityName ? `Ownership tree for ${entityName}` : "Ownership tree"}
-      className="text-xs border border-oo-rule rounded-oo overflow-auto bg-white"
+      className="text-oo-meta border border-oo-rule rounded-oo overflow-auto bg-white"
       style={{ maxHeight: 460 }}
     >
       {rows.map((row, i) => {
@@ -120,7 +147,6 @@ export default function BodsTree({
             className={`flex items-center gap-1.5 px-2 py-1 border-b border-oo-rule/60 cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-oo-blue focus-visible:-outline-offset-2 ${
               isSelected ? "bg-oo-soft" : "hover:bg-oo-bg"
             }`}
-            title={row.identifiers.length ? row.identifiers.join(" · ") : undefined}
           >
             {/* Name cell — indentation + caret + icon + label */}
             <span className="flex items-center gap-1 min-w-0 flex-1" style={{ paddingLeft: row.depth * 14 }}>
@@ -144,16 +170,45 @@ export default function BodsTree({
                 <span className="sr-only">{row.identifiers.join(" · ")}</span>
               )}
               {row.isRepeat && (
-                <span className="flex-shrink-0 text-oo-muted" title="Shown in full above">↑</span>
+                <span className="flex-shrink-0 text-oo-muted">
+                  <span aria-hidden="true">↑</span>
+                  <span className="sr-only">shown in full above</span>
+                </span>
               )}
               {expandable && row.collapsed && (
                 <span className="flex-shrink-0 text-oo-muted">({row.childCount})</span>
               )}
+              {/* Without this an unconnected party renders at depth 0 with no
+                  caret and no interest — identical to a genuine ultimate
+                  parent. The table this replaced named them in their own
+                  block; the marker is how that survives the move. */}
+              {row.isolated && (
+                <span className="flex-shrink-0 text-oo-muted italic">
+                  no reported relationships
+                </span>
+              )}
             </span>
+
+            {/* Signal cell — the text equivalent of the canvas risk badges.
+                Spelled out, not the badge's 1–3 character abbreviation. */}
+            {(signalsByNode?.get(row.id)?.length ?? 0) > 0 && (
+              <span className="flex-shrink-0 flex flex-wrap items-center gap-1">
+                {[...new Set(signalsByNode!.get(row.id)!.map((s) => signalLabel(s.code)))].map(
+                  (l) => (
+                    <span
+                      key={l}
+                      className="text-oo-meta font-medium text-oo-ink border border-oo-rule rounded-full px-1.5"
+                    >
+                      {l}
+                    </span>
+                  )
+                )}
+              </span>
+            )}
 
             {/* Interest cell */}
             {row.interestLabel && (
-              <span className="flex-shrink-0 text-[11px] text-oo-muted truncate max-w-[40%]">
+              <span className="flex-shrink-0 text-oo-meta text-oo-muted truncate max-w-[40%]">
                 {row.interestLabel.split("\n")[0]}
               </span>
             )}
@@ -165,13 +220,13 @@ export default function BodsTree({
               {row.flagUrl && (
                 <>
                   <img src={row.flagUrl} alt="" className="inline-block w-4 h-3 object-cover align-middle border border-black/10" />
-                  <span className="text-[10px] text-oo-muted">{jurisdictionCode(row.flagUrl)}</span>
+                  <span className="text-oo-meta text-oo-muted">{jurisdictionCode(row.flagUrl)}</span>
                 </>
               )}
             </span>
 
             {/* Type cell */}
-            <span className="flex-shrink-0 w-12 text-[10px] text-oo-muted uppercase tracking-wide text-right">
+            <span className="flex-shrink-0 w-14 text-oo-meta text-oo-muted uppercase tracking-wide text-right">
               {typeLabel(row.recordType)}
             </span>
           </div>

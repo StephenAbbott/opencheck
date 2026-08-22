@@ -231,11 +231,9 @@ function AnnotatedValue({
   if (!filed) return <>{value}</>;
   if (!asFiled) {
     return (
-      <span
-        className="underline decoration-dotted decoration-oo-muted/60 underline-offset-2"
-        title={`As filed: ${filed}`}
-      >
+      <span className="underline decoration-dotted decoration-oo-muted/60 underline-offset-2">
         {value}
+        <span className="sr-only"> — as filed: {filed}</span>
       </span>
     );
   }
@@ -765,11 +763,13 @@ function MentionsBreakdown({ hit }: { hit: SourceHit }) {
         {preview.map((c) => (
           <span
             key={c.label}
-            title={`${c.count} of ${total} mentions are in “${c.label}”`}
-            className="inline-flex items-center gap-1 text-[11px] bg-oo-bg border border-oo-rule rounded-full pl-1.5 pr-2 py-0.5 text-oo-muted"
+            className="inline-flex items-center gap-1 text-oo-meta bg-oo-bg border border-oo-rule rounded-full pl-1.5 pr-2 py-0.5 text-oo-muted"
           >
             <span className="font-mono font-semibold text-oo-ink">{c.count}</span>
             <span className="truncate max-w-[200px]">{c.label}</span>
+            <span className="sr-only">
+              {" "}of {total} mentions are in “{c.label}”
+            </span>
           </span>
         ))}
         {hidden > 0 && (
@@ -1283,7 +1283,7 @@ export function SourceBucketCard({
         </div>
       )}
       {bucket.hits.length === 0 && !bucket.error && (
-        <p className="px-5 py-3 text-[13px] text-oo-muted">No hits.</p>
+        <p className="px-5 py-3 text-oo-small text-oo-muted">No results.</p>
       )}
       <ul className="divide-y divide-oo-rule">
         {bucket.hits.map((hit, idx) => (

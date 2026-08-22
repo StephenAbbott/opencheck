@@ -117,7 +117,6 @@ export function LivenessBadge({
       className={`inline-flex items-center gap-1 rounded-oo border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${
         stale ? STALE_STYLE : STYLES[info.liveness]
       } ${className}`}
-      title={livenessTitle(info)}
     >
       {info.liveness === "stub" && (
         <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true">

@@ -1,171 +1,142 @@
+/**
+ * SearchLoadingGrid — what the lookup is really doing (Phase 124).
+ *
+ * This component used to simulate its own contents. Every chip's state came
+ * from a `setTimeout`, ordered by a random shuffle recomputed on each loop; the
+ * progress bar was derived from that simulated count; the source list was the
+ * entire registry rather than the sources the lookup dispatches; and its
+ * `role="status"` line announced "Queried 39 sources" to a screen reader on a
+ * timer, for a lookup that had not returned, before looping back to
+ * "Querying…". Its docstring's premise — "there is no real per-source progress
+ * signal" — stopped being true in Phase 47, when `_lookup_pipeline` began
+ * emitting `sources_applicable`, `source_started`, `source_completed` and
+ * `source_error`.
+ *
+ * It now renders those events and nothing else. The logic is in
+ * `lib/lookupProgress.ts` so the logic-only suite can pin the rule that
+ * matters: **a source is shown only in a state the stream has said it is in**,
+ * and before `sources_applicable` arrives there are no chips at all, because
+ * there is nothing true to draw. That pre-anchor window is one honest line
+ * naming the step — resolving the entity in GLEIF — which is what a lookup is
+ * actually doing before it knows which sources apply.
+ */
+
 import { useEffect, useRef, useState } from "react";
 import type { SourceInfo } from "../lib/api";
+import { lookupProgress, progressLabel } from "../lib/lookupProgress";
+import { sourceLabel } from "../lib/vocab";
 
-type ChipState = "idle" | "querying" | "done";
+const CHIP_STYLE: Record<string, string> = {
+  waiting: "bg-oo-bg text-oo-muted border-oo-rule",
+  querying: "bg-oo-light text-oo-blue border-oo-softBorder",
+  done: "bg-oo-ok-bg text-oo-ok-text border-oo-ok-border",
+  failed: "bg-oo-warn-bg text-oo-warn-text border-oo-warn-border",
+};
 
-/**
- * Animated source-status grid shown while OpenCheck is querying.
- *
- * Each chip cycles: idle → querying (pulsing dot) → done (green).
- *
- * Because the backend returns all results in a single response there
- * is no real per-source progress signal, so we simulate staggered
- * completion to convey that multiple APIs are being queried in
- * parallel. The animation loops automatically if the real response
- * takes longer than one full cycle (~4 s for a 12-source set).
- */
+/** The mark beside each chip. A glyph as well as a colour, so state is not
+ *  carried by colour alone (WCAG 1.4.1). */
+const CHIP_MARK: Record<string, string> = {
+  waiting: "·",
+  querying: "◌",
+  done: "✓",
+  failed: "!",
+};
+
+const STATE_WORD: Record<string, string> = {
+  waiting: "not started",
+  querying: "querying",
+  done: "answered",
+  failed: "did not answer",
+};
+
 export default function SearchLoadingGrid({
   sources,
+  anchored = false,
+  applicable = [],
+  started,
+  completed,
+  errored,
 }: {
+  /** The registry, used only to put a display name on a chip. */
   sources: SourceInfo[];
+  anchored?: boolean;
+  applicable?: string[];
+  started?: ReadonlySet<string>;
+  completed?: ReadonlySet<string>;
+  errored?: ReadonlySet<string>;
 }) {
-  const [states, setStates] = useState<ChipState[]>(() =>
-    sources.map(() => "idle")
-  );
-  const [doneCount, setDoneCount] = useState(0);
-
-  // Stable refs so the recursive cycle never captures stale state.
-  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  // Incremented on every new cycle and on unmount — lets stale
-  // timers detect they belong to a cancelled run and bail out.
-  const cycleRef = useRef(0);
-
+  const empty: ReadonlySet<string> = new Set();
+  const progress = lookupProgress({
+    anchored,
+    applicable,
+    started: started ?? empty,
+    completed: completed ?? empty,
+    errored: errored ?? empty,
+  });
+  const names = Object.fromEntries(sources.map((s) => [s.id, s.name]));
+  const failedCount = progress.sources.filter((s) => s.state === "failed").length;
+  // The live region is throttled, not live-per-event. Replacing an animation
+  // that announced on a timer with one that announces on every
+  // `source_completed` would queue ~39 utterances — a firehose is as unusable
+  // as a fiction. The phase is announced whenever it changes, and the count at
+  // most every few seconds. (App.tsx makes the same trade for its per-source
+  // failure announcements.)
+  const [announced, setAnnounced] = useState("");
+  const pending = useRef("");
+  pending.current = progress.total === null ? progress.label : progressLabel(progress, failedCount);
+  const phase = progress.phase;
   useEffect(() => {
-    if (sources.length === 0) return;
-
-    function runCycle(cycle: number) {
-      const n = sources.length;
-      const order = [...Array(n).keys()].sort(() => Math.random() - 0.5);
-
-      setStates(Array<ChipState>(n).fill("idle"));
-      setDoneCount(0);
-
-      order.forEach((idx, rank) => {
-        const startAt = rank * 290 + Math.random() * 100;
-        const doneAt = startAt + 360 + Math.random() * 240;
-
-        timersRef.current.push(
-          setTimeout(() => {
-            if (cycleRef.current !== cycle) return;
-            setStates((prev) => {
-              const next = [...prev] as ChipState[];
-              next[idx] = "querying";
-              return next;
-            });
-          }, startAt)
-        );
-
-        timersRef.current.push(
-          setTimeout(() => {
-            if (cycleRef.current !== cycle) return;
-            setStates((prev) => {
-              const next = [...prev] as ChipState[];
-              next[idx] = "done";
-              return next;
-            });
-            setDoneCount((d) => d + 1);
-          }, doneAt)
-        );
-      });
-
-      // After all chips complete + a brief pause, start a new cycle.
-      const loopAt = (sources.length - 1) * 290 + 100 + 360 + 240 + 650;
-      timersRef.current.push(
-        setTimeout(() => {
-          if (cycleRef.current !== cycle) return;
-          const next = cycle + 1;
-          cycleRef.current = next;
-          runCycle(next);
-        }, loopAt)
-      );
-    }
-
-    timersRef.current.forEach(clearTimeout);
-    timersRef.current = [];
-    const initial = ++cycleRef.current;
-    runCycle(initial);
-
-    return () => {
-      // Cancel all pending timers from this or any previous cycle.
-      cycleRef.current++;
-      timersRef.current.forEach(clearTimeout);
-      timersRef.current = [];
-    };
-  }, [sources]);
-
-  const n = sources.length;
-  const progress = n > 0 ? (doneCount / n) * 100 : 0;
-  const allDone = doneCount === n && n > 0;
+    setAnnounced(pending.current);
+    const t = setInterval(() => setAnnounced(pending.current), 4000);
+    return () => clearInterval(t);
+  }, [phase]);
+  const pct = progress.total ? (progress.settled / progress.total) * 100 : 0;
 
   return (
     <div className="bg-white border border-oo-rule rounded-oo p-4 mb-6">
-      {/* Counter row */}
       <div className="flex items-center gap-3 mb-2">
-        <p role="status" className="text-[11px] text-oo-muted flex-1">
-          {allDone ? `Queried ${n} sources` : `Querying ${n} sources…`}
+        <p className="text-oo-meta text-oo-muted flex-1" aria-hidden="true">
+          {progress.total === null ? progress.label : progressLabel(progress, failedCount)}
         </p>
-        <span aria-hidden="true" className="text-[10px] font-mono text-oo-muted">
-          {doneCount} / {n}
-        </span>
+        <p role="status" className="sr-only">
+          {announced}
+        </p>
+        {progress.total !== null && (
+          <span aria-hidden="true" className="text-oo-meta font-mono text-oo-muted">
+            {progress.settled} / {progress.total}
+          </span>
+        )}
       </div>
 
-      {/* Progress bar — simulated, decorative only */}
+      {/* Indeterminate until the stream says how many sources apply — a bar at
+          0 of an unknown total is a claim, not a placeholder. */}
       <div aria-hidden="true" className="h-0.5 bg-oo-rule rounded-full overflow-hidden mb-3">
-        <div
-          className="h-full rounded-full transition-all duration-300"
-          style={{
-            width: `${progress}%`,
-            background: allDone ? "#25cb55" : "#3d30d4",
-          }}
-        />
+        {progress.total === null ? (
+          <div className="h-full w-1/3 rounded-full bg-oo-blue/40 animate-pulse" />
+        ) : (
+          <div
+            className="h-full rounded-full bg-oo-blue transition-all duration-300"
+            style={{ width: `${pct}%` }}
+          />
+        )}
       </div>
 
-      {/* Source chips — simulated, decorative only */}
-      <div aria-hidden="true" className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-        {sources.map((src, i) => {
-          const state = states[i] ?? "idle";
-          return (
-            <div
-              key={src.id}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded text-[10.5px] border overflow-hidden transition-colors duration-200"
-              style={
-                state === "idle"
-                  ? {
-                      background: "#f3f3f5",
-                      color: "#757575",
-                      borderColor: "#e5e5e5",
-                    }
-                  : state === "querying"
-                  ? {
-                      background: "#dceeff",
-                      color: "#3d30d4",
-                      borderColor: "#3d30d440",
-                    }
-                  : {
-                      background: "#e8faf0",
-                      color: "#1a7a38",
-                      borderColor: "#25cb5540",
-                    }
-              }
+      {progress.sources.length > 0 && (
+        <ul className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+          {progress.sources.map((s) => (
+            <li
+              key={s.sourceId}
+              className={`flex items-center gap-1.5 px-2 py-1.5 rounded border text-oo-meta overflow-hidden transition-colors duration-200 ${CHIP_STYLE[s.state]}`}
             >
-              <span
-                className={`flex-shrink-0 rounded-full${state === "querying" ? " motion-safe:animate-pulse" : ""}`}
-                style={{
-                  width: 5,
-                  height: 5,
-                  background:
-                    state === "idle"
-                      ? "#e5e5e5"
-                      : state === "querying"
-                      ? "#3d30d4"
-                      : "#25cb55",
-                }}
-              />
-              <span className="truncate">{src.name}</span>
-            </div>
-          );
-        })}
-      </div>
+              <span aria-hidden="true" className="font-mono">
+                {CHIP_MARK[s.state]}
+              </span>
+              <span className="truncate">{sourceLabel(s.sourceId, names)}</span>
+              <span className="sr-only"> — {STATE_WORD[s.state]}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
