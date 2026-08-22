@@ -349,13 +349,138 @@ async def sweep(
     return results
 
 
+# ---------------------------------------------------------------------------
+# GLEIF dispatch drift
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class DriftResult:
+    source_id: str
+    status: str
+    reason: str = ""
+    registered_at: str | None = None
+    derived: str | None = None
+
+
+async def _gleif_entity_block(lei: str, cache: dict[str, Any]) -> dict[str, Any]:
+    if lei not in cache:
+        bundle = await REGISTRY["gleif"].fetch(lei)
+        attrs = (bundle.get("record") or {}).get("attributes") or {}
+        cache[lei] = attrs.get("entity") or {}
+    return cache[lei]
+
+
+async def check_dispatch_drift(source_ids: list[str]) -> list[DriftResult]:
+    """Is each national register still reachable *through GLEIF*?
+
+    Every national register is entered via a key derived from the GLEIF anchor
+    record: the pipeline reads ``registeredAt.id``, matches it against the
+    adapter's ``ra_codes``, and runs the adapter's ``normalise(registeredAs)``
+    to build the local identifier. If GLEIF renames a registration-authority
+    code, or a registrar changes its number formatting, the source stops being
+    dispatched **at all** — while its own probe stays green, because its own
+    endpoint is fine. No per-source probe can see this: it is a failure of the
+    join, not of either side.
+
+    That the formats genuinely differ is not hypothetical — GLEIF returns
+    Norway's as ``'923 609 016'`` with spaces and Croatia's zero-padded to nine
+    digits, which is exactly what the normalisers exist to absorb. This check
+    runs them for real rather than assuming they still fit.
+    """
+    results: list[DriftResult] = []
+    cache: dict[str, Any] = {}
+
+    for source_id in source_ids:
+        probe = PROBES[source_id]
+        adapter = REGISTRY[source_id]
+        derivers = getattr(adapter, "lookup_derivers", ()) or ()
+        if not derivers:
+            continue
+        if not probe.anchor_lei:
+            results.append(
+                DriftResult(
+                    source_id,
+                    SKIPPED,
+                    reason="no anchor LEI on the probe — dispatch is not covered",
+                )
+            )
+            continue
+
+        try:
+            entity = await _gleif_entity_block(probe.anchor_lei, cache)
+        except Exception as exc:  # noqa: BLE001
+            results.append(
+                DriftResult(source_id, FAIL, reason=f"GLEIF anchor fetch failed: {_redact(exc)}")
+            )
+            continue
+
+        registered_as = (entity.get("registeredAs") or "").strip()
+        registered_at = (entity.get("registeredAt") or {}).get("id") or ""
+
+        matching = [d for d in derivers if registered_at in d.ra_codes]
+        if not matching:
+            expected = sorted({code for d in derivers for code in d.ra_codes})
+            results.append(
+                DriftResult(
+                    source_id,
+                    FAIL,
+                    reason=(
+                        f"dispatch drift: GLEIF anchor is registered at {registered_at or '(none)'}, "
+                        f"adapter dispatches on {', '.join(expected)} — this source would never be reached"
+                    ),
+                    registered_at=registered_at,
+                )
+            )
+            continue
+
+        deriver = matching[0]
+        try:
+            derived = deriver.normalise(registered_as)
+        except ValueError as exc:
+            results.append(
+                DriftResult(
+                    source_id,
+                    FAIL,
+                    reason=f"normalise({registered_as!r}) rejected it: {_redact(exc)}",
+                    registered_at=registered_at,
+                )
+            )
+            continue
+
+        expected_id = str(probe.args[0]) if probe.args else ""
+        if derived != expected_id:
+            results.append(
+                DriftResult(
+                    source_id,
+                    FAIL,
+                    reason=(
+                        f"derived identifier {derived!r} no longer matches the probe subject "
+                        f"{expected_id!r} — registrar formatting may have changed"
+                    ),
+                    registered_at=registered_at,
+                    derived=derived,
+                )
+            )
+            continue
+
+        results.append(
+            DriftResult(source_id, OK, registered_at=registered_at, derived=derived)
+        )
+
+    results.sort(key=lambda r: (r.status != FAIL, r.source_id))
+    return results
+
+
 def _credential_skips(results: list[Result]) -> list[str]:
     return [r.source_id for r in results if r.status == SKIPPED and "not configured" in r.reason]
 
 
-def build_report(results: list[Result]) -> dict[str, Any]:
+def build_report(results: list[Result], drift: list[DriftResult] | None = None) -> dict[str, Any]:
+    drift = drift or []
     counts = {status: sum(1 for r in results if r.status == status) for status in (OK, DEGRADED, FAIL, SKIPPED)}
     return {
+        "dispatch_drift": {d.source_id: asdict(d) for d in drift},
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "registry_size": len(REGISTRY),
         "probed": len(results),
@@ -392,6 +517,29 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{row['liveness'] or '—'} | {latency} | {detail} |"
         )
 
+    drift = report.get("dispatch_drift") or {}
+    drift_bad = {sid: row for sid, row in drift.items() if row["status"] == FAIL}
+    drift_uncovered = [sid for sid, row in drift.items() if row["status"] == SKIPPED]
+    if drift:
+        checked = sum(1 for row in drift.values() if row["status"] == OK)
+        lines += [
+            "",
+            "### GLEIF dispatch drift",
+            "",
+            f"{checked} of {len(drift)} identifier-dispatched sources still resolve from their GLEIF "
+            "anchor. A source can pass its own probe and still be unreachable in production if the "
+            "anchor no longer derives its identifier.",
+            "",
+        ]
+        if drift_bad:
+            lines += [f"- ❌ `{sid}` — {row['reason']}" for sid, row in sorted(drift_bad.items())]
+        if drift_uncovered:
+            lines.append(
+                f"- ⏭️ not covered (no anchor LEI): {', '.join(f'`{s}`' for s in sorted(drift_uncovered))}"
+            )
+        if not drift_bad and not drift_uncovered:
+            lines.append("- ✅ no drift")
+
     gaps = {sid: row["known_gap"] for sid, row in report["sources"].items() if row["known_gap"]}
     if gaps:
         lines += ["", "### Known provenance gaps (tolerated, not fixed)", ""]
@@ -420,6 +568,11 @@ def main() -> int:
     parser.add_argument("--retry-delay", type=float, default=30.0, help="seconds to wait before the single retry")
     parser.add_argument("--no-retry", action="store_true", help="do not retry a failing probe")
     parser.add_argument("--data-root", default="", help="override OPENCHECK_DATA_ROOT")
+    parser.add_argument(
+        "--no-drift-check",
+        action="store_true",
+        help="skip the GLEIF dispatch-drift check (which needs GLEIF to be reachable)",
+    )
     parser.add_argument(
         "--use-cache",
         action="store_true",
@@ -457,7 +610,8 @@ def main() -> int:
             retry=not args.no_retry,
         )
     )
-    report = build_report(results)
+    drift = asyncio.run(check_dispatch_drift(wanted)) if not args.no_drift_check else []
+    report = build_report(results, drift)
     markdown = render_markdown(report)
 
     out = Path(args.out)
@@ -469,6 +623,13 @@ def main() -> int:
     counts = report["counts"]
     exit_code = 0
     if counts[FAIL] or counts[DEGRADED]:
+        exit_code = 1
+    if any(row["status"] == FAIL for row in (report.get("dispatch_drift") or {}).values()):
+        print(
+            "::error::GLEIF dispatch drift — one or more sources would no longer be reached "
+            "from their anchor record, however healthy their own endpoint is.",
+            file=sys.stderr,
+        )
         exit_code = 1
     if len(report["credential_skips"]) > MAX_SKIPPED_FOR_CREDENTIALS:
         print(

@@ -1,6 +1,7 @@
 # Weekly source-health sweep — plan and status
 
-**Prompted by:** PR #153 (Ariregister provenance) · **Phase A built:** 2026-08-21
+**Prompted by:** PR #153 (Ariregister provenance) · **Phases A + part of B/C built:** 2026-08-21/22
+**PR:** [#154](https://github.com/StephenAbbott/opencheck/pull/154) — every phase of this work lands on `feat/source-health-sweep` and ships as Phase 121
 **Ticket:** [Regularly check health of OpenCheck data sources](https://app.notion.com/p/3c37f3dc29288056ac43d03d2f7e627a)
 
 ## Why the obvious version of this wouldn't have caught Estonia
@@ -24,7 +25,7 @@ functional and still produce misleading output. Every probe therefore asserts **
 | 2 | Result is non-empty (unless the probe declares `allow_empty`) | API still 200s, shape drifted, parser yields nothing |
 | 3 | **Resolved liveness is the expected value** | **the Estonia class** — right data, wrong provenance |
 | 4 | Declared fields present and truthy | partial parse, silent degradation to a hollow answer |
-| 5 | *(Phase C)* BODS statement counts by type | data still flows but ownership edges vanished |
+| 5 | *(still to do)* BODS statement counts by type | data still flows but ownership edges vanished |
 
 Assertion 3 costs nothing to add and is the reason to build this at all. Assertion 4 turned out to
 matter more than expected — see the Lithuania finding below.
@@ -54,11 +55,9 @@ Three fields carry more weight than their size suggests:
 - **`expect_fields`** — top-level keys that must be present *and truthy*. Deliberately sparse:
   populated only where a shape has been verified against a real response. The sweep records the
   observed field names for every source in its JSON artifact, which is how the rest get filled in.
-- **`known_gap`** — several adapters record no provenance observation at all on their normal path,
-  so they resolve `stub` even when answering correctly. Rather than assert the correct-but-false
-  expectation (permanently red) or the current-but-wrong one silently, those probes match today's
-  behaviour and the report prints the gap so it stays visible. Closing a gap means fixing the
-  adapter and tightening `expect_liveness` in the same commit.
+- **`known_gap`** — for an adapter whose provenance is knowingly wrong and not yet fixed, this
+  asserts today's behaviour while the report prints the defect, so it stays visible instead of
+  being asserted away. Both gaps it originally carried were closed on 2026-08-22 (below).
 
 ### The two offline guards (in `tests.yml`, not the weekly job)
 
@@ -168,14 +167,72 @@ stale silently" trap into an actual alarm. Phase C.
 
 ---
 
+## Second pass — 2026-08-22
+
+### Both provenance gaps closed
+
+- **`eiti_soe` was over-claiming, not under-claiming.** The original note said it resolved `stub`;
+  in fact, when payment rows are fetched live it resolved **`live`** — on the strength of the
+  payments alone, while the bundle's central assertion (*this company is state-owned*) comes from
+  a committed index built on `meta.source_snapshot`. It now records a snapshot observation on the
+  index match, so the worst-liveness rule reports the bundle as only as fresh as its stalest part.
+  The mirror image of the Ariregister bug: same missing observation, opposite direction of error.
+- **`bce_belgium` recorded nothing at all** and would have resolved `stub` the day the source was
+  switched on. It now records a snapshot on a DB hit, in both `search()` and `fetch()`. No
+  retrieval time is claimed: `scripts/extract_bce.py` treats KBO's `meta.csv` as informational and
+  doesn't persist the extract date, and the file's mtime says nothing about the register.
+  *Follow-up: persist KBO's own extract date in a meta table so the snapshot can carry a real one.*
+
+### GLEIF dispatch-drift check — built
+
+`check_dispatch_drift()` fetches each probe's `anchor_lei` from GLEIF and asserts the anchor's
+`registeredAt.id` is still in the adapter's `ra_codes`, then runs the adapter's own
+`normalise(registeredAs)` and compares the result with the probe's identifier. Anchors were
+resolved live against GLEIF, so each pairing is verified rather than assumed.
+
+That the normalisers are load-bearing is not hypothetical: GLEIF returns Norway's registration
+number as `'923 609 016'` with spaces and Croatia's zero-padded to nine digits (`'080000604'`
+against the adapter's eight). The check runs them for real rather than assuming they still fit.
+
+**9 of 23 identifier-dispatched sources are covered.** The rest have no anchor LEI yet and are
+listed in the report as *not covered* rather than counted as passing — same honesty as the
+credential skips. Adding an anchor is a one-line change per source.
+
+### `expect_fields` filled — and the first choice was wrong
+
+Filling them from the first run's observed field names immediately produced three failures that
+were *my* error, and the error is instructive: `legal_name` is present in many bundles because the
+adapter **echoes the GLEIF name in as a display fallback**, not because the register supplied it.
+Asserting it proves nothing — it is exactly what makes the Lithuania 403 read as a successful
+lookup. Every `expect_fields` entry is now a field only the source itself can supply.
+
+### Two more bad probe subjects found by asserting fields
+
+- **`ur_latvia`** — regcode `40003009556`, taken from a test fixture, is not in the register. It
+  returned an empty entity, no officers and `is_stub: False`: the hollow-answer shape again, this
+  time from a dead fixture rather than a dead source. Latvia itself is fine (Latvenergo returns 22
+  entity fields and 5 officers). Subject moved to Latvenergo.
+- **`rpo_slovakia`** — IČO `31320155` resolves to a *dissolved branch* of VÚB banka rather than the
+  live parent, which is worth investigating on its own. And `address` is `None` for every active
+  entity tried (SPP, Slovenská pošta, Slovnaft, Slovak Telekom), so it is either absent upstream or
+  unparsed and cannot be asserted. Subject moved to SPP.
+
+**The lesson worth keeping: a probe identifier lifted from a test file is not a verified subject.**
+Both of these, and the original Lithuanian code, came from test fixtures that were fabricated or
+stale. Probe subjects need checking against the live register once.
+
+### Current state — 21 ok · 1 failed · 17 skipped
+
+The one failure is Lithuania, still genuine and still unresolved (see above).
+
 ## Phasing
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| **A** | Probe table, both offline guards, sweep script, weekly workflow, rolling issue. Key-free sources exercised (21 of 39 green). | **Built 2026-08-21** |
-| **B** | Add the credentials as repository secrets; lower `MAX_SKIPPED_FOR_CREDENTIALS` in the same commit as each. Fix the two `known_gap` provenance defects (`eiti_soe`, `bce_belgium`). Decide the Lithuania 403. | Next |
-| **C** | GLEIF dispatch-drift check; week-over-week statement-count diff; snapshot freshness HEADs; fill `expect_fields` from the first green run's observed fields. | Planned |
-| **D** | *(optional)* Publish `source-health.json` as a public data-source status page — fits the transparency positioning. | Optional |
+| **A** | Probe table, both offline guards, sweep script, weekly workflow, rolling issue. | **Built 2026-08-21** |
+| **B** | Add the credentials as repository secrets; lower `MAX_SKIPPED_FOR_CREDENTIALS` in the same commit as each. Decide the Lithuania 403. | Secrets outstanding; the two provenance gaps it listed are **closed** |
+| **C** | GLEIF dispatch-drift check **(built)**; `expect_fields` filled **(built)**; week-over-week statement-count diff; snapshot freshness HEADs; anchor LEIs for the remaining 14 dispatched sources. | Part built 2026-08-22 |
+| **D** | *(optional)* Publish `source-health.json` as a public data-source status page. | Optional |
 
 ## Credentials to add (Phase B)
 

@@ -35,14 +35,13 @@ a fixture does not rot because a company was struck off.
 ``known_gap``
 -------------
 
-Several adapters currently record *no* provenance observation at all on their
-normal path, so they resolve ``stub`` even when they answer correctly — the
-same shape as the Ariregister bug, not yet fixed. Rather than assert the
-correct-but-false expectation (which would make the sweep permanently red) or
-the current-but-wrong one silently, those probes declare ``known_gap``: the
-expectation matches today's behaviour and the report prints the gap so it stays
-visible. Closing a gap means fixing the adapter and tightening
-``expect_liveness`` in the same commit.
+For an adapter whose provenance or coverage is knowingly wrong and not yet
+fixed, ``known_gap`` lets the probe assert today's behaviour while the report
+prints the defect, so it stays visible instead of being asserted away. No probe
+currently needs it: the two gaps this table originally recorded — ``eiti_soe``
+over-claiming ``live`` for an index-derived answer, and ``bce_belgium``
+recording nothing at all — were both closed in Phase 121. Closing a gap means
+fixing the adapter and tightening ``expect_liveness`` in the same commit.
 """
 
 from __future__ import annotations
@@ -93,6 +92,12 @@ class SourceProbe:
     Deliberately sparse: populated only where the shape has been verified
     against a real response. The sweep records the observed top-level keys for
     every source in its JSON artifact, which is how the rest get filled in.
+
+    Choose fields **only the source itself can supply**. Several adapters echo
+    the GLEIF ``legal_name`` into their bundle as a display fallback, so
+    asserting it proves nothing about the register — that is precisely the
+    Lithuania failure mode, where a 403 yields a bundle carrying the GLEIF name
+    and null register fields that reads as a successful lookup from outside.
     """
 
     allow_empty: bool = False
@@ -150,12 +155,15 @@ PROBES: dict[str, SourceProbe] = {
         tier="live",
         subject="Czech company by IČO",
         args=("27082440",),
+        expect_fields=("name", "entity", "directors"),
         bods_mapper="map_ares",
     ),
     "ariregister": _p(
         tier="live",
-        subject="Estonian company by registry code",
-        args=("10584597",),
+        subject="Eesti Energia AS",
+        args=("10421629",),
+        anchor_lei="5493005044RTLQ5RZU70",
+        expect_fields=("name", "status", "officers", "beneficial_owners"),
         bods_mapper="map_ariregister",
         notes=(
             "The regression fence for PR #153: this adapter bypasses "
@@ -167,19 +175,24 @@ PROBES: dict[str, SourceProbe] = {
         tier="live",
         subject="Telefonaktiebolaget LM Ericsson",
         args=("5560160680",),
+        anchor_lei="549300W9JLPW15XIFM52",
         requires_env=("BOLAGSVERKET_API_KEY", "BOLAGSVERKET_CLIENT_SECRET"),
         bods_mapper="map_bolagsverket",
     ),
     "brreg": _p(
         tier="live",
         subject="Equinor ASA",
-        args=("974760673",),
+        args=("923609016",),
+        anchor_lei="OW6OFBNCKXC4US5C7523",
+        expect_fields=("entity", "roles"),
         bods_mapper="map_brreg",
     ),
     "cnpj_brazil": _p(
         tier="live",
         subject="Petróleo Brasileiro S.A. (Petrobras)",
         args=("33000167000101",),
+        anchor_lei="5493000J801JZRCMFE49",
+        expect_fields=("company", "partners"),
         bods_mapper="map_cnpj_brazil",
     ),
     "companies_house": _p(
@@ -201,6 +214,7 @@ PROBES: dict[str, SourceProbe] = {
         tier="live",
         subject="Irish company by CRN",
         args=("249885",),
+        expect_fields=("company",),
         bods_mapper="map_cro",
     ),
     "cvr_denmark": _p(
@@ -228,8 +242,9 @@ PROBES: dict[str, SourceProbe] = {
     ),
     "inpi": _p(
         tier="live",
-        subject="Bolloré SA",
-        args=("055804124",),
+        subject="Bolloré Participations SE",
+        args=("352730394",),
+        anchor_lei="9695009YHLBEVMOOCF13",
         requires_env=("INPI_USERNAME", "INPI_PASSWORD"),
         bods_mapper="map_inpi",
     ),
@@ -250,20 +265,25 @@ PROBES: dict[str, SourceProbe] = {
     ),
     "krs_poland": _p(
         tier="live",
-        subject="PKN Orlen",
-        args=("0000017219",),
+        subject="ORLEN Spółka Akcyjna",
+        args=("0000028860",),
+        anchor_lei="259400VVMM70CQREJT74",
+        expect_fields=("name", "legal_form", "registration_date"),
         bods_mapper="map_krs_poland",
     ),
     "kvk": _p(
         tier="live",
         subject="ASML Holding",
         args=("17085815",),
+        anchor_lei="724500Y6DUVHQD6OXN27",
+        expect_fields=("company",),
         bods_mapper="map_kvk",
     ),
     "malta_mbr": _p(
         tier="live",
         subject="Maltese company by CRN",
         args=("C 113927",),
+        expect_fields=("company",),
         bods_mapper="map_malta_mbr",
     ),
     "mca_india": _p(
@@ -277,6 +297,7 @@ PROBES: dict[str, SourceProbe] = {
         tier="live",
         subject="Fonterra Co-operative Group",
         args=("1166320",),
+        anchor_lei="549300NCQQ9E4O5JX172",
         requires_env=("NZBN_API_KEY",),
         bods_mapper="map_nz_companies",
     ),
@@ -284,13 +305,23 @@ PROBES: dict[str, SourceProbe] = {
         tier="live",
         subject="Finnish company by Y-tunnus",
         args=("0112038-9",),
+        expect_fields=("company",),
         bods_mapper="map_prh",
     ),
     "rpo_slovakia": _p(
         tier="live",
-        subject="Slovak legal person by IČO",
-        args=("31320155",),
+        subject="Slovenský plynárenský priemysel, a.s.",
+        args=("35815256",),
+        expect_fields=("name", "status", "source_register"),
         bods_mapper="map_rpo_slovakia",
+        notes=(
+            "Two things learned from the first sweep. The original subject "
+            "(IČO 31320155) resolves to a *dissolved branch* of VÚB banka "
+            "rather than the live parent, which is worth a look on its own. "
+            "And `address` is None for every active entity tried — SPP, "
+            "Slovenská pošta, Slovnaft, Slovak Telekom — so it is either "
+            "absent upstream or unparsed, and cannot be asserted."
+        ),
     ),
     "rpvs_slovakia": _p(
         tier="live",
@@ -303,15 +334,25 @@ PROBES: dict[str, SourceProbe] = {
     "sudreg_croatia": _p(
         tier="live",
         subject="INA-Industrija nafte d.d.",
-        args=("80000604",),
+        args=("080000604",),
+        anchor_lei="213800RUSOIJPJD19H13",
         requires_env=("SUDREG_CLIENT_ID", "SUDREG_CLIENT_SECRET"),
         bods_mapper="map_sudreg_croatia",
     ),
     "ur_latvia": _p(
         tier="live",
-        subject="Latvian company by regcode",
-        args=("40003009556",),
+        subject="Akciju sabiedrība \"Latvenergo\"",
+        args=("40003032949",),
+        expect_fields=("entity", "officers"),
         bods_mapper="map_ur_latvia",
+        notes=(
+            "The original subject (regcode 40003009556, taken from a test "
+            "fixture) is not in the register: it returned a bundle with an "
+            "empty entity, no officers and `is_stub: False` — the same "
+            "hollow-answer shape as the Lithuania failure, but caused by a "
+            "dead fixture rather than a dead source. Beneficial owners are "
+            "not asserted: a state-owned utility legitimately has none."
+        ),
     ),
     "zefix": _p(
         tier="live",
@@ -360,6 +401,7 @@ PROBES: dict[str, SourceProbe] = {
     "sec_edgar": _p(
         tier="live",
         subject="US issuer by CIK",
+        expect_fields=("issuer_cik", "coverage_note"),
         allow_empty=True,
         args=("1793659",),
         bods_mapper="map_sec_edgar",
@@ -368,6 +410,7 @@ PROBES: dict[str, SourceProbe] = {
         tier="live",
         subject="Unilever (Q152057)",
         args=("Q152057",),
+        expect_fields=("qid", "bindings"),
         bods_mapper="map_wikidata",
     ),
     "wikirate": _p(
@@ -405,6 +448,7 @@ PROBES: dict[str, SourceProbe] = {
     "eiti": _p(
         tier="index",
         subject="Equinor UK Ltd (GB 01285743)",
+        expect_fields=("entity_name", "organisations"),
         allow_empty=True,
         method="fetch_by_registration",
         args=("GB", "01285743"),
@@ -418,14 +462,15 @@ PROBES: dict[str, SourceProbe] = {
         allow_empty=True,
         method="fetch_by_lei",
         args=("98450073EGD581D89F03",),
-        expect_liveness=frozenset({"live", "cached", "stub"}),
+        expect_liveness=frozenset({"snapshot"}),
+        expect_fields=("entity_name", "is_state_owned", "country"),
         bods_mapper="map_eiti_soe",
-        known_gap=(
-            "An index-only match records no provenance observation, so it "
-            "resolves 'stub' even though the answer comes from a committed "
-            "snapshot — the same shape as the Ariregister bug. Fix by "
-            "recording a snapshot observation on the index hit, then tighten "
-            "expect_liveness here."
+        notes=(
+            "Snapshot, not live: the payment rows are fetched live but the "
+            "bundle's central assertion — that this company is an SOE — comes "
+            "from the committed index, and provenance takes the worst liveness "
+            "across a fetch. Before this was recorded the adapter over-claimed "
+            "'live' on the strength of the payments alone."
         ),
     ),
     # --- curated fixtures -------------------------------------------------
@@ -434,6 +479,7 @@ PROBES: dict[str, SourceProbe] = {
         subject="Dangote Cement PLC",
         method="fetch_by_lei",
         args=("029200697A0R1BH0A835",),
+        expect_fields=("lei", "record"),
         expect_liveness=frozenset({"curated"}),
         anchor_lei="029200697A0R1BH0A835",
         bods_mapper="map_cac_nigeria",
@@ -444,6 +490,7 @@ PROBES: dict[str, SourceProbe] = {
         subject="Dangote Cement PLC (EITI pooled BO)",
         method="fetch_by_lei",
         args=("029200697A0R1BH0A835",),
+        expect_fields=("lei", "record", "register_name"),
         expect_liveness=frozenset({"curated"}),
         anchor_lei="029200697A0R1BH0A835",
         bods_mapper="map_eiti_bo",
@@ -453,14 +500,14 @@ PROBES: dict[str, SourceProbe] = {
         tier="inactive",
         subject="Belgian enterprise by number",
         args=("0403019488",),
-        expect_liveness=frozenset({"live", "cached", "snapshot", "stub"}),
+        expect_liveness=frozenset({"snapshot"}),
+        expect_fields=("name", "enterprise_number"),
         requires_env=("BCE_BELGIUM_DB_FILE",),
         bods_mapper="map_bce_belgium",
-        known_gap=(
-            "Reads a local SQLite snapshot but records no provenance "
-            "observation, so an answer resolves 'stub' — an Ariregister-class "
-            "defect waiting for the day the source is activated. Fix by "
-            "recording a snapshot observation, then tighten expect_liveness."
+        notes=(
+            "Reads a local KBO Open Data build. It recorded nothing at all "
+            "until Phase 121 — an Ariregister-class defect that would have "
+            "badged the data 'Placeholder' the day the source was switched on."
         ),
     ),
 }

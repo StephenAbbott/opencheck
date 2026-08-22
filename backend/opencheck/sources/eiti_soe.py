@@ -52,8 +52,10 @@ import json
 import logging
 import os
 from pathlib import Path
+from datetime import datetime, timezone
 from typing import Any
 
+from .. import provenance
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -76,11 +78,14 @@ _INDEX_PATH = Path(
 
 # Lazy module-level singleton (LEI -> index record). Tests may set this directly.
 _index: dict[str, dict[str, Any]] | None = None
+#: Upstream extract date of the committed index (``meta.source_snapshot``),
+#: recorded as the snapshot's retrieval time on every match.
+_index_snapshot: str | None = None
 
 
 def _get_index() -> dict[str, dict[str, Any]]:
     """Load the committed LEI-keyed SOE index (cached in a module singleton)."""
-    global _index
+    global _index, _index_snapshot
     if _index is None:
         try:
             with gzip.open(_INDEX_PATH, "rt", encoding="utf-8") as f:
@@ -93,6 +98,7 @@ def _get_index() -> dict[str, dict[str, Any]]:
                 if len(str(k).strip()) == 20
             }
             meta = data.get("meta") or {}
+            _index_snapshot = meta.get("source_snapshot") or meta.get("built")
             log.info(
                 "EITI SOE index loaded: %s SOEs resolved to LEI (%s source snapshot)",
                 meta.get("resolved_lei", len(_index)),
@@ -102,6 +108,29 @@ def _get_index() -> dict[str, dict[str, Any]]:
             log.warning("EITI SOE index unavailable: %s", exc)
             _index = {}
     return _index
+
+
+def _record_index_provenance() -> None:
+    """Declare that this answer came from the committed SOE index.
+
+    Without this the adapter records nothing on the index match, so a bundle
+    resolves ``live`` on the strength of the payment rows alone — over-claiming
+    the freshness of its central assertion, which is that the company is an SOE
+    and comes from a snapshot built on ``meta.source_snapshot``. Provenance
+    takes the worst liveness across a fetch, so recording the snapshot here is
+    what makes the bundle report itself as only as fresh as its stalest part.
+    (The mirror image of the Ariregister bug in PR #153, which under-claimed.)
+    """
+    built_at: datetime | None = None
+    if _index_snapshot:
+        try:
+            built_at = datetime.fromisoformat(_index_snapshot).replace(tzinfo=timezone.utc)
+        except ValueError:
+            built_at = None
+    provenance.record_snapshot(
+        built_at,
+        "EITI SOE Database index committed to the repository",
+    )
 
 
 def _reset_index_for_tests() -> None:
@@ -166,6 +195,7 @@ class EitiSoeAdapter(SourceAdapter):
         record = index.get(lei_norm)
         if record is None:
             return None
+        _record_index_provenance()
         return await self._build_bundle(lei_norm, record)
 
     async def fetch(self, hit_id: str) -> dict[str, Any]:
@@ -175,6 +205,7 @@ class EitiSoeAdapter(SourceAdapter):
         record = index.get(lei_norm)
         if record is None:
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
+        _record_index_provenance()
         return await self._build_bundle(lei_norm, record)
 
     # ------------------------------------------------------------------

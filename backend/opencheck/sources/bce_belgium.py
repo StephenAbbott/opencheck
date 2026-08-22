@@ -48,6 +48,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from .. import provenance
 from ..config import get_settings
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
@@ -85,6 +86,24 @@ def format_enterprise_number(raw: str) -> str:
     if len(digits) == 10:
         return f"{digits[:4]}.{digits[4:7]}.{digits[7:]}"
     return digits
+
+
+def _record_db_provenance() -> None:
+    """Declare that this answer came from the committed KBO Open Data extract.
+
+    The adapter reads a local SQLite build of Belgium's KBO Open Data, and
+    recorded nothing at all — so an answer resolved ``stub`` and would have
+    been badged "Placeholder data" the day the source was switched on. Same
+    defect as the Ariregister bug (PR #153), caught by the AST guard before it
+    could reach anyone.
+
+    No retrieval time is claimed: ``scripts/extract_bce.py`` treats KBO's
+    ``meta.csv`` as informational and does not persist its extract date into
+    the database, and the file's mtime records when the DB was built locally,
+    which says nothing about when the data left the register. Persisting KBO's
+    own extract date in a meta table would let this carry a real date.
+    """
+    provenance.record_snapshot(None, "KBO Open Data extract (local SQLite build)")
 
 
 class BceBelgiumAdapter(SourceAdapter):
@@ -216,6 +235,7 @@ class BceBelgiumAdapter(SourceAdapter):
         if not rows:
             return []
 
+        _record_db_provenance()
         hits: list[SourceHit] = []
         for row in rows:
             num = row.get("enterprise_number") or ""
@@ -276,6 +296,7 @@ class BceBelgiumAdapter(SourceAdapter):
         row = self._query_by_number(enterprise_number)
         if row is None:
             return stub_bundle
+        _record_db_provenance()
 
         name = (
             row.get("name_nl")
