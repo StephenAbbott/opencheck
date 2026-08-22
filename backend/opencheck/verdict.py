@@ -185,15 +185,36 @@ def build_verdict(
         base = "No risk signals surfaced across the sources that answered"
 
     if degraded:
-        base += (
-            f", but {_incomplete_phrase(degraded)} — "
-            "an empty result there is not a clean screen"
-        )
+        base += f", but {_incomplete_phrase(degraded)}"
     return base + "."
 
 
+#: Adapters record this when the SOURCE itself did not answer, as opposed to a
+#: derived screen that could not run (see ``opencheck.degradation``).
+_SOURCE_FETCH = "source_fetch"
+
+
 def _incomplete_phrase(degraded: list[dict[str, Any]]) -> str:
-    n = len({d.get("source_id") for d in degraded if d.get("source_id")}) or len(degraded)
-    if n == 1:
-        return "one check did not run"
-    return f"{n} checks did not run"
+    """Say which kind of gap this was — they are not the same claim.
+
+    A screen that did not run undermines a clean result: an empty sanctions or
+    PEP screen that never executed is indistinguishable from a clean one, which
+    is what "not a clean screen" warns about. A *source* that did not answer is
+    a coverage gap, not a screening gap — the Lithuanian register being
+    unreachable says nothing about whether anyone was screened. Phrasing both
+    the same way over-claims on one and under-explains the other.
+    """
+    screens = [d for d in degraded if d.get("check") != _SOURCE_FETCH]
+    sources = [d for d in degraded if d.get("check") == _SOURCE_FETCH]
+
+    parts: list[str] = []
+    if screens:
+        n = len({d.get("source_id") for d in screens if d.get("source_id")}) or len(screens)
+        noun = "one check" if n == 1 else f"{n} checks"
+        parts.append(f"{noun} did not run — an empty result there is not a clean screen")
+    if sources:
+        n = len({d.get("source_id") for d in sources if d.get("source_id")}) or len(sources)
+        noun = "one source" if n == 1 else f"{n} sources"
+        verb = "did not answer" if n == 1 else "did not answer"
+        parts.append(f"{noun} {verb}, so its records were not consulted")
+    return ", and ".join(parts)

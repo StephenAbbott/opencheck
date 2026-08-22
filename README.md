@@ -16,15 +16,17 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 121** — monitoring a source is not asking whether it replied
+**Latest: Phase 123** — design v2, phases C+D: modes as the structure, rows that say what a source found
 
-The Ariregister bug returned correct, live Estonian register data while recording no provenance observation, so OpenCheck badged it "Placeholder data" — and a weekly health check built the obvious way, asking each adapter whether it returned something, would have gone green every week for as long as the bug lived. Every one of the 39 registry adapters now has a probe run inside a `provenance.recording()` scope that asserts the **resolved liveness** as well as reachability; a weekly sweep exercises all of them against the real upstreams, and two guards move into the PR gate — probe/registry parity, and an AST check that an adapter building its own HTTP client records provenance in the same function. That guard immediately found a second, latent instance of the same defect, and the first sweep found a live one in Lithuania. A second pass closes both provenance gaps — one of them *over*-claiming `live` rather than under-claiming — and adds a GLEIF dispatch-drift check, since every national register is entered via a key derived from the GLEIF anchor and a renamed authority code would stop a source being reached at all while its own probe stayed green. A third completes it: BODS statement counts diffed week over week, so a source that still answers but has quietly stopped carrying ownership edges is caught, plus an age check for the committed snapshots whose failure mode is silence rather than an error. Adapters can now also record a degradation of their own — Lithuania's register 403s datacentre IPs, and the adapter's answer to being refused was a card indistinguishable from a real one. Commits `efe0da1`, `231ab81`, `131ff78`, `30a8ec3`.
+The report is now organised by check mode, and each source row states what that source actually found rather
+than leaving the reader to infer it from a card. Commits `fbca1ba`, `54c98ca`.
 
-**Previous: Phase 120** — the false positives no threshold could kill, killed by shape
+**Previous: Phase 122** — design v2, phases A+B: the primitives, and the answer first
 
-The name-collision survivors of PR #86 all share one anatomy: generic tokens match, the distinctive token differs. A new distinctive-token gate strips legal forms and filler and requires the residues to agree — killing every named collision (including two sitting *above* the old 0.93 threshold and still shipping) while the threshold comes back to 0.87 and recovers the true matches it had cost, LVMH's only offshore-leaks signal among them. Measured on a reproducibly rebuilt 14-subject corpus, with the harness and adjudication committed this time. Commit `c5e6002`.
+A design-system layer (tokens, primitives, Tailwind config) under an answer-first report: the verdict sentence
+leads, and it is built so that a run where screens degraded can never read as a clean one. Commit `a8ba5e7`.
 
-*Earlier: [Phase 119 — OpenAleph signal volume, measured before mended](docs/status.md), [Phase 118 — export-control topics classified at last](docs/status.md), [Phase 117 — the evidence list no longer crowds out the page](docs/status.md), [Phase 116 — the exported report separates risk findings from structural context](docs/status.md), and everything before it.*
+*Earlier: [Phase 121 — monitoring a source is not asking whether it replied](docs/status.md), [Phase 120 — the false positives no threshold could kill, killed by shape](docs/status.md), [Phase 119 — OpenAleph signal volume, measured before mended](docs/status.md), [Phase 118 — export-control topics classified at last](docs/status.md), and everything before it.*
 
 
 
