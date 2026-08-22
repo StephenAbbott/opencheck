@@ -1,0 +1,175 @@
+import { describe, expect, it } from "vitest";
+import { lookupProgress, progressLabel } from "./lookupProgress";
+
+const none = new Set<string>();
+const base = {
+  anchored: false,
+  applicable: [] as string[],
+  started: none,
+  completed: none,
+  errored: none,
+};
+
+describe("lookupProgress", () => {
+  it("shows no chips at all before the stream says which sources apply", () => {
+    // The old grid rendered the entire registry — ESG adapters included —
+    // during the pre-anchor window, when nothing is known. An empty list and
+    // an honest phase label is the only truthful state here.
+    const p = lookupProgress(base);
+    expect(p.sources).toEqual([]);
+    expect(p.total).toBeNull();
+    expect(p.phase).toBe("connecting");
+    expect(p.label).toMatch(/connect/i);
+  });
+
+  it("reports total as null rather than 0 while unknown", () => {
+    // 0 would render as a complete progress bar.
+    expect(lookupProgress(base).total).toBeNull();
+    expect(lookupProgress({ ...base, anchored: true }).total).toBeNull();
+  });
+
+  it("puts every applicable source in waiting until its own event lands", () => {
+    const p = lookupProgress({
+      ...base,
+      anchored: true,
+      applicable: ["gleif", "companies_house", "opensanctions"],
+    });
+    expect(p.sources.map((s) => s.state)).toEqual(["waiting", "waiting", "waiting"]);
+    expect(p.phase).toBe("querying");
+    expect(p.settled).toBe(0);
+    expect(p.total).toBe(3);
+  });
+
+  it("moves a source only when the stream moves it", () => {
+    const p = lookupProgress({
+      ...base,
+      anchored: true,
+      applicable: ["a", "b", "c"],
+      started: new Set(["a", "b"]),
+      completed: new Set(["a"]),
+    });
+    expect(p.sources).toEqual([
+      { sourceId: "a", state: "done" },
+      { sourceId: "b", state: "querying" },
+      { sourceId: "c", state: "waiting" },
+    ]);
+    expect(p.settled).toBe(1);
+  });
+
+  it("keeps a failed source distinct from a completed one", () => {
+    // Folding a failure into the success count is the same untruth as the
+    // simulated bar: "3 of 3" when one errored.
+    const p = lookupProgress({
+      ...base,
+      anchored: true,
+      applicable: ["a", "b"],
+      completed: new Set(["a"]),
+      errored: new Set(["b"]),
+    });
+    expect(p.sources[1].state).toBe("failed");
+    expect(p.settled).toBe(2);
+  });
+
+  it("lets an error win over a completion for the same source", () => {
+    // App.tsx adds an errored source to BOTH sets, so the two overlap by
+    // design; the failure is the honest state to show.
+    const p = lookupProgress({
+      ...base,
+      anchored: true,
+      applicable: ["a"],
+      completed: new Set(["a"]),
+      errored: new Set(["a"]),
+    });
+    expect(p.sources[0].state).toBe("failed");
+  });
+
+  it("preserves dispatch order", () => {
+    const applicable = ["z_source", "a_source", "m_source"];
+    const p = lookupProgress({ ...base, anchored: true, applicable });
+    expect(p.sources.map((s) => s.sourceId)).toEqual(applicable);
+  });
+
+  it("advances to finishing only when everything has settled", () => {
+    const args = { ...base, anchored: true, applicable: ["a", "b"] };
+    expect(lookupProgress({ ...args, completed: new Set(["a"]) }).phase).toBe("querying");
+    expect(lookupProgress({ ...args, completed: new Set(["a", "b"]) }).phase).toBe("finishing");
+  });
+
+  it("handles a source that completes before its start event is processed", () => {
+    const p = lookupProgress({
+      ...base,
+      anchored: true,
+      applicable: ["a"],
+      completed: new Set(["a"]),
+    });
+    expect(p.sources[0].state).toBe("done");
+    expect(p.phase).toBe("finishing");
+  });
+
+  it("names the anchor step rather than pretending to query", () => {
+    // Between stream-open and gleif_done the lookup is resolving one entity in
+    // GLEIF. That is what it is doing, so that is what it should say.
+    const p = lookupProgress({ ...base, started: new Set(["gleif"]) });
+    expect(p.phase).toBe("anchoring");
+    expect(p.label).toMatch(/GLEIF/);
+  });
+
+  it("gives every phase a present-tense label", () => {
+    // The old grid's role="status" line flipped to the past tense on a timer.
+    for (const args of [
+      base,
+      { ...base, started: new Set(["gleif"]) },
+      { ...base, anchored: true, applicable: ["a"] },
+      { ...base, anchored: true, applicable: ["a"], completed: new Set(["a"]) },
+    ]) {
+      expect(lookupProgress(args).label).toMatch(/…$/);
+    }
+  });
+});
+
+describe("progressLabel", () => {
+  it("stays in the present tense until everything has settled", () => {
+    const p = lookupProgress({
+      ...base,
+      anchored: true,
+      applicable: ["a", "b", "c"],
+      completed: new Set(["a"]),
+    });
+    expect(progressLabel(p, 0)).toBe("Querying — 1 of 3 sources answered");
+  });
+
+  it("reaches the past tense only on real completion", () => {
+    const p = lookupProgress({
+      ...base,
+      anchored: true,
+      applicable: ["a", "b"],
+      completed: new Set(["a", "b"]),
+    });
+    expect(progressLabel(p, 0)).toBe("Queried 2 of 2 sources");
+  });
+
+  it("says how many did not answer instead of counting them as queried", () => {
+    const p = lookupProgress({
+      ...base,
+      anchored: true,
+      applicable: ["a", "b", "c"],
+      completed: new Set(["a", "b"]),
+      errored: new Set(["c"]),
+    });
+    expect(progressLabel(p, 1)).toBe("Queried 3 of 3 sources, 1 did not answer");
+  });
+
+  it("falls back to the phase label while the total is unknown", () => {
+    expect(progressLabel(lookupProgress(base), 0)).toMatch(/connect/i);
+  });
+
+  it("agrees in number for a single source", () => {
+    const p = lookupProgress({
+      ...base,
+      anchored: true,
+      applicable: ["a"],
+      completed: new Set(["a"]),
+    });
+    expect(progressLabel(p, 0)).toBe("Queried 1 of 1 source");
+  });
+});

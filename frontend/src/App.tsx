@@ -56,6 +56,7 @@ import { OpenAlephArchiveMatches } from "./components/cdd/OpenAlephArchiveMatche
 import { EsgPanel } from "./components/cdd/EsgPanel";
 import { MeipSignpost } from "./components/cdd/MeipSignpost";
 import { SecuritiesSection } from "./components/cdd/SecuritiesSection";
+import { clearPanelError, mergePanelError, panelLabel, type PanelError } from "./lib/panelErrors";
 
 // FullCheck (enhanced due diligence) view — lazy so Cytoscape/graph code only
 // loads when a user switches into FullCheck mode.
@@ -244,7 +245,22 @@ export default function App() {
   // RELATED_* code. Name-derived; never identifier corroboration.
   const [oaScreening, setOaScreening] = useState<OpenAlephScreeningMatch[]>([]);
   const [applicableSources, setApplicableSources] = useState<string[]>([]);
+  // Panels that fetch outside `_lookup_pipeline` (/securities, /subsidiaries).
+  // Deliberately NOT merged into `degradedSources`: that list arrives on the
+  // same event as `signals` and as the backend-built verdict sentence, and the
+  // three are provably consistent with each other. Injecting a client-side
+  // record would let the coverage count disagree with a sentence that knows
+  // nothing about it — and `onRiskSignals` overwrites the list wholesale, so it
+  // would be erased anyway. See lib/panelErrors.ts.
+  const [panelErrors, setPanelErrors] = useState<PanelError[]>([]);
   const [completedSources, setCompletedSources] = useState<Set<string>>(new Set());
+  // Phase 124: the loading grid used to simulate per-source progress. It now
+  // renders `source_started` / `source_completed` / `source_error`, so it needs
+  // the started set the stream was already sending and nothing was reading.
+  const [startedSources, setStartedSources] = useState<Set<string>>(new Set());
+  // Derived rather than stored: `errors` is already the record of which sources
+  // failed, and a second set could disagree with it.
+  const erroredSources = useMemo(() => new Set(Object.keys(errors)), [errors]);
   const [streaming, setStreaming] = useState(false);
   // QuickCheck (subject screening, default) vs FullCheck (network EDD) vs
   // BackgroundCheck (screening the people connected to the entity). Reset to
@@ -531,6 +547,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         setOaScreening([]);
         setApplicableSources([]);
         setCompletedSources(new Set());
+        setStartedSources(new Set());
+        setPanelErrors([]);
         setStreaming(false);
         setBodsCountMap({});
         setBodsBreakdownMap({});
@@ -559,6 +577,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             resolve({ lei: e.lei, legal_name: e.legal_name });
           },
           onSourcesApplicable: (e) => setApplicableSources(e.source_ids),
+          onSourceStarted: (e) =>
+            setStartedSources((prev) => new Set([...prev, e.source_id])),
           // Dedup by source_id:hit_id — in dev, React StrictMode runs the lookup
           // effect twice, so two streams can each deliver the same hit. The guard
           // makes hit accumulation idempotent (no-op in production, where
@@ -1668,8 +1688,15 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           )}
         </div>
 
-        {lookupMutation.isPending && (
-          <SearchLoadingGrid sources={sourcesQuery.data?.sources ?? []} />
+        {(lookupMutation.isPending || streaming) && (
+          <SearchLoadingGrid
+            sources={sourcesQuery.data?.sources ?? []}
+            anchored={!!streamingLei}
+            applicable={applicableSources}
+            started={startedSources}
+            completed={completedSources}
+            errored={erroredSources}
+          />
         )}
 
         {!streamingLei && !lookupMutation.isPending && !streaming && !lookupMutation.isError && !nameSearchMutation.data && !nameSearchMutation.isPending && !nationalIdSearchMutation.data && !nationalIdSearchMutation.isPending && (
@@ -1845,6 +1872,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           />
         )}
 
+        {panelErrors.length > 0 && <PanelErrorsNotice errors={panelErrors} />}
+
         {streamingLei && mode === "quick" && (
           <NarrativePanel lei={streamingLei} legalName={legalName} />
         )}
@@ -1960,7 +1989,15 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         {mode === "full" && streamingLei ? (
           <div id="panel-full" role="tabpanel" aria-labelledby="tab-full" tabIndex={-1}>
             <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading FullCheck…</p>}>
-              <FullCheckPanel lei={streamingLei} legalName={legalName} signals={riskSignals} />
+              <FullCheckPanel
+                  lei={streamingLei}
+                  legalName={legalName}
+                  signals={riskSignals}
+                  onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
+                  onPanelRecovered={(panel) =>
+                    setPanelErrors((prev) => clearPanelError(prev, panel))
+                  }
+                />
             </Suspense>
           </div>
         ) : mode === "background" && streamingLei ? (
@@ -2066,7 +2103,13 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           </section>
         )}
 
-        {streamingLei && <SecuritiesSection lei={streamingLei} />}
+        {streamingLei && (
+          <SecuritiesSection
+            lei={streamingLei}
+            onError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
+            onRecovered={(panel) => setPanelErrors((prev) => clearPanelError(prev, panel))}
+          />
+        )}
 
 
         {/* MEIP signpost — bottom of the results page, beneath the richer
@@ -3440,6 +3483,41 @@ function CrossSourceIdentifiersTable({
 // the "Show more" toggle. Multi-source subjects (e.g. DNO ASA) can flag many
 // pairs, which otherwise dominates the results page.
 const POSSIBLY_SAME_PREVIEW_COUNT = 2;
+
+/**
+ * Failures in the panels that fetch outside the lookup pipeline.
+ *
+ * Separate from DegradedScreensNotice on purpose — see lib/panelErrors.ts for
+ * why these must not be merged into `degraded_sources`. Same amber, same
+ * closing principle, different sentence: a section that is not on screen
+ * because its fetch failed must not be read as a section with nothing in it.
+ */
+function PanelErrorsNotice({ errors }: { errors: PanelError[] }) {
+  if (errors.length === 0) return null;
+  return (
+    <section
+      role="status"
+      aria-label="Part of this report could not be loaded"
+      className="mb-8 rounded-oo border border-oo-warn-border bg-oo-warn-bg p-5"
+    >
+      <h2 className="font-head font-bold text-oo-body text-oo-warn-text">
+        Part of this report could not be loaded
+      </h2>
+      <ul className="mt-2 space-y-1.5">
+        {errors.map((e) => (
+          <li key={e.panel} className="text-oo-meta text-oo-warn-text leading-[1.6]">
+            <span className="font-semibold">{panelLabel(e.panel)}</span> — {e.detail}. You
+            are not seeing {e.missing}.
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-oo-meta text-oo-warn-text">
+        These sections are missing from the page, not empty. Their absence is not
+        evidence of absence.
+      </p>
+    </section>
+  );
+}
 
 /** Human phrasing for the closed degradation-reason vocabulary. */
 const DEGRADED_REASON_LABELS: Record<string, string> = {

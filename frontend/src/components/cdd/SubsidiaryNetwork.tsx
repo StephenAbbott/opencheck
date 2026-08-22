@@ -1,7 +1,9 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { getSubsidiaries } from "../../lib/api";
 import type { RiskSignal, SubsidiariesResponse, SubsidiaryChild } from "../../lib/api";
 import { scopeCrossSourceSignals } from "../../lib/signalScope";
+import { describeFetchFailure, panelError, type PanelError, type PanelId } from "../../lib/panelErrors";
+import InvitationStrip from "../ui/InvitationStrip";
 
 // BodsGraphExplorer pulls in Cytoscape — load it only when a small network is
 // actually rendered as a graph (large networks degrade to a table + export).
@@ -126,36 +128,14 @@ function SummaryStats({ data }: { data: SubsidiariesResponse }) {
   );
 }
 
-// ---------------------------------------------------------------------
-// Invitation strip — shown before the lookup and when collapsed again
-// ---------------------------------------------------------------------
-
-function InvitationStrip({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="mt-3 w-full flex items-center gap-3 rounded-oo border border-[#c7cdf0] bg-[#eef1fb] px-3 py-2 text-left transition-colors hover:bg-[#e6eafb]"
-    >
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#3d30d4] text-white">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-          <rect x="5" y="1.5" width="4" height="3" rx="0.6" stroke="currentColor" strokeWidth="1.1" />
-          <rect x="1.5" y="9.5" width="4" height="3" rx="0.6" stroke="currentColor" strokeWidth="1.1" />
-          <rect x="8.5" y="9.5" width="4" height="3" rx="0.6" stroke="currentColor" strokeWidth="1.1" />
-          <path d="M7 4.5 V7 M7 7 H3.5 V9.5 M7 7 H10.5 V9.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
-        </svg>
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[13px] font-semibold text-[#2a2382] leading-tight">
-          Reveal subsidiary network
-        </span>
-        <span className="block text-[11px] text-[#5b54a8]">
-          GLEIF Level 2 direct &amp; ultimate children, mapped to BODS · live lookup
-        </span>
-      </span>
-    </button>
-  );
-}
+const SUBSIDIARY_ICON = (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+    <rect x="5" y="1.5" width="4" height="3" rx="0.6" stroke="currentColor" strokeWidth="1.1" />
+    <rect x="1.5" y="9.5" width="4" height="3" rx="0.6" stroke="currentColor" strokeWidth="1.1" />
+    <rect x="8.5" y="9.5" width="4" height="3" rx="0.6" stroke="currentColor" strokeWidth="1.1" />
+    <path d="M7 4.5 V7 M7 7 H3.5 V9.5 M7 7 H10.5 V9.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+  </svg>
+);
 
 // ---------------------------------------------------------------------
 // SubsidiaryNetwork — lazy GLEIF children reveal (graph or table + export)
@@ -165,9 +145,15 @@ export function SubsidiaryNetwork({
   lei,
   entityName,
   signals = [],
+  onError,
+  onRecovered,
 }: {
   lei: string;
   entityName?: string;
+  /** Report a fetch failure to the report-level notice — these panels sit
+   *  outside `_lookup_pipeline`, so nothing else knows they failed. */
+  onError?: (e: PanelError) => void;
+  onRecovered?: (panel: PanelId) => void;
   /** The lookup's top-level risk signals. This graph is built from a
    *  separately-fetched GLEIF children bundle, so — like the source cards —
    *  it saw no cross-source findings at all until Phase 109. */
@@ -177,6 +163,18 @@ export function SubsidiaryNetwork({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
+  // Collapsing unmounts the panel and put focus on <body>; the strip that
+  // replaces it takes focus instead. NzAssociations already did this — the
+  // duplicated component is why the fix only landed in one of the two.
+  const stripRef = useRef<HTMLButtonElement>(null);
+  const wantStripFocus = useRef(false);
+  useEffect(() => {
+    if (collapsed && wantStripFocus.current) {
+      stripRef.current?.focus();
+      wantStripFocus.current = false;
+    }
+  }, [collapsed]);
+  const collapse = () => { wantStripFocus.current = true; setCollapsed(true); };
 
   // BODS statements for the graph / export — fetched on demand (format=bods).
   const [bods, setBods] = useState<Record<string, unknown>[] | null>(null);
@@ -193,8 +191,11 @@ export function SubsidiaryNetwork({
     setError(null);
     try {
       setData(await getSubsidiaries(lei, "summary"));
+      onRecovered?.("subsidiaries");
     } catch (e) {
-      setError(String(e));
+      // Was `String(e)` — the reader saw "Error: 500 Internal Server Error".
+      setError(describeFetchFailure(e));
+      onError?.(panelError("subsidiaries", e));
     } finally {
       setLoading(false);
     }
@@ -209,7 +210,8 @@ export function SubsidiaryNetwork({
       setBods(stmts);
       return stmts;
     } catch (e) {
-      setError(String(e));
+      setError(describeFetchFailure(e));
+      onError?.(panelError("subsidiaries", e));
       return null;
     } finally {
       setBodsLoading(false);
@@ -235,13 +237,29 @@ export function SubsidiaryNetwork({
 
   // Layer 1 — invitation (nothing fires until clicked).
   if (!data && !loading && !error) {
-    return <InvitationStrip onClick={run} />;
+    return (
+      <InvitationStrip
+        title="Reveal subsidiary network"
+        detail="GLEIF Level 2 direct and ultimate children, mapped to BODS · live lookup"
+        icon={SUBSIDIARY_ICON}
+        onClick={run}
+        buttonRef={stripRef}
+      />
+    );
   }
 
   // Collapsed after viewing — back to the invitation strip; re-opening keeps the
   // already-fetched data (no second lookup).
   if (data && collapsed) {
-    return <InvitationStrip onClick={() => setCollapsed(false)} />;
+    return (
+      <InvitationStrip
+        title="Reveal subsidiary network"
+        detail="GLEIF Level 2 direct and ultimate children, mapped to BODS · already fetched"
+        icon={SUBSIDIARY_ICON}
+        onClick={() => setCollapsed(false)}
+        buttonRef={stripRef}
+      />
+    );
   }
 
   const isGraphMode = data?.render_mode === "graph";
@@ -249,7 +267,26 @@ export function SubsidiaryNetwork({
   return (
     <section className="mt-3 rounded-oo border border-oo-rule bg-oo-bg p-3">
       {loading && <p className="text-[12px] text-oo-muted">Fetching the GLEIF subsidiary network…</p>}
-      {error && <p className="text-[12px] text-red-700">{error}</p>}
+      {error && (
+        // role="alert" so it is announced, matching NzAssociations and
+        // FullCheckPanel. Amber, not red: an upstream that did not answer is
+        // incomplete, not a failure the reader caused. And a retry, because
+        // once `error` was truthy the invitation strip's early return no
+        // longer fired and the only way back was a page reload.
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-oo-meta text-oo-warn-text">
+            The subsidiary network could not be fetched — {error}. This is not a
+            finding that the entity has none.
+          </p>
+          <button
+            type="button"
+            onClick={() => { setError(null); setData(null); run(); }}
+            className="shrink-0 rounded border border-oo-warn-border px-2.5 py-1 text-oo-meta font-semibold text-oo-warn-text hover:bg-oo-warn-bg"
+          >
+            Try again
+          </button>
+        </div>
+      )}
 
       {data && !data.available && (
         <div className="flex items-start justify-between gap-3">
@@ -258,7 +295,7 @@ export function SubsidiaryNetwork({
           </p>
           <button
             type="button"
-            onClick={() => setCollapsed(true)}
+            onClick={collapse}
             className="shrink-0 text-[11px] font-mono text-oo-blue hover:underline"
           >
             Hide
@@ -272,7 +309,7 @@ export function SubsidiaryNetwork({
             <h4 className="font-head font-bold text-[13px] text-oo-ink">Subsidiary network</h4>
             <button
               type="button"
-              onClick={() => setCollapsed(true)}
+              onClick={collapse}
               className="shrink-0 text-[11px] font-mono text-oo-blue hover:underline"
             >
               Hide
