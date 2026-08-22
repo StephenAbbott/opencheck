@@ -35,6 +35,7 @@ import type { RiskSignal } from "../lib/api";
 import { buildSignalMap } from "../lib/signalScope";
 import { signalStyle } from "../lib/graphStyle";
 import GraphLegend from "./GraphLegend";
+import { RISK_PRESENTATION } from "./risk/RiskChip";
 import type { SameAsCandidate } from "../lib/reconcile";
 
 cytoscape.use(dagre);
@@ -509,17 +510,17 @@ export default function BODSGraph({
       {/* Toolbar */}
       <div className="border-b border-oo-rule">
         <div className="flex items-center flex-wrap gap-1 px-2 py-1 text-oo-meta text-oo-muted">
-          <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom in" aria-label="Zoom in"
+          <button type="button" className="hover:text-oo-blue font-mono px-2" aria-label="Zoom in"
               onClick={() => cyRef.current?.zoom({ level: (cyRef.current?.zoom() ?? 1) * 1.3,
                 renderedPosition: { x: (containerRef.current?.clientWidth ?? 0) / 2, y: (containerRef.current?.clientHeight ?? 0) / 2 } })}>
               +
             </button>
-            <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom out" aria-label="Zoom out"
+            <button type="button" className="hover:text-oo-blue font-mono px-2" aria-label="Zoom out"
               onClick={() => cyRef.current?.zoom({ level: (cyRef.current?.zoom() ?? 1) / 1.3,
                 renderedPosition: { x: (containerRef.current?.clientWidth ?? 0) / 2, y: (containerRef.current?.clientHeight ?? 0) / 2 } })}>
               −
             </button>
-            <button type="button" className="hover:text-oo-blue px-2" title="Fit"
+            <button type="button" className="hover:text-oo-blue px-2"
               onClick={() => cyRef.current?.fit(undefined, 32)}>
               Fit
             </button>
@@ -548,12 +549,12 @@ export default function BODSGraph({
                 }}
               />
               <button type="button" className="hover:text-oo-blue font-mono px-1 disabled:opacity-30"
-                title="Previous match" aria-label="Previous match"
+                aria-label="Previous match"
                 disabled={matchIds.length === 0} onClick={() => focusMatch(matchIdx - 1)}>
                 ‹
               </button>
               <button type="button" className="hover:text-oo-blue font-mono px-1 disabled:opacity-30"
-                title="Next match" aria-label="Next match"
+                aria-label="Next match"
                 disabled={matchIds.length === 0} onClick={() => focusMatch(matchIdx + 1)}>
                 ›
               </button>
@@ -604,7 +605,13 @@ export default function BODSGraph({
               );
               const st = signalStyle(worst.code);
               const badgePx = Math.max(18, item.r * 0.55);
-              const tooltip = sigs.map(s => `${s.code}: ${s.summary}`).join("\n");
+              // The badge's own mark is 1-3 characters; its accessible name was
+              // the RAW CODE ("RELATED_SANCTIONS_CONTROLLED: ..."), which is a
+              // backend constant, not a label. RISK_PRESENTATION already holds
+              // the display name every chip on the page uses.
+              const tooltip = sigs
+                .map(s => `${RISK_PRESENTATION[s.code]?.label ?? s.code.replace(/_/g, " ")}: ${s.summary}`)
+                .join("\n");
 
               // The badge is a real button (overlay is pointer-events:none, so
               // it re-enables pointer events like the collapse toggle below):
@@ -617,7 +624,7 @@ export default function BODSGraph({
 
               if (sigs.length === 1) {
                 sigBadge = (
-                  <button type="button" title={tooltip} aria-label={tooltip}
+                  <button type="button" aria-label={tooltip}
                     onClick={toggleSignalTooltip} style={{
                     position: "absolute", left: sigCx - badgePx * 0.9, top: sigCy - badgePx * 0.45,
                     minWidth: badgePx * 1.8, height: badgePx * 0.9, background: st.bg,
@@ -635,7 +642,7 @@ export default function BODSGraph({
                   <div style={{ position: "absolute", left: sigCx - badgePx * 0.75, top: sigCy - badgePx * 0.45 }}>
                     <div style={{ position: "absolute", left: 3, top: 3, width: badgePx * 1.5, height: badgePx * 0.9,
                       background: st.bg, border: `1.5px solid ${st.border}`, borderRadius: badgePx, opacity: 0.5 }}/>
-                    <button type="button" title={tooltip} aria-label={tooltip}
+                    <button type="button" aria-label={tooltip}
                       onClick={toggleSignalTooltip} style={{
                       position: "relative", minWidth: badgePx * 1.5, height: badgePx * 0.9, background: st.bg,
                       border: `1.5px solid ${st.border}`, borderRadius: badgePx,
@@ -660,7 +667,6 @@ export default function BODSGraph({
               toggle = (
                 <button
                   type="button"
-                  title={item.collapsed ? `Expand ${item.hiddenCount ?? 0} hidden` : "Collapse subsidiaries"}
                   aria-label={item.collapsed
                     ? `Expand ${item.hiddenCount ?? 0} hidden subsidiaries of ${item.label}`
                     : `Collapse subsidiaries of ${item.label}`}

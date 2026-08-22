@@ -129,7 +129,6 @@ export function SubjectCard({
               setCopied(true);
               window.setTimeout(() => setCopied(false), 1500);
             }}
-            title="Copies a link whose social-media preview shows a live summary card for this entity"
             className="inline-flex items-center gap-1.5 text-[12px] font-medium text-oo-blue border border-[#cfd6f5] bg-[#eef1fb] hover:bg-[#e2e7f9] rounded-full px-3 py-1.5 transition-colors"
           >
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -259,8 +258,7 @@ function IdentifierBadge({
     <button
       type="button"
       onClick={onClick}
-      title="Independent sources publish this entity's LEI — jump to the cross-source detail"
-      className={`items-center text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-colors ${className}`}
+      className={`items-center text-oo-meta font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-colors ${className}`}
     >
       <svg
         width="11"
@@ -280,7 +278,8 @@ function IdentifierBadge({
         Identifier confirmed by {count} source{count === 1 ? "" : "s"}
         <span className="sr-only">
           {" "}
-          — expands the cross-source identifier detail
+          — independent sources publish this entity's LEI; expands the
+          cross-source identifier detail
         </span>
       </span>
     </button>

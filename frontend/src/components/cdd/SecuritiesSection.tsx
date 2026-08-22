@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { getSecurities, type Security, type SecuritiesResponse } from "../../lib/api";
+import { NOT_IN_GRAPH } from "../../lib/vocab";
 
 // Entity-level "Securities" section: ISINs linked to the LEI, combining GLEIF
 // (count + list), OpenFIGI (security type) and OpenSanctions (sanctioned subset).
@@ -186,7 +187,7 @@ export function SecuritiesSection({ lei }: { lei: string }) {
             secur{meta.total === 1 ? "ity" : "ities"} mapped to this LEI
           </span>
           <span className="text-[11px] font-mono text-oo-muted bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5">
-            context · not in graph
+            {NOT_IN_GRAPH}
           </span>
           {meta.total > 0 && (
             <button

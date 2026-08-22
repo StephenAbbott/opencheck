@@ -41,6 +41,8 @@ import { ChangelogPage } from "./components/ChangelogPage";
 import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
 import { Icon } from "./components/ui";
+import ConfidenceLegend from "./components/ui/ConfidenceLegend";
+import { PERSON_VERB, resultCount, sourceLabel } from "./lib/vocab";
 import { documentTitleFor, modeParam, parseMode } from "./lib/checkMode";
 import type { CheckMode } from "./lib/checkMode";
 import type { IconName } from "./components/ui";
@@ -1336,14 +1338,14 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               {nameSearchMutation.data && nameSearchMutation.data.length > 0 && (
                 <div className="mt-4" aria-live="polite">
                   <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-3">
-                    {nameSearchMutation.data.length} result{nameSearchMutation.data.length === 1 ? "" : "s"} — click to look up
+                    {resultCount(nameSearchMutation.data.length)} — select one to search it
                   </p>
                   <ul aria-label="Search results" className="divide-y divide-oo-rule border border-oo-rule rounded-oo overflow-hidden">
                     {nameSearchMutation.data.map((r) => (
                       <li key={r.lei}>
                         <button
                           type="button"
-                          aria-label={`Look up ${r.legalName}, LEI ${r.lei}`}
+                          aria-label={`Search ${r.legalName}, LEI ${r.lei}`}
                           onClick={() => {
                             nameSearchMutation.reset();
                             setNameQuery("");
@@ -1474,7 +1476,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     aria-busy={nationalIdSearchMutation.isPending}
                     className="w-full sm:w-auto sm:flex-none bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
                   >
-                    {nationalIdSearchMutation.isPending ? "Searching…" : "Look up"}
+                    {nationalIdSearchMutation.isPending ? "Searching…" : "Search"}
                   </button>
                 </div>
               </form>
@@ -1508,14 +1510,14 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               {nationalIdSearchMutation.data && nationalIdSearchMutation.data.length > 1 && (
                 <div className="mt-4" aria-live="polite">
                   <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-3">
-                    {nationalIdSearchMutation.data.length} results — click to look up
+                    {resultCount(nationalIdSearchMutation.data.length)} — select one to search it
                   </p>
                   <ul aria-label="Search results" className="divide-y divide-oo-rule border border-oo-rule rounded-oo overflow-hidden">
                     {nationalIdSearchMutation.data.map((r) => (
                       <li key={r.lei}>
                         <button
                           type="button"
-                          aria-label={`Look up ${r.legalName}, LEI ${r.lei}`}
+                          aria-label={`Search ${r.legalName}, LEI ${r.lei}`}
                           onClick={() => {
                             nationalIdSearchMutation.reset();
                             setNationalIdQuery("");
@@ -1575,7 +1577,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   aria-busy={lookupMutation.isPending}
                   className="w-full sm:w-auto bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
                 >
-                  {lookupMutation.isPending ? "Looking up…" : "Look up"}
+                  {lookupMutation.isPending ? "Searching…" : "Search"}
                 </button>
               </div>
             </form>
@@ -1623,7 +1625,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     disabled={personQuery.trim().length < 2}
                     className="w-full sm:w-auto bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
                   >
-                    Screen person
+                    {PERSON_VERB}
                   </button>
                 </div>
               </form>
@@ -1856,9 +1858,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 <RiskChip key={sig.code} signal={sig} />
               ))}
             </div>
-            <p className="text-[12px] text-oo-muted mt-3">
-              Select a chip for the rule that fired. Signals derived from
-              open data; AMLA-aligned chips read BODS statements.
+            <ConfidenceLegend className="mt-2.5" />
+            <p className="text-oo-meta text-oo-muted mt-2">
+              Select a chip for the rule that fired. Signals derived from open
+              data; chips aligned to AMLA (the EU Anti-Money Laundering
+              Authority) read BODS (Beneficial Ownership Data Standard) records.
             </p>
           </section>
         )}
@@ -1876,11 +1880,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 <RiskChip key={sig.code} signal={sig} />
               ))}
             </div>
-            <p className="text-[12px] text-oo-muted mt-3">
-              Not risk findings — structural facts about the ownership
-              chain, shown because they are useful and because some feed
-              the AMLA complex-structure test. Jurisdiction risk is
-              reported separately, from the FATF and EU lists.
+            <ConfidenceLegend className="mt-2.5" />
+            <p className="text-oo-meta text-oo-muted mt-2">
+              Not risk findings — structural facts about the ownership chain,
+              shown because they are useful and because some feed the AMLA
+              complex-structure test. Jurisdiction risk is reported separately,
+              from the FATF (Financial Action Task Force) and EU lists.
             </p>
           </section>
         )}
@@ -2675,7 +2680,7 @@ function ApiPage() {
 
         <BtsCard title="Quick start">
           <p className="text-[13px] leading-[1.7] text-oo-muted mb-3">
-            Look up a company by its LEI and get the unified BODS view:
+            Search for a company by its LEI and get the unified BODS view:
           </p>
           <CopyField value={`curl "${base}/lookup?lei=HWUPKR0MPOU8FGXBT394"`} />
           <p className="text-[13px] leading-[1.7] text-oo-muted mt-4">
@@ -3379,7 +3384,7 @@ function CrossSourceIdentifiersTable({
                   <button
                     key={h.source_id}
                     type="button"
-                    title={`${sourceNames[h.source_id] ?? h.source_id} — jump to this source's results`}
+                    aria-label={`${sourceLabel(h.source_id, sourceNames)} — jump to this source's results`}
                     onClick={() =>
                       document
                         .getElementById(`source-${h.source_id}`)

@@ -17,6 +17,8 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { PERSON_VERB, sourceLabel } from "../../lib/vocab";
+import { Explain } from "../ui/Explain";
 import {
   lookup,
   personAppointments,
@@ -430,14 +432,25 @@ function PersonCard({
                 </button>
               )}
               {onDownloadBods && (
-                <button
-                  type="button"
-                  onClick={onDownloadBods}
-                  title="This person's statements + relationships + the companies they point at, as a flat BODS v0.4 array. Each statement keeps its source block; for the full licence bundle use the entity's Download data section."
-                  className="text-oo-muted underline hover:no-underline"
-                >
-                  Download BODS (person subgraph)
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={onDownloadBods}
+                    className="text-oo-muted underline hover:no-underline"
+                  >
+                    Download BODS (person subgraph)
+                  </button>
+                  {/* A whole paragraph, including the cross-reference to the
+                      licence bundle, used to be reachable only by hovering —
+                      and a native tooltip wraps unpredictably at this length
+                      even for the mouse user who found it. */}
+                  <Explain label="What the person subgraph download contains">
+                    This person's records, their relationships, and the companies
+                    those point at, as a flat BODS (Beneficial Ownership Data
+                    Standard) v0.4 array. Every record keeps its source block. For
+                    the full licence bundle, use the entity's Download data section.
+                  </Explain>
+                </>
               )}
             </p>
           )}
@@ -464,7 +477,7 @@ function PersonCard({
               ? "Checking…"
               : state.status === "done"
                 ? "Re-run check"
-                : "Run background check"}
+                : PERSON_VERB}
           </button>
         </span>
       </div>
@@ -701,8 +714,8 @@ function MatchRow({ match }: { match: PersonMatch }) {
         <span className="text-[12px] font-medium text-oo-ink">
           {match.hit.name}
           {match.hit.is_stub && (
-            <span className="ml-1.5 text-[10px] font-mono text-oo-muted">
-              (stub)
+            <span className="ml-1.5 text-oo-meta text-oo-muted">
+              (placeholder data)
             </span>
           )}
         </span>
@@ -712,15 +725,19 @@ function MatchRow({ match }: { match: PersonMatch }) {
               ? "bg-violet-100 text-violet-800"
               : "bg-slate-100 text-slate-600"
           }`}
-          title="Name similarity between the queried person and this record"
         >
           {match.strong ? "potential match" : "below threshold"} · {pct}%
+          {/* A compliance user acts on this number, and what it measured was
+              in a `title` and nowhere else. */}
+          <span className="sr-only">
+            {" "}— name similarity between the person searched for and this record
+          </span>
           {!match.birth_year_compatible && " · birth year differs"}
         </span>
       </div>
       <p className="text-[11px] text-oo-muted mt-0.5">
         {match.hit.summary || "No summary from source."}{" "}
-        <span className="font-mono">via {match.hit.source_id}</span>
+        <span>via {sourceLabel(match.hit.source_id)}</span>
       </p>
       {isChOfficer && (
         <div className="mt-1.5">

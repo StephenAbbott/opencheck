@@ -80,7 +80,8 @@ export default function PersonReportPage({
 
       <div className="mb-4 rounded-oo border border-violet-300 bg-violet-50 px-4 py-3">
         <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-violet-700 mb-1">
-          Person report · BackgroundCheck
+          Person report
+          <span className="normal-case"> · BackgroundCheck</span>
         </p>
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>

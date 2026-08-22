@@ -147,7 +147,6 @@ export default function BodsTree({
             className={`flex items-center gap-1.5 px-2 py-1 border-b border-oo-rule/60 cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-oo-blue focus-visible:-outline-offset-2 ${
               isSelected ? "bg-oo-soft" : "hover:bg-oo-bg"
             }`}
-            title={row.identifiers.length ? row.identifiers.join(" · ") : undefined}
           >
             {/* Name cell — indentation + caret + icon + label */}
             <span className="flex items-center gap-1 min-w-0 flex-1" style={{ paddingLeft: row.depth * 14 }}>

@@ -38,7 +38,7 @@ import {
   shouldCollapseEvidence,
 } from "../../lib/evidenceDisclosure";
 import { ExportMenu } from "../export/ExportMenu";
-import { CONFIDENCE_DOT } from "../risk/RiskChip";
+import { CONFIDENCE_GLYPH, CONFIDENCE_LABEL } from "../ui/Chip";
 
 const CONF_BADGE: Record<string, string> = {
   high: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -114,16 +114,24 @@ function CitationChip({ cite }: { cite: Cite }) {
     <button
       type="button"
       onClick={() => focusCitation(cite)}
-      title={cite.statementId ? "Show source and highlight in the ownership graph" : "Show source"}
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors ${tone}`}
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-oo-meta font-medium transition-colors ${tone}`}
     >
       {cite.confidence && (
         <>
-          <span aria-hidden className="text-[9px]">{CONFIDENCE_DOT[cite.confidence] ?? "•"}</span>
-          <span className="sr-only">{cite.confidence} confidence</span>
+          <span aria-hidden className="text-oo-meta">{CONFIDENCE_GLYPH[cite.confidence] ?? "•"}</span>
+          {/* v1 announced the bare level ("high confidence"). What the level
+              means is the useful part, and it already exists as prose. */}
+          <span className="sr-only">{CONFIDENCE_LABEL[cite.confidence] ?? cite.confidence}: </span>
         </>
       )}
       <span>{cite.label}</span>
+      {/* What activating the chip does — until Phase 124 this was a `title`,
+          and the graph-highlight behaviour was described nowhere else. */}
+      <span className="sr-only">
+        {cite.statementId
+          ? " — shows the source and highlights it in the ownership diagram"
+          : " — shows the source"}
+      </span>
     </button>
   );
 }
@@ -458,7 +466,6 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
             type="button"
             onClick={() => setCollapsed((c) => !c)}
             aria-expanded={!collapsed}
-            title={collapsed ? "Show summary" : "Hide summary"}
             className="inline-flex items-center gap-1 rounded-oo border border-oo-rule text-oo-muted text-[12px] font-medium px-3 py-1.5 hover:border-oo-blue hover:text-oo-blue transition-colors"
           >
             {collapsed ? (

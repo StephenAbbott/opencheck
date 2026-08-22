@@ -9,6 +9,8 @@
  * nodes that source asserts.
  */
 
+import { sourceLabel } from "../lib/vocab";
+
 export interface SourceCount {
   source: string;
   count: number;
@@ -46,15 +48,18 @@ export function SourceLegend({
               type="button"
               aria-pressed={on}
               onClick={() => onToggle(source)}
-              title={`Highlight everything ${source} asserts`}
-              className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
+              className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-oo-meta transition-colors ${
                 on
                   ? "border-oo-blue bg-oo-soft text-oo-blue font-semibold"
                   : "border-oo-rule bg-white text-oo-ink hover:border-oo-softBorder hover:text-oo-blue"
               }`}
             >
-              <span className="truncate max-w-[16rem]">{source}</span>
+              <span className="truncate max-w-[16rem]">{sourceLabel(source)}</span>
               <span className={on ? "text-oo-blue" : "text-oo-muted"}>{count}</span>
+              {/* aria-pressed says it is a toggle; nothing said what it toggles. */}
+              <span className="sr-only">
+                {" "}nodes — highlight everything this source asserts
+              </span>
             </button>
           );
         })}

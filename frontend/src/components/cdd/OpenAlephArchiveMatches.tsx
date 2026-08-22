@@ -17,6 +17,7 @@
  */
 
 import { useState } from "react";
+import { topicList } from "../../lib/vocab";
 import type { OpenAlephScreeningMatch } from "../../lib/api";
 
 /** Matches shown before the "Show all" toggle expands the list. */
@@ -81,7 +82,7 @@ export function OpenAlephArchiveMatches({
               <span>{m.collection || "an OpenAleph collection"}</span>
             )}
             {m.topics.length > 0 && (
-              <span className="text-oo-muted"> · {m.topics.join(", ")}</span>
+              <span className="text-oo-muted"> · {topicList(m.topics)}</span>
             )}
           </li>
         ))}

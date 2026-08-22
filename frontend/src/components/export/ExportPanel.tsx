@@ -303,14 +303,18 @@ export function ExportPanel({
             {a.per_source.map((s) => (
               <span
                 key={s.source_id}
-                title={s.terms.summary}
-                className={`inline-flex items-center gap-1 text-[11px] border rounded px-1.5 py-0.5 ${COLOR[s.terms.color]}`}
+                className={`inline-flex items-center gap-1 text-oo-meta border rounded px-1.5 py-0.5 ${COLOR[s.terms.color]}`}
               >
                 <span className={DOT[s.terms.color]} aria-hidden="true">
                   ●
                 </span>
                 {s.name}
                 <span className="font-mono opacity-70">{s.terms.license}</span>
+                {/* Two problems in one span: the plain-English terms were in a
+                    `title` and nowhere else, and how restrictive a licence is
+                    was carried by the dot's colour alone (WCAG 1.4.1). The
+                    summary is the non-colour cue as well as the explanation. */}
+                {s.terms.summary && <span className="sr-only"> — {s.terms.summary}</span>}
               </span>
             ))}
           </div>

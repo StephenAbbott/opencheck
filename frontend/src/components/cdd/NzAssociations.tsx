@@ -30,7 +30,6 @@ function ConfidenceChip({ confidence, basis }: { confidence: string; basis: stri
     confidence === "high" ? "High" : confidence === "medium" ? "Medium" : "Name only";
   return (
     <span
-      title={basis}
       className={`text-[10px] font-semibold rounded px-1.5 py-0.5 border ${style}`}
     >
       {label} · {basis}

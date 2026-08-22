@@ -19,17 +19,19 @@ function RelationBadge({ relation }: { relation: SubsidiaryChild["relation"] }) 
   } as const;
   const m = map[relation];
   return (
-    <span
-      className={`text-[10px] font-semibold rounded px-1.5 py-0.5 border ${m.classes}`}
-      title={
-        relation === "both"
-          ? "Both a direct and an ultimate child (GLEIF Level 2 accounting consolidation)"
-          : relation === "ultimate"
-            ? "Ultimate (indirect) child — consolidated by the group head"
-            : "Direct child — directly consolidated"
-      }
-    >
+    <span className={`text-oo-meta font-semibold rounded px-1.5 py-0.5 border ${m.classes}`}>
       {m.label}
+      {/* GLEIF Level 2 is accounting consolidation, not shareholding. That
+          caveat is the whole reason this badge is not called "owns", and until
+          Phase 124 it lived only in a `title` — invisible to keyboard and
+          touch, on the one label most likely to be misread as ownership. */}
+      <span className="sr-only">
+        {relation === "both"
+          ? " — reported as both a direct and an ultimate consolidating relationship"
+          : relation === "ultimate"
+            ? " — consolidated by the group head, not directly"
+            : " — directly consolidated"}
+      </span>
     </span>
   );
 }
