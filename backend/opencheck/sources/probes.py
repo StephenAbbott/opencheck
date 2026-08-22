@@ -555,9 +555,34 @@ PROBES: dict[str, SourceProbe] = {
 }
 
 
-def missing_env(probe: SourceProbe, environ: dict[str, str]) -> tuple[str, ...]:
+def configured_credentials() -> dict[str, str]:
+    """Every credential the app can see, however it was supplied.
+
+    Resolved through ``Settings`` rather than ``os.environ``, because OpenCheck
+    loads ``.env`` from the project root: a key present only there is real as
+    far as every adapter is concerned, and reading the raw environment would
+    report it "not configured" and skip the source. That is the difference
+    between a local run testing nothing and testing everything — CI never sees
+    it, since Actions supplies the same names as real environment variables.
+    """
+    from ..config import get_settings
+
+    settings = get_settings()
+    out: dict[str, str] = {}
+    for field_name, field in type(settings).model_fields.items():
+        alias = field.alias or field_name
+        value = getattr(settings, field_name, None)
+        if isinstance(value, str) and value.strip():
+            out[alias] = value
+    return out
+
+
+def missing_env(probe: SourceProbe, environ: dict[str, str] | None = None) -> tuple[str, ...]:
     """Which of the probe's required settings are absent or blank."""
-    return tuple(name for name in probe.requires_env if not environ.get(name, "").strip())
+    available = dict(configured_credentials())
+    if environ:
+        available.update({k: v for k, v in environ.items() if v and v.strip()})
+    return tuple(name for name in probe.requires_env if not available.get(name, "").strip())
 
 
 def key_gated_ids() -> frozenset[str]:

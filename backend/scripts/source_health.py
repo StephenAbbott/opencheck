@@ -293,7 +293,7 @@ def build_scratch_data_root(real_root: Path, scratch: Path) -> Path:
 
 
 def _skip_reason(probe: SourceProbe, root: Path) -> str | None:
-    absent_env = missing_env(probe, dict(os.environ))
+    absent_env = missing_env(probe, dict(os.environ))  # .env counts too — see probes.configured_credentials
     if absent_env:
         label = "not configured" if probe.tier != "inactive" else "env-gated off"
         return f"{label}: {', '.join(absent_env)}"
