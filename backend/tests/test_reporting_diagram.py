@@ -69,8 +69,8 @@ def test_diagram_has_nodes_edges_and_labels():
                    "ownership of shares", "director"):
         assert needle in d.svg
     # Ownership edge is blue, control edge is purple.
-    assert "#1565c0" in d.svg  # ownership
-    assert "#6a1b9a" in d.svg  # control/role
+    assert "#3b82f6" in d.svg  # ownership (oo.node.blue)
+    assert "#7c3aed" in d.svg  # control/role (oo.node.purple)
     # Accessible: role=img + title + desc.
     assert 'role="img"' in d.svg and "<title" in d.svg and "<desc" in d.svg
 

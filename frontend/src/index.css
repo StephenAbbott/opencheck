@@ -31,6 +31,38 @@
   --oo-node-green: #22c55e;
   --oo-node-blue: #3b82f6;
   --oo-node-purple: #7c3aed;
+  --oo-node-teal: #0d9488; /* Climate & ESG (Phase 122) -- see tailwind.config.js */
+
+  /* Soft "selected / active" pair (Phase 122). */
+  --oo-soft: #eef1fb;
+  --oo-soft-border: #cfd6f5;
+
+  /* Semantic state tiers (Phase 122). */
+  --oo-warn-bg: #fffbeb;
+  --oo-warn-border: #fcd34d;
+  --oo-warn-text: #92400e;
+  --oo-ok-bg: #ecfdf5;
+  --oo-ok-border: #a7f3d0;
+  --oo-ok-text: #047857;
+  --oo-info-bg: #f0f9ff;
+  --oo-info-border: #bae6fd;
+  --oo-info-text: #0369a1;
+
+  /* Ownership-graph relation palette (Phase 122). Ownership and role take
+     the FullCheck / BackgroundCheck node colours; control keeps its orange.
+     `*-text` are the darker label values needed for 4.5:1 on white. */
+  --oo-graph-ownership: #3b82f6;
+  --oo-graph-ownership-text: #1d4ed8;
+  --oo-graph-ownership-tint: #eff6ff;
+  --oo-graph-control: #e65100;
+  --oo-graph-control-text: #9a3412;
+  --oo-graph-control-tint: #fdf0e8;
+  --oo-graph-role: #7c3aed;
+  --oo-graph-role-text: #6d28d9;
+  --oo-graph-role-tint: #f5f3ff;
+  --oo-graph-same: #b45309;
+  --oo-graph-unknown: #888888;
+  --oo-graph-unknown-text: #595959;
 
   --font-body: "DM Sans", system-ui, sans-serif;
   --font-head: "Bitter", Georgia, serif;

@@ -345,7 +345,7 @@ export default function BodsGraphExplorer({
             onClick={() => setView(opt.value)}
             className={`text-[11px] px-2 py-0.5 rounded-full border ${
               view === opt.value
-                ? "bg-[#e8f0fb] border-[#1565c0] text-[#1565c0] font-medium"
+                ? "bg-oo-soft border-oo-blue text-oo-blue font-medium"
                 : "border-oo-rule text-oo-muted hover:text-oo-blue"
             }`}
           >
@@ -356,7 +356,7 @@ export default function BodsGraphExplorer({
 
       {/* FullCheck: eager "Run" to a depth budget */}
       {fullCheck && (
-        <div className="mb-2 rounded-oo border border-[#1565c0] bg-[#f3f7fe] px-3 py-2">
+        <div className="mb-2 rounded-oo border border-oo-blue bg-oo-soft px-3 py-2">
           <div className="flex items-center gap-3 flex-wrap">
             <button
               type="button"
@@ -386,7 +386,7 @@ export default function BodsGraphExplorer({
             </span>
           </div>
           {runProgress && (
-            <p className="mt-1.5 text-[12px] text-[#1565c0]" aria-live="polite">
+            <p className="mt-1.5 text-[12px] text-oo-blue" aria-live="polite">
               {runProgress}
             </p>
           )}

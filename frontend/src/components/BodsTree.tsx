@@ -117,8 +117,8 @@ export default function BodsTree({
             tabIndex={i === active ? 0 : -1}
             onKeyDown={(e) => onKeyDown(e, i)}
             onClick={() => { setActive(i); onSelect(row.id); }}
-            className={`flex items-center gap-1.5 px-2 py-1 border-b border-oo-rule/60 cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1565c0] focus-visible:-outline-offset-2 ${
-              isSelected ? "bg-[#e8f0fb]" : "hover:bg-oo-bg"
+            className={`flex items-center gap-1.5 px-2 py-1 border-b border-oo-rule/60 cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-oo-blue focus-visible:-outline-offset-2 ${
+              isSelected ? "bg-oo-soft" : "hover:bg-oo-bg"
             }`}
             title={row.identifiers.length ? row.identifiers.join(" · ") : undefined}
           >

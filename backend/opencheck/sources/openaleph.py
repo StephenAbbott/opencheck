@@ -64,6 +64,7 @@ import httpx
 from .. import names
 from ..cache import Cache
 from ..config import get_settings
+from ..findings import finding_openaleph
 from ..http import build_client
 from ..matching import canonical_identifier, canonical_url
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
@@ -749,6 +750,9 @@ class OpenAlephAdapter(SourceAdapter):
             kind=kind,
             name=name,
             summary=" · ".join(summary_bits),
+            # Mentions are fetched later by the lookup pipeline, which rebuilds
+            # the finding once it has them; this is the no-mentions form.
+            finding=finding_openaleph(item),
             identifiers=identifiers,
             raw=item,
             is_stub=False,

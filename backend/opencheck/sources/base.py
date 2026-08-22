@@ -141,6 +141,21 @@ class SourceHit(BaseModel):
     kind: SearchKind = Field(description="Entity or person.")
     name: str = Field(description="Primary display name.")
     summary: str = Field(description="Short human-readable line used in chat.")
+    finding: str | None = Field(
+        default=None,
+        description=(
+            "One plain-English SENTENCE saying what this source actually said "
+            "about the subject — 'Active since 12 March 1998, 6 officers on "
+            "file.' Deliberately distinct from ``summary``, which is an "
+            "identifier fragment ('GB · registered entity', 'SG-UEN 12345 · "
+            "live') consumed by search-result rows, the share card and "
+            "``og_image.py``; ``summary`` must not be repurposed, a dozen call "
+            "sites depend on its current shape. Optional: a source with no "
+            "template leaves this None and its ``summary`` renders as before. "
+            "Templates live in ``opencheck.findings``, which carries the rules "
+            "they follow."
+        ),
+    )
     identifiers: dict[str, str] = Field(
         default_factory=dict,
         description="Cross-source identifiers (e.g. {'lei': '...', 'gb_coh': '...', 'wikidata_qid': '...'}).",

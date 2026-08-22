@@ -48,7 +48,15 @@ export interface SourceHit {
   hit_id: string;
   kind: SearchKind;
   name: string;
+  /** Identifier fragment ("GB · registered entity") — what the search-result
+   *  rows, the share card and og_image.py have always consumed. */
   summary: string;
+  /** One plain-English sentence saying what this source actually said about
+   *  the subject, built by the adapter from fields it already parsed
+   *  (`opencheck/findings.py`). Absent for sources with no template yet, and
+   *  for payloads recorded before Phase 122 — the row falls back to
+   *  `summary`, so an un-migrated source looks like v1 rather than broken. */
+  finding?: string | null;
   identifiers: Record<string, string>;
   raw: Record<string, unknown>;
   is_stub: boolean;
@@ -192,6 +200,11 @@ export interface LookupResponse {
   /** How current each source's payload is, keyed by source_id. Sibling to
    *  degraded_sources: data that is not current must not read as live. */
   source_liveness?: Record<string, SourceLiveness>;
+  /** One deterministic sentence stating what the check found — built from
+   *  the signals and degradations by the backend (`opencheck/verdict.py`),
+   *  never by a model, so the page, the PDF, the share card and the API
+   *  cannot disagree. Absent on payloads recorded before Phase 122. */
+  verdict?: string | null;
   bods: Record<string, unknown>[];
   bods_issues: string[];
   license_notices: { source_id: string; hit_id: string; notice: string }[];
@@ -1029,6 +1042,11 @@ export interface RiskSignalsEvent {
   openaleph_screening?: OpenAlephScreeningMatch[];
   /** Per-source currency, keyed by source_id. */
   source_liveness?: Record<string, SourceLiveness>;
+  /** One deterministic sentence stating what the check found — built from
+   *  the signals and degradations by the backend (`opencheck/verdict.py`),
+   *  never by a model, so the page, the PDF, the share card and the API
+   *  cannot disagree. Absent on payloads recorded before Phase 122. */
+  verdict?: string | null;
 }
 
 export type StreamHandlers = {
