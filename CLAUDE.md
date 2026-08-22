@@ -898,6 +898,16 @@ layout genuinely cannot hold the sentence. `sr-only` alone is a last resort —
 showing it to screen readers reproduces the original bug with the audiences
 swapped.
 
+**Two confidences, and they are not interchangeable.** `ui/Chip`'s
+`CONFIDENCE_GLYPH` / `CONFIDENCE_LABEL` (●◐○) describe **corroboration** — how
+many sources assert a thing. `ui/MatchConfidenceChip` describes **match
+strength** — how sure we are that a record is the same party. Do not merge
+them: `CONFIDENCE_LABEL` reads "Corroborated by two or more sources", and
+beside a single-source name match that is false, in the one place OpenCheck is
+most careful (a name match is explicitly not an identity claim). Match strength
+never borrows the ●◐○ glyphs. `SubsidiaryNetwork`'s `RelationBadge` is a third
+thing again — a relation kind, not a confidence.
+
 **One word per concept, in `frontend/src/lib/vocab.ts`.** Results, never hits.
 `sourceLabel()` / `sourceList()` for any source id shown to a reader — never a
 raw slug, never `.join(" and ")` over ids. `topicLabel()` for OpenAleph's
@@ -941,6 +951,18 @@ well as failure, or a stale warning outlives the thing it warned about.
 `frontend/scripts/lint-design-system.mjs`, run by the frontend CI job and
 `npm run lint:design`. Two rules: no raw hex outside the token files, no
 `text-[NNpx]` outside the named scale.
+
+A third rule bans **exact user-facing labels** listed in `BANNED_SYNONYMS`
+(`lib/vocab.ts`, read by the lint so the two cannot disagree). **Phrases, not
+words** — the first version banned single words and every one had legitimate
+uses: "not a clean screen", "a fast screen of the subject", the SSE event named
+`"hit"`, `Liveness = "stub"`, `min-h-screen`. It reported 90 false violations in
+`App.tsx` alone. The matcher uses **TypeScript's own parser** (already a
+devDependency), walking string literals and JSX text minus anything inside a
+`className`. Do not rewrite it with a regex: word boundaries over whole files
+flag `bucket.hits.length`, and restricting to quoted strings is worse, because
+an apostrophe in JSX text ("doesn't") pairs with the next one and swallows the
+code between.
 
 **It is a ratchet.** `design-system-baseline.json` records what each file
 carries; a file may never carry more, and a new file may carry none. It also
