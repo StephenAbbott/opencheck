@@ -45,3 +45,12 @@ jobs:
       - name: Unit tests
         run: npm test
         working-directory: frontend
+      - name: Design-system lint
+        # Ratchet, not a ban: a file may never carry MORE raw hex or more
+        # text-[NNpx] than its baseline records, and a new file may carry none.
+        # Same pattern as the OKF drift job — the check fails on regression, and
+        # equally on a stale baseline after an improvement, so a migration
+        # commit has to lock its own gain in. See
+        # frontend/scripts/lint-design-system.mjs for why it is not a hard ban.
+        run: npm run lint:design
+        working-directory: frontend

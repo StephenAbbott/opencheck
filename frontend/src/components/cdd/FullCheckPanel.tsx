@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { lookup, type RiskSignal } from "../../lib/api";
 import BodsGraphExplorer from "../BodsGraphExplorer";
 import { SubsidiaryNetwork } from "./SubsidiaryNetwork";
+import type { PanelError, PanelId } from "../../lib/panelErrors";
 
 type Stmt = Record<string, unknown>;
 
@@ -20,10 +21,17 @@ export default function FullCheckPanel({
   lei,
   legalName,
   signals = [],
+  onPanelError,
+  onPanelRecovered,
 }: {
   lei: string;
   legalName: string | null;
   signals?: RiskSignal[];
+  /** Forwarded to SubsidiaryNetwork so a /subsidiaries failure reaches the
+   *  report-level notice — this panel is mounted inside a tab, so nothing
+   *  above it would otherwise learn that the fetch failed. */
+  onPanelError?: (e: PanelError) => void;
+  onPanelRecovered?: (panel: PanelId) => void;
 }) {
   const [statements, setStatements] = useState<Stmt[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +87,13 @@ export default function FullCheckPanel({
       )}
 
       <div className="mt-4">
-        <SubsidiaryNetwork lei={lei} entityName={legalName ?? undefined} signals={signals} />
+        <SubsidiaryNetwork
+          lei={lei}
+          entityName={legalName ?? undefined}
+          signals={signals}
+          onError={onPanelError}
+          onRecovered={onPanelRecovered}
+        />
       </div>
     </section>
   );

@@ -1,5 +1,7 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { getSecurities, type Security, type SecuritiesResponse } from "../../lib/api";
+import { NOT_IN_GRAPH } from "../../lib/vocab";
+import { panelError, type PanelError, type PanelId } from "../../lib/panelErrors";
 
 // Entity-level "Securities" section: ISINs linked to the LEI, combining GLEIF
 // (count + list), OpenFIGI (security type) and OpenSanctions (sanctioned subset).
@@ -39,7 +41,18 @@ function SecRow({ s, danger }: { s: Security; danger?: boolean }) {
   );
 }
 
-export function SecuritiesSection({ lei }: { lei: string }) {
+export function SecuritiesSection({
+  lei,
+  onError,
+  onRecovered,
+}: {
+  lei: string;
+  /** Report a fetch failure upward. The section renders nothing on failure —
+   *  which is the bug — so somebody outside it has to say so. */
+  onError?: (e: PanelError) => void;
+  /** Clear a previously reported failure once a fetch succeeds. */
+  onRecovered?: (panel: PanelId) => void;
+}) {
   const [meta, setMeta] = useState<SecuritiesResponse | null>(null);
   const [loaded, setLoaded] = useState<Security[]>([]);
   const [page, setPage] = useState(1);
@@ -67,11 +80,18 @@ export function SecuritiesSection({ lei }: { lei: string }) {
     getSecurities(lei, 1)
       .then((r) => {
         if (cancelled) return;
+        onRecovered?.("securities");
         setMeta(r);
         setLoaded(r.securities);
       })
-      .catch(() => {
-        /* securities are supplementary — stay silent on failure */
+      .catch((e) => {
+        if (cancelled) return;
+        // Phase 124: this used to swallow the rejection with no state write,
+        // so the section returned null and a transport failure was
+        // indistinguishable from "this entity has no securities" — including
+        // for the sanctioned-securities banner this component's own docstring
+        // calls always-visible.
+        onError?.(panelError("securities", e));
       });
     return () => {
       cancelled = true;
@@ -105,8 +125,10 @@ export function SecuritiesSection({ lei }: { lei: string }) {
       const r = await getSecurities(lei, next);
       setLoaded((prev) => [...prev, ...r.securities]);
       setPage(next);
-    } catch {
-      /* ignore */
+    } catch (e) {
+      // A failed page used to read as a no-op click: the button un-disabled
+      // and the "Showing N of M" counter kept its old numerator.
+      onError?.(panelError("securities", e));
     } finally {
       setLoadingMore(false);
     }
@@ -186,7 +208,7 @@ export function SecuritiesSection({ lei }: { lei: string }) {
             secur{meta.total === 1 ? "ity" : "ities"} mapped to this LEI
           </span>
           <span className="text-[11px] font-mono text-oo-muted bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5">
-            context · not in graph
+            {NOT_IN_GRAPH}
           </span>
           {meta.total > 0 && (
             <button

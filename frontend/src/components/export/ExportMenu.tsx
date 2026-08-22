@@ -195,13 +195,13 @@ export function ExportMenu({
                 onPdf();
               }}
               className={ITEM_CLASSES}
-              title="Download an accessible PDF report of these findings"
             >
               <span aria-hidden="true" className="text-oo-blue mt-px">
                 ⬇
               </span>
               <span>
                 {pdfBusy ? "Preparing PDF…" : "Report as PDF"}
+                <span className="sr-only"> — an accessible PDF of these findings</span>
               </span>
             </button>
             <button
@@ -214,13 +214,13 @@ export function ExportMenu({
                 onMarkdown();
               }}
               className={ITEM_CLASSES}
-              title="Download the report as portable Markdown"
             >
               <span aria-hidden="true" className="text-oo-blue mt-px">
                 ⬇
               </span>
               <span>
                 {mdBusy ? "Preparing Markdown…" : "Report as Markdown"}
+                <span className="sr-only"> — the report as portable Markdown</span>
               </span>
             </button>
             <div

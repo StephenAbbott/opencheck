@@ -17,6 +17,7 @@
 
 import type { ReactNode } from "react";
 import type { PersonCluster } from "../../lib/clusterPeople";
+import MatchConfidenceChip from "../ui/MatchConfidenceChip";
 
 export function ClusterGroup({
   cluster,
@@ -46,7 +47,7 @@ export function ClusterGroup({
         >
           Possibly one person — {cluster.size} records · review
         </p>
-        <ConfidenceChip confidence={cluster.confidence} />
+        <MatchConfidenceChip confidence={cluster.confidence} />
       </div>
 
       <ul className="mb-3 list-none p-0 m-0 space-y-1">
@@ -78,24 +79,3 @@ export function ClusterGroup({
   );
 }
 
-function ConfidenceChip({ confidence }: { confidence: "high" | "medium" }) {
-  const high = confidence === "high";
-  return (
-    <span
-      className={
-        "shrink-0 inline-flex items-center gap-1 rounded-oo border px-2 py-0.5 text-[10px] font-semibold tracking-oo-eyebrow uppercase " +
-        (high
-          ? "border-violet-400 bg-violet-100 text-violet-900"
-          : "border-amber-300 bg-amber-50 text-amber-800")
-      }
-    >
-      <span
-        aria-hidden="true"
-        className={
-          "h-1.5 w-1.5 rounded-full " + (high ? "bg-violet-600" : "bg-amber-500")
-        }
-      />
-      {high ? "High confidence" : "Medium · review"}
-    </span>
-  );
-}

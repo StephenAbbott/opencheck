@@ -651,6 +651,11 @@ export interface TreeRow {
   collapsed: boolean;
   /** Already shown in full above (DAG duplicate) — not expanded again here. */
   isRepeat: boolean;
+  /** No relationship statement names this party at either end. A depth-0 row
+   *  otherwise looks exactly like a genuine ultimate parent, so the tree has
+   *  to say which it is: the relationship table this replaced (Phase 124) named
+   *  these explicitly under "Parties with no reported relationships". */
+  isolated: boolean;
 }
 
 /**
@@ -702,6 +707,7 @@ export function buildTree(model: GraphModel, collapsed: Set<string>): TreeRow[] 
       childCount: children.length,
       collapsed: isCollapsed,
       isRepeat,
+      isolated: depth === 0 && children.length === 0,
     });
 
     seen.add(id);

@@ -5,8 +5,8 @@
  * FullCheck maps the corporate network; BackgroundCheck brings the
  * *people* connected to the entity to the fore — officers, PSCs and
  * beneficial owners from the assembled BODS bundle — and lets the user
- * run an on-demand, per-person screen across every person-capable
- * source (Companies House officers, OpenSanctions, EveryPolitician,
+ * run an on-demand, per-person screen across every source that holds
+ * people (Companies House officers, OpenSanctions, EveryPolitician,
  * Wikidata, OpenAleph).
  *
  * Evidence discipline: person screening is name-based, so every result
@@ -17,6 +17,8 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { PERSON_VERB, sourceLabel } from "../../lib/vocab";
+import { Explain } from "../ui/Explain";
 import {
   lookup,
   personAppointments,
@@ -187,12 +189,15 @@ export default function BackgroundCheckPanel({
           <span className="font-medium">{legalName ?? lei}</span> in the data
           already gathered — officers, persons with significant control and
           beneficial owners. Run a check to screen a person against every
-          person-capable source for PEP, sanctions and offshore-leaks signals.
+          source that holds people, for PEP, sanctions and offshore-leaks signals.
         </p>
         <p className="text-[12px] text-violet-900/80 leading-[1.6] mt-1.5">
           Person screening is <span className="font-medium">name-based</span>:
           results are potential matches with their evidence shown, never
-          confirmed identities — and a clean screen is not proof of absence.
+          confirmed identities — and a clean screen is not proof of absence. The
+          percentage on each result is name similarity between the person
+          searched for and that record, not a confidence that they are the same
+          person.
         </p>
       </div>
 
@@ -430,14 +435,25 @@ function PersonCard({
                 </button>
               )}
               {onDownloadBods && (
-                <button
-                  type="button"
-                  onClick={onDownloadBods}
-                  title="This person's statements + relationships + the companies they point at, as a flat BODS v0.4 array. Each statement keeps its source block; for the full licence bundle use the entity's Download data section."
-                  className="text-oo-muted underline hover:no-underline"
-                >
-                  Download BODS (person subgraph)
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={onDownloadBods}
+                    className="text-oo-muted underline hover:no-underline"
+                  >
+                    Download BODS (person subgraph)
+                  </button>
+                  {/* A whole paragraph, including the cross-reference to the
+                      licence bundle, used to be reachable only by hovering —
+                      and a native tooltip wraps unpredictably at this length
+                      even for the mouse user who found it. */}
+                  <Explain label="What the person subgraph download contains">
+                    This person's records, their relationships, and the companies
+                    those point at, as a flat BODS (Beneficial Ownership Data
+                    Standard) v0.4 array. Every record keeps its source block. For
+                    the full licence bundle, use the entity's Download data section.
+                  </Explain>
+                </>
               )}
             </p>
           )}
@@ -464,7 +480,7 @@ function PersonCard({
               ? "Checking…"
               : state.status === "done"
                 ? "Re-run check"
-                : "Run background check"}
+                : PERSON_VERB}
           </button>
         </span>
       </div>
@@ -701,8 +717,8 @@ function MatchRow({ match }: { match: PersonMatch }) {
         <span className="text-[12px] font-medium text-oo-ink">
           {match.hit.name}
           {match.hit.is_stub && (
-            <span className="ml-1.5 text-[10px] font-mono text-oo-muted">
-              (stub)
+            <span className="ml-1.5 text-oo-meta text-oo-muted">
+              (placeholder data)
             </span>
           )}
         </span>
@@ -712,15 +728,15 @@ function MatchRow({ match }: { match: PersonMatch }) {
               ? "bg-violet-100 text-violet-800"
               : "bg-slate-100 text-slate-600"
           }`}
-          title="Name similarity between the queried person and this record"
         >
           {match.strong ? "potential match" : "below threshold"} · {pct}%
+          <span className="sr-only"> — name similarity</span>
           {!match.birth_year_compatible && " · birth year differs"}
         </span>
       </div>
       <p className="text-[11px] text-oo-muted mt-0.5">
         {match.hit.summary || "No summary from source."}{" "}
-        <span className="font-mono">via {match.hit.source_id}</span>
+        <span>via {sourceLabel(match.hit.source_id)}</span>
       </p>
       {isChOfficer && (
         <div className="mt-1.5">

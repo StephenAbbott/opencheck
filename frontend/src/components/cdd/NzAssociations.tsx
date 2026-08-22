@@ -5,6 +5,8 @@ import type {
   NzAssociationsResponse,
   NzPersonAssociations,
 } from "../../lib/api";
+import InvitationStrip from "../ui/InvitationStrip";
+import MatchConfidenceChip from "../ui/MatchConfidenceChip";
 
 // ---------------------------------------------------------------------
 // Small building blocks
@@ -19,24 +21,6 @@ function RoleChip({ role }: { role: string }) {
   );
 }
 
-function ConfidenceChip({ confidence, basis }: { confidence: string; basis: string }) {
-  const style =
-    confidence === "high"
-      ? "bg-blue-600 text-white border-blue-600"
-      : confidence === "medium"
-        ? "bg-blue-50 text-blue-700 border-blue-200"
-        : "bg-amber-50 text-amber-700 border-amber-200";
-  const label =
-    confidence === "high" ? "High" : confidence === "medium" ? "Medium" : "Name only";
-  return (
-    <span
-      title={basis}
-      className={`text-[10px] font-semibold rounded px-1.5 py-0.5 border ${style}`}
-    >
-      {label} · {basis}
-    </span>
-  );
-}
 
 function CompanyRow({ c }: { c: NzAssociatedCompany }) {
   const name = c.name || `Company ${c.number}`;
@@ -59,7 +43,7 @@ function CompanyRow({ c }: { c: NzAssociatedCompany }) {
         {c.share_percentage != null && c.roles.includes("shareholder") && (
           <span className="text-[10px] font-mono text-oo-muted">{c.share_percentage}%</span>
         )}
-        <ConfidenceChip confidence={c.confidence} basis={c.basis} />
+        <MatchConfidenceChip confidence={c.confidence} basis={c.basis} />
       </div>
     </li>
   );
@@ -139,38 +123,13 @@ function PersonRow({ p }: { p: NzPersonAssociations }) {
 // Invitation strip — shown before the lookup and when collapsed again
 // ---------------------------------------------------------------------
 
-function InvitationStrip({
-  onClick,
-  buttonRef,
-}: {
-  onClick: () => void;
-  buttonRef?: React.Ref<HTMLButtonElement>;
-}) {
-  return (
-    <button
-      ref={buttonRef}
-      type="button"
-      onClick={onClick}
-      className="mt-3 w-full flex items-center gap-3 rounded-oo border border-[#c7cdf0] bg-[#eef1fb] px-3 py-2 text-left transition-colors hover:bg-[#e6eafb]"
-    >
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#3d30d4] text-white">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-          <circle cx="5" cy="4.5" r="2" stroke="currentColor" strokeWidth="1.2" />
-          <circle cx="10.5" cy="9.5" r="1.6" stroke="currentColor" strokeWidth="1.2" />
-          <path d="M3 12 c0-2 1.6-3 3.5-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-        </svg>
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[13px] font-semibold text-[#2a2382] leading-tight">
-          Check director &amp; shareholder associations
-        </span>
-        <span className="block text-[11px] text-[#5b54a8]">
-          Searches the NZ register for other companies each role holder is linked to · live lookup
-        </span>
-      </span>
-    </button>
-  );
-}
+const NZ_ASSOCIATIONS_ICON = (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+    <circle cx="5" cy="4.5" r="2" stroke="currentColor" strokeWidth="1.2" />
+    <circle cx="10.5" cy="9.5" r="1.6" stroke="currentColor" strokeWidth="1.2" />
+    <path d="M3 12 c0-2 1.6-3 3.5-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+  </svg>
+);
 
 // ---------------------------------------------------------------------
 // NzAssociations — lazy "check associations" panel
@@ -209,13 +168,29 @@ export function NzAssociations({ companyNumber }: { companyNumber: string }) {
 
   // Layer 1 — invitation (nothing fires until clicked).
   if (!data && !loading && !error) {
-    return <InvitationStrip onClick={run} />;
+    return (
+      <InvitationStrip
+        title="Check director and shareholder associations"
+        detail="Searches the NZ register for other companies each role holder is linked to · live lookup"
+        icon={NZ_ASSOCIATIONS_ICON}
+        onClick={run}
+        buttonRef={stripRef}
+      />
+    );
   }
 
   // Collapsed after viewing — back to the invitation strip; re-opening keeps
   // the already-fetched data (no second lookup).
   if (data && collapsed) {
-    return <InvitationStrip onClick={() => setCollapsed(false)} buttonRef={stripRef} />;
+    return (
+      <InvitationStrip
+        title="Check director and shareholder associations"
+        detail="Searches the NZ register for other companies each role holder is linked to · live lookup"
+        icon={NZ_ASSOCIATIONS_ICON}
+        onClick={() => setCollapsed(false)}
+        buttonRef={stripRef}
+      />
+    );
   }
 
   return (

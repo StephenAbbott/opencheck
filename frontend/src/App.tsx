@@ -41,6 +41,8 @@ import { ChangelogPage } from "./components/ChangelogPage";
 import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
 import { Icon } from "./components/ui";
+import ConfidenceLegend from "./components/ui/ConfidenceLegend";
+import { PERSON_VERB, resultCount, sourceLabel } from "./lib/vocab";
 import { documentTitleFor, modeParam, parseMode } from "./lib/checkMode";
 import type { CheckMode } from "./lib/checkMode";
 import type { IconName } from "./components/ui";
@@ -54,6 +56,7 @@ import { OpenAlephArchiveMatches } from "./components/cdd/OpenAlephArchiveMatche
 import { EsgPanel } from "./components/cdd/EsgPanel";
 import { MeipSignpost } from "./components/cdd/MeipSignpost";
 import { SecuritiesSection } from "./components/cdd/SecuritiesSection";
+import { clearPanelError, mergePanelError, panelLabel, type PanelError } from "./lib/panelErrors";
 
 // FullCheck (enhanced due diligence) view — lazy so Cytoscape/graph code only
 // loads when a user switches into FullCheck mode.
@@ -242,7 +245,22 @@ export default function App() {
   // RELATED_* code. Name-derived; never identifier corroboration.
   const [oaScreening, setOaScreening] = useState<OpenAlephScreeningMatch[]>([]);
   const [applicableSources, setApplicableSources] = useState<string[]>([]);
+  // Panels that fetch outside `_lookup_pipeline` (/securities, /subsidiaries).
+  // Deliberately NOT merged into `degradedSources`: that list arrives on the
+  // same event as `signals` and as the backend-built verdict sentence, and the
+  // three are provably consistent with each other. Injecting a client-side
+  // record would let the coverage count disagree with a sentence that knows
+  // nothing about it — and `onRiskSignals` overwrites the list wholesale, so it
+  // would be erased anyway. See lib/panelErrors.ts.
+  const [panelErrors, setPanelErrors] = useState<PanelError[]>([]);
   const [completedSources, setCompletedSources] = useState<Set<string>>(new Set());
+  // Phase 124: the loading grid used to simulate per-source progress. It now
+  // renders `source_started` / `source_completed` / `source_error`, so it needs
+  // the started set the stream was already sending and nothing was reading.
+  const [startedSources, setStartedSources] = useState<Set<string>>(new Set());
+  // Derived rather than stored: `errors` is already the record of which sources
+  // failed, and a second set could disagree with it.
+  const erroredSources = useMemo(() => new Set(Object.keys(errors)), [errors]);
   const [streaming, setStreaming] = useState(false);
   // QuickCheck (subject screening, default) vs FullCheck (network EDD) vs
   // BackgroundCheck (screening the people connected to the entity). Reset to
@@ -529,6 +547,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         setOaScreening([]);
         setApplicableSources([]);
         setCompletedSources(new Set());
+        setStartedSources(new Set());
+        setPanelErrors([]);
         setStreaming(false);
         setBodsCountMap({});
         setBodsBreakdownMap({});
@@ -557,6 +577,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             resolve({ lei: e.lei, legal_name: e.legal_name });
           },
           onSourcesApplicable: (e) => setApplicableSources(e.source_ids),
+          onSourceStarted: (e) =>
+            setStartedSources((prev) => new Set([...prev, e.source_id])),
           // Dedup by source_id:hit_id — in dev, React StrictMode runs the lookup
           // effect twice, so two streams can each deliver the same hit. The guard
           // makes hit accumulation idempotent (no-op in production, where
@@ -1052,6 +1074,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setOaScreening([]);
     setApplicableSources([]);
     setCompletedSources(new Set());
+    // Phase 124 added these two and this 30-setter reset is exactly the place
+    // a new one gets missed: a stale panel-error notice would sit on an empty
+    // landing page saying "this report" when there is no report.
+    setStartedSources(new Set());
+    setPanelErrors([]);
     setStreaming(false);
     lookupMutation.reset();
     nameSearchMutation.reset();
@@ -1336,14 +1363,14 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               {nameSearchMutation.data && nameSearchMutation.data.length > 0 && (
                 <div className="mt-4" aria-live="polite">
                   <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-3">
-                    {nameSearchMutation.data.length} result{nameSearchMutation.data.length === 1 ? "" : "s"} — click to look up
+                    {resultCount(nameSearchMutation.data.length)} — select one to search it
                   </p>
                   <ul aria-label="Search results" className="divide-y divide-oo-rule border border-oo-rule rounded-oo overflow-hidden">
                     {nameSearchMutation.data.map((r) => (
                       <li key={r.lei}>
                         <button
                           type="button"
-                          aria-label={`Look up ${r.legalName}, LEI ${r.lei}`}
+                          aria-label={`Search ${r.legalName}, LEI ${r.lei}`}
                           onClick={() => {
                             nameSearchMutation.reset();
                             setNameQuery("");
@@ -1474,7 +1501,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     aria-busy={nationalIdSearchMutation.isPending}
                     className="w-full sm:w-auto sm:flex-none bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
                   >
-                    {nationalIdSearchMutation.isPending ? "Searching…" : "Look up"}
+                    {nationalIdSearchMutation.isPending ? "Searching…" : "Search"}
                   </button>
                 </div>
               </form>
@@ -1508,14 +1535,14 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               {nationalIdSearchMutation.data && nationalIdSearchMutation.data.length > 1 && (
                 <div className="mt-4" aria-live="polite">
                   <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-3">
-                    {nationalIdSearchMutation.data.length} results — click to look up
+                    {resultCount(nationalIdSearchMutation.data.length)} — select one to search it
                   </p>
                   <ul aria-label="Search results" className="divide-y divide-oo-rule border border-oo-rule rounded-oo overflow-hidden">
                     {nationalIdSearchMutation.data.map((r) => (
                       <li key={r.lei}>
                         <button
                           type="button"
-                          aria-label={`Look up ${r.legalName}, LEI ${r.lei}`}
+                          aria-label={`Search ${r.legalName}, LEI ${r.lei}`}
                           onClick={() => {
                             nationalIdSearchMutation.reset();
                             setNationalIdQuery("");
@@ -1575,7 +1602,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   aria-busy={lookupMutation.isPending}
                   className="w-full sm:w-auto bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
                 >
-                  {lookupMutation.isPending ? "Looking up…" : "Look up"}
+                  {lookupMutation.isPending ? "Searching…" : "Search"}
                 </button>
               </div>
             </form>
@@ -1623,12 +1650,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     disabled={personQuery.trim().length < 2}
                     className="w-full sm:w-auto bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
                   >
-                    Screen person
+                    {PERSON_VERB}
                   </button>
                 </div>
               </form>
               <p className="text-[11px] text-oo-muted leading-[1.6] mt-3">
-                Screens a person by name across every person-capable source
+                Screens a person by name across every source that holds people
                 (Companies House officers, OpenSanctions, EveryPolitician,
                 Wikidata, OpenAleph) for PEP, sanctions and offshore-leaks
                 signals. Name-based: results are potential matches with their
@@ -1666,8 +1693,15 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           )}
         </div>
 
-        {lookupMutation.isPending && (
-          <SearchLoadingGrid sources={sourcesQuery.data?.sources ?? []} />
+        {(lookupMutation.isPending || streaming) && (
+          <SearchLoadingGrid
+            sources={sourcesQuery.data?.sources ?? []}
+            anchored={!!streamingLei}
+            applicable={applicableSources}
+            started={startedSources}
+            completed={completedSources}
+            errored={erroredSources}
+          />
         )}
 
         {!streamingLei && !lookupMutation.isPending && !streaming && !lookupMutation.isError && !nameSearchMutation.data && !nameSearchMutation.isPending && !nationalIdSearchMutation.data && !nationalIdSearchMutation.isPending && (
@@ -1843,6 +1877,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           />
         )}
 
+        {streamingLei && panelErrors.length > 0 && <PanelErrorsNotice errors={panelErrors} />}
+
         {streamingLei && mode === "quick" && (
           <NarrativePanel lei={streamingLei} legalName={legalName} />
         )}
@@ -1856,9 +1892,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 <RiskChip key={sig.code} signal={sig} />
               ))}
             </div>
-            <p className="text-[12px] text-oo-muted mt-3">
-              Select a chip for the rule that fired. Signals derived from
-              open data; AMLA-aligned chips read BODS statements.
+            <ConfidenceLegend className="mt-2.5" />
+            <p className="text-oo-meta text-oo-muted mt-2">
+              Select a chip for the rule that fired. Signals derived from open
+              data; chips aligned to AMLA (the EU Anti-Money Laundering
+              Authority) read BODS (Beneficial Ownership Data Standard) records.
             </p>
           </section>
         )}
@@ -1876,11 +1914,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 <RiskChip key={sig.code} signal={sig} />
               ))}
             </div>
-            <p className="text-[12px] text-oo-muted mt-3">
-              Not risk findings — structural facts about the ownership
-              chain, shown because they are useful and because some feed
-              the AMLA complex-structure test. Jurisdiction risk is
-              reported separately, from the FATF and EU lists.
+            <ConfidenceLegend className="mt-2.5" />
+            <p className="text-oo-meta text-oo-muted mt-2">
+              Not risk findings — structural facts about the ownership chain,
+              shown because they are useful and because some feed the AMLA
+              complex-structure test. Jurisdiction risk is reported separately,
+              from the FATF (Financial Action Task Force) and EU lists.
             </p>
           </section>
         )}
@@ -1955,7 +1994,15 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         {mode === "full" && streamingLei ? (
           <div id="panel-full" role="tabpanel" aria-labelledby="tab-full" tabIndex={-1}>
             <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading FullCheck…</p>}>
-              <FullCheckPanel lei={streamingLei} legalName={legalName} signals={riskSignals} />
+              <FullCheckPanel
+                  lei={streamingLei}
+                  legalName={legalName}
+                  signals={riskSignals}
+                  onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
+                  onPanelRecovered={(panel) =>
+                    setPanelErrors((prev) => clearPanelError(prev, panel))
+                  }
+                />
             </Suspense>
           </div>
         ) : mode === "background" && streamingLei ? (
@@ -2061,7 +2108,13 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           </section>
         )}
 
-        {streamingLei && <SecuritiesSection lei={streamingLei} />}
+        {streamingLei && (
+          <SecuritiesSection
+            lei={streamingLei}
+            onError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
+            onRecovered={(panel) => setPanelErrors((prev) => clearPanelError(prev, panel))}
+          />
+        )}
 
 
         {/* MEIP signpost — bottom of the results page, beneath the richer
@@ -2140,7 +2193,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     )}
                     <p className="text-[11px] font-mono mt-3 text-oo-muted">
                       Supports: {s.supports.join(", ")} ·{" "}
-                      {s.live_available ? "live ready" : "stub"}
+                      {s.live_available ? "live ready" : "placeholder data"}
                     </p>
                   </li>
                 ))}
@@ -2675,7 +2728,7 @@ function ApiPage() {
 
         <BtsCard title="Quick start">
           <p className="text-[13px] leading-[1.7] text-oo-muted mb-3">
-            Look up a company by its LEI and get the unified BODS view:
+            Search for a company by its LEI and get the unified BODS view:
           </p>
           <CopyField value={`curl "${base}/lookup?lei=HWUPKR0MPOU8FGXBT394"`} />
           <p className="text-[13px] leading-[1.7] text-oo-muted mt-4">
@@ -3379,7 +3432,7 @@ function CrossSourceIdentifiersTable({
                   <button
                     key={h.source_id}
                     type="button"
-                    title={`${sourceNames[h.source_id] ?? h.source_id} — jump to this source's results`}
+                    aria-label={`${sourceLabel(h.source_id, sourceNames)} — jump to this source's results`}
                     onClick={() =>
                       document
                         .getElementById(`source-${h.source_id}`)
@@ -3414,7 +3467,7 @@ function CrossSourceIdentifiersTable({
                   <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                   <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                 </svg>
-                GLEIF mapped
+                Mapped by GLEIF
               </span>
             </td>
           </tr>
@@ -3435,6 +3488,41 @@ function CrossSourceIdentifiersTable({
 // the "Show more" toggle. Multi-source subjects (e.g. DNO ASA) can flag many
 // pairs, which otherwise dominates the results page.
 const POSSIBLY_SAME_PREVIEW_COUNT = 2;
+
+/**
+ * Failures in the panels that fetch outside the lookup pipeline.
+ *
+ * Separate from DegradedScreensNotice on purpose — see lib/panelErrors.ts for
+ * why these must not be merged into `degraded_sources`. Same amber, same
+ * closing principle, different sentence: a section that is not on screen
+ * because its fetch failed must not be read as a section with nothing in it.
+ */
+function PanelErrorsNotice({ errors }: { errors: PanelError[] }) {
+  if (errors.length === 0) return null;
+  return (
+    <section
+      role="status"
+      aria-label="Part of this report could not be loaded"
+      className="mb-8 rounded-oo border border-oo-warn-border bg-oo-warn-bg p-5"
+    >
+      <h2 className="font-head font-bold text-oo-body text-oo-warn-text">
+        Part of this report could not be loaded
+      </h2>
+      <ul className="mt-2 space-y-1.5">
+        {errors.map((e) => (
+          <li key={e.panel} className="text-oo-meta text-oo-warn-text leading-[1.6]">
+            <span className="font-semibold">{panelLabel(e.panel)}</span> — {e.detail}. You
+            are not seeing {e.missing}.
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-oo-meta text-oo-warn-text">
+        These sections are missing from the page, not empty. Their absence is not
+        evidence of absence.
+      </p>
+    </section>
+  );
+}
 
 /** Human phrasing for the closed degradation-reason vocabulary. */
 const DEGRADED_REASON_LABELS: Record<string, string> = {

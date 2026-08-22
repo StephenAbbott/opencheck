@@ -80,7 +80,8 @@ export default function PersonReportPage({
 
       <div className="mb-4 rounded-oo border border-violet-300 bg-violet-50 px-4 py-3">
         <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-violet-700 mb-1">
-          Person report · BackgroundCheck
+          Person report
+          <span className="normal-case"> · BackgroundCheck</span>
         </p>
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
@@ -94,7 +95,7 @@ export default function PersonReportPage({
             </h2>
             <p className="text-[12px] text-violet-900/80 leading-[1.6] mt-1">
               Screened by <span className="font-medium">name</span>
-              {birthYear ? " and birth year" : ""} across every person-capable
+              {birthYear ? " and birth year" : ""} across every
               source. Results are potential matches with their evidence shown —
               never confirmed identities — and a clean screen is not proof of
               absence.
@@ -112,7 +113,7 @@ export default function PersonReportPage({
 
       {state.status === "loading" && (
         <p className="text-[13px] text-oo-muted italic" aria-live="polite">
-          Screening {name} across person-capable sources…
+          Checking {name} against the sources that hold people…
         </p>
       )}
       {state.status === "error" && (

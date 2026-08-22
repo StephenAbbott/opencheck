@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { CONFIDENCE_GLYPH, CONFIDENCE_LABEL } from "../ui/Chip";
 import type { RiskSignal } from "../../lib/api";
+import { sourceLabel } from "../../lib/vocab";
 
 /**
  * Map a risk signal code to a colour palette + short display label.
@@ -160,11 +162,10 @@ export const RISK_PRESENTATION: Record<
   },
 };
 
-export const CONFIDENCE_DOT: Record<string, string> = {
-  high: "●",
-  medium: "◐",
-  low: "○",
-};
+/** Re-export, not a second copy. Phase 122 introduced CONFIDENCE_GLYPH in
+ *  `ui/Chip.tsx` while this map stayed put, so the app had two definitions of
+ *  the same three glyphs and only one of them carried the prose meaning. */
+export { CONFIDENCE_GLYPH as CONFIDENCE_DOT } from "../ui/Chip";
 
 export function rank(confidence: string): number {
   return confidence === "high" ? 3 : confidence === "medium" ? 2 : 1;
@@ -188,11 +189,19 @@ export function RiskChip({
   const padding = compact
     ? "px-2 py-0.5 text-[12px] font-medium"
     : "px-3 py-1 text-[13px] font-semibold";
-  const title = `${signal.summary}\n\nSource: ${signal.source_id}/${signal.hit_id}\nConfidence: ${signal.confidence}`;
+  // Phase 124: `title` is gone from both branches. It was the only carrier of
+  // `signal.summary` on the interactive chip — a screen-reader user who did
+  // not activate the button heard the label and nothing else — and it leaked
+  // the raw `source_id/hit_id` pair as prose. The summary now rides in the
+  // accessible name on both branches, and the expansion names the source
+  // properly.
+  const described = `${signal.summary}${
+    signal.source_id ? ` Source: ${sourceLabel(signal.source_id)}.` : ""
+  }`;
   const chipContent = (
     <>
-      <span aria-hidden className="text-[10px]">{CONFIDENCE_DOT[signal.confidence] ?? "•"}</span>
-      <span className="sr-only">{signal.confidence} confidence</span>
+      <span aria-hidden className="text-oo-meta">{CONFIDENCE_GLYPH[signal.confidence] ?? "•"}</span>
+      <span className="sr-only">{CONFIDENCE_LABEL[signal.confidence] ?? signal.confidence}: </span>
       <span>{presentation.label}</span>
     </>
   );
@@ -200,14 +209,10 @@ export function RiskChip({
   if (!interactive) {
     return (
       <span
-        title={title}
         className={`inline-flex items-center gap-1.5 border rounded-full shadow-sm ${padding} ${presentation.classes}`}
       >
         {chipContent}
-        <span className="sr-only">
-          {signal.summary}
-          {signal.source_id ? ` Source: ${signal.source_id}.` : ""}
-        </span>
+        <span className="sr-only">{described}</span>
       </span>
     );
   }
@@ -218,17 +223,20 @@ export function RiskChip({
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        title={title}
         className={`inline-flex items-center gap-1.5 border rounded-full shadow-sm ${padding} ${presentation.classes}`}
       >
         {chipContent}
+        {/* The chip's own text is the rule that fired; the summary is why.
+            Both belong in the accessible name — activating a control should
+            not be the only way to learn what it is about. */}
+        <span className="sr-only">{described}</span>
       </button>
       {open && (
-        <span className="basis-full text-left text-[12px] text-oo-ink bg-white border border-oo-rule rounded px-2.5 py-1.5 leading-[1.5]">
+        <span className="basis-full text-left text-oo-meta text-oo-ink bg-white border border-oo-rule rounded-oo px-2.5 py-1.5 leading-[1.5]">
           {signal.summary}
-          {signal.source_id ? <> · Source: {signal.source_id}</> : null}
+          {signal.source_id ? <> · Source: {sourceLabel(signal.source_id)}</> : null}
           {" · "}
-          {signal.confidence} confidence
+          {CONFIDENCE_LABEL[signal.confidence]?.toLowerCase() ?? `${signal.confidence} confidence`}
         </span>
       )}
     </>

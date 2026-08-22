@@ -1,4 +1,5 @@
 import type { MeipMatch } from "../../lib/api";
+import { NOT_IN_GRAPH } from "../../lib/vocab";
 
 // ---------------------------------------------------------------------
 // MeipSignpost — OECD-UNSD MEIP "signpost" card.
@@ -42,7 +43,6 @@ function IdentifierPill({
   const inner = (
     <span
       className={`inline-flex items-center gap-1 font-mono text-[11px] border rounded px-1.5 py-0.5 ${classes}`}
-      title={corroborated ? "Also published by GLEIF for this LEI" : undefined}
     >
       {corroborated && (
         <>
@@ -50,7 +50,7 @@ function IdentifierPill({
             <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4" />
             <path d="M5 8.2 L7 10.2 L11 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          <span className="sr-only">corroborated by GLEIF</span>
+          <span className="sr-only">also published by GLEIF for this LEI</span>
         </>
       )}
       <span className="text-oo-muted">{label}:</span>
@@ -94,7 +94,7 @@ export function MeipSignpost({ match }: { match: MeipMatch | null }) {
           OECD-UNSD MEIP
         </h3>
         <span className="text-[11px] font-mono text-oo-muted bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5">
-          signpost · not in graph
+          {NOT_IN_GRAPH}
         </span>
       </header>
 

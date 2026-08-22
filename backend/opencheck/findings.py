@@ -236,8 +236,18 @@ def _gleif_parent_lei(parent: dict[str, Any] | None) -> str:
 
 
 def _gleif_exception_reason(exception: dict[str, Any] | None) -> str:
-    """``attributes.exceptionReason`` (live API and OO dump both seen; the
-    mapper reads ``reason`` too, so this does the same)."""
+    """The exception's reason code, under either spelling.
+
+    **The live API uses ``reason``**; Open Ownership's SQLite dump uses
+    ``exceptionReason`` (the same split `mapper.py` documents at its own
+    reader). Verified live 2026-08-22 against BP, Rosneft and SEB, whose
+    payloads read
+    ``{"validFrom": null, "validTo": null, "lei": …, "category":
+    "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT", "reason": "NO_KNOWN_PERSON",
+    "reference": null}`` under ``attributes``. ``category`` is GLEIF's own
+    field and says ``ACCOUNTING_CONSOLIDATION`` in as many words — which is
+    the whole argument for the vocabulary above.
+    """
     if not exception:
         return ""
     attrs = exception.get("attributes") or exception

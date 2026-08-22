@@ -61,10 +61,15 @@ export function ChangelogPage() {
                       href={commitUrl(h)}
                       target="_blank"
                       rel="noreferrer"
-                      title={`View commit ${h} on GitHub`}
-                      className="font-mono text-[11px] text-oo-blue border border-oo-rule rounded px-1.5 py-0.5 hover:bg-oo-bg transition-colors"
+                      className="font-mono text-oo-meta text-oo-blue border border-oo-rule rounded px-1.5 py-0.5 hover:bg-oo-bg transition-colors"
                     >
                       {h}
+                      {/* A bare 7-character hash is not a link name, and this
+                          was the one new-tab link in the app without the
+                          convention's "(opens in new tab)". */}
+                      <span className="sr-only">
+                        {" "}— view this commit on GitHub (opens in new tab)
+                      </span>
                     </a>
                   ))}
                 </div>

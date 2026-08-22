@@ -1,10 +1,17 @@
 /**
- * BodsGraphExplorer — the dual-pane explorer for a BODS ownership structure.
+ * BodsGraphExplorer — one diagram, one text equivalent (Phase 124).
  *
- * Owns the state shared between the two panes — `collapsed` (which nodes are
- * collapsed) and `selectedId` (the focused node) — and renders the visual
- * graph (BODSGraph) alongside the accessible tabular tree (BodsTree). A view
- * toggle switches between split / graph-only / tree-only.
+ * Owns the state shared between the canvas and its equivalent — `collapsed`
+ * (which nodes are collapsed) and `selectedId` (the focused node) — and renders
+ * the diagram (BODSGraph) with the accessible tree (BodsTree) underneath it.
+ *
+ * **The tree is a fallback, not a peer view.** v1 had a Split / Graph / Tree
+ * switch here, BODSGraph had its own "View as table" toggle inside the Graph
+ * pane, and SubsidiaryNetwork rendered a children list beneath both — so in
+ * Split mode with the table on, a reader saw two different tables of the same
+ * statements side by side plus a third list below. There is now one canvas, one
+ * text equivalent, and the equivalent is always available rather than being a
+ * mode you can end up in instead of the diagram.
  *
  * Progressive discovery ("Add next layer"): a single action takes the current
  * *frontier* (LEI-bearing entity nodes at the growing edge of the graph) and
@@ -38,17 +45,11 @@ import {
   type ExpandDirection,
 } from "../lib/expand";
 import { reconcileBods, remapSignals, possiblySameAs } from "../lib/reconcile";
+import { buildSignalMap } from "../lib/signalScope";
 import { RiskChip } from "./risk/RiskChip";
 import { SourceLegend } from "./SourceLegend";
 
 type Stmt = Record<string, unknown>;
-type ViewMode = "split" | "graph" | "tree";
-
-const VIEW_OPTIONS: { value: ViewMode; label: string }[] = [
-  { value: "split", label: "Split" },
-  { value: "graph", label: "Graph" },
-  { value: "tree", label: "Tree" },
-];
 
 // Guard: cap how many anchors we'll expand across a session so a runaway
 // click-fest can't fan out the whole register (the server also caps each batch).
@@ -129,7 +130,6 @@ export default function BodsGraphExplorer({
 
   const [collapsed, setCollapsed] = useState<Set<string>>(() => autoCollapse(baseModel));
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [view, setView] = useState<ViewMode>("split");
   const prevStatementsRef = useRef<unknown[]>(statements);
 
   // Reset everything when the underlying subject changes (a new lookup), but NOT
@@ -194,8 +194,8 @@ export default function BodsGraphExplorer({
   const noun = direction === "subsidiaries" ? "subsidiaries" : "owners/controllers";
   const helperText =
     direction === "subsidiaries"
-      ? "Resolves the next layer of subsidiaries for frontier companies which have an LEI. Chains which end with people can't be explored further"
-      : "Resolves the next layer of ownership for frontier companies which have an LEI. Chains which end with people can't be explored further";
+      ? "Resolves the next layer of subsidiaries for the companies at the edge of the network so far, where they have an LEI. Chains that end with people can't be explored further"
+      : "Resolves the next layer of ownership for the companies at the edge of the network so far, where they have an LEI. Chains that end with people can't be explored further";
 
   // Subject signals (QuickCheck, from the prop) + everything discovered while
   // expanding = the network-wide risk; `additionalSignals` is the diff.
@@ -237,6 +237,9 @@ export default function BodsGraphExplorer({
     () => (recon ? remapSignals(networkSignals, recon.remap) : networkSignals),
     [recon, networkSignals]
   );
+  // The same node→signals map the canvas draws badges from, so the text
+  // equivalent cannot silently omit a party the diagram has flagged.
+  const signalMap = useMemo(() => buildSignalMap(displaySignals), [displaySignals]);
 
   async function addNextLayer() {
     if (!frontier.length || expanding) return;
@@ -257,8 +260,8 @@ export default function BodsGraphExplorer({
       });
       const newRels = (res.bods as Stmt[]).filter((s) => s.recordType === "relationship").length;
       const parts: string[] = [];
-      if (newRels === 0) parts.push(`No further ${noun} disclosed for the current frontier.`);
-      if (res.truncated) parts.push(`Only the first ${res.count} were expanded (frontier was larger).`);
+      if (newRels === 0) parts.push(`No further ${noun} disclosed for the companies at the edge of the network.`);
+      if (res.truncated) parts.push(`Only the first ${res.count} were expanded — there were more.`);
       setExpandNote(parts.join(" ") || null);
     } catch (e) {
       setExpandNote(`Couldn't add layer: ${(e as Error).message}`);
@@ -285,12 +288,12 @@ export default function BodsGraphExplorer({
         if (cancelRef.current) { stop = "cancelled"; break; }
         const front = frontierAnchors(working, bodsToGraph(working).edges, expanded, direction);
         if (front.length === 0) {
-          stop = "frontier exhausted (no further LEI-bearing companies)";
+          stop = "there was nothing further to expand (no more companies with an LEI)";
           break;
         }
         const entities = working.filter((s) => (s as Stmt).recordType === "entity").length;
         if (entities >= FULLCHECK_NODE_CAP || expanded.size >= MAX_EXPANDED) {
-          stop = `node cap reached (${entities} companies)`;
+          stop = `the size limit was reached (${entities} companies)`;
           break;
         }
         setRunProgress(
@@ -335,25 +338,6 @@ export default function BodsGraphExplorer({
 
   return (
     <div>
-      {/* View toggle */}
-      <div className="flex items-center gap-1 mb-1.5" role="group" aria-label="Visualisation view">
-        {VIEW_OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            aria-pressed={view === opt.value}
-            onClick={() => setView(opt.value)}
-            className={`text-[11px] px-2 py-0.5 rounded-full border ${
-              view === opt.value
-                ? "bg-oo-soft border-oo-blue text-oo-blue font-medium"
-                : "border-oo-rule text-oo-muted hover:text-oo-blue"
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-
       {/* FullCheck: eager "Run" to a depth budget */}
       {fullCheck && (
         <div className="mb-2 rounded-oo border border-oo-blue bg-oo-soft px-3 py-2">
@@ -448,9 +432,8 @@ export default function BodsGraphExplorer({
         </p>
       )}
 
-      <div className={`flex flex-col gap-2 ${view === "split" ? "lg:flex-row" : ""}`}>
-        {view !== "tree" && (
-          <div className="flex-1 min-w-0">
+      <div className="flex flex-col gap-2">
+        <div className="min-w-0">
             {fullCheck && networkSources.length > 0 && (
               <SourceLegend
                 sources={networkSources}
@@ -477,19 +460,28 @@ export default function BodsGraphExplorer({
               highlightSource={highlightSource}
               sameAs={sameAs}
             />
-          </div>
-        )}
-        {view !== "graph" && (
-          <div className={view === "split" ? "w-full lg:w-96 lg:max-w-[44%] flex-shrink-0" : "w-full"}>
+        </div>
+
+        {/* Text equivalent of the canvas (WCAG 1.1.1 / 1.3.1 / 2.1.1). Open by
+            default is wrong — it doubles the height of every source card — but
+            hidden behind a mode switch was worse, because a reader could land
+            in the equivalent *instead of* the diagram. A disclosure that names
+            its row count is available on every mount and costs nothing shut. */}
+        <details className="rounded-oo border border-oo-rule bg-white">
+          <summary className="cursor-pointer px-3 py-1.5 text-oo-meta text-oo-blue hover:bg-oo-soft rounded-oo">
+            Read as text — {rows.length} {rows.length === 1 ? "row" : "rows"}, keyboard navigable
+          </summary>
+          <div className="border-t border-oo-rule">
             <BodsTree
               rows={rows}
               selectedId={selectedId}
               onSelect={setSelectedId}
               onToggleCollapse={toggleCollapse}
               entityName={entityName}
+              signalsByNode={signalMap}
             />
           </div>
-        )}
+        </details>
       </div>
 
       {fullCheck && (

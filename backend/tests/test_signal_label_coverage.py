@@ -5,7 +5,8 @@ against the backend's actual code list:
 
 * ``og_image.SIGNAL_STYLE``                       — the OG share card
 * ``RiskChip.RISK_PRESENTATION``                  — the results-page chip
-* ``BODSGraph.SIGNAL_STYLE``                      — the graph node badge
+* ``lib/graphStyle.SIGNAL_STYLE``                 — the graph node badge
+  and, since Phase 124, the generated graph legend
 * ``narrative.packet._RISK_LABELS``               — the LLM-facing label
 
 ``RiskChip.test.ts`` asserts every *graph badge* has a chip, but that is
@@ -106,7 +107,10 @@ def test_narrative_labels_cover_every_code() -> None:
     ("rel_path", "const"),
     [
         ("frontend/src/components/risk/RiskChip.tsx", "RISK_PRESENTATION"),
-        ("frontend/src/components/BODSGraph.tsx", "SIGNAL_STYLE"),
+        # Phase 124 moved SIGNAL_STYLE out of the component into
+        # lib/graphStyle.ts, so the legend can be generated from it without
+        # importing Cytoscape. BODSGraph re-exports it for existing callers.
+        ("frontend/src/lib/graphStyle.ts", "SIGNAL_STYLE"),
     ],
 )
 def test_frontend_maps_cover_every_code(rel_path: str, const: str) -> None:

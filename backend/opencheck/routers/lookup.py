@@ -1795,6 +1795,18 @@ async def _lookup_pipeline(
                 })
                 yield ("hit", edgar_hit)
                 yield ("source_completed", {"source_id": "sec_edgar", "hit_count": 1})
+            else:
+                # A name that resolves to no CIK is a completed search with no
+                # result, not an unfinished one. Announcing it matters because
+                # ``sec_edgar`` is in ``sources_applicable`` from the moment a
+                # US jurisdiction and a legal name exist: without this the
+                # client's progress counter can never reach its own total, and
+                # a finished lookup ends reading "11 of 12 sources answered".
+                yield ("source_started", {
+                    "source_id": "sec_edgar",
+                    "source_name": se_adapter.info.name,
+                })
+                yield ("source_completed", {"source_id": "sec_edgar", "hit_count": 0})
         except Exception as exc:  # noqa: BLE001
             errors["sec_edgar"] = _fmt_source_error(exc)
             yield ("source_error", {
