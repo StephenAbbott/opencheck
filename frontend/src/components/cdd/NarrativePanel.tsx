@@ -172,7 +172,7 @@ function DispositionControls({
     <span className="mt-1 flex flex-wrap items-center gap-1">
       <span
         role="group"
-        aria-label="Analyst disposition for this statement"
+        aria-label="Analyst disposition for this claim"
         className="inline-flex items-center gap-1"
       >
         {DISP_OPTIONS.map((opt) => {
@@ -522,7 +522,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
                   {/* The full count stays visible even while collapsed, so the
                       card's grounding promise is asserted at a glance. */}
                   <span className="normal-case tracking-normal font-normal">
-                    {" "}· {data.claims.length} statement{data.claims.length === 1 ? "" : "s"}
+                    {" "}· {data.claims.length} claim{data.claims.length === 1 ? "" : "s"}
                     {citedSources.length > 0 && (
                       <>
                         , cited to {citedSources.length} source
@@ -534,7 +534,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
                 {canSignOff && (
                   <p role="status" className="text-[11px] text-oo-muted">
                     {decidedCount === 0
-                      ? "Review each statement: accept, dispute, or hold for review."
+                      ? "Review each claim: accept, dispute, or hold for review."
                       : [
                           tally.accepted ? `${tally.accepted} accepted` : null,
                           tally.disputed ? `${tally.disputed} disputed` : null,

@@ -59,18 +59,37 @@ export const PERSON_VERB = "Run BackgroundCheck";
  *  Replaces both "signpost · not in graph" and "context · not in graph". */
 export const NOT_IN_GRAPH = "published elsewhere · not in the graph";
 
-/** Terms that must not reappear. Each maps to what to say instead. Pinned by
- *  `vocab.test.ts` so the fix cannot silently regress. */
+/**
+ * **Exact labels** that must not reappear, mapped to what to render instead.
+ * Enforced by `scripts/lint-design-system.mjs` on the same ratchet as the token
+ * and type-scale rules.
+ *
+ * These are phrases, not words, and that distinction was learned the hard way.
+ * The first version banned single words — `screen`, `hit`, `stub` — and every
+ * one of them turned out to have legitimate uses the moment a lint was pointed
+ * at them: "an empty result here is not a clean screen", "a fast screen of the
+ * subject", the SSE event literally named `"hit"`, and `Liveness = "stub"`.
+ * Banning the word would have forced rewrites of correct English to satisfy a
+ * rule aimed at something else.
+ *
+ * What actually regressed was a **label a reader sees**: a button that said
+ * "Screen person" while another said "Run background check" for the same
+ * action, and an empty state that said "No hits." forty lines from one that
+ * said "3 results". So the rule bans those strings and leaves the language
+ * alone.
+ */
 export const BANNED_SYNONYMS: Record<string, string> = {
-  hit: "result",
-  hits: "results",
-  signpost: NOT_IN_GRAPH,
-  stub: "placeholder data",
-  "look up": LOOKUP_VERB,
-  screen: PERSON_VERB,
+  "No hits.": "No results.",
+  "Screen person": PERSON_VERB,
+  "Run background check": PERSON_VERB,
+  "Look up": LOOKUP_VERB,
+  "Looking up…": "Searching…",
+  "signpost · not in graph": NOT_IN_GRAPH,
+  "context · not in graph": NOT_IN_GRAPH,
   "frontier companies": "companies at the edge of the network so far",
-  "node cap": "size limit",
+  "node cap reached": "the size limit was reached",
   "person-capable source": "source that holds people",
+  "GLEIF mapped": "Mapped by GLEIF",
 };
 
 // ---------------------------------------------------------------------------

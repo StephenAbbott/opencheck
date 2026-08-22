@@ -3,6 +3,7 @@ import { deepen } from "../../lib/api";
 import type { BodsBreakdown, DeepenResponse, SourceHit } from "../../lib/api";
 import { DeepenBlock, SkeletonSourceCard } from "./SourceBucketCard";
 import type { SourceBucket } from "./SourceBucketCard";
+import { sourceLabel } from "../../lib/vocab";
 
 // ---------------------------------------------------------------------
 // LeafIcon — inline SVG for the ESG panel header
@@ -879,7 +880,7 @@ function EsgTile({
       }`}
     >
       <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mb-1.5">
-        {meta?.org ?? hit.source_id}
+        {meta?.org ?? sourceLabel(hit.source_id)}
       </div>
       <div className="flex items-baseline gap-2">
         <span className="font-head font-bold leading-none text-[1.7rem] text-emerald-800 tabular-nums">

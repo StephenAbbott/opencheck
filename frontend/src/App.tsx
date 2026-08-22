@@ -1655,7 +1655,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 </div>
               </form>
               <p className="text-[11px] text-oo-muted leading-[1.6] mt-3">
-                Screens a person by name across every person-capable source
+                Screens a person by name across every source that holds people
                 (Companies House officers, OpenSanctions, EveryPolitician,
                 Wikidata, OpenAleph) for PEP, sanctions and offshore-leaks
                 signals. Name-based: results are potential matches with their
@@ -2193,7 +2193,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     )}
                     <p className="text-[11px] font-mono mt-3 text-oo-muted">
                       Supports: {s.supports.join(", ")} ·{" "}
-                      {s.live_available ? "live ready" : "stub"}
+                      {s.live_available ? "live ready" : "placeholder data"}
                     </p>
                   </li>
                 ))}
@@ -3467,7 +3467,7 @@ function CrossSourceIdentifiersTable({
                   <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                   <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                 </svg>
-                GLEIF mapped
+                Mapped by GLEIF
               </span>
             </td>
           </tr>

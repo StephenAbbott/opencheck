@@ -1,106 +1,132 @@
 {
   "src/App.tsx": {
     "hex": 14,
-    "text": 133
+    "text": 133,
+    "vocab": 0
   },
   "src/components/BODSGraph.tsx": {
     "hex": 25,
-    "text": 0
+    "text": 0,
+    "vocab": 0
   },
   "src/components/BodsGraphExplorer.tsx": {
     "hex": 1,
-    "text": 14
+    "text": 14,
+    "vocab": 0
   },
   "src/components/ChangelogPage.tsx": {
     "hex": 0,
-    "text": 5
+    "text": 5,
+    "vocab": 0
   },
   "src/components/SourceLegend.tsx": {
     "hex": 0,
-    "text": 3
+    "text": 3,
+    "vocab": 0
   },
   "src/components/cdd/BackgroundCheckPanel.tsx": {
     "hex": 0,
-    "text": 58
+    "text": 58,
+    "vocab": 0
   },
   "src/components/cdd/ClusterGroup.tsx": {
     "hex": 0,
-    "text": 4
+    "text": 3,
+    "vocab": 0
   },
   "src/components/cdd/EsgPanel.tsx": {
     "hex": 0,
-    "text": 57
+    "text": 57,
+    "vocab": 0
   },
   "src/components/cdd/FullCheckPanel.tsx": {
     "hex": 0,
-    "text": 4
+    "text": 4,
+    "vocab": 0
   },
   "src/components/cdd/HistoryTimeline.tsx": {
     "hex": 0,
-    "text": 15
+    "text": 15,
+    "vocab": 0
   },
   "src/components/cdd/LivenessBadge.tsx": {
     "hex": 0,
-    "text": 1
+    "text": 1,
+    "vocab": 0
   },
   "src/components/cdd/MeipSignpost.tsx": {
     "hex": 0,
-    "text": 8
+    "text": 8,
+    "vocab": 0
   },
   "src/components/cdd/NarrativePanel.tsx": {
     "hex": 9,
-    "text": 24
+    "text": 24,
+    "vocab": 0
   },
   "src/components/cdd/NzAssociations.tsx": {
     "hex": 0,
-    "text": 19
+    "text": 18,
+    "vocab": 0
   },
   "src/components/cdd/OpenAlephArchiveMatches.tsx": {
     "hex": 0,
-    "text": 4
+    "text": 4,
+    "vocab": 0
   },
   "src/components/cdd/PersonReportPage.tsx": {
     "hex": 0,
-    "text": 11
+    "text": 11,
+    "vocab": 0
   },
   "src/components/cdd/SecuritiesSection.tsx": {
     "hex": 3,
-    "text": 17
+    "text": 17,
+    "vocab": 0
   },
   "src/components/cdd/SourceBucketCard.tsx": {
     "hex": 6,
-    "text": 57
+    "text": 57,
+    "vocab": 0
   },
   "src/components/cdd/SubjectCard.tsx": {
     "hex": 6,
-    "text": 8
+    "text": 8,
+    "vocab": 0
   },
   "src/components/cdd/SubsidiaryNetwork.tsx": {
     "hex": 0,
-    "text": 15
+    "text": 15,
+    "vocab": 0
   },
   "src/components/export/ExportMenu.tsx": {
     "hex": 3,
-    "text": 4
+    "text": 4,
+    "vocab": 0
   },
   "src/components/export/ExportPanel.tsx": {
     "hex": 0,
-    "text": 13
+    "text": 13,
+    "vocab": 0
   },
   "src/components/icons/index.tsx": {
     "hex": 22,
-    "text": 0
+    "text": 0,
+    "vocab": 0
   },
   "src/components/risk/RiskChip.tsx": {
     "hex": 0,
-    "text": 2
+    "text": 2,
+    "vocab": 0
   },
   "src/components/ui/Button.tsx": {
     "hex": 2,
-    "text": 0
+    "text": 0,
+    "vocab": 0
   },
   "src/components/ui/ui.test.ts": {
     "hex": 2,
-    "text": 0
+    "text": 0,
+    "vocab": 0
   }
 }

@@ -6,6 +6,7 @@ import type {
   NzPersonAssociations,
 } from "../../lib/api";
 import InvitationStrip from "../ui/InvitationStrip";
+import MatchConfidenceChip from "../ui/MatchConfidenceChip";
 
 // ---------------------------------------------------------------------
 // Small building blocks
@@ -20,23 +21,6 @@ function RoleChip({ role }: { role: string }) {
   );
 }
 
-function ConfidenceChip({ confidence, basis }: { confidence: string; basis: string }) {
-  const style =
-    confidence === "high"
-      ? "bg-blue-600 text-white border-blue-600"
-      : confidence === "medium"
-        ? "bg-blue-50 text-blue-700 border-blue-200"
-        : "bg-amber-50 text-amber-700 border-amber-200";
-  const label =
-    confidence === "high" ? "High" : confidence === "medium" ? "Medium" : "Name only";
-  return (
-    <span
-      className={`text-[10px] font-semibold rounded px-1.5 py-0.5 border ${style}`}
-    >
-      {label} · {basis}
-    </span>
-  );
-}
 
 function CompanyRow({ c }: { c: NzAssociatedCompany }) {
   const name = c.name || `Company ${c.number}`;
@@ -59,7 +43,7 @@ function CompanyRow({ c }: { c: NzAssociatedCompany }) {
         {c.share_percentage != null && c.roles.includes("shareholder") && (
           <span className="text-[10px] font-mono text-oo-muted">{c.share_percentage}%</span>
         )}
-        <ConfidenceChip confidence={c.confidence} basis={c.basis} />
+        <MatchConfidenceChip confidence={c.confidence} basis={c.basis} />
       </div>
     </li>
   );

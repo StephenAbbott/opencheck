@@ -95,7 +95,7 @@ export default function PersonReportPage({
             </h2>
             <p className="text-[12px] text-violet-900/80 leading-[1.6] mt-1">
               Screened by <span className="font-medium">name</span>
-              {birthYear ? " and birth year" : ""} across every person-capable
+              {birthYear ? " and birth year" : ""} across every
               source. Results are potential matches with their evidence shown —
               never confirmed identities — and a clean screen is not proof of
               absence.
@@ -113,7 +113,7 @@ export default function PersonReportPage({
 
       {state.status === "loading" && (
         <p className="text-[13px] text-oo-muted italic" aria-live="polite">
-          Screening {name} across person-capable sources…
+          Checking {name} against the sources that hold people…
         </p>
       )}
       {state.status === "error" && (

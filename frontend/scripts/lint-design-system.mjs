@@ -11,6 +11,10 @@
  *   2. **No `text-[NNpx]` outside the named scale.** 15 arbitrary sizes,
  *      `text-[11px]` 122 times, `text-[10px]` 77, `text-[9px]` 5 — a body text
  *      of effectively 11–13px arrived at by accident rather than decision.
+ *   3. **No banned synonym.** `lib/vocab.ts` names one word per concept;
+ *      `BANNED_SYNONYMS` lists what must not come back. Until Phase 125 that
+ *      list was documentation with nothing enforcing it, which is how four
+ *      verbs for two actions survived a vocabulary pass in the first place.
  *
  * ## Why this is a ratchet and not a ban
  *
@@ -41,6 +45,7 @@
 import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const SRC = join(ROOT, "src");
@@ -57,6 +62,79 @@ const HEX = /#[0-9a-fA-F]{3,8}\b/g;
 /** `text-[11px]`, `text-[10.5px]`. */
 const ARBITRARY_TEXT = /text-\[[0-9.]+px\]/g;
 
+/**
+ * Terms that must not reappear in user-facing strings, read from
+ * `lib/vocab.ts` so the lint and the module cannot disagree — a second copy of
+ * the list is the same failure the list exists to prevent.
+ *
+ * Matched inside JSX text and string literals only, and word-bounded, so
+ * `hit.source_id`, `bucket.hits.length` and `hitCount` are untouched: the field
+ * names are not the problem, the prose is. `vocab.ts` itself is exempt because
+ * it has to name the words it bans.
+ */
+function bannedTerms() {
+  const src = readFileSync(join(SRC, "lib/vocab.ts"), "utf8");
+  const block = src.match(/BANNED_SYNONYMS[^=]*=\s*\{([\s\S]*?)\n\};/);
+  if (!block) throw new Error("BANNED_SYNONYMS not found in lib/vocab.ts");
+  return [...block[1].matchAll(/^\s*"([^"]+)":/gm)].map((m) => m[1]);
+}
+
+const VOCAB_EXEMPT = new Set(["src/lib/vocab.ts", "src/lib/vocab.test.ts"]);
+
+/**
+ * Count banned terms in **prose only**, using TypeScript's own parser.
+ *
+ * Regex cannot do this. A first attempt matched word boundaries over whole
+ * files and reported 26 violations in App.tsx, all false — `bucket.hits.length`,
+ * a `"hit_id"` key, a `Liveness = "stub"` union member. Restricting it to
+ * quoted strings made it worse (90), because an apostrophe in JSX text
+ * ("doesn't") pairs with the next one and swallows the code between them, and
+ * because `min-h-screen` contains the word "screen" at a word boundary.
+ *
+ * So this walks the AST and looks only at string literals and JSX text, then
+ * drops anything inside a `className`. Those are the two places a user-facing
+ * word can actually be, and the className exclusion is what keeps Tailwind out.
+ */
+function countBanned(src, terms, fileName) {
+  const sf = ts.createSourceFile(fileName, src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const prose = [];
+
+  const inClassName = (node) => {
+    for (let p = node.parent; p; p = p.parent) {
+      if (ts.isJsxAttribute(p) && p.name.getText() === "className") return true;
+      if (ts.isJsxElement(p) || ts.isJsxSelfClosingElement(p)) return false;
+    }
+    return false;
+  };
+
+  const visit = (node) => {
+    if (ts.isJsxText(node)) {
+      prose.push(node.text);
+    } else if (
+      (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) &&
+      !inClassName(node) &&
+      !ts.isImportDeclaration(node.parent) &&
+      !ts.isPropertyAssignment(node.parent)
+    ) {
+      prose.push(node.text);
+    } else if (ts.isTemplateExpression(node) && !inClassName(node)) {
+      prose.push(node.head.text, ...node.templateSpans.map((sp) => sp.literal.text));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+
+  const text = prose.join("\n");
+  let n = 0;
+  for (const term of terms) {
+    // Exact phrases, case-sensitive: these are labels, and "Look up" inside
+    // "Look up ROSNEFT OIL COMPANY" is the same regression.
+    const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g");
+    n += (text.match(re) ?? []).length;
+  }
+  return n;
+}
+
 function walk(dir) {
   const out = [];
   for (const name of readdirSync(dir)) {
@@ -69,12 +147,14 @@ function walk(dir) {
 
 export function scan() {
   const counts = {};
+  const terms = bannedTerms();
   for (const file of walk(SRC)) {
     const rel = relative(ROOT, file);
     const src = readFileSync(file, "utf8");
     const hex = ALLOWED_HEX_FILES.has(rel) ? 0 : (src.match(HEX) ?? []).length;
     const text = (src.match(ARBITRARY_TEXT) ?? []).length;
-    if (hex || text) counts[rel] = { hex, text };
+    const vocab = VOCAB_EXEMPT.has(rel) ? 0 : countBanned(src, terms, rel);
+    if (hex || text || vocab) counts[rel] = { hex, text, vocab };
   }
   return counts;
 }
@@ -89,8 +169,8 @@ function loadBaseline() {
 
 function totals(counts) {
   return Object.values(counts).reduce(
-    (a, c) => ({ hex: a.hex + c.hex, text: a.text + c.text }),
-    { hex: 0, text: 0 }
+    (a, c) => ({ hex: a.hex + c.hex, text: a.text + c.text, vocab: a.vocab + (c.vocab ?? 0) }),
+    { hex: 0, text: 0, vocab: 0 }
   );
 }
 
@@ -103,12 +183,12 @@ if (args.includes("--update")) {
   if (!allowIncrease) {
     const raised = Object.entries(counts).filter(([f, c]) => {
       const b = baseline[f];
-      return b && (c.hex > b.hex || c.text > b.text);
+      return b && (c.hex > b.hex || c.text > b.text || c.vocab > (b.vocab ?? 0));
     });
     if (raised.length) {
       console.error(
         "Refusing to raise the baseline. The ratchet only turns one way.\n" +
-          raised.map(([f, c]) => `  ${f}  hex ${baseline[f].hex}→${c.hex}  text ${baseline[f].text}→${c.text}`).join("\n") +
+          raised.map(([f, c]) => `  ${f}  hex ${baseline[f].hex}→${c.hex}  text ${baseline[f].text}→${c.text}  vocab ${baseline[f].vocab ?? 0}→${c.vocab}`).join("\n") +
           "\n\nFix the file, or pass --allow-increase if you genuinely mean it."
       );
       process.exit(1);
@@ -116,7 +196,10 @@ if (args.includes("--update")) {
   }
   writeFileSync(BASELINE, JSON.stringify(counts, null, 2) + "\n");
   const t = totals(counts);
-  console.log(`design-system: baseline written — ${t.hex} hex, ${t.text} arbitrary text sizes`);
+  console.log(
+    `design-system: baseline written — ${t.hex} hex, ${t.text} arbitrary text sizes, ` +
+      `${t.vocab} banned terms`
+  );
   process.exit(0);
 }
 
@@ -124,19 +207,26 @@ const failures = [];
 for (const [file, c] of Object.entries(counts)) {
   const b = baseline[file];
   if (!b) {
+    const parts = [
+      c.hex && `${c.hex} raw hex`,
+      c.text && `${c.text} text-[NNpx]`,
+      c.vocab && `${c.vocab} banned term${c.vocab === 1 ? "" : "s"}`,
+    ].filter(Boolean);
     failures.push(
-      `${file}: new file with ${c.hex} raw hex and ${c.text} text-[NNpx] — new code uses tokens and the named scale`
+      `${file}: new file with ${parts.join(", ")} — new code uses the tokens, the named scale and lib/vocab.ts`
     );
     continue;
   }
   if (c.hex > b.hex) failures.push(`${file}: raw hex ${b.hex} → ${c.hex}`);
   if (c.text > b.text) failures.push(`${file}: text-[NNpx] ${b.text} → ${c.text}`);
+  if (c.vocab > (b.vocab ?? 0))
+    failures.push(`${file}: banned terms ${b.vocab ?? 0} → ${c.vocab} (see lib/vocab.ts)`);
 }
 
 // A file that improved should update the baseline, so the gain is locked in.
 const improved = Object.entries(counts).filter(([f, c]) => {
   const b = baseline[f];
-  return b && (c.hex < b.hex || c.text < b.text);
+  return b && (c.hex < b.hex || c.text < b.text || c.vocab < (b.vocab ?? 0));
 });
 const removed = Object.keys(baseline).filter((f) => !(f in counts));
 
@@ -153,7 +243,7 @@ if (failures.length) {
 if (improved.length || removed.length) {
   console.error(
     "Design-system lint: counts went DOWN and the baseline is stale.\n" +
-      [...improved.map(([f, c]) => `  ${f}  hex ${baseline[f].hex}→${c.hex}  text ${baseline[f].text}→${c.text}`),
+      [...improved.map(([f, c]) => `  ${f}  hex ${baseline[f].hex}→${c.hex}  text ${baseline[f].text}→${c.text}  vocab ${baseline[f].vocab ?? 0}→${c.vocab}`),
        ...removed.map((f) => `  ${f}  now clean`)].join("\n") +
       "\n\nRun: npm run lint:design -- --update  (this locks the improvement in)"
   );
@@ -162,6 +252,6 @@ if (improved.length || removed.length) {
 
 const t = totals(counts);
 console.log(
-  `design-system: ok — ${t.hex} raw hex, ${t.text} arbitrary text sizes remaining ` +
-    `across ${Object.keys(counts).length} files (ratcheting down)`
+  `design-system: ok — ${t.hex} raw hex, ${t.text} arbitrary text sizes, ` +
+    `${t.vocab} banned terms remaining across ${Object.keys(counts).length} files (ratcheting down)`
 );

@@ -19,10 +19,14 @@
  *   layer needs collision detection, a portal and dismissal handling to be
  *   correct, and there is no popover library here; an expanded block that
  *   pushes its siblings down is plainer and cannot be clipped or land offscreen.
- * - **`Described`** — no control at all: renders the text visibly (or, when the
- *   layout genuinely has no room, `sr-only`) and wires `aria-describedby`. For
- *   the short cases, where a disclosure would be more furniture than the
- *   sentence it hides.
+ * A second shape, `Described`, was written for the short cases —
+ * `aria-describedby` pointing at a separate element — and **deleted unused in
+ * Phase 125**. Every short case turned out to want inline text appended to the
+ * control's own accessible name, not a separately-wired description, and the
+ * one place that genuinely needs `aria-describedby` (the national-ID format
+ * warning in `App.tsx`, which points a form field at a `role="status"`) already
+ * does it directly. An unused primitive in a design system is worse than none:
+ * it invites the wrong pattern to be adopted because it exists.
  *
  * The rule this encodes: **if a `title` is the only place something is said,
  * it is not said.** A `title` that duplicates a visible label or an `aria-label`
@@ -66,32 +70,5 @@ export function Explain({
         </span>
       )}
     </>
-  );
-}
-
-/**
- * `aria-describedby` without a control — for a short explanation that belongs
- * on screen anyway.
- *
- * `visible` defaults to true on purpose. Hiding the sentence from sighted users
- * and showing it to screen readers reproduces the original bug with the
- * audiences swapped; pass `visible={false}` only where the layout truly cannot
- * hold it (a dense pointer row, a table cell).
- */
-export function Described({
-  id,
-  children,
-  visible = true,
-  className = "",
-}: {
-  id: string;
-  children: React.ReactNode;
-  visible?: boolean;
-  className?: string;
-}) {
-  return (
-    <span id={id} className={visible ? className : "sr-only"}>
-      {children}
-    </span>
   );
 }

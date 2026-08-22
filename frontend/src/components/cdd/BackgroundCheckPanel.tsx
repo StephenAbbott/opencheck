@@ -5,8 +5,8 @@
  * FullCheck maps the corporate network; BackgroundCheck brings the
  * *people* connected to the entity to the fore — officers, PSCs and
  * beneficial owners from the assembled BODS bundle — and lets the user
- * run an on-demand, per-person screen across every person-capable
- * source (Companies House officers, OpenSanctions, EveryPolitician,
+ * run an on-demand, per-person screen across every source that holds
+ * people (Companies House officers, OpenSanctions, EveryPolitician,
  * Wikidata, OpenAleph).
  *
  * Evidence discipline: person screening is name-based, so every result
@@ -189,7 +189,7 @@ export default function BackgroundCheckPanel({
           <span className="font-medium">{legalName ?? lei}</span> in the data
           already gathered — officers, persons with significant control and
           beneficial owners. Run a check to screen a person against every
-          person-capable source for PEP, sanctions and offshore-leaks signals.
+          source that holds people, for PEP, sanctions and offshore-leaks signals.
         </p>
         <p className="text-[12px] text-violet-900/80 leading-[1.6] mt-1.5">
           Person screening is <span className="font-medium">name-based</span>:

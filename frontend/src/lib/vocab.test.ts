@@ -164,3 +164,32 @@ describe("BANNED_SYNONYMS", () => {
     }
   });
 });
+
+describe("the banned labels the lint enforces", () => {
+  it("bans phrases, not words", () => {
+    // The first version of this list banned single words and the lint that
+    // enforced it reported 90 violations, every one false: "an empty result
+    // here is not a clean screen", "a fast screen of the subject", the SSE
+    // event named "hit", `Liveness = "stub"`, and `min-h-screen` in a Tailwind
+    // class. A word ban would have forced rewrites of correct English.
+    for (const banned of Object.keys(BANNED_SYNONYMS)) {
+      expect(banned.length, banned).toBeGreaterThan(4);
+    }
+  });
+
+  it("bans each label that actually regressed", () => {
+    // One button said "Screen person" while another said "Run background
+    // check" for the same action; an empty state said "No hits." forty lines
+    // from one that said "3 results".
+    for (const label of ["No hits.", "Screen person", "Run background check", "Look up"]) {
+      expect(Object.keys(BANNED_SYNONYMS), label).toContain(label);
+    }
+  });
+
+  it("points every banned label at something renderable", () => {
+    for (const [banned, replacement] of Object.entries(BANNED_SYNONYMS)) {
+      expect(replacement, banned).toBeTruthy();
+      expect(replacement, banned).not.toBe(banned);
+    }
+  });
+});

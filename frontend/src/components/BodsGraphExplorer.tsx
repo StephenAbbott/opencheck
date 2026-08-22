@@ -194,8 +194,8 @@ export default function BodsGraphExplorer({
   const noun = direction === "subsidiaries" ? "subsidiaries" : "owners/controllers";
   const helperText =
     direction === "subsidiaries"
-      ? "Resolves the next layer of subsidiaries for frontier companies which have an LEI. Chains which end with people can't be explored further"
-      : "Resolves the next layer of ownership for frontier companies which have an LEI. Chains which end with people can't be explored further";
+      ? "Resolves the next layer of subsidiaries for the companies at the edge of the network so far, where they have an LEI. Chains that end with people can't be explored further"
+      : "Resolves the next layer of ownership for the companies at the edge of the network so far, where they have an LEI. Chains that end with people can't be explored further";
 
   // Subject signals (QuickCheck, from the prop) + everything discovered while
   // expanding = the network-wide risk; `additionalSignals` is the diff.
@@ -260,8 +260,8 @@ export default function BodsGraphExplorer({
       });
       const newRels = (res.bods as Stmt[]).filter((s) => s.recordType === "relationship").length;
       const parts: string[] = [];
-      if (newRels === 0) parts.push(`No further ${noun} disclosed for the current frontier.`);
-      if (res.truncated) parts.push(`Only the first ${res.count} were expanded (frontier was larger).`);
+      if (newRels === 0) parts.push(`No further ${noun} disclosed for the companies at the edge of the network.`);
+      if (res.truncated) parts.push(`Only the first ${res.count} were expanded — there were more.`);
       setExpandNote(parts.join(" ") || null);
     } catch (e) {
       setExpandNote(`Couldn't add layer: ${(e as Error).message}`);
@@ -288,12 +288,12 @@ export default function BodsGraphExplorer({
         if (cancelRef.current) { stop = "cancelled"; break; }
         const front = frontierAnchors(working, bodsToGraph(working).edges, expanded, direction);
         if (front.length === 0) {
-          stop = "frontier exhausted (no further LEI-bearing companies)";
+          stop = "there was nothing further to expand (no more companies with an LEI)";
           break;
         }
         const entities = working.filter((s) => (s as Stmt).recordType === "entity").length;
         if (entities >= FULLCHECK_NODE_CAP || expanded.size >= MAX_EXPANDED) {
-          stop = `node cap reached (${entities} companies)`;
+          stop = `the size limit was reached (${entities} companies)`;
           break;
         }
         setRunProgress(
