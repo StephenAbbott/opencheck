@@ -543,7 +543,7 @@ or corroboration** (that is the signals layer, with its own confidence
 model), and **state absence in the same voice as presence** — silence reads
 as "nothing to see".
 
-Seven adapters have templates (`bods_gleif`, `opensanctions`,
+Eight adapters have templates (`gleif`, `bods_gleif`, `opensanctions`,
 `companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`). The
 frontend falls back `finding → summary → nothing`
 (`frontend/src/lib/sourceFinding.ts`), so an adapter without one renders
@@ -553,6 +553,31 @@ obvious sentence was not supportable: the GLEIF Parquet extract has no
 percentages or parent names, OpenSanctions' dataset slugs cannot be widened
 into regime names without inference, OpenCorporates has `gb` and not
 "England and Wales". Say less rather than more.
+
+**Two GLEIF templates, one vocabulary.** `finding_gleif()` reads the live
+`GleifAdapter.fetch` bundle — the source every lookup shows;
+`finding_bods_gleif()` reads Open Ownership's Parquet extract, which is in
+`_DELIBERATELY_UNREGISTERED` and serves only the three curated
+`bulkBods: true` examples. **Check which one you are editing** — the first
+pass put the template on the curated path only, so the live GLEIF row had no
+sentence at all.
+
+Both say **"consolidated by"** and never "owns", "holds", "shareholder" or a
+percentage, because GLEIF Level 2 is *accounting consolidation*
+(`IS_DIRECTLY/ULTIMATELY_CONSOLIDATED_BY`) — a consolidating parent need not
+be a shareholder, and GLEIF publishes no percentage anywhere in Level 2.
+`test_findings.py` runs three parametrized guards over every producible GLEIF
+sentence and fails the build on a `%`, on an ownership verb, or on a missing
+`consolidat`. A missing parent is a **reporting exception** — a permitted
+filing defined by the LEI ROC policy, worded as such and never as a refusal
+to disclose; `_GLEIF_EXCEPTION_PHRASES` maps the five reasons `NON_PUBLIC`
+absorbed in Reporting Exceptions Format 2.1 to the same wording as the code
+that replaced them, and an unrecognised code still reports that an exception
+was filed rather than guessing at its meaning. Exception reasons are read
+from both `exceptionReason` (live API, OO dump) and `reason`, as
+`mapper.py:1935` does. "Direct subsidiaries" is only said where the data says
+direct: the live count comes from GLEIF's `/direct-children` endpoint, while
+the Parquet relationship table holds ultimate links too.
 
 ---
 

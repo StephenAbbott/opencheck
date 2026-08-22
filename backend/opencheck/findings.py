@@ -183,23 +183,201 @@ def _join_names(names: list[str], limit: int = 2) -> str:
 
 
 # ---------------------------------------------------------------------------
+# GLEIF — the live Level 1 + Level 2 bundle (this is the source every lookup
+# shows; ``bods_gleif`` below is the curated Parquet extract)
+# ---------------------------------------------------------------------------
+
+# GLEIF Level 2 is an ACCOUNTING CONSOLIDATION relationship, not a
+# shareholding. Its endpoints are the direct and ultimate *accounting
+# consolidating parent* — IS_DIRECTLY_CONSOLIDATED_BY / IS_ULTIMATELY_
+# CONSOLIDATED_BY — meaning "this entity's figures are consolidated into that
+# entity's group accounts". GLEIF publishes no percentage anywhere in Level 2,
+# and a consolidating parent is not necessarily a shareholder at all. So every
+# GLEIF sentence says "consolidated by" and never "owned by", "holds", or a
+# figure with a % on it. ``test_findings.py`` fails the build if one ever does.
+#
+# The reasons an entity may file no parent are equally specific: a *reporting
+# exception* is a permitted filing defined by the LEI ROC policy, not a refusal
+# to disclose, and the phrasing below says so.
+_GLEIF_EXCEPTION_PHRASES: dict[str, str] = {
+    "NATURAL_PERSONS": "control rests with natural persons",
+    "NO_KNOWN_PERSON": "no controlling person is known",
+    "NO_LEI": "the parent has no LEI",
+    "NON_CONSOLIDATING": "the parent prepares no consolidated accounts",
+    # NON_PUBLIC absorbed the five reasons below in Reporting Exceptions
+    # Format 2.1 (2022-03-01); records still carrying the old codes read the
+    # same way, because they mean the same thing.
+    "NON_PUBLIC": "the relationship is not public",
+    "BINDING_LEGAL_COMMITMENTS": "the relationship is not public",
+    "LEGAL_OBSTACLES": "the relationship is not public",
+    "DISCLOSURE_DETRIMENTAL": "the relationship is not public",
+    "DETRIMENT_NOT_EXCLUDED": "the relationship is not public",
+    "CONSENT_NOT_OBTAINED": "the relationship is not public",
+}
+
+
+def _gleif_parent_name(parent: dict[str, Any] | None) -> str | None:
+    """``direct_parent.attributes.entity.legalName.name`` — the parent's own
+    Level 1 record, which is what the parent endpoints return."""
+    if not parent:
+        return None
+    attrs = parent.get("attributes") or parent
+    entity = attrs.get("entity") or {}
+    name = (entity.get("legalName") or {}).get("name")
+    return str(name).strip() or None if name else None
+
+
+def _gleif_parent_lei(parent: dict[str, Any] | None) -> str:
+    """``attributes.lei``, falling back to the record ``id`` as the mapper does."""
+    if not parent:
+        return ""
+    attrs = parent.get("attributes") or parent
+    return str(attrs.get("lei") or parent.get("id") or "").strip().upper()
+
+
+def _gleif_exception_reason(exception: dict[str, Any] | None) -> str:
+    """``attributes.exceptionReason`` (live API and OO dump both seen; the
+    mapper reads ``reason`` too, so this does the same)."""
+    if not exception:
+        return ""
+    attrs = exception.get("attributes") or exception
+    return str(attrs.get("exceptionReason") or attrs.get("reason") or "").strip().upper()
+
+
+def _gleif_child_clause(children: int, *, direct: bool = True) -> str | None:
+    """Subsidiaries as GLEIF holds them: entities that *report* this one as
+    their consolidating parent — a reporting relationship, not an owned asset.
+
+    ``direct`` is only true where the data says so. The live bundle's count
+    comes from GLEIF's ``/direct-children`` endpoint, so it is direct by
+    construction; the Parquet extract's children are whatever the relationship
+    table holds, which includes ultimate links, so that path drops the word
+    unless every child interest is filed as direct.
+    """
+    if not children:
+        return None
+    if direct:
+        noun = plural(children, "direct subsidiary", "direct subsidiaries")
+    else:
+        noun = plural(children, "subsidiary", "subsidiaries")
+    return f"{noun} {'reports' if children == 1 else 'report'} to it"
+
+
+def _gleif_exception_clause(reason: str, *, ultimate: bool = False, both: bool = False) -> str:
+    """Word a reporting exception as the permitted filing it is."""
+    level = (
+        "no consolidating parent is reported at either level"
+        if both
+        else "no ultimate consolidating parent is reported"
+        if ultimate
+        else "no consolidating parent is reported"
+    )
+    phrase = _GLEIF_EXCEPTION_PHRASES.get(reason)
+    if not phrase:
+        # An exception code we do not have wording for is still a permitted
+        # filing — report that much rather than guessing at its meaning.
+        return f"{level}; a permitted exception is filed instead"
+    return f"{level}: {phrase}, a permitted exception"
+
+
+def finding_gleif(bundle: dict[str, Any]) -> str | None:
+    """Who consolidates this entity's accounts, per GLEIF Level 2.
+
+    Reads ``GleifAdapter.fetch`` output: ``direct_parent`` / ``ultimate_parent``
+    (each the parent's full Level 1 record, so the parent's legal name is
+    available), ``direct_parent_exception`` / ``ultimate_parent_exception``
+    (reporting-exception reason codes), and ``direct_children_total``.
+
+    See the vocabulary note above ``_GLEIF_EXCEPTION_PHRASES``: consolidation
+    is not ownership, so nothing here says owned, holds, or a percentage.
+    """
+    if not bundle or bundle.get("is_stub") or not bundle.get("record"):
+        return None
+
+    direct = bundle.get("direct_parent")
+    ultimate = bundle.get("ultimate_parent")
+    direct_name = _gleif_parent_name(direct)
+    ultimate_name = _gleif_parent_name(ultimate)
+    direct_reason = _gleif_exception_reason(bundle.get("direct_parent_exception"))
+    ultimate_reason = _gleif_exception_reason(bundle.get("ultimate_parent_exception"))
+
+    lead: str | None
+    second: str | None = None
+
+    if direct and ultimate and _gleif_parent_lei(direct) == _gleif_parent_lei(ultimate):
+        # One entity filed at both levels — say it once, and say it is both.
+        lead = (
+            f"consolidated by {direct_name}, its direct and ultimate parent"
+            if direct_name
+            else "consolidated by one entity reported as both direct and ultimate parent"
+        )
+    elif direct and ultimate:
+        lead = f"consolidated by {direct_name}" if direct_name else "a direct parent is reported"
+        second = (
+            f"ultimately by {ultimate_name}"
+            if ultimate_name
+            else "a separate ultimate parent is reported"
+        )
+    elif direct:
+        lead = f"consolidated by {direct_name}" if direct_name else "a direct parent is reported"
+        if ultimate_reason:
+            second = _gleif_exception_clause(ultimate_reason, ultimate=True)
+    elif ultimate:
+        lead = (
+            f"ultimately consolidated by {ultimate_name}"
+            if ultimate_name
+            else "an ultimate parent is reported"
+        )
+        if direct_reason:
+            second = _gleif_exception_clause(direct_reason)
+    elif direct_reason and ultimate_reason == direct_reason:
+        lead = _gleif_exception_clause(direct_reason, both=True)
+    elif direct_reason and ultimate_reason:
+        lead = _gleif_exception_clause(direct_reason)
+        # The lead has already said "a permitted exception"; repeating the
+        # whole frame for the ultimate level pushes the sentence past the cap
+        # and the tail clause is then dropped entirely — losing the fact.
+        ultimate_phrase = _GLEIF_EXCEPTION_PHRASES.get(ultimate_reason)
+        second = f"ultimately, {ultimate_phrase}" if ultimate_phrase else None
+    elif direct_reason:
+        lead = _gleif_exception_clause(direct_reason)
+    elif ultimate_reason:
+        lead = _gleif_exception_clause(ultimate_reason, ultimate=True)
+    else:
+        # GLEIF expects either a parent or an exception; neither on file is a
+        # fact about the filing, stated as such rather than left blank.
+        lead = "no consolidating parent and no reporting exception are on file"
+
+    children = int(bundle.get("direct_children_total") or 0)
+    child_clause = _gleif_child_clause(children)
+
+    return clauses_to_sentence([lead, second, child_clause], sep="; ")
+
+
+# ---------------------------------------------------------------------------
 # bods_gleif — Open Ownership's BODS v0.4 extract of the GLEIF bulk data
 # ---------------------------------------------------------------------------
 
 
 def finding_bods_gleif(payload: dict[str, Any], statement_id: str) -> str | None:
-    """What the GLEIF relationship file says about who this entity reports to.
+    """The same Level 2 facts as :func:`finding_gleif`, from the Parquet extract.
 
-    Deviation from the suggested shape: this extract carries **no ownership
-    percentages and no parent names** — GLEIF Level 2 publishes accounting
-    consolidation links, and Open Ownership's Parquet relationship table holds
-    only statement ids plus ``directOrIndirect``. So the sentence counts and
-    qualifies the parent links rather than naming a holder and a stake.
+    This path serves only the curated bulk-BODS examples; every live lookup
+    goes through :func:`finding_gleif`. The vocabulary is deliberately
+    identical — "consolidating parent", never ownership — so the two paths
+    cannot describe the same relationship with two different verbs.
+
+    Deviation from the suggested shape: this extract carries **no percentages
+    and no parent names**. Open Ownership's Parquet relationship table holds
+    statement ids plus ``directOrIndirect`` and nothing else, so the sentence
+    counts and qualifies the parent links rather than naming a parent. Where
+    the live bundle can say "consolidated by X", this can only say how many
+    consolidating parents were reported.
     """
     statements = payload.get("bods_statements") or []
     entity: dict[str, Any] = {}
     parents: list[dict[str, Any]] = []
-    children = 0
+    children: list[dict[str, Any]] = []
     for stmt in statements:
         kind = stmt.get("statementType")
         details = stmt.get("recordDetails") or {}
@@ -211,30 +389,35 @@ def finding_bods_gleif(payload: dict[str, Any], statement_id: str) -> str | None
             if subject == statement_id:
                 parents.append(details)
             elif party == statement_id:
-                children += 1
+                children.append(details)
 
-    directness = {
-        str(interest.get("directOrIndirect") or "").lower()
-        for rel in parents
-        for interest in (rel.get("interests") or [])
-    } - {""}
+    def _directness(rels: list[dict[str, Any]]) -> set[str]:
+        return {
+            str(interest.get("directOrIndirect") or "").lower()
+            for rel in rels
+            for interest in (rel.get("interests") or [])
+        } - {""}
+
+    directness = _directness(parents)
 
     if not parents:
         # GLEIF's own term for this is a reporting exception, but the
         # exception reason is not in the extract — so state the absence
         # plainly (rule 6) rather than naming a reason we do not hold.
-        parent_clause: str | None = "no parent relationship is reported"
+        parent_clause: str | None = "no consolidating parent is reported"
     elif directness == {"direct"}:
-        parent_clause = f"reports {plural(len(parents), 'direct parent')}"
+        parent_clause = f"reports {plural(len(parents), 'direct consolidating parent')}"
     elif directness == {"indirect"}:
-        parent_clause = f"reports {plural(len(parents), 'indirect parent')}"
+        parent_clause = f"reports {plural(len(parents), 'indirect consolidating parent')}"
     elif directness:
-        parent_clause = f"reports {plural(len(parents), 'parent')}, direct and indirect"
+        parent_clause = (
+            f"reports {plural(len(parents), 'consolidating parent')}, direct and indirect"
+        )
     else:
-        parent_clause = f"reports {plural(len(parents), 'parent')}"
+        parent_clause = f"reports {plural(len(parents), 'consolidating parent')}"
 
-    child_clause = (
-        f"{plural(children, 'subsidiary', 'subsidiaries')} report to it" if children else None
+    child_clause = _gleif_child_clause(
+        len(children), direct=_directness(children) == {"direct"}
     )
 
     dissolved = human_date(entity.get("dissolutionDate"))

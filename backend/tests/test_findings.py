@@ -10,6 +10,8 @@ asserting against a shape nothing else believes in.
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from opencheck.findings import (
@@ -17,6 +19,7 @@ from opencheck.findings import (
     clauses_to_sentence,
     finding_bods_gleif,
     finding_companies_house,
+    finding_gleif,
     finding_openaleph,
     finding_opencorporates,
     finding_opensanctions,
@@ -32,6 +35,10 @@ from opencheck.sources import SearchKind, SourceHit
 from opencheck.sources.bods_gleif import (
     _build_entity_statement,
     _build_relationship_statement,
+)
+from tests.test_bods_gleif_ftm import _child_record as gleif_child_record
+from tests.test_bods_gleif_ftm import (
+    _gleif_bundle_with_direct_parent as gleif_direct_parent_bundle,
 )
 from tests.test_bods_mapper import _sample_bundle as ch_sample_bundle
 from tests.test_bods_opencorporates import _minimal_bundle as oc_minimal_bundle
@@ -123,6 +130,40 @@ def _gleif_payload(*, parents: int = 1, children: int = 2, jurisdiction: str = "
             )
         )
     return {"source_id": "bods_gleif", "hit_id": _GLEIF_STATEMENT_ID, "bods_statements": statements}
+
+
+# The live GLEIF bundle. ``_gleif_bundle_with_direct_parent`` from
+# test_bods_gleif_ftm is the BP record with a direct parent; the keys the
+# adapter always emits but that fixture omits are defaulted here, and each
+# case overrides only what it is about.
+_GLEIF_ULTIMATE_PARENT = {
+    "id": "ULTIMATEXXXXXXXXXXXX",
+    "attributes": {
+        "lei": "ULTIMATEXXXXXXXXXXXX",
+        "entity": {"legalName": {"name": "BP p.l.c."}, "jurisdiction": "GB"},
+    },
+}
+
+
+def _gleif_bundle(**overrides: object) -> dict:
+    bundle = gleif_direct_parent_bundle()
+    bundle.setdefault("direct_parent_exception", None)
+    bundle.setdefault("ultimate_parent_exception", None)
+    bundle.setdefault("direct_children", [])
+    bundle.setdefault("direct_children_total", 0)
+    bundle.update(overrides)
+    return bundle
+
+
+def _gleif_exception(reason: str, *, ultimate: bool = False) -> dict:
+    """A GLEIF reporting-exception payload, shaped as the live API returns it
+    (see test_gleif_live's ``test_fetch_surfaces_reporting_exception``)."""
+    category = (
+        "ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT"
+        if ultimate
+        else "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT"
+    )
+    return {"attributes": {"exceptionCategory": category, "exceptionReason": reason}}
 
 
 def _oc_bundle() -> dict:
@@ -276,17 +317,146 @@ def test_non_numeric_psc_natures_are_rendered_as_prose() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_gleif_finding_leads_with_who_it_reports_to() -> None:
-    assert finding_bods_gleif(_gleif_payload(), _GLEIF_STATEMENT_ID) == (
-        "Reports 1 direct parent; 2 subsidiaries report to it; incorporated in Sweden."
+def test_gleif_finding_names_the_consolidating_parent() -> None:
+    assert finding_gleif(_gleif_bundle()) == "Consolidated by BP Group Holdings."
+
+
+def test_gleif_finding_counts_subsidiaries_that_report_to_it() -> None:
+    """``direct_children_total`` is GLEIF's own count of entities naming this
+    one as their consolidating parent — a reporting relationship, not assets
+    it owns."""
+    assert finding_gleif(_gleif_bundle(direct_children_total=12)) == (
+        "Consolidated by BP Group Holdings; 12 direct subsidiaries report to it."
     )
 
 
-def test_gleif_finding_states_a_missing_parent_in_the_same_voice() -> None:
+def test_gleif_finding_agrees_in_number_for_one_subsidiary() -> None:
+    assert finding_gleif(_gleif_bundle(direct_children_total=1)) == (
+        "Consolidated by BP Group Holdings; 1 direct subsidiary reports to it."
+    )
+
+
+def test_gleif_finding_separates_the_direct_and_ultimate_parent() -> None:
+    assert finding_gleif(_gleif_bundle(ultimate_parent=_GLEIF_ULTIMATE_PARENT)) == (
+        "Consolidated by BP Group Holdings; ultimately by BP p.l.c."
+    )
+
+
+def test_gleif_finding_says_one_parent_once_when_it_fills_both_levels() -> None:
+    """The same LEI filed as direct and ultimate parent must not be named
+    twice as if two entities were involved."""
+    bundle = _gleif_bundle()
+    bundle["ultimate_parent"] = gleif_direct_parent_bundle()["direct_parent"]
+    assert finding_gleif(bundle) == (
+        "Consolidated by BP Group Holdings, its direct and ultimate parent."
+    )
+
+
+def test_gleif_finding_handles_an_ultimate_parent_with_no_direct_one() -> None:
+    bundle = _gleif_bundle(direct_parent=None, ultimate_parent=_GLEIF_ULTIMATE_PARENT)
+    assert finding_gleif(bundle) == "Ultimately consolidated by BP p.l.c."
+
+
+def test_gleif_finding_reads_a_reporting_exception_as_a_permitted_filing() -> None:
+    """A reporting exception is a permitted reason defined by the LEI ROC
+    policy — not a failure to disclose — and must read that way (rule 6/7)."""
+    bundle = _gleif_bundle(
+        direct_parent=None,
+        direct_parent_exception=_gleif_exception("NATURAL_PERSONS"),
+    )
+    assert finding_gleif(bundle) == (
+        "No consolidating parent is reported: control rests with natural "
+        "persons, a permitted exception."
+    )
+
+
+@pytest.mark.parametrize(
+    "reason,expected",
+    [
+        ("NO_LEI", "the parent has no LEI"),
+        ("NON_CONSOLIDATING", "the parent prepares no consolidated accounts"),
+        ("NON_PUBLIC", "the relationship is not public"),
+        # Deprecated since Reporting Exceptions Format 2.1; records still
+        # carrying the old code mean what NON_PUBLIC means.
+        ("CONSENT_NOT_OBTAINED", "the relationship is not public"),
+    ],
+)
+def test_gleif_finding_words_each_exception_reason(reason: str, expected: str) -> None:
+    bundle = _gleif_bundle(
+        direct_parent=None, direct_parent_exception=_gleif_exception(reason)
+    )
+    finding = finding_gleif(bundle)
+    assert finding is not None
+    assert expected in finding
+    assert "a permitted exception" in finding
+
+
+def test_gleif_finding_collapses_the_same_exception_at_both_levels() -> None:
+    bundle = _gleif_bundle(
+        direct_parent=None,
+        direct_parent_exception=_gleif_exception("NATURAL_PERSONS"),
+        ultimate_parent_exception=_gleif_exception("NATURAL_PERSONS", ultimate=True),
+    )
+    assert finding_gleif(bundle) == (
+        "No consolidating parent is reported at either level: control rests "
+        "with natural persons, a permitted exception."
+    )
+
+
+def test_gleif_finding_keeps_an_unknown_exception_code_as_a_permitted_filing() -> None:
+    """GLEIF may add a reason code we have no wording for; the filing is still
+    permitted, so say that much rather than guessing at its meaning."""
+    bundle = _gleif_bundle(
+        direct_parent=None, direct_parent_exception=_gleif_exception("SOMETHING_NEW")
+    )
+    assert finding_gleif(bundle) == (
+        "No consolidating parent is reported; a permitted exception is filed instead."
+    )
+
+
+def test_gleif_finding_states_neither_parent_nor_exception_in_the_same_voice() -> None:
+    assert finding_gleif(_gleif_bundle(direct_parent=None)) == (
+        "No consolidating parent and no reporting exception are on file."
+    )
+
+
+def test_gleif_finding_is_none_for_a_stub_bundle() -> None:
+    assert finding_gleif({"source_id": "gleif", "hit_id": "X", "is_stub": True}) is None
+    assert finding_gleif({}) is None
+
+
+def test_bods_gleif_finding_uses_the_same_vocabulary_as_the_live_path() -> None:
+    """The curated Parquet examples and every live lookup must not describe
+    the same Level 2 relationship with two different verbs."""
+    assert finding_bods_gleif(_gleif_payload(), _GLEIF_STATEMENT_ID) == (
+        "Reports 1 direct consolidating parent; 2 direct subsidiaries report "
+        "to it; incorporated in Sweden."
+    )
+
+
+def test_bods_gleif_finding_does_not_call_an_indirect_child_a_direct_one() -> None:
+    """The live path counts GLEIF's ``/direct-children`` endpoint, so "direct"
+    is true by construction there. The Parquet relationship table holds
+    ultimate links too, so the word is only used when every child interest is
+    filed as direct."""
+    payload = _gleif_payload(children=0)
+    payload["bods_statements"].append(
+        _build_relationship_statement(
+            ("oo-gleif-rel-ci", "oo-gleif-child-i", _GLEIF_STATEMENT_ID, "2026-01-05"),
+            [{"directOrIndirect": "indirect"}],
+        )
+    )
+    finding = finding_bods_gleif(payload, _GLEIF_STATEMENT_ID)
+    assert finding is not None
+    assert "1 subsidiary reports to it" in finding
+    assert "direct subsidiary" not in finding
+
+
+def test_bods_gleif_finding_states_a_missing_parent_in_the_same_voice() -> None:
     """No parent filed is a fact about the filing, not an empty card (rule 6)."""
     payload = _gleif_payload(parents=0, children=0, jurisdiction="")
     assert finding_bods_gleif(payload, _GLEIF_STATEMENT_ID) == (
-        "No parent relationship is reported."
+        "No consolidating parent is reported."
     )
 
 
@@ -415,10 +585,148 @@ def test_wikidata_finding_is_none_for_an_empty_summary() -> None:
 
 
 # ---------------------------------------------------------------------------
+# GLEIF Level 2 is consolidation, not ownership
+# ---------------------------------------------------------------------------
+
+# Every sentence either GLEIF template can produce, live path and Parquet
+# path together. Both feed the vocabulary guard below.
+_ALL_GLEIF_FINDINGS: dict[str, str | None] = {
+    "direct": finding_gleif(_gleif_bundle()),
+    "direct+children": finding_gleif(_gleif_bundle(direct_children_total=12)),
+    "direct+one-child": finding_gleif(_gleif_bundle(direct_children_total=1)),
+    "direct+ultimate": finding_gleif(_gleif_bundle(ultimate_parent=_GLEIF_ULTIMATE_PARENT)),
+    "ultimate-only": finding_gleif(
+        _gleif_bundle(direct_parent=None, ultimate_parent=_GLEIF_ULTIMATE_PARENT)
+    ),
+    "direct+ultimate-exception": finding_gleif(
+        _gleif_bundle(
+            ultimate_parent_exception=_gleif_exception("NON_PUBLIC", ultimate=True)
+        )
+    ),
+    "children-with-record": finding_gleif(
+        _gleif_bundle(
+            direct_children=[gleif_child_record("CHILDXXXXXXXXXXXXXXX", "BP France SAS")],
+            direct_children_total=1,
+        )
+    ),
+    **{
+        f"exception/{reason}": finding_gleif(
+            _gleif_bundle(direct_parent=None, direct_parent_exception=_gleif_exception(reason))
+        )
+        for reason in (
+            "NATURAL_PERSONS",
+            "NO_KNOWN_PERSON",
+            "NO_LEI",
+            "NON_CONSOLIDATING",
+            "NON_PUBLIC",
+            "BINDING_LEGAL_COMMITMENTS",
+            "LEGAL_OBSTACLES",
+            "DISCLOSURE_DETRIMENTAL",
+            "DETRIMENT_NOT_EXCLUDED",
+            "CONSENT_NOT_OBTAINED",
+            "SOMETHING_NEW",
+        )
+    },
+    "exception/both-levels": finding_gleif(
+        _gleif_bundle(
+            direct_parent=None,
+            direct_parent_exception=_gleif_exception("NATURAL_PERSONS"),
+            ultimate_parent_exception=_gleif_exception("NATURAL_PERSONS", ultimate=True),
+        )
+    ),
+    "exception/differing-levels": finding_gleif(
+        _gleif_bundle(
+            direct_parent=None,
+            direct_parent_exception=_gleif_exception("NON_CONSOLIDATING"),
+            ultimate_parent_exception=_gleif_exception("NO_LEI", ultimate=True),
+        )
+    ),
+    "neither": finding_gleif(_gleif_bundle(direct_parent=None)),
+    "parquet": finding_bods_gleif(_gleif_payload(), _GLEIF_STATEMENT_ID),
+    "parquet/no-parent": finding_bods_gleif(
+        _gleif_payload(parents=0, children=0, jurisdiction=""), _GLEIF_STATEMENT_ID
+    ),
+    "parquet/indirect": finding_bods_gleif(_gleif_payload(children=0), _GLEIF_STATEMENT_ID),
+}
+
+#: GLEIF Level 2 is an accounting consolidation link (IS_DIRECTLY_CONSOLIDATED_BY),
+#: not a shareholding, and GLEIF publishes no percentage anywhere in it. A
+#: sentence that reached for ownership vocabulary would be asserting something
+#: the source never said.
+_OWNERSHIP_WORDS = (
+    "owns", "own", "owned", "holds", "hold", "held",
+    "shareholder", "shareholding", "stake", "equity", "majority",
+)
+
+#: Legal names the fixtures supply. A parent genuinely called "BP Group
+#: Holdings" is the source's word, not OpenCheck's, so it is removed before
+#: the vocabulary check — otherwise the guard fails on real company names
+#: (and every Nordic "… Holding AB" would trip it in production).
+_GLEIF_FIXTURE_NAMES = ("BP Group Holdings", "BP p.l.c.", "BP France SAS", "Ericsson AB")
+
+
+def _template_wording(finding: str) -> str:
+    """The sentence with source-supplied names stripped — what is left is
+    OpenCheck's own wording, which is what these rules govern."""
+    text = finding
+    for name in _GLEIF_FIXTURE_NAMES:
+        text = text.replace(name, " ")
+    return text.lower()
+
+
+@pytest.mark.parametrize("case", sorted(_ALL_GLEIF_FINDINGS))
+def test_no_gleif_finding_claims_ownership_or_a_percentage(case: str) -> None:
+    finding = _ALL_GLEIF_FINDINGS[case]
+    assert finding is not None, case
+    assert "%" not in finding, f"{case}: GLEIF publishes no percentages"
+    wording = _template_wording(finding)
+    for word in _OWNERSHIP_WORDS:
+        assert not re.search(rf"\b{word}\b", wording), (
+            f"{case}: {word!r} — Level 2 is consolidation, not ownership"
+        )
+
+
+@pytest.mark.parametrize("case", sorted(_ALL_GLEIF_FINDINGS))
+def test_every_gleif_finding_uses_the_consolidation_verb(case: str) -> None:
+    """One vocabulary across the live path and the curated Parquet path."""
+    finding = _ALL_GLEIF_FINDINGS[case]
+    assert finding is not None, case
+    assert "consolidat" in finding.lower(), case
+
+
+@pytest.mark.parametrize("case", sorted(_ALL_GLEIF_FINDINGS))
+def test_no_gleif_finding_exceeds_the_hard_cap(case: str) -> None:
+    finding = _ALL_GLEIF_FINDINGS[case]
+    assert finding is not None
+    assert len(finding) <= MAX_FINDING_CHARS, f"{case}: {len(finding)} chars"
+
+
+@pytest.mark.parametrize(
+    "case", sorted(k for k in _ALL_GLEIF_FINDINGS if k.startswith("exception/"))
+)
+def test_every_reporting_exception_reads_as_permitted(case: str) -> None:
+    """An exception is a permitted filing under the LEI ROC policy. None of
+    these sentences may read as concealment or as a compliance failure."""
+    finding = _ALL_GLEIF_FINDINGS[case]
+    assert finding is not None
+    assert "permitted exception" in finding
+    for word in ("fail", "refus", "conceal", "hidden", "missing", "undisclosed"):
+        assert word not in finding.lower(), f"{case}: {word!r}"
+
+
+# ---------------------------------------------------------------------------
 # Cross-cutting rules
 # ---------------------------------------------------------------------------
 
 _ALL_FIXTURE_FINDINGS: dict[str, str | None] = {
+    "gleif": finding_gleif(_gleif_bundle(direct_children_total=12)),
+    "gleif/ultimate": finding_gleif(_gleif_bundle(ultimate_parent=_GLEIF_ULTIMATE_PARENT)),
+    "gleif/exception": finding_gleif(
+        _gleif_bundle(
+            direct_parent=None, direct_parent_exception=_gleif_exception("NATURAL_PERSONS")
+        )
+    ),
+    "gleif/neither": finding_gleif(_gleif_bundle(direct_parent=None)),
     "bods_gleif": finding_bods_gleif(_gleif_payload(), _GLEIF_STATEMENT_ID),
     "bods_gleif/degraded": finding_bods_gleif(
         _gleif_payload(parents=0, children=0, jurisdiction=""), _GLEIF_STATEMENT_ID

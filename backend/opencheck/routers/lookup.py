@@ -28,8 +28,9 @@ from ..cross_check import assess_cross_source_names
 from ..findings import (
     finding_bods_gleif,
     finding_companies_house,
-    finding_opencorporates,
+    finding_gleif,
     finding_openaleph,
+    finding_opencorporates,
     finding_ted_eu,
     finding_wikidata,
 )
@@ -1100,6 +1101,9 @@ def _build_gleif_hit(ctx: _LookupCtx, gleif_bundle: dict[str, Any]) -> SourceHit
         "gleif", ctx.lei,
         name=ctx.legal_name or f"LEI {ctx.lei}",
         summary=f"LEI {ctx.lei} · {ctx.jurisdiction}",
+        # Reads the whole bundle (Level 2 parents, reporting exceptions,
+        # children count), not just the Level 1 record that becomes ``raw``.
+        finding=finding_gleif(gleif_bundle),
         identifiers=identifiers,
         raw={
             **(gleif_bundle.get("record") or {}),
