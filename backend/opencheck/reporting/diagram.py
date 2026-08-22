@@ -27,8 +27,12 @@ from typing import Any
 from xml.sax.saxutils import escape
 
 # Palette — mirrors frontend BODSGraph edge categories + BOVS node colours.
-_OWN = "#1565c0"     # ownership interest (blue)
-_CTRL = "#6a1b9a"    # control / management role (purple)
+# Phase 122: ownership and role moved onto the brand node tier
+# (oo.node.blue / oo.node.purple) so the exported PDF, the on-screen graph
+# and the mode badges cannot disagree. If BODSGraph's edge palette changes
+# again, this must move with it — there is no test pinning them together.
+_OWN = "#3b82f6"     # ownership interest  (oo.node.blue, FullCheck accent)
+_CTRL = "#7c3aed"    # control / management role (oo.node.purple)
 _PERSON = "#1d9e75"  # person node (green)
 _ENTITY = "#0d1b3e"  # entity node (navy)
 _UNSPEC = "#888888"  # unspecified party (grey)

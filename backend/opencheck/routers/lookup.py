@@ -25,9 +25,19 @@ from ..bods import BODSBundle, validate_shape
 from ..sources.base import LookupDeriver, raw_redaction_notice
 from .. import bods_data
 from ..cross_check import assess_cross_source_names
+from ..findings import (
+    finding_bods_gleif,
+    finding_companies_house,
+    finding_gleif,
+    finding_openaleph,
+    finding_opencorporates,
+    finding_ted_eu,
+    finding_wikidata,
+)
 from ..ftm import subject_to_ftm_entity
 from ..icij_check import assess_icij_names
 from ..openaleph_check import assess_openaleph_names
+from ..verdict import build_verdict
 from ..meip import meip_lookup
 from ..reconcile import possibly_same_entities, reconcile
 from ..risk import DegradedSource, RiskSignal, assess_bundle, assess_hits
@@ -146,6 +156,12 @@ class ReportResponse(BaseModel):
     #: that is not current must not read as live, just as a check that could
     #: not run must not read as clean. Per-hit values ride on each SourceHit.
     source_liveness: dict[str, dict[str, Any]] = {}
+    #: One deterministic sentence stating what the check found — see
+    #: ``opencheck.verdict``. Rendered at the top of the report, above the
+    #: evidence and above the AI summary. Template-built, never a model
+    #: call, and defaulted so replayed payloads recorded before Phase 122
+    #: still validate.
+    verdict: str | None = None
 
 
 class LookupResponse(ReportResponse):
@@ -311,6 +327,7 @@ async def _build_report(
         possibly_same_entities=[p.to_dict() for p in possibly_same_entities(bods_all)],
         degraded_sources=[d.to_dict() for d in degraded],
         openaleph_screening=oa_screening,
+        verdict=build_verdict(all_signals, [d.to_dict() for d in degraded]),
     )
 
 
@@ -393,6 +410,7 @@ def _hit(
     identifiers: dict[str, str],
     raw: dict[str, Any],
     is_stub: bool = False,
+    finding: str | None = None,
 ) -> SourceHit:
     return SourceHit(
         source_id=source_id,
@@ -400,6 +418,7 @@ def _hit(
         kind=SearchKind.ENTITY,
         name=name,
         summary=summary,
+        finding=finding,
         identifiers=identifiers,
         raw=raw,
         is_stub=is_stub,
@@ -420,6 +439,9 @@ def _bh_companies_house(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
         "companies_house", local_id,
         name=p.get("company_name", ctx.legal_name or ""),
         summary=f"GB-COH {local_id}",
+        # The finding reads the whole bundle (PSCs, PSC statements, officers),
+        # not just the profile that becomes ``raw``.
+        finding=finding_companies_house(r),
         identifiers={"gb_coh": local_id}, raw=p,
     )
 
@@ -770,6 +792,7 @@ def _bh_opencorporates(r: dict, ctx: _LookupCtx) -> SourceHit:
         "opencorporates", ctx.ocid or "",
         name=c.get("name") or ctx.legal_name or "",
         summary=f"OC {ctx.ocid} · {c.get('current_status', '')}",
+        finding=finding_opencorporates(r),
         identifiers={
             "ocid": ctx.ocid or "",
             "lei": ctx.lei,
@@ -800,6 +823,7 @@ def _bh_wikidata(r: dict, ctx: _LookupCtx) -> SourceHit:
         "wikidata", ctx.qid or "",
         name=s.get("label") or ctx.qid or "",
         summary=s.get("description") or "",
+        finding=finding_wikidata(s),
         identifiers={
             "wikidata_qid": ctx.qid or "",
             "lei": ctx.lei,
@@ -839,6 +863,7 @@ def _bh_bods_gleif(r: dict, ctx: _LookupCtx) -> SourceHit:
         "bods_gleif", statement_id,
         name=name,
         summary="Open Ownership BODS v0.4 (bulk) · LEI match",
+        finding=finding_bods_gleif(r, statement_id),
         identifiers={"lei": ctx.lei, "bods_gleif_statementid": statement_id},
         raw=r,
     )
@@ -1009,6 +1034,7 @@ def _bh_ted_eu(r: dict, ctx: _LookupCtx) -> SourceHit:
         "ted_eu", hit_id,
         name=r.get("legal_name") or ctx.legal_name or ctx.lei,
         summary=" · ".join(parts),
+        finding=finding_ted_eu(r),
         identifiers=identifiers,
         raw=r,
     )
@@ -1075,6 +1101,9 @@ def _build_gleif_hit(ctx: _LookupCtx, gleif_bundle: dict[str, Any]) -> SourceHit
         "gleif", ctx.lei,
         name=ctx.legal_name or f"LEI {ctx.lei}",
         summary=f"LEI {ctx.lei} · {ctx.jurisdiction}",
+        # Reads the whole bundle (Level 2 parents, reporting exceptions,
+        # children count), not just the Level 1 record that becomes ``raw``.
+        finding=finding_gleif(gleif_bundle),
         identifiers=identifiers,
         raw={
             **(gleif_bundle.get("record") or {}),
@@ -1160,6 +1189,10 @@ async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
                     f"{h.summary} · mentioned in {total} "
                     f"document{'s' if total != 1 else ''}"
                 )
+                # The adapter built the finding without mentions (it fetches
+                # them here, after the hit exists) — rebuild so the sentence
+                # leads with the document count.
+                h.finding = finding_openaleph(h.raw, mentions)
     return deduped
 
 
@@ -1885,11 +1918,16 @@ async def _lookup_pipeline(
     # degraded list must never be split apart into "clean screen".
     # openaleph_screening rides here too: the informational (sub-signal)
     # percolation matches belong with the signals they didn't become.
+    # The verdict rides the same event as the signals and the degradations
+    # for the same reason they ride together: a sentence about what was
+    # found is only honest next to the count of screens that did not run,
+    # and this way a replayed run replays the sentence too.
     yield (
         "risk_signals",
         {
             "signals": merged,
             "degraded_sources": degraded_dicts,
+            "verdict": build_verdict(merged, degraded_dicts),
             "openaleph_screening": oa_screening,
             "source_liveness": {
                 sid: prov.to_dict() for sid, prov in sorted(provenances.items())
@@ -1990,6 +2028,7 @@ async def _lookup_impl(
     signals: list[dict[str, Any]] = []
     degraded_sources: list[dict[str, Any]] = []
     source_liveness: dict[str, dict[str, Any]] = {}
+    verdict: str | None = None
     oa_screening: list[dict[str, Any]] = []
     bods_all: list[dict[str, Any]] = []
     same_pairs: list[dict[str, Any]] = []
@@ -2033,6 +2072,7 @@ async def _lookup_impl(
         elif event == "risk_signals":
             signals = payload["signals"]
             degraded_sources = payload.get("degraded_sources") or []
+            verdict = payload.get("verdict")
             oa_screening = payload.get("openaleph_screening") or []
             source_liveness = payload.get("source_liveness") or {}
         elif event == "done":
@@ -2054,6 +2094,7 @@ async def _lookup_impl(
         degraded_sources=degraded_sources,
         openaleph_screening=oa_screening,
         source_liveness=source_liveness,
+        verdict=verdict,
         lei=norm_lei,
         legal_name=legal_name,
         jurisdiction=jurisdiction,

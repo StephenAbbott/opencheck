@@ -431,7 +431,7 @@ Specific rules:
 
 **BOVS arrowhead marker**: injected after draw() — `<marker id="oc-bovs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="strokeWidth" markerWidth="8" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/></marker>`. Applied to all `g.edgePath path` elements.
 
-**Edge categories**: `ownership` (blue #1565c0), `control` (orange #e65100, dotted), `role` (purple #6a1b9a, dashed), `unknown` (grey #888). Edge label text for control/unknown is darkened (#9a3412 / #595959) for WCAG 4.5:1 contrast; line colours are unchanged.
+**Edge categories** (Phase 122 palette): `ownership` (**#3b82f6** = `oo.node.blue`, the FullCheck accent), `control` (orange #e65100, dotted), `role` (**#7c3aed** = `oo.node.purple`, the BackgroundCheck accent, dashed), `unknown` (grey #888). Ownership and role deliberately share the mode-badge node colours: the network mode's accent *is* the ownership edge, and roles are held by people, which is what the people mode screens. Control keeps its orange — the node tier has none, and control must stay distinguishable from both. Edge **label** text is darkened for WCAG 4.5:1 (#1d4ed8 ownership, #9a3412 control, #6d28d9 role, #595959 unknown); the line colours themselves do not reach it at text sizes. `backend/opencheck/reporting/diagram.py` carries the same two values for the exported PDF and **must move with any future change — nothing pins them together**.
 
 ---
 
@@ -471,6 +471,116 @@ Scoping is **RELATED_\* only, on purpose**. Subject-level codes stay out because
 
 ---
 
+## Design system: the primitives (Phase 122)
+
+`frontend/src/components/ui/` — `Button`, `Chip`, `SectionLabel` /
+`SectionHeading`, `Icon`, exported from `ui/index.tsx` (named exports, no
+default, mirroring `icons/index.tsx`). **Use these rather than restyling a
+`<button>` or a `<span>` in place.** They exist because the audit found the
+same meaning wearing nine button styles, twelve chip families and eight
+eyebrow variants — the drift came from every component styling its own.
+
+- **`Button`** — `primary | secondary | ghost | warn | danger`, sizes `md`
+  (44px, the default) and `sm` (36px, pointer-dense rows only). `warn` is
+  "incomplete, not failed" (the re-run affordance); `danger` is reserved for
+  a failure the user must act on, **never** for an empty result. Export
+  `buttonClasses()` for an `<a>` that must look like a button — a second
+  implementation is how they diverged the first time.
+- **`Chip`** — tone chosen by what the chip *asserts*, never by how alarming
+  it should look: `risk | context | warn | ok | neutral | accent`. Pass
+  `confidence` to get the ●/◐/○ glyph **plus** its screen-reader label; v1
+  marked the glyph `aria-hidden` and named the level nowhere else.
+- **`Icon`** — one stroke set on a 24 grid, `currentColor`, `aria-hidden`
+  unless it is the only content of its control. The four mode glyphs are
+  the shipped v1 mode-card paths, copied coordinate-for-coordinate.
+
+**Tokens added:** `oo.soft` / `oo.softBorder` (the `#eef1fb` / `#cfd6f5`
+pair, previously hardcoded 24×), semantic `oo.warn.*` / `oo.ok.*` /
+`oo.info.*`, the `oo.graph.*` relation palette, `oo.node.teal`, and an
+eight-step named type scale (`text-oo-meta` 12 → `text-oo-display` 26).
+The 520 existing `text-[NNpx]` arbitrary values migrate component by
+component — new code uses the named steps.
+
+---
+
+## The four check modes (Phase 122/123)
+
+`quick | full | background | esg`, owned by `frontend/src/lib/checkMode.ts`
+(pure, so it is testable — the frontend suite is logic-only). The mode is
+the report's top-level structure: a tablist under the subject and verdict,
+which stay put across a switch.
+
+- **The mode is in the URL** (`?mode=`), and QuickCheck deliberately writes
+  no parameter — a shared QuickCheck link keeps the short form it has always
+  had. `documentTitleFor` keeps QuickCheck's title byte-identical to the
+  server-rendered `/entity` template (`NAME - OpenCheck`, hyphen not
+  em-dash); only a non-default mode appends a segment.
+- **`selectMode` is the single entry point.** It writes the URL, fires the
+  analytics event once per actual change, and moves focus into
+  `#panel-<mode>` — switching unmounts most of the page, and v1 left focus
+  on `<body>`.
+- **Climate & ESG is a tab, not a section.** It used to render inside
+  QuickCheck, reachable by scrolling and by nothing else. It sits after a
+  divider because it is a different question, not a fourth depth of check.
+- Entity-scoped sections (risk signals, structural context, cross-source
+  identifiers, possibly-same) are guarded `mode === "quick"`. They were
+  `mode !== "background"`, which silently included the new ESG tab.
+
+---
+
+## Source findings: the sentence on a hit row (Phase 123)
+
+`SourceHit.finding` is **a sentence**; `SourceHit.summary` is the identifier
+fragment it has always been (`"GB · registered entity"`), consumed by the
+search-result rows, the share card and `og_image.py`. **Do not repurpose
+`summary`** — a dozen call sites depend on its shape.
+
+Templates live in `backend/opencheck/findings.py`; its module docstring
+carries the ten rules, and every template is built from `clauses_to_sentence`
+so a missing field shortens the sentence rather than emitting `None` or a
+dangling `at %`. The two rules that matter most: **assert nothing about risk
+or corroboration** (that is the signals layer, with its own confidence
+model), and **state absence in the same voice as presence** — silence reads
+as "nothing to see".
+
+Eight adapters have templates (`gleif`, `bods_gleif`, `opensanctions`,
+`companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`). The
+frontend falls back `finding → summary → nothing`
+(`frontend/src/lib/sourceFinding.ts`), so an adapter without one renders
+exactly as it did before. **When you add a template, check what the adapter
+actually parses first** — the first seven turned up six cases where the
+obvious sentence was not supportable: the GLEIF Parquet extract has no
+percentages or parent names, OpenSanctions' dataset slugs cannot be widened
+into regime names without inference, OpenCorporates has `gb` and not
+"England and Wales". Say less rather than more.
+
+**Two GLEIF templates, one vocabulary.** `finding_gleif()` reads the live
+`GleifAdapter.fetch` bundle — the source every lookup shows;
+`finding_bods_gleif()` reads Open Ownership's Parquet extract, which is in
+`_DELIBERATELY_UNREGISTERED` and serves only the three curated
+`bulkBods: true` examples. **Check which one you are editing** — the first
+pass put the template on the curated path only, so the live GLEIF row had no
+sentence at all.
+
+Both say **"consolidated by"** and never "owns", "holds", "shareholder" or a
+percentage, because GLEIF Level 2 is *accounting consolidation*
+(`IS_DIRECTLY/ULTIMATELY_CONSOLIDATED_BY`) — a consolidating parent need not
+be a shareholder, and GLEIF publishes no percentage anywhere in Level 2.
+`test_findings.py` runs three parametrized guards over every producible GLEIF
+sentence and fails the build on a `%`, on an ownership verb, or on a missing
+`consolidat`. A missing parent is a **reporting exception** — a permitted
+filing defined by the LEI ROC policy, worded as such and never as a refusal
+to disclose; `_GLEIF_EXCEPTION_PHRASES` maps the five reasons `NON_PUBLIC`
+absorbed in Reporting Exceptions Format 2.1 to the same wording as the code
+that replaced them, and an unrecognised code still reports that an exception
+was filed rather than guessing at its meaning. Exception reasons are read
+from both `exceptionReason` (live API, OO dump) and `reason`, as
+`mapper.py:1935` does. "Direct subsidiaries" is only said where the data says
+direct: the live count comes from GLEIF's `/direct-children` endpoint, while
+the Parquet relationship table holds ultimate links too.
+
+---
+
 ## Brand: Check-mode badges (QuickCheck / FullCheck / BackgroundCheck)
 
 Reusable circular badges for social-media overlays, one per check mode —
@@ -493,6 +603,7 @@ mirrored as `--oo-mark-*` / `--oo-node-*` in `index.css`):
 | `oo.node.green` | `#22c55e` | logo.svg / `OpenCheckIcon` network node | **QuickCheck** accent |
 | `oo.node.blue` | `#3b82f6` | logo.svg / `OpenCheckIcon` network node | **FullCheck** accent |
 | `oo.node.purple` | `#7c3aed` | logo.svg / `OpenCheckIcon` network node | **BackgroundCheck** accent (near-matches the PEP/RELATED_PEP violet `#6d28d9` in the risk-signal system above — fitting for a people-screening mode) |
+| `oo.node.teal` | `#0d9488` | **invented, Phase 122** | **Climate & ESG** accent — the fourth mode. The one colour in the badge set not lifted from `logo.svg`: three modes had three logo nodes, a fourth has none. The alternative, reusing `oo.green` `#25cb55`, sits three hex values from QuickCheck's `#22c55e` and was indistinguishable from it in the mode tab strip |
 
 **Note this is a brand-mark tier, deliberately distinct from the UI's
 `oo.navy` (`#191d23`) / `oo.blue` (`#3d30d4`)** — the logo has always
@@ -523,8 +634,15 @@ generation shouldn't depend on network access being available at render
 time.
 
 Files: `outputs/mode-badges/{quickcheck,fullcheck,backgroundcheck}-badge.png`
-+ `fullcheck-badge.svg` (fully vector, no emoji-font dependency, safe to
-recolour/edit by hand). Dated per-post share cards (e.g.
++ `fullcheck-badge.svg` and `esg-badge.svg` (fully vector, no emoji-font
+dependency, safe to recolour/edit by hand). **`outputs/` is gitignored**, so
+the badges live on Stephen's disk only and are delivered as files, never
+committed. `esg-badge.svg` ships vector-only: its PNG must come from the
+`checkmode-badges` skill, which embeds Bitter as base64 woff2 — a headless
+render without that font substitutes the wordmark face silently. The ESG
+glyph is the same leaf path as the mode tab (`components/ui/Icon.tsx`, name
+`esg`), copied rather than redrawn, for the same reason FullCheck's glyph is
+the literal logo triangle. Dated per-post share cards (e.g.
 `outputs/backgroundcheck-share-2026-07-23.png`) drop the relevant badge
 into a 1200×630 layout following the existing `opencheck-social-*.html`
 convention — OpenCheck logo top-left, Bitter headline, accent-coloured

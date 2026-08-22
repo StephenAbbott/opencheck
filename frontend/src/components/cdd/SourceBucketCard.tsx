@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useId, useMemo, useState, useSyncExternalStore } from "react";
 import { deepen } from "../../lib/api";
+import { rowFinding } from "../../lib/sourceFinding";
 import type { BodsBreakdown, BoAccessNotice, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
 import { LivenessBadge, type SourceLiveness } from "./LivenessBadge";
@@ -911,7 +912,30 @@ function TedAwardsList({ hit }: { hit: SourceHit }) {
   );
 }
 
-export function HitRow({
+export /**
+ * The finding line. Lives here rather than inline so the fallback chain is
+ * testable — see `lib/sourceFinding.ts`, which is where the reasoning is.
+ */
+function HitFinding({ hit }: { hit: SourceHit }) {
+  const finding = rowFinding(hit);
+  if (!finding) return null;
+  return (
+    <>
+      <p
+        className={`text-[13px] mt-1 leading-[1.6] ${
+          finding.sub ? "text-oo-ink" : "text-oo-muted"
+        }`}
+      >
+        {finding.lead}
+      </p>
+      {finding.sub && (
+        <p className="text-[12px] text-oo-muted mt-0.5 leading-[1.5]">{finding.sub}</p>
+      )}
+    </>
+  );
+}
+
+function HitRow({
   hit,
   riskSignals,
   subjectSignals = [],
@@ -1011,7 +1035,13 @@ export function HitRow({
         </div>
         {titleAccessory && <div className="shrink-0">{titleAccessory}</div>}
       </div>
-      <p className="text-[13px] text-oo-muted mt-1 leading-[1.6]">{hit.summary}</p>
+      {/* Phase 122: lead with what the source said, not with what it is
+          called. `finding` is a sentence built by the adapter from fields it
+          already parsed; `summary` is the identifier fragment it has always
+          been ("GB · registered entity"). A source with no template yet
+          falls back to the fragment, so the migration can land one adapter
+          at a time without any row looking broken. */}
+      <HitFinding hit={hit} />
       <MentionsBreakdown hit={hit} />
       <TedAwardsList hit={hit} />
       {riskSignals.length > 0 && (

@@ -49,12 +49,12 @@ export function SourceLegend({
               title={`Highlight everything ${source} asserts`}
               className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
                 on
-                  ? "border-[#1565c0] bg-[#e8f0fb] text-[#1565c0] font-semibold"
-                  : "border-oo-rule bg-white text-oo-ink hover:border-[#1565c0] hover:text-[#1565c0]"
+                  ? "border-oo-blue bg-oo-soft text-oo-blue font-semibold"
+                  : "border-oo-rule bg-white text-oo-ink hover:border-oo-softBorder hover:text-oo-blue"
               }`}
             >
               <span className="truncate max-w-[16rem]">{source}</span>
-              <span className={on ? "text-[#1565c0]" : "text-oo-muted"}>{count}</span>
+              <span className={on ? "text-oo-blue" : "text-oo-muted"}>{count}</span>
             </button>
           );
         })}
