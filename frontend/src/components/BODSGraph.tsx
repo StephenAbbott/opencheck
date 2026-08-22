@@ -33,7 +33,7 @@ import type { RiskSignal } from "../lib/api";
 // here and the per-source scoping filter must read `evidence` identically, so
 // they share one implementation rather than two that can drift.
 import { buildSignalMap } from "../lib/signalScope";
-import { signalStyle } from "../lib/graphStyle";
+import { EDGE_STYLE, signalStyle } from "../lib/graphStyle";
 import GraphLegend from "./GraphLegend";
 import { RISK_PRESENTATION } from "./risk/RiskChip";
 import type { SameAsCandidate } from "../lib/reconcile";
@@ -176,19 +176,26 @@ const STYLESHEET: StylesheetStyle[] = [
   // colour and the ownership edge are the same thing said twice, so they are
   // now literally the same value. Label is oo.graph.ownershipText (#1d4ed8):
   // #3b82f6 is 3.0:1 on white, below the 4.5:1 text minimum (WCAG 1.4.3).
-  { selector: "edge[category = 'ownership']", style: { "line-color": "#3b82f6", "target-arrow-color": "#3b82f6", color: "#1d4ed8" } as cytoscape.Css.Edge },
-  // Control: dotted (non-colour cue vs ownership/unknown; distinct from role's
-  // dashed). Label text is darker than the line for 4.5:1 contrast (WCAG 1.4.3).
-  { selector: "edge[category = 'control']",  style: { "line-color": "#e65100", "target-arrow-color": "#e65100", color: "#9a3412", "line-style": "dotted" } as cytoscape.Css.Edge },
-  // Role takes oo.node.purple -- the BackgroundCheck accent. Roles are held
-  // by people, which is what that mode screens. Label #6d28d9 for contrast.
-  { selector: "edge[category = 'role']",     style: { "line-color": "#7c3aed", "target-arrow-color": "#7c3aed", color: "#6d28d9", "line-style": "dashed" } as cytoscape.Css.Edge },
-  { selector: "edge[category = 'unknown']",  style: { "line-color": "#888",    "target-arrow-color": "#888",    color: "#595959" } as cytoscape.Css.Edge },
-  // POSSIBLY_SAME_AS — dashed, undirected, amber; a "likely same entity" suggestion for review (never a merge).
+  // Phase 124: these read from EDGE_STYLE rather than restating it. The legend
+  // beside the canvas is generated from the same object, so a colour change
+  // moves both — writing the values twice is exactly the drift the
+  // design-system lint exists to stop, and this file had just acquired it.
+  ...(["ownership", "control", "role", "unknown"] as const).map((k) => ({
+    selector: `edge[category = '${k}']`,
+    style: {
+      "line-color": EDGE_STYLE[k].color,
+      "target-arrow-color": EDGE_STYLE[k].color,
+      color: EDGE_STYLE[k].textColor,
+      ...(EDGE_STYLE[k].dash === "solid" ? {} : { "line-style": EDGE_STYLE[k].dash }),
+    } as cytoscape.Css.Edge,
+  })),
+  // POSSIBLY_SAME_AS — dashed, undirected; a "likely same entity" suggestion
+  // for review, never a merge. Its extra geometry is why it is not in the map
+  // above, but its colour still comes from the one place.
   {
     selector: "edge[category = 'possiblySame']",
     style: {
-      "line-color": "#b45309", color: "#b45309",
+      "line-color": EDGE_STYLE.possiblySame.color, color: EDGE_STYLE.possiblySame.textColor,
       "line-style": "dashed", "curve-style": "bezier",
       "target-arrow-shape": "none", "source-arrow-shape": "none",
       width: 1.5, "font-style": "italic",
