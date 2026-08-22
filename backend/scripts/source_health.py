@@ -28,10 +28,16 @@ Statuses
 ``skipped``   not exercised: no credential configured, a required local
               artifact absent, or the source is registered but env-gated off.
 
-Exit code is non-zero when anything failed or degraded — which is what makes
-GitHub email a red scheduled run — or when more sources skipped for want of a
-credential than ``probes.MAX_SKIPPED_FOR_CREDENTIALS`` allows, so an expired
-or deleted secret cannot quietly shrink coverage behind a green tick.
+Exit code is non-zero when a source **failed**, when GLEIF dispatch drifted,
+when statement counts collapsed, or when more sources skipped for want of a
+credential than ``probes.MAX_SKIPPED_FOR_CREDENTIALS`` allows — so an expired
+or deleted secret cannot quietly shrink coverage behind a green tick. A red run
+is "act now"; that is what makes the GitHub email worth opening.
+
+A **degradation** does not fail the run. It is reported, and it opens and
+updates the rolling issue, but a rate limit, a snapshot due a refresh, or a
+register that refuses datacentre IPs is a caveat on the result rather than a
+broken source — and a job that is permanently red for those stops being read.
 
 Reporting hygiene
 -----------------
@@ -817,8 +823,21 @@ def main() -> int:
 
     counts = report["counts"]
     exit_code = 0
-    if counts[FAIL] or counts[DEGRADED]:
+    # Only a FAILURE turns the run red and sends the email. Degradations are
+    # real and are reported — they open and update the rolling issue — but they
+    # are not "something is broken, act now": a rate limit, a snapshot due a
+    # refresh, or a register that refuses datacentre IPs would otherwise make
+    # the job permanently red, and a permanently red monitor stops being read.
+    # That is the same argument that made jar_lithuania degraded rather than
+    # failed; applying it there and not here would have been incoherent.
+    if counts[FAIL]:
         exit_code = 1
+    elif counts[DEGRADED]:
+        print(
+            f"::warning::{counts[DEGRADED]} source(s) degraded — see the rolling "
+            "source-health issue. Not failing the run: a degradation is a caveat "
+            "on the result, not a broken source."
+        )
     if report.get("statement_collapses"):
         print(
             "::error::BODS statement counts collapsed for "
