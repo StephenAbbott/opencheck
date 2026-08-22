@@ -195,6 +195,21 @@ async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Resu
         known_gap=probe.known_gap,
     )
 
+    # 0. The adapter said outright that the source did not answer. That is a
+    #    degradation, not a source-health failure: JAR returns 403 to
+    #    datacentre IPs, so this fires on a GitHub runner while the register
+    #    serves real users normally. Reporting it as `fail` would make the
+    #    weekly job permanently red for something that is not broken, and a
+    #    permanently red monitor stops being read.
+    if isinstance(result, dict) and result.get("register_unavailable"):
+        detail = result.get("register_unavailable_detail") or "no detail"
+        out.status = DEGRADED
+        out.reason = (
+            f"the source did not answer ({detail}); the adapter surfaced this "
+            "in degraded_sources rather than passing off a partial card"
+        )
+        return out
+
     # 1. Emptiness — for a register lookup of a company that exists, nothing
     #    back means the parser stopped understanding the response.
     if out.result_size == 0 and not probe.allow_empty:

@@ -179,3 +179,82 @@ def test_raw_http_client_records_provenance(path: Path):
         "these functions will be badged 'Placeholder data' (see PR #153): "
         + ", ".join(offenders)
     )
+
+
+# --- 3. adapters can say "the source did not answer" -------------------------
+
+
+def test_degradation_recorder_collects_and_closes():
+    """The scope adapters write into, and the pipeline reads from."""
+    from opencheck import degradation
+
+    degradation.record("jar_lithuania", "should be dropped — no scope open")
+
+    degradation.begin()
+    degradation.record("jar_lithuania", "the register did not answer (HTTP 403)")
+    collected = degradation.collect()
+
+    assert [d.source_id for d in collected] == ["jar_lithuania"]
+    assert collected[0].check == degradation.CHECK_SOURCE_FETCH
+    assert "403" in collected[0].detail
+
+    # Scope closed: further records are dropped rather than leaking into the
+    # next lookup.
+    degradation.record("jar_lithuania", "after collect")
+    assert degradation.collect() == []
+
+
+def test_degradation_reasons_mirror_risk():
+    """The adapter-side constants duplicate risk's because risk imports
+    sources and an adapter cannot import risk at module level. If they ever
+    drift, degraded_sources gains a reason the rest of the system cannot
+    classify."""
+    from opencheck import degradation, risk
+
+    assert degradation.REASON_UPSTREAM_ERROR == risk.DEGRADED_UPSTREAM_ERROR
+    assert degradation.REASON_TIMEOUT == risk.DEGRADED_TIMEOUT
+    assert degradation.REASON_NOT_CONFIGURED == risk.DEGRADED_NOT_CONFIGURED
+    assert degradation.REASON_RATE_LIMITED == risk.DEGRADED_RATE_LIMITED
+    assert degradation.reason_for_failure("HTTP 429") == risk.DEGRADED_RATE_LIMITED
+    assert degradation.reason_for_failure("HTTP 403") == risk.DEGRADED_UPSTREAM_ERROR
+    assert degradation.reason_for_failure("ConnectTimeout") == risk.DEGRADED_TIMEOUT
+
+
+async def test_jar_lithuania_marks_an_unanswered_register(monkeypatch, tmp_path):
+    """A register that refuses us must not look like one that answered.
+
+    This is the shape that made Lithuania read as healthy: a bundle carrying
+    only the GLEIF legal name, with `is_stub: False` and every register field
+    null, is indistinguishable from a successful lookup of a company the
+    register says little about.
+    """
+    from opencheck import degradation
+    from opencheck.config import get_settings
+    from opencheck.sources.jar_lithuania import JarLithuaniaAdapter
+
+    # A clean data root: a cached bundle from an earlier real fetch would
+    # short-circuit the path under test and quietly pass.
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    get_settings.cache_clear()
+
+    adapter = JarLithuaniaAdapter()
+
+    async def _refuse(self, url, *, cache_key):
+        self._last_failure = "HTTP 403"
+        return None
+
+    monkeypatch.setattr(JarLithuaniaAdapter, "_fetch_html", _refuse, raising=True)
+
+    degradation.begin()
+    bundle = await adapter.fetch("301844044", legal_name="AB Ignitis grupė")
+    recorded = degradation.collect()
+
+    assert bundle["register_unavailable"] is True
+    assert bundle["register_unavailable_detail"] == "HTTP 403"
+    assert bundle["status"] is None
+    assert [d.source_id for d in recorded] == ["jar_lithuania"]
+    assert "403" in recorded[0].detail
+    # Privacy: the detail names the source and the failure, never the subject.
+    assert "Ignitis" not in recorded[0].detail
+    get_settings.cache_clear()
