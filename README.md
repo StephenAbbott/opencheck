@@ -16,15 +16,17 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 120** — the false positives no threshold could kill, killed by shape
+**Latest: Phase 123** — design v2, phases C+D: modes as the structure, rows that say what a source found
 
-The name-collision survivors of PR #86 all share one anatomy: generic tokens match, the distinctive token differs. A new distinctive-token gate strips legal forms and filler and requires the residues to agree — killing every named collision (including two sitting *above* the old 0.93 threshold and still shipping) while the threshold comes back to 0.87 and recovers the true matches it had cost, LVMH's only offshore-leaks signal among them. Measured on a reproducibly rebuilt 14-subject corpus, with the harness and adjudication committed this time. Commit `c5e6002`.
+The report is now organised by check mode, and each source row states what that source actually found rather
+than leaving the reader to infer it from a card. Commits `fbca1ba`, `54c98ca`.
 
-**Previous: Phase 119** — OpenAleph signal volume, measured before mended
+**Previous: Phase 122** — design v2, phases A+B: the primitives, and the answer first
 
-The "31× more `RELATED_SANCTIONED` than OpenSanctions" reading decomposed, on fresh production diagnostics, into ~6 genuine per-collection copies and 19 legal-form false positives — distinct subsidiaries "matching" a record named only «Общество с ограниченной ответственностью» ("Limited Liability Company"). Per-collection copies now collapse to one finding per related party per code, with every copy kept as evidence; names that erode to nothing once legal-form tokens are stripped can no longer match at all. Commit `f7ff4f7`.
+A design-system layer (tokens, primitives, Tailwind config) under an answer-first report: the verdict sentence
+leads, and it is built so that a run where screens degraded can never read as a clean one. Commit `a8ba5e7`.
 
-*Earlier: [Phase 118 — export-control topics classified at last](docs/status.md), [Phase 117 — the evidence list no longer crowds out the page](docs/status.md), [Phase 116 — the exported report separates risk findings from structural context](docs/status.md), [Phase 115 — one pooled source for the EITI countries' beneficial ownership registers](docs/status.md), and everything before it.*
+*Earlier: [Phase 121 — monitoring a source is not asking whether it replied](docs/status.md), [Phase 120 — the false positives no threshold could kill, killed by shape](docs/status.md), [Phase 119 — OpenAleph signal volume, measured before mended](docs/status.md), [Phase 118 — export-control topics classified at last](docs/status.md), and everything before it.*
 
 
 

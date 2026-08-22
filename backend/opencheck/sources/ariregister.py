@@ -601,6 +601,15 @@ class AriregisterAdapter(SourceAdapter):
             return None
 
         async def _post(envelope: str) -> str | None:
+            # Same reasoning as search() and fetch(): the X-Road SOAP call needs
+            # its own client and timeout, so build_client()'s automatic
+            # provenance.record_live() never fires. Record it here, at the
+            # moment we commit to the network. Nothing opens a provenance scope
+            # around the Time Machine path today, so this was latent rather
+            # than user-visible — but it is the same defect PR #153 fixed on
+            # the lookup path, and the AST guard in tests/test_source_probes.py
+            # now keeps both closed.
+            provenance.record_live("ariregister X-Road timeline")
             try:
                 async with httpx.AsyncClient(timeout=_SOAP_TIMEOUT) as client:
                     r = await client.post(_SOAP_URL, content=envelope, headers=_SOAP_HEADERS)

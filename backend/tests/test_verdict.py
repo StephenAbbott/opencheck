@@ -159,3 +159,39 @@ def test_unknown_codes_are_dropped_rather_than_half_rendered() -> None:
     # never produce "Findings on the company itself" with an empty subject.
     v = build_verdict([_sig("SOME_FUTURE_CODE")], [])
     assert v is None
+
+
+def test_a_source_that_did_not_answer_is_not_called_a_failed_screen() -> None:
+    """A register that refused us is a coverage gap, not a screening gap.
+
+    "an empty result there is not a clean screen" is a claim about screening —
+    it is what makes an unrun sanctions check impossible to mistake for a clean
+    one. A source that did not answer (jar_lithuania getting a 403) warrants
+    saying so, but not that phrase: nothing about screening was affected.
+    """
+    source_gap = {
+        "source_id": "jar_lithuania",
+        "check": "source_fetch",
+        "affected_signals": [],
+        "detail": "The Lithuanian JAR interface did not answer (HTTP 403).",
+        "reason": "upstream_error",
+    }
+    v = build_verdict([], [source_gap])
+    assert v is not None
+    assert "one source did not answer" in v
+    assert "not a clean screen" not in v
+    assert "did not run" not in v
+
+
+def test_both_kinds_of_gap_are_reported_separately() -> None:
+    source_gap = {
+        "source_id": "jar_lithuania",
+        "check": "source_fetch",
+        "affected_signals": [],
+        "detail": "did not answer",
+        "reason": "upstream_error",
+    }
+    v = build_verdict([], [_degraded("icij"), source_gap])
+    assert v is not None
+    assert "one check did not run" in v
+    assert "one source did not answer" in v
