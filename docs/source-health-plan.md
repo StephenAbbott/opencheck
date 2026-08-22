@@ -25,7 +25,7 @@ functional and still produce misleading output. Every probe therefore asserts **
 | 2 | Result is non-empty (unless the probe declares `allow_empty`) | API still 200s, shape drifted, parser yields nothing |
 | 3 | **Resolved liveness is the expected value** | **the Estonia class** — right data, wrong provenance |
 | 4 | Declared fields present and truthy | partial parse, silent degradation to a hollow answer |
-| 5 | *(still to do)* BODS statement counts by type | data still flows but ownership edges vanished |
+| 5 | BODS statement counts, week over week | data still flows but ownership edges vanished |
 
 Assertion 3 costs nothing to add and is the reason to build this at all. Assertion 4 turned out to
 matter more than expected — see the Lithuania finding below.
@@ -225,13 +225,63 @@ stale. Probe subjects need checking against the live register once.
 
 The one failure is Lithuania, still genuine and still unresolved (see above).
 
+## Third pass — 2026-08-22 (Phase C)
+
+### Week-over-week BODS statement counts
+
+Each probe's answer is mapped through its BODS mapper and counted by record type, plus a histogram
+of relationship interest types. Counts, not content: the artifact carries integers, never
+statements, so nothing licence-restricted or personal is written down.
+
+**The interest histogram replaced a single "beneficial ownership" bucket**, because the first
+version was wrong in a way worth recording: which interest type carries beneficial ownership
+varies by source. Estonia's ten beneficial owners map to `otherInfluenceOrControl`, not
+`beneficialOwnershipOrControl`, so a bucket watching only the latter reported zero BO for a source
+that carries plenty. Counting every type is both more honest and more informative.
+
+The diff reports **collapses**, not movement — a drop to zero or past half the previous count. A
+company genuinely filing a new PSC has to read as ordinary variation, or the check becomes noise
+and stops being read. Verified against a synthetic previous run: an interest type going 2 → 0 is
+reported, while person statements going 3 → 14 is correctly ignored.
+
+Last week's counts come from **the previous successful run's artifact**, downloaded through the
+Actions API. That can legitimately come back empty — 90-day retention, or a failed previous run —
+and the report then says *"no comparison available"* explicitly, because a missing baseline must
+never read as "nothing changed".
+
+### Snapshot ageing
+
+Snapshot and curated sources don't fail with a 500; they age out in silence. Each now declares a
+`snapshot_max_age_days`, checked against the date the index itself declares (`built`, `harvested`,
+`source_snapshot`) — never a file mtime, which records when git wrote the file locally and says
+nothing about the register. Past the limit the source reports `degraded: refresh due`. Limits are
+deliberately generous (180–240 days): a prompt to re-run the builder, not an SLA.
+
+A `freshness_url` field exists for HEADing an upstream bulk file's `Last-Modified`, but none of the
+three committed indexes has a stable file URL to point at — they're built from portals and APIs —
+so they rely on the age check.
+
+### Dispatch-drift coverage: 9 → 20 of 23
+
+Eleven more anchors resolved against GLEIF, each verified by running the adapter's own
+`normalise(registeredAs)` and checking it produces the probe's identifier. Where the probe subject
+was still a generic test-fixture identifier it was realigned to the anchor (ČEZ Energy, Proximus,
+Canadian National Railway, Ryanair Finance, Ørsted Services, OMV Austria E&P, Ignitis grupė, Neste,
+Nestlé).
+
+Three stay uncovered, deliberately, with the reason recorded on the probe: `abr_australia` (the
+only ASIC-registered GLEIF records matching CBA are aircraft-leasing SPVs — a worse subject than
+none), `mca_india` (the Indian records carrying an MCA number are small private companies, not
+Infosys), and `malta_mbr` (no GLEIF record found at RA000443). Trading a good probe subject for
+drift coverage would be a bad bargain.
+
 ## Phasing
 
 | Phase | Scope | Status |
 |-------|-------|--------|
 | **A** | Probe table, both offline guards, sweep script, weekly workflow, rolling issue. | **Built 2026-08-21** |
-| **B** | Add the credentials as repository secrets; lower `MAX_SKIPPED_FOR_CREDENTIALS` in the same commit as each. Decide the Lithuania 403. | Secrets outstanding; the two provenance gaps it listed are **closed** |
-| **C** | GLEIF dispatch-drift check **(built)**; `expect_fields` filled **(built)**; week-over-week statement-count diff; snapshot freshness HEADs; anchor LEIs for the remaining 14 dispatched sources. | Part built 2026-08-22 |
+| **B** | Add the credentials as repository secrets; lower `MAX_SKIPPED_FOR_CREDENTIALS` in the same commit as each. Decide the Lithuania 403. Fill `expect_fields` for the 15 credential-gated sources — they have never run, so there are no observed shapes to fill from until the secrets exist. | **The only phase left.** Both provenance gaps it listed are closed |
+| **C** | Dispatch-drift check, `expect_fields`, week-over-week statement diff, snapshot ageing, 20 of 23 anchors. | **Complete 2026-08-22** |
 | **D** | *(optional)* Publish `source-health.json` as a public data-source status page. | Optional |
 
 ## Credentials to add (Phase B)
@@ -253,9 +303,9 @@ Keep it. `test_live_smoke.py` is the **deep tier** — full search → fetch →
 open sources. The sweep is the **broad tier** — all 39, shallower, provenance-aware. Don't merge
 the assertions: the deep tier's value is that it's deep.
 
-## One thing still to decide
+## Cadence — settled
 
-Weekly means up to seven days of silent breakage. The key-free tier is cheap enough (~21 HTTP
-round-trips, well under a minute of wall-clock) to run **daily** at no meaningful cost or upstream
-burden, with the key-gated tier staying weekly to conserve quota. Worth considering for
-BO-carrying registers, where a week of "Placeholder data" badges is a week of misleading output.
+**Weekly.** Considered running the key-free tier daily (it's ~21 round-trips, well under a minute)
+and decided against: up to seven days of silent breakage is acceptable for these sources, and a
+daily job on upstreams that publish weekly or monthly is noise for its own sake. Revisit only if a
+real incident goes unnoticed for a week.

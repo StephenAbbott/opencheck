@@ -134,6 +134,7 @@ class Result:
     observed_fields: list[str] = field(default_factory=list)
     attempts: int = 0
     known_gap: str = ""
+    statement_counts: dict[str, int] | None = None
 
 
 async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Result:
@@ -170,6 +171,7 @@ async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Resu
         source_id,
         probe.tier,
         OK,
+        statement_counts=statement_counts(source_id, probe, result),
         liveness=prov.liveness,
         retrieved_at=prov.retrieved_at_iso(),
         latency_ms=latency_ms,
@@ -200,6 +202,22 @@ async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Resu
             out.status = DEGRADED
             out.reason = f"claims live but retrieved_at is {age} old"
             return out
+
+    # 3b. Snapshot ageing — the failure mode of a committed index is silence,
+    #     not an error. Uses the date the index declares, never a file mtime.
+    if probe.snapshot_max_age_days is not None and prov.retrieved_at is not None:
+        age_days = (datetime.now(timezone.utc) - prov.retrieved_at).days
+        if age_days > probe.snapshot_max_age_days:
+            out.status = DEGRADED
+            out.reason = (
+                f"snapshot is {age_days} days old (limit {probe.snapshot_max_age_days}) "
+                "— refresh due"
+            )
+            return out
+    if probe.snapshot_max_age_days is not None and prov.retrieved_at is None:
+        out.status = DEGRADED
+        out.reason = "snapshot declares no build date, so its age cannot be checked"
+        return out
 
     # 4. A live-tier source answered from cache: the upstream was never
     #    contacted, so this run proves nothing about it.
@@ -350,6 +368,105 @@ async def sweep(
 
 
 # ---------------------------------------------------------------------------
+# BODS statement counts, and the week-over-week diff
+# ---------------------------------------------------------------------------
+
+#: Below this, week-to-week wobble is ordinary (a company files a change, an
+#: officer resigns). Only a collapse past it is reported.
+_COLLAPSE_RATIO = 0.5
+
+
+def statement_counts(source_id: str, probe: SourceProbe, result: Any) -> dict[str, int] | None:
+    """Map a probe's answer through its BODS mapper and count by record type.
+
+    Counts, not content: the artifact carries integers, never statements, so
+    nothing licence-restricted or personal is written down.
+
+    Returns None when there is nothing to count — no mapper declared, or the
+    probe returns a list of hits rather than a mappable bundle.
+    """
+    if probe.bods_mapper is None or not isinstance(result, dict):
+        return None
+    try:
+        from opencheck.bods import mapper as mapper_module
+
+        mapper = getattr(mapper_module, probe.bods_mapper)
+        statements = list(mapper(result))
+    except Exception:  # noqa: BLE001 — a mapping failure must not fail the sweep
+        return None
+
+    counts: dict[str, int] = {"entity": 0, "person": 0, "relationship": 0}
+    for statement in statements:
+        if not isinstance(statement, dict):
+            continue
+        record_type = statement.get("recordType")
+        if record_type in counts:
+            counts[record_type] += 1
+        if record_type == "relationship":
+            # The interest-type histogram rather than a single "beneficial
+            # ownership" bucket: which interest type carries BO varies by
+            # source (Estonia's beneficial owners map to
+            # otherInfluenceOrControl, not beneficialOwnershipOrControl), so
+            # counting each type is both more honest and more informative than
+            # guessing which one to watch.
+            for interest in (statement.get("recordDetails") or {}).get("interests") or []:
+                if isinstance(interest, dict) and interest.get("type"):
+                    key = f"interest:{interest['type']}"
+                    counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+def diff_statement_counts(
+    current: dict[str, Any], previous: dict[str, Any] | None
+) -> dict[str, dict[str, Any]]:
+    """Report *collapses* against last week's counts, not movement.
+
+    A company genuinely filing a new PSC must read as normal variation, or the
+    check becomes noise and stops being read. A drop to zero, or past
+    ``_COLLAPSE_RATIO``, is what earns a report: for a BO-carrying source that
+    is the earliest machine-detectable signal of an access change — the shape
+    of Estonia's postponed legitimate-interest switch, which has no announced
+    date to schedule a check against, so the data has to be the alarm.
+    """
+    if not previous:
+        return {}
+    findings: dict[str, dict[str, Any]] = {}
+    for source_id, now_row in current.items():
+        now_counts = now_row.get("statement_counts")
+        then_counts = (previous.get("sources") or {}).get(source_id, {}).get("statement_counts")
+        if not now_counts or not then_counts:
+            continue
+        collapsed = {}
+        for kind, then_value in then_counts.items():
+            now_value = now_counts.get(kind, 0)
+            if then_value > 0 and now_value < then_value * _COLLAPSE_RATIO:
+                collapsed[kind] = {"was": then_value, "now": now_value}
+        if collapsed:
+            findings[source_id] = collapsed
+    return findings
+
+
+def load_previous_report(path: str) -> dict[str, Any] | None:
+    """Last run's report, when the workflow managed to fetch it.
+
+    The workflow downloads the previous successful run's artifact through the
+    Actions API. That can legitimately come back empty — 90-day retention
+    expiring, or the last run having failed — and the report says
+    "no comparison available" rather than letting a missing baseline read as
+    "nothing changed".
+    """
+    if not path:
+        return None
+    candidate = Path(path)
+    if not candidate.exists():
+        return None
+    try:
+        return json.loads(candidate.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+# ---------------------------------------------------------------------------
 # GLEIF dispatch drift
 # ---------------------------------------------------------------------------
 
@@ -476,7 +593,11 @@ def _credential_skips(results: list[Result]) -> list[str]:
     return [r.source_id for r in results if r.status == SKIPPED and "not configured" in r.reason]
 
 
-def build_report(results: list[Result], drift: list[DriftResult] | None = None) -> dict[str, Any]:
+def build_report(
+    results: list[Result],
+    drift: list[DriftResult] | None = None,
+    previous: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     drift = drift or []
     counts = {status: sum(1 for r in results if r.status == status) for status in (OK, DEGRADED, FAIL, SKIPPED)}
     return {
@@ -488,6 +609,10 @@ def build_report(results: list[Result], drift: list[DriftResult] | None = None) 
         "credential_skips": sorted(_credential_skips(results)),
         "max_credential_skips": MAX_SKIPPED_FOR_CREDENTIALS,
         "sources": {r.source_id: asdict(r) for r in results},
+        "statement_collapses": diff_statement_counts(
+            {r.source_id: asdict(r) for r in results}, previous
+        ),
+        "compared_against": (previous or {}).get("generated_at"),
     }
 
 
@@ -540,6 +665,32 @@ def render_markdown(report: dict[str, Any]) -> str:
         if not drift_bad and not drift_uncovered:
             lines.append("- ✅ no drift")
 
+    collapses = report.get("statement_collapses") or {}
+    compared = report.get("compared_against")
+    lines += ["", "### BODS statement counts, week over week", ""]
+    if not compared:
+        lines.append(
+            "- ⏭️ no comparison available — the previous run's artifact could not be fetched "
+            "(retention expired, or the last run failed). This is **not** the same as "
+            "\"nothing changed\"."
+        )
+    elif collapses:
+        lines.append(f"Compared against the run of {compared}.")
+        lines.append("")
+        for sid, kinds in sorted(collapses.items()):
+            detail = ", ".join(
+                f"{kind} {v['was']} → {v['now']}" for kind, v in sorted(kinds.items())
+            )
+            lines.append(f"- ❌ `{sid}` — {detail}")
+        lines += [
+            "",
+            "A source that still answers, still resolves live and still has every expected field "
+            "can still have stopped carrying ownership edges. For a beneficial ownership source, "
+            "this is the earliest machine-detectable sign of an access change.",
+        ]
+    else:
+        lines.append(f"- ✅ no collapse against the run of {compared}.")
+
     gaps = {sid: row["known_gap"] for sid, row in report["sources"].items() if row["known_gap"]}
     if gaps:
         lines += ["", "### Known provenance gaps (tolerated, not fixed)", ""]
@@ -568,6 +719,11 @@ def main() -> int:
     parser.add_argument("--retry-delay", type=float, default=30.0, help="seconds to wait before the single retry")
     parser.add_argument("--no-retry", action="store_true", help="do not retry a failing probe")
     parser.add_argument("--data-root", default="", help="override OPENCHECK_DATA_ROOT")
+    parser.add_argument(
+        "--previous",
+        default="",
+        help="path to the previous run's source-health.json, for the week-over-week diff",
+    )
     parser.add_argument(
         "--no-drift-check",
         action="store_true",
@@ -611,7 +767,8 @@ def main() -> int:
         )
     )
     drift = asyncio.run(check_dispatch_drift(wanted)) if not args.no_drift_check else []
-    report = build_report(results, drift)
+    previous = load_previous_report(args.previous)
+    report = build_report(results, drift, previous)
     markdown = render_markdown(report)
 
     out = Path(args.out)
@@ -623,6 +780,14 @@ def main() -> int:
     counts = report["counts"]
     exit_code = 0
     if counts[FAIL] or counts[DEGRADED]:
+        exit_code = 1
+    if report.get("statement_collapses"):
+        print(
+            "::error::BODS statement counts collapsed for "
+            f"{', '.join(sorted(report['statement_collapses']))} — a source may still be "
+            "answering while no longer carrying the statements OpenCheck depends on.",
+            file=sys.stderr,
+        )
         exit_code = 1
     if any(row["status"] == FAIL for row in (report.get("dispatch_drift") or {}).values()):
         print(

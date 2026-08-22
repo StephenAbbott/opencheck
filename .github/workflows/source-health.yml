@@ -45,6 +45,22 @@ jobs:
         run: uv sync --extra ftm
         working-directory: backend
 
+      # Last week's counts, for the statement-count diff. Allowed to fail:
+      # 90-day retention expiring or a failed previous run legitimately means
+      # no baseline, and the report says "no comparison available" rather than
+      # letting a missing baseline read as "nothing changed".
+      - name: Fetch the previous run's report
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          ID=$(gh run list --workflow source-health.yml --status success --limit 1 \
+                 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$ID" ]; then
+            gh run download "$ID" --name source-health --dir previous
+          fi
+
       - name: Sweep every registry source
         id: sweep
         continue-on-error: true
@@ -74,7 +90,13 @@ jobs:
           WIKIRATE_API_KEY: ${{ secrets.WIKIRATE_API_KEY }}
           ZEFIX_USERNAME: ${{ secrets.ZEFIX_USERNAME }}
           ZEFIX_PASSWORD: ${{ secrets.ZEFIX_PASSWORD }}
-        run: uv run python scripts/source_health.py --out "$GITHUB_WORKSPACE/source-health"
+        run: |
+          PREV="$GITHUB_WORKSPACE/previous/source-health.json"
+          if [ -f "$PREV" ]; then
+            uv run python scripts/source_health.py --out "$GITHUB_WORKSPACE/source-health" --previous "$PREV"
+          else
+            uv run python scripts/source_health.py --out "$GITHUB_WORKSPACE/source-health"
+          fi
         working-directory: backend
 
       - name: Publish the table to the run summary

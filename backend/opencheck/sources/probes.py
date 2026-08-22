@@ -119,6 +119,25 @@ class SourceProbe:
     absent from a fresh CI checkout — that is a skip, not a failure.
     """
 
+    snapshot_max_age_days: int | None = None
+    """Report `degraded: refresh due` once the snapshot is older than this.
+
+    Snapshot and curated sources don't fail with a 500 — they age out in
+    silence, which is how a committed index quietly stops reflecting the
+    register. The check uses the retrieval time the adapter records (the
+    index's own ``built`` / ``harvested`` / ``source_snapshot`` date, never a
+    file mtime), so it asks "how old is this data?" rather than "when did git
+    write this file?".
+
+    Deliberately generous: a prompt to re-run the builder, not an SLA.
+    """
+
+    freshness_url: str | None = None
+    """Optional upstream bulk file to HEAD for a `Last-Modified` newer than
+    ours. Only meaningful where the source publishes a stable file URL; the
+    committed EITI and CAC indexes are built from portals and APIs, so they
+    rely on the age check above instead."""
+
     anchor_lei: str | None = None
     """GLEIF anchor for this subject, for the dispatch-drift check.
 
@@ -150,12 +169,16 @@ PROBES: dict[str, SourceProbe] = {
         args=("31976733718",),
         requires_env=("ABN_GUID",),
         bods_mapper="map_abr_australia",
+        notes=(
+            "No anchor LEI: the only ASIC-registered GLEIF records matching CBA are aircraft-leasing SPVs. Swapping a bank for an SPV to gain drift coverage would be a worse probe subject than none."
+        ),
     ),
     "ares": _p(
         tier="live",
-        subject="Czech company by IČO",
-        args=("27082440",),
+        subject="ČEZ Energy, a. s.",
+        args=("29700949",),
         expect_fields=("name", "entity", "directors"),
+        anchor_lei="315700JE48EH8QJ95N70",
         bods_mapper="map_ares",
     ),
     "ariregister": _p(
@@ -205,30 +228,34 @@ PROBES: dict[str, SourceProbe] = {
     ),
     "corporations_canada": _p(
         tier="live",
-        subject="Canadian federal corporation",
-        args=("1007",),
+        subject="Canadian National Railway Company",
+        args=("0105333",),
         requires_env=("CORPORATIONS_CANADA_API_KEY",),
+        anchor_lei="3SU7BEP7TH9YEQOZCS77",
         bods_mapper="map_corporations_canada",
     ),
     "cro": _p(
         tier="live",
-        subject="Irish company by CRN",
-        args=("249885",),
+        subject="Ryanair Finance DAC",
+        args=("633425",),
         expect_fields=("company",),
+        anchor_lei="635400UKS1476OXEKM35",
         bods_mapper="map_cro",
     ),
     "cvr_denmark": _p(
         tier="live",
-        subject="Novo Nordisk A/S",
-        args=("24256790",),
+        subject="Ørsted Services A/S",
+        args=("27446485",),
         requires_env=("CVR_DENMARK_API_KEY",),
+        anchor_lei="213800SBT2QLGP2Y4974",
         bods_mapper="map_cvr_denmark",
     ),
     "firmenbuch": _p(
         tier="live",
-        subject="Austrian company by Firmenbuchnummer",
-        args=("473888w",),
+        subject="OMV Austria Exploration & Production GmbH",
+        args=("241929d",),
         requires_env=("FIRMENBUCH_API_KEY",),
+        anchor_lei="5493004CC7P3EWMB7033",
         bods_mapper="map_firmenbuch",
     ),
     "gleif": _p(
@@ -250,10 +277,11 @@ PROBES: dict[str, SourceProbe] = {
     ),
     "jar_lithuania": _p(
         tier="live",
-        subject="Lietuvos energija",
-        args=("111950694",),
-        kwargs={"legal_name": "Lietuvos energija"},
+        subject="AB Ignitis grupė",
+        args=("301844044",),
+        kwargs={"legal_name": "Ignitis grupe"},
         expect_fields=("status",),
+        anchor_lei="5493005RZJHJT5PNHY10",
         bods_mapper="map_jar_lithuania",
         notes=(
             "expect_fields is load-bearing here: when JAR refuses the request "
@@ -285,6 +313,9 @@ PROBES: dict[str, SourceProbe] = {
         args=("C 113927",),
         expect_fields=("company",),
         bods_mapper="map_malta_mbr",
+        notes=(
+            "No anchor LEI: no GLEIF record found registered at RA000443."
+        ),
     ),
     "mca_india": _p(
         tier="live",
@@ -292,6 +323,9 @@ PROBES: dict[str, SourceProbe] = {
         args=("L85110KA1981PLC013115",),
         requires_env=("DATA_GOV_IN_API_KEY",),
         bods_mapper="map_mca_india",
+        notes=(
+            "No anchor LEI: the Indian GLEIF records carrying an MCA registration number are small private companies, not Infosys — a worse subject than the one we have."
+        ),
     ),
     "nz_companies": _p(
         tier="live",
@@ -303,9 +337,10 @@ PROBES: dict[str, SourceProbe] = {
     ),
     "prh": _p(
         tier="live",
-        subject="Finnish company by Y-tunnus",
-        args=("0112038-9",),
+        subject="Neste Oyj",
+        args=("1852302-9",),
         expect_fields=("company",),
+        anchor_lei="5493009GY1X8GQ66AM14",
         bods_mapper="map_prh",
     ),
     "rpo_slovakia": _p(
@@ -313,6 +348,7 @@ PROBES: dict[str, SourceProbe] = {
         subject="Slovenský plynárenský priemysel, a.s.",
         args=("35815256",),
         expect_fields=("name", "status", "source_register"),
+        anchor_lei="529900BJGD0X650NVB68",
         bods_mapper="map_rpo_slovakia",
         notes=(
             "Two things learned from the first sweep. The original subject "
@@ -344,6 +380,7 @@ PROBES: dict[str, SourceProbe] = {
         subject="Akciju sabiedrība \"Latvenergo\"",
         args=("40003032949",),
         expect_fields=("entity", "officers"),
+        anchor_lei="213800DJRB539Q1EMW75",
         bods_mapper="map_ur_latvia",
         notes=(
             "The original subject (regcode 40003009556, taken from a test "
@@ -356,9 +393,10 @@ PROBES: dict[str, SourceProbe] = {
     ),
     "zefix": _p(
         tier="live",
-        subject="Swiss company by UID",
-        args=("CHE313550547",),
+        subject="Nestlé S.A.",
+        args=("CHE105909036",),
         requires_env=("ZEFIX_USERNAME", "ZEFIX_PASSWORD"),
+        anchor_lei="KY37LUS27QQX7BB93L28",
         bods_mapper="map_zefix",
     ),
     # --- live cross-border / aggregator sources ---------------------------
@@ -464,6 +502,7 @@ PROBES: dict[str, SourceProbe] = {
         args=("98450073EGD581D89F03",),
         expect_liveness=frozenset({"snapshot"}),
         expect_fields=("entity_name", "is_state_owned", "country"),
+        snapshot_max_age_days=180,
         bods_mapper="map_eiti_soe",
         notes=(
             "Snapshot, not live: the payment rows are fetched live but the "
@@ -482,6 +521,7 @@ PROBES: dict[str, SourceProbe] = {
         expect_fields=("lei", "record"),
         expect_liveness=frozenset({"curated"}),
         anchor_lei="029200697A0R1BH0A835",
+        snapshot_max_age_days=240,
         bods_mapper="map_cac_nigeria",
         notes="Offline by design — the CAC's API is restricted to Nigerian government agencies.",
     ),
@@ -493,16 +533,18 @@ PROBES: dict[str, SourceProbe] = {
         expect_fields=("lei", "record", "register_name"),
         expect_liveness=frozenset({"curated"}),
         anchor_lei="029200697A0R1BH0A835",
+        snapshot_max_age_days=240,
         bods_mapper="map_eiti_bo",
     ),
     # --- registered but env-gated ----------------------------------------
     "bce_belgium": _p(
         tier="inactive",
-        subject="Belgian enterprise by number",
-        args=("0403019488",),
+        subject="Proximus",
+        args=("0202239951",),
         expect_liveness=frozenset({"snapshot"}),
         expect_fields=("name", "enterprise_number"),
         requires_env=("BCE_BELGIUM_DB_FILE",),
+        anchor_lei="549300CWRXC5EP004533",
         bods_mapper="map_bce_belgium",
         notes=(
             "Reads a local KBO Open Data build. It recorded nothing at all "
