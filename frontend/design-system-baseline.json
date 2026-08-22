@@ -1,7 +1,7 @@
 {
   "src/App.tsx": {
     "hex": 14,
-    "text": 133,
+    "text": 132,
     "vocab": 0
   },
   "src/components/BODSGraph.tsx": {
@@ -91,7 +91,7 @@
   },
   "src/components/cdd/SubjectCard.tsx": {
     "hex": 6,
-    "text": 8,
+    "text": 4,
     "vocab": 0
   },
   "src/components/cdd/SubsidiaryNetwork.tsx": {

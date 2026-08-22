@@ -57,7 +57,7 @@ export function VerdictStrip({
   return (
     <section
       aria-label="What this check found"
-      className="mb-6 bg-white border border-oo-rule rounded-oo p-5 lg:p-7"
+      className="border-t border-oo-rule px-4 py-[18px] sm:px-7 sm:py-6"
     >
       {verdict && (
         <p className="text-oo-head font-medium leading-snug text-oo-ink max-w-[76ch]">

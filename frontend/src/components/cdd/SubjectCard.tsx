@@ -55,7 +55,7 @@ export function SubjectCard({
   const cc = (jurisdiction || "").trim().toLowerCase().split("-")[0];
 
   return (
-    <section className="mb-8 bg-white border border-oo-rule rounded-oo p-7 transition-shadow hover:shadow-oo-card">
+    <section className="px-4 py-[18px] sm:px-7 sm:py-6">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-blue">
