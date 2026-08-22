@@ -58,6 +58,14 @@ function orderChildren(children: SubsidiaryChild[]): SubsidiaryChild[] {
 
 function ChildrenTable({ children }: { children: SubsidiaryChild[] }) {
   return (
+    <>
+      {/* Visible, not just sr-only: this is the sentence that stops "Direct"
+          and "Ultimate" being read as shareholding, and it was mouse-only. */}
+      <p className="mt-2 text-oo-meta text-oo-muted leading-[1.5]">
+        GLEIF Level 2 records accounting consolidation, not shareholding —
+        “direct” and “ultimate” describe whose group accounts a company reports
+        into, and a consolidating parent need not hold any shares.
+      </p>
     <ul className="mt-2 divide-y divide-oo-rule rounded-oo border border-oo-rule bg-white">
       {orderChildren(children).map((c) => (
         <li
@@ -86,6 +94,7 @@ function ChildrenTable({ children }: { children: SubsidiaryChild[] }) {
         </li>
       ))}
     </ul>
+    </>
   );
 }
 
@@ -208,6 +217,12 @@ export function SubsidiaryNetwork({
       const full = await getSubsidiaries(lei, "bods");
       const stmts = full.bods ?? [];
       setBods(stmts);
+      // `run()` is unreachable once `data` is set, so without this the notice
+      // could stay up above a rendered subsidiary network for the rest of the
+      // session — a warning outliving the thing it warned about is its own
+      // kind of untruth.
+      onRecovered?.("subsidiaries");
+      setError(null);
       return stmts;
     } catch (e) {
       setError(describeFetchFailure(e));

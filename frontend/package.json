@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "OpenCheck web UI \u2014 customer due diligence risk checks driven by the LEI and open data.",
+  "description": "OpenCheck web UI — customer due diligence risk checks driven by the LEI and open data.",
   "scripts": {
     "dev": "vite",
     "gen:changelog": "node scripts/gen-changelog.mjs",

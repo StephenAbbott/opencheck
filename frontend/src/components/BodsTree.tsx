@@ -178,6 +178,15 @@ export default function BodsTree({
               {expandable && row.collapsed && (
                 <span className="flex-shrink-0 text-oo-muted">({row.childCount})</span>
               )}
+              {/* Without this an unconnected party renders at depth 0 with no
+                  caret and no interest — identical to a genuine ultimate
+                  parent. The table this replaced named them in their own
+                  block; the marker is how that survives the move. */}
+              {row.isolated && (
+                <span className="flex-shrink-0 text-oo-muted italic">
+                  no reported relationships
+                </span>
+              )}
             </span>
 
             {/* Signal cell — the text equivalent of the canvas risk badges.

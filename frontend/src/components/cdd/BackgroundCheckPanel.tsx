@@ -194,7 +194,10 @@ export default function BackgroundCheckPanel({
         <p className="text-[12px] text-violet-900/80 leading-[1.6] mt-1.5">
           Person screening is <span className="font-medium">name-based</span>:
           results are potential matches with their evidence shown, never
-          confirmed identities — and a clean screen is not proof of absence.
+          confirmed identities — and a clean screen is not proof of absence. The
+          percentage on each result is name similarity between the person
+          searched for and that record, not a confidence that they are the same
+          person.
         </p>
       </div>
 
@@ -727,11 +730,7 @@ function MatchRow({ match }: { match: PersonMatch }) {
           }`}
         >
           {match.strong ? "potential match" : "below threshold"} · {pct}%
-          {/* A compliance user acts on this number, and what it measured was
-              in a `title` and nowhere else. */}
-          <span className="sr-only">
-            {" "}— name similarity between the person searched for and this record
-          </span>
+          <span className="sr-only"> — name similarity</span>
           {!match.birth_year_compatible && " · birth year differs"}
         </span>
       </div>

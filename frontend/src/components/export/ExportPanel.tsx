@@ -314,12 +314,25 @@ export function ExportPanel({
                     `title` and nowhere else, and how restrictive a licence is
                     was carried by the dot's colour alone (WCAG 1.4.1). The
                     summary is the non-colour cue as well as the explanation. */}
-                {s.terms.summary && <span className="sr-only"> — {s.terms.summary}</span>}
               </span>
             ))}
           </div>
 
-          <p className="text-[11px] text-oo-muted mt-2 leading-[1.5]">
+          {/* The per-source terms were in a `title` and nowhere else, and how
+              restrictive a licence is was carried by the dot colour alone.
+              Spelled out below the chips: a licence condition is the thing a
+              reuser has to comply with, so it belongs on screen. */}
+          <dl className="mt-2 space-y-0.5">
+            {a.per_source
+              .filter((s) => s.terms.summary)
+              .map((s) => (
+                <div key={s.source_id} className="flex flex-wrap gap-x-1.5 text-oo-meta">
+                  <dt className="font-medium text-oo-ink">{s.name}</dt>
+                  <dd className="text-oo-muted">{s.terms.summary}</dd>
+                </div>
+              ))}
+          </dl>
+          <p className="text-oo-meta text-oo-muted mt-2 leading-[1.5]">
             {a.disclaimer}
           </p>
         </div>

@@ -106,6 +106,18 @@ describe("lookupProgress", () => {
     expect(p.phase).toBe("finishing");
   });
 
+  it("stops saying it is resolving the entity once the entity is resolved", () => {
+    // anchored, but sources_applicable has not landed. Repeating "Resolving
+    // the entity in GLEIF…" claims the lookup is doing something it has
+    // finished — the same class of untruth as the simulated bar, smaller.
+    // This is also the state an older backend, or an empty applicable list,
+    // would sit in for a whole run.
+    const p = lookupProgress({ ...base, anchored: true });
+    expect(p.phase).toBe("dispatching");
+    expect(p.label).not.toMatch(/GLEIF/);
+    expect(p.total).toBeNull();
+  });
+
   it("names the anchor step rather than pretending to query", () => {
     // Between stream-open and gleif_done the lookup is resolving one entity in
     // GLEIF. That is what it is doing, so that is what it should say.
@@ -119,6 +131,7 @@ describe("lookupProgress", () => {
     for (const args of [
       base,
       { ...base, started: new Set(["gleif"]) },
+      { ...base, anchored: true },
       { ...base, anchored: true, applicable: ["a"] },
       { ...base, anchored: true, applicable: ["a"], completed: new Set(["a"]) },
     ]) {

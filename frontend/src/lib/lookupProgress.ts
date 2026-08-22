@@ -28,7 +28,12 @@
  */
 
 /** Where the lookup is. Ordered: each phase can only follow the one before. */
-export type LookupPhase = "connecting" | "anchoring" | "querying" | "finishing";
+export type LookupPhase =
+  | "connecting"
+  | "anchoring"
+  | "dispatching"
+  | "querying"
+  | "finishing";
 
 export type SourceProgressState = "waiting" | "querying" | "done" | "failed";
 
@@ -55,6 +60,7 @@ export interface LookupProgress {
 const PHASE_LABEL: Record<LookupPhase, string> = {
   connecting: "Connecting…",
   anchoring: "Resolving the entity in GLEIF…",
+  dispatching: "Working out which sources apply…",
   querying: "Querying sources…",
   finishing: "Screening for risk signals…",
 };
@@ -103,7 +109,12 @@ export function lookupProgress({
       ? "anchoring"
       : "connecting"
     : total === null
-      ? "anchoring"
+      ? // Anchored but no sources_applicable yet. Repeating "resolving the
+        // entity" here would claim the lookup is doing something it has
+        // finished — the same class of untruth as the simulated bar, just
+        // smaller. This is also the phase an older backend, or an empty
+        // applicable list, would sit in for the whole run.
+        "dispatching"
       : allSettled || finished
         ? "finishing"
         : "querying";

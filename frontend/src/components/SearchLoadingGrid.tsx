@@ -21,6 +21,7 @@
  * actually doing before it knows which sources apply.
  */
 
+import { useEffect, useRef, useState } from "react";
 import type { SourceInfo } from "../lib/api";
 import { lookupProgress, progressLabel } from "../lib/lookupProgress";
 import { sourceLabel } from "../lib/vocab";
@@ -74,13 +75,31 @@ export default function SearchLoadingGrid({
   });
   const names = Object.fromEntries(sources.map((s) => [s.id, s.name]));
   const failedCount = progress.sources.filter((s) => s.state === "failed").length;
+  // The live region is throttled, not live-per-event. Replacing an animation
+  // that announced on a timer with one that announces on every
+  // `source_completed` would queue ~39 utterances — a firehose is as unusable
+  // as a fiction. The phase is announced whenever it changes, and the count at
+  // most every few seconds. (App.tsx makes the same trade for its per-source
+  // failure announcements.)
+  const [announced, setAnnounced] = useState("");
+  const pending = useRef("");
+  pending.current = progress.total === null ? progress.label : progressLabel(progress, failedCount);
+  const phase = progress.phase;
+  useEffect(() => {
+    setAnnounced(pending.current);
+    const t = setInterval(() => setAnnounced(pending.current), 4000);
+    return () => clearInterval(t);
+  }, [phase]);
   const pct = progress.total ? (progress.settled / progress.total) * 100 : 0;
 
   return (
     <div className="bg-white border border-oo-rule rounded-oo p-4 mb-6">
       <div className="flex items-center gap-3 mb-2">
-        <p role="status" className="text-oo-meta text-oo-muted flex-1">
+        <p className="text-oo-meta text-oo-muted flex-1" aria-hidden="true">
           {progress.total === null ? progress.label : progressLabel(progress, failedCount)}
+        </p>
+        <p role="status" className="sr-only">
+          {announced}
         </p>
         {progress.total !== null && (
           <span aria-hidden="true" className="text-oo-meta font-mono text-oo-muted">

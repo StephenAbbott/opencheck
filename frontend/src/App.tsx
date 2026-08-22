@@ -1074,6 +1074,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setOaScreening([]);
     setApplicableSources([]);
     setCompletedSources(new Set());
+    // Phase 124 added these two and this 30-setter reset is exactly the place
+    // a new one gets missed: a stale panel-error notice would sit on an empty
+    // landing page saying "this report" when there is no report.
+    setStartedSources(new Set());
+    setPanelErrors([]);
     setStreaming(false);
     lookupMutation.reset();
     nameSearchMutation.reset();
@@ -1872,7 +1877,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           />
         )}
 
-        {panelErrors.length > 0 && <PanelErrorsNotice errors={panelErrors} />}
+        {streamingLei && panelErrors.length > 0 && <PanelErrorsNotice errors={panelErrors} />}
 
         {streamingLei && mode === "quick" && (
           <NarrativePanel lei={streamingLei} legalName={legalName} />

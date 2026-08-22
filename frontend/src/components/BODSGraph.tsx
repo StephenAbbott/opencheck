@@ -490,10 +490,16 @@ export default function BODSGraph({
 
   // The edge kinds this graph actually draws — the legend lists these and no
   // others, so a four-node diagram is not captioned with the whole vocabulary.
-  const edgeCategories = useMemo(
-    () => new Set(model.edges.map((e) => e.category as string)),
-    [model]
-  );
+  const edgeCategories = useMemo(() => {
+    const cats = new Set(model.edges.map((e) => e.category as string));
+    // `possiblySame` edges are synthesised in modelToElements from the
+    // `sameAs` prop, so they are drawn on the canvas without ever appearing
+    // in model.edges. Reading only model.edges made the legend omit the one
+    // edge kind a reader is least likely to guess — and it is the kind that
+    // must not be mistaken for a merge.
+    if (sameAs.length > 0) cats.add("possiblySame");
+    return cats;
+  }, [model, sameAs]);
 
   // Counts for the canvas's accessible name (role="img" — the name is all a
   // screen-reader user perceives of it; the table view is the full equivalent).
@@ -506,7 +512,7 @@ export default function BODSGraph({
     `${entityCount} ${entityCount === 1 ? "entity" : "entities"}, ` +
     `${personCount} ${personCount === 1 ? "person" : "people"}, ` +
     `${model.edges.length} ${model.edges.length === 1 ? "relationship" : "relationships"}. ` +
-    "Use the table view for a text equivalent.";
+    "Open \u201cRead as text\u201d below the diagram for a text equivalent.";
 
   if (model.nodes.length === 0) {
     return <p className="text-xs text-oo-muted italic">No BODS statements to visualise.</p>;
