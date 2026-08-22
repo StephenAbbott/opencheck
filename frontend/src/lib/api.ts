@@ -192,6 +192,11 @@ export interface LookupResponse {
   /** How current each source's payload is, keyed by source_id. Sibling to
    *  degraded_sources: data that is not current must not read as live. */
   source_liveness?: Record<string, SourceLiveness>;
+  /** One deterministic sentence stating what the check found — built from
+   *  the signals and degradations by the backend (`opencheck/verdict.py`),
+   *  never by a model, so the page, the PDF, the share card and the API
+   *  cannot disagree. Absent on payloads recorded before Phase 122. */
+  verdict?: string | null;
   bods: Record<string, unknown>[];
   bods_issues: string[];
   license_notices: { source_id: string; hit_id: string; notice: string }[];
@@ -1029,6 +1034,11 @@ export interface RiskSignalsEvent {
   openaleph_screening?: OpenAlephScreeningMatch[];
   /** Per-source currency, keyed by source_id. */
   source_liveness?: Record<string, SourceLiveness>;
+  /** One deterministic sentence stating what the check found — built from
+   *  the signals and degradations by the backend (`opencheck/verdict.py`),
+   *  never by a model, so the page, the PDF, the share card and the API
+   *  cannot disagree. Absent on payloads recorded before Phase 122. */
+  verdict?: string | null;
 }
 
 export type StreamHandlers = {

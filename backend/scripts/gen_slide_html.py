@@ -344,9 +344,9 @@ body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     <div class="legend">
       <div class="legend-item"><div class="legend-node"></div> Entity</div>
       <div class="legend-item"><div class="legend-person"></div> Person</div>
-      <div class="legend-item"><div class="legend-line" style="background:#1565c0"></div> Owns</div>
+      <div class="legend-item"><div class="legend-line" style="background:#3b82f6"></div> Owns</div>
       <div class="legend-item"><div class="legend-line" style="background:#e65100"></div> Controls</div>
-      <div class="legend-item"><div class="legend-line" style="background:#6a1b9a;border-top:2px dashed #6a1b9a;height:0"></div> Manages</div>
+      <div class="legend-item"><div class="legend-line" style="background:#7c3aed;border-top:2px dashed #7c3aed;height:0"></div> Manages</div>
       <div class="legend-item"><div class="legend-line" style="background:#0d9488"></div> Party to</div>
       <div class="legend-item"><div class="legend-line" style="background:#9ca3af"></div> Unknown</div>
       <div style="margin-left:auto;font-size:10px;color:#9ca3af">Arrow = owner/controller → owned/controlled · Use scroll to zoom · Drag to pan</div>
@@ -360,9 +360,9 @@ let currentIndex = 0;
 let cy = null;
 
 const FAMILY_COLOR = {{
-  OWNS: '#1565c0',
+  OWNS: '#3b82f6',
   CONTROLS: '#e65100',
-  MANAGES: '#6a1b9a',
+  MANAGES: '#7c3aed',
   IS_PARTY_TO: '#0d9488',
   UNKNOWN: '#9ca3af',
 }};

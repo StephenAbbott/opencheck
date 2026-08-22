@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trackEvent } from "./lib/analytics";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import SearchLoadingGrid from "./components/SearchLoadingGrid";
@@ -40,6 +40,7 @@ import { RiskChip, RISK_PRESENTATION, rank } from "./components/risk/RiskChip";
 import { ExportPanel } from "./components/export/ExportPanel";
 import { ChangelogPage } from "./components/ChangelogPage";
 import { SubjectCard } from "./components/cdd/SubjectCard";
+import { VerdictStrip } from "./components/cdd/VerdictStrip";
 import { NarrativePanel } from "./components/cdd/NarrativePanel";
 import {
   SourceBucketCard,
@@ -230,6 +231,11 @@ export default function App() {
   // warning above the risk panel; empty signals + non-empty degraded is
   // NOT a clean screen.
   const [degradedSources, setDegradedSources] = useState<DegradedSource[]>([]);
+  // The answer-first sentence, rendered above the evidence. Built in the
+  // backend (opencheck/verdict.py) from the signals and degradations, so
+  // the page, the PDF, the share card and the API cannot disagree — and
+  // so it costs no model call.
+  const [verdict, setVerdict] = useState<string | null>(null);
   // How current each source's payload is, keyed by source_id. Arrives on the
   // risk_signals event alongside degraded_sources — the two answer the same
   // shape of question: what in this result should not be read at face value.
@@ -275,6 +281,20 @@ export default function App() {
   // else falls through to "main" (the SPA rewrite in render.yaml serves
   // index.html for all paths so deep links work).
   type View = "main" | "sources" | "behind" | "api" | "changelog";
+
+  /**
+   * The header nav, constant across every view (Phase 122). One label per
+   * destination: v1 called the same page "Behind the scenes →", "About",
+   * "How it works →" and "Behind the Scenes" depending on where you met it,
+   * and replaced the whole nav with "← Back" on every sub-page, so /api and
+   * /sources were unreachable from each other.
+   */
+  const NAV_ITEMS: { view: View; label: string }[] = [
+    { view: "main", label: "Search" },
+    { view: "sources", label: "Sources" },
+    { view: "api", label: "API" },
+    { view: "behind", label: "About" },
+  ];
   function pathToView(path: string): View {
     if (path === "/sources") return "sources";
     if (path === "/about") return "behind";
@@ -453,6 +473,7 @@ export default function App() {
         setMeip(null);
         setRiskSignals([]);
         setDegradedSources([]);
+        setVerdict(null);
         setSourceLiveness({});
         setOaScreening([]);
         setApplicableSources([]);
@@ -507,6 +528,7 @@ export default function App() {
           onRiskSignals: (e) => {
             setRiskSignals(e.signals);
             setDegradedSources(e.degraded_sources ?? []);
+            setVerdict(e.verdict ?? null);
             setSourceLiveness(e.source_liveness ?? {});
             setOaScreening(e.openaleph_screening ?? []);
           },
@@ -918,6 +940,52 @@ export default function App() {
 
   // The hero heading is the page's <h1> on the homepage; once results are on
   // screen the sr-only report heading below takes over as the <h1> (WCAG 1.3.1).
+  /**
+   * Back to a fresh homepage. Extracted from the logo button in Phase 122
+   * so the nav's "Search" item and the wordmark cannot drift apart — the
+   * reset is thirty setters long, and a second copy would have gone stale
+   * the first time state was added to it.
+   */
+  const resetToHome = useCallback(() => {
+    cleanupRef.current?.();
+    cleanupRef.current = null;
+    navigate("main");
+    setStreamingLei(null);
+    setLegalName(null);
+    setHits([]);
+    setErrors({});
+    setCrossSourceLinks([]);
+    setCrossSourceOpen(false);
+    setPossiblySame([]);
+    setMeip(null);
+    setRiskSignals([]);
+    setDegradedSources([]);
+    setVerdict(null);
+    setSourceLiveness({});
+    setOaScreening([]);
+    setApplicableSources([]);
+    setCompletedSources(new Set());
+    setStreaming(false);
+    lookupMutation.reset();
+    nameSearchMutation.reset();
+    nationalIdSearchMutation.reset();
+    setLeiInput("");
+    setNameQuery("");
+    setNationalIdQuery("");
+    setSelectedCountry("GB");
+    setNationalIdTouched(false);
+    setSearchMode("name");
+    // Clear ?lei= so the address bar returns to a clean homepage URL.
+    if (window.location.search) {
+      const url = new URL(window.location.href);
+      url.search = "";
+      window.history.pushState({}, "", url);
+    }
+    // Every setter here is a stable useState setter and the mutations are
+    // stable for the component's life, so the empty dep list is correct.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const HeroHeading = streamingLei ? "h2" : "h1";
 
   return (
@@ -948,42 +1016,7 @@ export default function App() {
             <div className="flex items-center gap-4">
               <button
                 type="button"
-                onClick={() => {
-                  // Click the title to return to a fresh homepage state.
-                  cleanupRef.current?.();
-                  cleanupRef.current = null;
-                  navigate("main");
-                  setStreamingLei(null);
-                  setLegalName(null);
-                  setHits([]);
-                  setErrors({});
-                  setCrossSourceLinks([]);
-                  setCrossSourceOpen(false);
-                  setPossiblySame([]);
-                  setMeip(null);
-                  setRiskSignals([]);
-                  setDegradedSources([]);
-                  setSourceLiveness({});
-                  setOaScreening([]);
-                  setApplicableSources([]);
-                  setCompletedSources(new Set());
-                  setStreaming(false);
-                  lookupMutation.reset();
-                  nameSearchMutation.reset();
-                  nationalIdSearchMutation.reset();
-                  setLeiInput("");
-                  setNameQuery("");
-                  setNationalIdQuery("");
-                  setSelectedCountry("GB");
-                  setNationalIdTouched(false);
-                  setSearchMode("name");
-                  // Clear ?lei= so the address bar returns to a clean homepage URL.
-                  if (window.location.search) {
-                    const url = new URL(window.location.href);
-                    url.search = "";
-                    window.history.pushState({}, "", url);
-                  }
-                }}
+                onClick={resetToHome}
                 aria-label="OpenCheck — back to homepage"
                 className="flex items-center gap-2.5 hover:opacity-80 transition-opacity text-left"
               >
@@ -1002,36 +1035,25 @@ export default function App() {
                 </span>
               )}
             </div>
-            <nav aria-label="Site navigation" className="flex items-center gap-4">
-              {view !== "main" ? (
-                <button
-                  type="button"
-                  onClick={() => navigate("main")}
-                  aria-label="Back to main page"
-                  className="text-[12px] font-mono text-oo-light hover:text-white underline underline-offset-4 whitespace-nowrap"
-                >
-                  ← Back
-                </button>
-              ) : (
-                <div className="flex items-center gap-4">
-                  <a
-                    href="/sources"
-                    onClick={(e) => { e.preventDefault(); navigate("sources"); }}
-                    aria-label="View data sources"
-                    className="text-[12px] font-mono text-oo-light hover:text-white underline underline-offset-4 whitespace-nowrap"
+            <nav aria-label="Site navigation" className="flex items-center gap-4 sm:gap-5">
+              {NAV_ITEMS.map((item) => {
+                const current = view === item.view;
+                return (
+                  <button
+                    key={item.view}
+                    type="button"
+                    onClick={() => (item.view === "main" ? resetToHome() : navigate(item.view))}
+                    aria-current={current ? "page" : undefined}
+                    className={`min-h-[44px] text-[13px] transition-colors ${
+                      current
+                        ? "text-white font-medium border-b-2 border-[#93c5fd]"
+                        : "text-white/80 hover:text-white"
+                    }`}
                   >
-                    Sources →
-                  </a>
-                  <a
-                    href="/about"
-                    onClick={(e) => { e.preventDefault(); navigate("behind"); }}
-                    aria-label="Behind the scenes — how OpenCheck works"
-                    className="hidden sm:inline text-[12px] font-mono text-oo-light hover:text-white underline underline-offset-4 whitespace-nowrap"
-                  >
-                    Behind the scenes →
-                  </a>
-                </div>
-              )}
+                    {item.label}
+                  </button>
+                );
+              })}
             </nav>
           </div>
         </div>
@@ -1071,7 +1093,14 @@ export default function App() {
         )}
         {view === "main" && !personReport && (
         <>
-        {/* ── Search panel — two-tab design ── */}
+        {/* ── Hero — homepage only (Phase 122) ───────────────────────────
+            A report is not a landing page. v1 kept the hero and the
+            four-tab search panel above every result, so the first thing an
+            analyst read on a due-diligence report was marketing copy about
+            three million companies, and the subject came fourth. On results
+            the hero is gone and the panel collapses to a single "search for
+            a different entity" row. */}
+        {!streamingLei && (
         <div className="mb-3">
           <HeroHeading className="font-head font-bold text-oo-ink leading-tight text-[20px] sm:text-[26px]">
             Conduct due diligence on <span className="text-oo-blue">3 million</span> companies, starting from a single ID
@@ -1080,6 +1109,7 @@ export default function App() {
             With a Legal Entity Identifier, OpenCheck pulls open corporate data from 39 sources into one graph using the Beneficial Ownership Data Standard
           </p>
         </div>
+        )}
         {!streamingLei && (
           <p className="text-[12px] text-oo-muted leading-snug mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-oo-blue border border-[#cfd6f5] bg-[#eef1fb] rounded-full px-1.5 py-0.5">
@@ -1170,9 +1200,11 @@ export default function App() {
             </button>
           </div>
 
-          {/* Panels collapse on mobile once results are on screen — the tab
-              bar stays as a landmark; the prompt row below reopens them. */}
-          <div className={searchPanelsCollapsed ? "hidden sm:block" : ""}>
+          {/* Panels collapse once results are on screen — the tab bar stays
+              as a landmark; the prompt row below reopens them. Phase 122
+              widened this from mobile-only: 440 lines of search panel above
+              a report is the same problem on a laptop as on a phone. */}
+          <div className={searchPanelsCollapsed ? "hidden" : ""}>
 
           {/* ── Name search panel ── */}
           {searchMode === "name" && (
@@ -1527,7 +1559,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setMobileSearchOpen(true)}
-              className="sm:hidden w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[12px] font-medium text-oo-blue hover:bg-oo-bg transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] text-[12px] font-medium text-oo-blue hover:bg-oo-bg transition-colors"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="7" />
@@ -1598,6 +1630,28 @@ export default function App() {
           />
         )}
 
+        {/* ── The answer-first layer (Phase 122) ─────────────────────────
+            Subject, then what the check found and how much of it ran, then
+            the evidence. Both halves render from the same risk_signals
+            event as each other and as the sentence, so a signal count and
+            the count of screens that failed cannot drift apart on screen. */}
+        {streamingLei && (
+          <VerdictStrip
+            verdict={verdict}
+            riskSignals={riskCodes}
+            contextSignals={contextCodes}
+            degraded={degradedSources}
+            sourcesAnswered={completedSources.size}
+            sourcesApplicable={applicableSources.length}
+            screening={streaming}
+            onRerun={
+              streamingLei && !streaming
+                ? () => lookupLei(streamingLei, { refresh: true })
+                : undefined
+            }
+          />
+        )}
+
         {streamingLei && (
           <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3" role="group" aria-label="Check mode">
             <button
@@ -1665,14 +1719,14 @@ export default function App() {
             The AI summary box is additionally hidden in FullCheck mode: it
             sits above the network map and pushed the FullCheck content
             (the actual reason for switching modes) far down the page. */}
-        {streamingLei && mode === "quick" && (
-          <NarrativePanel lei={streamingLei} legalName={legalName} />
-        )}
-
-        {/* Screening-degradation warning (issue #50) — rendered above the
-            risk panel, and independently of it: zero signals with a
-            degraded screen is exactly the case that must NOT read as a
-            clean screen. */}
+        {/* Screening-degradation detail (issue #50) — the per-check list,
+            with the affected signals named. Phase 122 moved it ABOVE the AI
+            summary: it used to render after it, so a reader reached a
+            conclusion before learning which screens had not run. The
+            headline count now sits higher still, in the verdict strip; this
+            is the detail behind it, and it stays independent of the risk
+            panel because zero signals with a degraded screen is exactly the
+            case that must not read as a clean screen. */}
         {degradedSources.length > 0 && (
           <DegradedScreensNotice
             degraded={degradedSources}
@@ -1684,6 +1738,11 @@ export default function App() {
             }
           />
         )}
+
+        {streamingLei && mode === "quick" && (
+          <NarrativePanel lei={streamingLei} legalName={legalName} />
+        )}
+
 
         {riskCodes.length > 0 && mode !== "background" && (
           <section className="mb-8" id="risk-signals">

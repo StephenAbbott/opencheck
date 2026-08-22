@@ -187,16 +187,16 @@ const STYLESHEET: StylesheetStyle[] = [
   },
   {
     selector: "node:selected",
-    style: { "border-color": "#1565c0", "border-width": 3 } as cytoscape.Css.Node,
+    style: { "border-color": "#3d30d4", "border-width": 3 } as cytoscape.Css.Node,
   },
   // Collapsed node — solid blue ring so it reads as "expandable".
-  { selector: "node.collapsed", style: { "border-color": "#1565c0", "border-width": 3 } as cytoscape.Css.Node },
+  { selector: "node.collapsed", style: { "border-color": "#3d30d4", "border-width": 3 } as cytoscape.Css.Node },
   // Search highlight / dim
-  { selector: "node.search-match", style: { "border-color": "#1565c0", "border-width": 5 } as cytoscape.Css.Node },
+  { selector: "node.search-match", style: { "border-color": "#3d30d4", "border-width": 5 } as cytoscape.Css.Node },
   { selector: "node.search-dim", style: { opacity: 0.3 } as cytoscape.Css.Node },
   { selector: "edge.search-dim", style: { opacity: 0.12 } as cytoscape.Css.Edge },
   // Source highlight / dim (FullCheck provenance legend toggles)
-  { selector: "node.src-match", style: { "border-color": "#1565c0", "border-width": 5 } as cytoscape.Css.Node },
+  { selector: "node.src-match", style: { "border-color": "#3d30d4", "border-width": 5 } as cytoscape.Css.Node },
   { selector: "node.src-dim", style: { opacity: 0.2 } as cytoscape.Css.Node },
   { selector: "edge.src-dim", style: { opacity: 0.07 } as cytoscape.Css.Edge },
   // ── Edges ────────────────────────────────────────────────────────────────
@@ -221,11 +221,17 @@ const STYLESHEET: StylesheetStyle[] = [
       "edge-text-rotation": "autorotate",
     } as cytoscape.Css.Edge,
   },
-  { selector: "edge[category = 'ownership']", style: { "line-color": "#1565c0", "target-arrow-color": "#1565c0", color: "#1565c0" } as cytoscape.Css.Edge },
+  // Ownership takes oo.node.blue -- the FullCheck accent. The network mode's
+  // colour and the ownership edge are the same thing said twice, so they are
+  // now literally the same value. Label is oo.graph.ownershipText (#1d4ed8):
+  // #3b82f6 is 3.0:1 on white, below the 4.5:1 text minimum (WCAG 1.4.3).
+  { selector: "edge[category = 'ownership']", style: { "line-color": "#3b82f6", "target-arrow-color": "#3b82f6", color: "#1d4ed8" } as cytoscape.Css.Edge },
   // Control: dotted (non-colour cue vs ownership/unknown; distinct from role's
   // dashed). Label text is darker than the line for 4.5:1 contrast (WCAG 1.4.3).
   { selector: "edge[category = 'control']",  style: { "line-color": "#e65100", "target-arrow-color": "#e65100", color: "#9a3412", "line-style": "dotted" } as cytoscape.Css.Edge },
-  { selector: "edge[category = 'role']",     style: { "line-color": "#6a1b9a", "target-arrow-color": "#6a1b9a", color: "#6a1b9a", "line-style": "dashed" } as cytoscape.Css.Edge },
+  // Role takes oo.node.purple -- the BackgroundCheck accent. Roles are held
+  // by people, which is what that mode screens. Label #6d28d9 for contrast.
+  { selector: "edge[category = 'role']",     style: { "line-color": "#7c3aed", "target-arrow-color": "#7c3aed", color: "#6d28d9", "line-style": "dashed" } as cytoscape.Css.Edge },
   { selector: "edge[category = 'unknown']",  style: { "line-color": "#888",    "target-arrow-color": "#888",    color: "#595959" } as cytoscape.Css.Edge },
   // POSSIBLY_SAME_AS — dashed, undirected, amber; a "likely same entity" suggestion for review (never a merge).
   {
@@ -624,14 +630,14 @@ export default function BODSGraph({
         </div>
         {/* Legend */}
         <div className="flex flex-wrap gap-1.5 px-3 pb-2">
-          <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#e8f0fb] border-[#1565c0] text-[#1565c0]">
-            <span className="inline-block w-3.5 h-0.5 bg-[#1565c0] rounded-full flex-shrink-0"/>Ownership
+          <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#eff6ff] border-[#3b82f6] text-[#1d4ed8]">
+            <span className="inline-block w-3.5 h-0.5 bg-[#3b82f6] rounded-full flex-shrink-0"/>Ownership
           </span>
           <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#fdf0e8] border-[#e65100] text-[#9a3412]">
             <span className="inline-block w-3.5 flex-shrink-0" style={{borderTop:"1.5px dotted #e65100"}}/>Control
           </span>
-          <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#f3eef8] border-[#6a1b9a] text-[#6a1b9a]">
-            <span className="inline-block w-3.5 flex-shrink-0" style={{borderTop:"1.5px dashed #6a1b9a"}}/>Role
+          <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#f5f3ff] border-[#7c3aed] text-[#6d28d9]">
+            <span className="inline-block w-3.5 flex-shrink-0" style={{borderTop:"1.5px dashed #7c3aed"}}/>Role
           </span>
           {signals.length > 0 && <>
             <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#ffe4e6] border-[#be123c] text-[#be123c]">Sanction</span>
@@ -750,9 +756,9 @@ export default function BODSGraph({
                     left: item.cx - tp, top: item.cy + item.r - tp * 0.5,
                     minWidth: tp * 2, height: tp,
                     pointerEvents: "auto", cursor: "pointer",
-                    background: item.collapsed ? "#1565c0" : "#ffffff",
-                    color: item.collapsed ? "#ffffff" : "#1565c0",
-                    border: "1.5px solid #1565c0", borderRadius: tp,
+                    background: item.collapsed ? "#3d30d4" : "#ffffff",
+                    color: item.collapsed ? "#ffffff" : "#3d30d4",
+                    border: "1.5px solid #3d30d4", borderRadius: tp,
                     fontSize: Math.max(9, tp * 0.55), fontWeight: 700, lineHeight: 1,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.2)", padding: `0 ${tp * 0.3}px`,

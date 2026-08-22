@@ -42,6 +42,60 @@ export default {
             green: "#22c55e",  // QuickCheck badge accent
             blue: "#3b82f6",   // FullCheck badge accent
             purple: "#7c3aed", // BackgroundCheck badge accent
+            // Climate & ESG, added Phase 122 for the fourth check mode. The
+            // first node colour NOT lifted from logo.svg -- three modes had
+            // three logo nodes, a fourth has none, and shipping a second
+            // green next to `node.green` (#22c55e) would have been
+            // indistinguishable in the mode tab strip.
+            teal: "#0d9488",   // Climate & ESG badge accent
+          },
+
+          // Soft "selected / active" pair. Was #eef1fb + #cfd6f5 hardcoded 24x
+          // across App, SubjectCard, NarrativePanel and ExportMenu.
+          soft: "#eef1fb",
+          softBorder: "#cfd6f5",
+
+          // Semantic state tiers. Amber/emerald/rose were previously grabbed
+          // ad hoc from the Tailwind palette per component, so the same hue
+          // meant different things in different files. Named here so a
+          // reviewer can see the meaning, not the swatch.
+          warn: {
+            bg: "#fffbeb",     // amber-50   -- incomplete, not failed
+            border: "#fcd34d", // amber-300
+            text: "#92400e",   // amber-800  (4.5:1+ on warn.bg)
+          },
+          ok: {
+            bg: "#ecfdf5",     // emerald-50 -- corroborated / freely reusable
+            border: "#a7f3d0", // emerald-200
+            text: "#047857",   // emerald-700
+          },
+          info: {
+            bg: "#f0f9ff",     // sky-50     -- structural context
+            border: "#bae6fd", // sky-200
+            text: "#0369a1",   // sky-700
+          },
+
+          // Ownership-graph relation palette. Ownership and role take the
+          // FullCheck and BackgroundCheck node colours deliberately: the
+          // network mode's accent is the ownership edge, and roles are held
+          // by people, which is the people mode. Control keeps its orange --
+          // the node tier has none, and control must stay distinguishable
+          // from both. `*Text` values are the darker label colours needed for
+          // 4.5:1 on white (WCAG 1.4.3); the line colours alone do not reach
+          // it at text sizes.
+          graph: {
+            ownership: "#3b82f6",
+            ownershipText: "#1d4ed8",
+            ownershipTint: "#eff6ff",
+            control: "#e65100",
+            controlText: "#9a3412",
+            controlTint: "#fdf0e8",
+            role: "#7c3aed",
+            roleText: "#6d28d9",
+            roleTint: "#f5f3ff",
+            same: "#b45309",
+            unknown: "#888888",
+            unknownText: "#595959",
           },
         },
       },
@@ -56,6 +110,21 @@ export default {
         // so existing utility classes keep working.
         sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
         serif: ['Bitter', 'Georgia', 'serif'],
+      },
+      // The eight sizes the v2 design actually uses, named so a reviewer
+      // reads intent rather than a pixel value, and so a later drift check
+      // has a closed set to test against. Everything else in the codebase is
+      // still a raw `text-[NNpx]` arbitrary value (520 of them across 26
+      // files at Phase 122); those migrate component by component.
+      fontSize: {
+        "oo-meta": ["12px", { lineHeight: "1.5" }],   // captions, eyebrows, chips
+        "oo-small": ["13px", { lineHeight: "1.6" }],  // secondary copy
+        "oo-body": ["14px", { lineHeight: "1.6" }],   // body
+        "oo-lead": ["15px", { lineHeight: "1.5" }],   // source headings
+        "oo-head": ["16px", { lineHeight: "1.35" }],  // section headings
+        "oo-stat": ["18px", { lineHeight: "1.3" }],   // verdict numerals
+        "oo-title": ["22px", { lineHeight: "1.25" }], // subject name, phone
+        "oo-display": ["26px", { lineHeight: "1.2" }],// subject name, desktop
       },
       borderRadius: {
         oo: "10px",
