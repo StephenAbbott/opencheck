@@ -16,15 +16,15 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 120** — the false positives no threshold could kill, killed by shape
+**Latest: Phase 121** — monitoring a source is not asking whether it replied
+
+The Ariregister bug returned correct, live Estonian register data while recording no provenance observation, so OpenCheck badged it "Placeholder data" — and a weekly health check built the obvious way, asking each adapter whether it returned something, would have gone green every week for as long as the bug lived. Every one of the 39 registry adapters now has a probe run inside a `provenance.recording()` scope that asserts the **resolved liveness** as well as reachability; a weekly sweep exercises all of them against the real upstreams, and two guards move into the PR gate — probe/registry parity, and an AST check that an adapter building its own HTTP client records provenance in the same function. That guard immediately found a second, latent instance of the same defect, and the first sweep found a live one in Lithuania. A second pass closes both provenance gaps — one of them *over*-claiming `live` rather than under-claiming — and adds a GLEIF dispatch-drift check, since every national register is entered via a key derived from the GLEIF anchor and a renamed authority code would stop a source being reached at all while its own probe stayed green. A third completes it: BODS statement counts diffed week over week, so a source that still answers but has quietly stopped carrying ownership edges is caught, plus an age check for the committed snapshots whose failure mode is silence rather than an error. Adapters can now also record a degradation of their own — Lithuania's register 403s datacentre IPs, and the adapter's answer to being refused was a card indistinguishable from a real one. Commits `efe0da1`, `231ab81`, `131ff78`, `30a8ec3`.
+
+**Previous: Phase 120** — the false positives no threshold could kill, killed by shape
 
 The name-collision survivors of PR #86 all share one anatomy: generic tokens match, the distinctive token differs. A new distinctive-token gate strips legal forms and filler and requires the residues to agree — killing every named collision (including two sitting *above* the old 0.93 threshold and still shipping) while the threshold comes back to 0.87 and recovers the true matches it had cost, LVMH's only offshore-leaks signal among them. Measured on a reproducibly rebuilt 14-subject corpus, with the harness and adjudication committed this time. Commit `c5e6002`.
 
-**Previous: Phase 119** — OpenAleph signal volume, measured before mended
-
-The "31× more `RELATED_SANCTIONED` than OpenSanctions" reading decomposed, on fresh production diagnostics, into ~6 genuine per-collection copies and 19 legal-form false positives — distinct subsidiaries "matching" a record named only «Общество с ограниченной ответственностью» ("Limited Liability Company"). Per-collection copies now collapse to one finding per related party per code, with every copy kept as evidence; names that erode to nothing once legal-form tokens are stripped can no longer match at all. Commit `f7ff4f7`.
-
-*Earlier: [Phase 118 — export-control topics classified at last](docs/status.md), [Phase 117 — the evidence list no longer crowds out the page](docs/status.md), [Phase 116 — the exported report separates risk findings from structural context](docs/status.md), [Phase 115 — one pooled source for the EITI countries' beneficial ownership registers](docs/status.md), and everything before it.*
+*Earlier: [Phase 119 — OpenAleph signal volume, measured before mended](docs/status.md), [Phase 118 — export-control topics classified at last](docs/status.md), [Phase 117 — the evidence list no longer crowds out the page](docs/status.md), [Phase 116 — the exported report separates risk findings from structural context](docs/status.md), and everything before it.*
 
 
 
