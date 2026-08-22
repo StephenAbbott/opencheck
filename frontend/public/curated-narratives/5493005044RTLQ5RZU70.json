@@ -1,11 +1,11 @@
 {
   "lei": "5493005044RTLQ5RZU70",
   "subject_name": "EESTI ENERGIA AS",
-  "summary": "EESTI ENERGIA AS (LEI 5493005044RTLQ5RZU70; Estonian registry code 10421629) is identifier-confirmed, registered in Estonia. The Government of Estonia is reported as a controlling owner and shareholder, per Wikidata and OpenSanctions respectively, making this a possible state-owned enterprise; these are indicative findings from non-register sources and are not authoritative determinations. The Estonian e-Business Register records four current board members — Andrus Durejko, Marlen Tamm, Lauri Karp, and Gerrit Mäesalu (all from 2023–2026) — alongside several individuals holding influence by other means, including Jürgen Ligi (from 2024-08-02), who is a possible name match for a politically exposed person across OpenSanctions, EveryPolitician, and OpenAleph; no birth date or nationality was available to confirm identity, so this remains unconfirmed. GLEIF Level 2 data shows no accounting-consolidation parent reported (a permitted NON_CONSOLIDATING exception for both direct and ultimate parent), and the ownership chain has three or more corporate layers, which is a structural indicator warranting further review; EESTI ENERGIA AS is itself recorded as the direct accounting-consolidation parent of Enefit OÜ, Enefit Oy, and ENEFIT INDUSTRY AS. A material licensing limitation applies: OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used without separate authorisation.",
+  "summary": "EESTI ENERGIA AS (LEI 5493005044RTLQ5RZU70, Estonian registry code 10421629) is identifier-confirmed and registered in Estonia. The Government of Estonia is reported as a controlling owner and shareholder, per Wikidata and OpenSanctions respectively, making this a possible state-owned enterprise; these are indicative findings from non-register sources and are not authoritative determinations. Per the Estonian e-Business Register, the current board members are Andrus Durejko (from 2023-04-03), Marlen Tamm (from 2023-04-03), Lauri Karp (from 2024-09-10), and Gerrit Mäesalu (from 2026-06-22); GLEIF records Enefit OÜ, Enefit Oy, and ENEFIT INDUSTRY AS as direct accounting-consolidation subsidiaries, and OpenSanctions records shareholdings in Attarat Power Co. and Enefit Green. Two structural risk signals are noted: the ownership chain has three or more corporate layers (medium confidence, per GLEIF), warranting further review; and a related party named Jürgen Ligi — recorded in the Estonian e-Business Register as holding a position via other means from 2024-08-02 — shares a name with PEP records on OpenSanctions, EveryPolitician, and OpenAleph (all medium confidence, name-match only, with no birth date or nationality confirmed in common). A material licensing limitation applies: OpenSanctions data is licensed under CC-BY-NC-4.0 and commercial re-use is not permitted under that licence.",
   "claims": [
     {
       "id": "c1",
-      "text": "EESTI ENERGIA AS (LEI 5493005044RTLQ5RZU70; Estonian registry code 10421629) is identifier-confirmed and registered in Estonia.",
+      "text": "EESTI ENERGIA AS (LEI 5493005044RTLQ5RZU70, Estonian registry code 10421629) is identifier-confirmed and registered in Estonia.",
       "fact_ids": [
         "f25"
       ],
@@ -13,16 +13,24 @@
     },
     {
       "id": "c2",
-      "text": "The Government of Estonia is indicatively reported as a controlling owner of Eesti Energia per Wikidata, and as a shareholder per OpenSanctions, making this a possible state-owned enterprise; these are non-register, indicative findings.",
+      "text": "The Government of Estonia is reported as a controlling owner of Eesti Energia per Wikidata (indicative, not authoritative), making this a possible state-owned enterprise.",
       "fact_ids": [
         "f7",
-        "f10"
+        "r3"
       ],
       "confidence": "medium"
     },
     {
       "id": "c3",
-      "text": "The Estonian e-Business Register records four current board members: Andrus Durejko (from 2023-04-03), Marlen Tamm (from 2023-04-03), Lauri Karp (from 2024-09-10), and Gerrit Mäesalu (from 2026-06-22).",
+      "text": "The Government of Estonia is also reported as a shareholder in Eesti Energia AS per OpenSanctions (indicative).",
+      "fact_ids": [
+        "f10"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c4",
+      "text": "Per the Estonian e-Business Register, the current board members are Andrus Durejko (from 2023-04-03), Marlen Tamm (from 2023-04-03), Lauri Karp (from 2024-09-10), and Gerrit Mäesalu (from 2026-06-22).",
       "fact_ids": [
         "f11",
         "f12",
@@ -32,25 +40,35 @@
       "confidence": "high"
     },
     {
-      "id": "c4",
-      "text": "The Estonian e-Business Register also records several individuals holding influence by other means, including Gerrit Mäesalu (from 2026-07-06), Anna Broughel (from 2025-06-02), Priit Rohumaa (from 2025-06-02), Lauri Karp (from 2024-09-11), Jürgen Ligi (from 2024-08-02), Kristi Klaas (from 2024-06-10), Andrus Durejko (from 2023-04-18), Kaur Kajak (from 2023-04-18), Marlen Tamm (from 2023-04-18), and Anne Mere (from 2022-07-19).",
+      "id": "c5",
+      "text": "GLEIF records Enefit OÜ, Enefit Oy, and ENEFIT INDUSTRY AS as direct accounting-consolidation subsidiaries of EESTI ENERGIA AS.",
       "fact_ids": [
-        "f15",
-        "f16",
-        "f17",
-        "f18",
-        "f19",
-        "f20",
-        "f21",
-        "f22",
-        "f23",
-        "f24"
+        "f3",
+        "f4",
+        "f5"
       ],
-      "confidence": "high"
+      "confidence": "medium"
     },
     {
-      "id": "c5",
-      "text": "Jürgen Ligi, recorded as holding influence by other means from 2024-08-02, is a possible name match for a politically exposed person across OpenSanctions, EveryPolitician, and OpenAleph; no birth date or nationality was available to confirm identity, so this remains unconfirmed.",
+      "id": "c6",
+      "text": "OpenSanctions records Eesti Energia AS as holding a shareholding in Attarat Power Co. and in Enefit Green.",
+      "fact_ids": [
+        "f8",
+        "f9"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c7",
+      "text": "The ownership chain has three or more corporate layers, which is a structural risk signal warranting further review (medium confidence, per GLEIF).",
+      "fact_ids": [
+        "r2"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c8",
+      "text": "A related party named Jürgen Ligi — recorded in the Estonian e-Business Register as holding a position via other means from 2024-08-02 — shares a name with PEP records on OpenSanctions, EveryPolitician, and OpenAleph; all matches are name-only with no birth date or nationality confirmed in common (medium confidence).",
       "fact_ids": [
         "f19",
         "r5",
@@ -60,45 +78,8 @@
       "confidence": "medium"
     },
     {
-      "id": "c6",
-      "text": "GLEIF Level 2 data shows no accounting-consolidation parent reported for EESTI ENERGIA AS, as both the direct and ultimate parent positions carry a permitted NON_CONSOLIDATING reporting exception.",
-      "fact_ids": [
-        "f1",
-        "f2",
-        "r1"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c7",
-      "text": "The ownership chain has three or more corporate layers, which is a structural indicator warranting further review (medium confidence, per GLEIF).",
-      "fact_ids": [
-        "r2"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c8",
-      "text": "EESTI ENERGIA AS is recorded as the direct accounting-consolidation parent of Enefit OÜ, Enefit Oy, and ENEFIT INDUSTRY AS per GLEIF.",
-      "fact_ids": [
-        "f3",
-        "f4",
-        "f5"
-      ],
-      "confidence": "medium"
-    },
-    {
       "id": "c9",
-      "text": "EESTI ENERGIA AS also holds shareholdings in Enefit Green and Attarat Power Co., per OpenSanctions.",
-      "fact_ids": [
-        "f8",
-        "f9"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c10",
-      "text": "A material licensing limitation applies: OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used without separate authorisation.",
+      "text": "A material licensing limitation applies: OpenSanctions data is licensed under CC-BY-NC-4.0 and commercial re-use is not permitted under that licence.",
       "fact_ids": [
         "g1"
       ],
@@ -106,11 +87,11 @@
     }
   ],
   "limitations": [
-    "OpenSanctions data is licensed CC-BY-NC-4.0; commercial re-use is not permitted under the source licence (g1).",
-    "State ownership/control is sourced from Wikidata (a crowd-sourced knowledge base) and OpenSanctions (an aggregator) — both are indicative, not authoritative; absence of this indicator in other sources is not evidence to the contrary.",
-    "The possible PEP match for Jürgen Ligi is a name-only match with no birth date or nationality available to confirm or exclude identity across OpenSanctions, EveryPolitician, and OpenAleph.",
-    "No beneficial ownership register data was available; GLEIF Level 2 records accounting consolidation only, not beneficial ownership.",
-    "The GLEIF NON_CONSOLIDATING exception means the ultimate controlling legal entities are not identified in the LEI record."
+    "OpenSanctions data is licensed CC-BY-NC-4.0; commercial re-use is not permitted, limiting the use of shareholding and PEP-match findings in commercial contexts (g1).",
+    "State ownership/control is sourced from Wikidata (crowd-sourced) and OpenSanctions (aggregator) — both are indicative only; absence of this indicator in other sources is not evidence to the contrary (f7, f10, r3).",
+    "The GLEIF NON_CONSOLIDATING reporting exception means no accounting-consolidation parent is disclosed to GLEIF for either the direct or ultimate parent level; this is a permitted exception under LEI ROC policy and does not constitute a beneficial ownership disclosure (f1, f2, r1).",
+    "The PEP signals for Jürgen Ligi are name-match only across all three sources (OpenSanctions, EveryPolitician, OpenAleph) with no corroborating identifiers; positive identification has not been established (r5, r6, r7).",
+    "No beneficial ownership register data was available in the packet; the ownership picture relies on GLEIF accounting-consolidation data, Wikidata, and OpenSanctions aggregator records."
   ],
   "overall_confidence": "medium",
   "model": "claude-sonnet-4-6",
@@ -205,23 +186,23 @@
       },
       {
         "id": "f8",
-        "statement": "Eesti Energia AS holds shareholding in Enefit Green.",
-        "source_name": "OpenSanctions",
-        "source_id": "opensanctions",
-        "source_url": "https://www.opensanctions.org/entities/gem-own-e100000000358/",
-        "bods_statement_ids": [
-          "opencheck-9c363124fcd724bbd13f2181"
-        ],
-        "confidence": "medium"
-      },
-      {
-        "id": "f9",
         "statement": "Eesti Energia AS holds shareholding in Attarat Power Co.",
         "source_name": "OpenSanctions",
         "source_id": "opensanctions",
         "source_url": "https://www.opensanctions.org/entities/gem-own-e100000000358/",
         "bods_statement_ids": [
           "opencheck-2231843684641d83c595143c"
+        ],
+        "confidence": "medium"
+      },
+      {
+        "id": "f9",
+        "statement": "Eesti Energia AS holds shareholding in Enefit Green.",
+        "source_name": "OpenSanctions",
+        "source_id": "opensanctions",
+        "source_url": "https://www.opensanctions.org/entities/gem-own-e100000000358/",
+        "bods_statement_ids": [
+          "opencheck-9c363124fcd724bbd13f2181"
         ],
         "confidence": "medium"
       },

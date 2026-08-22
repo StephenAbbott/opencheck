@@ -1,0 +1,174 @@
+name: Source health sweep
+
+# Weekly exercise of EVERY adapter in the registry against the real upstream
+# sources, one known-good subject each (backend/opencheck/sources/probes.py).
+#
+# The check that matters here is provenance, not reachability. The Ariregister
+# bug (PR #153) returned correct, live Estonian register data while recording
+# no provenance observation, so OpenCheck badged it "Placeholder data" — a
+# sweep asking only "did it return something?" would have gone green every
+# week. Each probe therefore asserts the RESOLVED LIVENESS alongside
+# reachability, emptiness and shape. The two offline guards that keep the same
+# bug class out of the codebase live in tests.yml (tests/test_source_probes.py)
+# and gate every PR; this job is the weekly live half.
+#
+# Deliberately NOT run on push/pull_request: a transient upstream blip must
+# never block a merge. A red run means an upstream changed, a credential
+# expired, or a source is genuinely down. Failures are retried once before
+# they count.
+#
+# Related jobs on the same Monday cadence: drift checks 06:00, live smoke
+# (deep tier, 5 open sources through the full BODS mapping) 07:00, this broad
+# tier 07:30, securities refresh 08:00.
+on:
+  schedule:
+    - cron: "30 7 * * 1" # Mondays 07:30 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: source-health
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v5
+      - name: System deps for the ftm extra (bods-ftm → followthemoney → pyicu)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends g++ libicu-dev pkg-config
+      - name: Install backend
+        run: uv sync --extra ftm
+        working-directory: backend
+
+      # Last week's counts, for the statement-count diff. Allowed to fail:
+      # 90-day retention expiring or a failed previous run legitimately means
+      # no baseline, and the report says "no comparison available" rather than
+      # letting a missing baseline read as "nothing changed".
+      - name: Fetch the previous run's report
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          ID=$(gh run list --workflow source-health.yml --status success --limit 1 \
+                 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$ID" ]; then
+            gh run download "$ID" --name source-health --dir previous
+          fi
+
+      - name: Sweep every registry source
+        id: sweep
+        continue-on-error: true
+        env:
+          OPENCHECK_ALLOW_LIVE: "true"
+          # Phase B: add each of these as a repository secret to lift the
+          # source out of "skipped (not configured)". A source with no secret
+          # is reported as untested rather than counted as healthy, and the
+          # sweep fails outright if MORE sources skip for want of a credential
+          # than probes.MAX_SKIPPED_FOR_CREDENTIALS allows — so an expired or
+          # deleted secret cannot quietly shrink coverage behind a green tick.
+          ABN_GUID: ${{ secrets.ABN_GUID }}
+          BOLAGSVERKET_API_KEY: ${{ secrets.BOLAGSVERKET_API_KEY }}
+          BOLAGSVERKET_CLIENT_SECRET: ${{ secrets.BOLAGSVERKET_CLIENT_SECRET }}
+          COMPANIES_HOUSE_API_KEY: ${{ secrets.COMPANIES_HOUSE_API_KEY }}
+          CORPORATIONS_CANADA_API_KEY: ${{ secrets.CORPORATIONS_CANADA_API_KEY }}
+          CVR_DENMARK_API_KEY: ${{ secrets.CVR_DENMARK_API_KEY }}
+          DATA_GOV_IN_API_KEY: ${{ secrets.DATA_GOV_IN_API_KEY }}
+          FIRMENBUCH_API_KEY: ${{ secrets.FIRMENBUCH_API_KEY }}
+          INPI_USERNAME: ${{ secrets.INPI_USERNAME }}
+          INPI_PASSWORD: ${{ secrets.INPI_PASSWORD }}
+          NZBN_API_KEY: ${{ secrets.NZBN_API_KEY }}
+          OPENCORPORATES_API_KEY: ${{ secrets.OPENCORPORATES_API_KEY }}
+          OPENSANCTIONS_API_KEY: ${{ secrets.OPENSANCTIONS_API_KEY }}
+          SUDREG_CLIENT_ID: ${{ secrets.SUDREG_CLIENT_ID }}
+          SUDREG_CLIENT_SECRET: ${{ secrets.SUDREG_CLIENT_SECRET }}
+          WIKIRATE_API_KEY: ${{ secrets.WIKIRATE_API_KEY }}
+          ZEFIX_USERNAME: ${{ secrets.ZEFIX_USERNAME }}
+          ZEFIX_PASSWORD: ${{ secrets.ZEFIX_PASSWORD }}
+        run: |
+          PREV="$GITHUB_WORKSPACE/previous/source-health.json"
+          if [ -f "$PREV" ]; then
+            uv run python scripts/source_health.py --out "$GITHUB_WORKSPACE/source-health" --previous "$PREV"
+          else
+            uv run python scripts/source_health.py --out "$GITHUB_WORKSPACE/source-health"
+          fi
+        working-directory: backend
+
+      - name: Publish the table to the run summary
+        if: always()
+        run: cat source-health.md >> "$GITHUB_STEP_SUMMARY" || echo "no report produced" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-health
+          path: source-health.*
+          retention-days: 90
+
+      # One rolling issue rather than a new one each week, and a comment only
+      # when something CHANGED — a weekly comment on an unchanged table is how
+      # a monitor stops being read.
+      - name: Update the rolling source-health issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          TITLE="Source health: weekly sweep"
+          LABEL="source-health"
+          gh label create "$LABEL" --description "Weekly data-source health sweep" --color FBCA04 2>/dev/null || true
+
+          FAILING=$(python3 -c "
+          import json
+          report = json.load(open('source-health.json'))
+          bad = sorted(
+              sid for sid, row in report['sources'].items()
+              if row['status'] in ('fail', 'degraded')
+          )
+          print(' '.join(bad))
+          ")
+
+          NUMBER=$(gh issue list --repo "$REPO" --label "$LABEL" --state all --limit 1 --json number --jq '.[0].number // empty')
+          BODY_FILE=$(mktemp)
+          { cat source-health.md; printf '\n[Full run](%s)\n' "$RUN_URL"; } > "$BODY_FILE"
+
+          if [ -z "$FAILING" ]; then
+            if [ -n "$NUMBER" ]; then
+              PREV=$(gh issue view "$NUMBER" --repo "$REPO" --json state --jq .state)
+              gh issue edit "$NUMBER" --repo "$REPO" --body-file "$BODY_FILE"
+              if [ "$PREV" = "OPEN" ]; then
+                gh issue comment "$NUMBER" --repo "$REPO" --body "All sources recovered — closing."
+                gh issue close "$NUMBER" --repo "$REPO"
+              fi
+            fi
+            exit 0
+          fi
+
+          if [ -z "$NUMBER" ]; then
+            gh issue create --repo "$REPO" --title "$TITLE" --label "$LABEL" --body-file "$BODY_FILE"
+            exit 0
+          fi
+
+          PREV_FAILING=$(gh issue view "$NUMBER" --repo "$REPO" --json body --jq .body \
+            | grep -oE '^\| `[a-z_]+` \| [❌⚠️]' | grep -oE '`[a-z_]+`' | tr -d '`' | sort | tr '\n' ' ' || true)
+          gh issue edit "$NUMBER" --repo "$REPO" --body-file "$BODY_FILE"
+          gh issue reopen "$NUMBER" --repo "$REPO" 2>/dev/null || true
+
+          NEW=$(comm -13 <(echo $PREV_FAILING | tr ' ' '\n' | sort -u) <(echo $FAILING | tr ' ' '\n' | sort -u) | tr '\n' ' ')
+          FIXED=$(comm -23 <(echo $PREV_FAILING | tr ' ' '\n' | sort -u) <(echo $FAILING | tr ' ' '\n' | sort -u) | tr '\n' ' ')
+          if [ -n "${NEW// }" ] || [ -n "${FIXED// }" ]; then
+            gh issue comment "$NUMBER" --repo "$REPO" --body "$(printf 'Change since the last sweep.\n\n- Newly failing: %s\n- Recovered: %s\n\n[Full run](%s)' "${NEW:-none}" "${FIXED:-none}" "$RUN_URL")"
+          fi
+
+      - name: Fail the job if the sweep did
+        if: steps.sweep.outcome == 'failure'
+        run: |
+          echo "::error::Source health sweep reported failures or degradations — see the run summary."
+          exit 1

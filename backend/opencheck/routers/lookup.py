@@ -18,6 +18,7 @@ from sse_starlette.sse import EventSourceResponse
 from .. import __version__
 from .. import bods as _bods
 from .. import identifiers
+from .. import degradation as _degradation
 from .. import provenance as _provenance
 from .. import signalstats
 from ..provenance import Provenance
@@ -257,6 +258,11 @@ async def _build_report(
 ) -> ReportResponse:
     """Shared by /report and /export. Same algorithm; same response shape."""
     from .search import _run_adapters  # avoid circular at module level
+
+    # Open the scope BEFORE any adapter runs: a source that could not answer
+    # from its own data records that here, and it is collected below alongside
+    # the derived screens' degradations.
+    _degradation.begin()
     results, errors = await _run_adapters(q, kind)
     hits = [hit for adapter_hits in results.values() for hit in adapter_hits]
     links = [link.to_dict() for link in reconcile(hits)]
@@ -294,7 +300,10 @@ async def _build_report(
                 }
             )
 
-    degraded: list[DegradedSource] = []
+    # Seeded with whatever the source adapters recorded during the fetches
+    # above — a source that could not answer from its own data says so there,
+    # not only in the server log. The derived screens append to the same list.
+    degraded: list[DegradedSource] = _degradation.collect()
     oa_screening: list[dict[str, Any]] = []
     cross_signals = [
         s.to_dict()
@@ -1586,6 +1595,7 @@ async def _lookup_pipeline(
     collector: deepen_result and deepen_error. ``hit`` payloads are
     SourceHit objects; everything else is JSON-serialisable dicts.
     """
+    _degradation.begin()
     lei = lei.strip().upper()
     if not _LEI_SHAPE.match(lei):
         yield ("error", {
@@ -1893,7 +1903,10 @@ async def _lookup_pipeline(
         {"pairs": [p.to_dict() for p in possibly_same_entities(bods_all)]},
     )
 
-    degraded: list[DegradedSource] = []
+    # Seeded with whatever the source adapters recorded during the fetches
+    # above — a source that could not answer from its own data says so there,
+    # not only in the server log. The derived screens append to the same list.
+    degraded: list[DegradedSource] = _degradation.collect()
     oa_screening: list[dict[str, Any]] = []
     cross_raw, icij_raw, oa_raw = await asyncio.gather(
         assess_cross_source_names(bods_all, degraded=degraded),

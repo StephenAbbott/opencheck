@@ -1,7 +1,7 @@
 {
   "lei": "213800LH1BZH3DI6G760",
   "subject_name": "BP P.L.C.",
-  "summary": "BP P.L.C. is identifier-confirmed, registered in Great Britain (LEI 213800LH1BZH3DI6G760, GB-COH 00102498), and operates as the ultimate consolidating parent of an extensive multinational group spanning the UK, US, Australia, Canada, India, continental Europe, and other jurisdictions, as evidenced by GLEIF Level 2 data and UK Companies House PSC filings. No accounting-consolidation parent is reported to GLEIF — the direct and ultimate parent fields carry a \"no known person\" permitted exception, consistent with a widely held public company rather than a controlled entity. Key officers recorded at Companies House and OpenCorporates include board appointees Tushar Morzaria (from 2020-09-01), Johannes Antonius Teyssen (from 2021-01-01), Amanda Jayne Blanc (from 2022-09-01), Satish Pai and Hina Nagarajan (both from 2023-03-01), Katherine Anne Thomson (from 2024-02-02), Ian Paul Tyler (from 2025-04-01), David Alan Hager (from 2025-06-02), and Marguerite Eileen O'Neill (from 2026-04-01); Wikidata (indicative) records Helge Lund as chairperson from 2018-12-31 and Meg O'Neill as chief executive officer from 2025-12-01. One structural risk signal was identified: the ownership chain contains at least three corporate layers (medium confidence, per the AMLA threshold of ≥3), derived from OpenSanctions data; additionally, two related entities — BRITANNIC TRADING LIMITED (high confidence, ICIJ score 100/100) and BRITANNIC ENERGY TRADING LIMITED (medium confidence, ICIJ score 78/100) — match records in the Bahamas Leaks, which is a structural indicator warranting further review and does not constitute a finding of wrongdoing. A material limitation applies: OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used under that licence.",
+  "summary": "BP P.L.C. is identifier-confirmed, registered in Great Britain (LEI 213800LH1BZH3DI6G760, GB-COH 00102498), and operates as the ultimate consolidating parent of an extensive multinational group spanning energy, chemicals, aviation fuelling, renewables, and capital markets across jurisdictions including the US, Australia, Canada, India, the Netherlands, and others, as evidenced by GLEIF Level 2 data and UK Companies House PSC filings. BP P.L.C. directly or ultimately consolidates a large number of subsidiaries confirmed by GLEIF and UK Companies House, including BP International Limited (itself a direct subsidiary per Companies House), BP Global Investments Limited, BP Corporation North America Inc., BP Europa SE, Castrol Holdings International Limited, and BP Capital Markets P.L.C., among many others; no accounting-consolidation parent is reported to GLEIF, with a permitted \"no known person\" exception recorded for both direct and ultimate parent, consistent with a widely held public company. One structural risk signal was identified: the ownership chain has three or more corporate layers (medium confidence, per OpenSanctions), which meets the AMLA threshold for complex ownership structure and warrants further review of the layered chain. Two Offshore Leaks signals were raised against related entities in the group: BRITANNIC TRADING LIMITED matches a Bahamas Leaks record (ICIJ score 100/100, high confidence) and BRITANNIC ENERGY TRADING LIMITED matches a Bahamas Leaks record (ICIJ score 78/100, medium confidence); these are structural indicators for further review and are not determinations of wrongdoing. Key officers recorded at Companies House include board appointees Tushar Morzaria (from 2020-09-01), Johannes Antonius Teyssen (from 2021-01-01), Amanda Jayne Blanc (from 2022-09-01), Satish Pai (from 2023-03-01), Hina Nagarajan (from 2023-03-01), Katherine Anne Thomson (from 2024-02-02), Ian Paul Tyler (from 2025-04-01), David Alan Hager (from 2025-06-02), and Marguerite Eileen O'Neill (from 2026-04-01), with Helge Lund recorded as chairperson from 2018-12-31 and Meg O'Neill as CEO from 2025-12-01 per Wikidata (indicative); a material limitation is that OpenSanctions data is licensed CC-BY-NC-4.0 and commercial re-use is not permitted under that source licence.",
   "claims": [
     {
       "id": "c1",
@@ -13,44 +13,26 @@
     },
     {
       "id": "c2",
-      "text": "BP P.L.C. is the ultimate consolidating parent of an extensive multinational group, including subsidiaries in the UK, US, Australia, Canada, India, continental Europe, and other jurisdictions, as recorded in GLEIF Level 2 data.",
+      "text": "BP P.L.C. is the ultimate consolidating parent of an extensive multinational group, directly or ultimately consolidating subsidiaries including BP International Limited, BP Global Investments Limited, BP Corporation North America Inc., BP Europa SE, Castrol Holdings International Limited, BP Capital Markets P.L.C., and many others, as confirmed by GLEIF Level 2 data and UK Companies House PSC filings.",
       "fact_ids": [
-        "f1",
-        "f2",
-        "f3",
-        "f4",
-        "f5",
-        "f13",
-        "f14",
-        "f15",
-        "f16",
-        "f23",
-        "f24",
-        "f27",
-        "f28",
-        "f30",
-        "f42",
-        "f43",
-        "f50",
-        "f51",
-        "f53",
         "f56",
         "f57",
-        "f63",
-        "f64",
-        "f69",
-        "f70",
-        "f79",
-        "f80",
         "f91",
         "f92",
-        "f100"
+        "f101",
+        "f102",
+        "f143",
+        "f144",
+        "f79",
+        "f80",
+        "f281",
+        "f322"
       ],
       "confidence": "high"
     },
     {
       "id": "c3",
-      "text": "No accounting-consolidation parent is reported to GLEIF; the direct and ultimate parent fields carry a 'no known person' permitted exception, consistent with a widely held public company.",
+      "text": "No accounting-consolidation parent is reported to GLEIF for BP P.L.C.; a permitted 'no known person' exception is recorded for both direct and ultimate parent, consistent with a widely held public company.",
       "fact_ids": [
         "r1"
       ],
@@ -58,25 +40,37 @@
     },
     {
       "id": "c4",
-      "text": "UK Companies House PSC filings confirm BP P.L.C. holds 75–100% ownership, voting rights, and the right to appoint and remove directors in multiple direct subsidiaries including BP INTERNATIONAL LIMITED, BP GLOBAL INVESTMENTS LIMITED, BP HOLDINGS NORTH AMERICA LIMITED, BP AFRICA LIMITED, and others.",
+      "text": "One structural risk signal was identified: the ownership chain has three or more corporate layers (medium confidence, per OpenSanctions), which meets the AMLA threshold for complex ownership structure and warrants further review.",
       "fact_ids": [
-        "f281",
-        "f322",
-        "f294",
-        "f308",
-        "f301",
-        "f199",
-        "f243",
-        "f270",
-        "f272",
-        "f207",
-        "f320"
+        "r3"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c5",
+      "text": "BRITANNIC TRADING LIMITED, a related entity in the BP group, matches a record in the Bahamas Leaks (ICIJ score 100/100, high confidence); this is a structural indicator for further review and is not a determination of wrongdoing.",
+      "fact_ids": [
+        "r8",
+        "f109",
+        "f110",
+        "f299"
       ],
       "confidence": "high"
     },
     {
-      "id": "c5",
-      "text": "Board appointees recorded at Companies House and OpenCorporates include Tushar Morzaria (from 2020-09-01), Johannes Antonius Teyssen (from 2021-01-01), Amanda Jayne Blanc (from 2022-09-01), Satish Pai and Hina Nagarajan (both from 2023-03-01), Katherine Anne Thomson (from 2024-02-02), Ian Paul Tyler (from 2025-04-01), David Alan Hager (from 2025-06-02), and Marguerite Eileen O'Neill (from 2026-04-01).",
+      "id": "c6",
+      "text": "BRITANNIC ENERGY TRADING LIMITED, a related entity in the BP group, matches a record in the Bahamas Leaks (ICIJ score 78/100, medium confidence); this is a structural indicator for further review and is not a determination of wrongdoing.",
+      "fact_ids": [
+        "r9",
+        "f139",
+        "f140",
+        "f183"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "c7",
+      "text": "Key board appointees recorded at Companies House include Tushar Morzaria (from 2020-09-01), Johannes Antonius Teyssen (from 2021-01-01), Amanda Jayne Blanc (from 2022-09-01), Satish Pai (from 2023-03-01), Hina Nagarajan (from 2023-03-01), Katherine Anne Thomson (from 2024-02-02), Ian Paul Tyler (from 2025-04-01), David Alan Hager (from 2025-06-02), and Marguerite Eileen O'Neill (from 2026-04-01).",
       "fact_ids": [
         "f326",
         "f327",
@@ -91,45 +85,17 @@
       "confidence": "high"
     },
     {
-      "id": "c6",
-      "text": "Wikidata (indicative source) records Helge Lund as chairperson from 2018-12-31 and Meg O'Neill as chief executive officer from 2025-12-01.",
-      "fact_ids": [
-        "f178",
-        "f179"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c7",
-      "text": "One structural risk signal was identified: the ownership chain contains at least three corporate layers, meeting the AMLA threshold of ≥3, derived from OpenSanctions data at medium confidence.",
-      "fact_ids": [
-        "r3"
-      ],
-      "confidence": "medium"
-    },
-    {
       "id": "c8",
-      "text": "Related entity BRITANNIC TRADING LIMITED matches a record in the Bahamas Leaks with an ICIJ score of 100/100 (high confidence); this is a structural indicator for further review and does not constitute a finding of wrongdoing.",
+      "text": "Helge Lund is indicatively recorded as chairperson from 2018-12-31 and Meg O'Neill as CEO from 2025-12-01, per Wikidata; these are indicative, not authoritative.",
       "fact_ids": [
-        "r8",
-        "f109",
-        "f110"
+        "f177",
+        "f178"
       ],
-      "confidence": "high"
+      "confidence": "medium"
     },
     {
       "id": "c9",
-      "text": "Related entity BRITANNIC ENERGY TRADING LIMITED matches a record in the Bahamas Leaks with an ICIJ score of 78/100 (medium confidence); this is a structural indicator for further review and does not constitute a finding of wrongdoing.",
-      "fact_ids": [
-        "r9",
-        "f139",
-        "f140"
-      ],
-      "confidence": "medium"
-    },
-    {
-      "id": "c10",
-      "text": "OpenSanctions data is licensed CC-BY-NC-4.0 and may not be commercially re-used under that licence.",
+      "text": "A material limitation applies: OpenSanctions data used in this review is licensed CC-BY-NC-4.0, and commercial re-use of that data is not permitted under the source licence.",
       "fact_ids": [
         "g1"
       ],
@@ -137,11 +103,11 @@
     }
   ],
   "limitations": [
-    "OpenSanctions data is licensed CC-BY-NC-4.0; commercial re-use is not permitted under the source licence (g1).",
-    "No accounting-consolidation parent is reported to GLEIF (permitted 'no known person' exception); this reflects the entity's widely held public company status and is not a gap in disclosure per LEI ROC policy (r1).",
-    "Ownership percentages for shareholdings reported via OpenSanctions are not quantified in the packet and are therefore not cited in the summary.",
-    "Officer and chairperson data from Wikidata is indicative only and has not been verified against an official register.",
-    "The ICIJ Offshore Leaks matches relate to subsidiary entities (BRITANNIC TRADING LIMITED and BRITANNIC ENERGY TRADING LIMITED), not to BP P.L.C. directly; the nature and current status of those records require separate investigation."
+    "OpenSanctions data is licensed CC-BY-NC-4.0; commercial re-use is not permitted under that source licence (g1).",
+    "No accounting-consolidation parent is reported to GLEIF (permitted 'no known person' exception); GLEIF Level 2 records accounting consolidation, not beneficial ownership, so no beneficial owner is identified from this source.",
+    "Ownership shares and relationships sourced from Wikidata (including chairperson and CEO roles) are indicative only and not authoritative.",
+    "The Offshore Leaks signals (r8, r9) relate to named group entities (BRITANNIC TRADING LIMITED and BRITANNIC ENERGY TRADING LIMITED) and are structural indicators requiring further investigation; the packet does not contain detail on the nature or outcome of those Bahamas Leaks records.",
+    "The packet does not include a sanctions screening result for BP P.L.C. itself or its officers from a dedicated sanctions list check; the OpenSanctions source was consulted but its licence limits commercial use."
   ],
   "overall_confidence": "high",
   "model": "claude-sonnet-4-6",
@@ -2097,12 +2063,12 @@
       },
       {
         "id": "f177",
-        "statement": "BP PLC holds Parent organisation declared in GEM ownership tracker (not a beneficial ownership assertion) in BP PLC.",
-        "source_name": "Global Energy Monitor / Climate TRACE",
-        "source_id": "climatetrace",
-        "source_url": "https://globalenergymonitor.org/",
+        "statement": "Helge Lund holds chairperson, from 2018-12-31 in BP.",
+        "source_name": "Wikidata",
+        "source_id": "wikidata",
+        "source_url": "https://www.wikidata.org/wiki/Q152057",
         "bods_statement_ids": [
-          "opencheck-7f694abad61a952c14df266b"
+          "opencheck-a20a626c17183dcb749d9a0c"
         ],
         "confidence": "medium"
       },
@@ -2119,12 +2085,12 @@
       },
       {
         "id": "f179",
-        "statement": "Helge Lund holds chairperson, from 2018-12-31 in BP.",
-        "source_name": "Wikidata",
-        "source_id": "wikidata",
-        "source_url": "https://www.wikidata.org/wiki/Q152057",
+        "statement": "BP PLC holds Parent organisation declared in GEM ownership tracker (not a beneficial ownership assertion) in BP PLC.",
+        "source_name": "Global Energy Monitor / Climate TRACE",
+        "source_id": "climatetrace",
+        "source_url": "https://globalenergymonitor.org/",
         "bods_statement_ids": [
-          "opencheck-a20a626c17183dcb749d9a0c"
+          "opencheck-7f694abad61a952c14df266b"
         ],
         "confidence": "medium"
       },
@@ -3918,8 +3884,8 @@
         "label": "Outside EU/EEA",
         "confidence": "low",
         "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: GB. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
-        "source_name": "Global Energy Monitor / Climate TRACE",
-        "source_id": "climatetrace",
+        "source_name": "Wikidata",
+        "source_id": "wikidata",
         "fact_ids": [],
         "kind": "context"
       },
@@ -3929,8 +3895,8 @@
         "label": "Outside EU/EEA",
         "confidence": "low",
         "rationale": "Ownership chain reaches jurisdictions outside the EU/EEA: GB. Structural context, not a risk finding — neither the AMLA CDD RTS nor AMLR Annex III treats non-EU status as a risk factor in itself. Contributes to AMLA Article 12(1) condition (b) only where it appears on the layered ownership path.",
-        "source_name": "Wikidata",
-        "source_id": "wikidata",
+        "source_name": "Global Energy Monitor / Climate TRACE",
+        "source_id": "climatetrace",
         "fact_ids": [],
         "kind": "context"
       },
@@ -3993,16 +3959,16 @@
         "homepage": "https://www.opensanctions.org/"
       },
       {
-        "source_id": "climatetrace",
-        "name": "Global Energy Monitor / Climate TRACE",
-        "license": "CC-BY-4.0",
-        "homepage": "https://globalenergymonitor.org/"
-      },
-      {
         "source_id": "wikidata",
         "name": "Wikidata",
         "license": "CC0-1.0",
         "homepage": "https://www.wikidata.org/wiki/Wikidata:Main_Page"
+      },
+      {
+        "source_id": "climatetrace",
+        "name": "Global Energy Monitor / Climate TRACE",
+        "license": "CC-BY-4.0",
+        "homepage": "https://globalenergymonitor.org/"
       },
       {
         "source_id": "eiti",
@@ -4017,16 +3983,16 @@
         "homepage": "https://find-and-update.company-information.service.gov.uk/"
       },
       {
-        "source_id": "opencorporates",
-        "name": "OpenCorporates",
-        "license": "OC-Terms",
-        "homepage": "https://opencorporates.com/"
-      },
-      {
         "source_id": "wikirate",
         "name": "Wikirate",
         "license": "CC-BY-4.0",
         "homepage": "https://wikirate.org/"
+      },
+      {
+        "source_id": "opencorporates",
+        "name": "OpenCorporates",
+        "license": "OC-Terms",
+        "homepage": "https://opencorporates.com/"
       },
       {
         "source_id": "openaleph",

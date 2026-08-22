@@ -51,6 +51,7 @@ import re
 from typing import Any
 from urllib.parse import quote
 
+from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -200,6 +201,7 @@ def _parse_jar_html(html: str) -> list[dict[str, str]]:
 # ---------------------------------------------------------------------------
 # Adapter
 # ---------------------------------------------------------------------------
+
 
 
 class JarLithuaniaAdapter(SourceAdapter):
@@ -354,13 +356,31 @@ class JarLithuaniaAdapter(SourceAdapter):
             cache_key=html_cache_key,
         )
         if html is None:
-            # HTTP error or host unreachable.  We know the entity IS registered
-            # in the JAR (GLEIF confirmed registeredAt.id == RA000430), so surface
-            # a non-stub card using the GLEIF name rather than hiding it entirely.
+            # HTTP error or host unreachable. We know the entity IS registered
+            # in the JAR (GLEIF confirmed registeredAt.id == RA000430), so
+            # surface a card using the GLEIF name rather than hiding it
+            # entirely — but say plainly that the register did not answer.
+            #
+            # Until Phase 121 this returned exactly the same shape with no
+            # marker and no degradation, so a card carrying only the name
+            # GLEIF had already supplied was indistinguishable from a
+            # successful lookup. JAR returns 403 to datacentre IPs, which made
+            # it look healthy from a laptop and broken from CI while the
+            # underlying behaviour — an answer that isn't from the register —
+            # was the same in both.
+            failure = getattr(self, "_last_failure", None) or "unreachable"
             _log.warning(
-                "jar_lithuania: could not fetch JAR page for %s (%r); "
-                "returning partial non-stub using GLEIF name",
-                code, legal_name,
+                "jar_lithuania: could not fetch JAR page for %s (%s); "
+                "returning GLEIF-name card marked register_unavailable",
+                code, failure,
+            )
+            degradation.record(
+                self.id,
+                f"The Lithuanian JAR interface did not answer ({failure}); "
+                "the card shows the GLEIF legal name only, with no register "
+                "detail. This is not a confirmation that the register holds "
+                "nothing.",
+                reason=degradation.reason_for_failure(failure),
             )
             result = {
                 "source_id": self.id,
@@ -372,6 +392,11 @@ class JarLithuaniaAdapter(SourceAdapter):
                 "status": None,
                 "link": _entity_url(code),
                 "is_stub": False,
+                # The register did not answer. Consumers that treat a bundle as
+                # a register response — the UI, exports, the health sweep —
+                # must be able to tell.
+                "register_unavailable": True,
+                "register_unavailable_detail": failure,
             }
             self._cache.put(bundle_cache_key, result)
             return result
@@ -442,13 +467,17 @@ class JarLithuaniaAdapter(SourceAdapter):
                 resp = await client.get(url, headers=headers)
         except Exception as exc:  # noqa: BLE001
             _log.warning("jar_lithuania: HTTP error fetching %s: %s", url, exc)
+            self._last_failure = type(exc).__name__
             return None
 
         if not resp.is_success:
             _log.warning(
                 "jar_lithuania: HTTP %s fetching %s", resp.status_code, url
             )
+            self._last_failure = f"HTTP {resp.status_code}"
             return None
+
+        self._last_failure = None
 
         html = resp.text
         self._cache.put(cache_key, html)
