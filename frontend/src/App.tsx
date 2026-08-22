@@ -43,6 +43,7 @@ import { VerdictStrip } from "./components/cdd/VerdictStrip";
 import { Icon } from "./components/ui";
 import ConfidenceLegend from "./components/ui/ConfidenceLegend";
 import { PERSON_VERB, resultCount, sourceLabel } from "./lib/vocab";
+import { answeredCount } from "./lib/lookupProgress";
 import { documentTitleFor, modeParam, parseMode } from "./lib/checkMode";
 import type { CheckMode } from "./lib/checkMode";
 import type { IconName } from "./components/ui";
@@ -261,6 +262,17 @@ export default function App() {
   // Derived rather than stored: `errors` is already the record of which sources
   // failed, and a second set could disagree with it.
   const erroredSources = useMemo(() => new Set(Object.keys(errors)), [errors]);
+  // Coverage counts only sources that were dispatched. `completedSources` also
+  // holds the GLEIF anchor, which emits source_started/source_completed BEFORE
+  // sources_applicable and is never in that list — so the raw size could exceed
+  // the total and the strip read "13 of 12 sources answered", above the line
+  // "Every applicable source answered." A coverage figure that overshoots its
+  // own denominator undermines the one number on the page whose whole job is
+  // to say how much was checked.
+  const answeredApplicable = useMemo(
+    () => answeredCount(applicableSources, completedSources),
+    [applicableSources, completedSources]
+  );
   const [streaming, setStreaming] = useState(false);
   // QuickCheck (subject screening, default) vs FullCheck (network EDD) vs
   // BackgroundCheck (screening the people connected to the entity). Reset to
@@ -1742,8 +1754,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             lei={streamingLei}
             legalName={legalName}
             jurisdiction={subjectJurisdiction}
-            signals={riskCodes}
-            screening={streaming}
             replayedAt={replayedAt}
             onRefresh={() => lookupLei(streamingLei, { refresh: true })}
             identifierSources={leiConfirmedSourceCount}
@@ -1762,7 +1772,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             riskSignals={riskCodes}
             contextSignals={contextCodes}
             degraded={degradedSources}
-            sourcesAnswered={completedSources.size}
+            sourcesAnswered={answeredApplicable}
             sourcesApplicable={applicableSources.length}
             screening={streaming}
             onRerun={
