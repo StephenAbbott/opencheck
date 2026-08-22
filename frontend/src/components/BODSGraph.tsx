@@ -33,8 +33,9 @@ import type { RiskSignal } from "../lib/api";
 // here and the per-source scoping filter must read `evidence` identically, so
 // they share one implementation rather than two that can drift.
 import { buildSignalMap } from "../lib/signalScope";
+import { signalStyle } from "../lib/graphStyle";
+import GraphLegend from "./GraphLegend";
 import type { SameAsCandidate } from "../lib/reconcile";
-import BodsRelationshipTable from "./BodsRelationshipTable";
 
 cytoscape.use(dagre);
 
@@ -56,62 +57,11 @@ interface NodeOverlay {
   hiddenCount?: number;    // descendants hidden because this node is collapsed
 }
 
-interface SignalStyle { bg: string; border: string; text: string; label: string; severity: number }
-
-export const SIGNAL_STYLE: Record<string, SignalStyle> = {
-  SANCTIONED:               { bg:"#ffe4e6", border:"#be123c", text:"#be123c", label:"S",  severity:7 },
-  RELATED_SANCTIONED:       { bg:"#ffe4e6", border:"#be123c", text:"#be123c", label:"RS", severity:7 },
-  // Counter-sanctions (OpenSanctions `sanction.counter`): a direct listing,
-  // but by a regime with weak democratic institutions. Severity 2 and slate
-  // — below plain adjacency, and outside the rose/amber ramp entirely.
-  COUNTER_SANCTIONED:         { bg:"#f1f5f9", border:"#475569", text:"#334155", label:"CS",  severity:2 },
-  RELATED_COUNTER_SANCTIONED: { bg:"#f1f5f9", border:"#475569", text:"#334155", label:"RCS", severity:2 },
-  SANCTIONED_SECURITY:      { bg:"#fff1f2", border:"#be123c", text:"#be123c", label:"SS", severity:6 },
-  // Owned by a designated party (OpenSanctions `sanction.control`) — its own
-  // tier between a direct listing and plain adjacency.
-  SANCTIONS_CONTROLLED:         { bg:"#ffe4e6", border:"#9f1239", text:"#9f1239", label:"SC",  severity:6 },
-  RELATED_SANCTIONS_CONTROLLED: { bg:"#ffe4e6", border:"#9f1239", text:"#9f1239", label:"RSC", severity:6 },
-  SANCTIONS_LINKED:         { bg:"#fef3c7", border:"#b45309", text:"#b45309", label:"SL", severity:3 },
-  RELATED_SANCTIONS_LINKED: { bg:"#fef3c7", border:"#b45309", text:"#b45309", label:"RSL", severity:3 },
-  DEBARMENT:                { bg:"#ffedd5", border:"#c2410c", text:"#9a3412", label:"Db", severity:4 },
-  RELATED_DEBARMENT:        { bg:"#ffedd5", border:"#c2410c", text:"#9a3412", label:"RDb", severity:4 },
-  // Export-control family (Phase 118): a listing of the party itself, one
-  // tier above debarment and below sanction control; adjacency sits with the
-  // sanctions-linked tier, and "Trade risk" (export.risk) one below that.
-  EXPORT_CONTROLLED:            { bg:"#ffe4e6", border:"#9f1239", text:"#9f1239", label:"E",   severity:5 },
-  RELATED_EXPORT_CONTROLLED:    { bg:"#ffe4e6", border:"#9f1239", text:"#9f1239", label:"RE",  severity:5 },
-  EXPORT_CONTROL_LINKED:        { bg:"#fef3c7", border:"#b45309", text:"#b45309", label:"EL",  severity:3 },
-  RELATED_EXPORT_CONTROL_LINKED:{ bg:"#fef3c7", border:"#b45309", text:"#b45309", label:"REL", severity:3 },
-  EXPORT_RISK:                  { bg:"#fff7ed", border:"#c2410c", text:"#c2410c", label:"Er",  severity:2 },
-  RELATED_EXPORT_RISK:          { bg:"#fff7ed", border:"#c2410c", text:"#c2410c", label:"REr", severity:2 },
-  FATF_BLACK_LIST:          { bg:"#fee2e2", border:"#991b1b", text:"#991b1b", label:"F!",  severity:5 },
-  EU_HIGH_RISK_THIRD_COUNTRY: { bg:"#fee2e2", border:"#b91c1c", text:"#b91c1c", label:"EU!", severity:4 },
-  PEP:                      { bg:"#f5f3ff", border:"#6d28d9", text:"#6d28d9", label:"P",  severity:4 },
-  RELATED_PEP:              { bg:"#f5f3ff", border:"#6d28d9", text:"#6d28d9", label:"RP", severity:4 },
-  COMPLEX_CORPORATE_STRUCTURE: { bg:"#fef2f2", border:"#b91c1c", text:"#b91c1c", label:"CC", severity:3 },
-  FATF_GREY_LIST:           { bg:"#fff7ed", border:"#9a3412", text:"#9a3412", label:"Fg", severity:2 },
-  // Context, not risk — slate, and the LOWEST severity, so a node is
-  // never ranked by the graph on the strength of being non-EU alone.
-  NON_EU_JURISDICTION:      { bg:"#f8fafc", border:"#64748b", text:"#475569", label:"N",  severity:0 },
-  STATE_CONTROLLED:         { bg:"#fff7ed", border:"#c2410c", text:"#c2410c", label:"St", severity:2 },
-  OFFSHORE_LEAKS:           { bg:"#fef3c7", border:"#92400e", text:"#92400e", label:"OL", severity:2 },
-  TRUST_OR_ARRANGEMENT:     { bg:"#eef2ff", border:"#4338ca", text:"#4338ca", label:"T",  severity:1 },
-  COMPLEX_OWNERSHIP_LAYERS: { bg:"#f0f9ff", border:"#0369a1", text:"#0369a1", label:"≥3", severity:1 },
-  POSSIBLE_OBFUSCATION:     { bg:"#fefce8", border:"#854d0e", text:"#854d0e", label:"?",  severity:1 },
-  NOMINEE:                  { bg:"#fdf4ff", border:"#7e22ce", text:"#7e22ce", label:"Nm", severity:1 },
-  OPAQUE_OWNERSHIP:         { bg:"#f8fafc", border:"#475569", text:"#475569", label:"O",  severity:1 },
-  // Context, not risk — a permitted GLEIF reporting exception (no parent to
-  // report / parent without an LEI). Lowest severity, like NON_EU_JURISDICTION,
-  // so the exception bridge node is never ranked as a warning.
-  GLEIF_REPORTING_EXCEPTION: { bg:"#f8fafc", border:"#64748b", text:"#475569", label:"Ex", severity:0 },
-};
-
-const DEFAULT_SIGNAL_STYLE: SignalStyle =
-  { bg:"#f1f5f9", border:"#64748b", text:"#64748b", label:"!", severity:0 };
-
-function signalStyle(code: string): SignalStyle {
-  return SIGNAL_STYLE[code] ?? DEFAULT_SIGNAL_STYLE;
-}
+// The graph's visual vocabulary moved to lib/graphStyle.ts in Phase 124, so
+// the legend can be generated from it without importing this component (which
+// pulls in Cytoscape). Re-exported here because RiskChip.test.ts and other
+// call sites have always imported SIGNAL_STYLE from this module.
+export { SIGNAL_STYLE } from "../lib/graphStyle";
 
 // ---------------------------------------------------------------------------
 // BODS GraphModel → Cytoscape elements
@@ -290,10 +240,6 @@ export default function BODSGraph({
   // the full signal text; Escape dismisses (see effect below).
   const [signalTooltip, setSignalTooltip] =
     useState<{ id: string; x: number; y: number; text: string } | null>(null);
-  // Text-equivalent fallback for the canvas (WCAG 1.1.1/2.1.1): when on, the
-  // relationship table replaces the canvas; the Cytoscape instance is torn
-  // down and rebuilt on toggle (the init effect keys on `tableView`).
-  const [tableView, setTableView] = useState(false);
 
   // ── Search state ───────────────────────────────────────────────────────────
   const [query, setQuery] = useState("");
@@ -406,10 +352,8 @@ export default function BODSGraph({
     cy.on("viewport", () => { setEdgeTooltip(null); setSignalTooltip(null); });
 
     return () => { cy.destroy(); cyRef.current = null; };
-  // `tableView` is a dep so the instance is destroyed when the table replaces
-  // the canvas and rebuilt (fresh container element) when toggled back.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model, signalMap, sameAs, tableView]);
+  }, [model, signalMap, sameAs]);
 
   // ── Apply collapse: hide/show elements, re-layout the visible subset ───────
   useEffect(() => {
@@ -438,7 +382,7 @@ export default function BODSGraph({
     cy.fit(visEles, 32);
     updateOverlaysRef.current?.();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model, signals, collapsed, tableView]);
+  }, [model, signals, collapsed]);
 
   // ── Apply search over the currently-visible nodes ──────────────────────────
   useEffect(() => {
@@ -469,7 +413,7 @@ export default function BODSGraph({
       if (node.nonempty()) cy.animate({ center: { eles: node } }, { duration: 250 });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, model, collapsed, tableView]);
+  }, [query, model, collapsed]);
 
   // ── Provenance: highlight one source, dim the rest (FullCheck legend) ──────
   useEffect(() => {
@@ -491,7 +435,7 @@ export default function BODSGraph({
       });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [highlightSource, model, tableView]);
+  }, [highlightSource, model]);
 
   // ── Reflect the shared selection into the graph (highlight + centre) ───────
   useEffect(() => {
@@ -507,7 +451,7 @@ export default function BODSGraph({
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, model, tableView]);
+  }, [selectedId, model]);
 
   // ── Dismiss the risk-badge popover / edge tooltip with Escape while open ───
   useEffect(() => {
@@ -536,6 +480,13 @@ export default function BODSGraph({
     : `${matchIdx + 1} of ${matchIds.length}`;
   const collapsedCount = collapsed.size;
 
+  // The edge kinds this graph actually draws — the legend lists these and no
+  // others, so a four-node diagram is not captioned with the whole vocabulary.
+  const edgeCategories = useMemo(
+    () => new Set(model.edges.map((e) => e.category as string)),
+    [model]
+  );
+
   // Counts for the canvas's accessible name (role="img" — the name is all a
   // screen-reader user perceives of it; the table view is the full equivalent).
   const personCount = model.nodes.filter(
@@ -557,9 +508,8 @@ export default function BODSGraph({
     <div className="bg-white border border-oo-rule rounded-oo">
       {/* Toolbar */}
       <div className="border-b border-oo-rule">
-        <div className="flex items-center flex-wrap gap-1 px-2 py-1 text-xs text-oo-muted">
-          {!tableView && <>
-            <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom in" aria-label="Zoom in"
+        <div className="flex items-center flex-wrap gap-1 px-2 py-1 text-oo-meta text-oo-muted">
+          <button type="button" className="hover:text-oo-blue font-mono px-2" title="Zoom in" aria-label="Zoom in"
               onClick={() => cyRef.current?.zoom({ level: (cyRef.current?.zoom() ?? 1) * 1.3,
                 renderedPosition: { x: (containerRef.current?.clientWidth ?? 0) / 2, y: (containerRef.current?.clientHeight ?? 0) / 2 } })}>
               +
@@ -573,31 +523,16 @@ export default function BODSGraph({
               onClick={() => cyRef.current?.fit(undefined, 32)}>
               Fit
             </button>
-            {collapsedCount > 0 && (
-              <button type="button" className="hover:text-oo-blue px-2" title="Expand all collapsed nodes"
-                onClick={() => onCollapsedChange(new Set())}>
-                Expand all
-              </button>
-            )}
-          </>}
+          {collapsedCount > 0 && (
+            <button type="button" className="hover:text-oo-blue px-2"
+              aria-label={`Expand all ${collapsedCount} collapsed ${collapsedCount === 1 ? "branch" : "branches"}`}
+              onClick={() => onCollapsedChange(new Set())}>
+              Expand all
+            </button>
+          )}
 
-          {/* Text-equivalent toggle — always available, on every mount */}
-          <button
-            type="button"
-            className="hover:text-oo-blue px-2"
-            aria-pressed={tableView}
-            onClick={() => {
-              setEdgeTooltip(null);
-              setSignalTooltip(null);
-              setTableView((v) => !v);
-            }}
-          >
-            {tableView ? "View as graph" : "View as table"}
-          </button>
-
-          {/* Search-within-graph (targets the canvas — graph mode only) */}
-          {!tableView && (
-            <div className="flex items-center gap-1 ml-auto">
+          {/* Search-within-graph */}
+          <div className="flex items-center gap-1 ml-auto">
               <label htmlFor="bods-graph-search" className="sr-only">Search nodes in the graph</label>
               <input
                 id="bods-graph-search"
@@ -622,44 +557,23 @@ export default function BODSGraph({
                 disabled={matchIds.length === 0} onClick={() => focusMatch(matchIdx + 1)}>
                 ›
               </button>
-              <span role="status" aria-live="polite" className="min-w-[64px] tabular-nums text-[11px]">
+                <span role="status" aria-live="polite" className="min-w-[64px] tabular-nums text-oo-meta">
                 {resultLabel}
               </span>
-            </div>
-          )}
+          </div>
         </div>
-        {/* Legend */}
-        <div className="flex flex-wrap gap-1.5 px-3 pb-2">
-          <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#eff6ff] border-[#3b82f6] text-[#1d4ed8]">
-            <span className="inline-block w-3.5 h-0.5 bg-[#3b82f6] rounded-full flex-shrink-0"/>Ownership
-          </span>
-          <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#fdf0e8] border-[#e65100] text-[#9a3412]">
-            <span className="inline-block w-3.5 flex-shrink-0" style={{borderTop:"1.5px dotted #e65100"}}/>Control
-          </span>
-          <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#f5f3ff] border-[#7c3aed] text-[#6d28d9]">
-            <span className="inline-block w-3.5 flex-shrink-0" style={{borderTop:"1.5px dashed #7c3aed"}}/>Role
-          </span>
-          {signals.length > 0 && <>
-            <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#ffe4e6] border-[#be123c] text-[#be123c]">Sanction</span>
-            <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#f5f3ff] border-[#6d28d9] text-[#6d28d9]">PEP</span>
-            <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-[#fff7ed] border-[#c2410c] text-[#c2410c]">Jurisdiction</span>
-          </>}
-        </div>
+        {/* Legend — generated from lib/graphStyle.ts, scoped to this graph */}
+        <GraphLegend
+          edgeCategories={edgeCategories}
+          signalsByNode={signalMap}
+          hasPeople={personCount > 0}
+          hasCollapsed={collapsedCount > 0}
+        />
       </div>
 
-      {/* Table view — text equivalent of the canvas (WCAG 1.1.1/2.1.1) */}
-      {tableView && (
-        <div className="p-3 max-h-[420px] overflow-auto">
-          <BodsRelationshipTable
-            model={model}
-            signalsByNode={signalMap}
-            entityName={entityName}
-          />
-        </div>
-      )}
-
-      {/* Graph container + HTML overlay */}
-      {!tableView && (
+      {/* Graph container + HTML overlay. The text equivalent is BodsTree,
+          rendered by BodsGraphExplorer beside this canvas — see the WCAG note
+          in that component. */}
       <div style={{ position: "relative" }}>
         <div
           ref={containerRef}
@@ -822,7 +736,6 @@ export default function BODSGraph({
           </div>
         )}
       </div>
-      )}
     </div>
   );
 }

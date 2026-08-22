@@ -327,12 +327,18 @@ export function SubsidiaryNetwork({
             </div>
           )}
 
-          {/* Children list — always available (direct-first-then-tail). */}
-          {data.children.length > 0 ? (
-            <ChildrenTable children={data.children} />
-          ) : (
-            <p className="mt-2 text-[12px] text-oo-muted">No children to list.</p>
-          )}
+          {/* Children list — the view when there is no diagram (Phase 124).
+              It used to render underneath the graph as well, so a revealed
+              network showed the diagram, the diagram's own text equivalent and
+              this list: three renderings of one set of statements. The
+              explorer's "Read as text" disclosure covers the graph case, and
+              covers it better, because it nests. */}
+          {!(isGraphMode && showGraph && bods) &&
+            (data.children.length > 0 ? (
+              <ChildrenTable children={data.children} />
+            ) : (
+              <p className="mt-2 text-oo-meta text-oo-muted">No children to list.</p>
+            ))}
         </>
       )}
     </section>
