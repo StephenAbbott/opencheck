@@ -14,8 +14,14 @@ name: Source health sweep
 #
 # Deliberately NOT run on push/pull_request: a transient upstream blip must
 # never block a merge. A red run means an upstream changed, a credential
-# expired, or a source is genuinely down. Failures are retried once before
-# they count.
+# expired, or a source is genuinely down — act now. Failures are retried once
+# before they count.
+#
+# A DEGRADATION does not red the run: a rate limit, a snapshot due a refresh,
+# or a register that refuses datacentre IPs (Lithuania's JAR does) is a caveat
+# on the result, not a broken source. Degradations still open and update the
+# rolling issue, so they are tracked without training the reader to ignore a
+# red X that is always there.
 #
 # Related jobs on the same Monday cadence: drift checks 06:00, live smoke
 # (deep tier, 5 open sources through the full BODS mapping) 07:00, this broad
