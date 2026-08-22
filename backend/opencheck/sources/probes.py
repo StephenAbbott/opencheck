@@ -50,6 +50,8 @@ from dataclasses import dataclass, field
 from collections.abc import Mapping
 from typing import Any, Literal
 
+from .base import SearchKind
+
 Tier = Literal["live", "curated", "snapshot", "index", "inactive"]
 
 #: Liveness values that mean "a network round-trip actually happened".
@@ -111,6 +113,17 @@ class SourceProbe:
 
     requires_env: tuple[str, ...] = ()
     """Settings aliases that must be set for live mode. Missing → skipped."""
+
+    requires_env_files: tuple[str, ...] = ()
+    """Settings that name a FILE, which must exist for the source to answer.
+
+    A configured path is not a working source. `BCE_BELGIUM_DB_FILE` pointing
+    at a SQLite build that was never made is the case that taught this: the
+    setting is present, so the credential check passed, the adapter fell back
+    to a stub, and the probe reported a provenance failure — technically true,
+    and completely misleading about the cause. Missing file is a skip with the
+    path named, not a failure.
+    """
 
     requires_files: tuple[str, ...] = ()
     """Data-root-relative paths the adapter needs. Missing → skipped.
@@ -420,21 +433,34 @@ PROBES: dict[str, SourceProbe] = {
     ),
     "opensanctions": _p(
         tier="live",
-        subject="Rosneft (NK-rosneft)",
-        allow_empty=True,
-        args=("NK-rosneft",),
+        subject="Rosneft (sanctions search)",
+        method="search",
+        args=("Rosneft", SearchKind.ENTITY),
         requires_env=("OPENSANCTIONS_API_KEY",),
         bods_mapper="map_opensanctions",
-        notes="Licence CC BY-NC: shape-only assertions, nothing recorded or echoed.",
+        notes=(
+            "Searched, not fetched by id. The original probe fetched "
+            "`NK-rosneft` and got a 404 — and OpenSanctions 308-redirects a "
+            "MERGED id, so a 404 means that id never existed; it came from an "
+            "respx-mocked test file. Canonical ids also churn as entities are "
+            "deduplicated, so a search for a name that must always match "
+            "something is the stable way to exercise this API. An empty result "
+            "is a failure: if Rosneft stops matching, screening is broken."
+        ),
     ),
     "everypolitician": _p(
         tier="live",
-        subject="A PEP record served via OpenSanctions",
-        allow_empty=True,
-        args=("Q7747-pep",),
+        subject="A head of state (PEP search)",
+        method="search",
+        args=("Vladimir Putin", SearchKind.PERSON),
         requires_env=("OPENSANCTIONS_API_KEY",),
         bods_mapper="map_everypolitician",
-        notes="Licence CC BY-NC. Person-kind source; no personal detail goes in the report.",
+        notes=(
+            "Same story as opensanctions: the fetch-by-id probe used "
+            "`Q7747-pep`, which 404s. Person-kind search instead — the "
+            "adapter returns [] for entity searches. No personal detail "
+            "reaches the report, which carries source ids and statuses only."
+        ),
     ),
     "sec_edgar": _p(
         tier="live",
@@ -544,6 +570,7 @@ PROBES: dict[str, SourceProbe] = {
         expect_liveness=frozenset({"snapshot"}),
         expect_fields=("name", "enterprise_number"),
         requires_env=("BCE_BELGIUM_DB_FILE",),
+        requires_env_files=("BCE_BELGIUM_DB_FILE",),
         anchor_lei="549300CWRXC5EP004533",
         bods_mapper="map_bce_belgium",
         notes=(
@@ -593,7 +620,12 @@ def key_gated_ids() -> frozenset[str]:
 #: Guard against a secret quietly disappearing. If more sources skip for want
 #: of a credential than this, the sweep fails rather than reporting green over
 #: reduced coverage. Lower it deliberately, in the commit that adds the secret.
-MAX_SKIPPED_FOR_CREDENTIALS = len(key_gated_ids())
+#:
+#: 2026-08-22: every credential is now a repository secret except
+#: ``DATA_GOV_IN_API_KEY`` (India MCA, blocked on JanParichay registration), so
+#: exactly one source may legitimately skip. Any more means a secret expired or
+#: was deleted.
+MAX_SKIPPED_FOR_CREDENTIALS = 1
 
 __all__ = [
     "LIVE",

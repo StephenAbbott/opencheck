@@ -79,6 +79,7 @@ from opencheck.sources.probes import (  # noqa: E402
     MAX_SKIPPED_FOR_CREDENTIALS,
     PROBES,
     SourceProbe,
+    configured_credentials,
     missing_env,
 )
 
@@ -157,6 +158,20 @@ async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Resu
             known_gap=probe.known_gap,
         )
     except Exception as exc:  # noqa: BLE001 — a sweep must survive any adapter
+        # A rate limit is a statement about our request pattern, not about the
+        # source. Reporting it as a failure trains the reader to discount
+        # failures, which is how a real one gets missed. KvK's open-data API
+        # 429s readily, and the retry can be what trips it.
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        if status == 429:
+            return Result(
+                source_id,
+                probe.tier,
+                DEGRADED,
+                reason="rate limited (HTTP 429) — no verdict on this source's health",
+                latency_ms=int((time.monotonic() - started) * 1000),
+                known_gap=probe.known_gap,
+            )
         return Result(
             source_id,
             probe.tier,
@@ -297,6 +312,14 @@ def _skip_reason(probe: SourceProbe, root: Path) -> str | None:
     if absent_env:
         label = "not configured" if probe.tier != "inactive" else "env-gated off"
         return f"{label}: {', '.join(absent_env)}"
+
+    # A configured path is not a working source.
+    credentials = configured_credentials()
+    credentials.update({k: v for k, v in os.environ.items() if v and v.strip()})
+    for name in probe.requires_env_files:
+        path = (credentials.get(name) or "").strip()
+        if path and not Path(path).expanduser().exists():
+            return f"{name} points at a file that does not exist: {path}"
     absent_files = [p for p in probe.requires_files if not (root / p).exists()]
     if absent_files:
         return f"required local artifact absent: {', '.join(absent_files)}"
