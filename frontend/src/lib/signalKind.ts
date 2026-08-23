@@ -31,6 +31,21 @@ export function isContextObservation(signal: RiskSignal): boolean {
   return signalKind(signal) === "context";
 }
 
+/**
+ * How many distinct risk findings there are, counted the way the report
+ * counts them.
+ *
+ * The risk layer emits one signal per matching hit, so a list of nine can be
+ * two findings. The verdict strip has always deduplicated by code — "4
+ * signals — 2 risk, 2 structural" — while FullCheck's network-risk line read
+ * `signals.length` straight off the array and said "QuickCheck flagged 9
+ * signals on the subject" one screen below it. Two counts of the same thing,
+ * on the same page, both labelled as what the check found.
+ */
+export function riskFindingCount(signals: RiskSignal[]): number {
+  return new Set(signals.filter(isRiskFinding).map((s) => s.code)).size;
+}
+
 /** Split signals into `[risk, context]`, preserving input order in each. */
 export function partitionByKind(
   signals: RiskSignal[],

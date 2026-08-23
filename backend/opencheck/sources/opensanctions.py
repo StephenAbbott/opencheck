@@ -216,7 +216,12 @@ class OpenSanctionsAdapter(SourceAdapter):
         if topics:
             summary_bits.append("topics: " + ", ".join(topics[:3]))
         if datasets:
-            summary_bits.append(f"{len(datasets)} dataset(s)")
+            # Not "N dataset(s)". The parenthesised plural is a programmer
+            # writing one string for two cases; every other count in the
+            # product agrees in number (`resultCount` exists for exactly
+            # this), and this one reached the reader as "1 dataset(s)".
+            n = len(datasets)
+            summary_bits.append(f"{n} dataset" if n == 1 else f"{n} datasets")
         if not summary_bits:
             summary_bits.append(item.get("schema") or "Entity")
 

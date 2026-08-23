@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { CONFIDENCE_GLYPH, CONFIDENCE_LABEL } from "../ui/Chip";
+import { SignalEvidence } from "./SignalEvidence";
 import type { RiskSignal } from "../../lib/api";
+import type { LeadSignal } from "../../lib/leadSignal";
 import { sourceLabel } from "../../lib/vocab";
 
 /**
@@ -171,14 +173,41 @@ export function rank(confidence: string): number {
   return confidence === "high" ? 3 : confidence === "medium" ? 2 : 1;
 }
 
+/**
+ * A chip, and — where nothing else owns the explanation — the box under it.
+ *
+ * Three modes, in order of preference:
+ *
+ * - **Selectable** (`onSelect` given). The chip is a control in a set and
+ *   renders no box of its own; the section it lives in shows one
+ *   `SignalEvidence` for whichever chip is selected. This is the Risk signals
+ *   section, where a per-chip box meant the reader could have two boxes open
+ *   saying the same kind of sentence in two different styles.
+ * - **Self-expanding** (the default). For chips scattered outside a section
+ *   that could hold a box — the verdict strip, a source card, the graph
+ *   legend. The box is the same `SignalEvidence` component, so an expansion
+ *   here and the section's box are one design rather than two.
+ * - **Static** (`interactive={false}`). The summary rides in the accessible
+ *   name and there is nothing to activate.
+ *
+ * A self-expanded chip claims **no corroboration**: it knows one signal, and
+ * "Reported by one source" would be a claim about the whole check made by a
+ * component that has seen one row of it. It names its own source and stops.
+ */
 export function RiskChip({
   signal,
   compact = false,
   interactive = true,
+  selected = false,
+  onSelect,
 }: {
   signal: RiskSignal;
   compact?: boolean;
   interactive?: boolean;
+  /** Selectable mode: whether this chip is the one being explained. */
+  selected?: boolean;
+  /** Selectable mode: hand the selection to the section that owns the box. */
+  onSelect?: (signal: RiskSignal) => void;
 }) {
   const [open, setOpen] = useState(false);
   const presentation =
@@ -217,6 +246,26 @@ export function RiskChip({
     );
   }
 
+  // Selectable: the section owns the box, so the chip is a pressed/unpressed
+  // control and nothing more. `aria-pressed` rather than `aria-expanded` —
+  // there is no region under *this* control to expand, and announcing one
+  // would send a screen-reader user looking for it.
+  if (onSelect) {
+    return (
+      <button
+        type="button"
+        aria-pressed={selected}
+        onClick={() => onSelect(signal)}
+        className={`inline-flex items-center gap-1.5 border rounded-full shadow-sm ${padding} ${presentation.classes} ${
+          selected ? "ring-2 ring-oo-navy/40 ring-offset-1" : ""
+        }`}
+      >
+        {chipContent}
+        <span className="sr-only">{described}</span>
+      </button>
+    );
+  }
+
   return (
     <>
       <button
@@ -232,13 +281,25 @@ export function RiskChip({
         <span className="sr-only">{described}</span>
       </button>
       {open && (
-        <span className="basis-full text-left text-oo-meta text-oo-ink bg-white border border-oo-rule rounded-oo px-2.5 py-1.5 leading-[1.5]">
-          {signal.summary}
-          {signal.source_id ? <> · Source: {sourceLabel(signal.source_id)}</> : null}
-          {" · "}
-          {CONFIDENCE_LABEL[signal.confidence]?.toLowerCase() ?? `${signal.confidence} confidence`}
+        <span className="basis-full">
+          <SignalEvidence lead={chipEvidence(signal)} />
         </span>
       )}
     </>
   );
+}
+
+/**
+ * The `LeadSignal` shape for a chip that has only itself.
+ *
+ * `sourceCount: 0` on purpose — see the note on the component above. The
+ * source still goes in `sourceIds`, so the box names it.
+ */
+export function chipEvidence(signal: RiskSignal): LeadSignal {
+  return {
+    signal,
+    sourceCount: 0,
+    sourceIds: signal.source_id ? [signal.source_id] : [],
+    checkedAt: null,
+  };
 }

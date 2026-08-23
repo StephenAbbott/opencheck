@@ -98,10 +98,39 @@ _base.RAW_SUPPRESSED_SOURCE_IDS = frozenset(
     sid for sid, adapter in REGISTRY.items() if not adapter.republish_raw
 )
 
+#: Display names for source ids that are not registered adapters but do reach
+#: user-facing prose. ``icij`` is the one that matters: the Offshore Leaks
+#: reconciliation endpoint produces signals without being an adapter, so
+#: ``REGISTRY`` cannot name it.
+_UNREGISTERED_NAMES = {
+    "icij": "ICIJ Offshore Leaks",
+    "opencheck": "OpenCheck",
+}
+
+
+def source_display_name(source_id: str) -> str:
+    """The registry's own name for a source, for a sentence a reader will see.
+
+    Adapter ids are snake_case slugs, and several of them are wrong as brand
+    names however they are prettified — the registry says "OpenSanctions",
+    "OpenAleph", "Global Energy Monitor / Climate TRACE". A related-party
+    signal read "shares a name with a record on openaleph"; the id belongs in
+    ``source_id``, which the same signal already carries, not in the sentence.
+
+    Falls back to the id, which is at least true, rather than to a guess.
+    """
+    info = getattr(REGISTRY.get(source_id), "info", None)
+    name = getattr(info, "name", None)
+    if isinstance(name, str) and name:
+        return name
+    return _UNREGISTERED_NAMES.get(source_id, source_id)
+
+
 __all__ = [
     "REGISTRY",
     "SearchKind",
     "SourceAdapter",
     "SourceHit",
     "SourceInfo",
+    "source_display_name",
 ]

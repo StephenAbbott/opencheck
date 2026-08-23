@@ -61,7 +61,7 @@ from .risk import (
     classify_sanction_topics,
     pick_degradation_reason,
 )
-from .sources import REGISTRY, SearchKind, SourceHit
+from .sources import REGISTRY, SearchKind, SourceHit, source_display_name
 
 _LOG = logging.getLogger(__name__)
 
@@ -616,18 +616,39 @@ def match_summary(
     """Signal prose. An uncorroborated person match must not read as an
     assertion that the related party *is* the listed record."""
     relation = "Related party" if target["kind"] == _KIND_PERSON else "Related entity"
+    # The source's own name, not its adapter id. This sentence is read on the
+    # report — "shares a name with a record on openaleph" put a snake_case
+    # slug in the middle of prose, the defect `sourceLabel` exists to prevent
+    # on the frontend.
+    source = source_display_name(source_id)
     if target["kind"] == _KIND_PERSON and not corroboration:
         return (
             f"Possible name match only: {relation.lower()} '{target['name']}' "
-            f"shares a name with a record on {source_id}, with no birth date "
+            f"shares a name with a record on {source}, with no birth date "
             f"or nationality in common to confirm they are the same person "
             f"— {summary_extra}."
         )
-    via = f" (confirmed on {', '.join(corroboration)})" if corroboration else ""
+    via = f" ({_agreement_clause(corroboration)})" if corroboration else ""
     return (
         f"{relation} '{target['name']}' matches a record "
-        f"on {source_id}{via}: {summary_extra}."
+        f"on {source}{via}: {summary_extra}."
     )
+
+
+#: The attribute names `corroborating_attributes` returns, as English. They are
+#: field names, and "confirmed on birth_year" read like a log line.
+_ATTRIBUTE_WORDS = {"birth_year": "birth year", "nationality": "nationality"}
+
+
+def _agreement_clause(corroboration: tuple[str, ...]) -> str:
+    """"birth year and nationality also agree" — what the match rests on
+    beyond the name, said as a clause rather than as a list of fields."""
+    words = [_ATTRIBUTE_WORDS.get(c, c.replace("_", " ")) for c in corroboration]
+    if len(words) == 1:
+        listed = words[0]
+    else:
+        listed = f"{', '.join(words[:-1])} and {words[-1]}"
+    return f"{listed} also agree{'s' if len(words) == 1 else ''}"
 
 
 def _make_signal(

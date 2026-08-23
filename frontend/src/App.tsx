@@ -47,14 +47,14 @@ import { VerdictStrip } from "./components/cdd/VerdictStrip";
 import { Icon, SectionHeading } from "./components/ui";
 import ConfidenceLegend from "./components/ui/ConfidenceLegend";
 import PanelSection, { PanelCard } from "./components/ui/PanelSection";
-import { PERSON_VERB, resultCount, sourceLabel } from "./lib/vocab";
+import { PERSON_VERB, resultCount, setSourceNames, sourceLabel } from "./lib/vocab";
 import { answeredCount } from "./lib/lookupProgress";
 import { documentTitleFor, modeParam, parseMode } from "./lib/checkMode";
 import type { CheckMode } from "./lib/checkMode";
 import type { IconName } from "./components/ui";
 import { NarrativePanel } from "./components/cdd/NarrativePanel";
-import { LeadEvidence } from "./components/risk/LeadEvidence";
-import { leadSignal } from "./lib/leadSignal";
+import { SignalEvidence } from "./components/risk/SignalEvidence";
+import { evidenceForCode, leadSignal } from "./lib/leadSignal";
 import { Explain } from "./components/ui/Explain";
 import type { ReportExportPayload } from "./components/cdd/NarrativePanel";
 import {
@@ -235,6 +235,10 @@ export default function App() {
    *  identifier badge. Reset per lookup, like everything else about a
    *  result. */
   const [identityOpen, setIdentityOpen] = useState(false);
+  /** Which risk chip the reader selected, if any. Null means "the worst one",
+   *  which is what the Risk signals section opens on. Declared with the other
+   *  per-entity state because the lookup reset clears it. */
+  const [selectedSignalCode, setSelectedSignalCode] = useState<string | null>(null);
   const searchPanelsCollapsed = !!streamingLei && !mobileSearchOpen;
   const [hits, setHits] = useState<SourceHit[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -590,6 +594,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         setStartedSources(new Set());
         setPanelErrors([]);
         setIdentityOpen(false);
+        // A chip selection belongs to the entity it was made on. Carried into
+        // the next lookup it either explains a signal the new subject does not
+        // have, or — worse — silently lands on a code it does, so the box
+        // opens on something nobody chose.
+        setSelectedSignalCode(null);
         // The exports belong to the entity that was on screen. A failed PDF
         // left its alert sitting on the *next* subject, describing a download
         // that was never attempted for it — and the payload the report embeds
@@ -961,6 +970,14 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     [sourcesQuery.data]
   );
 
+  // Publish it, so a component holding a source id and no map still says the
+  // registry's name rather than a prettified slug ("Opensanctions"). Threading
+  // the prop reaches most call sites and missed the risk chips, the ESG cards
+  // and the source legend; those read the published map instead.
+  useEffect(() => {
+    setSourceNames(sourceNameIndex);
+  }, [sourceNameIndex]);
+
   // Group hits by source_id for the per-source bucket cards.
   // Built progressively from streaming hits — updates on every onHit / onSourceError.
   const bucketList = useMemo<SourceBucket[]>(() => {
@@ -1127,6 +1144,18 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     () => leadSignal(riskSignals, sourceLiveness),
     [riskSignals, sourceLiveness]
   );
+
+  // The signal the one evidence box is explaining: the reader's choice, or
+  // the lead. Falling back to the lead rather than to nothing matters — a
+  // selected code can disappear when a re-run returns different signals, and
+  // an empty box under a row of chips reads as a rendering fault.
+  const shownSignal = useMemo(() => {
+    if (selectedSignalCode) {
+      const chosen = evidenceForCode(riskSignals, selectedSignalCode, sourceLiveness);
+      if (chosen) return chosen;
+    }
+    return lead;
+  }, [selectedSignalCode, riskSignals, sourceLiveness, lead]);
 
   /** Scroll to a source card and flash it — the same affordance narrative
    *  citations and the identifier table already use. */
@@ -2224,19 +2253,29 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               <>
                 <div className="flex flex-wrap gap-2">
                   {riskCodes.map((sig) => (
-                    <RiskChip key={sig.code} signal={sig} />
+                    <RiskChip
+                      key={sig.code}
+                      signal={sig}
+                      selected={shownSignal?.signal.code === sig.code}
+                      onSelect={(s) => setSelectedSignalCode(s.code)}
+                    />
                   ))}
                 </div>
                 {/* The worst signal, said out loud. A row of chips over
                     "select a chip for the rule that fired" is a menu, not a
                     finding — the most serious thing the check turned up was a
-                    word in a pill, and its sentence only appeared on click. */}
-                {lead && (
+                    word in a pill, and its sentence only appeared on click.
+                    One box, not one per chip: a chip that opened its own
+                    expansion left two boxes on screen saying the same kind of
+                    sentence in two different styles. */}
+                {shownSignal && (
                   <div className="mt-3.5">
-                    <LeadEvidence
-                      lead={lead}
+                    <SignalEvidence
+                      lead={shownSignal}
                       sourceNames={sourceNameIndex}
-                      hasCard={(id) => cddBuckets.some((b) => b.sourceId === id)}
+                      hasCard={(id: string) =>
+                        cddBuckets.some((b) => b.sourceId === id)
+                      }
                       onShowSource={showSourceCard}
                     />
                   </div>
@@ -2248,8 +2287,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     accurate thing to be able to find and a poor thing to open
                     a section with. */}
                 <p className="text-oo-small text-oo-muted mt-2.5">
-                  Every signal comes from a published record. Select a chip to
-                  read the one behind it.{" "}
+                  The most serious signal is shown above. Select any chip to
+                  read the record behind it instead.{" "}
                   <Explain label="Where these come from">
                     Signals are derived from open data by deterministic rules,
                     never by a model. Those aligned to AMLA — the EU
@@ -2279,6 +2318,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   Structural context — how the company is put together, not a
                   finding against it.
                 </p>
+                {/* These stay self-expanding rather than driving the box
+                    above them. The box sits under the risk chips, and a
+                    control that updates something off-screen above it is
+                    worse than one that opens in place — the styles are the
+                    same either way, because the expansion is the same
+                    `SignalEvidence` component. */}
                 <div className="flex flex-wrap gap-2">
                   {contextCodes.map((sig) => (
                     <RiskChip key={sig.code} signal={sig} />

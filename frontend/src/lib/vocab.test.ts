@@ -8,6 +8,7 @@ import {
   OPENALEPH_TOPIC,
   resultCount,
   sourceLabel,
+  setSourceNames,
   sourceList,
   topicLabel,
   topicList,
@@ -222,5 +223,33 @@ describe("graphPartiesLabel", () => {
     for (const [e, p] of [[1, 0], [1, 1], [5, 2], [12, 9]] as const) {
       expect(graphPartiesLabel(e, p)).not.toMatch(/part(y|ies)/);
     }
+  });
+});
+
+describe("published registry names", () => {
+  it("names a source the way the registry does, with no map in hand", () => {
+    // The risk chip's evidence, the ESG cards and the source legend all hold
+    // a source id and no `sourceNames` prop, and rendered "Opensanctions"
+    // beside cards headed "OpenSanctions".
+    setSourceNames({ opensanctions: "OpenSanctions" });
+    expect(sourceLabel("opensanctions")).toBe("OpenSanctions");
+    expect(sourceList(["opensanctions", "everypolitician"])).toBe(
+      "OpenSanctions and Everypolitician"
+    );
+    setSourceNames({});
+  });
+
+  it("still prefers an explicit map, so nothing that threads one changes", () => {
+    setSourceNames({ opensanctions: "OpenSanctions" });
+    expect(sourceLabel("opensanctions", { opensanctions: "Local override" })).toBe(
+      "Local override"
+    );
+    setSourceNames({});
+  });
+
+  it("falls back to prettifying an id the registry does not know", () => {
+    setSourceNames({ opensanctions: "OpenSanctions" });
+    expect(sourceLabel("some_new_source")).toBe("Some New Source");
+    setSourceNames({});
   });
 });
