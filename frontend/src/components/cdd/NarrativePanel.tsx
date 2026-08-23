@@ -251,6 +251,12 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
   // dispositions and never derived from them.
   const [reviewed, setReviewed] = useState(false);
   const dirtyRef = useRef(false);
+  // The stored sheet has been fetched (or confirmed absent). No save may run
+  // before it is true: a whole-sheet overwrite racing its own hydration is how
+  // one click deleted an analyst's saved decisions.
+  const hydratedRef = useRef(false);
+  // An edit is waiting on the debounce.
+  const pendingRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
 
   const canSignOff = Boolean(data?.run_id) && !cached;
@@ -269,6 +275,8 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     setEvidenceExpanded(false);
     setReviewed(false);
     dirtyRef.current = false;
+    pendingRef.current = false;
+    hydratedRef.current = false;
     fetchCuratedNarrative(lei).then((cachedNarrative) => {
       if (active && cachedNarrative) {
         setData(cachedNarrative);
@@ -281,17 +289,30 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
   }, [lei]);
 
   // Hydrate any stored disposition sheet for this exact narrative run.
+  //
+  // The first version bailed entirely when the analyst had already touched
+  // something (`dirtyRef`), which lost the stored sheet: the save is a
+  // whole-sheet overwrite, so one click on "Mark as reviewed" landing before
+  // this promise resolved wrote back an empty `dispositions: []` and deleted
+  // every decision and `decided_at` on the server. Stored entries are now
+  // merged *under* local ones — the analyst's own edits win, everything they
+  // have not touched survives.
   useEffect(() => {
     if (!data?.run_id || cached) return;
     let active = true;
     getDispositions(lei, data.run_id).then((record) => {
-      if (!active || !record || dirtyRef.current) return;
-      const next: Record<string, DispState> = {};
-      for (const d of record.dispositions) {
-        next[d.claim_id] = { status: d.status, comment: d.comment ?? "" };
+      if (!active) return;
+      if (record) {
+        const stored: Record<string, DispState> = {};
+        for (const d of record.dispositions) {
+          stored[d.claim_id] = { status: d.status, comment: d.comment ?? "" };
+        }
+        setDisp((local) => ({ ...stored, ...local }));
+        if (!dirtyRef.current) setReviewed(Boolean(record.reviewed));
       }
-      setDisp(next);
-      setReviewed(Boolean(record.reviewed));
+      // Set last, and on both branches: until it is true no save may run, or
+      // the save would race the very sheet it is about to overwrite.
+      hydratedRef.current = true;
     });
     return () => {
       active = false;
@@ -305,8 +326,8 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     const runId = data.run_id;
     const promptVersion = data.prompt_version;
     const model = data.model;
-    if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = window.setTimeout(async () => {
+    if (!hydratedRef.current) return;
+    const save = async () => {
       setSaveState("saving");
       try {
         await putDispositions(
@@ -323,19 +344,38 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
       } catch {
         setSaveState("error");
       }
-    }, 800);
+    };
+    if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(save, 800);
     return () => {
-      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
+      if (saveTimerRef.current === null) return;
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+      // Flush rather than drop. This panel is mounted only under
+      // `mode === "quick"`, so switching to FullCheck within the debounce
+      // window unmounted it and silently discarded the pending write — the
+      // control had already drawn a checkmark for a review that was never
+      // persisted. `void` because a cleanup cannot await, and the request is
+      // an idempotent whole-sheet overwrite, so a duplicate is harmless.
+      if (pendingRef.current) void save();
     };
   }, [disp, reviewed, data, cached, lei]);
 
+  // Set on every analyst edit and cleared once a save completes, so the
+  // unmount flush above can tell "nothing to write" from "a write is due".
+  useEffect(() => {
+    if (saveState === "saved") pendingRef.current = false;
+  }, [saveState]);
+
   function toggleReviewed() {
     dirtyRef.current = true;
+    pendingRef.current = true;
     setReviewed((v) => !v);
   }
 
   function setClaimStatus(claimId: string, status: DispositionStatus) {
     dirtyRef.current = true;
+    pendingRef.current = true;
     setDisp((prev) => {
       const current = prev[claimId];
       // Clicking the active status again clears the decision.
@@ -350,6 +390,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
 
   function setClaimComment(claimId: string, comment: string) {
     dirtyRef.current = true;
+    pendingRef.current = true;
     setDisp((prev) => {
       const current = prev[claimId];
       return {
@@ -359,16 +400,22 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     });
   }
 
+  /** The audit trail embedded in the PDF and the Markdown report. */
   function buildRecord(): DispositionRecord | null {
     if (!data?.run_id || cached) return null;
     const entries = Object.entries(disp);
-    if (entries.length === 0) return null;
+    // A summary marked reviewed with no claim dispositioned is still a
+    // decision, and the exported report is where a decision has to appear —
+    // the first version returned null here, so the one analyst who read the
+    // summary and signed it off exported a report with no audit trail at all.
+    if (entries.length === 0 && !reviewed) return null;
     return {
       lei,
       run_id: data.run_id,
       prompt_version: data.prompt_version,
       model: data.model,
       reviewer: null,
+      reviewed,
       dispositions: entries.map(([claimId, d]) => ({
         claim_id: claimId,
         status: d.status,
@@ -387,7 +434,16 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
       setCommentOpen({});
       setSaveState("idle");
       setEvidenceExpanded(false);
+      // A regenerate is new text and therefore a new run_id, which is the
+      // whole reason run_id exists (see `compute_run_id`): decisions must
+      // never attach to words the analyst did not read. `reviewed` is one of
+      // those decisions — leaving it set carried a checkmark, and then a
+      // stamped `reviewed_at`, onto a summary produced two seconds ago.
+      setReviewed(false);
       dirtyRef.current = false;
+      pendingRef.current = false;
+      // The new run has no stored sheet yet; the hydrate effect will confirm.
+      hydratedRef.current = false;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not generate the summary.");
     } finally {
@@ -562,6 +618,23 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
                   "Mark as reviewed"
                 )}
               </button>
+            )}
+            {/* Beside the control, not four hundred pixels below it in a block
+                that only renders when the narrative has claims. The button
+                draws its checkmark optimistically, so a failed write was
+                reported nowhere on a claimless summary and silently reverted
+                on reload. */}
+            {canSignOff && saveState !== "idle" && (
+              <span
+                role="status"
+                className={saveState === "error" ? "text-oo-warn-text" : "text-oo-muted"}
+              >
+                {saveState === "saving"
+                  ? "Saving…"
+                  : saveState === "saved"
+                    ? "Saved"
+                    : "Could not save — your decisions are not stored."}
+              </span>
             )}
           </div>
 

@@ -187,10 +187,18 @@ def _summary(
     run_id = narrative.get("run_id", "")
     generated_at = str(narrative.get("generated_at", ""))[:19]
     updated_at = str((dispositions or {}).get("updated_at") or "")[:19]
+    # See html_report._summary: stated separately from the per-claim
+    # dispositions because it is a weaker claim than accepting each of them.
+    reviewed_at = str((dispositions or {}).get("reviewed_at") or "")[:19]
+    reviewed = bool((dispositions or {}).get("reviewed"))
     run_bits = [b for b in [
         f"run {run_id}" if run_id else "",
         f"generated {generated_at}" if generated_at else "",
         f"dispositions updated {updated_at}" if updated_at else "",
+        (
+            f"marked reviewed {reviewed_at}" if reviewed and reviewed_at
+            else "marked reviewed" if reviewed else ""
+        ),
     ] if b]
     lines = [
         f"## Summary ({conf} confidence)",

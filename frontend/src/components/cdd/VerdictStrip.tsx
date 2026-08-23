@@ -171,14 +171,14 @@ export function VerdictStrip({
         </div>
 
         {showNetwork && network && onOpenNetwork && (
-          // A button, not a link: FullCheck is a mode of this report, not
-          // another page, and `selectMode` owns the URL, the analytics event
-          // and moving focus into the panel.
-          <button
-            type="button"
-            onClick={onOpenNetwork}
-            className="flex flex-col items-start gap-2.5 text-left rounded-oo border border-oo-graph-ownershipTintBorder bg-oo-graph-ownershipTint px-4 py-3.5 hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oo-graph-ownershipText transition-colors"
-          >
+          // The heading and the counts sit *outside* the control, and only the
+          // call to action is the button. The first version wrapped the whole
+          // card, which put an `<h2>` inside a `<button>` — invalid content
+          // model, and in practice a control whose accessible name was the
+          // entire card, ~30 words long, while the heading dropped out of the
+          // page outline wherever AT flattens button descendants. This column
+          // was then the only one of the three without a heading.
+          <div className="flex flex-col items-start gap-2.5 rounded-oo border border-oo-graph-ownershipTintBorder bg-oo-graph-ownershipTint px-4 py-3.5">
             <SectionLabel as="h2" className="text-oo-graph-ownershipText">
               Ownership network
             </SectionLabel>
@@ -194,7 +194,11 @@ export function VerdictStrip({
               )}
               {network.depthPhrase && <>, {network.depthPhrase}</>}
             </span>
-            <span className="inline-flex items-center gap-2 text-oo-body font-bold text-oo-graph-ownershipText">
+            <button
+              type="button"
+              onClick={onOpenNetwork}
+              className="inline-flex items-center gap-2 text-left text-oo-body font-bold text-oo-graph-ownershipText hover:underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oo-graph-ownershipText rounded"
+            >
               <svg
                 width="17"
                 height="17"
@@ -212,12 +216,12 @@ export function VerdictStrip({
                 <path d="M8 7.5 10.7 15.6M16 7.5 13.3 15.6M8.5 6h7" />
               </svg>
               Explore the full ownership network
-            </span>
+            </button>
             <span className="text-oo-small text-oo-muted">
               Expand owners and controllers layer by layer, then explore the whole network in
               one graph.
             </span>
-          </button>
+          </div>
         )}
       </div>
     </section>

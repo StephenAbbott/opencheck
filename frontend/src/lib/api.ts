@@ -274,6 +274,34 @@ export type ExportFormat =
   | "amlai"
   | "rdf";
 
+/**
+ * Every export format, once, in the order the picker shows them.
+ *
+ * Built from a `Record<ExportFormat, ...>` rather than written out as an
+ * array, so adding a format to the type without adding it here fails the
+ * build. Two surfaces read it — the download picker and the API reference on
+ * the About page — and the API reference is where the list drifted before
+ * (Phase 81 fixed it once; it drifted again by two the moment csv and cypher
+ * landed).
+ */
+const EXPORT_FORMAT_ORDER: Record<ExportFormat, number> = {
+  json: 0,
+  zip: 1,
+  csv: 2,
+  jsonl: 3,
+  xml: 4,
+  ftm: 5,
+  cypher: 6,
+  rdf: 7,
+  senzing: 8,
+  gql: 9,
+  amlai: 10,
+};
+
+export const EXPORT_FORMATS: readonly ExportFormat[] = (
+  Object.keys(EXPORT_FORMAT_ORDER) as ExportFormat[]
+).sort((a, b) => EXPORT_FORMAT_ORDER[a] - EXPORT_FORMAT_ORDER[b]);
+
 export function exportUrl(
   lei: string,
   format: ExportFormat,

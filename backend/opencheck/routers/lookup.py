@@ -1531,9 +1531,14 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
                     ),
                 )
             gleif_bundle = {"source_id": "gleif", "lei": lei, "_from_bundle": True}
-            # A committed Open Ownership extract, not a call to GLEIF. Saying
-            # "curated" is the same claim the stored-bundle hits make below.
-            ctx.provenance = Provenance(liveness="curated")
+            # The same helper every other stored-bundle row uses, keyed, so the
+            # anchor states Open Ownership's own publicationDate. A first pass
+            # hardcoded `curated` here as "the same claim the stored-bundle
+            # hits make" — it is not: `curated` describes a fixture committed
+            # to the repo, and the row then showed no date at all next to
+            # sibling rows reading "Snapshot, published <date>" off the very
+            # same dataset.
+            ctx.provenance = _stored_bundle_provenance("gleif", lei)
         else:
             # Only this line observes the cache or the network, so it is the
             # only part that needs the scope; the bundle branch above never
@@ -1768,7 +1773,11 @@ async def _lookup_pipeline(
                 bkey = _stored_bundle_key(source_id, ctx)
                 if bkey is not None:
                     hit = _stored_bundle_hit(source_id, bkey, ctx)
-                    provenances[source_id] = _stored_bundle_provenance(source_id)
+                    # Keyed: without `bkey` the helper cannot open the bundle
+                    # and falls back to a dateless "Open Ownership bulk
+                    # dataset", so the one thing a snapshot most needs to say
+                    # — when it was published — went missing.
+                    provenances[source_id] = _stored_bundle_provenance(source_id, bkey)
                     _stamp(hit, provenances[source_id])
             if hit is not None:
                 hits.append(hit)
@@ -2740,16 +2749,81 @@ def _select_deepen_pairs(
     return deepen_pairs
 
 
+def _identifier_keys(statement: dict[str, Any]) -> list[str]:
+    """The published identifiers on a statement, normalised for comparison."""
+    details = statement.get("recordDetails") or {}
+    keys: list[str] = []
+    for ident in details.get("identifiers") or []:
+        if not isinstance(ident, dict):
+            continue
+        scheme = ident.get("scheme") or ident.get("schemeName") or ""
+        value = ident.get("id")
+        if isinstance(value, str) and value.strip():
+            keys.append(f"{scheme}:{value.strip()}".lower())
+    return keys
+
+
+def _count_parties(statements: list[dict[str, Any]]) -> int:
+    """How many distinct parties a list of same-kind statements describes.
+
+    Every mapper derives its ids as ``_stable_id(source_id, kind, local_id)``,
+    so GLEIF's copy of a company and Companies House's copy have **different**
+    ``statementId``s by construction. Counting statements and calling the total
+    "companies" therefore overstated every graph where two sources describe the
+    subject — which is nearly all of them.
+
+    Records are joined into one party when they share a published identifier
+    (``recordDetails.identifiers[]``), which is the evidence ``reconcile.py``
+    already requires before it will assert cross-source corroboration. It is a
+    transitive join, not a "pick one key" rule: GLEIF may publish only the LEI
+    while Companies House publishes a company number *and* the LEI, so the two
+    records agree on one identifier out of three and must still be one party.
+
+    Names are deliberately **not** used. A name match is not an identity claim
+    anywhere else in OpenCheck — ``possibly_same_entities`` exists precisely to
+    hold name-only pairs out of the graph and hand them to a human — and it
+    must not become one here just because it would make a number smaller.
+
+    The consequence is that the figure is an **upper bound**: two records of
+    one company sharing no identifier stay two. That is the safe direction for
+    an invitation into FullCheck, whose job is to go and resolve exactly those.
+    """
+    parent: dict[str, str] = {}
+
+    def find(x: str) -> str:
+        parent.setdefault(x, x)
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a: str, b: str) -> None:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[ra] = rb
+
+    roots: list[str] = []
+    for index, statement in enumerate(statements):
+        sid = statement.get("statementId")
+        node = f"stmt:{sid}" if isinstance(sid, str) else f"stmt:#{index}"
+        find(node)
+        roots.append(node)
+        for key in _identifier_keys(statement):
+            union(node, f"id:{key}")
+
+    return len({find(node) for node in roots})
+
+
 def _graph_shape(
     bods: list[dict[str, Any]], signals: list[dict[str, Any]]
 ) -> dict[str, int | None]:
     """How big the ownership-and-control graph on this page actually is.
 
-    The report's third verdict column invites the reader into FullCheck, and
-    an invitation with no numbers on it is a button. These are the numbers the
-    check has *already earned*: statements OpenCheck mapped from the sources
-    that answered, deduplicated by ``statementId`` because several sources
-    describe the same party and the merged list keeps each of them.
+    The report's third verdict column invites the reader into FullCheck, and an
+    invitation with no numbers on it is a button. These are the numbers the
+    check has *already earned*: the parties in the merged BODS bundle — the
+    same bundle ``/export`` ships and the risk engine assessed — collapsed by
+    ``_count_parties`` so one company described by three sources counts once.
 
     It deliberately does **not** reach for the GLEIF subsidiary total or
     anything FullCheck would go on to discover. Those are a different scope,
@@ -2761,18 +2835,13 @@ def _graph_shape(
     ``None`` when the signal did not fire — never a guess, and never 0, which
     would render as a flat graph.
     """
-    seen: set[str] = set()
-    counts = {"companies": 0, "people": 0, "relationships": 0}
-    key = {"entity": "companies", "person": "people", "relationship": "relationships"}
-    for statement in bods:
-        sid = statement.get("statementId")
-        if isinstance(sid, str):
-            if sid in seen:
-                continue
-            seen.add(sid)
-        bucket = key.get(str(statement.get("recordType")))
-        if bucket:
-            counts[bucket] += 1
+    entities = [s for s in bods if s.get("recordType") == "entity"]
+    persons = [s for s in bods if s.get("recordType") == "person"]
+    relationships = {
+        s.get("statementId")
+        for s in bods
+        if s.get("recordType") == "relationship" and isinstance(s.get("statementId"), str)
+    }
 
     depth: int | None = None
     for signal in signals:
@@ -2781,7 +2850,12 @@ def _graph_shape(
         path = (signal.get("evidence") or {}).get("longest_path")
         if isinstance(path, list) and path:
             depth = max(depth or 0, len(path))
-    return {**counts, "depth": depth}
+    return {
+        "companies": _count_parties(entities),
+        "people": _count_parties(persons),
+        "relationships": len(relationships),
+        "depth": depth,
+    }
 
 
 async def _count_only(source_id: str, hit_id: str) -> dict[str, int] | None:

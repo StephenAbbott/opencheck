@@ -325,10 +325,20 @@ def _summary(
     run_id = escape(narrative.get("run_id", ""))
     generated_at = escape(str(narrative.get("generated_at", ""))[:19])
     updated_at = escape(str((dispositions or {}).get("updated_at") or "")[:19])
+    # The analyst read the summary as a whole. Distinct from the per-claim
+    # dispositions below it and never derived from them, so it is stated
+    # separately here too — a review flag that never reaches the exported
+    # record does not do the audit-trail job it exists for.
+    reviewed_at = escape(str((dispositions or {}).get("reviewed_at") or "")[:19])
+    reviewed = bool((dispositions or {}).get("reviewed"))
     run_bits = [b for b in [
         f"run {run_id}" if run_id else "",
         f"generated {generated_at}" if generated_at else "",
         f"dispositions updated {updated_at}" if updated_at else "",
+        (
+            f"marked reviewed {reviewed_at}" if reviewed and reviewed_at
+            else "marked reviewed" if reviewed else ""
+        ),
     ] if b]
     return (
         f'<section aria-labelledby="sum"><h2 id="sum">Summary '

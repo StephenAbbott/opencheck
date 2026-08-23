@@ -16,7 +16,7 @@
  * archive matches, and an unbounded list buried the sources that follow.
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { topicLabel } from "../../lib/vocab";
 import { ActionChip, Chip, SectionHeading } from "../ui";
 import type { OpenAlephScreeningMatch } from "../../lib/api";
@@ -47,6 +47,8 @@ export function OpenAlephArchiveMatches({
   standalone?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+  // The control expands the list, not the wrapper that contains the control.
+  const listId = useId();
   if (matches.length === 0) return null;
   const visible = visibleArchiveMatches(matches, expanded);
   const hiddenCount = matches.length - visible.length;
@@ -61,12 +63,14 @@ export function OpenAlephArchiveMatches({
       }`}
     >
       <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2">
-        <SectionHeading as="h4">Archive matches</SectionHeading>
+        {/* h3 standing alone, h4 nested under a source card's own h3 — the
+            level has to follow where the block actually sits. */}
+        <SectionHeading as={standalone ? "h3" : "h4"}>Archive matches</SectionHeading>
         <p className="text-oo-small text-oo-muted">
           {matches.length} name {matches.length === 1 ? "match" : "matches"} · no risk signal
         </p>
       </div>
-      <ul className="flex flex-col gap-1.5">
+      <ul id={listId} className="flex flex-col gap-1.5">
         {visible.map((m) => (
           <li
             key={`${m.statement_id}:${m.entity_id}`}
@@ -113,7 +117,7 @@ export function OpenAlephArchiveMatches({
           <ActionChip
             onClick={() => setExpanded((prev) => !prev)}
             expanded={expanded}
-            controls="openaleph-screening"
+            controls={listId}
           >
             {expanded ? "Show fewer" : `Show all ${matches.length} matches`}
           </ActionChip>

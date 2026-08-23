@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { exportUrl, getLicenseMatrix, type ExportFormat } from "../../lib/api";
+import { EXPORT_FORMATS, exportUrl, getLicenseMatrix, type ExportFormat } from "../../lib/api";
 import { SectionHeading } from "../ui";
 import { DATA_SECTION_ID } from "./ExportMenu";
 
@@ -43,21 +43,36 @@ const DOT: Record<"green" | "amber" | "red", string> = {
  *  added on one side cannot be missed on the other. */
 type Format = ExportFormat;
 
-/** Ordered by how many readers want them, not alphabetically. BODS JSON first
- *  because it is what the page itself is made of. */
-const FORMATS: { value: Format; label: string }[] = [
-  { value: "json", label: "BODS JSON" },
-  { value: "zip", label: "ZIP bundle" },
-  { value: "csv", label: "CSV" },
-  { value: "jsonl", label: "JSONL" },
-  { value: "xml", label: "BODS XML" },
-  { value: "ftm", label: "FollowTheMoney" },
-  { value: "cypher", label: "Neo4j · Cypher" },
-  { value: "rdf", label: "RDF · TriG" },
-  { value: "senzing", label: "Senzing JSON" },
-  { value: "gql", label: "BigQuery · GQL" },
-  { value: "amlai", label: "Google AML AI" },
-];
+/**
+ * Ordered by how many readers want them, not alphabetically. BODS JSON first
+ * because it is what the page itself is made of.
+ *
+ The order comes from `EXPORT_FORMATS` (shared with the API reference on the
+ * About page) and the labels from a `Record<ExportFormat, string>`, so adding
+ * a format to the shared type without adding a chip fails the build. Typing
+ * the array as `{value: Format}[]` — the first attempt — only checked that
+ * each entry was *a* valid format, which is not the property that matters: a
+ * missing chip compiles clean and the picker silently loses an export.
+ */
+const FORMAT_LABEL: Record<Format, string> = {
+  json: "BODS JSON",
+  zip: "ZIP bundle",
+  csv: "CSV tables",
+  jsonl: "JSONL",
+  xml: "BODS XML",
+  ftm: "FollowTheMoney",
+  cypher: "Neo4j · Cypher",
+  rdf: "RDF · TriG",
+  senzing: "Senzing JSON",
+  gql: "BigQuery · GQL",
+  amlai: "Google AML AI",
+};
+
+const FORMATS: { value: Format; label: string }[] = EXPORT_FORMATS.map((value) => ({
+  value,
+  label: FORMAT_LABEL[value],
+}));
+
 
 const LINK = "underline text-oo-blue hover:text-oo-burst";
 
@@ -206,6 +221,7 @@ export function ExportPanel({
   contributingSourceIds: string[];
 }) {
   const [format, setFormat] = useState<Format>("json");
+  const chipRefs = useRef<Partial<Record<Format, HTMLButtonElement | null>>>({});
   const [subsidiaries, setSubsidiaries] = useState(false);
 
   const sorted = [...contributingSourceIds].sort();
@@ -218,6 +234,28 @@ export function ExportPanel({
   const a = licensing.data?.assessment;
 
   const href = exportUrl(lei, format, { subsidiaries });
+
+  // Arrow keys move the selection and the focus together, which is what the
+  // radiogroup pattern specifies and what makes the chips usable in a screen
+  // reader's forms mode. Home/End jump to the ends; the group wraps.
+  function onFormatKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    const keys = ["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Home", "End"];
+    if (!keys.includes(e.key)) return;
+    e.preventDefault();
+    const i = FORMATS.findIndex((f) => f.value === format);
+    const last = FORMATS.length - 1;
+    const next =
+      e.key === "Home"
+        ? 0
+        : e.key === "End"
+          ? last
+          : e.key === "ArrowRight" || e.key === "ArrowDown"
+            ? (i + 1) % FORMATS.length
+            : (i - 1 + FORMATS.length) % FORMATS.length;
+    const value = FORMATS[next].value;
+    setFormat(value);
+    chipRefs.current[value]?.focus();
+  }
 
   return (
     <section
@@ -238,10 +276,19 @@ export function ExportPanel({
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
         <div className="flex flex-col gap-3">
-          {/* A radiogroup rather than eleven buttons: they are one choice, and
-              arrow-key movement between them is what a keyboard user expects
-              from a set of alternatives. */}
-          <div role="radiogroup" aria-label="Export format" className="flex flex-wrap gap-2">
+          {/* A radiogroup rather than eleven buttons: they are one choice.
+              That role is a promise about keyboard behaviour, and a first pass
+              made it without keeping it — eleven tab stops, arrows dead, and a
+              screen reader announcing "1 of 11" positions it could not move
+              between. Worse than the `<select>` it replaced. So: one tab stop
+              (roving tabIndex) and arrow keys that move *and* select, per the
+              WAI-ARIA radiogroup pattern. */}
+          <div
+            role="radiogroup"
+            aria-label="Export format"
+            className="flex flex-wrap gap-2"
+            onKeyDown={onFormatKeyDown}
+          >
             {FORMATS.map((f) => {
               const on = f.value === format;
               return (
@@ -250,6 +297,10 @@ export function ExportPanel({
                   type="button"
                   role="radio"
                   aria-checked={on}
+                  tabIndex={on ? 0 : -1}
+                  ref={(el) => {
+                    chipRefs.current[f.value] = el;
+                  }}
                   onClick={() => setFormat(f.value)}
                   className={`rounded-oo border px-3 py-1.5 text-oo-small transition-colors ${
                     on

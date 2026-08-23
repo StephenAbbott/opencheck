@@ -15,6 +15,7 @@ import {
   type DegradedSource,
   type SourceLiveness,
   type GraphShape,
+  EXPORT_FORMATS,
   type MeipMatch,
   type OpenAlephScreeningMatch,
   type PossiblySameEntity,
@@ -1701,9 +1702,25 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           </div>
 
           {searchPanelsCollapsed && (
+            // Focus has to be moved deliberately: this button unmounts itself
+            // on click, and with the tab bar no longer rendered on a report
+            // page it is the *only* search affordance there — so dropping
+            // focus to <body> strands the entire keyboard entry path.
             <button
               type="button"
-              onClick={() => setMobileSearchOpen(true)}
+              onClick={() => {
+                setMobileSearchOpen(true);
+                requestAnimationFrame(() => {
+                  document
+                    .querySelector<HTMLElement>(
+                      // Scoped to the search tablist: the mode tabs (QuickCheck
+                      // and friends) are role="tab" too, and one of those is
+                      // always selected.
+                      '[role="tablist"][aria-label="Search method"] [role="tab"][aria-selected="true"]'
+                    )
+                    ?.focus();
+                });
+              }}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] text-[12px] font-medium text-oo-blue hover:bg-oo-bg transition-colors"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -2678,11 +2695,15 @@ function ApiPage() {
 
         <BtsCard title="Export &amp; licensing">
           <ApiEndpoint
-            path="/export?lei=<LEI>&format=<zip|json|jsonl|xml|senzing|ftm|gql|amlai|rdf>&subsidiaries=<bool>"
+            /* Generated from the shared EXPORT_FORMATS list rather than typed
+               out: this line has drifted from the backend twice (Phase 81
+               fixed it once), and a reference page that under-reports the API
+               is worse than no reference page. */
+            path={`/export?lei=<LEI>&format=<${EXPORT_FORMATS.join("|")}>&subsidiaries=<bool>`}
             params={[
               [
                 "format",
-                "zip ships bods.json + bods.jsonl + bods.xml + senzing.jsonl + ftm.jsonl + network.cypher + manifest.json + LICENSES.md; json / jsonl / xml return the statements only; senzing returns Senzing JSON entity records for entity resolution; ftm returns FollowTheMoney entities for OpenSanctions / OpenAleph workflows; gql returns a BigQuery property-graph zip; amlai returns Google AML AI input tables; rdf returns BODS RDF as TriG — one named graph per statement, a canonical licence URI on every statement, and bods:Annotation in two separated layers: the register's own words (nature-of-control codes, imprecise-date notes) in each statement's graph, and OpenCheck's risk signals and entity-resolution links in a separate analysis graph.",
+                "zip ships bods.json + bods.jsonl + bods.xml + senzing.jsonl + ftm.jsonl + manifest.json + LICENSES.md; json / jsonl / xml return the statements only; csv returns the entity / person / ownership-edge tables as a zip; cypher returns a Neo4j Cypher script; senzing returns Senzing JSON entity records for entity resolution; ftm returns FollowTheMoney entities for OpenSanctions / OpenAleph workflows; gql returns a BigQuery property-graph zip; amlai returns Google AML AI input tables; rdf returns BODS RDF as TriG — one named graph per statement, a canonical licence URI on every statement, and bods:Annotation in two separated layers: the register's own words (nature-of-control codes, imprecise-date notes) in each statement's graph, and OpenCheck's risk signals and entity-resolution links in a separate analysis graph.",
               ],
               [
                 "subsidiaries",
