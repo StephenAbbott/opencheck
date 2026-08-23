@@ -147,11 +147,11 @@ export function SecuritiesSection({
   );
 
   return (
-    <section className="mb-8">
-      <h3 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
+    <section className="border-b border-oo-rule px-4 py-[18px] sm:px-6 sm:py-[22px]">
+      <h2 className="font-head font-bold text-oo-head text-oo-ink mb-3">
         Securities
-      </h3>
-      <div className="bg-white border border-oo-rule rounded-oo p-5">
+      </h2>
+      <div>
         {/* Sanctions-first banner */}
         {sanctioned.length > 0 && (
           <div className="mb-3 rounded-oo border border-rose-200 bg-rose-50 px-4 py-3">

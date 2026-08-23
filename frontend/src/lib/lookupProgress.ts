@@ -154,7 +154,13 @@ export function progressLabel(p: LookupProgress, failedCount: number): string {
  */
 export function answeredCount(
   applicable: string[],
-  completed: ReadonlySet<string>
+  completed: ReadonlySet<string>,
+  /** Sources that emitted `source_error`. App adds an errored source to the
+   *  completed set as well, so without this a source whose own card reads
+   *  "Did not answer" is counted as one that answered — and the strip can say
+   *  "13 of 13 sources answered · Every applicable source answered" directly
+   *  above it. */
+  errored: ReadonlySet<string> = new Set()
 ): number {
-  return applicable.filter((id) => completed.has(id)).length;
+  return applicable.filter((id) => completed.has(id) && !errored.has(id)).length;
 }

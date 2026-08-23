@@ -207,3 +207,20 @@ describe("answeredCount", () => {
     expect(answeredCount([], new Set(["gleif"]))).toBe(0);
   });
 });
+
+describe("answeredCount and the sources that did not answer", () => {
+  it("does not count an errored source as one that answered", () => {
+    // The source card for an errored source reads "Did not answer". Counting
+    // it as answered let the verdict strip say "3 of 3 sources answered ·
+    // Every applicable source answered" directly above that card.
+    const applicable = ["a", "b", "c"];
+    // App adds an errored source to BOTH sets, by design.
+    const completed = new Set(["a", "b", "c"]);
+    const errored = new Set(["c"]);
+    expect(answeredCount(applicable, completed, errored)).toBe(2);
+  });
+
+  it("is unchanged when nothing errored", () => {
+    expect(answeredCount(["a", "b"], new Set(["a", "b"]), new Set())).toBe(2);
+  });
+});

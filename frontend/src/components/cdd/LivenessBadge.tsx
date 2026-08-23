@@ -8,9 +8,10 @@
  * the same principle — data that is not current must not read as live, just as
  * a check that could not run must not read as clean.
  *
- * Live is the unmarked default. Badging every card would put a second row of
- * chips beside the risk signals and dilute both, so only the cases a reader
- * would otherwise misread get visual weight.
+ * Every source states its freshness, live included (Phase 126). Suppressing the
+ * badge for live sources made "live" indistinguishable from "the badge did not
+ * render", and left the column unscannable. Colour still separates them: only
+ * the cases a reader would otherwise misread carry weight.
  */
 
 export type Liveness = "live" | "cached" | "snapshot" | "curated" | "stub";

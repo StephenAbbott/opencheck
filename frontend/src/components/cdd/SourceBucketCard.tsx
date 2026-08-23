@@ -1131,7 +1131,20 @@ function HitRow({
   // tile's content is already showing, so the drawer never hides what is on
   // screen — that would leave a graph visible with no control to close it.
   const [dataOpen, setDataOpen] = useState(false);
-  const toggleData = () => setDataOpen((v) => !v);
+  const drawerId = `${panelId}-drawer`;
+  // Closing the drawer while a tile's content is open would hide the only
+  // control for it — the tiles are the sole toggles for records and JSON, and
+  // the row has no chip for either. So closing also closes what it opened.
+  const toggleData = () => {
+    setDataOpen((open) => {
+      if (open) {
+        setShowStatements(false);
+        setShowJson(false);
+        setShowDiagram(false);
+      }
+      return !open;
+    });
+  };
   useEffect(() => {
     if (showDiagram || showStatements || showJson) setDataOpen(true);
   }, [showDiagram, showStatements, showJson]);
@@ -1156,7 +1169,6 @@ function HitRow({
             </span>
           )}
         </div>
-        {titleAccessory && <div className="shrink-0">{titleAccessory}</div>}
       </div>
       {/* Phase 122: lead with what the source said, not with what it is
           called. `finding` is a sentence built by the adapter from fields it
@@ -1201,7 +1213,7 @@ function HitRow({
         <ActionChip
           onClick={toggleData}
           expanded={dataOpen}
-          controls={panelId}
+          controls={drawerId}
         >
           Data
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1216,7 +1228,7 @@ function HitRow({
           Each tile opens the thing it names; the two that only describe what a
           download contains are not buttons. */}
       {dataOpen && (
-        <div className="mt-3 border-t border-oo-rule pt-3">
+        <div id={drawerId} className="mt-3 border-t border-oo-rule pt-3">
           <div className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))" }}>
             {showGraphStrip && (
               <DataTile
@@ -1380,12 +1392,13 @@ export function SourceBucketCard({
     </ActionChip>
   ) : null;
 
+  // The amber pill beside the name already says "Did not answer"; repeating it
+  // here in red mono stated one fact three times, once in the data-model word
+  // this phase set out to remove.
   const stateLabel = bucket.error
-    ? "error"
+    ? null
     : `${bucket.hits.length} result${bucket.hits.length === 1 ? "" : "s"}`;
-  const stateColor = bucket.error
-    ? "text-red-700"
-    : "text-oo-muted";
+  const stateColor = "text-oo-muted";
 
   return (
     <>

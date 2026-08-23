@@ -83,22 +83,22 @@ export function MeipSignpost({ match }: { match: MeipMatch | null }) {
     : `Subsidiary of ${match.immediate_parent || match.parent_mne} · part of the ${match.parent_mne} group`;
 
   return (
-    <section className="mb-8 bg-white border border-oo-rule rounded-oo overflow-hidden">
-      <header className="px-5 py-3 border-b border-oo-rule flex items-center justify-between gap-3">
-        <h3 className="inline-flex items-center gap-2 font-head font-bold text-[15px] text-oo-ink">
+    <section className="border-b border-oo-rule px-4 py-[18px] sm:px-6 sm:py-[22px]">
+      <header className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="inline-flex items-center gap-2 font-head font-bold text-oo-head text-oo-ink">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
             className="text-oo-muted" aria-hidden="true">
             <path d="M3 21h18" /><path d="M5 21V7l7-4 7 4v14" /><path d="M9 21v-4h6v4" />
           </svg>
           OECD-UNSD MEIP
-        </h3>
+        </h2>
         <span className="text-[11px] font-mono text-oo-muted bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5">
           {NOT_IN_GRAPH}
         </span>
       </header>
 
-      <div className="px-5 py-4">
+      <div>
         <a
           href={MEIP_URL}
           target="_blank"
@@ -150,7 +150,7 @@ export function MeipSignpost({ match }: { match: MeipMatch | null }) {
         )}
       </div>
 
-      <div className="flex gap-3 items-start px-5 py-3.5 bg-blue-50 border-t border-oo-rule">
+      <div className="mt-3 flex gap-3 items-start rounded-oo bg-oo-soft px-3.5 py-3">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
           className="text-oo-blue mt-0.5 shrink-0" aria-hidden="true">
