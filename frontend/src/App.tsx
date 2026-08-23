@@ -1441,19 +1441,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           </p>
         </div>
         )}
-        {!streamingLei && (
-          <p className="text-[12px] text-oo-muted leading-snug mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-oo-blue border border-[#cfd6f5] bg-[#eef1fb] rounded-full px-1.5 py-0.5">
-              New
-            </span>
-            <span className="text-oo-ink">Person screening</span>
-            <span aria-hidden>·</span>
-            <span className="text-oo-ink">RDF/GQL export</span>
-            <span aria-hidden>·</span>
-            <span className="text-oo-ink">Network screening</span>
-            <span className="text-oo-muted">— every claim links to its source.</span>
-          </p>
-        )}
         <div className="mb-4 bg-white border border-oo-rule rounded-oo overflow-hidden">
           {/* Tab bar — homepage only.
 
