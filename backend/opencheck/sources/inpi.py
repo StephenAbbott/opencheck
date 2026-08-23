@@ -179,8 +179,10 @@ class InpiAdapter(SourceAdapter):
                 headers={"Authorization": f"Bearer {token}"},
             )
             if response.status_code == 401:
-                # Token expired — refresh once and retry.
-                token = await self._refresh_token()
+                # Token expired — refresh once and retry. The stale token has
+                # to be passed in: without it the refresh sees a cached token
+                # and hands the expired one straight back (see below).
+                token = await self._refresh_token(stale=token)
                 response = await client.get(
                     f"{_API_BASE}/companies/{siren}",
                     headers={"Authorization": f"Bearer {token}"},
@@ -194,12 +196,30 @@ class InpiAdapter(SourceAdapter):
             return self._token
         return await self._refresh_token()
 
-    async def _refresh_token(self) -> str:
-        """Authenticate and store a fresh Bearer token in-process."""
+    async def _refresh_token(self, *, stale: str | None = None) -> str:
+        """Authenticate and store a fresh Bearer token in-process.
+
+        ``stale`` is the token the caller just found rejected. It is what makes
+        a forced refresh possible: the double-checked-locking guard below is
+        correct for the race it was written for — two coroutines both needing a
+        FIRST token, only one of which should log in — but called from the 401
+        path ``self._token`` is still set to the expired token, so an
+        unconditional "return the cached one" handed the dead token straight
+        back. The retry then re-sent it, got 401 again, and raised.
+
+        Because the token is fetched once per process and never cleared, that
+        made INPI work from deploy until first expiry and fail on every French
+        lookup afterwards until the service restarted — while the weekly sweep,
+        which starts a fresh process each run, only ever exercised the
+        first-login path and reported the source healthy.
+
+        Comparing against ``stale`` keeps both properties: a caller that lost
+        the lock finds a token that is no longer the one it saw rejected, and
+        uses it instead of logging in again.
+        """
         async with _TOKEN_LOCK:
-            # Re-check after acquiring the lock — another coroutine may have
-            # refreshed already while we were waiting.
-            if self._token:
+            if self._token is not None and self._token != stale:
+                # Someone else refreshed while we waited for the lock.
                 return self._token
 
             settings = get_settings()
