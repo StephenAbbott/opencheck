@@ -22,8 +22,9 @@ from opencheck.cross_check import (
     _name_score,
     _normalise,
     assess_cross_source_names,
+    match_summary,
 )
-from opencheck.sources import REGISTRY, SearchKind, SourceHit
+from opencheck.sources import REGISTRY, SearchKind, SourceHit, source_display_name
 
 
 # ---------------------------------------------------------------------
@@ -290,7 +291,41 @@ async def test_agreeing_birth_year_restores_full_confidence(monkeypatch) -> None
     assert [s.confidence for s in signals] == ["high"]
     assert signals[0].evidence["corroboration"] == ["birth_year"]
     assert signals[0].evidence["name_match_only"] is False
-    assert "confirmed on birth_year" in signals[0].summary
+    # The clause is English, not a field name: "confirmed on birth_year" put a
+    # column name in a sentence a reader sees on the report.
+    assert "birth year also agrees" in signals[0].summary
+    assert "birth_year" not in signals[0].summary
+
+
+def test_match_summary_names_the_source_the_way_the_registry_does() -> None:
+    """The sentence is read on the report; the slug belongs in `source_id`.
+
+    Live on a Related PEP finding: "shares a name with a record on openaleph".
+    The registry calls it OpenAleph, and every other user-facing surface goes
+    through `sourceLabel` for exactly this reason.
+    """
+    prose = match_summary(
+        target={"kind": "person", "name": "A B"},
+        source_id="openaleph",
+        summary_extra="PEP (role.pep)",
+        corroboration=(),
+    )
+    assert "on OpenAleph," in prose
+    assert "openaleph" not in prose
+
+    # A source that is not a registered adapter still gets a name — `icij`
+    # produces signals through the reconciliation endpoint, not an adapter.
+    assert "ICIJ Offshore Leaks" in match_summary(
+        target={"kind": "entity", "name": "C D"},
+        source_id="icij",
+        summary_extra="in a leak collection",
+        corroboration=(),
+    )
+
+
+def test_source_display_name_falls_back_to_the_id_not_to_a_guess() -> None:
+    assert source_display_name("opensanctions") == "OpenSanctions"
+    assert source_display_name("no_such_source") == "no_such_source"
 
 
 async def test_entities_keep_the_score_only_ladder(monkeypatch) -> None:
