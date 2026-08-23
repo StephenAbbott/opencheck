@@ -1,7 +1,7 @@
 {
   "src/App.tsx": {
     "hex": 14,
-    "text": 131,
+    "text": 128,
     "vocab": 0
   },
   "src/components/BODSGraph.tsx": {
@@ -26,7 +26,7 @@
   },
   "src/components/cdd/BackgroundCheckPanel.tsx": {
     "hex": 0,
-    "text": 58,
+    "text": 50,
     "vocab": 0
   },
   "src/components/cdd/ClusterGroup.tsx": {
@@ -36,12 +36,7 @@
   },
   "src/components/cdd/EsgPanel.tsx": {
     "hex": 0,
-    "text": 57,
-    "vocab": 0
-  },
-  "src/components/cdd/FullCheckPanel.tsx": {
-    "hex": 0,
-    "text": 4,
+    "text": 50,
     "vocab": 0
   },
   "src/components/cdd/HistoryTimeline.tsx": {
@@ -91,7 +86,7 @@
   },
   "src/components/cdd/SubsidiaryNetwork.tsx": {
     "hex": 0,
-    "text": 15,
+    "text": 13,
     "vocab": 0
   },
   "src/components/export/ExportMenu.tsx": {

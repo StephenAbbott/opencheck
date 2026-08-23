@@ -4,41 +4,8 @@ import type { BodsBreakdown, DeepenResponse, SourceHit } from "../../lib/api";
 import { DeepenBlock, SkeletonSourceCard } from "./SourceBucketCard";
 import type { SourceBucket } from "./SourceBucketCard";
 import { sourceLabel } from "../../lib/vocab";
+import PanelSection from "../ui/PanelSection";
 
-// ---------------------------------------------------------------------
-// LeafIcon — inline SVG for the ESG panel header
-// ---------------------------------------------------------------------
-
-function LeafIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={className}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        d="M12 2C6.5 2 2 7 2 12c0 1.8.5 3.5 1.4 4.9L12 22l8.6-5.1A10 10 0 0 0 22 12C22 7 17.5 2 12 2z"
-        fill="currentColor"
-        opacity="0.15"
-      />
-      <path
-        d="M12 2C6.5 2 2 7 2 12c0 1.8.5 3.5 1.4 4.9L12 22l8.6-5.1A10 10 0 0 0 22 12C22 7 17.5 2 12 2z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M12 22V12M12 12C9 9 5 9 5 9"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 // ---------------------------------------------------------------------
 // CO₂e formatting helpers
@@ -919,7 +886,6 @@ export function EsgPanel({
   bodsCountMap?: Record<string, number>;
   bodsBreakdownMap?: Record<string, BodsBreakdown>;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
   const bodyId = useId();
   // Per-hit expansion for the summary tiles. Unset entries fall back to the
   // default rule: a lone ESG hit shows its full card without an extra click;
@@ -932,50 +898,18 @@ export function EsgPanel({
     setExpandedMap((m) => ({ ...m, [key]: !isExpanded(key) }));
 
   return (
-    <section className="mb-8">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex-1 h-px bg-emerald-200" />
-        <div className="flex items-center gap-2 text-emerald-700">
-          <LeafIcon className="w-4 h-4" />
-          <h2 className="text-[10px] font-semibold tracking-oo-eyebrow uppercase">
-            Environmental, Social, and Governance (ESG) Data
-          </h2>
-        </div>
-        <div className="flex-1 h-px bg-emerald-200" />
-      </div>
-
-      <div className="rounded-oo border border-emerald-200 bg-white overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setCollapsed((c) => !c)}
-          aria-expanded={!collapsed}
-          aria-controls={bodyId}
-          className="w-full flex items-center justify-between px-5 py-3 border-b border-emerald-200 bg-emerald-50/60 hover:bg-emerald-50 transition-colors text-left"
-        >
-          <div className="flex items-center gap-2.5">
-            <LeafIcon className="w-4 h-4 text-emerald-600 shrink-0" />
-            <div>
-              <span className="font-head font-bold text-[14px] text-emerald-950">
-                Environmental, Social, and Governance (ESG) Data
-              </span>
-              <span className="ml-2 text-[11px] font-mono text-emerald-700">
-                {hitCount} result{hitCount === 1 ? "" : "s"} · {buckets.length} source{buckets.length === 1 ? "" : "s"}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <span className="text-[11px] text-emerald-700 hidden sm:inline">
-              ESG / climate risk · not a KYC source
-            </span>
-            <span className="text-[12px] font-mono text-emerald-700">
-              {collapsed ? "Show ↓" : "Hide ↑"}
-            </span>
-          </div>
-        </button>
-
-        {!collapsed && (
-          <div id={bodyId} className="p-5 space-y-4">
-            <p className="text-[12px] leading-[1.65] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">
+    <>
+      {/* No divider heading, no self-titling collapse header. Both said
+          "Environmental, Social, and Governance (ESG) Data" — once above the
+          card and once inside it — for a panel whose own tab already says
+          Climate & ESG. A card that *is* the tabpanel does not need a control
+          to hide itself, either: the way to hide it is to pick another tab. */}
+      <PanelSection
+        title="What was published"
+        aside={`${hitCount} result${hitCount === 1 ? "" : "s"} · ${buckets.length} source${buckets.length === 1 ? "" : "s"}`}
+      >
+        <div id={bodyId} className="space-y-4">
+            <p className="text-oo-small leading-[1.65] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-oo px-3 py-2">
               <span className="font-semibold">ESG context only.</span> Data
               from{" "}
               <a
@@ -1069,15 +1003,14 @@ export function EsgPanel({
                 <div
                   key={b.sourceId}
                   role="alert"
-                  className="rounded-oo border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700"
+                  className="rounded-oo border border-oo-warn-border bg-oo-warn-bg px-4 py-3 text-oo-small text-oo-warn-text"
                 >
                   <span className="font-semibold">{b.sourceName}:</span>{" "}
                   {b.error}
                 </div>
               ))}
-          </div>
-        )}
-      </div>
-    </section>
+        </div>
+      </PanelSection>
+    </>
   );
 }

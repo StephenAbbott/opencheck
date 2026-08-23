@@ -1940,8 +1940,16 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             <body> — v1's mode cards did exactly that. */}
         {mode === "full" && streamingLei ? (
           <div id="panel-full" role="tabpanel" aria-labelledby="tab-full" tabIndex={-1}>
-            <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading FullCheck…</p>}>
-              <FullCheckPanel
+            <PanelCard>
+              <ModeBlurb mode="full" tabs={MODE_TABS} />
+              <Suspense
+                fallback={
+                  <PanelSection>
+                    <p className="text-oo-small text-oo-muted italic">Loading FullCheck…</p>
+                  </PanelSection>
+                }
+              >
+                <FullCheckPanel
                   lei={streamingLei}
                   legalName={legalName}
                   signals={riskSignals}
@@ -1950,34 +1958,51 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     setPanelErrors((prev) => clearPanelError(prev, panel))
                   }
                 />
-            </Suspense>
+              </Suspense>
+            </PanelCard>
           </div>
         ) : mode === "background" && streamingLei ? (
           <div id="panel-background" role="tabpanel" aria-labelledby="tab-background" tabIndex={-1}>
-            <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading BackgroundCheck…</p>}>
-              <BackgroundCheckPanel
-                lei={streamingLei}
-                legalName={legalName}
-                onOpenReport={openPersonReport}
-              />
-            </Suspense>
+            <PanelCard>
+              <ModeBlurb mode="background" tabs={MODE_TABS} />
+              <Suspense
+                fallback={
+                  <PanelSection>
+                    <p className="text-oo-small text-oo-muted italic">
+                      Loading BackgroundCheck…
+                    </p>
+                  </PanelSection>
+                }
+              >
+                <BackgroundCheckPanel
+                  lei={streamingLei}
+                  legalName={legalName}
+                  onOpenReport={openPersonReport}
+                />
+              </Suspense>
+            </PanelCard>
           </div>
         ) : mode === "esg" && streamingLei ? (
           <div id="panel-esg" role="tabpanel" aria-labelledby="tab-esg" tabIndex={-1}>
-            {esgBuckets.length > 0 || pendingEsgSources.length > 0 ? (
-              <EsgPanel
-                buckets={esgBuckets}
-                pendingCount={pendingEsgSources.length}
-                bodsCountMap={bodsCountMap}
-                bodsBreakdownMap={bodsBreakdownMap}
-              />
-            ) : (
-              <p className="mb-8 rounded-oo border border-oo-rule bg-white p-5 text-[13px] text-oo-muted">
-                {streaming
-                  ? "Checking the climate and extractives sources…"
-                  : "No emissions or asset records were published about this company by the sources checked. That is an absence of records, not a finding about its emissions."}
-              </p>
-            )}
+            <PanelCard>
+              <ModeBlurb mode="esg" tabs={MODE_TABS} />
+              {esgBuckets.length > 0 || pendingEsgSources.length > 0 ? (
+                <EsgPanel
+                  buckets={esgBuckets}
+                  pendingCount={pendingEsgSources.length}
+                  bodsCountMap={bodsCountMap}
+                  bodsBreakdownMap={bodsBreakdownMap}
+                />
+              ) : (
+                <PanelSection>
+                  <p className="text-oo-small text-oo-muted">
+                    {streaming
+                      ? "Checking the climate and extractives sources…"
+                      : "No emissions or asset records were published about this company by the sources checked. That is an absence of records, not a finding about its emissions."}
+                  </p>
+                </PanelSection>
+              )}
+            </PanelCard>
           </div>
         ) : (
           <div id="panel-quick" role="tabpanel" aria-labelledby="tab-quick" tabIndex={-1}>
@@ -1988,11 +2013,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             labelled "QuickCheck" says what it is called, not what it does, and
             a reader arriving on a shared link has no other way to find out
             which of the four they are looking at. */}
-        <PanelSection>
-          <p className="text-oo-small text-oo-muted">
-            {MODE_TABS.find((t) => t.id === "quick")?.blurb}
-          </p>
-        </PanelSection>
+        <ModeBlurb mode="quick" tabs={MODE_TABS} />
         {streamingLei && mode === "quick" && (
           <NarrativePanel lei={streamingLei} legalName={legalName} />
         )}
@@ -3646,6 +3667,33 @@ const DEGRADED_REASON_LABELS: Record<string, string> = {
  * screen. Details are counts only; the backend never sends the
  * related-party names that were being screened.
  */
+/**
+ * The mode's own sentence, as its panel card's first band.
+ *
+ * The strings have been on `MODE_TABS` since Phase 122 and rendered nowhere.
+ * A tab labelled "QuickCheck" says what it is called, not what it does, and a
+ * reader arriving on a shared link has no other way to find out which of the
+ * four they are looking at. Three of the four panels used to state it
+ * themselves — in their own coloured strip, in their own words, at a heading
+ * level of their own choosing — which is three chances to disagree with the
+ * tab above them; this is one.
+ */
+function ModeBlurb({
+  mode,
+  tabs,
+}: {
+  mode: CheckMode;
+  tabs: { id: CheckMode; blurb: string }[];
+}) {
+  const blurb = tabs.find((t) => t.id === mode)?.blurb;
+  if (!blurb) return null;
+  return (
+    <PanelSection>
+      <p className="text-oo-small text-oo-muted">{blurb}</p>
+    </PanelSection>
+  );
+}
+
 function DegradedScreensNotice({
   degraded,
   sourceNames = {},

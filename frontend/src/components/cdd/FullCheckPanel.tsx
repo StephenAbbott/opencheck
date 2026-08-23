@@ -5,13 +5,24 @@
  * connected to it. This panel fetches the subject's merged BODS (one /lookup,
  * replay-cached) and renders a single **unified** network graph — distinct from
  * QuickCheck's per-source panels — with the "Run FullCheck" control that eagerly
- * expands owners/controllers to a depth budget (Phase 1). Network-wide risk
- * surfacing + the QuickCheck-vs-FullCheck comparison come in Phase 2.
+ * expands owners/controllers to a depth budget.
+ *
+ * **It renders bands, not cards** (Phase 128). The tabpanel above it owns the
+ * `PanelCard`, exactly as QuickCheck's does, so the tab strip claims what is
+ * beneath it. Before that this panel drew three detached objects on the grey
+ * page — a blue blurb strip, a white graph card, a grey subsidiary card — and
+ * the tab connected to none of them.
+ *
+ * The blurb strip is gone rather than restyled: it said in four lines what
+ * `MODE_TABS[1].blurb` says in one, and the tabpanel now renders that blurb as
+ * the card's first band, the same way every mode does. A panel that
+ * reintroduces its own title is a card inside a card again.
  */
 
 import { useEffect, useState } from "react";
 import { lookup, type RiskSignal } from "../../lib/api";
 import BodsGraphExplorer from "../BodsGraphExplorer";
+import PanelSection from "../ui/PanelSection";
 import { SubsidiaryNetwork } from "./SubsidiaryNetwork";
 import type { PanelError, PanelId } from "../../lib/panelErrors";
 
@@ -53,29 +64,25 @@ export default function FullCheckPanel({
   }, [lei]);
 
   return (
-    <section className="mb-8" aria-label="FullCheck — enhanced due diligence">
-      <div className="mb-3 rounded-oo border border-oo-blue bg-oo-soft px-4 py-3">
-        <h3 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-blue mb-1">
-          FullCheck · Enhanced due diligence
-        </h3>
-        <p className="text-[13px] text-oo-ink leading-[1.6]">
-          The wider corporate network connected to{" "}
-          <span className="font-medium">{legalName ?? lei}</span>. Run FullCheck to
-          expand owners and controllers layer by layer, then explore the whole
-          network in one graph.
-        </p>
-      </div>
-
-      {error && (
-        <p role="alert" className="text-[13px] text-red-700 bg-red-50 border border-red-200 rounded-oo px-3 py-2">
-          Couldn't load the network: {error}
-        </p>
-      )}
-      {!statements && !error && (
-        <p role="status" className="text-[13px] text-oo-muted italic">Loading the network…</p>
-      )}
-      {statements && (
-        <div className="bg-white border border-oo-rule rounded-oo p-4">
+    <>
+      <PanelSection
+        title="Ownership network"
+        aside="Drag to move, scroll to zoom — everything here is in the table too"
+      >
+        {error && (
+          <p
+            role="alert"
+            className="text-oo-small text-oo-warn-text bg-oo-warn-bg border border-oo-warn-border rounded-oo px-3 py-2"
+          >
+            Couldn&rsquo;t load the network: {error}
+          </p>
+        )}
+        {!statements && !error && (
+          <p role="status" className="text-oo-small text-oo-muted italic">
+            Loading the network…
+          </p>
+        )}
+        {statements && (
           <BodsGraphExplorer
             statements={statements}
             signals={signals}
@@ -83,18 +90,19 @@ export default function FullCheckPanel({
             direction="owners"
             fullCheck
           />
-        </div>
-      )}
+        )}
+      </PanelSection>
 
-      <div className="mt-4">
+      <PanelSection title="Subsidiary network">
         <SubsidiaryNetwork
           lei={lei}
           entityName={legalName ?? undefined}
           signals={signals}
           onError={onPanelError}
           onRecovered={onPanelRecovered}
+          bare
         />
-      </div>
-    </section>
+      </PanelSection>
+    </>
   );
 }
