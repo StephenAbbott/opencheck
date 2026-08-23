@@ -1,4 +1,5 @@
-import type { DegradedSource, RiskSignal } from "../../lib/api";
+import type { DegradedSource, GraphShape, RiskSignal } from "../../lib/api";
+import { networkSummary } from "../../lib/graphShape";
 import { RiskChip } from "../risk/RiskChip";
 import { SectionLabel } from "../ui";
 
@@ -23,6 +24,12 @@ const CHIP_PREVIEW = 3;
  * arrives on the lookup response. It is a template, not a model call: the
  * AI summary further down the page is unchanged, and this adds no API
  * calls to a lookup.
+ *
+ * **Three columns, not two.** The third is the ownership network, and it is
+ * the only route into FullCheck that a reader meets before scrolling. It
+ * shipped as two columns for four phases, which left the mode tabs as the
+ * sole invitation into the deeper check — a tab strip does not say what is
+ * behind it, and the numbers do.
  */
 export function VerdictStrip({
   verdict,
@@ -31,6 +38,8 @@ export function VerdictStrip({
   degraded,
   sourcesAnswered,
   sourcesApplicable,
+  graphShape,
+  onOpenNetwork,
   onRerun,
   screening = false,
 }: {
@@ -41,6 +50,13 @@ export function VerdictStrip({
   degraded: DegradedSource[];
   sourcesAnswered: number;
   sourcesApplicable: number;
+  /** How big the mapped graph is — `graph_shape` on the `risk_signals`
+   *  event. Counts the statements this check produced, never what FullCheck
+   *  might go on to find. Absent until the event lands. */
+  graphShape?: GraphShape | null;
+  /** Switches the report to FullCheck. Omitted when there is no network to
+   *  open, which is also when the column does not render. */
+  onOpenNetwork?: () => void;
   /** Re-runs the lookup bypassing the replay cache. */
   onRerun?: () => void;
   /** Sources are still streaming: counts are partial, so say nothing yet. */
@@ -53,6 +69,8 @@ export function VerdictStrip({
   if (screening && total === 0 && !verdict) return null;
 
   const degradedCount = new Set(degraded.map((d) => d.source_id)).size;
+  const network = networkSummary(graphShape);
+  const showNetwork = Boolean(network && onOpenNetwork);
 
   return (
     <section
@@ -65,7 +83,11 @@ export function VerdictStrip({
         </p>
       )}
 
-      <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
+      <div
+        className={`mt-5 grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6 ${
+          showNetwork ? "lg:grid-cols-3" : ""
+        }`.trim()}
+      >
         <div className="flex flex-col gap-2.5">
           <SectionLabel as="h2">What we found</SectionLabel>
           <p className="text-oo-small text-oo-ink">
@@ -80,8 +102,13 @@ export function VerdictStrip({
           </p>
           {preview.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
+              {/* Interactive, like the chips in the Risk signals section
+                  below. They shipped inert here, which made the first three
+                  signals a reader meets the only ones that would not open —
+                  the same chip, in the same colours, behaving differently
+                  depending on how far down the page it sat. */}
               {preview.map((sig) => (
-                <RiskChip key={sig.code} signal={sig} compact interactive={false} />
+                <RiskChip key={sig.code} signal={sig} compact />
               ))}
               {riskSignals.length > preview.length && (
                 <span className="text-oo-small text-oo-muted self-center">
@@ -142,6 +169,56 @@ export function VerdictStrip({
             </p>
           )}
         </div>
+
+        {showNetwork && network && onOpenNetwork && (
+          // A button, not a link: FullCheck is a mode of this report, not
+          // another page, and `selectMode` owns the URL, the analytics event
+          // and moving focus into the panel.
+          <button
+            type="button"
+            onClick={onOpenNetwork}
+            className="flex flex-col items-start gap-2.5 text-left rounded-oo border border-oo-graph-ownershipTintBorder bg-oo-graph-ownershipTint px-4 py-3.5 hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oo-graph-ownershipText transition-colors"
+          >
+            <SectionLabel as="h2" className="text-oo-graph-ownershipText">
+              Ownership network
+            </SectionLabel>
+            <span className="text-oo-small text-oo-ink">
+              <span className="font-head font-bold text-oo-stat">{network.companies}</span>{" "}
+              {network.companies === 1 ? "company" : "companies"}
+              {network.people > 0 && (
+                <>
+                  {" and "}
+                  <span className="font-head font-bold text-oo-stat">{network.people}</span>{" "}
+                  {network.people === 1 ? "person" : "people"}
+                </>
+              )}
+              {network.depthPhrase && <>, {network.depthPhrase}</>}
+            </span>
+            <span className="inline-flex items-center gap-2 text-oo-body font-bold text-oo-graph-ownershipText">
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="6" cy="6" r="2.3" />
+                <circle cx="18" cy="6" r="2.3" />
+                <circle cx="12" cy="18" r="2.3" />
+                <path d="M8 7.5 10.7 15.6M16 7.5 13.3 15.6M8.5 6h7" />
+              </svg>
+              Explore the full ownership network
+            </span>
+            <span className="text-oo-small text-oo-muted">
+              Expand owners and controllers layer by layer, then explore the whole network in
+              one graph.
+            </span>
+          </button>
+        )}
       </div>
     </section>
   );

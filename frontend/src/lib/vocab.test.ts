@@ -4,6 +4,7 @@ import {
   BANNED_SYNONYMS,
   bodsRecordCount,
   expandOnFirstUse,
+  graphPartiesLabel,
   OPENALEPH_TOPIC,
   resultCount,
   sourceLabel,
@@ -190,6 +191,36 @@ describe("the banned labels the lint enforces", () => {
     for (const [banned, replacement] of Object.entries(BANNED_SYNONYMS)) {
       expect(replacement, banned).toBeTruthy();
       expect(replacement, banned).not.toBe(banned);
+    }
+  });
+});
+
+describe("graphPartiesLabel", () => {
+  it("counts entities, not 'parties'", () => {
+    // The chip is computed from the entity split alone. Calling that total
+    // "parties" put "7 parties" over a diagram holding eleven nodes.
+    expect(graphPartiesLabel(7)).toBe("7 entities");
+    expect(graphPartiesLabel(7, 0)).toBe("7 entities");
+  });
+
+  it("names the people when the source disclosed any", () => {
+    expect(graphPartiesLabel(7, 4)).toBe("7 entities · 4 people");
+  });
+
+  it("agrees in number on both halves", () => {
+    expect(graphPartiesLabel(1)).toBe("1 entity");
+    expect(graphPartiesLabel(1, 1)).toBe("1 entity · 1 person");
+    expect(graphPartiesLabel(2, 1)).toBe("2 entities · 1 person");
+  });
+
+  it("never says '0 people', which reads as a finding about disclosure", () => {
+    expect(graphPartiesLabel(3, 0)).not.toMatch(/people|person/);
+    expect(graphPartiesLabel(3, -1)).toBe("3 entities");
+  });
+
+  it("never says 'parties'", () => {
+    for (const [e, p] of [[1, 0], [1, 1], [5, 2], [12, 9]] as const) {
+      expect(graphPartiesLabel(e, p)).not.toMatch(/part(y|ies)/);
     }
   });
 });

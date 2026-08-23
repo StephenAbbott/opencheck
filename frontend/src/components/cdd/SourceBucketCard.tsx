@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useId, useMemo, useState, useSyncExternalStore } from "react";
 import { deepen } from "../../lib/api";
 import { rowFinding } from "../../lib/sourceFinding";
+import { graphPartiesLabel } from "../../lib/vocab";
 import type { BodsBreakdown, BoAccessNotice, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
 import { LivenessBadge, type SourceLiveness } from "./LivenessBadge";
@@ -1112,19 +1113,20 @@ function HitRow({
   const breakdown: BodsBreakdown | undefined = detail
     ? {
         entities: detail.bods.filter((s) => (s as Record<string, unknown>).recordType === "entity").length,
+        persons: detail.bods.filter((s) => (s as Record<string, unknown>).recordType === "person").length,
         relationships: detail.bods.filter((s) => (s as Record<string, unknown>).recordType === "relationship").length,
       }
     : preloadedBreakdown;
   const graphMeta = breakdown
-    ? `${breakdown.entities} ${breakdown.entities === 1 ? "entity" : "entities"} · ${breakdown.relationships} ${breakdown.relationships === 1 ? "relationship" : "relationships"}`
+    ? `${graphPartiesLabel(breakdown.entities, breakdown.persons ?? 0)} · ${breakdown.relationships} ${breakdown.relationships === 1 ? "relationship" : "relationships"}`
     : "Interactive ownership & control graph";
 
-  // The chip is labelled by how many parties are in the diagram — "14
-  // companies" tells a reader whether opening it is worth the click, where
-  // "Explore the ownership graph" does not. Falls back to the neutral noun
-  // while the count is still unknown rather than inventing one.
+  // The chip is labelled by what is in the diagram — "14 entities" tells a
+  // reader whether opening it is worth the click, where "Explore the
+  // ownership graph" does not. Falls back to the neutral noun while the count
+  // is still unknown rather than inventing one.
   const partyLabel = breakdown
-    ? `${breakdown.entities} ${breakdown.entities === 1 ? "party" : "parties"}`
+    ? graphPartiesLabel(breakdown.entities, breakdown.persons ?? 0)
     : "Diagram";
 
   // One disclosure replaces v1's two mono text links. It starts open when a

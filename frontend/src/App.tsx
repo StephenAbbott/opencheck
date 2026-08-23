@@ -14,6 +14,7 @@ import {
   type CrossSourceLink,
   type DegradedSource,
   type SourceLiveness,
+  type GraphShape,
   type MeipMatch,
   type OpenAlephScreeningMatch,
   type PossiblySameEntity,
@@ -246,6 +247,10 @@ export default function App() {
   // names found in archive/watchlist collections whose topics map to no
   // RELATED_* code. Name-derived; never identifier corroboration.
   const [oaScreening, setOaScreening] = useState<OpenAlephScreeningMatch[]>([]);
+  // How big the mapped graph is, for the verdict strip's ownership-network
+  // column. Rides on the same event as the signals, the degradations and the
+  // verdict sentence, so the three columns describe one run.
+  const [graphShape, setGraphShape] = useState<GraphShape | null>(null);
   const [applicableSources, setApplicableSources] = useState<string[]>([]);
   // Panels that fetch outside `_lookup_pipeline` (/securities, /subsidiaries).
   // Deliberately NOT merged into `degradedSources`: that list arrives on the
@@ -558,6 +563,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         setVerdict(null);
         setSourceLiveness({});
         setOaScreening([]);
+        setGraphShape(null);
         setApplicableSources([]);
         setCompletedSources(new Set());
         setStartedSources(new Set());
@@ -617,6 +623,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             setVerdict(e.verdict ?? null);
             setSourceLiveness(e.source_liveness ?? {});
             setOaScreening(e.openaleph_screening ?? []);
+            setGraphShape(e.graph_shape ?? null);
           },
           onBodsCounts: (e: BodsCountsEvent) => {
             setBodsCountMap(e.counts);
@@ -1085,6 +1092,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setVerdict(null);
     setSourceLiveness({});
     setOaScreening([]);
+    setGraphShape(null);
     setApplicableSources([]);
     setCompletedSources(new Set());
     // Phase 124 added these two and this 30-setter reset is exactly the place
@@ -1251,7 +1259,16 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           </p>
         )}
         <div className="mb-4 bg-white border border-oo-rule rounded-oo overflow-hidden">
-          {/* Tab bar */}
+          {/* Tab bar — homepage only.
+
+              It used to stay on the report as a "landmark", with only the
+              440 lines of input panels collapsing beneath it. That left four
+              tabs and a search affordance above every result, which is the
+              v1 page's opening move: search first, answer second. The v2
+              report opens on the subject. The one-line prompt below is the
+              whole search surface on a result page, and reopening it brings
+              the tabs back with it. */}
+          {!searchPanelsCollapsed && (
           <div role="tablist" aria-label="Search method" className="flex border-b border-oo-rule">
             <button
               type="button"
@@ -1326,6 +1343,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               Person name
             </button>
           </div>
+          )}
 
           {/* Panels collapse once results are on screen — the tab bar stays
               as a landmark; the prompt row below reopens them. Phase 122
@@ -1775,6 +1793,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             degraded={degradedSources}
             sourcesAnswered={answeredApplicable}
             sourcesApplicable={applicableSources.length}
+            graphShape={graphShape}
+            onOpenNetwork={() => selectMode("full")}
             screening={streaming}
             onRerun={
               streamingLei && !streaming

@@ -200,6 +200,9 @@ export interface LookupResponse {
   /** How current each source's payload is, keyed by source_id. Sibling to
    *  degraded_sources: data that is not current must not read as live. */
   source_liveness?: Record<string, SourceLiveness>;
+  /** How big the mapped graph is. Absent on payloads recorded before this
+   *  field existed, which is why every consumer treats it as optional. */
+  graph_shape?: GraphShape;
   /** One deterministic sentence stating what the check found — built from
    *  the signals and degradations by the backend (`opencheck/verdict.py`),
    *  never by a model, so the page, the PDF, the share card and the API
@@ -208,6 +211,17 @@ export interface LookupResponse {
   bods: Record<string, unknown>[];
   bods_issues: string[];
   license_notices: { source_id: string; hit_id: string; notice: string }[];
+}
+
+/** `graph_shape` on the `risk_signals` event: the size of the ownership-and-
+ *  control graph this check produced, deduplicated by statementId. `depth` is
+ *  the longest chain the risk layer measured, or null when it measured none —
+ *  never 0, which would render as a flat graph. */
+export interface GraphShape {
+  companies: number;
+  people: number;
+  relationships: number;
+  depth: number | null;
 }
 
 export interface DeepenResponse {
@@ -1042,6 +1056,10 @@ export interface RiskSignalsEvent {
   openaleph_screening?: OpenAlephScreeningMatch[];
   /** Per-source currency, keyed by source_id. */
   source_liveness?: Record<string, SourceLiveness>;
+  /** How big the mapped graph is — see `GraphShape`. Rides on this event
+   *  rather than `done` so the verdict strip's three columns all come from
+   *  one payload and cannot disagree about the same run. */
+  graph_shape?: GraphShape;
   /** One deterministic sentence stating what the check found — built from
    *  the signals and degradations by the backend (`opencheck/verdict.py`),
    *  never by a model, so the page, the PDF, the share card and the API
@@ -1146,9 +1164,19 @@ export interface LookupStreamErrorEvent {
   detail: string;
 }
 
-/** Entity / relationship split for a single deepened hit's BODS graph. */
+/** Entity / person / relationship split for a single deepened hit's BODS
+ *  graph.
+ *
+ *  `persons` is counted separately because the diagram chip is labelled by
+ *  the entity figure alone. Calling that total "parties" hid every natural
+ *  person the source disclosed behind a number that excluded them — the
+ *  reader saw "7 parties" over a diagram containing eleven nodes.
+ *
+ *  Optional: payloads recorded before the backend split it out carry only
+ *  entities and relationships. */
 export interface BodsBreakdown {
   entities: number;
+  persons?: number;
   relationships: number;
 }
 

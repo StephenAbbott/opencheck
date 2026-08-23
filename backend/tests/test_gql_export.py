@@ -201,9 +201,70 @@ def test_zip_bundle_manifest_carries_gql_counts(monkeypatch):
 
 
 def test_network_format_literal_matches_export_formats():
-    """The three format declarations can't drift: the network Literal must be
-    exactly the /export set plus its one extra (cypher)."""
+    """The three format declarations can't drift: the network Literal and the
+    /export set must name the same formats.
+
+    They were briefly allowed to differ by one (cypher shipped on the network
+    export before GET /export served it standalone). Adding csv would have
+    reopened that gap silently, so the assertion is now equality.
+    """
     literal = set(
         ExportNetworkRequest.model_fields["format"].annotation.__args__
     )
-    assert literal == _EXPORT_FORMATS | {"cypher"}
+    assert literal == _EXPORT_FORMATS
+
+
+def test_export_csv_is_the_tables_without_the_property_graph(monkeypatch):
+    """`csv` ships the same three tables `gql` builds — and nothing else.
+
+    The point of the format is that someone who wants a spreadsheet does not
+    download a BigQuery property graph and delete two thirds of it. If it ever
+    starts carrying the DDL or the queries again, it has stopped being a
+    different format and is just `gql` under another name.
+    """
+    monkeypatch.setattr("opencheck.routers.export._lookup_impl", _fake_lookup)
+    client = TestClient(app)
+    r = client.get("/export", params={"lei": "2138000000000000A001", "format": "csv"})
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/zip"
+    assert "-csv.zip" in r.headers["content-disposition"]
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        names = zf.namelist()
+        prefix = names[0].split("/", 1)[0]
+        members = {n.split("/", 1)[1] for n in names}
+    assert members == {
+        "entity_nodes.csv", "person_nodes.csv", "ownership_edges.csv", "LICENSES.md"
+    }, members
+    assert prefix.endswith("-csv")
+
+
+def test_export_cypher_reuses_the_network_writer(monkeypatch):
+    """Serving cypher on GET /export must not fork a second Cypher writer.
+
+    The script was already reachable via POST /export-network; the two have to
+    stay byte-identical for the same BODS, or "Neo4j · Cypher" means two
+    different things depending on which button produced it.
+    """
+    monkeypatch.setattr("opencheck.routers.export._lookup_impl", _fake_lookup)
+    client = TestClient(app)
+    r = client.get("/export", params={"lei": "2138000000000000A001", "format": "cypher"})
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/plain")
+    assert ".cypher" in r.headers["content-disposition"]
+
+    n = client.post(
+        "/export-network", json={"bods": _fake_lookup_response().bods, "format": "cypher"}
+    )
+    assert n.status_code == 200
+    assert r.text == n.text
+
+
+def test_export_network_csv(monkeypatch):
+    client = TestClient(app)
+    r = client.post("/export-network", json={"bods": _bods(), "format": "csv", "slug": "net"})
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/zip"
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        members = {n.split("/", 1)[1] for n in zf.namelist()}
+    assert "ownership_edges.csv" in members
+    assert "create_property_graph.sql" not in members

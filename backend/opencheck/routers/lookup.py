@@ -157,6 +157,11 @@ class ReportResponse(BaseModel):
     #: that is not current must not read as live, just as a check that could
     #: not run must not read as clean. Per-hit values ride on each SourceHit.
     source_liveness: dict[str, dict[str, Any]] = {}
+    #: How big the mapped graph is: companies / people / relationships across
+    #: the sources that answered (deduplicated by statementId), plus the
+    #: longest ownership chain the risk layer measured, or null when it did
+    #: not. Counts what this check holds — never what a deeper one might find.
+    graph_shape: dict[str, Any] = {}
     #: One deterministic sentence stating what the check found — see
     #: ``opencheck.verdict``. Rendered at the top of the report, above the
     #: evidence and above the AI summary. Template-built, never a model
@@ -375,6 +380,13 @@ class _LookupCtx:
     #: GLEIF-published S&P Global / Capital IQ id — corroborates MEIP's CapIQ id.
     spglobal: str | None = None
     qid: str | None = None
+    #: Where the GLEIF anchor payload actually came from. The anchor is
+    #: resolved *before* the dispatch loop that fills ``provenances``, so
+    #: without carrying it here GLEIF is the one source with no entry in
+    #: ``source_liveness`` — and the one row on the report with no freshness
+    #: note, which reads as "we don't know" for the source everything else is
+    #: anchored to.
+    provenance: Provenance | None = None
 
 
 # RA-code derivers declared by the adapters themselves, collected from the
@@ -1494,6 +1506,10 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
     Returns ``(ctx, gleif_bundle)`` with derived identifiers, OpenCorporates
     ID and Wikidata QID populated. Raises :class:`_LookupAbort` when the LEI
     cannot be resolved. Shared by the pipeline and /lookup-source.
+
+    The anchor fetch runs inside a provenance scope and the result is stashed
+    on ``ctx.provenance``. Every other source gets one via ``_run()``; GLEIF
+    is resolved here, before that loop exists, which is why it needs its own.
     """
     gleif = REGISTRY["gleif"]
     ctx = _LookupCtx(lei=lei)
@@ -1515,8 +1531,18 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
                     ),
                 )
             gleif_bundle = {"source_id": "gleif", "lei": lei, "_from_bundle": True}
+            # A committed Open Ownership extract, not a call to GLEIF. Saying
+            # "curated" is the same claim the stored-bundle hits make below.
+            ctx.provenance = Provenance(liveness="curated")
         else:
-            gleif_bundle = await gleif.fetch(lei)
+            # Only this line observes the cache or the network, so it is the
+            # only part that needs the scope; the bundle branch above never
+            # contacts GLEIF at all.
+            with _provenance.recording() as recorder:
+                gleif_bundle = await gleif.fetch(lei)
+            ctx.provenance = recorder.resolve(
+                is_stub=bool(gleif_bundle.get("is_stub"))
+            )
             if gleif_bundle.get("is_stub") or not gleif_bundle.get("record"):
                 raise _LookupAbort(
                     404,
@@ -1637,6 +1663,7 @@ async def _lookup_pipeline(
     yield ("meip", {"match": meip_match.model_dump() if meip_match else None})
 
     gleif_hit = _build_gleif_hit(ctx, gleif_bundle)
+    _stamp(gleif_hit, ctx.provenance)
     hits: list[SourceHit] = [gleif_hit]
     deepened_bundles: list[tuple[str, str]] = [("gleif", lei)]
     yield ("hit", gleif_hit)
@@ -1678,7 +1705,10 @@ async def _lookup_pipeline(
         return src_id, result, recorder.resolve(is_stub=is_stub)
 
     errors: dict[str, str] = {}
-    provenances: dict[str, Provenance] = {}
+    # Seeded with the anchor, which was resolved before this loop existed.
+    provenances: dict[str, Provenance] = (
+        {"gleif": ctx.provenance} if ctx.provenance is not None else {}
+    )
     oc_result_processed = False
     pending = {asyncio.create_task(_run(sid, coro)) for sid, coro in dispatch}
     while pending:
@@ -1869,6 +1899,11 @@ async def _lookup_pipeline(
         bods_counts[f"{dsrc}:{dhit}"] = len(stmts)
         bods_breakdown[f"{dsrc}:{dhit}"] = {
             "entities": sum(1 for s in stmts if s.get("recordType") == "entity"),
+            # Counted separately because the row chip is labelled by the
+            # entity figure alone: calling that total "parties" hid every
+            # natural person the source disclosed behind a number that
+            # excluded them.
+            "persons": sum(1 for s in stmts if s.get("recordType") == "person"),
             "relationships": sum(1 for s in stmts if s.get("recordType") == "relationship"),
         }
         yield ("deepen_result", {
@@ -1893,7 +1928,9 @@ async def _lookup_pipeline(
             key = f"{dsrc}:{dhit}"
             bods_counts[key] = cnt["total"]
             bods_breakdown[key] = {
-                "entities": cnt["entities"], "relationships": cnt["relationships"],
+                "entities": cnt["entities"],
+                "persons": cnt.get("persons", 0),
+                "relationships": cnt["relationships"],
             }
 
     yield ("bods_counts", {"counts": bods_counts, "breakdown": bods_breakdown})
@@ -1957,6 +1994,7 @@ async def _lookup_pipeline(
             "source_liveness": {
                 sid: prov.to_dict() for sid, prov in sorted(provenances.items())
             },
+            "graph_shape": _graph_shape(bods_all, merged),
         },
     )
 
@@ -2053,6 +2091,7 @@ async def _lookup_impl(
     signals: list[dict[str, Any]] = []
     degraded_sources: list[dict[str, Any]] = []
     source_liveness: dict[str, dict[str, Any]] = {}
+    graph_shape: dict[str, Any] = {}
     verdict: str | None = None
     oa_screening: list[dict[str, Any]] = []
     bods_all: list[dict[str, Any]] = []
@@ -2100,6 +2139,7 @@ async def _lookup_impl(
             verdict = payload.get("verdict")
             oa_screening = payload.get("openaleph_screening") or []
             source_liveness = payload.get("source_liveness") or {}
+            graph_shape = payload.get("graph_shape") or {}
         elif event == "done":
             bods_issues = payload["bods_issues"]
             license_notices = payload["license_notices"]
@@ -2119,6 +2159,7 @@ async def _lookup_impl(
         degraded_sources=degraded_sources,
         openaleph_screening=oa_screening,
         source_liveness=source_liveness,
+        graph_shape=graph_shape,
         verdict=verdict,
         lei=norm_lei,
         legal_name=legal_name,
@@ -2693,6 +2734,50 @@ def _select_deepen_pairs(
     return deepen_pairs
 
 
+def _graph_shape(
+    bods: list[dict[str, Any]], signals: list[dict[str, Any]]
+) -> dict[str, int | None]:
+    """How big the ownership-and-control graph on this page actually is.
+
+    The report's third verdict column invites the reader into FullCheck, and
+    an invitation with no numbers on it is a button. These are the numbers the
+    check has *already earned*: statements OpenCheck mapped from the sources
+    that answered, deduplicated by ``statementId`` because several sources
+    describe the same party and the merged list keeps each of them.
+
+    It deliberately does **not** reach for the GLEIF subsidiary total or
+    anything FullCheck would go on to discover. Those are a different scope,
+    and a sentence that mixes "what we have" with "what we might find" is the
+    same overclaim as a progress bar that runs ahead of its stream.
+
+    ``depth`` is the longest ownership chain the risk layer actually measured
+    (``COMPLEX_OWNERSHIP_LAYERS`` carries it as ``evidence.longest_path``), or
+    ``None`` when the signal did not fire — never a guess, and never 0, which
+    would render as a flat graph.
+    """
+    seen: set[str] = set()
+    counts = {"companies": 0, "people": 0, "relationships": 0}
+    key = {"entity": "companies", "person": "people", "relationship": "relationships"}
+    for statement in bods:
+        sid = statement.get("statementId")
+        if isinstance(sid, str):
+            if sid in seen:
+                continue
+            seen.add(sid)
+        bucket = key.get(str(statement.get("recordType")))
+        if bucket:
+            counts[bucket] += 1
+
+    depth: int | None = None
+    for signal in signals:
+        if signal.get("code") != "COMPLEX_OWNERSHIP_LAYERS":
+            continue
+        path = (signal.get("evidence") or {}).get("longest_path")
+        if isinstance(path, list) and path:
+            depth = max(depth or 0, len(path))
+    return {**counts, "depth": depth}
+
+
 async def _count_only(source_id: str, hit_id: str) -> dict[str, int] | None:
     """Map a (cached) bundle just to count BODS statements — no risk/validate.
 
@@ -2718,6 +2803,7 @@ async def _count_only(source_id: str, hit_id: str) -> dict[str, int] | None:
     return {
         "total": len(bods),
         "entities": sum(1 for s in bods if s.get("recordType") == "entity"),
+        "persons": sum(1 for s in bods if s.get("recordType") == "person"),
         "relationships": sum(1 for s in bods if s.get("recordType") == "relationship"),
     }
 

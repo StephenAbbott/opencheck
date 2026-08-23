@@ -594,3 +594,56 @@ def test_stored_bundle_sources_report_as_snapshot(
     assert "live" not in {v["liveness"] for v in liveness.values()}, (
         f"a source claimed to be live in an offline test run: {liveness}"
     )
+
+
+def test_gleif_anchor_carries_provenance(client, tmp_path, monkeypatch) -> None:
+    """The anchor must appear in source_liveness like every other source.
+
+    GLEIF is resolved before the dispatch loop that fills ``provenances``, so
+    for a long time it was the one source with no entry — and the one row on
+    the report with no freshness note. A reader could reasonably read that
+    silence as "we don't know when this was checked" for the single source
+    every other row is anchored to.
+    """
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)
+
+    payload = client.get("/lookup", params={"lei": lei}).json()
+    liveness = payload.get("source_liveness") or {}
+    assert "gleif" in liveness, f"anchor missing from source_liveness: {sorted(liveness)}"
+    assert liveness["gleif"]["liveness"] in {
+        "live", "cached", "snapshot", "curated", "stub"
+    }
+    # And the hit itself carries it, so a consumer reading the hit rather than
+    # the map gets the same answer.
+    gleif_hits = [h for h in payload["hits"] if h["source_id"] == "gleif"]
+    assert gleif_hits, "no GLEIF hit on the response"
+    assert gleif_hits[0]["liveness"] == liveness["gleif"]["liveness"]
+
+
+def test_graph_shape_counts_the_mapped_graph(client, tmp_path) -> None:
+    """graph_shape counts what the check holds, deduplicated by statementId.
+
+    The verdict strip's ownership-network column is an invitation with numbers
+    on it. The numbers have to be the ones this check earned — not the GLEIF
+    subsidiary total, which belongs to a scope FullCheck has not run yet.
+    """
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)
+
+    payload = client.get("/lookup", params={"lei": lei}).json()
+    shape = payload.get("graph_shape") or {}
+    assert set(shape) == {"companies", "people", "relationships", "depth"}
+    assert shape["companies"] >= 1, "the subject itself is a company statement"
+    for key in ("companies", "people", "relationships"):
+        assert isinstance(shape[key], int) and shape[key] >= 0
+    # No measured chain means no claim about one — never 0, which renders as
+    # a flat graph.
+    assert shape["depth"] is None or shape["depth"] >= 1
+
+    # Counts are over distinct statements: the merged list keeps one entry per
+    # source describing the same party, so a raw len() would double-count.
+    ids = [s.get("statementId") for s in payload["bods"]]
+    distinct = {i for i in ids if isinstance(i, str)}
+    total = shape["companies"] + shape["people"] + shape["relationships"]
+    assert total <= len(distinct)
