@@ -4,6 +4,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import SearchLoadingGrid from "./components/SearchLoadingGrid";
 import {
   BASE_URL,
+  downloadReportMarkdown,
+  downloadReportPdf,
   fetchSources,
   isValidLei,
   retryLookupSource,
@@ -42,7 +44,7 @@ import { ExportPanel } from "./components/export/ExportPanel";
 import { ChangelogPage } from "./components/ChangelogPage";
 import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
-import { Icon } from "./components/ui";
+import { Icon, SectionHeading } from "./components/ui";
 import ConfidenceLegend from "./components/ui/ConfidenceLegend";
 import PanelSection, { PanelCard } from "./components/ui/PanelSection";
 import { PERSON_VERB, resultCount, sourceLabel } from "./lib/vocab";
@@ -51,6 +53,7 @@ import { documentTitleFor, modeParam, parseMode } from "./lib/checkMode";
 import type { CheckMode } from "./lib/checkMode";
 import type { IconName } from "./components/ui";
 import { NarrativePanel } from "./components/cdd/NarrativePanel";
+import type { ReportExportPayload } from "./components/cdd/NarrativePanel";
 import {
   SourceBucketCard,
   SkeletonSourceCard,
@@ -556,7 +559,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         setHits([]);
         setErrors({});
         setCrossSourceLinks([]);
-        setCrossSourceOpen(false);
         setPossiblySame([]);
         setMeip(null);
         setRiskSignals([]);
@@ -988,15 +990,65 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     [crossSourceLinks, streamingLei],
   );
 
-  // The cross-source identifiers box is collapsed by default but the
-  // SubjectCard badge can pop it open — so its open state lives here
-  // (controlled) rather than inside CollapsedSection.
-  const [crossSourceOpen, setCrossSourceOpen] = useState(false);
+  // The report exports embed the narrative and its dispositions, which are
+  // produced by NarrativePanel further down the page. That is why the control
+  // used to live in *its* header; now the control is on the subject and the
+  // payload comes up to here instead.
+  const [exportPayload, setExportPayload] = useState<ReportExportPayload>({
+    narrative: null,
+    dispositions: null,
+  });
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [mdBusy, setMdBusy] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
-  /** SubjectCard badge action: expand the cross-source identifiers box,
-   *  scroll to it and flash it (same affordance as narrative citations). */
+  const downloadPdf = useCallback(async () => {
+    if (!streamingLei) return;
+    setPdfBusy(true);
+    setExportError(null);
+    try {
+      await downloadReportPdf(
+        streamingLei,
+        exportPayload.narrative,
+        exportPayload.dispositions
+      );
+      trackEvent("pdf_export");
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : "Could not generate the PDF.");
+    } finally {
+      setPdfBusy(false);
+    }
+  }, [streamingLei, exportPayload]);
+
+  const downloadMarkdown = useCallback(async () => {
+    if (!streamingLei) return;
+    setMdBusy(true);
+    setExportError(null);
+    try {
+      // Same embedding rules as the PDF — the same record in a portable
+      // format, and it works even where the PDF route is 503.
+      await downloadReportMarkdown(
+        streamingLei,
+        exportPayload.narrative,
+        exportPayload.dispositions
+      );
+    } catch (e) {
+      setExportError(
+        e instanceof Error ? e.message : "Could not generate the Markdown report."
+      );
+    } finally {
+      setMdBusy(false);
+    }
+  }, [streamingLei, exportPayload]);
+
+  /** SubjectCard badge action: scroll to the identity band and flash it
+   *  (same affordance as narrative citations).
+   *
+   *  It used to also force a collapsed box open. The band is not collapsed —
+   *  "is this the right company?" is the question a reader with an identifier
+   *  badge in front of them is already asking, and answering it behind a
+   *  disclosure made them open two boxes to get the two halves. */
   const showCrossSourceIdentifiers = () => {
-    setCrossSourceOpen(true);
     const el = document.getElementById("cross-source-identifiers");
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1085,7 +1137,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setHits([]);
     setErrors({});
     setCrossSourceLinks([]);
-    setCrossSourceOpen(false);
     setPossiblySame([]);
     setMeip(null);
     setRiskSignals([]);
@@ -1795,6 +1846,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             onRefresh={() => lookupLei(streamingLei, { refresh: true })}
             identifierSources={leiConfirmedSourceCount}
             onShowIdentifiers={showCrossSourceIdentifiers}
+            pdfBusy={pdfBusy}
+            mdBusy={mdBusy}
+            onPdf={downloadPdf}
+            onMarkdown={downloadMarkdown}
+            exportError={exportError}
           />
         {/* ── The answer-first layer (Phase 122) ─────────────────────────
             Subject, then what the check found and how much of it ran, then
@@ -2015,7 +2071,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             which of the four they are looking at. */}
         <ModeBlurb mode="quick" tabs={MODE_TABS} />
         {streamingLei && mode === "quick" && (
-          <NarrativePanel lei={streamingLei} legalName={legalName} />
+          <NarrativePanel lei={streamingLei} onExportPayload={setExportPayload} />
         )}
 
 
@@ -2080,64 +2136,87 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             Phase 97) renders underneath the OpenAleph source card in the
             sources list below — see OpenAlephArchiveMatches. */}
 
-        {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && mode === "quick" && (
-          <CollapsedSection
-            htmlId="cross-source-identifiers"
-            label="Cross-source identifiers"
-            open={crossSourceOpen}
-            onToggle={setCrossSourceOpen}
-            summary={
-              crossLinkedSourceCount >= 2 ? (
-                <>
-                  <span className="font-semibold">
-                    {crossSourceLinks.length + gleifMappedIds.length}{" "}
-                    identifier
-                    {crossSourceLinks.length + gleifMappedIds.length === 1
-                      ? ""
-                      : "s"}
-                  </span>{" "}
-                  matched across{" "}
-                  <span className="font-semibold">
-                    {crossLinkedSourceCount} sources
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="font-semibold">
-                    {gleifMappedIds.length} identifier
-                    {gleifMappedIds.length === 1 ? "" : "s"}
-                  </span>{" "}
-                  mapped by GLEIF
-                </>
-              )
-            }
-          >
-            <CrossSourceIdentifiersTable
-              links={crossSourceLinks}
-              gleifMapped={gleifMappedIds}
-              sourceNames={sourceNameIndex}
-            />
-          </CollapsedSection>
-        )}
+        {/* One question, not two boxes.
 
-        {possiblySame.length > 0 && mode === "quick" && (
-          <CollapsedSection
-            htmlId="possibly-same"
-            label="Possibly the same entity"
-            summary={
-              <>
-                <span className="font-semibold">
-                  {possiblySame.length} candidate pair
-                  {possiblySame.length === 1 ? "" : "s"}
-                </span>{" "}
-                flagged for review — same name &amp; jurisdiction, no shared
-                identifier
-              </>
-            }
-          >
-            <PossiblySameTable pairs={possiblySame} />
-          </CollapsedSection>
-        )}
+            "Cross-source identifiers" and "Possibly the same entity" are the
+            same enquiry from two directions — what corroborates that this is
+            the right company, and what suggests the records might not all be
+            it. Splitting them into two collapsibles with two eyebrow labels
+            made a reader open two things to answer one question, and put the
+            reassuring half and the doubtful half in separate boxes where
+            neither qualified the other.
+
+            The band keeps `id="cross-source-identifiers"` because the subject
+            card's identifier badge scrolls to it by that id, and because a
+            shared report link may already carry the anchor. */}
+        {(crossSourceLinks.length > 0 ||
+          gleifMappedIds.length > 0 ||
+          possiblySame.length > 0) &&
+          mode === "quick" && (
+            <PanelSection
+              id="cross-source-identifiers"
+              title="Is this the right company?"
+              aside={
+                crossLinkedSourceCount >= 2 ? (
+                  <>
+                    <span className="font-semibold">
+                      {crossSourceLinks.length + gleifMappedIds.length} identifier
+                      {crossSourceLinks.length + gleifMappedIds.length === 1 ? "" : "s"}
+                    </span>{" "}
+                    matched across{" "}
+                    <span className="font-semibold">{crossLinkedSourceCount} sources</span>
+                  </>
+                ) : gleifMappedIds.length > 0 ? (
+                  <>
+                    <span className="font-semibold">
+                      {gleifMappedIds.length} identifier
+                      {gleifMappedIds.length === 1 ? "" : "s"}
+                    </span>{" "}
+                    mapped by GLEIF
+                  </>
+                ) : undefined
+              }
+            >
+              {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && (
+                <CrossSourceIdentifiersTable
+                  links={crossSourceLinks}
+                  gleifMapped={gleifMappedIds}
+                  sourceNames={sourceNameIndex}
+                />
+              )}
+
+              {possiblySame.length > 0 && (
+                <div
+                  id="possibly-same"
+                  className={
+                    crossSourceLinks.length > 0 || gleifMappedIds.length > 0
+                      ? "mt-5 border-t border-oo-rule pt-4 scroll-mt-4"
+                      : "scroll-mt-4"
+                  }
+                >
+                  {/* A sub-block, not a peer section — the same treatment
+                      structural context gets inside Risk signals. These pairs
+                      qualify the corroboration above them, and a reader who
+                      sees "2 identifiers matched across 5 sources" needs to
+                      meet them in the same breath rather than in the next box
+                      down. */}
+                  <SectionHeading as="h3">Possibly the same entity</SectionHeading>
+                  <p className="mt-1 text-oo-small text-oo-muted">
+                    <span className="font-semibold">
+                      {possiblySame.length} candidate pair
+                      {possiblySame.length === 1 ? "" : "s"}
+                    </span>{" "}
+                    flagged for review — same name &amp; jurisdiction, no shared
+                    identifier
+                  </p>
+                  <div className="mt-3">
+                    <PossiblySameTable pairs={possiblySame} />
+                  </div>
+                </div>
+              )}
+            </PanelSection>
+          )}
+
         {(cddBuckets.length > 0 || pendingCddSources.length > 0) && (
           <PanelSection
             title="What each source said"
@@ -3171,90 +3250,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     </h2>
   );
 }
-
-/**
- * Collapsed-by-default disclosure box for the reconciliation sections
- * (cross-source identifiers / possibly-same). The full tables pushed the
- * source results a long scroll below the fold for casual users, while the
- * LEI they mostly repeat is already on the SubjectCard — so each box now
- * renders as a one-line summary that expands in place. Kept in position
- * above the source cards so the "Confirmed by" jump chips still point
- * downward at their targets.
- */
-function CollapsedSection({
-  htmlId,
-  label,
-  summary,
-  open: openProp,
-  onToggle,
-  children,
-}: {
-  /** id on the section wrapper — in-page anchors (e.g. the SubjectCard
-   *  identifier badge) scroll here. */
-  htmlId: string;
-  label: string;
-  summary: React.ReactNode;
-  /** Controlled open state — omit to let the section manage its own. */
-  open?: boolean;
-  onToggle?: (open: boolean) => void;
-  children: React.ReactNode;
-}) {
-  const [openState, setOpenState] = useState(false);
-  const open = openProp ?? openState;
-  return (
-    <section
-      id={htmlId}
-      className="border-b border-oo-rule scroll-mt-4"
-    >
-      {/* The WAI-ARIA disclosure pattern: the heading WRAPS the button. A
-          heading nested inside a button is flattened into the button's
-          accessible name and exposed as a heading by almost nothing — which
-          would have restyled these to look like section heads while leaving
-          them out of the outline, the exact defect this phase set out to fix. */}
-      <h2 className="m-0">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={`${htmlId}-body`}
-        onClick={() => {
-          onToggle?.(!open);
-          if (openProp === undefined) setOpenState(!open);
-        }}
-        className="w-full flex items-center justify-between gap-3 px-4 py-[18px] sm:px-6 sm:py-[22px] text-left group"
-      >
-        <span className="min-w-0">
-          <span className="block font-head font-bold text-oo-head text-oo-ink">
-            {label}
-          </span>
-          <span className="block text-oo-small text-oo-ink mt-1">{summary}</span>
-        </span>
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          className={`shrink-0 text-oo-muted transition-transform group-hover:text-oo-ink ${
-            open ? "rotate-90" : ""
-          }`}
-        >
-          <path d="m9 18 6-6-6-6" />
-        </svg>
-      </button>
-      </h2>
-      {open && (
-        <div id={`${htmlId}-body`} className="px-4 pb-5 sm:px-6">
-          {children}
-        </div>
-      )}
-    </section>
-  );
-}
-
 
 function ExampleLeiPicker({
   onPick,

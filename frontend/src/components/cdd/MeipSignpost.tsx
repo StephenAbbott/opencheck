@@ -1,5 +1,7 @@
 import type { MeipMatch } from "../../lib/api";
 import { NOT_IN_GRAPH } from "../../lib/vocab";
+import { buttonClasses } from "../ui";
+import PanelSection from "../ui/PanelSection";
 
 // ---------------------------------------------------------------------
 // MeipSignpost — OECD-UNSD MEIP "signpost" card.
@@ -83,20 +85,22 @@ export function MeipSignpost({ match }: { match: MeipMatch | null }) {
     : `Subsidiary of ${match.immediate_parent || match.parent_mne} · part of the ${match.parent_mne} group`;
 
   return (
-    <section className="border-b border-oo-rule px-4 py-[18px] sm:px-6 sm:py-[22px]">
-      <header className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="inline-flex items-center gap-2 font-head font-bold text-oo-head text-oo-ink">
+    // A band of the report card, titled by `PanelSection` like every other —
+    // it used to hand-roll the band's class string, its heading's classes and
+    // its own split-head, three copies of what the primitive supplies.
+    <PanelSection
+      title={
+        <span className="inline-flex items-center gap-2">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
             className="text-oo-muted" aria-hidden="true">
             <path d="M3 21h18" /><path d="M5 21V7l7-4 7 4v14" /><path d="M9 21v-4h6v4" />
           </svg>
           OECD-UNSD MEIP
-        </h2>
-        <span className="text-[11px] font-mono text-oo-muted bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5">
-          {NOT_IN_GRAPH}
         </span>
-      </header>
+      }
+      aside={NOT_IN_GRAPH}
+    >
 
       <div>
         <a
@@ -164,11 +168,14 @@ export function MeipSignpost({ match }: { match: MeipMatch | null }) {
             <strong className="font-semibold">126,000+ subsidiaries of the world's
             500 largest multinationals</strong>.
           </p>
+          {/* `buttonClasses` rather than a hand-styled anchor: the design
+              system's rule for an <a> that must look like a button, and a
+              second implementation is how the nine button styles happened. */}
           <a
             href={MEIP_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 mt-2 text-[13px] font-semibold text-white bg-oo-blue hover:bg-oo-burst rounded-oo px-3 py-1.5"
+            className={`${buttonClasses("secondary", "sm")} mt-2.5 gap-1.5`}
           >
             Download &amp; reuse the data on OECD.org
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -179,6 +186,6 @@ export function MeipSignpost({ match }: { match: MeipMatch | null }) {
           </a>
         </div>
       </div>
-    </section>
+    </PanelSection>
   );
 }

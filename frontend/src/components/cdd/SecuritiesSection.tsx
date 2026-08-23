@@ -1,6 +1,8 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { getSecurities, type Security, type SecuritiesResponse } from "../../lib/api";
-import { NOT_IN_GRAPH } from "../../lib/vocab";
+import { NOT_IN_GRAPH, sourceList } from "../../lib/vocab";
+import { ActionChip } from "../ui";
+import PanelSection from "../ui/PanelSection";
 import { panelError, type PanelError, type PanelId } from "../../lib/panelErrors";
 
 // Entity-level "Securities" section: ISINs linked to the LEI, combining GLEIF
@@ -147,10 +149,7 @@ export function SecuritiesSection({
   );
 
   return (
-    <section className="border-b border-oo-rule px-4 py-[18px] sm:px-6 sm:py-[22px]">
-      <h2 className="font-head font-bold text-oo-head text-oo-ink mb-3">
-        Securities
-      </h2>
+    <PanelSection title="Securities" aside={NOT_IN_GRAPH}>
       <div>
         {/* Sanctions-first banner */}
         {sanctioned.length > 0 && (
@@ -201,29 +200,26 @@ export function SecuritiesSection({
           </div>
         )}
 
-        {/* Summary + browse toggle */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[13px] text-oo-ink">
+        {/* Summary + browse toggle. The "not in the graph" caveat moved to the
+            band's split-head, where it qualifies the section rather than
+            trailing the count as a mono pill. */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <span className="text-oo-small text-oo-ink">
             <span className="font-semibold">{meta.total.toLocaleString()}</span>{" "}
             secur{meta.total === 1 ? "ity" : "ities"} mapped to this LEI
           </span>
-          <span className="text-[11px] font-mono text-oo-muted bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5">
-            {NOT_IN_GRAPH}
-          </span>
           {meta.total > 0 && (
-            <button
-              type="button"
+            <ActionChip
               onClick={() => setExpanded((v) => !v)}
-              aria-expanded={expanded}
-              aria-controls={drawerId}
-              className="text-[12px] font-medium text-oo-blue hover:text-oo-burst"
+              expanded={expanded}
+              controls={drawerId}
             >
-              {expanded ? "Hide" : "Browse all"} ↗
-            </button>
+              {expanded ? "Hide" : "Browse all"}
+            </ActionChip>
           )}
         </div>
-        <div className="text-[10px] text-oo-muted mt-1 font-mono">
-          {meta.sources.join(" · ")}
+        <div className="text-oo-meta text-oo-muted mt-1.5">
+          {sourceList(meta.sources)}
         </div>
 
         {/* Drawer */}
@@ -286,6 +282,6 @@ export function SecuritiesSection({
           </p>
         )}
       </div>
-    </section>
+    </PanelSection>
   );
 }

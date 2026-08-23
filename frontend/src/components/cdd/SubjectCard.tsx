@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ExportMenu } from "../export/ExportMenu";
 import { trackEvent } from "../../lib/analytics";
 import { BASE_URL } from "../../lib/api";
 
@@ -30,6 +31,11 @@ export function SubjectCard({
   onRefresh,
   identifierSources = 0,
   onShowIdentifiers,
+  pdfBusy = false,
+  mdBusy = false,
+  onPdf,
+  onMarkdown,
+  exportError,
 }: {
   lei: string;
   legalName: string | null;
@@ -48,6 +54,14 @@ export function SubjectCard({
   identifierSources?: number;
   /** Expands + scrolls to the cross-source identifiers box. */
   onShowIdentifiers?: () => void;
+  /** Report downloads. They live on App because the payload they embed (the
+   *  narrative and its dispositions) is produced by a different card. */
+  pdfBusy?: boolean;
+  mdBusy?: boolean;
+  onPdf: () => void;
+  onMarkdown: () => void;
+  /** A failed export, reported beside the control that started it. */
+  exportError?: string | null;
 }) {
   const [copied, setCopied] = useState(false);
   const shareUrl = `${BASE_URL || "https://api.opencheck.world"}/share/${lei}`;
@@ -110,31 +124,32 @@ export function SubjectCard({
             />
           </p>
         </div>
+        {/* The report's one export affordance, as the subject's primary
+            control. It was three: "Copy share link" here, an "Export" menu in
+            the AI summary card header halfway down the page, and the Download
+            data section's own button — three entry points for one intention,
+            and the one most readers want was the only one not on the menu. */}
         <div className="shrink-0 flex flex-col items-end gap-2">
-          <button
-            type="button"
-            onClick={() => {
+          <ExportMenu
+            label="Share and export"
+            variant="primary"
+            onShare={() => {
               navigator.clipboard?.writeText(shareUrl);
               trackEvent("share_link");
               setCopied(true);
               window.setTimeout(() => setCopied(false), 1500);
             }}
-            className="inline-flex items-center gap-1.5 text-[12px] font-medium text-oo-blue border border-[#cfd6f5] bg-[#eef1fb] hover:bg-[#e2e7f9] rounded-full px-3 py-1.5 transition-colors"
-          >
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path
-                d="M6.5 9.5 L9.5 6.5 M7.5 4.5 l2-2 a2.5 2.5 0 0 1 3.5 3.5 l-2 2 M8.5 11.5 l-2 2 a2.5 2.5 0 0 1-3.5-3.5 l2-2"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-            {copied ? "Link copied" : "Copy share link"}
-            <span className="sr-only">
-              {" "}
-              — copies a link whose social-media preview shows a live summary card for this entity
-            </span>
-          </button>
+            shareCopied={copied}
+            pdfBusy={pdfBusy}
+            mdBusy={mdBusy}
+            onPdf={onPdf}
+            onMarkdown={onMarkdown}
+          />
+          {exportError && (
+            <p role="alert" className="text-oo-meta text-oo-warn-text max-w-[36ch] text-right">
+              {exportError}
+            </p>
+          )}
         </div>
         {/* Always-mounted live region so the copied confirmation is announced. */}
         <span role="status" className="sr-only">
