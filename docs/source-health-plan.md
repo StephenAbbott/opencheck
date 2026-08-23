@@ -303,6 +303,33 @@ Keep it. `test_live_smoke.py` is the **deep tier** — full search → fetch →
 open sources. The sweep is the **broad tier** — all 39, shallower, provenance-aware. Don't merge
 the assertions: the deep tier's value is that it's deep.
 
+## What the sweep cannot see: fresh-process blindness
+
+Found the hard way on 2026-08-23. INPI 401'd on every French lookup in production while the weekly
+sweep reported it healthy — and both were right.
+
+The adapter fetches a Bearer token once per process and holds it. Its refresh-on-401 path was dead
+code (a double-checked-locking guard handed the expired token straight back), so INPI worked from
+deploy until the first token expiry and failed on every lookup after that until the service
+restarted. **The sweep starts a fresh process every run**, so it always takes the first-login path
+and could never reach the expiry path at all.
+
+The general shape: **the sweep validates adapter ↔ upstream, in a process seconds old, using CI's
+credentials.** It cannot see anything whose cause is elapsed uptime, a stale in-process cache, or
+the deployed service's own configuration. Those are real production failure modes and the weekly
+green tick says nothing about them.
+
+Two mitigations, neither of which the sweep can provide on its own:
+
+1. **Unit tests for expiry paths** — where an adapter caches a credential, the refresh path needs
+   an offline test that seeds a stale value. Now in place for INPI
+   (`tests/test_inpi_token_refresh.py`); Bolagsverket and Sudreg were checked and are fine, both
+   tracking `expires_at` from `expires_in` with a safety margin.
+2. **A thin probe of the deployed API** — the option declined at the start of this work, worth
+   revisiting now there is concrete evidence. Hitting `/lookup` on the live service exercises the
+   long-lived process and its real environment, which is precisely the gap above. It answers a
+   different question from the sweep rather than replacing it.
+
 ## Cadence — settled
 
 **Weekly.** Considered running the key-free tier daily (it's ~21 round-trips, well under a minute)
