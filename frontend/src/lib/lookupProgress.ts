@@ -139,3 +139,22 @@ export function progressLabel(p: LookupProgress, failedCount: number): string {
   if (p.phase === "finishing") return `Queried ${of}${failed}`;
   return `Querying — ${of} answered${failed}`;
 }
+
+/**
+ * How many of the dispatched sources answered — the verdict strip's Coverage
+ * figure.
+ *
+ * It must be computed against `applicable`, not by counting the completed set,
+ * because the GLEIF anchor emits `source_started` / `source_completed` **before**
+ * `sources_applicable` and is never in that list. Counting the raw set let the
+ * figure overshoot its own denominator: production rendered "13 of 12 sources
+ * answered" directly above "Every applicable source answered." A coverage
+ * number that exceeds its own total undermines the one figure on the page whose
+ * job is to say how much was actually checked.
+ */
+export function answeredCount(
+  applicable: string[],
+  completed: ReadonlySet<string>
+): number {
+  return applicable.filter((id) => completed.has(id)).length;
+}

@@ -42,7 +42,9 @@ import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
 import { Icon } from "./components/ui";
 import ConfidenceLegend from "./components/ui/ConfidenceLegend";
+import PanelSection, { PanelCard } from "./components/ui/PanelSection";
 import { PERSON_VERB, resultCount, sourceLabel } from "./lib/vocab";
+import { answeredCount } from "./lib/lookupProgress";
 import { documentTitleFor, modeParam, parseMode } from "./lib/checkMode";
 import type { CheckMode } from "./lib/checkMode";
 import type { IconName } from "./components/ui";
@@ -261,6 +263,17 @@ export default function App() {
   // Derived rather than stored: `errors` is already the record of which sources
   // failed, and a second set could disagree with it.
   const erroredSources = useMemo(() => new Set(Object.keys(errors)), [errors]);
+  // Coverage counts only sources that were dispatched. `completedSources` also
+  // holds the GLEIF anchor, which emits source_started/source_completed BEFORE
+  // sources_applicable and is never in that list — so the raw size could exceed
+  // the total and the strip read "13 of 12 sources answered", above the line
+  // "Every applicable source answered." A coverage figure that overshoots its
+  // own denominator undermines the one number on the page whose whole job is
+  // to say how much was checked.
+  const answeredApplicable = useMemo(
+    () => answeredCount(applicableSources, completedSources),
+    [applicableSources, completedSources]
+  );
   const [streaming, setStreaming] = useState(false);
   // QuickCheck (subject screening, default) vs FullCheck (network EDD) vs
   // BackgroundCheck (screening the people connected to the entity). Reset to
@@ -1738,31 +1751,29 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         )}
 
         {streamingLei && (
+          <div className="mb-6 rounded-oo border border-oo-rule bg-white">
           <SubjectCard
             lei={streamingLei}
             legalName={legalName}
             jurisdiction={subjectJurisdiction}
-            signals={riskCodes}
-            screening={streaming}
             replayedAt={replayedAt}
             onRefresh={() => lookupLei(streamingLei, { refresh: true })}
             identifierSources={leiConfirmedSourceCount}
             onShowIdentifiers={showCrossSourceIdentifiers}
           />
-        )}
-
         {/* ── The answer-first layer (Phase 122) ─────────────────────────
             Subject, then what the check found and how much of it ran, then
             the evidence. Both halves render from the same risk_signals
             event as each other and as the sentence, so a signal count and
-            the count of screens that failed cannot drift apart on screen. */}
-        {streamingLei && (
+            the count of screens that failed cannot drift apart on screen.
+            One card with the subject (Phase 126): the verdict is what the
+            subject amounts to, not a separate object floating beneath it. */}
           <VerdictStrip
             verdict={verdict}
             riskSignals={riskCodes}
             contextSignals={contextCodes}
             degraded={degradedSources}
-            sourcesAnswered={completedSources.size}
+            sourcesAnswered={answeredApplicable}
             sourcesApplicable={applicableSources.length}
             screening={streaming}
             onRerun={
@@ -1771,6 +1782,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 : undefined
             }
           />
+          </div>
         )}
 
         {/* ── Modes as the report's structure (Phase 122) ─────────────
@@ -1879,49 +1891,109 @@ const NAV_ITEMS: { view: View; label: string }[] = [
 
         {streamingLei && panelErrors.length > 0 && <PanelErrorsNotice errors={panelErrors} />}
 
+
+        {/* Each mode's content is a labelled tabpanel with tabIndex={-1},
+            so selectMode can move focus into it after the switch. Without
+            that, switching tab unmounts most of the page and focus falls to
+            <body> — v1's mode cards did exactly that. */}
+        {mode === "full" && streamingLei ? (
+          <div id="panel-full" role="tabpanel" aria-labelledby="tab-full" tabIndex={-1}>
+            <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading FullCheck…</p>}>
+              <FullCheckPanel
+                  lei={streamingLei}
+                  legalName={legalName}
+                  signals={riskSignals}
+                  onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
+                  onPanelRecovered={(panel) =>
+                    setPanelErrors((prev) => clearPanelError(prev, panel))
+                  }
+                />
+            </Suspense>
+          </div>
+        ) : mode === "background" && streamingLei ? (
+          <div id="panel-background" role="tabpanel" aria-labelledby="tab-background" tabIndex={-1}>
+            <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading BackgroundCheck…</p>}>
+              <BackgroundCheckPanel
+                lei={streamingLei}
+                legalName={legalName}
+                onOpenReport={openPersonReport}
+              />
+            </Suspense>
+          </div>
+        ) : mode === "esg" && streamingLei ? (
+          <div id="panel-esg" role="tabpanel" aria-labelledby="tab-esg" tabIndex={-1}>
+            {esgBuckets.length > 0 || pendingEsgSources.length > 0 ? (
+              <EsgPanel
+                buckets={esgBuckets}
+                pendingCount={pendingEsgSources.length}
+                bodsCountMap={bodsCountMap}
+                bodsBreakdownMap={bodsBreakdownMap}
+              />
+            ) : (
+              <p className="mb-8 rounded-oo border border-oo-rule bg-white p-5 text-[13px] text-oo-muted">
+                {streaming
+                  ? "Checking the climate and extractives sources…"
+                  : "No emissions or asset records were published about this company by the sources checked. That is an absence of records, not a finding about its emissions."}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div id="panel-quick" role="tabpanel" aria-labelledby="tab-quick" tabIndex={-1}>
+          <PanelCard>
         {streamingLei && mode === "quick" && (
           <NarrativePanel lei={streamingLei} legalName={legalName} />
         )}
 
 
-        {riskCodes.length > 0 && mode === "quick" && (
-          <section className="mb-8" id="risk-signals">
-            <SectionLabel>Risk signals</SectionLabel>
-            <div className="flex flex-wrap gap-2">
-              {riskCodes.map((sig) => (
-                <RiskChip key={sig.code} signal={sig} />
-              ))}
-            </div>
-            <ConfidenceLegend className="mt-2.5" />
-            <p className="text-oo-meta text-oo-muted mt-2">
-              Select a chip for the rule that fired. Signals derived from open
-              data; chips aligned to AMLA (the EU Anti-Money Laundering
-              Authority) read BODS (Beneficial Ownership Data Standard) records.
-            </p>
-          </section>
-        )}
+        {/* Risk signals, with structural context as a captioned sub-block
+            inside it rather than a peer section. Two sibling sections put a
+            structural observation at the same weight as an adverse finding,
+            and printed the confidence legend twice on one screen. Neither the
+            AMLA CDD RTS nor AMLR Annex III treats a non-EU jurisdiction as a
+            risk factor in itself, so the distinction still has to be made —
+            it is made by the caption, in a sentence, which is what the v2
+            design does. */}
+        {(riskCodes.length > 0 || contextCodes.length > 0) && mode === "quick" && (
+          <PanelSection
+            id="risk-signals"
+            title="Risk signals"
+            aside={<ConfidenceLegend />}
+          >
+            {riskCodes.length > 0 ? (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {riskCodes.map((sig) => (
+                    <RiskChip key={sig.code} signal={sig} />
+                  ))}
+                </div>
+                <p className="text-oo-meta text-oo-muted mt-2.5">
+                  Select a chip for the rule that fired. Signals are derived from
+                  open data; chips aligned to AMLA (the EU Anti-Money Laundering
+                  Authority) read BODS (Beneficial Ownership Data Standard)
+                  records.
+                </p>
+              </>
+            ) : (
+              <p className="text-oo-small text-oo-muted">
+                No risk signals surfaced across the sources that answered.
+              </p>
+            )}
 
-        {/* Structural context — observations that are NOT risk findings.
-            Kept visually and semantically distinct from the strip above:
-            reaching a jurisdiction outside the EU is a fact about the
-            shape of the ownership chain, and neither the AMLA CDD RTS nor
-            AMLR Annex III treats it as a risk factor in itself. */}
-        {contextCodes.length > 0 && mode === "quick" && (
-          <section className="mb-8" id="structural-context">
-            <SectionLabel>Structural context</SectionLabel>
-            <div className="flex flex-wrap gap-2">
-              {contextCodes.map((sig) => (
-                <RiskChip key={sig.code} signal={sig} />
-              ))}
-            </div>
-            <ConfidenceLegend className="mt-2.5" />
-            <p className="text-oo-meta text-oo-muted mt-2">
-              Not risk findings — structural facts about the ownership chain,
-              shown because they are useful and because some feed the AMLA
-              complex-structure test. Jurisdiction risk is reported separately,
-              from the FATF (Financial Action Task Force) and EU lists.
-            </p>
-          </section>
+            {contextCodes.length > 0 && (
+              <div className="mt-5" id="structural-context">
+                <p className="text-oo-small text-oo-muted mb-2">
+                  Structural context — how the company is put together, not a
+                  finding against it. Jurisdiction risk is reported separately,
+                  from the FATF (Financial Action Task Force) and EU lists.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {contextCodes.map((sig) => (
+                    <RiskChip key={sig.code} signal={sig} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </PanelSection>
         )}
 
         {/* "Archive matches — OpenAleph" (informational percolation matches,
@@ -1986,65 +2058,23 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             <PossiblySameTable pairs={possiblySame} />
           </CollapsedSection>
         )}
-
-        {/* Each mode's content is a labelled tabpanel with tabIndex={-1},
-            so selectMode can move focus into it after the switch. Without
-            that, switching tab unmounts most of the page and focus falls to
-            <body> — v1's mode cards did exactly that. */}
-        {mode === "full" && streamingLei ? (
-          <div id="panel-full" role="tabpanel" aria-labelledby="tab-full" tabIndex={-1}>
-            <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading FullCheck…</p>}>
-              <FullCheckPanel
-                  lei={streamingLei}
-                  legalName={legalName}
-                  signals={riskSignals}
-                  onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
-                  onPanelRecovered={(panel) =>
-                    setPanelErrors((prev) => clearPanelError(prev, panel))
-                  }
-                />
-            </Suspense>
-          </div>
-        ) : mode === "background" && streamingLei ? (
-          <div id="panel-background" role="tabpanel" aria-labelledby="tab-background" tabIndex={-1}>
-            <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading BackgroundCheck…</p>}>
-              <BackgroundCheckPanel
-                lei={streamingLei}
-                legalName={legalName}
-                onOpenReport={openPersonReport}
-              />
-            </Suspense>
-          </div>
-        ) : mode === "esg" && streamingLei ? (
-          <div id="panel-esg" role="tabpanel" aria-labelledby="tab-esg" tabIndex={-1}>
-            {esgBuckets.length > 0 || pendingEsgSources.length > 0 ? (
-              <EsgPanel
-                buckets={esgBuckets}
-                pendingCount={pendingEsgSources.length}
-                bodsCountMap={bodsCountMap}
-                bodsBreakdownMap={bodsBreakdownMap}
-              />
-            ) : (
-              <p className="mb-8 rounded-oo border border-oo-rule bg-white p-5 text-[13px] text-oo-muted">
-                {streaming
-                  ? "Checking the climate and extractives sources…"
-                  : "No emissions or asset records were published about this company by the sources checked. That is an absence of records, not a finding about its emissions."}
-              </p>
-            )}
-          </div>
-        ) : (
-          <div id="panel-quick" role="tabpanel" aria-labelledby="tab-quick" tabIndex={-1}>
         {(cddBuckets.length > 0 || pendingCddSources.length > 0) && (
-          <section className="mb-8">
-            <SectionLabel>
-              {totalHits} hit{totalHits === 1 ? "" : "s"} across{" "}
-              {cddBuckets.length} source{cddBuckets.length === 1 ? "" : "s"}
-              {pendingCddSources.length > 0 && (
-                <span className="text-oo-blue font-normal ml-1.5">
-                  · {pendingCddSources.length} pending…
+          <PanelSection
+            title="What each source said"
+            aside={
+              pendingCddSources.length > 0 ? (
+                <span className="text-oo-blue">
+                  {answeredApplicable} of {applicableSources.length} sources answered ·{" "}
+                  {pendingCddSources.length} still running…
                 </span>
-              )}
-            </SectionLabel>
+              ) : (
+                <>
+                  {answeredApplicable} of {applicableSources.length}{" "}
+                  {applicableSources.length === 1 ? "source" : "sources"} answered
+                </>
+              )
+            }
+          >
             {streamingLei && EXAMPLE_LEIS.some((e) => e.lei === streamingLei && e.bulkBods) && (
               <div className="mb-4 flex items-start gap-3 rounded-oo border border-blue-200 bg-blue-50 px-4 py-3 text-[13px] leading-[1.6] text-blue-900">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.657 4.03 3 9 3s9-1.343 9-3V5"/><path d="M3 12c0 1.657 4.03 3 9 3s9-1.343 9-3"/></svg>
@@ -2105,7 +2135,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   <OpenAlephArchiveMatches matches={oaScreening} />
                 )}
             </div>
-          </section>
+          </PanelSection>
         )}
 
         {streamingLei && (
@@ -2130,6 +2160,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               .map((b) => b.sourceId)}
           />
         )}
+          </PanelCard>
           </div>
         )}
         </>
@@ -3085,7 +3116,7 @@ function CollapsedSection({
   return (
     <section
       id={htmlId}
-      className="mb-8 bg-white border border-oo-rule rounded-oo scroll-mt-4"
+      className="border-b border-oo-rule scroll-mt-4"
     >
       <button
         type="button"
@@ -3095,10 +3126,10 @@ function CollapsedSection({
           onToggle?.(!open);
           if (openProp === undefined) setOpenState(!open);
         }}
-        className="w-full flex items-center justify-between gap-3 p-5 text-left group"
+        className="w-full flex items-center justify-between gap-3 px-4 py-[18px] sm:px-6 sm:py-[22px] text-left group"
       >
         <span className="min-w-0">
-          <span className="block text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted">
+          <span className="block font-head font-bold text-oo-head text-oo-ink">
             {label}
           </span>
           <span className="block text-[13px] text-oo-ink mt-1">{summary}</span>

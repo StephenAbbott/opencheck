@@ -429,7 +429,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
   };
 
   return (
-    <section className="mb-8 bg-white border border-oo-rule rounded-oo p-5 lg:p-7 transition-shadow hover:shadow-oo-card">
+    <section className="px-4 py-[18px] sm:px-6 sm:py-[22px] border-b border-oo-rule">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-[15px] font-semibold text-oo-navy flex items-center gap-2">

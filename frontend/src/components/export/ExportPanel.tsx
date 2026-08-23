@@ -48,7 +48,7 @@ export function ExportPanel({
   return (
     <section
       id={DATA_SECTION_ID}
-      className="mb-8 bg-white border border-oo-rule rounded-oo p-5 scroll-mt-4"
+      className="px-4 py-[18px] sm:px-6 sm:py-[22px] scroll-mt-4"
     >
       <div className="flex items-baseline justify-between gap-4 flex-wrap">
         <div className="min-w-0">

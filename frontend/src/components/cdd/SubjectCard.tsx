@@ -1,11 +1,8 @@
 import { useState } from "react";
 import { trackEvent } from "../../lib/analytics";
 import { BASE_URL } from "../../lib/api";
-import type { RiskSignal } from "../../lib/api";
-import { RiskChip } from "../risk/RiskChip";
 
 /** How many signal chips show inline before the "+N more" link. */
-const SIGNAL_PREVIEW_COUNT = 4;
 
 /** "just now" / "1 min ago" / "12 min ago" from an ISO timestamp. */
 export function replayAgeLabel(fetchedAt: string, now: Date = new Date()): string {
@@ -30,8 +27,6 @@ export function SubjectCard({
   lei,
   legalName,
   jurisdiction,
-  signals = [],
-  screening = false,
   replayedAt = null,
   onRefresh,
   identifierSources = 0,
@@ -40,8 +35,6 @@ export function SubjectCard({
   lei: string;
   legalName: string | null;
   jurisdiction?: string | null;
-  signals?: RiskSignal[];
-  screening?: boolean;
   /** ISO completion time of the original run when results are replayed from cache. */
   replayedAt?: string | null;
   /** Re-runs the lookup bypassing the replay cache (?refresh=true). */
@@ -60,11 +53,9 @@ export function SubjectCard({
   const [copied, setCopied] = useState(false);
   const shareUrl = `${BASE_URL || "https://api.opencheck.world"}/share/${lei}`;
   const cc = (jurisdiction || "").trim().toLowerCase().split("-")[0];
-  const preview = signals.slice(0, SIGNAL_PREVIEW_COUNT);
-  const overflow = signals.length - preview.length;
 
   return (
-    <section className="mb-8 bg-white border border-oo-rule rounded-oo p-7 transition-shadow hover:shadow-oo-card">
+    <section className="px-4 py-[18px] sm:px-7 sm:py-6">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-blue">
@@ -190,46 +181,12 @@ export function SubjectCard({
         </p>
       )}
 
-      {/* Compact risk-signal summary — the headline finding, up top. The full
-          strip further down keeps the per-chip evidence and explanation. */}
-      {(signals.length > 0 || !screening) && (
-        <div className="mt-4 pt-4 border-t border-oo-rule flex items-center gap-2 flex-wrap">
-          {signals.length > 0 ? (
-            <>
-              <span className="text-[13px] text-oo-ink shrink-0">
-                <span className="font-head font-bold text-[17px]">{signals.length}</span>{" "}
-                risk signal{signals.length === 1 ? "" : "s"}
-              </span>
-              {preview.map((sig) => (
-                <RiskChip key={sig.code} signal={sig} compact />
-              ))}
-              {overflow > 0 && (
-                // A button, not an <a href="#…">: hash navigation is a
-                // same-document navigation, which fires popstate — and the
-                // app's popstate handler re-runs the ?lei= lookup, making the
-                // page appear to refresh.
-                <button
-                  type="button"
-                  onClick={() => {
-                    const el = document.getElementById("risk-signals");
-                    if (!el) return;
-                    el.scrollIntoView({ behavior: "smooth", block: "start" });
-                    if (el.tabIndex < 0) el.tabIndex = -1;
-                    el.focus({ preventScroll: true });
-                  }}
-                  className="text-[12px] font-medium text-oo-blue hover:underline"
-                >
-                  +{overflow} more
-                </button>
-              )}
-            </>
-          ) : (
-            <span className="text-[13px] text-oo-muted">
-              No risk signals surfaced across the sources checked.
-            </span>
-          )}
-        </div>
-      )}
+      {/* The risk-signal summary that used to sit here was the v1 verdict:
+          a count, the top chips and a "+N more" jump. `VerdictStrip` has done
+          exactly that job since Phase 122 — sentence, "What we found", the same
+          chips, the same overflow — and this was never removed, so a report
+          rendered both, one above the other. Removed in Phase 126. The subject
+          card is identity only; what was found belongs to the verdict. */}
     </section>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lookupProgress, progressLabel } from "./lookupProgress";
+import { answeredCount, lookupProgress, progressLabel } from "./lookupProgress";
 
 const none = new Set<string>();
 const base = {
@@ -184,5 +184,26 @@ describe("progressLabel", () => {
       completed: new Set(["a"]),
     });
     expect(progressLabel(p, 0)).toBe("Queried 1 of 1 source");
+  });
+});
+
+describe("answeredCount", () => {
+  it("never exceeds the number of applicable sources", () => {
+    // Production rendered "13 of 12 sources answered" above "Every applicable
+    // source answered": the GLEIF anchor completes before sources_applicable
+    // and is never in that list, so counting the completed set overshot.
+    const applicable = ["companies_house", "opensanctions"];
+    const completed = new Set(["gleif", "companies_house", "opensanctions", "sec_edgar"]);
+    expect(answeredCount(applicable, completed)).toBe(2);
+    expect(answeredCount(applicable, completed)).toBeLessThanOrEqual(applicable.length);
+  });
+
+  it("counts only what actually answered", () => {
+    expect(answeredCount(["a", "b", "c"], new Set(["a"]))).toBe(1);
+    expect(answeredCount(["a", "b"], new Set())).toBe(0);
+  });
+
+  it("is 0 before sources_applicable arrives, not the completed size", () => {
+    expect(answeredCount([], new Set(["gleif"]))).toBe(0);
   });
 });
