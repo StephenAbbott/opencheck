@@ -23,7 +23,12 @@
  */
 
 import { RISK_PRESENTATION } from "./RiskChip";
-import { evidenceFooter, type LeadSignal } from "../../lib/leadSignal";
+import {
+  attributionSentence,
+  evidenceFooter,
+  splitEvidenceSources,
+  type LeadSignal,
+} from "../../lib/leadSignal";
 import { sourceLabel } from "../../lib/vocab";
 
 export function LeadEvidence({
@@ -41,40 +46,33 @@ export function LeadEvidence({
 }) {
   const label = RISK_PRESENTATION[lead.signal.code]?.label ?? lead.signal.code;
   const footer = evidenceFooter(lead);
-  const shown = lead.sourceIds.filter(Boolean);
+  const { linked, named } = splitEvidenceSources(lead.sourceIds, hasCard);
+  const attribution = attributionSentence(named, sourceNames);
 
   return (
     <div className="rounded-oo border border-oo-rule bg-oo-bg px-3 py-2.5 text-oo-small leading-[1.6] text-oo-ink">
       <span className="font-bold">{label}</span> — {lead.signal.summary}
       {footer && <span className="text-oo-muted"> {footer}</span>}
-      {shown.length > 0 && (
-        <>
+      {/* One control per source that has a card, rather than one "Show the
+          records" that has to guess which of several to open. Each says what
+          it does in its own text, so a screen reader announcing the buttons
+          alone still gets two actions rather than two source names. */}
+      {linked.map((id) => (
+        <span key={id}>
           {" "}
-          {/* One control per source rather than one "Show the records" that
-              has to guess which of several to open. Each says what it does in
-              its own text, so a screen reader announcing the buttons alone
-              still gets two actions rather than two source names. */}
-          {shown.map((id, i) => {
-            const name = sourceLabel(id, sourceNames);
-            return (
-              <span key={id}>
-                {i > 0 && <span className="text-oo-muted"> </span>}
-                {hasCard(id) ? (
-                  <button
-                    type="button"
-                    onClick={() => onShowSource(id)}
-                    className="font-medium text-oo-blue hover:underline underline-offset-2"
-                  >
-                    Show the {name} record
-                  </button>
-                ) : (
-                  <span className="text-oo-muted">From {name}.</span>
-                )}
-              </span>
-            );
-          })}
-        </>
-      )}
+          <button
+            type="button"
+            onClick={() => onShowSource(id)}
+            className="font-medium text-oo-blue hover:underline underline-offset-2"
+          >
+            Show the {sourceLabel(id, sourceNames)} record
+          </button>
+        </span>
+      ))}
+      {/* The rest are attribution, not navigation, and they belong in one
+          sentence — "From OpenSanctions. From EveryPolitician." read as two
+          findings about the same party. */}
+      {attribution && <span className="text-oo-muted"> {attribution}</span>}
     </div>
   );
 }
