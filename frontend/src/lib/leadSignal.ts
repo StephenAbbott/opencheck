@@ -38,6 +38,7 @@
 
 import { SIGNAL_STYLE } from "./graphStyle";
 import { isRiskFinding } from "./signalKind";
+import { sourceList } from "./vocab";
 import type { RiskSignal, SourceLiveness } from "./api";
 
 export interface LeadSignal {
@@ -176,6 +177,43 @@ export function checkedClause(
     year: "numeric",
   });
   return `last checked ${formatted}`;
+}
+
+/**
+ * The sources that named the finding but have no card to scroll to, as one
+ * sentence.
+ *
+ * They used to be rendered one per source — "From OpenSanctions. From
+ * EveryPolitician." — because the box mapped over every source id and gave the
+ * unlinked branch a full stop of its own. Two attributions for one finding read
+ * as two findings. `sourceList` is the project's English list joiner and
+ * already deduplicates, so the sentence is built from it rather than from a
+ * second `join`.
+ */
+export function attributionSentence(
+  sourceIds: string[],
+  names?: Record<string, string>
+): string {
+  const list = sourceList(sourceIds, names);
+  return list ? `From ${list}.` : "";
+}
+
+/**
+ * Split the contributing sources into the ones the report can scroll to and
+ * the ones it can only name. Pure, so the rule is pinned by the logic-only
+ * suite rather than living inside JSX.
+ */
+export function splitEvidenceSources(
+  sourceIds: string[],
+  hasCard: (sourceId: string) => boolean
+): { linked: string[]; named: string[] } {
+  const linked: string[] = [];
+  const named: string[] = [];
+  for (const id of sourceIds) {
+    if (!id) continue;
+    (hasCard(id) ? linked : named).push(id);
+  }
+  return { linked, named };
 }
 
 /** The whole second sentence, with only the parts that are true. */

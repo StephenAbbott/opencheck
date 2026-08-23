@@ -1,7 +1,7 @@
 {
   "src/App.tsx": {
-    "hex": 14,
-    "text": 127,
+    "hex": 12,
+    "text": 125,
     "vocab": 0
   },
   "src/components/BODSGraph.tsx": {

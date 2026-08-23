@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  attributionSentence,
   checkedClause,
   corroborationClause,
   evidenceFooter,
   leadSignal,
+  splitEvidenceSources,
 } from "./leadSignal";
 import type { RiskSignal } from "./api";
 
@@ -186,6 +188,54 @@ describe("checkedClause", () => {
   it("says nothing for a missing or unparseable time", () => {
     expect(checkedClause(null)).toBe("");
     expect(checkedClause("not-a-date")).toBe("");
+  });
+});
+
+describe("attributionSentence", () => {
+  it("names several sources in one sentence, not one each", () => {
+    // The box rendered "From OpenSanctions. From EveryPolitician." — one full
+    // stop per source, which reads as two findings about the party rather
+    // than one finding two sources agree on.
+    expect(
+      attributionSentence(["opensanctions", "everypolitician"], {
+        opensanctions: "OpenSanctions",
+        everypolitician: "EveryPolitician",
+      })
+    ).toBe("From OpenSanctions and EveryPolitician.");
+  });
+
+  it("is the plain English list joiner, serial comma and all", () => {
+    expect(attributionSentence(["icij", "a_source", "b_source"])).toBe(
+      "From ICIJ, A Source and B Source."
+    );
+  });
+
+  it("says nothing when there is no one to name", () => {
+    expect(attributionSentence([])).toBe("");
+  });
+
+  it("does not name the same source twice", () => {
+    expect(attributionSentence(["icij", "icij"])).toBe("From ICIJ.");
+  });
+});
+
+describe("splitEvidenceSources", () => {
+  it("separates what can be shown from what can only be named", () => {
+    // `icij` is not a registered adapter, so no `#source-icij` exists to
+    // scroll to; a button for it looked identical to the working one beside
+    // it and did nothing.
+    const { linked, named } = splitEvidenceSources(
+      ["opensanctions", "icij", "openaleph"],
+      (id) => id !== "icij"
+    );
+    expect(linked).toEqual(["opensanctions", "openaleph"]);
+    expect(named).toEqual(["icij"]);
+  });
+
+  it("drops empty ids rather than rendering a blank attribution", () => {
+    const { linked, named } = splitEvidenceSources(["", "icij"], () => false);
+    expect(linked).toEqual([]);
+    expect(named).toEqual(["icij"]);
   });
 });
 

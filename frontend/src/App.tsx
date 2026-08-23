@@ -388,8 +388,11 @@ export default function App() {
     },
   ];
 
+// No "Search" item. It did exactly what the logo beside it does — go to the
+// homepage — and now that the header carries a real search field, a nav link
+// labelled "Search" that is not the search field is a third thing pointing at
+// two behaviours. The logo remains the way home.
 const NAV_ITEMS: { view: View; label: string }[] = [
-    { view: "main", label: "Search" },
     { view: "sources", label: "Sources" },
     { view: "api", label: "API" },
     { view: "behind", label: "About" },
@@ -1333,7 +1336,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   <button
                     key={item.view}
                     type="button"
-                    onClick={() => (item.view === "main" ? resetToHome() : navigate(item.view))}
+                    onClick={() => navigate(item.view)}
                     aria-current={current ? "page" : undefined}
                     className={`min-h-[44px] text-[13px] transition-colors ${
                       current
@@ -1437,19 +1440,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             With a Legal Entity Identifier, OpenCheck pulls open corporate data from 39 sources into one graph using the Beneficial Ownership Data Standard
           </p>
         </div>
-        )}
-        {!streamingLei && (
-          <p className="text-[12px] text-oo-muted leading-snug mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-oo-blue border border-[#cfd6f5] bg-[#eef1fb] rounded-full px-1.5 py-0.5">
-              New
-            </span>
-            <span className="text-oo-ink">Person screening</span>
-            <span aria-hidden>·</span>
-            <span className="text-oo-ink">RDF/GQL export</span>
-            <span aria-hidden>·</span>
-            <span className="text-oo-ink">Network screening</span>
-            <span className="text-oo-muted">— every claim links to its source.</span>
-          </p>
         )}
         <div className="mb-4 bg-white border border-oo-rule rounded-oo overflow-hidden">
           {/* Tab bar — homepage only.

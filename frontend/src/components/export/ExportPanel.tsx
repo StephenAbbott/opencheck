@@ -117,14 +117,23 @@ const BLURB: Record<Format, ReactNode> = {
     <>
       Three flat tables — companies, people and the ownership or control edges
       between them — for a spreadsheet or a database load. The same tables the
-      BigQuery package carries, without its schema and queries.
+      BigQuery package carries, without its schema and queries. A flattening of
+      this check as it stands today: one row per statement, and no record of
+      how any of it changed. The &ldquo;Changes over time&rdquo; view on a
+      source row is where history lives, and it is not in this file.
     </>
   ),
   xlsx: (
     <>
       The same three tables as one Excel workbook, a sheet each, with the
       licence notes on a fourth. Every cell is written as text, so a company
-      number keeps its leading zeros instead of becoming a number.
+      number keeps its leading zeros instead of becoming a number. Like the CSV
+      it is this check at one moment — the columns that express BODS&rsquo;s
+      record history are there (<span className="font-mono">record_id</span>,{" "}
+      <span className="font-mono">statement_id</span>,{" "}
+      <span className="font-mono">statement_date</span>,{" "}
+      <span className="font-mono">record_status</span>), but a single lookup
+      produces one statement per record, so there is no history in the file.
     </>
   ),
   jsonl: (
