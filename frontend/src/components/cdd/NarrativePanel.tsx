@@ -235,7 +235,6 @@ export function NarrativePanel({
   onExportPayload,
 }: {
   lei: string;
-  legalName?: string | null;
   /** Hand the report's export payload (narrative + analyst dispositions) up to
    *  whoever owns the "Share and export" control. */
   onExportPayload?: (payload: ReportExportPayload) => void;

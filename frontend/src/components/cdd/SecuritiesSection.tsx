@@ -47,8 +47,14 @@ export function SecuritiesSection({
   lei,
   onError,
   onRecovered,
+  sourceNames,
 }: {
   lei: string;
+  /** The lookup's source_id → display-name map. Without it `sourceLabel`
+   *  prettifies the slug, which turns `openfigi` into "Openfigi" — a brand
+   *  name OpenCheck has invented. Raw slugs were worse; an invented casing
+   *  is still a claim about how someone spells their own name. */
+  sourceNames?: Record<string, string>;
   /** Report a fetch failure upward. The section renders nothing on failure —
    *  which is the bug — so somebody outside it has to say so. */
   onError?: (e: PanelError) => void;
@@ -219,7 +225,7 @@ export function SecuritiesSection({
           )}
         </div>
         <div className="text-oo-meta text-oo-muted mt-1.5">
-          {sourceList(meta.sources)}
+          {sourceList(meta.sources, sourceNames)}
         </div>
 
         {/* Drawer */}

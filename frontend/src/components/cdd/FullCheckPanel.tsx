@@ -67,7 +67,14 @@ export default function FullCheckPanel({
     <>
       <PanelSection
         title="Ownership network"
-        aside="Drag to move, scroll to zoom — everything here is in the table too"
+        // Only once there is a graph. "Everything here is in the table too"
+        // printed beside "Couldn't load the network" describes something that
+        // is not on the page.
+        aside={
+          statements
+            ? "Drag to move, scroll to zoom — everything here is in the table too"
+            : undefined
+        }
       >
         {error && (
           <p
@@ -83,13 +90,20 @@ export default function FullCheckPanel({
           </p>
         )}
         {statements && (
-          <BodsGraphExplorer
-            statements={statements}
-            signals={signals}
-            entityName={legalName ?? undefined}
-            direction="owners"
-            fullCheck
-          />
+          <>
+            <p className="mb-3 text-oo-small text-oo-muted leading-[1.6] max-w-[82ch]">
+              The wider corporate network connected to{" "}
+              <span className="font-medium text-oo-ink">{legalName ?? lei}</span>.
+              Run FullCheck to expand owners and controllers layer by layer.
+            </p>
+            <BodsGraphExplorer
+              statements={statements}
+              signals={signals}
+              entityName={legalName ?? undefined}
+              direction="owners"
+              fullCheck
+            />
+          </>
         )}
       </PanelSection>
 

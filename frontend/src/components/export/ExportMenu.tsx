@@ -204,7 +204,7 @@ export function ExportMenu({
           <div
             ref={menuRef}
             role="menu"
-            aria-label="Export"
+            aria-label={label}
             onKeyDown={onMenuKeyDown}
             className={
               // <sm: bottom sheet. sm+: dropdown anchored to the trigger.

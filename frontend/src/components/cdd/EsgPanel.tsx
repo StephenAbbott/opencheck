@@ -886,7 +886,6 @@ export function EsgPanel({
   bodsCountMap?: Record<string, number>;
   bodsBreakdownMap?: Record<string, BodsBreakdown>;
 }) {
-  const bodyId = useId();
   // Per-hit expansion for the summary tiles. Unset entries fall back to the
   // default rule: a lone ESG hit shows its full card without an extra click;
   // two or more start as tiles only.
@@ -908,7 +907,7 @@ export function EsgPanel({
         title="What was published"
         aside={`${hitCount} result${hitCount === 1 ? "" : "s"} · ${buckets.length} source${buckets.length === 1 ? "" : "s"}`}
       >
-        <div id={bodyId} className="space-y-4">
+        <div className="space-y-4">
             <p className="text-oo-small leading-[1.65] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-oo px-3 py-2">
               <span className="font-semibold">ESG context only.</span> Data
               from{" "}

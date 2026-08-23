@@ -539,9 +539,9 @@ const NAV_ITEMS: { view: View; label: string }[] = [
   const lookupMutation = useMutation<
     { lei: string; legal_name: string | null },
     Error,
-    { lei: string; refresh?: boolean }
+    { lei: string; refresh?: boolean; mode?: CheckMode }
   >({
-    mutationFn: ({ lei, refresh }) =>
+    mutationFn: ({ lei, refresh, mode: startMode }) =>
       new Promise((resolve, reject) => {
         if (!isValidLei(lei)) {
           reject(
@@ -555,7 +555,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         // Reset streaming state before starting a new stream.
         setStreamingLei(null);
         setLegalName(null);
-        setMode("quick");
+        // A new lookup opens on QuickCheck unless the caller asked for a
+        // mode. It used to hardcode "quick", and because the mutationFn runs
+        // asynchronously it landed *after* the deep-link handler's
+        // setMode(parseMode(...)) — so ?mode=full opened on QuickCheck, which
+        // is exactly what that handler's comment says must not happen.
+        setMode(startMode ?? "quick");
         setHits([]);
         setErrors({});
         setCrossSourceLinks([]);
@@ -571,6 +576,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         setCompletedSources(new Set());
         setStartedSources(new Set());
         setPanelErrors([]);
+        // The exports belong to the entity that was on screen. A failed PDF
+        // left its alert sitting on the *next* subject, describing a download
+        // that was never attempted for it — and the payload the report embeds
+        // is the previous entity's summary and its analyst's signed decisions.
+        setExportError(null);
+        setExportPayload({ narrative: null, dispositions: null });
         setStreaming(false);
         setBodsCountMap({});
         setBodsBreakdownMap({});
@@ -681,7 +692,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setPersonReport(null);
   }
 
-  function lookupLei(rawLei: string, opts?: { refresh?: boolean }) {
+  function lookupLei(
+    rawLei: string,
+    opts?: { refresh?: boolean; mode?: CheckMode }
+  ) {
     const lei = rawLei.trim().toUpperCase();
     setLeiInput(lei);
     setView("main");
@@ -699,7 +713,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     // Cancel any in-flight stream before starting a new one.
     cleanupRef.current?.();
     cleanupRef.current = null;
-    lookupMutation.mutate({ lei, refresh: opts?.refresh });
+    lookupMutation.mutate({ lei, refresh: opts?.refresh, mode: opts?.mode });
   }
 
   /**
@@ -752,10 +766,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     }
     const initial = fromUrl(new URLSearchParams(window.location.search).get("lei"));
     if (initial && isValidLei(initial)) {
-      lookupLei(initial);
-      // ?mode= is read after lookupLei, which resets to quick: a deep link
-      // to a FullCheck must open on FullCheck, not flash QuickCheck first.
-      setMode(parseMode(new URLSearchParams(window.location.search).get("mode")));
+      // The mode goes *into* the lookup rather than being set beside it: the
+      // mutationFn's own reset runs later and would otherwise overwrite it.
+      lookupLei(initial, {
+        mode: parseMode(new URLSearchParams(window.location.search).get("mode")),
+      });
     }
 
     const onPopState = () => {
@@ -774,8 +789,9 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       // Back on main — honour ?lei= if present, otherwise clear results.
       const lei = fromUrl(new URLSearchParams(window.location.search).get("lei"));
       if (lei && isValidLei(lei)) {
-        lookupLei(lei);
-        setMode(parseMode(new URLSearchParams(window.location.search).get("mode")));
+        lookupLei(lei, {
+          mode: parseMode(new URLSearchParams(window.location.search).get("mode")),
+        });
       } else {
         // Navigated back to the landing page — clear the result view.
         cleanupRef.current?.();
@@ -1049,6 +1065,19 @@ const NAV_ITEMS: { view: View; label: string }[] = [
    *  badge in front of them is already asking, and answering it behind a
    *  disclosure made them open two boxes to get the two halves. */
   const showCrossSourceIdentifiers = () => {
+    // The band renders only in QuickCheck, so from any other mode this
+    // control did nothing at all — a badge that looks like a link and
+    // silently ignores the click. Switch first, then scroll on the next
+    // frame, once the panel it points at exists.
+    if (mode !== "quick") {
+      selectMode("quick");
+      requestAnimationFrame(() => requestAnimationFrame(flashIdentityBand));
+      return;
+    }
+    flashIdentityBand();
+  };
+
+  const flashIdentityBand = () => {
     const el = document.getElementById("cross-source-identifiers");
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1152,6 +1181,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     // landing page saying "this report" when there is no report.
     setStartedSources(new Set());
     setPanelErrors([]);
+    setExportError(null);
+    setExportPayload({ narrative: null, dispositions: null });
     setStreaming(false);
     lookupMutation.reset();
     nameSearchMutation.reset();
@@ -2305,6 +2336,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             lei={streamingLei}
             onError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
             onRecovered={(panel) => setPanelErrors((prev) => clearPanelError(prev, panel))}
+            sourceNames={sourceNameIndex}
           />
         )}
 
@@ -3654,15 +3686,6 @@ const DEGRADED_REASON_LABELS: Record<string, string> = {
 };
 
 /**
- * Warning box for degraded upstream screens (issue #50). Sits above the
- * risk panel and renders whenever the backend reports that a derived
- * check (related-party sanctions/PEP screening, ICIJ offshore-leaks
- * reconciliation) did not fully run — including when there are zero risk
- * signals, which is precisely the case that must not pass for a clean
- * screen. Details are counts only; the backend never sends the
- * related-party names that were being screened.
- */
-/**
  * The mode's own sentence, as its panel card's first band.
  *
  * The strings have been on `MODE_TABS` since Phase 122 and rendered nowhere.
@@ -3689,6 +3712,15 @@ function ModeBlurb({
   );
 }
 
+/**
+ * Warning box for degraded upstream screens (issue #50). Sits above the
+ * risk panel and renders whenever the backend reports that a derived
+ * check (related-party sanctions/PEP screening, ICIJ offshore-leaks
+ * reconciliation) did not fully run — including when there are zero risk
+ * signals, which is precisely the case that must not pass for a clean
+ * screen. Details are counts only; the backend never sends the
+ * related-party names that were being screened.
+ */
 function DegradedScreensNotice({
   degraded,
   sourceNames = {},

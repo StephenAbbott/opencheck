@@ -52,7 +52,8 @@ export function SubjectCard({
    *  worded "Identifier confirmed by" — the sources agree on the
    *  identifier, they do not corroborate each other's substance. */
   identifierSources?: number;
-  /** Expands + scrolls to the cross-source identifiers box. */
+  /** Goes to the "Is this the right company?" section (switching to
+   *  QuickCheck first — the section only renders there). */
   onShowIdentifiers?: () => void;
   /** Report downloads. They live on App because the payload they embed (the
    *  narrative and its dispositions) is produced by a different card. */
@@ -145,12 +146,25 @@ export function SubjectCard({
             onPdf={onPdf}
             onMarkdown={onMarkdown}
           />
-          {exportError && (
-            <p role="alert" className="text-oo-meta text-oo-warn-text max-w-[36ch] text-right">
-              {exportError}
-            </p>
-          )}
         </div>
+      </div>
+
+      {/* Outside the header row, not a third item inside it. The row is
+          `justify-between` with no `flex-wrap`, so a sentence placed in it
+          becomes a third column and crushes the `min-w-0` identity column:
+          at 375px the company name went to zero width. The card's own
+          comments record that this column has crushed the name once
+          before. */}
+      {exportError && (
+        <p
+          role="alert"
+          className="mt-3 text-oo-small text-oo-warn-text bg-oo-warn-bg border border-oo-warn-border rounded-oo px-3 py-2"
+        >
+          {exportError}
+        </p>
+      )}
+
+      <div>
         {/* Always-mounted live region so the copied confirmation is announced. */}
         <span role="status" className="sr-only">
           {copied ? "Share link copied" : ""}
@@ -249,8 +263,8 @@ function IdentifierBadge({
         Identifier confirmed by {count} source{count === 1 ? "" : "s"}
         <span className="sr-only">
           {" "}
-          — independent sources publish this entity's LEI; expands the
-          cross-source identifier detail
+          — independent sources publish this entity's LEI; goes to the
+          &ldquo;Is this the right company?&rdquo; section
         </span>
       </span>
     </button>
