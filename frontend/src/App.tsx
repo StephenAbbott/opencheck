@@ -4,6 +4,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import SearchLoadingGrid from "./components/SearchLoadingGrid";
 import {
   BASE_URL,
+  downloadReportMarkdown,
+  downloadReportPdf,
   fetchSources,
   isValidLei,
   retryLookupSource,
@@ -42,7 +44,7 @@ import { ExportPanel } from "./components/export/ExportPanel";
 import { ChangelogPage } from "./components/ChangelogPage";
 import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
-import { Icon } from "./components/ui";
+import { Icon, SectionHeading } from "./components/ui";
 import ConfidenceLegend from "./components/ui/ConfidenceLegend";
 import PanelSection, { PanelCard } from "./components/ui/PanelSection";
 import { PERSON_VERB, resultCount, sourceLabel } from "./lib/vocab";
@@ -51,6 +53,7 @@ import { documentTitleFor, modeParam, parseMode } from "./lib/checkMode";
 import type { CheckMode } from "./lib/checkMode";
 import type { IconName } from "./components/ui";
 import { NarrativePanel } from "./components/cdd/NarrativePanel";
+import type { ReportExportPayload } from "./components/cdd/NarrativePanel";
 import {
   SourceBucketCard,
   SkeletonSourceCard,
@@ -536,9 +539,9 @@ const NAV_ITEMS: { view: View; label: string }[] = [
   const lookupMutation = useMutation<
     { lei: string; legal_name: string | null },
     Error,
-    { lei: string; refresh?: boolean }
+    { lei: string; refresh?: boolean; mode?: CheckMode }
   >({
-    mutationFn: ({ lei, refresh }) =>
+    mutationFn: ({ lei, refresh, mode: startMode }) =>
       new Promise((resolve, reject) => {
         if (!isValidLei(lei)) {
           reject(
@@ -552,11 +555,15 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         // Reset streaming state before starting a new stream.
         setStreamingLei(null);
         setLegalName(null);
-        setMode("quick");
+        // A new lookup opens on QuickCheck unless the caller asked for a
+        // mode. It used to hardcode "quick", and because the mutationFn runs
+        // asynchronously it landed *after* the deep-link handler's
+        // setMode(parseMode(...)) — so ?mode=full opened on QuickCheck, which
+        // is exactly what that handler's comment says must not happen.
+        setMode(startMode ?? "quick");
         setHits([]);
         setErrors({});
         setCrossSourceLinks([]);
-        setCrossSourceOpen(false);
         setPossiblySame([]);
         setMeip(null);
         setRiskSignals([]);
@@ -569,6 +576,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         setCompletedSources(new Set());
         setStartedSources(new Set());
         setPanelErrors([]);
+        // The exports belong to the entity that was on screen. A failed PDF
+        // left its alert sitting on the *next* subject, describing a download
+        // that was never attempted for it — and the payload the report embeds
+        // is the previous entity's summary and its analyst's signed decisions.
+        setExportError(null);
+        setExportPayload({ narrative: null, dispositions: null });
         setStreaming(false);
         setBodsCountMap({});
         setBodsBreakdownMap({});
@@ -679,7 +692,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setPersonReport(null);
   }
 
-  function lookupLei(rawLei: string, opts?: { refresh?: boolean }) {
+  function lookupLei(
+    rawLei: string,
+    opts?: { refresh?: boolean; mode?: CheckMode }
+  ) {
     const lei = rawLei.trim().toUpperCase();
     setLeiInput(lei);
     setView("main");
@@ -697,7 +713,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     // Cancel any in-flight stream before starting a new one.
     cleanupRef.current?.();
     cleanupRef.current = null;
-    lookupMutation.mutate({ lei, refresh: opts?.refresh });
+    lookupMutation.mutate({ lei, refresh: opts?.refresh, mode: opts?.mode });
   }
 
   /**
@@ -750,10 +766,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     }
     const initial = fromUrl(new URLSearchParams(window.location.search).get("lei"));
     if (initial && isValidLei(initial)) {
-      lookupLei(initial);
-      // ?mode= is read after lookupLei, which resets to quick: a deep link
-      // to a FullCheck must open on FullCheck, not flash QuickCheck first.
-      setMode(parseMode(new URLSearchParams(window.location.search).get("mode")));
+      // The mode goes *into* the lookup rather than being set beside it: the
+      // mutationFn's own reset runs later and would otherwise overwrite it.
+      lookupLei(initial, {
+        mode: parseMode(new URLSearchParams(window.location.search).get("mode")),
+      });
     }
 
     const onPopState = () => {
@@ -772,8 +789,9 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       // Back on main — honour ?lei= if present, otherwise clear results.
       const lei = fromUrl(new URLSearchParams(window.location.search).get("lei"));
       if (lei && isValidLei(lei)) {
-        lookupLei(lei);
-        setMode(parseMode(new URLSearchParams(window.location.search).get("mode")));
+        lookupLei(lei, {
+          mode: parseMode(new URLSearchParams(window.location.search).get("mode")),
+        });
       } else {
         // Navigated back to the landing page — clear the result view.
         cleanupRef.current?.();
@@ -988,15 +1006,78 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     [crossSourceLinks, streamingLei],
   );
 
-  // The cross-source identifiers box is collapsed by default but the
-  // SubjectCard badge can pop it open — so its open state lives here
-  // (controlled) rather than inside CollapsedSection.
-  const [crossSourceOpen, setCrossSourceOpen] = useState(false);
+  // The report exports embed the narrative and its dispositions, which are
+  // produced by NarrativePanel further down the page. That is why the control
+  // used to live in *its* header; now the control is on the subject and the
+  // payload comes up to here instead.
+  const [exportPayload, setExportPayload] = useState<ReportExportPayload>({
+    narrative: null,
+    dispositions: null,
+  });
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [mdBusy, setMdBusy] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
-  /** SubjectCard badge action: expand the cross-source identifiers box,
-   *  scroll to it and flash it (same affordance as narrative citations). */
+  const downloadPdf = useCallback(async () => {
+    if (!streamingLei) return;
+    setPdfBusy(true);
+    setExportError(null);
+    try {
+      await downloadReportPdf(
+        streamingLei,
+        exportPayload.narrative,
+        exportPayload.dispositions
+      );
+      trackEvent("pdf_export");
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : "Could not generate the PDF.");
+    } finally {
+      setPdfBusy(false);
+    }
+  }, [streamingLei, exportPayload]);
+
+  const downloadMarkdown = useCallback(async () => {
+    if (!streamingLei) return;
+    setMdBusy(true);
+    setExportError(null);
+    try {
+      // Same embedding rules as the PDF — the same record in a portable
+      // format, and it works even where the PDF route is 503.
+      await downloadReportMarkdown(
+        streamingLei,
+        exportPayload.narrative,
+        exportPayload.dispositions
+      );
+    } catch (e) {
+      setExportError(
+        e instanceof Error ? e.message : "Could not generate the Markdown report."
+      );
+    } finally {
+      setMdBusy(false);
+    }
+  }, [streamingLei, exportPayload]);
+
+  /** SubjectCard badge action: scroll to the identity band and flash it
+   *  (same affordance as narrative citations).
+   *
+   *  It used to also force a collapsed box open. The band is not collapsed —
+   *  "is this the right company?" is the question a reader with an identifier
+   *  badge in front of them is already asking, and answering it behind a
+   *  disclosure made them open two boxes to get the two halves. */
   const showCrossSourceIdentifiers = () => {
-    setCrossSourceOpen(true);
+    // The band renders only in QuickCheck, so from any other mode this
+    // control did nothing at all — a badge that looks like a link and
+    // silently ignores the click. Switch first, then scroll on the next
+    // frame, once the panel it points at exists.
+    if (mode !== "quick") {
+      selectMode("quick");
+      requestAnimationFrame(() => requestAnimationFrame(flashIdentityBand));
+      return;
+    }
+    flashIdentityBand();
+  };
+
+  const flashIdentityBand = () => {
     const el = document.getElementById("cross-source-identifiers");
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1085,7 +1166,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setHits([]);
     setErrors({});
     setCrossSourceLinks([]);
-    setCrossSourceOpen(false);
     setPossiblySame([]);
     setMeip(null);
     setRiskSignals([]);
@@ -1101,6 +1181,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     // landing page saying "this report" when there is no report.
     setStartedSources(new Set());
     setPanelErrors([]);
+    setExportError(null);
+    setExportPayload({ narrative: null, dispositions: null });
     setStreaming(false);
     lookupMutation.reset();
     nameSearchMutation.reset();
@@ -1795,6 +1877,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             onRefresh={() => lookupLei(streamingLei, { refresh: true })}
             identifierSources={leiConfirmedSourceCount}
             onShowIdentifiers={showCrossSourceIdentifiers}
+            pdfBusy={pdfBusy}
+            mdBusy={mdBusy}
+            onPdf={downloadPdf}
+            onMarkdown={downloadMarkdown}
+            exportError={exportError}
           />
         {/* ── The answer-first layer (Phase 122) ─────────────────────────
             Subject, then what the check found and how much of it ran, then
@@ -1839,7 +1926,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           <div
             role="tablist"
             aria-label="Check mode"
-            className="mb-6 flex items-end gap-1 overflow-x-auto border-b border-oo-rule"
+            /* No bottom margin: the tab strip claims the card beneath it, and
+               a 24px gap between them breaks the claim — the active tab's
+               white edge has to meet the card's. The honesty notices that can
+               sit between the two carry their own top margin instead, so they
+               are the exception rather than the default spacing. */
+            className="flex items-end gap-1 overflow-x-auto border-b border-oo-rule"
           >
             {MODE_TABS.map((tab) => {
               const active = mode === tab.id;
@@ -1935,8 +2027,16 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             <body> — v1's mode cards did exactly that. */}
         {mode === "full" && streamingLei ? (
           <div id="panel-full" role="tabpanel" aria-labelledby="tab-full" tabIndex={-1}>
-            <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading FullCheck…</p>}>
-              <FullCheckPanel
+            <PanelCard>
+              <ModeBlurb mode="full" tabs={MODE_TABS} />
+              <Suspense
+                fallback={
+                  <PanelSection>
+                    <p className="text-oo-small text-oo-muted italic">Loading FullCheck…</p>
+                  </PanelSection>
+                }
+              >
+                <FullCheckPanel
                   lei={streamingLei}
                   legalName={legalName}
                   signals={riskSignals}
@@ -1945,34 +2045,51 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     setPanelErrors((prev) => clearPanelError(prev, panel))
                   }
                 />
-            </Suspense>
+              </Suspense>
+            </PanelCard>
           </div>
         ) : mode === "background" && streamingLei ? (
           <div id="panel-background" role="tabpanel" aria-labelledby="tab-background" tabIndex={-1}>
-            <Suspense fallback={<p className="text-[13px] text-oo-muted italic mb-8">Loading BackgroundCheck…</p>}>
-              <BackgroundCheckPanel
-                lei={streamingLei}
-                legalName={legalName}
-                onOpenReport={openPersonReport}
-              />
-            </Suspense>
+            <PanelCard>
+              <ModeBlurb mode="background" tabs={MODE_TABS} />
+              <Suspense
+                fallback={
+                  <PanelSection>
+                    <p className="text-oo-small text-oo-muted italic">
+                      Loading BackgroundCheck…
+                    </p>
+                  </PanelSection>
+                }
+              >
+                <BackgroundCheckPanel
+                  lei={streamingLei}
+                  legalName={legalName}
+                  onOpenReport={openPersonReport}
+                />
+              </Suspense>
+            </PanelCard>
           </div>
         ) : mode === "esg" && streamingLei ? (
           <div id="panel-esg" role="tabpanel" aria-labelledby="tab-esg" tabIndex={-1}>
-            {esgBuckets.length > 0 || pendingEsgSources.length > 0 ? (
-              <EsgPanel
-                buckets={esgBuckets}
-                pendingCount={pendingEsgSources.length}
-                bodsCountMap={bodsCountMap}
-                bodsBreakdownMap={bodsBreakdownMap}
-              />
-            ) : (
-              <p className="mb-8 rounded-oo border border-oo-rule bg-white p-5 text-[13px] text-oo-muted">
-                {streaming
-                  ? "Checking the climate and extractives sources…"
-                  : "No emissions or asset records were published about this company by the sources checked. That is an absence of records, not a finding about its emissions."}
-              </p>
-            )}
+            <PanelCard>
+              <ModeBlurb mode="esg" tabs={MODE_TABS} />
+              {esgBuckets.length > 0 || pendingEsgSources.length > 0 ? (
+                <EsgPanel
+                  buckets={esgBuckets}
+                  pendingCount={pendingEsgSources.length}
+                  bodsCountMap={bodsCountMap}
+                  bodsBreakdownMap={bodsBreakdownMap}
+                />
+              ) : (
+                <PanelSection>
+                  <p className="text-oo-small text-oo-muted">
+                    {streaming
+                      ? "Checking the climate and extractives sources…"
+                      : "No emissions or asset records were published about this company by the sources checked. That is an absence of records, not a finding about its emissions."}
+                  </p>
+                </PanelSection>
+              )}
+            </PanelCard>
           </div>
         ) : (
           <div id="panel-quick" role="tabpanel" aria-labelledby="tab-quick" tabIndex={-1}>
@@ -1983,13 +2100,9 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             labelled "QuickCheck" says what it is called, not what it does, and
             a reader arriving on a shared link has no other way to find out
             which of the four they are looking at. */}
-        <PanelSection>
-          <p className="text-oo-small text-oo-muted">
-            {MODE_TABS.find((t) => t.id === "quick")?.blurb}
-          </p>
-        </PanelSection>
+        <ModeBlurb mode="quick" tabs={MODE_TABS} />
         {streamingLei && mode === "quick" && (
-          <NarrativePanel lei={streamingLei} legalName={legalName} />
+          <NarrativePanel lei={streamingLei} onExportPayload={setExportPayload} />
         )}
 
 
@@ -2054,64 +2167,87 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             Phase 97) renders underneath the OpenAleph source card in the
             sources list below — see OpenAlephArchiveMatches. */}
 
-        {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && mode === "quick" && (
-          <CollapsedSection
-            htmlId="cross-source-identifiers"
-            label="Cross-source identifiers"
-            open={crossSourceOpen}
-            onToggle={setCrossSourceOpen}
-            summary={
-              crossLinkedSourceCount >= 2 ? (
-                <>
-                  <span className="font-semibold">
-                    {crossSourceLinks.length + gleifMappedIds.length}{" "}
-                    identifier
-                    {crossSourceLinks.length + gleifMappedIds.length === 1
-                      ? ""
-                      : "s"}
-                  </span>{" "}
-                  matched across{" "}
-                  <span className="font-semibold">
-                    {crossLinkedSourceCount} sources
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="font-semibold">
-                    {gleifMappedIds.length} identifier
-                    {gleifMappedIds.length === 1 ? "" : "s"}
-                  </span>{" "}
-                  mapped by GLEIF
-                </>
-              )
-            }
-          >
-            <CrossSourceIdentifiersTable
-              links={crossSourceLinks}
-              gleifMapped={gleifMappedIds}
-              sourceNames={sourceNameIndex}
-            />
-          </CollapsedSection>
-        )}
+        {/* One question, not two boxes.
 
-        {possiblySame.length > 0 && mode === "quick" && (
-          <CollapsedSection
-            htmlId="possibly-same"
-            label="Possibly the same entity"
-            summary={
-              <>
-                <span className="font-semibold">
-                  {possiblySame.length} candidate pair
-                  {possiblySame.length === 1 ? "" : "s"}
-                </span>{" "}
-                flagged for review — same name &amp; jurisdiction, no shared
-                identifier
-              </>
-            }
-          >
-            <PossiblySameTable pairs={possiblySame} />
-          </CollapsedSection>
-        )}
+            "Cross-source identifiers" and "Possibly the same entity" are the
+            same enquiry from two directions — what corroborates that this is
+            the right company, and what suggests the records might not all be
+            it. Splitting them into two collapsibles with two eyebrow labels
+            made a reader open two things to answer one question, and put the
+            reassuring half and the doubtful half in separate boxes where
+            neither qualified the other.
+
+            The band keeps `id="cross-source-identifiers"` because the subject
+            card's identifier badge scrolls to it by that id, and because a
+            shared report link may already carry the anchor. */}
+        {(crossSourceLinks.length > 0 ||
+          gleifMappedIds.length > 0 ||
+          possiblySame.length > 0) &&
+          mode === "quick" && (
+            <PanelSection
+              id="cross-source-identifiers"
+              title="Is this the right company?"
+              aside={
+                crossLinkedSourceCount >= 2 ? (
+                  <>
+                    <span className="font-semibold">
+                      {crossSourceLinks.length + gleifMappedIds.length} identifier
+                      {crossSourceLinks.length + gleifMappedIds.length === 1 ? "" : "s"}
+                    </span>{" "}
+                    matched across{" "}
+                    <span className="font-semibold">{crossLinkedSourceCount} sources</span>
+                  </>
+                ) : gleifMappedIds.length > 0 ? (
+                  <>
+                    <span className="font-semibold">
+                      {gleifMappedIds.length} identifier
+                      {gleifMappedIds.length === 1 ? "" : "s"}
+                    </span>{" "}
+                    mapped by GLEIF
+                  </>
+                ) : undefined
+              }
+            >
+              {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && (
+                <CrossSourceIdentifiersTable
+                  links={crossSourceLinks}
+                  gleifMapped={gleifMappedIds}
+                  sourceNames={sourceNameIndex}
+                />
+              )}
+
+              {possiblySame.length > 0 && (
+                <div
+                  id="possibly-same"
+                  className={
+                    crossSourceLinks.length > 0 || gleifMappedIds.length > 0
+                      ? "mt-5 border-t border-oo-rule pt-4 scroll-mt-4"
+                      : "scroll-mt-4"
+                  }
+                >
+                  {/* A sub-block, not a peer section — the same treatment
+                      structural context gets inside Risk signals. These pairs
+                      qualify the corroboration above them, and a reader who
+                      sees "2 identifiers matched across 5 sources" needs to
+                      meet them in the same breath rather than in the next box
+                      down. */}
+                  <SectionHeading as="h3">Possibly the same entity</SectionHeading>
+                  <p className="mt-1 text-oo-small text-oo-muted">
+                    <span className="font-semibold">
+                      {possiblySame.length} candidate pair
+                      {possiblySame.length === 1 ? "" : "s"}
+                    </span>{" "}
+                    flagged for review — same name &amp; jurisdiction, no shared
+                    identifier
+                  </p>
+                  <div className="mt-3">
+                    <PossiblySameTable pairs={possiblySame} />
+                  </div>
+                </div>
+              )}
+            </PanelSection>
+          )}
+
         {(cddBuckets.length > 0 || pendingCddSources.length > 0) && (
           <PanelSection
             title="What each source said"
@@ -2200,6 +2336,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             lei={streamingLei}
             onError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
             onRecovered={(panel) => setPanelErrors((prev) => clearPanelError(prev, panel))}
+            sourceNames={sourceNameIndex}
           />
         )}
 
@@ -3146,90 +3283,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-/**
- * Collapsed-by-default disclosure box for the reconciliation sections
- * (cross-source identifiers / possibly-same). The full tables pushed the
- * source results a long scroll below the fold for casual users, while the
- * LEI they mostly repeat is already on the SubjectCard — so each box now
- * renders as a one-line summary that expands in place. Kept in position
- * above the source cards so the "Confirmed by" jump chips still point
- * downward at their targets.
- */
-function CollapsedSection({
-  htmlId,
-  label,
-  summary,
-  open: openProp,
-  onToggle,
-  children,
-}: {
-  /** id on the section wrapper — in-page anchors (e.g. the SubjectCard
-   *  identifier badge) scroll here. */
-  htmlId: string;
-  label: string;
-  summary: React.ReactNode;
-  /** Controlled open state — omit to let the section manage its own. */
-  open?: boolean;
-  onToggle?: (open: boolean) => void;
-  children: React.ReactNode;
-}) {
-  const [openState, setOpenState] = useState(false);
-  const open = openProp ?? openState;
-  return (
-    <section
-      id={htmlId}
-      className="border-b border-oo-rule scroll-mt-4"
-    >
-      {/* The WAI-ARIA disclosure pattern: the heading WRAPS the button. A
-          heading nested inside a button is flattened into the button's
-          accessible name and exposed as a heading by almost nothing — which
-          would have restyled these to look like section heads while leaving
-          them out of the outline, the exact defect this phase set out to fix. */}
-      <h2 className="m-0">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={`${htmlId}-body`}
-        onClick={() => {
-          onToggle?.(!open);
-          if (openProp === undefined) setOpenState(!open);
-        }}
-        className="w-full flex items-center justify-between gap-3 px-4 py-[18px] sm:px-6 sm:py-[22px] text-left group"
-      >
-        <span className="min-w-0">
-          <span className="block font-head font-bold text-oo-head text-oo-ink">
-            {label}
-          </span>
-          <span className="block text-oo-small text-oo-ink mt-1">{summary}</span>
-        </span>
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          className={`shrink-0 text-oo-muted transition-transform group-hover:text-oo-ink ${
-            open ? "rotate-90" : ""
-          }`}
-        >
-          <path d="m9 18 6-6-6-6" />
-        </svg>
-      </button>
-      </h2>
-      {open && (
-        <div id={`${htmlId}-body`} className="px-4 pb-5 sm:px-6">
-          {children}
-        </div>
-      )}
-    </section>
-  );
-}
-
-
 function ExampleLeiPicker({
   onPick,
   disabled,
@@ -3603,7 +3656,7 @@ function PanelErrorsNotice({ errors }: { errors: PanelError[] }) {
     <section
       role="status"
       aria-label="Part of this report could not be loaded"
-      className="mb-8 rounded-oo border border-oo-warn-border bg-oo-warn-bg p-5"
+      className="mt-6 mb-8 rounded-oo border border-oo-warn-border bg-oo-warn-bg p-5"
     >
       <h2 className="font-head font-bold text-oo-body text-oo-warn-text">
         Part of this report could not be loaded
@@ -3633,6 +3686,33 @@ const DEGRADED_REASON_LABELS: Record<string, string> = {
 };
 
 /**
+ * The mode's own sentence, as its panel card's first band.
+ *
+ * The strings have been on `MODE_TABS` since Phase 122 and rendered nowhere.
+ * A tab labelled "QuickCheck" says what it is called, not what it does, and a
+ * reader arriving on a shared link has no other way to find out which of the
+ * four they are looking at. Three of the four panels used to state it
+ * themselves — in their own coloured strip, in their own words, at a heading
+ * level of their own choosing — which is three chances to disagree with the
+ * tab above them; this is one.
+ */
+function ModeBlurb({
+  mode,
+  tabs,
+}: {
+  mode: CheckMode;
+  tabs: { id: CheckMode; blurb: string }[];
+}) {
+  const blurb = tabs.find((t) => t.id === mode)?.blurb;
+  if (!blurb) return null;
+  return (
+    <PanelSection>
+      <p className="text-oo-small text-oo-muted">{blurb}</p>
+    </PanelSection>
+  );
+}
+
+/**
  * Warning box for degraded upstream screens (issue #50). Sits above the
  * risk panel and renders whenever the backend reports that a derived
  * check (related-party sanctions/PEP screening, ICIJ offshore-leaks
@@ -3656,7 +3736,7 @@ function DegradedScreensNotice({
     <section
       role="status"
       aria-label="Screening incomplete"
-      className="mb-8 rounded-oo border border-amber-300 bg-amber-50 p-5"
+      className="mt-6 mb-8 rounded-oo border border-amber-300 bg-amber-50 p-5"
     >
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-start gap-3 min-w-0">

@@ -1,13 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * The single Export entry point in the AI summary card header.
+ * The report's one "Share and export" control (Phase 128).
  *
- * One "Export" button opens a grouped menu: **Report** items download (PDF /
- * Markdown — both post the card's narrative + dispositions, which is why this
- * control lives on the AI summary card), and the **Data** item is an honest
- * jump link down to the "Download data" section rather than a fake download.
- * On small viewports the same items render as a bottom sheet.
+ * It began as an "Export" button in the AI summary card header, because the
+ * PDF and Markdown routes post that card's narrative and dispositions. That
+ * put the report's export affordance halfway down the page, under a heading
+ * about something else, while "Copy share link" — the thing most readers
+ * actually want — sat in a third place on the subject card. Three entry
+ * points for one intention.
+ *
+ * It now lives on the subject, as the primary control there, and carries all
+ * of it: **Share** copies the link, **Report** downloads (PDF / Markdown, both
+ * carrying whatever narrative and dispositions the summary card currently
+ * holds), and **Data** is an honest jump down to the "Download data" section
+ * rather than a fake download. On small viewports the same items render as a
+ * bottom sheet.
+ *
+ * The share item is optional so the menu still renders where there is nothing
+ * to share; the index bookkeeping for roving focus follows the items that are
+ * actually present, never a fixed count.
  */
 
 /** DOM id of the "Download data" section this menu's Data item jumps to. */
@@ -69,11 +81,23 @@ export function ExportMenu({
   mdBusy,
   onPdf,
   onMarkdown,
+  onShare,
+  shareCopied = false,
+  label = "Export",
+  variant = "secondary",
 }: {
   pdfBusy: boolean;
   mdBusy: boolean;
   onPdf: () => void;
   onMarkdown: () => void;
+  /** Copy the shareable report URL. Omitted where there is no link yet. */
+  onShare?: () => void;
+  /** The copy just succeeded — the item says so for ~1.5s. */
+  shareCopied?: boolean;
+  label?: string;
+  /** `primary` is the subject card's filled button; `secondary` the outline
+   *  one this control wore when it lived in a section header. */
+  variant?: "primary" | "secondary";
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -122,6 +146,11 @@ export function ExportMenu({
     }
   }
 
+  // The share item, when present, is index 0 and pushes the rest down. Roving
+  // focus indexes the items that exist, never a fixed count — the menu is
+  // rendered without a share item on surfaces that have no link to copy.
+  const reportIndex = onShare ? 1 : 0;
+
   function item(index: number) {
     return (el: HTMLButtonElement | null) => {
       itemRefs.current[index] = el;
@@ -142,9 +171,13 @@ export function ExportMenu({
             setOpen(true);
           }
         }}
-        className="whitespace-nowrap inline-flex items-center gap-1.5 rounded-oo border border-oo-blue text-oo-blue text-[12px] font-medium px-3 py-1.5 hover:bg-[#eef1fb]"
+        className={
+          variant === "primary"
+            ? "whitespace-nowrap inline-flex items-center gap-1.5 rounded-oo bg-oo-blue text-white text-oo-small font-bold px-3.5 py-2 hover:bg-oo-burst transition-colors"
+            : "whitespace-nowrap inline-flex items-center gap-1.5 rounded-oo border border-oo-blue text-oo-blue text-oo-small font-medium px-3 py-1.5 hover:bg-oo-soft"
+        }
       >
-        Export
+        {label}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 16 16"
@@ -171,7 +204,7 @@ export function ExportMenu({
           <div
             ref={menuRef}
             role="menu"
-            aria-label="Export"
+            aria-label={label}
             onKeyDown={onMenuKeyDown}
             className={
               // <sm: bottom sheet. sm+: dropdown anchored to the trigger.
@@ -184,9 +217,34 @@ export function ExportMenu({
               className="sm:hidden mx-auto mt-1 mb-2 h-1 w-9 rounded-full bg-oo-rule"
               aria-hidden="true"
             />
+            {onShare && (
+              <>
+                <GroupHeading>Share</GroupHeading>
+                <button
+                  ref={item(0)}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    onShare();
+                  }}
+                  className={ITEM_CLASSES}
+                >
+                  <span aria-hidden="true" className="text-oo-blue mt-px">
+                    🔗
+                  </span>
+                  <span>
+                    {shareCopied ? "Link copied" : "Copy share link"}
+                    <span className="block text-oo-meta text-oo-muted">
+                      Its preview shows a live summary card for this entity
+                    </span>
+                  </span>
+                </button>
+                <div className="my-1.5 border-t border-oo-rule" role="presentation" />
+              </>
+            )}
             <GroupHeading>Report</GroupHeading>
             <button
-              ref={item(0)}
+              ref={item(reportIndex)}
               type="button"
               role="menuitem"
               disabled={pdfBusy}
@@ -205,7 +263,7 @@ export function ExportMenu({
               </span>
             </button>
             <button
-              ref={item(1)}
+              ref={item(reportIndex + 1)}
               type="button"
               role="menuitem"
               disabled={mdBusy}
@@ -229,7 +287,7 @@ export function ExportMenu({
             />
             <GroupHeading>Data</GroupHeading>
             <button
-              ref={item(2)}
+              ref={item(reportIndex + 2)}
               type="button"
               role="menuitem"
               onClick={() => {

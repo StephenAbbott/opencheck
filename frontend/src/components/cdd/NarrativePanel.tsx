@@ -21,8 +21,6 @@
 import { useEffect, useRef, useState } from "react";
 import { trackEvent } from "../../lib/analytics";
 import {
-  downloadReportMarkdown,
-  downloadReportPdf,
   fetchCuratedNarrative,
   fetchNarrative,
   getDispositions,
@@ -37,7 +35,6 @@ import {
   citedSourceLabels,
   shouldCollapseEvidence,
 } from "../../lib/evidenceDisclosure";
-import { ExportMenu } from "../export/ExportMenu";
 import { CONFIDENCE_GLYPH, CONFIDENCE_LABEL } from "../ui/Chip";
 import { Chip, SectionHeading } from "../ui";
 
@@ -225,14 +222,26 @@ function DispositionControls({
   );
 }
 
-export function NarrativePanel({ lei }: { lei: string; legalName?: string | null }) {
+/** What the report's PDF and Markdown exports embed: the summary as generated
+ *  on this page, and the analyst's decisions about it. Both are nullable — the
+ *  reports are downloadable before a summary has been generated. */
+export interface ReportExportPayload {
+  narrative: NarrativeResponse | null;
+  dispositions: DispositionRecord | null;
+}
+
+export function NarrativePanel({
+  lei,
+  onExportPayload,
+}: {
+  lei: string;
+  /** Hand the report's export payload (narrative + analyst dispositions) up to
+   *  whoever owns the "Share and export" control. */
+  onExportPayload?: (payload: ReportExportPayload) => void;
+}) {
   const [data, setData] = useState<NarrativeResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pdfBusy, setPdfBusy] = useState(false);
-  const [pdfError, setPdfError] = useState<string | null>(null);
-  const [mdBusy, setMdBusy] = useState(false);
-  const [mdError, setMdError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [cached, setCached] = useState(false);
   // Evidence disclosure: long claim lists start collapsed to a preview (see
@@ -451,36 +460,17 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     }
   }
 
-  async function downloadPdf() {
-    setPdfBusy(true);
-    setPdfError(null);
-    try {
-      // Embed the summary in the PDF only if it has been generated here; the
-      // analyst's dispositions ride along so the PDF is the signed-off record.
-      await downloadReportPdf(lei, data, buildRecord());
-      trackEvent("pdf_export");
-    } catch (e) {
-      setPdfError(e instanceof Error ? e.message : "Could not generate the PDF.");
-    } finally {
-      setPdfBusy(false);
-    }
-  }
-
-  async function downloadMarkdown() {
-    setMdBusy(true);
-    setMdError(null);
-    try {
-      // Same embedding rules as the PDF — the Markdown report is the same
-      // record in a portable format, and it works even where PDF is 503.
-      await downloadReportMarkdown(lei, data, buildRecord());
-    } catch (e) {
-      setMdError(
-        e instanceof Error ? e.message : "Could not generate the Markdown report."
-      );
-    } finally {
-      setMdBusy(false);
-    }
-  }
+  // Publish what the report exports should embed. The PDF and Markdown routes
+  // post this card's narrative and dispositions, which is why the export
+  // control used to live in this card's header — halfway down the page, under
+  // a heading about something else. The control moved to the subject; the data
+  // it needs comes up from here instead.
+  const record = buildRecord();
+  useEffect(() => {
+    onExportPayload?.({ narrative: data, dispositions: record });
+    // `record` is rebuilt every render, so depend on what it is derived from.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, disp, reviewed, cached, onExportPayload]);
 
   const decidedCount = data ? data.claims.filter((c) => disp[c.id]).length : 0;
   // Long evidence lists start collapsed to a preview — except while sign-off
@@ -515,15 +505,6 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
             </Chip>
           </div>
         </div>
-        {/* Pinned in the top-right corner at every width — never overflows the
-            card. The Export menu lives here (not in a global toolbar) because
-            the report downloads post this card's narrative + dispositions. */}
-        <ExportMenu
-          pdfBusy={pdfBusy}
-          mdBusy={mdBusy}
-          onPdf={downloadPdf}
-          onMarkdown={downloadMarkdown}
-        />
       </div>
 
       {data && (
@@ -558,11 +539,6 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
             )}
           </button>
         </div>
-      )}
-      {(pdfError || mdError) && (
-        <p role="alert" className="mt-2 text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-oo px-3 py-2">
-          {pdfError ?? mdError}
-        </p>
       )}
 
       {!data && !collapsed && (

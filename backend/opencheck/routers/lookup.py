@@ -1941,6 +1941,9 @@ async def _lookup_pipeline(
             if isinstance(cnt, BaseException) or not cnt:
                 continue
             key = f"{dsrc}:{dhit}"
+            count_prov = cnt.get("provenance")
+            if dsrc not in provenances and isinstance(count_prov, Provenance):
+                provenances[dsrc] = count_prov
             bods_counts[key] = cnt["total"]
             bods_breakdown[key] = {
                 "entities": cnt["entities"],
@@ -2858,7 +2861,7 @@ def _graph_shape(
     }
 
 
-async def _count_only(source_id: str, hit_id: str) -> dict[str, int] | None:
+async def _count_only(source_id: str, hit_id: str) -> dict[str, Any] | None:
     """Map a (cached) bundle just to count BODS statements — no risk/validate.
 
     Lets every source surface its graph shape ("N entities · M relationships")
@@ -2870,6 +2873,7 @@ async def _count_only(source_id: str, hit_id: str) -> dict[str, int] | None:
     override = _bods_data_override(source_id, hit_id)
     if override is not None:
         bods: list[dict[str, Any]] = override
+        prov = _stored_bundle_provenance(source_id, hit_id)
     else:
         try:
             raw, prov = await _fetch_with_provenance(adapter, hit_id)
@@ -2885,6 +2889,12 @@ async def _count_only(source_id: str, hit_id: str) -> dict[str, int] | None:
         "entities": sum(1 for s in bods if s.get("recordType") == "entity"),
         "persons": sum(1 for s in bods if s.get("recordType") == "person"),
         "relationships": sum(1 for s in bods if s.get("recordType") == "relationship"),
+        # Carried for the same reason `_safe_deepen` carries it: a source the
+        # dispatch loop never saw (sec_edgar, resolved from a CIK) has no other
+        # route into `provenances`, and past `deepen_top` this is the only pass
+        # that touches it at all. Without this its row was the one with no
+        # freshness note, next to rows reading "Checked today".
+        "provenance": prov,
     }
 
 

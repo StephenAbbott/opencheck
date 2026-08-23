@@ -1,7 +1,7 @@
 {
   "src/App.tsx": {
     "hex": 14,
-    "text": 131,
+    "text": 128,
     "vocab": 0
   },
   "src/components/BODSGraph.tsx": {
@@ -26,7 +26,7 @@
   },
   "src/components/cdd/BackgroundCheckPanel.tsx": {
     "hex": 0,
-    "text": 58,
+    "text": 50,
     "vocab": 0
   },
   "src/components/cdd/ClusterGroup.tsx": {
@@ -36,12 +36,7 @@
   },
   "src/components/cdd/EsgPanel.tsx": {
     "hex": 0,
-    "text": 57,
-    "vocab": 0
-  },
-  "src/components/cdd/FullCheckPanel.tsx": {
-    "hex": 0,
-    "text": 4,
+    "text": 50,
     "vocab": 0
   },
   "src/components/cdd/HistoryTimeline.tsx": {
@@ -56,12 +51,12 @@
   },
   "src/components/cdd/MeipSignpost.tsx": {
     "hex": 0,
-    "text": 7,
+    "text": 5,
     "vocab": 0
   },
   "src/components/cdd/NarrativePanel.tsx": {
     "hex": 7,
-    "text": 21,
+    "text": 20,
     "vocab": 0
   },
   "src/components/cdd/NzAssociations.tsx": {
@@ -76,7 +71,7 @@
   },
   "src/components/cdd/SecuritiesSection.tsx": {
     "hex": 3,
-    "text": 16,
+    "text": 12,
     "vocab": 0
   },
   "src/components/cdd/SourceBucketCard.tsx": {
@@ -85,18 +80,18 @@
     "vocab": 0
   },
   "src/components/cdd/SubjectCard.tsx": {
-    "hex": 6,
-    "text": 4,
+    "hex": 3,
+    "text": 3,
     "vocab": 0
   },
   "src/components/cdd/SubsidiaryNetwork.tsx": {
     "hex": 0,
-    "text": 15,
+    "text": 13,
     "vocab": 0
   },
   "src/components/export/ExportMenu.tsx": {
-    "hex": 3,
-    "text": 4,
+    "hex": 2,
+    "text": 3,
     "vocab": 0
   },
   "src/components/icons/index.tsx": {

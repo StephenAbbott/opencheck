@@ -17,11 +17,16 @@ import { DATA_SECTION_ID } from "./ExportMenu";
  * Eleven chips answer it at a glance — and the format a reader wants is
  * usually recognised, not searched for.
  *
- * **Licensing is a condition of reuse, not a footnote to a download.** Stacked
- * below the button it reads as small print after the decision; beside it, as
- * "You can reuse this", it is part of the decision. The traffic-light colours
- * stay, but every one of them is also spelled out in words — how restrictive a
- * licence is must never be carried by a dot alone (WCAG 1.4.1).
+ * **Licensing is a condition of reuse, not a footnote to a download.** It was
+ * three separate blocks trailing off the bottom of the section; it is now one
+ * "You can reuse this" panel directly under the formats, where the choice is
+ * being made. It sat *beside* the formats for one revision — the mockup's
+ * 300px side column — which real data broke immediately: "Nigeria CAC —
+ * Persons with Significant Control register" wrapped to seven lines, its
+ * licence pill overflowed, and the section grew a thousand pixels of empty
+ * space beside it. The traffic-light colours stay, but every one is also
+ * spelled out in words — how restrictive a licence is must never be carried
+ * by a dot alone (WCAG 1.4.1).
  *
  * The format list is exactly `_EXPORT_FORMATS` in `routers/export.py`. Nothing
  * is offered here that the backend cannot produce: an export picker that lists
@@ -91,7 +96,7 @@ function Ext({ href, children }: { href: string; children: ReactNode }) {
 const BLURB: Record<Format, ReactNode> = {
   json: (
     <>
-      BODS JSON is the{" "}
+      BODS JSON is the format for the{" "}
       <Ext href="https://standard.openownership.org/en/0.4.0/">
         Beneficial Ownership Data Standard
       </Ext>{" "}
@@ -274,7 +279,7 @@ export function ExportPanel({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
+      <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-3">
           {/* A radiogroup rather than eleven buttons: they are one choice.
               That role is a promise about keyboard behaviour, and a first pass
@@ -346,40 +351,49 @@ export function ExportPanel({
         </div>
 
         {a && (
+          // Under the formats at every width, not beside them.
+          //
+          // A 300px column beside the chips looked right in the mockup, which
+          // had four short licence rows. Real ones are not short — "Nigeria CAC
+          // — Persons with Significant Control register" wrapped to seven
+          // lines, its licence pill overflowed the column, and the section grew
+          // a thousand pixels of empty space to the left of it. The content
+          // decides the layout: this is a list of sources with terms attached,
+          // and a list wants width.
           <aside className="rounded-oo border border-oo-rule bg-oo-bg px-4 py-3.5" role="status">
-            <p className="text-oo-small font-bold text-oo-ink">You can reuse this</p>
-            <p className="text-oo-small text-oo-muted mt-0.5 leading-[1.5]">
-              {a.headline}
-            </p>
-            <p className="text-oo-meta text-oo-muted mt-1 leading-[1.5]">
-              Commercial use: <strong>{a.commercial_use}</strong> · Attribution:{" "}
-              <strong>{a.attribution_required ? "required" : "not required"}</strong>
-              {a.share_alike ? (
-                <>
-                  {" "}· <strong>share-alike</strong>
-                </>
-              ) : null}
-            </p>
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+              <p className="text-oo-small font-bold text-oo-ink">You can reuse this</p>
+              <p className="text-oo-small text-oo-muted leading-[1.5]">
+                Commercial use: <strong>{a.commercial_use}</strong> · Attribution:{" "}
+                <strong>{a.attribution_required ? "required" : "not required"}</strong>
+                {a.share_alike ? (
+                  <>
+                    {" "}· <strong>share-alike</strong>
+                  </>
+                ) : null}
+              </p>
+            </div>
+            <p className="text-oo-small text-oo-muted mt-0.5 leading-[1.5]">{a.headline}</p>
             {a.warnings.map((w, i) => (
               <p
                 key={i}
-                className={`text-oo-meta mt-2 leading-[1.5] rounded-oo border px-2 py-1.5 ${COLOR[a.color]}`}
+                className={`text-oo-meta mt-2 leading-[1.5] rounded-oo border px-2.5 py-1.5 ${COLOR[a.color]}`}
               >
                 {w}
               </p>
             ))}
 
-            {/* One row per source: name on the left, licence on the right, the
-                colour on the licence itself. The plain-English terms sit under
-                the row rather than in a `title`, because a licence condition is
-                the thing a reuser has to comply with. */}
-            <dl className="mt-3 flex flex-col gap-2">
+            {/* One row per source: name, its licence, and the plain-English
+                terms under both. The terms are not in a `title` because a
+                licence condition is the thing a reuser has to comply with, and
+                the colour is never the only cue for how restrictive it is. */}
+            <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
               {a.per_source.map((s) => (
-                <div key={s.source_id}>
-                  <div className="flex items-baseline justify-between gap-2.5 text-oo-small">
+                <div key={s.source_id} className="min-w-0">
+                  <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1 text-oo-small">
                     <dt className="text-oo-burst">{s.name}</dt>
                     <dd
-                      className={`shrink-0 inline-flex items-center gap-1 border rounded px-1.5 py-0.5 text-oo-meta font-mono ${COLOR[s.terms.color]}`}
+                      className={`inline-flex items-center gap-1 border rounded px-1.5 py-0.5 text-oo-meta font-mono break-all ${COLOR[s.terms.color]}`}
                     >
                       <span className={DOT[s.terms.color]} aria-hidden="true">
                         ●

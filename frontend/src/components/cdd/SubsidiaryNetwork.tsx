@@ -4,6 +4,7 @@ import type { RiskSignal, SubsidiariesResponse, SubsidiaryChild } from "../../li
 import { scopeCrossSourceSignals } from "../../lib/signalScope";
 import { describeFetchFailure, panelError, type PanelError, type PanelId } from "../../lib/panelErrors";
 import InvitationStrip from "../ui/InvitationStrip";
+import { SectionHeading } from "../ui";
 
 // BodsGraphExplorer pulls in Cytoscape — load it only when a small network is
 // actually rendered as a graph (large networks degrade to a table + export).
@@ -156,9 +157,14 @@ export function SubsidiaryNetwork({
   signals = [],
   onError,
   onRecovered,
+  bare = false,
 }: {
   lei: string;
   entityName?: string;
+  /** Render as the contents of a band rather than as a standalone card:
+   *  no chrome, no self-title. Set by FullCheck, where the panel card and
+   *  its `PanelSection` already supply both. */
+  bare?: boolean;
   /** Report a fetch failure to the report-level notice — these panels sit
    *  outside `_lookup_pipeline`, so nothing else knows they failed. */
   onError?: (e: PanelError) => void;
@@ -280,7 +286,16 @@ export function SubsidiaryNetwork({
   const isGraphMode = data?.render_mode === "graph";
 
   return (
-    <section className="mt-3 rounded-oo border border-oo-rule bg-oo-bg p-3">
+    // `bare` drops the card chrome: inside FullCheck this is a band of the
+    // panel card, and a grey rounded box inside a white card inside the
+    // tabpanel is the "card in a card" the v2 conversion exists to remove.
+    // Elsewhere (the QuickCheck invitation strip) it still stands alone and
+    // keeps its own edges.
+    <section
+      className={
+        bare ? "" : "mt-3 rounded-oo border border-oo-rule bg-oo-bg p-3"
+      }
+    >
       {loading && <p className="text-[12px] text-oo-muted">Fetching the GLEIF subsidiary network…</p>}
       {error && (
         // role="alert" so it is announced, matching NzAssociations and
@@ -320,12 +335,19 @@ export function SubsidiaryNetwork({
 
       {data && data.available && (
         <>
+          {/* The band above already carries "Subsidiary network" as a real
+              heading, so repeating it here would title the same content
+              twice. Standalone, the title is the only one there is. */}
           <div className="flex items-baseline justify-between gap-2">
-            <h4 className="font-head font-bold text-[13px] text-oo-ink">Subsidiary network</h4>
+            {bare ? (
+              <span />
+            ) : (
+              <SectionHeading as="h4">Subsidiary network</SectionHeading>
+            )}
             <button
               type="button"
               onClick={collapse}
-              className="shrink-0 text-[11px] font-mono text-oo-blue hover:underline"
+              className="shrink-0 text-oo-meta font-medium text-oo-blue hover:underline"
             >
               Hide
             </button>

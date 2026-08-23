@@ -19,6 +19,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PERSON_VERB, sourceLabel } from "../../lib/vocab";
 import { Explain } from "../ui/Explain";
+import PanelSection from "../ui/PanelSection";
 import {
   lookup,
   personAppointments,
@@ -179,45 +180,62 @@ export default function BackgroundCheckPanel({
   };
 
   return (
-    <section className="mb-8" aria-label="BackgroundCheck — people screening">
-      <div className="mb-3 rounded-oo border border-violet-300 bg-violet-50 px-4 py-3">
-        <h3 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-violet-700 mb-1">
-          BackgroundCheck · People screening
-        </h3>
-        <p className="text-[13px] text-oo-ink leading-[1.6]">
-          The people connected to{" "}
-          <span className="font-medium">{legalName ?? lei}</span> in the data
-          already gathered — officers, persons with significant control and
-          beneficial owners. Run a check to screen a person against every
-          source that holds people, for PEP, sanctions and offshore-leaks signals.
-        </p>
-        <p className="text-[12px] text-violet-900/80 leading-[1.6] mt-1.5">
-          Person screening is <span className="font-medium">name-based</span>:
+    <>
+      {/* The mode blurb is the tabpanel's first band now, like every other
+          mode. What stays here is the caveat, which is *not* on `MODE_TABS`
+          and is not decoration: name-based screening produces potential
+          matches, and a reader who takes them for identities has been misled
+          by the interface rather than by the data. It sits directly above the
+          list it qualifies. */}
+      <PanelSection>
+        <p className="text-oo-small text-oo-muted leading-[1.6] max-w-[82ch]">
+          Person screening is <span className="font-medium text-oo-ink">name-based</span>:
           results are potential matches with their evidence shown, never
           confirmed identities — and a clean screen is not proof of absence. The
           percentage on each result is name similarity between the person
           searched for and that record, not a confidence that they are the same
           person.
         </p>
-      </div>
+      </PanelSection>
 
+      <PanelSection
+        title="Connected people"
+        aside={
+          people.length > 0
+            ? `${currentPeople.length} current ${
+                currentPeople.length === 1 ? "connection" : "connections"
+              }`
+            : undefined
+        }
+      >
+      {/* Where the list came from. The people are not searched for — they are
+          the officers, PSCs and beneficial owners the sources already
+          returned, and a reader who thinks otherwise will read an empty list
+          as "no people" rather than as "nothing published". */}
+      <p className="text-oo-small text-oo-muted leading-[1.6] mb-4 max-w-[82ch]">
+        The people connected to{" "}
+        <span className="font-medium text-oo-ink">{legalName ?? lei}</span> in
+        the data already gathered — officers, persons with significant control
+        and beneficial owners. Run a check to screen one against every source
+        that holds people, for PEP, sanctions and offshore-leaks signals.
+      </p>
       {loadError && (
-        <p className="text-[13px] text-red-700 mb-4" role="alert">
+        <p className="text-oo-small text-oo-warn-text mb-4" role="alert">
           Could not load the entity bundle: {loadError}
         </p>
       )}
       {!statements && !loadError && (
-        <p className="text-[13px] text-oo-muted italic">
+        <p className="text-oo-small text-oo-muted italic">
           Loading connected people…
         </p>
       )}
 
       {statements && people.length === 0 && (
-        <div className="rounded-oo border border-oo-rule bg-white px-4 py-6 text-center">
-          <p className="text-[14px] text-oo-ink font-medium mb-1">
+        <div>
+          <p className="text-oo-body text-oo-ink font-medium mb-1">
             No named people found for this entity
           </p>
-          <p className="text-[12px] text-oo-muted leading-[1.6] max-w-xl mx-auto">
+          <p className="text-oo-small text-oo-muted leading-[1.6] max-w-[82ch]">
             None of the sources that responded published named officers,
             persons with significant control or beneficial owners for this
             entity (protected or anonymous persons are excluded). That is a
@@ -228,11 +246,7 @@ export default function BackgroundCheckPanel({
 
       {people.length > 0 && (
         <>
-          <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
-            <p className="text-[12px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted">
-              {currentPeople.length} current{" "}
-              {currentPeople.length === 1 ? "connection" : "connections"}
-            </p>
+          <div className="mb-4 flex items-center justify-end gap-3 flex-wrap">
             <span className="flex items-center gap-2">
               {checkAllProgress && (
                 <span
@@ -349,7 +363,8 @@ export default function BackgroundCheckPanel({
           )}
         </>
       )}
-    </section>
+      </PanelSection>
+    </>
   );
 }
 
