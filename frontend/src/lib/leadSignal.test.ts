@@ -4,6 +4,7 @@ import {
   checkedClause,
   corroborationClause,
   evidenceFooter,
+  evidenceForCode,
   leadSignal,
   splitEvidenceSources,
 } from "./leadSignal";
@@ -188,6 +189,44 @@ describe("checkedClause", () => {
   it("says nothing for a missing or unparseable time", () => {
     expect(checkedClause(null)).toBe("");
     expect(checkedClause("not-a-date")).toBe("");
+  });
+});
+
+describe("evidenceForCode", () => {
+  it("explains the code the reader picked, not the worst one", () => {
+    const signals = [
+      sig({ code: "SANCTIONED", summary: "the worst" }),
+      sig({ code: "OFFSHORE_LEAKS", source_id: "icij", summary: "the chosen" }),
+    ];
+    expect(leadSignal(signals)?.signal.code).toBe("SANCTIONED");
+    expect(evidenceForCode(signals, "OFFSHORE_LEAKS")?.signal.summary).toBe("the chosen");
+  });
+
+  it("counts corroboration the same way the lead does", () => {
+    const signals = [
+      sig({ code: "SANCTIONED" }),
+      sig({ code: "PEP", source_id: "opensanctions", hit_id: "a" }),
+      sig({ code: "PEP", source_id: "everypolitician", hit_id: "b" }),
+    ];
+    expect(evidenceForCode(signals, "PEP")?.sourceCount).toBe(2);
+  });
+
+  it("can explain structural context, which can never be the lead", () => {
+    // A reader may select the chip; the section still leads with a finding.
+    const signals = [
+      sig({ code: "SANCTIONED" }),
+      sig({ code: "NON_EU_JURISDICTION", kind: "context", source_id: "gleif" }),
+    ];
+    expect(evidenceForCode(signals, "NON_EU_JURISDICTION")?.signal.code).toBe(
+      "NON_EU_JURISDICTION"
+    );
+    expect(leadSignal(signals)?.signal.code).toBe("SANCTIONED");
+  });
+
+  it("returns null for a code that is not in the list", () => {
+    // The selection survives a re-run that no longer produces the code; the
+    // caller falls back to the lead rather than rendering an empty box.
+    expect(evidenceForCode([sig({})], "DEBARMENT")).toBeNull();
   });
 });
 

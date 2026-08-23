@@ -46,6 +46,7 @@ import {
 } from "../lib/expand";
 import { reconcileBods, remapSignals, possiblySameAs } from "../lib/reconcile";
 import { buildSignalMap } from "../lib/signalScope";
+import { riskFindingCount } from "../lib/signalKind";
 import { RiskChip } from "./risk/RiskChip";
 import { SourceLegend } from "./SourceLegend";
 
@@ -207,6 +208,7 @@ export default function BodsGraphExplorer({
     () => signalsBeyond(signals, discoveredSignals),
     [signals, discoveredSignals]
   );
+  const subjectRiskCount = useMemo(() => riskFindingCount(signals), [signals]);
 
   // ── FullCheck provenance: source legend + highlight-by-source ──────────────
   const [highlightSource, setHighlightSource] = useState<string | null>(null);
@@ -384,11 +386,17 @@ export default function BodsGraphExplorer({
             Network risk
           </div>
           <p className="text-[13px] text-oo-ink leading-[1.5]">
-            QuickCheck flagged <strong>{signals.length}</strong> signal
-            {signals.length === 1 ? "" : "s"} on the subject.
+            {/* Distinct risk findings, not raw signals, and not "on the
+                subject": the list includes RELATED_* findings about related
+                parties and structural context, which the section above this
+                one is at pains to say is not a finding against the company.
+                Counted with `riskFindingCount` so this line and the verdict
+                strip cannot disagree. */}
+            QuickCheck flagged <strong>{subjectRiskCount}</strong> risk signal
+            {subjectRiskCount === 1 ? "" : "s"} in the records gathered so far.
             {discoveredSignals.length > 0 ? (
               <>
-                {" "}FullCheck surfaced <strong>{additionalSignals.length}</strong> more
+                {" "}FullCheck surfaced <strong>{riskFindingCount(additionalSignals)}</strong> more
                 across the wider network.
               </>
             ) : (

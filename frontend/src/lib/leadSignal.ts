@@ -89,9 +89,36 @@ export function leadSignal(
 ): LeadSignal | null {
   const risks = signals.filter(isRiskFinding);
   if (risks.length === 0) return null;
+  return evidenceFor(risks, pickWorst(risks), liveness);
+}
 
-  let best = risks[0];
-  for (const s of risks.slice(1)) {
+/**
+ * The same evidence, for a code the reader chose rather than the worst one.
+ *
+ * The section shows one box: the worst signal by default, and whichever chip
+ * the reader selects after that. Before this, each chip owned its own
+ * expansion, so selecting one opened a *second* box below the first in a
+ * different style — one sentence about the finding rendered two ways on one
+ * screen, which is what "some things are showing twice" meant.
+ *
+ * Structural context codes are eligible here and are not eligible for the
+ * lead: a reader can select one to read it, but a fact about how the company
+ * is put together can never be what the section leads with.
+ */
+export function evidenceForCode(
+  signals: RiskSignal[],
+  code: string,
+  liveness: Record<string, SourceLiveness> = {}
+): LeadSignal | null {
+  const matching = signals.filter((s) => s.code === code);
+  if (matching.length === 0) return null;
+  return evidenceFor(signals, pickWorst(matching), liveness);
+}
+
+/** The worst of a non-empty list, by severity then confidence then code. */
+function pickWorst(signals: RiskSignal[]): RiskSignal {
+  let best = signals[0];
+  for (const s of signals.slice(1)) {
     const bySeverity = severityOf(s.code) - severityOf(best.code);
     if (bySeverity > 0) {
       best = s;
@@ -112,10 +139,24 @@ export function leadSignal(
     // the backend happened to append two signals.
     if (s.code < best.code) best = s;
   }
+  return best;
+}
 
+/**
+ * The corroboration behind one chosen signal, counted over the whole list.
+ *
+ * `signals` is the full set, not just the instances of the chosen code: the
+ * count is "how many distinct sources said *this*", so it has to look at
+ * everything that could have said it.
+ */
+function evidenceFor(
+  signals: RiskSignal[],
+  best: RiskSignal,
+  liveness: Record<string, SourceLiveness>
+): LeadSignal {
   const subject = signalSubjectKey(best);
   const sourceIds: string[] = [];
-  for (const s of risks) {
+  for (const s of signals) {
     if (s.code !== best.code || signalSubjectKey(s) !== subject) continue;
     if (s.source_id && !sourceIds.includes(s.source_id)) sourceIds.push(s.source_id);
   }

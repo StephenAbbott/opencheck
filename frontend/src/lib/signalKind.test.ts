@@ -4,6 +4,7 @@ import {
   isRiskFinding,
   isContextObservation,
   partitionByKind,
+  riskFindingCount,
 } from "./signalKind";
 import type { RiskSignal } from "./api";
 
@@ -56,5 +57,43 @@ describe("signalKind", () => {
 
   it("returns empty groups rather than throwing on an empty input", () => {
     expect(partitionByKind([])).toEqual([[], []]);
+  });
+});
+
+describe("riskFindingCount", () => {
+  const one = (code: string, over: Partial<RiskSignal> = {}): RiskSignal => ({
+    code,
+    confidence: "high",
+    summary: "",
+    source_id: "opensanctions",
+    hit_id: "h",
+    evidence: {},
+    ...over,
+  });
+
+  it("counts findings, not signals", () => {
+    // The risk layer emits one signal per matching hit, so one finding can
+    // arrive three times. FullCheck's network-risk line said "9 signals" one
+    // screen under a verdict strip saying "4".
+    expect(
+      riskFindingCount([
+        one("OFFSHORE_LEAKS", { hit_id: "a" }),
+        one("OFFSHORE_LEAKS", { hit_id: "b" }),
+        one("OFFSHORE_LEAKS", { hit_id: "c" }),
+      ])
+    ).toBe(1);
+  });
+
+  it("leaves structural context out of a risk count", () => {
+    expect(
+      riskFindingCount([
+        one("SANCTIONED"),
+        one("NON_EU_JURISDICTION", { kind: "context" }),
+      ])
+    ).toBe(1);
+  });
+
+  it("is zero for nothing", () => {
+    expect(riskFindingCount([])).toBe(0);
   });
 });

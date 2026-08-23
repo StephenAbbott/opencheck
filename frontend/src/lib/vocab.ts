@@ -169,8 +169,40 @@ const ID_ABBREVIATIONS = new Set([
   "esg", "gem", "icij", "amla", "fatf", "oc", "ftm", "rdf", "api",
 ]);
 
+/**
+ * The registry's own names, published once so a component that has a source id
+ * but no map still says the source's name.
+ *
+ * The map arrives on `/sources` and was threaded down as a `sourceNames` prop.
+ * Threading is fine where it reaches; the problem is where it does not. A risk
+ * chip's expanded evidence read "Source: Opensanctions", the ESG cards and the
+ * source legend the same way — the registry calls it **OpenSanctions**, and
+ * `everypolitician` prettifies to "Everypolitician", `climatetrace` to
+ * "Climatetrace" against a registry name of "Global Energy Monitor / Climate
+ * TRACE". The prettifier is a fallback for a source the registry does not
+ * know, and using it for one the registry *does* know invents a brand name —
+ * the defect `sourceList` had with "Openfigi".
+ *
+ * Module-scoped for the same reason the "as filed" toggle is: it is one fact
+ * about the deployment, not per-component state, and every card must agree.
+ * An explicit prop still wins, so nothing that already threads the map
+ * changes behaviour.
+ */
+let REGISTRY_NAMES: Record<string, string> = {};
+
+/** Publish the registry's names. Called once when `/sources` resolves. */
+export function setSourceNames(names: Record<string, string>): void {
+  REGISTRY_NAMES = { ...names };
+}
+
+/** The names currently published — for tests and for callers that need the
+ *  whole map rather than one label. */
+export function getSourceNames(): Record<string, string> {
+  return REGISTRY_NAMES;
+}
+
 export function sourceLabel(sourceId: string, names?: Record<string, string>): string {
-  const mapped = names?.[sourceId];
+  const mapped = names?.[sourceId] ?? REGISTRY_NAMES[sourceId];
   if (mapped) return mapped;
   return sourceId
     .split(/[_-]/)
