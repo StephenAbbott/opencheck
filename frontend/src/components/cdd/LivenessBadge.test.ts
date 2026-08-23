@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ageInDays,
+  livenessLabel,
   livenessTitle,
   STALE_AFTER_DAYS,
   type SourceLiveness,
@@ -79,5 +80,44 @@ describe("staleness threshold", () => {
     expect(recent).not.toBeNull();
     expect(old! >= STALE_AFTER_DAYS).toBe(true);
     expect(recent! >= STALE_AFTER_DAYS).toBe(false);
+  });
+});
+
+describe("livenessLabel", () => {
+  it("says a live source is live, rather than saying nothing", () => {
+    // Until Phase 126 the badge returned null for a live source — "the
+    // unmarked default". But on a report where other rows are snapshots or
+    // curated sets, no badge is ambiguous: a reader cannot tell live from a
+    // badge that failed to render, and cannot scan the column at all. It also
+    // sat against this project's rule that an absence is stated in the same
+    // voice as a presence.
+    const now = new Date("2026-08-22T18:00:00Z");
+    expect(
+      livenessLabel(make({ liveness: "live", retrieved_at: "2026-08-22T09:00:00Z" }), now),
+    ).toBe("Checked today");
+  });
+
+  it("dates a live check that was not today", () => {
+    const now = new Date("2026-08-22T18:00:00Z");
+    expect(
+      livenessLabel(make({ liveness: "live", retrieved_at: "2026-08-19T09:00:00Z" }), now),
+    ).toMatch(/^Checked 19 Aug/);
+  });
+
+  it("does not claim a date it does not have", () => {
+    expect(livenessLabel(make({ liveness: "live", retrieved_at: undefined }))).toBe(
+      "Checked live",
+    );
+  });
+
+  it("keeps placeholder data unmistakable", () => {
+    // The one state a reader must never read as real data.
+    expect(livenessLabel(make({ liveness: "stub", label: "Stub" }))).toBe("Placeholder data");
+  });
+
+  it("labels every liveness state", () => {
+    for (const liveness of ["live", "cached", "snapshot", "curated", "stub"] as const) {
+      expect(livenessLabel(make({ liveness })), liveness).toBeTruthy();
+    }
   });
 });

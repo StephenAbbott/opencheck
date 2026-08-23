@@ -24,6 +24,43 @@ export interface SourceLiveness {
 
 /** Short, absolute date — "3 Jun 2026". Absolute beats relative here: "2 months
  *  ago" is friendlier but a reader checking a company wants the actual date. */
+/** Same calendar day in the reader's timezone — "Checked today" is only
+ *  true relative to where they are, not to UTC. */
+/**
+ * The text on the freshness chip.
+ *
+ * Exported so it can be tested: the frontend suite is logic-only, so a rule
+ * that lives inside the component body is untestable — which is how the old
+ * "live renders nothing" behaviour survived unpinned and contradicted the v2
+ * design without anything noticing.
+ */
+export function livenessLabel(info: SourceLiveness, now: Date = new Date()): string {
+  if (info.liveness === "live") {
+    if (!info.retrieved_at) return "Checked live";
+    return isToday(info.retrieved_at, now)
+      ? "Checked today"
+      : `Checked ${formatDate(info.retrieved_at)}`;
+  }
+  if (info.liveness === "snapshot" && info.retrieved_at)
+    return `Snapshot · ${formatDate(info.retrieved_at)}`;
+  if (info.liveness === "cached" && info.retrieved_at)
+    return `Cached · ${formatDateTime(info.retrieved_at)}`;
+  if (info.liveness === "curated")
+    return info.retrieved_at ? `Curated set · ${formatDate(info.retrieved_at)}` : "Curated set";
+  if (info.liveness === "stub") return "Placeholder data";
+  return info.label;
+}
+
+function isToday(iso: string, now: Date = new Date()): boolean {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return false;
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
 function formatDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
@@ -95,22 +132,16 @@ export function LivenessBadge({
     days !== null &&
     days >= STALE_AFTER_DAYS;
 
-  // A live card is the unmarked default — badging it adds noise without
-  // telling the reader anything they would not have assumed.
-  if (info.liveness === "live" && !stale) return null;
-
-  let text = info.label;
-  if (info.liveness === "snapshot" && info.retrieved_at) {
-    text = `Snapshot · ${formatDate(info.retrieved_at)}`;
-  } else if (info.liveness === "cached" && info.retrieved_at) {
-    text = `Cached · ${formatDateTime(info.retrieved_at)}`;
-  } else if (info.liveness === "curated") {
-    text = info.retrieved_at
-      ? `Curated set · ${formatDate(info.retrieved_at)}`
-      : "Curated set";
-  } else if (info.liveness === "stub") {
-    text = "Placeholder data";
-  }
+  // Phase 126: a live source now says so.
+  //
+  // This used to return null — "a live card is the unmarked default, badging it
+  // adds noise". But on a report where several rows ARE snapshots, cached or
+  // curated, the absence of a badge is ambiguous: a reader cannot tell live
+  // from a badge that failed to render, and cannot scan the column at all. It
+  // also sat against this project's own rule that an absence is stated in the
+  // same voice as a presence. The v2 design puts a freshness chip on every row
+  // for exactly that reason.
+  const text = livenessLabel(info);
 
   return (
     <span

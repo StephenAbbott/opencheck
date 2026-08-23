@@ -656,7 +656,7 @@ export function DeepenBlock({
       {showDiagram && detail.bods.length > 0 && (
         <section>
           <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
-            BODS · {detail.bods.length} statement{detail.bods.length === 1 ? "" : "s"}
+            Ownership diagram — {detail.bods.length} record{detail.bods.length === 1 ? "" : "s"} mapped
           </h4>
           {detail.bods_issues.length > 0 && (
             <p className="text-amber-800 mb-2">
@@ -691,7 +691,7 @@ export function DeepenBlock({
       {showStatements && detail.bods.length > 0 && (
         <section>
           <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
-            Mapped statements
+            What this source published
           </h4>
           <BODSStatementCards statements={detail.bods as BODSStmt[]} />
         </section>
@@ -702,7 +702,7 @@ export function DeepenBlock({
           {detail.bods.length > 0 && (
             <div>
               <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-1.5">
-                BODS statements
+                Mapped records (BODS v0.4)
               </h4>
               <pre className="max-h-80 overflow-auto bg-white border border-oo-rule rounded-oo p-3 text-[10px]">
                 {JSON.stringify(detail.bods, null, 2)}
@@ -711,7 +711,7 @@ export function DeepenBlock({
           )}
           <div>
             <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-1.5">
-              Raw source payload
+              The source's original response
             </h4>
             <pre className="max-h-80 overflow-auto bg-white border border-oo-rule rounded-oo p-3 text-[10px]">
               {JSON.stringify(detail.raw, null, 2)}
@@ -935,6 +935,112 @@ function HitFinding({ hit }: { hit: SourceHit }) {
   );
 }
 
+/**
+ * The compact action group on a source row (Phase 126).
+ *
+ * v1 gave the graph a full-width blue call-to-action strip and demoted
+ * everything else to 11px mono text links — `12 statements`, `Raw JSON`. The
+ * v2 design makes all three equal-weight outline chips in one right-aligned
+ * group, labelled by **what they contain** rather than by the data model: how
+ * many companies, how many changes, and one neutral `Data` disclosure standing
+ * in for the rest.
+ *
+ * The counts matter more than they look. "14 companies" tells a reader whether
+ * opening the diagram is worth it; "Explore the ownership graph" does not.
+ */
+function ActionChip({
+  onClick,
+  expanded,
+  controls,
+  tone = "neutral",
+  icon,
+  children,
+}: {
+  onClick: () => void;
+  expanded: boolean;
+  controls: string;
+  tone?: "network" | "timeline" | "neutral";
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const tones = {
+    network: "border-oo-graph-ownership/40 bg-oo-graph-ownershipTint text-oo-graph-ownershipText",
+    timeline: "border-oo-rule bg-oo-bg text-oo-burst",
+    neutral: "border-oo-softBorder bg-white text-oo-blue",
+  } as const;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={expanded}
+      aria-controls={controls}
+      className={`inline-flex items-center gap-1.5 rounded-oo border px-3 py-1.5 text-oo-small font-medium transition-colors hover:brightness-95 ${tones[tone]}`}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+/**
+ * One tile in the Data drawer.
+ *
+ * The drawer is a **menu of things to open**, not the things themselves. v1
+ * rendered the Cytoscape graph and two raw JSON dumps inline under headings
+ * reading `BODS · N statements`, `Mapped statements`, `BODS statements` and
+ * `Raw source payload` — the data model as the interface. Each tile here says
+ * what it holds in a human clause and opens it on click.
+ */
+function DataTile({
+  title,
+  meta,
+  action,
+  tone = "neutral",
+  open = false,
+  onClick,
+  controls,
+}: {
+  title: string;
+  meta: string;
+  /** Present only on tiles that reveal something; a tile that merely describes
+   *  what the download contains has no action and is not a button. */
+  action?: string;
+  tone?: "network" | "timeline" | "neutral";
+  open?: boolean;
+  onClick?: () => void;
+  controls?: string;
+}) {
+  const tones = {
+    network: "border-oo-graph-ownership/40 bg-oo-graph-ownershipTint",
+    timeline: "border-oo-rule bg-oo-bg",
+    neutral: "border-oo-rule bg-oo-bg",
+  } as const;
+  const body = (
+    <>
+      <p className="text-oo-small font-bold text-oo-ink">{title}</p>
+      <p className="text-oo-small text-oo-muted">{meta}</p>
+      {action && (
+        <p className="mt-1.5 text-oo-small font-bold text-oo-blue">
+          {open ? "Close" : action}
+        </p>
+      )}
+    </>
+  );
+  const cls = `rounded-oo border px-3.5 py-3 text-left ${tones[tone]}`;
+  if (!onClick) return <div className={cls}>{body}</div>;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={open}
+      aria-controls={controls}
+      className={`${cls} transition-colors hover:brightness-95`}
+    >
+      {body}
+    </button>
+  );
+}
+
 function HitRow({
   hit,
   riskSignals,
@@ -1013,6 +1119,23 @@ function HitRow({
     ? `${breakdown.entities} ${breakdown.entities === 1 ? "entity" : "entities"} · ${breakdown.relationships} ${breakdown.relationships === 1 ? "relationship" : "relationships"}`
     : "Interactive ownership & control graph";
 
+  // The chip is labelled by how many parties are in the diagram — "14
+  // companies" tells a reader whether opening it is worth the click, where
+  // "Explore the ownership graph" does not. Falls back to the neutral noun
+  // while the count is still unknown rather than inventing one.
+  const partyLabel = breakdown
+    ? `${breakdown.entities} ${breakdown.entities === 1 ? "party" : "parties"}`
+    : "Diagram";
+
+  // One disclosure replaces v1's two mono text links. It starts open when a
+  // tile's content is already showing, so the drawer never hides what is on
+  // screen — that would leave a graph visible with no control to close it.
+  const [dataOpen, setDataOpen] = useState(false);
+  const toggleData = () => setDataOpen((v) => !v);
+  useEffect(() => {
+    if (showDiagram || showStatements || showJson) setDataOpen(true);
+  }, [showDiagram, showStatements, showJson]);
+
   return (
     <li className="px-5 py-4">
       {/* Entity name (+ optional title accessory, e.g. See timeline), summary, risk chips */}
@@ -1052,54 +1175,79 @@ function HitRow({
         </div>
       )}
 
-      {/* Visualise — primary invitation strip (the graph is OpenCheck's headline
-          feature, so it gets a full-width call to action rather than a peer pill).
-          Hidden when the source returns ≤ 1 statement: a lone entity is not a graph. */}
-      {showGraphStrip && (
-      <button
-        type="button"
-        onClick={toggleDiagram}
-        aria-expanded={showDiagram}
-        aria-controls={panelId}
-        className="mt-3 w-full flex items-center gap-3 rounded-oo border border-[#bcdcff] bg-[#dceeff] px-3 py-2 text-left transition-colors hover:bg-[#cfe6ff]"
-      >
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-oo-blue text-white">
-          <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <circle cx="6" cy="2.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
-            <circle cx="2" cy="9.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
-            <circle cx="10" cy="9.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
-            <line x1="6" y1="4.3" x2="2.8" y2="7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-            <line x1="6" y1="4.3" x2="9.2" y2="7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      {/* The v2 action group: three equal-weight chips labelled by what they
+          contain. v1 gave the graph a full-width blue strip and demoted the
+          rest to 11px mono links, which is the data model as the interface. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {showGraphStrip && (
+          <ActionChip
+            onClick={toggleDiagram}
+            expanded={showDiagram}
+            controls={panelId}
+            tone="network"
+            icon={
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="6" cy="6" r="2.3" /><circle cx="18" cy="6" r="2.3" />
+                <circle cx="12" cy="18" r="2.3" />
+                <path d="M8 7.5 10.7 15.6M16 7.5 13.3 15.6M8.5 6h7" />
+              </svg>
+            }
+          >
+            {showDiagram ? "Hide diagram" : partyLabel}
+          </ActionChip>
+        )}
+        {titleAccessory}
+        <ActionChip
+          onClick={toggleData}
+          expanded={dataOpen}
+          controls={panelId}
+        >
+          Data
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+            className={`transition-transform ${dataOpen ? "rotate-180" : ""}`}>
+            <path d="m6 9 6 6 6-6" />
           </svg>
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[13px] font-semibold text-[#16357a] leading-tight">
-            {showDiagram ? "Hide ownership graph" : "Explore the ownership graph"}
-          </span>
-          <span className="block text-[11px] font-mono text-[#3a5a9a] truncate">
-            {graphMeta}
-          </span>
-        </span>
-        <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden="true"
-          className={`shrink-0 text-[#16357a] transition-transform ${showDiagram ? "rotate-90" : ""}`}>
-          <path d="M4.5 2.5 L8 6 L4.5 9.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </button>
-      )}
-
-      {/* Secondary drill-downs — quieter than the graph CTA. */}
-      <div className={`flex flex-wrap gap-4 text-[11px] font-mono ${showGraphStrip ? "mt-2" : "mt-3"}`}>
-        <button type="button" onClick={toggleStatements} aria-expanded={showStatements} aria-controls={panelId}
-          className={`hover:underline ${showStatements ? "text-oo-blue" : "text-oo-muted hover:text-oo-ink"}`}>
-          {showStatements ? "Hide statements" : (
-            hasKnownCount ? `${stmtCount} statement${stmtCount === 1 ? "" : "s"}` : "Statements"
-          )}
-        </button>
-        <button type="button" onClick={toggleJson} aria-expanded={showJson} aria-controls={panelId}
-          className={`hover:underline ${showJson ? "text-oo-blue" : "text-oo-muted hover:text-oo-ink"}`}>
-          {showJson ? "Hide JSON" : "Raw JSON"}
-        </button>
+        </ActionChip>
       </div>
+
+      {/* The Data drawer: a menu of what this source holds, in human clauses.
+          Each tile opens the thing it names; the two that only describe what a
+          download contains are not buttons. */}
+      {dataOpen && (
+        <div className="mt-3 border-t border-oo-rule pt-3">
+          <div className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))" }}>
+            {showGraphStrip && (
+              <DataTile
+                title="Ownership diagram"
+                meta={graphMeta}
+                action="Open diagram →"
+                tone="network"
+                open={showDiagram}
+                onClick={toggleDiagram}
+                controls={panelId}
+              />
+            )}
+            <DataTile
+              title="Structured records"
+              meta={hasKnownCount ? `${stmtCount} statement${stmtCount === 1 ? "" : "s"}, BODS v0.4` : "Mapped to BODS v0.4"}
+              action="Open records →"
+              open={showStatements}
+              onClick={toggleStatements}
+              controls={panelId}
+            />
+            <DataTile
+              title="Original response"
+              meta="JSON, as the source sent it"
+              action="Open response →"
+              open={showJson}
+              onClick={toggleJson}
+              controls={panelId}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Expanded content */}
       {anyOpen && (
@@ -1211,20 +1359,25 @@ export function SourceBucketCard({
       : undefined;
 
   // Rendered inline with the entity title (right-aligned) on the first hit row.
+  // Sits in the row's action group beside the diagram chip, not floating at
+  // the top-right of the first hit. The mockup labels it with a change count;
+  // that count only exists once HistoryTimeline has fetched, so the chip says
+  // what it opens until then rather than inventing a number.
   const timelineButton = showTimelineButton ? (
-    <button
-      type="button"
+    <ActionChip
       onClick={() => setShowTimeline((v) => !v)}
-      aria-expanded={showTimeline}
-      aria-controls={`oc-timeline-${bucket.sourceId}`}
-      className="inline-flex items-center gap-1.5 rounded-oo border border-oo-rule bg-white px-2.5 py-1 text-[11px] font-semibold text-oo-ink transition-colors hover:bg-oo-bg"
+      expanded={showTimeline}
+      controls={`oc-timeline-${bucket.sourceId}`}
+      tone="timeline"
+      icon={
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 4v4h4" /><path d="M12 8v4l3 2" />
+        </svg>
+      }
     >
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-        <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" />
-        <path d="M6 3.5 V6 L7.8 7.2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      {showTimeline ? "Hide timeline" : "See timeline"}
-    </button>
+      {showTimeline ? "Hide changes" : "Changes over time"}
+    </ActionChip>
   ) : null;
 
   const stateLabel = bucket.error
@@ -1238,14 +1391,24 @@ export function SourceBucketCard({
     <>
     <article
       id={`oc-source-${bucket.sourceId}`}
-      className="bg-white border border-oo-rule rounded-oo scroll-mt-24 transition-shadow"
+      className={`rounded-oo border scroll-mt-24 transition-shadow ${
+        bucket.error ? "border-oo-warn-border bg-oo-warn-bg" : "border-oo-rule bg-white"
+      }`}
     >
       <header className="px-5 py-3 border-b border-oo-rule flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="font-head font-bold text-[15px] text-oo-ink">
+        {/* Freshness sits inline beside the name (Phase 126), not on its own
+            line beneath it: the v2 design puts every row's freshness on the
+            same baseline so the column can be scanned in one pass. */}
+        <div className="min-w-0 flex flex-wrap items-center gap-2.5">
+          <h3 className="font-head font-bold text-oo-lead text-oo-ink">
             {bucket.sourceName}
           </h3>
-          {!bucket.error && <LivenessBadge info={liveness} className="mt-1" />}
+          {!bucket.error && <LivenessBadge info={liveness} />}
+          {bucket.error && (
+            <span className="rounded-full border border-oo-warn-border bg-white px-2.5 py-0.5 text-oo-meta font-medium text-oo-warn-text">
+              Did not answer
+            </span>
+          )}
         </div>
         {(() => {
           const firstHit = bucket.hits.find((h) => !h.is_stub);
@@ -1269,15 +1432,18 @@ export function SourceBucketCard({
       </header>
       {bucket.error && (
         <div className="px-5 py-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-[13px] text-red-700" role="alert">{bucket.error}</p>
+          <p className="text-oo-small text-oo-warn-text" role="alert">
+            Did not answer — {bucket.error}. Nothing was checked here, so treat
+            this source as unknown rather than clear.
+          </p>
           {onRetry && (
             <button
               type="button"
               onClick={onRetry}
               disabled={retrying}
-              className="shrink-0 rounded border border-red-300 px-3 py-1 text-[12px] font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
+              className="shrink-0 rounded-oo border border-oo-warn-border px-3 py-1.5 text-oo-small font-semibold text-oo-warn-text transition-colors hover:bg-oo-warn-bg disabled:opacity-50"
             >
-              {retrying ? <span role="status">Retrying…</span> : "Retry source"}
+              {retrying ? <span role="status">Retrying…</span> : "Try again"}
             </button>
           )}
         </div>
