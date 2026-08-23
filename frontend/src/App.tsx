@@ -1839,7 +1839,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           <div
             role="tablist"
             aria-label="Check mode"
-            className="mb-6 flex items-end gap-1 overflow-x-auto border-b border-oo-rule"
+            /* No bottom margin: the tab strip claims the card beneath it, and
+               a 24px gap between them breaks the claim — the active tab's
+               white edge has to meet the card's. The honesty notices that can
+               sit between the two carry their own top margin instead, so they
+               are the exception rather than the default spacing. */
+            className="flex items-end gap-1 overflow-x-auto border-b border-oo-rule"
           >
             {MODE_TABS.map((tab) => {
               const active = mode === tab.id;
@@ -3603,7 +3608,7 @@ function PanelErrorsNotice({ errors }: { errors: PanelError[] }) {
     <section
       role="status"
       aria-label="Part of this report could not be loaded"
-      className="mb-8 rounded-oo border border-oo-warn-border bg-oo-warn-bg p-5"
+      className="mt-6 mb-8 rounded-oo border border-oo-warn-border bg-oo-warn-bg p-5"
     >
       <h2 className="font-head font-bold text-oo-body text-oo-warn-text">
         Part of this report could not be loaded
@@ -3656,7 +3661,7 @@ function DegradedScreensNotice({
     <section
       role="status"
       aria-label="Screening incomplete"
-      className="mb-8 rounded-oo border border-amber-300 bg-amber-50 p-5"
+      className="mt-6 mb-8 rounded-oo border border-amber-300 bg-amber-50 p-5"
     >
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-start gap-3 min-w-0">

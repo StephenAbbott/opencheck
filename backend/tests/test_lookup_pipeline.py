@@ -820,3 +820,25 @@ def test_graph_shape_tolerates_missing_and_malformed_identifiers() -> None:
         {"recordType": "entity", "recordDetails": {"identifiers": []}},
     ]
     assert _graph_shape(bods, [])["companies"] == 4
+
+
+def test_sources_past_the_deepen_cap_still_report_freshness(client, tmp_path) -> None:
+    """The count-only pass is the last chance to say when a source was read.
+
+    `_select_deepen_pairs` caps full deepens at `deepen_top`; everything past it
+    goes through `_count_only`, which fetched the bundle and then threw the
+    provenance away. sec_edgar is resolved from a CIK outside the dispatch loop
+    *and* is not carved out of the cap, so on a busy lookup it hit both gaps at
+    once and rendered the only source row on the page with no freshness note.
+    """
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)
+
+    payload = client.get("/lookup", params={"lei": lei, "deepen_top": 0}).json()
+    liveness = payload.get("source_liveness") or {}
+    hit_sources = {h["source_id"] for h in payload["hits"] if not h.get("is_stub")}
+    missing = hit_sources - set(liveness)
+    assert not missing, (
+        f"with deepen_top=0 these sources reached the report with no liveness: "
+        f"{sorted(missing)}"
+    )
