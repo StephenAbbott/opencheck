@@ -54,6 +54,10 @@ dependencies = [
     # would silently drop /mcp. Migration tracked on the "Update MCP" ticket.
     "mcp>=1.28,<2",
     "slowapi>=0.1.10",
+    # openpyxl — the /export?format=xlsx workbook. Pure Python, no system
+    # libraries, and imported lazily inside the builder so a deployment
+    # without it loses one export format rather than the whole app.
+    "openpyxl>=3.1",
 ]
 
 [project.optional-dependencies]

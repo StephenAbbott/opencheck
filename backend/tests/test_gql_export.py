@@ -268,3 +268,63 @@ def test_export_network_csv(monkeypatch):
         members = {n.split("/", 1)[1] for n in zf.namelist()}
     assert "ownership_edges.csv" in members
     assert "create_property_graph.sql" not in members
+
+
+def test_export_xlsx_is_the_csv_tables_as_one_workbook(monkeypatch):
+    """One sheet per table, plus the licence notes.
+
+    The workbook is built from the same `build_gql_files` writer as `csv` — a
+    second projection of the graph into rows would be free to disagree with the
+    first, and the point of the format is that it *is* those tables, opened.
+    The licence notes travel as a sheet rather than a sibling file: dropping
+    them is the one thing the CSV zip does that this must not stop doing.
+    """
+    monkeypatch.setattr("opencheck.routers.export._lookup_impl", _fake_lookup)
+    client = TestClient(app)
+    r = client.get("/export", params={"lei": "2138000000000000A001", "format": "xlsx"})
+    assert r.status_code == 200, r.text
+    assert r.headers["content-type"].startswith(
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert ".xlsx" in r.headers["content-disposition"]
+
+    from openpyxl import load_workbook
+
+    wb = load_workbook(io.BytesIO(r.content))
+    assert wb.sheetnames == [
+        "Entity Nodes", "Person Nodes", "Ownership Edges", "Licences"
+    ], wb.sheetnames
+
+    # The same rows the CSV carries, header included.
+    csv_files = {
+        n: c for n, c in build_gql_files(_fake_lookup_response().bods).items()
+        if n.endswith(".csv")
+    }
+    entity_rows = csv_files["entity_nodes.csv"].strip().splitlines()
+    ws = wb["Entity Nodes"]
+    assert ws.max_row == len(entity_rows)
+    assert ws.freeze_panes == "A2"
+
+    notes = "\n".join(str(row[0].value or "") for row in wb["Licences"].iter_rows())
+    assert "OpenCheck export" in notes
+
+
+def test_export_xlsx_writes_identifiers_as_text(monkeypatch):
+    """A company number with leading zeros must survive the round trip.
+
+    Excel turns a numeric-looking cell into a number and drops the zeros. In a
+    due-diligence file that is a corrupted identifier, not a formatting nit —
+    "00102498" and "102498" are different companies at Companies House.
+    """
+    monkeypatch.setattr("opencheck.routers.export._lookup_impl", _fake_lookup)
+    client = TestClient(app)
+    r = client.get("/export", params={"lei": "2138000000000000A001", "format": "xlsx"})
+
+    from openpyxl import load_workbook
+
+    wb = load_workbook(io.BytesIO(r.content))
+    for name in ("Entity Nodes", "Person Nodes", "Ownership Edges"):
+        for row in wb[name].iter_rows():
+            for cell in row:
+                if cell.value is not None:
+                    assert isinstance(cell.value, str), (name, cell.coordinate, cell.value)

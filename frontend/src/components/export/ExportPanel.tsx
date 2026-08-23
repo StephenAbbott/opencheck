@@ -63,6 +63,7 @@ const FORMAT_LABEL: Record<Format, string> = {
   json: "BODS JSON",
   zip: "ZIP bundle",
   csv: "CSV tables",
+  xlsx: "Excel",
   jsonl: "JSONL",
   xml: "BODS XML",
   ftm: "FollowTheMoney",
@@ -117,6 +118,13 @@ const BLURB: Record<Format, ReactNode> = {
       Three flat tables — companies, people and the ownership or control edges
       between them — for a spreadsheet or a database load. The same tables the
       BigQuery package carries, without its schema and queries.
+    </>
+  ),
+  xlsx: (
+    <>
+      The same three tables as one Excel workbook, a sheet each, with the
+      licence notes on a fourth. Every cell is written as text, so a company
+      number keeps its leading zeros instead of becoming a number.
     </>
   ),
   jsonl: (

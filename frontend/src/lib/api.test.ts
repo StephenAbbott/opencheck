@@ -49,7 +49,7 @@ describe("EXPORT_FORMATS", () => {
     expect([...EXPORT_FORMATS].sort()).toEqual(
       [
         "amlai", "csv", "cypher", "ftm", "gql", "json", "jsonl", "rdf",
-        "senzing", "xml", "zip",
+        "senzing", "xlsx", "xml", "zip",
       ].sort()
     );
   });
