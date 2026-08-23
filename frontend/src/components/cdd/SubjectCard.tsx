@@ -2,7 +2,6 @@ import { useState } from "react";
 import { trackEvent } from "../../lib/analytics";
 import { BASE_URL } from "../../lib/api";
 
-/** How many signal chips show inline before the "+N more" link. */
 
 /** "just now" / "1 min ago" / "12 min ago" from an ISO timestamp. */
 export function replayAgeLabel(fetchedAt: string, now: Date = new Date()): string {

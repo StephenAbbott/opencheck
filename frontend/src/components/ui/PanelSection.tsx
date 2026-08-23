@@ -40,7 +40,10 @@ export default function PanelSection({
   title?: React.ReactNode;
   aside?: React.ReactNode;
   id?: string;
-  /** The final band, which carries no rule beneath it. */
+  /** Rarely needed: `PanelCard` already strips the rule from its last child in
+   *  CSS, which is more reliable than every call site remembering to pass a
+   *  flag — the first version defaulted to false and no caller ever set it, so
+   *  every card drew a doubled line at its foot. */
   last?: boolean;
   className?: string;
   children: React.ReactNode;
@@ -67,11 +70,8 @@ export default function PanelSection({
 }
 
 /**
- * The card the bands sit in.
- *
- * Rendered by the tabpanel so it is visually welded to the active tab: the tab
- * already draws a white bottom edge over the strip's border, and this supplies
- * the surface that edge opens onto.
+ * The card the bands sit in, rendered by the tabpanel so the mode tab claims
+ * what is beneath it.
  */
 export function PanelCard({
   className = "",
@@ -80,7 +80,16 @@ export function PanelCard({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={`mb-8 rounded-oo rounded-tl-none border border-oo-rule bg-white ${className}`.trim()}
+      // `[&>*:last-child]:border-b-0` removes the doubled line where the final
+      // band's rule meets the card's own border.
+      //
+      // The square top-left corner of the first version was meant to weld the
+      // card to the active tab, but the tablist carries its own bottom margin
+      // and the degraded-screens and panel-error notices can sit between the
+      // two — so it pointed at empty grey and read as a rendering glitch. The
+      // card is fully rounded; the tab strip's own white bottom edge is what
+      // carries the join.
+      className={`mb-8 overflow-hidden rounded-oo border border-oo-rule bg-white [&>*:last-child]:border-b-0 ${className}`.trim()}
       {...rest}
     >
       {children}

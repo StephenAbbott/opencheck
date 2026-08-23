@@ -1,7 +1,7 @@
 {
   "src/App.tsx": {
     "hex": 14,
-    "text": 132,
+    "text": 131,
     "vocab": 0
   },
   "src/components/BODSGraph.tsx": {
@@ -56,7 +56,7 @@
   },
   "src/components/cdd/MeipSignpost.tsx": {
     "hex": 0,
-    "text": 8,
+    "text": 7,
     "vocab": 0
   },
   "src/components/cdd/NarrativePanel.tsx": {
@@ -81,12 +81,12 @@
   },
   "src/components/cdd/SecuritiesSection.tsx": {
     "hex": 3,
-    "text": 17,
+    "text": 16,
     "vocab": 0
   },
   "src/components/cdd/SourceBucketCard.tsx": {
-    "hex": 6,
-    "text": 57,
+    "hex": 0,
+    "text": 50,
     "vocab": 0
   },
   "src/components/cdd/SubjectCard.tsx": {

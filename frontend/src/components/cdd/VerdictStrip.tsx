@@ -85,7 +85,7 @@ export function VerdictStrip({
               ))}
               {riskSignals.length > preview.length && (
                 <span className="text-oo-small text-oo-muted self-center">
-                  +{riskSignals.length - preview.length} more below
+                  +{riskSignals.length - preview.length} more
                 </span>
               )}
             </div>

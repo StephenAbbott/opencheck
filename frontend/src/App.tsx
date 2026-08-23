@@ -271,8 +271,8 @@ export default function App() {
   // own denominator undermines the one number on the page whose whole job is
   // to say how much was checked.
   const answeredApplicable = useMemo(
-    () => answeredCount(applicableSources, completedSources),
-    [applicableSources, completedSources]
+    () => answeredCount(applicableSources, completedSources, erroredSources),
+    [applicableSources, completedSources, erroredSources]
   );
   const [streaming, setStreaming] = useState(false);
   // QuickCheck (subject screening, default) vs FullCheck (network EDD) vs
@@ -1939,6 +1939,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           </div>
         ) : (
           <div id="panel-quick" role="tabpanel" aria-labelledby="tab-quick" tabIndex={-1}>
+          {streamingLei && (
           <PanelCard>
         {streamingLei && mode === "quick" && (
           <NarrativePanel lei={streamingLei} legalName={legalName} />
@@ -1974,8 +1975,14 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 </p>
               </>
             ) : (
+              // The verdict strip already says "No risk signals surfaced
+              // across the sources that answered" one screen above; repeating
+              // it verbatim here reads as a rendering fault. This section only
+              // exists in that case to hold the structural chips, so it says
+              // what it is holding.
               <p className="text-oo-small text-oo-muted">
-                No risk signals surfaced across the sources that answered.
+                Nothing adverse surfaced. The structural facts below describe how
+                the company is put together.
               </p>
             )}
 
@@ -2161,6 +2168,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           />
         )}
           </PanelCard>
+          )}
           </div>
         )}
         </>
@@ -3118,6 +3126,12 @@ function CollapsedSection({
       id={htmlId}
       className="border-b border-oo-rule scroll-mt-4"
     >
+      {/* The WAI-ARIA disclosure pattern: the heading WRAPS the button. A
+          heading nested inside a button is flattened into the button's
+          accessible name and exposed as a heading by almost nothing — which
+          would have restyled these to look like section heads while leaving
+          them out of the outline, the exact defect this phase set out to fix. */}
+      <h2 className="m-0">
       <button
         type="button"
         aria-expanded={open}
@@ -3132,7 +3146,7 @@ function CollapsedSection({
           <span className="block font-head font-bold text-oo-head text-oo-ink">
             {label}
           </span>
-          <span className="block text-[13px] text-oo-ink mt-1">{summary}</span>
+          <span className="block text-oo-small text-oo-ink mt-1">{summary}</span>
         </span>
         <svg
           width="16"
@@ -3151,8 +3165,9 @@ function CollapsedSection({
           <path d="m9 18 6-6-6-6" />
         </svg>
       </button>
+      </h2>
       {open && (
-        <div id={`${htmlId}-body`} className="px-5 pb-5">
+        <div id={`${htmlId}-body`} className="px-4 pb-5 sm:px-6">
           {children}
         </div>
       )}
