@@ -647,3 +647,22 @@ def test_graph_shape_counts_the_mapped_graph(client, tmp_path) -> None:
     distinct = {i for i in ids if isinstance(i, str)}
     total = shape["companies"] + shape["people"] + shape["relationships"]
     assert total <= len(distinct)
+
+
+def test_every_hit_source_has_a_freshness_claim(client, tmp_path) -> None:
+    """No source may reach the report with nothing said about its currency.
+
+    Two sources are dispatched outside the `_run` loop that fills
+    `provenances`: the GLEIF anchor, resolved before it, and sec_edgar,
+    resolved from a CIK during it. Both rendered a row with no freshness note
+    at all — which a reader can only read as "we do not know when this was
+    checked", next to rows that say "Checked today".
+    """
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)
+
+    payload = client.get("/lookup", params={"lei": lei}).json()
+    liveness = payload.get("source_liveness") or {}
+    hit_sources = {h["source_id"] for h in payload["hits"] if not h.get("is_stub")}
+    missing = hit_sources - set(liveness)
+    assert not missing, f"sources on the report with no liveness entry: {sorted(missing)}"

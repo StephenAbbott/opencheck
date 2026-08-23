@@ -1961,6 +1961,16 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           <div id="panel-quick" role="tabpanel" aria-labelledby="tab-quick" tabIndex={-1}>
           {streamingLei && (
           <PanelCard>
+        {/* The mode's own sentence, as the card's first band. The strings have
+            been on MODE_TABS since Phase 122 and rendered nowhere: a tab
+            labelled "QuickCheck" says what it is called, not what it does, and
+            a reader arriving on a shared link has no other way to find out
+            which of the four they are looking at. */}
+        <PanelSection>
+          <p className="text-oo-small text-oo-muted">
+            {MODE_TABS.find((t) => t.id === "quick")?.blurb}
+          </p>
+        </PanelSection>
         {streamingLei && mode === "quick" && (
           <NarrativePanel lei={streamingLei} legalName={legalName} />
         )}
@@ -2143,12 +2153,15 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                         ? `Showing the first ${gleifChildrenInfo.fetched} of ${gleifChildrenInfo.total.toLocaleString()} direct subsidiaries in BODS statements (GLEIF Level 2)`
                         : undefined
                     }
+                    /* Informational percolation matches (Phase 97) sit with
+                       the source they came from — inside its card, not as a
+                       second card stacked underneath it. */
+                    extra={
+                      b.sourceId === "openaleph" && oaScreening.length > 0 ? (
+                        <OpenAlephArchiveMatches matches={oaScreening} />
+                      ) : undefined
+                    }
                   />
-                  {/* Informational percolation matches (Phase 97) sit with
-                      the source they came from. */}
-                  {b.sourceId === "openaleph" && oaScreening.length > 0 && (
-                    <OpenAlephArchiveMatches matches={oaScreening} />
-                  )}
                 </div>
               ))}
               {pendingCddSources.map((id) => (
@@ -2159,7 +2172,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   visible in that case rather than dropping them. */}
               {oaScreening.length > 0 &&
                 !cddBuckets.some((b) => b.sourceId === "openaleph") && (
-                  <OpenAlephArchiveMatches matches={oaScreening} />
+                  <OpenAlephArchiveMatches matches={oaScreening} standalone />
                 )}
             </div>
           </PanelSection>

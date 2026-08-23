@@ -17,7 +17,8 @@
  */
 
 import { useState } from "react";
-import { topicList } from "../../lib/vocab";
+import { topicLabel } from "../../lib/vocab";
+import { ActionChip, Chip, SectionHeading } from "../ui";
 import type { OpenAlephScreeningMatch } from "../../lib/api";
 
 /** Matches shown before the "Show all" toggle expands the list. */
@@ -37,8 +38,13 @@ export function visibleArchiveMatches(
 
 export function OpenAlephArchiveMatches({
   matches,
+  standalone = false,
 }: {
   matches: OpenAlephScreeningMatch[];
+  /** No source card to sit inside (OpenAleph produced no bucket), so carry
+   *  the card chrome instead of the band's top rule — which against a card's
+   *  own border would draw a doubled line. */
+  standalone?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   if (matches.length === 0) return null;
@@ -48,18 +54,25 @@ export function OpenAlephArchiveMatches({
   return (
     <div
       id="openaleph-screening"
-      className="mt-2 rounded-oo border border-oo-rule bg-white px-4 py-3"
+      className={`px-5 py-3.5 ${
+        standalone
+          ? "bg-white border border-oo-rule rounded-oo"
+          : "border-t border-oo-rule"
+      }`}
     >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-oo-muted mb-2">
-        Archive matches — OpenAleph
-      </p>
-      <ul className="space-y-1.5">
+      <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2">
+        <SectionHeading as="h4">Archive matches</SectionHeading>
+        <p className="text-oo-small text-oo-muted">
+          {matches.length} name {matches.length === 1 ? "match" : "matches"} · no risk signal
+        </p>
+      </div>
+      <ul className="flex flex-col gap-1.5">
         {visible.map((m) => (
           <li
             key={`${m.statement_id}:${m.entity_id}`}
-            className="text-[13px] text-oo-ink leading-[1.6]"
+            className="text-oo-small text-oo-ink leading-[1.6]"
           >
-            <span className="font-semibold">{m.search_name}</span>{" "}
+            <span className="font-bold">{m.search_name}</span>{" "}
             <span className="text-oo-muted">
               {m.kind === "person" ? "(related party)" : "(related entity)"}{" "}
               matched
@@ -77,28 +90,36 @@ export function OpenAlephArchiveMatches({
                 className="text-oo-blue hover:underline underline-offset-2"
               >
                 {m.collection || "an OpenAleph collection"}
+                <span className="sr-only"> (opens in new tab)</span>
               </a>
             ) : (
               <span>{m.collection || "an OpenAleph collection"}</span>
             )}
             {m.topics.length > 0 && (
-              <span className="text-oo-muted"> · {topicList(m.topics)}</span>
+              <>
+                {" "}
+                {[...new Set(m.topics.map(topicLabel))].map((t) => (
+                  <Chip key={t} tone="context" size="sm">
+                    {t}
+                  </Chip>
+                ))}
+              </>
             )}
           </li>
         ))}
       </ul>
       {(hiddenCount > 0 || expanded) && matches.length > PREVIEW_COUNT && (
-        <button
-          type="button"
-          className="mt-2 text-[12px] font-medium text-oo-blue hover:underline underline-offset-2"
-          onClick={() => setExpanded((prev) => !prev)}
-        >
-          {expanded
-            ? "Show fewer"
-            : `Show all ${matches.length} matches`}
-        </button>
+        <div className="mt-2.5">
+          <ActionChip
+            onClick={() => setExpanded((prev) => !prev)}
+            expanded={expanded}
+            controls="openaleph-screening"
+          >
+            {expanded ? "Show fewer" : `Show all ${matches.length} matches`}
+          </ActionChip>
+        </div>
       )}
-      <p className="text-[12px] text-oo-muted mt-3">
+      <p className="text-oo-meta text-oo-muted mt-3 leading-[1.5] max-w-[80ch]">
         Informational only — name matches from OpenAleph collections that map
         to no risk signal. A name match is never treated as identifier
         confirmation.

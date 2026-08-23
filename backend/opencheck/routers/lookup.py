@@ -1896,6 +1896,12 @@ async def _lookup_pipeline(
                 "source_id": dsrc, "hit_id": dhit, "notice": deep["license_notice"],
             })
         stmts = deep["bods"]
+        # Only for a source the dispatch loop never saw: a dispatched source's
+        # own fetch is the better claim, and a deepen usually replays it from
+        # cache, which would downgrade a live row to "cached".
+        deep_prov = deep.get("provenance")
+        if dsrc not in provenances and isinstance(deep_prov, Provenance):
+            provenances[dsrc] = deep_prov
         bods_counts[f"{dsrc}:{dhit}"] = len(stmts)
         bods_breakdown[f"{dsrc}:{dhit}"] = {
             "entities": sum(1 for s in stmts if s.get("recordType") == "entity"),
@@ -2847,6 +2853,12 @@ async def _safe_deepen(source_id: str, hit_id: str) -> dict[str, Any] | None:
         "bods_issues": issues,
         "license_notice": license_notice,
         "risk_signals": signals,
+        # Sources dispatched outside the `_run` loop — sec_edgar, resolved
+        # from a CIK rather than from `_dispatch` — never reach the loop that
+        # fills `provenances`, so their row is the one with no freshness note.
+        # The deepen is a real fetch of the source; carrying its provenance
+        # back is the only place that fact exists.
+        "provenance": prov,
     }
 
 

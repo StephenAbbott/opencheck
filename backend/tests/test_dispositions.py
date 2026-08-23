@@ -303,3 +303,83 @@ def test_report_html_undecided_tally():
         _report_dict(), narrative=_narrative_dict(), dispositions=dispositions
     )
     assert "1 undecided" in html
+
+
+def test_reviewed_is_not_derived_from_the_claim_decisions(data_root):
+    """"I have read this" and "I accept every sentence" are different claims.
+
+    The summary-level control is one click; the per-claim dispositions are a
+    decision each. Deriving one from the other would let a page-level
+    acknowledgement stand in an audit trail as claim-by-claim agreement — or,
+    the other way round, silently mark a summary reviewed because its claims
+    happened to be dispositioned.
+    """
+    rec = DispositionRecord(
+        lei=LEI,
+        run_id=RUN_ID,
+        dispositions=[
+            ClaimDisposition(claim_id="c1", status="accepted"),
+            ClaimDisposition(claim_id="c2", status="accepted"),
+        ],
+    )
+    saved = save_dispositions(rec)
+    assert saved.reviewed is False
+    assert saved.reviewed_at is None
+
+    reviewed = save_dispositions(rec.model_copy(update={"reviewed": True}))
+    assert reviewed.reviewed is True
+    assert reviewed.reviewed_at is not None
+    # And no claim decision changed because the summary was marked read.
+    assert [d.status for d in reviewed.dispositions] == ["accepted", "accepted"]
+
+
+def test_reviewed_at_records_when_the_review_happened(data_root):
+    rec = DispositionRecord(lei=LEI, run_id=RUN_ID, reviewed=True)
+    first = save_dispositions(rec)
+    t1 = first.reviewed_at
+    assert t1 is not None
+    time.sleep(0.01)
+
+    # Re-saving an unchanged review keeps the original moment, like decided_at.
+    assert save_dispositions(rec).reviewed_at == t1
+
+    # Withdrawing it clears the timestamp — a stale one must not outlive the
+    # review it recorded.
+    withdrawn = save_dispositions(rec.model_copy(update={"reviewed": False}))
+    assert withdrawn.reviewed is False
+    assert withdrawn.reviewed_at is None
+
+    # And re-reviewing stamps a new moment rather than resurrecting the old.
+    again = save_dispositions(rec)
+    assert again.reviewed_at is not None and again.reviewed_at != t1
+
+
+def test_reviewed_survives_the_api_round_trip(data_root, client=None):
+    from fastapi.testclient import TestClient
+
+    from opencheck.app import app
+
+    c = TestClient(app)
+    body = {
+        "lei": LEI,
+        "run_id": RUN_ID,
+        "prompt_version": "v1",
+        "model": "m",
+        "dispositions": [{"claim_id": "c1", "status": "accepted"}],
+        "reviewed": True,
+    }
+    r = c.put("/narrative/dispositions", json=body)
+    assert r.status_code == 200, r.text
+    assert r.json()["reviewed"] is True
+
+    g = c.get("/narrative/dispositions", params={"lei": LEI, "run_id": RUN_ID})
+    assert g.status_code == 200
+    assert g.json()["reviewed"] is True
+    assert g.json()["reviewed_at"] is not None
+
+    # Older clients omit the field entirely; that must read as "not reviewed",
+    # never as "unchanged", or a withdrawn review would be impossible to save.
+    body.pop("reviewed")
+    r2 = c.put("/narrative/dispositions", json=body)
+    assert r2.status_code == 200
+    assert r2.json()["reviewed"] is False

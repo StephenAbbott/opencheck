@@ -39,6 +39,7 @@ import {
 } from "../../lib/evidenceDisclosure";
 import { ExportMenu } from "../export/ExportMenu";
 import { CONFIDENCE_GLYPH, CONFIDENCE_LABEL } from "../ui/Chip";
+import { Chip, SectionHeading } from "../ui";
 
 const CONF_BADGE: Record<string, string> = {
   high: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -245,6 +246,10 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
   const [disp, setDisp] = useState<Record<string, DispState>>({});
   const [commentOpen, setCommentOpen] = useState<Record<string, boolean>>({});
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  // "I have read this summary" — a weaker statement than accepting every
+  // claim in it, so it is stored and rendered separately from the per-claim
+  // dispositions and never derived from them.
+  const [reviewed, setReviewed] = useState(false);
   const dirtyRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
 
@@ -262,6 +267,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     setCommentOpen({});
     setSaveState("idle");
     setEvidenceExpanded(false);
+    setReviewed(false);
     dirtyRef.current = false;
     fetchCuratedNarrative(lei).then((cachedNarrative) => {
       if (active && cachedNarrative) {
@@ -285,6 +291,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
         next[d.claim_id] = { status: d.status, comment: d.comment ?? "" };
       }
       setDisp(next);
+      setReviewed(Boolean(record.reviewed));
     });
     return () => {
       active = false;
@@ -310,7 +317,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
             status: d.status,
             comment: d.comment.trim() ? d.comment.trim() : null,
           })),
-          { prompt_version: promptVersion, model },
+          { prompt_version: promptVersion, model, reviewed },
         );
         setSaveState("saved");
       } catch {
@@ -320,7 +327,12 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     return () => {
       if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
     };
-  }, [disp, data, cached, lei]);
+  }, [disp, reviewed, data, cached, lei]);
+
+  function toggleReviewed() {
+    dirtyRef.current = true;
+    setReviewed((v) => !v);
+  }
 
   function setClaimStatus(claimId: string, status: DispositionStatus) {
     dirtyRef.current = true;
@@ -432,15 +444,20 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     <section className="px-4 py-[18px] sm:px-6 sm:py-[22px] border-b border-oo-rule">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-[15px] font-semibold text-oo-navy flex items-center gap-2">
-            AI summary
-            <span className="text-[10px] font-medium uppercase tracking-wide text-oo-blue border border-[#cfd6f5] bg-[#eef1fb] rounded-full px-1.5 py-0.5">
-              Beta
-            </span>
-          </h2>
-          <p className="text-[12px] text-oo-muted mt-0.5">
-            A plain-English summary of what OpenCheck found — every statement links to its source.
-          </p>
+          {/* "Summary", not "AI summary" + a Beta badge.
+
+              The v1 heading named the machinery and graded it, which is two
+              statements about OpenCheck where the reader wanted one about the
+              company. What actually needs saying is the provenance — that a
+              model wrote it and every sentence carries a citation — so that
+              is what the chip beside the heading says, in words rather than
+              in a status label a reader has to interpret. */}
+          <div className="flex items-center flex-wrap gap-2">
+            <SectionHeading>Summary</SectionHeading>
+            <Chip tone="accent" size="sm">
+              Written by AI, cited to sources
+            </Chip>
+          </div>
         </div>
         {/* Pinned in the top-right corner at every width — never overflows the
             card. The Export menu lives here (not in a global toolbar) because
@@ -512,7 +529,41 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
 
       {data && !collapsed && (
         <div className="mt-4">
-          <p className="text-[14px] leading-relaxed text-oo-ink">{data.summary}</p>
+          <p className="text-[14px] leading-relaxed text-oo-ink max-w-[82ch]">{data.summary}</p>
+
+          {/* The line the mockup puts under the prose: what the citations
+              mean, and the one control that acts on the summary as a whole.
+              It sits above the evidence list rather than after it, because a
+              reader who has finished the two paragraphs is at this point on
+              the page — not four hundred pixels further down. */}
+          <div className="mt-3.5 flex items-center flex-wrap gap-x-4 gap-y-2 text-oo-small">
+            <span className="text-oo-muted">
+              Every sentence links to the record it came from.
+            </span>
+            {canSignOff && (
+              <button
+                type="button"
+                onClick={toggleReviewed}
+                aria-pressed={reviewed}
+                className={`inline-flex items-center gap-1.5 font-medium ${
+                  reviewed ? "text-oo-ok-text" : "text-oo-blue hover:underline"
+                }`}
+              >
+                {reviewed ? (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                      strokeLinejoin="round" aria-hidden="true">
+                      <path d="m20 6-11 11-5-5" />
+                    </svg>
+                    Reviewed
+                  </>
+                ) : (
+                  "Mark as reviewed"
+                )}
+              </button>
+            )}
+          </div>
 
           {data.claims.length > 0 && (
             <div className="mt-4 border-t border-oo-rule pt-3">

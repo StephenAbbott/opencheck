@@ -257,9 +257,26 @@ export const BASE_URL: string = import.meta.env.DEV
  * ``lei`` parameter; backend dispatches to the LEI synthesis path
  * (not the free-text /report one).
  */
+/** Exactly `_EXPORT_FORMATS` in `backend/opencheck/routers/export.py`. The
+ *  backend rejects anything outside that set with a 400, so the picker must
+ *  not be able to name one — an export chip that produces an error is worse
+ *  than an absent format. */
+export type ExportFormat =
+  | "json"
+  | "jsonl"
+  | "zip"
+  | "xml"
+  | "csv"
+  | "cypher"
+  | "senzing"
+  | "ftm"
+  | "gql"
+  | "amlai"
+  | "rdf";
+
 export function exportUrl(
   lei: string,
-  format: "json" | "jsonl" | "zip" | "xml" | "senzing" | "ftm" | "gql" | "amlai" | "rdf",
+  format: ExportFormat,
   opts?: { subsidiaries?: boolean }
 ): string {
   const params = new URLSearchParams({ lei, format });
@@ -820,6 +837,11 @@ export interface DispositionRecord {
   model: string;
   reviewer: string | null;
   dispositions: ClaimDisposition[];
+  /** The analyst has read the summary as a whole. Never derived from the
+   *  claim decisions: "I have read this" is a weaker statement than "I accept
+   *  every sentence in it". Bound to `run_id`, so a regenerate clears it. */
+  reviewed?: boolean;
+  reviewed_at?: string | null;
   updated_at?: string | null;
 }
 
@@ -831,7 +853,7 @@ export async function putDispositions(
   lei: string,
   runId: string,
   dispositions: { claim_id: string; status: DispositionStatus; comment: string | null }[],
-  meta: { prompt_version?: string; model?: string } = {},
+  meta: { prompt_version?: string; model?: string; reviewed?: boolean } = {},
 ): Promise<DispositionRecord> {
   const r = await fetch(`${BASE_URL}/narrative/dispositions`, {
     method: "PUT",
@@ -842,6 +864,10 @@ export async function putDispositions(
       prompt_version: meta.prompt_version ?? "",
       model: meta.model ?? "",
       dispositions,
+      // Always sent, never omitted: the sheet is a whole-sheet overwrite, so
+      // leaving it out on a withdrawal would make "reviewed" impossible to
+      // clear.
+      reviewed: meta.reviewed ?? false,
     }),
   });
   if (!r.ok) {

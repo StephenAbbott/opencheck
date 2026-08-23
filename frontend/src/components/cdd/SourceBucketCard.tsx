@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useId, useMemo, useState, useSyncExternalSto
 import { deepen } from "../../lib/api";
 import { rowFinding } from "../../lib/sourceFinding";
 import { graphPartiesLabel } from "../../lib/vocab";
+import { ActionChip, Chip, DataTile } from "../ui";
 import type { BodsBreakdown, BoAccessNotice, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
 import { LivenessBadge, type SourceLiveness } from "./LivenessBadge";
@@ -743,6 +744,7 @@ export function DeepenBlock({
  */
 function MentionsBreakdown({ hit }: { hit: SourceHit }) {
   const [expanded, setExpanded] = useState(false);
+  const listId = useId();
   const mentions = (hit.raw as Record<string, unknown> | undefined)
     ?.openaleph_mentions as
     | {
@@ -760,39 +762,27 @@ function MentionsBreakdown({ hit }: { hit: SourceHit }) {
 
   return (
     <div className="mt-2">
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5" id={listId}>
         {preview.map((c) => (
-          <span
-            key={c.label}
-            className="inline-flex items-center gap-1 text-oo-meta bg-oo-bg border border-oo-rule rounded-full pl-1.5 pr-2 py-0.5 text-oo-muted"
-          >
-            <span className="font-mono font-semibold text-oo-ink">{c.count}</span>
+          <Chip key={c.label} tone="neutral" size="sm">
+            <span className="font-mono font-bold text-oo-ink">{c.count}</span>
             <span className="truncate max-w-[200px]">{c.label}</span>
             <span className="sr-only">
               {" "}of {total} mentions are in “{c.label}”
             </span>
-          </span>
+          </Chip>
         ))}
-        {hidden > 0 && (
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className="text-[11px] font-medium text-oo-blue hover:underline"
+        {collections.length > 3 && (
+          <ActionChip
+            onClick={() => setExpanded((v) => !v)}
+            expanded={expanded}
+            controls={listId}
           >
-            +{hidden} more archive{hidden === 1 ? "" : "s"}
-          </button>
-        )}
-        {expanded && collections.length > 3 && (
-          <button
-            type="button"
-            onClick={() => setExpanded(false)}
-            className="text-[11px] font-medium text-oo-blue hover:underline"
-          >
-            Show fewer
-          </button>
+            {expanded ? "Show fewer" : `+${hidden} more archive${hidden === 1 ? "" : "s"}`}
+          </ActionChip>
         )}
       </div>
-      <p className="mt-1 text-[11px] text-oo-muted/80">
+      <p className="mt-1.5 text-oo-meta text-oo-muted leading-[1.5]">
         Documents mentioning this name — informational only, not a match on
         identifiers.
       </p>
@@ -812,6 +802,7 @@ function MentionsBreakdown({ hit }: { hit: SourceHit }) {
  */
 function TedAwardsList({ hit }: { hit: SourceHit }) {
   const [expanded, setExpanded] = useState(false);
+  const listId = useId();
   if (hit.source_id !== "ted_eu") return null;
   const raw = hit.raw as Record<string, unknown> | undefined;
   const notices = (raw?.notices ?? []) as {
@@ -830,35 +821,36 @@ function TedAwardsList({ hit }: { hit: SourceHit }) {
 
   const shown = expanded ? notices : notices.slice(0, 5);
   const hidden = notices.length - shown.length;
+  // `ui/Chip` rather than three hand-rolled spans in raw palette classes. The
+  // tones say what the row asserts: `ok` for a confirmed win, `neutral` for a
+  // bid, `warn` for a winner chain that could not be resolved — which is
+  // "we do not know", not "they lost".
   const roleBadge = (role?: string) =>
     role === "won" ? (
-      <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded px-1.5 py-0.5">
-        won
-      </span>
+      <Chip tone="ok" size="sm">won</Chip>
     ) : role === "tendered" ? (
-      <span className="text-[10px] font-semibold bg-oo-bg text-oo-muted border border-oo-rule rounded px-1.5 py-0.5">
-        tendered
-      </span>
+      <Chip tone="neutral" size="sm">tendered</Chip>
     ) : (
-      <span className="text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 rounded px-1.5 py-0.5">
-        unconfirmed
-      </span>
+      <Chip tone="warn" size="sm">unconfirmed</Chip>
     );
 
   return (
     <div className="mt-2">
-      <ul className="space-y-1.5">
+      {/* A divided list, not five bordered mini-cards inside the source card.
+          Nesting card chrome one level down made each notice read as its own
+          object rather than as a row of one source's answer. */}
+      <ul id={listId} className="divide-y divide-oo-rule border-y border-oo-rule">
         {shown.map((n) => (
           <li
             key={n.publication_number}
-            className="text-[12px] leading-[1.5] border border-oo-rule rounded-oo bg-white px-2.5 py-1.5"
+            className="text-oo-small leading-[1.5] py-2"
           >
             <div className="flex items-start justify-between gap-2">
               <a
                 href={n.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium text-oo-ink underline decoration-dotted underline-offset-2 min-w-0"
+                className="font-medium text-oo-blue hover:underline underline-offset-2 min-w-0"
               >
                 {n.title || `Notice ${n.publication_number}`}
                 <span className="sr-only"> (opens in new tab)</span>
@@ -879,32 +871,23 @@ function TedAwardsList({ hit }: { hit: SourceHit }) {
           </li>
         ))}
       </ul>
-      <div className="mt-1 flex items-center gap-2">
-        {hidden > 0 && (
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className="text-[11px] font-medium text-oo-blue hover:underline"
+      <div className="mt-2 flex items-center flex-wrap gap-2">
+        {notices.length > 5 && (
+          <ActionChip
+            onClick={() => setExpanded((v) => !v)}
+            expanded={expanded}
+            controls={listId}
           >
-            +{hidden} more notice{hidden === 1 ? "" : "s"}
-          </button>
-        )}
-        {expanded && notices.length > 5 && (
-          <button
-            type="button"
-            onClick={() => setExpanded(false)}
-            className="text-[11px] font-medium text-oo-blue hover:underline"
-          >
-            Show fewer
-          </button>
+            {expanded ? "Show fewer" : `+${hidden} more notice${hidden === 1 ? "" : "s"}`}
+          </ActionChip>
         )}
         {total > notices.length && (
-          <span className="text-[11px] text-oo-muted/80">
+          <span className="text-oo-meta text-oo-muted">
             {total} notices in total — showing the latest {notices.length}.
           </span>
         )}
       </div>
-      <p className="mt-1 text-[11px] text-oo-muted/80">
+      <p className="mt-2 text-oo-meta text-oo-muted leading-[1.5] max-w-[80ch]">
         eForms-era notices only (≈2024 onwards) — earlier awards are not
         searchable by identifier. Awards won via subsidiaries appear under the
         subsidiary&apos;s identifier.
@@ -933,112 +916,6 @@ function HitFinding({ hit }: { hit: SourceHit }) {
         <p className="text-[12px] text-oo-muted mt-0.5 leading-[1.5]">{finding.sub}</p>
       )}
     </>
-  );
-}
-
-/**
- * The compact action group on a source row (Phase 126).
- *
- * v1 gave the graph a full-width blue call-to-action strip and demoted
- * everything else to 11px mono text links — `12 statements`, `Raw JSON`. The
- * v2 design makes all three equal-weight outline chips in one right-aligned
- * group, labelled by **what they contain** rather than by the data model: how
- * many companies, how many changes, and one neutral `Data` disclosure standing
- * in for the rest.
- *
- * The counts matter more than they look. "14 companies" tells a reader whether
- * opening the diagram is worth it; "Explore the ownership graph" does not.
- */
-function ActionChip({
-  onClick,
-  expanded,
-  controls,
-  tone = "neutral",
-  icon,
-  children,
-}: {
-  onClick: () => void;
-  expanded: boolean;
-  controls: string;
-  tone?: "network" | "timeline" | "neutral";
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  const tones = {
-    network: "border-oo-graph-ownership/40 bg-oo-graph-ownershipTint text-oo-graph-ownershipText",
-    timeline: "border-oo-rule bg-oo-bg text-oo-burst",
-    neutral: "border-oo-softBorder bg-white text-oo-blue",
-  } as const;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-expanded={expanded}
-      aria-controls={controls}
-      className={`inline-flex items-center gap-1.5 rounded-oo border px-3 py-1.5 text-oo-small font-medium transition-colors hover:brightness-95 ${tones[tone]}`}
-    >
-      {icon}
-      {children}
-    </button>
-  );
-}
-
-/**
- * One tile in the Data drawer.
- *
- * The drawer is a **menu of things to open**, not the things themselves. v1
- * rendered the Cytoscape graph and two raw JSON dumps inline under headings
- * reading `BODS · N statements`, `Mapped statements`, `BODS statements` and
- * `Raw source payload` — the data model as the interface. Each tile here says
- * what it holds in a human clause and opens it on click.
- */
-function DataTile({
-  title,
-  meta,
-  action,
-  tone = "neutral",
-  open = false,
-  onClick,
-  controls,
-}: {
-  title: string;
-  meta: string;
-  /** Present only on tiles that reveal something; a tile that merely describes
-   *  what the download contains has no action and is not a button. */
-  action?: string;
-  tone?: "network" | "timeline" | "neutral";
-  open?: boolean;
-  onClick?: () => void;
-  controls?: string;
-}) {
-  const tones = {
-    network: "border-oo-graph-ownership/40 bg-oo-graph-ownershipTint",
-    timeline: "border-oo-rule bg-oo-bg",
-    neutral: "border-oo-rule bg-oo-bg",
-  } as const;
-  const body = (
-    <>
-      <p className="text-oo-small font-bold text-oo-ink">{title}</p>
-      <p className="text-oo-small text-oo-muted">{meta}</p>
-      {action && (
-        <p className="mt-1.5 text-oo-small font-bold text-oo-blue">
-          {open ? "Close" : action}
-        </p>
-      )}
-    </>
-  );
-  const cls = `rounded-oo border px-3.5 py-3 text-left ${tones[tone]}`;
-  if (!onClick) return <div className={cls}>{body}</div>;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-expanded={open}
-      aria-controls={controls}
-      className={`${cls} transition-colors hover:brightness-95`}
-    >
-      {body}
-    </button>
   );
 }
 
@@ -1331,6 +1208,7 @@ export function SourceBucketCard({
   retrying = false,
   footnote,
   liveness,
+  extra,
 }: {
   bucket: SourceBucket;
   /** Resolved LEI for the current lookup — keys the Time Machine timeline. */
@@ -1348,6 +1226,11 @@ export function SourceBucketCard({
   retrying?: boolean;
   /** Caption rendered inside the card footer (e.g. subsidiary truncation note). */
   footnote?: string;
+  /** A band rendered inside the card, below the rows — for content that
+   *  belongs to the source rather than to any one of its results (OpenAleph's
+   *  archive matches). It used to be a second white card stacked underneath,
+   *  which read as an unrelated widget that happened to be adjacent. */
+  extra?: React.ReactNode;
   /** How current this source's payload is — badged in the header when it is
    *  anything other than a fresh live call. */
   liveness?: SourceLiveness;
@@ -1484,6 +1367,7 @@ export function SourceBucketCard({
           <NzAssociations companyNumber={nzCompanyNumber} />
         </div>
       )}
+      {extra}
       {bucket.boAccess && !bucket.error && (
         <BoAccessFootnote notice={bucket.boAccess} />
       )}

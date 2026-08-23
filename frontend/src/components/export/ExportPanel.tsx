@@ -1,12 +1,31 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { exportUrl, getLicenseMatrix } from "../../lib/api";
+import { exportUrl, getLicenseMatrix, type ExportFormat } from "../../lib/api";
+import { SectionHeading } from "../ui";
 import { DATA_SECTION_ID } from "./ExportMenu";
 
 /**
- * Download button + format selector that points at /export, plus a licensing
- * assistant: a traffic-light compatibility verdict for the sources that
- * contributed to this result (commercial use / attribution / share-alike).
+ * Download data — the export surface (v2).
+ *
+ * v1 was a `<select>` of nine options with a Download button beside it, and
+ * the licensing assessment stacked underneath in three separate blocks. Two
+ * things were wrong with that beyond its looks.
+ *
+ * **A `<select>` hides the answer to the question the section exists to ask.**
+ * "Everything on this page, in the format you work in" is a question about
+ * what OpenCheck can produce, and a closed dropdown answers it with one word.
+ * Eleven chips answer it at a glance — and the format a reader wants is
+ * usually recognised, not searched for.
+ *
+ * **Licensing is a condition of reuse, not a footnote to a download.** Stacked
+ * below the button it reads as small print after the decision; beside it, as
+ * "You can reuse this", it is part of the decision. The traffic-light colours
+ * stay, but every one of them is also spelled out in words — how restrictive a
+ * licence is must never be carried by a dot alone (WCAG 1.4.1).
+ *
+ * The format list is exactly `_EXPORT_FORMATS` in `routers/export.py`. Nothing
+ * is offered here that the backend cannot produce: an export picker that lists
+ * an aspirational format is a 400 with extra steps.
  */
 
 const COLOR: Record<"green" | "amber" | "red", string> = {
@@ -20,6 +39,163 @@ const DOT: Record<"green" | "amber" | "red", string> = {
   red: "text-red-500",
 };
 
+/** The picker's option set is the client's export-format type, so a format
+ *  added on one side cannot be missed on the other. */
+type Format = ExportFormat;
+
+/** Ordered by how many readers want them, not alphabetically. BODS JSON first
+ *  because it is what the page itself is made of. */
+const FORMATS: { value: Format; label: string }[] = [
+  { value: "json", label: "BODS JSON" },
+  { value: "zip", label: "ZIP bundle" },
+  { value: "csv", label: "CSV" },
+  { value: "jsonl", label: "JSONL" },
+  { value: "xml", label: "BODS XML" },
+  { value: "ftm", label: "FollowTheMoney" },
+  { value: "cypher", label: "Neo4j · Cypher" },
+  { value: "rdf", label: "RDF · TriG" },
+  { value: "senzing", label: "Senzing JSON" },
+  { value: "gql", label: "BigQuery · GQL" },
+  { value: "amlai", label: "Google AML AI" },
+];
+
+const LINK = "underline text-oo-blue hover:text-oo-burst";
+
+function Ext({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <a href={href} target="_blank" rel="noreferrer" className={LINK}>
+      {children}
+      <span className="sr-only"> (opens in new tab)</span>
+    </a>
+  );
+}
+
+/** One explanation per format, always rendered — a picker whose description
+ *  appears for five of eleven options teaches the reader that the other six
+ *  are the unremarkable ones, which is not true of Cypher or RDF. */
+const BLURB: Record<Format, ReactNode> = {
+  json: (
+    <>
+      BODS JSON is the{" "}
+      <Ext href="https://standard.openownership.org/en/0.4.0/">
+        Beneficial Ownership Data Standard
+      </Ext>{" "}
+      — the same shape every source on this page was mapped into, so the file
+      loads straight into other BODS tooling.
+    </>
+  ),
+  zip: (
+    <>
+      The bundle: BODS as JSON, JSONL and XML, plus Senzing and FollowTheMoney
+      projections, a manifest recording what ran, and the per-source licence
+      notes. The one to take if you are archiving the check rather than
+      querying it.
+    </>
+  ),
+  csv: (
+    <>
+      Three flat tables — companies, people and the ownership or control edges
+      between them — for a spreadsheet or a database load. The same tables the
+      BigQuery package carries, without its schema and queries.
+    </>
+  ),
+  jsonl: (
+    <>
+      One BODS statement per line. The shape stream processors and{" "}
+      <span className="font-mono">jq</span> want, and the one to use when the
+      graph is too large to hold in memory as a single array.
+    </>
+  ),
+  xml: (
+    <>
+      Canonical BODS XML, for pipelines that validate against a schema rather
+      than parse JSON.
+    </>
+  ),
+  cypher: (
+    <>
+      A{" "}
+      <Ext href="https://neo4j.com/docs/cypher-manual/current/">Cypher</Ext>{" "}
+      script that builds this graph in Neo4j — companies and people as nodes,
+      each disclosed interest as a relationship. Paste it into the browser or
+      pipe it through <span className="font-mono">cypher-shell</span>.
+    </>
+  ),
+  senzing: (
+    <>
+      Senzing JSON projects this ownership graph into the{" "}
+      <Ext href="https://www.senzing.com/docs/entity_specification/">
+        Senzing entity specification
+      </Ext>{" "}
+      (newline-delimited records, ready to load for entity resolution) — one
+      record per company and person, with each disclosed ownership/control
+      relationship as a Senzing disclosed relationship.
+    </>
+  ),
+  ftm: (
+    <>
+      FollowTheMoney projects this ownership graph into{" "}
+      <Ext href="https://followthemoney.tech/">FtM entities</Ext>{" "}
+      (newline-delimited) — companies and people as nodes, each disclosed
+      interest as an Ownership or Directorship link — ready for OpenSanctions
+      matching, OpenAleph/Aleph (via{" "}
+      <span className="font-mono">alephclient write-entities</span>) and the{" "}
+      <span className="font-mono">ftm</span> CLI.
+    </>
+  ),
+  gql: (
+    <>
+      BigQuery GQL projects this ownership graph into a{" "}
+      <Ext href="https://cloud.google.com/bigquery/docs/property-graphs">
+        BigQuery property graph
+      </Ext>{" "}
+      queryable with{" "}
+      <Ext href="https://www.gqlstandards.org/">GQL (ISO/IEC 39075)</Ext>. The
+      zip holds node/edge CSV tables, the{" "}
+      <span className="font-mono">CREATE PROPERTY GRAPH</span> schema and 14
+      ready-made GQL queries (UBO detection, corporate groups, circular
+      ownership) — generated with{" "}
+      <Ext href="https://github.com/StephenAbbott/bods-gql">bods-gql</Ext>, with
+      load instructions in its README.
+    </>
+  ),
+  amlai: (
+    <>
+      Google AML AI projects this ownership graph into the{" "}
+      <Ext href="https://docs.cloud.google.com/financial-services/anti-money-laundering/docs/reference/schemas/aml-input-data-model">
+        AML AI input data model
+      </Ext>{" "}
+      — NDJSON tables ready for <span className="font-mono">bq load</span>. AML
+      AI has no party-to-party relationship table, so ownership is encoded as
+      numeric supplementary-data signals per party plus synthetic “ownership
+      accounts” linking owners to owned entities — generated with{" "}
+      <Ext href="https://github.com/StephenAbbott/bods-aml-ai">bods-aml-ai</Ext>,
+      with the encoding explained in the bundled README.
+    </>
+  ),
+  rdf: (
+    <>
+      RDF projects this ownership graph into{" "}
+      <Ext href="https://vocab.openownership.org/pages/4_convertingdata.html">
+        BODS RDF
+      </Ext>{" "}
+      (TriG, one named graph per statement, published{" "}
+      <Ext href="https://vocab.openownership.org/terms/bods-vocabulary-0.4.0.ttl">
+        BODS vocabulary
+      </Ext>{" "}
+      terms). Every statement carries its source&rsquo;s canonical licence URI.
+      Two kinds of <span className="font-mono">bods:Annotation</span> travel
+      with it, kept in separate named graphs so you can query either without the
+      other: the register&rsquo;s own words — the nature-of-control code behind
+      an interest, or a note that a birth date was published imprecise — sit in
+      each statement&rsquo;s own graph, while OpenCheck&rsquo;s risk signals and
+      entity-resolution links sit in a separate analysis graph. Queryable in
+      SPARQL tools or directly in DuckDB via the community{" "}
+      <span className="font-mono">rdf</span> extension.
+    </>
+  ),
+};
+
 export function ExportPanel({
   lei,
   legalName,
@@ -29,9 +205,7 @@ export function ExportPanel({
   legalName: string | null;
   contributingSourceIds: string[];
 }) {
-  const [format, setFormat] = useState<
-    "zip" | "json" | "jsonl" | "xml" | "senzing" | "ftm" | "gql" | "amlai" | "rdf"
-  >("zip");
+  const [format, setFormat] = useState<Format>("json");
   const [subsidiaries, setSubsidiaries] = useState(false);
 
   const sorted = [...contributingSourceIds].sort();
@@ -50,239 +224,83 @@ export function ExportPanel({
       id={DATA_SECTION_ID}
       className="px-4 py-[18px] sm:px-6 sm:py-[22px] scroll-mt-4"
     >
-      <div className="flex items-baseline justify-between gap-4 flex-wrap">
-        <div className="min-w-0">
-          {/* tabIndex + data-export-target: the Export menu's "Download data"
-              item scrolls here and moves focus to this heading, so keyboard
-              and screen-reader users land where sighted users scrolled. */}
-          <h2
-            tabIndex={-1}
-            data-export-target
-            className="font-head font-bold text-[15px] text-oo-ink focus:outline-none"
-          >
-            Download data
-          </h2>
-          <p className="text-[13px] text-oo-muted mt-1 leading-[1.6]">
+      <div className="mb-3 flex flex-col items-start gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+        {/* tabIndex + data-export-target: the Export menu's "Download data"
+            item scrolls here and moves focus to this heading, so keyboard
+            and screen-reader users land where sighted users scrolled. */}
+        <SectionHeading tabIndex={-1} data-export-target className="focus:outline-none">
+          Download data
+        </SectionHeading>
+        <p className="text-oo-small text-oo-muted">
+          Everything on this page, in the format you work in
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
+        <div className="flex flex-col gap-3">
+          {/* A radiogroup rather than eleven buttons: they are one choice, and
+              arrow-key movement between them is what a keyboard user expects
+              from a set of alternatives. */}
+          <div role="radiogroup" aria-label="Export format" className="flex flex-wrap gap-2">
+            {FORMATS.map((f) => {
+              const on = f.value === format;
+              return (
+                <button
+                  key={f.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => setFormat(f.value)}
+                  className={`rounded-oo border px-3 py-1.5 text-oo-small transition-colors ${
+                    on
+                      ? "border-oo-softBorder bg-oo-soft text-oo-blue font-bold"
+                      : "border-oo-rule bg-white text-oo-ink hover:border-oo-softBorder"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="text-oo-small text-oo-muted leading-[1.6] max-w-[70ch]">
+            {BLURB[format]}
+          </p>
+
+          <div className="flex items-center flex-wrap gap-3">
+            <a
+              href={href}
+              download
+              className="shrink-0 whitespace-nowrap bg-oo-blue text-white text-oo-small font-bold rounded-oo px-4 py-2.5 hover:bg-oo-burst transition-colors inline-block"
+            >
+              Download
+            </a>
+            <label className="flex items-center gap-2 text-oo-small text-oo-muted cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={subsidiaries}
+                onChange={(e) => setSubsidiaries(e.target.checked)}
+                className="accent-oo-blue"
+              />
+              Include the GLEIF subsidiary network
+            </label>
+          </div>
+          <p className="text-oo-meta text-oo-muted leading-[1.6] max-w-[70ch]">
             Reproducible export for{" "}
             {legalName ? <span>{legalName} (</span> : null}
             <span className="font-mono">{lei}</span>
-            {legalName ? <span>)</span> : null}. Includes BODS statements,
-            manifest, and per-source licence notes.
+            {legalName ? <span>)</span> : null}. The subsidiary network is off
+            by default — a large corporate group can add hundreds of statements.
           </p>
         </div>
-        {/* w-full on mobile so the control row owns its own line and the
-            select can shrink; min-w-0 lets flex actually shrink it below the
-            intrinsic width of the longest <option>, which otherwise pushes
-            the Download button off-screen on narrow viewports. */}
-        <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
-          <select
-            aria-label="Export format"
-            value={format}
-            onChange={(e) =>
-              setFormat(
-                e.target.value as
-                  | "zip"
-                  | "json"
-                  | "jsonl"
-                  | "xml"
-                  | "senzing"
-                  | "ftm"
-                  | "gql"
-                  | "amlai"
-                  | "rdf"
-              )
-            }
-            className="min-w-0 flex-1 sm:flex-none border border-oo-rule rounded px-2 py-1.5 text-[13px] bg-white"
-          >
-            <option value="zip">ZIP (bods + manifest + licenses)</option>
-            <option value="json">JSON (BODS array)</option>
-            <option value="jsonl">JSONL (newline-delimited)</option>
-            <option value="xml">XML (canonical BODS)</option>
-            <option value="senzing">Senzing JSON (entity resolution)</option>
-            <option value="ftm">FollowTheMoney (OpenSanctions / Aleph)</option>
-            <option value="gql">BigQuery GQL (CSV tables + graph schema)</option>
-            <option value="amlai">Google AML AI (NDJSON input tables)</option>
-            <option value="rdf">RDF (BODS TriG, linked open data)</option>
-          </select>
-          <a
-            href={href}
-            download
-            className="shrink-0 whitespace-nowrap bg-oo-blue text-white text-[13px] font-medium rounded px-4 py-1.5 hover:bg-oo-burst transition-colors inline-block"
-          >
-            Download
-          </a>
-        </div>
-      </div>
 
-      {format === "senzing" && (
-        <p className="mt-3 text-[12px] text-oo-muted leading-[1.6]">
-          Senzing JSON projects this ownership graph into the{" "}
-          <a
-            href="https://www.senzing.com/docs/entity_specification/"
-            target="_blank"
-            rel="noreferrer"
-            className="underline text-oo-blue hover:text-oo-burst"
-          >
-            Senzing entity specification
-            <span className="sr-only"> (opens in new tab)</span>
-          </a>{" "}
-          (newline-delimited records, ready to load for entity resolution) — one
-          record per company and person, with each disclosed ownership/control
-          relationship as a Senzing disclosed relationship.
-        </p>
-      )}
-
-      {format === "gql" && (
-        <p className="mt-3 text-[12px] text-oo-muted leading-[1.6]">
-          BigQuery GQL projects this ownership graph into a{" "}
-          <a
-            href="https://cloud.google.com/bigquery/docs/property-graphs"
-            target="_blank"
-            rel="noreferrer"
-            className="underline text-oo-blue hover:text-oo-burst"
-          >
-            BigQuery property graph
-            <span className="sr-only"> (opens in new tab)</span>
-          </a>{" "}
-          queryable with{" "}
-          <a
-            href="https://www.gqlstandards.org/"
-            target="_blank"
-            rel="noreferrer"
-            className="underline text-oo-blue hover:text-oo-burst"
-          >
-            GQL (ISO/IEC 39075)
-            <span className="sr-only"> (opens in new tab)</span>
-          </a>
-          . The zip holds node/edge CSV tables, the{" "}
-          <span className="font-mono">CREATE PROPERTY GRAPH</span> schema and 14
-          ready-made GQL queries (UBO detection, corporate groups, circular
-          ownership) — generated with{" "}
-          <a
-            href="https://github.com/StephenAbbott/bods-gql"
-            target="_blank"
-            rel="noreferrer"
-            className="underline text-oo-blue hover:text-oo-burst"
-          >
-            bods-gql
-            <span className="sr-only"> (opens in new tab)</span>
-          </a>
-          , with load instructions in its README.
-        </p>
-      )}
-
-      {format === "amlai" && (
-        <p className="mt-3 text-[12px] text-oo-muted leading-[1.6]">
-          Google AML AI projects this ownership graph into the{" "}
-          <a
-            href="https://docs.cloud.google.com/financial-services/anti-money-laundering/docs/reference/schemas/aml-input-data-model"
-            target="_blank"
-            rel="noreferrer"
-            className="underline text-oo-blue hover:text-oo-burst"
-          >
-            AML AI input data model
-            <span className="sr-only"> (opens in new tab)</span>
-          </a>{" "}
-          — NDJSON tables ready for{" "}
-          <span className="font-mono">bq load</span>. AML AI has no
-          party-to-party relationship table, so ownership is encoded as numeric
-          supplementary-data signals per party plus synthetic “ownership
-          accounts” linking owners to owned entities — generated with{" "}
-          <a
-            href="https://github.com/StephenAbbott/bods-aml-ai"
-            target="_blank"
-            rel="noreferrer"
-            className="underline text-oo-blue hover:text-oo-burst"
-          >
-            bods-aml-ai
-            <span className="sr-only"> (opens in new tab)</span>
-          </a>
-          , with the encoding explained in the bundled README.
-        </p>
-      )}
-
-      {format === "rdf" && (
-        <p className="mt-3 text-[12px] text-oo-muted leading-[1.6]">
-          RDF projects this ownership graph into{" "}
-          <a
-            href="https://vocab.openownership.org/pages/4_convertingdata.html"
-            target="_blank"
-            rel="noreferrer"
-            className="underline text-oo-blue hover:text-oo-burst"
-          >
-            BODS RDF
-            <span className="sr-only"> (opens in new tab)</span>
-          </a>{" "}
-          (TriG, one named graph per statement, published{" "}
-          <a
-            href="https://vocab.openownership.org/terms/bods-vocabulary-0.4.0.ttl"
-            target="_blank"
-            rel="noreferrer"
-            className="underline text-oo-blue hover:text-oo-burst"
-          >
-            BODS vocabulary
-            <span className="sr-only"> (opens in new tab)</span>
-          </a>{" "}
-          terms). Every statement carries its source&rsquo;s canonical licence URI.
-          Two kinds of{" "}
-          <span className="font-mono">bods:Annotation</span> travel with it, kept in
-          separate named graphs so you can query either without the other: the
-          register&rsquo;s own words — the nature-of-control code behind an interest,
-          or a note that a birth date was published imprecise — sit in each
-          statement&rsquo;s own graph, while OpenCheck&rsquo;s risk signals and
-          entity-resolution links sit in a separate analysis graph. Queryable in
-          SPARQL tools or directly in DuckDB via the community{" "}
-          <span className="font-mono">rdf</span> extension.
-        </p>
-      )}
-
-      {format === "ftm" && (
-        <p className="mt-3 text-[12px] text-oo-muted leading-[1.6]">
-          FollowTheMoney projects this ownership graph into{" "}
-          <a
-            href="https://followthemoney.tech/"
-            target="_blank"
-            rel="noreferrer"
-            className="underline text-oo-blue hover:text-oo-burst"
-          >
-            FtM entities
-            <span className="sr-only"> (opens in new tab)</span>
-          </a>{" "}
-          (newline-delimited) — companies and people as nodes, each disclosed
-          interest as an Ownership or Directorship link — ready for
-          OpenSanctions matching, OpenAleph/Aleph (via{" "}
-          <span className="font-mono">alephclient write-entities</span>) and the{" "}
-          <span className="font-mono">ftm</span> CLI.
-        </p>
-      )}
-
-      <label className="mt-3 flex items-start gap-2 text-[12px] text-oo-muted cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={subsidiaries}
-          onChange={(e) => setSubsidiaries(e.target.checked)}
-          className="mt-0.5 accent-oo-blue"
-        />
-        <span>
-          Include the GLEIF subsidiary network (direct &amp; ultimate children).
-          Off by default — a large corporate group can add hundreds of statements.
-        </span>
-      </label>
-
-      {a && (
-        <div className="mt-4">
-          {/* Overall verdict */}
-          <div
-            className={`rounded-oo border px-3 py-2 ${COLOR[a.color]}`}
-            role="status"
-          >
-            <p className="text-[13px] font-head font-bold leading-[1.5]">
-              <span className={DOT[a.color]} aria-hidden="true">
-                ●
-              </span>{" "}
+        {a && (
+          <aside className="rounded-oo border border-oo-rule bg-oo-bg px-4 py-3.5" role="status">
+            <p className="text-oo-small font-bold text-oo-ink">You can reuse this</p>
+            <p className="text-oo-small text-oo-muted mt-0.5 leading-[1.5]">
               {a.headline}
             </p>
-            <p className="text-[12px] mt-0.5 leading-[1.5] opacity-90">
+            <p className="text-oo-meta text-oo-muted mt-1 leading-[1.5]">
               Commercial use: <strong>{a.commercial_use}</strong> · Attribution:{" "}
               <strong>{a.attribution_required ? "required" : "not required"}</strong>
               {a.share_alike ? (
@@ -292,51 +310,44 @@ export function ExportPanel({
               ) : null}
             </p>
             {a.warnings.map((w, i) => (
-              <p key={i} className="text-[12px] mt-1 leading-[1.5]">
-                ⚠️ {w}
+              <p
+                key={i}
+                className={`text-oo-meta mt-2 leading-[1.5] rounded-oo border px-2 py-1.5 ${COLOR[a.color]}`}
+              >
+                {w}
               </p>
             ))}
-          </div>
 
-          {/* Per-source traffic lights */}
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {a.per_source.map((s) => (
-              <span
-                key={s.source_id}
-                className={`inline-flex items-center gap-1 text-oo-meta border rounded px-1.5 py-0.5 ${COLOR[s.terms.color]}`}
-              >
-                <span className={DOT[s.terms.color]} aria-hidden="true">
-                  ●
-                </span>
-                {s.name}
-                <span className="font-mono opacity-70">{s.terms.license}</span>
-                {/* Two problems in one span: the plain-English terms were in a
-                    `title` and nowhere else, and how restrictive a licence is
-                    was carried by the dot's colour alone (WCAG 1.4.1). The
-                    summary is the non-colour cue as well as the explanation. */}
-              </span>
-            ))}
-          </div>
-
-          {/* The per-source terms were in a `title` and nowhere else, and how
-              restrictive a licence is was carried by the dot colour alone.
-              Spelled out below the chips: a licence condition is the thing a
-              reuser has to comply with, so it belongs on screen. */}
-          <dl className="mt-2 space-y-0.5">
-            {a.per_source
-              .filter((s) => s.terms.summary)
-              .map((s) => (
-                <div key={s.source_id} className="flex flex-wrap gap-x-1.5 text-oo-meta">
-                  <dt className="font-medium text-oo-ink">{s.name}</dt>
-                  <dd className="text-oo-muted">{s.terms.summary}</dd>
+            {/* One row per source: name on the left, licence on the right, the
+                colour on the licence itself. The plain-English terms sit under
+                the row rather than in a `title`, because a licence condition is
+                the thing a reuser has to comply with. */}
+            <dl className="mt-3 flex flex-col gap-2">
+              {a.per_source.map((s) => (
+                <div key={s.source_id}>
+                  <div className="flex items-baseline justify-between gap-2.5 text-oo-small">
+                    <dt className="text-oo-burst">{s.name}</dt>
+                    <dd
+                      className={`shrink-0 inline-flex items-center gap-1 border rounded px-1.5 py-0.5 text-oo-meta font-mono ${COLOR[s.terms.color]}`}
+                    >
+                      <span className={DOT[s.terms.color]} aria-hidden="true">
+                        ●
+                      </span>
+                      {s.terms.license}
+                    </dd>
+                  </div>
+                  {s.terms.summary && (
+                    <p className="text-oo-meta text-oo-muted leading-[1.5]">
+                      {s.terms.summary}
+                    </p>
+                  )}
                 </div>
               ))}
-          </dl>
-          <p className="text-oo-meta text-oo-muted mt-2 leading-[1.5]">
-            {a.disclaimer}
-          </p>
-        </div>
-      )}
+            </dl>
+            <p className="text-oo-meta text-oo-muted mt-3 leading-[1.5]">{a.disclaimer}</p>
+          </aside>
+        )}
+      </div>
     </section>
   );
 }
