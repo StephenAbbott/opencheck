@@ -157,6 +157,11 @@ class ReportResponse(BaseModel):
     #: that is not current must not read as live, just as a check that could
     #: not run must not read as clean. Per-hit values ride on each SourceHit.
     source_liveness: dict[str, dict[str, Any]] = {}
+    #: How big the mapped graph is: companies / people / relationships across
+    #: the sources that answered (deduplicated by statementId), plus the
+    #: longest ownership chain the risk layer measured, or null when it did
+    #: not. Counts what this check holds — never what a deeper one might find.
+    graph_shape: dict[str, Any] = {}
     #: One deterministic sentence stating what the check found — see
     #: ``opencheck.verdict``. Rendered at the top of the report, above the
     #: evidence and above the AI summary. Template-built, never a model
@@ -375,6 +380,13 @@ class _LookupCtx:
     #: GLEIF-published S&P Global / Capital IQ id — corroborates MEIP's CapIQ id.
     spglobal: str | None = None
     qid: str | None = None
+    #: Where the GLEIF anchor payload actually came from. The anchor is
+    #: resolved *before* the dispatch loop that fills ``provenances``, so
+    #: without carrying it here GLEIF is the one source with no entry in
+    #: ``source_liveness`` — and the one row on the report with no freshness
+    #: note, which reads as "we don't know" for the source everything else is
+    #: anchored to.
+    provenance: Provenance | None = None
 
 
 # RA-code derivers declared by the adapters themselves, collected from the
@@ -1494,6 +1506,10 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
     Returns ``(ctx, gleif_bundle)`` with derived identifiers, OpenCorporates
     ID and Wikidata QID populated. Raises :class:`_LookupAbort` when the LEI
     cannot be resolved. Shared by the pipeline and /lookup-source.
+
+    The anchor fetch runs inside a provenance scope and the result is stashed
+    on ``ctx.provenance``. Every other source gets one via ``_run()``; GLEIF
+    is resolved here, before that loop exists, which is why it needs its own.
     """
     gleif = REGISTRY["gleif"]
     ctx = _LookupCtx(lei=lei)
@@ -1515,8 +1531,23 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
                     ),
                 )
             gleif_bundle = {"source_id": "gleif", "lei": lei, "_from_bundle": True}
+            # The same helper every other stored-bundle row uses, keyed, so the
+            # anchor states Open Ownership's own publicationDate. A first pass
+            # hardcoded `curated` here as "the same claim the stored-bundle
+            # hits make" — it is not: `curated` describes a fixture committed
+            # to the repo, and the row then showed no date at all next to
+            # sibling rows reading "Snapshot, published <date>" off the very
+            # same dataset.
+            ctx.provenance = _stored_bundle_provenance("gleif", lei)
         else:
-            gleif_bundle = await gleif.fetch(lei)
+            # Only this line observes the cache or the network, so it is the
+            # only part that needs the scope; the bundle branch above never
+            # contacts GLEIF at all.
+            with _provenance.recording() as recorder:
+                gleif_bundle = await gleif.fetch(lei)
+            ctx.provenance = recorder.resolve(
+                is_stub=bool(gleif_bundle.get("is_stub"))
+            )
             if gleif_bundle.get("is_stub") or not gleif_bundle.get("record"):
                 raise _LookupAbort(
                     404,
@@ -1637,6 +1668,7 @@ async def _lookup_pipeline(
     yield ("meip", {"match": meip_match.model_dump() if meip_match else None})
 
     gleif_hit = _build_gleif_hit(ctx, gleif_bundle)
+    _stamp(gleif_hit, ctx.provenance)
     hits: list[SourceHit] = [gleif_hit]
     deepened_bundles: list[tuple[str, str]] = [("gleif", lei)]
     yield ("hit", gleif_hit)
@@ -1678,7 +1710,10 @@ async def _lookup_pipeline(
         return src_id, result, recorder.resolve(is_stub=is_stub)
 
     errors: dict[str, str] = {}
-    provenances: dict[str, Provenance] = {}
+    # Seeded with the anchor, which was resolved before this loop existed.
+    provenances: dict[str, Provenance] = (
+        {"gleif": ctx.provenance} if ctx.provenance is not None else {}
+    )
     oc_result_processed = False
     pending = {asyncio.create_task(_run(sid, coro)) for sid, coro in dispatch}
     while pending:
@@ -1738,7 +1773,11 @@ async def _lookup_pipeline(
                 bkey = _stored_bundle_key(source_id, ctx)
                 if bkey is not None:
                     hit = _stored_bundle_hit(source_id, bkey, ctx)
-                    provenances[source_id] = _stored_bundle_provenance(source_id)
+                    # Keyed: without `bkey` the helper cannot open the bundle
+                    # and falls back to a dateless "Open Ownership bulk
+                    # dataset", so the one thing a snapshot most needs to say
+                    # — when it was published — went missing.
+                    provenances[source_id] = _stored_bundle_provenance(source_id, bkey)
                     _stamp(hit, provenances[source_id])
             if hit is not None:
                 hits.append(hit)
@@ -1866,9 +1905,20 @@ async def _lookup_pipeline(
                 "source_id": dsrc, "hit_id": dhit, "notice": deep["license_notice"],
             })
         stmts = deep["bods"]
+        # Only for a source the dispatch loop never saw: a dispatched source's
+        # own fetch is the better claim, and a deepen usually replays it from
+        # cache, which would downgrade a live row to "cached".
+        deep_prov = deep.get("provenance")
+        if dsrc not in provenances and isinstance(deep_prov, Provenance):
+            provenances[dsrc] = deep_prov
         bods_counts[f"{dsrc}:{dhit}"] = len(stmts)
         bods_breakdown[f"{dsrc}:{dhit}"] = {
             "entities": sum(1 for s in stmts if s.get("recordType") == "entity"),
+            # Counted separately because the row chip is labelled by the
+            # entity figure alone: calling that total "parties" hid every
+            # natural person the source disclosed behind a number that
+            # excluded them.
+            "persons": sum(1 for s in stmts if s.get("recordType") == "person"),
             "relationships": sum(1 for s in stmts if s.get("recordType") == "relationship"),
         }
         yield ("deepen_result", {
@@ -1893,7 +1943,9 @@ async def _lookup_pipeline(
             key = f"{dsrc}:{dhit}"
             bods_counts[key] = cnt["total"]
             bods_breakdown[key] = {
-                "entities": cnt["entities"], "relationships": cnt["relationships"],
+                "entities": cnt["entities"],
+                "persons": cnt.get("persons", 0),
+                "relationships": cnt["relationships"],
             }
 
     yield ("bods_counts", {"counts": bods_counts, "breakdown": bods_breakdown})
@@ -1957,6 +2009,7 @@ async def _lookup_pipeline(
             "source_liveness": {
                 sid: prov.to_dict() for sid, prov in sorted(provenances.items())
             },
+            "graph_shape": _graph_shape(bods_all, merged),
         },
     )
 
@@ -2053,6 +2106,7 @@ async def _lookup_impl(
     signals: list[dict[str, Any]] = []
     degraded_sources: list[dict[str, Any]] = []
     source_liveness: dict[str, dict[str, Any]] = {}
+    graph_shape: dict[str, Any] = {}
     verdict: str | None = None
     oa_screening: list[dict[str, Any]] = []
     bods_all: list[dict[str, Any]] = []
@@ -2100,6 +2154,7 @@ async def _lookup_impl(
             verdict = payload.get("verdict")
             oa_screening = payload.get("openaleph_screening") or []
             source_liveness = payload.get("source_liveness") or {}
+            graph_shape = payload.get("graph_shape") or {}
         elif event == "done":
             bods_issues = payload["bods_issues"]
             license_notices = payload["license_notices"]
@@ -2119,6 +2174,7 @@ async def _lookup_impl(
         degraded_sources=degraded_sources,
         openaleph_screening=oa_screening,
         source_liveness=source_liveness,
+        graph_shape=graph_shape,
         verdict=verdict,
         lei=norm_lei,
         legal_name=legal_name,
@@ -2693,6 +2749,115 @@ def _select_deepen_pairs(
     return deepen_pairs
 
 
+def _identifier_keys(statement: dict[str, Any]) -> list[str]:
+    """The published identifiers on a statement, normalised for comparison."""
+    details = statement.get("recordDetails") or {}
+    keys: list[str] = []
+    for ident in details.get("identifiers") or []:
+        if not isinstance(ident, dict):
+            continue
+        scheme = ident.get("scheme") or ident.get("schemeName") or ""
+        value = ident.get("id")
+        if isinstance(value, str) and value.strip():
+            keys.append(f"{scheme}:{value.strip()}".lower())
+    return keys
+
+
+def _count_parties(statements: list[dict[str, Any]]) -> int:
+    """How many distinct parties a list of same-kind statements describes.
+
+    Every mapper derives its ids as ``_stable_id(source_id, kind, local_id)``,
+    so GLEIF's copy of a company and Companies House's copy have **different**
+    ``statementId``s by construction. Counting statements and calling the total
+    "companies" therefore overstated every graph where two sources describe the
+    subject — which is nearly all of them.
+
+    Records are joined into one party when they share a published identifier
+    (``recordDetails.identifiers[]``), which is the evidence ``reconcile.py``
+    already requires before it will assert cross-source corroboration. It is a
+    transitive join, not a "pick one key" rule: GLEIF may publish only the LEI
+    while Companies House publishes a company number *and* the LEI, so the two
+    records agree on one identifier out of three and must still be one party.
+
+    Names are deliberately **not** used. A name match is not an identity claim
+    anywhere else in OpenCheck — ``possibly_same_entities`` exists precisely to
+    hold name-only pairs out of the graph and hand them to a human — and it
+    must not become one here just because it would make a number smaller.
+
+    The consequence is that the figure is an **upper bound**: two records of
+    one company sharing no identifier stay two. That is the safe direction for
+    an invitation into FullCheck, whose job is to go and resolve exactly those.
+    """
+    parent: dict[str, str] = {}
+
+    def find(x: str) -> str:
+        parent.setdefault(x, x)
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a: str, b: str) -> None:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[ra] = rb
+
+    roots: list[str] = []
+    for index, statement in enumerate(statements):
+        sid = statement.get("statementId")
+        node = f"stmt:{sid}" if isinstance(sid, str) else f"stmt:#{index}"
+        find(node)
+        roots.append(node)
+        for key in _identifier_keys(statement):
+            union(node, f"id:{key}")
+
+    return len({find(node) for node in roots})
+
+
+def _graph_shape(
+    bods: list[dict[str, Any]], signals: list[dict[str, Any]]
+) -> dict[str, int | None]:
+    """How big the ownership-and-control graph on this page actually is.
+
+    The report's third verdict column invites the reader into FullCheck, and an
+    invitation with no numbers on it is a button. These are the numbers the
+    check has *already earned*: the parties in the merged BODS bundle — the
+    same bundle ``/export`` ships and the risk engine assessed — collapsed by
+    ``_count_parties`` so one company described by three sources counts once.
+
+    It deliberately does **not** reach for the GLEIF subsidiary total or
+    anything FullCheck would go on to discover. Those are a different scope,
+    and a sentence that mixes "what we have" with "what we might find" is the
+    same overclaim as a progress bar that runs ahead of its stream.
+
+    ``depth`` is the longest ownership chain the risk layer actually measured
+    (``COMPLEX_OWNERSHIP_LAYERS`` carries it as ``evidence.longest_path``), or
+    ``None`` when the signal did not fire — never a guess, and never 0, which
+    would render as a flat graph.
+    """
+    entities = [s for s in bods if s.get("recordType") == "entity"]
+    persons = [s for s in bods if s.get("recordType") == "person"]
+    relationships = {
+        s.get("statementId")
+        for s in bods
+        if s.get("recordType") == "relationship" and isinstance(s.get("statementId"), str)
+    }
+
+    depth: int | None = None
+    for signal in signals:
+        if signal.get("code") != "COMPLEX_OWNERSHIP_LAYERS":
+            continue
+        path = (signal.get("evidence") or {}).get("longest_path")
+        if isinstance(path, list) and path:
+            depth = max(depth or 0, len(path))
+    return {
+        "companies": _count_parties(entities),
+        "people": _count_parties(persons),
+        "relationships": len(relationships),
+        "depth": depth,
+    }
+
+
 async def _count_only(source_id: str, hit_id: str) -> dict[str, int] | None:
     """Map a (cached) bundle just to count BODS statements — no risk/validate.
 
@@ -2718,6 +2883,7 @@ async def _count_only(source_id: str, hit_id: str) -> dict[str, int] | None:
     return {
         "total": len(bods),
         "entities": sum(1 for s in bods if s.get("recordType") == "entity"),
+        "persons": sum(1 for s in bods if s.get("recordType") == "person"),
         "relationships": sum(1 for s in bods if s.get("recordType") == "relationship"),
     }
 
@@ -2761,6 +2927,12 @@ async def _safe_deepen(source_id: str, hit_id: str) -> dict[str, Any] | None:
         "bods_issues": issues,
         "license_notice": license_notice,
         "risk_signals": signals,
+        # Sources dispatched outside the `_run` loop — sec_edgar, resolved
+        # from a CIK rather than from `_dispatch` — never reach the loop that
+        # fills `provenances`, so their row is the one with no freshness note.
+        # The deepen is a real fetch of the source; carrying its provenance
+        # back is the only place that fact exists.
+        "provenance": prov,
     }
 
 

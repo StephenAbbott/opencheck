@@ -60,18 +60,13 @@
     "vocab": 0
   },
   "src/components/cdd/NarrativePanel.tsx": {
-    "hex": 9,
-    "text": 24,
+    "hex": 7,
+    "text": 21,
     "vocab": 0
   },
   "src/components/cdd/NzAssociations.tsx": {
     "hex": 0,
     "text": 18,
-    "vocab": 0
-  },
-  "src/components/cdd/OpenAlephArchiveMatches.tsx": {
-    "hex": 0,
-    "text": 4,
     "vocab": 0
   },
   "src/components/cdd/PersonReportPage.tsx": {
@@ -86,7 +81,7 @@
   },
   "src/components/cdd/SourceBucketCard.tsx": {
     "hex": 0,
-    "text": 50,
+    "text": 39,
     "vocab": 0
   },
   "src/components/cdd/SubjectCard.tsx": {
@@ -102,11 +97,6 @@
   "src/components/export/ExportMenu.tsx": {
     "hex": 3,
     "text": 4,
-    "vocab": 0
-  },
-  "src/components/export/ExportPanel.tsx": {
-    "hex": 0,
-    "text": 13,
     "vocab": 0
   },
   "src/components/icons/index.tsx": {

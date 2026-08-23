@@ -44,7 +44,14 @@ from .lookup import ReportResponse, _build_report, _lookup_impl
 
 router = APIRouter()
 
-_EXPORT_FORMATS = {"json", "jsonl", "zip", "xml", "senzing", "ftm", "gql", "amlai", "rdf"}
+_EXPORT_FORMATS = {
+    "json", "jsonl", "zip", "xml", "senzing", "ftm", "gql", "amlai", "rdf",
+    # Both already existed elsewhere — cypher on POST /export-network and
+    # inside the FullCheck network zip, csv inside the BigQuery zip. Serving
+    # them here reuses those writers rather than adding new ones, and stops
+    # the download picker offering a ZIP to someone who wanted a table.
+    "cypher", "csv",
+}
 # One regex for the /export ?format= validation, derived from the set above so
 # the two can't drift (ExportNetworkRequest.format is the third place — a
 # typing.Literal, which must stay a literal; a test pins it to this set).
@@ -114,7 +121,10 @@ async def export(
             "statement per the Open Ownership conversion pattern, canonical "
             "licence URI on every statement, and OpenCheck's risk signals / "
             "entity-resolution links as bods:Annotation overlays in a "
-            "separate analysis graph)"
+            "separate analysis graph) | cypher (Neo4j Cypher script, the "
+            "same writer POST /export-network uses) | csv (zip: the entity / "
+            "person / ownership-edge tables, without the BigQuery DDL and "
+            "queries)"
         ),
     ),
     subsidiaries: bool = Query(
@@ -230,6 +240,37 @@ async def export(
             },
         )
 
+    if format == "cypher":
+        return Response(
+            content=to_cypher(payload.bods).encode("utf-8"),
+            media_type="text/plain; charset=utf-8",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="opencheck-{slug}-{stamp}.cypher"'
+                ),
+            },
+        )
+
+    if format == "csv":
+        contributing_ids = sorted({h.source_id for h in payload.hits if not h.is_stub})
+        licenses_md = _build_licenses_md(
+            contributing_ids=contributing_ids,
+            license_notices=payload.license_notices,
+            licensing=assess_licensing(contributing_ids),
+            query=export_query,
+            kind=kind,
+        )
+        body = _build_csv_zip(payload.bods, slug=slug, stamp=stamp, licenses_md=licenses_md)
+        return Response(
+            content=body,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="opencheck-{slug}-{stamp}-csv.zip"'
+                ),
+            },
+        )
+
     if format == "gql":
         contributing_ids = sorted({h.source_id for h in payload.hits if not h.is_stub})
         licenses_md = _build_licenses_md(
@@ -292,7 +333,8 @@ class ExportNetworkRequest(BaseModel):
 
     bods: list[dict[str, Any]]
     format: Literal[
-        "json", "jsonl", "xml", "senzing", "ftm", "cypher", "gql", "amlai", "rdf", "zip"
+        "json", "jsonl", "xml", "senzing", "ftm", "cypher", "csv", "gql",
+        "amlai", "rdf", "zip"
     ] = "zip"
     slug: str | None = None
 
@@ -338,6 +380,20 @@ async def export_network(request: Request, req: ExportNetworkRequest) -> Respons
         # Client-assembled network: data statements only — the analytical
         # overlay needs a lookup run, so it ships via GET /export?format=rdf.
         return _file(to_rdf(bods, fmt="trig").encode("utf-8"), "application/trig", "trig")
+    if req.format == "csv":
+        contributing_ids = _network_source_ids(bods)
+        licenses_md = _build_licenses_md(
+            contributing_ids=contributing_ids,
+            license_notices=[],
+            licensing=assess_licensing(contributing_ids),
+            query=slug,
+            kind=SearchKind.ENTITY,
+        )
+        return _file(
+            _build_csv_zip(bods, slug=slug, stamp=stamp, licenses_md=licenses_md),
+            "application/zip",
+            "csv.zip",
+        )
     if req.format == "gql":
         contributing_ids = _network_source_ids(bods)
         licenses_md = _build_licenses_md(
@@ -397,6 +453,30 @@ def _build_gql_zip(
     with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
         for name, content in build_gql_files(bods).items():
             zf.writestr(f"{base}/{name}", content)
+        zf.writestr(f"{base}/LICENSES.md", licenses_md)
+    return buf.getvalue()
+
+
+def _build_csv_zip(
+    bods: list[dict[str, Any]], *, slug: str, stamp: str, licenses_md: str
+) -> bytes:
+    """The plain tables: entity / person / ownership-edge CSVs plus licences.
+
+    These are exactly the tables ``gql`` already produces (``bods/gql.py``) —
+    the BigQuery package is those CSVs *plus* DDL, 14 GQL queries and a README.
+    Someone who wants a spreadsheet should not have to download a property
+    graph and delete two thirds of it, and building a second CSV writer to
+    avoid that would be two encodings of the same graph, free to disagree.
+
+    Empty tables are omitted upstream, so a subject with no natural persons
+    ships no ``person_nodes.csv`` rather than a header-only file.
+    """
+    buf = io.BytesIO()
+    base = f"opencheck-{slug}-{stamp}-csv"
+    with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name, content in build_gql_files(bods).items():
+            if name.endswith(".csv"):
+                zf.writestr(f"{base}/{name}", content)
         zf.writestr(f"{base}/LICENSES.md", licenses_md)
     return buf.getvalue()
 

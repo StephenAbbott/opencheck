@@ -60,6 +60,15 @@ class DispositionRecord(BaseModel):
     model: str = ""
     reviewer: str | None = None  # reserved for v2 (reviewer identity)
     dispositions: list[ClaimDisposition] = Field(default_factory=list)
+    #: The analyst has read the summary as a whole. Deliberately separate from
+    #: the per-claim dispositions and never derived from them: "I have read
+    #: this" is a weaker statement than "I accept every sentence in it", and
+    #: collapsing the two would let a page-level acknowledgement stand in an
+    #: audit trail as claim-by-claim agreement. Bound to ``run_id`` like the
+    #: dispositions, so a regenerate clears it rather than carrying a review
+    #: of words the analyst never saw.
+    reviewed: bool = False
+    reviewed_at: datetime | None = None  # server-set when reviewed flips true
     updated_at: datetime | None = None  # server-set on save
 
 
@@ -128,7 +137,19 @@ def save_dispositions(record: DispositionRecord) -> DispositionRecord:
             decided_at = now
         stamped.append(d.model_copy(update={"decided_at": decided_at}))
 
-    out = record.model_copy(update={"dispositions": stamped, "updated_at": now})
+    # Like decided_at: keep the moment the review actually happened rather
+    # than the moment the sheet was last written, and clear the timestamp
+    # when the review is withdrawn so a stale one cannot outlive it.
+    if not record.reviewed:
+        reviewed_at = None
+    elif previous is not None and previous.reviewed and previous.reviewed_at:
+        reviewed_at = previous.reviewed_at
+    else:
+        reviewed_at = now
+
+    out = record.model_copy(
+        update={"dispositions": stamped, "reviewed_at": reviewed_at, "updated_at": now}
+    )
     path = _record_path(out.lei, out.run_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as fh:

@@ -200,6 +200,9 @@ export interface LookupResponse {
   /** How current each source's payload is, keyed by source_id. Sibling to
    *  degraded_sources: data that is not current must not read as live. */
   source_liveness?: Record<string, SourceLiveness>;
+  /** How big the mapped graph is. Absent on payloads recorded before this
+   *  field existed, which is why every consumer treats it as optional. */
+  graph_shape?: GraphShape;
   /** One deterministic sentence stating what the check found — built from
    *  the signals and degradations by the backend (`opencheck/verdict.py`),
    *  never by a model, so the page, the PDF, the share card and the API
@@ -208,6 +211,17 @@ export interface LookupResponse {
   bods: Record<string, unknown>[];
   bods_issues: string[];
   license_notices: { source_id: string; hit_id: string; notice: string }[];
+}
+
+/** `graph_shape` on the `risk_signals` event: the size of the ownership-and-
+ *  control graph this check produced, deduplicated by statementId. `depth` is
+ *  the longest chain the risk layer measured, or null when it measured none —
+ *  never 0, which would render as a flat graph. */
+export interface GraphShape {
+  companies: number;
+  people: number;
+  relationships: number;
+  depth: number | null;
 }
 
 export interface DeepenResponse {
@@ -243,9 +257,54 @@ export const BASE_URL: string = import.meta.env.DEV
  * ``lei`` parameter; backend dispatches to the LEI synthesis path
  * (not the free-text /report one).
  */
+/** Exactly `_EXPORT_FORMATS` in `backend/opencheck/routers/export.py`. The
+ *  backend rejects anything outside that set with a 400, so the picker must
+ *  not be able to name one — an export chip that produces an error is worse
+ *  than an absent format. */
+export type ExportFormat =
+  | "json"
+  | "jsonl"
+  | "zip"
+  | "xml"
+  | "csv"
+  | "cypher"
+  | "senzing"
+  | "ftm"
+  | "gql"
+  | "amlai"
+  | "rdf";
+
+/**
+ * Every export format, once, in the order the picker shows them.
+ *
+ * Built from a `Record<ExportFormat, ...>` rather than written out as an
+ * array, so adding a format to the type without adding it here fails the
+ * build. Two surfaces read it — the download picker and the API reference on
+ * the About page — and the API reference is where the list drifted before
+ * (Phase 81 fixed it once; it drifted again by two the moment csv and cypher
+ * landed).
+ */
+const EXPORT_FORMAT_ORDER: Record<ExportFormat, number> = {
+  json: 0,
+  zip: 1,
+  csv: 2,
+  jsonl: 3,
+  xml: 4,
+  ftm: 5,
+  cypher: 6,
+  rdf: 7,
+  senzing: 8,
+  gql: 9,
+  amlai: 10,
+};
+
+export const EXPORT_FORMATS: readonly ExportFormat[] = (
+  Object.keys(EXPORT_FORMAT_ORDER) as ExportFormat[]
+).sort((a, b) => EXPORT_FORMAT_ORDER[a] - EXPORT_FORMAT_ORDER[b]);
+
 export function exportUrl(
   lei: string,
-  format: "json" | "jsonl" | "zip" | "xml" | "senzing" | "ftm" | "gql" | "amlai" | "rdf",
+  format: ExportFormat,
   opts?: { subsidiaries?: boolean }
 ): string {
   const params = new URLSearchParams({ lei, format });
@@ -806,6 +865,11 @@ export interface DispositionRecord {
   model: string;
   reviewer: string | null;
   dispositions: ClaimDisposition[];
+  /** The analyst has read the summary as a whole. Never derived from the
+   *  claim decisions: "I have read this" is a weaker statement than "I accept
+   *  every sentence in it". Bound to `run_id`, so a regenerate clears it. */
+  reviewed?: boolean;
+  reviewed_at?: string | null;
   updated_at?: string | null;
 }
 
@@ -817,7 +881,7 @@ export async function putDispositions(
   lei: string,
   runId: string,
   dispositions: { claim_id: string; status: DispositionStatus; comment: string | null }[],
-  meta: { prompt_version?: string; model?: string } = {},
+  meta: { prompt_version?: string; model?: string; reviewed?: boolean } = {},
 ): Promise<DispositionRecord> {
   const r = await fetch(`${BASE_URL}/narrative/dispositions`, {
     method: "PUT",
@@ -828,6 +892,10 @@ export async function putDispositions(
       prompt_version: meta.prompt_version ?? "",
       model: meta.model ?? "",
       dispositions,
+      // Always sent, never omitted: the sheet is a whole-sheet overwrite, so
+      // leaving it out on a withdrawal would make "reviewed" impossible to
+      // clear.
+      reviewed: meta.reviewed ?? false,
     }),
   });
   if (!r.ok) {
@@ -1042,6 +1110,10 @@ export interface RiskSignalsEvent {
   openaleph_screening?: OpenAlephScreeningMatch[];
   /** Per-source currency, keyed by source_id. */
   source_liveness?: Record<string, SourceLiveness>;
+  /** How big the mapped graph is — see `GraphShape`. Rides on this event
+   *  rather than `done` so the verdict strip's three columns all come from
+   *  one payload and cannot disagree about the same run. */
+  graph_shape?: GraphShape;
   /** One deterministic sentence stating what the check found — built from
    *  the signals and degradations by the backend (`opencheck/verdict.py`),
    *  never by a model, so the page, the PDF, the share card and the API
@@ -1146,9 +1218,19 @@ export interface LookupStreamErrorEvent {
   detail: string;
 }
 
-/** Entity / relationship split for a single deepened hit's BODS graph. */
+/** Entity / person / relationship split for a single deepened hit's BODS
+ *  graph.
+ *
+ *  `persons` is counted separately because the diagram chip is labelled by
+ *  the entity figure alone. Calling that total "parties" hid every natural
+ *  person the source disclosed behind a number that excluded them — the
+ *  reader saw "7 parties" over a diagram containing eleven nodes.
+ *
+ *  Optional: payloads recorded before the backend split it out carry only
+ *  entities and relationships. */
 export interface BodsBreakdown {
   entities: number;
+  persons?: number;
   relationships: number;
 }
 

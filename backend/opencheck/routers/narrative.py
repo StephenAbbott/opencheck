@@ -141,6 +141,9 @@ class DispositionsPutRequest(BaseModel):
     prompt_version: str = ""
     model: str = ""
     dispositions: list[DispositionIn] = Field(default_factory=list)
+    #: The analyst has read the summary as a whole. Not derived from the
+    #: per-claim dispositions — see DispositionRecord.reviewed.
+    reviewed: bool = False
 
 
 @router.put("/narrative/dispositions", response_model=DispositionRecord)
@@ -166,6 +169,7 @@ async def put_dispositions(
             ClaimDisposition(claim_id=d.claim_id, status=d.status, comment=d.comment)
             for d in req.dispositions
         ],
+        reviewed=req.reviewed,
     )
     try:
         return await asyncio.to_thread(save_dispositions, record)

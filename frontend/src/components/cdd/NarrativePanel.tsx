@@ -39,6 +39,7 @@ import {
 } from "../../lib/evidenceDisclosure";
 import { ExportMenu } from "../export/ExportMenu";
 import { CONFIDENCE_GLYPH, CONFIDENCE_LABEL } from "../ui/Chip";
+import { Chip, SectionHeading } from "../ui";
 
 const CONF_BADGE: Record<string, string> = {
   high: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -245,7 +246,17 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
   const [disp, setDisp] = useState<Record<string, DispState>>({});
   const [commentOpen, setCommentOpen] = useState<Record<string, boolean>>({});
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  // "I have read this summary" — a weaker statement than accepting every
+  // claim in it, so it is stored and rendered separately from the per-claim
+  // dispositions and never derived from them.
+  const [reviewed, setReviewed] = useState(false);
   const dirtyRef = useRef(false);
+  // The stored sheet has been fetched (or confirmed absent). No save may run
+  // before it is true: a whole-sheet overwrite racing its own hydration is how
+  // one click deleted an analyst's saved decisions.
+  const hydratedRef = useRef(false);
+  // An edit is waiting on the debounce.
+  const pendingRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
 
   const canSignOff = Boolean(data?.run_id) && !cached;
@@ -262,7 +273,10 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     setCommentOpen({});
     setSaveState("idle");
     setEvidenceExpanded(false);
+    setReviewed(false);
     dirtyRef.current = false;
+    pendingRef.current = false;
+    hydratedRef.current = false;
     fetchCuratedNarrative(lei).then((cachedNarrative) => {
       if (active && cachedNarrative) {
         setData(cachedNarrative);
@@ -275,16 +289,30 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
   }, [lei]);
 
   // Hydrate any stored disposition sheet for this exact narrative run.
+  //
+  // The first version bailed entirely when the analyst had already touched
+  // something (`dirtyRef`), which lost the stored sheet: the save is a
+  // whole-sheet overwrite, so one click on "Mark as reviewed" landing before
+  // this promise resolved wrote back an empty `dispositions: []` and deleted
+  // every decision and `decided_at` on the server. Stored entries are now
+  // merged *under* local ones — the analyst's own edits win, everything they
+  // have not touched survives.
   useEffect(() => {
     if (!data?.run_id || cached) return;
     let active = true;
     getDispositions(lei, data.run_id).then((record) => {
-      if (!active || !record || dirtyRef.current) return;
-      const next: Record<string, DispState> = {};
-      for (const d of record.dispositions) {
-        next[d.claim_id] = { status: d.status, comment: d.comment ?? "" };
+      if (!active) return;
+      if (record) {
+        const stored: Record<string, DispState> = {};
+        for (const d of record.dispositions) {
+          stored[d.claim_id] = { status: d.status, comment: d.comment ?? "" };
+        }
+        setDisp((local) => ({ ...stored, ...local }));
+        if (!dirtyRef.current) setReviewed(Boolean(record.reviewed));
       }
-      setDisp(next);
+      // Set last, and on both branches: until it is true no save may run, or
+      // the save would race the very sheet it is about to overwrite.
+      hydratedRef.current = true;
     });
     return () => {
       active = false;
@@ -298,8 +326,8 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     const runId = data.run_id;
     const promptVersion = data.prompt_version;
     const model = data.model;
-    if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = window.setTimeout(async () => {
+    if (!hydratedRef.current) return;
+    const save = async () => {
       setSaveState("saving");
       try {
         await putDispositions(
@@ -310,20 +338,44 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
             status: d.status,
             comment: d.comment.trim() ? d.comment.trim() : null,
           })),
-          { prompt_version: promptVersion, model },
+          { prompt_version: promptVersion, model, reviewed },
         );
         setSaveState("saved");
       } catch {
         setSaveState("error");
       }
-    }, 800);
-    return () => {
-      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
     };
-  }, [disp, data, cached, lei]);
+    if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(save, 800);
+    return () => {
+      if (saveTimerRef.current === null) return;
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+      // Flush rather than drop. This panel is mounted only under
+      // `mode === "quick"`, so switching to FullCheck within the debounce
+      // window unmounted it and silently discarded the pending write — the
+      // control had already drawn a checkmark for a review that was never
+      // persisted. `void` because a cleanup cannot await, and the request is
+      // an idempotent whole-sheet overwrite, so a duplicate is harmless.
+      if (pendingRef.current) void save();
+    };
+  }, [disp, reviewed, data, cached, lei]);
+
+  // Set on every analyst edit and cleared once a save completes, so the
+  // unmount flush above can tell "nothing to write" from "a write is due".
+  useEffect(() => {
+    if (saveState === "saved") pendingRef.current = false;
+  }, [saveState]);
+
+  function toggleReviewed() {
+    dirtyRef.current = true;
+    pendingRef.current = true;
+    setReviewed((v) => !v);
+  }
 
   function setClaimStatus(claimId: string, status: DispositionStatus) {
     dirtyRef.current = true;
+    pendingRef.current = true;
     setDisp((prev) => {
       const current = prev[claimId];
       // Clicking the active status again clears the decision.
@@ -338,6 +390,7 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
 
   function setClaimComment(claimId: string, comment: string) {
     dirtyRef.current = true;
+    pendingRef.current = true;
     setDisp((prev) => {
       const current = prev[claimId];
       return {
@@ -347,16 +400,22 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     });
   }
 
+  /** The audit trail embedded in the PDF and the Markdown report. */
   function buildRecord(): DispositionRecord | null {
     if (!data?.run_id || cached) return null;
     const entries = Object.entries(disp);
-    if (entries.length === 0) return null;
+    // A summary marked reviewed with no claim dispositioned is still a
+    // decision, and the exported report is where a decision has to appear —
+    // the first version returned null here, so the one analyst who read the
+    // summary and signed it off exported a report with no audit trail at all.
+    if (entries.length === 0 && !reviewed) return null;
     return {
       lei,
       run_id: data.run_id,
       prompt_version: data.prompt_version,
       model: data.model,
       reviewer: null,
+      reviewed,
       dispositions: entries.map(([claimId, d]) => ({
         claim_id: claimId,
         status: d.status,
@@ -375,7 +434,16 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
       setCommentOpen({});
       setSaveState("idle");
       setEvidenceExpanded(false);
+      // A regenerate is new text and therefore a new run_id, which is the
+      // whole reason run_id exists (see `compute_run_id`): decisions must
+      // never attach to words the analyst did not read. `reviewed` is one of
+      // those decisions — leaving it set carried a checkmark, and then a
+      // stamped `reviewed_at`, onto a summary produced two seconds ago.
+      setReviewed(false);
       dirtyRef.current = false;
+      pendingRef.current = false;
+      // The new run has no stored sheet yet; the hydrate effect will confirm.
+      hydratedRef.current = false;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not generate the summary.");
     } finally {
@@ -432,15 +500,20 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
     <section className="px-4 py-[18px] sm:px-6 sm:py-[22px] border-b border-oo-rule">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-[15px] font-semibold text-oo-navy flex items-center gap-2">
-            AI summary
-            <span className="text-[10px] font-medium uppercase tracking-wide text-oo-blue border border-[#cfd6f5] bg-[#eef1fb] rounded-full px-1.5 py-0.5">
-              Beta
-            </span>
-          </h2>
-          <p className="text-[12px] text-oo-muted mt-0.5">
-            A plain-English summary of what OpenCheck found — every statement links to its source.
-          </p>
+          {/* "Summary", not "AI summary" + a Beta badge.
+
+              The v1 heading named the machinery and graded it, which is two
+              statements about OpenCheck where the reader wanted one about the
+              company. What actually needs saying is the provenance — that a
+              model wrote it and every sentence carries a citation — so that
+              is what the chip beside the heading says, in words rather than
+              in a status label a reader has to interpret. */}
+          <div className="flex items-center flex-wrap gap-2">
+            <SectionHeading>Summary</SectionHeading>
+            <Chip tone="accent" size="sm">
+              Written by AI, cited to sources
+            </Chip>
+          </div>
         </div>
         {/* Pinned in the top-right corner at every width — never overflows the
             card. The Export menu lives here (not in a global toolbar) because
@@ -512,7 +585,58 @@ export function NarrativePanel({ lei }: { lei: string; legalName?: string | null
 
       {data && !collapsed && (
         <div className="mt-4">
-          <p className="text-[14px] leading-relaxed text-oo-ink">{data.summary}</p>
+          <p className="text-[14px] leading-relaxed text-oo-ink max-w-[82ch]">{data.summary}</p>
+
+          {/* The line the mockup puts under the prose: what the citations
+              mean, and the one control that acts on the summary as a whole.
+              It sits above the evidence list rather than after it, because a
+              reader who has finished the two paragraphs is at this point on
+              the page — not four hundred pixels further down. */}
+          <div className="mt-3.5 flex items-center flex-wrap gap-x-4 gap-y-2 text-oo-small">
+            <span className="text-oo-muted">
+              Every sentence links to the record it came from.
+            </span>
+            {canSignOff && (
+              <button
+                type="button"
+                onClick={toggleReviewed}
+                aria-pressed={reviewed}
+                className={`inline-flex items-center gap-1.5 font-medium ${
+                  reviewed ? "text-oo-ok-text" : "text-oo-blue hover:underline"
+                }`}
+              >
+                {reviewed ? (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                      strokeLinejoin="round" aria-hidden="true">
+                      <path d="m20 6-11 11-5-5" />
+                    </svg>
+                    Reviewed
+                  </>
+                ) : (
+                  "Mark as reviewed"
+                )}
+              </button>
+            )}
+            {/* Beside the control, not four hundred pixels below it in a block
+                that only renders when the narrative has claims. The button
+                draws its checkmark optimistically, so a failed write was
+                reported nowhere on a claimless summary and silently reverted
+                on reload. */}
+            {canSignOff && saveState !== "idle" && (
+              <span
+                role="status"
+                className={saveState === "error" ? "text-oo-warn-text" : "text-oo-muted"}
+              >
+                {saveState === "saving"
+                  ? "Saving…"
+                  : saveState === "saved"
+                    ? "Saved"
+                    : "Could not save — your decisions are not stored."}
+              </span>
+            )}
+          </div>
 
           {data.claims.length > 0 && (
             <div className="mt-4 border-t border-oo-rule pt-3">

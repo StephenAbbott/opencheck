@@ -22,3 +22,4 @@ export type { SectionLabelTone } from "./SectionLabel";
 
 export { Icon, ICON_NAMES, ICON_PATHS } from "./Icon";
 export type { IconName } from "./Icon";
+export { ActionChip, DataTile } from "./ActionChip";

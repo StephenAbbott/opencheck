@@ -46,6 +46,29 @@ export function bodsRecordCount(n: number): string {
   return `${n} BODS record${n === 1 ? "" : "s"}`;
 }
 
+/**
+ * What the diagram chip on a source row says, from the graph's own split.
+ *
+ * It said "**7 parties**", counted from `breakdown.entities` alone — so every
+ * natural person the source disclosed was standing in the diagram and missing
+ * from the number that described it. A reader who opened a UK Companies House
+ * row saw seven in the label and eleven nodes on screen.
+ *
+ * Two decisions, both narrower than they look:
+ *
+ * - **"entities", not "parties".** A party is whatever the graph holds, and
+ *   using it for a count that excludes half of them is the overclaim. BODS
+ *   itself splits `entity` from `person`, and so does the label.
+ * - **People are named when there are any.** Suppressing the clause at zero
+ *   keeps the common case short, and "· 0 people" reads as a finding about
+ *   disclosure rather than as an empty count.
+ */
+export function graphPartiesLabel(entities: number, persons = 0): string {
+  const e = `${entities} ${entities === 1 ? "entity" : "entities"}`;
+  if (persons <= 0) return e;
+  return `${e} · ${persons} ${persons === 1 ? "person" : "people"}`;
+}
+
 /** The one verb for starting a check on a company. */
 export const LOOKUP_VERB = "Search";
 

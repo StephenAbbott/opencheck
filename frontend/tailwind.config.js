@@ -87,6 +87,10 @@ export default {
             ownership: "#3b82f6",
             ownershipText: "#1d4ed8",
             ownershipTint: "#eff6ff",
+            // The tint needs an edge when it is used as a surface rather than
+            // a node fill -- the verdict strip's ownership-network invitation
+            // is a card, and #eff6ff on white with no border is not one.
+            ownershipTintBorder: "#bfdbfe",
             control: "#e65100",
             controlText: "#9a3412",
             controlTint: "#fdf0e8",

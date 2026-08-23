@@ -594,3 +594,229 @@ def test_stored_bundle_sources_report_as_snapshot(
     assert "live" not in {v["liveness"] for v in liveness.values()}, (
         f"a source claimed to be live in an offline test run: {liveness}"
     )
+
+
+def test_gleif_anchor_carries_provenance(client, tmp_path, monkeypatch) -> None:
+    """The anchor must appear in source_liveness like every other source.
+
+    GLEIF is resolved before the dispatch loop that fills ``provenances``, so
+    for a long time it was the one source with no entry — and the one row on
+    the report with no freshness note. A reader could reasonably read that
+    silence as "we don't know when this was checked" for the single source
+    every other row is anchored to.
+    """
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)
+
+    payload = client.get("/lookup", params={"lei": lei}).json()
+    liveness = payload.get("source_liveness") or {}
+    assert "gleif" in liveness, f"anchor missing from source_liveness: {sorted(liveness)}"
+    assert liveness["gleif"]["liveness"] in {
+        "live", "cached", "snapshot", "curated", "stub"
+    }
+    # And the hit itself carries it, so a consumer reading the hit rather than
+    # the map gets the same answer.
+    gleif_hits = [h for h in payload["hits"] if h["source_id"] == "gleif"]
+    assert gleif_hits, "no GLEIF hit on the response"
+    assert gleif_hits[0]["liveness"] == liveness["gleif"]["liveness"]
+
+
+def test_graph_shape_counts_the_mapped_graph(client, tmp_path) -> None:
+    """graph_shape counts what the check holds, deduplicated by statementId.
+
+    The verdict strip's ownership-network column is an invitation with numbers
+    on it. The numbers have to be the ones this check earned — not the GLEIF
+    subsidiary total, which belongs to a scope FullCheck has not run yet.
+    """
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)
+
+    payload = client.get("/lookup", params={"lei": lei}).json()
+    shape = payload.get("graph_shape") or {}
+    assert set(shape) == {"companies", "people", "relationships", "depth"}
+    assert shape["companies"] >= 1, "the subject itself is a company statement"
+    for key in ("companies", "people", "relationships"):
+        assert isinstance(shape[key], int) and shape[key] >= 0
+    # No measured chain means no claim about one — never 0, which renders as
+    # a flat graph.
+    assert shape["depth"] is None or shape["depth"] >= 1
+
+    # Counts are over distinct *parties*, not statements. This assertion is
+    # weak on its own — see test_graph_shape_merges_the_same_party below, which
+    # is the one that would have caught the statementId-only version.
+    ids = [s.get("statementId") for s in payload["bods"]]
+    distinct = {i for i in ids if isinstance(i, str)}
+    total = shape["companies"] + shape["people"] + shape["relationships"]
+    assert total <= len(distinct)
+
+
+def test_every_hit_source_has_a_freshness_claim(client, tmp_path) -> None:
+    """No source may reach the report with nothing said about its currency.
+
+    Two sources are dispatched outside the `_run` loop that fills
+    `provenances`: the GLEIF anchor, resolved before it, and sec_edgar,
+    resolved from a CIK during it. Both rendered a row with no freshness note
+    at all — which a reader can only read as "we do not know when this was
+    checked", next to rows that say "Checked today".
+    """
+    lei = "213800LH1BZH3DI6G760"
+    _seed_bundle(tmp_path, lei)
+
+    payload = client.get("/lookup", params={"lei": lei}).json()
+    liveness = payload.get("source_liveness") or {}
+    hit_sources = {h["source_id"] for h in payload["hits"] if not h.get("is_stub")}
+    missing = hit_sources - set(liveness)
+    assert not missing, f"sources on the report with no liveness entry: {sorted(missing)}"
+
+
+def test_graph_shape_merges_the_same_party_across_sources() -> None:
+    """One company described by two sources is one company.
+
+    Every mapper derives ids as `_stable_id(source_id, kind, local_id)`, so
+    GLEIF's copy of a subject and Companies House's copy carry *different*
+    statementIds by construction. The first version of `_graph_shape`
+    deduplicated by statementId and so collapsed nothing at all: a graph of two
+    companies was advertised in the verdict strip as three.
+    """
+    from opencheck.routers.lookup import _graph_shape
+
+    bods = [
+        {
+            "statementId": "opencheck-gleif-subject",
+            "recordType": "entity",
+            "recordDetails": {
+                "name": "Bundle Co P.L.C.",
+                "identifiers": [{"scheme": "XI-LEI", "id": "213800LH1BZH3DI6G760"}],
+            },
+        },
+        {
+            "statementId": "opencheck-ch-subject",
+            "recordType": "entity",
+            "recordDetails": {
+                "name": "BUNDLE CO PLC",
+                "identifiers": [
+                    {"scheme": "GB-COH", "id": "01234567"},
+                    {"scheme": "XI-LEI", "id": "213800LH1BZH3DI6G760"},
+                ],
+            },
+        },
+        {
+            "statementId": "opencheck-ch-parent",
+            "recordType": "entity",
+            "recordDetails": {
+                "name": "Bundle Holdings Ltd",
+                "identifiers": [{"scheme": "GB-COH", "id": "07654321"}],
+            },
+        },
+        {
+            "statementId": "opencheck-ch-psc",
+            "recordType": "person",
+            "recordDetails": {"names": [{"fullName": "Jane Smith"}]},
+        },
+        {"statementId": "rel-1", "recordType": "relationship", "recordDetails": {}},
+    ]
+    shape = _graph_shape(bods, [])
+    assert shape["companies"] == 2, shape
+    assert shape["people"] == 1
+    assert shape["relationships"] == 1
+
+
+def test_graph_shape_never_merges_on_name_alone() -> None:
+    """A name match is not an identity claim — not here either.
+
+    `possibly_same_entities` exists to hold name-only pairs *out* of the graph
+    and hand them to a human. Merging them here to make the invitation's number
+    smaller would assert in one line what the report refuses to assert in a
+    whole section.
+    """
+    from opencheck.routers.lookup import _graph_shape
+
+    bods = [
+        {
+            "statementId": "a",
+            "recordType": "entity",
+            "recordDetails": {"name": "Acme Trading Ltd", "identifiers": []},
+        },
+        {
+            "statementId": "b",
+            "recordType": "entity",
+            "recordDetails": {"name": "Acme Trading Ltd", "identifiers": []},
+        },
+        {"statementId": "r", "recordType": "relationship", "recordDetails": {}},
+    ]
+    assert _graph_shape(bods, [])["companies"] == 2
+
+
+def test_graph_shape_depth_only_when_measured() -> None:
+    from opencheck.routers.lookup import _graph_shape
+
+    assert _graph_shape([], [])["depth"] is None
+    assert _graph_shape([], [{"code": "SANCTIONED", "evidence": {}}])["depth"] is None
+    measured = [
+        {
+            "code": "COMPLEX_OWNERSHIP_LAYERS",
+            "evidence": {"longest_path": ["a", "b", "c", "d"]},
+        }
+    ]
+    assert _graph_shape([], measured)["depth"] == 4
+
+
+def test_graph_shape_merge_is_transitive_across_partial_identifier_overlap() -> None:
+    """Records sharing one identifier out of three are still one party.
+
+    GLEIF publishes the LEI; Companies House publishes a company number and the
+    LEI; a third source publishes the company number and a VAT id. All three
+    describe one company, and no single identifier is present on all three — a
+    "pick the lowest key" rule counts them as two or three. The join has to be
+    transitive.
+    """
+    from opencheck.routers.lookup import _graph_shape
+
+    bods = [
+        {
+            "statementId": "a",
+            "recordType": "entity",
+            "recordDetails": {"identifiers": [{"scheme": "XI-LEI", "id": "L1"}]},
+        },
+        {
+            "statementId": "b",
+            "recordType": "entity",
+            "recordDetails": {
+                "identifiers": [
+                    {"scheme": "GB-COH", "id": "C1"},
+                    {"scheme": "XI-LEI", "id": "L1"},
+                ]
+            },
+        },
+        {
+            "statementId": "c",
+            "recordType": "entity",
+            "recordDetails": {
+                "identifiers": [
+                    {"scheme": "GB-COH", "id": "C1"},
+                    {"scheme": "GB-VAT", "id": "V1"},
+                ]
+            },
+        },
+        {"statementId": "r", "recordType": "relationship", "recordDetails": {}},
+    ]
+    assert _graph_shape(bods, [])["companies"] == 1
+
+
+def test_graph_shape_tolerates_missing_and_malformed_identifiers() -> None:
+    """Provenance-style code must never sink a lookup on a shape it did not
+    expect — a statement with no recordDetails, a null identifier list, or a
+    non-dict entry counts as its own party rather than raising."""
+    from opencheck.routers.lookup import _graph_shape
+
+    bods = [
+        {"statementId": "a", "recordType": "entity"},
+        {"statementId": "b", "recordType": "entity", "recordDetails": None},
+        {
+            "statementId": "c",
+            "recordType": "entity",
+            "recordDetails": {"identifiers": ["not-a-dict", {"scheme": "X"}, {"id": "  "}]},
+        },
+        {"recordType": "entity", "recordDetails": {"identifiers": []}},
+    ]
+    assert _graph_shape(bods, [])["companies"] == 4
