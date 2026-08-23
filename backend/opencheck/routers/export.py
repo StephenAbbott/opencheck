@@ -66,6 +66,14 @@ _EXPORT_FORMAT_PATTERN = f"^({'|'.join(sorted(_EXPORT_FORMATS))})$"
 _TRAFFIC = {"green": "🟢", "amber": "🟡", "red": "🔴"}
 
 
+class _ExcelUnavailable(RuntimeError):
+    """openpyxl is not installed on this deployment.
+
+    Its own type so the 503 handler cannot swallow an unrelated RuntimeError
+    raised while building the workbook and report it as a missing dependency.
+    """
+
+
 @router.get("/license-matrix")
 @limiter.limit(default_tier)
 async def license_matrix(
@@ -289,9 +297,10 @@ async def export(
         )
         try:
             body = _build_xlsx(payload.bods, licenses_md=licenses_md)
-        except RuntimeError as exc:
-            # openpyxl absent: one format is unavailable, which is a 503 with
-            # a reason — not a 500, and not a silent empty file.
+        except _ExcelUnavailable as exc:
+            # One format is unavailable, which is a 503 with a reason — not a
+            # 500, and not a silent empty file. Anything else raised in here is
+            # a bug and must not be reported as a missing dependency.
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return Response(
             content=body,
@@ -439,7 +448,7 @@ async def export_network(request: Request, req: ExportNetworkRequest) -> Respons
         )
         try:
             body = _build_xlsx(bods, licenses_md=licenses_md)
-        except RuntimeError as exc:
+        except _ExcelUnavailable as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return _file(
             body,
@@ -548,7 +557,7 @@ def _build_xlsx(bods: list[dict[str, Any]], *, licenses_md: str) -> bytes:
     try:
         from openpyxl import Workbook
     except ImportError as exc:  # pragma: no cover - deployment-dependent
-        raise RuntimeError(
+        raise _ExcelUnavailable(
             "Excel export is unavailable on this deployment (openpyxl is not "
             "installed). Use format=csv for the same tables."
         ) from exc
@@ -564,16 +573,29 @@ def _build_xlsx(bods: list[dict[str, Any]], *, licenses_md: str) -> bytes:
             continue
         ws = wb.create_sheet(_sheet_name(name))
         for row in csv.reader(io.StringIO(content)):
-            # Everything is written as text. A registration number with
-            # leading zeros, an ISIN, a company number — Excel silently turns
-            # each into a number and loses the zeros, which is a corrupted
-            # identifier in a due-diligence file.
             ws.append([str(cell) for cell in row])
+            # Force every cell to text, *after* append.
+            #
+            # Two different problems, one fix. A registration number with
+            # leading zeros, an ISIN, a company number: Excel reads each as a
+            # number and loses the zeros, and "00102498" and "102498" are
+            # different companies at Companies House. And a value beginning
+            # with "=" — these names come from third-party open registers and
+            # free-text sources — is stored as a *formula*, which is a
+            # spreadsheet-injection payload inside a downloaded due-diligence
+            # artefact. openpyxl decides the type from the value on assignment,
+            # so the only way to say "this is text" is to say it afterwards.
+            for cell in ws[ws.max_row]:
+                if cell.value is not None:
+                    cell.data_type = "s"
         ws.freeze_panes = "A2"
 
     notes = wb.create_sheet("Licences")
     for line in licenses_md.splitlines():
         notes.append([line])
+        for cell in notes[notes.max_row]:
+            if cell.value is not None:
+                cell.data_type = "s"
 
     buf = io.BytesIO()
     wb.save(buf)

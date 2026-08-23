@@ -53,6 +53,37 @@ describe("leadSignal", () => {
     expect(lead?.sourceIds).toEqual(["opensanctions", "openaleph"]);
   });
 
+  it("does not call two findings about DIFFERENT parties corroboration", () => {
+    // Live on BP: OpenAleph flagged BP itself in the OffshoreLeaks collection
+    // while ICIJ flagged a subsidiary in the Bahamas Leaks. Both are
+    // OFFSHORE_LEAKS, and the box said "Corroborated by two sources" under a
+    // sentence about the subsidiary. Same code is not the same finding.
+    const lead = leadSignal([
+      sig({
+        code: "OFFSHORE_LEAKS",
+        source_id: "openaleph",
+        summary: "The company itself is in a leak collection.",
+        evidence: { statement_id: "the-subject" },
+      }),
+      sig({
+        code: "OFFSHORE_LEAKS",
+        source_id: "icij",
+        summary: "A related party matches a record in the Bahamas Leaks.",
+        evidence: { subject_statement_id: "a-subsidiary" },
+      }),
+    ]);
+    expect(lead?.sourceCount).toBe(1);
+    expect(lead?.sourceIds).toHaveLength(1);
+  });
+
+  it("does count two sources naming the same party", () => {
+    const lead = leadSignal([
+      sig({ code: "OFFSHORE_LEAKS", source_id: "openaleph", evidence: { subject_statement_id: "x" } }),
+      sig({ code: "OFFSHORE_LEAKS", source_id: "icij", evidence: { subject_statement_id: "x" } }),
+    ]);
+    expect(lead?.sourceCount).toBe(2);
+  });
+
   it("only counts the sources that asserted the lead code", () => {
     const lead = leadSignal([
       sig({ code: "SANCTIONED", source_id: "opensanctions" }),
@@ -71,7 +102,9 @@ describe("leadSignal", () => {
     expect(lead?.signal.summary).toBe("strong");
   });
 
-  it("takes the most recent observed retrieval across the contributing sources", () => {
+  it("takes the OLDEST observed retrieval across the contributing sources", () => {
+    // A claim is only as current as its stalest component — the same rule
+    // provenance.Recorder.resolve applies. The newest would overstate.
     const lead = leadSignal(
       [sig({}), sig({ source_id: "openaleph", hit_id: "b" })],
       {
@@ -81,7 +114,21 @@ describe("leadSignal", () => {
         icij: { liveness: "live", label: "Live", retrieved_at: "2026-08-23T09:00:00Z", detail: null },
       }
     );
-    expect(lead?.checkedAt).toBe("2026-08-21T09:00:00Z");
+    expect(lead?.checkedAt).toBe("2026-08-19T09:00:00Z");
+  });
+
+  it("reports no date at all when any contributing source reported none", () => {
+    // `icij` is not a registered adapter, so it never gets a source_liveness
+    // entry. Generalising OpenAleph's date onto it would state a currency for
+    // the ICIJ record that nothing established.
+    const lead = leadSignal(
+      [sig({}), sig({ source_id: "icij", hit_id: "b" })],
+      {
+        opensanctions: { liveness: "live", label: "Live", retrieved_at: "2026-08-21T09:00:00Z", detail: null },
+      }
+    );
+    expect(lead?.sourceCount).toBe(2);
+    expect(lead?.checkedAt).toBeNull();
   });
 
   it("reports no date rather than today's when nothing was observed", () => {
@@ -91,6 +138,17 @@ describe("leadSignal", () => {
       opensanctions: { liveness: "stub", label: "Stub", retrieved_at: null, detail: null },
     });
     expect(lead?.checkedAt).toBeNull();
+  });
+
+  it("breaks a severity tie stably, not on backend emit order", () => {
+    // PEP and DEBARMENT are both severity 4 in SIGNAL_STYLE, and one
+    // OpenSanctions entity carrying both topics emits them at the same
+    // confidence from the same hit. Without a stable last step the headline
+    // was decided by the order two `out.append` calls appear in risk.py.
+    const pep = sig({ code: "PEP", hit_id: "h" });
+    const deb = sig({ code: "DEBARMENT", hit_id: "h" });
+    expect(leadSignal([pep, deb])?.signal.code).toBe("DEBARMENT");
+    expect(leadSignal([deb, pep])?.signal.code).toBe("DEBARMENT");
   });
 
   it("does not let an unknown code outrank a known one", () => {
@@ -121,7 +179,7 @@ describe("corroborationClause", () => {
 describe("checkedClause", () => {
   it("formats an observed retrieval", () => {
     expect(checkedClause("2026-08-21T09:00:00Z")).toBe(
-      "most recently checked 21 August 2026"
+      "last checked 21 August 2026"
     );
   });
 
@@ -141,7 +199,7 @@ describe("evidenceFooter", () => {
 
   it("joins only the parts that are true", () => {
     expect(evidenceFooter(lead(2, "2026-08-21T09:00:00Z"))).toBe(
-      "Corroborated by two sources, most recently checked 21 August 2026."
+      "Corroborated by two sources, last checked 21 August 2026."
     );
     expect(evidenceFooter(lead(1, null))).toBe("Reported by one source.");
     expect(evidenceFooter(lead(0, null))).toBe("");

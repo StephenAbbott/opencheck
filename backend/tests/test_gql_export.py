@@ -309,12 +309,18 @@ def test_export_xlsx_is_the_csv_tables_as_one_workbook(monkeypatch):
     assert "OpenCheck export" in notes
 
 
-def test_export_xlsx_writes_identifiers_as_text(monkeypatch):
-    """A company number with leading zeros must survive the round trip.
+def test_export_xlsx_writes_every_cell_as_text(monkeypatch):
+    """Two problems, one assertion — and `isinstance(str)` catches neither.
 
-    Excel turns a numeric-looking cell into a number and drops the zeros. In a
-    due-diligence file that is a corrupted identifier, not a formatting nit —
-    "00102498" and "102498" are different companies at Companies House.
+    A company number with leading zeros: Excel reads it as a number and drops
+    them, and "00102498" and "102498" are different companies at Companies
+    House. And a name beginning with "=" — these come from third-party open
+    registers and free-text sources — is stored as a *formula*, which is a
+    spreadsheet-injection payload inside a downloaded due-diligence artefact.
+
+    `isinstance(cell.value, str)` is True for a formula cell, so the first
+    version of this test passed while the property it named was violated. The
+    assertion has to be on `data_type`.
     """
     monkeypatch.setattr("opencheck.routers.export._lookup_impl", _fake_lookup)
     client = TestClient(app)
@@ -323,8 +329,39 @@ def test_export_xlsx_writes_identifiers_as_text(monkeypatch):
     from openpyxl import load_workbook
 
     wb = load_workbook(io.BytesIO(r.content))
-    for name in ("Entity Nodes", "Person Nodes", "Ownership Edges"):
+    for name in wb.sheetnames:
         for row in wb[name].iter_rows():
             for cell in row:
                 if cell.value is not None:
-                    assert isinstance(cell.value, str), (name, cell.coordinate, cell.value)
+                    assert cell.data_type == "s", (name, cell.coordinate, cell.value)
+
+
+def test_export_xlsx_does_not_store_a_registry_name_as_a_formula():
+    """A name from an open register is data, never a formula."""
+    from openpyxl import load_workbook
+
+    from opencheck.routers.export import _build_xlsx
+
+    bods = [
+        {
+            "statementId": "e-1", "recordId": "e-1", "recordType": "entity",
+            "recordStatus": "new", "statementDate": "2026-01-01",
+            "recordDetails": {
+                "entityType": {"type": "registeredEntity"},
+                "name": "=cmd|'/C calc'!A1",
+                "isComponent": False,
+                "identifiers": [{"scheme": "GB-COH", "id": "00102498"}],
+            },
+            "source": {"description": "UK Companies House"},
+        },
+    ]
+    wb = load_workbook(io.BytesIO(_build_xlsx(bods, licenses_md="# notes")))
+    ws = wb["Entity Nodes"]
+    values = [c.value for row in ws.iter_rows() for c in row if c.value is not None]
+    assert "=cmd|'/C calc'!A1" in values
+    for row in ws.iter_rows():
+        for cell in row:
+            if cell.value is not None:
+                assert cell.data_type == "s", (cell.coordinate, cell.value)
+    # And the identifier keeps its leading zeros.
+    assert "00102498" in values

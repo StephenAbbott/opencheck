@@ -892,8 +892,14 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     e.preventDefault();
     const q = headerQuery.trim();
     if (!q) return;
+    // The header is on every page, so the search has to *get to* the page that
+    // can show a result. Without this it fired a real GLEIF request from
+    // /sources and rendered the answer nowhere, and from a person report it
+    // ran a whole 39-source lookup behind a screen that never changed —
+    // leaving `?person=…&lei=…` in the URL as a permanently stuck link.
+    showEntitySearchSurface();
+    setHeaderQuery("");
     if (isValidLei(q.toUpperCase())) {
-      setHeaderQuery("");
       lookupLei(q);
       return;
     }
@@ -901,11 +907,28 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setMobileSearchOpen(true);
     setNameQuery(q);
     nameSearchMutation.mutate(q);
-    setHeaderQuery("");
-    // The results render in the panel this just opened, so focus follows.
+    // The results render in the panel this just opened, so the page follows.
     requestAnimationFrame(() => {
-      document.getElementById("panel-name")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document
+        .getElementById("panel-name")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
+  }
+
+  /** Leave whatever page the header was clicked from and show the search
+   *  surface, clearing a person report and its `?person=` parameter. */
+  function showEntitySearchSurface() {
+    // `navigate`, not `setView` — the path has to change too, or the reader
+    // stays on /about with a search result rendered under it and a URL that
+    // reloads back to the page they left.
+    navigate("main");
+    if (personReport) {
+      setPersonReport(null);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("person");
+      url.searchParams.delete("person_birth_year");
+      window.history.replaceState({}, "", url);
+    }
   }
 
   function searchByName(e: React.FormEvent) {
@@ -1114,13 +1137,14 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     window.setTimeout(() => el.classList.remove("oc-cite-flash"), 1600);
   }, []);
 
-  /** SubjectCard badge action: scroll to the identity band and flash it
-   *  (same affordance as narrative citations).
+  /** SubjectCard badge action: open the identity band, scroll to it and flash
+   *  it (the same affordance narrative citations use).
    *
-   *  It used to also force a collapsed box open. The band is not collapsed —
-   *  "is this the right company?" is the question a reader with an identifier
-   *  badge in front of them is already asking, and answering it behind a
-   *  disclosure made them open two boxes to get the two halves. */
+   *  The band is a disclosure and starts shut. That is not a return to v1's
+   *  two collapsed boxes — it is one band answering one question, and the
+   *  badge is what opens it, which is the moment a reader is actually asking.
+   *  Corroboration that occupies a screen before anyone doubted anything sits
+   *  between the reader and the finding. */
   const showCrossSourceIdentifiers = () => {
     // The band renders only in QuickCheck, so from any other mode this
     // control did nothing at all — a badge that looks like a link and
@@ -1352,7 +1376,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 type="text"
                 value={headerQuery}
                 onChange={(e) => setHeaderQuery(e.target.value)}
-                placeholder="Company name, LEI or registration number"
+                placeholder="Company name or LEI"
                 className="min-w-0 flex-1 bg-transparent text-oo-small text-white placeholder:text-white/60 focus:outline-none"
               />
               <button type="submit" className="sr-only">
@@ -2222,6 +2246,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     <LeadEvidence
                       lead={lead}
                       sourceNames={sourceNameIndex}
+                      hasCard={(id) => cddBuckets.some((b) => b.sourceId === id)}
                       onShowSource={showSourceCard}
                     />
                   </div>
@@ -2323,7 +2348,21 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     </span>{" "}
                     mapped by GLEIF
                   </>
-                ) : undefined
+                ) : (
+                  // Never a bare title with a chevron. The band is shut by
+                  // default and the affordance that opens it — the subject
+                  // card's identifier badge — renders only at two or more
+                  // confirming sources, so on a lookup that has only
+                  // possibly-same pairs the heading has to say what is inside
+                  // it itself.
+                  <>
+                    <span className="font-semibold">
+                      {possiblySame.length} candidate pair
+                      {possiblySame.length === 1 ? "" : "s"}
+                    </span>{" "}
+                    flagged for review
+                  </>
+                )
               }
             >
               {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && (

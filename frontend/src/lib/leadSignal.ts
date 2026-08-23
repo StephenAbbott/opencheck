@@ -11,30 +11,61 @@
  * Everything here is derived from the signals the backend already sent. Three
  * rules keep it from saying more than they support:
  *
- * - **Corroboration is counted in distinct sources, not in signals.** The risk
- *   layer emits one signal per matching hit, so OpenSanctions alone can
- *   produce three for one code. "Corroborated by three sources" would then be
- *   a claim about one source's thoroughness.
- * - **"Most recently checked" is a retrieval time OpenCheck observed**, taken
- *   from `source_liveness`, and omitted entirely when none of the contributing
- *   sources reported one — never "today" by default.
+ * - **Corroboration is counted in distinct sources, about the same party.**
+ *   Counting by code alone was wrong twice over: the risk layer emits one
+ *   signal per matching hit, so one source can produce three for a code; and
+ *   two sources can carry the same code about *different* parties. A live BP
+ *   lookup produced exactly that — OpenAleph flagged BP itself in the
+ *   OffshoreLeaks collection while ICIJ flagged a subsidiary in the Bahamas
+ *   Leaks — and the box said "Corroborated by two sources" under a sentence
+ *   about the subsidiary. Signals corroborate only when they name the same
+ *   code *and* the same statement.
+ * - **The checked date is the oldest across the contributing sources, and is
+ *   omitted unless every one of them reported a retrieval time.** The oldest,
+ *   not the newest, for the reason `provenance.Recorder.resolve` takes the
+ *   oldest: a claim is only as current as its stalest component. Sources that
+ *   never reach the dispatch loop — `icij` is not a registered adapter — have
+ *   no `source_liveness` entry at all, and generalising a sibling's date onto
+ *   them stated a currency nothing had established.
  * - **The lead is the worst, and severity is `SIGNAL_STYLE`'s**, the same
  *   ordering the graph badges stack by. A second ordering would let the
- *   section headline a different signal than the graph marks as worst.
+ *   section headline a different signal than the graph marks as worst. Ties
+ *   break on confidence and then alphabetically by code — several codes share
+ *   a severity (PEP and DEBARMENT are both 4), and without the last step the
+ *   headline was decided by the order two `out.append` calls happen to appear
+ *   in a Python function.
  */
 
 import { SIGNAL_STYLE } from "./graphStyle";
+import { isRiskFinding } from "./signalKind";
 import type { RiskSignal, SourceLiveness } from "./api";
 
 export interface LeadSignal {
   signal: RiskSignal;
-  /** Distinct `source_id`s that asserted this code. */
+  /** Distinct `source_id`s that asserted this code about this party. */
   sourceCount: number;
   /** Their display ids, in first-seen order — the records to show. */
   sourceIds: string[];
-  /** The most recent retrieval OpenCheck observed across those sources, or
-   *  null when none of them reported one. */
+  /** The oldest retrieval OpenCheck observed across those sources, or null
+   *  when any of them reported none. */
   checkedAt: string | null;
+}
+
+/**
+ * What a signal is *about*, for corroboration.
+ *
+ * `subject_statement_id` is set on `RELATED_*` findings and names the related
+ * party; `statement_id` is set on subject-level ones. Falling back to the code
+ * means signals that carry neither are treated as being about the subject,
+ * which is what they are.
+ */
+export function signalSubjectKey(signal: RiskSignal): string {
+  const e = (signal.evidence ?? {}) as Record<string, unknown>;
+  const subject = e.subject_statement_id;
+  if (typeof subject === "string" && subject) return `subject:${subject}`;
+  const statement = e.statement_id;
+  if (typeof statement === "string" && statement) return `statement:${statement}`;
+  return "self";
 }
 
 /** Severity for a code, or -1 when the code is not in the style table — an
@@ -55,7 +86,7 @@ export function leadSignal(
   signals: RiskSignal[],
   liveness: Record<string, SourceLiveness> = {}
 ): LeadSignal | null {
-  const risks = signals.filter((s) => (s.kind ?? "risk") === "risk");
+  const risks = signals.filter(isRiskFinding);
   if (risks.length === 0) return null;
 
   let best = risks[0];
@@ -66,23 +97,37 @@ export function leadSignal(
       continue;
     }
     if (bySeverity < 0) continue;
-    // Same code or same severity: prefer the better-corroborated instance, so
-    // the sentence shown is the strongest evidence for the lead finding.
-    if ((CONFIDENCE_RANK[s.confidence] ?? 0) > (CONFIDENCE_RANK[best.confidence] ?? 0)) {
+    // Same severity: prefer the better-corroborated instance, so the sentence
+    // shown is the strongest evidence for the lead finding.
+    const byConfidence =
+      (CONFIDENCE_RANK[s.confidence] ?? 0) - (CONFIDENCE_RANK[best.confidence] ?? 0);
+    if (byConfidence > 0) {
       best = s;
+      continue;
     }
+    if (byConfidence < 0) continue;
+    // Still tied, and several codes share a severity. Alphabetical is
+    // arbitrary but *stable*; without it the headline depended on the order
+    // the backend happened to append two signals.
+    if (s.code < best.code) best = s;
   }
 
+  const subject = signalSubjectKey(best);
   const sourceIds: string[] = [];
   for (const s of risks) {
-    if (s.code !== best.code) continue;
+    if (s.code !== best.code || signalSubjectKey(s) !== subject) continue;
     if (s.source_id && !sourceIds.includes(s.source_id)) sourceIds.push(s.source_id);
   }
 
+  // Oldest, and only when every contributing source reported one.
   let checkedAt: string | null = null;
   for (const id of sourceIds) {
     const at = liveness[id]?.retrieved_at;
-    if (typeof at === "string" && (checkedAt === null || at > checkedAt)) checkedAt = at;
+    if (typeof at !== "string" || !at) {
+      checkedAt = null;
+      break;
+    }
+    if (checkedAt === null || at < checkedAt) checkedAt = at;
   }
 
   return { signal: best, sourceCount: sourceIds.length, sourceIds, checkedAt };
@@ -117,7 +162,7 @@ export function corroborationClause(sourceCount: number): string {
   return `Corroborated by ${n} sources`;
 }
 
-/** "most recently checked 21 August 2026", or "" when nothing was observed. */
+/** "last checked 21 August 2026", or "" when nothing was observed. */
 export function checkedClause(
   iso: string | null,
   locale = "en-GB"
@@ -130,7 +175,7 @@ export function checkedClause(
     month: "long",
     year: "numeric",
   });
-  return `most recently checked ${formatted}`;
+  return `last checked ${formatted}`;
 }
 
 /** The whole second sentence, with only the parts that are true. */

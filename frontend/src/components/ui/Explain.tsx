@@ -28,12 +28,14 @@
  * does it directly. An unused primitive in a design system is worse than none:
  * it invites the wrong pattern to be adopted because it exists.
  *
- * **`Explain` itself has one caller, and that is deliberate** (decided in
- * Phase 125). Only `BackgroundCheckPanel`'s person-subgraph download had an
- * explanation long enough to be worth a disclosure; every other case fitted
- * inline. It is kept rather than inlined so the next long explanation does not
- * have to reinvent the focus and `aria-expanded` handling — so do not delete
- * this as dead code on a one-caller count alone.
+ * **It was kept at one caller for four phases** (decided in Phase 125): only
+ * `BackgroundCheckPanel`'s person-subgraph download had an explanation long
+ * enough to be worth a disclosure, and it was kept rather than inlined so the
+ * next one would not have to reinvent the focus and `aria-expanded` handling.
+ * That next one arrived in Phase 129 — the Risk signals section's AMLA / BODS
+ * / FATF provenance, which is accurate and a poor way to open a section. Two
+ * callers now, and the reason for keeping it at one still applies: do not
+ * delete this on a caller count.
  *
  * The rule this encodes: **if a `title` is the only place something is said,
  * it is not said.** A `title` that duplicates a visible label or an `aria-label`
