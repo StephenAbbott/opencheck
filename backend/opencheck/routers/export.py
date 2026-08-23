@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import io
 import json
 import re
@@ -51,6 +52,11 @@ _EXPORT_FORMATS = {
     # them here reuses those writers rather than adding new ones, and stops
     # the download picker offering a ZIP to someone who wanted a table.
     "cypher", "csv",
+    # The same three tables as csv, as one workbook. A spreadsheet is where
+    # a lot of due-diligence work actually happens, and "download a zip,
+    # extract it, import three CSVs and set the encoding" is a worse answer
+    # than a file that opens.
+    "xlsx",
 }
 # One regex for the /export ?format= validation, derived from the set above so
 # the two can't drift (ExportNetworkRequest.format is the third place — a
@@ -58,6 +64,14 @@ _EXPORT_FORMATS = {
 _EXPORT_FORMAT_PATTERN = f"^({'|'.join(sorted(_EXPORT_FORMATS))})$"
 
 _TRAFFIC = {"green": "🟢", "amber": "🟡", "red": "🔴"}
+
+
+class _ExcelUnavailable(RuntimeError):
+    """openpyxl is not installed on this deployment.
+
+    Its own type so the 503 handler cannot swallow an unrelated RuntimeError
+    raised while building the workbook and report it as a missing dependency.
+    """
 
 
 @router.get("/license-matrix")
@@ -124,7 +138,8 @@ async def export(
             "separate analysis graph) | cypher (Neo4j Cypher script, the "
             "same writer POST /export-network uses) | csv (zip: the entity / "
             "person / ownership-edge tables, without the BigQuery DDL and "
-            "queries)"
+            "queries) | xlsx (the same three tables as one Excel workbook, "
+            "one sheet each, plus a licence sheet)"
         ),
     ),
     subsidiaries: bool = Query(
@@ -271,6 +286,34 @@ async def export(
             },
         )
 
+    if format == "xlsx":
+        contributing_ids = sorted({h.source_id for h in payload.hits if not h.is_stub})
+        licenses_md = _build_licenses_md(
+            contributing_ids=contributing_ids,
+            license_notices=payload.license_notices,
+            licensing=assess_licensing(contributing_ids),
+            query=export_query,
+            kind=kind,
+        )
+        try:
+            body = _build_xlsx(payload.bods, licenses_md=licenses_md)
+        except _ExcelUnavailable as exc:
+            # One format is unavailable, which is a 503 with a reason — not a
+            # 500, and not a silent empty file. Anything else raised in here is
+            # a bug and must not be reported as a missing dependency.
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        return Response(
+            content=body,
+            media_type=(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ),
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="opencheck-{slug}-{stamp}.xlsx"'
+                ),
+            },
+        )
+
     if format == "gql":
         contributing_ids = sorted({h.source_id for h in payload.hits if not h.is_stub})
         licenses_md = _build_licenses_md(
@@ -333,8 +376,8 @@ class ExportNetworkRequest(BaseModel):
 
     bods: list[dict[str, Any]]
     format: Literal[
-        "json", "jsonl", "xml", "senzing", "ftm", "cypher", "csv", "gql",
-        "amlai", "rdf", "zip"
+        "json", "jsonl", "xml", "senzing", "ftm", "cypher", "csv", "xlsx",
+        "gql", "amlai", "rdf", "zip"
     ] = "zip"
     slug: str | None = None
 
@@ -393,6 +436,24 @@ async def export_network(request: Request, req: ExportNetworkRequest) -> Respons
             _build_csv_zip(bods, slug=slug, stamp=stamp, licenses_md=licenses_md),
             "application/zip",
             "csv.zip",
+        )
+    if req.format == "xlsx":
+        contributing_ids = _network_source_ids(bods)
+        licenses_md = _build_licenses_md(
+            contributing_ids=contributing_ids,
+            license_notices=[],
+            licensing=assess_licensing(contributing_ids),
+            query=slug,
+            kind=SearchKind.ENTITY,
+        )
+        try:
+            body = _build_xlsx(bods, licenses_md=licenses_md)
+        except _ExcelUnavailable as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        return _file(
+            body,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "xlsx",
         )
     if req.format == "gql":
         contributing_ids = _network_source_ids(bods)
@@ -478,6 +539,66 @@ def _build_csv_zip(
             if name.endswith(".csv"):
                 zf.writestr(f"{base}/{name}", content)
         zf.writestr(f"{base}/LICENSES.md", licenses_md)
+    return buf.getvalue()
+
+
+def _build_xlsx(bods: list[dict[str, Any]], *, licenses_md: str) -> bytes:
+    """The three tables as one Excel workbook.
+
+    Same tables as ``csv``, from the same ``build_gql_files`` writer — a second
+    projection of the graph into rows would be free to disagree with the first,
+    and the whole point of the format is that it is the CSVs someone can
+    actually open.
+
+    The licence notes travel as a fourth sheet rather than a sibling file: a
+    workbook is one file by definition, and dropping the terms would be the one
+    thing the CSV zip does that this must not stop doing.
+    """
+    try:
+        from openpyxl import Workbook
+    except ImportError as exc:  # pragma: no cover - deployment-dependent
+        raise _ExcelUnavailable(
+            "Excel export is unavailable on this deployment (openpyxl is not "
+            "installed). Use format=csv for the same tables."
+        ) from exc
+
+    # openpyxl refuses these in a sheet name, and truncates past 31 characters.
+    def _sheet_name(filename: str) -> str:
+        return filename.removesuffix(".csv").replace("_", " ").title()[:31]
+
+    wb = Workbook()
+    wb.remove(wb.active)
+    for name, content in build_gql_files(bods).items():
+        if not name.endswith(".csv"):
+            continue
+        ws = wb.create_sheet(_sheet_name(name))
+        for row in csv.reader(io.StringIO(content)):
+            ws.append([str(cell) for cell in row])
+            # Force every cell to text, *after* append.
+            #
+            # Two different problems, one fix. A registration number with
+            # leading zeros, an ISIN, a company number: Excel reads each as a
+            # number and loses the zeros, and "00102498" and "102498" are
+            # different companies at Companies House. And a value beginning
+            # with "=" — these names come from third-party open registers and
+            # free-text sources — is stored as a *formula*, which is a
+            # spreadsheet-injection payload inside a downloaded due-diligence
+            # artefact. openpyxl decides the type from the value on assignment,
+            # so the only way to say "this is text" is to say it afterwards.
+            for cell in ws[ws.max_row]:
+                if cell.value is not None:
+                    cell.data_type = "s"
+        ws.freeze_panes = "A2"
+
+    notes = wb.create_sheet("Licences")
+    for line in licenses_md.splitlines():
+        notes.append([line])
+        for cell in notes[notes.max_row]:
+            if cell.value is not None:
+                cell.data_type = "s"
+
+    buf = io.BytesIO()
+    wb.save(buf)
     return buf.getvalue()
 
 

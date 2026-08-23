@@ -267,6 +267,7 @@ export type ExportFormat =
   | "zip"
   | "xml"
   | "csv"
+  | "xlsx"
   | "cypher"
   | "senzing"
   | "ftm"
@@ -288,14 +289,15 @@ const EXPORT_FORMAT_ORDER: Record<ExportFormat, number> = {
   json: 0,
   zip: 1,
   csv: 2,
-  jsonl: 3,
-  xml: 4,
-  ftm: 5,
-  cypher: 6,
-  rdf: 7,
-  senzing: 8,
-  gql: 9,
-  amlai: 10,
+  xlsx: 3,
+  jsonl: 4,
+  xml: 5,
+  ftm: 6,
+  cypher: 7,
+  rdf: 8,
+  senzing: 9,
+  gql: 10,
+  amlai: 11,
 };
 
 export const EXPORT_FORMATS: readonly ExportFormat[] = (

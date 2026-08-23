@@ -10,7 +10,7 @@ timestamp: 2026-07-20
 
 # Overview
 
-`GET /export?lei=<LEI>&format=<zip|json|jsonl|xml|csv|cypher|senzing|ftm|gql|amlai|rdf>` (or
+`GET /export?lei=<LEI>&format=<zip|json|jsonl|xml|csv|xlsx|cypher|senzing|ftm|gql|amlai|rdf>` (or
 `?q=<query>`) downloads a reproducible [BODS v0.4](/standards/bods.md) bundle
 for the subject, or a projection of it into a partner ecosystem's format.
 
@@ -22,6 +22,7 @@ for the subject, or a projection of it into a partner ecosystem's format.
 | `jsonl` | Newline-delimited BODS statements. |
 | `xml` | Canonical BODS XML. |
 | `csv` | Zip: the entity / person / ownership-edge tables (the same tables `gql` builds) + `LICENSES.md`, without the property-graph DDL and queries. |
+| `xlsx` | The same three tables as one Excel workbook — a sheet each plus a licence sheet. Every cell written as text, so identifiers keep their leading zeros. |
 | `cypher` | Neo4j Cypher script that builds the graph — the same writer `POST /export-network` uses. |
 | `senzing` | Newline-delimited Senzing JSON entity records (entity resolution). |
 | `ftm` | Newline-delimited FollowTheMoney entities (OpenSanctions / OpenAleph). |

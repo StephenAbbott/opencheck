@@ -53,6 +53,9 @@ import { documentTitleFor, modeParam, parseMode } from "./lib/checkMode";
 import type { CheckMode } from "./lib/checkMode";
 import type { IconName } from "./components/ui";
 import { NarrativePanel } from "./components/cdd/NarrativePanel";
+import { LeadEvidence } from "./components/risk/LeadEvidence";
+import { leadSignal } from "./lib/leadSignal";
+import { Explain } from "./components/ui/Explain";
 import type { ReportExportPayload } from "./components/cdd/NarrativePanel";
 import {
   SourceBucketCard,
@@ -225,6 +228,13 @@ export default function App() {
   // On mobile, the search inputs collapse once results are on screen (the
   // tab bar stays); this reopens them. Desktop is unaffected.
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  /** The header field's own value, kept apart from `nameQuery` so typing in
+   *  one does not rewrite the other under the reader. */
+  const [headerQuery, setHeaderQuery] = useState("");
+  /** The identity band is a disclosure, opened by the subject card's
+   *  identifier badge. Reset per lookup, like everything else about a
+   *  result. */
+  const [identityOpen, setIdentityOpen] = useState(false);
   const searchPanelsCollapsed = !!streamingLei && !mobileSearchOpen;
   const [hits, setHits] = useState<SourceHit[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -576,6 +586,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         setCompletedSources(new Set());
         setStartedSources(new Set());
         setPanelErrors([]);
+        setIdentityOpen(false);
         // The exports belong to the entity that was on screen. A failed PDF
         // left its alert sitting on the *next* subject, describing a download
         // that was never attempted for it — and the payload the report embeds
@@ -871,6 +882,55 @@ const NAV_ITEMS: { view: View; label: string }[] = [
    * On success, nameSearchMutation.data is populated for the user to pick from.
    * After selection the standard lookupLei flow takes over.
    */
+  /**
+   * The header field. A pasted LEI runs the lookup directly; anything else is
+   * a company-name search, which means opening the panel that shows the
+   * results to pick from — the header has no room to render them, and a
+   * search whose results appear nowhere is worse than no search field.
+   */
+  function submitHeaderSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = headerQuery.trim();
+    if (!q) return;
+    // The header is on every page, so the search has to *get to* the page that
+    // can show a result. Without this it fired a real GLEIF request from
+    // /sources and rendered the answer nowhere, and from a person report it
+    // ran a whole 39-source lookup behind a screen that never changed —
+    // leaving `?person=…&lei=…` in the URL as a permanently stuck link.
+    showEntitySearchSurface();
+    setHeaderQuery("");
+    if (isValidLei(q.toUpperCase())) {
+      lookupLei(q);
+      return;
+    }
+    setSearchMode("name");
+    setMobileSearchOpen(true);
+    setNameQuery(q);
+    nameSearchMutation.mutate(q);
+    // The results render in the panel this just opened, so the page follows.
+    requestAnimationFrame(() => {
+      document
+        .getElementById("panel-name")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  /** Leave whatever page the header was clicked from and show the search
+   *  surface, clearing a person report and its `?person=` parameter. */
+  function showEntitySearchSurface() {
+    // `navigate`, not `setView` — the path has to change too, or the reader
+    // stays on /about with a search result rendered under it and a URL that
+    // reloads back to the page they left.
+    navigate("main");
+    if (personReport) {
+      setPersonReport(null);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("person");
+      url.searchParams.delete("person_birth_year");
+      window.history.replaceState({}, "", url);
+    }
+  }
+
   function searchByName(e: React.FormEvent) {
     e.preventDefault();
     const q = nameQuery.trim();
@@ -1057,13 +1117,34 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     }
   }, [streamingLei, exportPayload]);
 
-  /** SubjectCard badge action: scroll to the identity band and flash it
-   *  (same affordance as narrative citations).
+  // The worst signal, with the corroboration behind it. Derived from the
+  // signals the backend already sent — see lib/leadSignal.ts for the three
+  // rules that keep the sentence from claiming more than they support.
+  const lead = useMemo(
+    () => leadSignal(riskSignals, sourceLiveness),
+    [riskSignals, sourceLiveness]
+  );
+
+  /** Scroll to a source card and flash it — the same affordance narrative
+   *  citations and the identifier table already use. */
+  const showSourceCard = useCallback((sourceId: string) => {
+    const el = document.getElementById(`source-${sourceId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (el.tabIndex < 0) el.tabIndex = -1;
+    el.focus({ preventScroll: true });
+    el.classList.add("oc-cite-flash");
+    window.setTimeout(() => el.classList.remove("oc-cite-flash"), 1600);
+  }, []);
+
+  /** SubjectCard badge action: open the identity band, scroll to it and flash
+   *  it (the same affordance narrative citations use).
    *
-   *  It used to also force a collapsed box open. The band is not collapsed —
-   *  "is this the right company?" is the question a reader with an identifier
-   *  badge in front of them is already asking, and answering it behind a
-   *  disclosure made them open two boxes to get the two halves. */
+   *  The band is a disclosure and starts shut. That is not a return to v1's
+   *  two collapsed boxes — it is one band answering one question, and the
+   *  badge is what opens it, which is the moment a reader is actually asking.
+   *  Corroboration that occupies a screen before anyone doubted anything sits
+   *  between the reader and the finding. */
   const showCrossSourceIdentifiers = () => {
     // The band renders only in QuickCheck, so from any other mode this
     // control did nothing at all — a badge that looks like a link and
@@ -1078,6 +1159,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
   };
 
   const flashIdentityBand = () => {
+    setIdentityOpen(true);
     const el = document.getElementById("cross-source-identifiers");
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1181,6 +1263,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     // landing page saying "this report" when there is no report.
     setStartedSources(new Set());
     setPanelErrors([]);
+    setIdentityOpen(false);
     setExportError(null);
     setExportPayload({ narrative: null, dispositions: null });
     setStreaming(false);
@@ -1243,16 +1326,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   Open<span className="text-[#93c5fd]">Check</span>
                 </span>
               </button>
-              {sourcesQuery.data && (
-                <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-white/70 font-mono">
-                  <span className="text-white/70 font-semibold">{sourcesQuery.data.sources.filter(s => s.is_national_register).length}</span>
-                  <span>national registers</span>
-                  <span className="text-white/20" aria-hidden>·</span>
-                  <span className="text-white/70 font-semibold">{sourcesQuery.data.sources.filter((s: { is_national_register: boolean }) => !s.is_national_register).length}</span>
-                  <span>open sources</span>
-                </span>
-              )}
-            </div>
             <nav aria-label="Site navigation" className="flex items-center gap-4 sm:gap-5">
               {NAV_ITEMS.map((item) => {
                 const current = view === item.view;
@@ -1273,6 +1346,43 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 );
               })}
             </nav>
+            </div>
+            {/* The constant search field. On a report page the tabbed panel is
+                collapsed to a single prompt row, which left the header — the
+                one piece of chrome present on every page — with no way to
+                start a search from. The source counts that used to sit here
+                are said in the hero and listed in full on /sources; a stat
+                does not need to be in the banner of a report about a company.
+
+                It handles the two things a header field can honestly handle:
+                a pasted LEI runs straight through, anything else goes to the
+                company-name search. National ID and person search stay in the
+                full panel, which the prompt row still opens. */}
+            <form
+              onSubmit={submitHeaderSearch}
+              role="search"
+              aria-label="Search for a company"
+              className="hidden md:flex items-center gap-2 rounded-oo border border-white/25 bg-white/10 focus-within:bg-white/15 focus-within:border-white/45 px-3 py-1.5 min-w-[300px] transition-colors"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round" aria-hidden="true" className="text-white/70 shrink-0">
+                <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+              </svg>
+              <label htmlFor="oo-header-search" className="sr-only">
+                Company name or LEI
+              </label>
+              <input
+                id="oo-header-search"
+                type="text"
+                value={headerQuery}
+                onChange={(e) => setHeaderQuery(e.target.value)}
+                placeholder="Company name or LEI"
+                className="min-w-0 flex-1 bg-transparent text-oo-small text-white placeholder:text-white/60 focus:outline-none"
+              />
+              <button type="submit" className="sr-only">
+                Search
+              </button>
+            </form>
           </div>
         </div>
       </header>
@@ -1809,7 +1919,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 <circle cx="11" cy="11" r="7" />
                 <path d="m21 21-4.3-4.3" />
               </svg>
-              Search for a different entity
+              More search options — national ID, person name
             </button>
           )}
         </div>
@@ -2127,11 +2237,38 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     <RiskChip key={sig.code} signal={sig} />
                   ))}
                 </div>
-                <p className="text-oo-meta text-oo-muted mt-2.5">
-                  Select a chip for the rule that fired. Signals are derived from
-                  open data; chips aligned to AMLA (the EU Anti-Money Laundering
-                  Authority) read BODS (Beneficial Ownership Data Standard)
-                  records.
+                {/* The worst signal, said out loud. A row of chips over
+                    "select a chip for the rule that fired" is a menu, not a
+                    finding — the most serious thing the check turned up was a
+                    word in a pill, and its sentence only appeared on click. */}
+                {lead && (
+                  <div className="mt-3.5">
+                    <LeadEvidence
+                      lead={lead}
+                      sourceNames={sourceNameIndex}
+                      hasCard={(id) => cddBuckets.some((b) => b.sourceId === id)}
+                      onShowSource={showSourceCard}
+                    />
+                  </div>
+                )}
+                {/* Plain sentence, and the regulatory detail behind it kept in
+                    an `Explain` rather than deleted: "chips aligned to AMLA
+                    (the EU Anti-Money Laundering Authority) read BODS
+                    (Beneficial Ownership Data Standard) records" is an
+                    accurate thing to be able to find and a poor thing to open
+                    a section with. */}
+                <p className="text-oo-small text-oo-muted mt-2.5">
+                  Every signal comes from a published record. Select a chip to
+                  read the one behind it.{" "}
+                  <Explain label="Where these come from">
+                    Signals are derived from open data by deterministic rules,
+                    never by a model. Those aligned to AMLA — the EU
+                    Anti-Money Laundering Authority — are read from BODS
+                    (Beneficial Ownership Data Standard) records; jurisdiction
+                    signals come from the FATF (Financial Action Task Force)
+                    and EU lists. A signal is a pointer to a record, not a
+                    conclusion about the company.
+                  </Explain>
                 </p>
               </>
             ) : (
@@ -2150,8 +2287,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               <div className="mt-5" id="structural-context">
                 <p className="text-oo-small text-oo-muted mb-2">
                   Structural context — how the company is put together, not a
-                  finding against it. Jurisdiction risk is reported separately,
-                  from the FATF (Financial Action Task Force) and EU lists.
+                  finding against it.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {contextCodes.map((sig) => (
@@ -2187,6 +2323,13 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             <PanelSection
               id="cross-source-identifiers"
               title="Is this the right company?"
+              // Shut on arrival. Identity corroboration is reassurance, and
+              // reassurance that occupies a screen before anyone doubted
+              // anything is in the way of the finding. The subject card's
+              // "Identifier confirmed by N sources" badge is what opens it —
+              // which is the moment a reader is actually asking.
+              open={identityOpen}
+              onToggle={setIdentityOpen}
               aside={
                 crossLinkedSourceCount >= 2 ? (
                   <>
@@ -2205,7 +2348,21 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     </span>{" "}
                     mapped by GLEIF
                   </>
-                ) : undefined
+                ) : (
+                  // Never a bare title with a chevron. The band is shut by
+                  // default and the affordance that opens it — the subject
+                  // card's identifier badge — renders only at two or more
+                  // confirming sources, so on a lookup that has only
+                  // possibly-same pairs the heading has to say what is inside
+                  // it itself.
+                  <>
+                    <span className="font-semibold">
+                      {possiblySame.length} candidate pair
+                      {possiblySame.length === 1 ? "" : "s"}
+                    </span>{" "}
+                    flagged for review
+                  </>
+                )
               }
             >
               {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && (

@@ -33,6 +33,8 @@ export default function PanelSection({
    *  answered" and for the confidence legend. */
   aside,
   id,
+  open,
+  onToggle,
   last = false,
   className = "",
   children,
@@ -40,6 +42,15 @@ export default function PanelSection({
   title?: React.ReactNode;
   aside?: React.ReactNode;
   id?: string;
+  /** Makes the band a disclosure: the title row becomes the control and the
+   *  children render only when open. Omit for the usual always-open band.
+   *
+   *  Used where the section answers a question the reader has not asked yet —
+   *  identity corroboration is reassurance, and reassurance that occupies a
+   *  screen before anyone doubted anything is in the way. The affordance that
+   *  opens it is the subject card's own identifier badge. */
+  open?: boolean;
+  onToggle?: (open: boolean) => void;
   /** Rarely needed: `PanelCard` already strips the rule from its last child in
    *  CSS, which is more reliable than every call site remembering to pass a
    *  flag — the first version defaulted to false and no caller ever set it, so
@@ -48,6 +59,8 @@ export default function PanelSection({
   className?: string;
   children: React.ReactNode;
 }) {
+  const collapsible = open !== undefined;
+  const bodyId = `${id ?? "oo-panel-section"}-body`;
   return (
     <section
       id={id}
@@ -58,13 +71,52 @@ export default function PanelSection({
         last ? "" : "border-b border-oo-rule"
       } ${className}`.trim()}
     >
-      {(title || aside) && (
+      {(title || aside) && !collapsible && (
         <div className="mb-3 flex flex-col items-start gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
           {title ? <SectionHeading>{title}</SectionHeading> : <span />}
           {aside ? <div className="text-oo-small text-oo-muted">{aside}</div> : null}
         </div>
       )}
-      {children}
+      {collapsible && (
+        // The WAI-ARIA disclosure pattern: an <h2> wrapping the button, not a
+        // button labelled like a heading. The heading has to stay in the
+        // outline whether the band is open or shut.
+        <SectionHeading className="m-0">
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={bodyId}
+            onClick={() => onToggle?.(!open)}
+            className="w-full flex flex-col items-start gap-1 text-left sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
+          >
+            <span className="flex items-center gap-2">
+              {title}
+              <svg
+                width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                aria-hidden="true"
+                className={`shrink-0 text-oo-blue transition-transform ${open ? "rotate-180" : ""}`}
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </span>
+            {aside ? (
+              <span className="font-body font-normal text-oo-small text-oo-muted">
+                {aside}
+              </span>
+            ) : null}
+          </button>
+        </SectionHeading>
+      )}
+      {collapsible ? (
+        open ? (
+          <div id={bodyId} className="mt-3">
+            {children}
+          </div>
+        ) : null
+      ) : (
+        children
+      )}
     </section>
   );
 }

@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useId, useMemo, useState, useSyncExternalSto
 import { deepen } from "../../lib/api";
 import { rowFinding } from "../../lib/sourceFinding";
 import { graphPartiesLabel } from "../../lib/vocab";
-import { ActionChip, Chip, DataTile } from "../ui";
+import { ActionChip, Chip, DataTile, RowList } from "../ui";
 import type { BodsBreakdown, BoAccessNotice, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
 import { LivenessBadge, type SourceLiveness } from "./LivenessBadge";
@@ -758,35 +758,30 @@ function MentionsBreakdown({ hit }: { hit: SourceHit }) {
   if (!total || collections.length === 0) return null;
 
   const preview = expanded ? collections : collections.slice(0, 3);
-  const hidden = collections.length - preview.length;
 
+  // A list, not a row of chips. Which archives a name appears in, and how
+  // often, is the finding for this source — a chip strip compresses it into
+  // decoration and truncates the collection names that carry the meaning
+  // ("Panama Papers" and "Paradise Papers (Appleby)" are not interchangeable).
   return (
-    <div className="mt-2">
-      <div className="flex flex-wrap items-center gap-1.5" id={listId}>
-        {preview.map((c) => (
-          <Chip key={c.label} tone="neutral" size="sm">
-            <span className="font-mono font-bold text-oo-ink">{c.count}</span>
-            <span className="truncate max-w-[200px]">{c.label}</span>
-            <span className="sr-only">
-              {" "}of {total} mentions are in “{c.label}”
-            </span>
-          </Chip>
-        ))}
-        {collections.length > 3 && (
-          <ActionChip
-            onClick={() => setExpanded((v) => !v)}
-            expanded={expanded}
-            controls={listId}
-          >
-            {expanded ? "Show fewer" : `+${hidden} more archive${hidden === 1 ? "" : "s"}`}
-          </ActionChip>
-        )}
-      </div>
-      <p className="mt-1.5 text-oo-meta text-oo-muted leading-[1.5]">
-        Documents mentioning this name — informational only, not a match on
-        identifiers.
-      </p>
-    </div>
+    <RowList
+      controls={listId}
+      total={collections.length}
+      expanded={expanded}
+      onToggle={() => setExpanded((v) => !v)}
+      moreLabel="archive"
+      items={preview.map((c) => ({
+        key: c.label,
+        title: <span className="text-oo-ink">{c.label}</span>,
+        meta: (
+          <>
+            {c.count} of {total}
+            <span className="sr-only"> mentions are in “{c.label}”</span>
+          </>
+        ),
+      }))}
+      footnote="Documents mentioning this name — informational only, not a match on identifiers."
+    />
   );
 }
 
@@ -820,7 +815,6 @@ function TedAwardsList({ hit }: { hit: SourceHit }) {
   if (!notices.length) return null;
 
   const shown = expanded ? notices : notices.slice(0, 5);
-  const hidden = notices.length - shown.length;
   // `ui/Chip` rather than three hand-rolled spans in raw palette classes. The
   // tones say what the row asserts: `ok` for a confirmed win, `neutral` for a
   // bid, `warn` for a winner chain that could not be resolved — which is
@@ -835,68 +829,57 @@ function TedAwardsList({ hit }: { hit: SourceHit }) {
     );
 
   return (
-    <div className="mt-2">
-      {/* A divided list, not five bordered mini-cards inside the source card.
-          Nesting card chrome one level down made each notice read as its own
-          object rather than as a row of one source's answer. */}
-      <ul id={listId} className="divide-y divide-oo-rule border-y border-oo-rule">
-        {shown.map((n) => (
-          <li
-            key={n.publication_number}
-            className="text-oo-small leading-[1.5] py-2"
+    <RowList
+      controls={listId}
+      total={notices.length}
+      expanded={expanded}
+      onToggle={() => setExpanded((v) => !v)}
+      moreLabel="notice"
+      items={shown.map((n) => ({
+        key: n.publication_number,
+        title: (
+          <a
+            href={n.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-oo-blue hover:underline underline-offset-2"
           >
-            <div className="flex items-start justify-between gap-2">
-              <a
-                href={n.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-oo-blue hover:underline underline-offset-2 min-w-0"
-              >
-                {n.title || `Notice ${n.publication_number}`}
-                <span className="sr-only"> (opens in new tab)</span>
-              </a>
-              <span className="shrink-0">{roleBadge(n.role)}</span>
-            </div>
-            <div className="text-oo-muted mt-0.5">
-              {[
-                n.buyer_name &&
-                  `${n.buyer_name}${n.buyer_country ? ` (${n.buyer_country})` : ""}`,
-                n.total_value &&
-                  `${Number(n.total_value).toLocaleString()} ${n.currency || ""}`.trim(),
-                n.publication_date,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </div>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-2 flex items-center flex-wrap gap-2">
-        {notices.length > 5 && (
-          <ActionChip
-            onClick={() => setExpanded((v) => !v)}
-            expanded={expanded}
-            controls={listId}
-          >
-            {expanded ? "Show fewer" : `+${hidden} more notice${hidden === 1 ? "" : "s"}`}
-          </ActionChip>
-        )}
-        {total > notices.length && (
-          <span className="text-oo-meta text-oo-muted">
-            {total} notices in total — showing the latest {notices.length}.
+            {n.title || `Notice ${n.publication_number}`}
+            <span className="sr-only"> (opens in new tab)</span>
+          </a>
+        ),
+        meta: (
+          <span className="inline-flex items-baseline gap-2">
+            {[
+              n.buyer_name &&
+                `${n.buyer_name}${n.buyer_country ? ` (${n.buyer_country})` : ""}`,
+              n.total_value &&
+                `${Number(n.total_value).toLocaleString()} ${n.currency || ""}`.trim(),
+              n.publication_date,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            {roleBadge(n.role)}
           </span>
-        )}
-      </div>
-      <p className="mt-2 text-oo-meta text-oo-muted leading-[1.5] max-w-[80ch]">
-        eForms-era notices only (≈2024 onwards) — earlier awards are not
-        searchable by identifier. Awards won via subsidiaries appear under the
-        subsidiary&apos;s identifier.
-      </p>
-    </div>
+        ),
+      }))}
+      footnote={
+        <>
+          {total > notices.length && (
+            <>
+              {total} notices in total — showing the latest {notices.length}.{" "}
+            </>
+          )}
+          eForms-era notices only (≈2024 onwards) — earlier awards are not
+          searchable by identifier. Awards won via subsidiaries appear under
+          the subsidiary&apos;s identifier.
+        </>
+      }
+    />
   );
 }
 
-export /**
+/**
  * The finding line. Lives here rather than inline so the fallback chain is
  * testable — see `lib/sourceFinding.ts`, which is where the reasoning is.
  */
@@ -1277,14 +1260,6 @@ export function SourceBucketCard({
     </ActionChip>
   ) : null;
 
-  // The amber pill beside the name already says "Did not answer"; repeating it
-  // here in red mono stated one fact three times, once in the data-model word
-  // this phase set out to remove.
-  const stateLabel = bucket.error
-    ? null
-    : `${bucket.hits.length} result${bucket.hits.length === 1 ? "" : "s"}`;
-  const stateColor = "text-oo-muted";
-
   return (
     <>
     <article
@@ -1308,25 +1283,11 @@ export function SourceBucketCard({
             </span>
           )}
         </div>
-        {(() => {
-          const firstHit = bucket.hits.find((h) => !h.is_stub);
-          const bucketUrl = firstHit ? sourceEntityUrl(bucket.sourceId, firstHit) : null;
-          return bucketUrl && !bucket.error ? (
-            <a
-              href={bucketUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`text-[11px] font-mono shrink-0 ${stateColor} hover:underline`}
-            >
-              {stateLabel}
-              <span className="sr-only"> — view record at source (opens in new tab)</span>
-            </a>
-          ) : (
-            <span className={`text-[11px] font-mono shrink-0 ${stateColor}`}>
-              {stateLabel}
-            </span>
-          );
-        })()}
+        {/* No "N results" in the corner. It counted rows a reader can see, in
+            the data-model word this phase set out to remove, and its only
+            other job — linking to the record at source — is already done by
+            each row's own name. The row's action group is what belongs on
+            this side, and that is where it is. */}
       </header>
       {bucket.error && (
         <div className="px-5 py-3 flex flex-wrap items-center justify-between gap-3">

@@ -1,7 +1,7 @@
 {
   "src/App.tsx": {
     "hex": 14,
-    "text": 128,
+    "text": 127,
     "vocab": 0
   },
   "src/components/BODSGraph.tsx": {
@@ -76,7 +76,7 @@
   },
   "src/components/cdd/SourceBucketCard.tsx": {
     "hex": 0,
-    "text": 39,
+    "text": 37,
     "vocab": 0
   },
   "src/components/cdd/SubjectCard.tsx": {
