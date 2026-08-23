@@ -388,8 +388,11 @@ export default function App() {
     },
   ];
 
+// No "Search" item. It did exactly what the logo beside it does — go to the
+// homepage — and now that the header carries a real search field, a nav link
+// labelled "Search" that is not the search field is a third thing pointing at
+// two behaviours. The logo remains the way home.
 const NAV_ITEMS: { view: View; label: string }[] = [
-    { view: "main", label: "Search" },
     { view: "sources", label: "Sources" },
     { view: "api", label: "API" },
     { view: "behind", label: "About" },
@@ -1333,7 +1336,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   <button
                     key={item.view}
                     type="button"
-                    onClick={() => (item.view === "main" ? resetToHome() : navigate(item.view))}
+                    onClick={() => navigate(item.view)}
                     aria-current={current ? "page" : undefined}
                     className={`min-h-[44px] text-[13px] transition-colors ${
                       current

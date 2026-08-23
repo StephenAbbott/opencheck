@@ -563,15 +563,18 @@ export function NarrativePanel({
         <div className="mt-4">
           <p className="text-[14px] leading-relaxed text-oo-ink max-w-[82ch]">{data.summary}</p>
 
-          {/* The line the mockup puts under the prose: what the citations
-              mean, and the one control that acts on the summary as a whole.
-              It sits above the evidence list rather than after it, because a
-              reader who has finished the two paragraphs is at this point on
-              the page — not four hundred pixels further down. */}
+          {/* The control that acts on the summary as a whole, above the
+              evidence list rather than after it, because a reader who has
+              finished the prose is at this point on the page.
+
+              It used to carry "Every sentence links to the record it came
+              from." — copied from the mockup, where the citations are chips
+              inline in the prose. Ours are not: they are a separate evidence
+              list below, and the sentences themselves link to nothing. The
+              claim was false as rendered, which is the one thing this report
+              is not allowed to be. It comes back if and when the citations
+              move inline. */}
           <div className="mt-3.5 flex items-center flex-wrap gap-x-4 gap-y-2 text-oo-small">
-            <span className="text-oo-muted">
-              Every sentence links to the record it came from.
-            </span>
             {canSignOff && (
               <button
                 type="button"
