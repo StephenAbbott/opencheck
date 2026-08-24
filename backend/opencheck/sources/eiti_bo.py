@@ -179,6 +179,20 @@ class EitiBoAdapter(SourceAdapter):
         # Identifier-keyed (LEI) source; free-text search intentionally empty.
         return []
 
+    def covers_lei(self, lei: str) -> bool:
+        """Whether the committed pooled EITI BO index holds this LEI.
+
+        The lookup pipeline asks before dispatching, so a company this file
+        cannot possibly describe is never announced as a source being queried
+        and never counted in "N of N sources answered". Absence means the LEI is not in the pooled index, which is not the same as evidence of no register-published ownership — this
+        governs whether the source is *applicable*, and says nothing about the
+        company.
+
+        Reads the index without declaring provenance: nothing has been fetched.
+        """
+        index, _ = _load()
+        return (lei or "").strip().upper() in index
+
     async def fetch_by_lei(self, lei: str) -> dict[str, Any] | None:
         """Return the pooled-register bundle for a LEI, or ``None`` if absent."""
         lei_norm = (lei or "").strip().upper()

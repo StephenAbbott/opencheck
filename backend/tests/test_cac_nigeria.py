@@ -14,7 +14,13 @@ from __future__ import annotations
 import pytest
 
 from opencheck.bods import map_cac_nigeria, validate_shape
-from opencheck.routers.lookup import _bh_cac_nigeria, _build_result_hit, _LookupCtx
+from opencheck.routers.lookup import (
+    _bh_cac_nigeria,
+    _build_result_hit,
+    _dispatch,
+    _LookupCtx,
+    _offline_index_covers,
+)
 from opencheck.sources import REGISTRY, cac_nigeria
 from opencheck.sources.base import SearchKind
 
@@ -230,3 +236,57 @@ async def test_committed_index_maps_and_validates():
         assert "lei" not in hit.identifiers
     assert total_rel >= 10
     cac_nigeria._reset_index_for_tests()
+
+
+# ---------------------------------------------------------------------------
+# Applicability — a register that cannot hold this company is not queried
+# ---------------------------------------------------------------------------
+
+
+def test_covers_lei_is_membership_in_the_committed_set(adapter):
+    assert adapter.covers_lei(_LEI_A) is True
+    assert adapter.covers_lei(_LEI_A.lower()) is True
+    assert adapter.covers_lei("213800LH1BZH3DI6G760") is False  # BP
+    assert adapter.covers_lei("") is False
+
+
+def test_not_dispatched_for_a_company_the_set_cannot_hold():
+    """BP is not in the Nigerian BO register example set, so it is not one of
+    the sources the report says it queried.
+
+    Raised from production: BP and Rosneft both listed CAC among the sources
+    consulted, and it was counted in "N of N sources answered". Membership in
+    the index is the same applicability test a jurisdiction code gives the
+    RA-derived adapters for free.
+    """
+    ctx = _LookupCtx(
+        lei="213800LH1BZH3DI6G760", legal_name="BP P.L.C.", jurisdiction="GB",
+        registered_as="", derived={}, ocid=None, spglobal=None, qid=None,
+    )
+    pairs = _dispatch(ctx)
+    dispatched = [sid for sid, _coro in pairs]
+    for _sid, coro in pairs:
+        coro.close()  # nothing awaits these; do not leak "never awaited"
+    assert "cac_nigeria" not in dispatched
+
+
+def test_dispatched_for_a_company_it_does_hold():
+    ctx = _ctx(_LEI_A, "A NIGERIAN COMPANY PLC")
+    pairs = _dispatch(ctx)
+    dispatched = [sid for sid, _coro in pairs]
+    for _sid, coro in pairs:
+        coro.close()
+    assert "cac_nigeria" in dispatched
+
+
+def test_index_membership_check_fails_open():
+    """An unreadable index is a fault to surface through the source-error
+    path, not a reason to quietly drop the source."""
+
+    class _Broken:
+        def covers_lei(self, lei):
+            raise OSError("index unreadable")
+
+    assert _offline_index_covers(_Broken(), "X" * 20) is True
+    # An adapter that does not declare the check is always applicable.
+    assert _offline_index_covers(object(), "X" * 20) is True

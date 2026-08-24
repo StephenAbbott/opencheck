@@ -21,6 +21,7 @@ from opencheck.cross_check import (
     _collect_targets,
     _name_score,
     _normalise,
+    NameScreen,
     assess_cross_source_names,
     match_summary,
 )
@@ -784,3 +785,74 @@ async def test_offline_mode_is_quiet(monkeypatch, caplog) -> None:
         assert await assess_cross_source_names(bundle) == []
 
     assert caplog.text == ""
+
+
+# ---------------------------------------------------------------------------
+# The screen reports itself — EveryPolitician gets a card (Phase 132)
+# ---------------------------------------------------------------------------
+
+
+async def test_screen_reports_names_read_and_the_records_matched(monkeypatch) -> None:
+    """EveryPolitician is queried on every lookup and was announced on none.
+
+    The out-collector is what lets the report say so: how many related-party
+    names the screen actually read, and which EveryPolitician records matched
+    — carried whole, with the party they matched, because the row's sentence
+    is about the party named in the company's records and not the politician.
+    """
+    ep_hit = SourceHit(
+        source_id="everypolitician",
+        hit_id="poli-1",
+        kind=SearchKind.PERSON,
+        name="Vladimir Putin",
+        summary="President · RU",
+        identifiers={"opensanctions_id": "poli-1"},
+        raw={
+            "id": "poli-1",
+            "schema": "Person",
+            "properties": {"name": ["Vladimir Putin"], "topics": ["role.pep"]},
+        },
+        is_stub=False,
+    )
+    _stub(monkeypatch, "opensanctions", [])
+    _stub(monkeypatch, "everypolitician", [ep_hit])
+
+    screen = NameScreen()
+    bundle = [
+        _person("p1", "Vladimir Putin"),
+        _entity("e1", "Acme Holdings"),  # entities are not screened against EP
+    ]
+    signals = await assess_cross_source_names(bundle, screen=screen)
+
+    assert [s.code for s in signals] == [RELATED_PEP]
+    assert screen.names_screened == 2
+    assert len(screen.matches) == 1
+    match = screen.matches[0]
+    assert match.source_id == "everypolitician"
+    assert match.hit.hit_id == "poli-1"
+    assert match.target_name == "Vladimir Putin"
+    assert match.subject_statement_id == "p1"
+
+
+async def test_screen_records_nothing_when_it_could_not_run(monkeypatch) -> None:
+    """No key means no query, so the report must not claim a source answered."""
+    monkeypatch.delenv("OPENSANCTIONS_API_KEY", raising=False)
+    get_settings.cache_clear()
+    screen = NameScreen()
+    await assess_cross_source_names([_person("p1", "Vladimir Putin")], screen=screen)
+    assert screen.names_screened == 0
+    assert screen.matches == []
+
+
+async def test_a_clean_screen_still_reports_the_names_it_read(monkeypatch) -> None:
+    """"Screened, nothing found" is a different answer from "not screened",
+    and the card has to be able to tell them apart."""
+    _stub(monkeypatch, "opensanctions", [])
+    _stub(monkeypatch, "everypolitician", [])
+    screen = NameScreen()
+    await assess_cross_source_names(
+        [_person("p1", "Nobody Notable"), _person("p2", "Also Nobody")],
+        screen=screen,
+    )
+    assert screen.names_screened == 2
+    assert screen.matches == []
