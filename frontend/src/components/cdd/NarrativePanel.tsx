@@ -21,6 +21,11 @@
 import { useEffect, useRef, useState } from "react";
 import { trackEvent } from "../../lib/analytics";
 import {
+  citeGroupDescription,
+  groupCitations,
+  type CiteGroup,
+} from "../../lib/citations";
+import {
   fetchCuratedNarrative,
   fetchNarrative,
   getDispositions,
@@ -103,9 +108,19 @@ function focusCitation(cite: Cite) {
   );
 }
 
-function CitationChip({ cite }: { cite: Cite }) {
+/**
+ * One chip per source, not one per fact.
+ *
+ * A claim citing twenty-eight GLEIF records used to render twenty-eight
+ * chips reading "GLEIF", stacked one per line on a phone. They all scrolled
+ * to the same card and highlighted the same diagram, so the repetition
+ * carried exactly one piece of information — how many — which the chip now
+ * carries as a number. See `lib/citations.ts`.
+ */
+function CitationChip({ group }: { group: CiteGroup<Cite> }) {
+  const cite = group.cites[0];
   const tone =
-    cite.kind === "gap"
+    group.kind === "gap"
       ? "bg-slate-50 text-slate-600 border-slate-300"
       : "bg-[#eef1fb] text-oo-blue border-[#cfd6f5] hover:bg-[#e3e8f8]";
   return (
@@ -114,18 +129,26 @@ function CitationChip({ cite }: { cite: Cite }) {
       onClick={() => focusCitation(cite)}
       className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-oo-meta font-medium transition-colors ${tone}`}
     >
-      {cite.confidence && (
+      {group.confidence && (
         <>
-          <span aria-hidden className="text-oo-meta">{CONFIDENCE_GLYPH[cite.confidence] ?? "•"}</span>
+          <span aria-hidden className="text-oo-meta">{CONFIDENCE_GLYPH[group.confidence] ?? "•"}</span>
           {/* v1 announced the bare level ("high confidence"). What the level
               means is the useful part, and it already exists as prose. */}
-          <span className="sr-only">{CONFIDENCE_LABEL[cite.confidence] ?? cite.confidence}: </span>
+          <span className="sr-only">{CONFIDENCE_LABEL[group.confidence] ?? group.confidence}: </span>
         </>
       )}
-      <span>{cite.label}</span>
-      {/* What activating the chip does — until Phase 124 this was a `title`,
-          and the graph-highlight behaviour was described nowhere else. */}
+      <span aria-hidden>{group.label}</span>
+      {group.count > 1 && (
+        <span aria-hidden className="font-normal opacity-70">
+          ·&nbsp;{group.count}
+        </span>
+      )}
+      {/* The whole accessible name in one place: the source, how many records
+          it contributed, and what activating this does. Until Phase 124 the
+          last part was a `title`, and the graph-highlight behaviour was
+          described nowhere else. */}
       <span className="sr-only">
+        {citeGroupDescription(group)}
         {cite.statementId
           ? " — shows the source and highlights it in the ownership diagram"
           : " — shows the source"}
@@ -660,15 +683,17 @@ export function NarrativePanel({
                   ? data.claims.slice(0, EVIDENCE_PREVIEW_COUNT)
                   : data.claims
                 ).map((c) => {
-                  const cites = c.fact_ids
-                    .map((id) => resolveCite(data.packet, id))
-                    .filter((x): x is Cite => x !== null);
+                  const cites = groupCitations(
+                    c.fact_ids
+                      .map((id) => resolveCite(data.packet, id))
+                      .filter((x): x is Cite => x !== null)
+                  );
                   return (
                     <li key={c.id} className="text-[13px] text-oo-ink">
                       <span>{c.text}</span>{" "}
                       <span className="inline-flex flex-wrap gap-1 align-middle">
-                        {cites.map((cite) => (
-                          <CitationChip key={`${c.id}-${cite.id}`} cite={cite} />
+                        {cites.map((group) => (
+                          <CitationChip key={`${c.id}-${group.key}`} group={group} />
                         ))}
                       </span>
                       {canSignOff && (

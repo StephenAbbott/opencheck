@@ -56,13 +56,20 @@ export function RowList({
     <div className="mt-3 border-t border-oo-rule pt-2.5">
       <ul id={controls} className="flex flex-col">
         {items.map((item) => (
+          // Two columns on a wide viewport, stacked on a phone. The meta was
+          // `shrink-0` at every width, which on a TED row — buyer, country,
+          // value, date and a status chip — is far wider than a 375px screen:
+          // it pushed itself off the right edge and crushed the title column
+          // to about one word per line. A phone gets the title on its own
+          // line and the metadata under it, which is the order they are read
+          // in anyway.
           <li
             key={item.key}
-            className="flex items-baseline justify-between gap-4 border-b border-oo-bg py-1.5 text-oo-small"
+            className="flex flex-col gap-1 border-b border-oo-bg py-1.5 text-oo-small sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
           >
             <span className="min-w-0">{item.title}</span>
             {item.meta ? (
-              <span className="shrink-0 text-oo-muted">{item.meta}</span>
+              <span className="min-w-0 text-oo-muted sm:shrink-0">{item.meta}</span>
             ) : null}
           </li>
         ))}
