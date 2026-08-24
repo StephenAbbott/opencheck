@@ -2,7 +2,7 @@ import { useState } from "react";
 import { CONFIDENCE_GLYPH, CONFIDENCE_LABEL } from "../ui/Chip";
 import { SignalEvidence } from "./SignalEvidence";
 import type { RiskSignal } from "../../lib/api";
-import type { LeadSignal } from "../../lib/leadSignal";
+import type { SignalEvidenceData } from "../../lib/signalEvidence";
 import { sourceLabel } from "../../lib/vocab";
 
 /**
@@ -290,12 +290,12 @@ export function RiskChip({
 }
 
 /**
- * The `LeadSignal` shape for a chip that has only itself.
+ * The `SignalEvidenceData` shape for a chip that has only itself.
  *
  * `sourceCount: 0` on purpose — see the note on the component above. The
  * source still goes in `sourceIds`, so the box names it.
  */
-export function chipEvidence(signal: RiskSignal): LeadSignal {
+export function chipEvidence(signal: RiskSignal): SignalEvidenceData {
   return {
     signal,
     sourceCount: 0,

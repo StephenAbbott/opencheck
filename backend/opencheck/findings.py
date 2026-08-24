@@ -750,3 +750,41 @@ def finding_wikidata(summary: dict[str, Any]) -> str | None:
     )
 
     return clauses_to_sentence([lead, type_clause, id_clause], sep="; ")
+
+
+# ---------------------------------------------------------------------------
+# everypolitician
+# ---------------------------------------------------------------------------
+
+
+def finding_everypolitician(hit_summary: str, related_party: str) -> str | None:
+    """What an EveryPolitician record on the report is, said plainly.
+
+    Unlike every other template here, this describes a **name match on a
+    related party**, not a fact about the subject. EveryPolitician holds
+    politicians, and the subject of an OpenCheck lookup is a company; the row
+    exists because a person named in the company's records shares a name with
+    a record in the PEP dataset.
+
+    The sentence therefore says what it is and what it is not, in the wording
+    the risk layer already uses for the same finding: a name match is not an
+    identity match, and being a PEP is not a finding of wrongdoing. Rule 2
+    (assert nothing about risk) is not breached — a PEP listing is what the
+    source published, and the sentence draws no conclusion from it.
+    """
+    party = (related_party or "").strip()
+    detail = (hit_summary or "").strip()
+    # The caveat rides in the lead clause, not as a trailing one: clauses are
+    # dropped from the end to meet the length cap, and "not confirmed to be
+    # the same person" is the one clause that must never be the one that goes.
+    lead = (
+        f"Possible name match only for {party}, a party named in this "
+        "company's records — not confirmed to be the same person"
+        if party
+        else "Possible name match only for a party named in this company's "
+        "records — not confirmed to be the same person"
+    )
+    return clauses_to_sentence(
+        [lead, f"listed as {detail}" if detail else None],
+        sep="; ",
+    )

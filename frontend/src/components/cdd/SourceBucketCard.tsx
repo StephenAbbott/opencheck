@@ -849,7 +849,10 @@ function TedAwardsList({ hit }: { hit: SourceHit }) {
           </a>
         ),
         meta: (
-          <span className="inline-flex items-baseline gap-2">
+          // Wrapping, and gap-y so a wrapped status chip does not collide
+          // with the line above it. Buyer + value + date + chip is a long
+          // string; on a phone it has to be allowed to take two lines.
+          <span className="inline-flex flex-wrap items-baseline gap-x-2 gap-y-1">
             {[
               n.buyer_name &&
                 `${n.buyer_name}${n.buyer_country ? ` (${n.buyer_country})` : ""}`,

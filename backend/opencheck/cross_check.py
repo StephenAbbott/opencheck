@@ -43,6 +43,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from dataclasses import dataclass, field
 from typing import Any
 
 from . import names
@@ -113,12 +114,47 @@ _AFFECTED_BY_SOURCE: dict[str, list[str]] = {
 # ---------------------------------------------------------------------
 
 
+@dataclass
+class NameMatch:
+    """One record a related party's name matched, with the party it came from."""
+
+    source_id: str
+    hit: SourceHit
+    target_name: str
+    subject_statement_id: str
+
+
+@dataclass
+class NameScreen:
+    """What the related-party name screen actually did, for the caller to show.
+
+    EveryPolitician is queried on every lookup that reaches this module — each
+    related person's name goes to it — but it is queried from the *risk* stage
+    rather than the source dispatch, so nothing in the report said so. It had
+    no card, no freshness note and no place in "N of N sources answered", and
+    a reader comparing it with OpenSanctions could only conclude it was never
+    checked.
+
+    This is the out-collector that lets the pipeline say what happened.
+    ``names_screened`` is the number of related parties the screen actually
+    read (post-cap), and ``matches`` are the hits that produced a signal, kept
+    whole so the card can show the record rather than a restatement of it.
+    Each match carries the **related party's** name as well as the record's:
+    they are similar by construction, and the sentence on the row is about the
+    party named in the company's records, not about the politician.
+    """
+
+    names_screened: int = 0
+    matches: list[NameMatch] = field(default_factory=list)
+
+
 async def assess_cross_source_names(
     bods: list[dict[str, Any]],
     *,
     max_targets: int = 25,
     min_score: float = 0.88,
     degraded: list[DegradedSource] | None = None,
+    screen: NameScreen | None = None,
 ) -> list[RiskSignal]:
     """Return scoped ``RELATED_*`` risk signals for related parties in
     the BODS bundle that match an OpenSanctions / EveryPolitician
@@ -177,6 +213,12 @@ async def assess_cross_source_names(
                 )
         return []
 
+    # The screen is going to run: record what it is about to read, so a
+    # caller can say "14 names screened" rather than inferring it from the
+    # signals, which only exist where something matched.
+    if screen is not None:
+        screen.names_screened = len(targets)
+
     # Run the OS + EP probes concurrently — both adapters are cheap
     # and each name yields at most ~10 hits to score.
     tasks: list[asyncio.Task] = []
@@ -206,8 +248,18 @@ async def assess_cross_source_names(
                 r,
             )
             continue
-        target_signals, failures = r
+        target_signals, failures, ep_matches = r
         signals.extend(target_signals)
+        if screen is not None:
+            for hit, target in ep_matches:
+                screen.matches.append(
+                    NameMatch(
+                        source_id="everypolitician",
+                        hit=hit,
+                        target_name=str(target.get("name") or ""),
+                        subject_statement_id=str(target.get("statement_id") or ""),
+                    )
+                )
         for source_id, reason in failures.items():
             by_reason = failed_by_source.setdefault(source_id, {})
             by_reason[reason] = by_reason.get(reason, 0) + 1
@@ -387,14 +439,17 @@ def _person_nationalities(rd: dict[str, Any]) -> tuple[str, ...]:
 
 async def _check_target(
     target: dict[str, Any], *, min_score: float
-) -> tuple[list[RiskSignal], dict[str, str]]:
+) -> tuple[list[RiskSignal], dict[str, str], list[tuple[SourceHit, dict[str, Any]]]]:
     """Run OS (+ EP for persons) searches for one target and score the
     matches.
 
-    Returns ``(signals, failed_sources)`` where ``failed_sources`` maps a
-    source id to a closed-vocabulary degradation reason. It lets the
+    Returns ``(signals, failed_sources, ep_matches)``. ``failed_sources``
+    maps a source id to a closed-vocabulary degradation reason; it lets the
     caller distinguish "screened, nothing found" from "the screen never
     ran" — see the aggregated warning in ``assess_cross_source_names``.
+    ``ep_matches`` pairs each EveryPolitician record that produced a signal
+    with the target it matched, returned whole so the source card can show the
+    record rather than a restatement of it.
     """
     name = target["name"]
     kind = SearchKind.PERSON if target["kind"] == _KIND_PERSON else SearchKind.ENTITY
@@ -410,12 +465,13 @@ async def _check_target(
     if ep_adapter is not None:
         tasks.append(asyncio.create_task(ep_adapter.search(name, SearchKind.PERSON)))
     if not tasks:
-        return [], {}
+        return [], {}, []
 
     raw_results = await asyncio.gather(*tasks, return_exceptions=True)
 
     signals: list[RiskSignal] = []
     failed: dict[str, str] = {}
+    ep_matches: list[tuple[SourceHit, dict[str, Any]]] = []
     # OpenSanctions hits — derive RELATED_PEP / RELATED_SANCTIONED from
     # the topics on the underlying record.
     if os_adapter is not None:
@@ -440,7 +496,8 @@ async def _check_target(
             sig = _signal_from_ep(hit, target, min_score=min_score)
             if sig is not None:
                 signals.append(sig)
-    return signals, failed
+                ep_matches.append((hit, target))
+    return signals, failed, ep_matches
 
 
 def _signals_from_os(

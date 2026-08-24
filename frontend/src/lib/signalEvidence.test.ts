@@ -5,9 +5,8 @@ import {
   corroborationClause,
   evidenceFooter,
   evidenceForCode,
-  leadSignal,
   splitEvidenceSources,
-} from "./leadSignal";
+} from "./signalEvidence";
 import type { RiskSignal } from "./api";
 
 const sig = (over: Partial<RiskSignal>): RiskSignal => ({
@@ -20,38 +19,57 @@ const sig = (over: Partial<RiskSignal>): RiskSignal => ({
   ...over,
 });
 
-describe("leadSignal", () => {
-  it("says nothing when there is nothing adverse", () => {
-    expect(leadSignal([])).toBeNull();
-    // Structural context is not a finding against the company, so it can
-    // never be the thing the section leads with.
-    expect(leadSignal([sig({ code: "NON_EU_JURISDICTION", kind: "context" })])).toBeNull();
+describe("evidenceForCode", () => {
+  it("says nothing for a code that is not there", () => {
+    // Which is also what a selection outliving a re-run looks like. The
+    // section renders no box for it rather than an empty one.
+    expect(evidenceForCode([], "SANCTIONED")).toBeNull();
+    expect(evidenceForCode([sig({})], "DEBARMENT")).toBeNull();
   });
 
-  it("leads with the worst, by the same severity the graph badges stack by", () => {
-    const lead = leadSignal([
-      sig({ code: "COMPLEX_OWNERSHIP_LAYERS", source_id: "gleif" }),
-      sig({ code: "SANCTIONED", source_id: "opensanctions" }),
-      sig({ code: "OFFSHORE_LEAKS", source_id: "icij" }),
-    ]);
-    expect(lead?.signal.code).toBe("SANCTIONED");
+  it("explains the code asked for, and ranks nothing", () => {
+    // Until Phase 132 the box opened on the *worst* signal by severity and
+    // captioned it "the most serious signal is shown above" — OpenCheck
+    // grading a company's findings. There is no ordering left to test: the
+    // chip decides, and a chip for a lower-severity code gets the same
+    // treatment as any other.
+    const signals = [
+      sig({ code: "SANCTIONED", summary: "the severe one" }),
+      sig({ code: "OFFSHORE_LEAKS", source_id: "icij", summary: "the chosen one" }),
+    ];
+    expect(evidenceForCode(signals, "OFFSHORE_LEAKS")?.signal.summary).toBe(
+      "the chosen one"
+    );
+    expect(evidenceForCode(signals, "SANCTIONED")?.signal.summary).toBe(
+      "the severe one"
+    );
+  });
+
+  it("explains structural context too", () => {
+    const lead = evidenceForCode(
+      [sig({ code: "NON_EU_JURISDICTION", kind: "context", source_id: "gleif" })],
+      "NON_EU_JURISDICTION"
+    );
+    expect(lead?.signal.code).toBe("NON_EU_JURISDICTION");
   });
 
   it("counts corroboration in distinct sources, not in signals", () => {
     // The risk layer emits one signal per matching hit, so one source can
     // produce three for one code. "Corroborated by three sources" would then
     // be a claim about a single source's thoroughness.
-    const lead = leadSignal([
-      sig({ hit_id: "a" }),
-      sig({ hit_id: "b" }),
-      sig({ hit_id: "c" }),
-    ]);
+    const lead = evidenceForCode(
+      [sig({ hit_id: "a" }), sig({ hit_id: "b" }), sig({ hit_id: "c" })],
+      "SANCTIONED"
+    );
     expect(lead?.sourceCount).toBe(1);
     expect(lead?.sourceIds).toEqual(["opensanctions"]);
   });
 
   it("counts two sources as two", () => {
-    const lead = leadSignal([sig({}), sig({ source_id: "openaleph", hit_id: "b" })]);
+    const lead = evidenceForCode(
+      [sig({}), sig({ source_id: "openaleph", hit_id: "b" })],
+      "SANCTIONED"
+    );
     expect(lead?.sourceCount).toBe(2);
     expect(lead?.sourceIds).toEqual(["opensanctions", "openaleph"]);
   });
@@ -61,55 +79,74 @@ describe("leadSignal", () => {
     // while ICIJ flagged a subsidiary in the Bahamas Leaks. Both are
     // OFFSHORE_LEAKS, and the box said "Corroborated by two sources" under a
     // sentence about the subsidiary. Same code is not the same finding.
-    const lead = leadSignal([
-      sig({
-        code: "OFFSHORE_LEAKS",
-        source_id: "openaleph",
-        summary: "The company itself is in a leak collection.",
-        evidence: { statement_id: "the-subject" },
-      }),
-      sig({
-        code: "OFFSHORE_LEAKS",
-        source_id: "icij",
-        summary: "A related party matches a record in the Bahamas Leaks.",
-        evidence: { subject_statement_id: "a-subsidiary" },
-      }),
-    ]);
+    const lead = evidenceForCode(
+      [
+        sig({
+          code: "OFFSHORE_LEAKS",
+          source_id: "openaleph",
+          summary: "The company itself is in a leak collection.",
+          evidence: { statement_id: "the-subject" },
+        }),
+        sig({
+          code: "OFFSHORE_LEAKS",
+          source_id: "icij",
+          summary: "A related party matches a record in the Bahamas Leaks.",
+          evidence: { subject_statement_id: "a-subsidiary" },
+        }),
+      ],
+      "OFFSHORE_LEAKS"
+    );
     expect(lead?.sourceCount).toBe(1);
     expect(lead?.sourceIds).toHaveLength(1);
   });
 
   it("does count two sources naming the same party", () => {
-    const lead = leadSignal([
-      sig({ code: "OFFSHORE_LEAKS", source_id: "openaleph", evidence: { subject_statement_id: "x" } }),
-      sig({ code: "OFFSHORE_LEAKS", source_id: "icij", evidence: { subject_statement_id: "x" } }),
-    ]);
+    const lead = evidenceForCode(
+      [
+        sig({ code: "OFFSHORE_LEAKS", source_id: "openaleph", evidence: { subject_statement_id: "x" } }),
+        sig({ code: "OFFSHORE_LEAKS", source_id: "icij", evidence: { subject_statement_id: "x" } }),
+      ],
+      "OFFSHORE_LEAKS"
+    );
     expect(lead?.sourceCount).toBe(2);
   });
 
-  it("only counts the sources that asserted the lead code", () => {
-    const lead = leadSignal([
-      sig({ code: "SANCTIONED", source_id: "opensanctions" }),
-      sig({ code: "OFFSHORE_LEAKS", source_id: "icij" }),
-      sig({ code: "OFFSHORE_LEAKS", source_id: "openaleph" }),
-    ]);
-    expect(lead?.signal.code).toBe("SANCTIONED");
+  it("only counts the sources that asserted the selected code", () => {
+    const lead = evidenceForCode(
+      [
+        sig({ code: "SANCTIONED", source_id: "opensanctions" }),
+        sig({ code: "OFFSHORE_LEAKS", source_id: "icij" }),
+        sig({ code: "OFFSHORE_LEAKS", source_id: "openaleph" }),
+      ],
+      "SANCTIONED"
+    );
     expect(lead?.sourceCount).toBe(1);
   });
 
-  it("prefers the better-corroborated instance of the lead code", () => {
-    const lead = leadSignal([
-      sig({ confidence: "low", summary: "weak" }),
-      sig({ confidence: "high", summary: "strong", source_id: "openaleph" }),
-    ]);
+  it("shows the best-evidenced instance of the code", () => {
+    const lead = evidenceForCode(
+      [
+        sig({ confidence: "low", summary: "weak", hit_id: "a" }),
+        sig({ confidence: "high", summary: "strong", source_id: "openaleph", hit_id: "b" }),
+      ],
+      "SANCTIONED"
+    );
     expect(lead?.signal.summary).toBe("strong");
+  });
+
+  it("breaks a tie stably, not on backend emit order", () => {
+    const a = sig({ hit_id: "a", summary: "first" });
+    const b = sig({ hit_id: "b", summary: "second" });
+    expect(evidenceForCode([a, b], "SANCTIONED")?.signal.summary).toBe("first");
+    expect(evidenceForCode([b, a], "SANCTIONED")?.signal.summary).toBe("first");
   });
 
   it("takes the OLDEST observed retrieval across the contributing sources", () => {
     // A claim is only as current as its stalest component — the same rule
     // provenance.Recorder.resolve applies. The newest would overstate.
-    const lead = leadSignal(
+    const lead = evidenceForCode(
       [sig({}), sig({ source_id: "openaleph", hit_id: "b" })],
+      "SANCTIONED",
       {
         opensanctions: { liveness: "cached", label: "Cached", retrieved_at: "2026-08-19T09:00:00Z", detail: null },
         openaleph: { liveness: "live", label: "Live", retrieved_at: "2026-08-21T09:00:00Z", detail: null },
@@ -124,8 +161,9 @@ describe("leadSignal", () => {
     // `icij` is not a registered adapter, so it never gets a source_liveness
     // entry. Generalising OpenAleph's date onto it would state a currency for
     // the ICIJ record that nothing established.
-    const lead = leadSignal(
+    const lead = evidenceForCode(
       [sig({}), sig({ source_id: "icij", hit_id: "b" })],
+      "SANCTIONED",
       {
         opensanctions: { liveness: "live", label: "Live", retrieved_at: "2026-08-21T09:00:00Z", detail: null },
       }
@@ -137,29 +175,10 @@ describe("leadSignal", () => {
   it("reports no date rather than today's when nothing was observed", () => {
     // A stub or curated source has no retrieval time. "Checked today" there
     // would be the exact claim LivenessBadge exists to avoid making.
-    const lead = leadSignal([sig({})], {
+    const lead = evidenceForCode([sig({})], "SANCTIONED", {
       opensanctions: { liveness: "stub", label: "Stub", retrieved_at: null, detail: null },
     });
     expect(lead?.checkedAt).toBeNull();
-  });
-
-  it("breaks a severity tie stably, not on backend emit order", () => {
-    // PEP and DEBARMENT are both severity 4 in SIGNAL_STYLE, and one
-    // OpenSanctions entity carrying both topics emits them at the same
-    // confidence from the same hit. Without a stable last step the headline
-    // was decided by the order two `out.append` calls appear in risk.py.
-    const pep = sig({ code: "PEP", hit_id: "h" });
-    const deb = sig({ code: "DEBARMENT", hit_id: "h" });
-    expect(leadSignal([pep, deb])?.signal.code).toBe("DEBARMENT");
-    expect(leadSignal([deb, pep])?.signal.code).toBe("DEBARMENT");
-  });
-
-  it("does not let an unknown code outrank a known one", () => {
-    const lead = leadSignal([
-      sig({ code: "SANCTIONED" }),
-      sig({ code: "SOME_FUTURE_CODE", source_id: "x" }),
-    ]);
-    expect(lead?.signal.code).toBe("SANCTIONED");
   });
 });
 
@@ -189,44 +208,6 @@ describe("checkedClause", () => {
   it("says nothing for a missing or unparseable time", () => {
     expect(checkedClause(null)).toBe("");
     expect(checkedClause("not-a-date")).toBe("");
-  });
-});
-
-describe("evidenceForCode", () => {
-  it("explains the code the reader picked, not the worst one", () => {
-    const signals = [
-      sig({ code: "SANCTIONED", summary: "the worst" }),
-      sig({ code: "OFFSHORE_LEAKS", source_id: "icij", summary: "the chosen" }),
-    ];
-    expect(leadSignal(signals)?.signal.code).toBe("SANCTIONED");
-    expect(evidenceForCode(signals, "OFFSHORE_LEAKS")?.signal.summary).toBe("the chosen");
-  });
-
-  it("counts corroboration the same way the lead does", () => {
-    const signals = [
-      sig({ code: "SANCTIONED" }),
-      sig({ code: "PEP", source_id: "opensanctions", hit_id: "a" }),
-      sig({ code: "PEP", source_id: "everypolitician", hit_id: "b" }),
-    ];
-    expect(evidenceForCode(signals, "PEP")?.sourceCount).toBe(2);
-  });
-
-  it("can explain structural context, which can never be the lead", () => {
-    // A reader may select the chip; the section still leads with a finding.
-    const signals = [
-      sig({ code: "SANCTIONED" }),
-      sig({ code: "NON_EU_JURISDICTION", kind: "context", source_id: "gleif" }),
-    ];
-    expect(evidenceForCode(signals, "NON_EU_JURISDICTION")?.signal.code).toBe(
-      "NON_EU_JURISDICTION"
-    );
-    expect(leadSignal(signals)?.signal.code).toBe("SANCTIONED");
-  });
-
-  it("returns null for a code that is not in the list", () => {
-    // The selection survives a re-run that no longer produces the code; the
-    // caller falls back to the lead rather than rendering an empty box.
-    expect(evidenceForCode([sig({})], "DEBARMENT")).toBeNull();
   });
 });
 

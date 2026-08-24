@@ -25,10 +25,12 @@ from ..provenance import Provenance
 from ..bods import BODSBundle, validate_shape
 from ..sources.base import LookupDeriver, raw_redaction_notice
 from .. import bods_data
-from ..cross_check import assess_cross_source_names
+from ..config import get_settings
+from ..cross_check import NameScreen, assess_cross_source_names
 from ..findings import (
     finding_bods_gleif,
     finding_companies_house,
+    finding_everypolitician,
     finding_gleif,
     finding_openaleph,
     finding_opencorporates,
@@ -1217,6 +1219,51 @@ async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
     return deduped
 
 
+
+
+def _name_screen_can_run() -> bool:
+    """Whether the related-party name screen will actually query anything.
+
+    The same two conditions ``assess_cross_source_names`` checks before it
+    runs: live mode, and the OpenSanctions key that the EveryPolitician
+    adapter shares. Announcing the source when neither holds would put a
+    source in "N of N answered" that was never going to be asked — the
+    failure mode this whole applicability idea exists to prevent.
+    """
+    settings = get_settings()
+    return bool(settings.allow_live and settings.opensanctions_api_key)
+
+
+def _offline_index_covers(adapter: Any, lei: str) -> bool:
+    """Whether an offline LEI-keyed adapter's committed index holds this LEI.
+
+    These three adapters — the CAC BOR example set, the EITI SOE database, the
+    pooled EITI BO registers — answer from a file in the repository rather than
+    from a call. Dispatching them regardless meant every lookup announced them
+    as sources being queried and counted them in "N of N sources answered":
+    a British oil major and a Russian one both listed the Nigerian beneficial
+    ownership register among the registers consulted, which is not a claim
+    anyone can defend. Membership in the index is exactly the applicability
+    test the RA-derived adapters get for free from a jurisdiction code.
+
+    Reads the index directly rather than through the adapter's declare-and-load
+    path: this is a question about the file, not a fetch, and recording curated
+    provenance for a source that never ran would put a freshness note on
+    nothing.
+
+    Fails **open**. An unreadable index is a fault worth surfacing through the
+    normal source-error path, not a reason to quietly drop a source.
+    """
+    covers = getattr(adapter, "covers_lei", None)
+    if covers is None:
+        return True
+    try:
+        return bool(covers(lei))
+    except Exception:  # pragma: no cover - defensive
+        _LOG.warning("%s: index membership check failed; dispatching anyway", adapter)
+        return True
+
+
 def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]:
     """Build the (source_id, awaitable) dispatch list for this lookup.
 
@@ -1288,21 +1335,36 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
     # A hit means the LEI is a state-owned enterprise; its BODS (a stateBody
     # government + control relationship) drives the STATE_CONTROLLED signal.
     soe_adapter = REGISTRY.get("eiti_soe")
-    if soe_adapter is not None and hasattr(soe_adapter, "fetch_by_lei") and _want("eiti_soe"):
+    if (
+        soe_adapter is not None
+        and hasattr(soe_adapter, "fetch_by_lei")
+        and _want("eiti_soe")
+        and _offline_index_covers(soe_adapter, ctx.lei)
+    ):
         tasks.append(("eiti_soe", soe_adapter.fetch_by_lei(ctx.lei)))
     # Nigeria CAC — LEI-keyed offline match against the committed PSC index
     # (curated example set; the CAC's official API is government-only). A hit
     # means the LEI is in the curated set; its BODS carries the CAC-published
     # beneficial ownership.
     cac_adapter = REGISTRY.get("cac_nigeria")
-    if cac_adapter is not None and hasattr(cac_adapter, "fetch_by_lei") and _want("cac_nigeria"):
+    if (
+        cac_adapter is not None
+        and hasattr(cac_adapter, "fetch_by_lei")
+        and _want("cac_nigeria")
+        and _offline_index_covers(cac_adapter, ctx.lei)
+    ):
         tasks.append(("cac_nigeria", cac_adapter.fetch_by_lei(ctx.lei)))
     # Pooled EITI national BO registers — LEI-keyed offline match against the
     # committed pooled index (DRC ITIE-RDC / Armenia State Register / Nigeria
     # CAC∩NEITI). A hit means the LEI is an extractive company with register-
     # published beneficial ownership; its BODS carries that ownership.
     eiti_bo_adapter = REGISTRY.get("eiti_bo")
-    if eiti_bo_adapter is not None and hasattr(eiti_bo_adapter, "fetch_by_lei") and _want("eiti_bo"):
+    if (
+        eiti_bo_adapter is not None
+        and hasattr(eiti_bo_adapter, "fetch_by_lei")
+        and _want("eiti_bo")
+        and _offline_index_covers(eiti_bo_adapter, ctx.lei)
+    ):
         tasks.append(("eiti_bo", eiti_bo_adapter.fetch_by_lei(ctx.lei)))
     # TED keys on the GLEIF anchor's identifiers (LEI + registeredAs + derived
     # national numbers) — eForms BT-501 values are national registration
@@ -1682,8 +1744,18 @@ async def _lookup_pipeline(
         and se_adapter
         and se_adapter.info.live_available
     )
-    applicable_ids = [sid for sid, _ in dispatch] + (
-        ["sec_edgar"] if sec_applicable else []
+    # EveryPolitician is screened from the risk stage rather than the dispatch
+    # loop — it is keyed on the *names* of related parties, which do not exist
+    # until the BODS bundle is assembled. It was therefore queried on every
+    # lookup and announced on none of them, so the report listed OpenSanctions
+    # among the sources checked and not the PEP dataset checked beside it.
+    # It is applicable exactly when the screen can run; the terminal event
+    # comes late, which is honest — it is still running.
+    ep_applicable = _name_screen_can_run()
+    applicable_ids = (
+        [sid for sid, _ in dispatch]
+        + (["sec_edgar"] if sec_applicable else [])
+        + (["everypolitician"] if ep_applicable else [])
     )
     yield ("sources_applicable", {"source_ids": applicable_ids})
     for sid in applicable_ids:
@@ -1963,11 +2035,39 @@ async def _lookup_pipeline(
     # not only in the server log. The derived screens append to the same list.
     degraded: list[DegradedSource] = _degradation.collect()
     oa_screening: list[dict[str, Any]] = []
+    name_screen = NameScreen()
     cross_raw, icij_raw, oa_raw = await asyncio.gather(
-        assess_cross_source_names(bods_all, degraded=degraded),
+        assess_cross_source_names(bods_all, degraded=degraded, screen=name_screen),
         assess_icij_names(bods_all, degraded=degraded),
         assess_openaleph_names(bods_all, degraded=degraded, screening=oa_screening),
     )
+    # EveryPolitician's terminal event, and its rows.
+    #
+    # The screen queried it once per related person; the report can now say so.
+    # A row is a *name match on a related party*, not a fact about the subject
+    # — `finding_everypolitician` says exactly that on every row, because a
+    # card headed with the subject's name is otherwise an invitation to read
+    # it as one. Deduplicated by hit id: two related parties sharing a name
+    # match the same record, and the same politician twice is not two findings.
+    if ep_applicable:
+        seen_ep: set[str] = set()
+        ep_count = 0
+        for match in name_screen.matches:
+            if match.source_id != "everypolitician" or match.hit.hit_id in seen_ep:
+                continue
+            seen_ep.add(match.hit.hit_id)
+            ep_count += 1
+            yield ("hit", match.hit.model_copy(update={
+                "finding": finding_everypolitician(
+                    match.hit.summary, match.target_name
+                ),
+            }))
+        yield ("source_completed", {
+            "source_id": "everypolitician",
+            "hit_count": ep_count,
+            "names_screened": name_screen.names_screened,
+        })
+
     # Sanctioned-securities chip: cheap in-memory lookup of the subject LEI in
     # the OpenSanctions securities index (no network). No-op when the index
     # isn't configured.

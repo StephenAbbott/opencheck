@@ -162,6 +162,19 @@ class CacNigeriaAdapter(SourceAdapter):
         # Identifier-keyed (LEI) source; free-text search intentionally empty.
         return []
 
+    def covers_lei(self, lei: str) -> bool:
+        """Whether the curated CAC BOR example set committed to this repository holds this LEI.
+
+        The lookup pipeline asks before dispatching, so a company this file
+        cannot possibly describe is never announced as a source being queried
+        and never counted in "N of N sources answered". The set is ten LEI-anchored companies, not the whole Nigerian register — this
+        governs whether the source is *applicable*, and says nothing about the
+        company.
+
+        Reads the index without declaring provenance: nothing has been fetched.
+        """
+        return (lei or "").strip().upper() in _get_index()
+
     async def fetch_by_lei(self, lei: str) -> dict[str, Any] | None:
         """Return the CAC PSC bundle for a LEI, or ``None`` when not in the set."""
         lei_norm = (lei or "").strip().upper()

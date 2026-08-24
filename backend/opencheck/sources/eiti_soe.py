@@ -184,6 +184,19 @@ class EitiSoeAdapter(SourceAdapter):
     # LEI-based lookup (called by the lookup pipeline)
     # ------------------------------------------------------------------
 
+    def covers_lei(self, lei: str) -> bool:
+        """Whether the committed EITI SOE index holds this LEI.
+
+        The lookup pipeline asks before dispatching, so a company this file
+        cannot possibly describe is never announced as a source being queried
+        and never counted in "N of N sources answered". Absence means the LEI is not in the index, which is not the same as evidence the company is not state-owned — this
+        governs whether the source is *applicable*, and says nothing about the
+        company.
+
+        Reads the index without declaring provenance: nothing has been fetched.
+        """
+        return (lei or "").strip().upper() in _get_index()
+
     async def fetch_by_lei(self, lei: str) -> dict[str, Any] | None:
         """Return the SOE bundle for a LEI, or ``None`` when not an SOE.
 
