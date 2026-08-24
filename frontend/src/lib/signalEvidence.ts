@@ -1,15 +1,21 @@
 /**
- * The one signal the Risk signals section says out loud (Phase 129).
+ * What the Risk signals section says when a reader selects a chip.
  *
- * The section rendered a row of chips and a caption telling the reader to
- * select one. That is a menu, not a finding: the most serious thing the check
- * turned up was a word in a pill, and the sentence explaining it — which the
- * chip has always carried — only appeared once someone clicked. The v2 design
- * puts the worst signal's evidence on the page, always visible, underneath the
- * chips.
+ * The section is a row of chips and one box under them. The chip is the
+ * question; this builds the answer — the signal's own sentence, how many
+ * distinct sources asserted it about the same party, when they were last
+ * read, and which of them have a record on the page.
  *
- * Everything here is derived from the signals the backend already sent. Three
- * rules keep it from saying more than they support:
+ * **It no longer picks anything.** Until Phase 132 the box opened on the
+ * *worst* signal, chosen by the severity ordering the graph badges stack by,
+ * and captioned "the most serious signal is shown above". That is OpenCheck
+ * grading a company's findings: the product's own rule is that a signal is a
+ * pointer to a record and not a conclusion, and deciding which finding a
+ * reader meets first is a conclusion. Severity still exists in
+ * `lib/graphStyle.ts`, where the graph needs it to stack overlapping badges
+ * on one node; nothing in the report reads it.
+ *
+ * Two rules keep the box from saying more than the signals support:
  *
  * - **Corroboration is counted in distinct sources, about the same party.**
  *   Counting by code alone was wrong twice over: the risk layer emits one
@@ -27,21 +33,12 @@
  *   never reach the dispatch loop — `icij` is not a registered adapter — have
  *   no `source_liveness` entry at all, and generalising a sibling's date onto
  *   them stated a currency nothing had established.
- * - **The lead is the worst, and severity is `SIGNAL_STYLE`'s**, the same
- *   ordering the graph badges stack by. A second ordering would let the
- *   section headline a different signal than the graph marks as worst. Ties
- *   break on confidence and then alphabetically by code — several codes share
- *   a severity (PEP and DEBARMENT are both 4), and without the last step the
- *   headline was decided by the order two `out.append` calls happen to appear
- *   in a Python function.
  */
 
-import { SIGNAL_STYLE } from "./graphStyle";
-import { isRiskFinding } from "./signalKind";
 import { sourceList } from "./vocab";
 import type { RiskSignal, SourceLiveness } from "./api";
 
-export interface LeadSignal {
+export interface SignalEvidenceData {
   signal: RiskSignal;
   /** Distinct `source_id`s that asserted this code about this party. */
   sourceCount: number;
@@ -69,64 +66,42 @@ export function signalSubjectKey(signal: RiskSignal): string {
   return "self";
 }
 
-/** Severity for a code, or -1 when the code is not in the style table — an
- *  unknown code must never outrank a known one by accident. */
-function severityOf(code: string): number {
-  return SIGNAL_STYLE[code]?.severity ?? -1;
-}
-
 const CONFIDENCE_RANK: Record<string, number> = { high: 2, medium: 1, low: 0 };
 
 /**
- * The signal to lead with, with the corroboration behind it.
+ * The evidence for the code the reader selected.
  *
- * Returns `null` when there is nothing to lead with — which is a state the
- * caller must render as itself, not as an empty box.
- */
-export function leadSignal(
-  signals: RiskSignal[],
-  liveness: Record<string, SourceLiveness> = {}
-): LeadSignal | null {
-  const risks = signals.filter(isRiskFinding);
-  if (risks.length === 0) return null;
-  return evidenceFor(risks, pickWorst(risks), liveness);
-}
-
-/**
- * The same evidence, for a code the reader chose rather than the worst one.
+ * `null` when the code is not in the list — which happens when a selection
+ * outlives a re-run that no longer produces it. That is the same state as
+ * "nothing selected yet", and the section renders no box for either.
  *
- * The section shows one box: the worst signal by default, and whichever chip
- * the reader selects after that. Before this, each chip owned its own
- * expansion, so selecting one opened a *second* box below the first in a
- * different style — one sentence about the finding rendered two ways on one
- * screen, which is what "some things are showing twice" meant.
- *
- * Structural context codes are eligible here and are not eligible for the
- * lead: a reader can select one to read it, but a fact about how the company
- * is put together can never be what the section leads with.
+ * Risk findings and structural context are both eligible: the section makes
+ * the distinction with a caption and a sub-block, not by refusing to explain
+ * one of them.
  */
 export function evidenceForCode(
   signals: RiskSignal[],
   code: string,
   liveness: Record<string, SourceLiveness> = {}
-): LeadSignal | null {
+): SignalEvidenceData | null {
   const matching = signals.filter((s) => s.code === code);
   if (matching.length === 0) return null;
-  return evidenceFor(signals, pickWorst(matching), liveness);
+  return evidenceFor(signals, pickStrongest(matching), liveness);
 }
 
-/** The worst of a non-empty list, by severity then confidence then code. */
-function pickWorst(signals: RiskSignal[]): RiskSignal {
+/**
+ * Which instance of one code to show.
+ *
+ * A code can arrive several times — one signal per matching hit. They all say
+ * the same thing about the same company, so this is not a ranking of findings
+ * (see the note at the top); it picks the best-evidenced sentence for the one
+ * finding the chip stands for: highest confidence, then a stable tiebreak so
+ * the box does not depend on the order two `out.append` calls happen to appear
+ * in a Python function.
+ */
+function pickStrongest(signals: RiskSignal[]): RiskSignal {
   let best = signals[0];
   for (const s of signals.slice(1)) {
-    const bySeverity = severityOf(s.code) - severityOf(best.code);
-    if (bySeverity > 0) {
-      best = s;
-      continue;
-    }
-    if (bySeverity < 0) continue;
-    // Same severity: prefer the better-corroborated instance, so the sentence
-    // shown is the strongest evidence for the lead finding.
     const byConfidence =
       (CONFIDENCE_RANK[s.confidence] ?? 0) - (CONFIDENCE_RANK[best.confidence] ?? 0);
     if (byConfidence > 0) {
@@ -134,10 +109,9 @@ function pickWorst(signals: RiskSignal[]): RiskSignal {
       continue;
     }
     if (byConfidence < 0) continue;
-    // Still tied, and several codes share a severity. Alphabetical is
-    // arbitrary but *stable*; without it the headline depended on the order
-    // the backend happened to append two signals.
-    if (s.code < best.code) best = s;
+    // Tied. Alphabetical by hit id is arbitrary but *stable*; the alternative
+    // is whichever the backend appended first.
+    if ((s.hit_id ?? "") < (best.hit_id ?? "")) best = s;
   }
   return best;
 }
@@ -153,7 +127,7 @@ function evidenceFor(
   signals: RiskSignal[],
   best: RiskSignal,
   liveness: Record<string, SourceLiveness>
-): LeadSignal {
+): SignalEvidenceData {
   const subject = signalSubjectKey(best);
   const sourceIds: string[] = [];
   for (const s of signals) {
@@ -258,7 +232,7 @@ export function splitEvidenceSources(
 }
 
 /** The whole second sentence, with only the parts that are true. */
-export function evidenceFooter(lead: LeadSignal, locale = "en-GB"): string {
+export function evidenceFooter(lead: SignalEvidenceData, locale = "en-GB"): string {
   const parts = [corroborationClause(lead.sourceCount), checkedClause(lead.checkedAt, locale)]
     .filter(Boolean);
   return parts.length === 0 ? "" : `${parts.join(", ")}.`;

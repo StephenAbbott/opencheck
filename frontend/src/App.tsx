@@ -54,7 +54,7 @@ import type { CheckMode } from "./lib/checkMode";
 import type { IconName } from "./components/ui";
 import { NarrativePanel } from "./components/cdd/NarrativePanel";
 import { SignalEvidence } from "./components/risk/SignalEvidence";
-import { evidenceForCode, leadSignal } from "./lib/leadSignal";
+import { evidenceForCode } from "./lib/signalEvidence";
 import { Explain } from "./components/ui/Explain";
 import type { ReportExportPayload } from "./components/cdd/NarrativePanel";
 import {
@@ -1138,24 +1138,28 @@ const NAV_ITEMS: { view: View; label: string }[] = [
   }, [streamingLei, exportPayload]);
 
   // The worst signal, with the corroboration behind it. Derived from the
-  // signals the backend already sent — see lib/leadSignal.ts for the three
+  // signals the backend already sent — see lib/signalEvidence.ts for the
   // rules that keep the sentence from claiming more than they support.
-  const lead = useMemo(
-    () => leadSignal(riskSignals, sourceLiveness),
-    [riskSignals, sourceLiveness]
+  // The signal the one evidence box is explaining — the reader's choice, and
+  // nothing before they make one.
+  //
+  // It used to open on the worst signal, picked by a severity ordering. That
+  // is OpenCheck grading findings: it put "the most serious signal is shown
+  // above" on the page, and it decided which of a company's findings a reader
+  // met first. The product's own rule is that a signal is a pointer to a
+  // record, not a conclusion about the company, and ranking them is a
+  // conclusion. The chips are the menu; the box answers whichever one is
+  // asked. `leadSignal` is gone with it.
+  //
+  // A selection that a re-run no longer produces resolves to null, which is
+  // the same state as "nothing selected yet" — not an empty box.
+  const shownSignal = useMemo(
+    () =>
+      selectedSignalCode
+        ? evidenceForCode(riskSignals, selectedSignalCode, sourceLiveness)
+        : null,
+    [selectedSignalCode, riskSignals, sourceLiveness]
   );
-
-  // The signal the one evidence box is explaining: the reader's choice, or
-  // the lead. Falling back to the lead rather than to nothing matters — a
-  // selected code can disappear when a re-run returns different signals, and
-  // an empty box under a row of chips reads as a rendering fault.
-  const shownSignal = useMemo(() => {
-    if (selectedSignalCode) {
-      const chosen = evidenceForCode(riskSignals, selectedSignalCode, sourceLiveness);
-      if (chosen) return chosen;
-    }
-    return lead;
-  }, [selectedSignalCode, riskSignals, sourceLiveness, lead]);
 
   /** Scroll to a source card and flash it — the same affordance narrative
    *  citations and the identifier table already use. */
@@ -1346,7 +1350,14 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       >
         <div className="max-w-oo-page mx-auto relative">
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+            {/* On mobile the search field is hidden, so this group is the only
+                child of the row and the nav ended up crowded against the
+                wordmark with the whole right half of the banner empty. Full
+                width with the two ends pushed apart puts the mark at one edge
+                and the links at the other; from `md` the search field takes
+                the right-hand end and this reverts to sitting beside the
+                mark. */}
+            <div className="flex items-center gap-4 w-full justify-between md:w-auto md:justify-start">
               <button
                 type="button"
                 onClick={resetToHome}
@@ -2261,13 +2272,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     />
                   ))}
                 </div>
-                {/* The worst signal, said out loud. A row of chips over
-                    "select a chip for the rule that fired" is a menu, not a
-                    finding — the most serious thing the check turned up was a
-                    word in a pill, and its sentence only appeared on click.
-                    One box, not one per chip: a chip that opened its own
+                {/* One box, not one per chip: a chip that opened its own
                     expansion left two boxes on screen saying the same kind of
-                    sentence in two different styles. */}
+                    sentence in two different styles. It shows whichever chip
+                    the reader selected and nothing before that — see
+                    `shownSignal` for why it no longer opens on a signal of
+                    OpenCheck's choosing. */}
                 {shownSignal && (
                   <div className="mt-3.5">
                     <SignalEvidence
@@ -2287,8 +2297,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     accurate thing to be able to find and a poor thing to open
                     a section with. */}
                 <p className="text-oo-small text-oo-muted mt-2.5">
-                  The most serious signal is shown above. Select any chip to
-                  read the record behind it instead.{" "}
+                  Select any chip to read the record behind it.{" "}
                   <Explain label="Where these come from">
                     Signals are derived from open data by deterministic rules,
                     never by a model. Those aligned to AMLA — the EU

@@ -41,8 +41,8 @@ import {
   attributionSentence,
   evidenceFooter,
   splitEvidenceSources,
-  type LeadSignal,
-} from "../../lib/leadSignal";
+  type SignalEvidenceData,
+} from "../../lib/signalEvidence";
 import { sourceLabel } from "../../lib/vocab";
 
 export function SignalEvidence({
@@ -51,7 +51,7 @@ export function SignalEvidence({
   hasCard = () => false,
   onShowSource,
 }: {
-  lead: LeadSignal;
+  lead: SignalEvidenceData;
   sourceNames?: Record<string, string>;
   /** Which source ids actually have a card on this report. */
   hasCard?: (sourceId: string) => boolean;
