@@ -430,8 +430,14 @@ class OpenAlephAdapter(SourceAdapter):
             hit = self._hit(item, SearchKind.ENTITY)
             hit.raw["identifier_corroborated"] = corroborated
             if isinstance(score, (int, float)):
+                # Kept on the record, not put in the sentence. It drives the
+                # relative cutoff above and the ordering below; on the page it
+                # was a bare number on no published scale — BM25, so it varies
+                # with name length and rarity and is comparable only within
+                # one query's results. "FtM match score 107" told a reader
+                # nothing they could act on, and 107 beside 106 invited a
+                # distinction the score cannot support (Phase 135).
                 hit.raw["match_score"] = score
-                hit.summary = f"{hit.summary} · FtM match score {score:.0f}"
             if corroborated:
                 hit.summary = f"{hit.summary} · identifier corroborated"
                 corroborated_hits.append(hit)

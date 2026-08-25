@@ -113,8 +113,13 @@ async def test_match_entity_parses_scored_results(httpx_mock: HTTPXMock) -> None
     )
     assert len(hits) == 1
     assert hits[0].identifiers["lei"] == _LEI
+    # The score drives the relative cutoff and the ordering, so it stays on
+    # the record. It does not go in the sentence: BM25 varies with name length
+    # and rarity and is comparable only within one query's results, so a bare
+    # "FtM match score 99" on the page is a number the reader cannot calibrate
+    # — and 107 beside 106 invited a distinction it cannot support (Phase 135).
     assert hits[0].raw["match_score"] == pytest.approx(98.51607)
-    assert "FtM match score 99" in hits[0].summary
+    assert "score" not in hits[0].summary.lower()
 
 
 async def test_match_entity_requires_api_key(monkeypatch) -> None:
@@ -264,7 +269,7 @@ async def test_strategies_try_ftm_match_before_name_fallback(monkeypatch) -> Non
 
     match_hit = SourceHit(
         source_id="openaleph", hit_id="lei-x", kind=SearchKind.ENTITY,
-        name="BP P.L.C.", summary="collection: GLEIF · FtM match score 99",
+        name="BP P.L.C.", summary="collection: GLEIF",
         identifiers={"aleph_id": "lei-x", "lei": _LEI}, raw={}, is_stub=False,
     )
     calls: list[str] = []
