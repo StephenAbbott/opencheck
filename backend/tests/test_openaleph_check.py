@@ -10,6 +10,8 @@ with a failed screen is never a clean screen), and the pipeline wiring.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from opencheck.config import get_settings
@@ -669,11 +671,79 @@ async def test_empty_bundle_is_a_noop() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_pipeline_gathers_openaleph_screen(monkeypatch) -> None:
+#: The LEI this test has always used. It resolves at GLEIF — checked, 200 —
+#: which is exactly why the old shape passed locally and timed out in CI. The
+#: bundle seeded below is the anchor now, so nothing has to ask.
+_PIPELINE_LEI = "5493001KJTIIGC8Y1R12"
+
+
+def _seed_gleif_bundle(tmp_path, lei: str) -> None:
+    """Write the one entity statement `_resolve_ctx` needs to anchor a lookup.
+
+    The idiom is tests/test_bods_data_override.py's: a JSON-Lines bundle under
+    the data root, which `bods_data.load_bundle` reads and `_resolve_ctx`
+    prefers over the network. Only the fields `_subject_metadata_from_bundle`
+    reads are set — the LEI it matches on, a name, a jurisdiction — because a
+    fixture carrying more would be asserting things this test does not test.
+    """
+    target = tmp_path / "cache" / "bods_data" / "gleif" / f"{lei}.jsonl"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        json.dumps(
+            {
+                "statementId": "seed-entity",
+                "recordType": "entity",
+                "recordDetails": {
+                    "name": "Pipeline Fixture Ltd",
+                    "jurisdiction": {"code": "GB"},
+                    "identifiers": [{"scheme": "XI-LEI", "id": lei}],
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+async def test_pipeline_gathers_openaleph_screen(monkeypatch, tmp_path) -> None:
     """The lookup pipeline's risk stage must call assess_openaleph_names
     alongside cross_check and icij, and put its screening block on the
-    risk_signals event."""
+    risk_signals event.
+
+    **Offline, unlike every other test in this file.** The autouse fixture
+    turns live mode on because the unit tests around it exercise the live
+    percolation paths with their HTTP mocked. This one runs the *whole*
+    pipeline and mocks only the screen, so live mode meant the anchor was
+    resolved by a real request to GLEIF for an LEI that has no record —
+    tolerated locally, where the round trip is milliseconds, and a
+    `httpx.ReadTimeout` in CI, on a suite whose conftest states it is fully
+    offline. The wiring this test pins has nothing to do with liveness.
+
+    So the anchor is seeded on disk instead, and every outbound request is
+    stubbed to fail rather than to return something: a change that puts the
+    network back in this path should say so immediately and by name, not time
+    out on someone else's pull request.
+    """
+    import httpx
+
     from opencheck.routers import lookup as lookup_mod
+
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
+    get_settings.cache_clear()
+    _seed_gleif_bundle(tmp_path, _PIPELINE_LEI)
+
+    async def _no_network(*args, **kwargs):
+        raise AssertionError(
+            "the pipeline wiring test made an HTTP request — this path must "
+            "stay offline; see the docstring"
+        )
+
+    # `httpx.AsyncClient.send`, not `opencheck.http.build_client`: every
+    # adapter does `from ..http import build_client` at import time and holds
+    # its own reference, so patching the function in its home module
+    # intercepts nothing. Every request funnels through `send` whatever the
+    # client came from.
+    monkeypatch.setattr(httpx.AsyncClient, "send", _no_network)
 
     called: dict = {}
 
@@ -688,7 +758,7 @@ async def test_pipeline_gathers_openaleph_screen(monkeypatch) -> None:
     # pins the streaming pipeline (which both endpoints share).
     src = None
     async for event, payload in lookup_mod._lookup_pipeline(
-        "5493001KJTIIGC8Y1R12", deepen_top=0
+        _PIPELINE_LEI, deepen_top=0
     ):
         if event == "risk_signals":
             src = payload
