@@ -522,7 +522,11 @@ async def test_export_control_emits_related_export_controlled(monkeypatch) -> No
     signals = await assess_cross_source_names([_entity("e1", "Acme Ltd")])
     assert [s.code for s in signals] == [RELATED_EXPORT_CONTROLLED]
     assert "export-control restrictions" in signals[0].summary
-    assert "export.control" in signals[0].summary  # topic blurb
+    # The prose no longer prints the slug (Phase 134) — it is a taxonomy key,
+    # and the sentence already says the same thing in English. What the
+    # classification was derived from is kept machine-readably instead.
+    assert "export.control" not in signals[0].summary
+    assert signals[0].evidence["topics"] == ["export.control"]
 
 
 async def test_export_family_no_suppression_and_ladder_order(monkeypatch) -> None:
