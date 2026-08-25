@@ -27,6 +27,7 @@ from ..cache import Cache
 from ..config import get_settings
 from ..findings import finding_opensanctions
 from ..http import build_client, sanitize_name_query
+from ..topics import topic_list
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _API_BASE = "https://api.opensanctions.org"
@@ -214,7 +215,10 @@ class OpenSanctionsAdapter(SourceAdapter):
 
         summary_bits: list[str] = []
         if topics:
-            summary_bits.append("topics: " + ", ".join(topics[:3]))
+            # Labels, not slugs: this line reached the reader as
+            # "topics: corp.disqual, debarment, export.control". See
+            # ``opencheck.topics`` for why translating is not judging.
+            summary_bits.append("topics: " + ", ".join(topic_list(topics)[:3]))
         if datasets:
             # Not "N dataset(s)". The parenthesised plural is a programmer
             # writing one string for two cases; every other count in the

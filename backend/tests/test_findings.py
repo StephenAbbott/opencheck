@@ -583,17 +583,33 @@ def test_bods_gleif_finding_states_a_missing_parent_in_the_same_voice() -> None:
 
 def test_opensanctions_finding_counts_listings_without_judging_them() -> None:
     assert finding_opensanctions(_OS_ROSNEFT) == (
-        "Appears on 2 published listings, recorded under the topic sanction."
+        'Appears on 2 published listings, recorded under the topic '
+        '"sanctions listing".'
     )
 
 
-def test_opensanctions_finding_quotes_topics_rather_than_translating_them() -> None:
-    """``role.pep`` stays ``role.pep``: turning it into "politically exposed"
-    would move a source classification into OpenCheck's voice (rule 7)."""
+def test_opensanctions_finding_names_topics_in_english_and_quotes_them() -> None:
+    """Reversed in Phase 133, deliberately.
+
+    This test used to pin ``role.pep`` reaching the reader as ``role.pep``,
+    defended on rule 7: turning it into "politically exposed" would move a
+    source classification into OpenCheck's voice. The concern is right about
+    the *adjective* and does not follow for the *slug* — `role.pep` is a key
+    in a taxonomy, and on a live Rosneft lookup a reader was shown
+    "recorded under the topics corp.disqual and 5 others".
+
+    Two things keep rule 7 satisfied. The labels are noun phrases naming the
+    topic ("politically exposed person"), never predicates about the subject.
+    And they are quoted, so the frame says plainly that the words are
+    OpenSanctions' name for a category rather than OpenCheck's description of
+    the company.
+    """
     item = {"id": "NK-putin", "schema": "Person", "topics": ["role.pep", "sanction"]}
     assert finding_opensanctions(item) == (
-        "Held as a Person record, recorded under the topics role.pep and sanction."
+        "Held as a Person record, recorded under the topics "
+        '"politically exposed person" and "sanctions listing".'
     )
+    assert "role.pep" not in finding_opensanctions(item)
 
 
 def test_opensanctions_finding_is_none_when_the_record_says_nothing_countable() -> None:

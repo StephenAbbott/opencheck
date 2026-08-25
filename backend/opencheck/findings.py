@@ -51,6 +51,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .topics import topic_list
+
 #: Hard cap from rule 1. ``clauses_to_sentence`` drops trailing clauses until
 #: the sentence fits; a lead clause that is on its own longer than this is
 #: returned anyway, because truncating mid-word would break rule 8.
@@ -448,9 +450,10 @@ def finding_bods_gleif(payload: dict[str, Any], statement_id: str) -> str | None
 def finding_opensanctions(item: dict[str, Any]) -> str | None:
     """How many published lists carry this record, and under which topics.
 
-    Rule 7 is why this counts listings and quotes the source's own topic
-    vocabulary instead of calling anyone sanctioned: the topic is what
-    OpenSanctions recorded, the judgement is the signals layer's.
+    Rule 7 is why this counts listings and names the source's own topics
+    instead of calling anyone sanctioned: the topic is what OpenSanctions
+    recorded, the judgement is the signals layer's. The topics are rendered
+    through ``opencheck.topics`` — English, and still nouns.
 
     Deviation from the suggested shape: dataset names are opaque slugs
     (``eu_fsf``, ``us_ofac_sdn``), and turning them into "the EU, UK and US
@@ -469,13 +472,23 @@ def finding_opensanctions(item: dict[str, Any]) -> str | None:
     else:
         lead = None
 
-    # The topic strings are OpenSanctions' own vocabulary, quoted rather than
-    # translated: rendering ``sanction`` as "sanctioned" would turn a source's
-    # classification into OpenCheck's judgement (rule 7).
+    # OpenSanctions' own vocabulary, in English. The clause keeps the
+    # source-attribution framing rule 7 asks for — it says what OpenSanctions
+    # *recorded the record under*, not what the company is — while the labels
+    # themselves are noun phrases naming the topic ("sanctions listing"),
+    # never adjectives applied to the subject ("sanctioned"). Printing the raw
+    # slug quoted upstream less faithfully, not more: `corp.disqual` is a key
+    # in a taxonomy, and it reached readers on a live Rosneft lookup.
+    # Quoted, because that is what makes the frame unambiguous: the words
+    # inside the marks are OpenSanctions' name for a category, not OpenCheck
+    # describing the company. It also fixes the reading — "recorded under the
+    # topic sanctions listing" and "recorded under the topic "sanctions
+    # listing"" are the same claim, and only one of them parses.
+    labels = [f'"{label}"' for label in topic_list(topics)]
     topic_clause = (
-        f"recorded under the {'topic' if len(topics) == 1 else 'topics'} "
-        f"{_join_names(topics)}"
-        if topics
+        f"recorded under the {'topic' if len(labels) == 1 else 'topics'} "
+        f"{_join_names(labels)}"
+        if labels
         else None
     )
 
