@@ -135,6 +135,7 @@ from .bods.mapper import _stable_id as _bods_stable_id
 from .bods.nominees import NOMINEE_NATURE_CODES, is_nominee_nature
 from .config import get_settings
 from .sources import SearchKind, SourceHit
+from .topics import topic_phrase
 
 _LOG = logging.getLogger(__name__)
 
@@ -921,7 +922,7 @@ def _opensanctions_topic_signals_from_entity(
             RiskSignal(
                 code=PEP,
                 confidence="high",
-                summary=f"OpenSanctions tags this record as {', '.join(matched)}.",
+                summary=f"OpenSanctions tags this record as {topic_phrase(matched)}.",
                 source_id=source_id,
                 hit_id=hit_id,
                 evidence={"topics": matched, "statement_id": stmt_id},
@@ -935,10 +936,7 @@ def _opensanctions_topic_signals_from_entity(
             RiskSignal(
                 code=SANCTIONED,
                 confidence="high",
-                summary=(
-                    "OpenSanctions lists this record as sanctioned"
-                    f" ({', '.join(direct_topics)})."
-                ),
+                summary="OpenSanctions lists this record as sanctioned.",
                 source_id=source_id,
                 hit_id=hit_id,
                 evidence={"topics": direct_topics, "statement_id": stmt_id},
@@ -963,7 +961,7 @@ def _opensanctions_topic_signals_from_entity(
                     "a designation by an EU, UK, US, UN or other mainstream "
                     "sanctions authority, and being listed is frequently a "
                     "consequence of journalism, sanctions enforcement or "
-                    f"human-rights work ({', '.join(counter_topics)})."
+                    "human-rights work."
                 ),
                 source_id=source_id,
                 hit_id=hit_id,
@@ -986,7 +984,7 @@ def _opensanctions_topic_signals_from_entity(
                     "or vessel. It is not itself designated. No percentage "
                     "threshold is applied, so whether an ownership-and-control "
                     "test (such as OFAC's 50 Percent Rule) brings it into scope "
-                    f"depends on the stake and the regime ({', '.join(control_topics)})."
+                    "depends on the stake and the regime."
                 ),
                 source_id=source_id,
                 hit_id=hit_id,
@@ -1011,7 +1009,7 @@ def _opensanctions_topic_signals_from_entity(
                 confidence="medium",
                 summary=(
                     "OpenSanctions links this record to sanctioned entities; the "
-                    f"record is not itself sanctioned ({', '.join(linked_topics)})."
+                    "record is not itself sanctioned."
                 ),
                 source_id=source_id,
                 hit_id=hit_id,
@@ -1026,7 +1024,7 @@ def _opensanctions_topic_signals_from_entity(
                 confidence="high",
                 summary=(
                     "OpenSanctions lists this record as debarred from public "
-                    "contracts/procurement (debarment)."
+                    "contracts."
                 ),
                 source_id=source_id,
                 hit_id=hit_id,
@@ -1046,7 +1044,7 @@ def _opensanctions_topic_signals_from_entity(
                 summary=(
                     "OpenSanctions lists this record as subject to "
                     "export-control restrictions — e.g. an entity-list or "
-                    f"military end-user designation ({', '.join(control_export)})."
+                    "military end-user designation."
                 ),
                 source_id=source_id,
                 hit_id=hit_id,
@@ -1064,7 +1062,7 @@ def _opensanctions_topic_signals_from_entity(
                 summary=(
                     "OpenSanctions links this record to an export-controlled "
                     "party; the record is not itself subject to export-control "
-                    f"restrictions ({', '.join(linked_export)})."
+                    "restrictions."
                 ),
                 source_id=source_id,
                 hit_id=hit_id,
@@ -1079,8 +1077,7 @@ def _opensanctions_topic_signals_from_entity(
                 confidence="medium",
                 summary=(
                     "OpenSanctions flags this record for trade risk — e.g. "
-                    "named in export-diversion or circumvention research "
-                    f"({', '.join(risk_export)})."
+                    "named in export-diversion or circumvention research."
                 ),
                 source_id=source_id,
                 hit_id=hit_id,

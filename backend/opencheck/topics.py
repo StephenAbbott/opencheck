@@ -105,6 +105,21 @@ def topic_label(topic: str) -> str:
     return topic.replace("_", " ").replace(".", " ")
 
 
+def topic_phrase(topics: Iterable[str]) -> str:
+    """Several topics as one English fragment: "a and b", "a, b and c".
+
+    For the one sentence where the topics *are* the sentence rather than a
+    parenthetical after it — `risk.py`'s PEP summary reads "OpenSanctions tags
+    this record as \u2026", and there is nothing left if the topics come out.
+    """
+    labels = topic_list(topics)
+    if not labels:
+        return "a risk topic"
+    if len(labels) == 1:
+        return labels[0]
+    return f"{', '.join(labels[:-1])} and {labels[-1]}"
+
+
 def topic_list(topics: Iterable[str]) -> list[str]:
     """Labels for several topics, deduplicated, in first-seen order.
 

@@ -136,3 +136,78 @@ def test_topic_list_deduplicates_labels() -> None:
         "financial crime",
     ]
     assert topic_list([]) == []
+
+
+# ----------------------------------------------------------------------
+# No slug reaches prose (Phase 134)
+# ----------------------------------------------------------------------
+
+_TOKEN = re.compile(r"\b[a-z][a-z.]*[a-z]\b")
+
+#: Words that are legitimately in a sentence because a *label* contains them.
+#: Four topics are their own label — `crime`, `fraud`, `theft`, `wanted` — so a
+#: bare-word rule would flag the translation it is meant to enforce. `sanction`
+#: is not among them: the label is "sanctions listing", so the singular
+#: appearing alone means the slug leaked.
+_LABEL_WORDS = {word for label in TOPIC_LABEL.values() for word in label.split()}
+
+
+def _prose_slugs(text: str) -> list[str]:
+    """Topic slugs in a sentence a reader sees.
+
+    Not just the dotted ones: `sanction`, `debarment` and `poi` are slugs
+    too, and a rule that only caught `sanction.linked` would have passed the
+    string this test exists to have failed.
+    """
+    return [
+        token
+        for token in _TOKEN.findall(text)
+        if token in _RISK_TOPICS and token not in _LABEL_WORDS
+    ]
+
+
+def test_no_signal_summary_prints_a_topic_slug() -> None:
+    """Every signal every published topic can produce, in English.
+
+    The parentheticals removed in Phase 134 (`"… as sanctioned (sanction,
+    sanction.linked)."`) were not one string but sixteen, spread over three
+    modules, and they arrived one at a time as each topic family was
+    classified. A rule about how the sentences are *built* would not have
+    caught them, so this drives the builders with real topics and reads the
+    output.
+
+    `evidence["topics"]` is deliberately not checked here — that is the
+    machine-readable record, and it must keep the slugs.
+    """
+    from opencheck.cross_check import _signals_from_os
+    from opencheck.risk import _opensanctions_topic_signals_from_entity
+    from opencheck.sources import SearchKind, SourceHit
+
+    target = {
+        "statement_id": "s1",
+        "name": "Acme Ltd",
+        "kind": "entity",
+        "birth_year": None,
+    }
+    offenders: list[tuple[str, str, str]] = []
+    for topic in sorted(_RISK_TOPICS):
+        entity = {
+            "id": "os-1",
+            "caption": "Acme Ltd",
+            "properties": {"topics": [topic]},
+        }
+        for sig in _opensanctions_topic_signals_from_entity("os-1", entity):
+            for slug in _prose_slugs(sig.summary):
+                offenders.append((topic, sig.code, slug))
+        hit = SourceHit(
+            source_id="opensanctions",
+            hit_id="os-1",
+            kind=SearchKind.ENTITY,
+            name="Acme Ltd",
+            summary="",
+            raw=entity,
+        )
+        for sig in _signals_from_os(hit, target, min_score=0.8):
+            for slug in _prose_slugs(sig.summary):
+                offenders.append((topic, sig.code, slug))
+    assert not offenders, f"topic slugs in prose: {offenders}"

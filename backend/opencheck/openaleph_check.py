@@ -95,7 +95,6 @@ from .cross_check import (
     match_summary,
     _dedupe,
     _extract_topics,
-    _topic_blurb,
 )
 from .matching import is_matchable_name
 from .risk import (
@@ -582,7 +581,7 @@ def _signals_from_percolate(
                 summary=match_summary(
                     target=target,
                     source_id="openaleph",
-                    summary_extra=f"{extra} ({_topic_blurb(topics)})",
+                    summary_extra=extra,
                     corroboration=corroboration,
                 ),
                 source_id="openaleph",

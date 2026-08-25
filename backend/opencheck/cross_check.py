@@ -51,9 +51,7 @@ from .config import get_settings
 from .matching import is_matchable_name
 from .risk import (
     _DEBARMENT_TOPICS,
-    _EXPORT_TOPIC_PREFIX,
     _PEP_TOPICS,
-    _SANCTION_TOPIC_PREFIX,
     DEGRADED_NOT_CONFIGURED,
     DegradedSource,
     RiskSignal,
@@ -535,64 +533,59 @@ def _signals_from_os(
     if not _birth_year_compatible(target.get("birth_year"), hit):
         return []
     topics = _extract_topics(hit.raw or {})
-    blurb = _topic_blurb(topics)
     sanctions = classify_sanction_topics(topics)
     exports = classify_export_topics(topics)
     controlled = bool(sanctions.control)
 
     out: list[RiskSignal] = []
 
+    # ``extra`` is the finding alone. It used to read "sanctioned per
+    # OpenSanctions (sanction, sanction.linked)": ``match_summary`` already
+    # names the source ("matches a record on OpenSanctions"), so the clause
+    # said it twice, and the parenthetical printed FollowTheMoney slugs —
+    # taxonomy keys, not words — after a sentence that had just said the same
+    # thing in English. The topics ride on ``evidence["topics"]`` instead.
     def add(code: str, extra: str) -> None:
         out.append(
             _make_signal(
-                code=code, target=target, hit=hit, score=score, summary_extra=extra
+                code=code,
+                target=target,
+                hit=hit,
+                score=score,
+                summary_extra=extra,
+                topics=topics,
             )
         )
 
     if sanctions.direct:
-        add(RELATED_SANCTIONED, f"sanctioned per OpenSanctions ({blurb})")
+        add(RELATED_SANCTIONED, "sanctioned")
     if controlled:
         add(
             RELATED_SANCTIONS_CONTROLLED,
-            f"inside a sanctioned party's ownership chain per OpenSanctions ({blurb})",
+            "inside a sanctioned party's ownership chain",
         )
     if any(t in _DEBARMENT_TOPICS for t in topics):
-        add(
-            RELATED_DEBARMENT,
-            f"debarred from public contracts per OpenSanctions ({blurb})",
-        )
+        add(RELATED_DEBARMENT, "debarred from public contracts")
     # Export-control listing outranks plain sanction adjacency: it is a
     # restriction on the related party itself. No suppression anywhere in the
     # export family — upstream declares no superset relationship among the
     # export topics (see risk.py).
     if exports.control:
-        add(
-            RELATED_EXPORT_CONTROLLED,
-            f"subject to export-control restrictions per OpenSanctions ({blurb})",
-        )
+        add(RELATED_EXPORT_CONTROLLED, "subject to export-control restrictions")
     # Suppressed when control fires — see the docstring.
     if not controlled and (sanctions.linked or sanctions.unknown):
-        add(
-            RELATED_SANCTIONS_LINKED,
-            f"linked to sanctioned entities per OpenSanctions ({blurb})",
-        )
+        add(RELATED_SANCTIONS_LINKED, "linked to sanctioned entities")
     if exports.linked or exports.unknown:
-        add(
-            RELATED_EXPORT_CONTROL_LINKED,
-            f"linked to an export-controlled party per OpenSanctions ({blurb})",
-        )
+        add(RELATED_EXPORT_CONTROL_LINKED, "linked to an export-controlled party")
     if exports.risk:
-        add(
-            RELATED_EXPORT_RISK,
-            f"flagged for trade risk per OpenSanctions ({blurb})",
-        )
+        add(RELATED_EXPORT_RISK, "flagged for trade risk")
     # Entities can never be PEPs by definition — only natural persons
     # hold political office. Skip the RELATED_PEP path for entity
     # targets even when OpenSanctions tags an entity record with a
     # ``role.pep`` topic (which it sometimes does for legal vehicles
     # owned by a PEP).
     if target["kind"] == _KIND_PERSON and any(t in _PEP_TOPICS for t in topics):
-        add(RELATED_PEP, f"PEP per OpenSanctions ({blurb})")
+        add(RELATED_PEP, "PEP")
     # Last rung deliberately. A counter-sanction is a direct listing of the
     # related party, but by a regime the reader almost certainly owes no
     # obligation to — so it must never be the headline finding a caller gets
@@ -600,9 +593,8 @@ def _signals_from_os(
     if sanctions.counter:
         add(
             RELATED_COUNTER_SANCTIONED,
-            "counter-sanctioned per OpenSanctions — designated by a state with "
-            "weak democratic institutions, not by a mainstream sanctions "
-            f"authority ({blurb})",
+            "counter-sanctioned — designated by a state with weak democratic "
+            "institutions, not by a mainstream sanctions authority",
         )
     return out
 
@@ -629,7 +621,7 @@ def _signal_from_ep(
         target=target,
         hit=hit,
         score=score,
-        summary_extra="political office-holder per EveryPolitician",
+        summary_extra="political office-holder",
     )
 
 
@@ -715,7 +707,17 @@ def _make_signal(
     hit: SourceHit,
     score: float,
     summary_extra: str,
+    topics: list[str] | None = None,
 ) -> RiskSignal:
+    """One related-party signal.
+
+    ``topics`` are the FollowTheMoney tags the classification was derived
+    from. They are recorded because the prose no longer prints them (Phase
+    134) and the signal code alone is lossy — ``RELATED_SANCTIONS_LINKED``
+    does not say whether it came from ``sanction.linked`` or from an
+    unrecognised ``sanction.*``. ``openaleph_check`` has always carried them;
+    this is the same field, so a consumer reads one shape from both screens.
+    """
     corroboration = corroborating_attributes(target, hit.raw or {})
     return RiskSignal(
         code=code,
@@ -738,6 +740,7 @@ def _make_signal(
             "name_match_only": bool(
                 target["kind"] == _KIND_PERSON and not corroboration
             ),
+            **({"topics": list(topics)} if topics else {}),
         },
     )
 
@@ -772,19 +775,6 @@ def _extract_topics(raw: dict[str, Any]) -> list[str]:
     if isinstance(topics, str):
         topics = [topics]
     return [t for t in topics if isinstance(t, str)]
-
-
-def _topic_blurb(topics: list[str]) -> str:
-    """Compact ``role.pep, sanction`` summary for the chip tooltip."""
-    keep = [
-        t
-        for t in topics
-        if t.startswith(_SANCTION_TOPIC_PREFIX)
-        or t.startswith(_EXPORT_TOPIC_PREFIX)
-        or t in _PEP_TOPICS
-        or t in _DEBARMENT_TOPICS
-    ]
-    return ", ".join(sorted(set(keep))[:3]) if keep else "no topic"
 
 
 def _prop_values(raw: dict[str, Any], *keys: str) -> list[str]:
