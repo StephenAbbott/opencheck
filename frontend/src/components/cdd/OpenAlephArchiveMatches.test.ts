@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { OpenAlephScreeningMatch } from "../../lib/api";
 import {
   PREVIEW_COUNT,
+  archiveRowKey,
   visibleArchiveMatches,
 } from "./OpenAlephArchiveMatches";
 
@@ -44,5 +45,36 @@ describe("visibleArchiveMatches", () => {
 
   it("handles an empty list", () => {
     expect(visibleArchiveMatches([], false)).toEqual([]);
+  });
+});
+
+describe("archiveRowKey", () => {
+  it("collapses two records for one party in one collection", () => {
+    // Live on BP: KATHERINE ANNE THOMSON appeared twice, two OpenAleph
+    // records in the Companies House PSC collection with nothing on the row
+    // to tell them apart.
+    const a = { ...match(1), entity_id: "oa-a", statement_id: "s-a" };
+    const b = { ...match(1), entity_id: "oa-b", statement_id: "s-b" };
+    expect(archiveRowKey(a)).toBe(archiveRowKey(b));
+  });
+
+  it("keeps parties, collections and topics apart", () => {
+    const base = match(1);
+    expect(archiveRowKey({ ...base, search_name: "Someone Else" })).not.toBe(
+      archiveRowKey(base)
+    );
+    expect(archiveRowKey({ ...base, collection: "Another" })).not.toBe(
+      archiveRowKey(base)
+    );
+    expect(archiveRowKey({ ...base, topics: ["poi"] })).not.toBe(
+      archiveRowKey(base)
+    );
+  });
+
+  it("does not care what order the topics arrived in", () => {
+    const base = match(1);
+    expect(archiveRowKey({ ...base, topics: ["poi", "crime.fin"] })).toBe(
+      archiveRowKey({ ...base, topics: ["crime.fin", "poi"] })
+    );
   });
 });

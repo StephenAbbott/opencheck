@@ -17,6 +17,7 @@
  */
 
 import { useId, useState } from "react";
+import { groupIdentical, repeatNote } from "../../lib/hitGroups";
 import { topicLabel } from "../../lib/vocab";
 import { ActionChip, Chip, SectionHeading } from "../ui";
 import type { OpenAlephScreeningMatch } from "../../lib/api";
@@ -28,12 +29,25 @@ export const PREVIEW_COUNT = 10;
  * The slice of matches to render for the current expanded state.
  * Pure — unit-tested in OpenAlephArchiveMatches.test.ts.
  */
-export function visibleArchiveMatches(
-  matches: OpenAlephScreeningMatch[],
-  expanded: boolean
-): OpenAlephScreeningMatch[] {
+export function visibleArchiveMatches<T>(matches: T[], expanded: boolean): T[] {
   if (expanded || matches.length <= PREVIEW_COUNT) return matches;
   return matches.slice(0, PREVIEW_COUNT);
+}
+
+/**
+ * What an archive row says: who matched, what kind of party they are, the
+ * name that matched if it differs, the collection, and the topics. Not
+ * `entity_id` — two OpenAleph records for the same person in the same
+ * collection are exactly the case this collapses.
+ */
+export function archiveRowKey(m: OpenAlephScreeningMatch): string {
+  return [
+    m.search_name,
+    m.kind,
+    m.matched_name ?? "",
+    m.collection ?? "",
+    [...new Set(m.topics)].sort().join(","),
+  ].join("|");
 }
 
 export function OpenAlephArchiveMatches({
@@ -50,8 +64,12 @@ export function OpenAlephArchiveMatches({
   // The control expands the list, not the wrapper that contains the control.
   const listId = useId();
   if (matches.length === 0) return null;
-  const visible = visibleArchiveMatches(matches, expanded);
-  const hiddenCount = matches.length - visible.length;
+  // Two records for one person in one collection rendered as two identical
+  // rows on a live BP lookup — the same defect as the source rows above, and
+  // grouped by the same rule: what the row says, not what identifies it.
+  const grouped = groupIdentical(matches, archiveRowKey);
+  const visible = visibleArchiveMatches(grouped, expanded);
+  const hiddenCount = grouped.length - visible.length;
 
   return (
     <div
@@ -71,7 +89,7 @@ export function OpenAlephArchiveMatches({
         </p>
       </div>
       <ul id={listId} className="flex flex-col gap-1.5">
-        {visible.map((m) => (
+        {visible.map(({ lead: m, count }) => (
           <li
             key={`${m.statement_id}:${m.entity_id}`}
             className="text-oo-small text-oo-ink leading-[1.6]"
@@ -99,6 +117,9 @@ export function OpenAlephArchiveMatches({
             ) : (
               <span>{m.collection || "an OpenAleph collection"}</span>
             )}
+            {repeatNote(count) && (
+              <span className="text-oo-muted"> ({repeatNote(count)})</span>
+            )}
             {m.topics.length > 0 && (
               <>
                 {" "}
@@ -119,7 +140,7 @@ export function OpenAlephArchiveMatches({
             expanded={expanded}
             controls={listId}
           >
-            {expanded ? "Show fewer" : `Show all ${matches.length} matches`}
+            {expanded ? "Show fewer" : `Show all ${grouped.length} matches`}
           </ActionChip>
         </div>
       )}
