@@ -122,7 +122,10 @@ describe("sourceList", () => {
 
 describe("topicLabel", () => {
   it("translates the upstream slugs a reader was shown raw", () => {
-    expect(topicLabel("corp.disqual")).toBe("disqualified director");
+    // "disqualified", not "disqualified director": upstream applies the
+    // topic to companies as well as to people, and naming the role would
+    // invent one.
+    expect(topicLabel("corp.disqual")).toBe("disqualified");
     expect(topicLabel("poi")).toBe("person of interest");
     expect(topicLabel("crime.fin")).toBe("financial crime");
   });
@@ -145,7 +148,7 @@ describe("topicLabel", () => {
 
 describe("topicList", () => {
   it("joins readable labels, deduplicated", () => {
-    expect(topicList(["poi", "corp.disqual"])).toBe("person of interest, disqualified director");
+    expect(topicList(["poi", "corp.disqual"])).toBe("person of interest, disqualified");
     expect(topicList(["poi", "poi"])).toBe("person of interest");
   });
 });

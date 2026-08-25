@@ -48,9 +48,15 @@ export function SubjectCard({
    *  sources sharing just any identifier (QID, national number, …): the
    *  badge renders beside the LEI, so its number must be scoped to the LEI
    *  (see countLeiConfirmingSources in lib/identifierBadge.ts). The badge
-   *  only renders from 2 (a lone source confirms nothing). Deliberately
-   *  worded "Identifier confirmed by" — the sources agree on the
-   *  identifier, they do not corroborate each other's substance. */
+   *  only renders from 2 (a lone source confirms nothing). Worded
+   *  "confirmed by" rather than "corroborated by" — the sources agree on the
+   *  identifier, they do not corroborate each other's substance. And it
+   *  names the **LEI**, not "identifier": the section this badge opens
+   *  counts every identifier across every source that shares one, so on BP
+   *  the two numbers sat a screen apart reading "Identifier confirmed by 6
+   *  sources" and "3 identifiers matched across 8 sources". Both were
+   *  right, and nothing on the page said they were answers to different
+   *  questions. */
   identifierSources?: number;
   /** Goes to the "Is this the right company?" section (switching to
    *  QuickCheck first — the section only renders there). */
@@ -220,7 +226,7 @@ export function SubjectCard({
 }
 
 /**
- * "Identifier confirmed by N sources" badge. Rendered twice by SubjectCard —
+ * "LEI confirmed by N sources" badge. Rendered twice by SubjectCard —
  * an inline pill beside the LEI on sm+, and a full-width-capable box directly
  * below the header row (i.e. under the LEI) on mobile — with only one
  * instance visible per breakpoint (the hidden one is display:none, so it
@@ -260,11 +266,11 @@ function IdentifierBadge({
         <path d="M20 6 9 17l-5-5" />
       </svg>
       <span>
-        Identifier confirmed by {count} source{count === 1 ? "" : "s"}
+        LEI confirmed by {count} source{count === 1 ? "" : "s"}
         <span className="sr-only">
           {" "}
-          — independent sources publish this entity's LEI; goes to the
-          &ldquo;Is this the right company?&rdquo; section
+          — this many independently publish it; goes to the &ldquo;Is this the
+          right company?&rdquo; section, which covers every identifier
         </span>
       </span>
     </button>

@@ -227,33 +227,64 @@ export function sourceList(ids: string[], names?: Record<string, string>): strin
 // ---------------------------------------------------------------------------
 
 /**
+ * FollowTheMoney topic slugs, in English.
+ *
  * OpenAleph topic ids reached the archive-matches list verbatim — a reader saw
  * `corp.disqual`, `poi`, `crime.fin`. These are FollowTheMoney topic slugs; the
  * mapping is upstream's own vocabulary, so it is a translation and not an
  * inference. An unmapped id is prettified rather than hidden: the fact that a
  * collection was tagged is still information.
+ *
+ * **The backend owns this list.** `opencheck/topics.py` carries the same map
+ * for the two strings built server-side — the OpenSanctions summary line and
+ * its finding sentence — and `tests/test_topic_labels.py` fails the build when
+ * the two disagree or when either drops a topic OpenSanctions publishes. Two
+ * hand-kept copies of one vocabulary is how `export_control` and
+ * `asset__frozen` sat here for three phases: neither is a FollowTheMoney slug
+ * (they are `export.control` and `asset.frozen`), so the two topics this map
+ * existed to translate fell through to the prettifier.
  */
 export const OPENALEPH_TOPIC: Record<string, string> = {
-  poi: "person of interest",
-  "corp.disqual": "disqualified director",
-  "crime.fin": "financial crime",
-  "crime.theft": "theft",
-  "crime.war": "war crimes",
-  "crime.boss": "organised crime",
-  "crime.terror": "terrorism",
-  "crime.traffick": "trafficking",
-  "role.pep": "politically exposed person",
-  "role.rca": "relative or close associate",
-  "role.judge": "judiciary",
-  "role.diplo": "diplomatic service",
-  "role.oligarch": "oligarch",
-  debarment: "debarred from public contracts",
+  // Sanctions and adjacent designations.
   sanction: "sanctions listing",
   "sanction.linked": "linked to a sanctions listing",
+  "sanction.control": "owned or controlled by a sanctioned party",
   "sanction.counter": "counter-sanctions listing",
-  export_control: "export control listing",
+  // Export controls and trade restrictions.
+  "export.control": "export control listing",
+  "export.control.linked": "linked to an export control listing",
+  "export.risk": "trade risk",
+  // Investment restrictions.
+  "invest.ban": "investment ban",
+  "invest.risk": "investment risk",
+  // Procurement exclusion and corporate disqualification.
+  debarment: "debarred from public contracts",
+  "corp.disqual": "disqualified",
+  // Political exposure.
+  "role.pep": "politically exposed person",
+  "role.rca": "relative or close associate",
+  "role.oligarch": "oligarch",
+  // Criminality — the category the record was filed under, so bare nouns.
+  crime: "crime",
+  "crime.boss": "organised crime",
+  "crime.fin": "financial crime",
+  "crime.fraud": "fraud",
+  "crime.terror": "terrorism",
+  "crime.theft": "theft",
+  "crime.traffick": "trafficking",
+  "crime.war": "war crimes",
   wanted: "wanted by law enforcement",
-  asset__frozen: "frozen asset",
+  // Maritime risk.
+  "mare.shadow": "shadow-fleet vessel",
+  "mare.detained": "detained vessel",
+  // Regulatory action and residual watchlisting.
+  "reg.action": "regulatory action",
+  "reg.warn": "regulatory warning",
+  poi: "person of interest",
+  // Beyond OpenSanctions' target topics: tags OpenAleph collections carry.
+  "asset.frozen": "frozen asset",
+  "role.diplo": "diplomatic service",
+  "role.judge": "judiciary",
 };
 
 export function topicLabel(topic: string): string {

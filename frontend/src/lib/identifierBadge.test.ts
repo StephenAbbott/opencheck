@@ -53,3 +53,27 @@ describe("countLeiConfirmingSources", () => {
     expect(countLeiConfirmingSources([link("lei", LEI, ["gleif"])], "")).toBe(0);
   });
 });
+
+describe("the badge count and the section count", () => {
+  it("are different numbers about different things, on purpose", () => {
+    // On BP the page carried "Identifier confirmed by 6 sources" beside the
+    // LEI and "3 identifiers matched across 8 sources" a screen below, and
+    // nothing said they were answers to different questions. Both are right:
+    // this counts sources publishing the LEI, the section counts every
+    // source sharing any identifier. The badge names the LEI now.
+    const links = [
+      link("lei", LEI, ["gleif", "opencorporates"]),
+      link("wikidata_qid", "Q66048", ["wikidata", "opensanctions"]),
+      link("gb_coh", "00102498", ["companies_house", "openaleph"]),
+    ];
+    const allSources = new Set(links.flatMap((l) => l.hits.map((h) => h.source_id)));
+
+    expect(countLeiConfirmingSources(links, LEI)).toBe(2);
+    expect(allSources.size).toBe(6);
+    // The badge's number is a subset of the section's, never the other way
+    // round: every source publishing the LEI participates in a link.
+    expect(countLeiConfirmingSources(links, LEI)).toBeLessThanOrEqual(
+      allSources.size,
+    );
+  });
+});

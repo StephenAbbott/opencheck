@@ -3,13 +3,18 @@ import type { CrossSourceLink } from "./api";
 /**
  * Distinct sources that independently publish the subject's LEI.
  *
- * This is the count behind the SubjectCard "Identifier confirmed by N
- * sources" badge. The badge renders next to the LEI, so its number must be
- * scoped to the LEI: counting every source participating in *any*
- * cross-source link (Wikidata QID, Companies House number, OpenSanctions id,
- * name matches…) overstates what the badge visually claims. Only links whose
- * bridge key is the LEI — and whose value is the subject's own LEI, not a
- * related entity's — contribute.
+ * This is the count behind the SubjectCard "LEI confirmed by N sources"
+ * badge. The badge renders next to the LEI, so its number must be scoped to
+ * the LEI: counting every source participating in *any* cross-source link
+ * (Wikidata QID, Companies House number, OpenSanctions id, name matches…)
+ * overstates what the badge visually claims. Only links whose bridge key is
+ * the LEI — and whose value is the subject's own LEI, not a related entity's
+ * — contribute.
+ *
+ * The badge and the "Is this the right company?" band therefore carry
+ * different numbers on purpose — on BP, 6 and 8 — and until Phase 133 the
+ * badge said "Identifier confirmed by", which gave a reader no way to tell
+ * that the two were answers to different questions. It names the LEI now.
  *
  * The reconciler only emits an "lei" link when ≥2 sources share the value,
  * and per CLAUDE.md a source's hit only carries `lei` when that source

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useId, useMemo, useState, useSyncExternalStore } from "react";
 import { deepen } from "../../lib/api";
+import { groupHitsForDisplay, siblingNote } from "../../lib/hitGroups";
 import { rowFinding } from "../../lib/sourceFinding";
 import { graphPartiesLabel } from "../../lib/vocab";
 import { ActionChip, Chip, DataTile, RowList } from "../ui";
@@ -907,6 +908,7 @@ function HitFinding({ hit }: { hit: SourceHit }) {
 
 function HitRow({
   hit,
+  siblingCount = 1,
   riskSignals,
   subjectSignals = [],
   preloadedStmtCount,
@@ -914,6 +916,8 @@ function HitRow({
   titleAccessory,
 }: {
   hit: SourceHit;
+  /** How many records render identically to this one, including it. */
+  siblingCount?: number;
   riskSignals: RiskSignal[];
   /** The lookup's full top-level signal list — scoped per bundle in
    *  DeepenBlock so cross-source findings can badge this graph too. */
@@ -1042,6 +1046,14 @@ function HitRow({
           falls back to the fragment, so the migration can land one adapter
           at a time without any row looking broken. */}
       <HitFinding hit={hit} />
+      {/* What the collapsed rows were. Said in the row's own voice rather
+          than as a count beside the title: the number is about the source's
+          holdings, and the drawer below shows one of them. */}
+      {siblingNote(siblingCount) && (
+        <p className="text-oo-meta text-oo-muted mt-1 leading-[1.5]">
+          {siblingNote(siblingCount)}
+        </p>
+      )}
       <MentionsBreakdown hit={hit} />
       <TedAwardsList hit={hit} />
       {riskSignals.length > 0 && (
@@ -1313,15 +1325,19 @@ export function SourceBucketCard({
       {bucket.hits.length === 0 && !bucket.error && (
         <p className="px-5 py-3 text-oo-small text-oo-muted">No results.</p>
       )}
+      {/* One row per distinct rendering, not per record. A live BP lookup put
+          four identical OpenAleph rows here — four real PSC records whose
+          only difference is not on the record. See lib/hitGroups.ts. */}
       <ul className="divide-y divide-oo-rule">
-        {bucket.hits.map((hit, idx) => (
+        {groupHitsForDisplay(bucket.hits).map((group, idx) => (
           <HitRow
-            key={`${hit.source_id}:${hit.hit_id}`}
-            hit={hit}
-            riskSignals={riskByHit[`${hit.source_id}:${hit.hit_id}`] ?? []}
+            key={`${group.lead.source_id}:${group.lead.hit_id}`}
+            hit={group.lead}
+            siblingCount={group.count}
+            riskSignals={riskByHit[`${group.lead.source_id}:${group.lead.hit_id}`] ?? []}
             subjectSignals={subjectSignals}
-            preloadedStmtCount={bodsCountMap[`${hit.source_id}:${hit.hit_id}`]}
-            preloadedBreakdown={bodsBreakdownMap[`${hit.source_id}:${hit.hit_id}`]}
+            preloadedStmtCount={bodsCountMap[`${group.lead.source_id}:${group.lead.hit_id}`]}
+            preloadedBreakdown={bodsBreakdownMap[`${group.lead.source_id}:${group.lead.hit_id}`]}
             titleAccessory={idx === 0 ? timelineButton : undefined}
           />
         ))}

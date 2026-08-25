@@ -2370,7 +2370,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               // Shut on arrival. Identity corroboration is reassurance, and
               // reassurance that occupies a screen before anyone doubted
               // anything is in the way of the finding. The subject card's
-              // "Identifier confirmed by N sources" badge is what opens it —
+              // "LEI confirmed by N sources" badge is what opens it —
               // which is the moment a reader is actually asking.
               open={identityOpen}
               onToggle={setIdentityOpen}
