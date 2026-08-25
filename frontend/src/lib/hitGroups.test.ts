@@ -8,7 +8,7 @@ const hit = (over: Partial<SourceHit> = {}): SourceHit =>
     hit_id: "a",
     kind: "entity",
     name: "Bp P.L.C.",
-    summary: "collection: Companies House (UK) PSC · Company · score 107",
+    summary: "collection: Companies House (UK) PSC · Company",
     finding: "Indexed in Companies House (UK) Persons with Significant Control.",
     identifiers: {},
     raw: {},
@@ -37,27 +37,36 @@ describe("groupHitsForDisplay", () => {
       hit({ hit_id: "a", finding: "Indexed in GLEIF Concatenated Data File." }),
       hit({ hit_id: "b" }),
       hit({ hit_id: "c", name: "BP P.L.C." }), // different capitalisation IS visible
-      hit({ hit_id: "d", summary: "collection: EU ESMA · Company · score 171" }),
+      hit({ hit_id: "d", summary: "collection: EU ESMA · Company" }),
     ]);
     expect(groups).toHaveLength(4);
   });
 
-  it("ignores the retrieval score, which says nothing a reader can use", () => {
-    // Two of BP's four PSC records scored 107 and one scored 106 — a BM25
-    // number on no published scale, which kept the fourth row out of its
-    // own group.
+  it("groups BP's PSC records, which now render identically", () => {
+    // Two of BP's four scored 107 and one scored 106 — a BM25 number on no
+    // published scale, which kept the fourth row out of its own group until
+    // Phase 133 subtracted it from the key. Phase 135 stopped printing it at
+    // the source instead, so these rows arrive identical and the key needs no
+    // special case. What the reader sees is what groups.
     const groups = groupHitsForDisplay([
-      hit({ hit_id: "a", summary: "collection: CH PSC \u00b7 Company \u00b7 FtM match score 107 \u00b7 identifier corroborated" }),
-      hit({ hit_id: "b", summary: "collection: CH PSC \u00b7 Company \u00b7 FtM match score 106 \u00b7 identifier corroborated" }),
+      hit({ hit_id: "a", summary: "collection: CH PSC \u00b7 Company \u00b7 identifier corroborated" }),
+      hit({ hit_id: "b", summary: "collection: CH PSC \u00b7 Company \u00b7 identifier corroborated" }),
     ]);
     expect(groups).toHaveLength(1);
     expect(groups[0].count).toBe(2);
   });
 
-  it("still separates rows whose collection differs", () => {
+  it("subtracts nothing, so a score in a summary would split a group again", () => {
+    // The inverse of what Phase 133 pinned, and deliberately so. That phase
+    // taught the key to ignore one visible difference; Phase 135 removed the
+    // difference instead, and the key went back to being "everything the row
+    // says". If a retrieval score ever reaches a summary again these rows
+    // stop grouping — which is the honest outcome for a key defined by what
+    // the reader sees, and is caught upstream by the adapter test that pins
+    // the score out of the sentence.
     const groups = groupHitsForDisplay([
       hit({ hit_id: "a", summary: "collection: CH PSC \u00b7 FtM match score 107" }),
-      hit({ hit_id: "b", summary: "collection: GLEIF \u00b7 FtM match score 107" }),
+      hit({ hit_id: "b", summary: "collection: CH PSC \u00b7 FtM match score 106" }),
     ]);
     expect(groups).toHaveLength(2);
   });

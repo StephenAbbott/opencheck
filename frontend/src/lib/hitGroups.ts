@@ -31,6 +31,10 @@
  * produce a group is the best-scoring record. The drawer on the collapsed row
  * therefore opens the closest match, and the row says how many others there
  * are so the drawer is not silently standing in for all of them.
+ *
+ * The example above is quoted as the rows actually read at the time. The score
+ * is no longer printed (Phase 135) — see `displayKey`, which no longer has to
+ * subtract it.
  */
 
 import type { SourceHit } from "./api";
@@ -47,30 +51,23 @@ export interface Group<T> {
 export type HitGroup = Group<SourceHit>;
 
 /**
- * A retrieval score, as it appears in an OpenAleph summary fragment.
+ * What the reader can use to tell one row from another: everything the row
+ * renders, and nothing else.
  *
- * `FtM match score 107` and `FtM match score 106` are the same answer to the
- * reader's question. It is a BM25 relevance number on no published scale —
- * two of BP's four PSC records scored 107 and one scored 106, which is noise
- * that happens to be printed, and it kept one row out of its own group. Match
- * *strength*, where OpenCheck asserts it, is `ui/MatchConfidenceChip`; this is
- * not that.
- */
-const RETRIEVAL_SCORE = /\s*\u00b7?\s*FtM match score\s+[\d.]+/gi;
-
-/**
- * What the reader can use to tell one row from another.
- *
- * Everything the row renders, less the retrieval score — the defect is rows
- * that say the same thing, and a key narrower than "what the row says" would
- * collapse rows that differ. The score is excluded because it is not part of
- * what the row says about the name: it is metadata about how the record was
- * found, and no reader can calibrate a one-point difference in it.
+ * Phase 133 had to subtract one thing from that — the FtM retrieval score,
+ * which OpenAleph summaries carried. It is a BM25 number on no published
+ * scale, so `FtM match score 107` and `FtM match score 106` were the same
+ * answer to the reader's question, and the one-point difference kept the
+ * fourth of BP's PSC records out of its own group. Phase 135 stopped printing
+ * it at the source, on the grounds that no reader can calibrate it, so the
+ * exclusion had nothing left to exclude and is gone: a key that subtracts part
+ * of what the row says is a key that can collapse rows which differ, and one
+ * kept for a string the backend no longer emits is a rule whose reason has to
+ * be reconstructed. The score is still on the record (`raw.match_score`),
+ * where the adapter's relative cutoff and ordering read it.
  */
 function displayKey(hit: SourceHit): string {
-  return [hit.name ?? "", hit.finding ?? "", hit.summary ?? ""]
-    .join(" ")
-    .replace(RETRIEVAL_SCORE, "");
+  return [hit.name ?? "", hit.finding ?? "", hit.summary ?? ""].join(" ");
 }
 
 /**
