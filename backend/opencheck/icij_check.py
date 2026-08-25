@@ -577,16 +577,26 @@ def _signal_from_match(
     # Fonseca). A related party turning up in that role is a materially
     # different fact from being named in the leak as an owner or officer, so
     # it is worded differently rather than folded into "matches a record".
+    # The sentence names the finding and the dataset, and stops there. It used
+    # to end "(ICIJ score 100/100)" — a retrieval score printed with a
+    # denominator, which reads as *this is a perfect match* on the one finding
+    # type that is most explicitly not an identity claim. Worse, it is the one
+    # input this module deliberately does not trust: ICIJ's own scorer rated
+    # the ENERGEN/BIOGAS collision 90/100, which is why every match still has
+    # to clear ``min_name_sim`` and the distinctive-token gate below. The
+    # number is a coarse first filter, not the reason the signal fired, so
+    # handing it to a reader as though it were the finding's strength
+    # overstated it in exactly the direction that matters. It stays on
+    # ``evidence["icij_score"]`` (Phase 136).
     if node_type == "Intermediary":
         summary = (
             f"{relation} '{target['name']}' appears as an offshore-services "
-            f"intermediary in {dataset_label}{qual_note} "
-            f"(ICIJ score {score}/100)."
+            f"intermediary in {dataset_label}{qual_note}."
         )
     else:
         summary = (
-            f"{relation} '{target['name']}' matches a record in {dataset_label}"
-            f"{qual_note} (ICIJ score {score}/100)."
+            f"{relation} '{target['name']}' matches a record in "
+            f"{dataset_label}{qual_note}."
         )
 
     return RiskSignal(
