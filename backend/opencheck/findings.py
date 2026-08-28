@@ -873,3 +873,66 @@ def finding_gemi_greece(bundle: dict[str, Any]) -> str | None:
     board_clause = f"{plural(len(board), 'board member')} listed" if board else None
 
     return clauses_to_sentence([lead, partner_clause, board_clause])
+
+
+# ---------------------------------------------------------------------------
+# climatetrace — GEM ownership tracker + Climate TRACE emissions
+# ---------------------------------------------------------------------------
+
+
+def finding_climatetrace(bundle: dict[str, Any]) -> str | None:
+    """Energy-asset footprint and corporate status per the ownership tracker.
+
+    Reads the fetch bundle: ``entity_status`` (dissolved/amalgamated/joint
+    venture — the August 2026 lifecycle fields), ``projects`` (the GEOT
+    ownership-closure totals) and ``emissions`` (the satellite-derived
+    aggregate). A dissolved or amalgamated status leads — it changes a
+    decision more than any asset count (rule 3). The status is worded
+    "recorded as": it is the tracker's record, not a registry filing.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return None
+
+    entity_status = bundle.get("entity_status") or {}
+    status = entity_status.get("status")
+    status_clause: str | None = None
+    if status == "amalgamated":
+        successor = entity_status.get("merged_into_name")
+        status_clause = (
+            f"recorded as amalgamated into {successor}"
+            if successor
+            else "recorded as amalgamated into another entity"
+        )
+    elif status == "dissolved":
+        status_clause = "recorded as dissolved"
+
+    jv_clause = "identified as a joint venture" if entity_status.get("jv") else None
+
+    projects = bundle.get("projects")
+    projects_clause: str | None = None
+    if isinstance(projects, dict):
+        live, operating, _controlled = (projects.get("total") or [0, 0, 0])[:3]
+        if live:
+            projects_clause = f"{plural(int(live), 'live energy project')} on file"
+            if operating:
+                projects_clause += f" ({int(operating)} operating)"
+        else:
+            projects_clause = "no live energy projects on file"
+
+    emissions = bundle.get("emissions") or {}
+    emissions_clause: str | None = None
+    try:
+        total_co2e = float(emissions.get("total_co2e_tonnes") or 0)
+    except (TypeError, ValueError):
+        total_co2e = 0.0
+    if total_co2e > 0:
+        year = emissions.get("year") or 2024
+        if total_co2e >= 1_000_000:
+            quantity = f"{total_co2e / 1_000_000:.1f} Mt"
+        else:
+            quantity = f"{total_co2e:,.0f} t"
+        emissions_clause = f"{year} emissions estimated at {quantity} CO₂e"
+
+    return clauses_to_sentence(
+        [status_clause, projects_clause, emissions_clause, jv_clause], sep="; "
+    )
