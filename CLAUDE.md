@@ -391,14 +391,65 @@ Specific rules:
 
 ---
 
+## `docs/status.md` and the README Status section
+
+Every phase ships an update to both files. Get the shape exactly right —
+these have been broken repeatedly by edits that looked harmless.
+
+### `docs/status.md` is ONE unbroken markdown table
+
+- **Never insert a blank line between phase rows.** A blank line terminates
+  the table on GitHub: every row after it renders as raw pipe-text outside
+  the table, which is how new phases have silently stopped appearing
+  (cleaned up in `7e9f69e`).
+- One row per phase, one line per row — `| 137 | <headline> |`. No wrapping,
+  no hard line breaks inside a headline (they run to several hundred
+  characters, and that is correct). Escape a literal `|` as `\|`.
+- Rows are **appended in ascending phase order**, directly under the previous
+  row. Never re-sort, never split the table, never put a sub-heading between
+  rows. Inject a new row with an append / `awk`, never with an editor step or
+  a heredoc that re-emits surrounding lines — that is what has introduced the
+  blank lines.
+- **Every row must end with a commit citation** — `Commit \`hash\`.` or
+  `Commits \`a\`, \`b\`.` (short hashes in backticks). The `/changelog` page
+  derives its GitHub links from exactly this clause (`extractCommits` in
+  `frontend/src/lib/changelog.ts`); a row without it renders on the changelog
+  with no link. Phases 68–70 dropped the convention and lost their links
+  (restored in `6ecc723`).
+- The whole file contains exactly **three** blank lines: after the H1, after
+  the intro sentence, and before the closing test-suite paragraph.
+  `grep -c '^$' docs/status.md` returning anything but `3` means the table is
+  broken.
+- Bump the spelled-out phase count in the intro sentence in the same edit
+  ("OpenCheck has shipped through one hundred and thirty-eight phases"). It
+  goes stale silently.
+
+### README Status section — one phase, one line
+
+```markdown
+## Status
+
+**Latest: Phase N** — one-line summary of the main change in that phase.
+
+→ [Full development history](docs/status.md)
+```
+
+The summary is a single sentence of plain prose, with no commit hash and no
+PR number — a compressed version of the status.md row's opening clause.
+Replace the Latest line each phase; do not accumulate `Previous:` / `Earlier:`
+tiers beneath it.
+
+### Verify on GitHub, not in the app
+
+`parseStatusMarkdown` walks status.md line by line and skips anything that
+isn't a row, so **the `/changelog` page renders perfectly even when the GitHub
+table is broken**. A clean changelog is not evidence. Look at the rendered
+`docs/status.md` and `README.md` on GitHub, or run the `grep -c` above.
+
+---
+
 ## Other conventions
 
-- **Every new phase row in `docs/status.md` must end with a commit citation**
-  — `Commit \`hash\`.` or `Commits \`a\`, \`b\`.` (short hashes in backticks).
-  The `/changelog` page derives its GitHub links from exactly this clause
-  (`extractCommits` in `frontend/src/lib/changelog.ts`); a row without it
-  renders on the changelog with no link. Phases 68–70 dropped the
-  convention and lost their links (restored in `6ecc723`).
 - API keys go in `.env` only — never committed to the repo.
 - Schema files use `extra="allow"` via `_Base` so unknown API fields don't break validation.
 - `validate_raw()` is called at the end of `fetch()` on the fully-assembled bundle, before returning.
@@ -841,35 +892,37 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | Nigeria | cac_nigeria | `RA000469` — Company Registry (Corporate Affairs Commission) | 2026-08-28 (also verified 2026-08-12; Africa's first public BO register). Offline curated example set of 10 LEI-anchored companies (`data/cac_nigeria_psc.json`); a live adapter is deferred pending CAC / Oasis Management engagement. LEI-keyed dispatch (not an RA deriver); asserts only the CAC-published RC number (`ng_cac_rc`), not the derived LEI. |
 | Greece | gemi_greece | `RA000685` — General Commercial Registry (G.E.MI.), businessregistry.gr | 2026-08-28 — 20 of 25 sampled Greek LEI records use it |
 
-### ⚠️ One real RA bug: Scotland and Northern Ireland are swapped
+### ✅ FIXED 2026-08-28: Scotland/Northern Ireland, and two more RA maps
 
-Found 2026-08-28 and **verified against live GLEIF records**. GLEIF's Companies
-House codes are `RA000585` England & Wales, **`RA000586` Northern Ireland**,
-**`RA000587` Scotland** — confirmed by real records (THON MARITIME LTD,
-`registeredAs = "SC651281"`, sits under `RA000587`; a `GB-NIR` record sits under
-`RA000586`). `RA000591` is **The Pensions Regulator**, not a company registry.
+GLEIF's Companies House codes are `RA000585` England & Wales, **`RA000586`
+Northern Ireland**, **`RA000587` Scotland** — confirmed against real records
+(THON MARITIME LTD, `registeredAs "SC651281"`, sits under `RA000587`).
+`RA000591` is **The Pensions Regulator**, not a company registry.
 
-Three places carry the wrong mapping. **None is fixed yet:**
+Fixed, with `backend/tests/test_ra_codes.py` and two canaries in
+`test_gleif_bridge.py` pinning it:
 
-1. **`routers/search.py::_ch_ra_code` — LIVE, this is the one that bites.**
-   Maps `SC → RA000586` and `NI → RA000591`. It feeds `ra_code` into the
-   Companies House → LEI bridge (`search.py`, `gleif_adapter.search_by_local_id`),
-   which appends `filter[entity.registeredAt]`. A Scottish number is therefore
-   filtered by Northern Ireland's code and a Northern Irish number by the
-   Pensions Regulator's, so the bridge silently returns no LEI for either.
-   Correct values: `SC → RA000587`, `NI → RA000586`.
-2. **`tests/test_gleif_bridge.py::test_ch_ra_code` pins the wrong values**
-   (`("SC123456", "RA000586")`, `("NI012345", "RA000591")`). The fix must update
-   the test — otherwise it fails the correction rather than catching the bug.
-3. **`sources/gleif.py::_CH_RA_CODES` carries the same wrong mapping but is
-   DEAD CODE** — neither `_CH_RA_CODES` nor `_CH_RA_DEFAULT` is referenced
-   anywhere in the repo. Fix it or delete it; leaving a second wrong copy around
-   is how the first one survived.
+1. **`routers/search.py::_ch_ra_code`** now returns `RA000587` for `SC`/`SO`/`SF`
+   and `RA000586` for `NI`/`NC`/`R0`. It previously mapped SC to Northern
+   Ireland's code and NI to the Pensions Regulator's, so the Companies House →
+   LEI bridge silently found no LEI for either nation.
+2. **`sources/gleif.py::_CH_RA_CODES`** — deleted. It carried the same wrong
+   mapping as dead code, referenced nowhere. A second copy is how the first
+   survived.
+3. **`bods/mapper.py`** — `RA000587` added to the RA → org-id scheme map, which
+   had 585 and 586 but not 587, so Scottish entities carried no `GB-COH`
+   scheme.
+4. **`routers/lookup.py::_RA_BY_COUNTRY`** — nine wrong codes (IE, LV, LT, FR,
+   BE, AT, PL, SK, SG), the same nine this table had. NZ and GR added.
+5. **`frontend/src/lib/raCodes.ts`** — **eleven of twenty wrong**, including
+   Norway pointing at India's MCA (`RA000394`) and Sweden at Singapore's ACRA
+   (`RA000523`). Both had already been corrected here and in the backend
+   months earlier without this file being touched.
 
-Related gap: `bods/mapper.py`'s RA → org-id scheme map has `RA000585` and
-`RA000586` → `GB-COH` and correctly notes that `RA000591` is the Pensions
-Regulator, but **`RA000587` (Scotland) is missing**, so Scottish entities get no
-scheme code.
+**Why it survived:** every wrong value was a real RA code belonging to a
+different authority, so the reverse lookup filtered on a registry the company
+was not registered at and returned nothing. It failed **closed** — a missed
+match looks like an absent company, not like a bug.
 
 ### Flags that did NOT survive verification
 

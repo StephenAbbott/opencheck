@@ -6,6 +6,19 @@
  *
  * filter[entity.registeredAt]=<raCode> is the GLEIF API parameter.
  * Reference: https://www.gleif.org/en/about-lei/code-lists/gleif-registration-authorities-list
+ *
+ * Every code re-verified 2026-08-28 against live GLEIF records — reading
+ * registeredAt.id off real entities, not off the RA catalogue, because the
+ * catalogue only says which authorities exist, not which one GLEIF actually
+ * files a country's companies under. Eleven of the twenty were wrong, and
+ * each pointed at a real but different authority, so the country picker
+ * scoped the reverse lookup to a registry the company was not registered at
+ * and returned no match. Norway pointed at India's MCA (RA000394) and Sweden
+ * at Singapore's ACRA (RA000523); both had already been corrected in the
+ * backend and in CLAUDE.md without this file being updated.
+ *
+ * Keep in step with _RA_BY_COUNTRY in backend/opencheck/routers/lookup.py —
+ * backend/tests/test_ra_codes.py parses THIS FILE and fails if they diverge.
  */
 
 export interface RaEntry {
@@ -46,7 +59,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatPattern: /^\d{8}$/,
   },
   NO: {
-    raCode: "RA000394",
+    raCode: "RA000472",
     countryName: "Norway",
     idLabel: "Organisation number (orgnr)",
     placeholder: "923609016",
@@ -70,7 +83,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatPattern: /^\d{8}$/,
   },
   SE: {
-    raCode: "RA000523",
+    raCode: "RA000544",
     countryName: "Sweden",
     idLabel: "Organisation number",
     placeholder: "5560985801",
@@ -79,7 +92,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatPattern: /^\d{10}$|^\d{6}-\d{4}$/,
   },
   FR: {
-    raCode: "RA000580",
+    raCode: "RA000189",
     countryName: "France",
     idLabel: "SIREN number",
     placeholder: "542107651",
@@ -87,7 +100,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatPattern: /^\d{9}$/,
   },
   BE: {
-    raCode: "RA000143",
+    raCode: "RA000025",
     countryName: "Belgium",
     idLabel: "CBE / KBO number",
     placeholder: "0403838524",
@@ -104,7 +117,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatPattern: /^\d{14}$|^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/,
   },
   IE: {
-    raCode: "RA000215",
+    raCode: "RA000402",
     countryName: "Ireland",
     idLabel: "CRO number",
     placeholder: "012345",
@@ -112,7 +125,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatPattern: /^\d{1,6}$/,
   },
   PL: {
-    raCode: "RA000439",
+    raCode: "RA000484",
     countryName: "Poland",
     idLabel: "KRS number",
     placeholder: "0000037171",
@@ -120,7 +133,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatPattern: /^\d{10}$/,
   },
   AT: {
-    raCode: "RA000128",
+    raCode: "RA000017",
     countryName: "Austria",
     idLabel: "Firmenbuchnummer",
     placeholder: "FN123456a",
@@ -137,7 +150,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatPattern: /^\d{8}$/,
   },
   LV: {
-    raCode: "RA000327",
+    raCode: "RA000423",
     countryName: "Latvia",
     idLabel: "Registration number",
     placeholder: "40003571815",
@@ -145,7 +158,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatPattern: /^\d{11}$/,
   },
   LT: {
-    raCode: "RA000330",
+    raCode: "RA000430",
     countryName: "Lithuania",
     idLabel: "JAR code",
     placeholder: "302511363",
@@ -162,7 +175,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatPattern: /^[A-Z]{1,3}\s*\d+$/i,
   },
   SK: {
-    raCode: "RA000476",
+    raCode: "RA000526",
     countryName: "Slovakia",
     idLabel: "IČO number",
     placeholder: "31320155",
@@ -178,7 +191,7 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatPattern: /^\d{11}$/,
   },
   SG: {
-    raCode: "RA000509",
+    raCode: "RA000523",
     countryName: "Singapore",
     idLabel: "UEN",
     placeholder: "196700240H",

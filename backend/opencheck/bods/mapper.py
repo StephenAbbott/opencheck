@@ -1496,6 +1496,9 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     "RA000585": ("GB-COH", "Companies House"),
     # United Kingdom — Companies House (Northern Ireland)
     "RA000586": ("GB-COH", "Companies House"),
+    # United Kingdom — Companies House (Scotland). Missing until 2026-08-28,
+    # so Scottish entities carried no scheme code on their BODS identifiers.
+    "RA000587": ("GB-COH", "Companies House"),
     # RA000591 = The Pensions Regulator (UK) — not a company registry; no org-id code.
     # Belgium — Crossroads Bank for Enterprises (BCE / KBO)
     "RA000025": ("BE-BCE_KBO", "Crossroads Bank for Enterprises (Belgium)"),
