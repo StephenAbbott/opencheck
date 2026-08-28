@@ -1,6 +1,6 @@
 # OpenCheck — Development History
 
-OpenCheck has shipped through one hundred and twenty-six phases. The latest commit on `main` is the source of truth.
+OpenCheck has shipped through one hundred and thirty-seven phases. The latest commit on `main` is the source of truth.
 
 | Phase | Headline |
 |------:|----------|
