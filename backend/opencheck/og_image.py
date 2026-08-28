@@ -21,10 +21,13 @@ Two variants:
 from __future__ import annotations
 
 import io
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
+
+from . import names as _names_mod
 
 _FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
 
@@ -85,6 +88,154 @@ _DEFAULT_STYLE = ("#f1f5f9", "#334155")
 
 def _font(name: str, size: int) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(str(_FONT_DIR / f"{name}.ttf"), size)
+
+
+# --- Script coverage --------------------------------------------------------
+# The bundled faces do not cover every script an entity name can arrive in.
+# Bitter carries Latin, Latin-ext and Cyrillic, but **no Greek** — and Greek
+# is not a subset Bitter publishes upstream either, so this cannot be fixed by
+# re-exporting the font. Drawing a Greek name in it produces a row of .notdef
+# boxes: verified by rasterising ΓΚΟΛΕΜΗΣ ΕΤΑΙΡΕΙΑ on 2026-08-28, where 11 of
+# 12 distinct characters came out as tofu.
+#
+# A pixel-count check is NOT a coverage check — tofu boxes are themselves
+# inky, so counting dark pixels reports a Greek line as *denser* than its
+# Latin equivalent. Coverage is decided by comparing each character's raster
+# against the raster of a codepoint the font certainly lacks.
+
+#: A Private Use Area codepoint no text face defines — its raster is the
+#: font's .notdef glyph, which is what every missing character renders as.
+_NOTDEF_PROBE = "\ue000"
+
+
+@lru_cache(maxsize=8)
+def _notdef_raster(font_name: str) -> bytes:
+    font = _font(font_name, 40)
+    return _char_raster(font, _NOTDEF_PROBE)
+
+
+def _char_raster(font: ImageFont.FreeTypeFont, ch: str) -> bytes:
+    image = Image.new("L", (80, 70), 255)
+    ImageDraw.Draw(image).text((5, 5), ch, font=font, fill=0)
+    return image.tobytes()
+
+
+@lru_cache(maxsize=4096)
+def _renders(font_name: str, ch: str) -> bool:
+    """True when *font_name* has a real glyph for *ch*.
+
+    Whitespace always passes. Everything else is compared against the face's
+    .notdef raster, which is the only reliable signal available without
+    pulling in a font-parsing dependency.
+    """
+    if ch.isspace():
+        return True
+    font = _font(font_name, 40)
+    return _char_raster(font, ch) != _notdef_raster(font_name)
+
+
+def renders_fully(text: str, font_name: str = "bitter-700") -> bool:
+    """True when every character of *text* has a glyph in the bundled face."""
+    return all(_renders(font_name, ch) for ch in text)
+
+
+def card_display_name(
+    name: str | None,
+    lei: str,
+    *,
+    latin_name: str | None = None,
+) -> tuple[str, bool]:
+    """The name to draw on the card, and whether it was romanised.
+
+    Order of preference:
+
+    1. The name as filed, when the card's face can actually render it.
+    2. *latin_name* — a Latin form the SOURCE published, when the caller has
+       one. ΓΕΜΗ, for instance, supplies ``coNamesEn[]``, the register's own
+       romanisation, which beats anything we could derive.
+    3. ``names.transliterate_display()`` — the same deterministic
+       transliteration that already reaches BODS output as an
+       ``alternateNames`` entry and a ``type: transliteration`` person name.
+       The card therefore shows a name OpenCheck already publishes rather
+       than inventing one for the image.
+    4. The LEI, when nothing renders.
+
+    Returns ``(text, romanised)`` so callers can say so in the alt text.
+    """
+    filed = (name or "").strip()
+    if not filed:
+        return f"LEI {lei}", False
+    if renders_fully(filed):
+        return filed, False
+
+    for candidate in (latin_name, _names_mod.transliterate_display(filed)):
+        candidate = (candidate or "").strip()
+        if candidate and renders_fully(candidate):
+            return candidate, True
+
+    return f"LEI {lei}", False
+
+
+def card_alt_text(
+    name: str | None,
+    lei: str,
+    signals: list[dict[str, Any]] | None,
+    *,
+    latin_name: str | None = None,
+) -> str:
+    """Alt text describing the rendered card, for ``og:image:alt``.
+
+    Describes what a sighted viewer sees, in the same terms and the same
+    order. When the drawn name was romanised the alt text says so, so a
+    screen-reader user is not told a Greek company has a Latin name.
+    """
+    display, romanised = card_display_name(name, lei, latin_name=latin_name)
+    subject = f"{display} (romanised)" if romanised else display
+
+    if signals is None:
+        return (
+            f"OpenCheck shareable card for {subject}, LEI {lei}. "
+            f"Invites the viewer to run a live check across "
+            f"{_source_count()} open sources at opencheck.world."
+        )
+
+    risk = [s for s in signals if s.get("kind", "risk") == "risk"]
+    codes: list[str] = []
+    for sig in risk:
+        code = str(sig.get("code") or "")
+        if code and code not in codes:
+            codes.append(code)
+    if not codes:
+        return (
+            f"OpenCheck shareable card for {subject}, LEI {lei}, "
+            f"showing no risk signals found."
+        )
+
+    labels = [
+        str(SIGNAL_STYLE[c][0]) if c in SIGNAL_STYLE else c.replace("_", " ").lower()
+        for c in codes[:3]
+    ]
+    named = ", ".join(labels[:-1]) + (f" and {labels[-1]}" if len(labels) > 1 else labels[0])
+    if len(labels) == 1:
+        named = labels[0]
+    more = len(codes) - len(labels)
+    tail = f", and {more} more" if more > 0 else ""
+    plural = "s" if len(codes) != 1 else ""
+    return (
+        f"OpenCheck shareable card for {subject}, LEI {lei}, showing "
+        f"{len(codes)} risk signal{plural} found: {named}{tail}. "
+        f"Prompts the viewer to visit opencheck.world for details."
+    )
+
+
+def _source_count() -> int:
+    """How many sources OpenCheck fans out across, counted not hard-coded."""
+    try:
+        from .sources import REGISTRY  # local import — keeps Pillow off that path
+
+        return len(REGISTRY)
+    except Exception:  # noqa: BLE001 — the card must render regardless
+        return 0
 
 
 def _wrap(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont,
@@ -176,7 +327,10 @@ def render_share_card(
     wx += draw.textlength("Open", font=f_word)
     draw.text((wx, 62 * s), "Check", font=f_word, fill=_CHECK_BLUE)
 
-    display_name = (name or "").strip() or f"LEI {lei}"
+    # A name the bundled face cannot draw (Greek, most notably) is replaced
+    # with a Latin form rather than rendered as .notdef boxes — see
+    # card_display_name.
+    display_name, romanised = card_display_name(name, lei)
     name_max_w = (_SPLIT - 70 - 60) * s
     longest_word = max(display_name.split(), key=len, default="")
     for size in (60, 54, 48, 42, 36, 30):
@@ -191,8 +345,12 @@ def render_share_card(
         draw.text((70 * s, y), line, font=f_name, fill=_INK)
         y += int(f_name.size * 1.18)
 
-    if name:  # only show the LEI line when it isn't already the headline
-        draw.text((70 * s, y + 20 * s), f"LEI {lei}", font=f_lei, fill=_MUTED)
+    if display_name != f"LEI {lei}":  # don't print the LEI twice
+        # A romanised name is flagged here rather than left implicit: the card
+        # would otherwise show a different name from the one on the register,
+        # which for a due-diligence tool is a claim we have not earned.
+        lei_line = f"LEI {lei}" + (" · name shown romanised" if romanised else "")
+        draw.text((70 * s, y + 20 * s), lei_line, font=f_lei, fill=_MUTED)
 
     cta_y = (H - 44 - 32) * s
     cx = 70 * s
@@ -210,8 +368,12 @@ def render_share_card(
 
     if signals is None:
         f_count = _font("bitter-700", 120 * s)
-        draw.text((px, 44 * s), "34", font=f_count, fill="#ffffff")
-        nx = px + draw.textlength("34", font=f_count) + 18 * s
+        # Counted from the registry, not hard-coded: this said "34" while the
+        # registry held 39, so every teaser card understated the tool by five
+        # sources.
+        source_text = str(_source_count())
+        draw.text((px, 44 * s), source_text, font=f_count, fill="#ffffff")
+        nx = px + draw.textlength(source_text, font=f_count) + 18 * s
         draw.text((nx, 116 * s), "open sources,", font=f_count_label, fill=_LAVENDER)
         draw.text((nx, 152 * s), "one query", font=f_count_label, fill=_LAVENDER)
         ty = 260 * s
