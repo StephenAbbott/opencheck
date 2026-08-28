@@ -16,21 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 123** — design v2, phases C+D: modes as the structure, rows that say what a source found
-
-The report is now organised by check mode, and each source row states what that source actually found rather
-than leaving the reader to infer it from a card. Commits `fbca1ba`, `54c98ca`.
-
-**Previous: Phase 122** — design v2, phases A+B: the primitives, and the answer first
-
-A design-system layer (tokens, primitives, Tailwind config) under an answer-first report: the verdict sentence
-leads, and it is built so that a run where screens degraded can never read as a clean one. Commit `a8ba5e7`.
-
-*Earlier: [Phase 121 — monitoring a source is not asking whether it replied](docs/status.md), [Phase 120 — the false positives no threshold could kill, killed by shape](docs/status.md), [Phase 119 — OpenAleph signal volume, measured before mended](docs/status.md), [Phase 118 — export-control topics classified at last](docs/status.md), and everything before it.*
-
-
-
-
+**Latest: Phase 137** — OpenCheck's fortieth source, and its first Greek one: the ΓΕΜΗ Open Data API under ODC-BY-1.0, entered from GLEIF RA000685.
 
 → [Full development history](docs/status.md)
 
