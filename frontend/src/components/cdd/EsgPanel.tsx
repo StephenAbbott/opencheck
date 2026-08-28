@@ -592,7 +592,7 @@ function ClimateTRACECard({
             forward when the successor's LEI is known. Context voice on
             purpose: the ESG card asserts structure, never risk. */}
         {statusBanner && (
-          <div className="mt-3 rounded-oo border border-emerald-300 bg-emerald-100/60 px-3 py-2 text-[13px] text-emerald-900">
+          <div className="mt-3 rounded-oo border border-emerald-300 bg-emerald-100/60 px-3 py-2 text-oo-small text-emerald-900">
             {statusBanner.text}
             {statusBanner.followHref && (
               <>
@@ -606,7 +606,7 @@ function ClimateTRACECard({
               </>
             )}
             {statusBanner.urls.length > 0 && (
-              <div className="mt-1 text-[11px] text-emerald-800">
+              <div className="mt-1 text-oo-meta text-emerald-800">
                 Status source:{" "}
                 {statusBanner.urls.map((u, i) => (
                   <span key={u}>
