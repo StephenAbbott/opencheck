@@ -227,3 +227,163 @@ def test_map_climatetrace_source_is_third_party() -> None:
     bundle = map_climatetrace(_entity_bundle())
     entity = next(iter(bundle))
     assert "thirdParty" in entity["source"]["type"]
+
+
+# ---------------------------------------------------------------------------
+# Entity types from GEM's Entity Type column (Phase 142)
+# ---------------------------------------------------------------------------
+
+
+def _typed_bundle(entity_type: str, *, lei: str = "213800LH1BZH3DI6G760") -> dict:
+    b = _entity_bundle()
+    b["lei"] = lei
+    b["gem_row"]["Entity Type"] = entity_type
+    if not lei:
+        b["gem_row"]["Global Legal Entity Identifier Index"] = ""
+    return b
+
+
+def test_map_climatetrace_state_entity_type() -> None:
+    entity = next(iter(map_climatetrace(_typed_bundle("state"))))
+    assert entity["recordDetails"]["entityType"]["type"] == "state"
+
+
+def test_map_climatetrace_state_body_entity_type() -> None:
+    entity = next(iter(map_climatetrace(_typed_bundle("state body"))))
+    assert entity["recordDetails"]["entityType"]["type"] == "stateBody"
+
+
+def test_map_climatetrace_arrangement_entity_type() -> None:
+    """GEM 'arrangement' maps honestly — accepted 2026-08-28 as a legitimate
+    TRUST_OR_ARRANGEMENT trigger even though climatetrace is ESG-category."""
+    entity = next(iter(map_climatetrace(_typed_bundle("arrangement"))))
+    assert entity["recordDetails"]["entityType"]["type"] == "arrangement"
+
+
+def test_map_climatetrace_arrangement_fires_trust_signal() -> None:
+    """Pin the accepted decision: an arrangement-typed GEM entity trips the
+    risk engine's TRUST_OR_ARRANGEMENT detection."""
+    from opencheck.risk import _trust_or_arrangement_signal
+
+    statements = list(map_climatetrace(_typed_bundle("arrangement")))
+    signal = _trust_or_arrangement_signal("climatetrace", "E100000001096", statements)
+    assert signal is not None
+    assert signal.evidence["matches"][0]["match"] == "entityType=arrangement"
+
+
+def test_map_climatetrace_unknown_entity_type() -> None:
+    entity = next(iter(map_climatetrace(_typed_bundle("unknown entity"))))
+    assert entity["recordDetails"]["entityType"]["type"] == "unknownEntity"
+
+
+def test_map_climatetrace_legal_entity_with_lei_is_registered() -> None:
+    entity = next(iter(map_climatetrace(_typed_bundle("legal entity"))))
+    assert entity["recordDetails"]["entityType"]["type"] == "registeredEntity"
+
+
+def test_map_climatetrace_legal_entity_without_lei_is_legal_entity() -> None:
+    entity = next(iter(map_climatetrace(_typed_bundle("legal entity", lei=""))))
+    assert entity["recordDetails"]["entityType"]["type"] == "legalEntity"
+
+
+def test_map_climatetrace_missing_entity_type_keeps_old_behaviour() -> None:
+    """July-2026-and-earlier CSVs: no Entity Type column, LEI present →
+    registeredEntity, exactly as before Phase 142."""
+    entity = next(iter(map_climatetrace(_entity_bundle())))
+    assert entity["recordDetails"]["entityType"]["type"] == "registeredEntity"
+
+
+def test_map_climatetrace_person_row_emits_nothing() -> None:
+    """GEM types 2 records as natural persons — an entityStatement would
+    misdescribe them, so the mapper emits no statements."""
+    assert list(map_climatetrace(_typed_bundle("person"))) == []
+
+
+# ---------------------------------------------------------------------------
+# Entity status: joint venture, dissolved, amalgamated (Phase 142)
+# ---------------------------------------------------------------------------
+
+
+def test_map_climatetrace_jv_in_entity_type_details() -> None:
+    b = _entity_bundle()
+    b["entity_status"] = {"jv": True}
+    entity = next(iter(map_climatetrace(b)))
+    assert entity["recordDetails"]["entityType"]["details"] == (
+        "Joint venture (per Global Energy Monitor)"
+    )
+
+
+def test_map_climatetrace_dissolved_annotation_no_dissolution_date() -> None:
+    b = _entity_bundle()
+    b["entity_status"] = {
+        "status": "dissolved",
+        "urls": ["https://example.org/strike-off"],
+    }
+    entity = next(iter(map_climatetrace(b)))
+    # No date is published, so no dissolutionDate may be asserted.
+    assert "dissolutionDate" not in entity["recordDetails"]
+    notes = entity.get("annotations") or []
+    assert len(notes) == 1
+    assert notes[0]["motivation"] == "commenting"
+    assert notes[0]["statementPointerTarget"] == "/recordDetails"
+    assert "dissolved" in notes[0]["description"]
+    assert "https://example.org/strike-off" in notes[0]["description"]
+
+
+def _amalgamated_bundle() -> dict:
+    b = _entity_bundle()
+    b["entity_id"] = "E100001013982"
+    b["entity_name"] = "3Bear Energy LLC"
+    b["gem_row"]["Entity ID"] = "E100001013982"
+    b["entity_status"] = {
+        "status": "amalgamated",
+        "merged_into": "E100001014363",
+        "merged_into_name": "Delek Logistics Partners LP",
+        "merged_into_lei": "549300UVYITDIU51P724",
+        "urls": ["https://example.org/acquisition"],
+    }
+    return b
+
+
+def test_map_climatetrace_amalgamated_annotation_names_successor() -> None:
+    statements = list(map_climatetrace(_amalgamated_bundle()))
+    subject = statements[0]
+    notes = subject.get("annotations") or []
+    assert len(notes) == 1
+    assert "amalgamated into Delek Logistics Partners LP" in notes[0]["description"]
+    assert "E100001014363" in notes[0]["description"]
+
+
+def test_map_climatetrace_amalgamated_emits_successor_stub() -> None:
+    statements = list(map_climatetrace(_amalgamated_bundle()))
+    assert len(statements) == 2
+    successor = statements[1]
+    assert successor["recordType"] == "entity"
+    assert successor["recordDetails"]["name"] == "Delek Logistics Partners LP"
+    ids = {i["scheme"]: i["id"] for i in successor["recordDetails"]["identifiers"]}
+    assert ids["GEM-ENTITY"] == "E100001014363"
+    assert ids["XI-LEI"] == "549300UVYITDIU51P724"
+    assert successor["recordDetails"]["entityType"]["type"] == "registeredEntity"
+
+
+def test_map_climatetrace_amalgamated_no_relationship_statement() -> None:
+    """A merger is not an ownership or control interest — no relationship
+    statement may link the dissolved entity to its successor."""
+    statements = list(map_climatetrace(_amalgamated_bundle()))
+    assert all(s["recordType"] == "entity" for s in statements)
+
+
+def test_map_climatetrace_successor_without_lei_is_unknown_entity() -> None:
+    b = _amalgamated_bundle()
+    del b["entity_status"]["merged_into_lei"]
+    statements = list(map_climatetrace(b))
+    successor = statements[1]
+    assert successor["recordDetails"]["entityType"]["type"] == "unknownEntity"
+    schemes = {i["scheme"] for i in successor["recordDetails"]["identifiers"]}
+    assert "XI-LEI" not in schemes
+
+
+def test_map_climatetrace_amalgamated_passes_validator() -> None:
+    statements = map_climatetrace(_amalgamated_bundle())
+    issues = validate_shape(statements)
+    assert issues == [], issues
