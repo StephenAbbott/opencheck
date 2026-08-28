@@ -740,8 +740,11 @@ class ClimateTRACEAdapter(SourceAdapter):
             description=(
                 "Global fossil-fuel asset ownership data (GEM) combined with "
                 "satellite-derived emissions estimates (Climate TRACE). "
-                "LEI resolution uses the GLEIF-certified GEM Entity ID mapping "
-                "(June 2026). Enables ESG and climate risk screening by LEI."
+                "LEI resolution uses the GLEIF-certified GEM Entity ID mapping. "
+                "Carries the Global Energy Ownership Tracker's corporate-"
+                "lifecycle records (August 2026): dissolved and amalgamated "
+                "entities with their successors, and joint-venture flags. "
+                "Enables ESG and climate risk screening by LEI."
             ),
             license="CC-BY-4.0",
             attribution=(
