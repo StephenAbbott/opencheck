@@ -10,6 +10,7 @@ from fastapi import APIRouter, Query, Request, Response
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
+from ..ra_codes import ch_ra_code
 from ..ratelimit import limiter, lookup_tier
 from ..reconcile import reconcile
 from ..risk import assess_hits
@@ -35,32 +36,20 @@ def _fmt_source_error(exc: Exception) -> str:
     return f"{type(exc).__name__}: {exc}"
 
 
-def _ch_ra_code(company_number: str) -> str:
-    """Return the GLEIF Registration Authority code for a Companies House number.
-
-    Companies House files under three GLEIF registration authorities, and the
-    prefix of the company number says which::
-
-        RA000585  England and Wales   (no prefix, or OC/FC/…)
-        RA000586  Northern Ireland    (NI, and NC/R for older registrations)
-        RA000587  Scotland            (SC, and SO/SF)
-
-    Until 2026-08-28 this mapped ``SC`` to RA000586 — Northern Ireland's code —
-    and ``NI`` to RA000591, which is **The Pensions Regulator** and not a
-    company registry at all. Because the result is appended to the GLEIF query
-    as ``filter[entity.registeredAt]``, the Companies House → LEI bridge was
-    filtering Scottish numbers by Northern Ireland and Northern Irish numbers
-    by a pensions regulator, and so silently found no LEI for either. It failed
-    closed — a missed match rather than a wrong one — which is why nothing
-    surfaced it. Confirmed against live GLEIF records: THON MARITIME LTD,
-    ``registeredAs "SC651281"``, is registered at RA000587.
-    """
-    upper = (company_number or "").strip().upper()
-    if upper.startswith(("SC", "SO", "SF")):
-        return "RA000587"
-    if upper.startswith(("NI", "NC", "R0")):
-        return "RA000586"
-    return "RA000585"
+# The Companies House → LEI bridge needs the GLEIF Registration Authority code
+# for a company number, and Companies House files under three of them:
+#
+#     RA000585  England and Wales   (no prefix, or OC/FC/…)
+#     RA000586  Northern Ireland    (NI, and NC/R0 for older registrations)
+#     RA000587  Scotland            (SC, and SO/SF)
+#
+# The rule lived here until Phase 141, which was half the problem: the other
+# entry point that scopes a GLEIF reverse lookup — ``/resolve-national-id`` —
+# read a flat country map instead and never saw it, so ``country="GB"`` sent a
+# Scottish number to the England & Wales authority and found nothing. Both
+# paths now go through ``opencheck.ra_codes``, which holds the country map and
+# the prefix rules together. ``opencheck.app`` re-exports this name.
+_ch_ra_code = ch_ra_code
 
 
 async def _run_adapters(

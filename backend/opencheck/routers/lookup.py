@@ -42,6 +42,7 @@ from ..icij_check import assess_icij_names
 from ..openaleph_check import assess_openaleph_names
 from ..verdict import build_verdict
 from ..meip import meip_lookup
+from ..ra_codes import RA_BY_COUNTRY, ra_code_for
 from ..reconcile import possibly_same_entities, reconcile
 from ..risk import DegradedSource, RiskSignal, assess_bundle, assess_hits
 from ..ratelimit import default_tier, limiter, lookup_tier
@@ -2534,48 +2535,14 @@ async def _lookup_sse_events(
             yield {"event": event, "data": json.dumps(payload)}
 
 
-# ISO 3166-1 alpha-2 → primary GLEIF Registration Authority code, used by the
-# national-ID → LEI reverse lookup. Mirrors frontend/src/lib/raCodes.ts and the
-# RA table in CLAUDE.md — keep in sync when adding a register. Countries with
-# sub-registries (e.g. GB) map to the dominant one; pass ``ra_code`` explicitly
-# to target a specific sub-registry.
-#
-# Every code re-verified on 2026-08-28 against **live GLEIF records** — reading
-# ``registeredAt.id`` off real entities via
-# ``filter[entity.legalAddress.country]``, which shows which authority GLEIF
-# actually populates, rather than off the RA catalogue, which only shows which
-# ones exist. Nine were wrong (IE, LV, LT, FR, BE, AT, PL, SK, SG) and had been
-# since this map was written; each pointed at a real but different authority,
-# so the reverse lookup filtered on an authority the company was not registered
-# at and returned nothing. It failed closed, which is why it went unnoticed.
-#
-# Note the endpoint that reads this: ``filter[country]`` on GLEIF's
-# registration-authorities endpoint is **silently ignored** and returns the
-# unfiltered global list, so spot-checking a code that way appears to confirm
-# whatever you already believed. tests/test_ra_codes.py pins every entry.
-_RA_BY_COUNTRY: dict[str, str] = {
-    "GB": "RA000585",  # UK Companies House (England & Wales)
-    "NL": "RA000463",  # KvK (Netherlands)
-    "NO": "RA000472",  # Brønnøysund / Brreg (Norway)
-    "NZ": "RA000466",  # Companies Office (New Zealand)
-    "IE": "RA000402",  # CRO (Ireland) — was RA000215
-    "LV": "RA000423",  # UR (Latvia) — was RA000327
-    "LT": "RA000430",  # JAR (Lithuania) — was RA000330
-    "FR": "RA000189",  # Sirene / INSEE (France) — was RA000580
-    "SE": "RA000544",  # Bolagsverket (Sweden)
-    "EE": "RA000181",  # ariregister (Estonia)
-    "BE": "RA000025",  # BCE/KBO (Belgium) — was RA000143
-    "AT": "RA000017",  # Firmenbuch (Austria) — was RA000128
-    "PL": "RA000484",  # KRS (Poland) — was RA000439
-    "SK": "RA000526",  # RPO (Slovakia) — was RA000476
-    "SG": "RA000523",  # ACRA (Singapore) — was RA000509
-    "CA": "RA000072",  # Corporations Canada
-    "DK": "RA000170",  # CVR (Denmark)
-    "HR": "RA000156",  # Sudski registar (Croatia)
-    "MT": "RA000443",  # Malta Business Registry
-    "BR": "RA000681",  # Receita Federal CNPJ (Brazil)
-    "GR": "RA000685",  # ΓΕΜΗ — General Commercial Registry (Greece)
-}
+# The country → RA code map and the sub-registry prefix rules now live together
+# in ``opencheck.ra_codes``; this name is re-exported because callers and tests
+# reference it. Phase 141: the map used to live here and the prefix rules in
+# ``routers/search.py``, and this endpoint consulted only the map — so
+# ``country="GB"`` scoped a Scottish or Northern Irish number to the England &
+# Wales authority and returned nothing. Use ``ra_code_for(country, number)``
+# rather than reading this map directly.
+_RA_BY_COUNTRY = RA_BY_COUNTRY
 
 
 class NationalIdMatch(BaseModel):
@@ -2636,7 +2603,13 @@ async def _resolve_national_id_impl(
     """Body of ``/resolve-national-id``, callable in-process (MCP tool)
     without going through the rate-limited route."""
     num = number.strip()
-    code = (ra_code or _RA_BY_COUNTRY.get(country.strip().upper(), "")).strip()
+    # The number, not just the country, decides the authority: Companies House
+    # files Scottish and Northern Irish companies under RA000587 and RA000586
+    # rather than the England & Wales RA000585 that "GB" maps to. Reading the
+    # country map alone — which this did until Phase 141 — scoped an SC number
+    # to the wrong registry and returned an empty result, which reads as an
+    # absent company rather than a bad query. An explicit ra_code still wins.
+    code = (ra_code or ra_code_for(country, num)).strip()
 
     # Advisory check-digit validation (never blocks the query — the registry
     # is the authority): only for countries whose GLEIF registry number is

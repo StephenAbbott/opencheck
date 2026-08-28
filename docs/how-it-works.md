@@ -112,7 +112,7 @@ opencheck/
         BODSGraph.tsx     Cytoscape.js ownership graph — BOVS icon overlays, flag badges, risk signal overlays (lazy-loaded)
       lib/
         api.ts            Typed client for the FastAPI surface
-        raCodes.ts        RA codes, labels, placeholders, format regexes for 17 countries (Phase 50)
+        raCodes.ts        RA codes, labels, placeholders, format regexes for 21 countries (Phase 50; sub-registry dispatch Phase 141)
         gleifNationalId.ts  searchByNationalId() — parallel GLEIF filter queries for national ID lookup (Phase 50)
   docs/                   Supplementary documentation (this file + status, sources, risk-signals, configuration)
   data/
