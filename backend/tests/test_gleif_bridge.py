@@ -34,16 +34,44 @@ def _isolated_data_root(monkeypatch, tmp_path):
     [
         ("00000001", "RA000585"),   # England & Wales (numeric)
         ("01234567", "RA000585"),   # England & Wales (numeric)
-        ("SC123456", "RA000586"),   # Scotland
-        ("sc123456", "RA000586"),   # Scotland (lowercase input)
-        ("NI012345", "RA000591"),   # Northern Ireland
-        ("ni012345", "RA000591"),   # Northern Ireland (lowercase)
+        ("SC123456", "RA000587"),   # Scotland
+        ("sc123456", "RA000587"),   # Scotland (lowercase input)
+        ("SO123456", "RA000587"),   # Scotland — limited partnership
+        ("NI012345", "RA000586"),   # Northern Ireland
+        ("ni012345", "RA000586"),   # Northern Ireland (lowercase)
+        ("NC001234", "RA000586"),   # Northern Ireland — older prefix
         ("OC123456", "RA000585"),   # LLP — England & Wales default
         ("", "RA000585"),           # Empty string → default
     ],
 )
 def test_ch_ra_code(company_number: str, expected_ra: str) -> None:
     assert _ch_ra_code(company_number) == expected_ra
+
+
+def test_pensions_regulator_is_never_a_companies_house_code() -> None:
+    """RA000591 is The Pensions Regulator, not a company registry.
+
+    It sat in ``_ch_ra_code`` as Northern Ireland's code until 2026-08-28, and
+    in the dead ``_CH_RA_CODES`` in sources/gleif.py alongside it, while
+    bods/mapper.py already carried a comment identifying it correctly. It is a
+    recurring foot-gun, so it gets a canary of its own.
+    """
+    for number in ("NI012345", "ni012345", "NC001234", "SC123456", "00000001", ""):
+        assert _ch_ra_code(number) != "RA000591"
+
+
+def test_the_three_companies_house_nations_are_distinct() -> None:
+    """England & Wales, Northern Ireland and Scotland must not collide.
+
+    The original defect was not a typo but a swap — Scotland returning
+    Northern Ireland's code — which a per-case assertion alone would not
+    characterise. Distinctness is the property that was actually broken.
+    """
+    ew = _ch_ra_code("00000001")
+    ni = _ch_ra_code("NI012345")
+    sc = _ch_ra_code("SC123456")
+    assert (ew, ni, sc) == ("RA000585", "RA000586", "RA000587")
+    assert len({ew, ni, sc}) == 3
 
 
 # ---------------------------------------------------------------------------

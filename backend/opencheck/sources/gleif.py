@@ -71,15 +71,6 @@ _RELATIONSHIP_CACHE_MAX_AGE_DAYS = 1.0
 _LEI_RECORD_CACHE_MAX_AGE_DAYS = 7.0
 
 # GLEIF Registration Authority codes for Companies House sub-registries.
-# Used to disambiguate local company numbers that may coincidentally exist
-# in multiple registries (e.g. NI000001 in both NI and England & Wales).
-# Full list: https://www.gleif.org/en/about-lei/code-lists/gleif-registration-authorities-list
-_CH_RA_CODES: dict[str, str] = {
-    "SC": "RA000586",  # Scotland
-    "NI": "RA000591",  # Northern Ireland
-}
-_CH_RA_DEFAULT = "RA000585"  # England & Wales (the large majority)
-
 # Typo-tolerance fallback for name search (issue #33). When the exact fulltext
 # query returns zero hits, ``search`` retries with each token dropped in turn
 # (leave-one-out) — a single-character typo lives in one token, so the variant

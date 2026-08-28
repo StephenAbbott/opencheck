@@ -2539,26 +2539,42 @@ async def _lookup_sse_events(
 # RA table in CLAUDE.md — keep in sync when adding a register. Countries with
 # sub-registries (e.g. GB) map to the dominant one; pass ``ra_code`` explicitly
 # to target a specific sub-registry.
+#
+# Every code re-verified on 2026-08-28 against **live GLEIF records** — reading
+# ``registeredAt.id`` off real entities via
+# ``filter[entity.legalAddress.country]``, which shows which authority GLEIF
+# actually populates, rather than off the RA catalogue, which only shows which
+# ones exist. Nine were wrong (IE, LV, LT, FR, BE, AT, PL, SK, SG) and had been
+# since this map was written; each pointed at a real but different authority,
+# so the reverse lookup filtered on an authority the company was not registered
+# at and returned nothing. It failed closed, which is why it went unnoticed.
+#
+# Note the endpoint that reads this: ``filter[country]`` on GLEIF's
+# registration-authorities endpoint is **silently ignored** and returns the
+# unfiltered global list, so spot-checking a code that way appears to confirm
+# whatever you already believed. tests/test_ra_codes.py pins every entry.
 _RA_BY_COUNTRY: dict[str, str] = {
     "GB": "RA000585",  # UK Companies House (England & Wales)
     "NL": "RA000463",  # KvK (Netherlands)
     "NO": "RA000472",  # Brønnøysund / Brreg (Norway)
-    "IE": "RA000215",  # CRO (Ireland)
-    "LV": "RA000327",  # UR (Latvia)
-    "LT": "RA000330",  # JAR (Lithuania)
-    "FR": "RA000580",  # INPI / SIREN (France)
+    "NZ": "RA000466",  # Companies Office (New Zealand)
+    "IE": "RA000402",  # CRO (Ireland) — was RA000215
+    "LV": "RA000423",  # UR (Latvia) — was RA000327
+    "LT": "RA000430",  # JAR (Lithuania) — was RA000330
+    "FR": "RA000189",  # Sirene / INSEE (France) — was RA000580
     "SE": "RA000544",  # Bolagsverket (Sweden)
     "EE": "RA000181",  # ariregister (Estonia)
-    "BE": "RA000143",  # BCE/KBO (Belgium)
-    "AT": "RA000128",  # Firmenbuch (Austria)
-    "PL": "RA000439",  # KRS (Poland)
-    "SK": "RA000476",  # RPO (Slovakia)
-    "SG": "RA000509",  # ACRA (Singapore)
+    "BE": "RA000025",  # BCE/KBO (Belgium) — was RA000143
+    "AT": "RA000017",  # Firmenbuch (Austria) — was RA000128
+    "PL": "RA000484",  # KRS (Poland) — was RA000439
+    "SK": "RA000526",  # RPO (Slovakia) — was RA000476
+    "SG": "RA000523",  # ACRA (Singapore) — was RA000509
     "CA": "RA000072",  # Corporations Canada
     "DK": "RA000170",  # CVR (Denmark)
     "HR": "RA000156",  # Sudski registar (Croatia)
     "MT": "RA000443",  # Malta Business Registry
     "BR": "RA000681",  # Receita Federal CNPJ (Brazil)
+    "GR": "RA000685",  # ΓΕΜΗ — General Commercial Registry (Greece)
 }
 
 

@@ -36,12 +36,30 @@ def _fmt_source_error(exc: Exception) -> str:
 
 
 def _ch_ra_code(company_number: str) -> str:
-    """Return the GLEIF Registration Authority code for a Companies House number."""
+    """Return the GLEIF Registration Authority code for a Companies House number.
+
+    Companies House files under three GLEIF registration authorities, and the
+    prefix of the company number says which::
+
+        RA000585  England and Wales   (no prefix, or OC/FC/…)
+        RA000586  Northern Ireland    (NI, and NC/R for older registrations)
+        RA000587  Scotland            (SC, and SO/SF)
+
+    Until 2026-08-28 this mapped ``SC`` to RA000586 — Northern Ireland's code —
+    and ``NI`` to RA000591, which is **The Pensions Regulator** and not a
+    company registry at all. Because the result is appended to the GLEIF query
+    as ``filter[entity.registeredAt]``, the Companies House → LEI bridge was
+    filtering Scottish numbers by Northern Ireland and Northern Irish numbers
+    by a pensions regulator, and so silently found no LEI for either. It failed
+    closed — a missed match rather than a wrong one — which is why nothing
+    surfaced it. Confirmed against live GLEIF records: THON MARITIME LTD,
+    ``registeredAs "SC651281"``, is registered at RA000587.
+    """
     upper = (company_number or "").strip().upper()
-    if upper.startswith("SC"):
+    if upper.startswith(("SC", "SO", "SF")):
+        return "RA000587"
+    if upper.startswith(("NI", "NC", "R0")):
         return "RA000586"
-    if upper.startswith("NI"):
-        return "RA000591"
     return "RA000585"
 
 
