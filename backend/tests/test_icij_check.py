@@ -249,8 +249,10 @@ def test_signal_summary_reads_cleanly_on_v02_description() -> None:
     assert sig is not None
     assert sig.summary == (
         "Related entity 'GLENCORE INTERNATIONAL AG' matches a record in "
-        "the Panama Papers (ICIJ score 100/100)."
+        "the Panama Papers."
     )
+    # The score is on the record, not in the sentence (Phase 136).
+    assert sig.evidence["icij_score"] == 100
     assert sig.evidence["dataset"] == "Panama Papers"
     assert sig.evidence["node_type"] == "Entity"
     assert sig.evidence["collection"] == ""
@@ -279,8 +281,7 @@ def test_intermediary_match_is_worded_as_a_different_finding() -> None:
     assert sig is not None
     assert sig.summary == (
         "Related entity 'GLENCORE INTERNATIONAL AG' appears as an "
-        "offshore-services intermediary in the Panama Papers "
-        "(ICIJ score 100/100)."
+        "offshore-services intermediary in the Panama Papers."
     )
     assert sig.evidence["node_type"] == "Intermediary"
 
@@ -821,3 +822,52 @@ def test_screenable_guard_blocks_names_that_erode_to_nothing() -> None:
     assert not _screenable("AB")
     for keep in ("KENZO", "CELINE", "BERLUTI", "PRIMAE", "UFIPAR", "LVMH"):
         assert _screenable(sanitize_name_query(keep)), keep
+
+
+# ----------------------------------------------------------------------
+# No retrieval score reaches the sentence (Phase 136)
+# ----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("score", [70, 77, 90, 99, 100])
+@pytest.mark.parametrize(
+    "node", ["Entity", "Officer", "Intermediary"]
+)
+def test_no_offshore_leaks_summary_prints_the_icij_score(
+    score: int, node: str
+) -> None:
+    """Every summary this module can produce, read rather than reasoned about.
+
+    The string came off the page because it overstated what it measured: a
+    denominator reads as certainty, and ICIJ's own scorer rated the
+    ENERGEN/BIOGAS collision 90/100 — which is why `min_name_sim` and the
+    distinctive-token gate exist. Both wordings carried it (the Intermediary
+    branch is a separate sentence, and a fix to one would not have touched the
+    other), so this drives both node families across the whole accepted range.
+
+    The subject name is deliberately digit-free, so asserting the score's
+    digits are absent cannot be satisfied by a name that happens to contain
+    them.
+    """
+    sig = _signal_from_match(
+        {
+            "id": "1",
+            "name": "GLENCORE INTERNATIONAL AG",
+            "score": score,
+            "match": True,
+            "types": [{"id": f".../oldb/{node.lower()}", "name": node}],
+            "description": f"{node} node extracted from the Panama Papers data.",
+        },
+        {
+            "kind": "entity",
+            "statement_id": "stmt-1",
+            "name": "GLENCORE INTERNATIONAL AG",
+        },
+        min_score=70,
+    )
+    assert sig is not None
+    assert "score" not in sig.summary.lower()
+    assert "/100" not in sig.summary
+    assert str(score) not in sig.summary
+    # Kept where the gate and any later analysis can read it.
+    assert sig.evidence["icij_score"] == score
