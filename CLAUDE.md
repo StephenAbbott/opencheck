@@ -803,26 +803,99 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 
 ## GLEIF RA codes for active adapters
 
-| Country | Adapter | RA code |
-|---|---|---|
-| UK | companies_house | RA000585 |
-| Netherlands | kvk | RA000463 |
-| Norway | brreg | RA000472 (verified live 2026-06-12 — RA000394 in earlier notes was wrong) |
-| Ireland | cro | RA000215 |
-| Latvia | ur_latvia | RA000327 |
-| Lithuania | jar_lithuania | RA000330 |
-| France | inpi | RA000580 |
-| Sweden | bolagsverket | RA000544 (verified live 2026-06-12 — RA000523 in earlier notes was wrong) |
-| Estonia | ariregister | **RA000181** (confirmed live; ignore any reference to RA000198) |
-| Belgium | bce_belgium | RA000143 |
-| Austria | firmenbuch | RA000128 |
-| Poland | krs_poland | RA000439 |
-| Slovakia | rpo_slovakia | RA000476 |
-| Singapore | acra_singapore | RA000509 |
-| Canada | corporations_canada | RA000072 |
-| Denmark | cvr_denmark | RA000170 |
-| Croatia | sudreg_croatia | RA000156 |
-| Nigeria | cac_nigeria | RA000469 — Corporate Affairs Commission (verified live 2026-08-12; Africa's first public BO register). Offline curated example set of 10 LEI-anchored companies (`data/cac_nigeria_psc.json`); a live adapter is deferred pending CAC / Oasis Management engagement. LEI-keyed dispatch (not an RA deriver); asserts only the CAC-published RC number (`ng_cac_rc`), not the derived LEI. |
+> **Every row below was re-verified live against the GLEIF Registration Authority
+> API on 2026-08-28.** The previous version of this table was wrong in **nine**
+> of eighteen rows (IE, LV, LT, FR, BE, AT, PL, SK, SG) — in every case the
+> adapter source was right and the table was wrong, so the table has been
+> corrected to match the adapters. **Trust the adapter constant, not this
+> table**, and re-verify against GLEIF before relying on any code here.
+
+| Country | Adapter | RA code | Verified |
+|---|---|---|---|
+| UK | companies_house / gleif | `RA000585` England & Wales · `RA000586` Northern Ireland · `RA000587` Scotland | 2026-08-28 — ⚠️ see the `gleif.py` bug note below |
+| Netherlands | kvk | `RA000463` — Business Register (KvK) | 2026-08-28 |
+| Norway | brreg | `RA000472` — Register of Business Enterprises (Foretaksregisteret) | 2026-08-28 — ⚠️ ambiguous; the adapter describes *Enhetsregisteret*, which is `RA000473`. `RA000270`, also named in `brreg.py`, **does not exist** in the GLEIF RA list |
+| Ireland | cro | `RA000402` — Companies Register (CRO) | 2026-08-28 — table previously said RA000215 (wrong) |
+| Latvia | ur_latvia | `RA000423` — Commerce Register (Uzņēmumu Reģistrs) | 2026-08-28 — table previously said RA000327 (wrong) |
+| Lithuania | jar_lithuania | `RA000430` — Register of Legal Entities (Registrų centras) | 2026-08-28 — table previously said RA000330 (wrong) |
+| France | inpi | `RA000189` — Register of Companies (Sirene, INSEE) | 2026-08-28 — table previously said RA000580 (wrong). Note `RA000192` is Infogreffe/RCS, a different register |
+| Sweden | bolagsverket | `RA000544` — Companies Register (Bolagsverket) | 2026-08-28 (also verified 2026-06-12; RA000523 in earlier notes was wrong) |
+| Estonia | ariregister | `RA000181` — Commercial Register | 2026-08-28 (ignore any reference to RA000198) |
+| Belgium | bce_belgium | `RA000025` — Crossroad Bank of Enterprises | 2026-08-28 — table previously said RA000143 (wrong) |
+| Austria | firmenbuch | `RA000017` — Commercial Register (BM für Justiz) | 2026-08-28 — table previously said RA000128 (wrong) |
+| Poland | krs_poland | `RA000484` — National Court Register (KRS) | 2026-08-28 — table previously said RA000439 (wrong) |
+| Slovakia | rpo_slovakia / rpvs_slovakia | `RA000526` — Business Register (Ministerstvo spravodlivosti) | 2026-08-28 — table previously said RA000476 (wrong) |
+| Singapore | acra_singapore | `RA000523` — Business Registry (ACRA) | 2026-08-28 — table previously said RA000509 (wrong) |
+| Canada | corporations_canada | `RA000072` — Corporate Registry (federal; provinces are RA000073–RA000085) | 2026-08-28 |
+| Denmark | cvr_denmark | `RA000170` — Central Business Register (Erhvervsstyrelsen) | 2026-08-28 |
+| Croatia | sudreg_croatia | `RA000156` — Croatian Court Registry (Sudski registar) | 2026-08-28 |
+| Czechia | ares | `RA000163` — Commercial Register (Ministerstvo spravedlnosti) | 2026-08-28 — ⚠️ ambiguous; the adapter is named for **ARES**, which is `RA000168` (Register of Economic Entities, Ministerstvo financí) |
+| Cyprus | cyprus_drcor | `RA000161` — Companies Section (DRCOR) | 2026-08-28 |
+| Finland | prh | `RA000188` — Business Information System (PRH) | 2026-08-28 |
+| Malta | malta_mbr | `RA000443` — Registry of Companies (MBR) | 2026-08-28 |
+| Switzerland | zefix | `RA000548` in the adapter | 2026-08-28 — ⚠️ **mismatch**: `RA000548` is the *UID-Register* (Bundesamt für Statistik, covers CH **and** LI). Zefix, the commercial register, is `RA000549` |
+| Australia | abr_australia | `RA000014` — Register of Companies (ASIC) · `RA000013` — Australian Business Register (ATO) | 2026-08-28 |
+| New Zealand | nz_companies | `RA000466` — Companies Register (Companies Office) | 2026-08-28 (near-miss neighbour: `RA000749` NZ Business Number Register) |
+| Brazil | cnpj_brazil | `RA000681` — National Registry for Legal Entity (Receita Federal / CNPJ) | 2026-08-28 (state Juntas Comerciais are RA000036–RA000062) |
+| India | mca_india | `RA000394` — Companies Register (MCA21) | 2026-08-28 |
+| Nigeria | cac_nigeria | `RA000469` — Company Registry (Corporate Affairs Commission) | 2026-08-28 (also verified 2026-08-12; Africa's first public BO register). Offline curated example set of 10 LEI-anchored companies (`data/cac_nigeria_psc.json`); a live adapter is deferred pending CAC / Oasis Management engagement. LEI-keyed dispatch (not an RA deriver); asserts only the CAC-published RC number (`ng_cac_rc`), not the derived LEI. |
+| Greece | gemi_greece | `RA000685` — General Commercial Registry (G.E.MI.), businessregistry.gr | 2026-08-28 — 20 of 25 sampled Greek LEI records use it |
+
+### ⚠️ One real RA bug: Scotland and Northern Ireland are swapped
+
+Found 2026-08-28 and **verified against live GLEIF records**. GLEIF's Companies
+House codes are `RA000585` England & Wales, **`RA000586` Northern Ireland**,
+**`RA000587` Scotland** — confirmed by real records (THON MARITIME LTD,
+`registeredAs = "SC651281"`, sits under `RA000587`; a `GB-NIR` record sits under
+`RA000586`). `RA000591` is **The Pensions Regulator**, not a company registry.
+
+Three places carry the wrong mapping. **None is fixed yet:**
+
+1. **`routers/search.py::_ch_ra_code` — LIVE, this is the one that bites.**
+   Maps `SC → RA000586` and `NI → RA000591`. It feeds `ra_code` into the
+   Companies House → LEI bridge (`search.py`, `gleif_adapter.search_by_local_id`),
+   which appends `filter[entity.registeredAt]`. A Scottish number is therefore
+   filtered by Northern Ireland's code and a Northern Irish number by the
+   Pensions Regulator's, so the bridge silently returns no LEI for either.
+   Correct values: `SC → RA000587`, `NI → RA000586`.
+2. **`tests/test_gleif_bridge.py::test_ch_ra_code` pins the wrong values**
+   (`("SC123456", "RA000586")`, `("NI012345", "RA000591")`). The fix must update
+   the test — otherwise it fails the correction rather than catching the bug.
+3. **`sources/gleif.py::_CH_RA_CODES` carries the same wrong mapping but is
+   DEAD CODE** — neither `_CH_RA_CODES` nor `_CH_RA_DEFAULT` is referenced
+   anywhere in the repo. Fix it or delete it; leaving a second wrong copy around
+   is how the first one survived.
+
+Related gap: `bods/mapper.py`'s RA → org-id scheme map has `RA000585` and
+`RA000586` → `GB-COH` and correctly notes that `RA000591` is the Pensions
+Regulator, but **`RA000587` (Scotland) is missing**, so Scottish entities get no
+scheme code.
+
+### Flags that did NOT survive verification
+
+Recorded so they are not "re-found" later:
+
+* **`zefix.py` is correct.** `CH_RA_CODES` is a frozenset containing **both**
+  `RA000548` and `RA000549`, and `gleif.py` imports it. Live GLEIF splits Swiss
+  entities across both (RA000549 ≈ 29/50, RA000548 ≈ 13/50) with different
+  `registeredAs` formats (`CHE-482.520.153` vs `CHE157821489`); `normalise_uid`
+  handles both. An earlier flag here came from a grep that returned only the
+  first match in the file.
+* **`brreg.py` is correct.** `RA000270` appears only inside a comment saying it
+  is *not* used for Norwegian entities. Live GLEIF: `RA000472` ≈ 48/50,
+  `RA000473` ≈ 2/50.
+* **Czechia is correct.** `ares.py` dispatches on `RA000163` (Commercial
+  Register, Ministry of Justice), which live GLEIF confirms as dominant
+  (45/50). `RA000168` — literally named "ARES" — appeared once, on a
+  municipality. The adapter is named after the *API it queries*, not the
+  register it dispatches on.
+
+Re-verify with the GLEIF RA endpoint before changing any of them:
+`https://api.gleif.org/api/v1/registration-authorities` — but note the raw
+`filter[country]` query parameter is **silently ignored** and returns the
+unfiltered global list, which is how the wrong codes got in here. Use the GLEIF
+MCP tool's `country=` argument, or read `registeredAt.id` off real `lei-records`
+filtered by `entity.legalAddress.country`.
 
 ---
 
