@@ -4,7 +4,7 @@ title: "Licensing compatibility matrix"
 description: "Per-source licence terms (commercial use, attribution, share-alike) for combining OpenCheck data in exports. Most-restrictive licence wins."
 resource: "/license-matrix"
 tags: ["licensing", "export", "compliance"]
-timestamp: "2026-08-19"
+timestamp: "2026-08-28"
 ---
 
 # Source licence matrix
@@ -31,6 +31,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | EITI State-Owned Enterprises Database (`eiti_soe`) | `EITI open data (free reuse with attribution)` | yes | yes | no |
 | EveryPolitician (`everypolitician`) | `CC-BY-NC-4.0` | no | yes | no |
 | Firmenbuch — Austrian Commercial Register (`firmenbuch`) | `CC-BY-4.0` | yes | yes | no |
+| ΓΕΜΗ — Greek General Commercial Registry (`gemi_greece`) | `ODC-BY-1.0` | yes | yes | no |
 | GLEIF (`gleif`) | `CC0-1.0` | yes | no | no |
 | INPI — Registre National des Entreprises (`inpi`) | `Licence Ouverte / Open Licence 2.0` | yes | yes | no |
 | JAR — Lithuanian Register of Legal Entities (`jar_lithuania`) | `CC-BY-4.0` | yes | yes | no |

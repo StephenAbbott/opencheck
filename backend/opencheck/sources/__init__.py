@@ -26,6 +26,7 @@ from .eiti_bo import EitiBoAdapter
 from .eiti_soe import EitiSoeAdapter
 from .everypolitician import EveryPoliticianAdapter
 from .firmenbuch import FirmenbuchAdapter
+from .gemi_greece import GemiGreeceAdapter
 from .gleif import GleifAdapter
 from .inpi import InpiAdapter
 from .jar_lithuania import JarLithuaniaAdapter
@@ -66,6 +67,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "eiti_bo": EitiBoAdapter(),
     "eiti_soe": EitiSoeAdapter(),
     "firmenbuch": FirmenbuchAdapter(),
+    "gemi_greece": GemiGreeceAdapter(),
     "gleif": GleifAdapter(),
     "inpi": InpiAdapter(),
     "jar_lithuania": JarLithuaniaAdapter(),

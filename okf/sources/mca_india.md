@@ -4,7 +4,7 @@ title: "Ministry of Corporate Affairs \u2014 Company Master Data (India)"
 description: "India's national company register extract \u2014 CIN, company name, status, class/category, authorised and paid-up capital, registration date, Registrar of Companies, registered office address and NIC industrial classification \u2014 from the Ministry of Corporate Affairs Company Master Data on the Open Government Data Platform. Entity-level only; no officer or ownership data. Exact-match search."
 resource: "https://www.data.gov.in/catalog/company-master-data"
 tags: ["cdd", "national-register", "GODL-India", "commercial-conditional"]
-timestamp: "2026-08-08"
+timestamp: "2026-08-28"
 source_id: "mca_india"
 license: "GODL-India"
 commercial_use: "conditional"

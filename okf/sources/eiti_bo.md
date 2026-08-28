@@ -4,7 +4,7 @@ title: "EITI countries \u2014 national beneficial ownership registers"
 description: "Beneficial ownership of extractive companies pooled from the national BO registers of EITI implementing countries \u2014 DRC (ITIE-RDC register, bulk export), Armenia (State Register BODS v0.2 declarations) and Nigeria (CAC PSC register, NEITI solid-minerals subset). Curated offline harvest of 91 companies, of which 3 resolve to an LEI (the launch index is LEI-only). Indonesia slot reserved."
 resource: "https://eiti.org/beneficial-ownership"
 tags: ["cdd", "aggregator", "Public registers; DRC and Armenia state no licence \u2014 included with attribution (see the artifact manifest for per-register terms)", "commercial-conditional"]
-timestamp: "2026-08-19"
+timestamp: "2026-08-28"
 source_id: "eiti_bo"
 license: "Public registers; DRC and Armenia state no licence \u2014 included with attribution (see the artifact manifest for per-register terms)"
 commercial_use: "conditional"

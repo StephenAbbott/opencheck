@@ -801,3 +801,75 @@ def finding_everypolitician(hit_summary: str, related_party: str) -> str | None:
         [lead, f"listed as {detail}" if detail else None],
         sep="; ",
     )
+
+
+# ---------------------------------------------------------------------------
+# gemi_greece
+# ---------------------------------------------------------------------------
+
+
+def finding_gemi_greece(bundle: dict[str, Any]) -> str | None:
+    """What ΓΕΜΗ holds: status, since when, and who is on file.
+
+    The owner/officer split follows ``persons[].category`` — ``Εταίροι`` are
+    partners with real holdings, ``Διοικητικό συμβούλιο`` are board members.
+
+    An **ΑΕ publishes no partners at all**: its share register is not part of
+    ΓΕΜΗ publicity. This sentence therefore never says owners are missing,
+    absent or withheld for a Greek company — it reports what is on file and
+    stops. Saying "no owners found" would read as a transparency failure where
+    the register is simply doing what Greek law provides.
+    """
+    from .sources.gemi_greece import (  # local import avoids circular
+        CATEGORY_BOARD,
+        CATEGORY_PARTNERS,
+        english_label,
+        parse_percentage,
+        status_is_active,
+    )
+
+    company = bundle.get("company")
+    if not isinstance(company, dict):
+        return None
+
+    people = [p for p in (company.get("persons") or []) if isinstance(p, dict)]
+    partners = [p for p in people if str(p.get("category") or "").strip() == CATEGORY_PARTNERS]
+    board = [p for p in people if str(p.get("category") or "").strip() == CATEGORY_BOARD]
+
+    status_label = english_label("companyStatuses", company.get("status"))
+    active = status_is_active(company.get("status"))
+    since = human_date(company.get("incorporationDate"))
+    if active and since:
+        lead: str | None = f"Active since {since}"
+    elif status_label and since:
+        lead = f"{status_label}, registered {since}"
+    elif status_label:
+        lead = status_label
+    elif since:
+        lead = f"Registered {since}"
+    else:
+        lead = None
+
+    # The largest declared holding is the most informative single fact about
+    # a partnership, so it leads the ownership clause where one exists.
+    partner_clause: str | None = None
+    if partners:
+        best = max(
+            partners,
+            key=lambda p: parse_percentage(p.get("percentage")) or 0.0,
+        )
+        partner_clause = holding_clause(
+            str(best.get("personName") or best.get("businessName") or "").strip() or None,
+            parse_percentage(best.get("percentage")),
+        )
+        if partner_clause and len(partners) > 1:
+            partner_clause = (
+                f"{plural(len(partners), 'partner')} on file, "
+                f"the largest {partner_clause}"
+            )
+        elif not partner_clause:
+            partner_clause = f"{plural(len(partners), 'partner')} on file"
+
+    board_clause = f"{plural(len(board), 'board member')} listed" if board else None
+
+    return clauses_to_sentence([lead, partner_clause, board_clause])

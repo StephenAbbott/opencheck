@@ -348,6 +348,13 @@ class Settings(BaseSettings):
     # License: CC BY 4.0 (High Value Dataset, EU Implementing Regulation 2023/138)
     firmenbuch_api_key: str | None = Field(default=None, alias="FIRMENBUCH_API_KEY")
 
+    # --- Greek General Commercial Registry (ΓΕΜΗ) Open Data API ---
+    # Request a key at: https://opendata.businessportal.gr/register/
+    # Sent as an ``api_key`` request header. Rate limited to 8 requests per
+    # minute; a higher limit can be requested from support@uhc.gr.
+    # License: ODC-BY-1.0 (attribution only; commercial reuse permitted).
+    gemi_api_key: str | None = Field(default=None, alias="GEMI_API_KEY")
+
     # --- SEC EDGAR fair-use contact ---
     # SEC EDGAR's automated-access policy requires a contact e-mail in the
     # User-Agent string so they can reach you if your tool misbehaves.

@@ -4,7 +4,7 @@ title: "EITI State-Owned Enterprises Database"
 description: "State-owned enterprises reported through the EITI across implementing countries, with a state-ownership classification, commodities, audited-financial-statement links and stock listings. Surfaces a state-ownership context signal by LEI."
 resource: "https://soe-database.eiti.org/"
 tags: ["cdd", "aggregator", "EITI open data (free reuse with attribution)", "commercial-yes"]
-timestamp: "2026-07-24"
+timestamp: "2026-08-28"
 source_id: "eiti_soe"
 license: "EITI open data (free reuse with attribution)"
 commercial_use: "yes"
