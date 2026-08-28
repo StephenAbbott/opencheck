@@ -1,5 +1,5 @@
 /**
- * GLEIF Registration Authority codes for the 17 countries that have
+ * GLEIF Registration Authority codes for the 21 countries that have
  * OpenCheck adapters. Used to scope the national-ID reverse lookup to
  * a single registry and avoid false matches from coincidental ID
  * collisions across registries.
@@ -38,6 +38,22 @@ export interface RaEntry {
    * submission, since GLEIF may store the ID in a normalised form.
    */
   formatPattern?: RegExp;
+  /**
+   * Countries whose companies are filed under more than one GLEIF authority,
+   * where the registration number's prefix says which. Rules are tried in
+   * order; a number matching none of them keeps `raCode`.
+   *
+   * Companies House is the only one OpenCheck covers. This matters more than
+   * it looks: the GB format hint below explicitly invites an `SC` or `NI`
+   * number, and until Phase 141 every one of them was scoped to the England &
+   * Wales authority, which is the one registry those companies are guaranteed
+   * *not* to be in. The query returned nothing, and nothing is what an absent
+   * company also returns.
+   *
+   * Mirrors SUB_REGISTRIES in backend/opencheck/ra_codes.py —
+   * backend/tests/test_ra_codes.py parses this file and fails if they diverge.
+   */
+  subRegistries?: { prefixes: string[]; raCode: string; label: string }[];
 }
 
 export const RA_CODES: Record<string, RaEntry> = {
@@ -49,6 +65,14 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatHint: "8 characters — digits or two-letter prefix (OC, SC, NI…) + 6 digits",
     // 8 pure digits OR two uppercase letters + 6 digits (total 8 chars).
     formatPattern: /^(?:\d{8}|[A-Z]{2}\d{6})$/i,
+    subRegistries: [
+      // Scottish limited companies are SC; Scottish limited partnerships and
+      // qualifying partnerships are SO and SF.
+      { prefixes: ["SC", "SO", "SF"], raCode: "RA000587", label: "Companies House — Scotland" },
+      // Northern Irish companies are NI; NC and R0 are older registrations
+      // carried over from the pre-2009 Belfast registry.
+      { prefixes: ["NI", "NC", "R0"], raCode: "RA000586", label: "Companies House — Northern Ireland" },
+    ],
   },
   NL: {
     raCode: "RA000463",
@@ -208,16 +232,32 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatHint: "7–9 digits (federal corporations)",
     formatPattern: /^\d{7,9}$/,
   },
+  GR: {
+    raCode: "RA000685",
+    countryName: "Greece",
+    idLabel: "Αριθμός ΓΕΜΗ (GEMI number)",
+    placeholder: "160228803000",
+    // ΓΕΜΗ numbers are 9-12 digits. GLEIF stores some zero-padded to 12 and
+    // some not, and the ΓΕΜΗ API accepts either, so do not normalise here.
+    formatHint: "9–12 digits",
+    formatPattern: /^\d{9,12}$/,
+  },
 };
 
 /**
  * Alphabetical by country name. UK is the default selected value (set in
  * App.tsx state) but sits in its natural A–Z position in the list.
+ *
+ * Derived from RA_CODES rather than hand-listed: the hand-listed version had
+ * silently omitted New Zealand, so a country with a correct RA code, a format
+ * hint and a working backend mapping could not be picked at all. Greece was
+ * missing from the file entirely, having been added to the backend map when
+ * the ΓΕΜΗ adapter shipped. Neither produced an error — an option that does
+ * not exist simply is not there to notice.
  */
-export const COUNTRY_OPTIONS: { code: string; entry: RaEntry }[] = [
-  "AT", "BE", "BR", "CA", "HR", "DK", "EE", "FR", "IE", "LV", "LT",
-  "MT", "NL", "NO", "PL", "SG", "SK", "SE", "GB",
-].map((code) => ({ code, entry: RA_CODES[code] }));
+export const COUNTRY_OPTIONS: { code: string; entry: RaEntry }[] = Object.entries(RA_CODES)
+  .map(([code, entry]) => ({ code, entry }))
+  .sort((a, b) => a.entry.countryName.localeCompare(b.entry.countryName, "en"));
 
 /**
  * Returns true if `value` is empty, the country has no pattern defined,
@@ -231,4 +271,28 @@ export function validateNationalId(countryCode: string, value: string): boolean 
   const pattern = RA_CODES[countryCode]?.formatPattern;
   if (!pattern) return true;
   return pattern.test(trimmed);
+}
+
+/**
+ * The RA code a reverse lookup should be scoped to — the country's authority,
+ * refined by the registration number where the country has sub-registries.
+ *
+ * Callers should always pass the number they have. `RA_CODES[c].raCode` alone
+ * answers "which registry is this country's", which is not the same question
+ * as "which registry is this company in", and for GB the two differ for every
+ * Scottish and Northern Irish company.
+ *
+ * Returns "" for an unknown country, which leaves the GLEIF query unscoped —
+ * a wider search rather than a wrong one.
+ */
+export function raCodeFor(countryCode: string, value = ""): string {
+  const entry = RA_CODES[countryCode];
+  if (!entry) return "";
+  const trimmed = value.trim().toUpperCase();
+  if (trimmed) {
+    for (const rule of entry.subRegistries ?? []) {
+      if (rule.prefixes.some((p) => trimmed.startsWith(p))) return rule.raCode;
+    }
+  }
+  return entry.raCode;
 }

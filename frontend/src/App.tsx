@@ -28,7 +28,7 @@ import {
   searchByNationalId,
   type GleifSearchResult,
 } from "./lib/gleifNationalId";
-import { COUNTRY_OPTIONS, RA_CODES, validateNationalId } from "./lib/raCodes";
+import { COUNTRY_OPTIONS, RA_CODES, raCodeFor, validateNationalId } from "./lib/raCodes";
 import { countLeiConfirmingSources } from "./lib/identifierBadge";
 import { partitionByKind } from "./lib/signalKind";
 import {
@@ -1671,7 +1671,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   const entry = RA_CODES[selectedCountry];
                   if (!entry) return;
                   nationalIdSearchMutation.mutate(
-                    { raCode: entry.raCode, id: q },
+                    // raCodeFor, not entry.raCode: a GB number beginning SC or
+                    // NI belongs to a different Companies House authority, and
+                    // scoping it to England & Wales returns nothing at all.
+                    { raCode: raCodeFor(selectedCountry, q), id: q },
                     {
                       onSuccess: (results) => {
                         if (results.length === 1) {

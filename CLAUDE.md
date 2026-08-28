@@ -146,7 +146,7 @@ Key files:
 
 | File | Purpose |
 |---|---|
-| `frontend/src/lib/raCodes.ts` | RA codes, labels, placeholders, format regexes for 17 countries. Export: `RA_CODES`, `COUNTRY_OPTIONS`, `validateNationalId()` |
+| `frontend/src/lib/raCodes.ts` | RA codes, labels, placeholders, format regexes for 21 countries, plus the GB sub-registry rules. Export: `RA_CODES`, `COUNTRY_OPTIONS`, `raCodeFor()`, `validateNationalId()`. Mirrors `backend/opencheck/ra_codes.py`; `backend/tests/test_ra_codes.py` parses this file and fails if they diverge |
 | `frontend/src/lib/gleifNationalId.ts` | `searchByNationalId(raCode, id)` — fires three GLEIF filter endpoints in parallel (`registeredAs`, `validatedAs`, `otherValidationAuthorities.validatedAs`), deduplicates by LEI |
 
 How it works:
@@ -923,6 +923,40 @@ Fixed, with `backend/tests/test_ra_codes.py` and two canaries in
 different authority, so the reverse lookup filtered on a registry the company
 was not registered at and returned nothing. It failed **closed** — a missed
 match looks like an absent company, not like a bug.
+
+### ⚠️ Phase 141: never read a country map directly — call `ra_code_for()`
+
+Phase 140 fixed the *values* in all four copies and left the *shape*, and the
+shape was the rest of the bug. The Companies House prefix rule lived in
+`routers/search.py` and the country map in `routers/lookup.py`, so only the
+`/search` bridge consulted both. `/resolve-national-id` — the endpoint behind
+the MCP tool **and** the frontend country picker — read the flat map, so
+`country="GB"` scoped a Scottish or Northern Irish number to England & Wales
+and returned nothing. Found by live production testing after #177 merged, not
+by the code review that produced #177.
+
+**`backend/opencheck/ra_codes.py` is now the single source.** It holds
+`RA_BY_COUNTRY`, the `SUB_REGISTRIES` prefix table, and `ra_code_for(country,
+number)`. `routers/lookup.py` and `routers/search.py` re-export their old names
+for compatibility but neither owns the data any more.
+
+- **Always pass the number**, not just the country. `RA_BY_COUNTRY["GB"]`
+  answers "which registry is this country's", which is a different question
+  from "which registry is this company in", and for GB the two differ for every
+  Scottish and Northern Irish company.
+- **`frontend/src/lib/raCodes.ts` mirrors it** — `raCodeFor()` plus a
+  `subRegistries` declaration per entry. `backend/tests/test_ra_codes.py`
+  parses that file and fails if the codes or the prefix rules diverge, and
+  pins that `App.tsx` calls `raCodeFor()` rather than reading `entry.raCode`.
+- **`COUNTRY_OPTIONS` is derived from `RA_CODES`**, not hand-listed. The
+  hand-listed version had silently dropped New Zealand, and Greece was never
+  added to the frontend at all when the ΓΕΜΗ adapter shipped — so two working
+  backend mappings could not be selected. An absent option raises nothing.
+- Adding a country: add it to `RA_BY_COUNTRY` and to `RA_CODES`, and add it to
+  `VERIFIED` in `test_ra_codes.py` with a live-GLEIF check. A country whose
+  companies split across authorities also needs a `SUB_REGISTRIES` entry, its
+  frontend mirror, and prefix cases in the test — `test_only_gb_declares_sub_registries`
+  fails until the test file acknowledges the new one.
 
 ### Flags that did NOT survive verification
 
