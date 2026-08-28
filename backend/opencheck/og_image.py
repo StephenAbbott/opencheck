@@ -14,7 +14,7 @@ Two variants:
 
 * **full** — name + signal count + chips (rendered when a completed lookup
   for the LEI is available, normally because the sharer just ran it).
-* **teaser** — name (or just the LEI) + "34 open sources, one query"
+* **teaser** — name (or just the LEI) + "N open sources, one query"
   when no completed lookup is cached; invites the viewer to run the check.
 """
 
@@ -445,7 +445,7 @@ def render_share_card(
         elif total == 0:
             draw.text((px, 250 * s), "No risk signals surfaced",
                       font=_font("dmsans-500", 30 * s), fill="#ffffff")
-            draw.text((px, 296 * s), "across 34 open sources",
+            draw.text((px, 296 * s), f"across {_source_count()} open sources",
                       font=f_more, fill=_LAVENDER)
 
     img = img.resize((W, H), Image.LANCZOS)

@@ -1912,12 +1912,15 @@ def map_gemi_greece(bundle: dict[str, Any]) -> BODSBundle:
     url = _gemi().company_url(argemi)
 
     name = str(company.get("coNameEl") or bundle.get("legal_name") or "").strip()
-    alternates = [
-        str(value).strip()
-        for key in ("coNamesEn", "coTitlesEl", "coTitlesEn")
-        for value in (company.get(key) or [])
-        if str(value).strip() and str(value).strip() != name
-    ]
+    # Deduplicated: the Latin name and the Latin distinctive title are often
+    # the same string (BUTTON P.C. carries "BUTTON" as both coTitlesEl and
+    # coTitlesEn), and BODS alternateNames should not repeat itself.
+    alternates: list[str] = []
+    for key in ("coNamesEn", "coTitlesEl", "coTitlesEn"):
+        for value in (company.get(key) or []):
+            text = str(value).strip()
+            if text and text != name and text not in alternates:
+                alternates.append(text)
 
     # A dissolved company's ``lastStatusChange`` is when it left the register.
     # It is only a dissolution date when the status is actually inactive —
