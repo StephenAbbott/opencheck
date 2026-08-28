@@ -233,7 +233,12 @@ def test_share_page_teaser_description(client: TestClient, monkeypatch):
     r = client.get(f"/share/{LEI}")
     assert r.status_code == 200
     assert f"LEI {LEI} — OpenCheck" in r.text
-    assert "34 open data sources" in r.text
+    # Counted from the registry, not hard-coded: this asserted "34" while the
+    # registry held 39, which is exactly how the share page drifted five
+    # sources behind reality without any test noticing.
+    from opencheck.sources import REGISTRY
+
+    assert f"{len(REGISTRY)} open data sources" in r.text
 
 
 def test_share_page_escapes_html_in_names(client: TestClient):
@@ -279,3 +284,110 @@ def test_share_redirect_falls_back_when_frontend_origin_invalid(
         assert f'url=https://opencheck.world/?lei={LEI}' in body
     finally:
         get_settings.cache_clear()
+
+
+# ---------------------------------------------------------------------------
+# Script coverage on the share card (Phase 137 follow-up)
+# ---------------------------------------------------------------------------
+
+
+class TestCardScriptCoverage:
+    """The bundled faces do not cover every script a company name arrives in.
+
+    Bitter carries Latin, Latin-ext and Cyrillic but **no Greek**, and Greek is
+    not a subset Bitter publishes upstream, so a Greek name drawn in it comes
+    out as .notdef boxes. Adding the ΓΕΜΗ adapter made that reachable.
+    """
+
+    GREEK = "ΓΚΟΛΕΜΗΣ ΕΤΑΙΡΕΙΑ ΑΕΡΟΠΟΡΙΚΩΝ"
+    LEI = "635400NMLGFBATPGJD19"
+
+    def test_renders_fully_knows_what_the_font_has(self) -> None:
+        from opencheck.og_image import renders_fully
+
+        assert renders_fully("ROSNEFT OIL COMPANY") is True
+        assert renders_fully("ПАО НК РОСНЕФТЬ") is True      # Cyrillic: covered
+        assert renders_fully("ØRSTED A/S · ŠKODA") is True   # Latin-ext: covered
+        assert renders_fully(self.GREEK) is False            # Greek: not covered
+
+    def test_latin_and_cyrillic_names_are_drawn_as_filed(self) -> None:
+        from opencheck.og_image import card_display_name
+
+        for name in ("Eli Lilly and Company", "ПАО НК РОСНЕФТЬ"):
+            display, romanised = card_display_name(name, self.LEI)
+            assert display == name
+            assert romanised is False
+
+    def test_greek_name_is_romanised_rather_than_drawn_as_tofu(self) -> None:
+        from opencheck.og_image import card_display_name, renders_fully
+
+        display, romanised = card_display_name(self.GREEK, self.LEI)
+        assert romanised is True
+        assert renders_fully(display)
+        assert display.startswith("GKOLEMIS")
+
+    def test_a_latin_name_the_source_published_wins(self) -> None:
+        """ΓΕΜΗ supplies coNamesEn[] — the register's own romanisation."""
+        from opencheck.og_image import card_display_name
+
+        official = "GKOLEMIS ETAIREIA AEROPORIKON"
+        display, romanised = card_display_name(
+            self.GREEK, self.LEI, latin_name=official
+        )
+        assert display == official
+        assert romanised is True
+
+    def test_falls_back_to_the_lei_when_nothing_renders(self) -> None:
+        from opencheck.og_image import card_display_name
+
+        display, romanised = card_display_name("你好世界", self.LEI)
+        assert display == f"LEI {self.LEI}"
+        assert romanised is False
+
+    def test_no_name_falls_back_to_the_lei(self) -> None:
+        from opencheck.og_image import card_display_name
+
+        assert card_display_name(None, self.LEI) == (f"LEI {self.LEI}", False)
+        assert card_display_name("   ", self.LEI) == (f"LEI {self.LEI}", False)
+
+    def test_alt_text_declares_a_romanised_name(self) -> None:
+        """A screen-reader user must not be told a Greek company has a Latin name."""
+        from opencheck.og_image import card_alt_text
+
+        signals = [
+            {"code": "OFFSHORE_LEAKS", "kind": "risk"},
+            {"code": "NON_EU_JURISDICTION", "kind": "context"},
+        ]
+        alt = card_alt_text(self.GREEK, self.LEI, signals)
+        assert "(romanised)" in alt
+        assert "GKOLEMIS" in alt
+        assert self.LEI in alt
+        # Context signals never inflate the count, on the card or in the alt.
+        assert "1 risk signal" in alt
+        assert "NON_EU" not in alt
+
+        plain = card_alt_text("Eli Lilly and Company", self.LEI, signals)
+        assert "(romanised)" not in plain
+
+    def test_alt_text_handles_the_teaser_and_the_empty_case(self) -> None:
+        from opencheck.og_image import card_alt_text
+        from opencheck.sources import REGISTRY
+
+        teaser = card_alt_text("Eli Lilly and Company", self.LEI, None)
+        assert f"{len(REGISTRY)} open sources" in teaser
+
+        empty = card_alt_text("Eli Lilly and Company", self.LEI, [])
+        assert "no risk signals found" in empty
+
+    def test_source_count_is_counted_not_hard_coded(self) -> None:
+        """The teaser card said "34" while the registry held 39."""
+        from opencheck.og_image import _source_count
+        from opencheck.sources import REGISTRY
+
+        assert _source_count() == len(REGISTRY)
+
+    def test_a_greek_card_actually_renders(self) -> None:
+        from opencheck.og_image import render_share_card
+
+        png = render_share_card(self.GREEK, self.LEI, [{"code": "OFFSHORE_LEAKS"}])
+        assert png[:8] == b"\x89PNG\r\n\x1a\n"

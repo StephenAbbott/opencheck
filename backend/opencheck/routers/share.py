@@ -26,7 +26,7 @@ from fastapi.responses import HTMLResponse
 
 from .. import identifiers
 from ..config import get_settings
-from ..og_image import render_share_card
+from ..og_image import card_alt_text, render_share_card
 from ..ratelimit import default_tier, limiter
 from . import lookup as lookup_router
 
@@ -196,6 +196,12 @@ async def share_page(request: Request, lei: str) -> HTMLResponse:
         frontend = "https://opencheck.world"
     api_base = (settings.public_api_base or "https://api.opencheck.world").rstrip("/")
 
+    # Counted from the registry, not hard-coded — these said "34" while the
+    # registry held 39. See og_image._source_count.
+    from ..sources import REGISTRY as _REGISTRY
+
+    source_count = len(_REGISTRY)
+
     summary = _summary_from_replay(lei)
     if summary is not None:
         name, signals = summary
@@ -213,14 +219,15 @@ async def share_page(request: Request, lei: str) -> HTMLResponse:
         )
         description = (
             f"{risk_count} risk signal{'s' if risk_count != 1 else ''} · "
-            "open corporate data from 34 sources · BODS v0.4"
+            f"open corporate data from {source_count} sources · BODS v0.4"
         )
     else:
         name = await _teaser_name(lei)
         description = (
-            "Live due diligence from 34 open data sources · BODS v0.4"
+            f"Live due diligence from {source_count} open data sources · BODS v0.4"
         )
 
+    image_alt = card_alt_text(name, lei, signals if summary is not None else None)
     title = html.escape(f"{name or f'LEI {lei}'} — OpenCheck")
     target = f"{frontend}/?lei={lei}"
     image = f"{api_base}/og/{lei}.png"
@@ -237,10 +244,12 @@ async def share_page(request: Request, lei: str) -> HTMLResponse:
 <meta property="og:image" content="{html.escape(image)}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{html.escape(image_alt)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{title}">
 <meta name="twitter:description" content="{html.escape(description)}">
 <meta name="twitter:image" content="{html.escape(image)}">
+<meta name="twitter:image:alt" content="{html.escape(image_alt)}">
 <meta http-equiv="refresh" content="0;url={html.escape(target)}">
 <meta name="robots" content="noindex">
 </head>
