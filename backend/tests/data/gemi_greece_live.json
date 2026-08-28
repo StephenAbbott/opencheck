@@ -1,0 +1,797 @@
+{
+ "ae_board": {
+  "legalType": {
+   "id": 1,
+   "descr": "ΑΕ"
+  },
+  "zipCode": "15124",
+  "municipality": {
+   "id": 61187,
+   "descr": "ΑΜΑΡΟΥΣΙΟΥ / ΒΟΡΕΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ"
+  },
+  "arGemi": "3031801000",
+  "city": null,
+  "streetNumber": "151",
+  "afm": "094447184",
+  "phone": "2103274647",
+  "fax": "2103236457",
+  "url": "www.goldair.gr",
+  "email": "gbekiras@goldair.gr",
+  "isBranch": false,
+  "objective": "α) η αντιπροσώπευση και  πρακτόρευση ημεδαπών και αλλοδαπών αεροπορικών  εταιρειών  στην  Ελλάδα και το εξωτερικό και γε…",
+  "coNamesEn": [
+   "GKOLEMIS ETAIREIA AEROPORIKON EXYPIRETISEON ANONYMI ETAIREIA"
+  ],
+  "autoRegistered": false,
+  "poBox": null,
+  "coNameEl": "ΓΚΟΛΕΜΗΣ ΕΤΑΙΡΕΙΑ ΑΕΡΟΠΟΡΙΚΩΝ ΕΞΥΠΗΡΕΤΗΣΕΩΝ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ",
+  "lastStatusChange": "1998-09-16",
+  "status": {
+   "id": 3,
+   "descr": "Ενεργή"
+  },
+  "prefecture": {
+   "id": 5,
+   "descr": "ΑΤΤΙΚΗΣ"
+  },
+  "street": "Λ.ΚΗΦΙΣΙΑΣ ((& ΒΑΣ.ΣΟΦΙΑΣ 2))",
+  "gemiOffice": {
+   "id": 1,
+   "descr": "ΕΜΠΟΡΙΚΟ & ΒΙΟΜΗΧΑΝΙΚΟ ΕΠΙΜΕΛΗΤΗΡΙΟ ΑΘΗΝΩΝ"
+  },
+  "activities": [
+   {
+    "activity": {
+     "id": "52320001",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΠΩΛΗΣΗΣ ΑΕΡΟΠΟΡΙΚΩΝ ΕΙΣΙΤΗΡΙΩΝ ΜΕΤΑΦΟΡΑΣ ΠΡΟΣΩΠΩΝ ΜΕ ΠΡΟΜΗΘΕΙΑ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Κύρια"
+   },
+   {
+    "activity": {
+     "id": "79111101",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΠΩΛΗΣΗΣ ΑΕΡΟΠΟΡΙΚΩΝ ΕΙΣΙΤΗΡΙΩΝ ΜΕΤΑΦΟΡΑΣ ΠΡΟΣΩΠΩΝ ΜΕ ΠΡΟΜΗΘΕΙΑ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "1998-09-16",
+    "dtTo": "2026-03-01",
+    "type": "Κύρια"
+   },
+   {
+    "activity": {
+     "id": "82300102",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΟΡΓΑΝΩΣΗΣ ΕΠΙΣΤΗΜΟΝΙΚΩΝ Η ΠΟΛΙΤΙΣΤΙΚΩΝ ΕΚΔΗΛΩΣΕΩΝ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "82301102",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΟΡΓΑΝΩΣΗΣ ΕΠΙΣΤΗΜΟΝΙΚΩΝ Η ΠΟΛΙΤΙΣΤΙΚΩΝ ΕΚΔΗΛΩΣΕΩΝ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "1998-09-16",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   }
+  ],
+  "coTitlesEl": [
+   "GOLDAIR"
+  ],
+  "coTitlesEn": [],
+  "incorporationDate": "1998-09-16",
+  "persons": [
+   {
+    "personName": "ΓΚΟΛΕΜΗ ΡΕΓΓΙΝΑ ΣΤΥΛΙΑΝΟΣ ",
+    "businessName": null,
+    "role": "Πρόεδρος",
+    "dtFrom": "2023-10-27",
+    "dtTo": "2028-10-27",
+    "isRepresentativeAlone": true,
+    "isRepresentativeInCommon": true,
+    "percentage": "-",
+    "category": "Διοικητικό συμβούλιο"
+   },
+   {
+    "personName": "ΚΑΛΙΝΚΟ ΚΑΛΛΙΝΙΚΟΣ ΚΑΛΛΙΝΙΚΟΣ ΑΠΟΣΤΟΛΟΣ ",
+    "businessName": null,
+    "role": "Διευθύνων Σύμβουλος",
+    "dtFrom": "2023-10-27",
+    "dtTo": "2028-10-27",
+    "isRepresentativeAlone": true,
+    "isRepresentativeInCommon": false,
+    "percentage": "-",
+    "category": "Διοικητικό συμβούλιο"
+   },
+   {
+    "personName": "ΣΟΦΙΑΔΗΣ ΝΙΚΟΛΑΟΣ ΠΑΝΑΓΙΩΤΗΣ ",
+    "businessName": null,
+    "role": "Αναπληρωτής Διευθύνων Σύμβουλος",
+    "dtFrom": "2023-10-27",
+    "dtTo": "2028-10-27",
+    "isRepresentativeAlone": false,
+    "isRepresentativeInCommon": true,
+    "percentage": "-",
+    "category": "Διοικητικό συμβούλιο"
+   },
+   {
+    "personName": "ΓΚΟΛΕΜΗΣ ΣΤΥΛΙΑΝΟΣ ΔΗΜΗΤΡΙΟΣ ",
+    "businessName": null,
+    "role": "Μέλος",
+    "dtFrom": "2023-10-27",
+    "dtTo": "2028-10-27",
+    "isRepresentativeAlone": false,
+    "isRepresentativeInCommon": false,
+    "percentage": "-",
+    "category": "Διοικητικό συμβούλιο"
+   },
+   {
+    "personName": "ΜΠΕΚΥΡΑΣ ΙΩΑΝΝΗΣ ΠΑΝΑΓΙΩΤΗΣ ",
+    "businessName": null,
+    "role": "Μέλος",
+    "dtFrom": "2023-10-27",
+    "dtTo": "2028-10-27",
+    "isRepresentativeAlone": false,
+    "isRepresentativeInCommon": false,
+    "percentage": "-",
+    "category": "Διοικητικό συμβούλιο"
+   },
+   {
+    "personName": "ΑΝΑΓΝΩΣΤΟΥ ΕΜΜΑΝΟΥΗΛ ΝΙΚΟΛΑΟΣ ",
+    "businessName": null,
+    "role": "Μέλος",
+    "dtFrom": "2023-10-27",
+    "dtTo": "2028-10-27",
+    "isRepresentativeAlone": false,
+    "isRepresentativeInCommon": false,
+    "percentage": "-",
+    "category": "Διοικητικό συμβούλιο"
+   },
+   {
+    "personName": "Συνοδινού Βαλλιάνου Αγγελική ΠΑΝΑΓΗΣ ",
+    "businessName": null,
+    "role": "Αναπληρωματικό Μέλος",
+    "dtFrom": "2023-10-27",
+    "dtTo": "2028-10-27",
+    "isRepresentativeAlone": false,
+    "isRepresentativeInCommon": false,
+    "percentage": "-",
+    "category": "Διοικητικό συμβούλιο"
+   }
+  ],
+  "capital": [],
+  "stocks": [
+   {
+    "stockTypeId": 1,
+    "amount": 90100,
+    "nominalPrice": 12.65,
+    "stockType": "Ονομαστικές, Κοινές"
+   }
+  ],
+  "branch": []
+ },
+ "ike_partners": {
+  "legalType": {
+   "id": 19,
+   "descr": "ΙΚΕ"
+  },
+  "zipCode": "18542",
+  "municipality": {
+   "id": 61223,
+   "descr": "ΝΙΚΑΙΑΣ - ΑΓΙΟΥ ΙΩΑΝΝΗ ΡΕΝΤΗ / ΠΕΙΡΑΙΩΣ"
+  },
+  "arGemi": "131516209000",
+  "city": "ΝΙΚΑΙΑ",
+  "streetNumber": "75",
+  "afm": "800599839",
+  "phone": "2104974778",
+  "fax": null,
+  "url": "http://button.com.gr/",
+  "email": "kostas@button.com.gr",
+  "isBranch": false,
+  "objective": "Η παροχή διαφημιστικών υπηρεσιών γενικά, μέσω δημιουργικών ιδεών και εργασιών για διαφημιστικούς σκοπούς, όπως ο σχεδιασ…",
+  "coNamesEn": [
+   "BUTTON P.C."
+  ],
+  "autoRegistered": false,
+  "poBox": null,
+  "coNameEl": "BUTTON P.C.",
+  "lastStatusChange": "2014-08-13",
+  "status": {
+   "id": 3,
+   "descr": "Ενεργή"
+  },
+  "prefecture": {
+   "id": 5,
+   "descr": "ΑΤΤΙΚΗΣ"
+  },
+  "street": "ΔΟΞΗΣ",
+  "gemiOffice": {
+   "id": 9,
+   "descr": "ΕΠΑΓΓΕΛΜΑΤΙΚΟ ΕΠΙΜΕΛΗΤΗΡΙΟ  ΠΕΙΡΑΙΩΣ"
+  },
+  "activities": [
+   {
+    "activity": {
+     "id": "73110100",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΠΛΗΡΟΥΣ ΔΙΑΦΗΜΙΣΗΣ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Κύρια"
+   },
+   {
+    "activity": {
+     "id": "73111100",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΠΛΗΡΟΥΣ ΔΙΑΦΗΜΙΣΗΣ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Κύρια"
+   },
+   {
+    "activity": {
+     "id": "18120200",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΕΚΤΥΠΩΣΗΣ ΔΙΑΦΗΜΙΣΤΙΚΩΝ ΚΑΤΑΛΟΓΩΝ, ΦΥΛΛΑΔΙΩΝ, ΑΦΙΣΩΝ ΚΑΙ ΑΛΛΟΥ ΕΝΤΥΠΟΥ ΔΙΑΦΗΜΙΣΤΙΚΟΥ ΥΛΙΚΟΥ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "18121200",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΕΚΤΥΠΩΣΗΣ ΔΙΑΦΗΜΙΣΤΙΚΩΝ ΚΑΤΑΛΟΓΩΝ, ΦΥΛΛΑΔΙΩΝ, ΑΦΙΣΩΝ ΚΑΙ ΑΛΛΟΥ ΔΙΑΦΗΜΙΣΤΙΚΟΥ ΥΛΙΚΟΥ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "47620101",
+     "descr": "ΛΙΑΝΙΚΟ ΕΜΠΟΡΙΟ ΕΜΠΟΡΙΚΟΥ ΔΙΑΦΗΜΙΣΤΙΚΟΥ ΥΛΙΚΟΥ, ΕΜΠΟΡΙΚΩΝ ΚΑΤΑΛΟΓΩΝ ΚΑΙ ΠΑΡΟΜΟΙΩΝ ΕΙΔΩΝ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "47626201",
+     "descr": "ΛΙΑΝΙΚΟ ΕΜΠΟΡΙΟ ΕΜΠΟΡΙΚΟΥ ΔΙΑΦΗΜΙΣΤΙΚΟΥ ΥΛΙΚΟΥ, ΕΜΠΟΡΙΚΩΝ ΚΑΤΑΛΟΓΩΝ ΚΑΙ ΠΑΡΟΜΟΙΩΝ ΕΙΔΩΝ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "58191500",
+     "descr": "ΕΚΔΟΣΗ ΕΝΤΥΠΟΥ ΕΜΠΟΡΙΚΟΥ ΔΙΑΦΗΜΙΣΤΙΚΟΥ ΥΛΙΚΟΥ, ΕΜΠΟΡΙΚΩΝ ΚΑΤΑΛΟΓΩΝ ΚΑΙ ΠΑΡΟΜΟΙΩΝ ΕΙΔΩΝ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "58191500",
+     "descr": "ΕΚΔΟΣΗ ΕΝΤΥΠΟΥ ΕΜΠΟΡΙΚΟΥ ΔΙΑΦΗΜΙΣΤΙΚΟΥ ΥΛΙΚΟΥ, ΕΜΠΟΡΙΚΩΝ ΚΑΤΑΛΟΓΩΝ ΚΑΙ ΠΑΡΟΜΟΙΩΝ ΕΙΔΩΝ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "59111100",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΠΑΡΑΓΩΓΗΣ ΚΙΝΗΜΑΤΟΓΡΑΦΙΚΩΝ ΤΑΙΝΙΩΝ ΚΑΙ ΒΙΝΤΕΟ ΠΡΟΩΘΗΣΗΣ Η ΔΙΑΦΗΜΙΣΗΣ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "59111101",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΒΙΝΤΕΟΣΚΟΠΗΣΕΩΝ ΓΙΑ ΠΡΟΩΘΗΣΗ ΠΩΛΗΣΕΩΝ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "59111102",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΠΑΡΑΓΩΓΗΣ ΔΙΑΦΗΜΙΣΤΙΚΩΝ ΤΑΙΝΙΩΝ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "59111200",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΠΑΡΑΓΩΓΗΣ ΤΑΙΝΙΩΝ ΠΡΟΩΘΗΣΗΣ Η ΔΙΑΦΗΜΙΣΤΙΚΩΝ ΚΑΙ ΒΙΝΤΕΟ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "59111201",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΒΙΝΤΕΟΣΚΟΠΗΣΕΩΝ ΓΙΑ ΠΡΟΩΘΗΣΗ ΠΩΛΗΣΕΩΝ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "59111202",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΠΑΡΑΓΩΓΗΣ ΔΙΑΦΗΜΙΣΤΙΚΩΝ ΤΑΙΝΙΩΝ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "62011104",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΔΗΜΙΟΥΡΓΙΑΣ ΙΣΤΟΣΕΛΙΔΩΝ ΣΤΟ ΔΙΑΔΙΚΤΥΟ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "62101104",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΔΗΜΙΟΥΡΓΙΑΣ ΙΣΤΟΣΕΛΙΔΩΝ ΣΤΟ ΔΙΑΔΙΚΤΥΟ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "70211000",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΔΗΜΟΣΙΩΝ ΣΧΕΣΕΩΝ ΚΑΙ ΕΠΙΚΟΙΝΩΝΙΑΣ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73110101",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΓΡΑΦΙΣΤΑ ΔΙΑΦΗΜΙΣΕΩΝ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73110102",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΚΑΤΑΣΚΕΥΗΣ ΔΙΑΦΗΜΙΣΤΙΚΩΝ ΠΙΝΑΚΩΝ ΓΕΝΙΚΑ (ΠΑΝΟ) ΚΑΙ ΕΠΙΓΡΑΦΩΝ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73110103",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΚΑΤΑΧΩΡΙΣΗΣ ΑΓΓΕΛΙΩΝ ΚΑΙ ΔΙΑΦΗΜΙΣΕΩΝ ΣΕ ΕΦΗΜΕΡΙΔΕΣ ΚΑΙ ΠΕΡΙΟΔΙΚΑ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73110104",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΣΧΕΔΙΑΣΜΟΥ (ΟΧΙ ΠΑΡΑΓΩΓΗΣ) ΔΙΑΦΗΜΙΣΤΙΚΩΝ ΑΝΤΙΚΕΙΜΕΝΩΝ Η ΤΑΙΝΙΩΝ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73110105",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΣΧΕΔΙΑΣΜΟΥ ΔΙΑΦΗΜΙΣΤΙΚΩΝ ΑΦΙΣΩΝ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73110300",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΔΙΑΦΗΜΙΣΤΙΚΩΝ ΙΔΕΩΝ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73110400",
+     "descr": "ΑΛΛΕΣ ΥΠΗΡΕΣΙΕΣ ΔΙΑΦΗΜΙΣΗΣ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73111101",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΓΡΑΦΙΣΤΑ ΔΙΑΦΗΜΙΣΕΩΝ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73111102",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΚΑΤΑΣΚΕΥΗΣ ΔΙΑΦΗΜΙΣΤΙΚΩΝ ΠΙΝΑΚΩΝ ΓΕΝΙΚΑ (ΠΑΝΟ) ΚΑΙ ΕΠΙΓΡΑΦΩΝ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73111103",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΚΑΤΑΧΩΡΙΣΗΣ ΑΓΓΕΛΙΩΝ ΚΑΙ ΔΙΑΦΗΜΙΣΕΩΝ ΣΕ ΕΦΗΜΕΡΙΔΕΣ ΚΑΙ ΠΕΡΙΟΔΙΚΑ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73111104",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΣΧΕΔΙΑΣΜΟΥ (ΟΧΙ ΠΑΡΑΓΩΓΗΣ) ΔΙΑΦΗΜΙΣΤΙΚΩΝ ΑΝΤΙΚΕΙΜΕΝΩΝ Η ΤΑΙΝΙΩΝ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73111105",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΣΧΕΔΙΑΣΜΟΥ ΔΙΑΦΗΜΙΣΤΙΚΩΝ ΑΦΙΣΩΝ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73111300",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΔΙΑΦΗΜΙΣΤΙΚΟΥ ΣΧΕΔΙΑΣΜΟΥ ΚΑΙ ΕΝΝΟΙΟΛΟΓΙΚΗΣ ΑΝΑΠΤΥΞΗΣ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73111900",
+     "descr": "ΑΛΛΕΣ ΥΠΗΡΕΣΙΕΣ ΔΙΑΦΗΜΙΣΗΣ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73121400",
+     "descr": "ΠΩΛΗΣΗ ΔΙΑΦΗΜΙΣΗΣ ΣΧΕΤΙΚΑ ΜΕ ΕΚΔΗΛΩΣΕΙΣ",
+     "kadVersion": "kad_2008"
+    },
+    "dtFrom": "2014-08-13",
+    "dtTo": "2026-03-01",
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73121400",
+     "descr": "ΠΩΛΗΣΗ ΔΙΑΦΗΜΙΣΗΣ ΣΧΕΤΙΚΑ ΜΕ ΕΚΔΗΛΩΣΕΙΣ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "73300000",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΔΗΜΟΣΙΩΝ ΣΧΕΣΕΩΝ ΚΑΙ ΕΠΙΚΟΙΝΩΝΙΑΣ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-03-01",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   }
+  ],
+  "coTitlesEl": [
+   "BUTTON"
+  ],
+  "coTitlesEn": [
+   "BUTTON"
+  ],
+  "incorporationDate": "2014-08-13",
+  "persons": [
+   {
+    "personName": "ΜΑΡΙΟΛΗΣ ΚΩΝΣΤ ΠΑΝ ",
+    "businessName": null,
+    "role": "Μέλος & Διαχειριστής",
+    "dtFrom": "2017-11-01",
+    "dtTo": null,
+    "isRepresentativeAlone": null,
+    "isRepresentativeInCommon": null,
+    "percentage": "70%",
+    "category": "Εταίροι"
+   },
+   {
+    "personName": "ΣΠΥΡΟΥ ΧΡΙΣΤ ΓΕΩ ",
+    "businessName": null,
+    "role": "Μέλος & Διαχειριστής",
+    "dtFrom": "2017-11-01",
+    "dtTo": null,
+    "isRepresentativeAlone": null,
+    "isRepresentativeInCommon": null,
+    "percentage": "30%",
+    "category": "Εταίροι"
+   }
+  ],
+  "capital": [],
+  "stocks": [],
+  "branch": []
+ },
+ "ee_partners": {
+  "legalType": {
+   "id": 4,
+   "descr": "ΕΕ"
+  },
+  "zipCode": "34100",
+  "municipality": {
+   "id": 61174,
+   "descr": "ΧΑΛΚΙΔΕΩΝ / ΕΥΒΟΙΑΣ"
+  },
+  "arGemi": "194162322000",
+  "city": "ΧΑΛΚΙΔΑ",
+  "streetNumber": "8",
+  "afm": "803303092",
+  "phone": "6988880612",
+  "fax": null,
+  "url": null,
+  "email": "eviainsure@gmail.com",
+  "isBranch": false,
+  "objective": "47300001 - ΛΙΑΝΙΚΟ ΕΜΠΟΡΙΟ (ΠΡΑΤΗΡΙΟ) ΒΕΝΖΙΝΗΣ ΚΑΙ ΠΕΤΡΕΛΑΙΟΥ ΚΙΝΗΣΗΣ, 47200000 - ΛΙΑΝΙΚΟ ΕΜΠΟΡΙΟ ΤΡΟΦΙΜΩΝ, ΠΟΤΩΝ ΚΑΙ ΚΑ…",
+  "coNamesEn": [
+   "STAMOULIS M - GKAVETA A L.P."
+  ],
+  "autoRegistered": false,
+  "poBox": null,
+  "coNameEl": "ΣΤΑΜΟΥΛΗΣ Μ - ΓΚΑΒΕΤΑ Α Ε.Ε.",
+  "lastStatusChange": "2026-06-02",
+  "status": {
+   "id": 3,
+   "descr": "Ενεργή"
+  },
+  "prefecture": {
+   "id": 12,
+   "descr": "ΕΥΒΟΙΑΣ"
+  },
+  "street": "ΠΥΤΙΟΥΣΗΣ",
+  "gemiOffice": {
+   "id": 22,
+   "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΕΥΒΟΙΑΣ"
+  },
+  "activities": [
+   {
+    "activity": {
+     "id": "47300001",
+     "descr": "ΛΙΑΝΙΚΟ ΕΜΠΟΡΙΟ (ΠΡΑΤΗΡΙΟ) ΒΕΝΖΙΝΗΣ ΚΑΙ ΠΕΤΡΕΛΑΙΟΥ ΚΙΝΗΣΗΣ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-06-02",
+    "dtTo": null,
+    "type": "Κύρια"
+   },
+   {
+    "activity": {
+     "id": "46720000",
+     "descr": "ΧΟΝΔΡΙΚΟ ΕΜΠΟΡΙΟ ΜΕΡΩΝ ΚΑΙ ΕΞΑΡΤΗΜΑΤΩΝ ΜΗΧΑΝΟΚΙΝΗΤΩΝ ΟΧΗΜΑΤΩΝ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-06-02",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "46810201",
+     "descr": "ΧΟΝΔΡΙΚΟ ΕΜΠΟΡΙΟ (ΠΡΑΤΗΡΙΟ) ΒΕΝΖΙΝΗΣ ΚΑΙ ΠΕΤΡΕΛΑΙΟΥ ΚΙΝΗΣΗΣ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-06-02",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "46810310",
+     "descr": "ΧΟΝΔΡΙΚΟ ΕΜΠΟΡΙΟ ΟΡΥΚΤΕΛΑΙΩΝ ΚΑΙ ΛΙΠΑΝΤΙΚΩΝ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-06-02",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "46810313",
+     "descr": "ΧΟΝΔΡΙΚΟ ΕΜΠΟΡΙΟ (ΠΡΑΤΗΡΙΟ) ΠΕΤΡΕΛΑΙΟΥ ΘΕΡΜΑΝΣΗΣ (ΠΑΡΑΔΟΣΗ ΣΤΗΝ ΕΓΚΑΤΑΣΤΑΣΗ ΤΟΥ ΑΓΟΡΑΣΤΗ)",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-06-02",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "47121001",
+     "descr": "ΕΚΜΕΤΑΛΛΕΥΣΗ ΚΑΤΑΣΤΗΜΑΤΟΣ ΨΙΛΙΚΩΝ ΕΙΔΩΝ ΓΕΝΙΚΑ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-06-02",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "47200000",
+     "descr": "ΛΙΑΝΙΚΟ ΕΜΠΟΡΙΟ ΤΡΟΦΙΜΩΝ, ΠΟΤΩΝ ΚΑΙ ΚΑΠΝΟΥ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-06-02",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "47300003",
+     "descr": "ΛΙΑΝΙΚΟ ΕΜΠΟΡΙΟ ΛΙΠΑΝΤΙΚΩΝ ΕΛΑΙΩΝ ΠΕΤΡΕΛΑΙΟΥ, ΟΡΥΚΤΕΛΑΙΩΝ, ΑΛΛΩΝ ΛΙΠΑΝΤΙΚΩΝ, ΒΑΡΕΩΝ ΠΑΡΑΣΚΕΥΑΣΜΑΤΩΝ Π.Δ.Κ.Α.",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-06-02",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "47780320",
+     "descr": "ΛΙΑΝΙΚΟ ΕΜΠΟΡΙΟ ΠΕΤΡΕΛΑΙΟΥ ΘΕΡΜΑΝΣΗΣ, ΜΕ ΔΙΑΝΟΜΗ ΚΑΤ' ΟΙΚΟΝ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-06-02",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "47822000",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΛΙΑΝΙΚΗΣ ΠΩΛΗΣΗΣ ΑΛΛΩΝ ΑΝΤΑΛΛΑΚΤΙΚΩΝ ΚΑΙ ΕΞΑΡΤΗΜΑΤΩΝ ΜΗΧΑΝΟΚΙΝΗΤΩΝ ΟΧΗΜΑΤΩΝ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-06-02",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   },
+   {
+    "activity": {
+     "id": "95313000",
+     "descr": "ΥΠΗΡΕΣΙΕΣ ΠΛΥΣΗΣ, ΓΥΑΛΙΣΜΑΤΟΣ ΟΧΗΜΑΤΩΝ ΚΑΙ ΠΑΡΟΜΟΙΕΣ ΥΠΗΡΕΣΙΕΣ",
+     "kadVersion": "kad_2026"
+    },
+    "dtFrom": "2026-06-02",
+    "dtTo": null,
+    "type": "Δευτερεύουσα"
+   }
+  ],
+  "coTitlesEl": [
+   "ΓΚΑΒΕΤΑ & ΣΙΑ Ε.Ε."
+  ],
+  "coTitlesEn": [
+   "GKAVETA & SIA L.P."
+  ],
+  "incorporationDate": "2026-06-02",
+  "persons": [
+   {
+    "personName": "ΣΤΑΜΟΥΛΗΣ ΜΙΧΑΗΛ ΑΘΑΝΑΣΙΟΣ ",
+    "businessName": null,
+    "role": "Ομόρρυθμο Μέλος, Διαχειριστής & Εκπρόσωπος",
+    "dtFrom": "2026-06-02",
+    "dtTo": null,
+    "isRepresentativeAlone": null,
+    "isRepresentativeInCommon": null,
+    "percentage": "70%",
+    "category": "Εταίροι"
+   },
+   {
+    "personName": "ΓΚΑΒΕΤΑ ΑΛΕΞΑΝΔΡΑ ΝΙΚΟΛΑΟΣ ",
+    "businessName": null,
+    "role": "Ετερόρρυθμο Μέλος, Διαχειριστής & Εκπρόσωπος",
+    "dtFrom": "2026-06-02",
+    "dtTo": null,
+    "isRepresentativeAlone": null,
+    "isRepresentativeInCommon": null,
+    "percentage": "30%",
+    "category": "Εταίροι"
+   }
+  ],
+  "capital": [
+   {
+    "capitalStock": 30000,
+    "currency": "Euro",
+    "ecsokefalaiikes": 0,
+    "eggiitikes": 0
+   }
+  ],
+  "stocks": [
+   {
+    "stockTypeId": 7,
+    "amount": 0,
+    "nominalPrice": 0,
+    "stockType": "Κεφαλαιικές"
+   }
+  ],
+  "branch": []
+ }
+}

@@ -145,6 +145,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `mt_crn` (Maltese registration number, e.g. `C 113927`) derived from GLEIF RA code `RA000443`
 - **Note:** No API key or registration required (EU High-Value Dataset under the Open Data Directive). The list endpoint is cursor-paginated with no name filter, so the source is entered via the LEI lookup flow rather than free-text search.
 
+## ΓΕΜΗ — Greek General Commercial Registry (Γενικό Εμπορικό Μητρώο)
+
+- **Data:** company details (name in Greek and Latin script, ΑΦΜ, legal form, status, registered office, incorporation date), filed publicity documents and board decisions, and `persons[]` — board members for an ΑΕ, and for ΙΚΕ / ΕΕ / ΟΕ / ΕΠΕ the partners with their percentage holdings.
+- **API:** <https://opendata.businessportal.gr/> — spec at <https://opendata-api.businessportal.gr/api-docs>
+- **License:** ODC-BY-1.0 — <http://www.opendefinition.org/licenses/odc-by>
+- **Attribution:** "Contains data from the Greek General Commercial Registry (ΓΕΜΗ), published by the Κεντρική Υπηρεσία ΓΕΜΗ / Κεντρική Ένωση Επιμελητηρίων Ελλάδος under ODC-BY-1.0 via opendata.businessportal.gr."
+- **Entry point:** `gr_argemi` (Αριθμός ΓΕΜΗ, zero-padded to 12 digits, e.g. `003031801000`) derived from GLEIF RA code `RA000685`
+- **Note:** Requires a free `GEMI_API_KEY`, issued on approval of the form at <https://opendata.businessportal.gr/register/>. **Rate limited to 8 requests per minute** (raise by request to support@uhc.gr), so the adapter paces its calls and caps how many a single lookup may spend. An **ΑΕ publishes no shareholders** — its share register is not part of ΓΕΜΗ publicity, which is the Greek regime rather than missing data. ΓΕΜΗ is a commercial register, not a beneficial ownership regime (Greece's Κεντρικό Μητρώο Πραγματικών Δικαιούχων is separate and non-public), so no `beneficialOwnershipOrControl` is asserted.
+
 ## Ministry of Corporate Affairs — Company Master Data (India)
 
 - **Data:** CIN, company name, status, class/category/sub-category, authorised and paid-up capital, registration date, Registrar of Companies, registered office address, listing status, and NIC industrial classification, from the "Registrars of Companies (RoC)-wise Company Master Data" resource (~3.67M companies) on the Open Government Data (OGD) Platform India. Entity-level only — no officers or beneficial owners — mapped to a single BODS entity statement.

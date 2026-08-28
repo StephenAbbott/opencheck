@@ -4,7 +4,7 @@ title: "TED \u2014 Tenders Electronic Daily (EU procurement)"
 description: "EU public procurement notices from Tenders Electronic Daily (OJ S): contract awards where the entity appears as a tenderer or winner, matched on eForms organisation identifiers (eForms era, \u22482024 onwards)."
 resource: "https://ted.europa.eu/"
 tags: ["cdd", "aggregator", "EU open data \u2014 Commission Decision 2011/833/EU (free reuse incl. commercial, with attribution)", "commercial-yes"]
-timestamp: "2026-08-03"
+timestamp: "2026-08-28"
 source_id: "ted_eu"
 license: "EU open data \u2014 Commission Decision 2011/833/EU (free reuse incl. commercial, with attribution)"
 commercial_use: "yes"

@@ -99,11 +99,15 @@ def test_source_info_fields_are_populated() -> None:
 # Adapters that are entered via a specific identifier (e.g. LEI, ocid) rather
 # than free-text search. Their search() method intentionally returns [] because
 # they are called directly via fetch() in the LEI-lookup flow (app.py).
+# ``gemi_greece`` is a partial case: it is entered via the LEI flow and DOES
+# support live name search, but its search has no stub tier — the Greek
+# register is key-gated and rate-limited to 8 requests/minute, so there is no
+# offline fixture path to return hits from.
 _IDENTIFIER_KEYED = {
     "eiti", "eiti_bo", "eiti_soe", "cac_nigeria", "ariregister", "bolagsverket",
-    "cnpj_brazil", "cvr_denmark", "firmenbuch", "krs_poland", "malta_mbr",
-    "nz_companies", "opencorporates", "inpi", "kvk", "rpo_slovakia",
-    "sudreg_croatia", "ted_eu", "wikirate", "zefix",
+    "cnpj_brazil", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",
+    "malta_mbr", "nz_companies", "opencorporates", "inpi", "kvk",
+    "rpo_slovakia", "sudreg_croatia", "ted_eu", "wikirate", "zefix",
 }
 
 

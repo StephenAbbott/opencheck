@@ -1,0 +1,4404 @@
+{
+ "_generated": "2026-08-28T12:13:09Z",
+ "_licence": "ODC-BY-1.0",
+ "_note": "Codelist ids are strings here; ids embedded in company records are integers. Stringify before looking up.",
+ "_source": "https://opendata-api.businessportal.gr/api/opendata/v1/metadata/*",
+ "tables": {
+  "assemblySubjects": {
+   "1": {
+    "descr": "Αλλαγή δ/νσης γραφείων-έδρας",
+    "descrEn": "Change of office address",
+    "id": "1",
+    "lastUpdated": "2017-09-27 12:42:51"
+   },
+   "10": {
+    "descr": "Εκλογή ΔΣ και συγκρότηση αυτού σε σώμα",
+    "descrEn": "Election of the Board of Directors and its constitution",
+    "id": "10",
+    "lastUpdated": "2017-09-27 12:43:06"
+   },
+   "100": {
+    "descr": " Άρση Αναστoλή Καταχώρισης Επιχείρησης",
+    "descrEn": "Cancellation of Business Registration Revocation",
+    "id": "100",
+    "lastUpdated": "2022-07-19 11:37:36"
+   },
+   "101": {
+    "descr": "Δημιουργία- Άνοιγμα Υποκαταστήματος Ημεδαπής",
+    "descrEn": "Creation - Opening of a Domestic Branch",
+    "id": "101",
+    "lastUpdated": "2022-11-03 11:38:36"
+   },
+   "103": {
+    "descr": "Καταχώρηση Διακριτικού Τίτλου",
+    "descrEn": "Registration of business title",
+    "id": "103",
+    "lastUpdated": "2022-11-16 10:11:53"
+   },
+   "104": {
+    "descr": "Μετατροπή Διάρκειας από Ορισμένου Χρόνου σε Αορίστου Χρόνου",
+    "descrEn": "Conversion from fixed-term to indefinite term",
+    "id": "104",
+    "lastUpdated": "2023-02-15 14:32:47"
+   },
+   "105": {
+    "descr": "Μείωση Εταιρικού Κεφαλαίου",
+    "descrEn": "Reduction of the Company Capital",
+    "id": "105",
+    "lastUpdated": "2023-06-09 11:10:02"
+   },
+   "106": {
+    "descr": "Διαγραφή από το ΓΕΜΗ (μη Υπόχρεος)",
+    "descrEn": "GEMH deletion (Not Liable)",
+    "id": "106",
+    "lastUpdated": "2023-06-13 13:55:48"
+   },
+   "107": {
+    "descr": "Σχέδιο Σύμβασης Διάσπασης",
+    "descrEn": "Draft Demerger Agreement",
+    "id": "107",
+    "lastUpdated": "2023-11-21 13:12:13"
+   },
+   "108": {
+    "descr": "Μεταβολή Υποκαταστήματος Ημεδαπής",
+    "descrEn": "Change of Domestic Branch",
+    "id": "108",
+    "lastUpdated": "2024-03-28 16:50:05"
+   },
+   "109": {
+    "descr": "Διανομή κερδών κατ άρθρο 162 Ν.4548/2018",
+    "descrEn": "Profit distribution according to article 162 of Law 4548/2018",
+    "id": "109",
+    "lastUpdated": "2024-07-03 12:49:35"
+   },
+   "11": {
+    "descr": "Ισολογισμός έναρξης εκκαθάρισης",
+    "descrEn": "Opening balance sheet",
+    "id": "11",
+    "lastUpdated": "2017-09-27 12:43:24"
+   },
+   "110": {
+    "descr": "Διανομή προαιρετικών αποθεματικών κατ άρθρο 162 Ν.4548/2018",
+    "descrEn": "Distribution of voluntary reserves pursuant to article 162 of Law 4548/2018",
+    "id": "110",
+    "lastUpdated": "2024-07-03 12:49:35"
+   },
+   "111": {
+    "descr": "Απόκτηση Ίδιων Μετοχών κατ άρθρο 49 ν.4548/2018",
+    "descrEn": "Acquisition of own shares pursuant to article 49 of Law 4548/2018",
+    "id": "111",
+    "lastUpdated": "2024-07-03 12:49:35"
+   },
+   "112": {
+    "descr": "Θέσπιση Προγράμματος Διάθεσης Μετοχών σε μέλη του ΔΣ και το προσωπικό κατ άρθρο 113 ν.4548/2018",
+    "descrEn": "Establishment of a Share Allocation Plan to members of the Board of Directors and the staff pursuant to article 113 of Law 4548/2018",
+    "id": "112",
+    "lastUpdated": "2024-07-03 12:49:35"
+   },
+   "113": {
+    "descr": "Δωρεάν Διάθεση Μετοχών σε μέλη του ΔΣ και το προσωπικό κατ άρθρο 114 ν.4548/2018",
+    "descrEn": "Free Allocation of Shares to members of the Board of Directors and staff pursuant to article 114 of Law 4548/2018",
+    "id": "113",
+    "lastUpdated": "2024-07-03 12:49:35"
+   },
+   "114": {
+    "descr": "Διαγραφή λόγω Διάσπασης",
+    "descrEn": "Δeletion due to fragmentation",
+    "id": "114",
+    "lastUpdated": "2024-11-19 12:09:29"
+   },
+   "115": {
+    "descr": "Διαγραφή λόγω συγχώνευσης",
+    "descrEn": "Deletion due to merger",
+    "id": "115",
+    "lastUpdated": "2024-11-19 12:10:53"
+   },
+   "116": {
+    "descr": "Διαγραφή Υποκαταστήματος Ημεδαπής",
+    "descrEn": "Deletion of branch",
+    "id": "116",
+    "lastUpdated": "2025-01-27 12:50:46"
+   },
+   "118": {
+    "descr": "Διορισμός / Αντικατάσταση / Παραίτηση Διαχειριστή",
+    "descrEn": "Designation / Substitution / Administrator Resignation",
+    "id": "118",
+    "lastUpdated": "2025-09-17 16:38:43"
+   },
+   "119": {
+    "descr": "Ορισμός εκπροσώπου στην Ελλάδα για υποκατάστημα αλλοδαπής",
+    "descrEn": "Designation of a representative in Greece for a foreign company branch",
+    "id": "119",
+    "lastUpdated": "2025-11-07 11:11:04"
+   },
+   "12": {
+    "descr": "Ανακοίνωση καταχώρισης αίτησης πτώχευσης",
+    "descrEn": "Announcement of the registration of a bankruptcy petition",
+    "id": "12",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "120": {
+    "descr": "Διόρθωση Σφάλματος",
+    "descrEn": "Error Correction",
+    "id": "120",
+    "lastUpdated": "2025-12-08 17:08:17"
+   },
+   "13": {
+    "descr": "Ανακοίνωση καταχώρισης αίτησης/αγωγής/δικαστικής απόφασης για λύση εταιρίας",
+    "descrEn": "Announcement of registration of application/claim/judgment for dissolution of company",
+    "id": "13",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "14": {
+    "descr": "Ανακοίνωση καταχώρισης απόφασης ανοίγματος/επικύρωσης/παύσης διαδικασίας συνδιαλλαγής",
+    "descrEn": "Announcement of registration of a decision to open/secure/terminate conciliation proceedings",
+    "id": "14",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "15": {
+    "descr": "Ανακοίνωση καταχώρισης απόφασης κήρυξης περάτωσης/ανακλησης/αναστολής πτώχευσης",
+    "descrEn": "Notice of registration of a decision to declare closure/recall/suspension of bankruptcy",
+    "id": "15",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "16": {
+    "descr": "Ανακοίνωση καταχώρισης απόφασης κήρυξης πτώχευσης",
+    "descrEn": "Notice of registration of a decision to declare bankruptcy",
+    "id": "16",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "17": {
+    "descr": "Ανακοίνωση καταχώρισης στο ΓΕΜΗ οικονομικών καταστάσεων & δημοσίευση του ισολογισμού",
+    "descrEn": "Announcement of registration of financial statements with the General Register of Companies & publication of the balance sheet",
+    "id": "17",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "18": {
+    "descr": "Ανακοίνωση καταχώρισης στο ΓΕΜΗ τροποποιήσεων καταστατικού",
+    "descrEn": "Announcement of registration of amendments to the articles of association in the General Register of Companies",
+    "id": "18",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "19": {
+    "descr": "Ανακοίνωση λύσης και έναρξης εκκαθάρισης & ορισμού εκκαθαριστή",
+    "descrEn": "Announcement of dissolution and opening of winding-up & appointment of liquidator",
+    "id": "19",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "2": {
+    "descr": "Μεταβολή ΔΣ (Ανασυγκρότηση ή/και αλλαγή σύνθεσης ή/και αλλαγή εκπροσώπησης)",
+    "descrEn": "Change in the Board of Directors (reconstitution and/or change of composition and/or change of representation)",
+    "id": "2",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "20": {
+    "descr": "Λύση και θέση σε εκκαθάριση και ορισμός εκκαθαριστών",
+    "descrEn": "Dissolution and liquidation and appointment of liquidators",
+    "id": "20",
+    "lastUpdated": "2017-09-27 12:45:13"
+   },
+   "21": {
+    "descr": "Μηνιαίες λογιστικές καταστάσεις τραπεζών",
+    "descrEn": "Monthly balance sheets of banks",
+    "id": "21",
+    "lastUpdated": "2017-09-27 12:44:46"
+   },
+   "22": {
+    "descr": "Ανακοίνωση πέρατος εκκαθάρισης και διαγραφής από το ΓΕΜΗ και τελικού ισολογισμού",
+    "descrEn": "Announcement of the end of liquidation and deletion from the GEMI and final balance sheet",
+    "id": "22",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "23": {
+    "descr": "Ανακοίνωση πιστοποίησης καταβολής μετοχικού/εταιρικού κεφαλαίου",
+    "descrEn": "Announcement of certification of payment of share capital",
+    "id": "23",
+    "lastUpdated": "2022-10-05 14:58:58"
+   },
+   "24": {
+    "descr": "Ανακοίνωση προσαρμογής κεφαλαίου",
+    "descrEn": "Announcement of capital adjustment",
+    "id": "24",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "25": {
+    "descr": "Καταχώριση στοιχείων 50δ τραπεζών",
+    "descrEn": "Registration of 50d bank data",
+    "id": "25",
+    "lastUpdated": "2017-09-27 12:41:28"
+   },
+   "26": {
+    "descr": "Ανακοίνωση συγκρότησης σε σώμα, εκπροσώπησης και δ/νσης γραφείων (χωρίς τροποποίηση καταστατικού)",
+    "descrEn": "Announcement of constitution, representation and head office (without amendment of the articles of association)",
+    "id": "26",
+    "lastUpdated": "2016-02-25 09:58:03"
+   },
+   "27": {
+    "descr": "Ανακοίνωση συγχώνευσης άρθρου 78",
+    "descrEn": "Notice of merger Article 78",
+    "id": "27",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "28": {
+    "descr": "Ανακοίνωση συγχώνευσης/διάσπασης/μετατροπής/απόσχισης κλάδου",
+    "descrEn": "Notice of merger/division/conversion/separation of branches",
+    "id": "28",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "29": {
+    "descr": "Ανακοίνωση σύστασης",
+    "descrEn": "Notice of establishment",
+    "id": "29",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "3": {
+    "descr": "Ανακοίνωση αύξησης Μετοχικού Κεφαλαίου χωρίς τροποποίηση καταστατικού",
+    "descrEn": "Announcement of an increase in Share Capital without amendment of the Articles of Association",
+    "id": "3",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "30": {
+    "descr": "Ανακοίνωση τροποποίησης καταστατικού ",
+    "descrEn": "Notice of amendment of statutes ",
+    "id": "30",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "31": {
+    "descr": "Ανακοίνωση αύξησης μετοχικού κεφαλαίου",
+    "descrEn": "Announcement of increase in share capital",
+    "id": "31",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "32": {
+    "descr": "Ανακοίνωσης μονομετοχικής εταιρείας",
+    "descrEn": "Notice of a single-member company",
+    "id": "32",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "33": {
+    "descr": "Λοιπές ανακοινώσεις",
+    "descrEn": "Other announcements",
+    "id": "33",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "34": {
+    "descr": "Καταστατικό, καταχώριση στο ΓΕΜΗ",
+    "descrEn": "Articles of association, registration in the General Register of Companies",
+    "id": "34",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "35": {
+    "descr": "Τροποποιήσεις καταστατικού, καταχώριση στο ΓΕΜΗ",
+    "descrEn": "Amendments to the articles of association, registration in the General Register of Companies",
+    "id": "35",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "36": {
+    "descr": "Λύση και εκκαθάριση εταιρίας, διαγραφή από ΓΕΜΗ",
+    "descrEn": "Dissolution and liquidation of the company, deletion from the General Register of Companies",
+    "id": "36",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "37": {
+    "descr": "Αίτηση/Αγωγή/Δικαστική απόφαση για λύση εταιρίας",
+    "descrEn": "Application/Action/Court decision for dissolution of a company",
+    "id": "37",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "38": {
+    "descr": "Αίτηση πτώχευσης",
+    "descrEn": "Application for bankruptcy",
+    "id": "38",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "39": {
+    "descr": "Απόφαση κήρυξης πτώχευσης",
+    "descrEn": "Decision to declare bankruptcy",
+    "id": "39",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "4": {
+    "descr": "Ανακοίνωση δημοσίευσης ισολογισμού (με επισυναπτόμενο ισολογισμό)",
+    "descrEn": "Announcement of publication of balance sheet (with balance sheet attached)",
+    "id": "4",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "40": {
+    "descr": "Απόφαση περάτωσης/ανακλησης/αναστολής πτώχευσης",
+    "descrEn": "Decision to close/recall/suspend bankruptcy",
+    "id": "40",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "41": {
+    "descr": "Απόφαση ανοίγματος/επικύρωσης/παύσης διαδικασίας συνδιαλλαγής",
+    "descrEn": "Decision to open/open/close/terminate conciliation proceedings",
+    "id": "41",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "42": {
+    "descr": "Απόφαση έγκρισης ισολογισμού",
+    "descrEn": "Decision approving the balance sheet",
+    "id": "42",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "43": {
+    "descr": "Χορήγηση Δικαιωμάτων Εκπροσώπησης (αν έγινε με μεταγενέστερο πρακτικό)",
+    "descrEn": "Granting of Rights of Representation (if made by a subsequent act)",
+    "id": "43",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "44": {
+    "descr": "Καταχώρηση Ιστοσελίδας",
+    "descrEn": "Website registration",
+    "id": "44",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "45": {
+    "descr": "Καταχώρηση απόφασης Διοικητικού Συμβουλίου για την πιστοποίηση καταβολής αρχικού μετοχικού/εταιρικού κεφαλαίου",
+    "descrEn": "Registration of the Board of Directors' decision to certify the payment of initial share capital",
+    "id": "45",
+    "lastUpdated": "2022-10-05 14:58:33"
+   },
+   "46": {
+    "descr": "Καταχώρηση απόφασης Διοικητικού Συμβουλίου για την πιστοποίηση καταβολής αύξησης μετοχικού/εταιρικού κεφαλαίου (Ολική ή Μερική)",
+    "descrEn": "Registration of the Board of Directors' resolution to certify the payment of an increase in share capital (Total or Partial)",
+    "id": "46",
+    "lastUpdated": "2022-10-05 14:59:06"
+   },
+   "48": {
+    "descr": "Αίτηση καταχώρησης ενοποιημένων οικονομικών καταστάσεων και δημοσίευσης ενοποιημένου ισολογισμού.",
+    "descrEn": "Application for registration of consolidated financial statements and publication of consolidated balance sheet.",
+    "id": "48",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "49": {
+    "descr": "Ανακοίνωση εκλογής ελεγκτών",
+    "descrEn": "Announcement of election of auditors",
+    "id": "49",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "5": {
+    "descr": "Ανακοίνωση διαγραφής από το ΓΕΜΗ λόγω λήξης και εκκαθάρισης",
+    "descrEn": "Announcement of deletion from the GEMI due to termination and liquidation",
+    "id": "5",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "50": {
+    "descr": "Διόρθωση σφάλματος Ανακοίνωσης",
+    "descrEn": "Correction of an error in the announcement",
+    "id": "50",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "51": {
+    "descr": "Γενική Αίτηση",
+    "descrEn": "General request",
+    "id": "51",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "52": {
+    "descr": "Kαταχώρiση απόφασης για οριστική λύση χωρίς στάδιο εκκαθάρισης",
+    "descrEn": "Registration of a decision to wind up definitively without going into liquidation",
+    "id": "52",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "53": {
+    "descr": "Καταχώριση Απόφασης Διοικητικού Συμβουλίου για διανομή προμερίσματος",
+    "descrEn": "Registration of a Board of Directors' decision to distribute an interim dividend",
+    "id": "53",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "54": {
+    "descr": "Αίτηση καταχώρησης απόφασης ΔΣ για πιστοποίηση τμηματικής καταβολής ποσών αύξησης μετοχικού/εταιρικού κεφαλαίου (δόση 1, 2,…)",
+    "descrEn": "Application for registration of a Board of Directors' decision to certify the payment of instalments of share capital increase (instalment 1, 2,...)",
+    "id": "54",
+    "lastUpdated": "2022-10-05 14:59:13"
+   },
+   "55": {
+    "descr": "Διαγραφή από το ΓΕΜΗ - Διακοπή ΔΟΥ (ατομικές ή άλλες)",
+    "descrEn": "(Individual) Deletion from the General Register of Companies - Interruption of the tax office",
+    "id": "55",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "56": {
+    "descr": "Χορήγηση εξουσίας στο ΔΣ για αύξηση Μετοχικού Κεφαλαίου",
+    "descrEn": "Granting of authority to the Board of Directors for an increase in share capital",
+    "id": "56",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "57": {
+    "descr": "Eγγραφή προσημείωσης υποθήκης",
+    "descrEn": "Registration of a mortgage note",
+    "id": "57",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "58": {
+    "descr": "Χορήγηση εξουσίας στο ΔΣ για θέσπιση δικαιωμάτων προαίρεσης",
+    "descrEn": "Granting of power to the Board of Directors to establish options",
+    "id": "58",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "59": {
+    "descr": "Αγορά ιδίων μετοχών",
+    "descrEn": "Purchase of treasury shares",
+    "id": "59",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "6": {
+    "descr": "Ανακοίνωση δικαιωμάτων προαίρεσης (stock options)",
+    "descrEn": "Announcement of stock options",
+    "id": "6",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "60": {
+    "descr": "Παροχή Εγγυήσεων - άρθρο 99-101, Ν.4548/2018",
+    "descrEn": "Provision of Guarantees - article 99-101, Law 4548/2018",
+    "id": "60",
+    "lastUpdated": "2023-01-18 11:06:46"
+   },
+   "61": {
+    "descr": "Έκδοση Μετατρέψιμου Ομολογιακού Δανείου",
+    "descrEn": "Issue of a convertible bond loan",
+    "id": "61",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "62": {
+    "descr": "Μεταβολή - Προσθήκη ΚΑΔ",
+    "descrEn": "Change - Addition of an ID number (individual)",
+    "id": "62",
+    "lastUpdated": "2022-12-08 13:26:43"
+   },
+   "63": {
+    "descr": "Μεταβολή Ατομικής",
+    "descrEn": "Change of Individual",
+    "id": "63",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "64": {
+    "descr": "Καταχώριση αποδεικτικού φορολογικής δήλωσης",
+    "descrEn": "Registration of proof of tax return",
+    "id": "64",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "65": {
+    "descr": "Έναρξη ΔΟΥ (Ατομικές)",
+    "descrEn": "Opening of a tax office (Individual)",
+    "id": "65",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "66": {
+    "descr": "Απόσβεση Μετοχικού Κεφαλαίου",
+    "descrEn": "Amortisation of Share Capital",
+    "id": "66",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "67": {
+    "descr": "Κατάργηση ή Περιορισμός του δικαιώματος προτίμησης",
+    "descrEn": "Abolition or Restriction of Pre-emption Rights",
+    "id": "67",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "68": {
+    "descr": "Ανανέωση εξουσίας στο ΔΣ για αύξηση μετοχικού κεφαλαίου",
+    "descrEn": "Renewal of authority to the Board of Directors to increase share capital",
+    "id": "68",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "69": {
+    "descr": "Μη δημοσιευτέα απόφαση Γενικής Συνέλευσης",
+    "descrEn": "Non-publishable resolution of the General Meeting",
+    "id": "69",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "7": {
+    "descr": "Ανακοίνωση έγκρισης οικονομικών καταστάσεων",
+    "descrEn": "Announcement of approval of financial statements",
+    "id": "7",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "70": {
+    "descr": "Σχέδιο Σύμβασης Συγχώνευσης",
+    "descrEn": "Draft Merger Agreement",
+    "id": "70",
+    "lastUpdated": "2015-12-30 15:44:36"
+   },
+   "71": {
+    "descr": "Πρόσκληση σε ΓΣ (παλιά διαδικασία)",
+    "descrEn": "Invitation to a General Meeting (old procedure)",
+    "id": "71",
+    "lastUpdated": "2016-01-29 18:03:58"
+   },
+   "72": {
+    "descr": "Καταχώριση Ισολογισμού Πέρατος Εκκαθάρισης",
+    "descrEn": "Registration of the balance sheet beyond liquidation",
+    "id": "72",
+    "lastUpdated": "2016-09-20 10:46:26"
+   },
+   "73": {
+    "descr": "Ανακοίνωση Καταχώρισης Απόφασης για μετατροπή Εταιρείας σε ΙΚΕ (Καταχ. Καταστατικού ΙΚΕ)",
+    "descrEn": "Announcement of the registration of a decision to convert a company into an IKE (Registration of the Articles of Association of an IKE)",
+    "id": "73",
+    "lastUpdated": "2016-11-21 10:22:43"
+   },
+   "74": {
+    "descr": "Ανακοίνωση Καταχώρισης Οριστικής Μετατροπή Εταιρείας σε ΙΚΕ (Καταχ. Υ.Δ. ότι δεν προβλήθηκαν από Δανειστές αντιρρήσεις για τη Μετατροπή)",
+    "descrEn": "Announcement of Registration of Final Conversion of a Company into an IKE (Record that no objections were raised by Lenders to the Conversion)",
+    "id": "74",
+    "lastUpdated": "2016-11-21 10:23:31"
+   },
+   "75": {
+    "descr": "Συγκρότηση σε σώμα 1ου Διοικητικού Συμβουλίου",
+    "descrEn": "Convening of the 1st Board of Directors",
+    "id": "75",
+    "lastUpdated": "2016-12-14 10:32:02"
+   },
+   "76": {
+    "descr": "Καταχώρηση απόφασης Διοικητικού Συμβουλίου για την ΟΛΙΚΗ πιστοποίηση καταβολής αύξησης μετοχικού/εταιρικού κεφαλαίου",
+    "descrEn": "Registration of the Board of Directors' decision on the TOTAL certification of payment of share capital increase",
+    "id": "76",
+    "lastUpdated": "2022-10-05 14:59:20"
+   },
+   "77": {
+    "descr": "Απόφαση Διοικητικού Συμβουλίου για την ΜΕΡΙΚΗ ή ΜΗ πιστοποίηση καταβολής αύξησης μετοχικού/εταιρικού κεφαλαίου με Τροποποίηση Καταστατικού",
+    "descrEn": "Resolution of the Board of Directors for the PARTIAL or NO certification of the payment of a share capital increase by means of an amendment to the Articles of Association",
+    "id": "77",
+    "lastUpdated": "2022-10-05 14:59:26"
+   },
+   "78": {
+    "descr": "Ανακοίνωση Καταχώρησης Πρακτικού ΓΣ για την έγκριση και δημοσίευση Οικονομικών Καταστάσεων",
+    "descrEn": "Announcement of the entry of the Minutes of the General Meeting of Shareholders for the approval and publication of the Financial Statements",
+    "id": "78",
+    "lastUpdated": "2017-03-16 12:49:51"
+   },
+   "79": {
+    "descr": "Καταχώρηση απόφασης Συνέλευσης Εταίρων για την «Έγκριση οικονομικών καταστάσεων» ME εκλογή ελεγκτών",
+    "descrEn": "Registration of a resolution of the Shareholders' Meeting on the \"Approval of the financial statements\" ME Election of auditors",
+    "id": "79",
+    "lastUpdated": "2017-05-30 12:30:23"
+   },
+   "8": {
+    "descr": "Ανακοίνωση έγκρισης οικονομικών καταστάσεων & εκλογής ελεγκτών",
+    "descrEn": "Announcement of approval of financial statements & appointment of auditors",
+    "id": "8",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "80": {
+    "descr": "Συγκρότηση σε Σώμα 1ου ΔΣ",
+    "descrEn": "Establishment of the 1st Board of Directors",
+    "id": "80",
+    "lastUpdated": "2017-05-30 12:46:39"
+   },
+   "81": {
+    "descr": "Αναδρομική Διαγραφή (ΠΟΛ:1163)",
+    "descrEn": "Retroactive Deletion (POL:1163)",
+    "id": "81",
+    "lastUpdated": "2017-07-10 13:51:53"
+   },
+   "82": {
+    "descr": "Καταχώριση Λογιστικής Κατάστασης του Αρ.46 για διανομή προμερίσματος",
+    "descrEn": "Registration of the Accounting Statement of No. 46 for the distribution of an interim dividend",
+    "id": "82",
+    "lastUpdated": "2018-05-04 15:46:25"
+   },
+   "83": {
+    "descr": "Εξώδικη Δήλωση Αποχώρησης Εταίρου",
+    "descrEn": "Extrajudicial Declaration of Withdrawal of a Partner",
+    "id": "83",
+    "lastUpdated": "2018-06-18 11:53:36"
+   },
+   "85": {
+    "descr": "Μετατροπή σε ΑΕ",
+    "descrEn": "Conversion to SA",
+    "id": "85",
+    "lastUpdated": "2019-03-28 12:59:14"
+   },
+   "86": {
+    "descr": "Διόρθωση Σφάλματος Αρχείου ή άλλου εγγράφου",
+    "descrEn": "Correction of Error in File or other document",
+    "id": "86",
+    "lastUpdated": "2019-10-18 11:33:06"
+   },
+   "87": {
+    "descr": "Έκθεση εκτίμησης",
+    "descrEn": "Valuation Report",
+    "id": "87",
+    "lastUpdated": "2020-05-25 13:49:07"
+   },
+   "88": {
+    "descr": "Δημοσιότητα Συναλλαγών με συνδεδεμένα μέρη(αρ.101-Ν.4548/2018)",
+    "descrEn": "Disclosure of Related Party Transactions (No.101-N.4548/2018)",
+    "id": "88",
+    "lastUpdated": "2020-06-18 11:29:18"
+   },
+   "89": {
+    "descr": "Παρέλευση 10ημέρου για την δημοσιότητα συναλλαγών με συνδεδεμένα μέρη",
+    "descrEn": "Provision of 10 days for disclosure of related party transactions",
+    "id": "89",
+    "lastUpdated": "2020-06-18 11:30:40"
+   },
+   "9": {
+    "descr": "Ανακοίνωση έκθεσης διαχείρισης και έκθεσης ελεγκτών αλλοδαπών τραπεζών",
+    "descrEn": "Announcement of management report and auditor's report of foreign banks",
+    "id": "9",
+    "lastUpdated": "2015-12-11 17:50:42"
+   },
+   "90": {
+    "descr": "Δημοσιότητα της έκθεσης αποδοχών (αρ.112-Ν.4548/2018)",
+    "descrEn": "Publication of remuneration report (No. 112-N.4548/2018)",
+    "id": "90",
+    "lastUpdated": "2020-06-18 11:31:14"
+   },
+   "91": {
+    "descr": "Έγκριση πολιτικής αποδοχών (αρ.110 - Ν.4548/2018)",
+    "descrEn": "Approval of remuneration policy (art. 110 - Law 4548/2018)",
+    "id": "91",
+    "lastUpdated": "2020-06-18 11:32:19"
+   },
+   "92": {
+    "descr": "Δημοσιότητα Επιτροπής Ελέγχου",
+    "descrEn": "Publicity of the Audit Committee",
+    "id": "92",
+    "lastUpdated": "2020-06-18 11:33:28"
+   },
+   "93": {
+    "descr": "Ληξιαρχική πράξη θανάτου",
+    "descrEn": "Death certificate",
+    "id": "93",
+    "lastUpdated": "2020-11-06 11:52:23"
+   },
+   "94": {
+    "descr": "Ανάκληση Καταχώρισης",
+    "descrEn": "Revocation of registration",
+    "id": "94",
+    "lastUpdated": "2025-12-03 15:13:02"
+   },
+   "95": {
+    "descr": "Καταχώρηση οικονομικών καταστάσεων με σκοπό την διανομή προσωρινού μερίσματος",
+    "descrEn": "Registration of financial statements with a view to the distribution of a provisional dividend",
+    "id": "95",
+    "lastUpdated": "2021-10-13 12:07:30"
+   },
+   "96": {
+    "descr": "Αναβίωση",
+    "descrEn": "Revival",
+    "id": "96",
+    "lastUpdated": "2022-05-23 11:44:05"
+   },
+   "99": {
+    "descr": "Αναστoλή Καταχώρισης Επιχείρησης",
+    "descrEn": "Reversal of business registration",
+    "id": "99",
+    "lastUpdated": "2022-07-19 11:37:36"
+   }
+  },
+  "companyStatuses": {
+   "0": {
+    "descr": "Άλλο",
+    "descrEn": "Other",
+    "id": "0",
+    "isActive": false,
+    "lastUpdated": "2015-12-11 18:35:51"
+   },
+   "15": {
+    "descr": "Διαδικασία Συνδιαλλαγής",
+    "descrEn": "Conciliation procedure",
+    "id": "15",
+    "isActive": false,
+    "lastUpdated": "2015-12-11 18:35:51"
+   },
+   "17": {
+    "descr": "Διαγραφή",
+    "descrEn": "Deletion",
+    "id": "17",
+    "isActive": false,
+    "lastUpdated": "2015-12-11 18:35:51"
+   },
+   "18": {
+    "descr": "Διαγραφή λόγω συγχώνευσης",
+    "descrEn": "Deletion due to merger",
+    "id": "18",
+    "isActive": false,
+    "lastUpdated": "2015-12-11 18:35:51"
+   },
+   "19": {
+    "descr": "Αναγκαστική διαχείριση",
+    "descrEn": "Forced Management",
+    "id": "19",
+    "isActive": false,
+    "lastUpdated": "2015-12-11 18:35:51"
+   },
+   "2": {
+    "descr": "Προεγγραφή",
+    "descrEn": "Pre-registration",
+    "id": "2",
+    "isActive": false,
+    "lastUpdated": "2015-12-11 18:35:51"
+   },
+   "20": {
+    "descr": "Διαγραφή λόγω διάσπασης",
+    "descrEn": "Deletion due to division",
+    "id": "20",
+    "isActive": false,
+    "lastUpdated": "2015-12-11 18:35:51"
+   },
+   "21": {
+    "descr": "Αναστολή καταχώρησης",
+    "descrEn": "Suspension of registration",
+    "id": "21",
+    "isActive": false,
+    "lastUpdated": "2020-01-16 12:28:29"
+   },
+   "3": {
+    "descr": "Ενεργή",
+    "descrEn": "Active",
+    "id": "3",
+    "isActive": true,
+    "lastUpdated": "2015-12-11 18:35:51"
+   },
+   "4": {
+    "descr": "Σε Αδράνεια",
+    "descrEn": "Dormant",
+    "id": "4",
+    "isActive": false,
+    "lastUpdated": "2015-12-11 18:35:51"
+   },
+   "5": {
+    "descr": "Πτώχευση",
+    "descrEn": "Bankruptcy",
+    "id": "5",
+    "isActive": false,
+    "lastUpdated": "2015-12-11 18:35:51"
+   },
+   "7": {
+    "descr": "Λύση - Εκκαθάριση",
+    "descrEn": "Dissolution - Liquidation",
+    "id": "7",
+    "isActive": false,
+    "lastUpdated": "2015-12-11 18:35:51"
+   }
+  },
+  "gemiOffices": {
+   "1": {
+    "address": "Ακαδημίας 7",
+    "city": "Αθήνα",
+    "descr": "ΕΜΠΟΡΙΚΟ & ΒΙΟΜΗΧΑΝΙΚΟ ΕΠΙΜΕΛΗΤΗΡΙΟ ΑΘΗΝΩΝ",
+    "descrEn": "ATHENS CHAMBER OF COMMERCE & INDUSTRY",
+    "email": "info@acci.gr",
+    "fax": null,
+    "id": "1",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2103604815-9 ",
+    "url": "http://www.acci.gr/",
+    "zipCode": "10671"
+   },
+   "10": {
+    "address": "Βασ. Γεωργίου 2β",
+    "city": "Κομοτηνή",
+    "descr": "ΕΜΠΟΡΙΚΟ & ΒΙΟΜΗΧΑΝΙΚΟ ΕΠΙΜΕΛΗΤΗΡΙΟ  ΡΟΔΟΠΗΣ",
+    "descrEn": "RODOPI CHAMBER OF COMMERCE & INDUSTRY",
+    "email": "info@rodopicci.gr",
+    "fax": "2531026714",
+    "id": "10",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2531022831",
+    "url": "http://www.rodopicci.gr",
+    "zipCode": "69100"
+   },
+   "11": {
+    "address": "Καβειρών 12",
+    "city": "Κομοτηνή",
+    "descr": "ΕΠΑΓΓΕΛΜΑΤΙΚΟ & ΒΙΟΤΕΧΝΙΚΟ ΕΠΙΜΕΛΗΤΗΡΙΟ  ΡΟΔΟΠΗΣ",
+    "descrEn": "PROFESSIONAL & CRAFTS CHAMBER OF RODOPI",
+    "email": "info@everodopi.gr",
+    "fax": "2531025866",
+    "id": "11",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2531022547",
+    "url": "http://www.everodopi.gr",
+    "zipCode": "69100"
+   },
+   "1127": {
+    "address": "null ",
+    "city": "Αθήνα",
+    "descr": "Υ.ΚΟΙ.Σ.Ο-Διεύθυνση Κ.ΑΛ.Ο.",
+    "descrEn": "Υ.ΚΟΙ.Σ.Ο-Dieythinsi K.AL.O.",
+    "email": null,
+    "fax": null,
+    "id": "1127",
+    "lastUpdated": "2025-03-06 16:31:57",
+    "phone": null,
+    "url": null,
+    "zipCode": null
+   },
+   "12": {
+    "address": "Παπαστράτου 53",
+    "city": "Αγρίνιο",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ",
+    "descrEn": "CHAMBER OF AITOLOAKARNANIA",
+    "email": "contact@epimetol.gr",
+    "fax": "2641022590",
+    "id": "12",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2641074500",
+    "url": "http://www.etakcci.gr",
+    "zipCode": "30131"
+   },
+   "13": {
+    "address": "Κορίνθου 23",
+    "city": "Άργος",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΑΡΓΟΛΙΔΑΣ",
+    "descrEn": "CHAMBER OF ARGOLIDA",
+    "email": "ebear@otenet.gr",
+    "fax": "2751024595",
+    "id": "13",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2751067216",
+    "url": "http://www.arcci.gr",
+    "zipCode": "21231"
+   },
+   "14": {
+    "address": "25ης Μαρτίου και Πανός 21",
+    "city": "Τρίπολη",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΑΡΚΑΔΙΑΣ",
+    "descrEn": "CHAMBER OF ARKADIA",
+    "email": "info@arcadianet.gr",
+    "fax": "2710233738",
+    "id": "14",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2710227141",
+    "url": "http://www.arcadianet.gr",
+    "zipCode": "22100"
+   },
+   "141": {
+    "address": "Πλ. Κάνιγγος ",
+    "city": "Αθήνα",
+    "descr": "Δ/νση Εταιρειών (Γενική Γραμματεία Εμπορίου & Προστασίας Καταναλωτή)",
+    "descrEn": "D/nsi Etaireion (Geniki Grammateia Emporiou & Prostasias Katanaloti)",
+    "email": null,
+    "fax": "210-3838981",
+    "id": "141",
+    "lastUpdated": "2021-10-26 15:50:51",
+    "phone": "210-3893525",
+    "url": null,
+    "zipCode": "10181"
+   },
+   "15": {
+    "address": "Κ. Αιτωλού και Ν. Πριοβόλου -",
+    "city": "Άρτα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΑΡΤΑΣ",
+    "descrEn": "CHAMBER OF ARTA",
+    "email": "epimelitirio@e-artas.gr",
+    "fax": "2681078654",
+    "id": "15",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2681028728",
+    "url": "https://www.e-artas.gr",
+    "zipCode": "47100"
+   },
+   "16": {
+    "address": "Αγίου Ανδρέου 89- 91",
+    "city": "Πάτρα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΑΧΑΙΑΣ",
+    "descrEn": "CHAMBER OF ACHAIA",
+    "email": "ea@e-a.gr",
+    "fax": "2610276519",
+    "id": "16",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2610277779",
+    "url": "http://www.e-a.gr",
+    "zipCode": "26221"
+   },
+   "17": {
+    "address": "Λ. Κουτσοπετάλου 1",
+    "city": "Λιβαδειά",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΒΟΙΩΤΙΑΣ",
+    "descrEn": "CHAMBER OF VOIOTIA",
+    "email": "epimviot@otenet.gr",
+    "fax": "2261021347",
+    "id": "17",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2261028281",
+    "url": "http://www.viotiachamber.gr",
+    "zipCode": "32131"
+   },
+   "18": {
+    "address": "Εμμ. Παπά 7",
+    "city": "Γρεβενά",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΓΡΕΒΕΝΩΝ",
+    "descrEn": "CHAMBER OF GREVENA",
+    "email": "ebegreve@grevenanet.gr",
+    "fax": "2462080310",
+    "id": "18",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2462085501",
+    "url": "http://www.epimelitiriogrevenon.gr/",
+    "zipCode": "51100"
+   },
+   "19": {
+    "address": "Λ. Λαμπριανίδου 40",
+    "city": "Δράμα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΔΡΑΜΑΣ",
+    "descrEn": "CHAMBER OF DRAMA",
+    "email": "ccidrama@dramanet.gr",
+    "fax": "2521025835",
+    "id": "19",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2521022750",
+    "url": "http://www.dramanet.gr",
+    "zipCode": "66132"
+   },
+   "2": {
+    "address": "Ακαδημίας 18",
+    "city": "Αθήνα",
+    "descr": "ΒΙΟΤΕΧΝΙΚΟ ΕΠΙΜΕΛΗΤΗΡΙΟ  ΑΘΗΝΑΣ",
+    "descrEn": "CHAMBER OF CRAFTS OF ATHENS",
+    "email": "info@acsmi.gr",
+    "fax": "2103614726",
+    "id": "2",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2103680700",
+    "url": "http://www.acsmi.gr/",
+    "zipCode": "10671"
+   },
+   "20": {
+    "address": "Γρ. Λαμπράκη 8",
+    "city": "Ρόδος",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΔΩΔ/ΝΗΣΟΥ",
+    "descrEn": "CHAMBER OF DODEKANISA",
+    "email": "info@ebed.gr",
+    "fax": "2241044240",
+    "id": "20",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2241044200",
+    "url": "http://www.ebed.gr",
+    "zipCode": "85100"
+   },
+   "21": {
+    "address": "Λ. Δημοκρατίας 307",
+    "city": "Αλέξανδρούπολη",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΕΒΡΟΥ",
+    "descrEn": "CHAMBER OF EVROS",
+    "email": "epimevro@otenet.gr",
+    "fax": "2551023253",
+    "id": "21",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2551026223",
+    "url": "http://www.evroschamber.gr",
+    "zipCode": "68132"
+   },
+   "22": {
+    "address": "Ελ. Βενιζέλου 12",
+    "city": "Χαλκίδα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΕΥΒΟΙΑΣ",
+    "descrEn": "CHAMBER OF EVVOIA",
+    "email": " info@eviachamber.gr",
+    "fax": "2221080918",
+    "id": "22",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2221086452",
+    "url": "http://www.eviachamber.gr",
+    "zipCode": "34100"
+   },
+   "23": {
+    "address": "Ν. Τσιαμπούλα 2",
+    "city": "Καρπενήσι",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΦΩΚΙΔΑΣ (ΕΠ. ΕΥΡΥΤΑΝΙΑΣ αναστολή λειτουργίας ΦΕΚ931/Β/2026)",
+    "descrEn": "CHAMBER OF EVRYTANIA",
+    "email": "epimevri@hotmail.com",
+    "fax": "2237024404",
+    "id": "23",
+    "lastUpdated": "2026-04-03 12:26:45",
+    "phone": "2237080036",
+    "url": "http://epimelitirio-evrytania.gr",
+    "zipCode": "36100"
+   },
+   "24": {
+    "address": "Λομβάρδου 20",
+    "city": "Ζάκυνθος",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΖΑΚΥΝΘΟΥ",
+    "descrEn": "CHAMBER OF ZAKYNTHOS",
+    "email": "zantecci@otenet.gr",
+    "fax": "2695023135",
+    "id": "24",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2695041940",
+    "url": "http://www.zantecci.gr",
+    "zipCode": "29100"
+   },
+   "25": {
+    "address": "28ης Οκτωβρίου και Πλ. Ηρώων -",
+    "city": "Πύργος",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΗΛΕΙΑΣ",
+    "descrEn": "CHAMBER OF ILEIA",
+    "email": "info@iliachamber.gr",
+    "fax": "2621031791",
+    "id": "25",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2621022541",
+    "url": "http://www.heliachamber.gr",
+    "zipCode": "27131"
+   },
+   "26": {
+    "address": "Κεντρικής 3",
+    "city": "Βέροια",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΗΜΑΘΙΑΣ",
+    "descrEn": "CHAMBER OF IMATHIA",
+    "email": "chamimat@otenet.gr",
+    "fax": "2331025330",
+    "id": "26",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2331025470",
+    "url": "http://www.icci.gr/",
+    "zipCode": "59100"
+   },
+   "27": {
+    "address": "Κορωναίου 9",
+    "city": "Ηράκλειο",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΗΡΑΚΛΕΙΟΥ",
+    "descrEn": "CHAMBER OF IRAKLEIO",
+    "email": "info@ebeh.gr",
+    "fax": "2810285829",
+    "id": "27",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2810247010",
+    "url": "http://www.ebeh.gr",
+    "zipCode": "71202"
+   },
+   "28": {
+    "address": "Αγίων Αποστόλων 55",
+    "city": "Ηγουμενίτσα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΘΕΣΠΡΩΤΙΑΣ",
+    "descrEn": "CHAMBER OF THESPROTIA",
+    "email": "cci@e-thesprotias.gr",
+    "fax": "2665029489",
+    "id": "28",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2665029480",
+    "url": "http://www.e-thesprotias.gr",
+    "zipCode": "46100"
+   },
+   "29": {
+    "address": "Τρικούπη και Οπλ. Πουτέτση 14",
+    "city": "Ιωάννινα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΙΩΑΝΝΙΝΩΝ",
+    "descrEn": "CHAMBER OF IOANNINA",
+    "email": "info@cci-ioannina.gr",
+    "fax": "2651025179",
+    "id": "29",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2651022389",
+    "url": "http://www.cci-ioannina.gr",
+    "zipCode": "45332"
+   },
+   "3": {
+    "address": "Πανεπιστημίου 44",
+    "city": "Αθήνα",
+    "descr": "ΕΠΑΓΓΕΛΜΑΤΙΚΟ ΕΠΙΜΕΛΗΤΗΡΙΟ  ΑΘΗΝΑΣ",
+    "descrEn": "ATHENS PROFESSIONAL CHAMBER OF COMMERCE",
+    "email": "eea@eea.gr",
+    "fax": "2103380219",
+    "id": "3",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2103380200",
+    "url": "http://www.eea.gr/",
+    "zipCode": "10679"
+   },
+   "30": {
+    "address": "Ομονοίας  50α",
+    "city": "Καβάλα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΚΑΒΑΛΑΣ",
+    "descrEn": "CHAMBER OF KAVALA",
+    "email": "info@chamberofkavala.gr",
+    "fax": "2510835946",
+    "id": "30",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2510223325",
+    "url": "http://www.chamberofkavala.gr",
+    "zipCode": "65302"
+   },
+   "31": {
+    "address": "Ηρώων Πολυτεχνείου 3",
+    "city": "Καρδίτσα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΚΑΡΔΙΤΣΑΣ",
+    "descrEn": "CHAMBER OF KARDITSA",
+    "email": "info@karditsacci.gr",
+    "fax": "2441022238",
+    "id": "31",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2441022334",
+    "url": "http://www.karditsacci.gr",
+    "zipCode": "43100"
+   },
+   "32": {
+    "address": "Μητροπόλεως 60",
+    "city": "Καστοριά",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΚΑΣΤΟΡΙΑΣ",
+    "descrEn": "CHAMBER OF KASTORIA",
+    "email": "kastcham@otenet.gr",
+    "fax": "2467022442",
+    "id": "32",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2467027537",
+    "url": "http://www.kastoriachamber.gr",
+    "zipCode": "52100"
+   },
+   "33": {
+    "address": "Αριστοτέλους 2",
+    "city": "Κέρκυρα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΚΕΡΚΥΡΑΣ",
+    "descrEn": "CHAMBER OF KERKYRA",
+    "email": "info@corfucci.gr ",
+    "fax": "2661040088",
+    "id": "33",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2661039813",
+    "url": "http://www.corfucci.gr",
+    "zipCode": "49100"
+   },
+   "34": {
+    "address": "Λ. Βεργωτή 131",
+    "city": "Αργοστόλι",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΚΕΦΑΛΛΗΝΙΑΣ-ΙΘΑΚΗΣ",
+    "descrEn": "CHAMBER OF KEFALLONIA-ITHAKI",
+    "email": "chamberk@otenet.gr",
+    "fax": "2671026190",
+    "id": "34",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2671022253",
+    "url": "http://www.eeki.gr",
+    "zipCode": "28100"
+   },
+   "35": {
+    "address": "Στενημάχου 2",
+    "city": "Κιλκίς",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΚΙΛΚΙΣ",
+    "descrEn": "CHAMBER OF KILKIS",
+    "email": "ebekilk@otenet.gr",
+    "fax": "2341020924",
+    "id": "35",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2341024580",
+    "url": "http://www.ccikilkis.gr",
+    "zipCode": "61100"
+   },
+   "36": {
+    "address": "Ι. Φαρμάκη 2",
+    "city": "Κοζάνη",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΚΟΖΑΝΗΣ",
+    "descrEn": "CHAMBER OF KOZANI",
+    "email": "chambers@otenet.gr",
+    "fax": "2461033976",
+    "id": "36",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2461034669",
+    "url": "http://www.evekozani.gr",
+    "zipCode": "50131"
+   },
+   "37": {
+    "address": "Ερμού 2",
+    "city": "Κόρινθος",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΚΟΡΙΝΘΙΑΣ",
+    "descrEn": "CHAMBER OF KORINTHIA",
+    "email": "info@korinthiacc.gr",
+    "fax": "2741021173",
+    "id": "37",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2741024464",
+    "url": "http://www.korinthiacc.gr",
+    "zipCode": "20131"
+   },
+   "38": {
+    "address": "Απόλλωνος και Λαδοπούλου -",
+    "city": "Ερμούπολη",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΚΥΚΛΑΔΩΝ",
+    "descrEn": "CHAMBER OF KYKLADES",
+    "email": "info@cycladescc.gr",
+    "fax": "2281086555",
+    "id": "38",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2281082346",
+    "url": "http://www.e-kyklades.gr",
+    "zipCode": "84100"
+   },
+   "39": {
+    "address": "Ξανθάκη 3",
+    "city": "Γύθειο",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΛΑΚΩΝΙΑΣ",
+    "descrEn": "CHAMBER OF LAKONIA",
+    "email": "info@lakoniacci.gr",
+    "fax": "2733022008",
+    "id": "39",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2733022279",
+    "url": "http://www.lcci.gr",
+    "zipCode": "23200"
+   },
+   "4": {
+    "address": "Τσιμισκή 29",
+    "city": "Θεσσαλονίκη",
+    "descr": "ΕΜΠΟΡΙΚΟ & ΒΙΟΜΗΧΑΝΙΚΟ ΕΠΙΜΕΛΗΤΗΡΙΟ  ΘΕΣ/ΝΙΚΗΣ",
+    "descrEn": "CHAMBER OF COMMERCE & INDUSTRY OF THESSALONIKI",
+    "email": "root@ebeth.gr",
+    "fax": "2310370114",
+    "id": "4",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2310370100",
+    "url": "http://www.ebeth.gr/",
+    "zipCode": "54624"
+   },
+   "40": {
+    "address": "Παπακυριαζή 44",
+    "city": "Λάρισα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΛΑΡΙΣΑΣ",
+    "descrEn": "CHAMBER OF LARISA",
+    "email": "info@larcci.gr",
+    "fax": "2410 257522",
+    "id": "40",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2410 255 388",
+    "url": "http://www.larissa-chamber.gr",
+    "zipCode": "41222"
+   },
+   "41": {
+    "address": "Ι. Κουνδούρου 17",
+    "city": "Αγ. Νικόλαος",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΛΑΣΙΘΙΟΥ",
+    "descrEn": "CHAMBER OF LASITHI",
+    "email": "info@epimlas.gr",
+    "fax": "2841023831",
+    "id": "41",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2841022231",
+    "url": "http://www.epimlas.gr",
+    "zipCode": "72100"
+   },
+   "42": {
+    "address": "Π. Κουντουριώτη 71",
+    "city": "Μυτιλήνη",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΛΕΣΒΟΥ",
+    "descrEn": "CHAMBER OF LESVOS",
+    "email": "info@lesvos-chamber.com",
+    "fax": "2251023275",
+    "id": "42",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2251028431",
+    "url": "http://www.lesvos-chamber.com",
+    "zipCode": "81100"
+   },
+   "43": {
+    "address": "ΓΟΛΕΜΗ 5-7",
+    "city": "Λευκάδα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΛΕΥΚΑΔΑΣ",
+    "descrEn": "CHAMBER OF LEFKADA",
+    "email": "gemi.lefkadachamber@gmail.com",
+    "fax": "2645021274",
+    "id": "43",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2645022381",
+    "url": "http://www.lefkadachamber.gr",
+    "zipCode": "31100"
+   },
+   "44": {
+    "address": "Δημητριάδος 176",
+    "city": "Βόλος",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΜΑΓΝΗΣΙΑΣ",
+    "descrEn": "CHAMBER OF MAGNISIA",
+    "email": "gemi_yms@cci-magnesia.gr",
+    "fax": "2421031211",
+    "id": "44",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2421094700",
+    "url": "http://www.cci-magnesia.gr/",
+    "zipCode": "38221"
+   },
+   "45": {
+    "address": "Πλατεία 23ης Μαρτίου -",
+    "city": "Καλαμάτα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΜΕΣΣΗΝΙΑΣ",
+    "descrEn": "CHAMBER OF MESSINIA",
+    "email": "info@messinianchamber.gr",
+    "fax": "2721062229",
+    "id": "45",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2721062200",
+    "url": "http://www.messinianchamber.gr",
+    "zipCode": "24100"
+   },
+   "46": {
+    "address": "Β. Κωνσταντίνου 1",
+    "city": "Ξάνθη",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΞΑΝΘΗΣ",
+    "descrEn": "CHAMBER OF XANTHI",
+    "email": "litsa@ebex.gr",
+    "fax": "2541025987",
+    "id": "46",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2541025105",
+    "url": "http://www.ebex.gr",
+    "zipCode": "67132"
+   },
+   "47": {
+    "address": "25ης Μαρτίου 13",
+    "city": "Έδεσσα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΠΕΛΛΑΣ",
+    "descrEn": "CHAMBER OF PELLA",
+    "email": "info@pellachamber.gr",
+    "fax": "2381029029",
+    "id": "47",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2381026555",
+    "url": "http://www.pellachamber.gr",
+    "zipCode": "58200"
+   },
+   "48": {
+    "address": "28ης Οκτωβρίου 9",
+    "city": "Κατερίνη",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΠΙΕΡΙΑΣ",
+    "descrEn": "CHAMBER OF PIERIA",
+    "email": "info@champier.gr",
+    "fax": "2351025124",
+    "id": "48",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2351023211",
+    "url": "http://www.champier.gr",
+    "zipCode": "60134"
+   },
+   "49": {
+    "address": "Γ. Σεφέρη 3",
+    "city": "Πρέβεζα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΠΡΕΒΕΖΑΣ",
+    "descrEn": "CHAMBER OF PREVEZA",
+    "email": "info@prevezachamber.gr",
+    "fax": "2682029283",
+    "id": "49",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2682029414",
+    "url": "http://www.prevezachamber.gr",
+    "zipCode": "48100"
+   },
+   "5": {
+    "address": "Αριστοτέλους 27",
+    "city": "Θεσσαλονίκη",
+    "descr": "ΒΙΟΤΕΧΝΙΚΟ ΕΠΙΜΕΛΗΤΗΡΙΟ  ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "CHAMBER OF CRAFTS OF THESSALONIKI",
+    "email": "info@veth.gov.gr",
+    "fax": "2310232667",
+    "id": "5",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2310241668",
+    "url": "http://www.veth.gov.gr/",
+    "zipCode": "54624"
+   },
+   "50": {
+    "address": "Εμμ. Πορτάλιου 23",
+    "city": "Ρέθυμνο",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΡΕΘΥΜΝΗΣ",
+    "descrEn": "CHAMBER OF RETHYMNI",
+    "email": "manager@eber.gr",
+    "fax": "2831055086",
+    "id": "50",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2831022214",
+    "url": "http://www.eber.gr",
+    "zipCode": "74100"
+   },
+   "51": {
+    "address": "Κουντουριώτη 19",
+    "city": "Σάμος",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΣΑΜΟΥ",
+    "descrEn": "CHAMBER OF SAMOS",
+    "email": "gemi@samoscci.gr",
+    "fax": "2273022784",
+    "id": "51",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2273087970",
+    "url": "http://www.samoscci.gr",
+    "zipCode": "83100"
+   },
+   "52": {
+    "address": "Π. Κωστόπουλου 2",
+    "city": "Σέρρες",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΣΕΡΡΩΝ",
+    "descrEn": "CHAMBER OF SERRES",
+    "email": "eves@eves.gr",
+    "fax": "2321099740",
+    "id": "52",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2321099720",
+    "url": "http://www.eves.gr",
+    "zipCode": "62122"
+   },
+   "53": {
+    "address": "Βενιζέλου 1",
+    "city": "Τρίκαλα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΤΡΙΚΑΛΩΝ",
+    "descrEn": "CHAMBER OF TRIKALA",
+    "email": "gemi@trikala-chamber.gr",
+    "fax": "2431038945",
+    "id": "53",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2431027493",
+    "url": "http://www.trikala-chamber.gr",
+    "zipCode": "42100"
+   },
+   "54": {
+    "address": "Κύπρου  & Ανθήλης ",
+    "city": "Λαμία",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΦΘΙΩΤΙΔΑΣ",
+    "descrEn": "CHAMBER OF FTHIOTIDA",
+    "email": "info@fthiotidoscc.gr",
+    "fax": "2231030985",
+    "id": "54",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2231022112",
+    "url": "http://www.fthiotidoscc.gr",
+    "zipCode": "35133"
+   },
+   "55": {
+    "address": "Μεγαρόβου 15",
+    "city": "Φλώρινα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΦΛΩΡΙΝΑΣ",
+    "descrEn": "CHAMBER OF FLORINA",
+    "email": "eveflo@otenet.gr",
+    "fax": "2385028020",
+    "id": "55",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2385022334",
+    "url": "http://www.ebef.gr",
+    "zipCode": "53100"
+   },
+   "56": {
+    "address": "Άμφισσα, Γιδογιάννου  7",
+    "city": "Άμφισσα",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΦΩΚΙΔΑΣ",
+    "descrEn": "CHAMBER OF FOKIDA",
+    "email": "epimfok@gmail.com",
+    "fax": "2265022185",
+    "id": "56",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2265023651",
+    "url": "http://www.epimelitiriofokidas.gr",
+    "zipCode": "33100"
+   },
+   "57": {
+    "address": "Πολυτεχνείου 58",
+    "city": "Πολύγυρος",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΧΑΛΚΙΔΙΚΗΣ",
+    "descrEn": "CHAMBER OF CHALKIDIKI",
+    "email": "info@epihal.gr",
+    "fax": "2371021355",
+    "id": "57",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2371024200",
+    "url": "http://www.epichal.gr",
+    "zipCode": "63100"
+   },
+   "58": {
+    "address": "Ελ. Βενιζέλου 4",
+    "city": "Χανιά",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΧΑΝΙΩΝ",
+    "descrEn": "CHAMBER OF CHANIA",
+    "email": "epimel@chania-cci.gr",
+    "fax": "2821028307",
+    "id": "58",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2821052329",
+    "url": "http://www.chania-cci.gr",
+    "zipCode": "73110"
+   },
+   "59": {
+    "address": "Φ. Αργέντη 8",
+    "city": "Χίος",
+    "descr": "ΕΠΙΜΕΛΗΤΗΡΙΟ ΧΙΟΥ",
+    "descrEn": "CHAMBER OF CHIOS",
+    "email": "info@chioschamber.gr",
+    "fax": "2271044332",
+    "id": "59",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2271044330",
+    "url": "http://www.chioschamber.gr",
+    "zipCode": "82100"
+   },
+   "6": {
+    "address": "Αριστοτέλους 27",
+    "city": "Θεσσαλονίκη",
+    "descr": "ΕΠΑΓΓΕΛΜΑΤΙΚΟ ΕΠΙΜΕΛΗΤΗΡΙΟ  ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "PROFESSIONAL CHAMBER OF THESSALONIKI",
+    "email": "epepthe@otenet.gr",
+    "fax": "2310271649",
+    "id": "6",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2310271340",
+    "url": "http://www.eeth.gr",
+    "zipCode": "54624"
+   },
+   "7": {
+    "address": "Γεωργίου Κασιμάτη 1",
+    "city": "Πειραιάς",
+    "descr": "ΕΜΠΟΡΙΚΟ & ΒΙΟΜΗΧΑΝΙΚΟ ΕΠΙΜΕΛΗΤΗΡΙΟ  ΠΕΙΡΑΙΩΣ",
+    "descrEn": "PIRAEUS CHAMBER OF COMMERCE & INDUSTRY",
+    "email": "evep@pcci.gr",
+    "fax": "2104178680",
+    "id": "7",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2104177241",
+    "url": "http://www.pcci.gr",
+    "zipCode": "18531"
+   },
+   "8": {
+    "address": "Καραίσκου 111",
+    "city": "Πειραιάς",
+    "descr": "ΒΙΟΤΕΧΝΙΚΟ ΕΠΙΜΕΛΗΤΗΡΙΟ  ΠΕΙΡΑΙΩΣ",
+    "descrEn": "CHAMBER OF CRAFTS OF PIRAEUS",
+    "email": "info@bep.gr",
+    "fax": "2104179495",
+    "id": "8",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2104110443",
+    "url": "http://www.bep.gr",
+    "zipCode": "18532"
+   },
+   "9": {
+    "address": "Αγ. Κωνσταντίνου 3",
+    "city": "Πειραιάς",
+    "descr": "ΕΠΑΓΓΕΛΜΑΤΙΚΟ ΕΠΙΜΕΛΗΤΗΡΙΟ  ΠΕΙΡΑΙΩΣ",
+    "descrEn": "PROFESSIONAL CHAMBER OF PIRAEUS",
+    "email": "eepir@otenet.gr",
+    "fax": "2104122790",
+    "id": "9",
+    "lastUpdated": "2021-10-26 15:50:50",
+    "phone": "2104121503",
+    "url": "http://www.eep.gr",
+    "zipCode": "18531"
+   }
+  },
+  "legalTypes": {
+   "0": {
+    "descr": "Inadequate Info",
+    "descrEn": "Inadequate Info",
+    "id": "0",
+    "lastUpdated": "2011-02-21 14:51:37"
+   },
+   "1": {
+    "descr": "ΑΕ",
+    "descrEn": "SA",
+    "id": "1",
+    "lastUpdated": "2007-09-26 18:03:59"
+   },
+   "10": {
+    "descr": "Ευρωπαϊκός Όμιλος Οικονομικού Σκοπού",
+    "descrEn": "European Economic Interest Grouping",
+    "id": "10",
+    "lastUpdated": "2011-05-02 12:08:00"
+   },
+   "11": {
+    "descr": "Συνεταιρισμός",
+    "descrEn": "Cooperative",
+    "id": "11",
+    "lastUpdated": "2011-05-03 12:00:00"
+   },
+   "12": {
+    "descr": "Ευρωπαϊκή Εταιρία (SE)",
+    "descrEn": "European Company (SE)",
+    "id": "12",
+    "lastUpdated": "2011-07-19 15:42:55"
+   },
+   "13": {
+    "descr": "Ευρωπαϊκή Συνεταιριστική Εταιρία (SCE)",
+    "descrEn": "European Cooperative Society (SCE)",
+    "id": "13",
+    "lastUpdated": "2011-07-19 15:42:52"
+   },
+   "14": {
+    "descr": "Κοινοπραξία",
+    "descrEn": "Consortium",
+    "id": "14",
+    "lastUpdated": "2011-09-11 13:17:04"
+   },
+   "15": {
+    "descr": "Υποκατάστημα Αλλοδαπής",
+    "descrEn": "Foreign Branch",
+    "id": "15",
+    "lastUpdated": "2024-04-01 14:50:39"
+   },
+   "16": {
+    "descr": "ΑΤΟΜΙΚΗ",
+    "descrEn": "SOLE",
+    "id": "16",
+    "lastUpdated": "2008-02-06 09:41:59"
+   },
+   "17": {
+    "descr": "ΕΝΩΣΗ ΠΡΟΣΩΠΩΝ",
+    "descrEn": "ASSOCIATION OF PERSONS",
+    "id": "17",
+    "lastUpdated": "2011-10-01 19:48:51"
+   },
+   "18": {
+    "descr": "ΑΣΤΙΚΗ ΕΤΑΙΡΕΙΑ 784 Α.Κ.",
+    "descrEn": "Civil Company 784 S.A.",
+    "id": "18",
+    "lastUpdated": "2024-05-23 15:48:40"
+   },
+   "19": {
+    "descr": "ΙΚΕ",
+    "descrEn": "PC",
+    "id": "19",
+    "lastUpdated": "2012-06-20 15:04:27"
+   },
+   "2": {
+    "descr": "ΟΕ",
+    "descrEn": "GP",
+    "id": "2",
+    "lastUpdated": "2008-05-21 15:40:02"
+   },
+   "20": {
+    "descr": "ΚΟΙ.Σ.Π.Ε",
+    "descrEn": "LLSCo",
+    "id": "20",
+    "lastUpdated": "2018-01-11 17:02:43"
+   },
+   "21": {
+    "descr": "Αγροτικός Συνεταιρισμός",
+    "descrEn": "Agricultural Partnership",
+    "id": "21",
+    "lastUpdated": "2024-11-29 17:46:10"
+   },
+   "3": {
+    "descr": "ΣυνΠΕ",
+    "descrEn": "LLCo",
+    "id": "3",
+    "lastUpdated": "2007-09-26 18:04:34"
+   },
+   "4": {
+    "descr": "ΕΕ",
+    "descrEn": "LP",
+    "id": "4",
+    "lastUpdated": "2007-09-26 18:04:14"
+   },
+   "64": {
+    "descr": "ΛΟΙΠΩΝ ΥΠΟΧΡΕΩΝ",
+    "descrEn": "OTHER LIABLES",
+    "id": "64",
+    "lastUpdated": "2007-09-26 18:04:57"
+   },
+   "65": {
+    "descr": "Ενεργειακή Κοινότητα",
+    "descrEn": "Energy Community",
+    "id": "65",
+    "lastUpdated": "2018-03-02 16:30:19"
+   },
+   "66": {
+    "descr": "Κοιν.Σ.Επ.",
+    "descrEn": "SoCC",
+    "id": "66",
+    "lastUpdated": "2020-09-23 09:38:37"
+   },
+   "67": {
+    "descr": "Συνεταιρισμός Εργαζομένων",
+    "descrEn": "Workers' Cooperatives",
+    "id": "67",
+    "lastUpdated": "2022-10-07 16:30:10"
+   },
+   "68": {
+    "descr": "ΕΕ κατά μετοχές",
+    "descrEn": "Limited partnership by shares",
+    "id": "68",
+    "lastUpdated": "2022-10-31 11:52:33"
+   },
+   "69": {
+    "descr": "ΚΟΙΝΟΤΗΤΑ ΑΝΑΝΕΩΣΙΜΗΣ ΕΝΕΡΓΕΙΑΣ",
+    "descrEn": "Renewable energy community",
+    "id": "69",
+    "lastUpdated": "2023-05-05 12:34:47"
+   },
+   "70": {
+    "descr": "ΕΝΕΡΓΕΙΑΚΗ ΚΟΙΝΟΤΗΤΑ ΠΟΛΙΤΩΝ",
+    "descrEn": "Citizen energy communities",
+    "id": "70",
+    "lastUpdated": "2023-05-05 12:34:47"
+   },
+   "8": {
+    "descr": "ΕΠΕ",
+    "descrEn": "LLC",
+    "id": "8",
+    "lastUpdated": "2007-09-26 18:04:25"
+   },
+   "9": {
+    "descr": "ΚΟΙΝΩΝΙΑ",
+    "descrEn": "SOCIETY",
+    "id": "9",
+    "lastUpdated": "2008-05-29 14:19:24"
+   }
+  },
+  "municipalities": {
+   "0": {
+    "descr": "Inadequate Info / Inadequate Info",
+    "descrEn": "Inadequate Info / Inadequate Info",
+    "id": "0",
+    "lastUpdated": "2021-10-26 15:45:38",
+    "prefectureId": "0"
+   },
+   "61020": {
+    "descr": "ΔΟΞΑΤΟΥ / ΔΡΑΜΑΣ",
+    "descrEn": "DOXATOU / DRAMAS",
+    "id": "61020",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "9"
+   },
+   "61021": {
+    "descr": "ΔΡΑΜΑΣ / ΔΡΑΜΑΣ",
+    "descrEn": "DRAMAS / DRAMAS",
+    "id": "61021",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "9"
+   },
+   "61022": {
+    "descr": "ΚΑΤΩ ΝΕΥΡΟΚΟΠΙΟΥ / ΔΡΑΜΑΣ",
+    "descrEn": "KATO NEVROKOPIOU / DRAMAS",
+    "id": "61022",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "9"
+   },
+   "61023": {
+    "descr": "ΠΑΡΑΝΕΣΤΙΟΥ / ΔΡΑΜΑΣ",
+    "descrEn": "PARANESTIOU / DRAMAS",
+    "id": "61023",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "9"
+   },
+   "61024": {
+    "descr": "ΠΡΟΣΟΤΣΑΝΗΣ / ΔΡΑΜΑΣ",
+    "descrEn": "PROSOTSANIS / DRAMAS",
+    "id": "61024",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "9"
+   },
+   "61025": {
+    "descr": "ΑΛΕΞΑΝΔΡΟΥΠΟΛΗΣ / ΕΒΡΟΥ",
+    "descrEn": "ALEXANDROUPOLIS / EVROU",
+    "id": "61025",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "11"
+   },
+   "61026": {
+    "descr": "ΔΙΔΥΜΟΤΕΙΧΟΥ / ΕΒΡΟΥ",
+    "descrEn": "DIDYMOTEICHOU / EVROU",
+    "id": "61026",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "11"
+   },
+   "61027": {
+    "descr": "ΟΡΕΣΤΙΑΔΑΣ / ΕΒΡΟΥ",
+    "descrEn": "ORESTIADAS / EVROU",
+    "id": "61027",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "11"
+   },
+   "61028": {
+    "descr": "ΣΑΜΟΘΡΑΚΗΣ / ΕΒΡΟΥ",
+    "descrEn": "SAMOTHRAKIS / EVROU",
+    "id": "61028",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "11"
+   },
+   "61029": {
+    "descr": "ΣΟΥΦΛΙΟΥ / ΕΒΡΟΥ",
+    "descrEn": "SOUFLIOU / EVROU",
+    "id": "61029",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "11"
+   },
+   "61030": {
+    "descr": "ΘΑΣΟΥ / ΘΑΣΟΥ",
+    "descrEn": "THASOU / THASOU",
+    "id": "61030",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "21"
+   },
+   "61031": {
+    "descr": "ΚΑΒΑΛΑΣ / ΚΑΒΑΛΑΣ",
+    "descrEn": "KAVALAS / KAVALAS",
+    "id": "61031",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "21"
+   },
+   "61032": {
+    "descr": "ΝΕΣΤΟΥ / ΚΑΒΑΛΑΣ",
+    "descrEn": "NESTOU / KAVALAS",
+    "id": "61032",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "21"
+   },
+   "61033": {
+    "descr": "ΠΑΓΓΑΙΟΥ / ΚΑΒΑΛΑΣ",
+    "descrEn": "PANGAIOU / KAVALAS",
+    "id": "61033",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "21"
+   },
+   "61034": {
+    "descr": "ΑΒΔΗΡΩΝ / ΞΑΝΘΗΣ",
+    "descrEn": "AVDIRON / XANTHIS",
+    "id": "61034",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "37"
+   },
+   "61035": {
+    "descr": "ΜΥΚΗΣ / ΞΑΝΘΗΣ",
+    "descrEn": "MYKIS / XANTHIS",
+    "id": "61035",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "37"
+   },
+   "61036": {
+    "descr": "ΞΑΝΘΗΣ / ΞΑΝΘΗΣ",
+    "descrEn": "XANTHIS / XANTHIS",
+    "id": "61036",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "37"
+   },
+   "61037": {
+    "descr": "ΤΟΠΕΙΡΟΥ / ΞΑΝΘΗΣ",
+    "descrEn": "TOPEIROU / XANTHIS",
+    "id": "61037",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "37"
+   },
+   "61038": {
+    "descr": "ΑΡΡΙΑΝΩΝ / ΡΟΔΟΠΗΣ",
+    "descrEn": "ARRIANON / RODOPIS",
+    "id": "61038",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "42"
+   },
+   "61039": {
+    "descr": "ΙΑΣΜΟΥ / ΡΟΔΟΠΗΣ",
+    "descrEn": "IASMOU / RODOPIS",
+    "id": "61039",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "42"
+   },
+   "61040": {
+    "descr": "ΚΟΜΟΤΗΝΗΣ / ΡΟΔΟΠΗΣ",
+    "descrEn": "KOMOTINIS / RODOPIS",
+    "id": "61040",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "42"
+   },
+   "61041": {
+    "descr": "ΜΑΡΩΝΕΙΑΣ-ΣΑΠΩΝ / ΡΟΔΟΠΗΣ",
+    "descrEn": "MARONEIAS-SAPON / RODOPIS",
+    "id": "61041",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "42"
+   },
+   "61042": {
+    "descr": "ΑΛΕΞΑΝΔΡΕΙΑΣ / ΗΜΑΘΙΑΣ",
+    "descrEn": "ALEXANDREIAS / IMATHIAS",
+    "id": "61042",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "16"
+   },
+   "61043": {
+    "descr": "ΒΕΡΟΙΑΣ / ΗΜΑΘΙΑΣ",
+    "descrEn": "VEROIAS / IMATHIAS",
+    "id": "61043",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "16"
+   },
+   "61044": {
+    "descr": "ΗΡΩΙΚΗΣ ΠΟΛΕΩΣ ΝΑΟΥΣΑΣ/ ΗΜΑΘΙΑΣ",
+    "descrEn": "IROIKIS POLEOS NAOUSAS/ IMATHIAS",
+    "id": "61044",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "16"
+   },
+   "61045": {
+    "descr": "ΑΜΠΕΛΟΚΗΠΩΝ-ΜΕΝΕΜΕΝΗΣ / ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "AMPELOKIPON-MENEMENIS / THESSALONIKIS",
+    "id": "61045",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "19"
+   },
+   "61046": {
+    "descr": "ΒΟΛΒΗΣ / ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "VOLVIS / THESSALONIKIS",
+    "id": "61046",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "19"
+   },
+   "61047": {
+    "descr": "ΔΕΛΤΑ / ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "DELTA / THESSALONIKIS",
+    "id": "61047",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "19"
+   },
+   "61048": {
+    "descr": "ΘΕΡΜΑΪΚΟΥ / ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "THERMAIKOU / THESSALONIKIS",
+    "id": "61048",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "19"
+   },
+   "61049": {
+    "descr": "ΘΕΡΜΗΣ / ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "THERMIS / THESSALONIKIS",
+    "id": "61049",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "19"
+   },
+   "61050": {
+    "descr": "ΘΕΣΣΑΛΟΝΙΚΗΣ / ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "THESSALONIKIS / THESSALONIKIS",
+    "id": "61050",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "19"
+   },
+   "61051": {
+    "descr": "ΚΑΛΑΜΑΡΙΑΣ / ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "KALAMARIAS / THESSALONIKIS",
+    "id": "61051",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "19"
+   },
+   "61052": {
+    "descr": "ΚΟΡΔΕΛΙΟΥ-ΕΥΟΣΜΟΥ / ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "KORDELIOU-EVOSMOU / THESSALONIKIS",
+    "id": "61052",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "19"
+   },
+   "61053": {
+    "descr": "ΛΑΓΚΑΔΑ / ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "LAGKADA / THESSALONIKIS",
+    "id": "61053",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "19"
+   },
+   "61054": {
+    "descr": "ΝΕΑΠΟΛΗΣ-ΣΥΚΕΩΝ / ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "NEAPOLIS-SYKEON / THESSALONIKIS",
+    "id": "61054",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "19"
+   },
+   "61055": {
+    "descr": "ΠΑΥΛΟΥ ΜΕΛΑ / ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "PAVLOU MELA / THESSALONIKIS",
+    "id": "61055",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "19"
+   },
+   "61056": {
+    "descr": "ΠΥΛΑΙΑΣ-ΧΟΡΤΙΑΤΗ / ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "PYLAIAS-CHORTIATI / THESSALONIKIS",
+    "id": "61056",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "19"
+   },
+   "61057": {
+    "descr": "ΧΑΛΚΗΔΟΝΟΣ / ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "CHALKIDONOS / THESSALONIKIS",
+    "id": "61057",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "19"
+   },
+   "61058": {
+    "descr": "ΩΡΑΙΟΚΑΣΤΡΟΥ / ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "ORAIOKASTROU / THESSALONIKIS",
+    "id": "61058",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "19"
+   },
+   "61059": {
+    "descr": "ΚΙΛΚΙΣ / ΚΙΛΚΙΣ",
+    "descrEn": "KILKIS / KILKIS",
+    "id": "61059",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "26"
+   },
+   "61060": {
+    "descr": "ΠΑΙΟΝΙΑΣ / ΚΙΛΚΙΣ",
+    "descrEn": "PAIONIAS / KILKIS",
+    "id": "61060",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "26"
+   },
+   "61061": {
+    "descr": "ΑΛΜΩΠΙΑΣ / ΠΕΛΛΑΣ",
+    "descrEn": "ALMOPIAS / PELLAS",
+    "id": "61061",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "38"
+   },
+   "61062": {
+    "descr": "ΕΔΕΣΣΑΣ / ΠΕΛΛΑΣ",
+    "descrEn": "EDESSAS / PELLAS",
+    "id": "61062",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "38"
+   },
+   "61063": {
+    "descr": "ΠΕΛΛΑΣ / ΠΕΛΛΑΣ",
+    "descrEn": "PELLAS / PELLAS",
+    "id": "61063",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "38"
+   },
+   "61064": {
+    "descr": "ΣΚΥΔΡΑΣ / ΠΕΛΛΑΣ",
+    "descrEn": "SKYDRAS / PELLAS",
+    "id": "61064",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "38"
+   },
+   "61065": {
+    "descr": "ΔΙΟΥ-ΟΛΥΜΠΟΥ / ΠΙΕΡΙΑΣ",
+    "descrEn": "DIOU-OLYMPOU / PIERIAS",
+    "id": "61065",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "39"
+   },
+   "61066": {
+    "descr": "ΚΑΤΕΡΙΝΗΣ / ΠΙΕΡΙΑΣ",
+    "descrEn": "KATERINIS / PIERIAS",
+    "id": "61066",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "39"
+   },
+   "61067": {
+    "descr": "ΠΥΔΝΑΣ-ΚΟΛΙΝΔΡΟΥ / ΠΙΕΡΙΑΣ",
+    "descrEn": "PYDNAS-KOLINDROU / PIERIAS",
+    "id": "61067",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "39"
+   },
+   "61068": {
+    "descr": "ΑΜΦΙΠΟΛΗΣ / ΣΕΡΡΩΝ",
+    "descrEn": "AMFIPOLIS / SERRON",
+    "id": "61068",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "44"
+   },
+   "61069": {
+    "descr": "ΒΙΣΑΛΤΙΑΣ / ΣΕΡΡΩΝ",
+    "descrEn": "VISALTIAS / SERRON",
+    "id": "61069",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "44"
+   },
+   "61070": {
+    "descr": "ΕΜΜΑΝΟΥΗΛ ΠΑΠΠΑ / ΣΕΡΡΩΝ",
+    "descrEn": "EMMANOUIL PAPPA / SERRON",
+    "id": "61070",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "44"
+   },
+   "61071": {
+    "descr": "ΗΡΑΚΛΕΙΑΣ / ΣΕΡΡΩΝ",
+    "descrEn": "IRAKLEIAS / SERRON",
+    "id": "61071",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "44"
+   },
+   "61072": {
+    "descr": "ΝΕΑΣ ΖΙΧΝΗΣ / ΣΕΡΡΩΝ",
+    "descrEn": "NEAS ZICHNIS / SERRON",
+    "id": "61072",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "44"
+   },
+   "61073": {
+    "descr": "ΣΕΡΡΩΝ / ΣΕΡΡΩΝ",
+    "descrEn": "SERRON / SERRON",
+    "id": "61073",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "44"
+   },
+   "61074": {
+    "descr": "ΣΙΝΤΙΚΗΣ / ΣΕΡΡΩΝ",
+    "descrEn": "SINTIKIS / SERRON",
+    "id": "61074",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "44"
+   },
+   "61075": {
+    "descr": "ΑΡΙΣΤΟΤΕΛΗ / ΧΑΛΚΙΔΙΚΗΣ",
+    "descrEn": "ARISTOTELI / CHALKIDIKIS",
+    "id": "61075",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "49"
+   },
+   "61076": {
+    "descr": "ΚΑΣΣΑΝΔΡΑΣ / ΧΑΛΚΙΔΙΚΗΣ",
+    "descrEn": "KASSANDRAS / CHALKIDIKIS",
+    "id": "61076",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "49"
+   },
+   "61077": {
+    "descr": "ΝΕΑΣ ΠΡΟΠΟΝΤΙΔΑΣ / ΧΑΛΚΙΔΙΚΗΣ",
+    "descrEn": "NEAS PROPONTIDAS / CHALKIDIKIS",
+    "id": "61077",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "49"
+   },
+   "61078": {
+    "descr": "ΠΟΛΥΓΥΡΟΥ / ΧΑΛΚΙΔΙΚΗΣ",
+    "descrEn": "POLYGYROU / CHALKIDIKIS",
+    "id": "61078",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "49"
+   },
+   "61079": {
+    "descr": "ΣΙΘΩΝΙΑΣ / ΧΑΛΚΙΔΙΚΗΣ",
+    "descrEn": "SITHONIAS / CHALKIDIKIS",
+    "id": "61079",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "49"
+   },
+   "61080": {
+    "descr": "ΓΡΕΒΕΝΩΝ / ΓΡΕΒΕΝΩΝ",
+    "descrEn": "GREVENON / GREVENON",
+    "id": "61080",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "8"
+   },
+   "61081": {
+    "descr": "ΔΕΣΚΑΤΗΣ / ΓΡΕΒΕΝΩΝ",
+    "descrEn": "DESKATIS / GREVENON",
+    "id": "61081",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "8"
+   },
+   "61082": {
+    "descr": "ΚΑΣΤΟΡΙΑΣ / ΚΑΣΤΟΡΙΑΣ",
+    "descrEn": "KASTORIAS / KASTORIAS",
+    "id": "61082",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "23"
+   },
+   "61083": {
+    "descr": "ΝΕΣΤΟΡΙΟΥ / ΚΑΣΤΟΡΙΑΣ",
+    "descrEn": "NESTORIOU / KASTORIAS",
+    "id": "61083",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "23"
+   },
+   "61084": {
+    "descr": "ΑΡΓΟΥΣ ΟΡΕΣΤΙΚΟΥ / ΚΑΣΤΟΡΙΑΣ",
+    "descrEn": "ARGOUS ORESTIKOU / KASTORIAS",
+    "id": "61084",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "23"
+   },
+   "61085": {
+    "descr": "ΒΟΙΟΥ / ΚΟΖΑΝΗΣ",
+    "descrEn": "VOIOU / KOZANIS",
+    "id": "61085",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "27"
+   },
+   "61086": {
+    "descr": "ΕΟΡΔΑΙΑΣ / ΚΟΖΑΝΗΣ",
+    "descrEn": "EORDAIAS / KOZANIS",
+    "id": "61086",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "27"
+   },
+   "61087": {
+    "descr": "ΚΟΖΑΝΗΣ / ΚΟΖΑΝΗΣ",
+    "descrEn": "KOZANIS / KOZANIS",
+    "id": "61087",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "27"
+   },
+   "61088": {
+    "descr": "ΣΕΡΒΙΩΝ / ΚΟΖΑΝΗΣ",
+    "descrEn": "SERVION / KOZANIS",
+    "id": "61088",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "27"
+   },
+   "61089": {
+    "descr": "ΑΜΥΝΤΑΙΟΥ / ΦΛΩΡΙΝΑΣ",
+    "descrEn": "AMYNTAIOU / FLORINAS",
+    "id": "61089",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "47"
+   },
+   "61090": {
+    "descr": "ΠΡΕΣΠΩΝ / ΦΛΩΡΙΝΑΣ",
+    "descrEn": "PRESPON / FLORINAS",
+    "id": "61090",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "47"
+   },
+   "61091": {
+    "descr": "ΦΛΩΡΙΝΑΣ / ΦΛΩΡΙΝΑΣ",
+    "descrEn": "FLORINAS / FLORINAS",
+    "id": "61091",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "47"
+   },
+   "61092": {
+    "descr": "ΑΡΤΑΙΩΝ / ΑΡΤΑΣ",
+    "descrEn": "ARTAION / ARTAS",
+    "id": "61092",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "4"
+   },
+   "61093": {
+    "descr": "ΓΕΩΡΓΙΟΥ ΚΑΡΑΙΣΚΑΚΗ / ΑΡΤΑΣ",
+    "descrEn": "GEORGIOU KARAISKAKI / ARTAS",
+    "id": "61093",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "4"
+   },
+   "61094": {
+    "descr": "ΚΕΝΤΡΙΚΩΝ ΤΖΟΥΜΕΡΚΩΝ / ΑΡΤΑΣ",
+    "descrEn": "KENTRIKON TZOUMERKON / ARTAS",
+    "id": "61094",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "4"
+   },
+   "61095": {
+    "descr": "ΝΙΚΟΛΑΟΥ ΣΚΟΥΦΑ / ΑΡΤΑΣ",
+    "descrEn": "NIKOLAOU SKOUFA / ARTAS",
+    "id": "61095",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "4"
+   },
+   "61096": {
+    "descr": "ΗΓΟΥΜΕΝΙΤΣΑΣ / ΘΕΣΠΡΩΤΙΑΣ",
+    "descrEn": "IGOUMENITSAS / THESPROTIAS",
+    "id": "61096",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "18"
+   },
+   "61097": {
+    "descr": "ΣΟΥΛΙΟΥ / ΘΕΣΠΡΩΤΙΑΣ",
+    "descrEn": "SOULIOU / THESPROTIAS",
+    "id": "61097",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "18"
+   },
+   "61098": {
+    "descr": "ΦΙΛΙΑΤΩΝ / ΘΕΣΠΡΩΤΙΑΣ",
+    "descrEn": "FILIATON / THESPROTIAS",
+    "id": "61098",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "18"
+   },
+   "61099": {
+    "descr": "ΒΟΡΕΙΩΝ ΤΖΟΥΜΕΡΚΩΝ / ΙΩΑΝΝΙΝΩΝ",
+    "descrEn": "VOREION TZOUMERKON / IOANNINON",
+    "id": "61099",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "20"
+   },
+   "61100": {
+    "descr": "ΔΩΔΩΝΗΣ / ΙΩΑΝΝΙΝΩΝ",
+    "descrEn": "DODONIS / IOANNINON",
+    "id": "61100",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "20"
+   },
+   "61101": {
+    "descr": "ΖΑΓΟΡΙΟΥ / ΙΩΑΝΝΙΝΩΝ",
+    "descrEn": "ZAGORIOU / IOANNINON",
+    "id": "61101",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "20"
+   },
+   "61102": {
+    "descr": "ΖΙΤΣΑΣ / ΙΩΑΝΝΙΝΩΝ",
+    "descrEn": "ZITSAS / IOANNINON",
+    "id": "61102",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "20"
+   },
+   "61103": {
+    "descr": "ΙΩΑΝΝΙΤΩΝ / ΙΩΑΝΝΙΝΩΝ",
+    "descrEn": "IOANNITON / IOANNINON",
+    "id": "61103",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "20"
+   },
+   "61104": {
+    "descr": "ΚΟΝΙΤΣΑΣ / ΙΩΑΝΝΙΝΩΝ",
+    "descrEn": "KONITSAS / IOANNINON",
+    "id": "61104",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "20"
+   },
+   "61105": {
+    "descr": "ΜΕΤΣΟΒΟΥ / ΙΩΑΝΝΙΝΩΝ",
+    "descrEn": "METSOVOU / IOANNINON",
+    "id": "61105",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "20"
+   },
+   "61106": {
+    "descr": "ΠΩΓΩΝΙΟΥ / ΙΩΑΝΝΙΝΩΝ",
+    "descrEn": "POGONIOU / IOANNINON",
+    "id": "61106",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "20"
+   },
+   "61107": {
+    "descr": "ΖΗΡΟΥ / ΠΡΕΒΕΖΑΣ",
+    "descrEn": "ZIROU / PREVEZAS",
+    "id": "61107",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "40"
+   },
+   "61108": {
+    "descr": "ΠΑΡΓΑΣ / ΠΡΕΒΕΖΑΣ",
+    "descrEn": "PARGAS / PREVEZAS",
+    "id": "61108",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "40"
+   },
+   "61109": {
+    "descr": "ΠΡΕΒΕΖΑΣ / ΠΡΕΒΕΖΑΣ",
+    "descrEn": "PREVEZAS / PREVEZAS",
+    "id": "61109",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "40"
+   },
+   "61110": {
+    "descr": "ΑΡΓΙΘΕΑΣ / ΚΑΡΔΙΤΣΑΣ",
+    "descrEn": "ARGITHEAS / KARDITSAS",
+    "id": "61110",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "22"
+   },
+   "61111": {
+    "descr": "ΚΑΡΔΙΤΣΑΣ / ΚΑΡΔΙΤΣΑΣ",
+    "descrEn": "KARDITSAS / KARDITSAS",
+    "id": "61111",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "22"
+   },
+   "61112": {
+    "descr": "ΛΙΜΝΗΣ ΠΛΑΣΤΗΡΑ / ΚΑΡΔΙΤΣΑΣ",
+    "descrEn": "LIMNIS PLASTIRA / KARDITSAS",
+    "id": "61112",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "22"
+   },
+   "61113": {
+    "descr": "ΜΟΥΖΑΚΙΟΥ / ΚΑΡΔΙΤΣΑΣ",
+    "descrEn": "MOUZAKIOU / KARDITSAS",
+    "id": "61113",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "22"
+   },
+   "61114": {
+    "descr": "ΠΑΛΑΜΑ / ΚΑΡΔΙΤΣΑΣ",
+    "descrEn": "PALAMA / KARDITSAS",
+    "id": "61114",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "22"
+   },
+   "61115": {
+    "descr": "ΣΟΦΑΔΩΝ / ΚΑΡΔΙΤΣΑΣ",
+    "descrEn": "SOFADON / KARDITSAS",
+    "id": "61115",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "22"
+   },
+   "61116": {
+    "descr": "ΑΓΙΑΣ / ΛΑΡΙΣΑΣ",
+    "descrEn": "AGIAS / LARISAS",
+    "id": "61116",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "31"
+   },
+   "61117": {
+    "descr": "ΕΛΑΣΣΟΝΑΣ / ΛΑΡΙΣΑΣ",
+    "descrEn": "ELASSONAS / LARISAS",
+    "id": "61117",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "31"
+   },
+   "61118": {
+    "descr": "ΚΙΛΕΛΕΡ / ΛΑΡΙΣΑΣ",
+    "descrEn": "KILELER / LARISAS",
+    "id": "61118",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "31"
+   },
+   "61119": {
+    "descr": "ΛΑΡΙΣΑΙΩΝ / ΛΑΡΙΣΑΣ",
+    "descrEn": "LARISAION / LARISAS",
+    "id": "61119",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "31"
+   },
+   "61120": {
+    "descr": "ΤΕΜΠΩΝ / ΛΑΡΙΣΑΣ",
+    "descrEn": "TEMPON / LARISAS",
+    "id": "61120",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "31"
+   },
+   "61121": {
+    "descr": "ΤΥΡΝΑΒΟΥ / ΛΑΡΙΣΑΣ",
+    "descrEn": "TYRNAVOU / LARISAS",
+    "id": "61121",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "31"
+   },
+   "61122": {
+    "descr": "ΦΑΡΣΑΛΩΝ / ΛΑΡΙΣΑΣ",
+    "descrEn": "FARSALON / LARISAS",
+    "id": "61122",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "31"
+   },
+   "61123": {
+    "descr": "ΑΛΜΥΡΟΥ / ΜΑΓΝΗΣΙΑΣ",
+    "descrEn": "ALMYROU / MAGNISIAS",
+    "id": "61123",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "35"
+   },
+   "61124": {
+    "descr": "ΒΟΛΟΥ / ΜΑΓΝΗΣΙΑΣ",
+    "descrEn": "VOLOU / MAGNISIAS",
+    "id": "61124",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "35"
+   },
+   "61125": {
+    "descr": "ΖΑΓΟΡΑΣ-ΜΟΥΡΕΣΙΟΥ / ΜΑΓΝΗΣΙΑΣ",
+    "descrEn": "ZAGORAS-MOURESIOU / MAGNISIAS",
+    "id": "61125",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "35"
+   },
+   "61126": {
+    "descr": "ΝΟΤΙΟΥ ΠΗΛΙΟΥ / ΜΑΓΝΗΣΙΑΣ",
+    "descrEn": "NOTIOU PILIOU / MAGNISIAS",
+    "id": "61126",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "35"
+   },
+   "61127": {
+    "descr": "ΡΗΓΑ ΦΕΡΑΙΟΥ / ΜΑΓΝΗΣΙΑΣ",
+    "descrEn": "RIGA FERAIOU / MAGNISIAS",
+    "id": "61127",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "35"
+   },
+   "61128": {
+    "descr": "ΑΛΟΝΝΗΣΟΥ / ΣΠΟΡΑΔΩΝ",
+    "descrEn": "ALONNISOU / SPORADON",
+    "id": "61128",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "35"
+   },
+   "61129": {
+    "descr": "ΣΚΙΑΘΟΥ / ΣΠΟΡΑΔΩΝ",
+    "descrEn": "SKIATHOU / SPORADON",
+    "id": "61129",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "35"
+   },
+   "61130": {
+    "descr": "ΣΚΟΠΕΛΟΥ / ΣΠΟΡΑΔΩΝ",
+    "descrEn": "SKOPELOU / SPORADON",
+    "id": "61130",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "35"
+   },
+   "61131": {
+    "descr": "ΜΕΤΕΩΡΩΝ / ΤΡΙΚΑΛΩΝ",
+    "descrEn": "METEORON / TRIKALON",
+    "id": "61131",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "45"
+   },
+   "61132": {
+    "descr": "ΠΥΛΗΣ / ΤΡΙΚΑΛΩΝ",
+    "descrEn": "PYLIS / TRIKALON",
+    "id": "61132",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "45"
+   },
+   "61133": {
+    "descr": "ΤΡΙΚΚΑΙΩΝ / ΤΡΙΚΑΛΩΝ",
+    "descrEn": "TRIKKAION / TRIKALON",
+    "id": "61133",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "45"
+   },
+   "61134": {
+    "descr": "ΦΑΡΚΑΔΟΝΑΣ / ΤΡΙΚΑΛΩΝ",
+    "descrEn": "FARKADONAS / TRIKALON",
+    "id": "61134",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "45"
+   },
+   "61135": {
+    "descr": "ΖΑΚΥΝΘΟΥ / ΖΑΚΥΝΘΟΥ",
+    "descrEn": "ZAKYNTHOU / ZAKYNTHOU",
+    "id": "61135",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "14"
+   },
+   "61136": {
+    "descr": "ΙΘΑΚΗΣ / ΙΘΑΚΗΣ",
+    "descrEn": "ITHAKIS / ITHAKIS",
+    "id": "61136",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "25"
+   },
+   "61137": {
+    "descr": "ΚΕΝΤΡΙΚΗΣ ΚΕΡΚΥΡΑΣ ΚΑΙ ΔΙΑΠΟΝΤΙΩΝ ΝΗΣΩΝ / ΚΕΡΚΥΡΑΣ",
+    "descrEn": "KENTRIKIS KERKYRAS KAI DIAPONTION NISON / KERKYRAS",
+    "id": "61137",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "24"
+   },
+   "61138": {
+    "descr": "ΠΑΞΩΝ / ΚΕΡΚΥΡΑΣ",
+    "descrEn": "PAXON / KERKYRAS",
+    "id": "61138",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "24"
+   },
+   "61139": {
+    "descr": "ΑΡΓΟΣΤΟΛΙΟΥ / ΚΕΦΑΛΛΗΝΙΑΣ",
+    "descrEn": "ARGOSTOLIOU / KEFALLINIAS",
+    "id": "61139",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "25"
+   },
+   "61140": {
+    "descr": "ΛΕΥΚΑΔΑΣ / ΛΕΥΚΑΔΑΣ",
+    "descrEn": "LEFKADAS / LEFKADAS",
+    "id": "61140",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "34"
+   },
+   "61141": {
+    "descr": "ΜΕΓΑΝΗΣΙΟΥ / ΛΕΥΚΑΔΑΣ",
+    "descrEn": "MEGANISIOU / LEFKADAS",
+    "id": "61141",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "34"
+   },
+   "61142": {
+    "descr": "ΑΓΡΙΝΙΟΥ / ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ",
+    "descrEn": "AGRINIOU / AITOLOAKARNANIAS",
+    "id": "61142",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "1"
+   },
+   "61143": {
+    "descr": "ΑΚΤΙΟΥ-ΒΟΝΙΤΣΑΣ / ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ",
+    "descrEn": "AKTIOU-VONITSAS / AITOLOAKARNANIAS",
+    "id": "61143",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "1"
+   },
+   "61144": {
+    "descr": "ΑΜΦΙΛΟΧΙΑΣ / ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ",
+    "descrEn": "AMFILOCHIAS / AITOLOAKARNANIAS",
+    "id": "61144",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "1"
+   },
+   "61145": {
+    "descr": "ΘΕΡΜΟΥ / ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ",
+    "descrEn": "THERMOU / AITOLOAKARNANIAS",
+    "id": "61145",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "1"
+   },
+   "61146": {
+    "descr": "ΙΕΡΑΣ ΠΟΛΗΣ ΜΕΣΟΛΟΓΓΙΟΥ / ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ",
+    "descrEn": "IERAS POLIS MESOLONGIOU / AITOLOAKARNANIAS",
+    "id": "61146",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "1"
+   },
+   "61147": {
+    "descr": "ΝΑΥΠΑΚΤΙΑΣ / ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ",
+    "descrEn": "NAFPAKTIAS / AITOLOAKARNANIAS",
+    "id": "61147",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "1"
+   },
+   "61148": {
+    "descr": "ΞΗΡΟΜΕΡΟΥ / ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ",
+    "descrEn": "XIROMEROU / AITOLOAKARNANIAS",
+    "id": "61148",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "1"
+   },
+   "61149": {
+    "descr": "ΑΙΓΙΑΛΕΙΑΣ / ΑΧΑΙΑΣ",
+    "descrEn": "AIGIALEIAS / ACHAIAS",
+    "id": "61149",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "6"
+   },
+   "61150": {
+    "descr": "ΔΥΤΙΚΗΣ ΑΧΑΙΑΣ / ΑΧΑΙΑΣ",
+    "descrEn": "DYTIKIS ACHAIAS / ACHAIAS",
+    "id": "61150",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "6"
+   },
+   "61151": {
+    "descr": "ΕΡΥΜΑΝΘΟΥ / ΑΧΑΙΑΣ",
+    "descrEn": "ERYMANTHOU / ACHAIAS",
+    "id": "61151",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "6"
+   },
+   "61152": {
+    "descr": "ΚΑΛΑΒΡΥΤΩΝ / ΑΧΑΙΑΣ",
+    "descrEn": "KALAVRYTON / ACHAIAS",
+    "id": "61152",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "6"
+   },
+   "61153": {
+    "descr": "ΠΑΤΡΕΩΝ / ΑΧΑΙΑΣ",
+    "descrEn": "PATREON / ACHAIAS",
+    "id": "61153",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "6"
+   },
+   "61154": {
+    "descr": "ΑΝΔΡΑΒΙΔΑΣ-ΚΥΛΛΗΝΗΣ / ΗΛΕΙΑΣ",
+    "descrEn": "ANDRAVIDAS-KYLLINIS / ILEIAS",
+    "id": "61154",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "15"
+   },
+   "61155": {
+    "descr": "ΑΝΔΡΙΤΣΑΙΝΑΣ-ΚΡΕΣΤΕΝΩΝ / ΗΛΕΙΑΣ",
+    "descrEn": "ANDRITSAINAS-KRESTENON / ILEIAS",
+    "id": "61155",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "15"
+   },
+   "61156": {
+    "descr": "ΑΡΧΑΙΑΣ ΟΛΥΜΠΙΑΣ / ΗΛΕΙΑΣ",
+    "descrEn": "ARCHAIAS OLYMPIAS / ILEIAS",
+    "id": "61156",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "15"
+   },
+   "61157": {
+    "descr": "ΖΑΧΑΡΩΣ / ΗΛΕΙΑΣ",
+    "descrEn": "ZACHAROS / ILEIAS",
+    "id": "61157",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "15"
+   },
+   "61158": {
+    "descr": "ΗΛΙΔΑΣ / ΗΛΕΙΑΣ",
+    "descrEn": "ILIDAS / ILEIAS",
+    "id": "61158",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "15"
+   },
+   "61159": {
+    "descr": "ΠΗΝΕΙΟΥ / ΗΛΕΙΑΣ",
+    "descrEn": "PINEIOU / ILEIAS",
+    "id": "61159",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "15"
+   },
+   "61160": {
+    "descr": "ΠΥΡΓΟΥ / ΗΛΕΙΑΣ",
+    "descrEn": "PYRGOU / ILEIAS",
+    "id": "61160",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "15"
+   },
+   "61161": {
+    "descr": "ΑΛΙΑΡΤΟΥ-ΘΕΣΠΙΕΩΝ / ΒΟΙΩΤΙΑΣ",
+    "descrEn": "ALIARTOU-THESPIEON / VOIOTIAS",
+    "id": "61161",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "7"
+   },
+   "61162": {
+    "descr": "ΔΙΣΤΟΜΟΥ - ΑΡΑΧΟΒΑΣ - ΑΝΤΙΚΥΡΑΣ / ΒΟΙΩΤΙΑΣ",
+    "descrEn": "DISTOMOU - ARACHOVAS - ANTIKYRAS / VOIOTIAS",
+    "id": "61162",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "7"
+   },
+   "61163": {
+    "descr": "ΘΗΒΑΙΩΝ / ΒΟΙΩΤΙΑΣ",
+    "descrEn": "THIVAION / VOIOTIAS",
+    "id": "61163",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "7"
+   },
+   "61164": {
+    "descr": "ΛΕΒΑΔΕΩΝ / ΒΟΙΩΤΙΑΣ",
+    "descrEn": "LEVADEON / VOIOTIAS",
+    "id": "61164",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "7"
+   },
+   "61165": {
+    "descr": "ΟΡΧΟΜΕΝΟΥ / ΒΟΙΩΤΙΑΣ",
+    "descrEn": "ORCHOMENOU / VOIOTIAS",
+    "id": "61165",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "7"
+   },
+   "61166": {
+    "descr": "ΤΑΝΑΓΡΑΣ / ΒΟΙΩΤΙΑΣ",
+    "descrEn": "TANAGRAS / VOIOTIAS",
+    "id": "61166",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "7"
+   },
+   "61167": {
+    "descr": "ΔΙΡΦΥΩΝ-ΜΕΣΣΑΠΙΩΝ / ΕΥΒΟΙΑΣ",
+    "descrEn": "DIRFYON-MESSAPION / EVVOIAS",
+    "id": "61167",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "12"
+   },
+   "61168": {
+    "descr": "ΕΡΕΤΡΙΑΣ / ΕΥΒΟΙΑΣ",
+    "descrEn": "ERETRIAS / EVVOIAS",
+    "id": "61168",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "12"
+   },
+   "61169": {
+    "descr": "ΙΣΤΙΑΙΑΣ-ΑΙΔΗΨΟΥ / ΕΥΒΟΙΑΣ",
+    "descrEn": "ISTIAIAS-AIDIPSOU / EVVOIAS",
+    "id": "61169",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "12"
+   },
+   "61170": {
+    "descr": "ΚΑΡΥΣΤΟΥ / ΕΥΒΟΙΑΣ",
+    "descrEn": "KARYSTOU / EVVOIAS",
+    "id": "61170",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "12"
+   },
+   "61171": {
+    "descr": "ΚΥΜΗΣ-ΑΛΙΒΕΡΙΟΥ / ΕΥΒΟΙΑΣ",
+    "descrEn": "KYMIS-ALIVERIOU / EVVOIAS",
+    "id": "61171",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "12"
+   },
+   "61172": {
+    "descr": "ΜΑΝΤΟΥΔΙΟΥ-ΛΙΜΝΗΣ-ΑΓΙΑΣ ΑΝΝΑΣ / ΕΥΒΟΙΑΣ",
+    "descrEn": "MANTOUDIOU-LIMNIS-AGIAS ANNAS / EVVOIAS",
+    "id": "61172",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "12"
+   },
+   "61173": {
+    "descr": "ΣΚΥΡΟΥ / ΕΥΒΟΙΑΣ",
+    "descrEn": "SKYROU / EVVOIAS",
+    "id": "61173",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "12"
+   },
+   "61174": {
+    "descr": "ΧΑΛΚΙΔΕΩΝ / ΕΥΒΟΙΑΣ",
+    "descrEn": "CHALKIDEON / EVVOIAS",
+    "id": "61174",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "12"
+   },
+   "61175": {
+    "descr": "ΑΓΡΑΦΩΝ / ΕΥΡΥΤΑΝΙΑΣ",
+    "descrEn": "AGRAFON / EVRYTANIAS",
+    "id": "61175",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "13"
+   },
+   "61176": {
+    "descr": "ΚΑΡΠΕΝΗΣΙΟΥ / ΕΥΡΥΤΑΝΙΑΣ",
+    "descrEn": "KARPENISIOU / EVRYTANIAS",
+    "id": "61176",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "13"
+   },
+   "61177": {
+    "descr": "ΑΜΦΙΚΛΕΙΑΣ - ΕΛΑΤΕΙΑΣ / ΦΘΙΩΤΙΔΑΣ",
+    "descrEn": "AMFIKLEIAS - ELATEIAS / FTHIOTIDAS",
+    "id": "61177",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "46"
+   },
+   "61178": {
+    "descr": "ΔΟΜΟΚΟΥ / ΦΘΙΩΤΙΔΑΣ",
+    "descrEn": "DOMOKOU / FTHIOTIDAS",
+    "id": "61178",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "46"
+   },
+   "61179": {
+    "descr": "ΛΑΜΙΕΩΝ / ΦΘΙΩΤΙΔΑΣ",
+    "descrEn": "LAMIEON / FTHIOTIDAS",
+    "id": "61179",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "46"
+   },
+   "61180": {
+    "descr": "ΛΟΚΡΩΝ / ΦΘΙΩΤΙΔΑΣ",
+    "descrEn": "LOKRON / FTHIOTIDAS",
+    "id": "61180",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "46"
+   },
+   "61181": {
+    "descr": "ΜΑΚΡΑΚΩΜΗΣ / ΦΘΙΩΤΙΔΑΣ",
+    "descrEn": "MAKRAKOMIS / FTHIOTIDAS",
+    "id": "61181",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "46"
+   },
+   "61182": {
+    "descr": "ΚΑΜΕΝΩΝ ΒΟΥΡΛΩΝ / ΦΘΙΩΤΙΔΑΣ",
+    "descrEn": "KAMENON VOURLON / FTHIOTIDAS",
+    "id": "61182",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "46"
+   },
+   "61183": {
+    "descr": "ΣΤΥΛΙΔΑΣ / ΦΘΙΩΤΙΔΑΣ",
+    "descrEn": "STYLIDAS / FTHIOTIDAS",
+    "id": "61183",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "46"
+   },
+   "61184": {
+    "descr": "ΔΕΛΦΩΝ / ΦΩΚΙΔΑΣ",
+    "descrEn": "DELFON / FOKIDAS",
+    "id": "61184",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "48"
+   },
+   "61185": {
+    "descr": "ΔΩΡΙΔΟΣ / ΦΩΚΙΔΑΣ",
+    "descrEn": "DORIDOS / FOKIDAS",
+    "id": "61185",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "48"
+   },
+   "61186": {
+    "descr": "ΑΓΙΑΣ ΠΑΡΑΣΚΕΥΗΣ / ΒΟΡΕΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "AGIAS PARASKEVIS / VOREIOU TOMEA ATHINON",
+    "id": "61186",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61187": {
+    "descr": "ΑΜΑΡΟΥΣΙΟΥ / ΒΟΡΕΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "AMAROUSIOU / VOREIOU TOMEA ATHINON",
+    "id": "61187",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61188": {
+    "descr": "ΒΡΙΛΗΣΣΙΩΝ / ΒΟΡΕΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "VRILISSION / VOREIOU TOMEA ATHINON",
+    "id": "61188",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61189": {
+    "descr": "ΗΡΑΚΛΕΙΟΥ / ΒΟΡΕΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "IRAKLEIOU / VOREIOU TOMEA ATHINON",
+    "id": "61189",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61190": {
+    "descr": "ΚΗΦΙΣΙΑΣ / ΒΟΡΕΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "KIFISIAS / VOREIOU TOMEA ATHINON",
+    "id": "61190",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61191": {
+    "descr": "ΛΥΚΟΒΡΥΣΗΣ - ΠΕΥΚΗΣ / ΒΟΡΕΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "LYKOVRYSIS - PEFKIS / VOREIOU TOMEA ATHINON",
+    "id": "61191",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61192": {
+    "descr": "ΜΕΤΑΜΟΡΦΩΣΕΩΣ / ΒΟΡΕΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "METAMORFOSEOS / VOREIOU TOMEA ATHINON",
+    "id": "61192",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61193": {
+    "descr": "ΝΕΑΣ ΙΩΝΙΑΣ / ΒΟΡΕΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "NEAS IONIAS / VOREIOU TOMEA ATHINON",
+    "id": "61193",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61194": {
+    "descr": "ΠΑΠΑΓΟΥ - ΧΟΛΑΡΓΟΥ / ΒΟΡΕΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "PAPAGOU - CHOLARGOU / VOREIOU TOMEA ATHINON",
+    "id": "61194",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61195": {
+    "descr": "ΠΕΝΤΕΛΗΣ / ΒΟΡΕΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "PENTELIS / VOREIOU TOMEA ATHINON",
+    "id": "61195",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61196": {
+    "descr": "ΦΙΛΟΘΕΗΣ - ΨΥΧΙΚΟΥ / ΒΟΡΕΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "FILOTHEIS - PSYCHIKOU / VOREIOU TOMEA ATHINON",
+    "id": "61196",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61197": {
+    "descr": "ΧΑΛΑΝΔΡΙΟΥ / ΒΟΡΕΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "CHALANDRIOU / VOREIOU TOMEA ATHINON",
+    "id": "61197",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61198": {
+    "descr": "ΑΓΙΑΣ ΒΑΡΒΑΡΑΣ / ΔΥΤΙΚΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "AGIAS VARVARAS / DYTIKOU TOMEA ATHINON",
+    "id": "61198",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61199": {
+    "descr": "ΑΓΙΩΝ ΑΝΑΡΓΥΡΩΝ - ΚΑΜΑΤΕΡΟΥ / ΔΥΤΙΚΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "AGION ANARGYRON - KAMATEROU / DYTIKOU TOMEA ATHINON",
+    "id": "61199",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61200": {
+    "descr": "ΑΙΓΑΛΕΩ / ΔΥΤΙΚΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "AIGALEO / DYTIKOU TOMEA ATHINON",
+    "id": "61200",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61201": {
+    "descr": "ΙΛΙΟΥ / ΔΥΤΙΚΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "ILIOU / DYTIKOU TOMEA ATHINON",
+    "id": "61201",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61202": {
+    "descr": "ΠΕΡΙΣΤΕΡΙΟΥ / ΔΥΤΙΚΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "PERISTERIOU / DYTIKOU TOMEA ATHINON",
+    "id": "61202",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61203": {
+    "descr": "ΠΕΤΡΟΥΠΟΛΕΩΣ / ΔΥΤΙΚΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "PETROUPOLEOS / DYTIKOU TOMEA ATHINON",
+    "id": "61203",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61204": {
+    "descr": "ΧΑΙΔΑΡΙΟΥ / ΔΥΤΙΚΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "CHAIDARIOU / DYTIKOU TOMEA ATHINON",
+    "id": "61204",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61205": {
+    "descr": "ΑΘΗΝΑΙΩΝ / ΚΕΝΤΡΙΚΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "ATHINAION / KENTRIKOU TOMEA ATHINON",
+    "id": "61205",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61206": {
+    "descr": "ΒΥΡΩΝΟΣ / ΚΕΝΤΡΙΚΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "VYRONOS / KENTRIKOU TOMEA ATHINON",
+    "id": "61206",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61207": {
+    "descr": "ΓΑΛΑΤΣΙΟΥ / ΚΕΝΤΡΙΚΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "GALATSIOU / KENTRIKOU TOMEA ATHINON",
+    "id": "61207",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61208": {
+    "descr": "ΔΑΦΝΗΣ - ΥΜΗΤΤΟΥ / ΚΕΝΤΡΙΚΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "DAFNIS - YMITTOU / KENTRIKOU TOMEA ATHINON",
+    "id": "61208",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61209": {
+    "descr": "ΖΩΓΡΑΦΟΥ / ΚΕΝΤΡΙΚΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "ZOGRAFOU / KENTRIKOU TOMEA ATHINON",
+    "id": "61209",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61210": {
+    "descr": "ΗΛΙΟΥΠΟΛΕΩΣ / ΚΕΝΤΡΙΚΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "ILIOUPOLEOS / KENTRIKOU TOMEA ATHINON",
+    "id": "61210",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61211": {
+    "descr": "ΚΑΙΣΑΡΙΑΝΗΣ / ΚΕΝΤΡΙΚΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "KAISARIANIS / KENTRIKOU TOMEA ATHINON",
+    "id": "61211",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61212": {
+    "descr": "ΝΕΑΣ ΦΙΛΑΔΕΛΦΕΙΑΣ - ΝΕΑΣ ΧΑΛΚΗΔΟΝΑΣ / ΚΕΝΤΡΙΚΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "NEAS FILADELFEIAS - NEAS CHALKIDONAS / KENTRIKOU TOMEA ATHINON",
+    "id": "61212",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61213": {
+    "descr": "ΑΓΙΟΥ ΔΗΜΗΤΡΙΟΥ / ΝΟΤΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "AGIOU DIMITRIOU / NOTIOU TOMEA ATHINON",
+    "id": "61213",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61214": {
+    "descr": "ΑΛΙΜΟΥ / ΝΟΤΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "ALIMOU / NOTIOU TOMEA ATHINON",
+    "id": "61214",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61215": {
+    "descr": "ΓΛΥΦΑΔΑΣ / ΝΟΤΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "GLYFADAS / NOTIOU TOMEA ATHINON",
+    "id": "61215",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61216": {
+    "descr": "ΕΛΛΗΝΙΚΟΥ - ΑΡΓΥΡΟΥΠΟΛΗΣ / ΝΟΤΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "ELLINIKOU - ARGYROUPOLIS / NOTIOU TOMEA ATHINON",
+    "id": "61216",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61217": {
+    "descr": "ΚΑΛΛΙΘΕΑΣ / ΝΟΤΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "KALLITHEAS / NOTIOU TOMEA ATHINON",
+    "id": "61217",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61218": {
+    "descr": "ΜΟΣΧΑΤΟΥ - ΤΑΥΡΟΥ / ΝΟΤΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "MOSCHATOU - TAVROU / NOTIOU TOMEA ATHINON",
+    "id": "61218",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61219": {
+    "descr": "ΝΕΑΣ ΣΜΥΡΝΗΣ / ΝΟΤΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "NEAS SMYRNIS / NOTIOU TOMEA ATHINON",
+    "id": "61219",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61220": {
+    "descr": "ΠΑΛΑΙΟΥ ΦΑΛΗΡΟΥ / ΝΟΤΙΟΥ ΤΟΜΕΑ ΑΘΗΝΩΝ",
+    "descrEn": "PALAIOU FALIROU / NOTIOU TOMEA ATHINON",
+    "id": "61220",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61221": {
+    "descr": "ΚΕΡΑΤΣΙΝΙΟΥ - ΔΡΑΠΕΤΣΩΝΑΣ / ΠΕΙΡΑΙΩΣ",
+    "descrEn": "KERATSINIOU - DRAPETSONAS / PEIRAIOS",
+    "id": "61221",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61222": {
+    "descr": "ΚΟΡΥΔΑΛΛΟΥ / ΠΕΙΡΑΙΩΣ",
+    "descrEn": "KORYDALLOU / PEIRAIOS",
+    "id": "61222",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61223": {
+    "descr": "ΝΙΚΑΙΑΣ - ΑΓΙΟΥ ΙΩΑΝΝΗ ΡΕΝΤΗ / ΠΕΙΡΑΙΩΣ",
+    "descrEn": "NIKAIAS - AGIOU IOANNI RENTI / PEIRAIOS",
+    "id": "61223",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61224": {
+    "descr": "ΠΕΙΡΑΙΩΣ / ΠΕΙΡΑΙΩΣ",
+    "descrEn": "PEIRAIOS / PEIRAIOS",
+    "id": "61224",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61225": {
+    "descr": "ΠΕΡΑΜΑΤΟΣ / ΠΕΙΡΑΙΩΣ",
+    "descrEn": "PERAMATOS / PEIRAIOS",
+    "id": "61225",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61226": {
+    "descr": "ΑΓΚΙΣΤΡΙΟΥ / ΝΗΣΩΝ",
+    "descrEn": "AGKISTRIOU / NISON",
+    "id": "61226",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61227": {
+    "descr": "ΑΙΓΙΝΑΣ / ΝΗΣΩΝ",
+    "descrEn": "AIGINAS / NISON",
+    "id": "61227",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61228": {
+    "descr": "ΚΥΘΗΡΩΝ / ΝΗΣΩΝ",
+    "descrEn": "KYTHIRON / NISON",
+    "id": "61228",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61229": {
+    "descr": "ΠΟΡΟΥ / ΝΗΣΩΝ",
+    "descrEn": "POROU / NISON",
+    "id": "61229",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61230": {
+    "descr": "ΣΑΛΑΜΙΝΑΣ / ΝΗΣΩΝ",
+    "descrEn": "SALAMINAS / NISON",
+    "id": "61230",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61231": {
+    "descr": "ΣΠΕΤΣΩΝ / ΝΗΣΩΝ",
+    "descrEn": "SPETSON / NISON",
+    "id": "61231",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61232": {
+    "descr": "ΤΡΟΙΖΗΝΙΑΣ-ΜΕΘΑΝΩΝ / ΝΗΣΩΝ",
+    "descrEn": "TROIZINIAS-METHANON / NISON",
+    "id": "61232",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61233": {
+    "descr": "ΥΔΡΑΣ / ΝΗΣΩΝ",
+    "descrEn": "YDRAS / NISON",
+    "id": "61233",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61234": {
+    "descr": "ΑΧΑΡΝΩΝ / ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "ACHARNON / ANATOLIKIS ATTIKIS",
+    "id": "61234",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61235": {
+    "descr": "ΒΑΡΗΣ - ΒΟΥΛΑΣ - ΒΟΥΛΙΑΓΜΕΝΗΣ / ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "VARIS - VOULAS - VOULIAGMENIS / ANATOLIKIS ATTIKIS",
+    "id": "61235",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61236": {
+    "descr": "ΔΙΟΝΥΣΟΥ / ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "DIONYSOU / ANATOLIKIS ATTIKIS",
+    "id": "61236",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61237": {
+    "descr": "ΚΡΩΠΙΑΣ / ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "KROPIAS / ANATOLIKIS ATTIKIS",
+    "id": "61237",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61238": {
+    "descr": "ΛΑΥΡΕΩΤΙΚΗΣ / ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "LAVREOTIKIS / ANATOLIKIS ATTIKIS",
+    "id": "61238",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61239": {
+    "descr": "ΜΑΡΑΘΩΝΟΣ / ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "MARATHONOS / ANATOLIKIS ATTIKIS",
+    "id": "61239",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61240": {
+    "descr": "ΜΑΡΚΟΠΟΥΛΟΥ ΜΕΣΟΓΑΙΑΣ / ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "MARKOPOULOU MESOGAIAS / ANATOLIKIS ATTIKIS",
+    "id": "61240",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61241": {
+    "descr": "ΠΑΙΑΝΙΑΣ / ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "PAIANIAS / ANATOLIKIS ATTIKIS",
+    "id": "61241",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61242": {
+    "descr": "ΠΑΛΛΗΝΗΣ / ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "PALLINIS / ANATOLIKIS ATTIKIS",
+    "id": "61242",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61243": {
+    "descr": "ΡΑΦΗΝΑΣ - ΠΙΚΕΡΜΙΟΥ / ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "RAFINAS - PIKERMIOU / ANATOLIKIS ATTIKIS",
+    "id": "61243",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61244": {
+    "descr": "ΣΑΡΩΝΙΚΟΥ / ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "SARONIKOU / ANATOLIKIS ATTIKIS",
+    "id": "61244",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61245": {
+    "descr": "ΣΠΑΤΩΝ - ΑΡΤΕΜΙΔΟΣ / ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "SPATON - ARTEMIDOS / ANATOLIKIS ATTIKIS",
+    "id": "61245",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61246": {
+    "descr": "ΩΡΩΠΟΥ / ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "OROPOU / ANATOLIKIS ATTIKIS",
+    "id": "61246",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61247": {
+    "descr": "ΑΣΠΡΟΠΥΡΓΟΥ / ΔΥΤΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "ASPROPYRGOU / DYTIKIS ATTIKIS",
+    "id": "61247",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61248": {
+    "descr": "ΕΛΕΥΣΙΝΑΣ / ΔΥΤΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "ELEFSINAS / DYTIKIS ATTIKIS",
+    "id": "61248",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61249": {
+    "descr": "ΜΑΝΔΡΑΣ - ΕΙΔΥΛΛΙΑΣ / ΔΥΤΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "MANDRAS - EIDYLLIAS / DYTIKIS ATTIKIS",
+    "id": "61249",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61250": {
+    "descr": "ΜΕΓΑΡΕΩΝ / ΔΥΤΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "MEGAREON / DYTIKIS ATTIKIS",
+    "id": "61250",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61251": {
+    "descr": "ΦΥΛΗΣ / ΔΥΤΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "FYLIS / DYTIKIS ATTIKIS",
+    "id": "61251",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "5"
+   },
+   "61252": {
+    "descr": "ΑΡΓΟΥΣ-ΜΥΚΗΝΩΝ / ΑΡΓΟΛΙΔΑΣ",
+    "descrEn": "ARGOUS-MYKINON / ARGOLIDAS",
+    "id": "61252",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "2"
+   },
+   "61253": {
+    "descr": "ΕΠΙΔΑΥΡΟΥ / ΑΡΓΟΛΙΔΑΣ",
+    "descrEn": "EPIDAVROU / ARGOLIDAS",
+    "id": "61253",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "2"
+   },
+   "61254": {
+    "descr": "ΕΡΜΙΟΝΙΔΑΣ / ΑΡΓΟΛΙΔΑΣ",
+    "descrEn": "ERMIONIDAS / ARGOLIDAS",
+    "id": "61254",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "2"
+   },
+   "61255": {
+    "descr": "ΝΑΥΠΛΙΕΩΝ / ΑΡΓΟΛΙΔΑΣ",
+    "descrEn": "NAFPLIEON / ARGOLIDAS",
+    "id": "61255",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "2"
+   },
+   "61256": {
+    "descr": "ΒΟΡΕΙΑΣ ΚΥΝΟΥΡΙΑΣ / ΑΡΚΑΔΙΑΣ",
+    "descrEn": "VOREIAS KYNOURIAS / ARKADIAS",
+    "id": "61256",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "3"
+   },
+   "61257": {
+    "descr": "ΓΟΡΤΥΝΙΑΣ / ΑΡΚΑΔΙΑΣ",
+    "descrEn": "GORTYNIAS / ARKADIAS",
+    "id": "61257",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "3"
+   },
+   "61258": {
+    "descr": "ΜΕΓΑΛΟΠΟΛΗΣ / ΑΡΚΑΔΙΑΣ",
+    "descrEn": "MEGALOPOLIS / ARKADIAS",
+    "id": "61258",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "3"
+   },
+   "61259": {
+    "descr": "ΝΟΤΙΑΣ ΚΥΝΟΥΡΙΑΣ / ΑΡΚΑΔΙΑΣ",
+    "descrEn": "NOTIAS KYNOURIAS / ARKADIAS",
+    "id": "61259",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "3"
+   },
+   "61260": {
+    "descr": "ΤΡΙΠΟΛΗΣ / ΑΡΚΑΔΙΑΣ",
+    "descrEn": "TRIPOLIS / ARKADIAS",
+    "id": "61260",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "3"
+   },
+   "61261": {
+    "descr": "ΒΕΛΟΥ-ΒΟΧΑΣ / ΚΟΡΙΝΘΙΑΣ",
+    "descrEn": "VELOU-VOCHAS / KORINTHIAS",
+    "id": "61261",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "28"
+   },
+   "61262": {
+    "descr": "ΚΟΡΙΝΘΙΩΝ / ΚΟΡΙΝΘΙΑΣ",
+    "descrEn": "KORINTHION / KORINTHIAS",
+    "id": "61262",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "28"
+   },
+   "61263": {
+    "descr": "ΛΟΥΤΡΑΚΙΟΥ-ΠΕΡΑΧΩΡΑΣ-ΑΓΙΩΝ ΘΕΟΔΩΡΩΝ / ΚΟΡΙΝΘΙΑΣ",
+    "descrEn": "LOUTRAKIOU-PERACHORAS-AGION THEODORON / KORINTHIAS",
+    "id": "61263",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "28"
+   },
+   "61264": {
+    "descr": "ΝΕΜΕΑΣ / ΚΟΡΙΝΘΙΑΣ",
+    "descrEn": "NEMEAS / KORINTHIAS",
+    "id": "61264",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "28"
+   },
+   "61265": {
+    "descr": "ΞΥΛΟΚΑΣΤΡΟΥ-ΕΥΡΩΣΤΙΝΗΣ / ΚΟΡΙΝΘΙΑΣ",
+    "descrEn": "XYLOKASTROU-EVROSTINIS / KORINTHIAS",
+    "id": "61265",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "28"
+   },
+   "61266": {
+    "descr": "ΣΙΚΥΩΝΙΩΝ / ΚΟΡΙΝΘΙΑΣ",
+    "descrEn": "SIKYONION / KORINTHIAS",
+    "id": "61266",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "28"
+   },
+   "61267": {
+    "descr": "ΑΝΑΤΟΛΙΚΗΣ ΜΑΝΗΣ / ΛΑΚΩΝΙΑΣ",
+    "descrEn": "ANATOLIKIS MANIS / LAKONIAS",
+    "id": "61267",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "30"
+   },
+   "61268": {
+    "descr": "ΕΛΑΦΟΝΗΣΟΥ / ΛΑΚΩΝΙΑΣ",
+    "descrEn": "ELAFONISOU / LAKONIAS",
+    "id": "61268",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "30"
+   },
+   "61269": {
+    "descr": "ΕΥΡΩΤΑ / ΛΑΚΩΝΙΑΣ",
+    "descrEn": "EVROTA / LAKONIAS",
+    "id": "61269",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "30"
+   },
+   "61270": {
+    "descr": "ΜΟΝΕΜΒΑΣΙΑΣ / ΛΑΚΩΝΙΑΣ",
+    "descrEn": "MONEMVASIAS / LAKONIAS",
+    "id": "61270",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "30"
+   },
+   "61271": {
+    "descr": "ΣΠΑΡΤΗΣ / ΛΑΚΩΝΙΑΣ",
+    "descrEn": "SPARTIS / LAKONIAS",
+    "id": "61271",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "30"
+   },
+   "61272": {
+    "descr": "ΔΥΤΙΚΗΣ ΜΑΝΗΣ / ΜΕΣΣΗΝΙΑΣ",
+    "descrEn": "DYTIKIS MANIS / MESSINIAS",
+    "id": "61272",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "36"
+   },
+   "61273": {
+    "descr": "ΚΑΛΑΜΑΤΑΣ / ΜΕΣΣΗΝΙΑΣ",
+    "descrEn": "KALAMATAS / MESSINIAS",
+    "id": "61273",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "36"
+   },
+   "61274": {
+    "descr": "ΜΕΣΣΗΝΗΣ / ΜΕΣΣΗΝΙΑΣ",
+    "descrEn": "MESSINIS / MESSINIAS",
+    "id": "61274",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "36"
+   },
+   "61275": {
+    "descr": "ΟΙΧΑΛΙΑΣ / ΜΕΣΣΗΝΙΑΣ",
+    "descrEn": "OICHALIAS / MESSINIAS",
+    "id": "61275",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "36"
+   },
+   "61276": {
+    "descr": "ΠΥΛΟΥ-ΝΕΣΤΟΡΟΣ / ΜΕΣΣΗΝΙΑΣ",
+    "descrEn": "PYLOU-NESTOROS / MESSINIAS",
+    "id": "61276",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "36"
+   },
+   "61277": {
+    "descr": "ΤΡΙΦΥΛΙΑΣ / ΜΕΣΣΗΝΙΑΣ",
+    "descrEn": "TRIFYLIAS / MESSINIAS",
+    "id": "61277",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "36"
+   },
+   "61278": {
+    "descr": "ΙΚΑΡΙΑΣ / ΙΚΑΡΙΑΣ",
+    "descrEn": "IKARIAS / IKARIAS",
+    "id": "61278",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "43"
+   },
+   "61279": {
+    "descr": "ΦΟΥΡΝΩΝ ΚΟΡΣΕΩΝ / ΙΚΑΡΙΑΣ",
+    "descrEn": "FOURNON KORSEON / IKARIAS",
+    "id": "61279",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "43"
+   },
+   "61280": {
+    "descr": "ΜΥΤΙΛΗΝΗΣ / ΛΕΣΒΟΥ",
+    "descrEn": "MYTILINIS / LESVOU",
+    "id": "61280",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "33"
+   },
+   "61281": {
+    "descr": "ΑΓΙΟΥ ΕΥΣΤΡΑΤΙΟΥ / ΛΗΜΝΟΥ",
+    "descrEn": "AGIOU EFSTRATIOU / LIMNOU",
+    "id": "61281",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "33"
+   },
+   "61282": {
+    "descr": "ΛΗΜΝΟΥ / ΛΗΜΝΟΥ",
+    "descrEn": "LIMNOU / LIMNOU",
+    "id": "61282",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "33"
+   },
+   "61283": {
+    "descr": "ΑΝΑΤΟΛΙΚΗΣ ΣΑΜΟΥ / ΣΑΜΟΥ",
+    "descrEn": "ANATOLIKIS SAMOU / SAMOU",
+    "id": "61283",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "43"
+   },
+   "61284": {
+    "descr": "ΟΙΝΟΥΣΣΩΝ / ΧΙΟΥ",
+    "descrEn": "OINOUSSON / CHIOU",
+    "id": "61284",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "51"
+   },
+   "61285": {
+    "descr": "ΧΙΟΥ / ΧΙΟΥ",
+    "descrEn": "CHIOU / CHIOU",
+    "id": "61285",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "51"
+   },
+   "61286": {
+    "descr": "ΗΡΩΙΚΗΣ ΝΗΣΟΥ ΨΑΡΩΝ / ΧΙΟΥ",
+    "descrEn": "IROIKIS NISOU PSARON / CHIOU",
+    "id": "61286",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "51"
+   },
+   "61287": {
+    "descr": "ΑΝΔΡΟΥ / ΑΝΔΡΟΥ",
+    "descrEn": "ANDROU / ANDROU",
+    "id": "61287",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61288": {
+    "descr": "ΑΝΑΦΗΣ / ΘΗΡΑΣ",
+    "descrEn": "ANAFIS / THIRAS",
+    "id": "61288",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61289": {
+    "descr": "ΘΗΡΑΣ / ΘΗΡΑΣ",
+    "descrEn": "THIRAS / THIRAS",
+    "id": "61289",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61290": {
+    "descr": "ΙΗΤΩΝ / ΘΗΡΑΣ",
+    "descrEn": "IITON / THIRAS",
+    "id": "61290",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61291": {
+    "descr": "ΣΙΚΙΝΟΥ / ΘΗΡΑΣ",
+    "descrEn": "SIKINOU / THIRAS",
+    "id": "61291",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61292": {
+    "descr": "ΦΟΛΕΓΑΝΔΡΟΥ / ΘΗΡΑΣ",
+    "descrEn": "FOLEGANDROU / THIRAS",
+    "id": "61292",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61293": {
+    "descr": "ΑΓΑΘΟΝΗΣΙΟΥ / ΚΑΛΥΜΝΟΥ",
+    "descrEn": "AGATHONISIOU / KALYMNOU",
+    "id": "61293",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "10"
+   },
+   "61294": {
+    "descr": "ΑΣΤΥΠΑΛΑΙΑΣ / ΚΑΛΥΜΝΟΥ",
+    "descrEn": "ASTYPALAIAS / KALYMNOU",
+    "id": "61294",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "10"
+   },
+   "61295": {
+    "descr": "ΚΑΛΥΜΝΙΩΝ / ΚΑΛΥΜΝΟΥ",
+    "descrEn": "KALYMNION / KALYMNOU",
+    "id": "61295",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "10"
+   },
+   "61296": {
+    "descr": "ΛΕΙΨΩΝ / ΚΑΛΥΜΝΟΥ",
+    "descrEn": "LEIPSON / KALYMNOU",
+    "id": "61296",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "10"
+   },
+   "61297": {
+    "descr": "ΛΕΡΟΥ / ΚΑΛΥΜΝΟΥ",
+    "descrEn": "LEROU / KALYMNOU",
+    "id": "61297",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "10"
+   },
+   "61298": {
+    "descr": "ΠΑΤΜΟΥ / ΚΑΛΥΜΝΟΥ",
+    "descrEn": "PATMOU / KALYMNOU",
+    "id": "61298",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "10"
+   },
+   "61299": {
+    "descr": "ΚΑΡΠΑΘΟΥ / ΚΑΡΠΑΘΟΥ",
+    "descrEn": "KARPATHOU / KARPATHOU",
+    "id": "61299",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "10"
+   },
+   "61300": {
+    "descr": "ΗΡΩΙΚΗΣ ΝΗΣΟΥ ΚΑΣΟΥ / ΚΑΡΠΑΘΟΥ",
+    "descrEn": "IROIKIS NISOU KASOU / KARPATHOU",
+    "id": "61300",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "10"
+   },
+   "61301": {
+    "descr": "ΚΕΑΣ / ΚΕΑΣ-ΚΥΘΝΟΥ",
+    "descrEn": "KEAS / KEAS-KYTHNOU",
+    "id": "61301",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61302": {
+    "descr": "ΚΥΘΝΟΥ / ΚΕΑΣ-ΚΥΘΝΟΥ",
+    "descrEn": "KYTHNOU / KEAS-KYTHNOU",
+    "id": "61302",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61303": {
+    "descr": "ΚΩ / ΚΩ",
+    "descrEn": "KO / KO",
+    "id": "61303",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "10"
+   },
+   "61304": {
+    "descr": "ΝΙΣΥΡΟΥ / ΚΩ",
+    "descrEn": "NISYROU / KO",
+    "id": "61304",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "10"
+   },
+   "61305": {
+    "descr": "ΚΙΜΩΛΟΥ / ΜΗΛΟΥ",
+    "descrEn": "KIMOLOU / MILOU",
+    "id": "61305",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61306": {
+    "descr": "ΜΗΛΟΥ / ΜΗΛΟΥ",
+    "descrEn": "MILOU / MILOU",
+    "id": "61306",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61307": {
+    "descr": "ΣΕΡΙΦΟΥ / ΜΗΛΟΥ",
+    "descrEn": "SERIFOU / MILOU",
+    "id": "61307",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61308": {
+    "descr": "ΣΙΦΝΟΥ / ΜΗΛΟΥ",
+    "descrEn": "SIFNOU / MILOU",
+    "id": "61308",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61309": {
+    "descr": "ΜΥΚΟΝΟΥ / ΜΥΚΟΝΟΥ",
+    "descrEn": "MYKONOU / MYKONOU",
+    "id": "61309",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61310": {
+    "descr": "ΑΜΟΡΓΟΥ / ΝΑΞΟΥ",
+    "descrEn": "AMORGOU / NAXOU",
+    "id": "61310",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61311": {
+    "descr": "ΝΑΞΟΥ & ΜΙΚΡΩΝ ΚΥΚΛΑΔΩΝ / ΝΑΞΟΥ",
+    "descrEn": "NAXOU & MIKRON KYKLADON / NAXOU",
+    "id": "61311",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61312": {
+    "descr": "ΑΝΤΙΠΑΡΟΥ / ΠΑΡΟΥ",
+    "descrEn": "ANTIPAROU / PAROU",
+    "id": "61312",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61313": {
+    "descr": "ΠΑΡΟΥ / ΠΑΡΟΥ",
+    "descrEn": "PAROU / PAROU",
+    "id": "61313",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61314": {
+    "descr": "ΜΕΓΙΣΤΗΣ / ΡΟΔΟΥ",
+    "descrEn": "MEGISTIS / RODOU",
+    "id": "61314",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "10"
+   },
+   "61315": {
+    "descr": "ΡΟΔΟΥ / ΡΟΔΟΥ",
+    "descrEn": "RODOU / RODOU",
+    "id": "61315",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "10"
+   },
+   "61316": {
+    "descr": "ΣΥΜΗΣ / ΡΟΔΟΥ",
+    "descrEn": "SYMIS / RODOU",
+    "id": "61316",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "10"
+   },
+   "61317": {
+    "descr": "ΤΗΛΟΥ / ΡΟΔΟΥ",
+    "descrEn": "TILOU / RODOU",
+    "id": "61317",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "10"
+   },
+   "61318": {
+    "descr": "ΧΑΛΚΗΣ / ΡΟΔΟΥ",
+    "descrEn": "CHALKIS / RODOU",
+    "id": "61318",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "10"
+   },
+   "61319": {
+    "descr": "ΣΥΡΟΥ-ΕΡΜΟΥΠΟΛΗΣ / ΣΥΡΟΥ",
+    "descrEn": "SYROU-ERMOUPOLIS / SYROU",
+    "id": "61319",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61320": {
+    "descr": "ΤΗΝΟΥ / ΤΗΝΟΥ",
+    "descrEn": "TINOU / TINOU",
+    "id": "61320",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "29"
+   },
+   "61321": {
+    "descr": "ΑΡΧΑΝΩΝ - ΑΣΤΕΡΟΥΣΙΩΝ / ΗΡΑΚΛΕΙΟΥ",
+    "descrEn": "ARCHANON - ASTEROUSION / IRAKLEIOU",
+    "id": "61321",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "17"
+   },
+   "61322": {
+    "descr": "ΒΙΑΝΝΟΥ / ΗΡΑΚΛΕΙΟΥ",
+    "descrEn": "VIANNOU / IRAKLEIOU",
+    "id": "61322",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "17"
+   },
+   "61323": {
+    "descr": "ΓΟΡΤΥΝΑΣ / ΗΡΑΚΛΕΙΟΥ",
+    "descrEn": "GORTYNAS / IRAKLEIOU",
+    "id": "61323",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "17"
+   },
+   "61324": {
+    "descr": "ΗΡΑΚΛΕΙΟΥ / ΗΡΑΚΛΕΙΟΥ",
+    "descrEn": "IRAKLEIOU / IRAKLEIOU",
+    "id": "61324",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "17"
+   },
+   "61325": {
+    "descr": "ΜΑΛΕΒΙΖΙΟΥ / ΗΡΑΚΛΕΙΟΥ",
+    "descrEn": "MALEVIZIOU / IRAKLEIOU",
+    "id": "61325",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "17"
+   },
+   "61326": {
+    "descr": "ΜΙΝΩΑ ΠΕΔΙΑΔΑΣ / ΗΡΑΚΛΕΙΟΥ",
+    "descrEn": "MINOA PEDIADAS / IRAKLEIOU",
+    "id": "61326",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "17"
+   },
+   "61327": {
+    "descr": "ΦΑΙΣΤΟΥ / ΗΡΑΚΛΕΙΟΥ",
+    "descrEn": "FAISTOU / IRAKLEIOU",
+    "id": "61327",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "17"
+   },
+   "61328": {
+    "descr": "ΧΕΡΣΟΝΗΣΟΥ / ΗΡΑΚΛΕΙΟΥ",
+    "descrEn": "CHERSONISOU / IRAKLEIOU",
+    "id": "61328",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "17"
+   },
+   "61329": {
+    "descr": "ΑΓΙΟΥ ΝΙΚΟΛΑΟΥ / ΛΑΣΙΘΙΟΥ",
+    "descrEn": "AGIOU NIKOLAOU / LASITHIOU",
+    "id": "61329",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "32"
+   },
+   "61330": {
+    "descr": "ΙΕΡΑΠΕΤΡΑΣ / ΛΑΣΙΘΙΟΥ",
+    "descrEn": "IERAPETRAS / LASITHIOU",
+    "id": "61330",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "32"
+   },
+   "61331": {
+    "descr": "ΟΡΟΠΕΔΙΟΥ ΛΑΣΙΘΙΟΥ / ΛΑΣΙΘΙΟΥ",
+    "descrEn": "OROPEDIOU LASITHIOU / LASITHIOU",
+    "id": "61331",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "32"
+   },
+   "61332": {
+    "descr": "ΣΗΤΕΙΑΣ / ΛΑΣΙΘΙΟΥ",
+    "descrEn": "SITEIAS / LASITHIOU",
+    "id": "61332",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "32"
+   },
+   "61333": {
+    "descr": "ΑΓΙΟΥ ΒΑΣΙΛΕΙΟΥ / ΡΕΘΥΜΝΟΥ",
+    "descrEn": "AGIOU VASILEIOU / RETHYMNOU",
+    "id": "61333",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "41"
+   },
+   "61334": {
+    "descr": "ΑΜΑΡΙΟΥ / ΡΕΘΥΜΝΟΥ",
+    "descrEn": "AMARIOU / RETHYMNOU",
+    "id": "61334",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "41"
+   },
+   "61335": {
+    "descr": "ΑΝΩΓΕΙΩΝ / ΡΕΘΥΜΝΟΥ",
+    "descrEn": "ANOGEION / RETHYMNOU",
+    "id": "61335",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "41"
+   },
+   "61336": {
+    "descr": "ΜΥΛΟΠΟΤΑΜΟΥ / ΡΕΘΥΜΝΟΥ",
+    "descrEn": "MYLOPOTAMOU / RETHYMNOU",
+    "id": "61336",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "41"
+   },
+   "61337": {
+    "descr": "ΡΕΘΥΜΝΗΣ / ΡΕΘΥΜΝΟΥ",
+    "descrEn": "RETHYMNIS / RETHYMNOU",
+    "id": "61337",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "41"
+   },
+   "61338": {
+    "descr": "ΑΠΟΚΟΡΩΝΟΥ / ΧΑΝΙΩΝ",
+    "descrEn": "APOKORONOU / CHANION",
+    "id": "61338",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "50"
+   },
+   "61339": {
+    "descr": "ΓΑΥΔΟΥ / ΧΑΝΙΩΝ",
+    "descrEn": "GAVDOU / CHANION",
+    "id": "61339",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "50"
+   },
+   "61340": {
+    "descr": "ΚΑΝΤΑΝΟΥ - ΣΕΛΙΝΟΥ / ΧΑΝΙΩΝ",
+    "descrEn": "KANTANOU - SELINOU / CHANION",
+    "id": "61340",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "50"
+   },
+   "61341": {
+    "descr": "ΚΙΣΣΑΜΟΥ / ΧΑΝΙΩΝ",
+    "descrEn": "KISSAMOU / CHANION",
+    "id": "61341",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "50"
+   },
+   "61342": {
+    "descr": "ΠΛΑΤΑΝΙΑ / ΧΑΝΙΩΝ",
+    "descrEn": "PLATANIA / CHANION",
+    "id": "61342",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "50"
+   },
+   "61343": {
+    "descr": "ΣΦΑΚΙΩΝ / ΧΑΝΙΩΝ",
+    "descrEn": "SFAKION / CHANION",
+    "id": "61343",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "50"
+   },
+   "61344": {
+    "descr": "ΧΑΝΙΩΝ / ΧΑΝΙΩΝ",
+    "descrEn": "CHANION / CHANION",
+    "id": "61344",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "50"
+   },
+   "61345": {
+    "descr": "ΒΟΡΕΙΑΣ ΚΕΡΚΥΡΑΣ / ΚΕΡΚΥΡΑΣ",
+    "descrEn": "VOREIAS KERKYRAS / KERKYRAS",
+    "id": "61345",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "24"
+   },
+   "61346": {
+    "descr": "ΝΟΤΙΑΣ ΚΕΡΚΥΡΑΣ / ΚΕΡΚΥΡΑΣ",
+    "descrEn": "NOTIAS KERKYRAS / KERKYRAS",
+    "id": "61346",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "24"
+   },
+   "61347": {
+    "descr": "ΛΗΞΟΥΡΙΟΥ / ΚΕΦΑΛΛΗΝΙΑΣ",
+    "descrEn": "LIXOURIOU / KEFALLINIAS",
+    "id": "61347",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "25"
+   },
+   "61348": {
+    "descr": "ΣΑΜΗΣ / ΚΕΦΑΛΛΗΝΙΑΣ",
+    "descrEn": "SAMIS / KEFALLINIAS",
+    "id": "61348",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "25"
+   },
+   "61349": {
+    "descr": "ΒΕΛΒΕΝΤΟΥ / ΚΟΖΑΝΗΣ",
+    "descrEn": "VELVENTOU / KOZANIS",
+    "id": "61349",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "27"
+   },
+   "61350": {
+    "descr": "ΔΥΤΙΚΗΣ ΛΕΣΒΟΥ / ΛΕΣΒΟΥ",
+    "descrEn": "DYTIKIS LESVOU / LESVOU",
+    "id": "61350",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "33"
+   },
+   "61351": {
+    "descr": "ΔΥΤΙΚΗΣ ΣΑΜΟΥ / ΣΑΜΟΥ",
+    "descrEn": "DYTIKIS SAMOU / SAMOU",
+    "id": "61351",
+    "lastUpdated": "2025-03-26 16:01:46",
+    "prefectureId": "43"
+   }
+  },
+  "prefectures": {
+   "0": {
+    "descr": "Inadequate Info",
+    "descrEn": "Inadequate Info",
+    "id": "0",
+    "lastUpdated": "2011-02-21 14:17:08"
+   },
+   "1": {
+    "descr": "ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ",
+    "descrEn": "ETOLOAKARNANIA",
+    "id": "1",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "10": {
+    "descr": "ΔΩΔΕΚΑΝΗΣΟΥ",
+    "descrEn": "DODECANESE",
+    "id": "10",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "11": {
+    "descr": "ΕΒΡΟΥ",
+    "descrEn": "EVROU",
+    "id": "11",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "12": {
+    "descr": "ΕΥΒΟΙΑΣ",
+    "descrEn": "EVVIA",
+    "id": "12",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "13": {
+    "descr": "ΕΥΡΥΤΑΝΙΑΣ",
+    "descrEn": "EURITANIA",
+    "id": "13",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "14": {
+    "descr": "ΖΑΚΥΝΘΟΥ",
+    "descrEn": "ZAKINTHOS",
+    "id": "14",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "15": {
+    "descr": "ΗΛΕΙΑΣ",
+    "descrEn": "ILEIA",
+    "id": "15",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "16": {
+    "descr": "ΗΜΑΘΙΑΣ",
+    "descrEn": "IMATHIA",
+    "id": "16",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "17": {
+    "descr": "ΗΡΑΚΛΕΙΟΥ",
+    "descrEn": "HERAKLION",
+    "id": "17",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "18": {
+    "descr": "ΘΕΣΠΡΩΤΙΑΣ",
+    "descrEn": "THESPROTIA",
+    "id": "18",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "19": {
+    "descr": "ΘΕΣΣΑΛΟΝΙΚΗΣ",
+    "descrEn": "THESSALONIKI",
+    "id": "19",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "2": {
+    "descr": "ΑΡΓΟΛΙΔΑΣ",
+    "descrEn": "ARGOLIDA",
+    "id": "2",
+    "lastUpdated": "2008-03-12 16:17:13"
+   },
+   "20": {
+    "descr": "ΙΩΑΝΝΙΝΩΝ",
+    "descrEn": "IOANNINA",
+    "id": "20",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "21": {
+    "descr": "ΚΑΒΑΛΑΣ",
+    "descrEn": "KAVALA",
+    "id": "21",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "22": {
+    "descr": "ΚΑΡΔΙΤΣΑΣ",
+    "descrEn": "KARDITSA",
+    "id": "22",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "23": {
+    "descr": "ΚΑΣΤΟΡΙΑΣ",
+    "descrEn": "KASTORIA",
+    "id": "23",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "24": {
+    "descr": "ΚΕΡΚΥΡΑΣ",
+    "descrEn": "KERKIRA",
+    "id": "24",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "25": {
+    "descr": "ΚΕΦΑΛΛΗΝΙΑΣ",
+    "descrEn": "KEFALLINIA",
+    "id": "25",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "26": {
+    "descr": "ΚΙΛΚΙΣ",
+    "descrEn": "KILKIS",
+    "id": "26",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "27": {
+    "descr": "ΚΟΖΑΝΗΣ",
+    "descrEn": "KOZANI",
+    "id": "27",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "28": {
+    "descr": "ΚΟΡΙΝΘΙΑΣ",
+    "descrEn": "KORINTHIA",
+    "id": "28",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "29": {
+    "descr": "ΚΥΚΛΑΔΩΝ",
+    "descrEn": "CYCLADES",
+    "id": "29",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "3": {
+    "descr": "ΑΡΚΑΔΙΑΣ",
+    "descrEn": "ARKADIA",
+    "id": "3",
+    "lastUpdated": "2007-12-04 14:41:28"
+   },
+   "30": {
+    "descr": "ΛΑΚΩΝΙΑΣ",
+    "descrEn": "LAKONIA",
+    "id": "30",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "31": {
+    "descr": "ΛΑΡΙΣΑΣ",
+    "descrEn": "LARISA",
+    "id": "31",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "32": {
+    "descr": "ΛΑΣΙΘΙΟΥ",
+    "descrEn": "LASITHI",
+    "id": "32",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "33": {
+    "descr": "ΛΕΣΒΟΥ",
+    "descrEn": "LESVOS",
+    "id": "33",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "34": {
+    "descr": "ΛΕΥΚΑΔΑΣ",
+    "descrEn": "LEFKADA",
+    "id": "34",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "35": {
+    "descr": "ΜΑΓΝΗΣΙΑΣ",
+    "descrEn": "MAGNESIA",
+    "id": "35",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "36": {
+    "descr": "ΜΕΣΣΗΝΙΑΣ",
+    "descrEn": "MESSINIA",
+    "id": "36",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "37": {
+    "descr": "ΞΑΝΘΗΣ",
+    "descrEn": "XANTHI",
+    "id": "37",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "38": {
+    "descr": "ΠΕΛΛΗΣ",
+    "descrEn": "PELLA",
+    "id": "38",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "39": {
+    "descr": "ΠΙΕΡΙΑΣ",
+    "descrEn": "PIERIA",
+    "id": "39",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "4": {
+    "descr": "ΑΡΤΑΣ",
+    "descrEn": "ARTA",
+    "id": "4",
+    "lastUpdated": "2007-12-04 18:13:15"
+   },
+   "40": {
+    "descr": "ΠΡΕΒΕΖΑΣ",
+    "descrEn": "PREVEZA",
+    "id": "40",
+    "lastUpdated": "2007-12-10 14:59:31"
+   },
+   "41": {
+    "descr": "ΡΕΘΥΜΝΗΣ",
+    "descrEn": "RETHYMNO",
+    "id": "41",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "42": {
+    "descr": "ΡΟΔΟΠΗΣ",
+    "descrEn": "RODOPI",
+    "id": "42",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "43": {
+    "descr": "ΣΑΜΟΥ",
+    "descrEn": "SAMOU",
+    "id": "43",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "44": {
+    "descr": "ΣΕΡΡΩΝ",
+    "descrEn": "SERRES",
+    "id": "44",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "45": {
+    "descr": "ΤΡΙΚΑΛΩΝ",
+    "descrEn": "TRIKALA",
+    "id": "45",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "46": {
+    "descr": "ΦΘΙΩΤΙΔΑΣ",
+    "descrEn": "FTHIOTIDA",
+    "id": "46",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "47": {
+    "descr": "ΦΛΩΡΙΝΑΣ",
+    "descrEn": "FLORINA",
+    "id": "47",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "48": {
+    "descr": "ΦΩΚΙΔΑΣ",
+    "descrEn": "FOKIDA",
+    "id": "48",
+    "lastUpdated": "2008-01-15 14:16:45"
+   },
+   "49": {
+    "descr": "ΧΑΛΚΙΔΙΚΗΣ",
+    "descrEn": "CHALKIDIKI",
+    "id": "49",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "5": {
+    "descr": "ΑΤΤΙΚΗΣ",
+    "descrEn": "ATTICA",
+    "id": "5",
+    "lastUpdated": "2007-12-04 15:47:06"
+   },
+   "50": {
+    "descr": "ΧΑΝΙΩΝ",
+    "descrEn": "CHANIA",
+    "id": "50",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "51": {
+    "descr": "ΧΙΟΥ",
+    "descrEn": "CHIOS",
+    "id": "51",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "52": {
+    "descr": "ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "EASTERN ATTICA",
+    "id": "52",
+    "lastUpdated": "2012-06-13 00:00:00"
+   },
+   "53": {
+    "descr": "ΔΥΤΙΚΗΣ ΑΤΤΙΚΗΣ",
+    "descrEn": "WESTERN ATTICA",
+    "id": "53",
+    "lastUpdated": "2012-06-13 00:00:00"
+   },
+   "54": {
+    "descr": "ΑΘΗΝΩΝ",
+    "descrEn": "ATHENS",
+    "id": "54",
+    "lastUpdated": "2012-06-13 00:00:00"
+   },
+   "55": {
+    "descr": "ΠΕΙΡΑΙΑ",
+    "descrEn": "PIRAEUS",
+    "id": "55",
+    "lastUpdated": "2012-06-13 00:00:00"
+   },
+   "6": {
+    "descr": "ΑΧΑΙΑΣ",
+    "descrEn": "ACHAIA",
+    "id": "6",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "7": {
+    "descr": "ΒΟΙΩΤΙΑΣ",
+    "descrEn": "VIOTIA",
+    "id": "7",
+    "lastUpdated": "2007-12-04 18:07:24"
+   },
+   "8": {
+    "descr": "ΓΡΕΒΕΝΩΝ",
+    "descrEn": "GREVENA",
+    "id": "8",
+    "lastUpdated": "2007-03-22 12:35:37"
+   },
+   "9": {
+    "descr": "ΔΡΑΜΑΣ",
+    "descrEn": "DRAMA",
+    "id": "9",
+    "lastUpdated": "2007-03-22 12:35:37"
+   }
+  }
+ }
+}

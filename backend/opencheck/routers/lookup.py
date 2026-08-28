@@ -585,6 +585,34 @@ def _bh_malta_mbr(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_gemi_greece(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the Greek General Commercial Registry (ΓΕΜΗ).
+
+    Asserts only the two identifiers ΓΕΜΗ itself publishes — the Αριθμός ΓΕΜΗ
+    and the ΑΦΜ — never the LEI the lookup arrived by (see the identifier
+    corroboration rule in CLAUDE.md).
+    """
+    from ..findings import finding_gemi_greece
+    from ..sources.gemi_greece import english_label
+
+    c = r.get("company") or {}
+    identifiers = {"gr_argemi": local_id}
+    afm = str(c.get("afm") or "").strip()
+    if afm:
+        identifiers["gr_afm"] = afm
+
+    status = english_label("companyStatuses", c.get("status"))
+    summary = f"GR-GEMI {local_id}" + (f" · {status.lower()}" if status else "")
+
+    return _hit(
+        "gemi_greece", local_id,
+        name=(c.get("coNameEl") or "").strip() or ctx.legal_name or "",
+        summary=summary,
+        identifiers=identifiers, raw=c,
+        finding=finding_gemi_greece(r),
+    )
+
+
 def _bh_prh(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     c = r.get("company") or {}
     name = ""

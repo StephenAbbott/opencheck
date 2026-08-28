@@ -271,6 +271,22 @@ PROBES: dict[str, SourceProbe] = {
         anchor_lei="5493004CC7P3EWMB7033",
         bods_mapper="map_firmenbuch",
     ),
+    "gemi_greece": _p(
+        tier="live",
+        subject="ΓΚΟΛΕΜΗΣ ΕΤΑΙΡΕΙΑ ΑΕΡΟΠΟΡΙΚΩΝ ΕΞΥΠΗΡΕΤΗΣΕΩΝ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ",
+        args=("003031801000",),
+        requires_env=("GEMI_API_KEY",),
+        expect_fields=("company",),
+        anchor_lei="635400NMLGFBATPGJD19",
+        bods_mapper="map_gemi_greece",
+        notes=(
+            "Zero-padded Αριθμός ΓΕΜΗ, exactly as GLEIF stores registeredAs — "
+            "the API accepts the padded and unpadded forms interchangeably, so "
+            "the probe uses the padded one the lookup pipeline actually passes. "
+            "8 requests/minute: a sweep that also probes another Greek subject "
+            "must pace itself."
+        ),
+    ),
     "gleif": _p(
         tier="live",
         subject="BP P.L.C.",
