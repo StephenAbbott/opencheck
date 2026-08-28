@@ -667,6 +667,43 @@ def test_geot_projects_for_known_parent() -> None:
         _ct_mod._geot_data = None
 
 
+def test_geot_artifact_entity_status_section() -> None:
+    """The committed artifact carries the entity_status section (August 2026+).
+
+    Guards the artifact shape the Phase 142 adapter work consumes: records are
+    status-flagged (dissolved/amalgamated) and/or joint ventures; successor
+    fields appear only alongside a status; successor LEIs are valid 20-char
+    codes; URLs are real lists, not GEM's stringified-Python-list cells.
+    """
+    import opencheck.sources.climatetrace as _ct_mod
+
+    _ct_mod._geot_data = None
+    try:
+        data = _ct_mod._get_geot_data()
+        status = data.get("entity_status") or {}
+        assert data["meta"]["entity_status_count"] == len(status) > 100
+        assert any(r.get("merged_into_lei") for r in status.values())
+        for eid, rec in status.items():
+            assert eid.startswith("E")
+            assert rec.get("status") in ("dissolved", "amalgamated") or rec.get("jv") is True
+            if "merged_into" in rec:
+                # Successors ride with amalgamated entities, and occasionally
+                # with dissolved ones — but never without a status.
+                assert rec.get("status") in ("dissolved", "amalgamated")
+                assert not rec["merged_into"].endswith(".0")  # float artifact stripped
+            for key in ("merged_into_name", "merged_into_lei"):
+                assert key not in rec or rec.get("merged_into")
+            lei = rec.get("merged_into_lei")
+            assert lei is None or (len(lei) == 20 and lei == lei.upper())
+            urls = rec.get("urls")
+            assert urls is None or (
+                isinstance(urls, list)
+                and all(not u.startswith("[") for u in urls)
+            )
+    finally:
+        _ct_mod._geot_data = None
+
+
 def test_geot_projects_none_for_unknown_entity() -> None:
     import opencheck.sources.climatetrace as _ct_mod
 
