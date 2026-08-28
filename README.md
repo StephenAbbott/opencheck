@@ -16,7 +16,13 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 137** — OpenCheck's fortieth source, and its first Greek one: the ΓΕΜΗ Open Data API under ODC-BY-1.0, entered from GLEIF RA000685.
+**Latest: Phase 140** — twenty country-to-registration-authority mappings were wrong across three copies, so the national-ID reverse lookup was querying registries companies are not registered at.
+
+**Previous: Phase 139** — the third stale source count, found by live testing, plus a repeated alternate name in published BODS.
+
+**Previous: Phase 138** — the share card could not draw Greek company names; it now falls back to a Latin form the source itself published.
+
+**Previous: Phase 137** — OpenCheck's fortieth source, and its first Greek one: the ΓΕΜΗ Open Data API under ODC-BY-1.0, entered from GLEIF RA000685.
 
 → [Full development history](docs/status.md)
 
