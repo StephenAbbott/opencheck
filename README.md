@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 144** — declared bots are refused on the app's live-lookup stream (pointed at the crawlable entity pages and the JSON API instead), and a rate-limited anchor now falls back to the Golden Copy snapshot after five seconds instead of fifteen.
+**Latest: Phase 145** — a rate-limited or unreachable GLEIF no longer takes down the securities section: the sanctioned-securities check runs from a local index regardless, and the report says which part is missing instead of erroring.
 
 → [Full development history](docs/status.md)
 
