@@ -32,6 +32,8 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 | `OPENCHECK_DATA_ROOT` | Override the cache root (used by tests; defaults to `./data`). |
 | `OPENCHECK_GLEIF_RATE_LIMIT_PER_MINUTE` | Process-wide budget for requests to `api.gleif.org` (default `50`). GLEIF rate-limits by IP at 60 req/min across *everything* this deployment sends it — anchor lookups, `/securities` ISINs, the Time Machine, subsidiary reveals — so OpenCheck keeps its own ceiling under GLEIF's and queues bursts instead of burning GLEIF's sliding window with 429s (which still count against it). `0` disables the throttle. |
 | `OPENCHECK_GLEIF_THROTTLE_MAX_WAIT_S` | How long one GLEIF request may wait for a budget slot (default `15`) before giving up and taking the degradation path: stale cache, then the entity-pages Golden Copy snapshot, then a `503` with retry advice. |
+| `OPENCHECK_GLEIF_SNAPSHOT_AFTER_S` | When the anchor LEI exists in the entity-pages Golden Copy, serve the snapshot if the live GLEIF fetch hasn't completed within this many seconds (default `5`) instead of sitting out the full throttle wait. Only applies when a snapshot row exists; `0` disables the early fallback. |
+| `OPENCHECK_BOT_GATE_LOOKUP_STREAM` | Refuse declared automated clients (bot User-Agents) on `/lookup-stream` with a `403` pointing at `/lookup` and the `/entity` pages (default `true`). The plain `/lookup` JSON API is never gated — `python`/`curl` UAs are its legitimate callers. |
 | `ANTHROPIC_API_KEY` | Optional — reserved for future intent extraction / phrasing. |
 
 ## Deployment on Render
