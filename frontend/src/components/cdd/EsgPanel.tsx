@@ -5,6 +5,13 @@ import { DeepenBlock, SkeletonSourceCard } from "./SourceBucketCard";
 import type { SourceBucket } from "./SourceBucketCard";
 import { sourceLabel } from "../../lib/vocab";
 import PanelSection from "../ui/PanelSection";
+import { Chip } from "../ui/Chip";
+import {
+  entityStatusBanner,
+  FOLLOW_FORWARD_LABEL,
+  isJointVenture,
+  JOINT_VENTURE_LABEL,
+} from "../../lib/entityStatus";
 
 
 // ---------------------------------------------------------------------
@@ -515,6 +522,9 @@ function ClimateTRACECard({
   const formatted = totalCo2e > 0 ? formatCo2e(totalCo2e) : null;
   const [liveProjects, operatingProjects, controlledProjects] = projects?.total ?? [0, 0, 0];
   const footnote = projects ? statusFootnote(projects.statuses) : null;
+  // August 2026 GEOT lifecycle fields — context, deliberately not risk.
+  const statusBanner = entityStatusBanner(raw.entity_status);
+  const jointVenture = isJointVenture(raw.entity_status);
 
   const anyOpen = showDiagram || showStatements || showJson;
   const stmtCount = detail?.bods.length ?? preloadedStmtCount ?? 0;
@@ -571,7 +581,51 @@ function ClimateTRACECard({
         </h3>
         <div className="text-[11px] font-mono text-emerald-800 mt-0.5">
           GEM entity {hit.identifiers.gem_entity_id}
+          {jointVenture && (
+            <Chip tone="context" className="ml-2 font-body align-middle">
+              {JOINT_VENTURE_LABEL}
+            </Chip>
+          )}
         </div>
+
+        {/* Entity status — dissolved / amalgamated, with the ownership trail
+            forward when the successor's LEI is known. Context voice on
+            purpose: the ESG card asserts structure, never risk. */}
+        {statusBanner && (
+          <div className="mt-3 rounded-oo border border-emerald-300 bg-emerald-100/60 px-3 py-2 text-oo-small text-emerald-900">
+            {statusBanner.text}
+            {statusBanner.followHref && (
+              <>
+                {" "}
+                <a
+                  href={statusBanner.followHref}
+                  className="font-semibold underline underline-offset-2 hover:text-emerald-950 whitespace-nowrap"
+                >
+                  {FOLLOW_FORWARD_LABEL} →
+                </a>
+              </>
+            )}
+            {statusBanner.urls.length > 0 && (
+              <div className="mt-1 text-oo-meta text-emerald-800">
+                Status source:{" "}
+                {statusBanner.urls.map((u, i) => (
+                  <span key={u}>
+                    {i > 0 && " · "}
+                    <a
+                      href={u}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline underline-offset-2 hover:text-emerald-900"
+                    >
+                      {new URL(u).hostname.replace(/^www\./, "")}
+                      <span className="sr-only"> (opens in new tab)</span>
+                    </a>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Two-stat header: emissions | project portfolio */}
         {(formatted || liveProjects > 0) && (

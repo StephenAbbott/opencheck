@@ -667,6 +667,43 @@ def test_geot_projects_for_known_parent() -> None:
         _ct_mod._geot_data = None
 
 
+def test_geot_artifact_entity_status_section() -> None:
+    """The committed artifact carries the entity_status section (August 2026+).
+
+    Guards the artifact shape the Phase 142 adapter work consumes: records are
+    status-flagged (dissolved/amalgamated) and/or joint ventures; successor
+    fields appear only alongside a status; successor LEIs are valid 20-char
+    codes; URLs are real lists, not GEM's stringified-Python-list cells.
+    """
+    import opencheck.sources.climatetrace as _ct_mod
+
+    _ct_mod._geot_data = None
+    try:
+        data = _ct_mod._get_geot_data()
+        status = data.get("entity_status") or {}
+        assert data["meta"]["entity_status_count"] == len(status) > 100
+        assert any(r.get("merged_into_lei") for r in status.values())
+        for eid, rec in status.items():
+            assert eid.startswith("E")
+            assert rec.get("status") in ("dissolved", "amalgamated") or rec.get("jv") is True
+            if "merged_into" in rec:
+                # Successors ride with amalgamated entities, and occasionally
+                # with dissolved ones — but never without a status.
+                assert rec.get("status") in ("dissolved", "amalgamated")
+                assert not rec["merged_into"].endswith(".0")  # float artifact stripped
+            for key in ("merged_into_name", "merged_into_lei"):
+                assert key not in rec or rec.get("merged_into")
+            lei = rec.get("merged_into_lei")
+            assert lei is None or (len(lei) == 20 and lei == lei.upper())
+            urls = rec.get("urls")
+            assert urls is None or (
+                isinstance(urls, list)
+                and all(not u.startswith("[") for u in urls)
+            )
+    finally:
+        _ct_mod._geot_data = None
+
+
 def test_geot_projects_none_for_unknown_entity() -> None:
     import opencheck.sources.climatetrace as _ct_mod
 
@@ -719,6 +756,143 @@ def test_stub_bundle_carries_geot_projects(tmp_path, monkeypatch) -> None:
         assert result is not None
         assert result["projects"] is not None
         assert result["projects"]["total"][0] > 0
+    finally:
+        get_settings.cache_clear()
+        _reset_indexes()
+        _ct_mod._geot_data = None
+
+
+# ---------------------------------------------------------------------------
+# Entity status — dissolved / amalgamated / joint venture (August 2026 GEOT)
+# ---------------------------------------------------------------------------
+
+
+def test_row_entity_status_parses_new_columns() -> None:
+    """CSV-row fallback: strips the '.0' float suffix, parses list-URLs, and
+    resolves the successor's name and LEI from the entities index."""
+    import opencheck.sources.climatetrace as _ct_mod
+
+    _ct_mod._lei_index = {}
+    _ct_mod._entity_index = {
+        "E100001014363": {
+            "Entity ID": "E100001014363",
+            "Full Name": "Delek Logistics Partners LP",
+            "Global Legal Entity Identifier Index": "549300UVYITDIU51P724",
+        }
+    }
+    try:
+        rec = _ct_mod._row_entity_status(
+            {
+                "Entity Status": "amalgamated",
+                "Merged Into": "E100001014363.0",
+                "Entity Status Data Source URL": "['https://a.example', 'https://b.example']",
+                "Joint Venture": "False",
+            }
+        )
+        assert rec == {
+            "status": "amalgamated",
+            "merged_into": "E100001014363",
+            "merged_into_name": "Delek Logistics Partners LP",
+            "merged_into_lei": "549300UVYITDIU51P724",
+            "urls": ["https://a.example", "https://b.example"],
+        }
+    finally:
+        _ct_mod._lei_index = None
+        _ct_mod._entity_index = None
+
+
+def test_row_entity_status_dangling_successor_keeps_bare_id() -> None:
+    import opencheck.sources.climatetrace as _ct_mod
+
+    _ct_mod._lei_index = {}
+    _ct_mod._entity_index = {}
+    try:
+        rec = _ct_mod._row_entity_status(
+            {"Entity Status": "dissolved", "Merged Into": "E100002009178.0"}
+        )
+        assert rec == {"status": "dissolved", "merged_into": "E100002009178"}
+    finally:
+        _ct_mod._lei_index = None
+        _ct_mod._entity_index = None
+
+
+def test_row_entity_status_jv_true_and_unknown() -> None:
+    """JV 'True' is a record on its own; the literal 'Unknown' is not."""
+    import opencheck.sources.climatetrace as _ct_mod
+
+    assert _ct_mod._row_entity_status({"Joint Venture": "True"}) == {"jv": True}
+    assert _ct_mod._row_entity_status({"Joint Venture": "Unknown"}) is None
+
+
+def test_row_entity_status_none_for_active_and_old_schema() -> None:
+    """Active entities and pre-August-2026 rows (no columns) yield None."""
+    import opencheck.sources.climatetrace as _ct_mod
+
+    assert _ct_mod._row_entity_status({"Entity Status": "", "Joint Venture": "False"}) is None
+    assert _ct_mod._row_entity_status({"Entity ID": "E1", "Full Name": "X"}) is None
+
+
+def test_entity_status_prefers_artifact_over_row() -> None:
+    """The curated artifact record wins; the CSV row covers unlisted entities."""
+    import opencheck.sources.climatetrace as _ct_mod
+
+    _ct_mod._geot_data = {
+        "meta": {},
+        "entities": {},
+        "entity_status": {"E1": {"status": "amalgamated", "merged_into": "E2"}},
+    }
+    try:
+        art = _ct_mod._entity_status("E1", {"Entity Status": "dissolved"})
+        assert art == {"status": "amalgamated", "merged_into": "E2"}
+        fallback = _ct_mod._entity_status("E3", {"Joint Venture": "True"})
+        assert fallback == {"jv": True}
+        assert _ct_mod._entity_status("E4", {}) is None
+    finally:
+        _ct_mod._geot_data = None
+
+
+def test_stub_bundle_carries_entity_status(tmp_path, monkeypatch) -> None:
+    """fetch_by_lei stub path includes the artifact's entity_status record."""
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("OPENCHECK_DISABLE_DOTENV", "1")
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
+
+    _make_gem_zip(
+        tmp_path,
+        rows=[
+            {
+                "Entity ID": "E100001013982",
+                "Full Name": "3Bear Energy LLC",
+                "Global Legal Entity Identifier Index": "AAAAAAAAAAAAAAAAAA03",
+                "Headquarters Country": "USA",
+            }
+        ],
+    )
+    from opencheck.config import get_settings
+    import opencheck.sources.climatetrace as _ct_mod
+
+    get_settings.cache_clear()
+    _reset_indexes()
+    _ct_mod._geot_data = {
+        "meta": {},
+        "entities": {},
+        "entity_status": {
+            "E100001013982": {
+                "status": "amalgamated",
+                "merged_into": "E100001014363",
+                "merged_into_name": "Delek Logistics Partners LP",
+                "merged_into_lei": "549300UVYITDIU51P724",
+            }
+        },
+    }
+    try:
+        import asyncio
+
+        adapter = ClimateTRACEAdapter()
+        result = asyncio.run(adapter.fetch_by_lei("AAAAAAAAAAAAAAAAAA03"))
+        assert result is not None
+        assert result["entity_status"]["status"] == "amalgamated"
+        assert result["entity_status"]["merged_into_lei"] == "549300UVYITDIU51P724"
     finally:
         get_settings.cache_clear()
         _reset_indexes()

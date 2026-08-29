@@ -6,11 +6,13 @@ cannot be fetched at runtime. This script is run manually against each new
 GEOT release (roughly twice a year) and the generated artifact is committed:
 
     python scripts/build_geot_projects.py \
-        ~/Downloads/Global-Energy-Ownership-Tracker-May-2026-V1.xlsx \
-        --release "May 2026"
+        ~/Downloads/Global-Energy-Ownership-Tracker-August-2026-V2.xlsx \
+        --release "August 2026"
 
-Output: ``opencheck/data/geot_projects.json.gz`` — a per-entity summary of
-the precomputed ownership closure in the 9 per-tracker sheets:
+Output: ``opencheck/data/geot_projects.json.gz`` with two data sections.
+
+``entities`` — a per-entity summary of the precomputed ownership closure in
+the 9 per-tracker sheets:
 
 * Each sheet row is one (ultimate parent, asset unit, ownership path) with an
   *effective* share (product along the path). Shares for one unit sum well
@@ -25,6 +27,22 @@ the precomputed ownership closure in the 9 per-tracker sheets:
   operating > development > mothballed > retired > cancelled > other, so the
   status counts sum to the total distinct projects.
 
+``entity_status`` (August 2026 release onwards) — a compact per-entity record
+of the All Entities sheet's corporate-lifecycle columns, present only for
+entities that carry any of them:
+
+* ``status`` — ``dissolved`` or ``amalgamated`` (``Entity Status`` column;
+  blank in the sheet means active and yields no record).
+* ``merged_into`` / ``merged_into_name`` / ``merged_into_lei`` — the successor
+  GEM entity for amalgamated companies. The raw ``Merged Into`` value carries
+  a spurious ``.0`` float suffix on 115 of 117 rows (August 2026), which is
+  stripped; name and LEI are resolved from the same sheet at build time and
+  omitted when the successor ID has no row (33 dangle in August 2026).
+* ``urls`` — ``Entity Status Data Source URL``, published as a stringified
+  Python list (``"['https://…', 'https://…']"``) and parsed accordingly.
+* ``jv: true`` — the ``Joint Venture`` column; the literal ``"Unknown"``
+  (4 rows in August 2026) is treated as absent.
+
 Requires openpyxl (tooling-only dependency, not needed at runtime):
     pip install openpyxl
 """
@@ -32,6 +50,7 @@ Requires openpyxl (tooling-only dependency, not needed at runtime):
 from __future__ import annotations
 
 import argparse
+import ast
 import datetime as dt
 import gzip
 import json
@@ -40,10 +59,13 @@ from pathlib import Path
 
 # Sheet name → (parent ID column, project-level asset ID column, unit-level
 # asset ID column, status column, short tracker key).
-# Column naming is inconsistent across sheets — verified against May 2026.
+# Column naming is inconsistent across sheets — verified against August 2026
+# (which renamed the coal sheet's "Owner GEM Entity ID" to "Parent GEM Entity
+# ID" and the cement sheet's "GEM Plant ID" to "GEM plant ID"; lookups are
+# case-insensitive via _col so pure case drift no longer breaks the build).
 SHEET_SPEC: dict[str, tuple[str, str, str, str, str]] = {
     "Coal Plant Ownership": (
-        "Owner GEM Entity ID", "GEM location ID", "GEM unit ID", "Status", "coal_plant",
+        "Parent GEM Entity ID", "GEM location ID", "GEM unit ID", "Status", "coal_plant",
     ),
     "Gas Plant Ownership": (
         "Parent GEM Entity ID", "GEM location ID", "GEM unit ID", "Status", "gas_plant",
@@ -67,7 +89,7 @@ SHEET_SPEC: dict[str, tuple[str, str, str, str, str]] = {
         "Parent GEM Entity ID", "Steel Plant ID", "Steel Plant ID", "Status", "steel_plant",
     ),
     "Cement and Concrete Ownership": (
-        "Parent GEM Entity ID", "GEM Plant ID", "GEM Plant ID", "Status", "cement",
+        "Parent GEM Entity ID", "GEM plant ID", "GEM plant ID", "Status", "cement",
     ),
 }
 
@@ -105,6 +127,144 @@ def _bucket(status: str | None) -> str:
     return STATUS_BUCKETS.get((status or "").strip().lower(), "other")
 
 
+def _col(header: list[str], sheet: str, name: str, *, required: bool = True) -> int | None:
+    """Index of a column by case-insensitive name, or a legible error.
+
+    GEM's header casing drifts between releases (August 2026 turned
+    "GEM Plant ID" into "GEM plant ID"), so exact matching is too brittle;
+    a genuinely missing/renamed column should fail loudly, naming the sheet.
+    """
+    lowered = [h.lower() for h in header]
+    try:
+        return lowered.index(name.lower())
+    except ValueError:
+        if not required:
+            return None
+        raise SystemExit(
+            f"Sheet {sheet!r} has no column matching {name!r} — headers: {header}"
+        ) from None
+
+
+# --- All Entities sheet: corporate-lifecycle columns (August 2026 onwards) ---
+
+_AE_SHEET = "All Entities"
+_AE_ID = "Entity ID"
+_AE_NAME = "Full Name"
+_AE_LEI = "Global Legal Entity Identifier Index"
+_AE_JV = "Joint Venture"
+_AE_STATUS = "Entity Status"
+_AE_MERGED = "Merged Into"
+_AE_STATUS_URL = "Entity Status Data Source URL"
+
+
+def _clean_lei(raw: object) -> str | None:
+    """A valid 20-char LEI from the sheet's LEI cell, else None.
+
+    The column also holds "not found", "n/a" and semicolon-delimited multiples;
+    take the first valid-looking code, mirroring the runtime adapter.
+    """
+    for token in str(raw or "").split(";"):
+        lei = token.strip().upper()
+        if len(lei) == 20 and lei not in ("", "NOT FOUND", "N/A"):
+            return lei
+    return None
+
+
+def _parse_status_urls(raw: object) -> list[str]:
+    """Parse the Entity Status Data Source URL cell.
+
+    August 2026 publishes stringified Python lists ("['https://a', 'https://b']");
+    tolerate a plain URL string too in case the format is fixed upstream.
+    """
+    text = str(raw or "").strip()
+    if not text:
+        return []
+    if text.startswith("["):
+        try:
+            parsed = ast.literal_eval(text)
+            if isinstance(parsed, (list, tuple)):
+                return [str(u).strip() for u in parsed if str(u).strip()]
+        except (ValueError, SyntaxError):
+            pass
+    return [text]
+
+
+def extract_entity_status(wb: object) -> dict[str, dict]:
+    """Per-entity corporate-lifecycle records from the All Entities sheet.
+
+    Returns {gem_entity_id: record} for entities that are status-flagged
+    (dissolved/amalgamated) or joint ventures; everything else is omitted.
+    Pre-August-2026 workbooks lack the columns — returns {} then.
+    """
+    try:
+        ws = wb[_AE_SHEET]
+    except KeyError:
+        print(f"No {_AE_SHEET!r} sheet — skipping entity_status")
+        return {}
+
+    rows = ws.iter_rows(values_only=True)
+    header = [str(h).strip() if h is not None else "" for h in next(rows)]
+    id_i = _col(header, _AE_SHEET, _AE_ID)
+    name_i = _col(header, _AE_SHEET, _AE_NAME)
+    lei_i = _col(header, _AE_SHEET, _AE_LEI, required=False)
+    jv_i = _col(header, _AE_SHEET, _AE_JV, required=False)
+    status_i = _col(header, _AE_SHEET, _AE_STATUS, required=False)
+    merged_i = _col(header, _AE_SHEET, _AE_MERGED, required=False)
+    url_i = _col(header, _AE_SHEET, _AE_STATUS_URL, required=False)
+    if status_i is None and jv_i is None:
+        print("All Entities sheet predates the entity-status columns — skipping")
+        return {}
+
+    names: dict[str, str] = {}
+    leis: dict[str, str] = {}
+    records: dict[str, dict] = {}
+
+    for row in rows:
+        eid = str(row[id_i] or "").strip()
+        if not eid:
+            continue
+        names[eid] = str(row[name_i] or "").strip()
+        if lei_i is not None:
+            lei = _clean_lei(row[lei_i])
+            if lei:
+                leis[eid] = lei
+
+        rec: dict = {}
+        status = str(row[status_i] or "").strip().lower() if status_i is not None else ""
+        if status in ("dissolved", "amalgamated"):
+            rec["status"] = status
+            if merged_i is not None:
+                # 115 of 117 August-2026 values carry a float-coercion ".0" suffix.
+                merged = str(row[merged_i] or "").strip().removesuffix(".0")
+                if merged:
+                    rec["merged_into"] = merged
+            if url_i is not None:
+                urls = _parse_status_urls(row[url_i])
+                if urls:
+                    rec["urls"] = urls
+        # The literal "Unknown" (4 rows in August 2026) is not an assertion.
+        if jv_i is not None and str(row[jv_i] or "").strip().lower() == "true":
+            rec["jv"] = True
+        if rec:
+            records[eid] = rec
+
+    # Resolve successor name/LEI now so the runtime needs no extra index.
+    # 33 August-2026 successor IDs have no All Entities row — keep the bare ID.
+    for rec in records.values():
+        merged = rec.get("merged_into")
+        if not merged:
+            continue
+        if names.get(merged):
+            rec["merged_into_name"] = names[merged]
+        if merged in leis:
+            rec["merged_into_lei"] = leis[merged]
+
+    n_status = sum(1 for r in records.values() if "status" in r)
+    n_jv = sum(1 for r in records.values() if r.get("jv"))
+    print(f"{_AE_SHEET:32s} status-flagged={n_status:4d} joint ventures={n_jv:4d}")
+    return records
+
+
 def build(xlsx_path: Path, release: str) -> dict:
     import openpyxl  # tooling-only dependency
 
@@ -118,12 +278,9 @@ def build(xlsx_path: Path, release: str) -> dict:
         ws = wb[sheet]
         rows = ws.iter_rows(values_only=True)
         header = [str(h).strip() if h is not None else "" for h in next(rows)]
-        idx = {name: header.index(name) for name in (pcol, projcol, unitcol, scol)}
-        try:
-            path_idx: int | None = header.index("Ownership Path")
-        except ValueError:
-            path_idx = None
-        share_idx = header.index("Share")
+        idx = {name: _col(header, sheet, name) for name in (pcol, projcol, unitcol, scol)}
+        path_idx = _col(header, sheet, "Ownership Path", required=False)
+        share_idx = _col(header, sheet, "Share")
 
         seen_paths: set[tuple] = set()  # exact-duplicate row guard
         n_rows = 0
@@ -207,6 +364,8 @@ def build(xlsx_path: Path, release: str) -> dict:
         for eid, e in entities.items()
     }
 
+    entity_status = extract_entity_status(wb)
+
     return {
         "meta": {
             "release": release,
@@ -218,8 +377,10 @@ def build(xlsx_path: Path, release: str) -> dict:
             "control_threshold_pct": CONTROL_THRESHOLD,
             "live_buckets": sorted(LIVE_BUCKETS),
             "entity_count": len(out_entities),
+            "entity_status_count": len(entity_status),
         },
         "entities": out_entities,
+        "entity_status": entity_status,
     }
 
 
@@ -240,7 +401,10 @@ def main() -> None:
     with gzip.open(args.out, "wt", encoding="utf-8") as f:
         json.dump(data, f, separators=(",", ":"))
     size_kb = args.out.stat().st_size / 1024
-    print(f"\nWrote {args.out} ({size_kb:.0f} KB, {data['meta']['entity_count']} entities)")
+    print(
+        f"\nWrote {args.out} ({size_kb:.0f} KB, {data['meta']['entity_count']} entities, "
+        f"{data['meta']['entity_status_count']} entity-status records)"
+    )
 
 
 if __name__ == "__main__":

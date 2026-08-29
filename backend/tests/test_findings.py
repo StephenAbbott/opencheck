@@ -18,6 +18,7 @@ from opencheck.findings import (
     MAX_FINDING_CHARS,
     clauses_to_sentence,
     finding_bods_gleif,
+    finding_climatetrace,
     finding_companies_house,
     finding_gleif,
     finding_openaleph,
@@ -682,6 +683,64 @@ def test_ted_finding_states_an_empty_result_in_the_same_voice() -> None:
     )
 
 
+def _ct_live_bundle(**overrides) -> dict:
+    """A live climatetrace bundle shaped like _fetch_entity_data output."""
+    bundle = {
+        "source_id": "climatetrace",
+        "entity_id": "E100000001096",
+        "entity_name": "BP p.l.c.",
+        "projects": {"total": [137, 106, 14], "statuses": {}, "trackers": {}},
+        "emissions": {"total_co2e_tonnes": 200_800_000.0, "year": 2024},
+        "entity_status": None,
+        "is_stub": False,
+    }
+    bundle.update(overrides)
+    return bundle
+
+
+def test_climatetrace_finding_counts_projects_and_emissions() -> None:
+    assert finding_climatetrace(_ct_live_bundle()) == (
+        "137 live energy projects on file (106 operating); "
+        "2024 emissions estimated at 200.8 Mt CO\u2082e."
+    )
+
+
+def test_climatetrace_finding_leads_with_amalgamation() -> None:
+    """Rule 3 — a dead entity changes a decision more than any asset count."""
+    assert finding_climatetrace(
+        _ct_live_bundle(
+            projects={"total": [0, 0, 0], "statuses": {}, "trackers": {}},
+            emissions={},
+            entity_status={
+                "status": "amalgamated",
+                "merged_into": "E100001014363",
+                "merged_into_name": "Delek Logistics Partners LP",
+            },
+        )
+    ) == (
+        "Recorded as amalgamated into Delek Logistics Partners LP; "
+        "no live energy projects on file."
+    )
+
+
+def test_climatetrace_finding_dissolved_and_joint_venture() -> None:
+    assert finding_climatetrace(
+        _ct_live_bundle(
+            projects=None,
+            emissions={},
+            entity_status={"status": "dissolved", "jv": True},
+        )
+    ) == "Recorded as dissolved; identified as a joint venture."
+
+
+def test_climatetrace_finding_is_none_for_stub_and_empty_bundles() -> None:
+    assert finding_climatetrace({}) is None
+    assert finding_climatetrace(_ct_live_bundle(is_stub=True)) is None
+    assert finding_climatetrace(
+        _ct_live_bundle(projects=None, emissions={}, entity_status=None)
+    ) is None
+
+
 def test_wikidata_finding_leads_with_the_parent_organisation() -> None:
     assert finding_wikidata(wd_parent_bundle()["summary"]) == (
         "Part of Telefonaktiebolaget LM Ericsson; described as a public company; "
@@ -874,6 +933,17 @@ _ALL_FIXTURE_FINDINGS: dict[str, str | None] = {
     "opencorporates": finding_opencorporates(_oc_bundle()),
     "openaleph": finding_openaleph(_ERICSSON_ENTITY, _OA_MENTIONS),
     "ted_eu": finding_ted_eu(ted_won_bundle(["380129866"])),
+    "climatetrace": finding_climatetrace(_ct_live_bundle()),
+    "climatetrace/amalgamated": finding_climatetrace(
+        _ct_live_bundle(
+            projects={"total": [0, 0, 0], "statuses": {}, "trackers": {}},
+            emissions={},
+            entity_status={
+                "status": "amalgamated",
+                "merged_into_name": "Delek Logistics Partners LP",
+            },
+        )
+    ),
     "wikidata": finding_wikidata(wd_parent_bundle()["summary"]),
     "wikidata/person": finding_wikidata(wd_person_bundle()["summary"]),
 }

@@ -7538,15 +7538,74 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 # ----------------------------------------------------------------------
 
 
+# GEM's Entity Type column follows BODS definitions by GEM's own documentation
+# (August 2026 About sheet). "legal entity" maps to registeredEntity when the
+# row carries a registry identifier (LEI), else legalEntity; blank or
+# unrecognised values fall back the same way. "person" (2 rows in August 2026)
+# has no honest entityStatement mapping and yields no statements at all.
+_GEM_ENTITY_TYPE_MAP: dict[str, str] = {
+    "state": "state",
+    "state body": "stateBody",
+    "arrangement": "arrangement",
+    "unknown entity": "unknownEntity",
+}
+
+
+def _gem_entity_type(gem_row: dict[str, Any], lei: str) -> str | None:
+    """BODS entityType.type for a GEM entities-CSV row, or None for 'person'.
+
+    Deliberate consequence, accepted 2026-08-28: mapping GEM ``arrangement``
+    honestly means the risk engine's TRUST_OR_ARRANGEMENT signal can fire
+    from this ESG-category source.
+    """
+    raw = str(gem_row.get("Entity Type") or "").strip().lower()
+    if raw == "person":
+        return None
+    mapped = _GEM_ENTITY_TYPE_MAP.get(raw)
+    if mapped:
+        return mapped
+    return "registeredEntity" if len(lei) == 20 else "legalEntity"
+
+
+def _gem_status_note(entity_status: dict[str, Any]) -> str:
+    """One-sentence annotation text for a dissolved/amalgamated GEM entity."""
+    status = entity_status.get("status")
+    if status == "amalgamated":
+        successor = (
+            entity_status.get("merged_into_name")
+            or entity_status.get("merged_into")
+            or "another entity"
+        )
+        text = f"Global Energy Monitor records this entity as amalgamated into {successor}"
+        if entity_status.get("merged_into_name") and entity_status.get("merged_into"):
+            text += f" ({entity_status['merged_into']})"
+    else:
+        text = "Global Energy Monitor records this entity as dissolved"
+    urls = entity_status.get("urls") or []
+    if urls:
+        text += ". Source: " + "; ".join(urls)
+    return text + "."
+
+
 def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
     """Map a Climate TRACE / GEM fetch bundle to BODS statements.
 
     Emits:
-    * One entity statement for the subject company (GEM entity identifier).
+    * One entity statement for the subject company (GEM entity identifier),
+      typed from GEM's Entity Type column (which follows BODS definitions);
+      joint ventures are noted in ``entityType.details``.
     * For each declared GEM parent: one stub entity statement + one
       ``otherInfluenceOrControl`` relationship (``beneficialOwnershipOrControl``
       is ``False`` — parent declarations in GEM are corporate structure data,
       not beneficial ownership assertions).
+    * For a dissolved or amalgamated entity (August 2026 GEOT fields): a
+      ``commenting`` annotation on the subject's statement — never a
+      ``dissolutionDate``, which requires a date GEM does not publish, and
+      never ``recordStatus: "closed"``, which would misuse the record
+      lifecycle on a first-and-only statement. An amalgamated entity's
+      successor additionally gets a stub entity statement so it exists as a
+      node; no relationship statement links them, because a merger is not an
+      ownership or control interest and no BODS interest type fits.
 
     Emissions data is attached as an annotation via ``source.description``
     rather than as a BODS interest — BODS v0.4 has no concept of an
@@ -7599,17 +7658,76 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
         (jurisdiction["name"], jurisdiction["code"]) if jurisdiction else None
     )
 
+    entity_type = _gem_entity_type(gem_row, lei)
+    if entity_type is None:
+        # GEM types a handful of records as natural persons — an
+        # entityStatement would misdescribe them, so emit nothing.
+        return result
+
+    entity_status: dict[str, Any] = bundle.get("entity_status") or {}
+
     entity = make_entity_statement(
         source_id="climatetrace",
         local_id=entity_id,
         name=entity_name,
         jurisdiction=jur_tuple,
         identifiers=identifiers,
-        entity_type="registeredEntity",
+        entity_type=entity_type,
+        entity_details=(
+            "Joint venture (per Global Energy Monitor)"
+            if entity_status.get("jv")
+            else None
+        ),
         source_url=source_url,
     )
+    if entity_status.get("status") in ("dissolved", "amalgamated"):
+        annotate(
+            entity,
+            commenting(pointer("recordDetails"), _gem_status_note(entity_status)),
+        )
     result.statements.append(entity)
     subject_statement_id: str = entity["statementId"]
+
+    # A stub statement for the amalgamation successor, so "merged into X"
+    # names a node that exists in the bundle. Deliberately NO relationship
+    # statement: a merger is not an ownership or control interest.
+    successor_id = (entity_status.get("merged_into") or "").strip()
+    if successor_id:
+        successor_lei = (entity_status.get("merged_into_lei") or "").strip().upper()
+        successor_identifiers: list[dict[str, str]] = [
+            {
+                "id": successor_id,
+                "scheme": "GEM-ENTITY",
+                "schemeName": "Global Energy Monitor Entity ID",
+            }
+        ]
+        if len(successor_lei) == 20:
+            successor_identifiers.append(
+                {
+                    "id": successor_lei,
+                    "scheme": "XI-LEI",
+                    "schemeName": "Global Legal Entity Identifier Index",
+                }
+            )
+        successor = make_entity_statement(
+            source_id="climatetrace",
+            local_id=successor_id,
+            name=entity_status.get("merged_into_name") or successor_id,
+            identifiers=successor_identifiers,
+            entity_type="registeredEntity" if len(successor_lei) == 20 else "unknownEntity",
+            source_url=source_url,
+        )
+        annotate(
+            successor,
+            commenting(
+                pointer("recordDetails"),
+                (
+                    f"Successor entity: Global Energy Monitor records "
+                    f"{entity_name} as merged into this entity."
+                ),
+            ),
+        )
+        result.statements.append(successor)
 
     # Emit stub entity + relationship for each declared parent.
     for parent in bundle.get("parents") or []:
@@ -7658,8 +7776,6 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
             source_url=source_url,
         )
         result.statements.append(relationship)
-
-    return result
 
     return result
 

@@ -29,6 +29,7 @@ from ..config import get_settings
 from ..cross_check import NameScreen, assess_cross_source_names
 from ..findings import (
     finding_bods_gleif,
+    finding_climatetrace,
     finding_companies_house,
     finding_everypolitician,
     finding_gleif,
@@ -899,6 +900,7 @@ def _bh_climatetrace(r: dict, ctx: _LookupCtx) -> SourceHit:
         "climatetrace", entity_id,
         name=r.get("entity_name") or ctx.legal_name or entity_id,
         summary=" · ".join(parts),
+        finding=finding_climatetrace(r),
         identifiers={"gem_entity_id": entity_id},
         raw=r, is_stub=bool(r.get("is_stub")),
     )

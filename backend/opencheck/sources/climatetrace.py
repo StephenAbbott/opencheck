@@ -430,6 +430,7 @@ def warm_caches() -> dict[str, int]:
         "owners_with_subsidiaries": len(rel_children),
         "entities_with_assets": len(asset_index),
         "geot_entities": len(geot.get("entities") or {}),
+        "geot_entity_status": len(geot.get("entity_status") or {}),
     }
 
 
@@ -526,6 +527,10 @@ def _get_relationship_indexes() -> tuple[
 #    "statuses": {"operating": n, "development": n, "mothballed": n,
 #                 "retired": n, "cancelled": n, "other": n},
 #    "trackers": {"coal_plant": [live, operating, controlled], ...}}
+#
+# From the August 2026 release the artifact also carries an "entity_status"
+# section (dissolved/amalgamated status, successor entity with name and LEI,
+# source URLs, joint-venture flag) — see _entity_status below.
 
 _GEOT_PROJECTS_PATH = Path(__file__).resolve().parent.parent / "data" / "geot_projects.json.gz"
 _geot_data: dict[str, Any] | None = None
@@ -560,6 +565,106 @@ def _geot_projects(entity_id: str) -> dict[str, Any] | None:
     if rec is None:
         return None
     return {**rec, "meta": data.get("meta") or {}}
+
+
+# ---------------------------------------------------------------------------
+# Entity status — dissolved / amalgamated / joint venture (August 2026 GEOT)
+# ---------------------------------------------------------------------------
+#
+# The August 2026 GEOT release added corporate-lifecycle columns to the
+# entities data: Entity Status (dissolved/amalgamated), Merged Into (the
+# successor's GEM entity ID), Joint Venture, and Entity Status Data Source
+# URL. The GCS bucket CSVs are still on the July 2026 schema without them, so
+# the repo-shipped GEOT artifact (built from the xlsx, successor name and LEI
+# pre-resolved) is the primary source; the CSV columns are parsed defensively
+# as a fallback so newly flagged entities surface once the bucket catches up.
+
+_STATUS_COL = "Entity Status"
+_MERGED_INTO_COL = "Merged Into"
+_JV_COL = "Joint Venture"
+_STATUS_URL_COL = "Entity Status Data Source URL"
+_ENTITY_STATUSES = ("dissolved", "amalgamated")
+
+
+def _first_valid_lei(raw: str | None) -> str | None:
+    """First valid 20-char LEI in a GEM LEI cell, or None.
+
+    The column also holds "not found" and semicolon-delimited multiples.
+    """
+    for token in (raw or "").split(";"):
+        lei = token.strip().upper()
+        if len(lei) == 20 and lei not in ("NOT FOUND", "N/A"):
+            return lei
+    return None
+
+
+def _parse_status_urls(raw: str | None) -> list[str]:
+    """Parse the Entity Status Data Source URL cell.
+
+    GEM publishes stringified Python lists ("['https://a', 'https://b']");
+    tolerate a plain URL string too in case the format is fixed upstream.
+    """
+    text = (raw or "").strip()
+    if not text:
+        return []
+    if text.startswith("["):
+        try:
+            import ast
+
+            parsed = ast.literal_eval(text)
+            if isinstance(parsed, (list, tuple)):
+                return [str(u).strip() for u in parsed if str(u).strip()]
+        except (ValueError, SyntaxError):
+            pass
+    return [text]
+
+
+def _row_entity_status(gem_row: dict[str, str]) -> dict[str, Any] | None:
+    """Corporate-lifecycle record parsed from a GEM entities-CSV row, or None.
+
+    Returns None both for active non-JV entities and for rows from CSVs that
+    predate the columns (July 2026 schema and earlier).
+    """
+    rec: dict[str, Any] = {}
+    status = (gem_row.get(_STATUS_COL) or "").strip().lower()
+    if status in _ENTITY_STATUSES:
+        rec["status"] = status
+        # 115 of 117 August-2026 values carry a float-coercion ".0" suffix.
+        merged = (gem_row.get(_MERGED_INTO_COL) or "").strip().removesuffix(".0")
+        if merged:
+            rec["merged_into"] = merged
+            # Resolve the successor's name and LEI from the entities index
+            # (already built by the time any bundle is assembled).
+            _, ent_idx = _get_indexes()
+            successor = ent_idx.get(merged)
+            if successor:
+                name = (successor.get(_ENTITY_NAME_COL) or "").strip()
+                if name:
+                    rec["merged_into_name"] = name
+                lei = _first_valid_lei(successor.get(_LEI_COL))
+                if lei:
+                    rec["merged_into_lei"] = lei
+        urls = _parse_status_urls(gem_row.get(_STATUS_URL_COL))
+        if urls:
+            rec["urls"] = urls
+    # The literal "Unknown" (4 rows in August 2026) is not an assertion.
+    if (gem_row.get(_JV_COL) or "").strip().lower() == "true":
+        rec["jv"] = True
+    return rec or None
+
+
+def _entity_status(entity_id: str, gem_row: dict[str, str]) -> dict[str, Any] | None:
+    """Merged corporate-lifecycle record for a GEM entity, or None.
+
+    The artifact record wins when present (curated release, successor LEI
+    pre-resolved); otherwise the CSV row supplies the fields — covering
+    entities flagged after the committed GEOT release once the GCS bucket
+    ships the new columns.
+    """
+    artifact = (_get_geot_data().get("entity_status") or {}).get(entity_id)
+    if artifact:
+        return dict(artifact)
+    return _row_entity_status(gem_row)
 
 
 _MAX_OWNERSHIP_DEPTH = 25  # GEOT's longest observed chain is 17 hops
@@ -635,8 +740,11 @@ class ClimateTRACEAdapter(SourceAdapter):
             description=(
                 "Global fossil-fuel asset ownership data (GEM) combined with "
                 "satellite-derived emissions estimates (Climate TRACE). "
-                "LEI resolution uses the GLEIF-certified GEM Entity ID mapping "
-                "(June 2026). Enables ESG and climate risk screening by LEI."
+                "LEI resolution uses the GLEIF-certified GEM Entity ID mapping. "
+                "Carries the Global Energy Ownership Tracker's corporate-"
+                "lifecycle records (August 2026): dissolved and amalgamated "
+                "entities with their successors, and joint-venture flags. "
+                "Enables ESG and climate risk screening by LEI."
             ),
             license="CC-BY-4.0",
             attribution=(
@@ -786,6 +894,7 @@ class ClimateTRACEAdapter(SourceAdapter):
             "parents": _parse_parents(gem_row),
             "ownership": _ownership_summary(entity_id),
             "projects": _geot_projects(entity_id),
+            "entity_status": _entity_status(entity_id, gem_row),
             "is_stub": False,
         }
         self._cache.put(cache_key, bundle)
@@ -984,5 +1093,6 @@ def _stub_bundle(
         "parents": _parse_parents(gem_row),
         "ownership": _ownership_summary(entity_id),
         "projects": _geot_projects(entity_id),
+        "entity_status": _entity_status(entity_id, gem_row),
         "is_stub": True,
     }
