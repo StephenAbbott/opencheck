@@ -79,6 +79,35 @@ export function panelError(panel: PanelId, e: unknown): PanelError {
   return { panel, missing: PANEL_MISSING[panel], detail: describeFetchFailure(e) };
 }
 
+/**
+ * Phase 145: `/securities` no longer 500s when GLEIF is unavailable — it
+ * returns 200 with `isin_list_available: false` and the sanctioned overlay (a
+ * local index on the backend, no network) still applied. Two degraded shapes
+ * reach this module rather than the section's own notice:
+ *
+ * - A deployment with no sanctions index configured has nothing left to show,
+ *   so the section reports through here — the check genuinely did not run,
+ *   exactly what the old 500 was (accidentally) telling the reader.
+ * - A later page of the drawer failing leaves the sanctions banner standing,
+ *   so the fixed PANEL_MISSING copy ("the check did not run") would be false;
+ *   this names what is actually missing instead.
+ */
+export function securitiesOverlayUnavailable(): PanelError {
+  return {
+    panel: "securities",
+    missing: PANEL_MISSING.securities,
+    detail: "GLEIF could not be queried and this deployment has no sanctions index",
+  };
+}
+
+export function securitiesPageUnavailable(): PanelError {
+  return {
+    panel: "securities",
+    missing: "the rest of this entity's ISIN list — the next page could not be fetched",
+    detail: "GLEIF is rate-limiting the ISIN list; try again shortly",
+  };
+}
+
 /** One entry per panel — a retry that fails again replaces, never appends. */
 export function mergePanelError(list: PanelError[], next: PanelError): PanelError[] {
   return [...list.filter((p) => p.panel !== next.panel), next];

@@ -5,6 +5,8 @@ import {
   mergePanelError,
   panelError,
   panelLabel,
+  securitiesOverlayUnavailable,
+  securitiesPageUnavailable,
 } from "./panelErrors";
 
 describe("describeFetchFailure", () => {
@@ -50,6 +52,33 @@ describe("panelError", () => {
       expect(e.missing.length, panel).toBeGreaterThan(10);
       expect(panelLabel(panel), panel).toBeTruthy();
     }
+  });
+});
+
+describe("degraded /securities responses (Phase 145)", () => {
+  it("no-overlay degradation reports the check as not run, like the 500 did", () => {
+    const e = securitiesOverlayUnavailable();
+    expect(e.panel).toBe("securities");
+    expect(e.missing).toMatch(/sanctions list/);
+    expect(e.missing).toMatch(/did not run/);
+    expect(e.detail).toMatch(/no sanctions index/);
+  });
+
+  it("a failed later page does NOT claim the sanctions check did not run", () => {
+    // The banner is still on screen when a page-2 fetch degrades — saying
+    // "the check did not run" beside it would be false.
+    const e = securitiesPageUnavailable();
+    expect(e.panel).toBe("securities");
+    expect(e.missing).not.toMatch(/did not run/);
+    expect(e.missing).toMatch(/ISIN list/);
+    expect(e.detail).toMatch(/rate-limiting/);
+  });
+
+  it("merges into the panel list like any other securities failure", () => {
+    let list = mergePanelError([], securitiesOverlayUnavailable());
+    list = mergePanelError(list, securitiesPageUnavailable());
+    expect(list).toHaveLength(1);
+    expect(list[0].detail).toMatch(/rate-limiting/);
   });
 });
 

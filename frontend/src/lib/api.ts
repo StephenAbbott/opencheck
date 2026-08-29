@@ -488,6 +488,10 @@ export interface SecuritiesResponse {
   page_size: number;
   securities: Security[];
   sanctioned: Security[];
+  /** Phase 145: false when GLEIF could not be queried (rate-limited or down).
+   *  The sanctioned overlay is a local index on the backend and still runs,
+   *  so `sanctioned` is trustworthy even when `total`/`securities` are not. */
+  isin_list_available: boolean;
   sources: string[];
   license_notices: { source_id: string; notice: string }[];
 }

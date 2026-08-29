@@ -17,6 +17,13 @@ Combines three open datasets, each in the role it is actually good at:
 The design rule: **never enumerate every ISIN**. Sanctioned securities (small,
 pre-filtered, high value) come from OpenSanctions independently of GLEIF paging;
 the long tail is a count behind a page.
+
+A corollary (Phase 145): **GLEIF failing must not fail the overlay**. The
+sanctioned index is a local file — the one check with a compliance consequence
+needs no network at all — so a GLEIF 429/outage degrades the response
+(``isin_list_available: false``, count and page absent, GLEIF not listed in
+``sources``) instead of raising the 500 that used to take the sanctions check
+down with it.
 """
 
 from __future__ import annotations
@@ -28,8 +35,11 @@ import urllib.request
 from typing import Any
 from urllib.parse import quote
 
+import httpx
+
 from . import identifiers
 from .config import get_settings
+from .gleif_throttle import GleifRateLimitedError
 from .http import build_client
 
 log = logging.getLogger(__name__)
@@ -252,6 +262,7 @@ async def assemble_securities(
         "page_size": page_size,
         "securities": [],
         "sanctioned": [],
+        "isin_list_available": False,
         "sources": [],
         "license_notices": [],
     }
@@ -263,8 +274,24 @@ async def assemble_securities(
     overlay_on = bool(settings.securities_index_file or settings.securities_index_url) and bool(_index())
     sanctioned_map = _sanctioned_for_lei(lei) if overlay_on else {}
 
+    isin_list_available = True
+    total, isins = 0, []
     async with build_client() as client:
-        total, isins = await _gleif_isins(client, lei, page, page_size)
+        try:
+            total, isins = await _gleif_isins(client, lei, page, page_size)
+        except (GleifRateLimitedError, httpx.HTTPError) as exc:
+            # GLEIF saying no — a 429 handed back by the Phase 143 transport,
+            # the throttle refusing to send, a timeout, an outage — must not
+            # take the whole section down: the sanctioned overlay reads a LOCAL
+            # index and needs no network, so the one check this section exists
+            # for can still run. Live diagnosis 2026-08-29: under crawler
+            # saturation this raise became a 500, and the frontend told readers
+            # the sanctions check "did not run" when only the ISIN list was
+            # unavailable. The response says honestly which part is missing
+            # (`isin_list_available: false`, GLEIF absent from `sources`)
+            # instead of failing the part that works.
+            log.warning("GLEIF ISIN list unavailable for %s: %s", lei, exc)
+            isin_list_available = False
         figi_map = await _openfigi_map(client, isins, settings.openfigi_api_key)
         # Sanctioned ISINs may not be in the current GLEIF page (or in GLEIF at
         # all — e.g. Rosneft). Enrich those too so the banner shows their type.
@@ -280,7 +307,9 @@ async def assemble_securities(
         _row(isin, figi_map.get(isin), True, meta) for isin, meta in sanctioned_map.items()
     ]
 
-    sources = ["gleif"]
+    # `sources` lists what actually answered — a failed GLEIF is reported via
+    # `isin_list_available`, not listed as if it had contributed.
+    sources = ["gleif"] if isin_list_available else []
     if figi_map or settings.openfigi_api_key:
         sources.append("openfigi")
     if overlay_on:
@@ -294,6 +323,7 @@ async def assemble_securities(
         "page_size": page_size,
         "securities": securities,
         "sanctioned": sanctioned,
+        "isin_list_available": isin_list_available,
         "sources": sources,
         "license_notices": (
             [{"source_id": "opensanctions", "notice": _OS_NC_NOTICE}] if sanctioned else []
