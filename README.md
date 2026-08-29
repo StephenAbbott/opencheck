@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 143** — A process-wide GLEIF request budget keeps OpenCheck under GLEIF's 60 req/min IP limit, and a rate-limited lookup now degrades to a stale cache entry or the Golden Copy snapshot — honestly badged — instead of failing with a 502.
+**Latest: Phase 144** — declared bots are refused on the app's live-lookup stream (pointed at the crawlable entity pages and the JSON API instead), and a rate-limited anchor now falls back to the Golden Copy snapshot after five seconds instead of fifteen.
 
 → [Full development history](docs/status.md)
 
