@@ -30,6 +30,8 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 | `OPENCHECK_AMLA_EQUIVALENT_JURISDICTIONS` | Comma-separated ISO codes added to the EU+EEA set used by `NON_EU_JURISDICTION` (e.g. `GB,CH`). |
 | `OPENCHECK_AMLA_EU_EEA_OVERRIDE` | When set, replaces the EU+EEA default entirely. |
 | `OPENCHECK_DATA_ROOT` | Override the cache root (used by tests; defaults to `./data`). |
+| `OPENCHECK_GLEIF_RATE_LIMIT_PER_MINUTE` | Process-wide budget for requests to `api.gleif.org` (default `50`). GLEIF rate-limits by IP at 60 req/min across *everything* this deployment sends it — anchor lookups, `/securities` ISINs, the Time Machine, subsidiary reveals — so OpenCheck keeps its own ceiling under GLEIF's and queues bursts instead of burning GLEIF's sliding window with 429s (which still count against it). `0` disables the throttle. |
+| `OPENCHECK_GLEIF_THROTTLE_MAX_WAIT_S` | How long one GLEIF request may wait for a budget slot (default `15`) before giving up and taking the degradation path: stale cache, then the entity-pages Golden Copy snapshot, then a `503` with retry advice. |
 | `ANTHROPIC_API_KEY` | Optional — reserved for future intent extraction / phrasing. |
 
 ## Deployment on Render

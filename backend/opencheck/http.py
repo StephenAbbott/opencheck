@@ -16,6 +16,8 @@ import re
 import httpx
 
 from . import __version__, provenance
+from .config import get_settings
+from .gleif_throttle import GleifThrottledTransport
 
 _DEFAULT_TIMEOUT = httpx.Timeout(connect=5.0, read=15.0, write=5.0, pool=5.0)
 _DEFAULT_LIMITS = httpx.Limits(max_connections=20, max_keepalive_connections=10)
@@ -111,7 +113,15 @@ def build_client() -> httpx.AsyncClient:
     cache read wins.
     """
     provenance.record_live()
-    transport = httpx.AsyncHTTPTransport(retries=2)
+    transport: httpx.AsyncBaseTransport = httpx.AsyncHTTPTransport(retries=2)
+    # Phase 143: GLEIF rate-limits by IP (60 req/min) and every adapter in this
+    # process shares that budget, so requests to api.gleif.org pass through a
+    # process-wide throttle + 429-retry wrapper. Other hosts are untouched.
+    # Installed here — the one place every live adapter already passes through
+    # (see the Ariregister provenance regression for why bypassing
+    # build_client is a bug class of its own).
+    if get_settings().gleif_rate_limit_per_minute > 0:
+        transport = GleifThrottledTransport(transport)
     return httpx.AsyncClient(
         timeout=_DEFAULT_TIMEOUT,
         limits=_DEFAULT_LIMITS,

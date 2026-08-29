@@ -25,13 +25,16 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
 import httpx
 
+from .. import provenance
 from ..cache import Cache
 from ..config import get_settings
+from ..gleif_throttle import GleifRateLimitedError
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
@@ -221,21 +224,32 @@ class GleifAdapter(SourceAdapter):
         if not self.info.live_available and not self._cache.has(cache_key):
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
 
-        (
-            record,
-            (direct_parent, direct_exception),
-            (ultimate_parent, ultimate_exception),
-            (direct_children, direct_children_total),
-        ) = await asyncio.gather(
-            self._get(
-                f"/lei-records/{quote(lei)}",
-                cache_key=cache_key,
-                max_age_days=_LEI_RECORD_CACHE_MAX_AGE_DAYS,
-            ),
-            self._parent_or_exception(lei, "direct"),
-            self._parent_or_exception(lei, "ultimate"),
-            self._fetch_direct_children(lei),
-        )
+        try:
+            (
+                record,
+                (direct_parent, direct_exception),
+                (ultimate_parent, ultimate_exception),
+                (direct_children, direct_children_total),
+            ) = await asyncio.gather(
+                self._get(
+                    f"/lei-records/{quote(lei)}",
+                    cache_key=cache_key,
+                    max_age_days=_LEI_RECORD_CACHE_MAX_AGE_DAYS,
+                ),
+                self._parent_or_exception(lei, "direct"),
+                self._parent_or_exception(lei, "ultimate"),
+                self._fetch_direct_children(lei),
+            )
+        except GleifRateLimitedError:
+            # Live GLEIF is rate-limiting and no cache entry (fresh or stale)
+            # could stand in. Last resort before failing the whole lookup:
+            # serve the anchor from the entity-pages Golden Copy snapshot,
+            # honestly badged as such (Phase 143).
+            bundle = self._snapshot_bundle(lei)
+            if bundle is None:
+                raise
+            validate_raw("gleif", GLEIFBundle, bundle)
+            return bundle
 
         bundle = {
             "source_id": self.id,
@@ -250,6 +264,97 @@ class GleifAdapter(SourceAdapter):
         }
         validate_raw("gleif", GLEIFBundle, bundle)
         return bundle
+
+    def _snapshot_bundle(self, lei: str) -> dict[str, Any] | None:
+        """Anchor bundle from the entity-pages Golden Copy SQLite, or ``None``.
+
+        Phase 143's last line of degradation before a lookup fails outright:
+        when live GLEIF is rate-limiting and no cache entry (fresh or stale)
+        exists, serve the anchor from the same local snapshot the ``/entity``
+        pages are rendered from. It carries what the store holds — legal name,
+        statuses, jurisdiction, address, direct/ultimate parent LEIs (with
+        names when the store has those rows), and the first page of direct
+        children with GLEIF's exact total. What the store does NOT hold —
+        ``registeredAs``/``registeredAt``, parent reporting exceptions, the
+        cross-reference ids — is simply absent, so the registry bridges and
+        exception chips quietly skip for this lookup rather than being guessed
+        at. Provenance is recorded as ``snapshot`` with the Golden Copy publish
+        date, so every statement mapped from this bundle says what it is.
+        """
+        from ..entity_pages import EntityRow, get_store
+
+        store = get_store()
+        if store is None:
+            return None
+        row = store.get(lei)
+        if row is None:
+            return None
+
+        def _record(r: EntityRow) -> dict[str, Any]:
+            entity: dict[str, Any] = {"legalName": {"name": r.name}}
+            if r.jurisdiction:
+                entity["jurisdiction"] = r.jurisdiction
+            if r.entity_status:
+                entity["status"] = r.entity_status
+            if r.legal_form:
+                entity["legalForm"] = {"id": r.legal_form}
+            address = {
+                key: value
+                for key, value in (
+                    ("city", r.city),
+                    ("region", r.region),
+                    ("country", r.country),
+                )
+                if value
+            }
+            if address:
+                entity["legalAddress"] = address
+            attributes: dict[str, Any] = {"lei": r.lei, "entity": entity}
+            if r.registration_status:
+                attributes["registration"] = {"status": r.registration_status}
+            return {"id": r.lei, "attributes": attributes}
+
+        related = store.get_many([row.direct_parent_lei, row.ultimate_parent_lei])
+
+        def _parent(parent_lei: str | None) -> dict[str, Any] | None:
+            if not parent_lei:
+                return None
+            parent_row = related.get(parent_lei)
+            if parent_row is not None:
+                return _record(parent_row)
+            # The store row names a parent the store itself lacks (trimmed
+            # build, or a non-LEI edge) — keep the LEI, claim nothing else.
+            return {"id": parent_lei, "attributes": {"lei": parent_lei}}
+
+        children_rows, children_total = store.children(lei, limit=100)
+
+        built_at: datetime | None = None
+        publish = (store.meta().get("source_publish_date") or "")[:10]
+        if publish:
+            try:
+                built_at = datetime.strptime(publish, "%Y-%m-%d").replace(
+                    tzinfo=timezone.utc
+                )
+            except ValueError:
+                built_at = None
+        provenance.record_snapshot(
+            built_at, "GLEIF Golden Copy snapshot (live API rate-limited)"
+        )
+
+        return {
+            "source_id": self.id,
+            "lei": lei,
+            "record": _record(row),
+            "direct_parent": _parent(row.direct_parent_lei),
+            "ultimate_parent": _parent(row.ultimate_parent_lei),
+            "direct_parent_exception": None,
+            "ultimate_parent_exception": None,
+            "direct_children": [_record(r) for r in children_rows],
+            "direct_children_total": children_total,
+            # Not a schema field (extra="allow") — lets tests and logs tell a
+            # snapshot-served anchor from a live one.
+            "snapshot_fallback": True,
+        }
 
     async def _fetch_direct_children(
         self, lei: str
@@ -323,10 +428,26 @@ class GleifAdapter(SourceAdapter):
         if cached is not None:
             return cached[0]
 
-        async with build_client() as client:
-            response = await client.get(f"{_API_BASE}{path}")
-            response.raise_for_status()
-            payload = response.json()
+        try:
+            async with build_client() as client:
+                response = await client.get(f"{_API_BASE}{path}")
+                response.raise_for_status()
+                payload = response.json()
+        except (httpx.HTTPStatusError, GleifRateLimitedError) as exc:
+            if (
+                isinstance(exc, httpx.HTTPStatusError)
+                and exc.response.status_code != 429
+            ):
+                raise
+            # Rate-limited (an observed 429, or the shared budget refusing to
+            # send one). A stale cache entry beats no answer: re-read with the
+            # TTL waived — the cache layer records the entry's true age as
+            # `cached` provenance, so the response never claims freshness it
+            # doesn't have.
+            stale = self._cache.get_payload(cache_key)
+            if stale is not None:
+                return stale[0]
+            raise GleifRateLimitedError(str(exc)) from exc
 
         self._cache.put(cache_key, payload)
         return payload
@@ -365,6 +486,17 @@ class GleifAdapter(SourceAdapter):
             if exc.response.status_code == 404:
                 self._cache.put(cache_key, None)
                 return None
+            if exc.response.status_code == 429:
+                stale = self._cache.get_payload(cache_key)
+                if stale is not None:
+                    return stale[0]
+                raise GleifRateLimitedError(str(exc)) from exc
+            raise
+        except GleifRateLimitedError:
+            # Budget refused to send. Same stale-beats-nothing rule as ``_get``.
+            stale = self._cache.get_payload(cache_key)
+            if stale is not None:
+                return stale[0]
             raise
 
         self._cache.put(cache_key, payload)
