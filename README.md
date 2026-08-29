@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 141** — the country-to-registration-authority mapping now lives in one place, so a Scottish or Northern Irish company number is no longer scoped to the England & Wales registry and silently found missing.
+**Latest: Phase 142** — the ESG card now says when Global Energy Monitor records an entity as dissolved or amalgamated, and follows the ownership trail forward to a lookup of the successor.
 
 → [Full development history](docs/status.md)
 
