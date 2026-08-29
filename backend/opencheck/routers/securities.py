@@ -43,6 +43,11 @@ class SecuritiesResponse(BaseModel):
     page_size: int
     securities: list[Security]
     sanctioned: list[Security]
+    # Phase 145: false when GLEIF could not be queried (rate-limited or down).
+    # The sanctioned overlay is a local index and still runs, so the endpoint
+    # answers 200 with the overlay applied and `total`/`securities` empty —
+    # the reader is told which part is missing instead of losing the section.
+    isin_list_available: bool = True
     sources: list[str]
     license_notices: list[dict[str, str]]
 

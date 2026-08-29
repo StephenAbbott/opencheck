@@ -3,7 +3,13 @@ import { getSecurities, type Security, type SecuritiesResponse } from "../../lib
 import { NOT_IN_GRAPH, sourceList } from "../../lib/vocab";
 import { ActionChip } from "../ui";
 import PanelSection from "../ui/PanelSection";
-import { panelError, type PanelError, type PanelId } from "../../lib/panelErrors";
+import {
+  panelError,
+  securitiesOverlayUnavailable,
+  securitiesPageUnavailable,
+  type PanelError,
+  type PanelId,
+} from "../../lib/panelErrors";
 
 // Entity-level "Securities" section: ISINs linked to the LEI, combining GLEIF
 // (count + list), OpenFIGI (security type) and OpenSanctions (sanctioned subset).
@@ -88,6 +94,15 @@ export function SecuritiesSection({
     getSecurities(lei, 1)
       .then((r) => {
         if (cancelled) return;
+        // Phase 145: GLEIF being unavailable no longer 500s — the response
+        // says so (`isin_list_available: false`) with the sanctioned overlay
+        // still applied. When the overlay did not run either (no index on
+        // this deployment), the response holds nothing trustworthy, so
+        // report it as the panel failure the 500 used to be.
+        if (r.isin_list_available === false && !r.sources.includes("opensanctions")) {
+          onError?.(securitiesOverlayUnavailable());
+          return;
+        }
         onRecovered?.("securities");
         setMeta(r);
         setLoaded(r.securities);
@@ -131,6 +146,14 @@ export function SecuritiesSection({
     try {
       const next = page + 1;
       const r = await getSecurities(lei, next);
+      if (r.isin_list_available === false) {
+        // A degraded 200 mid-browse (GLEIF started rate-limiting between
+        // pages): appending its empty page would read as a no-op click —
+        // the exact Phase 124 bug. The banner above is still standing, so
+        // the report names the pages as missing, not the whole check.
+        onError?.(securitiesPageUnavailable());
+        return;
+      }
       setLoaded((prev) => [...prev, ...r.securities]);
       setPage(next);
     } catch (e) {
@@ -146,7 +169,11 @@ export function SecuritiesSection({
   // available:false; entities with no securities and nothing sanctioned are hidden).
   if (!meta || !meta.available) return null;
   const sanctioned = meta.sanctioned;
-  if (meta.total === 0 && sanctioned.length === 0) return null;
+  // Degraded (Phase 145): the ISIN count/page is missing but the sanctions
+  // overlay ran — the section stays visible to say so, even with nothing
+  // sanctioned, because hiding it would read as "checked and clean list".
+  const isinListDown = meta.isin_list_available === false;
+  if (!isinListDown && meta.total === 0 && sanctioned.length === 0) return null;
 
   const ncNotice = meta.license_notices.find((n) => n.source_id === "opensanctions");
   // Regimes are company-level — collect the union once for the banner header.
@@ -208,22 +235,40 @@ export function SecuritiesSection({
 
         {/* Summary + browse toggle. The "not in the graph" caveat moved to the
             band's split-head, where it qualifies the section rather than
-            trailing the count as a mono pill. */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <span className="text-oo-small text-oo-ink">
-            <span className="font-semibold">{meta.total.toLocaleString()}</span>{" "}
-            secur{meta.total === 1 ? "ity" : "ities"} mapped to this LEI
-          </span>
-          {meta.total > 0 && (
-            <ActionChip
-              onClick={() => setExpanded((v) => !v)}
-              expanded={expanded}
-              controls={drawerId}
-            >
-              {expanded ? "Hide" : "Browse all"}
-            </ActionChip>
-          )}
-        </div>
+            trailing the count as a mono pill. When the ISIN list is down the
+            count is unknown, and "0 securities mapped" would be a false claim
+            — say which part is missing instead (the sanctions overlay above,
+            or the sentence below when it found nothing, covers what did run). */}
+        {isinListDown ? (
+          <div className="rounded-oo border border-amber-200 bg-amber-50 px-3 py-2 text-oo-small text-amber-900">
+            The GLEIF ISIN list could not be fetched (GLEIF is rate-limiting or
+            unreachable), so how many securities are mapped to this LEI is
+            unknown right now — try again in a minute.
+            {sanctioned.length === 0 && (
+              <>
+                {" "}The sanctioned-securities check did run, from OpenCheck's
+                local OpenSanctions index: it records no sanctioned securities
+                for this entity.
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="text-oo-small text-oo-ink">
+              <span className="font-semibold">{meta.total.toLocaleString()}</span>{" "}
+              secur{meta.total === 1 ? "ity" : "ities"} mapped to this LEI
+            </span>
+            {meta.total > 0 && (
+              <ActionChip
+                onClick={() => setExpanded((v) => !v)}
+                expanded={expanded}
+                controls={drawerId}
+              >
+                {expanded ? "Hide" : "Browse all"}
+              </ActionChip>
+            )}
+          </div>
+        )}
         <div className="text-oo-meta text-oo-muted mt-1.5">
           {sourceList(meta.sources, sourceNames)}
         </div>

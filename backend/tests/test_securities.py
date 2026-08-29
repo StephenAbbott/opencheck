@@ -14,12 +14,14 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from opencheck import securities as svc
 from opencheck.app import app
 from opencheck.config import get_settings
+from opencheck.gleif_throttle import GleifRateLimitedError
 
 _SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 
@@ -51,12 +53,15 @@ class _Resp:
 
 
 class _FakeClient:
-    def __init__(self, *, gleif: Any, openfigi_by_isin: dict) -> None:
+    def __init__(self, *, gleif: Any, openfigi_by_isin: dict, gleif_error: Exception | None = None) -> None:
         self._gleif = gleif
         self._figi = openfigi_by_isin
+        self._gleif_error = gleif_error
 
     async def get(self, url: str, params=None, headers=None) -> _Resp:
         assert "/isins" in url, f"unexpected GET {url}"
+        if self._gleif_error is not None:
+            raise self._gleif_error
         return _Resp(self._gleif)
 
     async def post(self, url: str, json=None, headers=None) -> _Resp:
@@ -229,6 +234,79 @@ async def test_overlay_from_url(monkeypatch, tmp_path):
     assert "opensanctions" in out["sources"]
 
 
+def _gleif_429() -> httpx.HTTPStatusError:
+    """The exact shape the Phase 143 transport hands back after its one retry."""
+    req = httpx.Request("GET", svc._GLEIF_ISINS_URL.format(lei="7LTWFZYICNSX8D621K86"))
+    resp = httpx.Response(429, request=req)
+    return httpx.HTTPStatusError(
+        "Client error '429 Too Many Requests'", request=req, response=resp
+    )
+
+
+@pytest.mark.parametrize(
+    "gleif_error",
+    [_gleif_429(), GleifRateLimitedError("budget exhausted"), httpx.ConnectTimeout("timed out")],
+    ids=["429-handed-back", "throttle-refused-to-send", "network"],
+)
+async def test_gleif_failure_still_serves_sanctioned_overlay(monkeypatch, tmp_path, gleif_error):
+    """Phase 145: the sanctions check reads a LOCAL index — GLEIF saying no
+    (crawler-saturation 429s, live 2026-08-29) must degrade the ISIN list,
+    not 500 the one check this section exists for."""
+    _write_index(tmp_path, monkeypatch, {
+        "7LTWFZYICNSX8D621K86": {
+            "name": "Deutsche Bank", "id": "NK-1",
+            "isins": ["XS0848530001"], "regimes": ["US OFAC SDN", "EU"],
+        },
+    })
+    client = _FakeClient(
+        gleif=None,
+        gleif_error=gleif_error,
+        # OpenFIGI is a different host, untouched by GLEIF's rate limit — the
+        # sanctioned ISIN must still be typed for the banner.
+        openfigi_by_isin={"XS0848530001": {"securityType2": "Bond", "name": "Sanctioned Bond"}},
+    )
+    with patch.object(svc, "build_client", lambda: _FakeCM(client)):
+        out = await svc.assemble_securities("7LTWFZYICNSX8D621K86")
+
+    assert out["available"] is True
+    assert out["isin_list_available"] is False
+    assert out["total"] == 0 and out["securities"] == []
+    assert len(out["sanctioned"]) == 1
+    s = out["sanctioned"][0]
+    assert s["isin"] == "XS0848530001" and s["type"] == "Bond"
+    assert "US OFAC SDN" in s["regimes"]
+    # GLEIF did not answer, so it is not claimed as a source; the overlay is.
+    assert "gleif" not in out["sources"]
+    assert "opensanctions" in out["sources"]
+    assert out["license_notices"] and out["license_notices"][0]["source_id"] == "opensanctions"
+
+
+async def test_gleif_failure_with_no_index_degrades_without_raising(monkeypatch, tmp_path):
+    """No overlay configured AND GLEIF down → nothing to show, still no 500.
+    The frontend reads isin_list_available + sources and reports the panel
+    error itself (the check genuinely did not run on such a deployment)."""
+    monkeypatch.delenv("OPENCHECK_SECURITIES_INDEX_FILE", raising=False)
+    get_settings.cache_clear()
+    client = _FakeClient(gleif=None, gleif_error=_gleif_429(), openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(client)):
+        out = await svc.assemble_securities("7LTWFZYICNSX8D621K86")
+    assert out["available"] is True
+    assert out["isin_list_available"] is False
+    assert out["sanctioned"] == [] and out["securities"] == []
+    assert "gleif" not in out["sources"] and "opensanctions" not in out["sources"]
+
+
+async def test_gleif_success_reports_isin_list_available(monkeypatch, tmp_path):
+    client = _FakeClient(
+        gleif=_gleif_payload(["DE000A1"], total=1),
+        openfigi_by_isin={"DE000A1": {"securityType2": "Warrant"}},
+    )
+    with patch.object(svc, "build_client", lambda: _FakeCM(client)):
+        out = await svc.assemble_securities("7LTWFZYICNSX8D621K86")
+    assert out["isin_list_available"] is True
+    assert "gleif" in out["sources"]
+
+
 def test_sanctioned_securities_signal(monkeypatch, tmp_path):
     _write_index(tmp_path, monkeypatch, {
         "7LTWFZYICNSX8D621K86": {
@@ -263,6 +341,32 @@ def test_endpoint_offline_returns_available_false(monkeypatch):
         r = client.get("/securities", params={"lei": "7LTWFZYICNSX8D621K86"})
     assert r.status_code == 200
     assert r.json()["available"] is False
+
+
+def test_endpoint_returns_200_with_overlay_when_gleif_rate_limited(monkeypatch, tmp_path):
+    """The live 2026-08-29 failure, end to end: GLEIF 429 → 200, not 500,
+    with the sanctioned overlay applied and the degradation declared."""
+    _write_index(tmp_path, monkeypatch, {
+        "7LTWFZYICNSX8D621K86": {
+            "name": "Deutsche Bank", "id": "NK-1",
+            "isins": ["XS0848530001"], "regimes": ["EU"],
+        },
+    })
+    fake = _FakeClient(
+        gleif=None,
+        gleif_error=_gleif_429(),
+        openfigi_by_isin={"XS0848530001": {"securityType2": "Bond"}},
+    )
+    with patch.object(svc, "build_client", lambda: _FakeCM(fake)):
+        with TestClient(app) as client:
+            r = client.get("/securities", params={"lei": "7LTWFZYICNSX8D621K86"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["available"] is True
+    assert body["isin_list_available"] is False
+    assert body["total"] == 0 and body["securities"] == []
+    assert [s["isin"] for s in body["sanctioned"]] == ["XS0848530001"]
+    assert "gleif" not in body["sources"] and "opensanctions" in body["sources"]
 
 
 # ---------------------------------------------------------------------------
