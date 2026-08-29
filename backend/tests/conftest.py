@@ -40,6 +40,13 @@ os.environ.setdefault("OPENCHECK_RATE_LIMIT_ENABLED", "0")
 # (env var + get_settings.cache_clear()) to pin the enforced behaviour.
 os.environ.setdefault("OPENCHECK_IDENTIFIER_CHECKSUMS_ENFORCED", "0")
 
+# The process-wide GLEIF throttle (Phase 143) is off for the whole suite:
+# respx-mocked GLEIF calls go through the real transport layer, and a shared
+# 50/min budget would make unrelated tests sleep once enough of them have
+# fired. tests/test_gleif_throttle.py re-enables it per-fixture (env var +
+# get_settings.cache_clear() + reset_throttle_for_tests()).
+os.environ.setdefault("OPENCHECK_GLEIF_RATE_LIMIT_PER_MINUTE", "0")
+
 
 def pytest_addoption(parser):
     parser.addoption(

@@ -125,6 +125,21 @@ class Settings(BaseSettings):
     # history, securities, share pages, …). Generous: normal UI usage fires
     # several of these per lookup.
     rate_limit_default: str = Field(default="60/minute", alias="OPENCHECK_RATE_LIMIT_DEFAULT")
+    # --- Outbound GLEIF budget (see opencheck/gleif_throttle.py) ---
+    # GLEIF rate-limits by IP at 60 req/min, shared across everything this
+    # process sends it (anchor lookups, /securities ISINs, Time Machine,
+    # subsidiary reveals). This is OUR ceiling — kept under GLEIF's so bursts
+    # queue here instead of burning GLEIF's sliding window with 429s (which
+    # still count against it). 0 disables the throttle entirely; the test
+    # suite does that in conftest.py, dedicated tests re-enable per-fixture.
+    gleif_rate_limit_per_minute: int = Field(
+        default=50, alias="OPENCHECK_GLEIF_RATE_LIMIT_PER_MINUTE"
+    )
+    # How long one GLEIF request may wait for a budget slot before giving up
+    # (GleifRateLimitedError → the adapter's stale-cache/snapshot fallback).
+    gleif_throttle_max_wait_s: float = Field(
+        default=15.0, alias="OPENCHECK_GLEIF_THROTTLE_MAX_WAIT_S"
+    )
 
     # --- Memory + traffic instrumentation (see opencheck/memwatch.py) ---
     # Interval (seconds) between "memwatch" memory-report log lines. 0 disables

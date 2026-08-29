@@ -39,6 +39,7 @@ from ..findings import (
     finding_wikidata,
 )
 from ..ftm import subject_to_ftm_entity
+from ..gleif_throttle import GleifRateLimitedError
 from ..icij_check import assess_icij_names
 from ..openaleph_check import assess_openaleph_names
 from ..verdict import build_verdict
@@ -1659,6 +1660,19 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
             registered_at_id = (entity_block.get("registeredAt") or {}).get("id") or ""
     except _LookupAbort:
         raise
+    except GleifRateLimitedError as exc:
+        # Phase 143: the throttle refused to send (or GLEIF answered 429 twice)
+        # and every fallback — stale cache, Golden Copy snapshot — came up
+        # empty. A 503 with retry advice, not a 502: nothing is broken, the
+        # shared upstream budget is momentarily spent.
+        raise _LookupAbort(
+            503,
+            (
+                "GLEIF is rate-limiting OpenCheck's shared connection and no "
+                f"cached or snapshot copy of {lei} is available yet. "
+                "Please retry in about a minute."
+            ),
+        ) from exc
     except Exception as exc:  # noqa: BLE001
         raise _LookupAbort(
             502, f"GLEIF fetch failed: {type(exc).__name__}: {exc}"
