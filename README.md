@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 142** — the ESG card now says when Global Energy Monitor records an entity as dissolved or amalgamated, and follows the ownership trail forward to a lookup of the successor.
+**Latest: Phase 143** — A process-wide GLEIF request budget keeps OpenCheck under GLEIF's 60 req/min IP limit, and a rate-limited lookup now degrades to a stale cache entry or the Golden Copy snapshot — honestly badged — instead of failing with a 502.
 
 → [Full development history](docs/status.md)
 
