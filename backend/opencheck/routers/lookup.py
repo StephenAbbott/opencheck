@@ -40,6 +40,7 @@ from ..findings import (
 )
 from ..ftm import subject_to_ftm_entity
 from ..gleif_throttle import GleifRateLimitedError
+from ..memwatch import is_bot
 from ..icij_check import assess_icij_names
 from ..openaleph_check import assess_openaleph_names
 from ..verdict import build_verdict
@@ -2529,8 +2530,33 @@ async def lookup_stream(
     lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),
     deepen_top: int = Query(5, ge=0, le=10),
     refresh: bool = Query(False, description="Bypass the short-lived replay cache."),
-) -> EventSourceResponse:
-    """LEI-anchored lookup streamed as SSE — same pipeline as /lookup."""
+) -> Response:
+    """LEI-anchored lookup streamed as SSE — same pipeline as /lookup.
+
+    Phase 144: declared automated clients are refused here. This endpoint
+    exists for the interactive app; robots.txt has always disallowed it, and
+    a crawler running it anyway triggers the full adapter fan-out and drains
+    the shared upstream budgets (GLEIF's 60 req/min IP cap first among them)
+    that human lookups queue behind — measured live on 2026-08-29, bots were
+    ~19 lookup-streams/min while human cold anchors stalled ~15–21s. The
+    per-IP slowapi limit cannot catch a distributed crawler fleet; the
+    User-Agent gate at least removes every honest bot. The plain ``/lookup``
+    JSON API is deliberately NOT gated — `python`/`curl`/`httpx` UAs are its
+    legitimate callers — and the ``/entity`` pages serve crawlers from bulk
+    data at any volume.
+    """
+    if get_settings().bot_gate_lookup_stream and is_bot(
+        request.headers.get("user-agent")
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "/lookup-stream serves the interactive OpenCheck app and is "
+                "disallowed for automated clients (see /robots.txt). Use the "
+                "JSON API at /lookup?lei=<LEI> (rate-limited), or the "
+                "crawlable per-entity pages at /entity/<LEI>."
+            ),
+        )
     return EventSourceResponse(
         _lookup_sse_events(lei, deepen_top=deepen_top, refresh=refresh)
     )

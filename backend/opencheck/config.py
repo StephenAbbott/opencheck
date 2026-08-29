@@ -140,6 +140,27 @@ class Settings(BaseSettings):
     gleif_throttle_max_wait_s: float = Field(
         default=15.0, alias="OPENCHECK_GLEIF_THROTTLE_MAX_WAIT_S"
     )
+    # Phase 144: when the anchor LEI exists in the entity-pages Golden Copy,
+    # don't make the user sit out the full max-wait — if the live anchor fetch
+    # hasn't completed within this many seconds, serve the snapshot instead
+    # (honestly badged). Only applies when a snapshot row exists, so
+    # deployments without the entity-pages DB keep the full live wait.
+    # 0 disables the early fallback. Measured 2026-08-29: under crawler
+    # saturation the anchor stalled ~15–21s before falling back; this caps it.
+    gleif_snapshot_after_s: float = Field(
+        default=5.0, alias="OPENCHECK_GLEIF_SNAPSHOT_AFTER_S"
+    )
+    # Phase 144: refuse declared automated clients (memwatch.is_bot on the
+    # User-Agent) on /lookup-stream, the interactive app's SSE endpoint.
+    # robots.txt has always disallowed it; a crawler there is ignoring robots
+    # and burning the shared upstream budgets (GLEIF's 60 req/min IP cap
+    # first among them). Bots get a 403 pointing at the crawlable /entity
+    # pages and the plain /lookup JSON API. The gate deliberately does NOT
+    # cover /lookup itself — that is the promoted programmatic API, and
+    # `python`/`curl`/`httpx` UAs are its legitimate callers.
+    bot_gate_lookup_stream: bool = Field(
+        default=True, alias="OPENCHECK_BOT_GATE_LOOKUP_STREAM"
+    )
 
     # --- Memory + traffic instrumentation (see opencheck/memwatch.py) ---
     # Interval (seconds) between "memwatch" memory-report log lines. 0 disables

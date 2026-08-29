@@ -224,29 +224,51 @@ class GleifAdapter(SourceAdapter):
         if not self.info.live_available and not self._cache.has(cache_key):
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
 
+        # Phase 144: when a Golden Copy snapshot exists for this LEI, bound the
+        # live attempt — a saturated GLEIF budget otherwise makes the user sit
+        # out the throttle's full max wait (~15–21s measured on 2026-08-29)
+        # before the very same snapshot is served. No snapshot row (or the
+        # early fallback disabled) keeps the unbounded live attempt, so
+        # deployments without the entity-pages DB behave exactly as before.
+        snapshot_after = get_settings().gleif_snapshot_after_s
+        timeout: float | None = (
+            snapshot_after
+            if snapshot_after > 0 and self._snapshot_available(lei)
+            else None
+        )
         try:
             (
                 record,
                 (direct_parent, direct_exception),
                 (ultimate_parent, ultimate_exception),
                 (direct_children, direct_children_total),
-            ) = await asyncio.gather(
-                self._get(
-                    f"/lei-records/{quote(lei)}",
-                    cache_key=cache_key,
-                    max_age_days=_LEI_RECORD_CACHE_MAX_AGE_DAYS,
+            ) = await asyncio.wait_for(
+                asyncio.gather(
+                    self._get(
+                        f"/lei-records/{quote(lei)}",
+                        cache_key=cache_key,
+                        max_age_days=_LEI_RECORD_CACHE_MAX_AGE_DAYS,
+                    ),
+                    self._parent_or_exception(lei, "direct"),
+                    self._parent_or_exception(lei, "ultimate"),
+                    self._fetch_direct_children(lei),
                 ),
-                self._parent_or_exception(lei, "direct"),
-                self._parent_or_exception(lei, "ultimate"),
-                self._fetch_direct_children(lei),
+                timeout=timeout,
             )
-        except GleifRateLimitedError:
-            # Live GLEIF is rate-limiting and no cache entry (fresh or stale)
-            # could stand in. Last resort before failing the whole lookup:
-            # serve the anchor from the entity-pages Golden Copy snapshot,
-            # honestly badged as such (Phase 143).
+        except (GleifRateLimitedError, TimeoutError) as exc:
+            # Live GLEIF is rate-limiting (or, with a snapshot in hand, simply
+            # not answering within the bound) and no cache entry — fresh or
+            # stale — could stand in. Last resort before failing the whole
+            # lookup: serve the anchor from the entity-pages Golden Copy
+            # snapshot, honestly badged as such (Phase 143; bound added in
+            # Phase 144).
             bundle = self._snapshot_bundle(lei)
             if bundle is None:
+                if isinstance(exc, TimeoutError):  # store row vanished mid-flight
+                    raise GleifRateLimitedError(
+                        f"live GLEIF fetch for {lei} exceeded "
+                        f"{snapshot_after:.0f}s and no snapshot row was found"
+                    ) from exc
                 raise
             validate_raw("gleif", GLEIFBundle, bundle)
             return bundle
@@ -264,6 +286,19 @@ class GleifAdapter(SourceAdapter):
         }
         validate_raw("gleif", GLEIFBundle, bundle)
         return bundle
+
+    @staticmethod
+    def _snapshot_available(lei: str) -> bool:
+        """Cheap check: does the entity-pages Golden Copy hold this LEI?
+
+        One indexed primary-key read. Decides whether ``fetch`` may bound the
+        live attempt (Phase 144) — with no snapshot to fall back on, cutting
+        the live attempt short would only trade a slow answer for none.
+        """
+        from ..entity_pages import get_store
+
+        store = get_store()
+        return store is not None and store.get(lei) is not None
 
     def _snapshot_bundle(self, lei: str) -> dict[str, Any] | None:
         """Anchor bundle from the entity-pages Golden Copy SQLite, or ``None``.

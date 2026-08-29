@@ -330,3 +330,80 @@ def test_lookup_returns_friendly_503_when_rate_limited(
     detail = response.json()["detail"]
     assert "rate-limiting" in detail
     assert "retry" in detail.lower()
+
+
+# ---------------------------------------------------------------------------
+# Phase 144 — serve the snapshot sooner than the full throttle wait
+# ---------------------------------------------------------------------------
+
+
+async def test_snapshot_available_reads_the_store(tmp_path, monkeypatch) -> None:
+    assert GleifAdapter._snapshot_available(_LEI) is False  # no store configured
+    monkeypatch.setenv(
+        "OPENCHECK_ENTITY_PAGES_DB_FILE", str(_entity_store_db(tmp_path))
+    )
+    get_settings.cache_clear()
+    ep.reset_store_for_tests()
+    assert GleifAdapter._snapshot_available(_LEI) is True
+    assert GleifAdapter._snapshot_available("MISSING00000000000XX") is False
+
+
+async def test_saturated_budget_serves_snapshot_within_the_bound(
+    tmp_path, monkeypatch
+) -> None:
+    """With a snapshot in the store and the shared budget saturated, the
+    anchor is served after ``OPENCHECK_GLEIF_SNAPSHOT_AFTER_S`` — not after
+    the throttle's much longer max wait. Phase 143 measured 15–21s anchor
+    stalls in production; this pins the cap that removes them."""
+    monkeypatch.setenv(
+        "OPENCHECK_ENTITY_PAGES_DB_FILE", str(_entity_store_db(tmp_path))
+    )
+    monkeypatch.setenv("OPENCHECK_GLEIF_SNAPSHOT_AFTER_S", "0.3")
+    _enable_throttle(monkeypatch, per_minute=50, max_wait_s=30.0)
+    ep.reset_store_for_tests()
+    get_throttle().penalise(15.0)  # budget saturated: acquire would block 15s
+
+    start = time.monotonic()
+    bundle = await GleifAdapter().fetch(_LEI)
+    elapsed = time.monotonic() - start
+
+    assert bundle["snapshot_fallback"] is True
+    assert bundle["record"]["attributes"]["entity"]["legalName"]["name"] == "SHELL PLC"
+    assert elapsed < 3.0  # the 30s max wait never applied
+
+
+async def test_fast_live_fetch_wins_over_an_available_snapshot(
+    httpx_mock: HTTPXMock, tmp_path, monkeypatch
+) -> None:
+    """The bound is a ceiling, not a preference: when GLEIF answers promptly
+    the anchor stays live even though a snapshot row exists."""
+    monkeypatch.setenv(
+        "OPENCHECK_ENTITY_PAGES_DB_FILE", str(_entity_store_db(tmp_path))
+    )
+    get_settings.cache_clear()
+    ep.reset_store_for_tests()
+    httpx_mock.add_response(
+        url=f"{_API}/lei-records/{_LEI}",
+        json={"data": {"id": _LEI, "attributes": {"lei": _LEI, "entity": {
+            "legalName": {"name": "SHELL PLC (LIVE)"}}}}},
+    )
+    for path in (
+        "direct-parent",
+        "direct-parent-reporting-exception",
+        "ultimate-parent",
+        "ultimate-parent-reporting-exception",
+    ):
+        httpx_mock.add_response(
+            url=f"{_API}/lei-records/{_LEI}/{path}", status_code=404
+        )
+    httpx_mock.add_response(
+        url=f"{_API}/lei-records/{_LEI}/direct-children?page[size]=100&page[number]=1",
+        json={"data": [], "meta": {"pagination": {"total": 0}}},
+    )
+
+    bundle = await GleifAdapter().fetch(_LEI)
+
+    assert "snapshot_fallback" not in bundle
+    assert bundle["record"]["attributes"]["entity"]["legalName"]["name"] == (
+        "SHELL PLC (LIVE)"
+    )
