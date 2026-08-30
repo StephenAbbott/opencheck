@@ -258,3 +258,68 @@ async def test_jar_lithuania_marks_an_unanswered_register(monkeypatch, tmp_path)
     # Privacy: the detail names the source and the failure, never the subject.
     assert "Ignitis" not in recorded[0].detail
     get_settings.cache_clear()
+
+
+def test_identical_degradations_collapse():
+    """An adapter that loops must not report the same gap once per iteration.
+
+    EITI fetches revenue per matched organisation, so a 403 produced four
+    identical entries — a degraded_sources list that reads as four problems.
+    """
+    from opencheck import degradation
+
+    degradation.begin()
+    for _ in range(4):
+        degradation.record("eiti", "The EITI revenue API did not answer.")
+    degradation.record("eiti", "A different thing also failed.")
+    degradation.record("eiti_soe", "The EITI revenue API did not answer.")
+    collected = degradation.collect()
+
+    assert len(collected) == 3, [d.detail for d in collected]
+    assert [d.source_id for d in collected] == ["eiti", "eiti", "eiti_soe"]
+
+
+async def test_eiti_records_a_degradation_when_the_revenue_api_refuses(monkeypatch, tmp_path):
+    """An empty payments list because the API refused is not the same claim as
+    an empty payments list because none were reported.
+
+    EITI and EITI SOE both answer from committed indexes, so a 403 on the live
+    enrichment call left a bundle that looked complete. The weekly sweep
+    reported both healthy while eiti.org was 403ing every revenue call from CI.
+    """
+    import httpx
+
+    from opencheck import degradation
+    from opencheck.config import get_settings
+    from opencheck.sources import REGISTRY
+    import opencheck.sources.eiti as eiti_mod
+
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    get_settings.cache_clear()
+
+    class _Refuse:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+        async def get(self, *args, **kwargs):
+            request = httpx.Request("GET", "https://eiti.org/api/v2.0/revenue")
+            raise httpx.HTTPStatusError(
+                "403", request=request, response=httpx.Response(403, request=request)
+            )
+
+    monkeypatch.setattr(eiti_mod, "build_client", lambda: _Refuse())
+
+    degradation.begin()
+    await REGISTRY["eiti"].fetch_by_registration("GB", "01285743")
+    recorded = degradation.collect()
+    get_settings.cache_clear()
+
+    assert [d.source_id for d in recorded] == ["eiti"], "one entry, not one per organisation"
+    assert "did not answer" in recorded[0].detail
+    assert recorded[0].reason == "upstream_error"
+    # Privacy: the detail names the source and the failure, never the subject.
+    assert "Equinor" not in recorded[0].detail

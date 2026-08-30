@@ -55,7 +55,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
 
-from .. import provenance
+from .. import degradation, provenance
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -138,6 +138,14 @@ def _reset_index_for_tests() -> None:
     global _index
     _index = None
 
+
+
+def _failure_label(exc: BaseException) -> str:
+    """Short label for degradation.reason_for_failure, from a swallowed error."""
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    if status is not None:
+        return f"HTTP {status}"
+    return type(exc).__name__
 
 class EitiSoeAdapter(SourceAdapter):
     """EITI State-Owned Enterprises Database adapter — CDD category."""
@@ -286,6 +294,16 @@ class EitiSoeAdapter(SourceAdapter):
                 rows = response.json()
         except Exception as exc:  # noqa: BLE001
             log.warning("EITI SOE payment fetch failed for %s: %s", eiti_id_company, exc)
+            # The SOE classification comes from the committed index and still
+            # stands; the payment rows do not. Saying so is the difference
+            # between "this SOE reported no payments" and "we could not ask".
+            degradation.record(
+                self.id,
+                "The EITI SOE database did not answer "
+                f"({type(exc).__name__}); the state-ownership classification "
+                "stands, but payment rows are missing.",
+                reason=degradation.reason_for_failure(_failure_label(exc)),
+            )
             rows = []
         out: list[dict[str, Any]] = []
         for r in rows if isinstance(rows, list) else []:

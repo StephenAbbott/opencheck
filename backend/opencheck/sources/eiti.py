@@ -38,6 +38,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -125,6 +126,14 @@ def _match_identification(country: str, registered_as: str) -> str | None:
             return ident
     return None
 
+
+
+def _failure_label(exc: BaseException) -> str:
+    """Short label for degradation.reason_for_failure, from a swallowed error."""
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    if status is not None:
+        return f"HTTP {status}"
+    return type(exc).__name__
 
 class EitiAdapter(SourceAdapter):
     """EITI payments-to-governments adapter — ESG category."""
@@ -275,6 +284,20 @@ class EitiAdapter(SourceAdapter):
                     self._cache.put(cache_key, payload)
                 except Exception as exc:  # noqa: BLE001
                     log.warning("EITI revenue fetch failed for %s: %s", org_id, exc)
+                    # An empty payments list because the API refused us is not
+                    # the same claim as an empty payments list because the
+                    # company reported none — and until Phase 121 they were
+                    # indistinguishable to every consumer, including the
+                    # weekly sweep, which reported EITI healthy while eiti.org
+                    # was 403ing every revenue call from CI.
+                    degradation.record(
+                        self.id,
+                        "The EITI revenue API did not answer "
+                        f"({type(exc).__name__}); payment rows are missing for "
+                        "one or more matched organisations. An empty payments "
+                        "list here is not a statement that none were reported.",
+                        reason=degradation.reason_for_failure(_failure_label(exc)),
+                    )
                     payload = {"data": []}
             rows = []
             total = 0.0
