@@ -303,6 +303,26 @@ Keep it. `test_live_smoke.py` is the **deep tier** — full search → fetch →
 open sources. The sweep is the **broad tier** — all 39, shallower, provenance-aware. Don't merge
 the assertions: the deep tier's value is that it's deep.
 
+## Silent green, case 2 and 3: EITI and EITI SOE — closed 2026-08-23
+
+Both 403 from GitHub runners, and both still reported **ok**: they answer from their committed
+indexes, and their probes declare `allow_empty=True`, so a payments list emptied by a refusal was
+indistinguishable from a company that genuinely reported none. Visible only in the run log.
+
+Both adapters now record a degradation when the live enrichment call fails. The classification
+still stands — that is what the index is for — but the report and `degraded_sources` say plainly
+that the payment rows are missing rather than absent.
+
+**The sweep now reads the degradation channel, not a per-adapter bundle key.** Each probe runs
+inside `degradation.recording()` as well as `provenance.recording()`, so *any* adapter that records
+a degradation is reported amber automatically, with no per-source wiring in the sweep and no marker
+for it to know about. The two channels answer different questions: provenance says **how current**
+the payload is, degradation says **whether the source actually answered**.
+
+Identical observations now collapse in the recorder. EITI fetches revenue per matched
+organisation, so one 403 recorded the same sentence four times — a `degraded_sources` list with
+four identical rows reads as four problems.
+
 ## What the sweep cannot see: fresh-process blindness
 
 Found the hard way on 2026-08-23. INPI 401'd on every French lookup in production while the weekly

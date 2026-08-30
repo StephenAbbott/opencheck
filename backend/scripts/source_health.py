@@ -77,7 +77,7 @@ _BACKEND = Path(__file__).resolve().parent.parent
 if str(_BACKEND) not in sys.path:
     sys.path.insert(0, str(_BACKEND))
 
-from opencheck import provenance  # noqa: E402
+from opencheck import degradation, provenance  # noqa: E402
 from opencheck.cache import data_root  # noqa: E402
 from opencheck.config import get_settings  # noqa: E402
 from opencheck.sources import REGISTRY  # noqa: E402
@@ -150,10 +150,18 @@ async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Resu
     call = getattr(adapter, probe.method)
     started = time.monotonic()
 
+    degradations: list[Any] = []
     try:
-        with provenance.recording() as recorder:
+        # Both channels, for the same reason: an adapter can answer while
+        # telling you the answer is not what it looks like. provenance says
+        # HOW CURRENT the payload is; degradation says WHETHER THE SOURCE
+        # ACTUALLY ANSWERED. Reading the second here means any adapter that
+        # records one is reported amber automatically — no per-source wiring,
+        # and no bundle key for the sweep to know about.
+        with provenance.recording() as recorder, degradation.recording() as recorded:
             result = await asyncio.wait_for(call(*probe.args, **dict(probe.kwargs)), timeout=timeout)
         prov = recorder.resolve()
+        degradations = list(recorded)
     except asyncio.TimeoutError:
         return Result(
             source_id,
@@ -201,19 +209,28 @@ async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Resu
         known_gap=probe.known_gap,
     )
 
-    # 0. The adapter said outright that the source did not answer. That is a
+    # 0. The adapter said outright that something did not answer. That is a
     #    degradation, not a source-health failure: JAR returns 403 to
-    #    datacentre IPs, so this fires on a GitHub runner while the register
-    #    serves real users normally. Reporting it as `fail` would make the
-    #    weekly job permanently red for something that is not broken, and a
-    #    permanently red monitor stops being read.
+    #    datacentre IPs and EITI 403s the revenue API from CI, so these fire on
+    #    a GitHub runner while both serve real users normally. Reporting them
+    #    as `fail` would make the weekly job permanently red for something that
+    #    is not broken, and a permanently red monitor stops being read.
+    #
+    #    This is why the sweep reads degraded_sources rather than a per-adapter
+    #    bundle key: EITI and EITI SOE both answered from their committed
+    #    indexes with an empty payments list, which is indistinguishable from
+    #    "this company reported no payments" unless the adapter says otherwise.
+    if degradations:
+        first = degradations[0]
+        extra = f" (+{len(degradations) - 1} more)" if len(degradations) > 1 else ""
+        out.status = DEGRADED
+        out.reason = f"{_redact(getattr(first, 'detail', first))}{extra}"
+        return out
+
     if isinstance(result, dict) and result.get("register_unavailable"):
         detail = result.get("register_unavailable_detail") or "no detail"
         out.status = DEGRADED
-        out.reason = (
-            f"the source did not answer ({detail}); the adapter surfaced this "
-            "in degraded_sources rather than passing off a partial card"
-        )
+        out.reason = f"the source did not answer ({detail})"
         return out
 
     # 1. Emptiness — for a register lookup of a company that exists, nothing

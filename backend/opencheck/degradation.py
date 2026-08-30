@@ -109,6 +109,20 @@ def record(
         return
     from .risk import DegradedSource  # lazy: risk imports sources
 
+    # Identical observations collapse. An adapter that loops — EITI fetches
+    # revenue per matched organisation — would otherwise record the same
+    # sentence once per iteration, and a degraded_sources list with four
+    # identical rows reads as four problems. The detail text is deliberately
+    # count-free, so a repeat carries no information the first does not.
+    if any(
+        d.source_id == source_id
+        and d.check == check
+        and d.reason == reason
+        and d.detail == detail
+        for d in current
+    ):
+        return
+
     current.append(
         DegradedSource(
             source_id=source_id,
