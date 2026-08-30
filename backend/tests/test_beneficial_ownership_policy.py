@@ -79,8 +79,11 @@ class TestSecReportingCapacity:
         assert "IN" not in _SEC_CUSTODIAL_REPORTER_CODES
         assert _sec_beneficial_ownership({"type_code": "IN"}) is True
 
-    def test_ordinary_filer_still_asserts(self):
-        assert _sec_beneficial_ownership({"type_code": "CO"}) is True
+    def test_ordinary_person_filer_still_asserts(self):
+        assert _sec_beneficial_ownership({"type_code": "CO"}, "person") is True
+
+    def test_ordinary_entity_filer_is_false(self):
+        assert _sec_beneficial_ownership({"type_code": "CO"}, "entity") is False
 
     def test_missing_code_defaults_to_asserting(self):
         assert _sec_beneficial_ownership({}) is True
@@ -117,8 +120,16 @@ class TestSecEdgarMapping:
         assert rels
         return rels[0]["recordDetails"]["interests"][0]
 
-    def test_ordinary_filer_asserts_beneficial_ownership(self):
-        assert self._interest(_sec_bundle("CO"))["beneficialOwnershipOrControl"] is True
+    def test_ordinary_entity_filer_gets_false(self):
+        """Rule 13d-3 admits entity beneficial owners, but a BODS beneficial
+        owner is a natural person — an entity interested party carries false
+        (bo_regimes: sec_edgar/filer_entity; 2026-08 audit)."""
+        assert self._interest(_sec_bundle("CO"))["beneficialOwnershipOrControl"] is False
+
+    def test_ordinary_person_filer_asserts_and_names_the_definition(self):
+        interest = self._interest(_sec_bundle("IN", is_individual=True))
+        assert interest["beneficialOwnershipOrControl"] is True
+        assert "13d-3" in interest.get("details", "")
 
     def test_investment_adviser_makes_no_claim(self):
         interest = self._interest(_sec_bundle("IA"))

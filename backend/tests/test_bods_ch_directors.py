@@ -177,11 +177,14 @@ def test_director_interest_type_is_senior_managing_official() -> None:
     assert interest["type"] == "seniorManagingOfficial"
 
 
-def test_director_interest_beneficial_ownership_is_false() -> None:
+def test_director_interest_beneficial_ownership_is_unset() -> None:
+    """The officers register is not a BO declaration: the flag is omitted
+    ("not stated"), not asserted false — bo_regimes:
+    companies_house/officer_director -> omit (2026-08 audit decision)."""
     bundle = map_companies_house(_company_bundle_with_directors())
     rels = [s for s in bundle if s["recordType"] == "relationship"]
     interest = rels[0]["recordDetails"]["interests"][0]
-    assert interest["beneficialOwnershipOrControl"] is False
+    assert "beneficialOwnershipOrControl" not in interest
 
 
 def test_director_interest_records_start_date() -> None:

@@ -741,14 +741,16 @@ class TestUrLatvia:
         types = _interest_types(stmts)
         assert "boardMember" in types
 
-    def test_officer_beneficial_ownership_false(self, stmts):
-        """Board officer does not assert beneficial ownership."""
+    def test_officer_beneficial_ownership_unset(self, stmts):
+        """Board officer makes NO beneficial ownership claim: the flag is
+        omitted ("not stated"), not asserted false — bo_regimes:
+        ur_latvia/officer -> omit (2026-08 audit decision)."""
         officer_rels = [
             r for r in _relationships(stmts)
             if any(i.get("type") == "boardMember" for i in _interests(r))
         ]
         assert len(officer_rels) == 1
-        assert _interests(officer_rels[0])[0]["beneficialOwnershipOrControl"] is False
+        assert "beneficialOwnershipOrControl" not in _interests(officer_rels[0])[0]
 
 
 # ===========================================================================

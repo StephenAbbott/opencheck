@@ -815,10 +815,13 @@ def _ch_director_statements(
 
         appointed_on = officer.get("appointed_on")
         details = role_label + (f", from {appointed_on}" if appointed_on else "")
+        # No beneficialOwnershipOrControl key: the officers register is not
+        # a BO declaration, so the flag stays unset ("not stated") —
+        # bo_regimes: companies_house/officer_director -> omit
+        # (decision 2026-08-28; was an over-claiming explicit False).
         interest: dict[str, Any] = {
             "type": "seniorManagingOfficial",
             "directOrIndirect": "direct",
-            "beneficialOwnershipOrControl": False,
             "details": details,
         }
         if appointed_on:
@@ -4388,6 +4391,9 @@ _FTM_EDGE_SCHEMAS: dict[str, tuple[str, str, str | None]] = {
 # Sources that publish or validate an actual beneficial-ownership declaration,
 # and may therefore assert the flag. Extend only with a source whose ownership
 # records are demonstrably beneficial ownership, not merely registered holdings.
+# The per-jurisdiction legal definitions behind this list — statute, threshold,
+# reporting basis, per-record-kind policy — live in ``bo_regimes.py`` and are
+# rendered to ``docs/bo-regimes.md``.
 _BO_ASSERTING_SOURCES: frozenset[str] = frozenset({
     "bods_uk_psc",      # UK PSC register — a BO regime; the flag is copied verbatim
     "bods_gleif",       # Open Ownership's processed output; flag copied verbatim
@@ -4414,6 +4420,7 @@ def set_beneficial_ownership(
     source_id: str,
     *,
     asserted: bool | None = None,
+    record_kind: str | None = None,
 ) -> dict[str, Any]:
     """Set ``beneficialOwnershipOrControl`` on *interest*, or leave it unset.
 
@@ -4421,15 +4428,38 @@ def set_beneficial_ownership(
 
     * ``True`` / ``False`` — the register stated it. Emitted as given, for any
       source, because an explicit statement outranks our classification.
-    * ``None`` — the source said nothing. The flag is emitted only if the
-      source is one that publishes BO declarations at all; otherwise it is
-      omitted, which BODS reads as "not stated".
+    * ``None`` — the source said nothing; what happens next depends on
+      ``record_kind``.
+
+    ``record_kind`` names what kind of record the interest came from (a BO
+    declaration, a registered holding, an officer role, ...) and looks the
+    policy up in the per-jurisdiction regimes registry
+    (``bo_regimes.boc_policy``): ``assert_true`` -> True, ``assert_false`` ->
+    False, anything else (``omit``, unknown kind, unknown source) -> the flag
+    stays unset. Pass it whenever the record kind is known — it is the fix for
+    the source-level/record-level conflation the 2026-08 audit flagged: a
+    source that publishes BO declarations ALSO publishes plain holdings, and
+    "the source may assert" never meant "every record asserts".
+
+    Without ``record_kind`` the legacy source-level rule applies: the flag is
+    emitted only if the source publishes BO declarations at all; otherwise it
+    is omitted, which BODS reads as "not stated".
 
     Mutates and returns *interest* so it can be used inline.
     """
     if asserted is not None:
         interest["beneficialOwnershipOrControl"] = asserted
-    elif source_may_assert_beneficial_ownership(source_id):
+        return interest
+    if record_kind is not None:
+        from .bo_regimes import boc_policy
+
+        policy = boc_policy(source_id, record_kind)
+        if policy == "assert_true":
+            interest["beneficialOwnershipOrControl"] = True
+        elif policy == "assert_false":
+            interest["beneficialOwnershipOrControl"] = False
+        return interest
+    if source_may_assert_beneficial_ownership(source_id):
         interest["beneficialOwnershipOrControl"] = True
     return interest
 
@@ -5013,14 +5043,17 @@ def _emit_wikidata_owner(
             source_id="wikidata", local_id=oqid, full_name=oname,
             identifiers=identifiers, source_url=owner_url,
         )
-        ip_type, is_boc = "person", True   # natural-person owner = beneficial owner
+        # Wikidata publishes no BO declaration: a person owner gets NO flag
+        # ("not stated") — bo_regimes: wikidata/owner_natural_person -> omit
+        # (audit finding 4: the old hard-coded True over-claimed).
+        ip_type, is_boc = "person", None
     else:
         owner_stmt = make_entity_statement(
             source_id="wikidata", local_id=oqid, name=oname, identifiers=identifiers,
             entity_type=owner.get("entity_type") or "registeredEntity",
             source_url=owner_url,
         )
-        ip_type, is_boc = "entity", False  # intermediate entity, not the ultimate BO
+        ip_type, is_boc = "entity", False  # entity party is never the BO (definitional)
 
     result.statements.append(owner_stmt)
 
@@ -5030,7 +5063,9 @@ def _emit_wikidata_owner(
     ref_src = ref0.get("stated_in") or ref0.get("url")
     via = "/".join(owner.get("via") or []) or "P127/P749"
 
-    interest: dict[str, Any] = {"beneficialOwnershipOrControl": is_boc}
+    interest: dict[str, Any] = {}
+    if is_boc is not None:
+        interest["beneficialOwnershipOrControl"] = is_boc
     if share is not None:
         interest["type"] = "shareholding"
         interest["share"] = {"exact": share}
@@ -6155,18 +6190,25 @@ _SEC_CUSTODIAL_REPORTER_CODES: frozenset[str] = frozenset({
 _SEC_CUSTODIAL_REPORTER_CODES = _SEC_CUSTODIAL_REPORTER_CODES - {"IN"}
 
 
-def _sec_beneficial_ownership(reporter: dict[str, Any]) -> bool | None:
+def _sec_beneficial_ownership(
+    reporter: dict[str, Any], party_type: str = "person"
+) -> bool | None:
     """What, if anything, a 13D/13G filing says about beneficial ownership.
 
     Returns ``None`` — "not stated" — when the filer reports in a custodial or
     advisory capacity, because the filing then asserts voting/dispositive power
     without asserting that the filer benefits. Returns ``True`` for an ordinary
-    filer, where the SEC's own beneficial-ownership test has been met.
+    NATURAL-PERSON filer, where the SEC's own beneficial-ownership test (Rule
+    13d-3: voting and/or dispositive power) has been met. Returns ``False`` for
+    an ordinary ENTITY filer: Rule 13d-3 admits entities, but a BODS beneficial
+    owner is a natural person, so an entity interested party never carries
+    ``true`` — bo_regimes: sec_edgar/filer_entity -> assert_false, matching
+    Open Ownership's entity-party convention (2026-08 audit).
     """
     code = (reporter.get("type_code") or "").strip().upper()
     if code in _SEC_CUSTODIAL_REPORTER_CODES:
         return None
-    return True
+    return party_type == "person"
 
 
 def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
@@ -6328,8 +6370,19 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
             "directOrIndirect": "direct",
         }
         set_beneficial_ownership(
-            shareholding, "sec_edgar", asserted=_sec_beneficial_ownership(reporter)
+            shareholding,
+            "sec_edgar",
+            asserted=_sec_beneficial_ownership(reporter, party_type),
         )
+        if shareholding.get("beneficialOwnershipOrControl") is True:
+            # Name WHICH definition the flag is true under — Rule 13d-3 is a
+            # securities-disclosure concept, not AML beneficial ownership
+            # (bo_regimes: sec_edgar).
+            shareholding["details"] = (
+                "Beneficial owner under SEC Rule 13d-3 (voting and/or "
+                "dispositive power) — a securities-disclosure concept distinct "
+                "from AML beneficial ownership"
+            )
         # Sole vs shared power is a materially different claim and was being
         # discarded; where the filing distinguishes them, say so.
         sole = reporter.get("sole_voting_power")
@@ -6341,7 +6394,9 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
             if shared:
                 power_parts.append(f"shared voting power over {shared:,.0f} shares")
             if power_parts:
-                shareholding["details"] = "; ".join(power_parts)
+                shareholding["details"] = "; ".join(
+                    filter(None, [shareholding.get("details"), *power_parts])
+                )
         type_code = (reporter.get("type_code") or "").strip().upper()
         if type_code in _SEC_CUSTODIAL_REPORTER_CODES:
             note = (
@@ -7435,7 +7490,9 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             {
                 "type": interest_type,
                 "directOrIndirect": "direct",
-                "beneficialOwnershipOrControl": False,
+                # BOC unset ("not stated"): an officer record is not a BO
+                # declaration — bo_regimes: ur_latvia/officer -> omit
+                # (decision 2026-08-28; was an over-claiming explicit False).
                 "details": ", ".join(role_desc_parts) if role_desc_parts else governing_body,
                 # registered_on is the UR entry date for this officer record —
                 # the closest thing UR gives us to when the role began.
@@ -7505,10 +7562,13 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
         yield mem_stmt
 
+        # BOC unset ("not stated"): UR's member list is a registered-holding
+        # record, not a BO declaration; the same person's BO record (if any)
+        # carries true — bo_regimes: ur_latvia/member_shareholder -> omit
+        # (decision 2026-08-28; was an over-claiming explicit False).
         interest: dict[str, Any] = {
             "type": "shareholding",
             "directOrIndirect": "direct",
-            "beneficialOwnershipOrControl": False,
         }
         if date_from:
             interest["startDate"] = date_from

@@ -528,10 +528,12 @@ def test_map_wikidata_owner_share_and_bo_flags() -> None:
     assert fi["share"]["exact"] == 92.0
     assert fi["beneficialOwnershipOrControl"] is False
 
-    # Natural-person owner → beneficialOwnershipOrControl true.
+    # Natural-person owner → NO flag: Wikidata publishes no BO declaration,
+    # so the old hard-coded true over-claimed — bo_regimes:
+    # wikidata/owner_natural_person -> omit (2026-08 audit finding 4).
     person_id = persons[0]["statementId"]
     prel = next(r for r in rels if r["recordDetails"]["interestedParty"] == person_id)
-    assert prel["recordDetails"]["interests"][0]["beneficialOwnershipOrControl"] is True
+    assert "beneficialOwnershipOrControl" not in prel["recordDetails"]["interests"][0]
 
 
 def test_map_wikidata_controlling_owners_validate_clean() -> None:

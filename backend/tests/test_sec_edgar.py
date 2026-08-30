@@ -458,12 +458,18 @@ def test_map_sec_edgar_relationship_share_exact():
     bundle = map_sec_edgar(_make_bundle(percent=77.0))
     rel_stmts = [s for s in bundle if s["recordType"] == "relationship"]
     assert len(rel_stmts) == 2
+    persons = {s["statementId"] for s in bundle if s["recordType"] == "person"}
     for rel in rel_stmts:
         interests = rel["recordDetails"]["interests"]
         assert len(interests) == 1
         interest = interests[0]
         assert interest["type"] == "shareholding"
-        assert interest["beneficialOwnershipOrControl"] is True
+        # Person filer (BLUHM NEIL, IN) asserts true under Rule 13d-3; the
+        # entity filer (GP LLC, OO) gets false — an entity interested party is
+        # never the beneficial owner (bo_regimes: sec_edgar; 2026-08 audit).
+        ip = rel["recordDetails"]["interestedParty"]
+        expected = ip in persons
+        assert interest["beneficialOwnershipOrControl"] is expected
         assert interest["share"]["exact"] == 77.0
 
 
