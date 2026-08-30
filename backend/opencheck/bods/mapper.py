@@ -118,10 +118,12 @@ def _parse_nature(nature: str) -> dict[str, Any]:
 
     # Prefer the official human-readable descriptor for the code; fall back to
     # the raw code string for any code not in the vendored enumeration.
+    # No beneficialOwnershipOrControl here: the flag depends on WHO holds the
+    # interest (individual PSC vs corporate RLE), which only the caller knows —
+    # _emit_company_statements routes it through the regimes registry.
     entry: dict[str, Any] = {
         "type": interest_type,
         "directOrIndirect": "direct",
-        "beneficialOwnershipOrControl": True,
         "details": describe_nature(nature) or nature,
     }
 
@@ -911,6 +913,11 @@ def _ch_psc_statement_statements(
         ceased_on = item.get("ceased_on")
         interests: list[dict[str, Any]] = []
         if reason != _PSC_STATEMENT_NO_BO:
+            # Deliberately NOT routed through the regimes registry: PSC
+            # statements are per-code decisions (bo_regimes:
+            # companies_house/psc_statement -> per_statement_code) — this
+            # branch IS the policy: any statement short of "no BO exists"
+            # asserts that a beneficial owner exists but is not identified.
             interests = [{
                 "type": "unknownInterest",
                 "directOrIndirect": "unknown",
@@ -1049,7 +1056,6 @@ def _emit_company_statements(
                 {
                     "type": "unpublishedInterest",
                     "directOrIndirect": "unknown",
-                    "beneficialOwnershipOrControl": True,
                     "details": describe_super_secure(ss_code),
                 }
             ]
@@ -1058,16 +1064,21 @@ def _emit_company_statements(
                 {
                     "type": "unknownInterest",
                     "directOrIndirect": "unknown",
-                    "beneficialOwnershipOrControl": True,
                 }
             ]
-        # BODS: beneficialOwnershipOrControl may only be True when the
-        # interested party is a natural person (known or anonymous).  For
-        # corporate / legal-person PSCs the interested party is an entity, so
-        # we set the flag to False — the BO relationship is further up the chain.
-        if ip_type == "entity":
-            for interest in interests:
-                interest["beneficialOwnershipOrControl"] = False
+        # beneficialOwnershipOrControl comes from the regimes registry
+        # (bo_regimes.py), not from per-interest literals: an individual PSC
+        # record is a BO declaration under the UK regime (psc_individual ->
+        # true); a corporate / legal-person PSC (RLE) is an entity interested
+        # party and never the beneficial owner (psc_corporate_rle -> false) —
+        # the BO relationship is further up the chain.
+        psc_record_kind = (
+            "psc_corporate_rle" if ip_type == "entity" else "psc_individual"
+        )
+        for interest in interests:
+            set_beneficial_ownership(
+                interest, "companies_house", record_kind=psc_record_kind
+            )
 
         # A ceased PSC closes the relationship: stamp each interest with the
         # cessation date and emit the statement with recordStatus 'closed'. The
@@ -4181,10 +4192,11 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             control_code, ("otherInfluenceOrControl", "")
         )
 
-        interest: dict[str, Any] = {
-            "type": interest_type,
-            "beneficialOwnershipOrControl": True,
-        }
+        # kasusaajad records ARE the Estonian BO declarations — the flag
+        # comes from the regimes registry (ariregister/kasusaaja_bo -> true).
+        interest: dict[str, Any] = set_beneficial_ownership(
+            {"type": interest_type}, "ariregister", record_kind="kasusaaja_bo"
+        )
         if control_label:
             interest["details"] = control_label
         if start_date:
@@ -5043,17 +5055,14 @@ def _emit_wikidata_owner(
             source_id="wikidata", local_id=oqid, full_name=oname,
             identifiers=identifiers, source_url=owner_url,
         )
-        # Wikidata publishes no BO declaration: a person owner gets NO flag
-        # ("not stated") — bo_regimes: wikidata/owner_natural_person -> omit
-        # (audit finding 4: the old hard-coded True over-claimed).
-        ip_type, is_boc = "person", None
+        ip_type = "person"
     else:
         owner_stmt = make_entity_statement(
             source_id="wikidata", local_id=oqid, name=oname, identifiers=identifiers,
             entity_type=owner.get("entity_type") or "registeredEntity",
             source_url=owner_url,
         )
-        ip_type, is_boc = "entity", False  # entity party is never the BO (definitional)
+        ip_type = "entity"
 
     result.statements.append(owner_stmt)
 
@@ -5063,9 +5072,17 @@ def _emit_wikidata_owner(
     ref_src = ref0.get("stated_in") or ref0.get("url")
     via = "/".join(owner.get("via") or []) or "P127/P749"
 
-    interest: dict[str, Any] = {}
-    if is_boc is not None:
-        interest["beneficialOwnershipOrControl"] = is_boc
+    # beneficialOwnershipOrControl comes from the regimes registry: Wikidata
+    # publishes no BO declaration, so a person owner gets NO flag ("not
+    # stated" — the old hard-coded True over-claimed, audit finding 4), while
+    # an entity party is never the beneficial owner (definitional -> false).
+    interest: dict[str, Any] = set_beneficial_ownership(
+        {},
+        "wikidata",
+        record_kind=(
+            "owner_natural_person" if ip_type == "person" else "owner_entity"
+        ),
+    )
     if share is not None:
         interest["type"] = "shareholding"
         interest["share"] = {"exact": share}
@@ -7413,14 +7430,19 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         )
         yield person_stmt
 
+        # Declared BO records are the Latvian BO declarations — the flag
+        # comes from the regimes registry (ur_latvia/beneficial_owner -> true).
         interests = [
-            {
-                "type": "otherInfluenceOrControl",
-                "directOrIndirect": "unknown",
-                "beneficialOwnershipOrControl": True,
-                "details": "Declared beneficial owner per Latvian UR register",
-                **({"startDate": registered_on} if registered_on else {}),
-            }
+            set_beneficial_ownership(
+                {
+                    "type": "otherInfluenceOrControl",
+                    "directOrIndirect": "unknown",
+                    "details": "Declared beneficial owner per Latvian UR register",
+                    **({"startDate": registered_on} if registered_on else {}),
+                },
+                "ur_latvia",
+                record_kind="beneficial_owner",
+            )
         ]
         rel_local_id = f"bo-rel-{regcode}-{bo_id or full_name}"
         yield make_relationship_statement(
@@ -8076,13 +8098,13 @@ def map_bods_uk_psc(bundle: dict[str, Any]) -> BODSBundle:
 # ----------------------------------------------------------------------
 
 
-def _cac_interests(psc: dict[str, Any], boc: bool) -> list[dict[str, Any]]:
+def _cac_interests(psc: dict[str, Any], record_kind: str) -> list[dict[str, Any]]:
     """Map the five statutory CAMA PSC conditions to BODS interest types.
 
-    ``boc`` (beneficialOwnershipOrControl) is asserted True only for natural
-    persons — the ultimate beneficial owners. Corporate / intermediate owners
-    are legal owners in the chain, so their interests are flagged False (BODS
-    guidance: do not assert beneficial ownership on an entity party).
+    ``record_kind`` routes beneficialOwnershipOrControl through the regimes
+    registry (bo_regimes.py): ``psc_natural_person`` -> true (the ultimate
+    beneficial owners), ``psc_corporate`` -> false (legal owners in the chain
+    — BODS guidance: do not assert beneficial ownership on an entity party).
     """
     out: list[dict[str, Any]] = []
 
@@ -8092,11 +8114,11 @@ def _cac_interests(psc: dict[str, Any], boc: bool) -> list[dict[str, Any]]:
     start = psc.get("notified") or None
 
     def _mk(itype: str, share_val: Any = None, details: str | None = None) -> dict[str, Any]:
-        i: dict[str, Any] = {
-            "type": itype,
-            "directOrIndirect": "direct",
-            "beneficialOwnershipOrControl": boc,
-        }
+        i: dict[str, Any] = set_beneficial_ownership(
+            {"type": itype, "directOrIndirect": "direct"},
+            "cac_nigeria",
+            record_kind=record_kind,
+        )
         s = _share(share_val)
         if s:
             i["share"] = s
@@ -8123,11 +8145,11 @@ def _cac_interests(psc: dict[str, Any], boc: bool) -> list[dict[str, Any]]:
             details="Significant influence or control over a trust or firm (CAMA condition 5)",
         ))
     if not out:
-        out.append({
-            "type": "unknownInterest",
-            "directOrIndirect": "unknown",
-            "beneficialOwnershipOrControl": boc,
-        })
+        out.append(set_beneficial_ownership(
+            {"type": "unknownInterest", "directOrIndirect": "unknown"},
+            "cac_nigeria",
+            record_kind=record_kind,
+        ))
     return out
 
 
@@ -8196,7 +8218,12 @@ def map_cac_nigeria(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             continue
         kind = psc.get("owner_kind") or "entity"
         g = groups.setdefault(owner, {"kind": kind, "psc": psc, "ilists": []})
-        g["ilists"].append(_cac_interests(psc, boc=(kind == "person")))
+        g["ilists"].append(_cac_interests(
+            psc,
+            record_kind=(
+                "psc_natural_person" if kind == "person" else "psc_corporate"
+            ),
+        ))
 
     emitted: set[str] = set()
     for owner, g in groups.items():
@@ -8942,16 +8969,21 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         kuv_valid_from: str | None = (kuv.get("PlatnostOd") or "")[:10] or None
         kuv_valid_to: str | None = (kuv.get("PlatnostDo") or "")[:10] or None
 
-        interest: dict[str, Any] = {
-            "type": "unknownInterest",
-            "directOrIndirect": "unknown",
-            "beneficialOwnershipOrControl": True,
-            "details": (
-                "Disclosed as konečný užívateľ výhod (KUV) in the Slovak "
-                "Public Sector Partners Register (RPVS).  The specific "
-                "mechanism of beneficial ownership is not published."
-            ),
-        }
+        # KUV records are verified Slovak BO declarations — the flag comes
+        # from the regimes registry (rpvs_slovakia/kuv -> true).
+        interest: dict[str, Any] = set_beneficial_ownership(
+            {
+                "type": "unknownInterest",
+                "directOrIndirect": "unknown",
+                "details": (
+                    "Disclosed as konečný užívateľ výhod (KUV) in the Slovak "
+                    "Public Sector Partners Register (RPVS).  The specific "
+                    "mechanism of beneficial ownership is not published."
+                ),
+            },
+            "rpvs_slovakia",
+            record_kind="kuv",
+        )
         if kuv_valid_from or kuv_valid_to:
             interest["startDate"] = kuv_valid_from
             if kuv_valid_to:
@@ -10244,7 +10276,12 @@ def _eiti_bo_map_nigeria(
             continue
         kind = psc.get("owner_kind") or "entity"
         g = groups.setdefault(owner, {"kind": kind, "psc": psc, "ilists": []})
-        g["ilists"].append(_cac_interests(psc, boc=(kind == "person")))
+        g["ilists"].append(_cac_interests(
+            psc,
+            record_kind=(
+                "psc_natural_person" if kind == "person" else "psc_corporate"
+            ),
+        ))
 
     emitted: set[str] = set()
     for owner, g in groups.items():
