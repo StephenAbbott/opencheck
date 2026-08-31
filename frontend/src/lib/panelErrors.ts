@@ -108,6 +108,34 @@ export function securitiesPageUnavailable(): PanelError {
   };
 }
 
+/**
+ * Phase 146: `/subsidiaries` no longer reports a rate-limited GLEIF as an
+ * entity with no children. It returns 200 with `children_available: false`
+ * (nothing could be checked) or with one relation missing / served from the
+ * Golden Copy snapshot (partial), plus a `degraded_detail` sentence written
+ * by the backend — the only layer that knows *which* call GLEIF refused.
+ *
+ * Two shapes, because the honest statements differ: "we could not check"
+ * suppresses the whole network, while "we checked half of it" leaves rows on
+ * screen that a reader would otherwise take for the complete set.
+ */
+export function subsidiariesUnavailable(detail: string | null): PanelError {
+  return {
+    panel: "subsidiaries",
+    missing: PANEL_MISSING.subsidiaries,
+    detail: detail ?? "GLEIF is rate-limiting or unreachable",
+  };
+}
+
+export function subsidiariesPartial(detail: string | null): PanelError {
+  return {
+    panel: "subsidiaries",
+    missing:
+      "part of the GLEIF subsidiary network — what is listed is incomplete",
+    detail: detail ?? "GLEIF answered only some of the network",
+  };
+}
+
 /** One entry per panel — a retry that fails again replaces, never appends. */
 export function mergePanelError(list: PanelError[], next: PanelError): PanelError[] {
   return [...list.filter((p) => p.panel !== next.panel), next];

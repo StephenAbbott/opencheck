@@ -3,6 +3,10 @@
 ``GET /subsidiaries?lei=<LEI>`` returns a count-first summary of the subject's
 direct and ultimate children (with a render-mode hint); ``?format=bods`` also
 returns the BODS statements for the graph / export. Never on the main lookup.
+
+Always 200, including when GLEIF refuses: a rate-limited network is reported
+as ``children_available: false`` with a ``degraded_detail`` sentence, never as
+an empty list (Phase 146, extending the Phase 145 ``/securities`` pattern).
 """
 
 from __future__ import annotations
@@ -39,6 +43,17 @@ class SubsidiariesResponse(BaseModel):
     lei: str
     available: bool
     reason: str | None = None
+    #: Phase 146. False = GLEIF refused both relation calls and no snapshot
+    #: stood in, so an empty ``children`` list says nothing about the entity.
+    #: The frontend must render the degraded notice, not "no network published".
+    children_available: bool = True
+    direct_available: bool = True
+    ultimate_available: bool = True
+    #: Direct children served from the entity-pages Golden Copy, not live.
+    snapshot_fallback: bool = False
+    snapshot_date: str | None = None
+    #: One sentence naming what GLEIF did not answer (None when it answered).
+    degraded_detail: str | None = None
     direct_total: int = 0
     ultimate_total: int = 0
     distinct_fetched: int = 0

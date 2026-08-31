@@ -11,6 +11,7 @@ import { getHistory } from "../../lib/api";
 import type { HistoryResponse } from "../../lib/api";
 import {
   buildTimelineRows,
+  historyDegradedNotice,
   noiseEventsOf,
   sourceUrl,
   basisLabel,
@@ -22,6 +23,10 @@ const RESP: HistoryResponse = {
   lei: _LEI,
   company_number: "00358949",
   available: true,
+  gleif_record_available: true,
+  gleif_events_available: true,
+  registry_sources_blocked: false,
+  company_number_basis: "live",
   sources: ["gleif", "companies_house"],
   notable_count: 3,
   notable: [
@@ -140,5 +145,49 @@ describe("basisLabel", () => {
   it("labels effective vs recorded honestly", () => {
     expect(basisLabel("effective")).toBe("as filed");
     expect(basisLabel("recorded")).toBe("as recorded by GLEIF");
+  });
+});
+
+describe("historyDegradedNotice (Phase 146)", () => {
+  it("says nothing when both GLEIF calls answered", () => {
+    expect(historyDegradedNotice(RESP)).toBeNull();
+  });
+
+  it("names the compounding failure: no record means no registry histories", () => {
+    const notice = historyDegradedNotice({
+      ...RESP,
+      notable: [],
+      events: [],
+      available: false,
+      gleif_record_available: false,
+      gleif_events_available: false,
+      registry_sources_blocked: true,
+      company_number_basis: null,
+      company_number: null,
+    });
+    expect(notice).toMatch(/could not be checked/);
+    expect(notice).toMatch(/Companies House/);
+    expect(notice).toMatch(/not a finding/);
+  });
+
+  it("distinguishes a missing change log from a missing record", () => {
+    const notice = historyDegradedNotice({
+      ...RESP,
+      gleif_events_available: false,
+    });
+    expect(notice).toMatch(/change log/);
+    // The registry sources ran, so it must not claim they were blocked.
+    expect(notice).not.toMatch(/could not be attempted/);
+  });
+
+  it("says the registry number came from cache when it did", () => {
+    const notice = historyDegradedNotice({
+      ...RESP,
+      gleif_record_available: false,
+      registry_sources_blocked: false,
+      company_number_basis: "cached",
+    });
+    expect(notice).toMatch(/cached copy/);
+    expect(notice).not.toMatch(/could not be attempted/);
   });
 });

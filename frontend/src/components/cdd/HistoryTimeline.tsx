@@ -230,6 +230,53 @@ export function buildTimelineRows(
   return out;
 }
 
+// ---------------------------------------------------------------------
+// Degradation notice (Phase 146)
+// ---------------------------------------------------------------------
+
+/**
+ * What to tell the reader when GLEIF would not answer, or `null`.
+ *
+ * The Time Machine's silent failure was the worst of the three GLEIF panels:
+ * a 429 emptied the change log AND — because the Companies House / NZ /
+ * Estonia / Denmark branches gate on a registry number that only the GLEIF
+ * record carries — stopped every other source from being attempted, leaving a
+ * near-empty timeline that read as "checked, nothing happened". These
+ * sentences say which of those two things actually occurred.
+ *
+ * Exported so it can be tested as a pure function, like `basisLabel` and
+ * `buildTimelineRows` above.
+ */
+export function historyDegradedNotice(data: HistoryResponse): string | null {
+  const recordDown = data.gleif_record_available === false;
+  const eventsDown = data.gleif_events_available === false;
+  if (!recordDown && !eventsDown) return null;
+
+  const parts: string[] = [];
+  if (eventsDown && recordDown) {
+    parts.push(
+      "GLEIF is rate-limiting or unreachable, so this entity's change history could not be checked.",
+    );
+  } else if (eventsDown) {
+    parts.push(
+      "GLEIF did not return its change log, so any GLEIF-recorded changes are missing from this timeline.",
+    );
+  } else {
+    parts.push("GLEIF did not return this entity's record.");
+  }
+  if (data.registry_sources_blocked) {
+    parts.push(
+      "The company-registry histories (Companies House, NZ, Estonia, Denmark) could not be attempted either — the registry number they need comes from that record.",
+    );
+  } else if (recordDown && data.company_number_basis === "cached") {
+    parts.push(
+      "The company-registry histories were still attempted, using a registry number from OpenCheck's cached copy of the GLEIF record.",
+    );
+  }
+  parts.push("What is shown is not a finding that nothing changed.");
+  return parts.join(" ");
+}
+
 export function HistoryTimeline({
   lei,
   entityName,
@@ -261,6 +308,7 @@ export function HistoryTimeline({
     };
   }, [lei]);
 
+  const degraded = useMemo(() => (data ? historyDegradedNotice(data) : null), [data]);
   const noiseEvents = useMemo(() => (data ? noiseEventsOf(data) : []), [data]);
   const rows = useMemo<Row[]>(
     () => (data ? buildTimelineRows(data, showNoise) : []),
@@ -284,7 +332,18 @@ export function HistoryTimeline({
         {loading && <p role="status" className="text-[13px] text-oo-muted">Loading change history…</p>}
         {error && <p role="alert" className="text-[13px] text-red-700">{error}</p>}
 
-        {!loading && !error && data && data.notable.length === 0 && (
+        {/* Phase 146 — the upstream refused. Amber, above the timeline
+            (which may still hold events from the sources that did answer). */}
+        {!loading && !error && degraded && (
+          <div
+            role="status"
+            className="mb-3 rounded-oo border border-amber-200 bg-amber-50 px-3 py-2 text-oo-meta text-amber-900"
+          >
+            {degraded}
+          </div>
+        )}
+
+        {!loading && !error && data && data.notable.length === 0 && !degraded && (
           <p className="text-[13px] text-oo-muted leading-[1.6]">
             No notable ownership or identity changes found in the available
             history{data.available ? "" : " (live history not available)"}.

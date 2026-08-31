@@ -132,6 +132,41 @@ class EntityRow:
 _COLUMNS = [f.strip() for f in EntityRow.__dataclass_fields__]  # keep in schema order
 
 
+def gleif_record_from_row(row: EntityRow) -> dict:
+    """An :class:`EntityRow` shaped as a GLEIF Level-1 ``data`` object.
+
+    The snapshot store is the fallback for two GLEIF surfaces now — the anchor
+    bundle (``sources.gleif._snapshot_bundle``, Phase 143) and the subsidiary
+    network — and both need the row rendered in GLEIF's own shape so the
+    downstream mappers do not care where it came from. It carries only what the
+    store holds: name, statuses, jurisdiction, legal form and address. What the
+    store does NOT hold (``registeredAs``/``registeredAt``, reporting
+    exceptions, cross-reference ids) is simply absent rather than guessed at.
+    """
+    entity: dict = {"legalName": {"name": row.name}}
+    if row.jurisdiction:
+        entity["jurisdiction"] = row.jurisdiction
+    if row.entity_status:
+        entity["status"] = row.entity_status
+    if row.legal_form:
+        entity["legalForm"] = {"id": row.legal_form}
+    address = {
+        key: value
+        for key, value in (
+            ("city", row.city),
+            ("region", row.region),
+            ("country", row.country),
+        )
+        if value
+    }
+    if address:
+        entity["legalAddress"] = address
+    attributes: dict = {"lei": row.lei, "entity": entity}
+    if row.registration_status:
+        attributes["registration"] = {"status": row.registration_status}
+    return {"id": row.lei, "attributes": attributes}
+
+
 def _row(cursor_row: sqlite3.Row) -> EntityRow:
     return EntityRow(**{k: cursor_row[k] for k in _COLUMNS})
 

@@ -547,6 +547,16 @@ export interface HistoryResponse {
   notable_count: number;
   notable: HistoryEntry[];
   events: HistoryRawChange[];
+  /** Phase 146: false when GLEIF refused that call (rate-limited or down).
+   *  An empty timeline alongside either false is "could not check", not
+   *  "checked, nothing there" — the two used to be indistinguishable. */
+  gleif_record_available: boolean;
+  gleif_events_available: boolean;
+  /** The GLEIF record failed and no cached one stood in, so the registry
+   *  history sources could not be attempted at all. */
+  registry_sources_blocked: boolean;
+  /** "live" | "cached" | null — where `company_number` came from. */
+  company_number_basis: string | null;
 }
 
 /** Fetch the Time Machine timeline for an LEI (notable changes, GLEIF + CH). */
@@ -634,6 +644,17 @@ export interface SubsidiariesResponse {
   lei: string;
   available: boolean;
   reason: string | null;
+  /** Phase 146: false when GLEIF refused both relation calls and no snapshot
+   *  stood in — an empty `children` list is then not a finding about the
+   *  entity, and the panel must say so instead of rendering "no network". */
+  children_available: boolean;
+  direct_available: boolean;
+  ultimate_available: boolean;
+  /** Direct children served from OpenCheck's Golden Copy snapshot, not live. */
+  snapshot_fallback: boolean;
+  snapshot_date: string | null;
+  /** One sentence naming what GLEIF did not answer; null when it answered. */
+  degraded_detail: string | null;
   direct_total: number;
   ultimate_total: number;
   distinct_fetched: number;
