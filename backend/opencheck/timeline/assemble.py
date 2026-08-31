@@ -88,6 +88,19 @@ class Timeline:
     events: list[ChangeEvent]  # ALL classified changes, chronological (incl. noise)
     notable: list[TimelineEntry]  # deduped, Tier-1/2 view for rendering
 
+    # -- Phase 146 honesty flags. Set by the fetch service, not by assembly:
+    # they describe whether each upstream answered, which is exactly what an
+    # empty ``events`` list cannot tell you. Defaults say "everything ran",
+    # so every existing caller of ``assemble_timeline`` keeps its meaning.
+    gleif_record_available: bool = True
+    gleif_events_available: bool = True
+    #: The GLEIF record failed, so the registry-history sources (CH / NZ / EE /
+    #: DK) had no registry number to be attempted with at all.
+    registry_sources_blocked: bool = False
+    #: "live" | "cached" | None — where ``company_number`` and its siblings
+    #: came from. "cached" means a stale on-disk GLEIF record stood in.
+    company_number_basis: str | None = None
+
 
 # --------------------------------------------------------------------------- #
 # Date helpers

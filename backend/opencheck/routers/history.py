@@ -5,6 +5,11 @@
 returns every raw classified change, including administrative noise.
 
 Lazy by design — fetched by the frontend on demand, never on the main lookup.
+
+Always 200. When GLEIF refuses (rate-limited or down) the response says which
+call failed (``gleif_record_available`` / ``gleif_events_available``) and
+whether the registry-history sources could be attempted at all, so an empty
+timeline is never mistaken for a checked one (Phase 146).
 """
 
 from __future__ import annotations
@@ -62,6 +67,18 @@ class HistoryResponse(BaseModel):
     notable_count: int
     notable: list[HistoryEntry]
     events: list[RawChange] = []
+    #: Phase 146 — "checked, no history" and "could not check" are different
+    #: answers, and `available: false` said both. False here means GLEIF
+    #: refused that call (rate-limited or down), so an empty timeline is not
+    #: evidence about the entity.
+    gleif_record_available: bool = True
+    gleif_events_available: bool = True
+    #: The GLEIF record failed and no cached one stood in, so the registry
+    #: history sources (Companies House / NZ / Estonia / Denmark) could not be
+    #: attempted — they gate on a registry number only that record carries.
+    registry_sources_blocked: bool = False
+    #: "live" | "cached" | None — where `company_number` came from.
+    company_number_basis: str | None = None
 
 
 @router.get("/history", response_model=HistoryResponse)
@@ -137,4 +154,8 @@ async def history(
         notable_count=len(notable),
         notable=notable,
         events=events,
+        gleif_record_available=tl.gleif_record_available,
+        gleif_events_available=tl.gleif_events_available,
+        registry_sources_blocked=tl.registry_sources_blocked,
+        company_number_basis=tl.company_number_basis,
     )

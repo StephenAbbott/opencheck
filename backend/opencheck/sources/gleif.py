@@ -316,7 +316,7 @@ class GleifAdapter(SourceAdapter):
         at. Provenance is recorded as ``snapshot`` with the Golden Copy publish
         date, so every statement mapped from this bundle says what it is.
         """
-        from ..entity_pages import EntityRow, get_store
+        from ..entity_pages import get_store, gleif_record_from_row
 
         store = get_store()
         if store is None:
@@ -325,29 +325,9 @@ class GleifAdapter(SourceAdapter):
         if row is None:
             return None
 
-        def _record(r: EntityRow) -> dict[str, Any]:
-            entity: dict[str, Any] = {"legalName": {"name": r.name}}
-            if r.jurisdiction:
-                entity["jurisdiction"] = r.jurisdiction
-            if r.entity_status:
-                entity["status"] = r.entity_status
-            if r.legal_form:
-                entity["legalForm"] = {"id": r.legal_form}
-            address = {
-                key: value
-                for key, value in (
-                    ("city", r.city),
-                    ("region", r.region),
-                    ("country", r.country),
-                )
-                if value
-            }
-            if address:
-                entity["legalAddress"] = address
-            attributes: dict[str, Any] = {"lei": r.lei, "entity": entity}
-            if r.registration_status:
-                attributes["registration"] = {"status": r.registration_status}
-            return {"id": r.lei, "attributes": attributes}
+        # Shared with the subsidiary-network snapshot fallback so the two
+        # snapshot paths cannot drift in what they claim from a store row.
+        _record = gleif_record_from_row
 
         related = store.get_many([row.direct_parent_lei, row.ultimate_parent_lei])
 

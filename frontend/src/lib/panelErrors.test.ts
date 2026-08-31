@@ -7,6 +7,8 @@ import {
   panelLabel,
   securitiesOverlayUnavailable,
   securitiesPageUnavailable,
+  subsidiariesPartial,
+  subsidiariesUnavailable,
 } from "./panelErrors";
 
 describe("describeFetchFailure", () => {
@@ -108,5 +110,35 @@ describe("clearPanelError", () => {
 
   it("is a no-op when nothing is recorded", () => {
     expect(clearPanelError([], "securities")).toEqual([]);
+  });
+});
+
+describe("subsidiaries degraded 200s (Phase 146)", () => {
+  it("reports a refused network as the panel failure it is", () => {
+    const e = subsidiariesUnavailable(
+      "GLEIF is rate-limiting or unreachable, so the subsidiary network could not be checked.",
+    );
+    expect(e.panel).toBe("subsidiaries");
+    expect(e.missing).toMatch(/subsidiary network/);
+    expect(e.detail).toMatch(/rate-limiting/);
+  });
+
+  it("falls back to its own wording when the backend sent no sentence", () => {
+    expect(subsidiariesUnavailable(null).detail).toMatch(/rate-limiting|unreachable/);
+  });
+
+  it("says what is missing when only part of the network came back", () => {
+    const e = subsidiariesPartial("GLEIF did not return the ultimate children.");
+    // The fixed copy would claim the whole network is missing; it is not, and
+    // rows are on screen — so the incompleteness is what gets named.
+    expect(e.missing).toMatch(/incomplete/);
+    expect(e.detail).toMatch(/ultimate/);
+  });
+
+  it("keeps one subsidiaries entry when a partial follows a total failure", () => {
+    let list = mergePanelError([], subsidiariesUnavailable(null));
+    list = mergePanelError(list, subsidiariesPartial("half of it"));
+    expect(list).toHaveLength(1);
+    expect(list[0].missing).toMatch(/incomplete/);
   });
 });

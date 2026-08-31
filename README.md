@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 145** — a rate-limited or unreachable GLEIF no longer takes down the securities section: the sanctioned-securities check runs from a local index regardless, and the report says which part is missing instead of erroring.
+**Latest: Phase 146** — a rate-limited GLEIF no longer empties the Time Machine and the subsidiary network in silence: both now say which upstream call was refused, the subsidiary reveal falls back to OpenCheck's Golden Copy snapshot rather than reporting no children, and a degraded result is never cached.
 
 → [Full development history](docs/status.md)
 

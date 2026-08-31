@@ -2,7 +2,14 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { getSubsidiaries } from "../../lib/api";
 import type { RiskSignal, SubsidiariesResponse, SubsidiaryChild } from "../../lib/api";
 import { scopeCrossSourceSignals } from "../../lib/signalScope";
-import { describeFetchFailure, panelError, type PanelError, type PanelId } from "../../lib/panelErrors";
+import {
+  describeFetchFailure,
+  panelError,
+  subsidiariesPartial,
+  subsidiariesUnavailable,
+  type PanelError,
+  type PanelId,
+} from "../../lib/panelErrors";
 import InvitationStrip from "../ui/InvitationStrip";
 import { SectionHeading } from "../ui";
 
@@ -205,8 +212,19 @@ export function SubsidiaryNetwork({
     setLoading(true);
     setError(null);
     try {
-      setData(await getSubsidiaries(lei, "summary"));
-      onRecovered?.("subsidiaries");
+      const res = await getSubsidiaries(lei, "summary");
+      setData(res);
+      // Phase 146: a degraded 200. `children_available: false` is the empty
+      // network that used to render as "this entity has no subsidiaries";
+      // `degraded_detail` with rows present means the list is partial (or
+      // snapshot-served) and must not be read as the complete set.
+      if (res.children_available === false) {
+        onError?.(subsidiariesUnavailable(res.degraded_detail));
+      } else if (res.degraded_detail) {
+        onError?.(subsidiariesPartial(res.degraded_detail));
+      } else {
+        onRecovered?.("subsidiaries");
+      }
     } catch (e) {
       // Was `String(e)` — the reader saw "Error: 500 Internal Server Error".
       setError(describeFetchFailure(e));
@@ -226,8 +244,16 @@ export function SubsidiaryNetwork({
       // `run()` is unreachable once `data` is set, so without this the notice
       // could stay up above a rendered subsidiary network for the rest of the
       // session — a warning outliving the thing it warned about is its own
-      // kind of untruth.
-      onRecovered?.("subsidiaries");
+      // kind of untruth. But a *degraded* 200 is not a recovery: clearing the
+      // notice here because the BODS call returned would erase the statement
+      // that the network is incomplete, while the incomplete graph renders.
+      if (full.children_available === false) {
+        onError?.(subsidiariesUnavailable(full.degraded_detail));
+      } else if (full.degraded_detail) {
+        onError?.(subsidiariesPartial(full.degraded_detail));
+      } else {
+        onRecovered?.("subsidiaries");
+      }
       setError(null);
       return stmts;
     } catch (e) {
@@ -318,7 +344,32 @@ export function SubsidiaryNetwork({
         </div>
       )}
 
-      {data && !data.available && (
+      {/* Degraded 200 (Phase 146). Amber, above whatever else renders: an
+          upstream that would not answer is incomplete, not a finding. When
+          nothing at all came back this replaces the "no network published"
+          line below, which was the silent failure this phase exists to end. */}
+      {data && data.degraded_detail && (
+        <div
+          role="status"
+          className="mb-2 rounded-oo border border-amber-200 bg-amber-50 px-3 py-2 text-oo-meta text-amber-900 leading-[1.5]"
+        >
+          {data.degraded_detail}
+          {data.children_available === false && (
+            <>
+              {" "}
+              <button
+                type="button"
+                onClick={() => { setError(null); setData(null); run(); }}
+                className="underline font-semibold hover:no-underline"
+              >
+                Try again
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {data && !data.available && data.children_available !== false && (
         <div className="flex items-start justify-between gap-3">
           <p className="text-[12px] text-oo-muted leading-[1.6]">
             No subsidiary network published{data.reason ? ` (${data.reason})` : ""}.
