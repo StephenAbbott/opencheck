@@ -442,3 +442,59 @@ def test_indexnow_urls_match_db_slugs(tmp_path: Path) -> None:
     assert body["host"] == "opencheck.world"
     assert body["keyLocation"] == "https://opencheck.world/indexnow/k123.txt"
     assert body["urlList"] == batches[0]
+
+
+def test_indexnow_key_location_is_redacted_for_logs() -> None:
+    """The key is a secret shared with Render; it must not reach a log line."""
+    from submit_indexnow import redacted_key_location
+
+    shown = redacted_key_location("supersecretkey123")
+    assert "supersecretkey123" not in shown
+    assert shown.startswith("https://opencheck.world/indexnow/supe")
+
+
+@pytest.mark.parametrize(
+    ("status", "body", "expected"),
+    [
+        (200, "rightkey", None),
+        (404, "Not Found", "returned HTTP 404"),
+        (200, "otherkey", "served a different value"),
+    ],
+)
+def test_indexnow_check_key_location(
+    monkeypatch: pytest.MonkeyPatch, status: int, body: str, expected: str | None
+) -> None:
+    """The pre-flight check does the engines' fetch and names what's wrong.
+
+    A mismatch between OPENCHECK_INDEXNOW_KEY and the INDEXNOW_KEY secret is
+    invisible at api.indexnow.org — it's just a 403 — so it's caught here.
+    """
+    import httpx
+    import submit_indexnow
+
+    def fake_get(url: str, **kwargs: object) -> httpx.Response:
+        assert url == "https://opencheck.world/indexnow/rightkey.txt"
+        return httpx.Response(status, text=body)
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+    problem = submit_indexnow.check_key_location("rightkey")
+    if expected is None:
+        assert problem is None
+    else:
+        assert problem is not None and expected in problem
+        assert "rightkey" not in problem  # redacted
+
+
+def test_indexnow_check_key_location_survives_a_network_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A backend that's down is a skip with a reason, not a traceback."""
+    import httpx
+    import submit_indexnow
+
+    def boom(url: str, **kwargs: object) -> httpx.Response:
+        raise httpx.ConnectError("no route to host")
+
+    monkeypatch.setattr(httpx, "get", boom)
+    problem = submit_indexnow.check_key_location("rightkey")
+    assert problem is not None and "could not fetch" in problem
