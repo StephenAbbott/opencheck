@@ -73,7 +73,8 @@ services:
       - key: OPENCHECK_ENTITY_PAGES_DB_URL
         sync: false
       # --- Phase 91: IndexNow (SEO Phase D) ---
-      # Shared key echoed back at /indexnow/{key}.txt so IndexNow-participating
+      # Shared key echoed back at /{key}.txt (root — IndexNow scopes a
+      # submission to the key file's directory) so IndexNow-participating
       # engines can verify we own the host. MUST equal the INDEXNOW_KEY Actions
       # secret used by refresh-entity-pages-db.yml — if the two drift apart the
       # engines fetch the key file, see a mismatch, and reject the whole

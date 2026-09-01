@@ -389,18 +389,34 @@ async def robots_txt() -> PlainTextResponse:
 
 
 # ---------------------------------------------------------------------------
-# IndexNow key file (Phase 91 — SEO Phase D)
+# IndexNow key file (Phase 91 — SEO Phase D; moved to the root in Phase 149)
 # ---------------------------------------------------------------------------
 
 
-@router.api_route("/indexnow/{key}.txt", methods=["GET", "HEAD"], response_class=PlainTextResponse)
+# MUST stay below /robots.txt: this pattern would otherwise swallow it, and
+# route order inside a router is definition order. A test pins that ordering.
+@router.api_route("/{key}.txt", methods=["GET", "HEAD"], response_class=PlainTextResponse)
 async def indexnow_key(key: str) -> PlainTextResponse:
     """Prove ownership of the host to IndexNow-participating engines.
 
     The monthly refresh submits changed entity URLs to api.indexnow.org
-    (scripts/submit_indexnow.py) with keyLocation pointing here; engines
-    fetch it and expect the body to equal the key. 404 for anything but
-    the configured key, and for everything while no key is configured.
+    (scripts/submit_indexnow.py); engines fetch this file and expect the body
+    to equal the key. 404 for anything but the configured key, and for
+    everything while no key is configured.
+
+    **Served from the root on purpose.** IndexNow scopes a submission to the
+    key file's *directory*: a key at ``/indexnow/{key}.txt`` authorises only
+    URLs under ``/indexnow/``, so the Phase 91 arrangement had every
+    ``/entity/…`` URL rejected with a 422 ("not related to your site verified
+    through the keylocation parameter") the first time it ran for real, on
+    2026-09-01. At the root the whole host is in scope — the spec's
+    recommended Option 1 — which also covers /browse and /sources if those
+    are ever submitted.
+
+    The pattern matches one path segment, so it claims only root-level
+    ``*.txt``. Those previously fell through to the SPA catch-all and got
+    index.html with a 200; they now 404, which is the more honest answer for
+    a .txt path that does not exist.
     """
     configured = (get_settings().indexnow_key or "").strip()
     if not configured or key != configured:

@@ -99,7 +99,8 @@ jobs:
         # Google ignores IndexNow — its discovery stays sitemap/lastmod-driven.
         # Skips itself when the INDEXNOW_KEY secret is unset; the key must
         # match OPENCHECK_INDEXNOW_KEY on the backend, which serves it at
-        # /indexnow/{key}.txt for engine-side verification.
+        # /{key}.txt for engine-side verification (root: IndexNow scopes a
+        # submission to the key file's own directory).
         env:
           INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
         run: python3 backend/scripts/submit_indexnow.py --delta LastMonth
