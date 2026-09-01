@@ -291,21 +291,38 @@ FATF_GREY_LIST_CODES: frozenset[str] = frozenset(
 #     from the FATF grey list at the June 2026 plenary.
 #   * MM (Myanmar) is FATF black but sits in the EU's Section I.
 #   * BA, BG, IQ, KW, PG are FATF grey but not EU-listed.
+#   * RU (Russian Federation) is EU-listed in Section IV and appears on
+#     NO FATF list at all — see the Section IV note below. This is the
+#     widest case of the divergence: the EU listing rests on a category
+#     the FATF does not have.
 #
 # Folding them together would make the summary text unable to say which
 # instrument applies, and a delisting from one would silently move a
 # signal attributed to the other.
 #
-# Current as of Delegated Regulation (EU) 2026/83 of 4 December 2025
-# (published 9 January 2026, applies from 29 January 2026), which added
-# Bolivia and the British Virgin Islands and removed Burkina Faso, Mali,
-# Mozambique, Nigeria, South Africa and Tanzania. Verified against the
-# EUR-Lex consolidated text 02016R1675-20260129.
+# Current as of the two delegated regulations that apply from
+# 29 January 2026, both published in OJ L of 9 January 2026:
+#
+#   * (EU) 2026/46 of 3 December 2025 — inserts a new SECTION IV and adds
+#     the Russian Federation to it.
+#   * (EU) 2026/83 of 4 December 2025 — adds Bolivia and the British
+#     Virgin Islands to Section I, and removes Burkina Faso, Mali,
+#     Mozambique, Nigeria, South Africa and Tanzania.
+#
+# Verified against the EUR-Lex consolidated text 02016R1675-20260129.
+# Both instruments share an application date, so a date-only staleness
+# check does not distinguish them: 2026/46 was missed for seven months
+# because "as amended to 29 January 2026" was already true without it.
+# Check the AMENDING ACT LIST on EUR-Lex, not the date.
 #
 # Re-check after each Commission update — they follow FATF plenaries
 # (typically February, June, October) at a lag of several months.
-# Source: https://eur-lex.europa.eu/eli/reg_del/2026/83/oj/eng
-EU_HRTC_INSTRUMENT = "Delegated Regulation (EU) 2016/1675, as amended to 29 January 2026"
+# Sources: https://eur-lex.europa.eu/eli/reg_del/2026/46/oj
+#          https://eur-lex.europa.eu/eli/reg_del/2026/83/oj/eng
+EU_HRTC_INSTRUMENT = (
+    "Delegated Regulation (EU) 2016/1675, as amended by (EU) 2026/46 and "
+    "(EU) 2026/83, applying from 29 January 2026"
+)
 
 EU_HIGH_RISK_THIRD_COUNTRY_CODES: frozenset[str] = frozenset(
     {
@@ -337,8 +354,35 @@ EU_HIGH_RISK_THIRD_COUNTRY_CODES: frozenset[str] = frozenset(
         "IR",  # Iran
         # Section III — ongoing and substantial risk
         "KP",  # Democratic People's Republic of Korea
+        # Section IV — FATF membership suspended (added by (EU) 2026/46)
+        "RU",  # Russian Federation
     }
 )
+
+# Section IV of the Annex, inserted by Delegated Regulation (EU) 2026/46:
+# "high-risk third countries which are not identified as being subject to
+# calls for action or increased monitoring by the FATF, but whose membership
+# in that international standard-setter is suspended".
+#
+# The FATF suspended the Russian Federation's membership on 24 February 2023
+# following the invasion of Ukraine; follow-up runs through the Eurasian
+# Group (EAG). Russia is on neither the FATF black nor the FATF grey list,
+# so no FATF signal fires for it and this is the only listing OpenCheck can
+# report — which is exactly why the summary has to say WHICH kind of listing
+# it is rather than asserting that the FATF identified deficiencies.
+#
+# Deliberately NOT a separate RiskSignal code. Article 29 attaches the same
+# mandatory enhanced due diligence to every jurisdiction in the Annex
+# regardless of section, and a distinct code would imply a distinct
+# obligation, fragment the severity ladder, and need its own chip, colour,
+# graph severity and og_image label. The section is a property of the hit,
+# carried in ``evidence.jurisdictions[].annex_section``, not a new signal.
+#
+# Sections I–III need no such treatment: each tracks a FATF listing, so the
+# FATF signals already carry the nuance alongside this one. Section IV is
+# the only section with no FATF counterpart.
+# Source: https://www.fatf-gafi.org/en/countries/detail/Russian-Federation.html
+EU_HRTC_SECTION_IV_CODES: frozenset[str] = frozenset({"RU"})
 
 # Free-text fragments that signal a trust / non-corporate arrangement
 # in legal-form / details fields. Lower-cased.
@@ -2258,6 +2302,13 @@ def _eu_high_risk_third_country_signals(
 
     One signal per bundle, aggregating every matching entity, so the
     graph can badge each node from ``evidence.jurisdictions``.
+
+    Each hit carries ``annex_section`` — ``"I-III"`` or ``"IV"``. Section IV
+    (currently Russia alone) is the one section with no FATF counterpart, so
+    the generic "strategic AML/CFT deficiencies" clause would misdescribe it;
+    a trailing sentence names the suspension instead. Still one signal code:
+    Article 29 attaches the same obligation to the whole Annex. See the
+    comment on ``EU_HRTC_SECTION_IV_CODES``.
     """
     hits: list[dict[str, str]] = []
     for stmt in bods:
@@ -2274,6 +2325,9 @@ def _eu_high_risk_third_country_signals(
                 "statement_id": _statement_id(stmt),
                 "code": code,
                 "name": j.get("name") or "",
+                "annex_section": (
+                    "IV" if code in EU_HRTC_SECTION_IV_CODES else "I-III"
+                ),
             }
         )
 
@@ -2283,16 +2337,32 @@ def _eu_high_risk_third_country_signals(
     codes = sorted({h["code"] for h in hits})
     names = sorted({h["name"] for h in hits if h["name"]})
     label = ", ".join(names) if names else ", ".join(codes)
+
+    summary = (
+        f"Ownership chain reaches into {label}, on the EU list of "
+        "high-risk third countries with strategic AML/CFT "
+        f"deficiencies ({EU_HRTC_INSTRUMENT}). EU-listed "
+        "jurisdictions attract mandatory enhanced due diligence."
+    )
+
+    section_iv = [h for h in hits if h["annex_section"] == "IV"]
+    if section_iv:
+        iv_names = sorted({h["name"] for h in section_iv if h["name"]})
+        iv_label = ", ".join(iv_names) or ", ".join(
+            sorted({h["code"] for h in section_iv})
+        )
+        verb = "is" if len(section_iv) == 1 and len(iv_names) <= 1 else "are"
+        summary += (
+            f" {iv_label} {verb} listed under Section IV of the Annex — "
+            "not identified by the FATF for a call for action or increased "
+            "monitoring, but suspended from FATF membership."
+        )
+
     return [
         RiskSignal(
             code=EU_HIGH_RISK_THIRD_COUNTRY,
             confidence="high",
-            summary=(
-                f"Ownership chain reaches into {label}, on the EU list of "
-                "high-risk third countries with strategic AML/CFT "
-                f"deficiencies ({EU_HRTC_INSTRUMENT}). EU-listed "
-                "jurisdictions attract mandatory enhanced due diligence."
-            ),
+            summary=summary,
             source_id=source_id,
             hit_id=hit_id,
             evidence={"jurisdictions": hits, "instrument": EU_HRTC_INSTRUMENT},
