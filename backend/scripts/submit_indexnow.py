@@ -12,7 +12,7 @@ DB builder writes, because both import :func:`slugify_name`. Typically
 ~100–300k URLs/month, sent in the protocol's 10,000-URL batches.
 
 Auth: the shared key must be provable on the host — the backend serves it
-at ``/indexnow/{key}.txt`` (see routers/entity_pages.py) from the
+at ``/{key}.txt`` (see routers/entity_pages.py) from the
 ``OPENCHECK_INDEXNOW_KEY`` env var; this script reads ``INDEXNOW_KEY``
 (same value; the GitHub Actions secret). Without a key the script exits 0
 with a notice, so the refresh workflow degrades gracefully. With one, it
@@ -85,7 +85,7 @@ def batched(urls: Iterable[str], size: int = BATCH) -> Iterator[list[str]]:
 
 
 def key_location_for(key: str, host: str = HOST) -> str:
-    return f"https://{host}/indexnow/{key}.txt"
+    return f"https://{host}/{key}.txt"
 
 
 def redacted_key_location(key: str, host: str = HOST) -> str:
@@ -95,7 +95,7 @@ def redacted_key_location(key: str, host: str = HOST) -> str:
     key that leaks into a terminal or a pasted log has to be rotated on both
     Render and GitHub.
     """
-    return f"https://{host}/indexnow/{key[:4]}….txt"
+    return f"https://{host}/{key[:4]}….txt"
 
 
 def payload_for(batch: list[str], key: str, host: str = HOST) -> dict:

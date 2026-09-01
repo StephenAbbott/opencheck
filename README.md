@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 148** — an optional IndexNow ping marked a monthly entity-pages rebuild as failed after the rebuild had already succeeded, and reported an unverifiable key as a bare 403; the step is now non-fatal and the script checks the key file itself before submitting.
+**Latest: Phase 149** — the monthly IndexNow submission was rejected not for its key but for where the key file sat: IndexNow authorises only URLs under the key's own directory, so a key at `/indexnow/` could not vouch for `/entity/` pages. It now serves from the site root.
 
 → [Full development history](docs/status.md)
 

@@ -410,15 +410,33 @@ def test_not_found_page_has_no_analytics(client: TestClient) -> None:
 def test_indexnow_key_route(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENCHECK_INDEXNOW_KEY", "abc123def456")
     get_settings.cache_clear()
-    r = client.get("/indexnow/abc123def456.txt")
+    r = client.get("/abc123def456.txt")
     assert r.status_code == 200
     assert r.text == "abc123def456"
-    assert client.get("/indexnow/wrong-key.txt").status_code == 404
+    assert client.get("/wrong-key.txt").status_code == 404
     get_settings.cache_clear()
 
 
 def test_indexnow_key_route_404_when_unconfigured(client: TestClient) -> None:
-    assert client.get("/indexnow/anything.txt").status_code == 404
+    assert client.get("/anything.txt").status_code == 404
+
+
+def test_robots_txt_survives_the_root_key_route(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """/{key}.txt is a root single-segment pattern — /robots.txt must win.
+
+    Route order inside a router is definition order, so /robots.txt only keeps
+    working because it is declared above the key route. Moving either one
+    breaks robots.txt silently; this pins it.
+    """
+    monkeypatch.setenv("OPENCHECK_INDEXNOW_KEY", "abc123def456")
+    get_settings.cache_clear()
+    r = client.get("/robots.txt")
+    assert r.status_code == 200
+    assert "Sitemap:" in r.text
+    assert r.text.strip() != "abc123def456"
+    get_settings.cache_clear()
 
 
 def test_indexnow_urls_match_db_slugs(tmp_path: Path) -> None:
@@ -440,8 +458,33 @@ def test_indexnow_urls_match_db_slugs(tmp_path: Path) -> None:
     assert [len(b) for b in batches] == [4, 2]
     body = payload_for(batches[0], "k123")
     assert body["host"] == "opencheck.world"
-    assert body["keyLocation"] == "https://opencheck.world/indexnow/k123.txt"
+    assert body["keyLocation"] == "https://opencheck.world/k123.txt"
     assert body["urlList"] == batches[0]
+
+
+def test_indexnow_key_location_scopes_every_submitted_url(tmp_path: Path) -> None:
+    """The rule that cost the 2026-09-01 run, pinned.
+
+    IndexNow authorises a submission only for URLs under the key file's own
+    directory — a key at /indexnow/k.txt cannot vouch for /entity/… , which is
+    a 422, not a 403, and says nothing about the key being wrong. So the
+    keyLocation's directory must be a prefix of every URL in the batch. It is
+    only because the key sits at the root that this holds for /entity/ URLs.
+    """
+    from submit_indexnow import payload_for, urls_from_delta
+
+    delta = _write_csv(tmp_path / "delta.csv", LEI2_HEADER, LEI2_ROWS)
+    import csv as _csv
+
+    with open(delta, encoding="utf-8") as fh:
+        urls = list(urls_from_delta(_csv.DictReader(fh), "https://opencheck.world"))
+
+    body = payload_for(urls, "k123")
+    scope = body["keyLocation"].rsplit("/", 1)[0] + "/"
+    assert scope == "https://opencheck.world/"
+    assert urls, "fixture produced no URLs — the assertion below would be vacuous"
+    for url in body["urlList"]:
+        assert url.startswith(scope), f"{url} is outside the key's scope {scope}"
 
 
 def test_indexnow_key_location_is_redacted_for_logs() -> None:
@@ -450,7 +493,7 @@ def test_indexnow_key_location_is_redacted_for_logs() -> None:
 
     shown = redacted_key_location("supersecretkey123")
     assert "supersecretkey123" not in shown
-    assert shown.startswith("https://opencheck.world/indexnow/supe")
+    assert shown.startswith("https://opencheck.world/supe")
 
 
 @pytest.mark.parametrize(
@@ -473,7 +516,7 @@ def test_indexnow_check_key_location(
     import submit_indexnow
 
     def fake_get(url: str, **kwargs: object) -> httpx.Response:
-        assert url == "https://opencheck.world/indexnow/rightkey.txt"
+        assert url == "https://opencheck.world/rightkey.txt"
         return httpx.Response(status, text=body)
 
     monkeypatch.setattr(httpx, "get", fake_get)
