@@ -15,7 +15,10 @@ Auth: the shared key must be provable on the host — the backend serves it
 at ``/indexnow/{key}.txt`` (see routers/entity_pages.py) from the
 ``OPENCHECK_INDEXNOW_KEY`` env var; this script reads ``INDEXNOW_KEY``
 (same value; the GitHub Actions secret). Without a key the script exits 0
-with a notice, so the refresh workflow degrades gracefully.
+with a notice, so the refresh workflow degrades gracefully. With one, it
+fetches that key file itself before submitting anything — the engines'
+verification failure is an opaque 403, so we'd rather find out here, by
+name, than ship 300k URLs into a rejection.
 
 Usage:
     INDEXNOW_KEY=... python3 scripts/submit_indexnow.py --delta LastMonth
@@ -81,13 +84,61 @@ def batched(urls: Iterable[str], size: int = BATCH) -> Iterator[list[str]]:
         yield batch
 
 
+def key_location_for(key: str, host: str = HOST) -> str:
+    return f"https://{host}/indexnow/{key}.txt"
+
+
+def redacted_key_location(key: str, host: str = HOST) -> str:
+    """``key_location_for`` with the key stubbed out — safe to print.
+
+    Actions masks the secret anyway, but this script also runs by hand, and a
+    key that leaks into a terminal or a pasted log has to be rotated on both
+    Render and GitHub.
+    """
+    return f"https://{host}/indexnow/{key[:4]}….txt"
+
+
 def payload_for(batch: list[str], key: str, host: str = HOST) -> dict:
     return {
         "host": host,
         "key": key,
-        "keyLocation": f"https://{host}/indexnow/{key}.txt",
+        "keyLocation": key_location_for(key, host),
         "urlList": batch,
     }
+
+
+def check_key_location(key: str, host: str = HOST) -> str | None:
+    """Fetch the key file the engines will fetch. ``None`` when it checks out,
+    otherwise a human-readable reason it won't.
+
+    IndexNow answers a submission it can't verify with a bare ``403`` and no
+    body worth reading, which looks identical whether the backend is down, the
+    route is missing, or the two halves of the shared key have drifted apart.
+    Doing the engine's fetch ourselves first turns that into a message naming
+    the actual problem — and avoids shipping ~300k URLs that will be rejected.
+    """
+    import httpx
+
+    url = key_location_for(key, host)
+    shown = redacted_key_location(key, host)
+    try:
+        resp = httpx.get(url, timeout=30.0, follow_redirects=True)
+    except httpx.HTTPError as exc:
+        return f"could not fetch {shown}: {exc}"
+    if resp.status_code != 200:
+        return (
+            f"{shown} returned HTTP {resp.status_code}, expected 200. The backend "
+            "serves this from OPENCHECK_INDEXNOW_KEY; it must be set to the same "
+            "value as this job's INDEXNOW_KEY secret, and the deploy carrying "
+            "the /indexnow route must be live."
+        )
+    if resp.text.strip() != key:
+        return (
+            f"{shown} is reachable but served a different value than the key we "
+            "would submit — OPENCHECK_INDEXNOW_KEY and INDEXNOW_KEY have drifted "
+            "apart."
+        )
+    return None
 
 
 def submit(batches: Iterable[list[str]], key: str, *, dry_run: bool = False) -> int:
@@ -105,7 +156,10 @@ def submit(batches: Iterable[list[str]], key: str, *, dry_run: bool = False) -> 
             # failing loudly on (bad key, bad key location).
             if resp.status_code not in (200, 202):
                 raise SystemExit(
-                    f"IndexNow batch {i} rejected: HTTP {resp.status_code} {resp.text[:200]}"
+                    f"IndexNow batch {i} rejected: HTTP {resp.status_code} "
+                    f"{resp.text[:200]}\n"
+                    f"  keyLocation was {redacted_key_location(key)} — a 403 "
+                    "here usually means the engines could not verify it."
                 )
             print(f"batch {i}: {len(batch)} URLs -> HTTP {resp.status_code}")
             time.sleep(1)  # be polite between large batches
@@ -130,6 +184,14 @@ def main() -> None:
     if not key and not args.dry_run:
         print("INDEXNOW_KEY not set — skipping IndexNow submission (not an error).")
         return
+
+    if key and not args.dry_run:
+        problem = check_key_location(key)
+        if problem:
+            print(f"::warning::IndexNow key check failed: {problem}")
+            print("Skipping IndexNow submission — no URLs were sent.")
+            return
+        print(f"key file verified at {redacted_key_location(key)}")
 
     with tempfile.TemporaryDirectory(prefix="indexnow-") as tmp:
         if args.lei2_file is not None:

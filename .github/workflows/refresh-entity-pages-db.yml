@@ -88,6 +88,12 @@ jobs:
         run: curl -fsS -X POST "$HOOK"
 
       - name: Submit the month's changed URLs to IndexNow (optional)
+        # Genuinely optional, so say so to Actions as well as in the name: by
+        # this point the DB is built, sanity-checked, published to the release
+        # and the backend redeployed. An SEO ping the engines would pick up
+        # from the sitemap anyway must not mark the monthly refresh failed —
+        # it did on 2026-09-01, the step's first live run.
+        continue-on-error: true
         # Phase 91 (SEO Phase D): push the LastMonth delta's entity URLs to
         # IndexNow-participating engines (Bing, Seznam, Naver, Yandex …).
         # Google ignores IndexNow — its discovery stays sitemap/lastmod-driven.

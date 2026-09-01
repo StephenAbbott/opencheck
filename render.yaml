@@ -72,6 +72,14 @@ services:
       # 503 until it lands. Leave unset to disable entity pages entirely.
       - key: OPENCHECK_ENTITY_PAGES_DB_URL
         sync: false
+      # --- Phase 91: IndexNow (SEO Phase D) ---
+      # Shared key echoed back at /indexnow/{key}.txt so IndexNow-participating
+      # engines can verify we own the host. MUST equal the INDEXNOW_KEY Actions
+      # secret used by refresh-entity-pages-db.yml — if the two drift apart the
+      # engines fetch the key file, see a mismatch, and reject the whole
+      # submission with a bare 403. Unset = key route 404s, submission no-ops.
+      - key: OPENCHECK_INDEXNOW_KEY
+        sync: false
       # --- Phase 88 cutover switch (single-service mode) ---
       # Render static-site rewrites CANNOT proxy /entity/* to this service
       # (verified: https://render.com/docs/redirects-rewrites — rewrites are
