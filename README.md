@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 146** — a rate-limited GLEIF no longer empties the Time Machine and the subsidiary network in silence: both now say which upstream call was refused, the subsidiary reveal falls back to OpenCheck's Golden Copy snapshot rather than reporting no children, and a degraded result is never cached.
+**Latest: Phase 147** — the EU high-risk third-country list was missing Russia, added seven months earlier by a delegated regulation that shared its application date with the one OpenCheck had read, so the staleness check could not see it.
 
 → [Full development history](docs/status.md)
 

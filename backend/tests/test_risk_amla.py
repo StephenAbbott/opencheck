@@ -32,7 +32,10 @@ from opencheck.risk import (
     EU_EEA_COUNTRY_CODES,
     EU_HIGH_RISK_THIRD_COUNTRY,
     EU_HIGH_RISK_THIRD_COUNTRY_CODES,
+    EU_HRTC_INSTRUMENT,
+    EU_HRTC_SECTION_IV_CODES,
     FATF_BLACK_LIST,
+    FATF_BLACK_LIST_CODES,
     FATF_GREY_LIST,
     FATF_GREY_LIST_CODES,
     NOMINEE,
@@ -227,16 +230,84 @@ def test_fatf_grey_signal_does_not_fire_for_removed_jurisdiction() -> None:
 # ---------------------------------------------------------------------
 
 
-def test_eu_hrtc_membership_matches_delegated_regulation_2026_83() -> None:
-    """Delegated Reg (EU) 2026/83, applying from 29 January 2026."""
-    # Added by 2026/83.
+def test_eu_hrtc_membership_matches_delegated_regulations_2026_46_and_2026_83() -> None:
+    """Delegated Regs (EU) 2026/46 and (EU) 2026/83, both applying from
+    29 January 2026 and both published in OJ L of 9 January 2026.
+
+    Two instruments, one application date — which is why a date-only check
+    does not distinguish them. Assert membership per instrument.
+    """
+    # Added by 2026/83, to Section I.
     assert "BO" in EU_HIGH_RISK_THIRD_COUNTRY_CODES  # Bolivia
     assert "VG" in EU_HIGH_RISK_THIRD_COUNTRY_CODES  # British Virgin Islands
     # Removed by 2026/83.
     for code in ("BF", "ML", "MZ", "NG", "ZA", "TZ"):
         assert code not in EU_HIGH_RISK_THIRD_COUNTRY_CODES
-    # 23 in Section I, plus Iran (II) and DPRK (III).
-    assert len(EU_HIGH_RISK_THIRD_COUNTRY_CODES) == 25
+    # Added by 2026/46, to the new Section IV.
+    assert "RU" in EU_HIGH_RISK_THIRD_COUNTRY_CODES  # Russian Federation
+    assert set(EU_HRTC_SECTION_IV_CODES) == {"RU"}
+    assert EU_HRTC_SECTION_IV_CODES <= EU_HIGH_RISK_THIRD_COUNTRY_CODES
+    # 23 in Section I, plus Iran (II), DPRK (III) and Russia (IV).
+    assert len(EU_HIGH_RISK_THIRD_COUNTRY_CODES) == 26
+
+
+def test_eu_hrtc_instrument_names_both_delegated_regulations() -> None:
+    """The prose string is user-facing — it must not credit only 2026/83.
+
+    2026/46 went unnoticed for seven months because "as amended to
+    29 January 2026" was already true without it.
+    """
+    assert "2016/1675" in EU_HRTC_INSTRUMENT
+    assert "2026/46" in EU_HRTC_INSTRUMENT
+    assert "2026/83" in EU_HRTC_INSTRUMENT
+
+
+def test_russia_is_eu_listed_but_on_no_fatf_list() -> None:
+    """Section IV is the widest case of the FATF/EU divergence.
+
+    The FATF suspended Russia's membership on 24 February 2023; it has never
+    been on the black or grey list. The EU listed it on its own analysis in
+    (EU) 2026/46. A future refresh must not "tidy" this by adding RU to a
+    FATF set — no plenary has ever put it there.
+    """
+    assert "RU" not in FATF_BLACK_LIST_CODES
+    assert "RU" not in FATF_GREY_LIST_CODES
+
+    bods = [_entity("E1", jurisdiction_code="RU",
+                    jurisdiction_name="Russian Federation")]
+    signals = assess_amla("gleif", {"entity_id": "X"}, bods)
+    codes = {s.code for s in signals}
+    assert EU_HIGH_RISK_THIRD_COUNTRY in codes
+    assert FATF_BLACK_LIST not in codes
+    assert FATF_GREY_LIST not in codes
+
+
+def test_eu_hrtc_section_iv_summary_says_suspended_not_deficient() -> None:
+    """Russia's listing must not be reported as a FATF identification.
+
+    One signal code for the whole Annex — Article 29 attaches the same EDD
+    obligation to every section — but the sentence has to distinguish them.
+    """
+    bods = [_entity("E1", jurisdiction_code="RU",
+                    jurisdiction_name="Russian Federation")]
+    signals = assess_amla("gleif", {"entity_id": "X"}, bods)
+    sig = next(s for s in signals if s.code == EU_HIGH_RISK_THIRD_COUNTRY)
+    assert sig.confidence == "high"
+    assert sig.kind == "risk"
+    assert "Section IV" in sig.summary
+    assert "suspended from FATF membership" in sig.summary
+    assert sig.evidence["jurisdictions"][0]["annex_section"] == "IV"
+
+
+def test_eu_hrtc_sections_one_to_three_carry_no_section_iv_clause() -> None:
+    """A Section I hit gets the plain sentence — no suspension wording."""
+    bods = [_entity("E1", jurisdiction_code="VG",
+                    jurisdiction_name="British Virgin Islands")]
+    signals = assess_amla("gleif", {"entity_id": "X"}, bods)
+    sig = next(s for s in signals if s.code == EU_HIGH_RISK_THIRD_COUNTRY)
+    assert "Section IV" not in sig.summary
+    assert "suspended" not in sig.summary
+    assert sig.evidence["jurisdictions"][0]["annex_section"] == "I-III"
 
 
 def test_eu_hrtc_signal_fires_and_names_the_instrument() -> None:
