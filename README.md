@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 147** — the EU high-risk third-country list was missing Russia, added seven months earlier by a delegated regulation that shared its application date with the one OpenCheck had read, so the staleness check could not see it.
+**Latest: Phase 148** — an optional IndexNow ping marked a monthly entity-pages rebuild as failed after the rebuild had already succeeded, and reported an unverifiable key as a bare 403; the step is now non-fatal and the script checks the key file itself before submitting.
 
 → [Full development history](docs/status.md)
 
