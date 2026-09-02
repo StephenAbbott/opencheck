@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 151** — every register's company status now goes through one liveness path: `dissolutionDate` only for a real date, never a sentinel, plus an annotation in a fixed grammar saying whether the register calls the entity live, in a terminal process, or dissolved — so "Companies House says struck off, GLEIF says ACTIVE" is finally written down on both sides.
+**Latest: Phase 152** — the record-consistency check runs in shadow mode: independent sources describing the same entity are compared on liveness, jurisdiction, founding date and one-per-entity identifiers, and `GET /consistencystats` counts how often they disagree — nothing is shown until the measured rate says a comparison is informative rather than noise.
 
 → [Full development history](docs/status.md)
 
