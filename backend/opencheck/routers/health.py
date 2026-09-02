@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from .. import __version__, memwatch, signalstats
+from .. import __version__, consistencystats, memwatch, signalstats
 from ..bo_access import notice_for
 from ..config import get_settings
 from ..sources import REGISTRY, SourceInfo, lineage
@@ -71,6 +71,20 @@ async def signal_stats() -> JSONResponse:
     counters reset on deploy and on Render spin-down.
     """
     return JSONResponse(signalstats.stats(), headers={"Cache-Control": "no-store"})
+
+
+@router.get("/consistencystats")
+async def consistency_stats() -> JSONResponse:
+    """How often independent sources agree about the same entity, per field
+    and source pair, since the last deploy (Phase 152, shadow mode).
+
+    Same contract as /signalstats: public, unauthenticated, aggregate only,
+    closed-vocabulary keys (field names, adapter ids, relation names), so no
+    entity name, identifier or date can appear. Read ``disagree_rate`` per
+    ``field|source_a|source_b`` row: under 10 % after two weeks of traffic
+    is the gate for showing that comparison (see opencheck/consistency.py).
+    """
+    return JSONResponse(consistencystats.stats(), headers={"Cache-Control": "no-store"})
 
 
 @router.get("/sources", response_model=SourcesResponse)

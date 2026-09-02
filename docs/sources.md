@@ -259,6 +259,24 @@ integer status code without a published codelist), `inpi`, `wikidata` (P576 is
 not queried), `sec_edgar`, `krs_poland`, the EITI sources, `wikirate`, `ted_eu`,
 `brightquery`.
 
+## Record consistency (shadow mode)
+
+With lineage (Phase 150) and liveness (Phase 151) in place, `backend/opencheck/consistency.py`
+compares what *independent* sources say about the *same* entity — statements grouped
+by shared strong identifier, the rule the FullCheck network merges on — on four aligned
+fields: **liveness** (the Phase 151 class), **jurisdiction**, **founding date** (registers
+and GLEIF only; Wikidata's *inception* is the business, not the incorporation, and is
+never compared), and **one-per-entity identifiers** (the LEI, and a register number
+within one jurisdiction; OpenCorporates ids are per-registration and never a clash).
+Each pair is `agree` / `disagree` between independent sources, `mirror` / `stale` where
+one republishes the other (counted, never shown), or `one_missing`.
+
+Nothing reaches the results page yet. `GET /consistencystats` counts outcomes per
+`field|source_a|source_b` with a `disagree_rate`, on the `/signalstats` contract
+(aggregate only, closed-vocabulary keys, resets on deploy). A comparison earns a
+place on the page only when its measured disagree rate is under 10 % after at least
+two weeks of traffic — the base-rate gate that keeps "sources disagree" from being noise.
+
 ## Notes
 
 NC-licensed sources (OpenSanctions, EveryPolitician) propagate their non-commercial obligations through `/deepen` and `/export`. The exported `LICENSES.md` warns reviewers before they re-publish. (OpenTender / DIGIWHIST procurement was retired and its code removed — the live `ted_eu` adapter answers the EU-procurement question against TED directly, under a licence that permits commercial reuse.)

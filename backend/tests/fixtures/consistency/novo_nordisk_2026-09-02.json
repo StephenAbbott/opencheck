@@ -1,0 +1,2712 @@
+[
+  {
+    "statementId": "opencheck-c75dbbef941e9df509b71734",
+    "recordId": "opencheck-c75dbbef941e9df509b71734",
+    "declarationSubject": "opencheck-c75dbbef941e9df509b71734",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2025-12-22",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "NOVO NORDISK A/S",
+      "identifiers": [
+        {
+          "id": "549300DAQ1CVT6CXN342",
+          "scheme": "XI-LEI",
+          "schemeName": "Global Legal Entity Identifier Index"
+        },
+        {
+          "id": "24256790",
+          "scheme": "",
+          "schemeName": "GLEIF Registration Authorities List"
+        },
+        {
+          "id": "dk/24256790",
+          "scheme": "OpenCorporates",
+          "schemeName": "OpenCorporates company ID",
+          "uri": "https://opencorporates.com/companies/dk/24256790"
+        },
+        {
+          "id": "QDKCMVQQU8",
+          "scheme": "QCC Code",
+          "schemeName": "QCC Global Enterprise Identifier (QCC Code)"
+        },
+        {
+          "id": "NOVODK22XXX",
+          "scheme": "ISO-9362",
+          "schemeName": "Bank Identifier Code (ISO 9362)"
+        },
+        {
+          "id": "323452",
+          "scheme": "S&P CIQ Company ID",
+          "schemeName": "S&P CIQ Company ID"
+        }
+      ],
+      "jurisdiction": {
+        "name": "Denmark",
+        "code": "DK"
+      },
+      "foundingDate": "1931-11-28",
+      "addresses": [
+        {
+          "type": "registered",
+          "address": "Novo Alle 1, Bagsv\u00e6rd, DK-84, 2880, DK",
+          "country": {
+            "name": "Denmark",
+            "code": "DK"
+          }
+        },
+        {
+          "type": "business",
+          "address": "Novo Alle 1, Bagsv\u00e6rd, DK-84, 2880, DK",
+          "country": {
+            "name": "Denmark",
+            "code": "DK"
+          }
+        }
+      ],
+      "legalFormLabel": "Aktieselskab"
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-09-02T08:44:37Z",
+      "url": "https://www.gleif.org/lei/549300DAQ1CVT6CXN342"
+    }
+  },
+  {
+    "statementId": "opencheck-d99efb2b616e086ffc8cf3a0",
+    "recordId": "opencheck-d99efb2b616e086ffc8cf3a0",
+    "declarationSubject": "opencheck-d99efb2b616e086ffc8cf3a0",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "unknownEntity"
+      },
+      "name": "Non-consolidating parent (GLEIF reporting exception)",
+      "identifiers": []
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-09-02T08:44:37Z",
+      "url": "https://www.gleif.org/lei/549300DAQ1CVT6CXN342"
+    },
+    "annotations": [
+      {
+        "statementPointerTarget": "/",
+        "motivation": "commenting",
+        "description": "This statement was created due to a NON_CONSOLIDATING GLEIF Reporting Exception for 549300DAQ1CVT6CXN342. Reporting exceptions are permitted reasons, defined by the LEI ROC policy, for an entity not to report an accounting consolidation parent.",
+        "createdBy": {
+          "name": "OpenCheck",
+          "uri": "https://opencheck.world"
+        },
+        "creationDate": "2026-09-02"
+      }
+    ]
+  },
+  {
+    "statementId": "opencheck-9d2adee2ed3050035a80786f",
+    "recordId": "opencheck-f43dc5076b3bd0cd69767cea",
+    "declarationSubject": "opencheck-c75dbbef941e9df509b71734",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2025-12-22",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-c75dbbef941e9df509b71734",
+      "interestedParty": "opencheck-d99efb2b616e086ffc8cf3a0",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF reporting exception NON_CONSOLIDATING: the entity is controlled by legal entities not subject to preparing consolidated financial statements (ExceptionCategory: DIRECT_ACCOUNTING_CONSOLIDATION_PARENT)"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-09-02T08:44:37Z",
+      "url": "https://www.gleif.org/lei/549300DAQ1CVT6CXN342"
+    },
+    "annotations": [
+      {
+        "statementPointerTarget": "/",
+        "motivation": "commenting",
+        "description": "This statement was created due to a NON_CONSOLIDATING GLEIF Reporting Exception for 549300DAQ1CVT6CXN342. Reporting exceptions are permitted reasons, defined by the LEI ROC policy, for an entity not to report an accounting consolidation parent.",
+        "createdBy": {
+          "name": "OpenCheck",
+          "uri": "https://opencheck.world"
+        },
+        "creationDate": "2026-09-02"
+      }
+    ]
+  },
+  {
+    "statementId": "opencheck-30c608996ddd7b028ff479e6",
+    "recordId": "opencheck-30c608996ddd7b028ff479e6",
+    "declarationSubject": "opencheck-30c608996ddd7b028ff479e6",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "unknownEntity"
+      },
+      "name": "Non-consolidating parent (GLEIF reporting exception)",
+      "identifiers": []
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-09-02T08:44:37Z",
+      "url": "https://www.gleif.org/lei/549300DAQ1CVT6CXN342"
+    },
+    "annotations": [
+      {
+        "statementPointerTarget": "/",
+        "motivation": "commenting",
+        "description": "This statement was created due to a NON_CONSOLIDATING GLEIF Reporting Exception for 549300DAQ1CVT6CXN342. Reporting exceptions are permitted reasons, defined by the LEI ROC policy, for an entity not to report an accounting consolidation parent.",
+        "createdBy": {
+          "name": "OpenCheck",
+          "uri": "https://opencheck.world"
+        },
+        "creationDate": "2026-09-02"
+      }
+    ]
+  },
+  {
+    "statementId": "opencheck-2475bc841591b7652644fb51",
+    "recordId": "opencheck-49f65c1ca58592af726b5fa4",
+    "declarationSubject": "opencheck-c75dbbef941e9df509b71734",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2025-12-22",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-c75dbbef941e9df509b71734",
+      "interestedParty": "opencheck-30c608996ddd7b028ff479e6",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "indirect",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF reporting exception NON_CONSOLIDATING: the entity is controlled by legal entities not subject to preparing consolidated financial statements (ExceptionCategory: ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT)"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-09-02T08:44:37Z",
+      "url": "https://www.gleif.org/lei/549300DAQ1CVT6CXN342"
+    },
+    "annotations": [
+      {
+        "statementPointerTarget": "/",
+        "motivation": "commenting",
+        "description": "This statement was created due to a NON_CONSOLIDATING GLEIF Reporting Exception for 549300DAQ1CVT6CXN342. Reporting exceptions are permitted reasons, defined by the LEI ROC policy, for an entity not to report an accounting consolidation parent.",
+        "createdBy": {
+          "name": "OpenCheck",
+          "uri": "https://opencheck.world"
+        },
+        "creationDate": "2026-09-02"
+      }
+    ]
+  },
+  {
+    "statementId": "opencheck-b32f1b94f80f8f03f1639950",
+    "recordId": "opencheck-b32f1b94f80f8f03f1639950",
+    "declarationSubject": "opencheck-b32f1b94f80f8f03f1639950",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2024-06-16",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "NOVO NORDISK REGION EUROPE A/S",
+      "identifiers": [
+        {
+          "id": "894500G05T7MXFP5E425",
+          "scheme": "XI-LEI",
+          "schemeName": "Global Legal Entity Identifier Index"
+        },
+        {
+          "id": "26236266",
+          "scheme": "",
+          "schemeName": "GLEIF Registration Authorities List"
+        },
+        {
+          "id": "dk/26236266",
+          "scheme": "OpenCorporates",
+          "schemeName": "OpenCorporates company ID",
+          "uri": "https://opencorporates.com/companies/dk/26236266"
+        },
+        {
+          "id": "QDKSNSGS3C",
+          "scheme": "QCC Code",
+          "schemeName": "QCC Global Enterprise Identifier (QCC Code)"
+        },
+        {
+          "id": "7900542",
+          "scheme": "S&P CIQ Company ID",
+          "schemeName": "S&P CIQ Company ID"
+        }
+      ],
+      "jurisdiction": {
+        "name": "Denmark",
+        "code": "DK"
+      },
+      "foundingDate": "2001-09-13",
+      "addresses": [
+        {
+          "type": "registered",
+          "address": "Novo Alle 1, Bagsv\u00e6rd, DK-84, 2880, DK",
+          "country": {
+            "name": "Denmark",
+            "code": "DK"
+          }
+        },
+        {
+          "type": "business",
+          "address": "Novo Alle 1, Bagsv\u00e6rd, DK-84, 2880, DK",
+          "country": {
+            "name": "Denmark",
+            "code": "DK"
+          }
+        }
+      ],
+      "legalFormLabel": "Aktieselskab"
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-09-02T08:44:37Z",
+      "url": "https://www.gleif.org/lei/894500G05T7MXFP5E425"
+    }
+  },
+  {
+    "statementId": "opencheck-d3eae24e13dbcfff44c4d84c",
+    "recordId": "opencheck-f19db136281b2de12284c26d",
+    "declarationSubject": "opencheck-b32f1b94f80f8f03f1639950",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2025-12-22",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-b32f1b94f80f8f03f1639950",
+      "interestedParty": "opencheck-c75dbbef941e9df509b71734",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF Level 2 direct-child (accounting consolidation)"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-09-02T08:44:37Z",
+      "url": "https://www.gleif.org/lei/894500G05T7MXFP5E425"
+    }
+  },
+  {
+    "statementId": "opencheck-28ec83246b73d9aff7e2ce23",
+    "recordId": "opencheck-28ec83246b73d9aff7e2ce23",
+    "declarationSubject": "opencheck-28ec83246b73d9aff7e2ce23",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-03-05",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "NOVO NORDISK FINANCE (NETHERLANDS) B.V.",
+      "identifiers": [
+        {
+          "id": "549300X0PCJ6M2JZQW91",
+          "scheme": "XI-LEI",
+          "schemeName": "Global Legal Entity Identifier Index"
+        },
+        {
+          "id": "82510148",
+          "scheme": "NL-KVK",
+          "schemeName": "Netherlands Chamber of Commerce (KvK)"
+        },
+        {
+          "id": "nl/82510148",
+          "scheme": "OpenCorporates",
+          "schemeName": "OpenCorporates company ID",
+          "uri": "https://opencorporates.com/companies/nl/82510148"
+        },
+        {
+          "id": "QNLQ1QE595",
+          "scheme": "QCC Code",
+          "schemeName": "QCC Global Enterprise Identifier (QCC Code)"
+        },
+        {
+          "id": "714529457",
+          "scheme": "S&P CIQ Company ID",
+          "schemeName": "S&P CIQ Company ID"
+        }
+      ],
+      "jurisdiction": {
+        "name": "Netherlands",
+        "code": "NL"
+      },
+      "foundingDate": "2016-12-31",
+      "addresses": [
+        {
+          "type": "registered",
+          "address": "KONINGIN WILHELMINAPLEIN 2 C, AMSTERDAM, NL-ZH, 1062 HK, NL",
+          "country": {
+            "name": "Netherlands",
+            "code": "NL"
+          }
+        },
+        {
+          "type": "business",
+          "address": "NOVO ALL\u00c9 1, BAGSVAERD, DK-84, 2880, DK",
+          "country": {
+            "name": "Denmark",
+            "code": "DK"
+          }
+        }
+      ],
+      "legalFormLabel": "besloten vennootschap met beperkte aansprakelijkheid"
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-09-02T08:44:37Z",
+      "url": "https://www.gleif.org/lei/549300X0PCJ6M2JZQW91"
+    }
+  },
+  {
+    "statementId": "opencheck-53b0ba8b5541d069a147dd52",
+    "recordId": "opencheck-aab228c86ac01b1daa8f59b9",
+    "declarationSubject": "opencheck-28ec83246b73d9aff7e2ce23",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2025-12-22",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-28ec83246b73d9aff7e2ce23",
+      "interestedParty": "opencheck-c75dbbef941e9df509b71734",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF Level 2 direct-child (accounting consolidation)"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-09-02T08:44:37Z",
+      "url": "https://www.gleif.org/lei/549300X0PCJ6M2JZQW91"
+    }
+  },
+  {
+    "statementId": "opencheck-370730e5efccb53484e1cdf5",
+    "recordId": "opencheck-370730e5efccb53484e1cdf5",
+    "declarationSubject": "opencheck-370730e5efccb53484e1cdf5",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-04-22",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "NOVO NORDISK SERVICE CENTRE (INDIA) PRIVATE LIMITED",
+      "identifiers": [
+        {
+          "id": "33580093D1Z4KP6JYI77",
+          "scheme": "XI-LEI",
+          "schemeName": "Global Legal Entity Identifier Index"
+        },
+        {
+          "id": "U74990KA2011PTC057129",
+          "scheme": "",
+          "schemeName": "GLEIF Registration Authorities List"
+        },
+        {
+          "id": "in/U74990KA2011PTC057129",
+          "scheme": "OpenCorporates",
+          "schemeName": "OpenCorporates company ID",
+          "uri": "https://opencorporates.com/companies/in/U74990KA2011PTC057129"
+        },
+        {
+          "id": "QINB08640K",
+          "scheme": "QCC Code",
+          "schemeName": "QCC Global Enterprise Identifier (QCC Code)"
+        },
+        {
+          "id": "333883964",
+          "scheme": "S&P CIQ Company ID",
+          "schemeName": "S&P CIQ Company ID"
+        }
+      ],
+      "jurisdiction": {
+        "name": "India",
+        "code": "IN"
+      },
+      "foundingDate": "2011-02-14",
+      "addresses": [
+        {
+          "type": "registered",
+          "address": "MINDCOMP TECH PARK, 4TH FLOOR, PLOT NO. 149-A, EPIP II PHASE, WHITEFIELD, BENGALURU BANGALORE, MINDCOMP TECH PARK, 4TH FLOOR, PLOT NO. 149-A, EPIP II PHASE, WHITEFIELD, BENGALURU BANGALORE, BANGALORE, IN-KA, 560066, IN",
+          "country": {
+            "name": "India",
+            "code": "IN"
+          }
+        },
+        {
+          "type": "business",
+          "address": "MINDCOMP TECH PARK, 4TH FLOOR, PLOT NO. 149-A, EPIP II PHASE, WHITEFIELD, BENGALURU BANGALORE, MINDCOMP TECH PARK, 4TH FLOOR, PLOT NO. 149-A, EPIP II PHASE, WHITEFIELD, BENGALURU BANGALORE, BANGALORE, IN-KA, 560066, IN",
+          "country": {
+            "name": "India",
+            "code": "IN"
+          }
+        }
+      ],
+      "legalFormLabel": "Private Limited Company"
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-09-02T08:44:37Z",
+      "url": "https://www.gleif.org/lei/33580093D1Z4KP6JYI77"
+    }
+  },
+  {
+    "statementId": "opencheck-33b8682c52de7d2923e86952",
+    "recordId": "opencheck-46a9e01d8a3a480a3f01beb9",
+    "declarationSubject": "opencheck-370730e5efccb53484e1cdf5",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2025-12-22",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-370730e5efccb53484e1cdf5",
+      "interestedParty": "opencheck-c75dbbef941e9df509b71734",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF Level 2 direct-child (accounting consolidation)"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-09-02T08:44:37Z",
+      "url": "https://www.gleif.org/lei/33580093D1Z4KP6JYI77"
+    }
+  },
+  {
+    "statementId": "opencheck-4783ed840d3e150b2d72139b",
+    "recordId": "opencheck-4783ed840d3e150b2d72139b",
+    "declarationSubject": "opencheck-4783ed840d3e150b2d72139b",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2023-08-09",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "NNE A/S",
+      "identifiers": [
+        {
+          "id": "549300HVEIX9WIJWHH73",
+          "scheme": "XI-LEI",
+          "schemeName": "Global Legal Entity Identifier Index"
+        },
+        {
+          "id": "13246009",
+          "scheme": "",
+          "schemeName": "GLEIF Registration Authorities List"
+        },
+        {
+          "id": "dk/13246009",
+          "scheme": "OpenCorporates",
+          "schemeName": "OpenCorporates company ID",
+          "uri": "https://opencorporates.com/companies/dk/13246009"
+        },
+        {
+          "id": "QDK07UC4JJ",
+          "scheme": "QCC Code",
+          "schemeName": "QCC Global Enterprise Identifier (QCC Code)"
+        },
+        {
+          "id": "5630588",
+          "scheme": "S&P CIQ Company ID",
+          "schemeName": "S&P CIQ Company ID"
+        }
+      ],
+      "jurisdiction": {
+        "name": "Denmark",
+        "code": "DK"
+      },
+      "addresses": [
+        {
+          "type": "registered",
+          "address": "Bredevej 2, Virum, DK-84, 2830, DK",
+          "country": {
+            "name": "Denmark",
+            "code": "DK"
+          }
+        },
+        {
+          "type": "business",
+          "address": "Bredevej 2, Virum, DK-84, 2830, DK",
+          "country": {
+            "name": "Denmark",
+            "code": "DK"
+          }
+        }
+      ],
+      "alternateNames": [
+        "NNE PHARMAPLAN A/S"
+      ],
+      "legalFormLabel": "Aktieselskab"
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-09-02T08:44:37Z",
+      "url": "https://www.gleif.org/lei/549300HVEIX9WIJWHH73"
+    }
+  },
+  {
+    "statementId": "opencheck-1091fdaa9976f11158870442",
+    "recordId": "opencheck-b1e42cd1853e1d70e7603b5f",
+    "declarationSubject": "opencheck-4783ed840d3e150b2d72139b",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2025-12-22",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-4783ed840d3e150b2d72139b",
+      "interestedParty": "opencheck-c75dbbef941e9df509b71734",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF Level 2 direct-child (accounting consolidation)"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-09-02T08:44:37Z",
+      "url": "https://www.gleif.org/lei/549300HVEIX9WIJWHH73"
+    }
+  },
+  {
+    "statementId": "opencheck-168f57ef91362336155f2a53",
+    "recordId": "opencheck-168f57ef91362336155f2a53",
+    "declarationSubject": "opencheck-168f57ef91362336155f2a53",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-05-27",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "NOVO NORDISK HEALTH CARE AG",
+      "identifiers": [
+        {
+          "id": "549300WWQUBZ2HVQB313",
+          "scheme": "XI-LEI",
+          "schemeName": "Global Legal Entity Identifier Index"
+        },
+        {
+          "id": "CHE-101.209.164",
+          "scheme": "CH-FDJP",
+          "schemeName": "Swiss Commercial Register (Federal Office of Justice)"
+        },
+        {
+          "id": "QCH54KUCXG",
+          "scheme": "QCC Code",
+          "schemeName": "QCC Global Enterprise Identifier (QCC Code)"
+        },
+        {
+          "id": "8203691",
+          "scheme": "S&P CIQ Company ID",
+          "schemeName": "S&P CIQ Company ID"
+        }
+      ],
+      "jurisdiction": {
+        "name": "Switzerland",
+        "code": "CH"
+      },
+      "foundingDate": "2000-08-09",
+      "addresses": [
+        {
+          "type": "registered",
+          "address": "THE CIRCLE 32/38, ZURICH, CH-ZH, 8058, CH",
+          "country": {
+            "name": "Switzerland",
+            "code": "CH"
+          }
+        },
+        {
+          "type": "business",
+          "address": "THE CIRCLE 32/38, ZURICH, CH-ZH, 8058, CH",
+          "country": {
+            "name": "Switzerland",
+            "code": "CH"
+          }
+        }
+      ],
+      "legalFormLabel": "Company limited by shares"
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-09-02T08:44:37Z",
+      "url": "https://www.gleif.org/lei/549300WWQUBZ2HVQB313"
+    }
+  },
+  {
+    "statementId": "opencheck-32a720f3240359632c2bfe0d",
+    "recordId": "opencheck-799376e15a9f0a06de42eee3",
+    "declarationSubject": "opencheck-168f57ef91362336155f2a53",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2025-12-22",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-168f57ef91362336155f2a53",
+      "interestedParty": "opencheck-c75dbbef941e9df509b71734",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "GLEIF Level 2 direct-child (accounting consolidation)"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "GLEIF",
+      "retrievedAt": "2026-09-02T08:44:37Z",
+      "url": "https://www.gleif.org/lei/549300WWQUBZ2HVQB313"
+    }
+  },
+  {
+    "statementId": "opencheck-074715fd1607cef756d9d291",
+    "recordId": "opencheck-074715fd1607cef756d9d291",
+    "declarationSubject": "opencheck-074715fd1607cef756d9d291",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "Novo Nordisk A/S",
+      "identifiers": [
+        {
+          "id": "NK-YsNuKz2PpjoRPQB3tMfhgM",
+          "scheme": "OPENSANCTIONS",
+          "schemeName": "OpenSanctions"
+        },
+        {
+          "id": "549300DAQ1CVT6CXN342",
+          "scheme": "XI-LEI",
+          "schemeName": "Legal Entity Identifier"
+        }
+      ],
+      "jurisdiction": {
+        "name": "Denmark",
+        "code": "DK"
+      },
+      "foundingDate": "1931-11-28",
+      "addresses": [
+        {
+          "type": "registered",
+          "address": "Novo Alle 1, BAGSVAERD, 2880, Denmark"
+        },
+        {
+          "type": "registered",
+          "address": "Krogshoejvej 36, BAGSVAERD, 2880, Denmark"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "OpenSanctions",
+      "retrievedAt": "2026-09-02T08:44:48Z",
+      "url": "https://www.opensanctions.org/entities/NK-YsNuKz2PpjoRPQB3tMfhgM/"
+    }
+  },
+  {
+    "statementId": "opencheck-155d394fefdf9032a8f8e509",
+    "recordId": "opencheck-155d394fefdf9032a8f8e509",
+    "declarationSubject": "opencheck-155d394fefdf9032a8f8e509",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "Novo Nordisk",
+      "identifiers": [
+        {
+          "id": "Q818846",
+          "scheme": "WIKIDATA",
+          "schemeName": "Wikidata Q identifier",
+          "uri": "https://www.wikidata.org/wiki/Q818846"
+        },
+        {
+          "id": "549300DAQ1CVT6CXN342",
+          "scheme": "XI-LEI",
+          "schemeName": "Global Legal Entity Identifier Index"
+        },
+        {
+          "id": "dk/24256790",
+          "scheme": "OpenCorporates",
+          "schemeName": "OpenCorporates company ID"
+        },
+        {
+          "id": "DK0060534915",
+          "scheme": "ISIN",
+          "schemeName": "International Securities Identification Number"
+        }
+      ],
+      "jurisdiction": {
+        "name": "Denmark",
+        "code": "DK"
+      },
+      "foundingDate": "1923-01-01",
+      "alternateNames": [
+        "\u0646\u0648\u0641\u0648 \u0646\u0648\u0631\u062f\u064a\u0633\u0643",
+        "\u8bfa\u548c\u8bfa\u5fb7"
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "Wikidata",
+      "retrievedAt": "2026-09-02T08:44:39Z",
+      "url": "https://www.wikidata.org/wiki/Q818846"
+    }
+  },
+  {
+    "statementId": "opencheck-256d0540482c08ed30d4a398",
+    "recordId": "opencheck-256d0540482c08ed30d4a398",
+    "declarationSubject": "opencheck-256d0540482c08ed30d4a398",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "Novo Holdings",
+      "identifiers": [
+        {
+          "id": "Q17513197",
+          "scheme": "WIKIDATA",
+          "schemeName": "Wikidata Q identifier",
+          "uri": "https://www.wikidata.org/wiki/Q17513197"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "Wikidata",
+      "retrievedAt": "2026-09-02T08:44:39Z",
+      "url": "https://www.wikidata.org/wiki/Q17513197"
+    }
+  },
+  {
+    "statementId": "opencheck-ded4912c87379e875973bb56",
+    "recordId": "opencheck-c37cc82fd6d52ce336b014dc",
+    "declarationSubject": "opencheck-155d394fefdf9032a8f8e509",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-155d394fefdf9032a8f8e509",
+      "interestedParty": "opencheck-256d0540482c08ed30d4a398",
+      "interests": [
+        {
+          "beneficialOwnershipOrControl": false,
+          "type": "shareholding",
+          "share": {
+            "exact": 77.1
+          },
+          "details": "Ownership declared on Wikidata (P127/P749); 77.1% (indicative); source: annual report"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "Wikidata",
+      "retrievedAt": "2026-09-02T08:44:39Z",
+      "url": "https://www.novonordisk.com/content/dam/nncorp/global/en/investors/irmaterial/annual_report/2024/novo-nordisk-annual-report-2023.pdf"
+    }
+  },
+  {
+    "statementId": "opencheck-cefc958be0adcd2853438787",
+    "recordId": "opencheck-cefc958be0adcd2853438787",
+    "declarationSubject": "opencheck-cefc958be0adcd2853438787",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "Novo Nordisk Foundation",
+      "identifiers": [
+        {
+          "id": "Q22723716",
+          "scheme": "WIKIDATA",
+          "schemeName": "Wikidata Q identifier",
+          "uri": "https://www.wikidata.org/wiki/Q22723716"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "Wikidata",
+      "retrievedAt": "2026-09-02T08:44:39Z",
+      "url": "https://www.wikidata.org/wiki/Q22723716"
+    }
+  },
+  {
+    "statementId": "opencheck-99b6d18c28e634f1dfc3baa1",
+    "recordId": "opencheck-b29b1b9e7ebf6ab1dbe9d1ed",
+    "declarationSubject": "opencheck-155d394fefdf9032a8f8e509",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-155d394fefdf9032a8f8e509",
+      "interestedParty": "opencheck-cefc958be0adcd2853438787",
+      "interests": [
+        {
+          "beneficialOwnershipOrControl": false,
+          "type": "shareholding",
+          "share": {
+            "exact": 28.1
+          },
+          "details": "Ownership declared on Wikidata (P127); 28.1% (indicative); source: annual report"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "Wikidata",
+      "retrievedAt": "2026-09-02T08:44:39Z",
+      "url": "https://www.novonordisk.com/content/dam/nncorp/global/en/investors/irmaterial/annual_report/2024/novo-nordisk-annual-report-2023.pdf"
+    }
+  },
+  {
+    "statementId": "opencheck-530538d53704b9e4e9822ec3",
+    "recordId": "opencheck-530538d53704b9e4e9822ec3",
+    "declarationSubject": "opencheck-530538d53704b9e4e9822ec3",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Lars Fruergaard J\u00f8rgensen"
+        }
+      ],
+      "identifiers": [
+        {
+          "id": "Q28858458",
+          "scheme": "WIKIDATA",
+          "schemeName": "Wikidata Q identifier",
+          "uri": "https://www.wikidata.org/wiki/Q28858458"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "Wikidata",
+      "retrievedAt": "2026-09-02T08:44:39Z",
+      "url": "https://www.wikidata.org/wiki/Q28858458"
+    }
+  },
+  {
+    "statementId": "opencheck-2cda50a8cc2f4b07491acf95",
+    "recordId": "opencheck-40dcc0b148ab13a36320b4ee",
+    "declarationSubject": "opencheck-155d394fefdf9032a8f8e509",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-155d394fefdf9032a8f8e509",
+      "interestedParty": "opencheck-530538d53704b9e4e9822ec3",
+      "interests": [
+        {
+          "type": "seniorManagingOfficial",
+          "details": "chief executive officer",
+          "beneficialOwnershipOrControl": false,
+          "startDate": "2017-01-01"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "Wikidata",
+      "retrievedAt": "2026-09-02T08:44:39Z",
+      "url": "https://www.wikidata.org/wiki/Q818846"
+    }
+  },
+  {
+    "statementId": "opencheck-73dea1280de22790f1a18522",
+    "recordId": "opencheck-73dea1280de22790f1a18522",
+    "declarationSubject": "opencheck-73dea1280de22790f1a18522",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Mike Doustdar"
+        }
+      ],
+      "identifiers": [
+        {
+          "id": "Q135494805",
+          "scheme": "WIKIDATA",
+          "schemeName": "Wikidata Q identifier",
+          "uri": "https://www.wikidata.org/wiki/Q135494805"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "Wikidata",
+      "retrievedAt": "2026-09-02T08:44:39Z",
+      "url": "https://www.wikidata.org/wiki/Q135494805"
+    }
+  },
+  {
+    "statementId": "opencheck-26298b5da7e9e9632feb6e90",
+    "recordId": "opencheck-aba4eb2cb85507ecb49b6d86",
+    "declarationSubject": "opencheck-155d394fefdf9032a8f8e509",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-155d394fefdf9032a8f8e509",
+      "interestedParty": "opencheck-73dea1280de22790f1a18522",
+      "interests": [
+        {
+          "type": "seniorManagingOfficial",
+          "details": "chief executive officer",
+          "beneficialOwnershipOrControl": false
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "thirdParty"
+      ],
+      "description": "Wikidata",
+      "retrievedAt": "2026-09-02T08:44:39Z",
+      "url": "https://www.wikidata.org/wiki/Q818846"
+    }
+  },
+  {
+    "statementId": "opencheck-63439710940cf41334d62d1d",
+    "recordId": "opencheck-63439710940cf41334d62d1d",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "NOVO NORDISK A/S",
+      "identifiers": [
+        {
+          "id": "dk/24256790",
+          "scheme": "OpenCorporates",
+          "schemeName": "OpenCorporates company ID",
+          "uri": "https://opencorporates.com/companies/dk/24256790"
+        },
+        {
+          "id": "24256790",
+          "scheme": "DK-COA",
+          "schemeName": "OpenCorporates DK company number"
+        }
+      ],
+      "jurisdiction": {
+        "name": "Denmark",
+        "code": "DK"
+      },
+      "foundingDate": "1931-11-28"
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-335a6c30aa1cee2c420b5cd1",
+    "recordId": "opencheck-335a6c30aa1cee2c420b5cd1",
+    "declarationSubject": "opencheck-335a6c30aa1cee2c420b5cd1",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Kasim Kutay"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-465433275e99a2760edb319d",
+    "recordId": "opencheck-689b49126db0c212b576dbb9",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-335a6c30aa1cee2c420b5cd1",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: bestyrelsesmedlem",
+          "startDate": "2017-03-23"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-010e942b845cabe7f0678988",
+    "recordId": "opencheck-010e942b845cabe7f0678988",
+    "declarationSubject": "opencheck-010e942b845cabe7f0678988",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Karsten Munk Knudsen"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-28759d2c456b56bdcb7d66b8",
+    "recordId": "opencheck-ad9d76f2aeab1a1a2bdab0c8",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-010e942b845cabe7f0678988",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: direkt\u00d8r",
+          "startDate": "2018-02-15"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-b8ae119a0c6a556d469e2241",
+    "recordId": "opencheck-b8ae119a0c6a556d469e2241",
+    "declarationSubject": "opencheck-b8ae119a0c6a556d469e2241",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Mette B\u00f8jer Jensen"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-c09bfd49765ebbedc798d49e",
+    "recordId": "opencheck-0ed47ed3934809ef0e258973",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-b8ae119a0c6a556d469e2241",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: bestyrelsesmedlem",
+          "startDate": "2018-03-22"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-a893d3de0b2c0706e52f779a",
+    "recordId": "opencheck-a893d3de0b2c0706e52f779a",
+    "declarationSubject": "opencheck-a893d3de0b2c0706e52f779a",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Elisabeth Dahl Christensen"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-414679002a4bd1de4992e4ba",
+    "recordId": "opencheck-95ed38f2c700a99d38df1a82",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-a893d3de0b2c0706e52f779a",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: bestyrelsesmedlem",
+          "startDate": "2022-03-24"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-b4269a27fa93552a95d7e6f2",
+    "recordId": "opencheck-b4269a27fa93552a95d7e6f2",
+    "declarationSubject": "opencheck-b4269a27fa93552a95d7e6f2",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "DELOITTE STATSAUTORISERET REVISIONSPARTNERSELSKAB"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-60f2bd759bc2c91590209f38",
+    "recordId": "opencheck-8b9fd7d3d24786e54ee658d2",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-b4269a27fa93552a95d7e6f2",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: b\u00c6redygtighedsrevision",
+          "startDate": "2024-03-21"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-b0c8323f3d46e030f85d0e97",
+    "recordId": "opencheck-b0c8323f3d46e030f85d0e97",
+    "declarationSubject": "opencheck-b0c8323f3d46e030f85d0e97",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Maziar Doustdar"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-f1ece84f79ec7c3f94372c5c",
+    "recordId": "opencheck-0c12039f247b023a04d292c3",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-b0c8323f3d46e030f85d0e97",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: adm. dir.",
+          "startDate": "2025-08-07"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-888f99bb5c96e8625ac42941",
+    "recordId": "opencheck-888f99bb5c96e8625ac42941",
+    "declarationSubject": "opencheck-888f99bb5c96e8625ac42941",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Britt Meelby Jensen"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-8502cd7e7576ff4b8e030825",
+    "recordId": "opencheck-a5986ce10bea6f4d7f4c870e",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-888f99bb5c96e8625ac42941",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: bestyrelsesmedlem",
+          "startDate": "2025-11-14"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-9660fd85c337239ee145763e",
+    "recordId": "opencheck-9660fd85c337239ee145763e",
+    "declarationSubject": "opencheck-9660fd85c337239ee145763e",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Lars Rebien S\u00f8rensen"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-e1fa5c1d37ba535cdc6d5b71",
+    "recordId": "opencheck-9fc800fbcdde2a6e17d3a463",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-9660fd85c337239ee145763e",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: formand",
+          "startDate": "2025-11-14"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-63ace5fdc974339c54d0320c",
+    "recordId": "opencheck-63ace5fdc974339c54d0320c",
+    "declarationSubject": "opencheck-63ace5fdc974339c54d0320c",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Stephan Engels"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-507af627e5e194ee38980995",
+    "recordId": "opencheck-404cfcb7cebee996e27fb685",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-63ace5fdc974339c54d0320c",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: bestyrelsesmedlem",
+          "startDate": "2025-11-14"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-590e5e7402bff3e0ac4b9c11",
+    "recordId": "opencheck-590e5e7402bff3e0ac4b9c11",
+    "declarationSubject": "opencheck-590e5e7402bff3e0ac4b9c11",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Cornelis de Jong"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-39b618480594933cad686483",
+    "recordId": "opencheck-111d07f5eafcb95eb4aec47f",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-590e5e7402bff3e0ac4b9c11",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: n\u00c6stformand",
+          "startDate": "2025-11-14"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-1b46a4d27405a59dd81316db",
+    "recordId": "opencheck-1b46a4d27405a59dd81316db",
+    "declarationSubject": "opencheck-1b46a4d27405a59dd81316db",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Hassan Kassem"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-f1fb3ee7b7122e29fec53f88",
+    "recordId": "opencheck-b2efe22fa88e482a1010ae5e",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-1b46a4d27405a59dd81316db",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: suppleant",
+          "startDate": "2026-03-26"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-2c676461c3aa4fe9fc70fb9f",
+    "recordId": "opencheck-2c676461c3aa4fe9fc70fb9f",
+    "declarationSubject": "opencheck-2c676461c3aa4fe9fc70fb9f",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "D\u00e9sire\u00e9 Jantzen Asgreen"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-8e02c61e0c5259f235f196ef",
+    "recordId": "opencheck-5544b2220cb04eb7e761f079",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-2c676461c3aa4fe9fc70fb9f",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: bestyrelsesmedlem",
+          "startDate": "2026-03-26"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-ffde767d748c5b7850722150",
+    "recordId": "opencheck-ffde767d748c5b7850722150",
+    "declarationSubject": "opencheck-ffde767d748c5b7850722150",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Tanja Villumsen"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-4f88ed9ce36a8c6093280f69",
+    "recordId": "opencheck-2551460d097d16427b461e59",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-ffde767d748c5b7850722150",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: suppleant",
+          "startDate": "2026-03-26"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-cb5fcde894e9da6279c69d89",
+    "recordId": "opencheck-cb5fcde894e9da6279c69d89",
+    "declarationSubject": "opencheck-cb5fcde894e9da6279c69d89",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Tamara Schmidt"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-a0dfadb09fc236484ef95d39",
+    "recordId": "opencheck-c655c4202938f0d8f175f11e",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-cb5fcde894e9da6279c69d89",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: suppleant",
+          "startDate": "2026-03-26"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-3788ce298e6f78215833ae7e",
+    "recordId": "opencheck-3788ce298e6f78215833ae7e",
+    "declarationSubject": "opencheck-3788ce298e6f78215833ae7e",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Helena Ildiko Saxon"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-7e1372b75dd2d135e63c2d01",
+    "recordId": "opencheck-379c47620a2cff2305cc3b90",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-3788ce298e6f78215833ae7e",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: bestyrelsesmedlem",
+          "startDate": "2026-03-26"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-fcde1a522ae749cf77b5d89e",
+    "recordId": "opencheck-fcde1a522ae749cf77b5d89e",
+    "declarationSubject": "opencheck-fcde1a522ae749cf77b5d89e",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Ramona Audry Sequeira"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-92fa5f5cc25447bc93931731",
+    "recordId": "opencheck-e0e2823d20fe732e829120d3",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-fcde1a522ae749cf77b5d89e",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: bestyrelsesmedlem",
+          "startDate": "2026-03-26"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-bf8c64a03cd2c444225d8906",
+    "recordId": "opencheck-bf8c64a03cd2c444225d8906",
+    "declarationSubject": "opencheck-bf8c64a03cd2c444225d8906",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Johannes Gerardus Joseph van de Winkel"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-cde7c3cbad247d320973df5f",
+    "recordId": "opencheck-d0784853b1e754334afe0b47",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-bf8c64a03cd2c444225d8906",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: bestyrelsesmedlem",
+          "startDate": "2026-03-26"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-90f85974ffcee4b5bd673307",
+    "recordId": "opencheck-90f85974ffcee4b5bd673307",
+    "declarationSubject": "opencheck-90f85974ffcee4b5bd673307",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Semsi Kilic Madsen"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-cda96149d3a363729ed0b330",
+    "recordId": "opencheck-06a59ba8ad5035a86a0c8293",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-90f85974ffcee4b5bd673307",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: bestyrelsesmedlem",
+          "startDate": "2026-03-26"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-c46edf04bc3200de3fa095c3",
+    "recordId": "opencheck-c46edf04bc3200de3fa095c3",
+    "declarationSubject": "opencheck-c46edf04bc3200de3fa095c3",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "personType": "knownPerson",
+      "names": [
+        {
+          "type": "legal",
+          "fullName": "Trine Hartvig Kristiansen"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-37510349d3a765af1275efaa",
+    "recordId": "opencheck-9e786f1265570a0085504bed",
+    "declarationSubject": "opencheck-63439710940cf41334d62d1d",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "subject": "opencheck-63439710940cf41334d62d1d",
+      "interestedParty": "opencheck-c46edf04bc3200de3fa095c3",
+      "interests": [
+        {
+          "type": "otherInfluenceOrControl",
+          "directOrIndirect": "direct",
+          "beneficialOwnershipOrControl": false,
+          "details": "Officer position: suppleant",
+          "startDate": "2026-03-26"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "OpenCorporates",
+      "retrievedAt": "2026-09-02T08:44:42Z",
+      "url": "https://opencorporates.com/companies/dk/24256790"
+    }
+  },
+  {
+    "statementId": "opencheck-52e2cb54f89b0c9deb8c378b",
+    "recordId": "opencheck-52e2cb54f89b0c9deb8c378b",
+    "declarationSubject": "opencheck-52e2cb54f89b0c9deb8c378b",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-09-02",
+    "publicationDetails": {
+      "bodsVersion": "0.4",
+      "publicationDate": "2026-09-02",
+      "publisher": {
+        "name": "OpenCheck"
+      }
+    },
+    "recordDetails": {
+      "isComponent": false,
+      "entityType": {
+        "type": "registeredEntity"
+      },
+      "name": "NOVO NORDISK A/S",
+      "identifiers": [
+        {
+          "id": "24256790",
+          "scheme": "DK-CVR",
+          "schemeName": "Det Centrale Virksomhedsregister \u2014 Danish Central Business Register"
+        }
+      ],
+      "jurisdiction": {
+        "name": "Denmark",
+        "code": "DK"
+      },
+      "foundingDate": "1931-11-28",
+      "addresses": [
+        {
+          "type": "registered",
+          "address": "Novo Alle 1, 2880 Bagsv\u00e6rd",
+          "country": {
+            "name": "Denmark",
+            "code": "DK"
+          }
+        }
+      ],
+      "legalFormLabel": "Aktieselskab",
+      "primaryIndustryCode": "212000"
+    },
+    "source": {
+      "type": [
+        "officialRegister"
+      ],
+      "description": "CVR \u2014 Det Centrale Virksomhedsregister (Danish Business Authority)",
+      "url": "https://datacvr.virk.dk/enhed/virksomhed/24256790"
+    }
+  }
+]
