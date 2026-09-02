@@ -329,8 +329,10 @@ def test_eu_hrtc_does_not_fire_for_unlisted_jurisdiction() -> None:
     assert EU_HIGH_RISK_THIRD_COUNTRY not in codes
     assert FATF_GREY_LIST not in codes
     assert FATF_BLACK_LIST not in codes
-    # The only thing a UK entity raises is structural context.
-    assert codes == {NON_EU_JURISDICTION}
+    # A UK entity on its own raises nothing — not even structural context.
+    # Its own jurisdiction is where it *is*, not somewhere its ownership
+    # chain *reaches* (Phase 153).
+    assert codes == set()
 
 
 # ---------------------------------------------------------------------
@@ -347,8 +349,12 @@ def test_non_eu_jurisdiction_is_context_not_risk() -> None:
     out of the risk chip strip and out of the "N risk signals" count on
     the share card and share-page meta description.
     """
-    bods = [_entity("E1", jurisdiction_code="PA", jurisdiction_name="Panama")]
-    signals = assess_amla("openaleph", {"entity_id": "X"}, bods)
+    bods = [
+        _entity("E1", jurisdiction_code="DE"),
+        _entity("E2", jurisdiction_code="PA", jurisdiction_name="Panama"),
+        _rel("R1", "E1", "E2"),
+    ]
+    signals = assess_amla("openaleph", {"entity_id": "E1"}, bods)
     sig = next(s for s in signals if s.code == NON_EU_JURISDICTION)
     assert sig.kind == "context"
     assert sig.confidence == "low"
@@ -357,6 +363,76 @@ def test_non_eu_jurisdiction_is_context_not_risk() -> None:
     assert sig.evidence["jurisdictions"][0]["code"] == "PA"
     # And it must survive serialisation — every surface reads this field.
     assert sig.to_dict()["kind"] == "context"
+
+
+def test_non_eu_never_counts_the_subjects_own_jurisdiction() -> None:
+    """Phase 153. Shell plc's report carried "Ownership chain reaches
+    jurisdictions outside the EU/EEA: GB" on seven source cards, each from a
+    bundle holding nothing above the subject but the subject. Where a company
+    *is* is not somewhere its chain *reaches*."""
+    bods = [
+        _entity("E1", jurisdiction_code="GB"),
+        _entity("E2", jurisdiction_code="GB"),
+        _rel("R1", "E1", "E2"),
+    ]
+    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
+    sig = next(s for s in signals if s.code == NON_EU_JURISDICTION)
+    # The GB *parent* is a chain fact; the subject's own GB is not listed as
+    # a separate statement.
+    assert [j["statement_id"] for j in sig.evidence["jurisdictions"]] == ["E2"]
+    # And a lone entity, or a subject whose only owners share its own EU
+    # jurisdiction, raises nothing.
+    assert NON_EU_JURISDICTION not in {
+        s.code for s in assess_amla("companies_house", {"entity_id": "E1"},
+                                    [_entity("E1", jurisdiction_code="GB")])
+    }
+
+
+def test_non_eu_never_counts_subsidiaries_below_the_subject() -> None:
+    """A GLEIF bundle lists a parent's direct subsidiaries. They are below
+    the subject, not on its ownership chain, and must not be reported as
+    somewhere the chain reaches."""
+    bods = [
+        _entity("E1", jurisdiction_code="DE"),                # subject
+        _entity("E2", jurisdiction_code="KY"),                # subsidiary
+        _entity("E3", jurisdiction_code="BM"),                # subsidiary
+        _rel("R1", "E2", "E1"),                               # E1 owns E2
+        _rel("R2", "E3", "E1"),                               # E1 owns E3
+    ]
+    signals = assess_amla("gleif", {"entity_id": "E1"}, bods)
+    assert NON_EU_JURISDICTION not in {s.code for s in signals}
+
+
+def test_non_eu_walks_the_whole_chain_above_the_subject() -> None:
+    bods = [
+        _entity("E1", jurisdiction_code="DE"),
+        _entity("E2", jurisdiction_code="FR"),
+        _entity("E3", jurisdiction_code="US"),
+        _rel("R1", "E1", "E2"),
+        _rel("R2", "E2", "E3"),
+    ]
+    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
+    sig = next(s for s in signals if s.code == NON_EU_JURISDICTION)
+    assert [j["code"] for j in sig.evidence["jurisdictions"]] == ["US"]
+
+
+def test_non_eu_finds_the_subject_by_its_identifier_not_its_position() -> None:
+    """Mappers put the subject first, but the rule must not depend on it:
+    the entity carrying the adapter-local hit id is the subject."""
+    owner = _entity("E9", jurisdiction_code="PA", name="Owner SA")
+    subject = _entity("E1", jurisdiction_code="DE", name="Subject GmbH")
+    subject["recordDetails"]["identifiers"] = [
+        {"scheme": "DE-HRB", "id": "HRB 12345"},
+    ]
+    bods = [owner, subject, _rel("R1", "E1", "E9")]
+    signals = assess_amla("firmenbuch", {}, bods, hit_id="HRB 12345")
+    sig = next(s for s in signals if s.code == NON_EU_JURISDICTION)
+    assert [j["code"] for j in sig.evidence["jurisdictions"]] == ["PA"]
+    # Same bundle, hit id naming the owner: the owner is now the subject and
+    # has nothing above it, so nothing is reported.
+    owner["recordDetails"]["identifiers"] = [{"scheme": "PA-REG", "id": "PA-1"}]
+    signals = assess_amla("firmenbuch", {}, bods, hit_id="PA-1")
+    assert NON_EU_JURISDICTION not in {s.code for s in signals}
 
 
 def test_fatf_and_eu_jurisdiction_signals_stay_risk() -> None:
@@ -389,11 +465,15 @@ def test_eea_non_eu_countries_treated_as_eu_equivalent() -> None:
 
 def test_non_eu_aggregates_codes_in_summary() -> None:
     bods = [
+        _entity("E0", jurisdiction_code="DE"),  # the subject
         _entity("E1", jurisdiction_code="VG", jurisdiction_name="British Virgin Islands"),
         _entity("E2", jurisdiction_code="KY", jurisdiction_name="Cayman Islands"),
         _entity("E3", jurisdiction_code="DE"),  # EU — ignored in summary
+        _rel("R1", "E0", "E1"),
+        _rel("R2", "E0", "E2"),
+        _rel("R3", "E0", "E3"),
     ]
-    signals = assess_amla("companies_house", {"entity_id": "X"}, bods)
+    signals = assess_amla("companies_house", {"entity_id": "E0"}, bods)
     sig = next(s for s in signals if s.code == NON_EU_JURISDICTION)
     assert "KY" in sig.summary and "VG" in sig.summary and "DE" not in sig.summary
 
@@ -633,10 +713,11 @@ def test_nominee_condition_stays_bundle_wide() -> None:
 def test_non_eu_condition_is_scoped_to_the_layered_path() -> None:
     """Article 12(1)(b) says "present at any of THESE LAYERS".
 
-    An off-path non-EU entity that is not part of the layered ownership
-    chain still raises the standalone NON_EU_JURISDICTION signal, but it
+    An off-path non-EU entity that is not part of the ownership chain
     must not count towards the Article 12 composite — even alongside a
-    genuine second condition.
+    genuine second condition. Since Phase 153 the standalone
+    NON_EU_JURISDICTION signal walks the chain above the subject too, so
+    an entity with no edges at all raises nothing anywhere.
     """
     bods = _three_layer_chain()
     # A trust ON the path — condition (a) is genuinely met.
@@ -648,9 +729,9 @@ def test_non_eu_condition_is_scoped_to_the_layered_path() -> None:
     )
     signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
     codes = {s.code for s in signals}
-    # Bundle-wide standalone signal still reports the Panama entity…
-    assert NON_EU_JURISDICTION in codes
-    # …but it is not on the layered path, so only condition (a) is met.
+    # The Panama entity is on no chain, so neither the standalone signal…
+    assert NON_EU_JURISDICTION not in codes
+    # …nor the composite sees it: only condition (a) is met.
     assert COMPLEX_CORPORATE_STRUCTURE not in codes
 
 
@@ -773,8 +854,12 @@ def test_eu_eea_override_env_replaces_default(monkeypatch) -> None:
 
     # NO (Norway) is in the EEA default but excluded under the override
     # → should now fire the non-EU signal.
-    bods = [_entity("E1", jurisdiction_code="NO", jurisdiction_name="Norway")]
-    signals = assess_amla("companies_house", {"entity_id": "X"}, bods)
+    bods = [
+        _entity("E1", jurisdiction_code="DE"),
+        _entity("E2", jurisdiction_code="NO", jurisdiction_name="Norway"),
+        _rel("R1", "E1", "E2"),
+    ]
+    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
     assert NON_EU_JURISDICTION in {s.code for s in signals}
 
 

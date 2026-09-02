@@ -64,12 +64,15 @@ def test_report_endpoint_caps_deepen_at_zero() -> None:
 def test_deepen_emits_amla_non_eu_signal_for_offshore_gleif_record(
     monkeypatch, httpx_mock: HTTPXMock
 ) -> None:
-    """End-to-end: a GLEIF record incorporated in BVI fires the AMLA
-    NON_EU_JURISDICTION signal via /deepen.risk_signals.
+    """End-to-end: a GLEIF record whose direct parent is incorporated in BVI
+    fires the AMLA NON_EU_JURISDICTION signal via /deepen.risk_signals.
 
-    (We don't assert on COMPLEX_OWNERSHIP_LAYERS here because GLEIF's
-    Level 2 parent model is a star — both parents point to the subject —
-    so the longest chain is 2, not 3. Layer counting is exercised
+    Since Phase 153 the signal walks the chain *above* the subject, so the
+    offshore jurisdiction has to be the parent's — a subject that is itself
+    in BVI with no parent reports nothing (where it is, not where its chain
+    reaches). (We don't assert on COMPLEX_OWNERSHIP_LAYERS here because
+    GLEIF's Level 2 parent model is a star — both parents point to the
+    subject — so the longest chain is 2, not 3. Layer counting is exercised
     rigorously in test_risk_amla.)
     """
     monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
@@ -77,6 +80,7 @@ def test_deepen_emits_amla_non_eu_signal_for_offshore_gleif_record(
 
     api = "https://api.gleif.org/api/v1"
     lei_a = "AAAA00000000000000A1"
+    lei_parent = "BBBB00000000000000B1"
 
     httpx_mock.add_response(
         url=f"{api}/lei-records/{lei_a}",
@@ -86,6 +90,21 @@ def test_deepen_emits_amla_non_eu_signal_for_offshore_gleif_record(
                 "attributes": {
                     "lei": lei_a,
                     "entity": {
+                        "legalName": {"name": "Onshore Trading GmbH"},
+                        "jurisdiction": "DE",
+                    },
+                },
+            }
+        },
+    )
+    httpx_mock.add_response(
+        url=f"{api}/lei-records/{lei_a}/direct-parent",
+        json={
+            "data": {
+                "id": lei_parent,
+                "attributes": {
+                    "lei": lei_parent,
+                    "entity": {
                         "legalName": {"name": "Offshore Holdings Ltd"},
                         "jurisdiction": "VG",
                     },
@@ -93,11 +112,8 @@ def test_deepen_emits_amla_non_eu_signal_for_offshore_gleif_record(
             }
         },
     )
-    # No parents — return 404 for both, then exception 404s, so
-    # the GLEIF mapper just emits the subject entity statement.
+    # No ultimate parent — 404 for it and its exception probe.
     for path in (
-        "direct-parent",
-        "direct-parent-reporting-exception",
         "ultimate-parent",
         "ultimate-parent-reporting-exception",
     ):

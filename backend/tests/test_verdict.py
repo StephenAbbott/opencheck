@@ -195,3 +195,34 @@ def test_both_kinds_of_gap_are_reported_separately() -> None:
     assert v is not None
     assert "one check did not run" in v
     assert "one source did not answer" in v
+
+
+def test_counter_sanctions_never_read_as_sanctions() -> None:
+    # Phase 153. A counter-designation is issued by the target of mainstream
+    # sanctions against the sanctioning side's citizens (Phase 105). Shell plc
+    # carried "Records linking it to sanctioned parties" on the strength of a
+    # name-only match against Russia's list of US citizens; the sentence must
+    # say what the record is and never borrow the vocabulary of a listing.
+    for code in ("COUNTER_SANCTIONED", "RELATED_COUNTER_SANCTIONED"):
+        v = build_verdict([_sig(code)], [])
+        assert v == "A counter-sanctions designation by a non-mainstream authority."
+        assert "sanctioned parties" not in v.lower()
+        assert "sanctions findings" not in v.lower()
+
+
+def test_counter_sanctions_are_read_after_every_other_finding() -> None:
+    # Two clauses make the sentence; a counter-designation must be the one
+    # that drops out, never the one that displaces a PEP or a leak.
+    v = build_verdict(
+        [_sig("RELATED_COUNTER_SANCTIONED"), _sig("RELATED_PEP"), _sig("OFFSHORE_LEAKS")],
+        [],
+    )
+    assert v is not None
+    assert v.startswith("A politically exposed person among the parties named, and an appearance")
+    assert "counter-sanctions" not in v
+    # And with only the PEP beside it, it appears — after the PEP.
+    v2 = build_verdict([_sig("RELATED_COUNTER_SANCTIONED"), _sig("RELATED_PEP")], [])
+    assert v2 == (
+        "A politically exposed person among the parties named, "
+        "and a counter-sanctions designation by a non-mainstream authority."
+    )

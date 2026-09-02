@@ -1871,18 +1871,104 @@ def _trust_or_arrangement_signal(
     )
 
 
+def _subject_entity_id(hit_id: str, bods: list[dict[str, Any]]) -> str | None:
+    """The statementId of the entity the bundle is *about*.
+
+    A ``/deepen`` bundle does not say which of its entity statements is the
+    looked-up company, so it is inferred, most reliable rule first:
+
+    1. an entity statement carrying an identifier equal to ``hit_id`` — the
+       adapter-local id is the register's own number (Companies House number,
+       LEI, OpenCorporates id), and every mapper writes it into
+       ``identifiers``;
+    2. the unique *sink* of the ownership graph — an entity that is the
+       subject of a relationship and never an interested party;
+    3. the first entity statement, which is where every mapper puts the
+       subject it was handed.
+    """
+    entities: list[dict[str, Any]] = [s for s in bods if _stmt_kind(s) == "entity"]
+    if not entities:
+        return None
+    if hit_id:
+        for stmt in entities:
+            for ident in _record_details(stmt).get("identifiers") or []:
+                if isinstance(ident, dict) and ident.get("id") == hit_id:
+                    return _statement_id(stmt)
+    subjects: set[str] = set()
+    parties: set[str] = set()
+    for stmt in bods:
+        if _stmt_kind(stmt) != "relationship":
+            continue
+        subj, ip, _ = _relationship_endpoints(stmt)
+        if subj:
+            subjects.add(subj)
+        if ip:
+            parties.add(ip)
+    entity_ids = {_statement_id(s) for s in entities}
+    sinks = (subjects - parties) & entity_ids
+    if len(sinks) == 1:
+        return next(iter(sinks))
+    return _statement_id(entities[0])
+
+
+def _upstream_entity_ids(subject_id: str, bods: list[dict[str, Any]]) -> set[str]:
+    """Every statementId reachable from ``subject_id`` by walking *up* the
+    ownership graph — the parties that own or control the subject, their
+    owners, and so on. Subsidiaries (which the subject owns) are never in
+    this set: they are below it."""
+    owners: dict[str, set[str]] = {}
+    for stmt in bods:
+        if _stmt_kind(stmt) != "relationship":
+            continue
+        subj, ip, _ = _relationship_endpoints(stmt)
+        if subj and ip:
+            owners.setdefault(subj, set()).add(ip)
+    seen: set[str] = set()
+    frontier = [subject_id]
+    while frontier:
+        node = frontier.pop()
+        for ip in owners.get(node, ()):
+            if ip not in seen:
+                seen.add(ip)
+                frontier.append(ip)
+    return seen
+
+
 def _non_eu_jurisdiction_signal(
     source_id: str, hit_id: str, bods: list[dict[str, Any]]
 ) -> RiskSignal | None:
-    """Fires when the chain has any entity outside the EU+EEA set.
+    """Fires when the *ownership chain above the subject* has an entity
+    outside the EU+EEA set.
 
     The "EU+EEA set" is resolved at call time from settings — see
     ``_eu_eea_codes()`` and the ``OPENCHECK_AMLA_*`` env vars.
+
+    Phase 153. Until now this walked every entity statement in the bundle,
+    which produced two claims the sentence could not support. A GB company
+    whose bundle held nothing but itself reported "Ownership chain reaches
+    jurisdictions outside the EU/EEA: GB" — its own jurisdiction is where it
+    *is*, not somewhere its chain *reaches* — and because the signal fires per
+    deepened bundle, Shell plc's report carried that chip on seven source
+    cards. And a GLEIF bundle that lists a parent's direct subsidiaries
+    reported every subsidiary's country as somewhere the ownership chain
+    reaches, when a subsidiary is below the subject, not above it. The
+    sentence says "ownership chain", so the rule now walks exactly that: the
+    parties above the subject, transitively, and nothing else. A bundle with
+    no owners in it says nothing — the absence of a chip is then a true
+    statement about that source's view.
     """
     eu_eea = _eu_eea_codes()
+    subject_id = _subject_entity_id(hit_id, bods)
+    if subject_id is None:
+        return None
+    upstream = _upstream_entity_ids(subject_id, bods)
+    if not upstream:
+        return None
     non_eu: list[dict[str, str]] = []
     for stmt in bods:
         if _stmt_kind(stmt) != "entity":
+            continue
+        if _statement_id(stmt) not in upstream:
             continue
         j = _entity_jurisdiction(stmt)
         if not j:

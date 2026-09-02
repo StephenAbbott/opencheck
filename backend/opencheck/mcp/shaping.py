@@ -65,17 +65,83 @@ def _sources_summary(
     return sorted(by_source.values(), key=lambda r: (not r["found"], r["id"]))
 
 
+#: A signal without a ``kind`` is a risk finding — the same default
+#: ``lib/signalKind.ts`` applies on the web, so the two surfaces cannot split
+#: the same list differently.
+_DEFAULT_KIND = "risk"
+
+
 def _shape_risk(signals: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
+    """The signal list as an agent should read it.
+
+    Phase 153. Two things the first version dropped, and both mattered:
+
+    * **``kind``.** Phases 111/116 split every signal into a *risk finding*
+      and a *structural context* observation, and the results page, the PDF
+      and the share card all render the two apart. The MCP row carried
+      ``code``/``severity``/``confidence``/``summary`` and nothing else, so
+      an agent reading ``"Risk signals: GLEIF_REPORTING_EXCEPTION,
+      NON_EU_JURISDICTION, ..."`` on Shell plc reported four risk signals,
+      two of which the product itself says are not findings — the Phase 111
+      failure, on the surface most likely to be quoted verbatim.
+    * **Merging.** Per-bundle context signals (``NON_EU_JURISDICTION`` fires
+      once per source that deepened) crossed the wire as four identical rows.
+      Rows that say the same thing collapse into one, and the sources that
+      said it ride along as ``sources`` — so "N sources report X" is still
+      answerable without four copies of X.
+    """
+    merged: dict[tuple[str, str, str], dict[str, Any]] = {}
     for s in signals or []:
-        row = {
-            k: s.get(k)
-            for k in ("code", "severity", "confidence", "summary")
-            if s.get(k) is not None
-        }
-        if row:
-            out.append(row)
-    return out
+        code = s.get("code")
+        if not code:
+            continue
+        kind = s.get("kind") or _DEFAULT_KIND
+        summary = s.get("summary") or ""
+        key = (str(code), str(kind), str(summary))
+        row = merged.get(key)
+        if row is None:
+            row = {
+                k: s.get(k)
+                for k in ("code", "severity", "confidence", "summary")
+                if s.get(k) is not None
+            }
+            row["kind"] = kind
+            row["sources"] = []
+            merged[key] = row
+        sid = s.get("source_id")
+        if sid and sid not in row["sources"]:
+            row["sources"].append(sid)
+    return list(merged.values())
+
+
+def _codes_by_kind(risk: list[dict[str, Any]], kind: str) -> str:
+    return ", ".join(dict.fromkeys(r["code"] for r in risk if r.get("kind") == kind))
+
+
+def _licensing(sources: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """The composite licence verdict over the sources that contributed.
+
+    ``license_notices`` carries only the per-bundle notices adapters attach
+    themselves, which is usually nothing — a Shell plc lookup holding
+    CC-BY-NC OpenSanctions and share-alike OpenCorporates statements shipped
+    ``license_notices: []`` to agents while the web Download panel said
+    "NOT for commercial use". The same ``licensing.assess`` the panel calls
+    (via ``/license-matrix?sources=``) answers here, over the sources that
+    returned data, so the two surfaces cannot disagree.
+    """
+    from ..licensing import assess
+
+    ids = [s["id"] for s in sources if s.get("found")]
+    if not ids:
+        return None
+    a = assess(ids)
+    return {
+        "commercial_use": a.commercial_use,
+        "attribution_required": a.attribution_required,
+        "share_alike": a.share_alike,
+        "headline": a.headline,
+        "warnings": list(a.warnings),
+    }
 
 
 def shape_lookup(payload: Any) -> dict[str, Any]:
@@ -83,10 +149,12 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
     bods = payload.bods or []
     relationships = sum(1 for s in bods if s.get("recordType") == "relationship")
     risk = _shape_risk(payload.risk_signals)
-    codes = ", ".join(dict.fromkeys(r["code"] for r in risk if r.get("code"))) or "none"
+    risk_codes = _codes_by_kind(risk, "risk") or "none"
+    context_codes = _codes_by_kind(risk, "context")
     sources = _sources_summary(payload.hits, payload.errors)
     found = sum(1 for s in sources if s.get("found"))
     degraded = getattr(payload, "degraded_sources", None) or []
+    licensing = _licensing(sources)
 
     # An AI consumer must never read "Risk signals: none" as a clean screen
     # when a screening check didn't fully run — say so in the summary line
@@ -98,13 +166,23 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         if degraded
         else ""
     )
+    # Structural context is named in the same sentence, in its own clause,
+    # and labelled for what it is — never folded into the risk list.
+    context_note = (
+        f" Structural context (not risk findings): {context_codes}."
+        if context_codes
+        else ""
+    )
+    licence_note = (
+        f" Licensing: {licensing['headline']}" if licensing else ""
+    )
     summary = (
         f"{payload.legal_name or 'Entity'} (LEI {payload.lei}"
         f"{', ' + payload.jurisdiction if payload.jurisdiction else ''}). "
-        f"Risk signals: {codes}. "
+        f"Risk signals: {risk_codes}.{context_note} "
         f"{found} of {len(sources)} sources returned data; "
         f"{len(bods)} BODS statements ({relationships} ownership/control relationships)."
-        f"{degraded_note}"
+        f"{degraded_note}{licence_note}"
     )
 
     return {
@@ -112,6 +190,9 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         "legal_name": payload.legal_name,
         "jurisdiction": payload.jurisdiction,
         "summary": summary,
+        # The same one-line sentence the results page opens with
+        # (``opencheck.verdict``) — deterministic, already split on kind.
+        "verdict": getattr(payload, "verdict", None),
         "identifiers": _subject_identifiers(bods, payload.lei),
         "derived_identifiers": payload.derived_identifiers or {},
         "risk_signals": risk,
@@ -121,9 +202,17 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
             "bods_statements": len(bods),
             "relationships": relationships,
             "sources_with_data": found,
+            "risk_signals": sum(1 for r in risk if r.get("kind") == "risk"),
+            "context_signals": sum(1 for r in risk if r.get("kind") == "context"),
         },
+        "licensing": licensing,
         "license_notices": payload.license_notices or [],
-        "hint": "Call opencheck_export_bods for the full machine-readable ownership graph.",
+        "hint": (
+            "risk_signals rows carry kind='risk' (a finding) or kind='context' "
+            "(how the company is put together, not a finding against it) — "
+            "never report a context row as a risk. Call opencheck_export_bods "
+            "for the full machine-readable ownership graph."
+        ),
     }
 
 

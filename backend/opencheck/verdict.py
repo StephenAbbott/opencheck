@@ -42,7 +42,15 @@ _RELATED_SANCTIONS = (
     "RELATED_SANCTIONS_CONTROLLED",
     "RELATED_SANCTIONS_LINKED",
 )
-_SANCTIONS_LINKED = ("SANCTIONS_LINKED", "COUNTER_SANCTIONED", "RELATED_COUNTER_SANCTIONED")
+_SANCTIONS_LINKED = ("SANCTIONS_LINKED",)
+#: Counter-sanctions are a designation by the *target* of mainstream sanctions
+#: (Phase 105: ``sanction.counter``, slate chip, severity 2). They are kept
+#: out of every sanctions clause on purpose: "records linking it to sanctioned
+#: parties" was, until Phase 153, the headline Shell plc carried on the
+#: strength of a name-only match against Russia's list of US citizens — the
+#: exact misreading the counter-sanctions split exists to prevent. They get a
+#: clause of their own, read last, that names what the record is.
+_COUNTER_SANCTIONS = ("COUNTER_SANCTIONED", "RELATED_COUNTER_SANCTIONED")
 _SUBJECT_EXPORT = ("EXPORT_CONTROLLED", "EXPORT_CONTROL_LINKED", "EXPORT_RISK")
 _RELATED_EXPORT = (
     "RELATED_EXPORT_CONTROLLED",
@@ -77,6 +85,7 @@ _RISK_CLAUSES: tuple[tuple[tuple[str, ...], str], ...] = (
     (_LEAKS, "an appearance in offshore-leaks data"),
     (_OPACITY, "ownership recorded in a form that obscures who benefits"),
     (_STATE, "state ownership recorded on the company"),
+    (_COUNTER_SANCTIONS, "a counter-sanctions designation by a non-mainstream authority"),
 )
 
 _MAX_RISK_CLAUSES = 2
