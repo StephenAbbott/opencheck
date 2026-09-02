@@ -23,6 +23,7 @@ import pycountry
 from .. import names as _names_mod
 from .. import provenance as _provenance
 from ..elf import resolve_elf
+from . import liveness as _liveness
 from .annotations import annotate, commenting, pointer, transformation
 from .ch_constants import describe_company_type, describe_officer_role
 from .psc_natures import describe_nature, describe_statement, describe_super_secure
@@ -482,54 +483,61 @@ def make_relationship_statement(
     return statement
 
 
+#: ``source.description`` stamped on every statement a source contributes,
+#: keyed by source id. Module-level (rather than local to ``_source_block``)
+#: because the frontend lineage table is generated from it: the FullCheck
+#: network holds these labels, not adapter ids, so the label is the join key.
+SOURCE_NAMES: dict[str, str] = {
+    "abr_australia": "Australian Business Register — ABN Lookup (Australian Taxation Office)",
+    "acra_singapore": "ACRA — Accounting and Corporate Regulatory Authority (Singapore)",
+    "ariregister": "Estonian e-Business Register (e-Äriregister)",
+    "bce_belgium": "BCE/KBO — Banque-Carrefour des Entreprises (Belgian Business Register)",
+    "bods_gleif": "GLEIF — Global LEI Foundation (BODS bulk dataset)",
+    "bods_uk_psc": "UK Companies House — Persons with Significant Control (BODS bulk dataset)",
+    "bolagsverket": "Bolagsverket — Swedish Companies Registration Office",
+    "cac_nigeria": "CAC — Corporate Affairs Commission (Nigeria) Persons with Significant Control register",
+    "brreg": "Brønnøysundregistrene — Norwegian Register Centre",
+    "brightquery": "BrightQuery / OpenData.org",
+    "climatetrace": "Global Energy Monitor / Climate TRACE",
+    "companies_house": "UK Companies House",
+    "corporations_canada": "Corporations Canada — ISED federal register",
+    "cyprus_drcor": "Cyprus DRCOR — Department of Registrar of Companies and Intellectual Property",
+    "cnpj_brazil": "Receita Federal — CNPJ register (Brazil)",
+    "cro": "CRO — Companies Registration Office Ireland",
+    "cvr_denmark": "CVR — Det Centrale Virksomhedsregister (Danish Business Authority)",
+    "everypolitician": "EveryPolitician",
+    "firmenbuch": "Firmenbuch — Austrian Commercial Register",
+    "gleif": "GLEIF",
+    "gemi_greece": "ΓΕΜΗ — Greek General Commercial Registry (Γενικό Εμπορικό Μητρώο)",
+    "inpi": "INPI — Registre National des Entreprises",
+    "jar_lithuania": "JAR — Juridinių asmenų registras (Lithuanian Register of Legal Entities)",
+    "krs_poland": "KRS — Polish National Court Register (Krajowy Rejestr Sądowy)",
+    "kvk": "KvK — Netherlands Chamber of Commerce",
+    "malta_mbr": "Malta Business Registry (MBR)",
+    "mca_india": "MCA — Ministry of Corporate Affairs Company Master Data (India)",
+    "nz_companies": "New Zealand Companies Register (NZBN)",
+    "openaleph": "OpenAleph",
+    "opencorporates": "OpenCorporates",
+    "opensanctions": "OpenSanctions",
+    "prh": "PRH — Finnish Patent and Registration Office (Patentti- ja rekisterihallitus)",
+    "rpo_slovakia": "RPO — Slovak Register of Legal Persons",
+    "rpvs_slovakia": "RPVS — Slovak Public Sector Partners Register",
+    "sec_edgar": "SEC EDGAR — U.S. Securities and Exchange Commission",
+    "sudreg_croatia": "Sudski registar — Croatian Court Register",
+    "ted_eu": "TED — Tenders Electronic Daily (EU procurement notices)",
+    "eiti": "EITI — Extractive Industries Transparency Initiative",
+    "eiti_bo": "EITI countries — national beneficial ownership registers (pooled: ITIE-RDC, Armenia State Register, Nigeria CAC/NEITI subset)",
+    "eiti_soe": "EITI State-Owned Enterprises Database",
+    "ur_latvia": "UR — Latvian Register of Enterprises (data.gov.lv)",
+    "ares": "ARES — Czech Administrativní registr ekonomických subjektů",
+    "wikidata": "Wikidata",
+    "wikirate": "Wikirate",
+    "zefix": "Zefix — Swiss Commercial Registry",
+}
+
+
 def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
-    source_names = {
-        "abr_australia": "Australian Business Register — ABN Lookup (Australian Taxation Office)",
-        "acra_singapore": "ACRA — Accounting and Corporate Regulatory Authority (Singapore)",
-        "ariregister": "Estonian e-Business Register (e-Äriregister)",
-        "bce_belgium": "BCE/KBO — Banque-Carrefour des Entreprises (Belgian Business Register)",
-        "bods_gleif": "GLEIF — Global LEI Foundation (BODS bulk dataset)",
-        "bods_uk_psc": "UK Companies House — Persons with Significant Control (BODS bulk dataset)",
-        "bolagsverket": "Bolagsverket — Swedish Companies Registration Office",
-        "cac_nigeria": "CAC — Corporate Affairs Commission (Nigeria) Persons with Significant Control register",
-        "brreg": "Brønnøysundregistrene — Norwegian Register Centre",
-        "brightquery": "BrightQuery / OpenData.org",
-        "climatetrace": "Global Energy Monitor / Climate TRACE",
-        "companies_house": "UK Companies House",
-        "corporations_canada": "Corporations Canada — ISED federal register",
-        "cyprus_drcor": "Cyprus DRCOR — Department of Registrar of Companies and Intellectual Property",
-        "cnpj_brazil": "Receita Federal — CNPJ register (Brazil)",
-        "cro": "CRO — Companies Registration Office Ireland",
-        "cvr_denmark": "CVR — Det Centrale Virksomhedsregister (Danish Business Authority)",
-        "everypolitician": "EveryPolitician",
-        "firmenbuch": "Firmenbuch — Austrian Commercial Register",
-        "gleif": "GLEIF",
-        "gemi_greece": "ΓΕΜΗ — Greek General Commercial Registry (Γενικό Εμπορικό Μητρώο)",
-        "inpi": "INPI — Registre National des Entreprises",
-        "jar_lithuania": "JAR — Juridinių asmenų registras (Lithuanian Register of Legal Entities)",
-        "krs_poland": "KRS — Polish National Court Register (Krajowy Rejestr Sądowy)",
-        "kvk": "KvK — Netherlands Chamber of Commerce",
-        "malta_mbr": "Malta Business Registry (MBR)",
-        "mca_india": "MCA — Ministry of Corporate Affairs Company Master Data (India)",
-        "nz_companies": "New Zealand Companies Register (NZBN)",
-        "openaleph": "OpenAleph",
-        "opencorporates": "OpenCorporates",
-        "opensanctions": "OpenSanctions",
-        "prh": "PRH — Finnish Patent and Registration Office (Patentti- ja rekisterihallitus)",
-        "rpo_slovakia": "RPO — Slovak Register of Legal Persons",
-        "rpvs_slovakia": "RPVS — Slovak Public Sector Partners Register",
-        "sec_edgar": "SEC EDGAR — U.S. Securities and Exchange Commission",
-        "sudreg_croatia": "Sudski registar — Croatian Court Register",
-        "ted_eu": "TED — Tenders Electronic Daily (EU procurement notices)",
-        "eiti": "EITI — Extractive Industries Transparency Initiative",
-        "eiti_bo": "EITI countries — national beneficial ownership registers (pooled: ITIE-RDC, Armenia State Register, Nigeria CAC/NEITI subset)",
-        "eiti_soe": "EITI State-Owned Enterprises Database",
-        "ur_latvia": "UR — Latvian Register of Enterprises (data.gov.lv)",
-        "ares": "ARES — Czech Administrativní registr ekonomických subjektů",
-        "wikidata": "Wikidata",
-        "wikirate": "Wikirate",
-        "zefix": "Zefix — Swiss Commercial Registry",
-    }
+    source_names = SOURCE_NAMES
     _official_registers = {
         "abr_australia",
         "acra_singapore",
@@ -992,6 +1000,27 @@ def _emit_company_statements(
         addresses=_profile_addresses(profile),
         alternate_names=alternate_names,
         source_url=company_url,
+    )
+    # Register status → liveness (Phase 151). The Companies House
+    # ``company_status`` codelist (constants.yml) distinguishes the closed
+    # states from the insolvency processes; only the former end the company.
+    _liveness.apply_register_status(
+        entity,
+        source_label=SOURCE_NAMES["companies_house"],
+        liveness=_liveness.classify(
+            profile.get("company_status"),
+            live=("active", "open", "registered"),
+            pending=(
+                "liquidation",
+                "receivership",
+                "administration",
+                "voluntary-arrangement",
+                "insolvency-proceedings",
+            ),
+            terminal=("dissolved", "converted-closed", "closed", "removed"),
+        ),
+        raw=profile.get("company_status"),
+        since=profile.get("date_of_cessation"),
     )
     entity_sid = entity["statementId"]
     if entity_sid not in seen_sids:
@@ -1957,11 +1986,23 @@ def map_gemi_greece(bundle: dict[str, Any]) -> BODSBundle:
         jurisdiction=("Greece", "GR"),
         identifiers=_gemi_identifiers(company),
         founding_date=_gemi_date(company.get("incorporationDate")),
-        dissolution_date=dissolution,
         addresses=_gemi_addresses(company),
         alternate_names=alternates,
         entity_details=details,
         source_url=url,
+    )
+    # Shared liveness path (Phase 151): the codelist's ``isActive`` is the
+    # classification; an unknown status stays unknown, never "inactive".
+    _liveness.apply_register_status(
+        entity,
+        source_label=SOURCE_NAMES["gemi_greece"],
+        liveness=(
+            _liveness.LIVE if is_active is True
+            else _liveness.TERMINAL if is_active is False
+            else _liveness.UNKNOWN
+        ),
+        raw=status_label,
+        since=dissolution,
     )
     statements.extend([entity])
 
@@ -2530,10 +2571,17 @@ def _gleif_entity_statement(
     creation_date_raw = entity_block.get("creationDate") or ""
     founding_date = creation_date_raw[:10] if creation_date_raw else None
 
-    # entity.expiration.date → dissolutionDate (set when entity dissolved/merged).
+    # entity.status (ACTIVE / INACTIVE) is the LEI system's view of whether the
+    # legal entity still exists; entity.expiration.date/.reason say when and
+    # why it stopped (dissolved, merged, ...). Both go through the shared
+    # liveness path (Phase 151): INACTIVE without an expiration date is now
+    # visible as a status annotation rather than lost. ``registration.status``
+    # (ISSUED / LAPSED / RETIRED / ...) is a different question — whether the
+    # LEI *record* is maintained — and is deliberately not read as liveness.
     expiration = entity_block.get("expiration") or {}
     expiration_date_raw = expiration.get("date") or ""
-    dissolution_date = expiration_date_raw[:10] if expiration_date_raw else None
+    expiration_date = expiration_date_raw[:10] if expiration_date_raw else None
+    entity_status = str(entity_block.get("status") or "")
 
     stmt = make_entity_statement(
         source_id="gleif",
@@ -2544,9 +2592,25 @@ def _gleif_entity_statement(
         addresses=addresses,
         alternate_names=alternate_names,
         founding_date=founding_date,
-        dissolution_date=dissolution_date,
         source_url=source_url,
         statement_date=gleif_statement_date,
+    )
+    gleif_liveness = _liveness.classify(
+        entity_status, live=("ACTIVE",), terminal=("INACTIVE",)
+    )
+    if gleif_liveness == _liveness.UNKNOWN and expiration_date:
+        # An expiration date with no status field (older cached records)
+        # still means the entity ended.
+        gleif_liveness = _liveness.TERMINAL
+    raw_status = entity_status
+    if expiration.get("reason"):
+        raw_status = f"{entity_status} ({expiration['reason']})" if entity_status else str(expiration["reason"])
+    _liveness.apply_register_status(
+        stmt,
+        source_label=SOURCE_NAMES["gleif"],
+        liveness=gleif_liveness,
+        raw=raw_status or None,
+        since=expiration_date,
     )
 
     # Resolve GLEIF's ISO 20275 legal-form code (entity.legalForm.id, e.g.
@@ -2716,6 +2780,18 @@ def map_zefix(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         addresses=addresses,
         source_url=source_url or None,
     )
+    # Zefix ``status``: ACTIVE / BEING_CANCELLED / CANCELLED (Phase 151).
+    _liveness.apply_register_status(
+        entity,
+        source_label=SOURCE_NAMES["zefix"],
+        liveness=_liveness.classify(
+            company.get("status"),
+            live=("ACTIVE",),
+            pending=("BEING_CANCELLED",),
+            terminal=("CANCELLED",),
+        ),
+        raw=company.get("status") or None,
+    )
 
     # Carry the Swiss legal form (e.g. "Foundation"/"Stiftung", "Corporation")
     # as the non-schema `legalFormLabel` annotation. This is what the AMLA
@@ -2826,6 +2902,18 @@ def map_kvk(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         founding_date=founding_date,
         source_url=f"https://www.kvk.nl/zoeken/handelsnaam/?q={kvk_number}",
     )
+    # datumEinde (YYYYMMDD) is the end of the registration — the register's
+    # only liveness signal in the open-data profile (Phase 151). No end date
+    # says nothing either way, so no annotation is written.
+    raw_end = str(company.get("datumEinde") or "").strip()
+    if len(raw_end) == 8 and raw_end.isdigit():
+        _liveness.apply_register_status(
+            entity,
+            source_label=SOURCE_NAMES["kvk"],
+            liveness=_liveness.TERMINAL,
+            raw="datumEinde",
+            since=f"{raw_end[:4]}-{raw_end[4:6]}-{raw_end[6:]}",
+        )
     yield entity
 
 
@@ -3402,6 +3490,37 @@ def map_bolagsverket(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         founding_date=founding_date,
         addresses=addresses,
         source_url=source_url,
+    )
+    # Register status (Phase 151): ``avregistreradOrganisation`` carries the
+    # deregistration date and ``avregistreringsorsak`` the reason; a pending
+    # winding-up / restructuring list (konkurs, likvidation, ...) is the
+    # pending class; ``verksamOrganisation.kod`` JA is live.
+    dereg = (company.get("avregistreradOrganisation") or {}).get("avregistreringsdatum") or ""
+    dereg_reason = (company.get("avregistreringsorsak") or {}).get("klartext") or ""
+    pending_list = (
+        (company.get("pagaendeAvvecklingsEllerOmstruktureringsforfarande") or {}).get(
+            "pagaendeAvvecklingsEllerOmstruktureringsforfarandeLista"
+        )
+        or []
+    )
+    active_code = str((company.get("verksamOrganisation") or {}).get("kod") or "").upper()
+    if dereg:
+        se_liveness, se_raw, se_since = _liveness.TERMINAL, dereg_reason or "avregistrerad", str(dereg)[:10]
+    elif pending_list:
+        first = pending_list[0] if isinstance(pending_list[0], dict) else {}
+        se_liveness = _liveness.PENDING
+        se_raw = str(first.get("klartext") or first.get("kod") or "pågående avveckling")
+        se_since = str(first.get("fromDatum") or "")[:10] or None
+    elif active_code == "JA":
+        se_liveness, se_raw, se_since = _liveness.LIVE, "verksam", None
+    else:
+        se_liveness, se_raw, se_since = _liveness.UNKNOWN, None, None
+    _liveness.apply_register_status(
+        entity,
+        source_label=SOURCE_NAMES["bolagsverket"],
+        liveness=se_liveness,
+        raw=se_raw,
+        since=se_since,
     )
     yield entity
 
@@ -3998,6 +4117,20 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         founding_date=founding_date,
         addresses=addresses,
         source_url=source_url,
+    )
+    # e-Business Register status label as shown on the company page
+    # (Phase 151): "Entered into the register" is live; liquidation /
+    # bankruptcy are pending; "Deleted from the register" is terminal.
+    _liveness.apply_register_status(
+        company_stmt,
+        source_label=SOURCE_NAMES["ariregister"],
+        liveness=_liveness.classify(
+            bundle.get("status"),
+            live=("Entered into the register", "Registered"),
+            pending=("In liquidation", "Liquidation", "Bankrupt", "In bankruptcy", "Being deleted"),
+            terminal=("Deleted from the register", "Deleted", "Removed from the register"),
+        ),
+        raw=bundle.get("status") or None,
     )
     yield company_stmt
     company_stmt_id: str = company_stmt["statementId"]
@@ -4846,7 +4979,7 @@ def _ftm_entity_statement(
     addresses = _ftm_addresses(props)
     founding_date = (props.get("incorporationDate") or [None])[0]
 
-    return make_entity_statement(
+    stmt = make_entity_statement(
         source_id=source_id,
         local_id=ftm_id,
         name=name,
@@ -4856,6 +4989,20 @@ def _ftm_entity_statement(
         founding_date=founding_date,
         source_url=source_url,
     )
+    # FtM ``dissolutionDate`` / ``status`` (Phase 151). Only a dissolution date
+    # is a positive statement; FtM ``status`` is free text from whichever
+    # upstream dataset produced the record, so it travels as the raw label
+    # but is not classified on its own.
+    ftm_dissolved = (props.get("dissolutionDate") or [None])[0]
+    if ftm_dissolved:
+        _liveness.apply_register_status(
+            stmt,
+            source_label=SOURCE_NAMES.get(source_id, source_id),
+            liveness=_liveness.TERMINAL,
+            raw=(props.get("status") or [None])[0],
+            since=str(ftm_dissolved)[:10],
+        )
+    return stmt
 
 
 def _ftm_person_statement(
@@ -5787,6 +5934,25 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
         entity_type="registeredEntity",
         source_url=oc_url,
     )
+    # OpenCorporates normalises every register's status into ``inactive``
+    # (bool) and carries the register's own words in ``current_status`` and,
+    # where published, a ``dissolution_date``. The bool is OC's classification
+    # and is what we key on; the label travels verbatim (Phase 151).
+    oc_inactive = company.get("inactive")
+    oc_dissolved = company.get("dissolution_date")
+    if oc_dissolved or oc_inactive is True:
+        oc_liveness = _liveness.TERMINAL
+    elif oc_inactive is False:
+        oc_liveness = _liveness.LIVE
+    else:
+        oc_liveness = _liveness.UNKNOWN
+    _liveness.apply_register_status(
+        subject_stmt,
+        source_label=SOURCE_NAMES["opencorporates"],
+        liveness=oc_liveness,
+        raw=company.get("current_status") or company.get("company_status"),
+        since=oc_dissolved,
+    )
     subject_stmt_id: str = subject_stmt["statementId"]
     result.extend([subject_stmt])
 
@@ -6623,7 +6789,7 @@ def map_cro(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
     address = _cro_address(company)
 
-    yield make_entity_statement(
+    cro_entity = make_entity_statement(
         source_id="cro",
         local_id=crn,
         name=name,
@@ -6634,6 +6800,28 @@ def map_cro(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         entity_type=entity_type,
         source_url=source_url,
     )
+    # CRO ``company_status`` (Phase 151): "Normal" is live; the insolvency
+    # and strike-off-listed states are pending; dissolved / struck off end
+    # the company. ``company_status_date`` when the open-data row has it.
+    cro_status = (company.get("company_status") or "").strip()
+    cro_liveness = _liveness.classify(
+        cro_status,
+        live=("Normal",),
+        pending=("Liquidation", "Receivership", "Examinership", "Strike Off Listed", "Strike-off Listed"),
+        terminal=("Dissolved", "Struck Off", "Struck-off", "Amalgamated", "Ceased"),
+    )
+    _liveness.apply_register_status(
+        cro_entity,
+        source_label=SOURCE_NAMES["cro"],
+        liveness=cro_liveness,
+        raw=cro_status or None,
+        since=(
+            str(company.get("company_status_date") or "")[:10] or None
+            if cro_liveness != _liveness.LIVE
+            else None
+        ),
+    )
+    yield cro_entity
 
 
 def map_malta_mbr(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
@@ -6685,7 +6873,7 @@ def map_malta_mbr(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     addr_str = ", ".join(p for p in parts if p)
     address = _addr("registered", addr_str, "MT") if addr_str else None
 
-    yield make_entity_statement(
+    mbr_entity = make_entity_statement(
         source_id="malta_mbr",
         local_id=reg,
         name=name,
@@ -6697,6 +6885,25 @@ def map_malta_mbr(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         entity_details=legal_form,
         source_url=source_url,
     )
+    # MBR ``state`` + ``status_effective_date`` (Phase 151). Labels seen in
+    # the open-data API: Active, Struck Off, Dissolved, In Liquidation,
+    # Defunct, Removed.
+    mbr_state = (company.get("state") or "").strip()
+    mbr_liveness = _liveness.classify(
+        mbr_state,
+        live=("active",),
+        pending=("in liquidation", "in dissolution", "under liquidation"),
+        terminal=("struck off", "dissolved", "defunct", "removed", "liquidated"),
+    )
+    mbr_since = (company.get("status_effective_date") or "").strip()[:10] or None
+    _liveness.apply_register_status(
+        mbr_entity,
+        source_label=SOURCE_NAMES["malta_mbr"],
+        liveness=mbr_liveness,
+        raw=mbr_state or None,
+        since=mbr_since if mbr_liveness != _liveness.LIVE else None,
+    )
+    yield mbr_entity
 
 
 # Brazil CNPJ — QSA qualification label → BODS interest type.
@@ -6763,6 +6970,23 @@ def map_cnpj_brazil(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         alternate_names=[company["trade_name"]] if company.get("trade_name") else [],
         entity_details=company.get("legal_nature"),
         source_url=source_url,
+    )
+    # Receita Federal ``situacao_cadastral`` (Phase 151): ATIVA is live;
+    # BAIXADA (closed) and NULA (annulled) are terminal. SUSPENSA and INAPTA
+    # are irregular-but-existing registrations and are left unclassified
+    # rather than guessed. ``data_situacao_cadastral`` is the effective date.
+    br_status = (company.get("status") or "").strip()
+    br_liveness = _liveness.classify(
+        br_status,
+        live=("ATIVA", "02", "2"),
+        terminal=("BAIXADA", "08", "8", "NULA", "01", "1"),
+    )
+    _liveness.apply_register_status(
+        company_stmt,
+        source_label=SOURCE_NAMES["cnpj_brazil"],
+        liveness=br_liveness,
+        raw=br_status or None,
+        since=(company.get("status_date") if br_liveness == _liveness.TERMINAL else None),
     )
     yield company_stmt
     company_stmt_id: str = company_stmt["statementId"]
@@ -6882,6 +7106,29 @@ def map_nz_companies(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         alternate_names=[a for a in alt_names if a],
         entity_details=company.get("entity_type"),
         source_url=source_url,
+    )
+    # NZBN entity status (Phase 151): "Registered" is live; the insolvency
+    # states are pending; "Removed" is the register's terminal state. The
+    # lookup bundle carries no status date (the entity-statuses history is
+    # fetched only for the Time Machine), so none is stated.
+    nz_status = (company.get("status") or "").strip()
+    _liveness.apply_register_status(
+        company_stmt,
+        source_label=SOURCE_NAMES["nz_companies"],
+        liveness=_liveness.classify(
+            nz_status,
+            live=("registered",),
+            pending=(
+                "in liquidation",
+                "in receivership",
+                "in voluntary administration",
+                "in statutory management",
+                "registered (in liquidation)",
+                "registered (in receivership)",
+            ),
+            terminal=("removed", "struck off", "deregistered", "amalgamated"),
+        ),
+        raw=nz_status or None,
     )
     yield company_stmt
     company_stmt_id: str = company_stmt["statementId"]
@@ -7050,6 +7297,35 @@ def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         founding_date=founding_date,
         addresses=[address] if address else [],
         source_url=source_url,
+    )
+    # Enhetsregisteret flags (Phase 151): ``slettedato`` is the deletion
+    # date (terminal); ``konkurs`` / ``underAvvikling`` /
+    # ``underTvangsavviklingEllerTvangsopplosning`` are pending processes;
+    # an entity with none of these is live in the register's eyes.
+    no_deleted = str(entity.get("slettedato") or "")[:10] or None
+    no_pending = [
+        label
+        for key, label in (
+            ("konkurs", "konkurs"),
+            ("underAvvikling", "under avvikling"),
+            ("underTvangsavviklingEllerTvangsopplosning", "under tvangsavvikling eller tvangsoppløsning"),
+        )
+        if entity.get(key) is True
+    ]
+    if no_deleted:
+        no_liveness, no_raw = _liveness.TERMINAL, "slettet"
+    elif no_pending:
+        no_liveness, no_raw = _liveness.PENDING, ", ".join(no_pending)
+    elif any(k in entity for k in ("konkurs", "underAvvikling")):
+        no_liveness, no_raw = _liveness.LIVE, "registrert"
+    else:
+        no_liveness, no_raw = _liveness.UNKNOWN, None
+    _liveness.apply_register_status(
+        company_stmt,
+        source_label=SOURCE_NAMES["brreg"],
+        liveness=no_liveness,
+        raw=no_raw,
+        since=no_deleted,
     )
     yield company_stmt
     company_stmt_id: str = company_stmt["statementId"]
@@ -7239,7 +7515,7 @@ def map_prh(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
     address = _prh_address(company)
 
-    yield make_entity_statement(
+    prh_entity = make_entity_statement(
         source_id="prh",
         local_id=ytunnus,
         name=name,
@@ -7250,6 +7526,30 @@ def map_prh(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         entity_type=entity_type,
         source_url=source_url,
     )
+    # YTJ open data (Phase 151): a ``liquidations`` block means a pending
+    # process; an ``endDate`` on the company is its end. Otherwise the
+    # register says nothing about liveness beyond listing it, so nothing is
+    # asserted.
+    prh_end = str(company.get("endDate") or "")[:10] or None
+    if prh_end:
+        _liveness.apply_register_status(
+            prh_entity,
+            source_label=SOURCE_NAMES["prh"],
+            liveness=_liveness.TERMINAL,
+            raw="endDate",
+            since=prh_end,
+        )
+    elif company.get("liquidations"):
+        liq = company.get("liquidations")
+        first = liq[0] if isinstance(liq, list) and liq and isinstance(liq[0], dict) else {}
+        _liveness.apply_register_status(
+            prh_entity,
+            source_label=SOURCE_NAMES["prh"],
+            liveness=_liveness.PENDING,
+            raw=str(first.get("type") or first.get("description") or "liquidation"),
+            since=str(first.get("registrationDate") or "")[:10] or None,
+        )
+    yield prh_entity
 
 
 # ----------------------------------------------------------------------
@@ -7349,8 +7649,12 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
     # Parse registration / dissolution dates (datetime → date string).
     founding_date = _lv_date(entity_rec.get("registered"))
+    # ``terminated`` is the register's termination date; ``closed`` a closure
+    # marker. Either ends the entity (the adapter's own search summary already
+    # reads them as "inactive"); the parsed date was previously computed here
+    # and discarded (Phase 151).
     dissolution_date = _lv_date(entity_rec.get("terminated"))
-    _ = dissolution_date  # retained for future use; make_entity_statement accepts it
+    lv_closed = str(entity_rec.get("closed") or "").strip()
 
     # Alternate names from historical_names table.
     hist_names: list[dict[str, Any]] = bundle.get("historical_names") or []
@@ -7397,6 +7701,13 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         alternate_names=alternate_names,
         entity_type=entity_type,
         source_url=source_url,
+    )
+    _liveness.apply_register_status(
+        entity_stmt,
+        source_label=SOURCE_NAMES["ur_latvia"],
+        liveness=_liveness.TERMINAL if (dissolution_date or lv_closed) else _liveness.LIVE,
+        raw=lv_closed or ("terminated" if dissolution_date else "registered"),
+        since=dissolution_date,
     )
     yield entity_stmt
     entity_stmt_id: str = entity_stmt["statementId"]
@@ -7932,6 +8243,17 @@ def map_firmenbuch(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         addresses=addresses,
         source_url=source_url,
     )
+    # Firmenbuch AUFRECHT attribute → "aktiv" / "gelöscht" (Phase 151).
+    _liveness.apply_register_status(
+        company_stmt,
+        source_label=SOURCE_NAMES["firmenbuch"],
+        liveness=_liveness.classify(
+            extract.get("status"),
+            live=("aktiv", "aufrecht"),
+            terminal=("gelöscht", "geloescht", "gelöscht (amtswegig)"),
+        ),
+        raw=extract.get("status") or None,
+    )
     yield company_stmt
     company_stmt_id: str = company_stmt["statementId"]
 
@@ -8207,6 +8529,18 @@ def map_cac_nigeria(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         identifiers=[cac_id],
         source_url=source_url,
     )
+    # CAC public-search status (Phase 151). "ACTIVE" is live. "INACTIVE" at
+    # the CAC means annual returns are outstanding, not that the company has
+    # ceased, so it is deliberately left unclassified rather than read as
+    # dissolved.
+    _liveness.apply_register_status(
+        subject_stmt,
+        source_label=SOURCE_NAMES["cac_nigeria"],
+        liveness=_liveness.classify(
+            record.get("status"), live=("ACTIVE",), terminal=("DISSOLVED", "STRUCK OFF", "WOUND UP")
+        ),
+        raw=(record.get("status") or "").strip() or None,
+    )
     yield subject_stmt
     subject_id: str = subject_stmt["statementId"]
 
@@ -8346,7 +8680,7 @@ def map_jar_lithuania(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
     source_url = f"https://www.registrucentras.lt/jar/p/index.php?kod={lt_code}"
 
-    yield make_entity_statement(
+    jar_entity = make_entity_statement(
         source_id="jar_lithuania",
         local_id=lt_code,
         name=name,
@@ -8356,6 +8690,22 @@ def map_jar_lithuania(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         entity_type=entity_type,
         source_url=source_url,
     )
+    # JAR status (Phase 151), in the register's Lithuanian: Veikiantis =
+    # operating; Likviduojamas / Bankrutuojantis / Bankrotas /
+    # Reorganizuojamas = a process under way; Išregistruotas = deregistered.
+    # Sustabdyta (suspended) is left unclassified.
+    _liveness.apply_register_status(
+        jar_entity,
+        source_label=SOURCE_NAMES["jar_lithuania"],
+        liveness=_liveness.classify(
+            bundle.get("status"),
+            live=("Veikiantis", "Veikianti", "Veikiantys"),
+            pending=("Likviduojamas", "Likviduojama", "Bankrutuojantis", "Bankrutuojanti", "Bankrotas", "Reorganizuojamas", "Reorganizuojama"),
+            terminal=("Išregistruotas", "Išregistruota", "Išregistruotas iš registro"),
+        ),
+        raw=(bundle.get("status") or "").strip() or None,
+    )
+    yield jar_entity
 
 
 # ----------------------------------------------------------------------
@@ -8451,6 +8801,23 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         entity_type=entity_type,
         source_url=source_url,
         statement_date=ares_last_updated,
+    )
+    # ARES status, normalised by the adapter's ``_STATUS_MAP`` (Phase 151):
+    # active; liquidation (pending); dissolved / dissolved-merger /
+    # not-registered (terminal). ``datumZaniku`` is the dissolution date when
+    # the adapter passes it through.
+    ares_status = (entity_rec.get("status") or "").strip()
+    _liveness.apply_register_status(
+        entity_stmt,
+        source_label=SOURCE_NAMES["ares"],
+        liveness=_liveness.classify(
+            ares_status,
+            live=("active",),
+            pending=("liquidation",),
+            terminal=("dissolved", "dissolved-merger", "not-registered"),
+        ),
+        raw=ares_status or None,
+        since=str(entity_rec.get("datumZaniku") or "")[:10] or None,
     )
     yield entity_stmt
     entity_stmt_id: str = entity_stmt["statementId"]
@@ -8802,7 +9169,7 @@ def map_rpo_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
     source_url: str = bundle.get("link") or f"https://rpo.statistics.sk/"
 
-    yield make_entity_statement(
+    rpo_entity = make_entity_statement(
         source_id="rpo_slovakia",
         local_id=ico,
         name=name,
@@ -8813,6 +9180,17 @@ def map_rpo_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         entity_type="registeredEntity",
         source_url=source_url,
     )
+    # ``termination`` is the RPO's dissolution date (null = active); the
+    # adapter derives ``status`` from it (Phase 151).
+    rpo_termination = bundle.get("termination") or None
+    _liveness.apply_register_status(
+        rpo_entity,
+        source_label=SOURCE_NAMES["rpo_slovakia"],
+        liveness=_liveness.TERMINAL if rpo_termination else _liveness.LIVE,
+        raw=bundle.get("status"),
+        since=rpo_termination,
+    )
+    yield rpo_entity
 
 
 # ---------------------------------------------------------------------------
@@ -9081,6 +9459,14 @@ def map_bce_belgium(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         addresses=addresses,
         source_url=source_url,
     )
+    # KBO/BCE open-data ``Status``: AC (active) / ST (stopped) (Phase 151).
+    be_status = (bundle.get("status") or "").strip()
+    _liveness.apply_register_status(
+        entity_stmt,
+        source_label=SOURCE_NAMES["bce_belgium"],
+        liveness=_liveness.classify(be_status, live=("AC", "active"), terminal=("ST", "stopped")),
+        raw=be_status or None,
+    )
     yield entity_stmt
 
 
@@ -9136,12 +9522,15 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
     # ── Founding date from activities ─────────────────────────────────────
     founding_date: str | None = None
+    dissolution_date: str | None = None
     for act_entry in corp.get("activities") or []:
         act = act_entry.get("activity") or {}
         act_type = (act.get("activity") or "").lower()
-        if act_type in ("incorporation", "continuance", "amalgamation"):
+        if act_type in ("incorporation", "continuance", "amalgamation") and not founding_date:
             founding_date = act.get("date") or None
-            break
+        # The same activity log records the end of the corporation (Phase 151).
+        if any(k in act_type for k in ("dissolution", "dissolved", "discontinuance", "amalgamated into")):
+            dissolution_date = act.get("date") or dissolution_date
 
     # ── Address from adresses (documented API typo) ───────────────────────
     addresses: list[dict[str, Any]] = []
@@ -9188,6 +9577,24 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         founding_date=founding_date,
         addresses=addresses,
         source_url=source_url,
+    )
+    # Corporation ``status`` (Active / Dissolved / Amalgamated / Discontinued /
+    # Inactive) plus any dissolution activity date (Phase 151).
+    cc_status = (corp.get("status") or "").strip()
+    cc_liveness = _liveness.classify(
+        cc_status,
+        live=("active",),
+        pending=("dissolution pending", "pending dissolution", "in liquidation"),
+        terminal=("dissolved", "amalgamated", "discontinued", "inactive", "revoked"),
+    )
+    if cc_liveness == _liveness.UNKNOWN and dissolution_date:
+        cc_liveness = _liveness.TERMINAL
+    _liveness.apply_register_status(
+        company_stmt,
+        source_label=SOURCE_NAMES["corporations_canada"],
+        liveness=cc_liveness,
+        raw=cc_status or None,
+        since=dissolution_date,
     )
     yield company_stmt
     company_stmt_id: str = company_stmt["statementId"]
@@ -9249,7 +9656,7 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 # Fields mapped:
 #   uen              → identifiers (SG-ACRA scheme)
 #   entity_name      → name
-#   uen_status_desc  → dissolved / founding date inference (status only)
+#   uen_status_desc  → register status → liveness annotation (+ dissolutionDate never: no date published)
 #   entity_type_desc → entity type label (stored in description)
 #   uen_issue_date   → foundingDate
 #   reg_street_name + reg_postal_code → registered address
@@ -9294,12 +9701,20 @@ def map_acra_singapore(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     if issue_date and re.match(r"\d{4}-\d{2}-\d{2}", issue_date):
         founding_date = issue_date
 
-    # Dissolved date: we don't have an explicit dissolution date in the
-    # open dataset; mark the entity as dissolved when status contains
-    # "struck off" or "cancelled".
-    dissolved_date: str | None = None
-    if any(k in status_raw for k in ("struck off", "cancelled")):
-        dissolved_date = "unknown"  # flag only; no date available
+    # The open dataset carries a status label but no date, so the status is
+    # recorded as a liveness annotation and ``dissolutionDate`` is never set
+    # (Phase 151 — it used to be written as JSON null, which the schema
+    # forbids). Labels seen in the dataset: "Live", "Live Company", "Struck
+    # Off", "Cancelled", "Ceased Registration", "Dissolved", "Amalgamated",
+    # "In Liquidation", "Receivership", "Converted To LLP".
+    if any(k in status_raw for k in ("struck off", "cancelled", "ceased", "dissolved", "amalgamated", "converted")):
+        acra_liveness = _liveness.TERMINAL
+    elif any(k in status_raw for k in ("liquidation", "receivership", "winding")):
+        acra_liveness = _liveness.PENDING
+    elif status_raw.startswith("live"):
+        acra_liveness = _liveness.LIVE
+    else:
+        acra_liveness = _liveness.UNKNOWN
 
     # Entity statement.
     stmt = make_entity_statement(
@@ -9322,9 +9737,12 @@ def map_acra_singapore(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         }
         stmt["recordDetails"] = record_details
 
-    # Mark as inactive when struck off / cancelled.
-    if dissolved_date:
-        stmt.setdefault("recordDetails", {})["dissolutionDate"] = None  # unknown
+    _liveness.apply_register_status(
+        stmt,
+        source_label=SOURCE_NAMES["acra_singapore"],
+        liveness=acra_liveness,
+        raw=(bundle.get("uen_status_desc") or "").strip() or None,
+    )
 
     yield stmt
 
@@ -9410,9 +9828,27 @@ def map_cvr_denmark(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     if legal_form_text:
         record_details["legalFormLabel"] = legal_form_text
 
-    # Dissolution / end date.
+    # Register status → liveness (Phase 151). ``status`` is the adapter's
+    # normalised English label (``_STATUS_MAP`` in sources/cvr_denmark.py,
+    # falling back to the API's own text); ``end_date`` is
+    # ``virksomhedOphoersdato``. A published end date is the register's own
+    # statement that the company ended and outranks the label.
+    cvr_liveness = _liveness.classify(
+        status,
+        live=("active",),
+        pending=("in bankruptcy", "in forced dissolution", "in voluntary liquidation"),
+        terminal=("dissolved", "dissolved (error registration)", "deleted"),
+    )
     if end_date:
-        record_details["dissolutionDate"] = end_date
+        cvr_liveness = _liveness.TERMINAL
+    stmt["recordDetails"] = record_details
+    _liveness.apply_register_status(
+        stmt,
+        source_label=SOURCE_NAMES["cvr_denmark"],
+        liveness=cvr_liveness,
+        raw=bundle.get("status_label") or (status if status != "unknown" else None),
+        since=end_date,
+    )
 
     # Industry code (DB07/NACE) as supplemental annotation.
     if branche_code:
@@ -9511,6 +9947,19 @@ def map_cyprus_drcor(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         founding_date=founding_date,
         addresses=addresses,
         source_url=source_url,
+    )
+    # DRCOR organisation status (Phase 151).
+    cy_status = (_cy_field(organisation, "org_status") or "").strip()
+    _liveness.apply_register_status(
+        company_stmt,
+        source_label=SOURCE_NAMES["cyprus_drcor"],
+        liveness=_liveness.classify(
+            cy_status,
+            live=("Active", "Εγγεγραμμένη"),
+            pending=("Under Liquidation", "In Liquidation", "Under Strike Off", "Strike Off Pending"),
+            terminal=("Dissolved", "Struck Off", "Deleted", "Liquidated"),
+        ),
+        raw=cy_status or None,
     )
     org_type_label = _cy_field(organisation, "org_type")
     if org_type_label:
@@ -9642,10 +10091,19 @@ def map_abr_australia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     record_details = stmt.get("recordDetails") or {}
     if entity_type_name:
         record_details["entityType"] = {"type": "registeredEntity", "subtype": entity_type_name}
-    if abn_status and abn_status != "active":
-        # ABN Lookup gives a status (e.g. "Cancelled") but not always a date.
-        record_details["dissolutionDate"] = (bundle.get("abn_status_from") or "unknown")
     stmt["recordDetails"] = record_details
+    # ABN Lookup publishes the ABN's status ("Active" / "Cancelled") and the
+    # date it took effect. A cancelled ABN is the register's terminal state
+    # for the registration OpenCheck resolved (Phase 151 — previously written
+    # as the literal "unknown" when no date was given, which the schema
+    # forbids; now the date is set only when ABR gives one).
+    _liveness.apply_register_status(
+        stmt,
+        source_label=SOURCE_NAMES["abr_australia"],
+        liveness=_liveness.classify(abn_status, live=("active",), terminal=("cancelled",)),
+        raw=(bundle.get("abn_status") or "").strip() or None,
+        since=bundle.get("abn_status_from") if abn_status and abn_status != "active" else None,
+    )
 
     yield stmt
 
@@ -9659,8 +10117,9 @@ def map_abr_australia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
 # CompanyStatus values that mean the company has ceased to exist on the
 # register. Deliberately conservative: in-progress states ("Under Process of
-# Striking Off", "Under Liquidation") and inactive-but-registered states
-# ("Dormant") are NOT treated as dissolution.
+# Striking Off", "Under Liquidation") are the ``pending`` class and
+# inactive-but-registered states ("Dormant") are still ``live`` — the company
+# exists.
 _MCA_TERMINAL_STATUSES = frozenset({
     "strike off",
     "struck off",
@@ -9670,6 +10129,12 @@ _MCA_TERMINAL_STATUSES = frozenset({
     "converted to llp",
     "converted to llp and dissolved",
 })
+_MCA_PENDING_STATUSES = frozenset({
+    "under process of striking off",
+    "under liquidation",
+    "to be struck off",
+})
+_MCA_LIVE_STATUSES = frozenset({"active", "dormant", "active in progress", "dormant under section 455"})
 
 
 def map_mca_india(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
@@ -9733,12 +10198,22 @@ def map_mca_india(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             entity_type["details"] = " — ".join(detail_bits)
         record_details["entityType"] = entity_type
 
-    # Terminal register status → dissolution (date not published).
-    status = (bundle.get("status") or "").strip().lower()
-    if status in _MCA_TERMINAL_STATUSES:
-        record_details["dissolutionDate"] = "unknown"
-
     stmt["recordDetails"] = record_details
+
+    # Register status → liveness annotation (Phase 151). MCA publishes no
+    # date, so ``dissolutionDate`` is never set — it used to be the literal
+    # "unknown", which the schema forbids.
+    _liveness.apply_register_status(
+        stmt,
+        source_label=SOURCE_NAMES["mca_india"],
+        liveness=_liveness.classify(
+            bundle.get("status"),
+            live=_MCA_LIVE_STATUSES,
+            pending=_MCA_PENDING_STATUSES,
+            terminal=_MCA_TERMINAL_STATUSES,
+        ),
+        raw=(bundle.get("status") or "").strip() or None,
+    )
 
     yield stmt
 

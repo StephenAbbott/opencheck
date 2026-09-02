@@ -159,6 +159,9 @@ def shape_sources(payload: Any) -> dict[str, Any]:
             "license": s.license,
             "live_available": s.live_available,
             "homepage": s.homepage,
+            # Which sources this one republishes — an agent counting "N
+            # sources agree" needs it for the same reason the UI does.
+            "derived_from": list(s.derived_from),
         }
         for s in payload.sources
     ]

@@ -331,15 +331,29 @@ def test_map_entity_statement():
 
 
 def test_map_terminal_status_sets_dissolution():
+    """MCA publishes no date, so the terminal status is a liveness annotation
+    and ``dissolutionDate`` is NOT set (Phase 151 — it used to be the literal
+    "unknown", which the BODS schema forbids)."""
+    from opencheck.bods.liveness import read_register_status
+
     (stmt,) = list(map_mca_india(_bundle(status="Strike Off")))
-    assert stmt["recordDetails"]["dissolutionDate"] == "unknown"
+    assert "dissolutionDate" not in stmt["recordDetails"]
+    status = read_register_status(stmt)
+    assert status is not None
+    assert status["liveness"] == "terminal"
+    assert status["raw"] == "Strike Off"
+    assert status["since"] is None
 
 
 def test_map_in_progress_status_is_not_dissolution():
+    from opencheck.bods.liveness import read_register_status
+
     (stmt,) = list(map_mca_india(_bundle(status="Under Process of Striking Off")))
     assert "dissolutionDate" not in stmt["recordDetails"]
+    assert read_register_status(stmt)["liveness"] == "pending"
     (stmt,) = list(map_mca_india(_bundle(status="Dormant")))
     assert "dissolutionDate" not in stmt["recordDetails"]
+    assert read_register_status(stmt)["liveness"] == "live"
 
 
 def test_map_skips_stub_and_incomplete():

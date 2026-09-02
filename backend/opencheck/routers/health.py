@@ -6,10 +6,10 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from .. import __version__, memwatch, signalstats
+from .. import __version__, consistencystats, memwatch, signalstats
 from ..bo_access import notice_for
 from ..config import get_settings
-from ..sources import REGISTRY, SourceInfo
+from ..sources import REGISTRY, SourceInfo, lineage
 
 router = APIRouter()
 
@@ -73,14 +73,31 @@ async def signal_stats() -> JSONResponse:
     return JSONResponse(signalstats.stats(), headers={"Cache-Control": "no-store"})
 
 
+@router.get("/consistencystats")
+async def consistency_stats() -> JSONResponse:
+    """How often independent sources agree about the same entity, per field
+    and source pair, since the last deploy (Phase 152, shadow mode).
+
+    Same contract as /signalstats: public, unauthenticated, aggregate only,
+    closed-vocabulary keys (field names, adapter ids, relation names), so no
+    entity name, identifier or date can appear. Read ``disagree_rate`` per
+    ``field|source_a|source_b`` row: under 10 % after two weeks of traffic
+    is the gate for showing that comparison (see opencheck/consistency.py).
+    """
+    return JSONResponse(consistencystats.stats(), headers={"Cache-Control": "no-store"})
+
+
 @router.get("/sources", response_model=SourcesResponse)
 async def sources() -> SourcesResponse:
     # Attach the computed EU/EEA beneficial-ownership access notice per register.
     # Adapters declare only the static `country`; the (date-dependent) notice is
     # computed here so it flips on the restriction date without a code change.
     out: list[SourceInfo] = []
-    for adapter in REGISTRY.values():
+    for source_id, adapter in REGISTRY.items():
         info = adapter.info
         notice = notice_for(info.country)
-        out.append(info.model_copy(update={"bo_access": notice}) if notice else info)
+        update: dict = {"derived_from": sorted(lineage.derived_from(source_id))}
+        if notice:
+            update["bo_access"] = notice
+        out.append(info.model_copy(update=update))
     return SourcesResponse(sources=out)

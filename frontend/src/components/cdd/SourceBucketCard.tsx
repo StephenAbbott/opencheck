@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useId, useMemo, useState, useSyncExternalSto
 import { deepen } from "../../lib/api";
 import { groupHitsForDisplay, siblingNote } from "../../lib/hitGroups";
 import { rowFinding } from "../../lib/sourceFinding";
+import { readRegisterStatus, registerStatusLabel } from "../../lib/liveness";
 import { graphPartiesLabel } from "../../lib/vocab";
 import { ActionChip, Chip, DataTile, RowList } from "../ui";
 import type { BodsBreakdown, BoAccessNotice, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
@@ -281,6 +282,11 @@ function EntityStatementCard({ stmt }: { stmt: BODSStmt }) {
   const jurisdiction = stmtStr(rd, "incorporatedInJurisdiction", "name");
   const jurisdictionCode = stmtStr(rd, "incorporatedInJurisdiction", "code");
   const foundingDate = stmtStr(rd, "foundingDate");
+  // Register status (Phase 151): shown only when the register says the entity
+  // has ended or is ending — "active" on every card would be noise, and the
+  // absence of a terminal status is not a finding.
+  const registerStatus = readRegisterStatus(stmt);
+  const statusLabel = registerStatus ? registerStatusLabel(registerStatus) : null;
   const identifiers = stmtArr(rd, "identifiers");
   const addresses = stmtArr(rd, "addresses");
   const sourceDesc = stmtStr(stmt, "source", "description");
@@ -305,6 +311,16 @@ function EntityStatementCard({ stmt }: { stmt: BODSStmt }) {
           />
         )}
         {foundingDate && <FieldRow label="Founded" value={foundingDate} mono />}
+        {statusLabel && (
+          <FieldRow
+            label="Register status"
+            value={
+              <span className={registerStatus?.liveness === "terminal" ? "text-red-700 font-semibold" : "text-oo-warn font-semibold"}>
+                {statusLabel}
+              </span>
+            }
+          />
+        )}
         {identifiers.length > 0 && (
           <FieldRow
             label="Identifiers"

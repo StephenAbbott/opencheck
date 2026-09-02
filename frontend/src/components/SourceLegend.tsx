@@ -35,7 +35,7 @@ export function SourceLegend({
         </span>
         {corroboratedCount > 0 && (
           <span className="text-[11px] text-oo-muted">
-            {corroboratedCount} {corroboratedCount === 1 ? "node" : "nodes"} corroborated by ≥2 sources
+            {corroboratedCount} {corroboratedCount === 1 ? "node" : "nodes"} corroborated by ≥2 independent sources
           </span>
         )}
       </div>

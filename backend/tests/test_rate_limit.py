@@ -180,6 +180,8 @@ _EXEMPT_PATHS = {
     # docstring already states this explicitly; it was simply never added
     # here when Phase 110 shipped, which turned this guard red on main.
     "/signalstats",
+    # Phase 152: same contract as /signalstats — a single aggregate dict dump.
+    "/consistencystats",
 }
 
 

@@ -72,6 +72,10 @@ export interface CrossSourceLink {
   key: string;
   key_value: string;
   confidence: "strong" | "possible";
+  /** Independent origins among `hits` after source lineage (GLEIF +
+   *  OpenSanctions sharing an LEI is one). Absent on payloads recorded before
+   *  Phase 150; the client recomputes from `lineage.ts` regardless. */
+  independent_source_count?: number;
   hits: { source_id: string; hit_id: string; name: string }[];
 }
 

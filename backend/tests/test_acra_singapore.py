@@ -283,9 +283,17 @@ def test_map_acra_singapore_struck_off() -> None:
     }
     stmts = list(map_acra_singapore(bundle))
     assert len(stmts) == 1
-    # dissolutionDate key should exist when struck off.
+    # ACRA publishes no date, so the struck-off status is a liveness
+    # annotation and ``dissolutionDate`` is NOT written (Phase 151 — it used
+    # to be JSON null, which the BODS schema forbids).
+    from opencheck.bods.liveness import read_register_status
+
     rd = stmts[0].get("recordDetails") or {}
-    assert "dissolutionDate" in rd
+    assert "dissolutionDate" not in rd
+    status = read_register_status(stmts[0])
+    assert status is not None
+    assert status["liveness"] == "terminal"
+    assert status["raw"] == "Struck Off"
 
 
 def test_map_acra_singapore_address_present() -> None:

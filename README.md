@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 149** — the monthly IndexNow submission was rejected not for its key but for where the key file sat: IndexNow authorises only URLs under the key's own directory, so a key at `/indexnow/` could not vouch for `/entity/` pages. It now serves from the site root.
+**Latest: Phase 152** — the record-consistency check runs in shadow mode: independent sources describing the same entity are compared on liveness, jurisdiction, founding date and one-per-entity identifiers, and `GET /consistencystats` counts how often they disagree — nothing is shown until the measured rate says a comparison is informative rather than noise.
 
 → [Full development history](docs/status.md)
 

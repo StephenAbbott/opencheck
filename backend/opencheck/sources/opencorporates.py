@@ -31,6 +31,7 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .lineage import NATIONAL_REGISTERS
 from .oc_relationships import get_bulk_lookup_for_settings
 from .schemas import validate_raw
 from .schemas.opencorporates import OCBundle
@@ -60,6 +61,12 @@ class OpenCorporatesAdapter(SourceAdapter):
     # raw payload is therefore redacted from all API responses and exports; the
     # mapped BODS statements remain available.
     republish_raw = False
+
+    # OpenCorporates is a mirror of the official registers — its Companies
+    # House officers agree with Companies House because they *are* Companies
+    # House. Declared so corroboration counts read it as one observation
+    # with whichever national register it copies (see sources/lineage.py).
+    derived_from = frozenset({NATIONAL_REGISTERS})
 
     def __init__(self) -> None:
         self._cache = Cache()

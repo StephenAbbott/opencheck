@@ -39,6 +39,11 @@ def _slug(text: str) -> str:
 class EveryPoliticianAdapter(SourceAdapter):
     id = "everypolitician"
 
+    # Reads the OpenSanctions database (same canonical FtM ids — the
+    # reconciler already bridges the two on ``opensanctions_id``), so an
+    # EveryPolitician hit never corroborates an OpenSanctions one.
+    derived_from = frozenset({"opensanctions"})
+
     def __init__(self) -> None:
         self._cache = Cache()
 

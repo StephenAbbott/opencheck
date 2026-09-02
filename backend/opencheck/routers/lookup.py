@@ -20,7 +20,7 @@ from .. import bods as _bods
 from .. import identifiers
 from .. import degradation as _degradation
 from .. import provenance as _provenance
-from .. import signalstats
+from .. import consistency, consistencystats, signalstats
 from ..provenance import Provenance
 from ..bods import BODSBundle, validate_shape
 from ..sources.base import LookupDeriver, raw_redaction_notice
@@ -2138,6 +2138,12 @@ async def _lookup_pipeline(
     # run is not a low number, it is an unknown one.
     signalstats.record_degraded(degraded_dicts)
     signalstats.record_lookup()
+    # Record consistency, shadow mode (Phase 152): compare what independent
+    # sources said about the same entity and count the outcomes. CPU-only,
+    # runs after the network stage, emits nothing to the client yet — the
+    # counters at /consistencystats decide which comparisons earn a place
+    # on the page (see opencheck/consistency.py).
+    consistencystats.record(consistency.assess_consistency(bods_all))
     # degraded_sources rides on the same event as the signals so every
     # consumer (SSE UI, sync /lookup, replay cache, narrative, exports)
     # sees the two together — an empty signals list plus a non-empty

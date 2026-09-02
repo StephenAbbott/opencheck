@@ -168,6 +168,115 @@ declared in 1998 and certainly was not published by OpenCheck in 1998, so
 `appointed_on` (Companies House officers) and the INPI role start date appear
 only as `interests[].startDate`.
 
+## Lineage — which sources republish which
+
+Several sources are copies of others, and OpenCheck says so. Each adapter may
+declare `derived_from`; the `/sources` endpoint (and the MCP `opencheck_list_sources`
+tool) exposes it, and every surface that counts "sources that agree" as
+corroboration — the "LEI confirmed by N sources" badge, the FullCheck network's
+"corroborated by ≥2 independent sources" count and the identity band's "matched
+across N independent sources" — counts *independent origins* after collapsing
+this lineage. A source with no declaration is treated as original, so an adapter
+that says nothing under-claims its dependence rather than over-claiming
+corroboration. The table lives in `backend/opencheck/sources/lineage.py`; the
+browser copy `frontend/src/lib/lineage.json` is generated from it by
+`backend/scripts/gen_lineage.py` and a test fails when it is stale.
+
+| Source | Republishes | Why |
+|--------|-------------|-----|
+| `opencorporates` | every national register (`is_national_register`) | OpenCorporates is a mirror of the official registers; its Companies House officers agree with Companies House because they are Companies House |
+| `openaleph` | `companies_house`, `gleif`, `opensanctions` | The entity records a company lookup returns come from OpenAleph's `gb-coh-psc-*`, `lei-*` and OpenSanctions collections. Leak and document collections are original, but lineage is declared per source, so OpenAleph is discounted throughout — the safe side |
+| `opensanctions` | `gleif`, `companies_house` | OpenSanctions' *company records* are its GLEIF and UK PSC mirrors (a Novo Nordisk record carries GLEIF's LEI and creation date verbatim). Its sanctions, PEP and debarment *listings* are original — lineage only discounts agreement about the record, never a finding |
+| `everypolitician` | `opensanctions` | Reads the OpenSanctions database (same canonical FtM ids) |
+| `bods_gleif`, `bods_uk_psc` | `gleif`, `companies_house` | The bulk BODS datasets are the same registers in a different container |
+
+Two rules follow. A source whose upstream is also present is dropped in favour
+of the upstream (GLEIF + OpenSanctions sharing an LEI is one confirmation). Two
+derivatives of a shared upstream that is absent (OpenCorporates and OpenAleph,
+both mirroring Companies House) count once between them. On the 2 September 2026
+Shell plc lookup that turns "five sources describe this entity" into three
+independent origins (Companies House, GLEIF, Wikidata), and the 22 officer
+records Companies House and OpenCorporates agree on into one observation.
+
+## Liveness — what each register says about whether the entity still exists
+
+Nearly every register publishes a company status, and until Phase 151 the
+mappers handled it six different ways (three wrote `dissolutionDate: "unknown"`,
+one wrote `null`, one annotated, twenty-odd dropped it). Every adapter now goes
+through one path, `backend/opencheck/bods/liveness.py`, which classifies the
+register's own label into **live**, **pending** (a terminal process under way —
+liquidation, strike-off listed, bankruptcy), **terminal** (dissolved, struck off,
+cancelled, deregistered, amalgamated) or **unknown** (the register said nothing,
+or something the mapper does not classify — never guessed either way), and writes:
+
+- `recordDetails.dissolutionDate` **only** for `terminal` with a real date
+  (partial dates rounded per the BODS dates guidance and annotated). Never a
+  sentinel: the schema requires `YYYY-MM-DD`.
+- a `commenting` annotation on `/recordDetails` in a fixed grammar —
+  *"`<Source>` records this entity as `active` | `in a terminal process` |
+  `dissolved`[ since `YYYY-MM-DD`][ — register status: “`<verbatim label>`”]."* —
+  for live, pending and terminal alike, so that "this source said live" is
+  distinguishable from "this source said nothing". `read_register_status`
+  (Python) and `readRegisterStatus` (`frontend/src/lib/liveness.ts`) parse it back.
+
+The structured-records card shows a **Register status** row for pending and
+terminal statuses only; an active status is not a finding.
+
+| Source | Status field(s) read | Notes |
+|--------|----------------------|-------|
+| `companies_house` | `company_status`, `date_of_cessation` | dissolved / converted-closed / closed / removed → terminal; liquidation, receivership, administration, voluntary-arrangement, insolvency-proceedings → pending |
+| `gleif` | `entity.status` (ACTIVE / INACTIVE), `entity.expiration.date` + `.reason` | `registration.status` (LAPSED / RETIRED) is about the LEI record, not the entity, and is **not** read as liveness |
+| `opencorporates` | `inactive` (OC's normalised bool), `dissolution_date`, `current_status` (verbatim label) | previously the dissolution date was dropped |
+| `cvr_denmark` | normalised status (`_STATUS_MAP`) + `virksomhedOphoersdato` | an end date outranks the label |
+| `gemi_greece` | codelist `isActive` + `lastStatusChange` | unknown codelist entry stays unknown |
+| `acra_singapore` | `uen_status_desc` | no date published; was JSON `null` before |
+| `abr_australia` | `abn_status`, `abn_status_from` | cancelled ABN = terminal for the registration resolved |
+| `mca_india` | `CompanyStatus` | no date published; was `"unknown"` before; Dormant is live |
+| `kvk` | `datumEinde` | end date only — no label in the open-data profile |
+| `ur_latvia` | `terminated` (date), `closed` | the parsed date was previously computed and discarded |
+| `rpo_slovakia` | `termination` (date) | |
+| `malta_mbr` | `state`, `status_effective_date` | |
+| `nz_companies` | `entityStatusDescription` | Registered → live; Removed → terminal; insolvency states → pending |
+| `corporations_canada` | `status` + dissolution `activities[]` dates | |
+| `zefix` | `status` ACTIVE / BEING_CANCELLED / CANCELLED | |
+| `bolagsverket` | `avregistreradOrganisation`, `avregistreringsorsak`, pending winding-up list, `verksamOrganisation.kod` | |
+| `ariregister` | page status label | "Entered into the register" → live; "Deleted from the register" → terminal |
+| `cro` | `company_status`, `company_status_date` | Normal → live; Strike Off Listed and the insolvency states → pending |
+| `cnpj_brazil` | `situacao_cadastral`, `data_situacao_cadastral` | ATIVA → live; BAIXADA / NULA → terminal; SUSPENSA / INAPTA left unclassified |
+| `brreg` | `slettedato`, `konkurs`, `underAvvikling`, `underTvangsavviklingEllerTvangsopplosning` | |
+| `prh` | `endDate`, `liquidations` | |
+| `firmenbuch` | AUFRECHT → `aktiv` / `gelöscht` | |
+| `cac_nigeria` | `status` | ACTIVE → live; INACTIVE means returns outstanding, not dissolution, so left unclassified |
+| `jar_lithuania` | status (Lithuanian labels) | Veikiantis → live; Išregistruotas → terminal; Likviduojamas / Bankrutuojantis / Reorganizuojamas → pending; Sustabdyta left unclassified |
+| `ares` | normalised status, `datumZaniku` | |
+| `bce_belgium` | `status` AC / ST | |
+| `cyprus_drcor` | organisation status | |
+| `opensanctions`, `openaleph` (FtM) | `dissolutionDate` property | only a dissolution date is a positive statement; FtM `status` is free text and not classified |
+| `climatetrace` (GEOT) | `entity_status` | unchanged: GEM publishes no date; its own annotation remains |
+
+Not read (no usable status in the payload, or not yet): `sudreg_croatia` (an
+integer status code without a published codelist), `inpi`, `wikidata` (P576 is
+not queried), `sec_edgar`, `krs_poland`, the EITI sources, `wikirate`, `ted_eu`,
+`brightquery`.
+
+## Record consistency (shadow mode)
+
+With lineage (Phase 150) and liveness (Phase 151) in place, `backend/opencheck/consistency.py`
+compares what *independent* sources say about the *same* entity — statements grouped
+by shared strong identifier, the rule the FullCheck network merges on — on four aligned
+fields: **liveness** (the Phase 151 class), **jurisdiction**, **founding date** (registers
+and GLEIF only; Wikidata's *inception* is the business, not the incorporation, and is
+never compared), and **one-per-entity identifiers** (the LEI, and a register number
+within one jurisdiction; OpenCorporates ids are per-registration and never a clash).
+Each pair is `agree` / `disagree` between independent sources, `mirror` / `stale` where
+one republishes the other (counted, never shown), or `one_missing`.
+
+Nothing reaches the results page yet. `GET /consistencystats` counts outcomes per
+`field|source_a|source_b` with a `disagree_rate`, on the `/signalstats` contract
+(aggregate only, closed-vocabulary keys, resets on deploy). A comparison earns a
+place on the page only when its measured disagree rate is under 10 % after at least
+two weeks of traffic — the base-rate gate that keeps "sources disagree" from being noise.
+
 ## Notes
 
 NC-licensed sources (OpenSanctions, EveryPolitician) propagate their non-commercial obligations through `/deepen` and `/export`. The exported `LICENSES.md` warns reviewers before they re-publish. (OpenTender / DIGIWHIST procurement was retired and its code removed — the live `ted_eu` adapter answers the EU-procurement question against TED directly, under a licence that permits commercial reuse.)

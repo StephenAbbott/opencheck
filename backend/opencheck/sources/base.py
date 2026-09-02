@@ -126,6 +126,16 @@ class SourceInfo(BaseModel):
             "adapters do not set it (see opencheck.bo_access)."
         ),
     )
+    derived_from: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Source ids this source republishes (e.g. OpenCorporates mirrors the "
+            "national registers). Agreement between a source and one it derives "
+            "from is one observation, not corroboration. Empty for original "
+            "data. Populated by the /sources endpoint from the adapter's "
+            "declaration (see opencheck.sources.lineage)."
+        ),
+    )
 
 
 class SourceHit(BaseModel):
@@ -244,6 +254,15 @@ class SourceAdapter(ABC):
 
     #: Whether ``fetch()`` should receive ``legal_name=`` from the anchor.
     lookup_pass_legal_name: ClassVar[bool] = False
+
+    #: Sources this adapter *republishes* — adapter ids, or the
+    #: ``lineage.NATIONAL_REGISTERS`` marker for "every national register".
+    #: An aggregator that mirrors Companies House agreeing with Companies
+    #: House is one observation, not two; ``opencheck.sources.lineage``
+    #: reads this to discount such agreement wherever the UI counts
+    #: corroborating sources. Empty (the default) means original data, so an
+    #: adapter that declares nothing under-claims rather than over-claims.
+    derived_from: ClassVar[frozenset[str]] = frozenset()
 
     #: Wall-clock budget (seconds) for this adapter inside one lookup. The
     #: pipeline cancels the fetch and emits a source_error when exceeded, so
