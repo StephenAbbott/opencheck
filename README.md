@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 150** — a source agreeing with its own upstream is one observation, not two: adapters now declare which sources they republish (OpenCorporates mirrors the registers, OpenSanctions and OpenAleph mirror GLEIF and Companies House), and every "N sources confirm" count on the results page is of independent origins.
+**Latest: Phase 151** — every register's company status now goes through one liveness path: `dissolutionDate` only for a real date, never a sentinel, plus an annotation in a fixed grammar saying whether the register calls the entity live, in a terminal process, or dissolved — so "Companies House says struck off, GLEIF says ACTIVE" is finally written down on both sides.
 
 → [Full development history](docs/status.md)
 
