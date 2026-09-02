@@ -275,3 +275,88 @@ async def test_person_check_tool_validates_input() -> None:
     assert "error" in await opencheck_person_check(
         name="Jane Example", birth_year=1500
     )
+
+
+def _fake_shell_payload():
+    """A Shell-plc-shaped payload: two context signals (one repeated per
+    deepened source), two risk signals, CC-BY-NC + share-alike contributors."""
+    lei = "21380068P1DRHMJ8KU70"
+    bods = [{"recordType": "entity", "recordDetails": {"identifiers": [
+        {"scheme": "XI-LEI", "id": lei, "schemeName": "LEI"}]}}]
+    hits = [
+        SourceHit(source_id=sid, hit_id=f"{sid}-1", kind=SearchKind.ENTITY,
+                  name="SHELL PLC", summary="", identifiers={}, raw={}, is_stub=False)
+        for sid in ("gleif", "opensanctions", "opencorporates")
+    ]
+    non_eu = "Ownership chain reaches jurisdictions outside the EU/EEA: GB."
+    signals = [
+        {"code": "GLEIF_REPORTING_EXCEPTION", "confidence": "high", "kind": "context",
+         "source_id": "gleif", "summary": "No parent, permitted exception."},
+        {"code": "NON_EU_JURISDICTION", "confidence": "low", "kind": "context",
+         "source_id": "gleif", "summary": non_eu},
+        {"code": "NON_EU_JURISDICTION", "confidence": "low", "kind": "context",
+         "source_id": "opencorporates", "summary": non_eu},
+        {"code": "NON_EU_JURISDICTION", "confidence": "low", "kind": "context",
+         "source_id": "wikidata", "summary": non_eu},
+        {"code": "RELATED_COUNTER_SANCTIONED", "confidence": "medium", "kind": "risk",
+         "source_id": "openaleph", "summary": "Possible name match only."},
+        {"code": "RELATED_PEP", "confidence": "medium",  # no kind → risk
+         "source_id": "openaleph", "summary": "Possible name match only."},
+    ]
+    return SimpleNamespace(
+        lei=lei, legal_name="SHELL PLC", jurisdiction="GB", bods=bods,
+        risk_signals=signals, hits=hits, errors={}, license_notices=[],
+        derived_identifiers={"gb_coh": "04366849"},
+        verdict="A politically exposed person among the parties named.",
+    )
+
+
+def test_shape_lookup_keeps_kind_and_never_calls_context_a_risk() -> None:
+    # Phase 153. The web, PDF and share card have split risk findings from
+    # structural context since Phases 111/116; the MCP row dropped `kind`
+    # and its summary said "Risk signals: GLEIF_REPORTING_EXCEPTION,
+    # NON_EU_JURISDICTION, ..." on Shell plc.
+    shaped = shaping.shape_lookup(_fake_shell_payload())
+    by_code = {r["code"]: r for r in shaped["risk_signals"]}
+    assert by_code["GLEIF_REPORTING_EXCEPTION"]["kind"] == "context"
+    assert by_code["NON_EU_JURISDICTION"]["kind"] == "context"
+    assert by_code["RELATED_COUNTER_SANCTIONED"]["kind"] == "risk"
+    assert by_code["RELATED_PEP"]["kind"] == "risk"  # missing kind defaults to risk
+    s = shaped["summary"]
+    risk_clause = s.split("Risk signals: ", 1)[1].split(".", 1)[0]
+    assert "GLEIF_REPORTING_EXCEPTION" not in risk_clause
+    assert "NON_EU_JURISDICTION" not in risk_clause
+    assert "RELATED_COUNTER_SANCTIONED" in risk_clause and "RELATED_PEP" in risk_clause
+    assert "Structural context (not risk findings): GLEIF_REPORTING_EXCEPTION, NON_EU_JURISDICTION." in s
+    assert shaped["counts"]["risk_signals"] == 2
+    assert shaped["counts"]["context_signals"] == 2
+    assert shaped["verdict"] == "A politically exposed person among the parties named."
+
+
+def test_shape_lookup_merges_identical_rows_and_keeps_their_sources() -> None:
+    # NON_EU_JURISDICTION fires once per deepened bundle; four identical
+    # rows crossed the wire. One row, three sources.
+    shaped = shaping.shape_lookup(_fake_shell_payload())
+    rows = [r for r in shaped["risk_signals"] if r["code"] == "NON_EU_JURISDICTION"]
+    assert len(rows) == 1
+    assert rows[0]["sources"] == ["gleif", "opencorporates", "wikidata"]
+
+
+def test_shape_lookup_reports_the_composite_licence() -> None:
+    # `license_notices` is only what adapters attach per bundle — usually
+    # nothing. The Download panel's verdict must reach agents too.
+    shaped = shaping.shape_lookup(_fake_shell_payload())
+    lic = shaped["licensing"]
+    assert lic is not None
+    assert lic["commercial_use"] == "no"  # OpenSanctions is CC-BY-NC
+    assert lic["share_alike"] is True  # OpenCorporates OC-Terms
+    assert any("OpenSanctions" in w for w in lic["warnings"])
+    assert "Licensing: NOT for commercial use" in shaped["summary"]
+
+
+def test_shape_lookup_with_no_context_signals_has_no_context_clause() -> None:
+    p = _fake_shell_payload()
+    p.risk_signals = [s for s in p.risk_signals if s.get("kind") != "context"]
+    shaped = shaping.shape_lookup(p)
+    assert "Structural context" not in shaped["summary"]
+    assert shaped["counts"]["context_signals"] == 0

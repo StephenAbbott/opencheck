@@ -42,8 +42,32 @@ would `421` in production.
 
 `narrative` is deliberately **not** exposed (it spends model tokens per call).
 Responses are flattened by `mcp/shaping.py` into compact, agent-readable
-structures; `license_notices` are preserved so agents don't redistribute
-CC-BY-NC data unknowingly.
+structures.
+
+### What `opencheck_lookup` returns (Phase 153)
+
+- **`risk_signals[]` rows carry `kind`** — `risk` (a finding) or `context`
+  (how the company is put together, not a finding against it) — mirroring the
+  split every other surface has rendered since Phases 111/116. A row with no
+  `kind` on the wire is `risk`, the same default as `lib/signalKind.ts`. The
+  `summary` line names the two sets separately (`Risk signals: …` and
+  `Structural context (not risk findings): …`) and `counts` carries
+  `risk_signals` / `context_signals`. Before this the row dropped `kind`, so an
+  agent reading Shell plc reported four risk signals including "non-EU
+  jurisdiction" — the Phase 111 failure on the surface most likely to be quoted.
+- **Identical rows merge.** Per-bundle context signals fire once per deepened
+  source; rows with the same `(code, kind, summary)` collapse into one, with the
+  contributing adapters listed in `sources`.
+- **`verdict`** — the deterministic one-line sentence the results page opens
+  with (`opencheck.verdict`).
+- **`licensing`** — the composite licence verdict over the sources that
+  returned data (`commercial_use`, `attribution_required`, `share_alike`,
+  `headline`, `warnings`), computed by the same `licensing.assess` the web
+  Download panel calls. `license_notices` remains the per-bundle notices
+  adapters attach themselves — usually empty, which is why `licensing` exists:
+  a bundle holding CC-BY-NC OpenSanctions statements shipped
+  `license_notices: []` to agents while the panel said "NOT for commercial
+  use". The `summary` line ends with the licensing headline.
 
 ## resolve_national_id
 
