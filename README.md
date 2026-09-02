@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 152** — the record-consistency check runs in shadow mode: independent sources describing the same entity are compared on liveness, jurisdiction, founding date and one-per-entity identifiers, and `GET /consistencystats` counts how often they disagree — nothing is shown until the measured rate says a comparison is informative rather than noise.
+**Latest: Phase 153** — three claims the Shell plc report made that its own rules forbid are gone: the verdict no longer calls a counter-sanctions designation a link to sanctioned parties, the MCP server now separates risk findings from structural context and carries the composite licence verdict, and the "Outside EU/EEA" chip walks only the ownership chain above the subject instead of stamping a company's own jurisdiction on every source card.
 
 → [Full development history](docs/status.md)
 
