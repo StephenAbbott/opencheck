@@ -159,6 +159,15 @@ def _bears_name(item: dict[str, Any], wanted: str) -> bool:
 class OpenAlephAdapter(SourceAdapter):
     id = "openaleph"
 
+    # The entity records OpenAleph returns for a company lookup come from its
+    # register mirrors — the ``gb-coh-psc-*`` (Companies House PSC), ``lei-*``
+    # (GLEIF) and OpenSanctions collections — so an OpenAleph statement
+    # agreeing with those sources is the same record read twice. Leak and
+    # document collections are original, but lineage is declared per source,
+    # not per record, and under-claiming corroboration is the safe side
+    # (see sources/lineage.py).
+    derived_from = frozenset({"companies_house", "gleif", "opensanctions"})
+
     # The lookup cascade tries up to seven sequential queries (LEI → OC URL
     # → five registration numbers → name) — allow more than one HTTP budget.
     lookup_timeout_s = 60.0

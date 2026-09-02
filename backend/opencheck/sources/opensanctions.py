@@ -113,6 +113,13 @@ def _schema_for(kind: SearchKind) -> str:
 class OpenSanctionsAdapter(SourceAdapter):
     id = "opensanctions"
 
+    # OpenSanctions' *entity records* for ordinary companies are its GLEIF
+    # and UK PSC dataset mirrors (a Novo Nordisk record carries GLEIF's LEI
+    # and creation date verbatim). Its sanctions, PEP and debarment
+    # *listings* are original — lineage discounts corroboration of the
+    # record, never the finding (see sources/lineage.py).
+    derived_from = frozenset({"gleif", "companies_house"})
+
     def __init__(self) -> None:
         self._cache = Cache()
 

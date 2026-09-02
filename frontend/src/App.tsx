@@ -30,6 +30,7 @@ import {
 } from "./lib/gleifNationalId";
 import { COUNTRY_OPTIONS, RA_CODES, raCodeFor, validateNationalId } from "./lib/raCodes";
 import { countLeiConfirmingSources } from "./lib/identifierBadge";
+import { independentCount } from "./lib/lineage";
 import { partitionByKind } from "./lib/signalKind";
 import {
   OpenCheckIcon,
@@ -1072,7 +1073,9 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     const srcs = new Set<string>();
     for (const link of crossSourceLinks)
       for (const h of link.hits) srcs.add(h.source_id);
-    return srcs.size;
+    // Independent origins, not participating adapters: OpenCorporates and
+    // Companies House sharing a company number is one register (lineage.ts).
+    return independentCount([...srcs]);
   }, [crossSourceLinks]);
 
   // Distinct sources that independently publish the subject's LEI — the
@@ -2385,7 +2388,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                       {crossSourceLinks.length + gleifMappedIds.length === 1 ? "" : "s"}
                     </span>{" "}
                     matched across{" "}
-                    <span className="font-semibold">{crossLinkedSourceCount} sources</span>
+                    <span className="font-semibold">{crossLinkedSourceCount} independent sources</span>
                   </>
                 ) : gleifMappedIds.length > 0 ? (
                   <>

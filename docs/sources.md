@@ -168,6 +168,36 @@ declared in 1998 and certainly was not published by OpenCheck in 1998, so
 `appointed_on` (Companies House officers) and the INPI role start date appear
 only as `interests[].startDate`.
 
+## Lineage — which sources republish which
+
+Several sources are copies of others, and OpenCheck says so. Each adapter may
+declare `derived_from`; the `/sources` endpoint (and the MCP `opencheck_list_sources`
+tool) exposes it, and every surface that counts "sources that agree" as
+corroboration — the "LEI confirmed by N sources" badge, the FullCheck network's
+"corroborated by ≥2 independent sources" count and the identity band's "matched
+across N independent sources" — counts *independent origins* after collapsing
+this lineage. A source with no declaration is treated as original, so an adapter
+that says nothing under-claims its dependence rather than over-claiming
+corroboration. The table lives in `backend/opencheck/sources/lineage.py`; the
+browser copy `frontend/src/lib/lineage.json` is generated from it by
+`backend/scripts/gen_lineage.py` and a test fails when it is stale.
+
+| Source | Republishes | Why |
+|--------|-------------|-----|
+| `opencorporates` | every national register (`is_national_register`) | OpenCorporates is a mirror of the official registers; its Companies House officers agree with Companies House because they are Companies House |
+| `openaleph` | `companies_house`, `gleif`, `opensanctions` | The entity records a company lookup returns come from OpenAleph's `gb-coh-psc-*`, `lei-*` and OpenSanctions collections. Leak and document collections are original, but lineage is declared per source, so OpenAleph is discounted throughout — the safe side |
+| `opensanctions` | `gleif`, `companies_house` | OpenSanctions' *company records* are its GLEIF and UK PSC mirrors (a Novo Nordisk record carries GLEIF's LEI and creation date verbatim). Its sanctions, PEP and debarment *listings* are original — lineage only discounts agreement about the record, never a finding |
+| `everypolitician` | `opensanctions` | Reads the OpenSanctions database (same canonical FtM ids) |
+| `bods_gleif`, `bods_uk_psc` | `gleif`, `companies_house` | The bulk BODS datasets are the same registers in a different container |
+
+Two rules follow. A source whose upstream is also present is dropped in favour
+of the upstream (GLEIF + OpenSanctions sharing an LEI is one confirmation). Two
+derivatives of a shared upstream that is absent (OpenCorporates and OpenAleph,
+both mirroring Companies House) count once between them. On the 2 September 2026
+Shell plc lookup that turns "five sources describe this entity" into three
+independent origins (Companies House, GLEIF, Wikidata), and the 22 officer
+records Companies House and OpenCorporates agree on into one observation.
+
 ## Notes
 
 NC-licensed sources (OpenSanctions, EveryPolitician) propagate their non-commercial obligations through `/deepen` and `/export`. The exported `LICENSES.md` warns reviewers before they re-publish. (OpenTender / DIGIWHIST procurement was retired and its code removed — the live `ted_eu` adapter answers the EU-procurement question against TED directly, under a licence that permits commercial reuse.)

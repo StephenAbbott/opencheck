@@ -1,4 +1,5 @@
 import type { CrossSourceLink } from "./api";
+import { independentCount } from "./lineage";
 
 /**
  * Distinct sources that independently publish the subject's LEI.
@@ -18,8 +19,10 @@ import type { CrossSourceLink } from "./api";
  *
  * The reconciler only emits an "lei" link when ≥2 sources share the value,
  * and per CLAUDE.md a source's hit only carries `lei` when that source
- * independently publishes or validates it — so every source counted here is
- * a genuine, independent confirmation of the LEI.
+ * publishes or validates it. "Independently" is then a lineage question:
+ * OpenSanctions' company record IS GLEIF's, so GLEIF + OpenSanctions is one
+ * confirmation, not two. The count is therefore of independent origins
+ * (`lineage.ts`), never of participating hits.
  */
 export function countLeiConfirmingSources(
   links: CrossSourceLink[],
@@ -33,5 +36,5 @@ export function countLeiConfirmingSources(
     if (link.key_value.trim().toUpperCase() !== target) continue;
     for (const hit of link.hits) sources.add(hit.source_id);
   }
-  return sources.size;
+  return independentCount([...sources]);
 }

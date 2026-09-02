@@ -46,6 +46,7 @@ import {
 } from "../lib/expand";
 import { reconcileBods, remapSignals, possiblySameAs } from "../lib/reconcile";
 import { buildSignalMap } from "../lib/signalScope";
+import { independentCount } from "../lib/lineage";
 import { riskFindingCount } from "../lib/signalKind";
 import { RiskChip } from "./risk/RiskChip";
 import { SourceLegend } from "./SourceLegend";
@@ -223,9 +224,12 @@ export default function BodsGraphExplorer({
       .map(([source, count]) => ({ source, count }))
       .sort((a, b) => b.count - a.count || a.source.localeCompare(b.source));
   }, [fullCheck, model]);
-  // Nodes corroborated by ≥2 sources — the EDD confidence signal.
+  // Nodes corroborated by ≥2 INDEPENDENT sources — the EDD confidence signal.
+  // `n.sources` lists every source that asserted the node (provenance, kept
+  // in full for the legend and the highlight toggles); corroboration is the
+  // lineage-collapsed count, so Companies House + OpenCorporates is one.
   const corroboratedCount = useMemo(
-    () => (fullCheck ? model.nodes.filter((n) => n.sources.length > 1).length : 0),
+    () => (fullCheck ? model.nodes.filter((n) => independentCount(n.sources) > 1).length : 0),
     [fullCheck, model]
   );
   // Drop a stale highlight if its source left the network (e.g. after a reset).

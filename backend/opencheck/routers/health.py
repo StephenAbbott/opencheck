@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from .. import __version__, memwatch, signalstats
 from ..bo_access import notice_for
 from ..config import get_settings
-from ..sources import REGISTRY, SourceInfo
+from ..sources import REGISTRY, SourceInfo, lineage
 
 router = APIRouter()
 
@@ -79,8 +79,11 @@ async def sources() -> SourcesResponse:
     # Adapters declare only the static `country`; the (date-dependent) notice is
     # computed here so it flips on the restriction date without a code change.
     out: list[SourceInfo] = []
-    for adapter in REGISTRY.values():
+    for source_id, adapter in REGISTRY.items():
         info = adapter.info
         notice = notice_for(info.country)
-        out.append(info.model_copy(update={"bo_access": notice}) if notice else info)
+        update: dict = {"derived_from": sorted(lineage.derived_from(source_id))}
+        if notice:
+            update["bo_access"] = notice
+        out.append(info.model_copy(update=update))
     return SourcesResponse(sources=out)

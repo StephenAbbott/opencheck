@@ -26,7 +26,7 @@ from typing import Iterable
 
 from . import identifiers, names
 from .matching import canonical_identifier, is_matchable_name
-from .sources import SearchKind, SourceHit
+from .sources import SearchKind, SourceHit, lineage
 
 
 @dataclass
@@ -39,6 +39,14 @@ class CrossSourceLink:
     * ``"strong"`` — shared structured identifier (Q-ID / LEI / CH /
       OpenSanctions id).
     * ``"possible"`` — name + birth-year match between persons.
+
+    ``independent_source_count`` is how many *independent* origins the hits
+    represent once source lineage is applied (``sources/lineage.py``): GLEIF
+    and OpenSanctions sharing an LEI is one origin, because OpenSanctions'
+    company record is GLEIF's. The link is still emitted — it is a true
+    statement about which results carry the identifier, and the panel that
+    lists it is provenance — but anything that *counts sources* as
+    corroboration must count this field, not ``len(hits)``.
     """
 
     key: str
@@ -46,11 +54,16 @@ class CrossSourceLink:
     confidence: str
     hits: list[SourceHit] = field(default_factory=list)
 
+    @property
+    def independent_source_count(self) -> int:
+        return lineage.independent_count(h.source_id for h in self.hits)
+
     def to_dict(self) -> dict:
         return {
             "key": self.key,
             "key_value": self.key_value,
             "confidence": self.confidence,
+            "independent_source_count": self.independent_source_count,
             "hits": [
                 {
                     "source_id": hit.source_id,
