@@ -2,6 +2,8 @@ import { useState } from "react";
 import { ExportMenu } from "../export/ExportMenu";
 import { trackEvent } from "../../lib/analytics";
 import { BASE_URL } from "../../lib/api";
+import type { StatusChip } from "../../lib/subjectProfile";
+import { chipClasses } from "../ui/Chip";
 
 
 /** "just now" / "1 min ago" / "12 min ago" from an ISO timestamp. */
@@ -31,6 +33,7 @@ export function SubjectCard({
   onRefresh,
   identifierSources = 0,
   onShowIdentifiers,
+  status = null,
   pdfBusy = false,
   mdBusy = false,
   onPdf,
@@ -61,6 +64,13 @@ export function SubjectCard({
   /** Goes to the "Is this the right company?" section (switching to
    *  QuickCheck first — the section only renders there). */
   onShowIdentifiers?: () => void;
+  /** Register status (Phase 154), from `lib/subjectProfile.statusChip`. Of
+   *  the four profile facts this is the only one promoted to the card: a
+   *  dissolved company with an ACTIVE LEI has to be met before the verdict,
+   *  not found on a structured-records card. Legal form, incorporation date
+   *  and address live in "Is this the right company?", which the badge
+   *  beside this chip opens. Null renders nothing — absence is not active. */
+  status?: StatusChip | null;
   /** Report downloads. They live on App because the payload they embed (the
    *  narrative and its dispositions) is produced by a different card. */
   pdfBusy?: boolean;
@@ -129,6 +139,7 @@ export function SubjectCard({
               onClick={onShowIdentifiers}
               className="hidden sm:inline-flex gap-1 rounded-full px-2.5 py-0.5"
             />
+            <RegisterStatusChip status={status} className="hidden sm:inline-flex" />
           </p>
         </div>
         {/* The report's one export affordance, as the subject's primary
@@ -190,6 +201,12 @@ export function SubjectCard({
         onClick={onShowIdentifiers}
         className="sm:hidden inline-flex gap-1.5 max-w-full text-left rounded-oo px-3 py-1.5 mt-3"
       />
+      {/* Same placement rule as the badge: its own line under the header row
+          on mobile, so it can never squeeze the name; inline beside the LEI
+          on sm+, where the hidden instance is display:none. */}
+      <div className="sm:hidden mt-2">
+        <RegisterStatusChip status={status} />
+      </div>
 
       {/* Provenance badge — a replayed (cached) run must never look live.
           Amber note + a fresh-check action wired to ?refresh=true. Sits
@@ -222,6 +239,40 @@ export function SubjectCard({
           rendered both, one above the other. Removed in Phase 126. The subject
           card is identity only; what was found belongs to the verdict. */}
     </section>
+  );
+}
+
+/**
+ * Register status chip (Phase 154). Neutral for a live status — a status is
+ * a fact with no valence (`ui/Chip`) — warn while a terminal process is under
+ * way, and a dark, un-tinted chip once the register says the company has
+ * ended. Never the risk tone: dissolved is a fact about the company, not a
+ * finding against it. The full sentence is read to assistive technology.
+ */
+function RegisterStatusChip({
+  status,
+  className = "",
+}: {
+  status: StatusChip | null;
+  className?: string;
+}) {
+  if (!status) return null;
+  const classes =
+    status.tone === "terminal"
+      ? `inline-flex items-center gap-1.5 rounded-full border font-body px-2.5 py-0.5 text-oo-meta bg-oo-navy border-oo-navy text-white ${className}`
+      : chipClasses(status.tone, "sm", className);
+  const dot =
+    status.tone === "neutral"
+      ? "bg-oo-node-green"
+      : status.tone === "warn"
+        ? "bg-oo-warn-border"
+        : "bg-white";
+  return (
+    <span className={`${classes} font-medium`.trim()}>
+      <span aria-hidden="true" className={`h-[7px] w-[7px] shrink-0 rounded-full ${dot}`} />
+      <span aria-hidden="true">{status.label}</span>
+      <span className="sr-only">{status.detail}</span>
+    </span>
   );
 }
 

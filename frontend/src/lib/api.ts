@@ -212,9 +212,48 @@ export interface LookupResponse {
    *  never by a model, so the page, the PDF, the share card and the API
    *  cannot disagree. Absent on payloads recorded before Phase 122. */
   verdict?: string | null;
+  /** What the registers say the subject *is* (Phase 154) — see
+   *  `SubjectProfile`. Absent on payloads recorded before this field existed. */
+  subject_profile?: SubjectProfile | null;
   bods: Record<string, unknown>[];
   bods_issues: string[];
   license_notices: { source_id: string; hit_id: string; notice: string }[];
+}
+
+/** One profile fact and who states it. `sources` are the adapter ids whose
+ *  value agrees with `value`; `independent_sources` counts them through the
+ *  lineage table (OpenCorporates republishing Companies House is one). */
+export interface SubjectProfileFact {
+  value: string;
+  sources: string[];
+  independent_sources: number;
+  other_values: { source_id: string; value: string }[];
+}
+
+export interface SubjectProfileStatus {
+  liveness: "live" | "pending" | "terminal";
+  since: string | null;
+  raw: string | null;
+  /** The source whose status is shown — the register before GLEIF. */
+  source_id: string;
+  sources: string[];
+  independent_sources: number;
+  other_values: { source_id: string; value: string }[];
+}
+
+/** The subject's profile, assembled by `opencheck/subject_profile.py` from
+ *  the subject's own entity statements: facts, never findings. */
+export interface SubjectProfile {
+  legal_form: SubjectProfileFact | null;
+  register_status: SubjectProfileStatus | null;
+  founding_date: SubjectProfileFact | null;
+  registered_address: (SubjectProfileFact & { country: string }) | null;
+  jurisdiction: string | null;
+  statement_ids: string[];
+}
+
+export interface SubjectProfileEvent {
+  profile: SubjectProfile | null;
 }
 
 /** `graph_shape` on the `risk_signals` event: the size of the ownership-and-
@@ -1298,6 +1337,7 @@ export type LookupStreamHandlers = {
   onMeip?: (e: MeipEvent) => void;
   onRiskSignals?: (e: RiskSignalsEvent) => void;
   onBodsCounts?: (e: BodsCountsEvent) => void;
+  onSubjectProfile?: (e: SubjectProfileEvent) => void;
   onDone?: (e: LookupStreamDoneEvent) => void;
   /** Called on both backend "error" events and EventSource network errors. */
   onError?: (detail: string) => void;
@@ -1383,6 +1423,10 @@ export function streamLookup(
   es.addEventListener("bods_counts", (ev) => {
     const data = safeParse<BodsCountsEvent>((ev as MessageEvent).data);
     if (data) handlers.onBodsCounts?.(data);
+  });
+  es.addEventListener("subject_profile", (ev) => {
+    const data = safeParse<SubjectProfileEvent>((ev as MessageEvent).data);
+    if (data) handlers.onSubjectProfile?.(data);
   });
   es.addEventListener("done", (ev) => {
     const data = safeParse<LookupStreamDoneEvent>((ev as MessageEvent).data);

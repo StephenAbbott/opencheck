@@ -23,6 +23,7 @@ import {
   type PossiblySameEntity,
   type RiskSignal,
   type SourceHit,
+  type SubjectProfile,
 } from "./lib/api";
 import {
   searchByNationalId,
@@ -45,7 +46,8 @@ import { ExportPanel } from "./components/export/ExportPanel";
 import { ChangelogPage } from "./components/ChangelogPage";
 import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
-import { Icon, SectionHeading } from "./components/ui";
+import { Icon, SectionHeading, SectionLabel as Eyebrow } from "./components/ui";
+import { profileRows, statusChip } from "./lib/subjectProfile";
 import ConfidenceLegend from "./components/ui/ConfidenceLegend";
 import PanelSection, { PanelCard } from "./components/ui/PanelSection";
 import { PERSON_VERB, resultCount, setSourceNames, sourceLabel } from "./lib/vocab";
@@ -246,6 +248,9 @@ export default function App() {
   const [crossSourceLinks, setCrossSourceLinks] = useState<CrossSourceLink[]>([]);
   const [possiblySame, setPossiblySame] = useState<PossiblySameEntity[]>([]);
   const [meip, setMeip] = useState<MeipMatch | null>(null);
+  // What the registers say the subject *is* (Phase 154) — its own event,
+  // arriving once the deepened bundles are in. Identity, not the answer.
+  const [subjectProfile, setSubjectProfile] = useState<SubjectProfile | null>(null);
   const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
   // Derived checks that did not fully run (issue #50) — rendered as a
   // warning above the risk panel; empty signals + non-empty degraded is
@@ -584,6 +589,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         setCrossSourceLinks([]);
         setPossiblySame([]);
         setMeip(null);
+        setSubjectProfile(null);
         setRiskSignals([]);
         setDegradedSources([]);
         setVerdict(null);
@@ -655,6 +661,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           onCrossSourceLinks: (e) => setCrossSourceLinks(e.links),
           onPossiblySame: (e) => setPossiblySame(e.pairs),
           onMeip: (e) => setMeip(e.match),
+          onSubjectProfile: (e) => setSubjectProfile(e.profile),
           onRiskSignals: (e) => {
             setRiskSignals(e.signals);
             setDegradedSources(e.degraded_sources ?? []);
@@ -969,6 +976,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         ? Object.fromEntries(sourcesQuery.data.sources.map((s) => [s.id, s.name]))
         : {},
     [sourcesQuery.data]
+  );
+  // The identity band's profile rows (Phase 154) — derived once per profile.
+  const profileRowsForBand = useMemo(
+    () => profileRows(subjectProfile, sourceNameIndex),
+    [subjectProfile, sourceNameIndex],
   );
 
   // Publish it, so a component holding a source id and no map still says the
@@ -1289,6 +1301,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setCrossSourceLinks([]);
     setPossiblySame([]);
     setMeip(null);
+    setSubjectProfile(null);
     setRiskSignals([]);
     setDegradedSources([]);
     setVerdict(null);
@@ -2023,6 +2036,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             onRefresh={() => lookupLei(streamingLei, { refresh: true })}
             identifierSources={leiConfirmedSourceCount}
             onShowIdentifiers={showCrossSourceIdentifiers}
+            status={statusChip(subjectProfile, sourceNameIndex)}
             pdfBusy={pdfBusy}
             mdBusy={mdBusy}
             onPdf={downloadPdf}
@@ -2368,7 +2382,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             shared report link may already carry the anchor. */}
         {(crossSourceLinks.length > 0 ||
           gleifMappedIds.length > 0 ||
-          possiblySame.length > 0) &&
+          possiblySame.length > 0 ||
+          profileRowsForBand.length > 0) &&
           mode === "quick" && (
             <PanelSection
               id="cross-source-identifiers"
@@ -2415,6 +2430,36 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 )
               }
             >
+              {/* The profile leads the band (Phase 154): legal form,
+                  register status, incorporation date and registered address
+                  are answers to *which* company, and this is where a reader
+                  asking that already looks — the LEI badge on the subject
+                  card opens it. Each row names the sources stating it, never
+                  a count: two sources that copy each other would read as
+                  two. A fact no source stated is absent, not "unknown". */}
+              {profileRowsForBand.length > 0 && (
+                <div
+                  className={
+                    crossSourceLinks.length > 0 || gleifMappedIds.length > 0
+                      ? "mb-5 border-b border-oo-rule pb-4"
+                      : ""
+                  }
+                >
+                  <Eyebrow as="h3">Company profile — what the registers say</Eyebrow>
+                  <dl className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+                    {profileRowsForBand.map((row) => (
+                      <div key={row.label} className="flex flex-col gap-0.5 min-w-0">
+                        <dt className="font-body text-oo-meta font-bold uppercase tracking-oo-eyebrow text-oo-muted">
+                          {row.label}
+                        </dt>
+                        <dd className="m-0 text-oo-small text-oo-ink break-words">{row.value}</dd>
+                        <dd className="m-0 text-oo-meta text-oo-muted">{row.sources}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              )}
+
               {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && (
                 <CrossSourceIdentifiersTable
                   links={crossSourceLinks}

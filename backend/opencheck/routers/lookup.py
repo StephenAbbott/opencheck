@@ -43,6 +43,7 @@ from ..gleif_throttle import GleifRateLimitedError
 from ..memwatch import is_bot
 from ..icij_check import assess_icij_names
 from ..openaleph_check import assess_openaleph_names
+from ..subject_profile import build_subject_profile
 from ..verdict import build_verdict
 from ..meip import meip_lookup
 from ..ra_codes import RA_BY_COUNTRY, ra_code_for
@@ -174,6 +175,13 @@ class ReportResponse(BaseModel):
     #: call, and defaulted so replayed payloads recorded before Phase 122
     #: still validate.
     verdict: str | None = None
+    #: What the registers say the subject *is* (Phase 154): legal form,
+    #: register status, founding date and registered address, each with the
+    #: sources stating it and their independent count — read from the
+    #: subject's own entity statements only (``opencheck.subject_profile``).
+    #: Facts, never findings. None for a name search or before any source
+    #: has been deepened.
+    subject_profile: dict[str, Any] | None = None
 
 
 class LookupResponse(ReportResponse):
@@ -2071,6 +2079,11 @@ async def _lookup_pipeline(
 
     yield ("bods_counts", {"counts": bods_counts, "breakdown": bods_breakdown})
 
+    # The subject's profile, from its own statements across the deepened
+    # sources. Its own event rather than a rider on `risk_signals`: it is
+    # identity, and the verdict event is the answer.
+    yield ("subject_profile", {"profile": build_subject_profile(ctx.lei, bods_all)})
+
     yield (
         "possibly_same_entities",
         {"pairs": [p.to_dict() for p in possibly_same_entities(bods_all)]},
@@ -2263,6 +2276,7 @@ async def _lookup_impl(
     source_liveness: dict[str, dict[str, Any]] = {}
     graph_shape: dict[str, Any] = {}
     verdict: str | None = None
+    subject_profile: dict[str, Any] | None = None
     oa_screening: list[dict[str, Any]] = []
     bods_all: list[dict[str, Any]] = []
     same_pairs: list[dict[str, Any]] = []
@@ -2301,6 +2315,8 @@ async def _lookup_impl(
             links = payload["links"]
         elif event == "possibly_same_entities":
             same_pairs = payload["pairs"]
+        elif event == "subject_profile":
+            subject_profile = payload.get("profile")
         elif event == "meip":
             meip_match = payload["match"]
         elif event == "risk_signals":
@@ -2331,6 +2347,7 @@ async def _lookup_impl(
         source_liveness=source_liveness,
         graph_shape=graph_shape,
         verdict=verdict,
+        subject_profile=subject_profile,
         lei=norm_lei,
         legal_name=legal_name,
         jurisdiction=jurisdiction,
