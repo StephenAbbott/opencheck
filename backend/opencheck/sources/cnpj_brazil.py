@@ -283,6 +283,8 @@ class CnpjBrazilAdapter(SourceAdapter):
             "status": _txt(
                 raw.get("situacao_cadastral") or raw.get("descricao_situacao_cadastral")
             ) or None,
+            # When the status took effect — the closure date for BAIXADA.
+            "status_date": _txt(raw.get("data_situacao_cadastral"))[:10] or None,
             "legal_nature": _legal_nature(raw.get("natureza_juridica")),
             "founding_date": _txt(raw.get("data_inicio_atividade"))[:10] or None,
             "capital_social": raw.get("capital_social"),
