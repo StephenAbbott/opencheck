@@ -193,6 +193,10 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         # The same one-line sentence the results page opens with
         # (``opencheck.verdict``) — deterministic, already split on kind.
         "verdict": getattr(payload, "verdict", None),
+        # What the registers say the company is — legal form, register
+        # status, founding date, registered address — with the sources that
+        # state each (Phase 154). Facts, never findings.
+        "profile": getattr(payload, "subject_profile", None),
         "identifiers": _subject_identifiers(bods, payload.lei),
         "derived_identifiers": payload.derived_identifiers or {},
         "risk_signals": risk,

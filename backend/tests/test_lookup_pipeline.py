@@ -159,6 +159,10 @@ def test_sync_and_stream_agree_on_offline_bundle(
     stream_same = by_name["possibly_same_entities"][0]["pairs"]
     assert stream_same == sync["possibly_same_entities"]
 
+    # The subject profile (Phase 154) rides its own event and the sync field.
+    assert "subject_profile" in sync
+    assert by_name["subject_profile"][0]["profile"] == sync["subject_profile"]
+
 
 def test_meip_signpost_fires_for_a_register_lei(
     client: TestClient, tmp_path: Path

@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 153** — three claims the Shell plc report made that its own rules forbid are gone: the verdict no longer calls a counter-sanctions designation a link to sanctioned parties, the MCP server now separates risk findings from structural context and carries the composite licence verdict, and the "Outside EU/EEA" chip walks only the ownership chain above the subject instead of stamping a company's own jurisdiction on every source card.
+**Latest: Phase 154** — the subject's profile: register status becomes a chip beside the LEI on the subject card (neutral when active, warn during a terminal process, dark when dissolved — never a risk tone), and legal form, incorporation date and registered address lead the "Is this the right company?" band, each naming the sources that state it.
 
 → [Full development history](docs/status.md)
 

@@ -60,6 +60,12 @@ structures.
   contributing adapters listed in `sources`.
 - **`verdict`** — the deterministic one-line sentence the results page opens
   with (`opencheck.verdict`).
+- **`profile`** — what the registers say the company *is* (Phase 154):
+  `legal_form`, `register_status` (`liveness` live / pending / terminal, the
+  register that said it, its date and raw label), `founding_date` and
+  `registered_address`, each listing the sources that state the value and
+  how many of them are independent. Facts, never findings — a dissolved
+  company is reported as dissolved; whether that matters is the reader's call.
 - **`licensing`** — the composite licence verdict over the sources that
   returned data (`commercial_use`, `attribution_required`, `share_alike`,
   `headline`, `warnings`), computed by the same `licensing.assess` the web

@@ -33,7 +33,10 @@ cannot diverge.
 A `LookupResponse`: `lei`, `legal_name`, `jurisdiction`, `derived_identifiers`,
 `hits` (per-source results; raw payloads are redacted for sources that forbid
 re-publication), `bods` (the merged BODS statements), `cross_source_links`,
-`risk_signals`, `license_notices`.
+`risk_signals`, `license_notices`, `verdict` (the deterministic one-line
+sentence) and `subject_profile` (what the registers say the company *is*:
+legal form, register status, founding date and registered address, each with
+the sources stating it — facts, never findings; Phase 154).
 
 # Citations
 
