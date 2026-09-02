@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 149** — the monthly IndexNow submission was rejected not for its key but for where the key file sat: IndexNow authorises only URLs under the key's own directory, so a key at `/indexnow/` could not vouch for `/entity/` pages. It now serves from the site root.
+**Latest: Phase 150** — a source agreeing with its own upstream is one observation, not two: adapters now declare which sources they republish (OpenCorporates mirrors the registers, OpenSanctions and OpenAleph mirror GLEIF and Companies House), and every "N sources confirm" count on the results page is of independent origins.
 
 → [Full development history](docs/status.md)
 
