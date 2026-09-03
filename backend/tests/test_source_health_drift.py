@@ -170,3 +170,36 @@ def test_fetch_entity_reads_the_level_1_record_only(monkeypatch) -> None:
     entity = asyncio.run(REGISTRY["gleif"].fetch_entity(" 5967007lieexzx4lpr43 "))
     assert entity == {"registeredAs": "923 609 016", "registeredAt": {"id": "RA000472"}}
     assert seen == [("/lei-records/5967007LIEEXZX4LPR43", "gleif/lei/5967007LIEEXZX4LPR43")]
+
+
+@pytest.mark.parametrize(
+    ("source_id", "registered_at", "registered_as"),
+    [
+        # Values as GLEIF returned them on 2026-09-03, when each anchor was chosen (Phase 163).
+        ("abr_australia", "RA000014", "123 123 124"),
+        ("malta_mbr", "RA000443", "C 2833"),
+        ("mca_india", "RA000394", "L85110KA1981PLC013115"),
+    ],
+)
+def test_phase_163_anchors_derive_their_probe_subject(gleif_calls, source_id, registered_at, registered_as) -> None:
+    """The three probes that had no anchor LEI now have one whose GLEIF record
+    derives the probe subject through the adapter's own normaliser — the
+    whole point of an anchor. Pinned against the values GLEIF actually
+    returned, so a future edit to a probe cannot silently break the join."""
+    calls, answers = gleif_calls
+    lei, expected = _anchored(source_id)
+    answers[lei] = _entity(registered_at, registered_as)
+    import asyncio
+
+    (result,) = asyncio.run(sweep.check_dispatch_drift([source_id]))
+    assert (result.status, result.derived) == (sweep.OK, expected), result.reason
+
+
+def test_every_identifier_dispatched_probe_now_has_an_anchor() -> None:
+    """Phase 163 closed the last three gaps; the drift check covers the whole set."""
+    uncovered = [
+        sid
+        for sid, probe in PROBES.items()
+        if getattr(REGISTRY[sid], "lookup_derivers", ()) and not probe.anchor_lei
+    ]
+    assert uncovered == []

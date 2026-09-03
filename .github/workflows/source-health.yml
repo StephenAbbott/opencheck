@@ -67,6 +67,21 @@ jobs:
             gh run download "$ID" --name source-health --dir previous
           fi
 
+      # Phase 163: the Climate TRACE probe requires data/gem/ownership.zip
+      # (gitignored) and skipped as "required local artifact absent" on every
+      # sweep since Phase 121. It is a 2 MB file on GitHub's own CDN, so it is
+      # fetched every run rather than cached — a cache key would need a month
+      # in it and would then hide a mirror that stopped updating. Allowed to
+      # fail: the probe then skips with the same reason as before, and the
+      # report says so, rather than the whole sweep failing on a mirror blip.
+      - name: Seed the GEM ownership artifact for the Climate TRACE probe
+        continue-on-error: true
+        run: |
+          mkdir -p data/gem
+          curl -fsSL --retry 3 -o data/gem/ownership.zip \
+            https://raw.githubusercontent.com/climatetracecoalition/climate-trace-tools/main/climate_trace_tools/data/ownership/ownership.zip
+          python3 -c "import zipfile; zipfile.ZipFile('data/gem/ownership.zip').testzip() and exit(1)"
+
       - name: Sweep every registry source
         id: sweep
         continue-on-error: true
@@ -92,6 +107,7 @@ jobs:
           CVR_DENMARK_API_KEY: ${{ secrets.CVR_DENMARK_API_KEY }}
           DATA_GOV_IN_API_KEY: ${{ secrets.DATA_GOV_IN_API_KEY }}
           FIRMENBUCH_API_KEY: ${{ secrets.FIRMENBUCH_API_KEY }}
+          GEMI_API_KEY: ${{ secrets.GEMI_API_KEY }}
           INPI_USERNAME: ${{ secrets.INPI_USERNAME }}
           INPI_PASSWORD: ${{ secrets.INPI_PASSWORD }}
           NZBN_API_KEY: ${{ secrets.NZBN_API_KEY }}

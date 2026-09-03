@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 162** — the weekly sweep's dispatch-drift check fetches only the Level 1 GLEIF record per anchor and reports an anchor it could not fetch as unchecked rather than drifted; its first published run had called twelve rate-limited fetches "drift".
+**Latest: Phase 163** — the weekly sweep now maps `GEMI_API_KEY`, seeds the GEM ownership artifact before probing, and gives the last three identifier-dispatched probes an anchor LEI, so the dispatch-drift check covers all 24.
 
 → [Full development history](docs/status.md)
 
