@@ -46,7 +46,7 @@ import { ExportPanel } from "./components/export/ExportPanel";
 import { ChangelogPage } from "./components/ChangelogPage";
 import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
-import { Icon, SectionHeading, SectionLabel as Eyebrow } from "./components/ui";
+import { Icon, SectionHeading, SectionLabel as Eyebrow, buttonClasses } from "./components/ui";
 import { profileRows, statusChip } from "./lib/subjectProfile";
 import ConfidenceLegend from "./components/ui/ConfidenceLegend";
 import PanelSection, { PanelCard } from "./components/ui/PanelSection";
@@ -60,6 +60,7 @@ import { SignalEvidence } from "./components/risk/SignalEvidence";
 import { evidenceForCode } from "./lib/signalEvidence";
 import { Explain } from "./components/ui/Explain";
 import { SourcesPage } from "./components/SourcesPage";
+import BatchPage from "./components/BatchPage";
 import type { ReportExportPayload } from "./components/cdd/NarrativePanel";
 import {
   SourceBucketCard,
@@ -343,7 +344,7 @@ export default function App() {
   // Path → view mapping. /sources and /about are real URLs; everything
   // else falls through to "main" (the SPA rewrite in render.yaml serves
   // index.html for all paths so deep links work).
-  type View = "main" | "sources" | "behind" | "api" | "changelog";
+  type View = "main" | "sources" | "behind" | "api" | "changelog" | "batch";
 
   /**
    * The header nav, constant across every view (Phase 122). One label per
@@ -413,6 +414,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     if (path === "/about") return "behind";
     if (path === "/api") return "api";
     if (path === "/changelog") return "changelog";
+    if (path === "/batch") return "batch";
     return "main";
   }
   function viewToPath(v: View): string {
@@ -420,6 +422,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     if (v === "behind") return "/about";
     if (v === "api") return "/api";
     if (v === "changelog") return "/changelog";
+    if (v === "batch") return "/batch";
     return "/";
   }
   const [view, setView] = useState<View>(() => pathToView(window.location.pathname));
@@ -449,6 +452,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       document.title = "API — OpenCheck";
     } else if (view === "changelog") {
       document.title = "Changelog — OpenCheck";
+    } else if (view === "batch") {
+      document.title = "Screen a list — OpenCheck";
     } else {
       document.title = "OpenCheck";
     }
@@ -1997,7 +2002,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         {!streamingLei && !lookupMutation.isPending && !streaming && !lookupMutation.isError && !nameSearchMutation.data && !nameSearchMutation.isPending && !nationalIdSearchMutation.data && !nationalIdSearchMutation.isPending && (
           <>
             <ExampleLeiPicker onPick={lookupLei} disabled={lookupMutation.isPending || streaming} />
-            <ShareCardShowcase />
+            <BatchInvite onOpen={() => navigate("batch")} />
             <HowItWorks />
           </>
         )}
@@ -2657,6 +2662,14 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         {view === "api" && <ApiPage />}
 
         {view === "changelog" && <ChangelogPage />}
+
+        {view === "batch" && (
+          <BatchPage
+            registryTotal={sourcesQuery.data?.sources.length ?? null}
+            sourceNames={sourceNameIndex}
+            onOpen={(lei) => lookupLei(lei)}
+          />
+        )}
       </main>
 
       {/* GODIN ribbon — permanent attribution banner. */}
@@ -3649,7 +3662,8 @@ const HOW_IT_WORKS_STEPS = [
         Deterministic risk signals — sanctions, flagged jurisdictions, complex
         ownership and more — follow the EU AMLA's draft due-diligence standards,
         and a plain-English AI summary explains them with every statement linked
-        to its source. Take it away as an accessible PDF or raw data.
+        to its source. Take it away as an accessible PDF or raw data — or copy
+        the share link, and a live summary card appears wherever you paste it.
       </>
     ),
     badges: null,
@@ -3657,42 +3671,39 @@ const HOW_IT_WORKS_STEPS = [
 ] as const;
 
 /**
- * ShareCardShowcase — homepage preview of the output: the live shareable
- * summary card every lookup generates. Shows what a result looks like before
- * the first query, and advertises the share-link feature. The image is a
- * committed render of the ELI LILLY curated example, chosen because the
- * copy beside it promises a signal count and a range of risk colours:
- * Lilly shows three signals in three different colour families (violet
- * PEP, amber leaks, slate opaque). It replaced BP, which after Phase 111
- * produces only two low-severity signals and made a thin advert.
+ * BatchInvite — the homepage's invitation to screen a list (Phase 166).
  *
- * Regenerate with `opencheck.og_image.render_share_card` if the design
- * changes, or when the subject's production signals change. Pass the FULL
- * signal list including any kind="context" entries — the generator
- * filters those itself, and the rendered count is what the alt text below
- * must match. Verify against production, not against this card.
+ * It replaces ShareCardShowcase, the preview of the shareable summary card.
+ * The share link is still advertised — one sentence in the last "How it
+ * works" step — but the homepage's second section now promotes the thing a
+ * compliance officer, a journalist or an EITI secretariat actually arrives
+ * with: a list. Nothing in it is a claim about the engine, so nothing here
+ * can go stale the way the rendered card could (see the hardcoded-claims
+ * note in CLAUDE.md).
  */
-function ShareCardShowcase() {
+function BatchInvite({ onOpen }: { onOpen: () => void }) {
   return (
     <section className="mb-10 bg-white border border-oo-rule rounded-oo p-7">
-      <SectionLabel>Share what you find</SectionLabel>
-      <div className="mt-2 flex flex-col lg:flex-row lg:items-center gap-6">
-        <div className="lg:max-w-[300px] shrink-0">
-          <p className="text-[13px] text-oo-muted leading-[1.65]">
-            Every lookup generates a <span className="text-oo-ink font-medium">live summary card</span> —
-            the entity, its risk-signal count, and the first flags in OpenCheck's
-            risk colours. Copy the share link from any result and the card appears
-            wherever you paste it: Slack, LinkedIn, X, WhatsApp.
-          </p>
-        </div>
-        <img
-          src="/share-card-example.png"
-          width={1200}
-          height={630}
-          alt="Example shareable summary card for Eli Lilly and Company showing 3 risk signals found, all named: related trade risk, related PEP and offshore leaks, with a prompt to visit opencheck.world for details"
-          className="w-full max-w-[560px] h-auto rounded-oo border border-oo-rule shadow-oo-card"
-          loading="lazy"
-        />
+      <SectionLabel>Screen a list</SectionLabel>
+      <div className="mt-2 flex flex-col md:flex-row md:items-center gap-5">
+        <p className="text-oo-small text-oo-muted md:max-w-xl">
+          Arrived with a counterparty list, a portfolio, or every licence-holder in a
+          register? Paste up to 20 LEIs and get{" "}
+          <span className="text-oo-ink font-medium">one table</span> — register status, the
+          verdict sentence and the signal count for each company, every row linking to its
+          full report — and{" "}
+          <span className="text-oo-ink font-medium">one file</span> to take away.
+        </p>
+        <a
+          href="/batch"
+          onClick={(e) => {
+            e.preventDefault();
+            onOpen();
+          }}
+          className={buttonClasses("primary", "md", "shrink-0 self-start md:self-center")}
+        >
+          Screen a list of companies
+        </a>
       </div>
     </section>
   );

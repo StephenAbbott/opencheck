@@ -1486,6 +1486,168 @@ export function streamLookup(
 }
 
 // ---------------------------------------------------------------------
+// Batch screening — /batch-stream (Phase 164 backend, Phase 166 page)
+// ---------------------------------------------------------------------
+
+/** One screened company, as `mcp.shaping.shape_batch_row` reduces it. */
+export interface BatchRow {
+  lei: string;
+  legal_name: string | null;
+  jurisdiction: string | null;
+  register_status: {
+    liveness: "live" | "pending" | "terminal";
+    since?: string | null;
+    raw?: string | null;
+    source_id?: string;
+  } | null;
+  verdict: string | null;
+  risk_count: number;
+  context_count: number;
+  risk_codes: string[];
+  context_codes: string[];
+  /** The GLEIF anchor is counted in both figures (Phase 156). */
+  coverage: {
+    applicable: number;
+    answered: number;
+    applicable_ids: string[];
+    answered_ids: string[];
+  };
+  /** A screening check did not fully run — never a clean row. */
+  degraded: boolean;
+  degraded_sources: string[];
+  licensing: { commercial_use: boolean; headline: string } | null;
+  replayed: boolean;
+  report_url: string;
+}
+
+/** A company that could not be screened at all — a row, not an exception. */
+export interface BatchFailedRow {
+  lei: string;
+  status: number;
+  reason: string;
+  /** 503 — the shared upstream budget was momentarily spent. */
+  retryable: boolean;
+  degraded: true;
+}
+
+export interface BatchStartEvent {
+  accepted: string[];
+  rejected: { token: string; reason: string }[];
+  overflow: number;
+  cap: number;
+  concurrency: number;
+}
+
+export interface BatchDoneEvent {
+  requested: number;
+  done: number;
+  failed: number;
+}
+
+export type BatchStreamHandlers = {
+  onStart?: (e: BatchStartEvent) => void;
+  onRow?: (row: BatchRow) => void;
+  onRowFailed?: (row: BatchFailedRow) => void;
+  onDone?: (e: BatchDoneEvent) => void;
+  /** HTTP refusal (422 nothing valid, 403 bot gate, 429 heavy tier) or a dropped connection. */
+  onError?: (detail: string) => void;
+};
+
+/**
+ * Subscribe to `/batch-stream`. Rows arrive in completion order, not paste
+ * order — the page keeps a running placeholder per accepted LEI and fills
+ * each in as its event lands. Returns a cleanup that aborts the request;
+ * the backend cancels its in-flight pipelines when the client goes away.
+ *
+ * This one uses `fetch` rather than `EventSource`, deliberately: the route
+ * sits on the heavy rate tier (a few batches a minute), so a 429 is an
+ * ordinary outcome here, and an `EventSource` cannot say *why* it failed —
+ * it fires `onerror` with no status. A reader who has just been told to
+ * wait a minute needs those words, not "connection error".
+ */
+export function streamBatch(
+  leis: string[],
+  handlers: BatchStreamHandlers,
+  deepen_top = 5,
+  refresh = false,
+): () => void {
+  const params = new URLSearchParams({ leis: leis.join(","), deepen_top: String(deepen_top) });
+  if (refresh) params.set("refresh", "true");
+  const controller = new AbortController();
+
+  const dispatch = (event: string, raw: string) => {
+    let data: unknown;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    if (event === "batch_start") handlers.onStart?.(data as BatchStartEvent);
+    else if (event === "row_done") handlers.onRow?.(data as BatchRow);
+    else if (event === "row_failed") handlers.onRowFailed?.(data as BatchFailedRow);
+    else if (event === "batch_done") handlers.onDone?.(data as BatchDoneEvent);
+  };
+
+  (async () => {
+    let finished = false;
+    try {
+      const res = await fetch(`${BASE_URL}/batch-stream?${params.toString()}`, {
+        headers: { Accept: "text/event-stream" },
+        signal: controller.signal,
+      });
+      if (!res.ok || !res.body) {
+        let detail = `The batch could not start (HTTP ${res.status}).`;
+        try {
+          const body = (await res.json()) as { detail?: unknown };
+          const d = body?.detail;
+          if (typeof d === "string") detail = d;
+          else if (d && typeof d === "object" && "message" in d)
+            detail = String((d as { message: unknown }).message);
+        } catch {
+          /* keep the status line */
+        }
+        if (res.status === 429) detail = `${detail} Batches are limited to a few a minute — try again shortly.`;
+        handlers.onError?.(detail);
+        return;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let event = "";
+      let dataLines: string[] = [];
+      const flush = () => {
+        if (event && dataLines.length) dispatch(event, dataLines.join("\n"));
+        event = "";
+        dataLines = [];
+      };
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buffer.indexOf("\n")) >= 0) {
+          const line = buffer.slice(0, nl).replace(/\r$/, "");
+          buffer = buffer.slice(nl + 1);
+          if (line === "") {
+            if (event === "batch_done") finished = true;
+            flush();
+          } else if (line.startsWith("event:")) event = line.slice(6).trim();
+          else if (line.startsWith("data:")) dataLines.push(line.slice(5).replace(/^ /, ""));
+          // ":" comment lines (keep-alives) and other fields are ignored.
+        }
+      }
+      flush();
+      if (!finished) handlers.onError?.("The connection dropped before the batch finished.");
+    } catch (err) {
+      if ((err as { name?: string })?.name === "AbortError") return;
+      handlers.onError?.("The batch could not start or the connection dropped.");
+    }
+  })();
+
+  return () => controller.abort();
+}
+
+// ---------------------------------------------------------------------
 // Per-source retry — /lookup-source
 // ---------------------------------------------------------------------
 
