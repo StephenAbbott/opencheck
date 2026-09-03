@@ -411,8 +411,9 @@ class Settings(BaseSettings):
 
     # --- Greek General Commercial Registry (ΓΕΜΗ) Open Data API ---
     # Request a key at: https://opendata.businessportal.gr/register/
-    # Sent as an ``api_key`` request header. Rate limited to 8 requests per
-    # minute; a higher limit can be requested from support@uhc.gr.
+    # Sent as an ``api_key`` request header. Rate limited to 20 requests per
+    # minute — raised from the original 8 on request, 2026-09-03; a further
+    # increase can be asked of support@uhc.gr.
     # License: ODC-BY-1.0 (attribution only; commercial reuse permitted).
     gemi_api_key: str | None = Field(default=None, alias="GEMI_API_KEY")
 

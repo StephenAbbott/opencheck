@@ -287,8 +287,8 @@ PROBES: dict[str, SourceProbe] = {
             "Zero-padded Αριθμός ΓΕΜΗ, exactly as GLEIF stores registeredAs — "
             "the API accepts the padded and unpadded forms interchangeably, so "
             "the probe uses the padded one the lookup pipeline actually passes. "
-            "8 requests/minute: a sweep that also probes another Greek subject "
-            "must pace itself."
+            "20 requests/minute (raised from 8 on 2026-09-03): a sweep that "
+            "also probes another Greek subject must pace itself."
         ),
     ),
     "gleif": _p(

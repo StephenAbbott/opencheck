@@ -366,6 +366,51 @@ def test_info_requires_a_key() -> None:
     assert info.license == "ODC-BY-1.0"
 
 
+def test_the_call_budget_fits_inside_the_source_timeout() -> None:
+    """The budget's real ceiling is the clock, not ΓΕΜΗ's published quota.
+
+    The token bucket serialises calls ``60 / _RATE_PER_MINUTE`` apart, and a
+    source gets ``lookup_timeout_s`` wall-clock seconds inside a lookup. Spend
+    the whole budget and the queueing alone must finish inside that, or the
+    lookup reports a timeout — the very outcome the budget exists to replace
+    with an honest degradation.
+
+    So this is not a literal pin on 8 and 18; it is the relationship between
+    them. Raising the budget without raising ``lookup_timeout_s`` fails here,
+    with the arithmetic in the message.
+    """
+    from opencheck.sources.gemi_greece import (
+        _LOOKUP_CALL_BUDGET,
+        _RATE_PER_MINUTE,
+    )
+
+    interval = 60.0 / _RATE_PER_MINUTE
+    worst_case_queueing = (_LOOKUP_CALL_BUDGET - 1) * interval
+    timeout = GemiGreeceAdapter.lookup_timeout_s
+
+    assert worst_case_queueing < timeout, (
+        f"{_LOOKUP_CALL_BUDGET} calls paced {interval:.2f}s apart queue for "
+        f"{worst_case_queueing:.1f}s, past the {timeout:.0f}s this source "
+        "gets — raise lookup_timeout_s or lower the budget"
+    )
+
+
+def test_the_paced_rate_stays_under_the_published_quota() -> None:
+    """ΓΕΜΗ publish 20/min (raised from 8 on 2026-09-03).
+
+    Pacing at the published rate exactly leaves nothing for a retry or for
+    clock skew against the server's own sliding window, which is why the
+    original was 7 of 8. Keep at least that ~10% margin.
+    """
+    from opencheck.sources.gemi_greece import _RATE_PER_MINUTE
+
+    published = 20.0
+    assert _RATE_PER_MINUTE <= published * 0.95, (
+        f"pacing at {_RATE_PER_MINUTE}/min leaves no headroom under ΓΕΜΗ's "
+        f"published {published:.0f}/min"
+    )
+
+
 def test_call_budget_stops_at_the_limit() -> None:
     budget = CallBudget(limit=2)
     assert budget.take() is True

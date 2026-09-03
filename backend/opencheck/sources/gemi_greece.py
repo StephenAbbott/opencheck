@@ -32,14 +32,20 @@ The flow with GLEIF:
 
 Rate limiting — the defining constraint
 ---------------------------------------
-GEMI publish a hard budget of **8 requests per minute**. A FullCheck that
-traverses several Greek related parties would trip that on the third or fourth
-company, so this adapter is paced by a process-wide token bucket
-(:mod:`opencheck.outbound_rate`) at 7/min, and each lookup may spend at most
+GEMI publish a hard budget of **20 requests per minute** — raised from the
+original 8 on 2026-09-03, on request, by the Υπηρεσία Υποστήριξης ΓΕΜΗ. A
+FullCheck that traverses several Greek related parties issues one or two calls
+each, so this adapter is paced by a process-wide token bucket
+(:mod:`opencheck.outbound_rate`) at 18/min, and each lookup may spend at most
 ``_LOOKUP_CALL_BUDGET`` calls on GEMI. Over budget, or on HTTP 429, the
 adapter records a degradation rather than stalling or throwing — the lookup
-returns what it has and says GEMI was rate-limited. An increase was requested
-from support@uhc.gr on 2026-08-28.
+returns what it has and says GEMI was rate-limited.
+
+The cap only binds while a budget scope is open, and opening one is the
+*pipeline's* job: :func:`opencheck.outbound_rate.begin` is called once per
+lookup in ``routers/lookup.py``. A standalone ``fetch()`` — a script, a probe,
+a test — runs uncapped by design, because it is not competing with a fan-out
+for the minute's budget.
 
 Codelists are not optional
 --------------------------
@@ -108,14 +114,19 @@ _CACHE_NS = "gemi_greece"
 #: RA001118 pleasure-vessel shipping companies, and RA999999).
 GR_RA_CODE: str = "RA000685"
 
-#: Published budget is 8 requests/minute. Pace at 7 to leave headroom for a
-#: retry and for clock skew against the server's own window.
-_RATE_PER_MINUTE = 7.0
+#: Published budget is 20 requests/minute (raised from 8 on 2026-09-03). Pace
+#: at 18 to leave headroom for a retry and for clock skew against the server's
+#: own window — the same 10% margin the original 7-of-8 pacing kept.
+_RATE_PER_MINUTE = 18.0
 
 #: Most GEMI calls a single lookup may spend. A company costs 1 (detail) or 2
-#: (detail + documents), so this allows a subject plus a couple of Greek
-#: related parties before the lookup starts degrading rather than stalling.
-_LOOKUP_CALL_BUDGET = 4
+#: (detail + documents), so this allows a subject plus three Greek related
+#: parties before the lookup starts degrading rather than stalling.
+#:
+#: The ceiling is not the minute's budget but ``lookup_timeout_s``: the bucket
+#: serialises calls 60/18 ≈ 3.3s apart, so 8 calls is ~23s of queueing, inside
+#: the 30s a source gets. Raising this further means raising that too.
+_LOOKUP_CALL_BUDGET = 8
 
 #: Search results are capped well under the API's own maximum of 200 — a large
 #: page is no cheaper in requests but is much more to parse and rank.
@@ -314,7 +325,7 @@ class GemiGreeceAdapter(SourceAdapter):
         if response.status_code == 429:
             degradation.record(
                 self.id,
-                "ΓΕΜΗ returned HTTP 429 (published limit is 8 requests/minute)",
+                "ΓΕΜΗ returned HTTP 429 (published limit is 20 requests/minute)",
                 reason=degradation.REASON_RATE_LIMITED,
             )
             return None

@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 164** — batch screening, backend half: `GET /batch-stream` and the MCP `opencheck_batch_lookup` screen up to 20 LEIs as a thin loop over the single-lookup pipeline (two in flight, heavy tier, bot-gated), with a row that could not be checked reported as degraded rather than dropped.
+**Latest: Phase 165** — ΓΕΜΗ raised the API limit to twenty requests a minute, and the per-lookup call budget that was supposed to spend it is now actually opened on the request path, where it had been inert since Phase 137.
 
 → [Full development history](docs/status.md)
 
