@@ -75,6 +75,9 @@ _us_ein_by_lei: dict[str, str] | None = None
 
 
 _DIGITS_RE = re.compile(r"\D+")
+#: An ISO 3166-1 alpha-2 country, optionally followed by an ISO 3166-2
+#: subdivision ("US-NJ").
+_JURISDICTION_RE = re.compile(r"^([A-Z]{2})(?:-[A-Z0-9]{1,3})?$")
 
 
 def _norm_forms(value: str) -> list[str]:
@@ -179,10 +182,36 @@ def _reset_caches_for_tests() -> None:
     _us_ein_by_lei = None
 
 
+def _country_code(jurisdiction: str) -> str:
+    """The ISO 3166-1 alpha-2 country of a GLEIF ``jurisdiction`` value.
+
+    GLEIF publishes a jurisdiction as a plain country code for most of the
+    world, but for the US it publishes the ISO 3166-2 **subdivision** the
+    entity is incorporated in: Exxon Mobil is ``US-NJ``, and a sample of US
+    records returns ``US-DE``, ``US-WY``, ``US-SD``, ``US-PA``. EITI keys its
+    organisation index by country, so a subdivision has to be reduced to its
+    country before anything can match.
+
+    This is why US EITI matching stayed dead after Phase 155 shipped the
+    crosswalk: the pipeline hands this adapter ``ctx.jurisdiction`` verbatim,
+    and ``US-NJ`` finds no bucket. Sampled across eleven EITI implementing
+    countries on 2026-09-04 (GB, NO, NL, NG, ID, MN, KZ, PH, GH, PE, US),
+    **only the US carries subdivisions** — which is exactly why the one
+    country the crosswalk exists for is the one country it broke on.
+
+    Anything that is not a recognisable country-or-subdivision code is
+    returned unchanged, so an unexpected value fails to match rather than
+    being coerced into some other country's bucket.
+    """
+    value = (jurisdiction or "").strip().upper()
+    match = _JURISDICTION_RE.match(value)
+    return match.group(1) if match else value
+
+
 def _match_identification(country: str, registered_as: str) -> str | None:
     """Return the EITI identification matching a GLEIF registeredAs value."""
     index, norm_index = _get_index()
-    cc = (country or "").strip().upper()
+    cc = _country_code(country)
     bucket = norm_index.get(cc)
     if not bucket:
         return None
@@ -261,7 +290,11 @@ class EitiAdapter(SourceAdapter):
         (payments only when live mode is enabled — the organisation match
         itself is offline data and always available).
         """
-        cc = (jurisdiction or "").strip().upper()
+        # Normalised here, not only inside _match_identification, because cc
+        # also becomes the bundle's ``country`` and the ``CC:ident`` hit id --
+        # a bundle stamped "US-NJ" would miss _EITI_IDENTIFIER_KEY_BY_COUNTRY
+        # and lose the us_ein corroboration key on the way to the report.
+        cc = _country_code(jurisdiction)
         ident = _match_identification(cc, registered_as)
         if ident is None and us_ein:
             ident = _match_identification(cc, us_ein)
@@ -272,7 +305,7 @@ class EitiAdapter(SourceAdapter):
     async def fetch(self, hit_id: str) -> dict[str, Any]:
         """Fetch by ``CC:identification`` hit id (deepen / retry path)."""
         cc, _, ident = hit_id.partition(":")
-        bundle = await self._build_bundle(cc.strip().upper(), ident.strip())
+        bundle = await self._build_bundle(_country_code(cc), ident.strip())
         if bundle is None:
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
         return bundle
