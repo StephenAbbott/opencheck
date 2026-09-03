@@ -54,3 +54,46 @@ jobs:
         # frontend/scripts/lint-design-system.mjs for why it is not a hard ban.
         run: npm run lint:design
         working-directory: frontend
+
+  e2e:
+    # The smoke tier: a real backend and a production build of the SPA, driven
+    # in Chromium. It exists for the failures the other two tiers cannot see —
+    # a page that renders two of something, or does not fit its viewport.
+    # Offline by construction: no API keys are set, so every adapter serves its
+    # stub or the committed Open Ownership bulk BODS data, which is what the
+    # curated homepage examples use anyway. Nothing here can fail because an
+    # upstream register had a bad morning.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v5
+      - name: System deps for the ftm extra (bods-ftm → followthemoney → pyicu)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends g++ libicu-dev pkg-config
+      - name: Install backend
+        run: uv sync --extra ftm
+        working-directory: backend
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend
+        run: npm ci
+        working-directory: frontend
+      - name: Install Chromium
+        # Only the one browser, and only here: the unit job has no use for it.
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Smoke
+        # playwright.config.ts starts uvicorn and `vite build && vite preview`
+        # itself, so there is nothing to orchestrate here.
+        run: npm run test:e2e
+        working-directory: frontend
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 14

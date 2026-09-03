@@ -366,15 +366,19 @@ source: the page shows the last sweep's verdict and says when it was reached.
       `lookup_pass_legal_name` declared on the class
 - [ ] `sources/schemas/<name>.py` — Pydantic bundle schema
 - [ ] `sources/__init__.py` — import + REGISTRY entry
-- [ ] `bods/mapper.py` — `map_<name>()` function (+ `bods/__init__.py` export)
-- [ ] `routers/lookup.py` — `_bh_<name>()` hit builder (only this)
+- [ ] `bods/mapper.py` — `map_<name>()` function (+ `bods/__init__.py` export).
+      Phase 168 moved the shared statement factories to `bods/statements.py`
+      and the two largest sections to `bods/mappers/{ftm,wikidata}.py`;
+      `mapper.py` re-exports all of it, so imports are unchanged either way
+- [ ] `routers/hit_builders.py` — `_bh_<name>()` hit builder (only this).
+      Moved out of `routers/lookup.py` in Phase 168 and re-exported from it
 - [ ] `tests/test_<name>.py` — adapter + mapper tests
 - [ ] `.env` — API key if required (never committed)
 - [ ] `README.md` + `ATTRIBUTIONS.md` — document the source
 - [ ] `docs/sources.md` — add the adapter row (keep it in sync with `REGISTRY`;
       the active table = `REGISTRY` minus env-gated bulk-only adapters), and
       refresh the source counts in `README.md` (intro paragraph + adapter-table
-      pointer line) and the social card `opencheck-social-b.html`
+      pointer line) and the social card `docs/social/opencheck-social-b.html`
 - [ ] **Frontend homepage source count** — bump the "N sources" copy in
       `frontend/src/App.tsx`: the hero subline ("…from N sources into one
       graph…") **and** the "How it works" step-3 title ("N open sources, in
@@ -817,10 +821,23 @@ gaps before promoting one.
 - **Test every layer that changed, and make sure CI runs those tests.** Backend
   changes need pytest; frontend changes need `tsc` + the vitest suite. CI gates
   push/PR via `.github/workflows/tests.yml` (backend `pytest`, frontend
-  `npm run build` + `npm test`) — a change that touches React/TS but only has
-  backend tests is **not** production-ready. The sandbox can't run vitest
+  `npm run build` + `npm test` + `npm run lint:design`, and the e2e smoke) — a
+  change that touches React/TS but only has backend tests is **not**
+  production-ready. The sandbox can't always run vitest
   (platform-mismatched `node_modules`); that is **not** the same as CI running
   it, so don't treat "tsc clean locally" as sufficient — confirm CI is green.
+- **Three frontend tiers, and they answer different questions (Phase 168).**
+  `src/lib/*.test.ts` runs in `node` and pins *what the app says* — a sentence,
+  a tone, a count. `src/**/*.test.tsx` runs in `jsdom` with testing-library and
+  pins *what the markup is* — how many of a thing there are, an element's
+  accessible name, what a control does when pressed. `frontend/e2e/*.spec.ts`
+  is Playwright over a real backend and a production build (`npm run test:e2e`)
+  and pins *what a whole page is* — one `<h1>`, nothing overflowing sideways,
+  no console errors. The suite was tier one alone for 163 phases, and the three
+  regressions that cost the most (the v1/v2 component mix, the verdict rendered
+  twice, the mode tabs overflowing at 390px) were all invisible to it, because
+  none of them was a wrong value. Pick the cheapest tier that can see the claim
+  you are making: a `.test.tsx` that only checks a string belongs in `lib/`.
 - **Unit fixtures are not enough — exercise it against real data before declaring
   it done.** The progressive-discovery spike passed every test yet was wrong on
   live Shell data three times (expansion direction; cross-source duplicate

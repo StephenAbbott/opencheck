@@ -441,7 +441,11 @@ def test_missing_hit_builder_fails_fast() -> None:
     blow up at import/collection time, not silently at runtime."""
     from unittest.mock import patch
 
-    from opencheck.routers import lookup as lookup_mod
+    # Phase 168: the collector and the builders live in hit_builders now, so
+    # that is the module whose REGISTRY has to be patched — patching the name
+    # re-exported by lookup would leave the collector reading the real one and
+    # this guard passing for the wrong reason.
+    from opencheck.routers import hit_builders as builders_mod
     from opencheck.sources.base import SourceAdapter, SourceInfo
     from opencheck.sources import SearchKind
 
@@ -461,9 +465,9 @@ def test_missing_hit_builder_fails_fast() -> None:
 
     fake_registry = dict(REGISTRY)
     fake_registry["ghost_register"] = GhostAdapter()
-    with patch.object(lookup_mod, "REGISTRY", fake_registry):
+    with patch.object(builders_mod, "REGISTRY", fake_registry):
         with pytest.raises(RuntimeError, match="_bh_ghost_register"):
-            lookup_mod._collect_registry_sources()
+            builders_mod._collect_registry_sources()
 
 
 def test_mapper_convention_covers_all_dispatch_sources() -> None:

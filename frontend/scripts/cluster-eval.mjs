@@ -11,9 +11,10 @@
  * (order-insensitive nameMatchKey) and clusterPeople.ts verbatim, so verdicts
  * match the live UI. No imports — drop it anywhere and run.
  *
- * Usage:
- *   node cluster-eval.mjs <bundle1.json> [bundle2.json ...]
+ * Usage (from the repo root; bundles are captured /lookup responses, never
+ * committed — make one first):
  *   curl 'http://127.0.0.1:8000/lookup?lei=<LEI>&refresh=true' > company.json
+ *   node frontend/scripts/cluster-eval.mjs company.json [more.json ...]
  */
 
 import { readFileSync } from "node:fs";

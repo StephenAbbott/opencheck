@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 167** — `GET /batch-export`: a screened list as one zip — every company's BODS statements de-duplicated into one bundle, `rows.csv`, a manifest and a `LICENSES.md` over the union of sources — with a *Download BODS bundle* button on `/batch`.
+**Latest: Phase 168** — component tests and a Playwright smoke join the logic-only frontend suite, and the three files every phase touches give up their seams: `App.tsx`, `routers/lookup.py` and `bods/mapper.py` are 1,045, 671 and 2,312 lines lighter.
 
 → [Full development history](docs/status.md)
 

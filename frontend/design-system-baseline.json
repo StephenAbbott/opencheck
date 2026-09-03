@@ -1,7 +1,12 @@
 {
   "src/App.tsx": {
-    "hex": 12,
-    "text": 117,
+    "hex": 7,
+    "text": 66,
+    "vocab": 0
+  },
+  "src/components/ApiPage.tsx": {
+    "hex": 0,
+    "text": 18,
     "vocab": 0
   },
   "src/components/BODSGraph.tsx": {
@@ -9,13 +14,28 @@
     "text": 0,
     "vocab": 0
   },
+  "src/components/BehindTheScenesPage.tsx": {
+    "hex": 0,
+    "text": 26,
+    "vocab": 0
+  },
   "src/components/BodsGraphExplorer.tsx": {
     "hex": 1,
     "text": 14,
     "vocab": 0
   },
+  "src/components/BtsCard.tsx": {
+    "hex": 0,
+    "text": 2,
+    "vocab": 0
+  },
   "src/components/ChangelogPage.tsx": {
     "hex": 0,
+    "text": 5,
+    "vocab": 0
+  },
+  "src/components/HomePanels.tsx": {
+    "hex": 5,
     "text": 5,
     "vocab": 0
   },
