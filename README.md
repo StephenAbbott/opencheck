@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 159** — the US EITI crosswalk shipped in Phase 155 never fired in production: GLEIF publishes a US jurisdiction as the subdivision the entity is incorporated in (Exxon Mobil is `US-NJ`, not `US`), so the derivation test never matched and the adapter looked for a country bucket that does not exist. Both now reduce a subdivision to its country.
+**Latest: Phase 160** — a risk chip's accessible name is now its label alone; the summary sentence is an `aria-describedby` description, so a screen-reader user no longer hears every chip's paragraph twice.
 
 → [Full development history](docs/status.md)
 
