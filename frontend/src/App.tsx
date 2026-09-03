@@ -2093,12 +2093,31 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                white edge has to meet the card's. The honesty notices that can
                sit between the two carry their own top margin instead, so they
                are the exception rather than the default spacing. */
-            className="flex items-end gap-1 overflow-x-auto border-b border-oo-rule"
+            /* Phase 157: below `sm` the strip is a 2×2 grid of stacked
+               icon-over-label cells — the pattern the search-method tablist
+               already uses. The one-row strip needs ~657px, so on a 390px
+               phone a reader saw "QuickCheck · FullCheck · Ba…" and two of
+               the four modes did not exist unless they knew to swipe. From
+               `sm` up the strip is unchanged (padding eases to px-3 until
+               `md` so it still fits at 700), and the wrappers collapse to
+               `contents` on phones so the buttons are the grid cells. */
+            className="grid grid-cols-2 overflow-hidden rounded-oo border border-oo-rule bg-oo-bg mb-3 sm:mb-0 sm:flex sm:items-end sm:gap-1 sm:overflow-x-auto sm:overflow-y-auto sm:rounded-none sm:border-0 sm:border-b sm:bg-transparent"
           >
-            {MODE_TABS.map((tab) => {
+            {MODE_TABS.map((tab, i) => {
               const active = mode === tab.id;
+              // Grid lines for the phone layout: a left rule on the right-hand
+              // column, a top rule on the second row. Reset at `sm`, where the
+              // button's own tab border takes over.
+              const cellRules = `${i % 2 === 1 ? "border-l" : ""} ${i >= 2 ? "border-t" : ""}`.trim();
               return (
-                <div key={tab.id} className={tab.topic ? "flex items-end pl-3 ml-2 border-l border-oo-rule" : "flex items-end"}>
+                <div
+                  key={tab.id}
+                  className={
+                    tab.topic
+                      ? "contents sm:flex sm:items-end sm:pl-2 sm:ml-1 md:pl-3 md:ml-2 sm:border-l sm:border-oo-rule"
+                      : "contents sm:flex sm:items-end"
+                  }
+                >
                   <button
                     type="button"
                     role="tab"
@@ -2121,16 +2140,16 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                       selectMode(next.id);
                       document.getElementById(`tab-${next.id}`)?.focus();
                     }}
-                    className={`relative flex shrink-0 items-center gap-2 rounded-t-oo px-4 pb-3 pt-3 text-[14px] min-h-[44px] transition-colors ${
+                    className={`relative flex flex-col items-center justify-center gap-1 px-2 py-2.5 min-h-[56px] text-oo-meta border-0 border-oo-rule ${cellRules} transition-colors sm:flex-row sm:shrink-0 sm:justify-start sm:gap-2 sm:rounded-t-oo sm:px-3 md:px-4 sm:pb-3 sm:pt-3 sm:text-[14px] sm:min-h-[44px] sm:border ${
                       active
-                        ? "-mb-px border border-oo-rule border-b-white bg-white font-bold text-oo-ink"
-                        : "border border-transparent font-medium text-oo-muted hover:text-oo-ink"
+                        ? "bg-white font-bold text-oo-ink sm:-mb-px sm:border-oo-rule sm:border-b-white"
+                        : "font-medium text-oo-muted hover:text-oo-ink sm:border-transparent"
                     }`}
                   >
                     {active && (
                       <span
                         aria-hidden="true"
-                        className="absolute inset-x-[-1px] top-[-1px] h-[3px] rounded-t-oo"
+                        className="absolute inset-x-0 top-0 h-[3px] sm:inset-x-[-1px] sm:top-[-1px] sm:rounded-t-oo"
                         style={{ background: tab.accent }}
                       />
                     )}
