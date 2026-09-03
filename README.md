@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 157** — on phones the four check-mode tabs become a 2×2 grid of icon-over-label cells, so BackgroundCheck and Climate & ESG no longer sit off the edge of a strip nobody knew to swipe; the desktop strip is unchanged.
+**Latest: Phase 158** — OpenAleph mentions are fetched once per name and applied to every record carrying it, so same-name records collapse to one row with a count, and the Wikidata finding quotes a class label as Wikidata's own term ("classed on Wikidata as “concern”") unless it reads as a description.
 
 → [Full development history](docs/status.md)
 
