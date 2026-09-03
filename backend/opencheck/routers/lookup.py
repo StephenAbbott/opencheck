@@ -19,6 +19,7 @@ from .. import __version__
 from .. import bods as _bods
 from .. import identifiers
 from .. import degradation as _degradation
+from .. import outbound_rate as _outbound_rate
 from .. import provenance as _provenance
 from .. import consistency, consistencystats, signalstats
 from ..provenance import Provenance
@@ -289,6 +290,11 @@ async def _build_report(
     # from its own data records that here, and it is collected below alongside
     # the derived screens' degradations.
     _degradation.begin()
+    # Likewise the outbound call budgets, for the same reason and with the same
+    # lifetime: this function fans out across every adapter and then deepens
+    # the top hits, so a rate-capped source can be asked several times in one
+    # request and needs a per-request counter to spend from.
+    _outbound_rate.begin()
     results, errors = await _run_adapters(q, kind)
     hits = [hit for adapter_hits in results.values() for hit in adapter_hits]
     links = [link.to_dict() for link in reconcile(hits)]
@@ -330,6 +336,10 @@ async def _build_report(
     # above — a source that could not answer from its own data says so there,
     # not only in the server log. The derived screens append to the same list.
     degraded: list[DegradedSource] = _degradation.collect()
+    # The register fan-out is over, so the call budgets close with it. The
+    # derived screens below talk to name-screening services, none of which
+    # publish a per-minute quota this module governs.
+    _outbound_rate.end()
     oa_screening: list[dict[str, Any]] = []
     cross_signals = [
         s.to_dict()
@@ -1780,6 +1790,12 @@ async def _lookup_pipeline(
     SourceHit objects; everything else is JSON-serialisable dicts.
     """
     _degradation.begin()
+    # One outbound call budget per lookup, opened here because this is the
+    # outermost frame of the fan-out: the source tasks below copy this context
+    # on creation, so all of them — the subject's sources and every deepened
+    # related party — spend from one counter per rate-capped source. Without
+    # this call the budgets in gemi_greece.py are inert (see outbound_rate).
+    _outbound_rate.begin()
     lei = lei.strip().upper()
     if not _LEI_SHAPE.match(lei):
         yield ("error", {
@@ -2130,6 +2146,9 @@ async def _lookup_pipeline(
     # above — a source that could not answer from its own data says so there,
     # not only in the server log. The derived screens append to the same list.
     degraded: list[DegradedSource] = _degradation.collect()
+    # As in _build_report: the fan-out is done, so the budgets close with the
+    # degradation scope and the derived screens run outside both.
+    _outbound_rate.end()
     oa_screening: list[dict[str, Any]] = []
     name_screen = NameScreen()
     cross_raw, icij_raw, oa_raw = await asyncio.gather(

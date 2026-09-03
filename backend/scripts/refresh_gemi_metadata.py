@@ -57,8 +57,9 @@ _LISTS = (
     "assemblySubjects",
 )
 
-# 8 req/min published; pace at ~7/min to leave headroom for a retry.
-_INTERVAL_SECONDS = 8.6
+# 20 req/min published (raised from 8 on 2026-09-03); pace at ~18/min to leave
+# headroom for a retry.
+_INTERVAL_SECONDS = 3.4
 
 
 def _api_key() -> str:
