@@ -17,6 +17,7 @@ from opencheck.routers.lookup import (
 from opencheck.sources import REGISTRY, SearchKind
 from opencheck.sources.eiti import (
     EitiAdapter,
+    _country_code,
     _get_index,
     _match_identification,
     _norm_forms,
@@ -442,3 +443,86 @@ async def test_us_subject_matches_eiti_end_to_end_from_the_crosswalk() -> None:
     # And the hit corroborates on us_ein, not on the state number.
     hit = _bh_eiti(bundle, ctx)
     assert hit.identifiers == {"us_ein": _EXXON_EIN}
+
+
+# ---------------------------------------------------------------------------
+# GLEIF publishes a US jurisdiction as an ISO 3166-2 SUBDIVISION (Exxon Mobil
+# is "US-NJ"), not "US". Phase 155 shipped the crosswalk with an `== "US"`
+# test in _build_derived and passed ctx.jurisdiction straight to the adapter,
+# so US matching stayed dead in production even though every test passed --
+# the tests fed "US", a value the pipeline never actually supplies. These
+# pin the real shape.
+# ---------------------------------------------------------------------------
+
+#: Exxon Mobil's actual GLEIF jurisdiction, as returned by production.
+_EXXON_JURISDICTION = "US-NJ"
+
+
+def test_country_code_reduces_a_gleif_subdivision() -> None:
+    assert _country_code("US-NJ") == "US"
+    assert _country_code("us-de") == "US"
+    assert _country_code("GB") == "GB"
+    # Unrecognisable values pass through rather than being coerced into some
+    # other country's bucket -- failing to match beats matching the wrong one.
+    assert _country_code("") == ""
+    assert _country_code("NOT-A-JURISDICTION") == "NOT-A-JURISDICTION"
+
+
+def test_match_identification_accepts_a_subdivision_jurisdiction() -> None:
+    assert _match_identification("US-NJ", _EXXON_EIN) == _EXXON_EIN
+    # The country still binds: a US EIN under a GB subdivision must not match.
+    assert _match_identification("GB-SCT", _EXXON_EIN) is None
+
+
+def test_build_derived_populates_us_ein_under_a_subdivision() -> None:
+    """The regression that made Phase 155 a no-op in production."""
+    ctx = _LookupCtx(lei=_EXXON_LEI)
+    ctx.jurisdiction = _EXXON_JURISDICTION
+    ctx.registered_as = ""  # GLEIF publishes none for this record
+    _build_derived(ctx, "")
+    assert ctx.derived["us_ein"] == _EXXON_EIN
+
+
+async def test_fetch_by_registration_matches_under_a_subdivision() -> None:
+    """A subdivision jurisdiction matches, and the bundle is stamped with the
+    COUNTRY. A bundle carrying "US-NJ" would match yet still lose the us_ein
+    corroboration key downstream, so the country is asserted, not just the
+    hit."""
+    adapter = EitiAdapter()
+    bundle = await adapter.fetch_by_registration(
+        _EXXON_JURISDICTION, "", legal_name="EXXON MOBIL CORPORATION",
+        us_ein=_EXXON_EIN,
+    )
+    assert bundle is not None
+    assert bundle["country"] == "US"
+    assert bundle["identification"] == _EXXON_EIN
+
+
+async def test_us_subject_matches_end_to_end_under_a_subdivision() -> None:
+    """The production path, with the production jurisdiction value: derive ->
+    dispatch -> match -> corroborate on us_ein. This is the check that the
+    2026-09-04 Exxon spot-check failed."""
+    ctx = _LookupCtx(lei=_EXXON_LEI)
+    ctx.jurisdiction = _EXXON_JURISDICTION
+    ctx.registered_as = ""
+    ctx.legal_name = "EXXON MOBIL CORPORATION"
+    _build_derived(ctx, "")
+    assert ctx.derived.get("us_ein") == _EXXON_EIN
+
+    tasks = _dispatch(ctx, only="eiti")
+    assert [sid for sid, _ in tasks] == ["eiti"]
+    bundle = await tasks[0][1]
+    assert bundle is not None
+    assert bundle["country"] == "US"
+
+    hit = _bh_eiti(bundle, ctx)
+    assert hit.hit_id == f"US:{_EXXON_EIN}"
+    assert hit.identifiers == {"us_ein": _EXXON_EIN}
+
+
+async def test_fetch_by_hit_id_accepts_a_subdivision() -> None:
+    """The deepen/retry path takes ``CC:ident`` and must normalise it too."""
+    adapter = EitiAdapter()
+    bundle = await adapter.fetch(f"US-NJ:{_EXXON_EIN}")
+    assert bundle.get("is_stub") is not True
+    assert bundle["country"] == "US"
