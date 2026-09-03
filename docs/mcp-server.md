@@ -72,7 +72,13 @@ minutes; a re-run inside the 15-minute replay window is free.
 
 The same loop backs `GET /batch-stream?leis=…` for the web app (SSE:
 `batch_start`, then `row_done` / `row_failed` in completion order, then
-`batch_done`; heavy rate tier; Phase 144 bot gate).
+`batch_done`; heavy rate tier; Phase 144 bot gate) and, since Phase 167,
+`GET /batch-export?leis=…` — one zip with `bundle.json` (every row's BODS
+statements, de-duplicated by `statementId`), `rows.csv`, `manifest.json` and a
+`LICENSES.md` computed over the union of contributing sources, so one CC-BY-NC
+source in one row makes the whole bundle non-commercial and the notes say so.
+An agent wanting the merged graph can call `opencheck_export_bods` per LEI, or
+fetch `/batch-export` directly.
 
 ### What `opencheck_lookup` returns (Phase 153)
 

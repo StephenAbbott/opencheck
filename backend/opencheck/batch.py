@@ -30,6 +30,9 @@ OpenCheck does not grade companies, so rows are never ranked by severity.
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
+import json
 import re
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator
@@ -122,13 +125,15 @@ def batch_concurrency() -> int:
 
 async def _one(
     lei: str, deepen_top: int, refresh: bool, sem: asyncio.Semaphore
-) -> tuple[str, dict[str, Any]]:
+) -> tuple[str, dict[str, Any], Any]:
     """Run one LEI through the single-lookup pipeline under the semaphore.
 
-    Returns ``("row_done", row)`` or ``("row_failed", {...})``. Failures
-    are *rows*, not exceptions: one unknown LEI must not abort the other
-    nineteen, and a rate-limited anchor is reported so the reader knows
-    that company was not checked.
+    Returns ``("row_done", row, response)`` or ``("row_failed", {...},
+    None)``. Failures are *rows*, not exceptions: one unknown LEI must not
+    abort the other nineteen, and a rate-limited anchor is reported so the
+    reader knows that company was not checked. The full ``LookupResponse``
+    rides along for callers that need more than the row — the combined
+    export (Phase 167) needs every row's BODS statements.
     """
     from .mcp.shaping import shape_batch_row
     from .routers.lookup import _lookup_impl
@@ -148,6 +153,7 @@ async def _one(
                     "retryable": exc.status_code == 503,
                     "degraded": True,
                 },
+                None,
             )
         except GleifRateLimitedError as exc:  # pragma: no cover — _lookup_impl maps it
             return (
@@ -159,6 +165,7 @@ async def _one(
                     "retryable": True,
                     "degraded": True,
                 },
+                None,
             )
         except Exception as exc:  # noqa: BLE001 — a row, never a batch abort
             return (
@@ -170,22 +177,23 @@ async def _one(
                     "retryable": False,
                     "degraded": True,
                 },
+                None,
             )
-    return ("row_done", shape_batch_row(resp))
+    return ("row_done", shape_batch_row(resp), resp)
 
 
-async def run_batch(
+async def iter_batch(
     leis: list[str],
     *,
     deepen_top: int = 5,
     refresh: bool = False,
     concurrency: int | None = None,
-) -> AsyncIterator[tuple[str, dict[str, Any]]]:
-    """Screen ``leis`` and yield ``(event, payload)`` as each row finishes.
+) -> AsyncIterator[tuple[str, dict[str, Any], Any]]:
+    """Screen ``leis`` and yield ``(event, payload, response)`` per row.
 
-    Events: ``row_done`` / ``row_failed`` per LEI (completion order), then
-    one ``batch_done`` with the totals. Callers parse and cap the list
-    first (:func:`parse_lei_list`) — this function trusts its input.
+    The engine under :func:`run_batch` (which drops the response) and the
+    combined export (which keeps it). ``response`` is the ``LookupResponse``
+    for ``row_done`` and ``None`` for ``row_failed`` and ``batch_done``.
     """
     sem = asyncio.Semaphore(concurrency or batch_concurrency())
     tasks = [
@@ -194,12 +202,12 @@ async def run_batch(
     done = failed = 0
     try:
         for fut in asyncio.as_completed(tasks):
-            event, payload = await fut
+            event, payload, resp = await fut
             if event == "row_done":
                 done += 1
             else:
                 failed += 1
-            yield (event, payload)
+            yield (event, payload, resp)
     finally:
         # A client that disconnects mid-batch must not leave nineteen
         # pipelines running against the shared upstream budgets.
@@ -216,4 +224,171 @@ async def run_batch(
             # fully run are counted by the caller from each row's
             # ``degraded`` flag; ``failed`` rows are degraded by definition.
         },
+        None,
     )
+
+
+async def run_batch(
+    leis: list[str],
+    *,
+    deepen_top: int = 5,
+    refresh: bool = False,
+    concurrency: int | None = None,
+) -> AsyncIterator[tuple[str, dict[str, Any]]]:
+    """Screen ``leis`` and yield ``(event, payload)`` as each row finishes.
+
+    Events: ``row_done`` / ``row_failed`` per LEI (completion order), then
+    one ``batch_done`` with the totals. Callers parse and cap the list
+    first (:func:`parse_lei_list`) — this function trusts its input.
+    """
+    async for event, payload, _resp in iter_batch(
+        leis, deepen_top=deepen_top, refresh=refresh, concurrency=concurrency
+    ):
+        yield (event, payload)
+
+
+# ---------------------------------------------------------------------------
+# Combined export (Phase 167)
+# ---------------------------------------------------------------------------
+
+#: The table as it is written to ``rows.csv`` — the same columns, in the
+#: same order, as the page's client-side CSV (``frontend/src/lib/batch.ts``),
+#: so a reader who has both files can line them up.
+CSV_COLUMNS = [
+    "lei",
+    "legal_name",
+    "jurisdiction",
+    "register_status",
+    "verdict",
+    "risk_count",
+    "risk_codes",
+    "context_count",
+    "context_codes",
+    "sources_applicable",
+    "sources_answered",
+    "degraded",
+    "degraded_sources",
+    "state",
+    "reason",
+    "report_url",
+]
+
+
+@dataclass
+class BatchResult:
+    """Everything the combined export needs, in paste order."""
+
+    rows: list[dict[str, Any]] = field(default_factory=list)
+    failed: list[dict[str, Any]] = field(default_factory=list)
+    #: Every row's BODS statements, de-duplicated by ``statementId`` across
+    #: rows: two companies in one group share the parent's entity statement
+    #: (both derive it from the same LEI), and it must appear once.
+    statements: list[dict[str, Any]] = field(default_factory=list)
+    #: Registered source ids that returned data for at least one row.
+    contributing_ids: list[str] = field(default_factory=list)
+    #: Per-bundle licence notices adapters attached, de-duplicated.
+    license_notices: list[dict[str, Any]] = field(default_factory=list)
+    #: ``statementId``s that appeared in more than one row's bundle.
+    duplicate_statement_count: int = 0
+
+    @property
+    def totals(self) -> dict[str, int]:
+        return {
+            "requested": len(self.rows) + len(self.failed),
+            "done": len(self.rows),
+            "failed": len(self.failed),
+            "degraded": sum(1 for r in self.rows if r.get("degraded")) + len(self.failed),
+        }
+
+
+async def collect_batch(
+    leis: list[str], *, deepen_top: int = 5, refresh: bool = False
+) -> BatchResult:
+    """Run the batch to completion and merge every row's bundle.
+
+    Rows come back in paste order regardless of completion order. A
+    failed row contributes no statements and no sources — it is named in
+    ``failed`` (and in ``rows.csv``) so the bundle never reads as a
+    complete answer for a list it only partly covered.
+    """
+    order = {lei: i for i, lei in enumerate(leis)}
+    rows: list[dict[str, Any]] = []
+    failed: list[dict[str, Any]] = []
+    responses: dict[str, Any] = {}
+    async for event, payload, resp in iter_batch(
+        leis, deepen_top=deepen_top, refresh=refresh
+    ):
+        if event == "row_done":
+            rows.append(payload)
+            responses[payload["lei"]] = resp
+        elif event == "row_failed":
+            failed.append(payload)
+    rows.sort(key=lambda r: order.get(r["lei"], len(order)))
+    failed.sort(key=lambda r: order.get(r["lei"], len(order)))
+
+    result = BatchResult(rows=rows, failed=failed)
+    seen: set[str] = set()
+    sources: set[str] = set()
+    notices: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        resp = responses[row["lei"]]
+        for stmt in resp.bods or []:
+            sid = stmt.get("statementId")
+            if sid and sid in seen:
+                result.duplicate_statement_count += 1
+                continue
+            if sid:
+                seen.add(sid)
+            result.statements.append(stmt)
+        for h in resp.hits or []:
+            if not h.is_stub:
+                sources.add(h.source_id)
+        for n in resp.license_notices or []:
+            key = json.dumps(n, sort_keys=True, default=str)
+            notices.setdefault(key, n)
+    result.contributing_ids = sorted(sources)
+    result.license_notices = list(notices.values())
+    return result
+
+
+def _csv_row_done(row: dict[str, Any], origin: str) -> list[Any]:
+    status = row.get("register_status") or {}
+    cov = row.get("coverage") or {}
+    return [
+        row["lei"],
+        row.get("legal_name") or "",
+        row.get("jurisdiction") or "",
+        status.get("liveness") or "",
+        row.get("verdict") or "",
+        row.get("risk_count", 0),
+        " ".join(row.get("risk_codes") or []),
+        row.get("context_count", 0),
+        " ".join(row.get("context_codes") or []),
+        cov.get("applicable", ""),
+        cov.get("answered", ""),
+        "true" if row.get("degraded") else "false",
+        " ".join(row.get("degraded_sources") or []),
+        "degraded" if row.get("degraded") else "done",
+        "",
+        f"{origin}{row.get('report_url', '')}",
+    ]
+
+
+def _csv_row_failed(row: dict[str, Any], origin: str) -> list[Any]:
+    return [
+        row["lei"], "", "", "", "", "", "", "", "", "", "", "true", "",
+        "not checked", row.get("reason") or "", f"{origin}/?lei={row['lei']}",
+    ]
+
+
+def rows_csv(result: BatchResult, *, origin: str = "https://opencheck.world") -> str:
+    """``rows.csv``: every screened LEI, one line each, failed rows included
+    with their reason — the same columns the page's CSV button writes."""
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\r\n")
+    w.writerow(CSV_COLUMNS)
+    for r in result.rows:
+        w.writerow(_csv_row_done(r, origin))
+    for r in result.failed:
+        w.writerow(_csv_row_failed(r, origin))
+    return buf.getvalue()

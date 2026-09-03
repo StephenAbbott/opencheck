@@ -410,3 +410,141 @@ async def test_mcp_tool_with_nothing_valid() -> None:
     out = await mcp_server.opencheck_batch_lookup(leis=["nope"])
     assert out["rows"] == [] and out["failed"] == [] and out["accepted"] == []
     assert out["counts"]["requested"] == 0
+
+
+# ---- Phase 167: the combined export ----------------------------------------
+
+import io as _io
+import zipfile as _zipfile
+
+from opencheck.routers.batch import build_batch_zip
+
+
+def _bods(lei: str, *, shared_parent: bool = True) -> list[dict]:
+    """Two statements per company plus, when asked, the SAME parent entity
+    statement — two subsidiaries of one group share it by statementId."""
+    stmts = [
+        {"statementId": f"e-{lei}", "recordType": "entity",
+         "recordDetails": {"entityType": {"type": "registeredEntity"}, "name": lei},
+         "source": {"description": "GLEIF"}},
+        {"statementId": f"r-{lei}", "recordType": "relationship",
+         "recordDetails": {"subject": f"e-{lei}", "interestedParty": "e-parent",
+                           "interests": [{"type": "shareholding"}]}},
+    ]
+    if shared_parent:
+        stmts.append({"statementId": "e-parent", "recordType": "entity",
+                      "recordDetails": {"entityType": {"type": "registeredEntity"}, "name": "Parent"}})
+    return stmts
+
+
+@pytest.mark.asyncio
+async def test_collect_batch_merges_and_dedupes_statements(monkeypatch) -> None:
+    a, b, c = _leis(3)
+
+    async def _fake(lei, deepen_top=5, refresh=False):
+        if lei == c:
+            raise HTTPException(404, "No GLEIF record found")
+        return _resp(lei, bods=_bods(lei))
+
+    monkeypatch.setattr("opencheck.routers.lookup._lookup_impl", _fake)
+    result = await _batch.collect_batch([a, b, c])
+    assert [r["lei"] for r in result.rows] == [a, b]
+    assert [r["lei"] for r in result.failed] == [c]
+    ids = [s["statementId"] for s in result.statements]
+    # 2 per company + the shared parent ONCE — never twice.
+    assert sorted(ids) == sorted([f"e-{a}", f"r-{a}", f"e-{b}", f"r-{b}", "e-parent"])
+    assert result.duplicate_statement_count == 1
+    # The failed row contributes nothing — and the sources are the union of
+    # the rows that did answer.
+    assert result.contributing_ids == ["companies_house", "gleif"]
+    assert result.totals == {"requested": 3, "done": 2, "failed": 1, "degraded": 3}
+
+
+def test_rows_csv_names_every_lei_with_failed_ones_apart() -> None:
+    a, b = _leis(2)
+    result = _batch.BatchResult(
+        rows=[shape_batch_row(_resp(a, verdict='Sanctions, "listed".'))],
+        failed=[{"lei": b, "status": 503, "reason": "rate-limited", "retryable": True, "degraded": True}],
+    )
+    text = _batch.rows_csv(result, origin="https://opencheck.world")
+    lines = text.strip().split("\r\n")
+    assert lines[0].split(",") == _batch.CSV_COLUMNS
+    assert lines[1].startswith(f"{a},Northwind Logistics Ltd,GB,live,")
+    assert '"Sanctions, ""listed""."' in lines[1]
+    assert ",degraded,," in lines[1]  # the fixture row has a degraded source
+    assert lines[2] == f"{b},,,,,,,,,,,true,,not checked,rate-limited,https://opencheck.world/?lei={b}"
+
+
+def test_zip_union_licence_is_the_strictest_member(monkeypatch) -> None:
+    """One NC source in ONE row makes the whole bundle non-commercial."""
+    from opencheck.licensing import assess
+
+    a, b = _leis(2)
+    result = _batch.BatchResult(
+        rows=[shape_batch_row(_resp(a)), shape_batch_row(_resp(b))],
+        statements=_bods(a),
+        contributing_ids=["gleif", "opensanctions"],  # OpenSanctions is CC-BY-NC
+    )
+    parsed = _batch.parse_lei_list(f"{a} {b}")
+    body = build_batch_zip(result, parsed=parsed, stamp="20260903")
+    with _zipfile.ZipFile(_io.BytesIO(body)) as zf:
+        names = zf.namelist()
+        assert names == [
+            "opencheck-batch-20260903/bundle.json",
+            "opencheck-batch-20260903/rows.csv",
+            "opencheck-batch-20260903/manifest.json",
+            "opencheck-batch-20260903/LICENSES.md",
+        ]
+        manifest = json.loads(zf.read(names[2]))
+        licenses = zf.read(names[3]).decode()
+        bundle = json.loads(zf.read(names[0]))
+    assert manifest["kind"] == "batch-screening"
+    assert manifest["leis"] == [a, b]
+    assert manifest["licensing"]["commercial_use"] == "no"
+    assert manifest["licensing"] == assess(["gleif", "opensanctions"]).model_dump()
+    assert "batch of 2 LEIs" in licenses
+    assert "Commercial use: **no**" in licenses
+    assert len(bundle) == 3 and manifest["bods_statement_count"] == 3
+
+
+def test_export_route_returns_the_zip_and_flags_failures(client: TestClient, monkeypatch) -> None:
+    a, b = _leis(2)
+
+    async def _fake(lei, deepen_top=5, refresh=False):
+        if lei == b:
+            raise HTTPException(503, "rate-limited")
+        return _resp(lei, bods=_bods(lei))
+
+    monkeypatch.setattr("opencheck.routers.lookup._lookup_impl", _fake)
+    r = client.get("/batch-export", params={"leis": f"{a},{b}"}, headers={"User-Agent": _BROWSER_UA})
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/zip"
+    assert r.headers["x-opencheck-batch-failed"] == "1"
+    assert 'filename="opencheck-batch-' in r.headers["content-disposition"]
+    with _zipfile.ZipFile(_io.BytesIO(r.content)) as zf:
+        manifest = json.loads(zf.read([n for n in zf.namelist() if n.endswith("manifest.json")][0]))
+        rows = zf.read([n for n in zf.namelist() if n.endswith("rows.csv")][0]).decode()
+    assert manifest["counts"] == {"requested": 2, "done": 1, "failed": 1, "degraded": 2}
+    assert manifest["failed"][0]["lei"] == b
+    assert f"{b},,,,,,,,,,,true,,not checked,rate-limited" in rows
+
+
+def test_export_route_is_gated_and_validated(client: TestClient) -> None:
+    lei = _leis(1)[0]
+    r = client.get("/batch-export", params={"leis": lei}, headers={"User-Agent": "python-httpx/0.27.0"})
+    assert r.status_code == 403 and "/batch-export" in r.json()["detail"]
+    r = client.get("/batch-export", params={"leis": "nope"}, headers={"User-Agent": _BROWSER_UA})
+    assert r.status_code == 422
+    r = client.get("/robots.txt")
+    assert "Disallow: /batch-export" in r.text
+
+
+def test_export_route_is_on_the_heavy_tier(limited_client: TestClient, monkeypatch) -> None:
+    async def _fake(lei, deepen_top=5, refresh=False):
+        return _resp(lei, bods=_bods(lei))
+
+    monkeypatch.setattr("opencheck.routers.lookup._lookup_impl", _fake)
+    hdr = {"User-Agent": _BROWSER_UA}
+    lei = _leis(1)[0]
+    assert limited_client.get("/batch-export", params={"leis": lei}, headers=hdr).status_code == 200
+    assert limited_client.get("/batch-export", params={"leis": lei}, headers=hdr).status_code == 429
