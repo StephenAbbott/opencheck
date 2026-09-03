@@ -178,12 +178,16 @@ PROBES: dict[str, SourceProbe] = {
     # --- live national registers, entered by identifier -------------------
     "abr_australia": _p(
         tier="live",
-        subject="Commonwealth Bank of Australia (ABN)",
-        args=("31976733718",),
+        subject="Commonwealth Bank of Australia (ACN)",
+        args=("123123124",),
         requires_env=("ABN_GUID",),
+        anchor_lei="MSFSBD3QN1GSN7Q6C537",
         bods_mapper="map_abr_australia",
         notes=(
-            "No anchor LEI: the only ASIC-registered GLEIF records matching CBA are aircraft-leasing SPVs. Swapping a bank for an SPV to gain drift coverage would be a worse probe subject than none."
+            "Phase 163: probed by ACN, not ABN, because that is how the pipeline reaches it — CBA's own "
+            "GLEIF record is registered at ASIC (RA000014) as '123 123 124', and the adapter routes a "
+            "9-digit identifier to AcnDetails. The earlier note that only aircraft-leasing SPVs matched "
+            "was wrong: a fulltext search surfaces the SPVs first, the bank's record is MSFSBD3QN1GSN7Q6C537."
         ),
     ),
     "ares": _p(
@@ -338,12 +342,16 @@ PROBES: dict[str, SourceProbe] = {
     ),
     "malta_mbr": _p(
         tier="live",
-        subject="Maltese company by CRN",
-        args=("C 113927",),
+        subject="Bank of Valletta p.l.c. (C 2833)",
+        args=("C 2833",),
         expect_fields=("company",),
+        anchor_lei="529900RWC8ZYB066JF16",
         bods_mapper="map_malta_mbr",
         notes=(
-            "No anchor LEI: no GLEIF record found registered at RA000443."
+            "Phase 163: subject changed from an anonymous CRN to Malta's largest bank, incorporated 1974, "
+            "whose GLEIF record is registered at RA000443 as 'C 2833'. The earlier note that no GLEIF "
+            "record was registered there was wrong — the API's registeredAt filter returns nothing, but "
+            "nearly every Maltese company record carries RA000443."
         ),
     ),
     "mca_india": _p(
@@ -351,9 +359,12 @@ PROBES: dict[str, SourceProbe] = {
         subject="Infosys Limited",
         args=("L85110KA1981PLC013115",),
         requires_env=("DATA_GOV_IN_API_KEY",),
+        anchor_lei="335800TYLGG93MM7PR89",
         bods_mapper="map_mca_india",
         notes=(
-            "No anchor LEI: the Indian GLEIF records carrying an MCA registration number are small private companies, not Infosys — a worse subject than the one we have."
+            "Phase 163: Infosys's own GLEIF record is registered at RA000394 with the CIN verbatim as "
+            "registeredAs, so the anchor derives the probe subject exactly. The earlier note said no such "
+            "record existed."
         ),
     ),
     "nz_companies": _p(

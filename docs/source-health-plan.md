@@ -182,6 +182,17 @@ Expected after a re-run: 21 of 24 verified. The three not covered (`abr_australi
 `mca_india`) have no anchor LEI on their probe — a separate, real gap: each needs one known-good
 LEI whose GLEIF record is registered at that authority.
 
+## Sweep coverage — closed 2026-09-03 (Phase 163)
+
+Three gaps the first published sweeps made visible, all about what the CI job can reach rather
+than about any source:
+
+| Gap | Cause | Fix |
+|---|---|---|
+| `gemi_greece` "not configured: GEMI_API_KEY" | The workflow maps secrets into the sweep one by one and GEMI was never added (the adapter post-dates the sweep). Render and `.env` were always fine — the page shows the sweep's verdict, not the deployment's configuration | `GEMI_API_KEY` mapped in `source-health.yml`; the repository secret must exist for it to take effect (same for `DATA_GOV_IN_API_KEY`, which was mapped but never created) |
+| `climatetrace` "required local artifact absent: gem/ownership.zip" | `data/gem/` is gitignored; production downloads it on demand, a fresh checkout has nothing, and the probe deliberately refuses to start a download itself | A workflow step fetches the 2 MB zip from GitHub's CDN before the sweep (allowed to fail — the probe then skips exactly as before) |
+| Three probes with no anchor LEI (`abr_australia`, `malta_mbr`, `mca_india`) | The notes said no suitable GLEIF record existed. All three notes were wrong: CBA's own record is at ASIC (RA000014) as an ACN, Bank of Valletta's at RA000443 as `C 2833`, Infosys's at RA000394 with the CIN verbatim | Anchors added; the ABR probe now probes CBA by ACN (which is how the pipeline reaches it); the Malta subject is Bank of Valletta rather than an anonymous CRN. The drift check now covers all 24 identifier-dispatched sources |
+
 ## Snapshot and curated sources need a *staleness* check, not a liveness check
 
 For `cac_nigeria`, `eiti_bo`, `eiti_soe` and the bulk parquet adapters the failure mode isn't a
