@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { CONFIDENCE_GLYPH, CONFIDENCE_LABEL } from "../ui/Chip";
 import { SignalEvidence } from "./SignalEvidence";
 import type { RiskSignal } from "../../lib/api";
@@ -187,8 +187,21 @@ export function rank(confidence: string): number {
  *   that could hold a box — the verdict strip, a source card, the graph
  *   legend. The box is the same `SignalEvidence` component, so an expansion
  *   here and the section's box are one design rather than two.
- * - **Static** (`interactive={false}`). The summary rides in the accessible
- *   name and there is nothing to activate.
+ * - **Static** (`interactive={false}`). The summary follows the label as
+ *   screen-reader-only text and there is nothing to activate.
+ *
+ * **Name and description are kept apart** (Phase 160). Phase 124 put the
+ * summary sentence inside the button so that activating it was not the only
+ * way to learn what it was about; but text inside a button *is* its
+ * accessible name, so each chip announced as a 300-character paragraph —
+ * "corroborated by two or more sources: Related PEP. Jane Holl Lute, a director, matches a
+ * politically exposed person record… Source: OpenSanctions." — and the same
+ * chip is rendered in the verdict strip and again in the Risk signals
+ * section, so a screen-reader user tabbing the page heard every paragraph
+ * twice. The name is now the glyph's confidence word and the label; the
+ * sentence is an `aria-describedby` description, which assistive technology
+ * reads after the name on focus and which a reader can skip. Same words,
+ * same order, one level down.
  *
  * A self-expanded chip claims **no corroboration**: it knows one signal, and
  * "Reported by one source" would be a claim about the whole check made by a
@@ -210,6 +223,7 @@ export function RiskChip({
   onSelect?: (signal: RiskSignal) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const descriptionId = useId();
   const presentation =
     RISK_PRESENTATION[signal.code] ?? {
       label: signal.code,
@@ -221,12 +235,14 @@ export function RiskChip({
   // Phase 124: `title` is gone from both branches. It was the only carrier of
   // `signal.summary` on the interactive chip — a screen-reader user who did
   // not activate the button heard the label and nothing else — and it leaked
-  // the raw `source_id/hit_id` pair as prose. The summary now rides in the
-  // accessible name on both branches, and the expansion names the source
-  // properly.
-  const described = `${signal.summary}${
-    signal.source_id ? ` Source: ${sourceLabel(signal.source_id)}.` : ""
-  }`;
+  // the raw `source_id/hit_id` pair as prose. Phase 160: the summary is the
+  // control's *description*, not part of its name (see the component note).
+  // The element it points at is `hidden` — a description is computed from a
+  // referenced element whether or not it is rendered, and a visible-to-AT
+  // copy in the document would be read a second time in browse mode, which
+  // is the duplication this exists to remove.
+  const described = describedText(signal);
+  const description = <span id={descriptionId} hidden>{described}</span>;
   const chipContent = (
     <>
       <span aria-hidden className="text-oo-meta">{CONFIDENCE_GLYPH[signal.confidence] ?? "•"}</span>
@@ -236,12 +252,16 @@ export function RiskChip({
   );
 
   if (!interactive) {
+    // Not a control, so there is no name to keep short: the summary is read
+    // once, in document order, after the label — unless it *is* the label
+    // (the example picker passes the label as the summary), in which case
+    // repeating it says nothing.
     return (
       <span
         className={`inline-flex items-center gap-1.5 border rounded-full shadow-sm ${padding} ${presentation.classes}`}
       >
         {chipContent}
-        <span className="sr-only">{described}</span>
+        {described !== presentation.label && <span className="sr-only">{described}</span>}
       </span>
     );
   }
@@ -252,17 +272,20 @@ export function RiskChip({
   // would send a screen-reader user looking for it.
   if (onSelect) {
     return (
-      <button
-        type="button"
-        aria-pressed={selected}
-        onClick={() => onSelect(signal)}
-        className={`inline-flex items-center gap-1.5 border rounded-full shadow-sm ${padding} ${presentation.classes} ${
-          selected ? "ring-2 ring-oo-navy/40 ring-offset-1" : ""
-        }`}
-      >
-        {chipContent}
-        <span className="sr-only">{described}</span>
-      </button>
+      <>
+        <button
+          type="button"
+          aria-pressed={selected}
+          aria-describedby={descriptionId}
+          onClick={() => onSelect(signal)}
+          className={`inline-flex items-center gap-1.5 border rounded-full shadow-sm ${padding} ${presentation.classes} ${
+            selected ? "ring-2 ring-oo-navy/40 ring-offset-1" : ""
+          }`}
+        >
+          {chipContent}
+        </button>
+        {description}
+      </>
     );
   }
 
@@ -271,15 +294,16 @@ export function RiskChip({
       <button
         type="button"
         aria-expanded={open}
+        aria-describedby={descriptionId}
         onClick={() => setOpen((v) => !v)}
         className={`inline-flex items-center gap-1.5 border rounded-full shadow-sm ${padding} ${presentation.classes}`}
       >
         {chipContent}
-        {/* The chip's own text is the rule that fired; the summary is why.
-            Both belong in the accessible name — activating a control should
-            not be the only way to learn what it is about. */}
-        <span className="sr-only">{described}</span>
       </button>
+      {/* The chip's own text is the rule that fired; the summary is why.
+          Activating the control must not be the only way to learn what it
+          is about — so the why is its description, reachable on focus. */}
+      {description}
       {open && (
         <span className="basis-full">
           <SignalEvidence lead={chipEvidence(signal)} />
@@ -287,6 +311,17 @@ export function RiskChip({
       )}
     </>
   );
+}
+
+/**
+ * What a chip says about itself beyond its label: the summary sentence and,
+ * when the signal names one, its source. This is the chip's accessible
+ * description — never part of its name.
+ */
+export function describedText(signal: RiskSignal): string {
+  return `${signal.summary}${
+    signal.source_id ? ` Source: ${sourceLabel(signal.source_id)}.` : ""
+  }`;
 }
 
 /**

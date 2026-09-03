@@ -113,3 +113,71 @@ describe("risk signal presentation maps", () => {
     );
   });
 });
+
+/**
+ * Phase 160 — the chip's accessible name is its label; the sentence is its
+ * description. Rendered to static markup (no DOM needed) and read back the
+ * way an accessibility tree would: text inside the button is the name,
+ * `aria-describedby` points at the description.
+ */
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { RiskChip, describedText } from "./RiskChip";
+import type { RiskSignal } from "../../lib/api";
+
+const RELATED_PEP: RiskSignal = {
+  code: "RELATED_PEP",
+  confidence: "high",
+  source_id: "opensanctions",
+  hit_id: "Q1",
+  summary:
+    "Jane Holl Lute, a director, matches a politically exposed person record: a former United States Deputy Secretary of Homeland Security.",
+  evidence: {},
+};
+
+function buttonText(html: string): string {
+  const m = html.match(/<button[^>]*>([\s\S]*?)<\/button>/);
+  if (!m) throw new Error(`no button in ${html}`);
+  return m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+}
+
+describe("RiskChip accessible name and description", () => {
+  const description = describedText(RELATED_PEP);
+
+  it("keeps the summary out of the name and reachable as a description (self-expanding chip)", () => {
+    const html = renderToStaticMarkup(createElement(RiskChip, { signal: RELATED_PEP, compact: true }));
+    const name = buttonText(html);
+    expect(name).toBe("●Corroborated by two or more sources: Related PEP");
+    expect(name).not.toContain("Jane Holl Lute");
+    const id = html.match(/aria-describedby="([^"]+)"/)?.[1];
+    expect(id, "button carries aria-describedby").toBeTruthy();
+    expect(html).toContain(`<span id="${id}" hidden="">${description}</span>`);
+    expect(description).toMatch(/ Source: \w+\.$/);
+  });
+
+  it("does the same on the selectable chip, which the Risk signals section renders", () => {
+    const html = renderToStaticMarkup(
+      createElement(RiskChip, { signal: RELATED_PEP, compact: true, onSelect: () => {} }),
+    );
+    expect(html).toContain('aria-pressed="false"');
+    expect(buttonText(html)).not.toContain("Jane Holl Lute");
+    const id = html.match(/aria-describedby="([^"]+)"/)?.[1];
+    expect(html).toContain(`<span id="${id}" hidden="">${description}</span>`);
+  });
+
+  it("reads the summary once, after the label, on a static chip — and not at all when it is the label", () => {
+    const html = renderToStaticMarkup(
+      createElement(RiskChip, { signal: RELATED_PEP, compact: true, interactive: false }),
+    );
+    expect(html).not.toContain("aria-describedby");
+    expect(html).toContain(`<span class="sr-only">${description}</span>`);
+    const bare = renderToStaticMarkup(
+      createElement(RiskChip, {
+        signal: { ...RELATED_PEP, source_id: "", summary: "Related PEP" },
+        compact: true,
+        interactive: false,
+      }),
+    );
+    expect(bare.match(/Related PEP/g)).toHaveLength(1);
+  });
+});
