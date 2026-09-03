@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 165** — ΓΕΜΗ raised the API limit to twenty requests a minute, and the per-lookup call budget that was supposed to spend it is now actually opened on the request path, where it had been inert since Phase 137.
+**Latest: Phase 166** — the `/batch` page: paste up to 20 LEIs, get one table (register status, verdict sentence, signal chips, coverage; rows that could not be checked listed first) and one CSV, promoted from a new *Screen a list* section on the homepage.
 
 → [Full development history](docs/status.md)
 
