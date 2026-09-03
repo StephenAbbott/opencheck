@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 164** — batch screening, backend half: `GET /batch-stream` and the MCP `opencheck_batch_lookup` screen up to 20 LEIs as a thin loop over the single-lookup pipeline (two in flight, heavy tier, bot-gated), with a row that could not be checked reported as degraded rather than dropped.
+**Latest: Phase 166** — the `/batch` page: paste up to 20 LEIs, get one table (register status, verdict sentence, signal chips, coverage; rows that could not be checked listed first) and one CSV, promoted from a new *Screen a list* section on the homepage.
 
 → [Full development history](docs/status.md)
 
