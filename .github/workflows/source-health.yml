@@ -72,6 +72,12 @@ jobs:
         continue-on-error: true
         env:
           OPENCHECK_ALLOW_LIVE: "true"
+          # Phase 162: a batch job should queue for a GLEIF slot, not give up.
+          # The 15 s default is tuned for an interactive lookup; here the
+          # dispatch-drift check runs after the probes have drawn on the same
+          # 50/min budget, and the first published sweep reported twelve
+          # anchors as "drifted" because each fetch abandoned the wait.
+          OPENCHECK_GLEIF_THROTTLE_MAX_WAIT_S: "120"
           # Phase B: add each of these as a repository secret to lift the
           # source out of "skipped (not configured)". A source with no secret
           # is reported as untested rather than counted as healthy, and the

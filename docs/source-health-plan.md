@@ -157,6 +157,31 @@ not any movement.
 
 ---
 
+## Dispatch-drift false alarm — closed 2026-09-03 (Phase 162)
+
+The first sweep published to the release (Phase 161) reported *"9 of 24 identifier-dispatched
+sources still resolve from their GLEIF anchor"*, with twelve ❌ rows. Every one carried the same
+reason: *GLEIF request budget exhausted (50/min shared across this process) and no slot frees
+within 15s*. Nothing had drifted; the check had exhausted the sweep's own GLEIF budget.
+
+`check_dispatch_drift` fetched each anchor through `GleifAdapter.fetch`, which also walks both
+parents, their reporting exceptions and the children — four to six requests per anchor, a
+hundred-odd for the set, after the probes had already drawn on the same budget, with the
+interactive 15 s maximum wait. Only `registeredAs` and `registeredAt` were ever read, and both are
+on the Level 1 record.
+
+Three changes:
+
+| Change | Why |
+|---|---|
+| `GleifAdapter.fetch_entity(lei)` — the Level 1 `entity` block alone, one request, same cache key and TTL as `fetch` | 24 anchors now cost 24 requests, inside one minute's budget |
+| An anchor the sweep **could not fetch** is `unchecked` (⚠️), reported under the drift heading but never counted as drift and never a red run; `fail` (❌) is reserved for an anchor that was fetched and no longer derives | A fetch failure says something about the sweep's reach, not about the registrar; calling it drift is how twelve false alarms reached the report |
+| The summary is three numbers — *N verified · K could not be checked · J drifted · M not covered* — and the job sets `OPENCHECK_GLEIF_THROTTLE_MAX_WAIT_S=120` | "9 of 24 still resolve" read as fifteen drifted; a batch job should queue for a slot rather than give up |
+
+Expected after a re-run: 21 of 24 verified. The three not covered (`abr_australia`, `malta_mbr`,
+`mca_india`) have no anchor LEI on their probe — a separate, real gap: each needs one known-good
+LEI whose GLEIF record is registered at that authority.
+
 ## Snapshot and curated sources need a *staleness* check, not a liveness check
 
 For `cac_nigeria`, `eiti_bo`, `eiti_soe` and the bulk parquet adapters the failure mode isn't a
