@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 156** — the Coverage column says which sources apply to the company as well as how many answered ("11 of OpenCheck's 40 sources apply to a GB company; every one answered"), the GLEIF anchor included, so ten of ten no longer reads as forty minus thirty.
+**Latest: Phase 157** — on phones the four check-mode tabs become a 2×2 grid of icon-over-label cells, so BackgroundCheck and Climate & ESG no longer sit off the edge of a strip nobody knew to swipe; the desktop strip is unchanged.
 
 → [Full development history](docs/status.md)
 
