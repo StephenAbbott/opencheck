@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 166** — the `/batch` page: paste up to 20 LEIs, get one table (register status, verdict sentence, signal chips, coverage; rows that could not be checked listed first) and one CSV, promoted from a new *Screen a list* section on the homepage.
+**Latest: Phase 167** — `GET /batch-export`: a screened list as one zip — every company's BODS statements de-duplicated into one bundle, `rows.csv`, a manifest and a `LICENSES.md` over the union of sources — with a *Download BODS bundle* button on `/batch`.
 
 → [Full development history](docs/status.md)
 
