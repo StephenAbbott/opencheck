@@ -6,10 +6,10 @@ OpenCheck calls *someone else's* API, for the handful of sources whose
 published quota is low enough that an unthrottled fan-out would trip it.
 
 The first such source is the Greek ΓΕΜΗ Open Data API, whose documented
-budget is **8 requests per minute** — one every 7.5 seconds. A FullCheck that
-traverses several Greek related parties issues one call each; without a
-throttle the third or fourth lands on HTTP 429 and the lookup loses data it
-could have had by waiting.
+budget is **20 requests per minute** — one every three seconds, raised from
+the original 8 on 2026-09-03. A FullCheck that traverses several Greek related
+parties issues one call each; without a throttle the third or fourth lands on
+HTTP 429 and the lookup loses data it could have had by waiting.
 
 Two mechanisms, deliberately separate:
 
@@ -21,6 +21,23 @@ Two mechanisms, deliberately separate:
   and stall the request past its timeout. Scoped with a ContextVar, in the
   same style as :mod:`opencheck.provenance` and :mod:`opencheck.degradation`,
   so adapters need no plumbing.
+
+A budget only exists while a scope is open, and **something has to open it**.
+Phase 137 shipped the mechanism and both call sites in the ΓΕΜΗ adapter but
+never opened a scope on the request path — only inside a test, which opened
+its own — so :func:`current_budget` returned ``None`` in production and the
+cap was inert for every real lookup from Phase 137 to Phase 165. Nothing
+looked wrong: the adapter's ``if budget is not None`` guard is exactly what a
+script or probe needs, so the dead path was indistinguishable from the
+intended one. What it cost was the honest degradation the cap exists to
+produce — a deep Greek chain queued on the bucket instead and hit its 30s
+source timeout, reporting a timeout rather than "GEMI was rate-limited".
+
+The lesson generalises: a ContextVar mechanism is only as live as its
+outermost ``begin()``, and a test that opens the scope itself cannot tell you
+whether production does. :func:`begin` is called once per lookup in
+``routers/lookup.py``, beside ``degradation.begin()``, and a test asserts that
+the real pipeline opens it.
 
 Both are process-local. OpenCheck runs as a single Render instance, the same
 assumption :mod:`opencheck.ratelimit` already makes; if it ever scales out,
@@ -40,7 +57,14 @@ from typing import Iterator
 
 _LOG = logging.getLogger(__name__)
 
-__all__ = ["TokenBucket", "CallBudget", "budget_scope", "current_budget"]
+__all__ = [
+    "TokenBucket",
+    "CallBudget",
+    "begin",
+    "end",
+    "budget_scope",
+    "current_budget",
+]
 
 
 class TokenBucket:
@@ -123,6 +147,34 @@ class CallBudget:
 _CURRENT: contextvars.ContextVar[dict[str, CallBudget] | None] = contextvars.ContextVar(
     "opencheck_outbound_budgets", default=None
 )
+
+
+def begin() -> dict[str, CallBudget]:
+    """Open a per-lookup budget scope, and return the live budget map.
+
+    The counterpart to :func:`budget_scope` for callers that cannot wrap their
+    body in a ``with`` — deliberately, and for the same reason
+    :func:`opencheck.degradation.begin` exists: ``_lookup_pipeline`` is an
+    async generator several hundred lines long, and re-indenting it under a
+    context manager would be a large diff for no behavioural gain. It is also
+    the *safe* shape here: a ``with`` block spanning ``yield`` statements in an
+    async generator resets the ContextVar in whichever task happens to resume
+    the generator, which is not necessarily the one that set it.
+
+    Setting the var in the consuming task's context is what makes the budget
+    shared: :func:`asyncio.create_task` copies the context at creation, and
+    the value is a mutable dict of mutable :class:`CallBudget`s, so every
+    concurrent source fetch spends from the same counter — the same mechanism
+    ``degradation`` relies on to collect from concurrent fetches.
+    """
+    budgets: dict[str, CallBudget] = {}
+    _CURRENT.set(budgets)
+    return budgets
+
+
+def end() -> None:
+    """Close the scope, so a later standalone fetch is uncapped again."""
+    _CURRENT.set(None)
 
 
 @contextmanager

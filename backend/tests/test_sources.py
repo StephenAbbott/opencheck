@@ -101,7 +101,7 @@ def test_source_info_fields_are_populated() -> None:
 # they are called directly via fetch() in the LEI-lookup flow (app.py).
 # ``gemi_greece`` is a partial case: it is entered via the LEI flow and DOES
 # support live name search, but its search has no stub tier — the Greek
-# register is key-gated and rate-limited to 8 requests/minute, so there is no
+# register is key-gated and rate-limited to 20 requests/minute, so there is no
 # offline fixture path to return hits from.
 _IDENTIFIER_KEYED = {
     "eiti", "eiti_bo", "eiti_soe", "cac_nigeria", "ariregister", "bolagsverket",
