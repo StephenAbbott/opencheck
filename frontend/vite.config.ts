@@ -1,4 +1,7 @@
-import { defineConfig } from "vite";
+// `vitest/config` rather than `vite`: it is Vite's own defineConfig
+// widened with the `test` block below, so one file configures the dev server
+// and the suite (Phase 168).
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { readFileSync } from "fs";
 import { resolve } from "path";
@@ -65,5 +68,29 @@ export default defineConfig({
     port: 5173,
     host: true,
     proxy: proxyRoutes,
+  },
+  preview: {
+    port: 4173,
+    host: true,
+    // Vite defaults `preview.proxy` to `server.proxy`, and inheriting it here
+    // makes `vite preview` the one thing it is not supposed to be: unlike
+    // production. The deployed SPA is a static site that talks to the API by
+    // absolute URL (VITE_API_BASE_URL), with no proxy in front — and with the
+    // dev proxy in place, `/sources` is answered by the backend's JSON
+    // inventory, so the SPA route of that name cannot be reached at all.
+    // Empty, not inherited (Phase 168).
+    proxy: {},
+  },
+  test: {
+    // Two environments on purpose (Phase 168). The `lib/` suite is logic-only
+    // and runs in `node`, where it is fast and cannot accidentally depend on a
+    // DOM; component tests get `jsdom`, which costs ~1s of setup per file and
+    // is worth it only where a claim lives in the markup. The glob is the
+    // whole rule: name a test `.test.tsx` and you get a DOM, name it
+    // `.test.ts` and you do not.
+    environmentMatchGlobs: [["**/*.test.tsx", "jsdom"]],
+    setupFiles: ["./src/test/setup.ts"],
+    // e2e/ is Playwright's; vitest must not try to run those specs.
+    exclude: ["e2e/**", "node_modules/**", "dist/**"],
   },
 });

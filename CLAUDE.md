@@ -817,10 +817,23 @@ gaps before promoting one.
 - **Test every layer that changed, and make sure CI runs those tests.** Backend
   changes need pytest; frontend changes need `tsc` + the vitest suite. CI gates
   push/PR via `.github/workflows/tests.yml` (backend `pytest`, frontend
-  `npm run build` + `npm test`) — a change that touches React/TS but only has
-  backend tests is **not** production-ready. The sandbox can't run vitest
+  `npm run build` + `npm test` + `npm run lint:design`, and the e2e smoke) — a
+  change that touches React/TS but only has backend tests is **not**
+  production-ready. The sandbox can't always run vitest
   (platform-mismatched `node_modules`); that is **not** the same as CI running
   it, so don't treat "tsc clean locally" as sufficient — confirm CI is green.
+- **Three frontend tiers, and they answer different questions (Phase 168).**
+  `src/lib/*.test.ts` runs in `node` and pins *what the app says* — a sentence,
+  a tone, a count. `src/**/*.test.tsx` runs in `jsdom` with testing-library and
+  pins *what the markup is* — how many of a thing there are, an element's
+  accessible name, what a control does when pressed. `frontend/e2e/*.spec.ts`
+  is Playwright over a real backend and a production build (`npm run test:e2e`)
+  and pins *what a whole page is* — one `<h1>`, nothing overflowing sideways,
+  no console errors. The suite was tier one alone for 163 phases, and the three
+  regressions that cost the most (the v1/v2 component mix, the verdict rendered
+  twice, the mode tabs overflowing at 390px) were all invisible to it, because
+  none of them was a wrong value. Pick the cheapest tier that can see the claim
+  you are making: a `.test.tsx` that only checks a string belongs in `lib/`.
 - **Unit fixtures are not enough — exercise it against real data before declaring
   it done.** The progressive-discovery spike passed every test yet was wrong on
   live Shell data three times (expansion direction; cross-source duplicate

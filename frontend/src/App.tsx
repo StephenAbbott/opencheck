@@ -404,6 +404,16 @@ export default function App() {
 // homepage — and now that the header carries a real search field, a nav link
 // labelled "Search" that is not the search field is a third thing pointing at
 // two behaviours. The logo remains the way home.
+/** The page title each view puts in the document outline. Keyed by `View`,
+ *  so a new view cannot be added without deciding what the page is called. */
+const PAGE_TITLES: Record<View, string> = {
+  main: "OpenCheck — due diligence on a legal entity, from open data",
+  sources: "The sources OpenCheck queries",
+  behind: "About OpenCheck",
+  api: "The OpenCheck API",
+  changelog: "OpenCheck development history",
+};
+
 const NAV_ITEMS: { view: View; label: string }[] = [
     { view: "sources", label: "Sources" },
     { view: "api", label: "API" },
@@ -1288,8 +1298,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
   const nationalIdFormatOk =
     !nationalIdTouched || validateNationalId(selectedCountry, nationalIdQuery);
 
-  // The hero heading is the page's <h1> on the homepage; once results are on
-  // screen the sr-only report heading below takes over as the <h1> (WCAG 1.3.1).
   /**
    * Back to a fresh homepage. Extracted from the logo button in Phase 122
    * so the nav's "Search" item and the wordmark cannot drift apart — the
@@ -1459,6 +1467,17 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         style={{ outline: "none" }}
         className="flex-1 px-6 sm:px-10 lg:px-16 py-5 sm:py-6 max-w-oo-page mx-auto w-full"
       >
+        {/* One <h1> per page, and never two (Phase 168).
+            The main view has had one all along — `HeroHeading` on the
+            homepage, the sr-only report heading below once a lookup is on
+            screen — but /sources, /about, /api and /changelog each had a
+            page full of <h2>s under no <h1> at all, which the first run of
+            the Playwright smoke found and no unit test could. `sr-only`
+            because the design gives those pages an eyebrow rather than a
+            visible title: that is a design decision, and "no page title in
+            the outline" was not one. */}
+        {view !== "main" && <h1 className="sr-only">{PAGE_TITLES[view]}</h1>}
+
         {/* Screen-reader live region — announces streaming lookup progress */}
         <div aria-live="polite" aria-atomic="false" className="sr-only">
           {lookupMutation.isPending && "Looking up entity, please wait…"}

@@ -101,6 +101,13 @@ exports/
 *.export.json
 *.export.zip
 
+# ---- Playwright (frontend/e2e) ----
+# Traces, screenshots and the HTML report are per-run artefacts.
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/.playwright/
+
 # ---- TypeScript build info ----
 tsconfig.tsbuildinfo
 frontend/tsconfig.tsbuildinfo
