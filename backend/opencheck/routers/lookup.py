@@ -431,7 +431,11 @@ def _build_derived(ctx: _LookupCtx, registered_at_id: str) -> None:
     # committed EITI crosswalk. Derived here, before dispatch, because the
     # EITI adapter takes us_ein as a dispatch argument; the CIK-carrying
     # OpenCorporates result arrives long after that point.
-    if ctx.jurisdiction.upper() == "US":
+    # startswith, not ==: GLEIF publishes a US jurisdiction as the ISO 3166-2
+    # subdivision ("US-NJ" for Exxon Mobil), which is why the == test shipped
+    # in Phase 155 never fired in production. The EDGAR paths further down
+    # have always used startswith for the same reason.
+    if ctx.jurisdiction.upper().startswith("US"):
         us_ein = eiti_us_ein_for_lei(ctx.lei)
         if us_ein:
             ctx.derived["us_ein"] = us_ein
