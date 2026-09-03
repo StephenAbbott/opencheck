@@ -19,6 +19,15 @@ How the lookup works
    country, not just those with a dedicated OpenCheck adapter. Verified
    formats: GB → Companies House numbers (incl. SC/FC prefixes), NO →
    9-digit orgnr, NL → KvK-adjacent, US → EINs.
+
+   **US is the exception**: EITI's US identifications are federal EINs and
+   GLEIF publishes a US ``registeredAs`` as the *state* file number, so
+   ``registeredAs`` can never match. The lookup pipeline therefore also
+   passes a derived ``us_ein``, which ``us_ein_for_lei()`` reads from the
+   committed ``eiti_us_ein_by_lei.json`` crosswalk (issue #26).
+   Identifications carrying no digit at all are dropped at load: EITI's US
+   bucket ships literal ``Private`` and ``Foreign`` sentinel rows where the
+   company gave no number, and those are not identifiers.
 2. **Payments (live)**: for the most recent reporting years, payment rows
    come from ``GET /api/v2.0/revenue?organisation={id}`` — the one
    server-side filter verified to work — and are aggregated per year and
@@ -56,9 +65,13 @@ _INDEX_PATH = Path(__file__).resolve().parent.parent / "data" / "eiti_organisati
 #: How many of the most recent reporting years to fetch live payments for.
 _MAX_REVENUE_YEARS = 4
 
+#: LEI -> EITI US federal EIN, built by ``scripts/build_eiti_us_ein_index.py``.
+_US_EIN_PATH = Path(__file__).resolve().parent.parent / "data" / "eiti_us_ein_by_lei.json"
+
 # Lazy module-level singletons.
 _index: dict[str, dict[str, list[dict[str, Any]]]] | None = None
 _norm_index: dict[str, dict[str, str]] | None = None  # cc -> normform -> ident
+_us_ein_by_lei: dict[str, str] | None = None
 
 
 _DIGITS_RE = re.compile(r"\D+")
@@ -105,12 +118,65 @@ def _get_index() -> tuple[
             _index = {}
         _norm_index = {}
         for cc, idents in _index.items():
+            # EITI's identification column carries sentinel words where the
+            # company gave no registry number: the US bucket holds literal
+            # "Private" and "Foreign" rows. A value with no digit in it is
+            # not an identifier in any jurisdiction -- GB's alphanumeric
+            # "SC123456" still has digits -- so drop those rows outright
+            # rather than let a lookup match the word "Private".
+            for ident in [i for i in idents if not _DIGITS_RE.sub("", i or "")]:
+                log.debug("EITI %s: ignoring non-identifier %r", cc, ident)
+                idents.pop(ident, None)
             bucket: dict[str, str] = {}
             for ident in idents:
                 for form in _norm_forms(ident):
                     bucket.setdefault(form, ident)
             _norm_index[cc] = bucket
     return _index, _norm_index
+
+
+def us_ein_for_lei(lei: str) -> str:
+    """The EITI-published federal EIN for an LEI, or ``""`` when there is none.
+
+    EITI's US identifications are federal EINs; GLEIF publishes a US
+    ``registeredAs`` as the *state* file number and never the EIN, so without
+    this a US subject can never join the organisation index.
+    ``routers/lookup.py::_build_derived`` calls this to populate
+    ``ctx.derived["us_ein"]`` before dispatch, which is the producer
+    ``fetch_by_registration``'s ``us_ein`` argument has been waiting for.
+
+    The crosswalk is committed rather than derived live. The US left EITI in
+    November 2017, so its bucket is a frozen single-year (2015) table of 27
+    EINs; resolving them offline keeps an EDGAR round-trip off every US
+    lookup, and still covers the entities EDGAR can no longer resolve by name
+    because they have since merged or delisted. Built (with per-row evidence)
+    by ``scripts/build_eiti_us_ein_index.py``.
+    """
+    global _us_ein_by_lei
+    if _us_ein_by_lei is None:
+        try:
+            with _US_EIN_PATH.open(encoding="utf-8") as f:
+                data = json.load(f)
+            _us_ein_by_lei = {
+                str(k).strip().upper(): str((v or {}).get("ein") or "")
+                for k, v in (data.get("index") or {}).items()
+                if (v or {}).get("ein")
+            }
+            log.info(
+                "EITI US EIN crosswalk loaded: %s LEIs", len(_us_ein_by_lei)
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.warning("EITI US EIN crosswalk unavailable: %s", exc)
+            _us_ein_by_lei = {}
+    return _us_ein_by_lei.get((lei or "").strip().upper(), "")
+
+
+def _reset_caches_for_tests() -> None:
+    """Drop the module-level singletons so a test can point at a fixture."""
+    global _index, _norm_index, _us_ein_by_lei
+    _index = None
+    _norm_index = None
+    _us_ein_by_lei = None
 
 
 def _match_identification(country: str, registered_as: str) -> str | None:
