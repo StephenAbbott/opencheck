@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 155** — a US company can finally match EITI: the derived `us_ein` that PR #46 taught the adapter to accept now has a producer, a committed LEI-to-EIN crosswalk built by confirming each EITI EIN against the SEC EDGAR registrant that carries it, because GLEIF publishes a US registration number that is not the EIN EITI keys on.
+**Latest: Phase 156** — the Coverage column says which sources apply to the company as well as how many answered ("11 of OpenCheck's 40 sources apply to a GB company; every one answered"), the GLEIF anchor included, so ten of ten no longer reads as forty minus thirty.
 
 → [Full development history](docs/status.md)
 
