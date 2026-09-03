@@ -51,7 +51,7 @@ import { profileRows, statusChip } from "./lib/subjectProfile";
 import ConfidenceLegend from "./components/ui/ConfidenceLegend";
 import PanelSection, { PanelCard } from "./components/ui/PanelSection";
 import { PERSON_VERB, resultCount, setSourceNames, sourceLabel } from "./lib/vocab";
-import { answeredCount } from "./lib/lookupProgress";
+import { answeredCount, coverageCopy } from "./lib/lookupProgress";
 import { documentTitleFor, modeParam, parseMode } from "./lib/checkMode";
 import type { CheckMode } from "./lib/checkMode";
 import type { IconName } from "./components/ui";
@@ -2057,6 +2057,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             degraded={degradedSources}
             sourcesAnswered={answeredApplicable}
             sourcesApplicable={applicableSources.length}
+            registryTotal={sourcesQuery.data?.sources.length ?? null}
+            jurisdiction={subjectJurisdiction}
             graphShape={graphShape}
             onOpenNetwork={() => selectMode("full")}
             screening={streaming}
@@ -2503,17 +2505,30 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         {(cddBuckets.length > 0 || pendingCddSources.length > 0) && (
           <PanelSection
             title="What each source said"
+            // The same figures as the verdict strip's Coverage column, from
+            // the same helper, GLEIF anchor included — the GLEIF card is the
+            // first one in this list, so a count that excluded it read one
+            // short of the cards beneath it (Phase 156).
             aside={
               pendingCddSources.length > 0 ? (
                 <span className="text-oo-blue">
-                  {answeredApplicable} of {applicableSources.length} sources answered ·{" "}
-                  {pendingCddSources.length} still running…
+                  {coverageCopy({
+                    answered: answeredApplicable,
+                    applicable: applicableSources.length,
+                    total: sourcesQuery.data?.sources.length ?? null,
+                    jurisdiction: subjectJurisdiction,
+                    screening: true,
+                    pending: pendingCddSources.length,
+                  }).aside}
                 </span>
               ) : (
-                <>
-                  {answeredApplicable} of {applicableSources.length}{" "}
-                  {applicableSources.length === 1 ? "source" : "sources"} answered
-                </>
+                coverageCopy({
+                  answered: answeredApplicable,
+                  applicable: applicableSources.length,
+                  total: sourcesQuery.data?.sources.length ?? null,
+                  jurisdiction: subjectJurisdiction,
+                  screening: false,
+                }).aside
               )
             }
           >

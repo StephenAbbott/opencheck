@@ -1,5 +1,6 @@
 import type { DegradedSource, GraphShape, RiskSignal } from "../../lib/api";
 import { networkSummary } from "../../lib/graphShape";
+import { coverageCopy } from "../../lib/lookupProgress";
 import { RiskChip } from "../risk/RiskChip";
 import { SectionLabel } from "../ui";
 
@@ -42,14 +43,25 @@ export function VerdictStrip({
   onOpenNetwork,
   onRerun,
   screening = false,
+  registryTotal = null,
+  jurisdiction = null,
 }: {
   /** The deterministic sentence from the backend. */
   verdict?: string | null;
   riskSignals: RiskSignal[];
   contextSignals: RiskSignal[];
   degraded: DegradedSource[];
+  /** From `answeredCount` — excludes the GLEIF anchor, which `coverageCopy`
+   *  adds back: it is one of the registry's sources and it answered. */
   sourcesAnswered: number;
+  /** `sources_applicable` length — excludes the GLEIF anchor likewise. */
   sourcesApplicable: number;
+  /** Registry size from `/sources`, or null until it has loaded. The
+   *  denominator a reader needs (Phase 156): "10 of 10 answered" under a
+   *  homepage promising forty read as thirty sources failing silently. */
+  registryTotal?: number | null;
+  /** The subject's jurisdiction, for "apply to a GB company". */
+  jurisdiction?: string | null;
   /** How big the mapped graph is — `graph_shape` on the `risk_signals`
    *  event. Counts the statements this check produced, never what FullCheck
    *  might go on to find. Absent until the event lands. */
@@ -69,6 +81,13 @@ export function VerdictStrip({
   if (screening && total === 0 && !verdict) return null;
 
   const degradedCount = new Set(degraded.map((d) => d.source_id)).size;
+  const coverage = coverageCopy({
+    answered: sourcesAnswered,
+    applicable: sourcesApplicable,
+    total: registryTotal ?? null,
+    jurisdiction,
+    screening,
+  });
   const network = networkSummary(graphShape);
   const showNetwork = Boolean(network && onOpenNetwork);
 
@@ -128,8 +147,8 @@ export function VerdictStrip({
         <div className="flex flex-col gap-2.5 sm:pl-6 sm:border-l border-oo-rule">
           <SectionLabel as="h2">Coverage</SectionLabel>
           <p className="text-oo-small text-oo-ink">
-            <span className="font-head font-bold text-oo-stat">{sourcesAnswered}</span>{" "}
-            of {sourcesApplicable} {sourcesApplicable === 1 ? "source" : "sources"} answered
+            <span className="font-head font-bold text-oo-stat">{coverage.answered}</span>{" "}
+            {coverage.statNoun}
           </p>
           {degradedCount > 0 ? (
             <div className="flex items-start gap-2 text-oo-small text-oo-warn-text bg-oo-warn-bg border border-oo-warn-border rounded-oo px-2.5 py-2">
@@ -164,9 +183,7 @@ export function VerdictStrip({
               </span>
             </div>
           ) : (
-            <p className="text-oo-small text-oo-muted">
-              {screening ? "Sources are still answering." : "Every applicable source answered."}
-            </p>
+            <p className="text-oo-small text-oo-muted">{coverage.detail}</p>
           )}
         </div>
 
