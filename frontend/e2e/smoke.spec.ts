@@ -1,7 +1,7 @@
 import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
 
 /**
- * Five pages and a report (Phase 168).
+ * Six pages and a report (Phase 168).
  *
  * The vitest suite could not have caught any of the three failures that made
  * the case for this file, because none of them was a wrong value:
@@ -44,6 +44,7 @@ const ROUTES = [
   { path: "/about", name: "about" },
   { path: "/api", name: "api" },
   { path: "/changelog", name: "changelog" },
+  { path: "/batch", name: "batch" },
 ] as const;
 
 /**

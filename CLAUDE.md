@@ -366,8 +366,12 @@ source: the page shows the last sweep's verdict and says when it was reached.
       `lookup_pass_legal_name` declared on the class
 - [ ] `sources/schemas/<name>.py` — Pydantic bundle schema
 - [ ] `sources/__init__.py` — import + REGISTRY entry
-- [ ] `bods/mapper.py` — `map_<name>()` function (+ `bods/__init__.py` export)
-- [ ] `routers/lookup.py` — `_bh_<name>()` hit builder (only this)
+- [ ] `bods/mapper.py` — `map_<name>()` function (+ `bods/__init__.py` export).
+      Phase 168 moved the shared statement factories to `bods/statements.py`
+      and the two largest sections to `bods/mappers/{ftm,wikidata}.py`;
+      `mapper.py` re-exports all of it, so imports are unchanged either way
+- [ ] `routers/hit_builders.py` — `_bh_<name>()` hit builder (only this).
+      Moved out of `routers/lookup.py` in Phase 168 and re-exported from it
 - [ ] `tests/test_<name>.py` — adapter + mapper tests
 - [ ] `.env` — API key if required (never committed)
 - [ ] `README.md` + `ATTRIBUTIONS.md` — document the source
