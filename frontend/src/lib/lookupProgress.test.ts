@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { answeredCount, lookupProgress, progressLabel } from "./lookupProgress";
+import { answeredCount, lookupProgress, progressLabel, coverageCopy, jurisdictionPhrase } from "./lookupProgress";
 
 const none = new Set<string>();
 const base = {
@@ -222,5 +222,54 @@ describe("answeredCount and the sources that did not answer", () => {
 
   it("is unchanged when nothing errored", () => {
     expect(answeredCount(["a", "b"], new Set(["a", "b"]), new Set())).toBe(2);
+  });
+});
+
+describe("coverageCopy (Phase 156)", () => {
+  it("names the registry and the company so ten of ten is never read as forty minus thirty", () => {
+    const c = coverageCopy({ answered: 10, applicable: 10, total: 40, jurisdiction: "GB", screening: false });
+    expect(c.answered).toBe(11); // the GLEIF anchor is one of the forty and it answered
+    expect(c.applicable).toBe(11);
+    expect(c.statNoun).toBe("sources answered");
+    expect(c.detail).toBe("11 of OpenCheck's 40 sources apply to a GB company; every one answered.");
+    expect(c.aside).toBe("11 of 11 sources answered");
+  });
+
+  it("says how many are still answering while the stream is open", () => {
+    const c = coverageCopy({ answered: 3, applicable: 10, total: 40, jurisdiction: "GB", screening: true, pending: 7 });
+    expect(c.detail).toBe("11 of OpenCheck's 40 sources apply to a GB company; 7 still answering.");
+    expect(c.aside).toBe("4 of 11 sources answered · 7 still running…");
+  });
+
+  it("states a shortfall plainly rather than claiming every one answered", () => {
+    const c = coverageCopy({ answered: 8, applicable: 10, total: 40, jurisdiction: "NL", screening: false });
+    expect(c.detail).toBe("11 of OpenCheck's 40 sources apply to a NL company; 9 answered.");
+  });
+
+  it("drops the registry total until /sources has loaded, and never overshoots it", () => {
+    expect(
+      coverageCopy({ answered: 10, applicable: 10, total: null, jurisdiction: "GB", screening: false }).detail,
+    ).toBe("11 sources apply to a GB company; every one answered.");
+    // A total smaller than the applicable count is a stale or partial list —
+    // do not print "11 of 9".
+    expect(
+      coverageCopy({ answered: 10, applicable: 10, total: 9, jurisdiction: "GB", screening: false }).detail,
+    ).toBe("11 sources apply to a GB company; every one answered.");
+  });
+
+  it("names the country from a region-suffixed code and falls back to 'this company'", () => {
+    expect(jurisdictionPhrase("US-DE")).toBe("a US company");
+    expect(jurisdictionPhrase(" gb ")).toBe("a GB company");
+    expect(jurisdictionPhrase(null)).toBe("this company");
+    expect(jurisdictionPhrase("")).toBe("this company");
+  });
+
+  it("handles the singular and a report with no anchor", () => {
+    const c = coverageCopy({ answered: 0, applicable: 0, total: 40, jurisdiction: null, screening: false });
+    expect(c.answered).toBe(1);
+    expect(c.statNoun).toBe("source answered");
+    expect(c.detail).toBe("1 of OpenCheck's 40 sources applies to this company; every one answered.");
+    const none = coverageCopy({ answered: 0, applicable: 1, total: 40, jurisdiction: "GB", screening: false, anchorAnswered: false });
+    expect(none.detail).toBe("1 of OpenCheck's 40 sources applies to a GB company; 0 answered.");
   });
 });

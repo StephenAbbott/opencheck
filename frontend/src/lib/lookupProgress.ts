@@ -164,3 +164,102 @@ export function answeredCount(
 ): number {
   return applicable.filter((id) => completed.has(id) && !errored.has(id)).length;
 }
+
+// ---------------------------------------------------------------------------
+// Coverage copy (Phase 156)
+// ---------------------------------------------------------------------------
+
+/**
+ * What the Coverage column says, and the aside on "What each source said".
+ *
+ * "10 of 10 sources answered" sat under a homepage promising forty. Both
+ * numbers were true — ten sources apply to a British company, ten answered —
+ * and nothing on the page said that the other thirty were never in question,
+ * so the sentence read either as thirty sources failing silently or as forty
+ * being hype. The denominator a reader needs is the registry; the numerator
+ * they need is how many of it apply to *this* company; and only then does
+ * "every one answered" mean anything.
+ *
+ * The GLEIF anchor is counted. `sources_applicable` never lists it (it has
+ * answered before that event fires — Phase 126), so the two stream-derived
+ * figures exclude it, but it is one of the forty and it did answer: a figure
+ * that says "10 of 40 apply" while the GLEIF card sits first in the list below
+ * is off by one in the direction that undercounts what was checked.
+ *
+ * Pure, so the suite can pin every sentence: the strip and the aside both
+ * call this, which is what keeps them from disagreeing.
+ */
+export interface CoverageCopy {
+  /** Sources that answered, GLEIF included — the stat numeral. */
+  answered: number;
+  /** Sources that apply to this company, GLEIF included. */
+  applicable: number;
+  /** "N sources answered" — the noun beside the numeral. */
+  statNoun: string;
+  /** The sentence under the numeral. */
+  detail: string;
+  /** "10 of 11 sources answered · 1 still running…" for the aside while
+   *  streaming; "11 of 11 sources answered" once settled. */
+  aside: string;
+}
+
+/** "a GB company" / "a US company" / "this company". A code with a region
+ *  suffix (US-DE) names the country, which is what the registry is keyed on. */
+export function jurisdictionPhrase(jurisdiction: string | null | undefined): string {
+  const code = (jurisdiction || "").trim().toUpperCase().split("-")[0];
+  return code ? `a ${code} company` : "this company";
+}
+
+export function coverageCopy({
+  answered,
+  applicable,
+  total,
+  jurisdiction,
+  screening,
+  pending = 0,
+  anchorAnswered = true,
+}: {
+  /** From `answeredCount` — excludes the GLEIF anchor. */
+  answered: number;
+  /** `sources_applicable` length — excludes the GLEIF anchor. */
+  applicable: number;
+  /** Registry size from `/sources`, or null until it has loaded. */
+  total: number | null;
+  jurisdiction: string | null | undefined;
+  screening: boolean;
+  /** Sources still running, for the aside. */
+  pending?: number;
+  /** Whether the GLEIF anchor resolved — it did if there is a report at all. */
+  anchorAnswered?: boolean;
+}): CoverageCopy {
+  const anchor = anchorAnswered ? 1 : 0;
+  const a = answered + anchor;
+  const p = applicable + anchor;
+  const who = jurisdictionPhrase(jurisdiction);
+  const applyClause =
+    total && total >= p
+      ? `${p} of OpenCheck's ${total} sources ${p === 1 ? "applies" : "apply"} to ${who}`
+      : `${p} ${p === 1 ? "source applies" : "sources apply"} to ${who}`;
+
+  let detail: string;
+  if (screening) {
+    detail = `${applyClause}; ${p - a} still answering.`;
+  } else if (a >= p) {
+    detail = `${applyClause}; every one answered.`;
+  } else {
+    detail = `${applyClause}; ${a} answered.`;
+  }
+
+  const aside =
+    pending > 0
+      ? `${a} of ${p} sources answered · ${pending} still running…`
+      : `${a} of ${p} ${p === 1 ? "source" : "sources"} answered`;
+
+  return {
+    answered: a,
+    applicable: p,
+    statNoun: a === 1 ? "source answered" : "sources answered",
+    detail,
+    aside,
+  };
+}
