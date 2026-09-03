@@ -93,6 +93,10 @@ OK = "ok"
 DEGRADED = "degraded"
 FAIL = "fail"
 SKIPPED = "skipped"
+# Dispatch-drift only (Phase 162): the anchor could not be fetched, so the
+# join was not tested. Reported, never counted as drift, never reds the run —
+# a sweep that cannot reach GLEIF has learned nothing about the registrar.
+UNCHECKED = "unchecked"
 
 #: A live answer older than this was not really fetched now.
 _FRESH_WITHIN = timedelta(hours=1)
@@ -542,10 +546,18 @@ class DriftResult:
 
 
 async def _gleif_entity_block(lei: str, cache: dict[str, Any]) -> dict[str, Any]:
+    """The anchor's Level 1 ``entity`` block — one GLEIF request per LEI.
+
+    Phase 162. The first published sweep reported twelve of twenty-four
+    anchors as drifted, every one with the same reason: the GLEIF budget was
+    exhausted. This used ``fetch()``, which also walks both parents, their
+    reporting exceptions and the children — four to six requests per anchor,
+    a hundred-odd for the set, against a 50/min budget the probes had already
+    drawn on and a 15 s maximum wait. ``registeredAs`` and ``registeredAt``
+    are on the Level 1 record; nothing else was ever read.
+    """
     if lei not in cache:
-        bundle = await REGISTRY["gleif"].fetch(lei)
-        attrs = (bundle.get("record") or {}).get("attributes") or {}
-        cache[lei] = attrs.get("entity") or {}
+        cache[lei] = await REGISTRY["gleif"].fetch_entity(lei)
     return cache[lei]
 
 
@@ -588,8 +600,17 @@ async def check_dispatch_drift(source_ids: list[str]) -> list[DriftResult]:
         try:
             entity = await _gleif_entity_block(probe.anchor_lei, cache)
         except Exception as exc:  # noqa: BLE001
+            # Not drift: the join was not tested. A fetch failure says
+            # something about the sweep's reach (a rate limit, an outage), not
+            # about whether the registrar's number still derives — and calling
+            # it drift is how twelve false alarms reached the first published
+            # report. Reported under its own heading, and never a red run.
             results.append(
-                DriftResult(source_id, FAIL, reason=f"GLEIF anchor fetch failed: {_redact(exc)}")
+                DriftResult(
+                    source_id,
+                    UNCHECKED,
+                    reason=f"anchor could not be fetched from GLEIF: {_redact(exc)}",
+                )
             )
             continue
 
@@ -646,7 +667,7 @@ async def check_dispatch_drift(source_ids: list[str]) -> list[DriftResult]:
             DriftResult(source_id, OK, registered_at=registered_at, derived=derived)
         )
 
-    results.sort(key=lambda r: (r.status != FAIL, r.source_id))
+    results.sort(key=lambda r: (r.status != FAIL, r.status != UNCHECKED, r.source_id))
     return results
 
 
@@ -705,25 +726,33 @@ def render_markdown(report: dict[str, Any]) -> str:
 
     drift = report.get("dispatch_drift") or {}
     drift_bad = {sid: row for sid, row in drift.items() if row["status"] == FAIL}
+    drift_unchecked = {sid: row for sid, row in drift.items() if row["status"] == UNCHECKED}
     drift_uncovered = [sid for sid, row in drift.items() if row["status"] == SKIPPED]
     if drift:
-        checked = sum(1 for row in drift.values() if row["status"] == OK)
+        verified = sum(1 for row in drift.values() if row["status"] == OK)
+        # Three numbers, never one: "9 of 24 still resolve" read as fifteen
+        # drifted when twelve had simply not been fetched. Verified, could not
+        # be checked, drifted — and the ones with no anchor at all.
         lines += [
             "",
             "### GLEIF dispatch drift",
             "",
-            f"{checked} of {len(drift)} identifier-dispatched sources still resolve from their GLEIF "
-            "anchor. A source can pass its own probe and still be unreachable in production if the "
-            "anchor no longer derives its identifier.",
+            f"{len(drift)} identifier-dispatched sources: **{verified} verified** from their GLEIF "
+            f"anchor · **{len(drift_unchecked)} could not be checked** · **{len(drift_bad)} drifted** · "
+            f"{len(drift_uncovered)} not covered. A source can pass its own probe and still be "
+            "unreachable in production if the anchor no longer derives its identifier; an anchor the "
+            "sweep could not fetch says nothing either way.",
             "",
         ]
         if drift_bad:
             lines += [f"- ❌ `{sid}` — {row['reason']}" for sid, row in sorted(drift_bad.items())]
+        if drift_unchecked:
+            lines += [f"- ⚠️ `{sid}` — {row['reason']}" for sid, row in sorted(drift_unchecked.items())]
         if drift_uncovered:
             lines.append(
                 f"- ⏭️ not covered (no anchor LEI): {', '.join(f'`{s}`' for s in sorted(drift_uncovered))}"
             )
-        if not drift_bad and not drift_uncovered:
+        if not drift_bad and not drift_unchecked and not drift_uncovered:
             lines.append("- ✅ no drift")
 
     collapses = report.get("statement_collapses") or {}

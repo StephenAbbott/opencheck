@@ -287,6 +287,28 @@ class GleifAdapter(SourceAdapter):
         validate_raw("gleif", GLEIFBundle, bundle)
         return bundle
 
+    async def fetch_entity(self, lei: str) -> dict[str, Any]:
+        """The Level 1 ``entity`` block alone — one request, no relationships.
+
+        For callers that need only what the record says about the entity
+        itself (``registeredAs`` / ``registeredAt`` for the dispatch-drift
+        check, Phase 162). ``fetch`` costs four to six GLEIF requests per LEI
+        because it also walks both parents, their reporting exceptions and
+        the children; a sweep of two dozen anchors through it exhausted the
+        shared 50/min budget and reported every remaining anchor as drift.
+        Same cache key and TTL as the record ``fetch`` reads, so the two never
+        disagree about an LEI.
+        """
+        lei = lei.strip().upper()
+        record = await self._get(
+            f"/lei-records/{quote(lei)}",
+            cache_key=f"{_CACHE_NS}/lei/{lei}",
+            max_age_days=_LEI_RECORD_CACHE_MAX_AGE_DAYS,
+        )
+        data = record.get("data") or record
+        attrs = data.get("attributes") or {}
+        return attrs.get("entity") or {}
+
     @staticmethod
     def _snapshot_available(lei: str) -> bool:
         """Cheap check: does the entity-pages Golden Copy hold this LEI?
