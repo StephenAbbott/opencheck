@@ -32,8 +32,10 @@ _INSTRUCTIONS = (
     "opencheck_resolve_national_id if you have a national registration number); "
     "then call opencheck_lookup with the LEI for owners, controllers and risk "
     "signals; call opencheck_export_bods for the full machine-readable ownership "
-    "graph in BODS v0.4. Data is open; some sources are CC-BY-NC — respect the "
-    "license_notices in responses."
+    "graph in BODS v0.4. For a list of companies call opencheck_batch_lookup "
+    "with up to 20 LEIs and read each row's verdict, counts and degraded flag. "
+    "Data is open; some sources are CC-BY-NC — respect the license_notices in "
+    "responses."
 )
 
 # DNS-rebinding protection guards localhost-bound dev servers from malicious
@@ -122,6 +124,69 @@ async def opencheck_lookup(lei: str, deepen_top: int = 5) -> dict[str, Any]:
     except HTTPException as exc:
         return _err(exc)
     return shaping.shape_lookup(resp)
+
+
+@mcp.tool()
+async def opencheck_batch_lookup(leis: list[str], deepen_top: int = 5) -> dict[str, Any]:
+    """Screen a list of companies by LEI — one compact row per company.
+
+    Portfolio / counterparty screening for agents (Phase 164). Each row is
+    exactly what opencheck_lookup would return for that LEI, reduced to
+    the table a list reader scans: name, jurisdiction, register status,
+    the one-sentence verdict, risk and structural-context counts, coverage
+    (how many of OpenCheck's sources apply and how many answered) and a
+    ``degraded`` flag. Rows run two at a time against the shared upstream
+    budgets, so twenty companies not seen recently take about two minutes.
+
+    Args:
+        leis: ISO 17442 Legal Entity Identifiers. At most 20 are screened;
+            duplicates and malformed values are returned in ``rejected``,
+            valid ones beyond the cap are counted in ``overflow``.
+        deepen_top: How many top sources to deepen per company (0-10, default 5).
+
+    A ``failed`` row (unknown LEI, upstream rate-limited) means that company
+    was NOT screened — never read the batch as clean while ``failed`` or a
+    row's ``degraded`` flag is non-empty. Rows are never ranked by
+    severity: OpenCheck does not grade companies.
+    """
+    from .. import batch as _batch
+
+    parsed = _batch.parse_lei_list("\n".join(str(v) for v in (leis or [])))
+    rows: list[dict[str, Any]] = []
+    failed: list[dict[str, Any]] = []
+    totals: dict[str, Any] = {}
+    if parsed.leis:
+        async for event, payload in _batch.run_batch(parsed.leis, deepen_top=deepen_top):
+            if event == "row_done":
+                rows.append(payload)
+            elif event == "row_failed":
+                failed.append(payload)
+            else:
+                totals = payload
+    # Paste order, so the caller can line rows up with its own list.
+    order = {lei: i for i, lei in enumerate(parsed.leis)}
+    rows.sort(key=lambda r: order.get(r["lei"], len(order)))
+    failed.sort(key=lambda r: order.get(r["lei"], len(order)))
+    return {
+        "cap": parsed.cap,
+        "accepted": parsed.leis,
+        "rejected": [r.to_dict() for r in parsed.rejected],
+        "overflow": parsed.overflow,
+        "rows": rows,
+        "failed": failed,
+        "counts": {
+            "requested": totals.get("requested", len(parsed.leis)),
+            "done": totals.get("done", len(rows)),
+            "failed": totals.get("failed", len(failed)),
+            "degraded": sum(1 for r in rows if r.get("degraded")) + len(failed),
+        },
+        "hint": (
+            "Each row's risk_count counts findings (kind='risk'); context_count "
+            "is structural context, not a finding. A failed row or degraded=true "
+            "means that company was not fully screened. Call opencheck_lookup "
+            "with a row's lei for the full report."
+        ),
+    }
 
 
 @mcp.tool()
@@ -219,6 +284,7 @@ TOOL_NAMES = [
     "opencheck_search",
     "opencheck_resolve_national_id",
     "opencheck_lookup",
+    "opencheck_batch_lookup",
     "opencheck_export_bods",
     "opencheck_person_check",
     "opencheck_list_sources",

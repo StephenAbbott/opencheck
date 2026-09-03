@@ -49,7 +49,7 @@ def test_descriptor_shape() -> None:
     assert d["transport"] == "streamable-http"
     assert d["endpoint"].endswith("/mcp")
     assert d["tools"] == TOOL_NAMES
-    assert len(TOOL_NAMES) == 6
+    assert len(TOOL_NAMES) == 7
 
 
 def test_descriptor_route_served_with_cors(client: TestClient) -> None:

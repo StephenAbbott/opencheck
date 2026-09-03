@@ -199,6 +199,11 @@ class LookupResponse(ReportResponse):
     # run. ``?refresh=true`` always yields a fresh run.
     replayed: bool = False
     fetched_at: str | None = None
+    # Phase 164: the source ids the pipeline announced as applicable to this
+    # company (the ``sources_applicable`` stream event; the GLEIF anchor is
+    # never in it — Phase 126/156). Lets a JSON consumer build the Phase 156
+    # coverage sentence without the stream.
+    sources_applicable: list[str] = []
 
 
 @router.get("/deepen", response_model=DeepenResponse)
@@ -2320,6 +2325,7 @@ async def _lookup_impl(
     derived: dict[str, str] = {}
     replayed = False
     fetched_at: str | None = None
+    sources_applicable: list[str] = []
 
     async for event, payload in _lookup_pipeline_cached(
         norm_lei, deepen_top=deepen_top, refresh=refresh
@@ -2327,6 +2333,8 @@ async def _lookup_impl(
         if event == "replayed":
             replayed = True
             fetched_at = payload["fetched_at"]
+        elif event == "sources_applicable":
+            sources_applicable = list(payload.get("source_ids") or [])
         elif event == "error":
             raise HTTPException(
                 status_code=payload["status"], detail=payload["detail"]
@@ -2386,6 +2394,7 @@ async def _lookup_impl(
         derived_identifiers=derived,
         replayed=replayed,
         fetched_at=fetched_at,
+        sources_applicable=sources_applicable,
     )
 
 

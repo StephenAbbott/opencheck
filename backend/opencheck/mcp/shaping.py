@@ -220,6 +220,65 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
     }
 
 
+def shape_batch_row(payload: Any) -> dict[str, Any]:
+    """One table row for the batch screen (Phase 164) from a ``LookupResponse``.
+
+    The row is the single-lookup result reduced to what a list reader
+    scans: who, where, is it still there, the verdict sentence, how many
+    findings and how much of the registry applied. Every figure comes
+    from the same helpers the single report uses — ``_shape_risk`` for
+    the kind split, ``subject_profile`` for register status (Phase 154),
+    ``verdict`` as built by ``opencheck.verdict`` — so a batch row for LEI
+    X and the report for LEI X can never disagree. Nothing here ranks:
+    OpenCheck does not grade companies (Phase 132).
+    """
+    risk = _shape_risk(payload.risk_signals)
+    sources = _sources_summary(payload.hits, payload.errors)
+    answered = [s["id"] for s in sources if s.get("found")]
+    # Phase 156: the anchor is one of the registry's sources and it has
+    # answered before ``sources_applicable`` fires, so it is counted in
+    # both figures here, the way ``coverageCopy()`` counts it on the web.
+    applicable = list(dict.fromkeys(["gleif", *(getattr(payload, "sources_applicable", None) or [])]))
+    if "gleif" not in answered and payload.legal_name:
+        answered.insert(0, "gleif")
+    degraded = getattr(payload, "degraded_sources", None) or []
+    profile = getattr(payload, "subject_profile", None) or {}
+    status = profile.get("register_status") or None
+    licensing = _licensing(sources)
+    return {
+        "lei": payload.lei,
+        "legal_name": payload.legal_name,
+        "jurisdiction": payload.jurisdiction,
+        "register_status": (
+            {
+                k: status.get(k)
+                for k in ("liveness", "since", "raw", "source_id")
+                if status.get(k) is not None
+            }
+            if status
+            else None
+        ),
+        "verdict": getattr(payload, "verdict", None),
+        "risk_count": sum(1 for r in risk if r.get("kind") == "risk"),
+        "context_count": sum(1 for r in risk if r.get("kind") == "context"),
+        "risk_codes": list(dict.fromkeys(r["code"] for r in risk if r.get("kind") == "risk")),
+        "context_codes": list(
+            dict.fromkeys(r["code"] for r in risk if r.get("kind") == "context")
+        ),
+        "coverage": {
+            "applicable": len(applicable),
+            "answered": len(answered),
+            "applicable_ids": applicable,
+            "answered_ids": answered,
+        },
+        "degraded": bool(degraded),
+        "degraded_sources": [d.get("source_id") for d in degraded if d.get("source_id")],
+        "licensing": licensing,
+        "replayed": bool(getattr(payload, "replayed", False)),
+        "report_url": f"/?lei={payload.lei}",
+    }
+
+
 def shape_search(payload: Any) -> dict[str, Any]:
     """Flatten a ``SearchResponse`` into a ranked candidate list with LEIs."""
     candidates: list[dict[str, Any]] = []
