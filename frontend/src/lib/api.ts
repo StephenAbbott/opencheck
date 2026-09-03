@@ -455,6 +455,49 @@ export function fetchSources(): Promise<{ sources: SourceInfo[] }> {
   return getJson("/sources");
 }
 
+// --- Source health (Phase 161) ---------------------------------------------
+
+export type SourceHealthStatus = "ok" | "degraded" | "fail" | "skipped";
+
+/** One source's row from the last weekly sweep, as `/source-health` shapes it. */
+export interface SourceHealthRow {
+  status: SourceHealthStatus;
+  /** Why it is not `ok` — already credential-redacted by the sweep. */
+  reason: string;
+  /** A defect the probe knowingly asserts around, printed rather than hidden. */
+  known_gap: string;
+  liveness: "live" | "cached" | "snapshot" | "curated" | "stub" | null;
+  retrieved_at: string | null;
+  latency_ms: number | null;
+  attempts: number;
+  /** Entity + person + relationship statements the probe subject mapped to. */
+  statement_total: number | null;
+  /** Week-over-week collapse, when the sweep reported one. */
+  statement_collapse: Record<string, { was: number; now: number }> | null;
+  /** Oldest first; the last entry is this sweep. */
+  history: SourceHealthStatus[];
+}
+
+export type SourceHealthReport =
+  | {
+      available: true;
+      generated_at: string;
+      compared_against: string | null;
+      registry_size: number | null;
+      probed: number | null;
+      counts: Record<SourceHealthStatus, number>;
+      /** `generated_at` of each sweep in the history, oldest first. */
+      sweeps: string[];
+      sources: Record<string, SourceHealthRow>;
+      /** Set when the asset could not be re-read and this is the last good copy. */
+      stale?: boolean;
+    }
+  | { available: false; reason: string };
+
+export function fetchSourceHealth(): Promise<SourceHealthReport> {
+  return getJson("/source-health");
+}
+
 // --- Licensing compatibility matrix (the export "licensing assistant") -------
 
 export interface LicenseTerms {

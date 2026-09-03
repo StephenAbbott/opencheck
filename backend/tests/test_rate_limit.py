@@ -182,6 +182,10 @@ _EXEMPT_PATHS = {
     "/signalstats",
     # Phase 152: same contract as /signalstats — a single aggregate dict dump.
     "/consistencystats",
+    # Phase 161: the last weekly sweep's verdict, read from a release asset at
+    # most hourly and otherwise served from memory — a cached dict dump that
+    # never contacts a source, on the same footing as /sources.
+    "/source-health",
 }
 
 
