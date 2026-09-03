@@ -374,7 +374,7 @@ source: the page shows the last sweep's verdict and says when it was reached.
 - [ ] `docs/sources.md` — add the adapter row (keep it in sync with `REGISTRY`;
       the active table = `REGISTRY` minus env-gated bulk-only adapters), and
       refresh the source counts in `README.md` (intro paragraph + adapter-table
-      pointer line) and the social card `opencheck-social-b.html`
+      pointer line) and the social card `docs/social/opencheck-social-b.html`
 - [ ] **Frontend homepage source count** — bump the "N sources" copy in
       `frontend/src/App.tsx`: the hero subline ("…from N sources into one
       graph…") **and** the "How it works" step-3 title ("N open sources, in

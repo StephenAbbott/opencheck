@@ -119,5 +119,11 @@ backend/scripts/.gleif_eval_cache.json
 # Session artefacts — never commit
 _to_delete/
 *.bundle
-unilever.json
 tmp_opencheck_audit.tgz
+# Captured /lookup responses used as input to the frontend/scripts/ diagnostics.
+# Regenerate with the curl line in each script's header rather than committing
+# one: unilever.json alone was 252 KB of a single API answer, and it sat in the
+# repo root for months BECAUSE it was listed here after it had been committed —
+# .gitignore never untracks what git already tracks (Phase 168).
+unilever.json
+*.lookup.json

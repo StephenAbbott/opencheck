@@ -17,10 +17,10 @@
  * detector in section (B) is a conservative PREVIEW heuristic for the cluster
  * work — not the final scorer, it just shows what the current flag can't see.
  *
- * Usage:
- *   node person-dup-diagnostic.mjs <bundle.json>
+ * Usage (from the repo root; the bundle is any captured /lookup response —
+ * they are never committed, so make one first):
  *   curl 'http://127.0.0.1:8000/lookup?lei=549300MKFYEKVRWML317' > unilever.json
- *   node person-dup-diagnostic.mjs unilever.json
+ *   node frontend/scripts/person-dup-diagnostic.mjs unilever.json
  */
 
 import { readFileSync } from "node:fs";
