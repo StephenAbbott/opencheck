@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 158** — OpenAleph mentions are fetched once per name and applied to every record carrying it, so same-name records collapse to one row with a count, and the Wikidata finding quotes a class label as Wikidata's own term ("classed on Wikidata as “concern”") unless it reads as a description.
+**Latest: Phase 159** — the US EITI crosswalk shipped in Phase 155 never fired in production: GLEIF publishes a US jurisdiction as the subdivision the entity is incorporated in (Exxon Mobil is `US-NJ`, not `US`), so the derivation test never matched and the adapter looked for a country bucket that does not exist. Both now reduce a subdivision to its country.
 
 → [Full development history](docs/status.md)
 
