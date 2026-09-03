@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 158** — OpenAleph mentions are fetched once per name and applied to every record carrying it, so same-name records collapse to one row with a count, and the Wikidata finding quotes a class label as Wikidata's own term ("classed on Wikidata as “concern”") unless it reads as a description.
+**Latest: Phase 160** — a risk chip's accessible name is now its label alone; the summary sentence is an `aria-describedby` description, so a screen-reader user no longer hears every chip's paragraph twice.
 
 → [Full development history](docs/status.md)
 
