@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 160** — a risk chip's accessible name is now its label alone; the summary sentence is an `aria-describedby` description, so a screen-reader user no longer hears every chip's paragraph twice.
+**Latest: Phase 161** — the sources page now says whether each source is answering: the weekly sweep publishes its verdict to a release asset, `GET /source-health` reads it back, and every catalogue card carries the sweep's word, when it was checked, and a Health details disclosure.
 
 → [Full development history](docs/status.md)
 
