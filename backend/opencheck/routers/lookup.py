@@ -51,6 +51,7 @@ from ..reconcile import possibly_same_entities, reconcile
 from ..risk import DegradedSource, RiskSignal, assess_bundle, assess_hits
 from ..ratelimit import default_tier, limiter, lookup_tier
 from ..sources import REGISTRY, SearchKind, SourceHit, SourceInfo
+from ..sources.eiti import us_ein_for_lei as eiti_us_ein_for_lei
 from ..sources.schemas import SourceSchemaError
 
 router = APIRouter()
@@ -424,6 +425,15 @@ def _build_derived(ctx: _LookupCtx, registered_at_id: str) -> None:
     ctx.derived["lei"] = ctx.lei
     if ctx.jurisdiction.upper() == "GB" and ctx.registered_as:
         ctx.derived["gb_coh"] = ctx.registered_as
+    # US federal EIN. Not on the GLEIF record -- GLEIF publishes a US
+    # registeredAs as the *state* file number -- so it comes from the
+    # committed EITI crosswalk. Derived here, before dispatch, because the
+    # EITI adapter takes us_ein as a dispatch argument; the CIK-carrying
+    # OpenCorporates result arrives long after that point.
+    if ctx.jurisdiction.upper() == "US":
+        us_ein = eiti_us_ein_for_lei(ctx.lei)
+        if us_ein:
+            ctx.derived["us_ein"] = us_ein
     if ctx.registered_as and registered_at_id:
         for deriver in _RA_DERIVERS:
             if registered_at_id in deriver.ra_codes:

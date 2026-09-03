@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 154** — the subject's profile: register status becomes a chip beside the LEI on the subject card (neutral when active, warn during a terminal process, dark when dissolved — never a risk tone), and legal form, incorporation date and registered address lead the "Is this the right company?" band, each naming the sources that state it.
+**Latest: Phase 155** — a US company can finally match EITI: the derived `us_ein` that PR #46 taught the adapter to accept now has a producer, a committed LEI-to-EIN crosswalk built by confirming each EITI EIN against the SEC EDGAR registrant that carries it, because GLEIF publishes a US registration number that is not the EIN EITI keys on.
 
 → [Full development history](docs/status.md)
 

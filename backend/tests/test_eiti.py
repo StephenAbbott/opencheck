@@ -7,12 +7,20 @@ from pytest_httpx import HTTPXMock
 
 from opencheck.bods import map_eiti, validate_shape
 from opencheck.config import get_settings
-from opencheck.routers.lookup import _EITI_IDENTIFIER_KEY_BY_COUNTRY, _bh_eiti, _dispatch, _LookupCtx
+from opencheck.routers.lookup import (
+    _EITI_IDENTIFIER_KEY_BY_COUNTRY,
+    _bh_eiti,
+    _build_derived,
+    _dispatch,
+    _LookupCtx,
+)
 from opencheck.sources import REGISTRY, SearchKind
 from opencheck.sources.eiti import (
     EitiAdapter,
+    _get_index,
     _match_identification,
     _norm_forms,
+    us_ein_for_lei,
 )
 
 _API = "https://eiti.org/api/v2.0"
@@ -328,3 +336,109 @@ def test_map_eiti_unknown_country_omits_scheme() -> None:
 def test_map_eiti_stub_yields_nothing() -> None:
     assert list(map_eiti({"is_stub": True})) == []
     assert list(map_eiti({})) == []
+
+
+# ---------------------------------------------------------------------------
+# The US EIN crosswalk (issue #26). PR #46 taught fetch_by_registration to
+# accept a derived ``us_ein``, but nothing produced one, so no US subject
+# ever matched end-to-end. These tests pin the producer.
+# ---------------------------------------------------------------------------
+
+#: One high-confidence row of the committed crosswalk: the EIN came from
+#: EITI's 2015 US filing and was confirmed against the EDGAR registrant's
+#: own ``ein`` field before the LEI was accepted.
+_EXXON_LEI = "J3WHBG0MTS7O8ZVMDC91"
+_EXXON_EIN = "13-5409005"
+
+
+def test_us_ein_crosswalk_resolves_a_committed_lei() -> None:
+    assert us_ein_for_lei(_EXXON_LEI) == _EXXON_EIN
+    assert us_ein_for_lei(_EXXON_LEI.lower()) == _EXXON_EIN  # case-insensitive
+    assert us_ein_for_lei("X" * 20) == ""  # unknown LEI
+    assert us_ein_for_lei("") == ""
+
+
+def test_crosswalk_rows_all_hit_the_eiti_us_bucket() -> None:
+    """Every EIN in the crosswalk must still match the organisation index.
+
+    The two artifacts are rebuilt by different scripts. If the EITI index is
+    refreshed without re-running build_eiti_us_ein_index.py, US matching goes
+    silently back to zero -- exactly the failure this whole change fixes --
+    and nothing else would notice.
+    """
+    index, _ = _get_index()
+    assert index.get("US"), "the committed EITI index has no US bucket"
+    from opencheck.sources.eiti import _US_EIN_PATH
+    import json as _json
+
+    rows = _json.loads(_US_EIN_PATH.read_text(encoding="utf-8"))["index"]
+    assert rows, "the committed crosswalk is empty"
+    for lei, row in rows.items():
+        assert _match_identification("US", row["ein"]) is not None, (
+            f"{lei} ({row['eiti_label']}) carries EIN {row['ein']}, which is "
+            "no longer in the EITI US bucket -- rebuild the crosswalk"
+        )
+        assert us_ein_for_lei(lei) == row["ein"]
+
+
+def test_index_drops_identifications_with_no_digits() -> None:
+    """EITI's US bucket ships literal 'Private' and 'Foreign' sentinels where
+    a company gave no registry number. They are not identifiers, and a lookup
+    must never match on the word."""
+    index, _ = _get_index()
+    for sentinel in ("Private", "Foreign"):
+        assert sentinel not in index["US"]
+        assert _match_identification("US", sentinel) is None
+    # The guard is about digits, not about letters: GB's alphanumeric
+    # Companies House numbers survive it.
+    assert any(not k.isdigit() for k in index["GB"]), "GB bucket lost its SC/NI numbers"
+
+
+def test_build_derived_populates_us_ein_from_the_crosswalk() -> None:
+    ctx = _LookupCtx(lei=_EXXON_LEI)
+    ctx.jurisdiction = "US"
+    ctx.registered_as = "0000019017"  # a state file number, not the EIN
+    _build_derived(ctx, "")
+    assert ctx.derived["us_ein"] == _EXXON_EIN
+    # The state-registry number is what GLEIF publishes and it is not an EIN,
+    # so it must not have been reused as one.
+    assert ctx.derived["us_ein"] != ctx.registered_as
+
+
+def test_build_derived_omits_us_ein_off_the_crosswalk() -> None:
+    """No key at all rather than an empty string -- an empty us_ein would
+    still satisfy the dispatch guard's truth test somewhere downstream."""
+    ctx = _LookupCtx(lei="X" * 20)
+    ctx.jurisdiction = "US"
+    _build_derived(ctx, "")
+    assert "us_ein" not in ctx.derived
+
+    # Same LEI, non-US jurisdiction: the crosswalk is never consulted.
+    ctx2 = _LookupCtx(lei=_EXXON_LEI)
+    ctx2.jurisdiction = "GB"
+    ctx2.registered_as = "01285743"
+    _build_derived(ctx2, "")
+    assert "us_ein" not in ctx2.derived
+
+
+async def test_us_subject_matches_eiti_end_to_end_from_the_crosswalk() -> None:
+    """The loop PR #46 left open: derive -> dispatch -> match, with no live
+    call and nothing hand-fed. Before the crosswalk existed this produced no
+    dispatch at all for a US subject whose registeredAs is a state number."""
+    ctx = _LookupCtx(lei=_EXXON_LEI)
+    ctx.jurisdiction = "US"
+    ctx.registered_as = "0000019017"
+    ctx.legal_name = "EXXON MOBIL CORPORATION"
+    _build_derived(ctx, "")
+
+    tasks = _dispatch(ctx, only="eiti")
+    assert [sid for sid, _ in tasks] == ["eiti"]
+    bundle = await tasks[0][1]
+    assert bundle is not None
+    assert bundle["country"] == "US"
+    assert bundle["identification"] == _EXXON_EIN
+    assert bundle["is_stub"] is False
+
+    # And the hit corroborates on us_ein, not on the state number.
+    hit = _bh_eiti(bundle, ctx)
+    assert hit.identifiers == {"us_ein": _EXXON_EIN}
