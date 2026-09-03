@@ -42,6 +42,7 @@ from ..ftm import subject_to_ftm_entity
 from ..gleif_throttle import GleifRateLimitedError
 from ..memwatch import is_bot
 from ..icij_check import assess_icij_names
+from ..names import normalise_name
 from ..openaleph_check import assess_openaleph_names
 from ..subject_profile import build_subject_profile
 from ..verdict import build_verdict
@@ -1248,17 +1249,34 @@ async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
     # Informational enrichment (OpenAleph 5.3): count the documents in the
     # instance that mention each matched entity, via the /mentions endpoint
     # (the inverse of percolation/Screening). Name-derived — never treated
-    # as identifier corroboration. Only the top hits are enriched to stay
-    # inside the adapter's lookup time budget; failures degrade silently.
+    # as identifier corroboration. Failures degrade silently.
+    #
+    # Phase 158: fetched once per distinct *name*, and applied to every hit
+    # that carries it. Mentions are name-derived, so two records for the same
+    # name get the same documents (Shell plc's GLEIF and Companies House
+    # records both read "mentioned in 110 documents"); fetching for the top
+    # two *hits* meant the third record of the same name rendered without the
+    # mentions line and so could not group with the two above it — three rows
+    # where the reader could tell apart one. At most two fetches still, to
+    # stay inside the adapter's lookup time budget.
     if hasattr(oa_adapter, "fetch_mentions"):
-        for h in deduped[:2]:
+        by_name: dict[str, list[SourceHit]] = {}
+        for h in deduped:
+            by_name.setdefault(normalise_name(h.name) or h.hit_id, []).append(h)
+        fetched = 0
+        for same_name in by_name.values():
+            if fetched >= 2:
+                break
+            fetched += 1
             try:
-                mentions = await oa_adapter.fetch_mentions(h.hit_id)  # type: ignore[attr-defined]
+                mentions = await oa_adapter.fetch_mentions(same_name[0].hit_id)  # type: ignore[attr-defined]
             except Exception:  # noqa: BLE001
                 continue
-            if mentions and mentions.get("total"):
+            if not mentions or not mentions.get("total"):
+                continue
+            total = mentions["total"]
+            for h in same_name:
                 h.raw["openaleph_mentions"] = mentions
-                total = mentions["total"]
                 h.summary = (
                     f"{h.summary} · mentioned in {total} "
                     f"document{'s' if total != 1 else ''}"

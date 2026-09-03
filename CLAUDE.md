@@ -299,10 +299,14 @@ endpoint periodically, which is a separate decision.
   percolation over famous names drowns in near-duplicate registry
   records, while `filter:schema=Person` is high-precision; latency ~1.8 s
   unfiltered on the 2.1M-entity flagship vs ~10 ms topic-scoped.
-- Mentions enrichment (OpenAleph 5.3 `/entities/{id}/mentions`): top
-  OpenAleph hits get "· mentioned in N documents" + `raw.openaleph_mentions`
-  (title/collection/category/url per doc). Informational only — mentions
-  are name-derived and never count as identifier corroboration.
+- Mentions enrichment (OpenAleph 5.3 `/entities/{id}/mentions`): fetched
+  once per distinct normalised *name* (two fetches max, Phase 158) and
+  applied to every hit carrying that name — "· mentioned in N documents" +
+  `raw.openaleph_mentions` (title/collection/category/url per doc). Mentions
+  are name-derived, so same-name records share them; enriching by *hit*
+  left a third same-name record without the line and it could not group
+  with the two above it. Informational only — never identifier
+  corroboration.
 - Related-party graph screening (`opencheck/openaleph_check.py`, Phase 97):
   `assess_openaleph_names(bods, degraded=, screening=)` runs in the risk
   stage alongside `assess_cross_source_names` / `assess_icij_names` (same

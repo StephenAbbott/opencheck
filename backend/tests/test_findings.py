@@ -1015,3 +1015,36 @@ def test_finding_crosses_the_wire_alongside_summary() -> None:
     assert dumped["summary"] == "GB-COH 00102498"
     assert dumped["finding"] == "2 people with significant control on file."
     assert '"finding"' in hit.model_dump_json()
+
+
+# ---------------------------------------------------------------------------
+# wikidata — the instance-of class is a taxonomy key, not a description
+# ---------------------------------------------------------------------------
+
+
+def test_wikidata_class_label_is_quoted_when_it_does_not_read_as_a_description() -> None:
+    """Phase 158. Shell plc's first ``instance of`` is "concern" — Wikidata's
+    class for a business group (Q167037) — and the card read "described as a
+    concern". The label is Wikidata's word, so it is printed as Wikidata's
+    word, in quotes, and never dressed as OpenCheck's description."""
+    summary = {"instance_of": [{"qid": "Q167037", "label": "concern"}], "identifiers": {"lei": "x"}}
+    assert finding_wikidata(summary) == "Classed on Wikidata as “concern”; 1 cross-identifier published."
+
+
+def test_wikidata_prefers_the_class_that_reads_as_a_description() -> None:
+    summary = {
+        "instance_of": [
+            {"qid": "Q167037", "label": "concern"},
+            {"qid": "Q891723", "label": "public company"},
+        ],
+    }
+    assert finding_wikidata(summary) == "Described as a public company."
+    for label in ("multinational corporation", "state-owned enterprise", "holding company", "bank"):
+        assert finding_wikidata({"instance_of": [{"qid": "Q1", "label": label}]}) == (
+            f"Described as {'an' if label[0] in 'aeiou' else 'a'} {label}."
+        )
+
+
+def test_wikidata_bare_qid_labels_and_empty_classes_say_nothing() -> None:
+    assert finding_wikidata({"instance_of": [{"qid": "Q1", "label": "Q1"}]}) is None
+    assert finding_wikidata({"instance_of": []}) is None

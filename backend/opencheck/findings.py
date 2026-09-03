@@ -714,6 +714,38 @@ def finding_ted_eu(bundle: dict[str, Any]) -> str | None:
 # ---------------------------------------------------------------------------
 
 
+#: Wikidata ``instance of`` labels that read as a description in English. The
+#: first instance label used to be printed as "described as a <label>", and on
+#: Shell plc the first label was "concern" — Wikidata's class for a business
+#: group (Q167037, *Konzern*), which in a sentence reads as an emotional state.
+#: A class label is a key in a taxonomy, not a description (the Phase 133
+#: argument about FollowTheMoney slugs, again); it is printed as a description
+#: only when it ends in a word a reader would use for a company, and otherwise
+#: quoted as Wikidata's own term. Word-final match, so "public company",
+#: "multinational corporation" and "state-owned enterprise" all pass.
+_WIKIDATA_READABLE_CLASS_ENDINGS: tuple[str, ...] = (
+    "company", "corporation", "enterprise", "business", "firm", "bank",
+    "partnership", "cooperative", "co-operative", "foundation", "trust",
+    "fund", "insurer", "organisation", "organization", "institution",
+    "agency", "authority", "association", "charity", "conglomerate",
+    "manufacturer", "retailer", "airline", "university", "subsidiary",
+    "holding", "group",
+)
+
+
+def _wikidata_type_clause(instances: list[dict[str, Any]]) -> str | None:
+    """"described as a public company", or Wikidata's own word in quotes."""
+    labels = [str((i or {}).get("label") or "").strip() for i in instances]
+    labels = [lbl for lbl in labels if lbl and not lbl.startswith("Q")]
+    if not labels:
+        return None
+    for label in labels:
+        last = label.lower().split()[-1]
+        if last in _WIKIDATA_READABLE_CLASS_ENDINGS:
+            return f"described as {_article(label)} {label}"
+    return f"classed on Wikidata as “{labels[0]}”"
+
+
 def finding_wikidata(summary: dict[str, Any]) -> str | None:
     """What Wikidata says this subject is, and who is above it.
 
@@ -753,9 +785,7 @@ def finding_wikidata(summary: dict[str, Any]) -> str | None:
     else:
         lead = None
 
-    instances = summary.get("instance_of") or []
-    instance = str((instances[0] if instances else {}).get("label") or "").strip()
-    type_clause = f"described as {_article(instance)} {instance}" if instance else None
+    type_clause = _wikidata_type_clause(summary.get("instance_of") or [])
 
     identifiers = summary.get("identifiers") or {}
     id_clause = (

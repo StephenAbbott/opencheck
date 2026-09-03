@@ -321,3 +321,64 @@ async def test_strategies_fall_back_to_name_when_match_empty(monkeypatch) -> Non
     result = await lookup_mod._openaleph_strategies(ctx)
     assert result == []
     assert calls == ["match", "name"]
+
+
+async def test_mentions_are_fetched_once_per_name_and_applied_to_every_hit_with_it(monkeypatch) -> None:
+    """Phase 158. Mentions are name-derived, so records sharing a name share
+    the documents; fetching for the top two *hits* left the third record of
+    the same name without the mentions line, so it could not group with the
+    two above it and the card showed three rows a reader could not tell
+    apart (Shell plc, 2 Sept 2026)."""
+    from opencheck.routers import lookup as lookup_mod
+
+    ctx = lookup_mod._LookupCtx(lei=_LEI)
+    ctx.legal_name = "Shell plc"
+    ctx.jurisdiction = "GB"
+
+    adapter = REGISTRY["openaleph"]
+    _empty_strategies(monkeypatch, adapter)
+
+    def hit(hid: str, name: str, coll: str) -> SourceHit:
+        return SourceHit(
+            source_id="openaleph", hit_id=hid, kind=SearchKind.ENTITY, name=name,
+            summary=f"collection: {coll}", identifiers={"aleph_id": hid},
+            raw={"collection_label": coll, "schema": "Company"}, is_stub=False,
+        )
+
+    hits = [
+        hit("gleif-1", "SHELL PLC", "GLEIF Concatenated Data File"),
+        hit("psc-1", "Shell Plc", "Companies House (UK) PSC"),
+        hit("psc-2", "Shell Plc", "Companies House (UK) PSC"),
+        hit("psc-3", "Shell Plc", "Companies House (UK) PSC"),
+        hit("other-1", "Shell Energy Ltd", "Companies House (UK) PSC"),
+        hit("third-1", "Shell Chemicals Ltd", "Companies House (UK) PSC"),
+    ]
+
+    async def fake_match(entity, limit=5):
+        return hits
+
+    fetched: list[str] = []
+
+    async def fake_mentions(hit_id: str):
+        fetched.append(hit_id)
+        return {"total": 110, "documents": []}
+
+    monkeypatch.setattr(adapter, "match_entity", fake_match)
+    monkeypatch.setattr(adapter, "fetch_mentions", fake_mentions)
+
+    result = await lookup_mod._openaleph_strategies(ctx)
+    # One fetch per distinct name, two fetches at most — "SHELL PLC" and
+    # "Shell Plc" are one name, "Shell Energy Ltd" the second, and the third
+    # name is outside the budget.
+    assert fetched == ["gleif-1", "other-1"]
+    with_mentions = [h.hit_id for h in result if "openaleph_mentions" in h.raw]
+    assert with_mentions == ["gleif-1", "psc-1", "psc-2", "psc-3", "other-1"]
+    # Every record of the name renders the same mentions line, so the three
+    # PSC rows now share one rendering and collapse on the card.
+    psc = [h for h in result if h.hit_id.startswith("psc")]
+    assert len({(h.name, h.finding, h.summary) for h in psc}) == 1
+    assert psc[0].summary.endswith("· mentioned in 110 documents")
+    assert "110 documents mention this name" in (psc[0].finding or "")
+    # The third name is outside the budget: no fetch, no line.
+    third = next(h for h in result if h.hit_id == "third-1")
+    assert "openaleph_mentions" not in third.raw and "mentioned in" not in third.summary
