@@ -59,6 +59,7 @@ import { NarrativePanel } from "./components/cdd/NarrativePanel";
 import { SignalEvidence } from "./components/risk/SignalEvidence";
 import { evidenceForCode } from "./lib/signalEvidence";
 import { Explain } from "./components/ui/Explain";
+import { SourcesPage } from "./components/SourcesPage";
 import type { ReportExportPayload } from "./components/cdd/NarrativePanel";
 import {
   SourceBucketCard,
@@ -2648,70 +2649,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         )}
 
         {view === "sources" && (
-          <section>
-            <SectionLabel>About the sources</SectionLabel>
-            <p className="text-[14px] leading-[1.7] text-oo-muted mb-6 max-w-2xl">
-              OpenCheck queries the open data sources below. GLEIF is
-              the entry point — the LEI acts as a connector across the
-              rest. Each source ships its data under its own license;
-              non-commercial sources propagate that obligation through
-              the export bundle.
-            </p>
-            {sourcesQuery.isLoading && (
-              <p className="text-oo-muted">Loading…</p>
-            )}
-            {sourcesQuery.data && (
-              <ul
-                className="grid gap-6"
-                // 480px min as per the BO design library card grid spec.
-                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 480px), 1fr))" }}
-              >
-                {[...sourcesQuery.data.sources]
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((s, i) => (
-                  <li
-                    key={s.id}
-                    className={`bg-white border rounded-oo p-6 text-sm transition-shadow hover:shadow-oo-card ${
-                      s.category === "esg"
-                        ? "border-emerald-200"
-                        : "border-oo-rule"
-                    }`}
-                  >
-                    <div className="flex items-baseline gap-3 mb-1 flex-wrap">
-                      <span className="font-mono text-[11px] tracking-wider text-oo-blue">
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                      <a
-                        href={s.homepage}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-head text-[17px] font-bold text-oo-ink leading-tight hover:underline underline-offset-2"
-                      >
-                        {s.name}
-                      </a>
-                      <div className="ml-auto flex items-center gap-2">
-                        {s.category === "esg" && (
-                          <span className="text-[10px] font-semibold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200 rounded px-1.5 py-0.5">
-                            ESG
-                          </span>
-                        )}
-                        <LicenseChip license={s.license} />
-                      </div>
-                    </div>
-                    {s.description && (
-                      <p className="text-[13.5px] leading-[1.7] text-oo-muted mt-2">
-                        {s.description}
-                      </p>
-                    )}
-                    <p className="text-[11px] font-mono mt-3 text-oo-muted">
-                      Supports: {s.supports.join(", ")} ·{" "}
-                      {s.live_available ? "live ready" : "placeholder data"}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+          <SourcesPage sources={sourcesQuery.data?.sources} loading={sourcesQuery.isLoading} />
         )}
 
         {view === "behind" && <BehindTheScenesPage />}
@@ -3796,22 +3734,6 @@ function HowItWorks() {
 }
 
 
-
-// LicenseChip is also defined in SourceBucketCard for use inside DeepenBlock.
-// This copy is used in the Sources list view inside App.
-function LicenseChip({ license }: { license: string }) {
-  const nc = license.toLowerCase().includes("nc");
-  const classes = nc
-    ? "bg-amber-50 text-amber-800 border-amber-200"
-    : "bg-emerald-50 text-emerald-700 border-emerald-200";
-  return (
-    <span
-      className={`text-[11px] border rounded px-1.5 py-0.5 font-mono ${classes}`}
-    >
-      {license}
-    </span>
-  );
-}
 
 /** Human-readable label for each reconcile bridge key. */
 const SCHEME_LABELS: Record<string, string> = {

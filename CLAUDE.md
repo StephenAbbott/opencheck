@@ -247,6 +247,24 @@ field, and end-to-end through a real lookup. Counters are in-process and
 reset on deploy and Render spin-down; making them durable means scraping the
 endpoint periodically, which is a separate decision.
 
+### Source health on the sources page (Phase 161)
+
+The weekly sweep (`scripts/source_health.py`, `.github/workflows/source-health.yml`)
+publishes `source-health.json`, `source-health.md` and a rolling
+`source-health-history.json` to the `source-health-latest` GitHub release —
+the entity-pages arrangement, a URL an ephemeral-filesystem host reads
+without a rebuild. `opencheck/source_health.py` reads them back for
+`GET /source-health` (hourly refresh, stale-and-say-so on error,
+`available: false` when nothing has been published) and *shapes* the report:
+statuses, reasons, known gaps, liveness, latency, statement totals and the
+last eight statuses per source; never `observed_fields` or `result_size`.
+`frontend/src/lib/sourceHealth.ts` words it (`ok` → Healthy in the ok tone,
+`degraded` → Degraded in the *context* tone, `fail` → Failed in the *warn*
+tone, `skipped` → Not tested in neutral — never healthy, never omitted) and
+`components/SourcesPage.tsx` renders it. Nothing at request time probes a
+source: the page shows the last sweep's verdict and says when it was reached.
+`OPENCHECK_SOURCE_HEALTH_FILE` points a developer at a local sweep.
+
 ### Cold start & per-source time budgets (Phase 47)
 
 - The FastAPI lifespan kicks off `climatetrace.warm_caches()` in a

@@ -282,7 +282,7 @@ drift coverage would be a bad bargain.
 | **A** | Probe table, both offline guards, sweep script, weekly workflow, rolling issue. | **Built 2026-08-21** |
 | **B** | Add the credentials as repository secrets; lower `MAX_SKIPPED_FOR_CREDENTIALS` in the same commit as each. Decide the Lithuania 403. Fill `expect_fields` for the 15 credential-gated sources — they have never run, so there are no observed shapes to fill from until the secrets exist. | **The only phase left.** Both provenance gaps it listed are closed |
 | **C** | Dispatch-drift check, `expect_fields`, week-over-week statement diff, snapshot ageing, 20 of 23 anchors. | **Complete 2026-08-22** |
-| **D** | *(optional)* Publish `source-health.json` as a public data-source status page. | Optional |
+| **D** | Publish `source-health.json` as a public data-source status page. | **Built 2026-09-03 (Phase 161)** — the workflow uploads `source-health.json`, `.md` and a rolling `source-health-history.json` (26 runs) to the `source-health-latest` release; `GET /source-health` reads them back hourly; `/sources` shows a sweep summary strip and, on every card, the sweep's word, when it was checked, and a *Health details* disclosure (last eight sweeps, freshness, latency, statement count, reason, known gap) that opens unasked on anything not plainly healthy. |
 
 ## Credentials to add (Phase B)
 

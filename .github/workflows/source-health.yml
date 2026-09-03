@@ -32,7 +32,7 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: read
+  contents: write # the source-health-latest release assets (Phase 161)
   issues: write
 
 concurrency:
@@ -115,6 +115,49 @@ jobs:
           name: source-health
           path: source-health.*
           retention-days: 90
+
+      # Phase 161: the report is also published where the API can read it.
+      # A 90-day artifact and a rolling issue are for the engineer; the
+      # sources page on opencheck.world reads `source-health.json` from the
+      # `source-health-latest` release (the entity-pages arrangement — an
+      # ephemeral-filesystem host reads a URL, no rebuild), alongside a
+      # rolling `source-health-history.json` of per-source statuses so a card
+      # can show the last eight sweeps, not just the last one. The release is
+      # created on first use and never marked "latest": it is a data slot,
+      # not a version of OpenCheck.
+      - name: Publish the report to the source-health-latest release
+        if: always() && hashFiles('source-health.json') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          TAG=source-health-latest
+          if ! gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$REPO" --latest=false \
+              --title "Source health (latest weekly sweep)" \
+              --notes "Data slot for the weekly source-health sweep. Assets are replaced every Monday; read by GET /source-health."
+          fi
+          gh release download "$TAG" --repo "$REPO" --pattern source-health-history.json --dir previous-release 2>/dev/null || true
+          python3 - <<'PY'
+          import json, pathlib
+          report = json.load(open("source-health.json"))
+          prev = pathlib.Path("previous-release/source-health-history.json")
+          history = json.load(open(prev)) if prev.exists() else {"runs": []}
+          runs = [r for r in history.get("runs", []) if r.get("generated_at") != report["generated_at"]]
+          runs.append({
+              "generated_at": report["generated_at"],
+              "statuses": {sid: row["status"] for sid, row in report["sources"].items()},
+          })
+          # Half a year of Mondays: enough for "when did this start", small enough to read whole.
+          history = {"runs": runs[-26:]}
+          pathlib.Path("source-health-history.json").write_text(json.dumps(history, indent=1))
+          print(f"history: {len(history['runs'])} runs")
+          PY
+          gh release upload "$TAG" --repo "$REPO" --clobber \
+            source-health.json source-health.md source-health-history.json
+          gh release edit "$TAG" --repo "$REPO" \
+            --notes "Weekly source-health sweep — last run $(date -u +%Y-%m-%dT%H:%MZ). Assets are replaced every Monday; read by GET /source-health on the API and shown on opencheck.world/sources."
 
       # One rolling issue rather than a new one each week, and a comment only
       # when something CHANGED — a weekly comment on an unchanged table is how

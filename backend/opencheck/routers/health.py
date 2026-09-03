@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from .. import __version__, consistencystats, memwatch, signalstats
+from .. import __version__, consistencystats, memwatch, signalstats, source_health
 from ..bo_access import notice_for
 from ..config import get_settings
 from ..sources import REGISTRY, SourceInfo, lineage
@@ -101,3 +101,18 @@ async def sources() -> SourcesResponse:
             update["bo_access"] = notice
         out.append(info.model_copy(update=update))
     return SourcesResponse(sources=out)
+
+
+@router.get("/source-health")
+async def source_health_report() -> JSONResponse:
+    """The last weekly sweep's verdict on every source (Phase 161).
+
+    Read from the ``source-health-latest`` release asset the sweep uploads,
+    refreshed at most hourly, served stale (and marked so) when the asset
+    cannot be re-read, and ``available: false`` when no sweep has published
+    one. Nothing here contacts a source: see ``opencheck/source_health.py``.
+    Same contract as /sources: public, unauthenticated, undecorated — a
+    cached dict dump.
+    """
+    payload = await source_health.load()
+    return JSONResponse(payload, headers={"Cache-Control": "public, max-age=3600"})

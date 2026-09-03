@@ -84,6 +84,25 @@ class Settings(BaseSettings):
     entity_pages_db_url: str | None = Field(
         default=None, alias="OPENCHECK_ENTITY_PAGES_DB_URL"
     )
+    # --- Source health (Phase 161) ---
+    # Where the weekly sweep's ``source-health.json`` is read from. The sweep
+    # (``.github/workflows/source-health.yml``) uploads it, with the rolling
+    # ``source-health-history.json`` beside it, to the ``source-health-latest``
+    # GitHub release, the same arrangement the entity-pages DB uses: a URL an
+    # ephemeral-filesystem host can read without a rebuild. The file wins
+    # when both are set (tests, and a developer reading a local sweep).
+    # Empty string disables the fetch: ``/source-health`` then answers
+    # ``available: false`` and the sources page shows no health at all.
+    source_health_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "source-health-latest/source-health.json"
+        ),
+        alias="OPENCHECK_SOURCE_HEALTH_URL",
+    )
+    source_health_file: str | None = Field(
+        default=None, alias="OPENCHECK_SOURCE_HEALTH_FILE"
+    )
     # Directory of a built frontend (frontend/dist). When set, the backend
     # serves the SPA itself — the single-service arrangement that lets
     # opencheck.world serve /entity/* pages from one origin: Render
