@@ -29,6 +29,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import {
+  fetchBatchExport,
   streamBatch,
   type BatchDoneEvent,
   type BatchFailedRow,
@@ -73,6 +74,7 @@ export default function BatchPage({
   const [start, setStart] = useState<BatchStartEvent | null>(null);
   const [summary, setSummary] = useState<BatchDoneEvent | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const cleanupRef = useRef<(() => void) | null>(null);
   const textareaId = useId();
   const statusId = useId();
@@ -116,18 +118,40 @@ export default function BatchPage({
   const finished = rows.filter((r) => r.state !== "running").length;
   const degradedCount = rows.filter((r) => r.state === "degraded").length;
 
-  const download = useCallback(() => {
-    const csv = rowsToCsv(rows, window.location.origin);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const saveBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = csvFilename();
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  };
+
+  const download = useCallback(() => {
+    const csv = rowsToCsv(rows, window.location.origin);
+    saveBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), csvFilename());
   }, [rows]);
+
+  // The combined BODS bundle (Phase 167). Built server-side from the same
+  // list: the batch re-runs inside the replay window, so it costs nothing
+  // upstream; the zip carries bundle.json, rows.csv, manifest.json and a
+  // LICENSES.md over the union of sources.
+  const downloadBundle = useCallback(async () => {
+    const leis = rows.map((r) => r.lei);
+    if (!leis.length || exporting) return;
+    setExporting(true);
+    setError(null);
+    try {
+      const { blob, filename } = await fetchBatchExport(leis);
+      saveBlob(blob, filename);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The export could not be built.");
+    } finally {
+      setExporting(false);
+    }
+  }, [rows, exporting]);
 
   return (
     <div className="max-w-oo-page mx-auto">
@@ -175,9 +199,19 @@ export default function BatchPage({
             {phase === "running" ? "Screening…" : "Screen these companies"}
           </Button>
           {rows.length > 0 && (
-            <Button variant="secondary" onClick={download} disabled={phase === "running"}>
-              Download table (CSV)
-            </Button>
+            <>
+              <Button variant="secondary" onClick={download} disabled={phase === "running"}>
+                Download table (CSV)
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={downloadBundle}
+                disabled={phase === "running" || exporting}
+                title="One zip: every company's BODS statements, the table, a manifest and the licence notes for the whole set"
+              >
+                {exporting ? "Building bundle…" : "Download BODS bundle (zip)"}
+              </Button>
+            </>
           )}
         </div>
       </section>

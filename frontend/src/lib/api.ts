@@ -1647,6 +1647,43 @@ export function streamBatch(
   return () => controller.abort();
 }
 
+/**
+ * Fetch the combined export for a screened list (Phase 167): one zip with
+ * every row's BODS statements de-duplicated, `rows.csv`, a manifest and a
+ * `LICENSES.md` over the union of sources. The backend re-runs the batch,
+ * which inside the replay window — the case when the table has just been
+ * shown — costs nothing upstream. Resolves to the blob and the filename
+ * the server chose; rejects with the server's own words on 4xx/5xx.
+ */
+export async function fetchBatchExport(
+  leis: string[],
+  deepen_top = 5,
+): Promise<{ blob: Blob; filename: string; failed: number }> {
+  const params = new URLSearchParams({ leis: leis.join(","), deepen_top: String(deepen_top) });
+  const res = await fetch(`${BASE_URL}/batch-export?${params.toString()}`);
+  if (!res.ok) {
+    let detail = `The export could not be built (HTTP ${res.status}).`;
+    try {
+      const body = (await res.json()) as { detail?: unknown };
+      const d = body?.detail;
+      if (typeof d === "string") detail = d;
+      else if (d && typeof d === "object" && "message" in d)
+        detail = String((d as { message: unknown }).message);
+    } catch {
+      /* keep the status line */
+    }
+    if (res.status === 429) detail = `${detail} Exports are limited to a few a minute — try again shortly.`;
+    throw new Error(detail);
+  }
+  const disposition = res.headers.get("content-disposition") ?? "";
+  const m = /filename="([^"]+)"/.exec(disposition);
+  return {
+    blob: await res.blob(),
+    filename: m?.[1] ?? "opencheck-batch.zip",
+    failed: Number(res.headers.get("x-opencheck-batch-failed") ?? "0") || 0,
+  };
+}
+
 // ---------------------------------------------------------------------
 // Per-source retry — /lookup-source
 // ---------------------------------------------------------------------

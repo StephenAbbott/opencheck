@@ -3004,6 +3004,14 @@ function ApiPage() {
             <code className={mono}>batch_done</code>. A failed row is a row with{" "}
             <code className={mono}>degraded: true</code>, never a dropped one. Heavy rate tier.
           </ApiEndpoint>
+          <ApiEndpoint path="/batch-export?leis=<LEI,LEI,…>">
+            The same list as one zip: <code className={mono}>bundle.json</code> (every company’s
+            BODS statements, de-duplicated by <code className={mono}>statementId</code>),{" "}
+            <code className={mono}>rows.csv</code>, <code className={mono}>manifest.json</code> and a{" "}
+            <code className={mono}>LICENSES.md</code> over the union of sources — the most
+            restrictive licence in the set applies to the whole bundle. Rows that could not be
+            screened are listed in the manifest and the CSV, never omitted. Heavy rate tier.
+          </ApiEndpoint>
         </BtsCard>
 
         <BtsCard title="MCP server — for AI agents">
