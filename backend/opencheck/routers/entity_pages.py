@@ -342,6 +342,7 @@ _DISALLOWED_API_PREFIXES = [
     "/lookup",
     "/lookup-stream",
     "/lookup-source",
+    "/batch-stream",
     "/search",
     "/stream",
     "/deepen",

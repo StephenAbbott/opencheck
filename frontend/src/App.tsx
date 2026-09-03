@@ -2983,6 +2983,14 @@ function ApiPage() {
           <ApiEndpoint path="/lookup-source?lei=<LEI>&source_id=<id>">
             Re-run a single source for an existing lookup (the per-source “retry” in the UI).
           </ApiEndpoint>
+          <ApiEndpoint path="/batch-stream?leis=<LEI,LEI,…>">
+            Screen up to 20 LEIs in one request — the same pipeline as{" "}
+            <code className={mono}>/lookup</code>, looped two at a time, streamed as{" "}
+            <code className={mono}>batch_start</code>, one <code className={mono}>row_done</code> or{" "}
+            <code className={mono}>row_failed</code> per LEI in completion order, then{" "}
+            <code className={mono}>batch_done</code>. A failed row is a row with{" "}
+            <code className={mono}>degraded: true</code>, never a dropped one. Heavy rate tier.
+          </ApiEndpoint>
         </BtsCard>
 
         <BtsCard title="MCP server — for AI agents">
@@ -3012,6 +3020,7 @@ function ApiPage() {
               ["opencheck_search", "Find a company’s LEI from a name or free text."],
               ["opencheck_resolve_national_id", "Resolve a national company-registration number to its LEI."],
               ["opencheck_lookup", "Due diligence by LEI: identity, identifiers, risk signals, source coverage."],
+              ["opencheck_batch_lookup", "Up to 20 LEIs at once: one compact row each, with failed rows kept apart."],
               ["opencheck_export_bods", "The full ownership-and-control graph as BODS v0.4 statements."],
               ["opencheck_list_sources", "Inventory of the data sources, with licence and live status."],
             ] as [string, string][]).map(([name, desc]) => (

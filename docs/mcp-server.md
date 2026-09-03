@@ -36,6 +36,7 @@ would `421` in production.
 | `opencheck_search(query, kind="entity")` | Name → candidate entities with LEIs |
 | `opencheck_resolve_national_id(number, country="", ra_code="")` | National registration number → LEI(s) |
 | `opencheck_lookup(lei, deepen_top=5)` | Identity, identifiers, risk signals, source coverage |
+| `opencheck_batch_lookup(leis, deepen_top=5)` | Up to 20 LEIs → one compact row each (name, jurisdiction, register status, verdict sentence, risk/context counts, coverage, `degraded`), plus `failed` rows and `rejected` tokens — see below |
 | `opencheck_export_bods(lei, format="json", deepen_top=3)` | Full ownership graph — BODS v0.4 (`json`/`jsonl`), Senzing JSON entity records (`senzing`), or FollowTheMoney entities (`ftm`) |
 | `opencheck_person_check(name, birth_year=None)` | Screen one person (PEP / sanctions / offshore-leaks) — evidence-shaped: signals from strong matches only, per-source outcomes, caveats |
 | `opencheck_list_sources()` | Adapter inventory with licence + live status |
@@ -43,6 +44,35 @@ would `421` in production.
 `narrative` is deliberately **not** exposed (it spends model tokens per call).
 Responses are flattened by `mcp/shaping.py` into compact, agent-readable
 structures.
+
+### What `opencheck_batch_lookup` returns (Phase 164)
+
+A thin loop over `opencheck_lookup`, never a second pipeline: each row is the
+single lookup's `LookupResponse` reduced by `shaping.shape_batch_row` to what a
+list reader scans, so a batch row for LEI X and `opencheck_lookup(X)` cannot
+disagree. Rows run **two at a time** (`OPENCHECK_BATCH_CONCURRENCY`) against
+the shared GLEIF budget — twenty companies not seen recently take about two
+minutes; a re-run inside the 15-minute replay window is free.
+
+- **`accepted` / `rejected` / `overflow`** — the list is parsed tolerantly
+  (whitespace, commas, semicolons), each token checksum-validated and
+  de-duplicated; every rejection carries a reason; valid LEIs beyond the cap of
+  20 are counted in `overflow`, never silently dropped.
+- **`rows[]`** in paste order: `lei`, `legal_name`, `jurisdiction`,
+  `register_status` (Phase 151 liveness, from the subject profile),
+  `verdict`, `risk_count` / `risk_codes` and `context_count` / `context_codes`
+  (the Phase 153 kind split), `coverage {applicable, answered}` with the GLEIF
+  anchor counted (Phase 156), `degraded` + `degraded_sources`, `licensing`,
+  `report_url`.
+- **`failed[]`** — a row that could not be screened (unknown LEI → 404; GLEIF
+  throttle refusal → 503 with `retryable: true`) is a row with
+  `degraded: true`, not an exception: one bad LEI never aborts the other
+  nineteen, and the batch is not clean while `failed` is non-empty.
+- Rows are never ranked by severity — OpenCheck does not grade companies.
+
+The same loop backs `GET /batch-stream?leis=…` for the web app (SSE:
+`batch_start`, then `row_done` / `row_failed` in completion order, then
+`batch_done`; heavy rate tier; Phase 144 bot gate).
 
 ### What `opencheck_lookup` returns (Phase 153)
 

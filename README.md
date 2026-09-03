@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 163** — the weekly sweep now maps `GEMI_API_KEY`, seeds the GEM ownership artifact before probing, and gives the last three identifier-dispatched probes an anchor LEI, so the dispatch-drift check covers all 24.
+**Latest: Phase 164** — batch screening, backend half: `GET /batch-stream` and the MCP `opencheck_batch_lookup` screen up to 20 LEIs as a thin loop over the single-lookup pipeline (two in flight, heavy tier, bot-gated), with a row that could not be checked reported as degraded rather than dropped.
 
 → [Full development history](docs/status.md)
 

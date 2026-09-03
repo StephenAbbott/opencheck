@@ -181,6 +181,12 @@ class Settings(BaseSettings):
         default=True, alias="OPENCHECK_BOT_GATE_LOOKUP_STREAM"
     )
 
+    # Phase 164: pipelines in flight per /batch-stream request. Each cold
+    # anchor costs 4–6 GLEIF calls against the shared 50/min budget (Phase
+    # 143), so one batch must never monopolise what human lookups queue
+    # behind. Two is the design number; raise only with the throttle.
+    batch_concurrency: int = Field(default=2, alias="OPENCHECK_BATCH_CONCURRENCY")
+
     # --- Memory + traffic instrumentation (see opencheck/memwatch.py) ---
     # Interval (seconds) between "memwatch" memory-report log lines. 0 disables
     # the reporter (the access log below is controlled separately). Added after
