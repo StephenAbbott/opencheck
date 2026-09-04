@@ -1277,3 +1277,66 @@ def test_gleif_mapping_missing_file_falls_back_gracefully(tmp_path, monkeypatch)
         get_settings.cache_clear()
         _ct_mod._lei_index = None
         _ct_mod._entity_index = None
+
+
+# ---------------------------------------------------------------------------
+# _parse_parents — parent typing from the parent's own entities-CSV row
+# ---------------------------------------------------------------------------
+
+
+def test_parse_parents_carries_parent_entity_type_and_country(monkeypatch) -> None:
+    """The parent's BODS type comes from the parent's row, not the subject's.
+
+    GEM's real shape for PT Pertamina (Persero): the subject's row names the
+    parent by ID and share only, and only the parent's own row says it is a
+    `state`. Without this lookup the state above an SOE is untyped and the BODS
+    state-owned-enterprise structure cannot be built.
+    """
+    import opencheck.sources.climatetrace as _ct_mod
+
+    monkeypatch.setattr(
+        _ct_mod,
+        "_entity_index",
+        {
+            "E100001000084": {
+                "Entity ID": "E100001000084",
+                "Name": "Government of Indonesia",
+                "Entity Type": "state",
+                "Headquarters Country": "IDN",
+            }
+        },
+    )
+    row = {
+        "Gem parents IDs": "E100001000084 [100.0%]",
+        "Gem parents": "Government of Indonesia [100%]",
+    }
+    parents = _parse_parents(row)
+    assert len(parents) == 1
+    assert parents[0]["entity_type"] == "state"
+    assert parents[0]["country"] == "IDN"
+    assert parents[0]["share"] == pytest.approx(100.0)
+
+
+def test_parse_parents_unknown_parent_has_no_type(monkeypatch) -> None:
+    """A parent with no row of its own reports no type — never a guessed one."""
+    import opencheck.sources.climatetrace as _ct_mod
+
+    monkeypatch.setattr(_ct_mod, "_entity_index", {})
+    parents = _parse_parents(
+        {"Gem parents IDs": "E100000000001", "Gem parents": "Acme Corp"}
+    )
+    assert parents[0]["entity_type"] is None
+    assert parents[0]["country"] is None
+
+
+def test_parent_gem_row_does_not_load_indexes(monkeypatch) -> None:
+    """The lookup must never trigger a data download as a side effect."""
+    import opencheck.sources.climatetrace as _ct_mod
+
+    monkeypatch.setattr(_ct_mod, "_entity_index", None)
+
+    def _boom() -> None:  # pragma: no cover - must not be called
+        raise AssertionError("_parse_parents must not build the GEM indexes")
+
+    monkeypatch.setattr(_ct_mod, "_get_indexes", _boom)
+    assert _ct_mod._parent_gem_row("E100001000084") is None

@@ -1660,6 +1660,21 @@ def _interests(stmt: dict[str, Any]) -> list[dict[str, Any]]:
 # SOE modelling requirement). A relationship to such an entity = state control.
 _STATE_ENTITY_TYPES = {"state", "stateBody"}
 
+#: Per-source coverage caveat for the STATE_CONTROLLED summary. Every source
+#: that can produce a state/stateBody node covers only part of the world, so
+#: the signal names the one it actually came from rather than whichever source
+#: happened to be implemented first.
+_STATE_SOURCE_CAVEATS: dict[str, str] = {
+    "wikidata": "Wikidata-sourced — crowd-sourced, famous names only",
+    "climatetrace": "Global Energy Monitor ownership data — energy sector only",
+    "eiti_soe": "EITI State-Owned Enterprises Database — EITI countries only",
+}
+
+
+def _state_source_caveat(source_id: str) -> str:
+    """Human-readable coverage caveat for the source that produced the node."""
+    return _STATE_SOURCE_CAVEATS.get(source_id, f"sourced from {source_id}")
+
 
 def _state_controlled_signals(
     source_id: str, hit_id: str, bods: list[dict[str, Any]]
@@ -1671,9 +1686,12 @@ def _state_controlled_signals(
     entity statement with ``entityType.type`` ``state`` / ``stateBody``. We fire
     when such an entity is the interested party of a relationship in the bundle.
 
-    Presence-only and corroborating — currently sourced from Wikidata (crowd-
-    sourced, famous-names-only), so its **absence is not evidence** the entity is
-    privately owned. Medium confidence; never a determination.
+    Presence-only and corroborating: every source that can produce such a node
+    covers only part of the world (Wikidata is crowd-sourced and famous-names-
+    only; GEM covers the energy sector; the EITI SOE database covers EITI
+    countries), so its **absence is not evidence** the entity is privately
+    owned. The summary names the source the structure came from. Medium
+    confidence; never a determination.
     """
     ents: dict[str, dict[str, Any]] = {}
     state_ids: set[str] = set()
@@ -1709,9 +1727,9 @@ def _state_controlled_signals(
             confidence="medium",
             summary=(
                 "A controlling owner is a state or state body — a possible "
-                "state-owned enterprise. Corroborating indicator (Wikidata-"
-                "sourced); not a determination, and its absence is not evidence "
-                "the entity is privately owned."
+                "state-owned enterprise. Corroborating indicator "
+                f"({_state_source_caveat(source_id)}); not a determination, and "
+                "its absence is not evidence the entity is privately owned."
             ),
             source_id=source_id,
             hit_id=hit_id,

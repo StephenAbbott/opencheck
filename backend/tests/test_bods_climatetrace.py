@@ -387,3 +387,132 @@ def test_map_climatetrace_amalgamated_passes_validator() -> None:
     statements = map_climatetrace(_amalgamated_bundle())
     issues = validate_shape(statements)
     assert issues == [], issues
+
+
+# ---------------------------------------------------------------------------
+# State-owned enterprises — BODS "representing state-owned enterprises"
+# ---------------------------------------------------------------------------
+
+
+def _soe_bundle(parent_type: str | None, *, country: str | None = "IDN") -> dict:
+    """PT Pertamina (Persero) with the Republic of Indonesia declared above it."""
+    return {
+        "source_id": "climatetrace",
+        "entity_id": "E100000000538",
+        "entity_name": "PT Pertamina (Persero)",
+        "lei": "254900NDAKGNZ2IBBL45",
+        "gem_row": {
+            "Entity ID": "E100000000538",
+            "Full Name": "PT Pertamina (Persero)",
+            "Global Legal Entity Identifier Index": "254900NDAKGNZ2IBBL45",
+            "Headquarters Country": "IDN",
+            "Entity Type": "legal entity",
+            "Gem parents IDs": "E100001000084 [100.0%]",
+            "Gem parents": "Government of Indonesia [100%]",
+        },
+        "emissions": {},
+        "assets": [],
+        "parents": [
+            {
+                "entity_id": "E100001000084",
+                "name": "Government of Indonesia",
+                "share": 100.0,
+                "entity_type": parent_type,
+                "country": country,
+            }
+        ],
+        "is_stub": False,
+    }
+
+
+def _parent_statement(statements: list[dict]) -> dict:
+    return next(
+        s
+        for s in statements
+        if s.get("recordType") == "entity"
+        and s["recordDetails"]["name"] == "Government of Indonesia"
+    )
+
+
+def test_state_parent_is_typed_state_with_jurisdiction() -> None:
+    """A GEM `state` parent becomes a BODS `state` entity carrying its state.
+
+    BODS: an SOE's entity statement MUST be the subject of relationship
+    statements connecting it to an entity statement typed `state`/`stateBody`,
+    and jurisdiction represents the particular state.
+    """
+    statements = list(map_climatetrace(_soe_bundle("state")))
+    parent = _parent_statement(statements)
+    assert parent["recordDetails"]["entityType"]["type"] == "state"
+    assert parent["recordDetails"]["jurisdiction"]["code"] == "ID"
+    assert "Global Energy Monitor" in parent["recordDetails"]["entityType"]["details"]
+    assert validate_shape(statements) == []
+
+
+def test_state_body_parent_is_typed_state_body() -> None:
+    parent = _parent_statement(list(map_climatetrace(_soe_bundle("state body"))))
+    assert parent["recordDetails"]["entityType"]["type"] == "stateBody"
+
+
+def test_state_parent_raises_state_controlled_naming_its_source() -> None:
+    """The SOE structure alone drives the risk signal — no bespoke GEM rule.
+
+    The summary must name GEM as the source of the structure; hard-coding
+    "Wikidata-sourced" would misattribute the provenance of the caveat.
+    """
+    from opencheck.risk import STATE_CONTROLLED, _state_controlled_signals
+
+    statements = list(map_climatetrace(_soe_bundle("state")))
+    signals = _state_controlled_signals("climatetrace", "E100000000538", statements)
+    assert [s.code for s in signals] == [STATE_CONTROLLED]
+    assert "Government of Indonesia" in signals[0].evidence["state_owners"]
+    assert "Global Energy Monitor" in signals[0].summary
+    assert "Wikidata" not in signals[0].summary
+
+
+def test_parent_without_its_own_row_stays_unknown_entity() -> None:
+    """No row for the parent means "unknown", not a guessed type."""
+    parent = _parent_statement(list(map_climatetrace(_soe_bundle(None, country=None))))
+    assert parent["recordDetails"]["entityType"]["type"] == "unknownEntity"
+    assert "jurisdiction" not in parent["recordDetails"]
+
+
+def test_person_parent_emits_neither_node_nor_edge() -> None:
+    """GEM types a couple of parents as natural persons; an entity statement
+    would misdescribe them, so the whole edge is dropped rather than mistyped."""
+    statements = list(map_climatetrace(_soe_bundle("person")))
+    assert not any(
+        s.get("recordType") == "entity"
+        and s["recordDetails"]["name"] == "Government of Indonesia"
+        for s in statements
+    )
+    assert not any(s.get("recordType") == "relationship" for s in statements)
+
+
+def test_legal_entity_parent_is_not_typed_state() -> None:
+    """Ordinary corporate parents keep their own type; nothing state-ish leaks."""
+    parent = _parent_statement(list(map_climatetrace(_soe_bundle("legal entity"))))
+    assert parent["recordDetails"]["entityType"]["type"] == "legalEntity"
+    assert "details" not in parent["recordDetails"]["entityType"]
+
+
+def test_self_declared_parent_emits_no_relationship() -> None:
+    """GEM lists a group's top entity as its own parent — never emit that.
+
+    5,132 rows in the September 2026 GEOT snapshot declare themselves as their
+    own parent (PT Pertamina (Persero) included). A relationship whose subject
+    and interestedParty are the same statement says an entity owns itself.
+    """
+    bundle = _soe_bundle("state")
+    bundle["parents"] = [
+        {
+            "entity_id": bundle["entity_id"],
+            "name": bundle["entity_name"],
+            "share": 100.0,
+            "entity_type": "legal entity",
+            "country": "IDN",
+        }
+    ]
+    statements = list(map_climatetrace(bundle))
+    assert not any(s.get("recordType") == "relationship" for s in statements)
+    assert validate_shape(statements) == []

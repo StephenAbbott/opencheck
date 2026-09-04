@@ -5675,10 +5675,16 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
     * One entity statement for the subject company (GEM entity identifier),
       typed from GEM's Entity Type column (which follows BODS definitions);
       joint ventures are noted in ``entityType.details``.
-    * For each declared GEM parent: one stub entity statement + one
-      ``otherInfluenceOrControl`` relationship (``beneficialOwnershipOrControl``
-      is ``False`` — parent declarations in GEM are corporate structure data,
-      not beneficial ownership assertions).
+    * For each declared GEM parent: one stub entity statement, typed and
+      located from the *parent's own* entities-CSV row (so a government parent
+      arrives as ``state`` / ``stateBody`` with its jurisdiction, satisfying
+      the BODS *representing state-owned enterprises* requirement that an SOE
+      connect to an entity statement typed ``state`` or ``stateBody``), plus
+      one ``otherInfluenceOrControl`` relationship
+      (``beneficialOwnershipOrControl`` is ``False`` — parent declarations in
+      GEM are corporate structure data, not beneficial ownership assertions).
+      A parent with no row of its own stays ``unknownEntity``; a parent GEM
+      types as a natural person is skipped entirely, as for subjects.
     * For a dissolved or amalgamated entity (August 2026 GEOT fields): a
       ``commenting`` annotation on the subject's statement — never a
       ``dissolutionDate``, which requires a date GEM does not publish, and
@@ -5817,10 +5823,48 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
         if not parent_eid:
             continue
 
+        if parent_eid == entity_id:
+            # GEM's "Gem parents" column names the top of the group *within
+            # GEM's own universe*, so a group parent is listed as its own
+            # parent (5,132 rows in the September 2026 snapshot, PT Pertamina
+            # (Persero) among them). Emitting that would produce a
+            # relationship whose subject and interestedParty are the same
+            # statement — an entity owning itself, which is meaningless in
+            # BODS and draws a self-loop in any BOVS diagram.
+            continue
+
+        # Type the parent from GEM's own Entity Type column, exactly as the
+        # subject is typed above. Before this, every parent was emitted as
+        # ``unknownEntity``, which silently defeated the BODS SOE modelling
+        # requirement: the Republic of Indonesia above PT Pertamina (Persero)
+        # is `state` in GEM's data and must be `state` in ours for the
+        # structure to say "state-owned enterprise" at all.
+        parent_type_raw = parent.get("entity_type")
+        if parent_type_raw is None:
+            # The parent has no row of its own in the entities CSV. Say
+            # "unknown", never guess a type from the subject's row.
+            parent_type: str | None = "unknownEntity"
+        else:
+            parent_type = _gem_entity_type({"Entity Type": parent_type_raw}, "")
+            if parent_type is None:
+                # GEM types a handful of records as natural persons. An entity
+                # statement would misdescribe them and a person statement is
+                # not what a "parent organisation" column asserts, so emit
+                # neither the node nor the edge — as for subjects.
+                continue
+
+        # Jurisdiction carries which state a `state` / `stateBody` node is
+        # (BODS: "jurisdiction is used to represent the particular state").
+        parent_country = _country_obj(parent.get("country") or "")
+        parent_jur = (
+            (parent_country["name"], parent_country["code"]) if parent_country else None
+        )
+
         parent_entity = make_entity_statement(
             source_id="climatetrace",
             local_id=parent_eid,
             name=parent_name,
+            jurisdiction=parent_jur,
             identifiers=[
                 {
                     "id": parent_eid,
@@ -5828,7 +5872,12 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
                     "schemeName": "Global Energy Monitor Entity ID",
                 }
             ],
-            entity_type="unknownEntity",
+            entity_type=parent_type,
+            entity_details=(
+                "State or government body (per Global Energy Monitor)"
+                if parent_type in {"state", "stateBody"}
+                else None
+            ),
             source_url=source_url,
         )
         result.statements.append(parent_entity)

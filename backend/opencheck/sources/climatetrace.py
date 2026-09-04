@@ -1045,12 +1045,37 @@ def _split_parent_token(token: str) -> tuple[str, float | None]:
     return token[: m.start()].strip(), share
 
 
+def _parent_gem_row(entity_id: str) -> dict[str, str] | None:
+    """The parent's own row from the GEM entities CSV, or None.
+
+    Deliberately reads the already-built module index instead of calling
+    ``_get_indexes()``: this is a pure parser and must not trigger a data
+    download as a side effect. Every caller runs after the subject lookup has
+    built the index, so in practice the row is there; when it is not, the
+    caller records "no row" rather than guessing at the parent's type.
+    """
+    if _entity_index is None:
+        return None
+    return _entity_index.get(entity_id)
+
+
 def _parse_parents(gem_row: dict[str, str]) -> list[dict[str, Any]]:
     """Extract parent entities declared in the GEM CSV row.
 
-    Each parent dict has ``entity_id``, ``name`` and ``share`` (float
-    percentage, or None when GEM doesn't publish one). The share suffix that
-    GEM embeds in both columns ("… [55.0%]") is stripped from the values.
+    Each parent dict has ``entity_id``, ``name``, ``share`` (float percentage,
+    or None when GEM doesn't publish one), ``entity_type`` and ``country``.
+    The share suffix that GEM embeds in both columns ("… [55.0%]") is stripped
+    from the values.
+
+    ``entity_type`` and ``country`` come from the *parent's own row* in the
+    entities CSV, not from the subject's row, which carries only the parent's
+    ID, name and share. GEM types entities in BODS vocabulary ("state",
+    "state body", "legal entity", …); carrying it raw here lets the mapper
+    type the parent's entity statement instead of falling back to
+    ``unknownEntity`` — which is what the BODS *representing state-owned
+    enterprises* requirement needs, since an SOE is only recognisable as one
+    when the state above it is typed ``state`` / ``stateBody``. Both are None
+    when the parent has no row of its own.
     """
     parent_ids_raw = (gem_row.get(_PARENT_IDS_COL) or "").strip()
     parent_names_raw = (gem_row.get(_PARENT_NAMES_COL) or "").strip()
@@ -1072,7 +1097,22 @@ def _parse_parents(gem_row: dict[str, str]) -> list[dict[str, Any]]:
                 share = name_share
         else:
             pname = pid
-        parents.append({"entity_id": pid, "name": pname or pid, "share": share})
+        parent_row = _parent_gem_row(pid) or {}
+        parents.append(
+            {
+                "entity_id": pid,
+                "name": pname or pid,
+                "share": share,
+                "entity_type": (parent_row.get("Entity Type") or "").strip().lower()
+                or None,
+                "country": (
+                    parent_row.get(_COUNTRY_COL)
+                    or parent_row.get("Registration Country")
+                    or ""
+                ).strip()
+                or None,
+            }
+        )
     return parents
 
 
