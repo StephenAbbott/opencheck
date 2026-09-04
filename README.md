@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 168** — component tests and a Playwright smoke join the logic-only frontend suite, and the three files every phase touches give up their seams: `App.tsx`, `routers/lookup.py` and `bods/mapper.py` are 1,045, 671 and 2,312 lines lighter.
+**Latest: Phase 169** — the state above a state-owned enterprise is now typed as one: GEM's own `state` / `state body` classification is carried through to parent entities, so the BODS state-ownership structure holds and `STATE_CONTROLLED` names the source it came from.
 
 → [Full development history](docs/status.md)
 
