@@ -59,8 +59,9 @@ ABSOLUTE RULES — these protect the integrity of the summary:
    only from the FATF and EU high-risk-country lists, which have their own signals. Ownership or
    control by a state or state body (a possible state-owned enterprise) is itself a
    structural indicator, NOT an adverse finding — describe it neutrally; and note
-   where an indicator is presence-only (e.g. state control sourced from Wikidata),
-   meaning its absence is not evidence to the contrary.
+   where an indicator is presence-only (state control, for example, comes from
+   partial-coverage sources and the signal summary names which one), meaning its
+   absence is not evidence to the contrary.
 6. If the subject was matched by name rather than a confirmed identifier
    (`subject_confidence: name-matched`), say so explicitly and early — the match
    is not a positive identification.
