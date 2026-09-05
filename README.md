@@ -12,11 +12,11 @@ You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/intr
 
 Everything maps into [BODS v0.4](https://standard.openownership.org/en/0.4.0/). Cross-source links and risk signals are computed deterministically, and the whole bundle is one click away from a downloadable export (JSON / JSONL / XML / CSV / Excel / ZIP, plus [Senzing JSON](https://www.senzing.com/docs/entity_specification/) entity records for entity resolution, [FollowTheMoney](https://followthemoney.tech/) entities for OpenSanctions / OpenAleph investigative workflows, a [BigQuery property-graph](https://cloud.google.com/bigquery/docs/property-graphs) package queryable with GQL, [Google AML AI](https://docs.cloud.google.com/financial-services/anti-money-laundering/docs/reference/schemas/aml-input-data-model) input tables, a [Neo4j Cypher](https://neo4j.com/docs/cypher-manual/current/) script, and [BODS RDF](https://vocab.openownership.org/pages/4_convertingdata.html) as TriG for linked-data and SPARQL workflows).
 
-The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulatory technical standards](https://www.amla.europa.eu/policy/public-consultations/consultation-draft-rts-customer-due-diligence_en) conditions for "complex corporate structures" — trust/arrangement, non-EU jurisdiction, nominee, ≥3 ownership layers, plus the composite threshold rule and an advisory mirror of the subjective obfuscation condition.
+The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulatory technical standards](https://www.amla.europa.eu/policy/public-consultations/consultation-draft-rts-customer-due-diligence_en) conditions for "complex corporate structures" — trust/arrangement, non-EU jurisdiction, nominee, ≥3 ownership layers *above the subject*, plus the composite threshold rule and an advisory mirror of the subjective obfuscation condition.
 
 ## Status
 
-**Latest: Phase 169** — the state above a state-owned enterprise is now typed as one: GEM's own `state` / `state body` classification is carried through to parent entities, so the BODS state-ownership structure holds and `STATE_CONTROLLED` names the source it came from.
+**Latest: Phase 170** — the AMLA "three or more layers" check now counts the chain ABOVE the subject: it was walking downwards into subsidiaries from any node in the bundle, so Shell plc's chip rested on a three-node path that did not contain Shell plc.
 
 → [Full development history](docs/status.md)
 

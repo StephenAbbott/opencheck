@@ -2241,67 +2241,109 @@ def _nominee_signal(
 def _layers_signal(
     source_id: str, hit_id: str, bods: list[dict[str, Any]]
 ) -> RiskSignal | None:
-    """Longest entity-only chain in the BODS relationship graph.
+    """Corporate layers on the ownership chain **above the subject**.
 
-    AMLA defines a complex corporate structure as having "three or more
-    layers of ownership". We treat that as: there exists a chain of
-    relationship edges through ≥3 distinct entity nodes.
+    AMLA CDD RTS Article 12(1) defines a complex corporate structure as one
+    with "three or more layers **between the customer and the beneficial
+    owner**". Two words in that phrase do all the work, and until Phase 170
+    this function honoured neither.
 
-    Edge direction: ``interestedParty --(owns)--> subject``. So walking
-    from a leaf interestedParty up through subject_ids approximates the
-    ownership-direction chain. We DFS over the entity-only subgraph and
-    track the longest simple path (cycles guarded via per-path visited
-    set).
+    *Between the customer* — the chain must be the subject's own. The DFS
+    used to start from **every** entity node in the bundle and keep the
+    longest path found anywhere, so a chain among parties that never touch
+    the subject satisfied the rule on the subject's behalf. In production on
+    2026-09-05 that is exactly what Shell plc's report was built on: the
+    winning path was ``BlackRock -> Royal Dutch Shell plc -> Shell Midstream
+    Operating LLC``, three nodes none of which is the looked-up Shell plc.
+    The verdict sentence read "over an ownership chain 3 layers deep" and the
+    US on that path also fed condition (b) of the composite.
+
+    *And the beneficial owner* — the BO sits **above** the customer, so the
+    layers are its owners, not the companies it owns. Edge direction in BODS
+    is ``interestedParty --(owns)--> subject``, and the old walk followed it
+    forwards, i.e. **downwards into subsidiaries**. A GLEIF bundle that
+    lists a parent's children therefore reported the depth of the group
+    below the subject as the depth of the chain above it. This is the same
+    defect ``_non_eu_jurisdiction_signal`` was corrected for in Phase 153,
+    for the same reason and with the same fix.
+
+    So the walk now starts at the subject (``_subject_entity_id``) and
+    follows ``subject -> interestedParty`` upwards, entity nodes only —
+    persons end a chain rather than extending it, and a subsidiary is never
+    on it. ``layers`` counts the entity nodes on that path **including the
+    subject**: the subject plus two holding layers is the ≥3 threshold, which
+    is the convention the previous count and the "N layers deep" phrasing
+    already used, so only the anchoring changes and not the bar.
+
+    The count is a **lower bound**, not a measured distance to a named BO. A
+    chain that runs four entities up without reaching a person still has at
+    least those four layers under whoever the BO turns out to be, so the
+    signal does not require a person at the top — which also keeps it alive
+    on GLEIF and OpenCorporates bundles, neither of which carries person
+    statements. ``evidence.reaches_beneficial_owner`` records whether a
+    person was actually found at the top, so a consumer can tell a completed
+    chain from a truncated one.
     """
-    # Map statementId -> entity type to filter to entity nodes.
-    entity_ids: set[str] = set()
-    for stmt in bods:
-        if _stmt_kind(stmt) == "entity":
-            sid = _statement_id(stmt)
-            if sid:
-                entity_ids.add(sid)
+    subject_id = _subject_entity_id(hit_id, bods)
+    if subject_id is None:
+        return None
 
-    # Build adjacency: ip -> {subject1, subject2, ...} restricted to
-    # entity nodes (ignore person interestedParties because they end
-    # the chain, not extend it).
-    adj: dict[str, set[str]] = {}
+    # Map statementId -> kind so the walk can stay on entity nodes and can
+    # tell when a chain terminates at a person (a beneficial owner).
+    entity_ids: set[str] = set()
+    person_ids: set[str] = set()
+    for stmt in bods:
+        sid = _statement_id(stmt)
+        if not sid:
+            continue
+        kind = _stmt_kind(stmt)
+        if kind == "entity":
+            entity_ids.add(sid)
+        elif kind == "person":
+            person_ids.add(sid)
+
+    if subject_id not in entity_ids:
+        return None
+
+    # Adjacency runs UP the chain: subject -> the parties that own it.
+    owners: dict[str, set[str]] = {}
+    person_capped: set[str] = set()
     for stmt in bods:
         if _stmt_kind(stmt) != "relationship":
             continue
         subj, ip, ip_kind = _relationship_endpoints(stmt)
         if not subj or not ip:
             continue
-        # BODS v0.4 bare-string format: ip_kind is "" — resolve from entity_ids.
+        # BODS v0.4 bare-string format: ip_kind is "" — resolve from the maps.
         if ip_kind == "":
             ip_kind = "entity" if ip in entity_ids else "person"
-        if ip_kind != "entity":
+        if ip_kind != "entity" or ip not in entity_ids:
+            # A person (or an unresolvable party) tops out the chain here.
+            if ip in person_ids:
+                person_capped.add(subj)
             continue
-        if subj not in entity_ids or ip not in entity_ids:
+        if subj not in entity_ids:
             continue
-        adj.setdefault(ip, set()).add(subj)
-
-    if not adj and len(entity_ids) < 3:
-        return None
+        owners.setdefault(subj, set()).add(ip)
 
     longest = 0
     longest_path: list[str] = []
+    longest_reaches_bo = False
 
-    def dfs(node: str, visited: list[str]) -> None:
-        nonlocal longest, longest_path
-        path_len = len(visited)
-        if path_len > longest:
-            longest = path_len
+    def dfs(node: str, visited: list[str], reaches_bo: bool) -> None:
+        nonlocal longest, longest_path, longest_reaches_bo
+        if len(visited) > longest:
+            longest = len(visited)
             longest_path = list(visited)
-        for nxt in adj.get(node, ()):
+            longest_reaches_bo = reaches_bo
+        for nxt in owners.get(node, ()):
             if nxt in visited:
                 continue  # cycle guard
             visited.append(nxt)
-            dfs(nxt, visited)
+            dfs(nxt, visited, nxt in person_capped)
             visited.pop()
 
-    # Start from every entity node — the graph may have multiple roots.
-    for start in entity_ids:
-        dfs(start, [start])
+    dfs(subject_id, [subject_id], subject_id in person_capped)
 
     if longest < 3:
         return None
@@ -2309,12 +2351,17 @@ def _layers_signal(
         code=COMPLEX_OWNERSHIP_LAYERS,
         confidence="medium",
         summary=(
-            f"Ownership chain has {longest} corporate layers "
+            f"Ownership chain above the subject has {longest} corporate layers "
             "(AMLA threshold: ≥3)."
         ),
         source_id=source_id,
         hit_id=hit_id,
-        evidence={"layers": longest, "longest_path": longest_path},
+        evidence={
+            "layers": longest,
+            "longest_path": longest_path,
+            "subject_statement_id": subject_id,
+            "reaches_beneficial_owner": longest_reaches_bo,
+        },
     )
 
 
