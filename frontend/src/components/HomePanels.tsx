@@ -48,10 +48,20 @@ export interface ExampleLei {
 // (the entity page, or the packet inside the regenerated curated
 // narratives), never by reading the card back.
 //
-// Last verified 2026-08-18 against the post-Phase-111 curated narrative
-// packets. Risk findings only: NON_EU_JURISDICTION is now kind="context"
-// and the results page shows it under a separate "Structural context"
-// heading, which a bare chip strip on a card cannot convey.
+// Last verified 2026-09-05 against production /export bundles, per source.
+// Risk findings only: NON_EU_JURISDICTION is now kind="context" and the
+// results page shows it under a separate "Structural context" heading,
+// which a bare chip strip on a card cannot convey.
+//
+// Phase 170 removed COMPLEX_OWNERSHIP_LAYERS from BP, Rosneft, Eesti Energia
+// and Ørsted. Every one of those chips was a V through the subject — a parent,
+// the subject, and one of its SUBSIDIARIES (Ørsted's was "Non-consolidating
+// parent -> ØRSTED A/S -> Eleven Mile Solar Center") — counted as three layers
+// of ownership above it. With the walk anchored at the subject and pointing
+// upwards none of the four reaches three layers, and none of the six curated
+// subjects now does. Finding examples that carry a REAL layered chain is an
+// open follow-up: it needs a subject whose intermediaries are themselves in
+// the bulk BODS, which is a coverage question, not a picker question.
 //
 // Ordered by graph severity, then confidence — so the strongest finding
 // leads rather than whichever code sorts first alphabetically.
@@ -62,7 +72,6 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "UK oil major",
     signals: [
       { code: "OFFSHORE_LEAKS", confidence: "high" },
-      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
     ],
     bulkBods: true,
   },
@@ -73,7 +82,6 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
     signals: [
       { code: "SANCTIONED", confidence: "high" },
       { code: "EXPORT_CONTROLLED", confidence: "high" },
-      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
     ],
     bulkBods: true,
   },
@@ -94,7 +102,6 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
     signals: [
       { code: "RELATED_PEP", confidence: "medium" },
       { code: "STATE_CONTROLLED", confidence: "medium" },
-      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
     ],
   },
   {
@@ -104,7 +111,6 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
     signals: [
       { code: "RELATED_PEP", confidence: "medium" },
       { code: "OFFSHORE_LEAKS", confidence: "medium" },
-      { code: "COMPLEX_OWNERSHIP_LAYERS", confidence: "medium" },
     ],
   },
   {

@@ -65,6 +65,7 @@ def _entity(sid: str, *, entity_type: str = "registeredEntity",
             jurisdiction_code: str | None = None,
             jurisdiction_name: str | None = None,
             legal_form: str | None = None,
+            identifier: str | None = None,
             name: str = "Acme") -> dict:
     rd: dict = {
         "entityType": {"type": entity_type},
@@ -77,6 +78,8 @@ def _entity(sid: str, *, entity_type: str = "registeredEntity",
         }
     if legal_form:
         rd["legalForm"] = legal_form
+    if identifier:
+        rd["identifiers"] = [{"id": identifier, "scheme": "XI-LEI"}]
     return {
         "statementId": sid,
         "recordType": "entity",
@@ -593,6 +596,92 @@ def test_layers_handles_cycles_safely() -> None:
     signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
     layers = next(s for s in signals if s.code == COMPLEX_OWNERSHIP_LAYERS)
     assert layers.evidence["layers"] == 3
+
+
+def test_layers_never_counts_subsidiaries_below_the_subject() -> None:
+    """The layers are between the customer and the BO, and the BO is ABOVE.
+
+    BODS edges run ``interestedParty --(owns)--> subject``, so following them
+    forwards walks *down* into subsidiaries. Until Phase 170 that is what the
+    DFS did, and a GLEIF bundle listing a parent's children reported the depth
+    of the group below the subject as the depth of the chain above it. The
+    subject here owns a three-deep chain of subsidiaries and is owned by
+    nobody: there are no layers between it and a beneficial owner.
+    """
+    bods = [
+        _entity("E1", name="Subject GmbH", identifier="SUBJ", jurisdiction_code="DE"),
+        _entity("S1", name="Sub 1 GmbH", jurisdiction_code="DE"),
+        _entity("S2", name="Sub 2 GmbH", jurisdiction_code="DE"),
+        _entity("S3", name="Sub 3 GmbH", jurisdiction_code="DE"),
+        _rel("R1", "S1", "E1"),  # E1 owns S1
+        _rel("R2", "S2", "S1"),
+        _rel("R3", "S3", "S2"),
+    ]
+    codes = {s.code for s in assess_amla("gleif", {"entity_id": "SUBJ"}, bods)}
+    assert COMPLEX_OWNERSHIP_LAYERS not in codes
+
+
+def test_layers_never_counts_a_chain_the_subject_is_not_on() -> None:
+    """Production regression, Shell plc, 2026-09-05.
+
+    The DFS started from every entity node and kept the longest path found
+    anywhere in the bundle, so a chain among parties that never touch the
+    subject satisfied Article 12(1) on the subject's behalf. Shell plc's chip
+    — and its verdict sentence, "over an ownership chain 3 layers deep" — rested
+    on ``BlackRock -> Royal Dutch Shell plc -> Shell Midstream Operating LLC``,
+    three nodes none of which is the looked-up Shell plc.
+
+    The shape is reproduced here: the subject has one owner, and a separate
+    three-node chain sits elsewhere in the same bundle.
+    """
+    bods = [
+        _entity("E1", name="Shell plc", identifier="SUBJ", jurisdiction_code="GB"),
+        _entity("E2", name="Direct owner Ltd", jurisdiction_code="GB"),
+        _entity("X1", name="BlackRock", jurisdiction_code="US"),
+        _entity("X2", name="Royal Dutch Shell plc", jurisdiction_code="NL"),
+        _entity("X3", name="Shell Midstream Operating LLC", jurisdiction_code="US"),
+        _rel("R1", "E1", "E2"),   # subject's own chain: two layers
+        _rel("R2", "X2", "X1"),   # side chain, three nodes, no subject on it
+        _rel("R3", "X3", "X2"),
+    ]
+    codes = {s.code for s in assess_amla("opensanctions", {"entity_id": "SUBJ"}, bods)}
+    assert COMPLEX_OWNERSHIP_LAYERS not in codes
+    # And because conditions (a)/(b) are scoped to that path, the composite
+    # cannot be built out of side-branch entities either — the US entities
+    # above are exactly what fed condition (b) on the live Shell report.
+    assert COMPLEX_CORPORATE_STRUCTURE not in codes
+
+
+def test_layers_path_starts_at_the_subject_and_runs_upwards() -> None:
+    signals = assess_amla(
+        "companies_house", {"entity_id": "E1"}, _three_layer_chain()
+    )
+    layers = next(s for s in signals if s.code == COMPLEX_OWNERSHIP_LAYERS)
+    assert layers.evidence["longest_path"] == ["E1", "E2", "E3"]
+    assert layers.evidence["subject_statement_id"] == "E1"
+
+
+def test_layers_reports_whether_the_chain_reached_a_beneficial_owner() -> None:
+    """The count is a lower bound, so no person terminus is required — but
+    whether one was found is recorded, so a truncated chain and a completed
+    one are distinguishable. GLEIF and OpenCorporates bundles carry no person
+    statements at all; requiring a BO would silence the signal on both."""
+    truncated = assess_amla(
+        "gleif", {"entity_id": "E1"}, _three_layer_chain()
+    )
+    sig = next(s for s in truncated if s.code == COMPLEX_OWNERSHIP_LAYERS)
+    assert sig.evidence["reaches_beneficial_owner"] is False
+
+    completed = _three_layer_chain() + [
+        _person("P1"),
+        _rel("R3", "E3", "P1", ip_kind="person"),
+    ]
+    sig2 = next(
+        s
+        for s in assess_amla("companies_house", {"entity_id": "E1"}, completed)
+        if s.code == COMPLEX_OWNERSHIP_LAYERS
+    )
+    assert sig2.evidence["reaches_beneficial_owner"] is True
 
 
 def test_complex_corporate_structure_needs_two_conditions_not_one() -> None:
