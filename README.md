@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 169** — the state above a state-owned enterprise is now typed as one: GEM's own `state` / `state body` classification is carried through to parent entities, so the BODS state-ownership structure holds and `STATE_CONTROLLED` names the source it came from.
+**Latest: Phase 170** — the AMLA "three or more layers" check now counts the chain ABOVE the subject: it was walking downwards into subsidiaries from any node in the bundle, so Shell plc's chip rested on a three-node path that did not contain Shell plc.
 
 → [Full development history](docs/status.md)
 
