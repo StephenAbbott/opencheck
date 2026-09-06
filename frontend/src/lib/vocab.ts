@@ -116,6 +116,100 @@ export const BANNED_SYNONYMS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Declared lists that OpenCheck has not matched (EITI Company Assessment)
+// ---------------------------------------------------------------------------
+
+/**
+ * The caption above EITI's declared-subsidiary list.
+ *
+ * **Visible, never a `title` attribute.** A list of 156 company names with no
+ * caption reads as a list of companies OpenCheck has identified; it is a list of
+ * strings a company typed into a form. The sentence has to be on the screen the
+ * whole time the list is, which is why the markup test asserts it renders
+ * whenever a row does.
+ */
+export const EITI_DECLARED_CAPTION =
+  "Self-declared by the company in its EITI Company Assessment. Names only — " +
+  "EITI publishes no identifier for these, so OpenCheck has not matched them " +
+  "to companies.";
+
+/** Why a name-only comparison is a comparison and not an identification. */
+export const NAME_ONLY_COMPARISON =
+  "Compared on name alone. A name that appears in both lists is not proof the " +
+  "two records are the same company.";
+
+/**
+ * One list against another, in numbers — and in **both** directions.
+ *
+ * The direction of the difference is the whole finding and it is the easy thing
+ * to hide: counting only from the EITI side produces "48 declared · 12 matched"
+ * and leaves a reader to assume the other list is the complete one. It is not.
+ * For Shell, MEIP lists 294 subsidiaries to EITI's 156 overlapping on 19 —
+ * neither list contains the other, and a card that implied otherwise would
+ * misrepresent both.
+ */
+export function crossListSummary(
+  declared: number,
+  label: string,
+  overlap: number,
+  eitiOnly: number,
+): string {
+  return (
+    `${declared} declared to EITI · ${overlap} also appear in ${label} · ` +
+    `${eitiOnly} declared to EITI only`
+  );
+}
+
+/** The sentence that says which way the two lists differ, and why they do. */
+export function crossListDirection(args: {
+  declared: number;
+  label: string;
+  listed: number;
+  overlap: number;
+  onlyInList: number;
+  eitiOnly: number;
+  measures: string;
+}): string {
+  const { declared, label, listed, overlap, onlyInList, eitiOnly, measures } = args;
+  const shape =
+    onlyInList > 0 && eitiOnly > 0
+      ? "neither list contains the other"
+      : onlyInList > 0
+        ? `every name EITI declares is also in ${label}, which holds ${onlyInList} more`
+        : eitiOnly > 0
+          ? `${label} holds nothing EITI does not also declare`
+          : "the two lists agree";
+  const counted =
+    overlap > 0
+      ? `${label} holds ${listed} for this company to EITI's ${declared}, overlapping on ${overlap} — ${shape}.`
+      : `${label} holds ${listed} for this company and EITI declares ${declared}, with no name in both.`;
+  return `${counted} They measure different things: ${measures}.`;
+}
+
+// ---------------------------------------------------------------------------
+// Comparing names across sources
+// ---------------------------------------------------------------------------
+
+/**
+ * The key two free-text company names are compared on.
+ *
+ * Case, punctuation and spacing are folded. **Legal-form suffixes are
+ * deliberately not stripped**, although stripping them would match more rows:
+ * the builder for this source found that suffix-stripping makes a group head
+ * exactly equal to its own subsidiary (`Glencore` → GLENCORE AG) and to
+ * unrelated companies (`Teck` → TECK GmbH). This comparison is shown to a
+ * reader as a fact about two lists, so it takes the misses rather than the
+ * false matches.
+ */
+export function compareKey(name: string): string {
+  return (name ?? "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+// ---------------------------------------------------------------------------
 // Acronyms
 // ---------------------------------------------------------------------------
 

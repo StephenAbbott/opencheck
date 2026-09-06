@@ -104,7 +104,7 @@ def test_source_info_fields_are_populated() -> None:
 # register is key-gated and rate-limited to 20 requests/minute, so there is no
 # offline fixture path to return hits from.
 _IDENTIFIER_KEYED = {
-    "eiti", "eiti_bo", "eiti_soe", "cac_nigeria", "ariregister", "bolagsverket",
+    "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "cac_nigeria", "ariregister", "bolagsverket",
     "cnpj_brazil", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",
     "malta_mbr", "nz_companies", "opencorporates", "inpi", "kvk",
     "rpo_slovakia", "sudreg_croatia", "ted_eu", "wikirate", "zefix",

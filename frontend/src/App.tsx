@@ -1417,7 +1417,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             Conduct due diligence on <span className="text-oo-blue">3 million</span> companies, starting from a single ID
           </HeroHeading>
           <p className="text-[13px] sm:text-sm text-oo-muted leading-snug mt-2">
-            With a Legal Entity Identifier, OpenCheck pulls open corporate data from 40 sources into one graph using the Beneficial Ownership Data Standard
+            With a Legal Entity Identifier, OpenCheck pulls open corporate data from 41 sources into one graph using the Beneficial Ownership Data Standard
           </p>
         </div>
         )}
@@ -2184,6 +2184,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   pendingCount={pendingEsgSources.length}
                   bodsCountMap={bodsCountMap}
                   bodsBreakdownMap={bodsBreakdownMap}
+                  onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
+                  onRecovered={(panel) =>
+                    setPanelErrors((prev) => clearPanelError(prev, panel))
+                  }
                 />
               ) : (
                 <PanelSection>

@@ -109,8 +109,12 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Ørsted A/S",
     hint: "Danish offshore energy company",
     signals: [
+      // OFFSHORE_LEAKS removed 2026-09-05: production returns only RELATED_PEP
+      // (plus GLEIF_REPORTING_EXCEPTION as context) — the ICIJ match this card
+      // claimed is no longer made. Unrelated to Phase 170; ordinary drift of
+      // the kind the comment above warns about, found by checking the card
+      // against the regenerated narrative packet rather than by reading it back.
       { code: "RELATED_PEP", confidence: "medium" },
-      { code: "OFFSHORE_LEAKS", confidence: "medium" },
     ],
   },
   {
@@ -260,7 +264,7 @@ const HOW_IT_WORKS_STEPS = [
     num: "3",
     accent: "#3d30d4" as const,
     icon: <StepNetworkIcon className="h-[15px] w-[15px]" />,
-    title: "40 open sources, in parallel",
+    title: "41 open sources, in parallel",
     body: (
       <>
         Each source is queried with the identifier it understands, and the

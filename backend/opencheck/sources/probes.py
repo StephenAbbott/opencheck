@@ -566,6 +566,24 @@ PROBES: dict[str, SourceProbe] = {
         ),
     ),
     # --- curated fixtures -------------------------------------------------
+    "eiti_assessment": _p(
+        tier="curated",
+        subject="Shell Plc (EITI Company Assessment)",
+        method="fetch_by_lei",
+        args=("21380068P1DRHMJ8KU70",),
+        expect_fields=("lei", "name", "assessments"),
+        expect_liveness=frozenset({"curated"}),
+        anchor_lei="21380068P1DRHMJ8KU70",
+        snapshot_max_age_days=400,
+        bods_mapper="map_eiti_assessment",
+        notes=(
+            "Offline by design: the EITI global database is queried once at "
+            "index-build time and the supporting companies are resolved to "
+            "LEIs by hand, so there is no live path to probe. The generous "
+            "age budget matches EITI's own cadence — the Company Assessment "
+            "runs roughly every two years (2023, then 2025)."
+        ),
+    ),
     "cac_nigeria": _p(
         tier="curated",
         subject="Dangote Cement PLC",

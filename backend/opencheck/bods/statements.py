@@ -540,6 +540,7 @@ SOURCE_NAMES: dict[str, str] = {
     "ted_eu": "TED — Tenders Electronic Daily (EU procurement notices)",
     "eiti": "EITI — Extractive Industries Transparency Initiative",
     "eiti_bo": "EITI countries — national beneficial ownership registers (pooled: ITIE-RDC, Armenia State Register, Nigeria CAC/NEITI subset)",
+    "eiti_assessment": "EITI Company Assessment",
     "eiti_soe": "EITI State-Owned Enterprises Database",
     "ur_latvia": "UR — Latvian Register of Enterprises (data.gov.lv)",
     "ares": "ARES — Czech Administrativní registr ekonomických subjektů",
