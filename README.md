@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 170** — the AMLA "three or more layers" check now counts the chain ABOVE the subject: it was walking downwards into subsidiaries from any node in the bundle, so Shell plc's chip rested on a three-node path that did not contain Shell plc.
+**Latest: Phase 171** — the EITI Company Assessment, the only beneficial-ownership-adjacent dataset EITI publishes, is now a source: 64 supporting companies resolved to LEIs and checked by hand, their declared subsidiaries, and their beneficial ownership disclosure status on the Climate & ESG tab.
 
 → [Full development history](docs/status.md)
 
