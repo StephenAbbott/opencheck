@@ -3106,6 +3106,10 @@ def map_eiti(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     yield entity
 
 
+#: The SOE roster now lives in the new global database (Phase 172).
+_EITI_SOE_URL = "https://eiti-database.eiti.org/eiti_database/view_soeList"
+
+
 def map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an EITI SOE Database bundle to BODS v0.4 statements.
 
@@ -3141,24 +3145,15 @@ def map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         else None
     )
 
+    # No identifiers at all. The ``XI-EITI`` scheme this used to emit carried
+    # ``eiti_id_company``, which EITI regenerated wholesale when the new
+    # database launched (UUIDv4 → UUIDv5-over-a-name): every exported statement
+    # asserting one now names a key that cannot be looked up in the database it
+    # came from. A deduplication key is not a registry number. The
+    # OpenCorporates branch went with it — EITI publishes no OpenCorporates id
+    # for any state-owned enterprise. The LEI stays barred as it always was,
+    # being OpenCheck-derived. See ``routers/hit_builders.py::_bh_eiti_soe``.
     identifiers: list[dict[str, str]] = []
-    eiti_id = (bundle.get("eiti_id_company") or "").strip()
-    if eiti_id:
-        identifiers.append(
-            {
-                "id": eiti_id,
-                "scheme": "XI-EITI",
-                "schemeName": "EITI State-Owned Enterprises Database",
-            }
-        )
-    oc_id = (bundle.get("opencorporates_id") or "").strip()
-    if oc_id:
-        identifiers.append(
-            {
-                "id": oc_id,
-                "schemeName": "OpenCorporates company number (via EITI SOE database)",
-            }
-        )
 
     soe = make_entity_statement(
         source_id="eiti_soe",
@@ -3168,11 +3163,34 @@ def map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         identifiers=identifiers,
         entity_type="registeredEntity",
         entity_details="State-owned enterprise (EITI SOE database)",
-        source_url="https://soe-database.eiti.org/",
+        source_url=_EITI_SOE_URL,
     )
     yield soe
 
+    # The controlling party.
+    #
+    # The old SOE database carried a `government_entity` per company and the new
+    # one does not: `metadata_gov_entities` holds the agencies that *collect*
+    # revenue (tax authorities, ministries), with no link saying which body owns
+    # which enterprise. Dropping the relationship when that field is empty would
+    # silently switch off `STATE_CONTROLLED` — the one signal this adapter
+    # exists to raise — for every company in the repointed index.
+    #
+    # So where EITI names the body, it is used. Where EITI does not, the
+    # controlling party is the state EITI files the enterprise under, named as
+    # such, and the relationship's own `details` says that EITI does not name
+    # the organ. That is the whole of what is known: EITI's SOE roster asserts
+    # state ownership — that is what the roster *is* — and asserts nothing about
+    # which ministry or fund holds it. The alternative is not a more cautious
+    # graph, it is a graph missing a fact the source states plainly.
     gov_name = (bundle.get("government_entity") or "").strip()
+    named_by_eiti = bool(gov_name)
+    if not gov_name:
+        country_label = (bundle.get("country_name") or "").strip()
+        if not country_label and jurisdiction_obj:
+            country_label = jurisdiction_obj["name"]
+        gov_name = f"Government of {country_label}" if country_label else ""
+
     # Only assert state control (which raises the STATE_CONTROLLED signal) when
     # the LEI match is reasonably trustworthy. A low-confidence name match still
     # surfaces the SOE entity and its enrichment, but must not raise a
@@ -3187,7 +3205,13 @@ def map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         name=gov_name,
         jurisdiction=jur_tuple,
         entity_type="stateBody",
-        source_url="https://soe-database.eiti.org/",
+        entity_details=(
+            None
+            if named_by_eiti
+            else "The state EITI files this enterprise under; EITI does not "
+                 "name the controlling government body."
+        ),
+        source_url=_EITI_SOE_URL,
     )
     yield government
 
@@ -3205,10 +3229,18 @@ def map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 "details": (
                     f"State-owned enterprise controlled by {gov_name} "
                     "(EITI SOE database)."
+                    if named_by_eiti
+                    else (
+                        "Classified by EITI as a state-owned enterprise in "
+                        f"{gov_name.removeprefix('Government of ').strip()}. "
+                        "EITI's roster asserts state ownership but does not "
+                        "name the controlling government body, so the "
+                        "controlling party here is the state itself."
+                    )
                 ),
             }
         ],
-        source_url="https://soe-database.eiti.org/",
+        source_url=_EITI_SOE_URL,
     )
 
 

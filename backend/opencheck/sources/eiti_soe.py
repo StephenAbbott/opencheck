@@ -1,42 +1,57 @@
 """EITI State-Owned Enterprises (SOE) Database adapter — CDD category.
 
-This is a **separate** EITI product from the existing ``eiti`` adapter. The
-``eiti`` adapter targets the main EITI API (``eiti.org/api/v2.0``) and surfaces
-company-level *payments to governments*. This adapter targets the **SOE
-Database** — a Datasette instance at ``soe-database.eiti.org/eiti_database``
-covering the ~100 state-owned enterprises reported through the EITI, with
-SOE-specific attributes that live nowhere else in OpenCheck: an explicit
-state-ownership classification, commodities produced, links to audited financial
-statements, stock-exchange listings and an ``opencorporates_id`` per company.
+This is a **separate** EITI product from the ``eiti`` adapter (payments to
+governments, via ``eiti.org/api/v2.0``) and from ``eiti_assessment`` (the
+Company Assessment of EITI's supporting companies). This one is the **SOE
+roster**: the state-owned enterprises reported through the EITI, with an
+explicit state-ownership classification that lives nowhere else in OpenCheck.
 
-Its distinctive value is therefore a **state-ownership context signal**
-(``STATE_OWNED_ENTERPRISE`` — PEP-adjacent, higher corruption/sanctions nexus)
+Its distinctive value is a **state-ownership context signal**
+(``STATE_CONTROLLED``, which falls out of the BODS shape the mapper emits)
 plus SOE enrichment, rather than a second payments feed.
+
+Repointed at the new global database (Phase 172)
+-------------------------------------------------
+The roster now comes from ``eiti-database.eiti.org`` → ``view_soeList``:
+**194** state-owned enterprises rather than 125, covering **2017–2024** rather
+than 2017–2022, with name variants deduplicated by EITI's own UUIDv5 key. The
+old host is still live and ``build_eiti_soe_index.py --source old`` still reads
+it, kept as a fallback until the new index has proven itself.
 
 How the lookup works (the ClimateTRACE/GEM pattern)
 ---------------------------------------------------
-The SOE database is UUID/name-keyed and carries **no native LEI**, while
-OpenCheck is anchored end-to-end on the LEI. So identity resolution is done
-**once, offline**, by ``scripts/build_eiti_soe_index.py``:
+The SOE database carries **no native LEI**, while OpenCheck is anchored
+end-to-end on the LEI. So identity resolution is done **once, offline**, by
+``scripts/build_eiti_soe_index.py``, which commits a gzipped, LEI-keyed
+artifact at ``opencheck/data/eiti_soe_index.json.gz``. At runtime this adapter
+loads that index and answers ``fetch_by_lei`` as a dict lookup — no live call
+on the hot path. With ``allow_live`` on, a matched hit is deepened with payment
+rows from the new database's ``view_payments_detailed``, filtered on
+``eiti_id_company``.
 
-1. Pull the SOE companies (Datasette JSON API).
-2. Resolve each SOE to an LEI via GLEIF — ``opencorporates_id`` → GLEIF reverse
-   lookup first, name+country search as a fallback — recording the match method
-   and a confidence grade.
-3. Commit a gzipped, LEI-keyed artifact ``opencheck/data/eiti_soe_index.json.gz``.
+Coverage is **2 of 194**, and that is the data rather than the matching
+-----------------------------------------------------------------------
+Every one of the 194 joins to ``metadata_companies`` with ``legal_entity_id``,
+``open_corporates_id`` and ``estma_id`` all empty, and a name-and-country search
+against GLEIF returns no candidate at all for 183 of them. Re-running the worst
+40 without the country filter produced one extra candidate, and it was wrong.
+These companies do not hold LEIs. The adapter stays because the classification
+is worth having and because EITI may yet publish identifiers — see the
+"Repoint EITI SOE index" ticket, which set that expectation before the number
+was known.
 
-At runtime this adapter loads that committed index and answers ``fetch_by_lei``
-as a dict lookup — no live call on the hot path. When ``allow_live`` is on, a
-matched hit can be deepened with live payment/context rows from the Datasette
-API, exactly as the ``eiti`` adapter gates its ``/revenue`` calls.
-
-Identifier corroboration
-------------------------
-The SOE database does **not** publish the LEI — OpenCheck *derives* it at build
-time. Per the corroboration rule in ``CLAUDE.md`` / ``routers/lookup.py``, this
-adapter therefore must **not** assert ``lei`` in ``SourceHit.identifiers``. It
-may assert the identifiers the source *does* publish (``eiti_id_company`` and,
-where present, ``opencorporates_id``).
+Identifier corroboration — **nothing is asserted**
+---------------------------------------------------
+The SOE database does not publish the LEI (OpenCheck derives it at build time),
+so ``lei`` was always barred by the corroboration rule in ``CLAUDE.md``.
+``eiti_soe_id`` used to be asserted as "the identifier EITI itself publishes"
+and **no longer is**: EITI regenerated its entire company id space in this
+release — UUIDv4 to a UUIDv5 over a normalised name, now prefixed
+``eiti_id_company:`` — so the value OpenCheck published cannot be looked up in
+the database it came from. A key a source can regenerate wholesale is a
+deduplication key, not a registry number. It stays in the bundle because the
+live payments query is keyed on it, and it stays out of
+``SourceHit.identifiers`` and out of the BODS statements.
 
 No API key required. Licence: EITI content-use policy — free republication with
 credit to "EITI International Secretariat, eiti.org". (Note: do **not** ingest
@@ -66,7 +81,12 @@ from .schemas.eiti_soe import EitiSoeBundle
 log = logging.getLogger(__name__)
 
 # Datasette JSON API for optional live enrichment of a matched hit.
-_API_BASE = "https://soe-database.eiti.org/eiti_database"
+# The new global database. The old host (soe-database.eiti.org) is still live
+# but its `companies.json?eiti_id_company__exact=` filter only resolves the old
+# UUIDv4 ids, which this index no longer carries — see the repoint note in
+# scripts/build_eiti_soe_index.py.
+_API_BASE = "https://eiti-database.eiti.org/eiti_database"
+_QUERY_URL = f"{_API_BASE}/-/query.json"
 _CACHE_NS = "eiti_soe"
 
 #: Committed, LEI-keyed index artifact (built by scripts/build_eiti_soe_index.py).
@@ -166,12 +186,15 @@ class EitiSoeAdapter(SourceAdapter):
         return SourceInfo(
             id=self.id,
             name="EITI State-Owned Enterprises Database",
-            homepage="https://soe-database.eiti.org/",
+            homepage="https://eiti-database.eiti.org/eiti_database/view_soeList",
             description=(
-                "State-owned enterprises reported through the EITI across "
-                "implementing countries, with a state-ownership classification, "
-                "commodities, audited-financial-statement links and stock "
-                "listings. Surfaces a state-ownership context signal by LEI."
+                "194 state-owned enterprises reported through the EITI across "
+                "39 implementing countries, 2017–2024, with a state-ownership "
+                "classification, sectors, audited-financial-statement links and "
+                "stock listings. Surfaces a state-ownership context signal by "
+                "LEI. EITI publishes no LEI, OpenCorporates id or national "
+                "registration number for any of them, so coverage is limited to "
+                "the enterprises whose names match GLEIF exactly."
             ),
             license="EITI open data (free reuse with attribution)",
             attribution="EITI International Secretariat, eiti.org",
@@ -248,6 +271,9 @@ class EitiSoeAdapter(SourceAdapter):
             "source_id": self.id,
             "lei": lei,
             "entity_name": soe.get("company_name") or soe.get("original_company_name"),
+            "name_variants": soe.get("name_variants") or [],
+            "gleif_legal_name": record.get("gleif_legal_name"),
+            "country_name": soe.get("country_name"),
             "is_state_owned": True,
             "country": soe.get("country") or soe.get("iso_alpha2"),
             "sector": soe.get("sector"),
@@ -282,16 +308,27 @@ class EitiSoeAdapter(SourceAdapter):
         try:
             async with build_client() as client:
                 response = await client.get(
-                    f"{_API_BASE}/companies.json",
+                    _QUERY_URL,
                     params={
-                        "eiti_id_company__exact": eiti_id_company,
-                        "_shape": "array",
-                        "_size": "max",
+                        # Filtered on the id, never a name join: joining
+                        # view_payments_detailed to view_soeList on name trips
+                        # `sql_time_limit_ms` (2.5 s) while the id filter
+                        # answers in well under one.
+                        "sql": (
+                            "select year, revenue_stream_name, payment_value, "
+                            "payment_value_usd, currency_code, project_name, "
+                            "gov_entity_name from view_payments_detailed "
+                            "where eiti_id_company = :cid "
+                            "order by year desc limit 200"
+                        ),
+                        ":cid": eiti_id_company,
+                        "_shape": "objects",
                     },
                     headers={"Accept": "application/json"},
                 )
                 response.raise_for_status()
-                rows = response.json()
+                body = response.json()
+                rows = body.get("rows", []) if isinstance(body, dict) else body
         except Exception as exc:  # noqa: BLE001
             log.warning("EITI SOE payment fetch failed for %s: %s", eiti_id_company, exc)
             # The SOE classification comes from the committed index and still
@@ -311,8 +348,8 @@ class EitiSoeAdapter(SourceAdapter):
                 {
                     "year": r.get("year"),
                     "revenue_stream": r.get("revenue_stream_name"),
-                    "revenue_value": r.get("revenue_value"),
-                    "currency": r.get("reporting_currency"),
+                    "revenue_value": r.get("payment_value_usd") or r.get("payment_value"),
+                    "currency": r.get("currency_code"),
                     "project": r.get("project_name"),
                 }
             )

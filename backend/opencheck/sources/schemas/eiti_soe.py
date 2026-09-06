@@ -31,6 +31,15 @@ class EitiSoeBundle(_Base):
 
     lei: str
     entity_name: str | None = None
+    #: Every spelling EITI holds for this company. The new database keys on a
+    #: UUIDv5 over a normalised name, so 251 names collapse to 194 companies and
+    #: the variants are real data rather than noise — they are what the GLEIF
+    #: name search is run against.
+    name_variants: list[str] = Field(default_factory=list)
+    #: The GLEIF legal name of the matched record, shown beside EITI's own name
+    #: whenever the two differ.
+    gleif_legal_name: str | None = None
+    country_name: str | None = None
     is_state_owned: bool = True
     country: str | None = None
     sector: str | None = None
@@ -43,8 +52,12 @@ class EitiSoeBundle(_Base):
     audited_financial_statement: str | None = None
     public_listing_or_website: str | None = None
     years: list[str] = Field(default_factory=list)
-    #: How the SOE was resolved to this LEI: "opencorporates_id" | "name_country".
+    #: How the SOE was resolved to this LEI. Only ``gleif_name_exact`` is
+    #: produced now: EITI publishes no identifier for any state-owned
+    #: enterprise, so the old ``opencorporates_id`` reverse-lookup route has
+    #: nothing to run on.
     match_method: str | None = None
-    #: "high" | "medium" | "low" — drives the signal's confidence dot.
+    #: "high" | "medium" | "low" — drives the signal's confidence dot. Never
+    #: "high" from this source: two strings agreeing is not corroboration.
     match_confidence: str = "medium"
     payments: list[EitiSoePaymentRow] = Field(default_factory=list)
