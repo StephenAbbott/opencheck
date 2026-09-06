@@ -358,6 +358,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** GLEIF `registeredAs` + jurisdiction matched against EITI national identifications (verified formats: GB Companies House numbers, NO orgnr, NL KvK-adjacent)
 - **Category:** ESG — payments-to-governments card in the ESG panel, alongside GEM/Climate TRACE
 
+## EITI Company Assessment
+
+- **Data:** EITI's assessment of its **supporting companies** — the multinationals that fund and endorse the EITI — against nine expectations, published in the EITI global database at <https://eiti-database.eiti.org/>. Two matter here: **expectation 6, "Company disclose beneficial ownership"** (a per-company, per-year result, with links to the disclosure where EITI captured them) and **expectation 2, "Company publish a list of controlled subsidiaries"**, together with the declared list itself — 1,230 parent-to-child rows across 51 EITI implementing countries. This records a company's *disclosure posture*, not its ownership. The declared subsidiaries are names and countries only: EITI publishes no identifier, percentage or share class for them, so OpenCheck renders them as evidence and does not map them into the ownership graph. Supporting companies are resolved to LEIs once, offline, by `backend/scripts/build_eiti_assessment_index.py`, which refuses to write an index until a human has reviewed every match; 64 of 99 are resolved. EITI publishes a `legal_entity_id` column but it is populated for 3 companies of 10,116, and its `eiti_id_company` is a name-derived deduplication key rather than a registry number, so **no identifier from this source is asserted as a cross-source identifier**.
+- **API:** Datasette 1.0 JSON/CSV/SQL — <https://eiti-database.eiti.org/eiti_database/-/query.json>
+- **License:** EITI content-use policy — free republication with credit; open-data commitment at <https://eiti.org/open-data>
+- **Attribution:** "EITI International Secretariat, eiti.org"
+- **Entry point:** subject LEI matched against the committed assessment index
+- **Category:** ESG — beneficial ownership disclosure and declared-subsidiary card in the Climate & ESG panel
+
 ## EITI State-Owned Enterprises Database
 
 - **Data:** State-owned enterprises reported through the EITI (~100 SOEs across implementing countries), published via a Datasette instance at <https://soe-database.eiti.org/eiti_database>. Provides the state-ownership classification plus SOE context (sector, commodities, audited-financial-statement links, stock-exchange listings, `opencorporates_id`). Distinct from the main EITI adapter (payments to governments): its value is a state-ownership context signal, not payments. Each SOE is resolved to an LEI once, at index-build time, via GLEIF (`opencorporates_id` → reverse lookup, name+country fallback) by `backend/scripts/build_eiti_soe_index.py`, producing the committed `backend/opencheck/data/eiti_soe_index.json.gz`. The SOE database does not publish the LEI, so it is not asserted as a cross-source identifier.

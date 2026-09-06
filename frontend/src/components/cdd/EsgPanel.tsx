@@ -6,6 +6,11 @@ import type { SourceBucket } from "./SourceBucketCard";
 import { sourceLabel } from "../../lib/vocab";
 import PanelSection from "../ui/PanelSection";
 import { Chip } from "../ui/Chip";
+import { EitiAssessmentCard } from "./EitiAssessmentCard";
+import { ESG_SOURCE_META } from "./esgSources";
+import { assessmentTile } from "../../lib/eitiAssessment";
+import type { EitiAssessmentBundle } from "../../lib/eitiAssessment";
+import type { PanelError, PanelId } from "../../lib/panelErrors";
 import {
   entityStatusBanner,
   FOLLOW_FORWARD_LABEL,
@@ -434,26 +439,6 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
 // Source attribution — every ESG card and tile names its data origin
 // ---------------------------------------------------------------------
 
-const ESG_SOURCE_META: Record<
-  string,
-  { org: string; href: string; licence: string }
-> = {
-  climatetrace: {
-    org: "Global Energy Monitor · Climate TRACE",
-    href: "https://climatetrace.org/",
-    licence: "CC BY 4.0",
-  },
-  eiti: {
-    org: "EITI International Secretariat",
-    href: "https://eiti.org/",
-    licence: "open data, attribution",
-  },
-  wikirate: {
-    org: "Wikirate",
-    href: "https://wikirate.org/",
-    licence: "CC BY 4.0",
-  },
-};
 
 function SourceTag({ sourceId }: { sourceId: string }) {
   const meta = ESG_SOURCE_META[sourceId];
@@ -843,6 +828,12 @@ function tileStats(hit: SourceHit): { stat: string; unit: string; sub: string } 
       sub: span,
     };
   }
+  if (hit.source_id === "eiti_assessment") {
+    // The count is the declared-subsidiary list; a company EITI assessed but
+    // filed no list for still gets a tile, in the same voice, rather than
+    // vanishing from a grid that is meant to show what each source published.
+    return assessmentTile(hit.raw as unknown as EitiAssessmentBundle);
+  }
   if (hit.source_id === "wikirate") {
     const raw = hit.raw as unknown as WikirateBundle;
     return {
@@ -934,11 +925,18 @@ export function EsgPanel({
   pendingCount = 0,
   bodsCountMap = {},
   bodsBreakdownMap = {},
+  onPanelError,
+  onRecovered,
 }: {
   buckets: SourceBucket[];
   pendingCount?: number;
   bodsCountMap?: Record<string, number>;
   bodsBreakdownMap?: Record<string, BodsBreakdown>;
+  /** `EitiAssessmentCard` cross-references the GLEIF children, which is a
+   *  fetch outside the lookup pipeline — so, like `SubsidiaryNetwork`, its
+   *  failures have to be routed to the report-level notice by hand. */
+  onPanelError?: (e: PanelError) => void;
+  onRecovered?: (panel: PanelId) => void;
 }) {
   // Per-hit expansion for the summary tiles. Unset entries fall back to the
   // default rule: a lone ESG hit shows its full card without an extra click;
@@ -1034,6 +1032,13 @@ export function EsgPanel({
               .map((hit) =>
                 hit.source_id === "eiti" ? (
                   <EitiCard key={`${hit.source_id}:${hit.hit_id}`} hit={hit} />
+                ) : hit.source_id === "eiti_assessment" ? (
+                  <EitiAssessmentCard
+                    key={`${hit.source_id}:${hit.hit_id}`}
+                    hit={hit}
+                    onPanelError={onPanelError}
+                    onRecovered={onRecovered}
+                  />
                 ) : hit.source_id === "wikirate" ? (
                   <WikirateCard key={`${hit.source_id}:${hit.hit_id}`} hit={hit} />
                 ) : (

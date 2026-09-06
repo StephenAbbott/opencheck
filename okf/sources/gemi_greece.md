@@ -4,7 +4,7 @@ title: "\u0393\u0395\u039c\u0397 \u2014 Greek General Commercial Registry"
 description: "Greek company data from the General Commercial Registry (\u0393\u0395\u039c\u0397) Open Data API (ODC-BY-1.0). Provides entity details \u2014 name, \u0391\u03a6\u039c, legal form, status, registered office and incorporation date \u2014 together with board members and, for private companies and partnerships, partners with their percentage holdings."
 resource: "https://www.businessregistry.gr/"
 tags: ["cdd", "national-register", "ODC-BY-1.0", "commercial-yes"]
-timestamp: "2026-08-28"
+timestamp: "2026-09-06"
 source_id: "gemi_greece"
 license: "ODC-BY-1.0"
 commercial_use: "yes"
