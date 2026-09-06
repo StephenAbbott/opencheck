@@ -9,7 +9,7 @@ reject	BARRICK		0	candidates_only	0O4KBQCJZX82UKGCBV73	Barrick Mining Corporatio
 reject	Base Resources now Energy Fuels inc		6	candidates_only					no GLEIF candidate
 reject	Base Titanium	KEN	0	candidates_only					no GLEIF candidate
 accept	BP	GBR	87	candidates_only	213800LH1BZH3DI6G760	BP P.L.C.	GB		no exact match — paste one LEI if right: 213800LH1BZH3DI6G760 BP P.L.C. (GB); 984500EY7ADCE6FB0C92 BP BUILDS LTD (GB); 213800V2BTQQWDTVEA57 BP TELECOMS LTD (GB)
-accept	CHEVRON CORPORATION	USA	18	candidates_only	VA8TZDWPEZYU430RZ444	Chevon U.S.A. Inc.	US		no exact match — paste one LEI if right: 5493000LYKE40G5GMJ46 CHEVRON MASTER PENSION TRUST (US); 5493003J64OKD7HGL688 Bridgehead Gas & Oil Corporation (US); 25490030VC077NQNOP03 99 BEDFORD OWNER LLC (US)
+accept	CHEVRON CORPORATION	USA	18	candidates_only	VA8TZDWPEZYU430RZ444	Chevron U.S.A. Inc.	US		no exact match — paste one LEI if right: 5493000LYKE40G5GMJ46 CHEVRON MASTER PENSION TRUST (US); 5493003J64OKD7HGL688 Bridgehead Gas & Oil Corporation (US); 25490030VC077NQNOP03 99 BEDFORD OWNER LLC (US)
 reject	Codelco	CHL	3	candidates_only					no GLEIF candidate
 reject	Compania Poderosa Minera S.A.	PER	0	candidates_only					no GLEIF candidate
 reject	Council on Ethics of the Swedish National Pension Funds		0	candidates_only					no GLEIF candidate

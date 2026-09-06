@@ -604,21 +604,27 @@ def _bh_eiti_soe(r: dict, ctx: _LookupCtx) -> SourceHit:
         parts.append(str(r["country"]))
     if (r.get("match_confidence") or "").lower() == "low":
         parts.append("possible name match")
-    # Corroboration rule: the SOE database does NOT publish the LEI (OpenCheck
-    # derives it at index-build time), so `lei` is intentionally omitted from
-    # identifiers. Only the identifiers EITI itself publishes are asserted.
-    # `eiti_soe_id` is informational (EITI's own id). `ocid` is intentionally
-    # NOT asserted from the SOE database's opencorporates_id: like the Wikirate
-    # precedent, its format may differ from OpenCheck's jurisdiction-scoped
-    # `ocid`, and a mismatched assert would create a false corroboration.
-    identifiers: dict[str, str] = {}
-    if r.get("eiti_id_company"):
-        identifiers["eiti_soe_id"] = str(r["eiti_id_company"])
+    # Corroboration rule: **nothing is asserted.**
+    #
+    # The LEI is OpenCheck-derived at index-build time, so it was always barred.
+    # `eiti_soe_id` used to be published here as "EITI's own id" and no longer
+    # is: EITI regenerated the entire company id space when the new database
+    # launched (UUIDv4 → a UUIDv5 over a normalised name, now prefixed
+    # `eiti_id_company:`), so the value OpenCheck published is not resolvable in
+    # the database it came from. An identifier a source can regenerate wholesale
+    # is a deduplication key, not a registry number, and asserting one lets the
+    # reconciler claim corroboration from a string that means nothing outside
+    # this month's export. It stays in the bundle because the live payments
+    # query needs it; it does not go in `identifiers`.
+    #
+    # `ocid` was never asserted either — EITI publishes no OpenCorporates id for
+    # a single one of the 194 state-owned enterprises, so there is nothing left
+    # to weigh up.
     return _hit(
         "eiti_soe", ctx.lei,
         name=r.get("entity_name") or ctx.legal_name or ctx.lei,
         summary=" · ".join(parts),
-        identifiers=identifiers,
+        identifiers={},
         raw=r,
     )
 

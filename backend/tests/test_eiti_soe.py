@@ -22,10 +22,16 @@ _LEI_MISS = "213800WSGIIZCXF1P572"
 _FIXTURE = {
     _LEI_MATCH: {
         "lei": _LEI_MATCH,
-        "match_method": "opencorporates_id",
-        "match_confidence": "high",
+        "match_method": "gleif_name_exact",
+        "match_confidence": "medium",
+        "gleif_legal_name": "GHANA NATIONAL PETROLEUM CORPORATION",
         "soe": {
             "company_name": "Ghana National Petroleum Corporation",
+            "name_variants": [
+                "Ghana National Petroleum Corporation",
+                "GHANA NATIONAL PETROLEUM CORP (GNPC)",
+            ],
+            "country_name": "Ghana",
             "country": "GH",
             "iso_alpha2": "GH",
             "sector": "Oil & Gas",
@@ -81,7 +87,10 @@ async def test_fetch_by_lei_match(adapter):
     assert bundle["lei"] == _LEI_MATCH
     assert bundle["is_state_owned"] is True
     assert bundle["entity_name"] == "Ghana National Petroleum Corporation"
-    assert bundle["match_confidence"] == "high"
+    # Never "high" from this source. Nothing EITI publishes corroborates the
+    # match — two strings agreeing is not corroboration — so the builder grades
+    # every row medium and the adapter carries that through.
+    assert bundle["match_confidence"] == "medium"
     assert bundle["country"] == "GH"
     assert bundle["commodities"] == ["oil", "gas"]
     assert bundle["is_stub"] is False
@@ -106,15 +115,45 @@ async def test_fetch_deepen_and_stub(adapter):
     assert stub["is_stub"] is True
 
 
-async def test_does_not_assert_lei_as_published_identifier(adapter):
-    """The SOE DB does not publish the LEI (it is derived at build time), so the
-    bundle exposes it as the anchor `lei` but the source publishes eiti/OC ids —
-    the hit builder must not assert `lei` in SourceHit.identifiers (see the
-    corroboration rule in CLAUDE.md). This test documents the contract the
-    routers/lookup.py hit builder must honour."""
+async def test_hit_builder_asserts_no_identifiers_at_all(adapter):
+    """The hit carries an empty identifier set — and this calls the **real**
+    hit builder rather than describing what it ought to do.
+
+    Three separate reasons, and all three have to hold:
+
+    * ``lei`` is OpenCheck-derived at index-build time (the corroboration rule).
+    * ``eiti_soe_id`` was published here until EITI regenerated its whole
+      company id space in the new database — UUIDv4 to a UUIDv5 over a
+      normalised name. A key a source can regenerate wholesale is a
+      deduplication key, and asserting one lets the reconciler claim
+      corroboration from a string that does not resolve anywhere.
+    * ``ocid`` never was asserted, and now could not be: EITI publishes no
+      OpenCorporates id for a single one of its 194 state-owned enterprises.
+
+    The previous version of this test read two fields off the bundle and
+    asserted nothing about the hit at all, so it would have passed unchanged
+    through the identifier decision it existed to guard.
+    """
+    from opencheck.routers.hit_builders import _bh_eiti_soe, _LookupCtx
+
     bundle = await adapter.fetch_by_lei(_LEI_MATCH)
+    hit = _bh_eiti_soe(bundle, _LookupCtx(lei=_LEI_MATCH, legal_name="GNPC"))
+
+    assert hit.identifiers == {}
+    # The id is still in the bundle: the live payments query is keyed on it.
     assert bundle["eiti_id_company"] == "eiti-co-123"
-    assert bundle["opencorporates_id"] == "gh/CS000000001"
+
+
+async def test_bundle_carries_every_spelling_eiti_holds(adapter):
+    """The new database keys on a UUIDv5 over a normalised name, so one company
+    can arrive under several spellings. They are kept — they are what the GLEIF
+    search is run against, and what a reader needs to recognise the company."""
+    bundle = await adapter.fetch_by_lei(_LEI_MATCH)
+    assert bundle["name_variants"] == [
+        "Ghana National Petroleum Corporation",
+        "GHANA NATIONAL PETROLEUM CORP (GNPC)",
+    ]
+    assert bundle["gleif_legal_name"] == "GHANA NATIONAL PETROLEUM CORPORATION"
 
 
 def test_gzip_index_load_path(tmp_path, monkeypatch):
@@ -168,11 +207,11 @@ async def test_mapper_emits_state_control_shape(adapter):
     assert rel["recordDetails"]["interestedParty"] == state_body["statementId"]
     assert rel["recordDetails"]["interests"][0]["type"] == "controlByLegalFramework"
 
-    # Corroboration rule: the SOE database does not publish the LEI, so no BODS
-    # identifier may carry an LEI scheme.
-    for ident in soe["recordDetails"]["identifiers"]:
-        assert ident.get("scheme") != "XI-LEI"
-        assert ident.get("id") != _LEI_MATCH
+    # Corroboration rule: **no identifiers at all**, not merely no LEI. The
+    # `XI-EITI` scheme this used to emit carried `eiti_id_company`, and every
+    # statement asserting one now names a key that cannot be looked up in the
+    # database it came from.
+    assert soe["recordDetails"]["identifiers"] == []
 
 
 async def test_mapper_skips_stub_and_nameless(adapter):
@@ -206,3 +245,199 @@ async def test_mapper_gates_state_control_on_low_confidence():
     bundle["match_confidence"] = "medium"
     kinds = {s["recordType"] for s in map_eiti_soe(bundle)}
     assert kinds == {"entity", "relationship"}
+
+
+# ---------------------------------------------------------------------------
+# The builder, on a fixture, through its real entry points
+# ---------------------------------------------------------------------------
+
+
+def _load_builder():
+    """Import ``scripts/build_eiti_soe_index.py`` by path.
+
+    The point is to exercise the shipped file rather than a reimplementation of
+    it: a test that arranges the thing it is meant to prove proves nothing.
+    """
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parent.parent / "scripts" / "build_eiti_soe_index.py"
+    spec = importlib.util.spec_from_file_location("_build_eiti_soe_index", path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+class _FakeClient:
+    """Stands in for httpx at the one seam the roster builder uses."""
+
+    def __init__(self, rows):
+        self._rows = rows
+
+    def get(self, url, params=None, headers=None):  # noqa: D401
+        sql = (params or {}).get("sql", "")
+        rows = [{"n": len(self._rows)}] if "count(*)" in sql else self._rows
+
+        class _Resp:
+            status_code = 200
+
+            @staticmethod
+            def raise_for_status():
+                return None
+
+            @staticmethod
+            def json():
+                return {"rows": rows}
+
+        return _Resp()
+
+
+def test_builder_collapses_name_variants_onto_one_company():
+    """Two spellings, one ``eiti_id_company`` → one roster entry holding both.
+
+    This is the whole reason the roster is keyed on the id: EITI's own
+    ``view_soeList`` holds 251 distinct ``soe_name`` values for 194 distinct
+    companies, and the old builder — which keyed on the normalised name —
+    counted those as separate SOEs and searched GLEIF for each.
+    """
+    builder = _load_builder()
+    rows = [
+        {
+            "eiti_id_company": "eiti_id_company:abc",
+            "soe_name": "Sonangol E.P.",
+            "country_iso3": "AGO",
+            "country_name": "Angola",
+            "sectors": "Oil & Gas",
+            "year": 2019,
+            "audited_statement_url": "Not available",
+            "public_listing_url": "https://sonangol.co.ao",
+        },
+        {
+            "eiti_id_company": "eiti_id_company:abc",
+            "soe_name": "SONANGOL EP",
+            "country_iso3": "AGO",
+            "country_name": "Angola",
+            "sectors": "Oil & Gas",
+            "year": 2021,
+            "audited_statement_url": "https://example.org/afs.pdf",
+            "public_listing_url": "Not available",
+        },
+    ]
+    roster = builder._roster_new(_FakeClient(rows), sleep=0)
+
+    assert list(roster) == ["eiti_id_company:abc"]
+    entry = roster["eiti_id_company:abc"]
+    assert entry["names"] == ["Sonangol E.P.", "SONANGOL EP"]
+    assert entry["years"] == ["2019", "2021"]
+    # "Not available" is EITI's way of saying nothing, and must never reach a
+    # card as if it were a URL.
+    assert entry["afs"] == "https://example.org/afs.pdf"
+    assert entry["listing"] == "https://sonangol.co.ao"
+
+
+def test_builder_refuses_a_truncated_harvest():
+    """The page cap is a server setting, not a contract.
+
+    ``_fetch_all`` checks what it harvested against the server's own
+    ``count(*)``. An earlier SOE build silently kept 176 rows of 5,332 because
+    nothing compared the two.
+    """
+    builder = _load_builder()
+
+    class _ShortClient(_FakeClient):
+        def get(self, url, params=None, headers=None):
+            sql = (params or {}).get("sql", "")
+            if "count(*)" in sql:
+                rows = [{"n": 99}]        # the server says 99 …
+            else:
+                rows = self._rows          # … and hands back 2
+
+            class _Resp:
+                status_code = 200
+
+                @staticmethod
+                def raise_for_status():
+                    return None
+
+                @staticmethod
+                def json():
+                    return {"rows": rows}
+
+            return _Resp()
+
+    with pytest.raises(RuntimeError, match="harvested 2 rows but count"):
+        builder._fetch_all(
+            _ShortClient([{"a": 1}, {"a": 2}]), "view_soeList", "a", sleep=0
+        )
+
+
+def test_builder_never_strips_a_legal_form_suffix():
+    """``Teck`` matched TECK GmbH as a plain exact match in the sibling builder.
+
+    Suffix-stripping is the one "improvement" that would make this matcher
+    dangerous, so the normaliser's behaviour is pinned rather than described.
+    """
+    builder = _load_builder()
+    assert builder._norm_name("Sonangol E.P.") == "sonangol e p"
+    assert builder._norm_name("Teck") != builder._norm_name("Teck GmbH")
+    assert builder._norm_name("Glencore") != builder._norm_name("Glencore AG")
+    # Case, accents and punctuation still fold.
+    assert builder._norm_name("Société  Nationale!") == builder._norm_name("societe nationale")
+
+
+def test_builder_treats_eiti_placeholders_as_absent():
+    builder = _load_builder()
+    for placeholder in ("Not available", "n/v", "N/A", "", "  "):
+        assert builder._clean(placeholder) == ""
+    assert builder._clean(" https://example.org ") == "https://example.org"
+
+
+async def test_mapper_names_the_state_when_eiti_does_not_name_the_body(adapter):
+    """The repointed roster carries no `government_entity`, and the graph must
+    not lose its state-control edge because of it.
+
+    The new database's `metadata_gov_entities` holds revenue-collecting
+    agencies with no link saying which body owns which enterprise, so the
+    controlling party falls back to the state EITI files the company under —
+    named as such, with the relationship saying in words that EITI does not name
+    the organ. Dropping the edge instead would silently switch off
+    `STATE_CONTROLLED`, the one signal this adapter exists to raise.
+    """
+    from opencheck.bods import map_eiti_soe
+
+    bundle = await adapter.fetch_by_lei(_LEI_MATCH)
+    bundle["government_entity"] = None
+    bundle["country_name"] = "Ghana"
+
+    statements = list(map_eiti_soe(bundle))
+    assert len(statements) == 3
+
+    state_body = next(
+        s for s in statements
+        if s["recordType"] == "entity"
+        and s["recordDetails"]["entityType"]["type"] == "stateBody"
+    )
+    assert state_body["recordDetails"]["name"] == "Government of Ghana"
+
+    rel = next(s for s in statements if s["recordType"] == "relationship")
+    details = rel["recordDetails"]["interests"][0]["details"]
+    assert "does not name the controlling government body" in details
+    # The inference is labelled, not disguised as an EITI assertion.
+    assert "controlled by Government of Ghana (EITI SOE database)" not in details
+
+
+async def test_mapper_prefers_the_body_eiti_names(adapter):
+    from opencheck.bods import map_eiti_soe
+
+    bundle = await adapter.fetch_by_lei(_LEI_MATCH)
+    bundle["government_entity"] = "Ministry of Energy"
+
+    rel = next(
+        s for s in map_eiti_soe(bundle) if s["recordType"] == "relationship"
+    )
+    details = rel["recordDetails"]["interests"][0]["details"]
+    assert details == (
+        "State-owned enterprise controlled by Ministry of Energy "
+        "(EITI SOE database)."
+    )

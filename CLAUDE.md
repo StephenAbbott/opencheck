@@ -379,11 +379,15 @@ source: the page shows the last sweep's verdict and says when it was reached.
       the active table = `REGISTRY` minus env-gated bulk-only adapters), and
       refresh the source counts in `README.md` (intro paragraph + adapter-table
       pointer line) and the social card `docs/social/opencheck-social-b.html`
-- [ ] **Frontend homepage source count** — bump the "N sources" copy in
-      `frontend/src/App.tsx`: the hero subline ("…from N sources into one
-      graph…") **and** the "How it works" step-3 title ("N open sources, in
-      parallel"). Easy to miss — these are hard-coded counts separate from the
-      README/social-card ones.
+- [ ] **Frontend homepage source count** — two hard-coded counts, in **two
+      different files**: the hero subline in `frontend/src/App.tsx` ("…from N
+      sources into one graph…") **and** the "How it works" step-3 title in
+      `frontend/src/components/HomePanels.tsx` ("N open sources, in parallel").
+      Easy to miss — separate from the README/social-card ones. This checklist
+      said both were in `App.tsx` until the `eiti_assessment` adapter went
+      looking for the second one: the step-3 title moved to `HomePanels.tsx`
+      with the homepage-panels extraction and nothing here moved with it.
+      `og_image.py` needs no edit — `_source_count()` reads the REGISTRY.
 - [ ] **Regenerate the OKF bundle** — run `python3 backend/scripts/generate_okf.py`
       and `python3 backend/scripts/generate_okf_viz.py`, then commit the resulting
       `okf/` changes **in the same commit as the adapter**. The CI `okf` job runs
@@ -787,6 +791,80 @@ INPI entries where `beneficiaireEffectif == True` MUST be silently skipped and n
 - **Not found detection**: If `str(r.url)` does not contain `/eng/company/`, the server redirected away (company not found) → return stub bundle
 - **Bundle format**: Unchanged from Phase 37 — `map_ariregister()` in `bods/mapper.py` needs no changes
 - `ARIREGISTER_USERNAME` / `ARIREGISTER_PASSWORD` are NOT used by the live-lookup scraper, but ARE read by `fetch_timeline_data()` for the SOAP history path (see the narrowed-ban note above)
+
+---
+
+## EITI: three databases, three ID systems
+
+Three EITI endpoints are live at once and the adapters split across them. Every
+item here cost real debugging time.
+
+| Endpoint | What it serves | Used by |
+|---|---|---|
+| `eiti.org/api/v2.0` | payments + the organisation index | `eiti` |
+| `soe-database.eiti.org` | the old flat summary data — **still live** | `eiti_soe` |
+| `eiti-database.eiti.org` | the new Datasette-backed global database | `eiti_assessment` |
+
+### Datasette 1.0-alpha gotchas (the new database)
+
+- **SQL lives at `/eiti_database/-/query.json?sql=`.** The legacy
+  `/eiti_database.json?sql=` **302-redirects** there, so a client without
+  `follow_redirects=True` silently gets nothing back — not an error, nothing.
+- **`sql_time_limit_ms` times out even `select count(*)`** on the wide views:
+  `view_companies`, `view_commodities`, `view_countries`,
+  `view_country_commodity_pairs`. **Query the narrow tables, never the wide
+  views.**
+- **1,000-row page cap.** Follow the `next` token; do not trust `_size=max`.
+  `build_eiti_assessment_index.py::_fetch_all` pages with LIMIT/OFFSET and then
+  asserts the harvested row count against `count(*)`, so a changed cap can never
+  silently truncate a harvest again — that failure cost an earlier SOE build
+  5,156 of its 5,332 companies.
+
+### Table naming is a four-layer pipeline
+
+`raw_*` → `resolved_*` → `clean_*` → `metadata_*` → `view_*`
+
+> **`raw_*` values are JSON-encoded, quotes included.** A LEI arrives as
+> `"\"549300071188HIDJEB11\""` — `length()` is **22**, not 20. This is why a
+> naive validity check reports zero valid LEIs when there are three. Strip it
+> before comparing anything (`_unjson()` in the assessment builder).
+
+Pick the table by what it actually carries, not by what it is named:
+`raw_company_assessment_subsidiaries` has the implementing country and the
+assessment year; `metadata_company_relationships` describes the same edges with
+`country_of_operation_iso3` NULL and `assessment_year` 0.
+
+### Two traps worth naming
+
+- **On the old host the SOE view name cannot be percent-encoded.**
+  `SOE%20List` returns **404**. Datasette's own encoding for the space is
+  `~20`, which is what `build_eiti_soe_index.py`'s `SOE_LIST_URL` uses and which
+  still returns 200 (re-verified 2026-09-04); `SOE+List` also works. **Do not
+  "fix" the `~20` to `%20`.**
+- **The company IDs were regenerated between the two databases and are not
+  portable.** Old `eiti_id_company` is a **UUIDv4** (random, unprefixed); new is
+  a **UUIDv5** (name-based SHA-1) prefixed `eiti_id_company:`, alongside a
+  **UUIDv7** surrogate row key. The v5 is a *deduplication* key, not an identity
+  assertion — 12,009 distinct normalised names collapse to 10,116 ids — which is
+  why `eiti_assessment` asserts no identifier of any kind. Anything that stored
+  an old v4 id cannot look it up in the new database.
+
+### What EITI does and does not publish as an identifier
+
+`legal_entity_id` is a real column in `metadata_companies`, populated for
+**3 companies of 10,116**; the Company Assessment reference sheet has the column
+on all 124 rows but 121 hold the literal string `"Not available"`. There is no
+OpenCorporates id in the new database at all, and `metadata_company_id_references`
+holds one row (GB / Companies House). So an EITI `identification` value being a
+national registry number is an *assumption*, not something the data states.
+
+### One more, learned the hard way
+
+EITI spells the same company differently in its own two sheets and the UUIDv5
+dedup does not collapse the variants: `Anglo American`/`AngloAmerican`,
+`ArcelorMittal`/`Arcelor Mittal`, `Barrick Gold`/`BARRICK`,
+`Staatsolie`/`Staatsolie maatschappij Suriname N.V`. Canonicalise on a spaceless
+key before joining EITI to EITI.
 
 ---
 
