@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 171** — the EITI Company Assessment, the only beneficial-ownership-adjacent dataset EITI publishes, is now a source: 64 supporting companies resolved to LEIs and checked by hand, their declared subsidiaries, and their beneficial ownership disclosure status on the Climate & ESG tab.
+**Latest: Phase 173** — curated examples no longer ship a pre-baked AI summary: the stored narratives and their generator are gone, and every entity generates its summary live from the model and prompt running today.
 
 → [Full development history](docs/status.md)
 
