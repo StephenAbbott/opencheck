@@ -966,3 +966,98 @@ def finding_climatetrace(bundle: dict[str, Any]) -> str | None:
     return clauses_to_sentence(
         [status_clause, projects_clause, emissions_clause, jv_clause], sep="; "
     )
+
+
+# --------------------------------------------------------------------------
+# eiti_assessment (the EITI Company Assessment of its supporting companies)
+# --------------------------------------------------------------------------
+
+#: EITI's own expectation-6 results, mapped to a clause that says what EITI
+#: concluded without upgrading it into a claim about the company's ownership.
+#: "Not available" is a statement about the *assessment*, not the company —
+#: rule 10 (state absence in the same voice as presence) is why it gets a
+#: clause of its own rather than being dropped, and rule 2 (assert nothing
+#: about risk) is why none of these read as a judgement.
+_EITI_BO_CLAUSES: dict[str, str] = {
+    "expectation met": "recorded by EITI in {year} as disclosing its beneficial owners",
+    "expectation partially met": (
+        "recorded by EITI in {year} as partially disclosing its beneficial owners"
+    ),
+    "expectation not met": (
+        "recorded by EITI in {year} as not disclosing its beneficial owners"
+    ),
+    "not applicable": "not assessed by EITI in {year} on beneficial ownership disclosure",
+    "not available": "not assessed by EITI in {year} on beneficial ownership disclosure",
+}
+
+
+def finding_eiti_assessment(bundle: dict[str, Any]) -> str | None:
+    """One sentence for the EITI Company Assessment row.
+
+    Says the beneficial ownership assessment first, then the declared
+    subsidiaries. **That order is load-bearing**: ``clauses_to_sentence`` drops
+    *trailing* clauses to fit :data:`MAX_FINDING_CHARS`, so a template that
+    puts its most important clause last loses exactly the thing it was written
+    to say. An earlier draft opened with "Assessed by EITI in 2025" and the
+    140-character cap silently ate the disclosure clause on every company with
+    a subsidiary list.
+
+    Two rules bite hard here.
+
+    **Assert nothing about risk or corroboration.** An expectation EITI records
+    as "not met" is a disclosure gap, not a finding against the company, and
+    this sentence must not imply otherwise. Every clause is phrased as
+    something *EITI recorded*, because that is all that is known.
+
+    **State absence in the same voice as presence.** A company EITI did not
+    assess on beneficial ownership gets a clause saying so, rather than a
+    sentence that quietly omits the subject and reads as though the question
+    was never asked.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return None
+
+    assessments: dict[str, Any] = bundle.get("assessments") or {}
+    years = [y for y in assessments if str(y).strip()]
+    if not years:
+        return None
+    year = max(years, key=lambda y: (len(y), y))
+
+    clauses: list[str | None] = []
+
+    result = ((assessments.get(year) or {}).get("exp_6") or {}).get("result") or ""
+    result = result.strip()
+    if result:
+        clauses.append(
+            _EITI_BO_CLAUSES.get(
+                result.lower(),
+                # An unrecognised result still reports that EITI reached one,
+                # rather than guessing at what it meant.
+                "assessed by EITI in {year} on beneficial ownership disclosure "
+                f"({result})",
+            ).format(year=year)
+        )
+    else:
+        clauses.append(f"assessed by EITI in {year}")
+
+    subs = bundle.get("subsidiaries") or []
+    if subs:
+        countries = {
+            (s.get("country") or "").strip()
+            for s in subs
+            if (s.get("country") or "").strip()
+        }
+        clause = f"declared {len(subs)} controlled subsidiar" + (
+            "y" if len(subs) == 1 else "ies"
+        )
+        if len(countries) > 1:
+            clause += f" across {len(countries)} implementing countries"
+        elif len(countries) == 1:
+            clause += f" in {next(iter(countries))}"
+        clauses.append(clause)
+    else:
+        # Said out loud rather than omitted: a reader who sees no subsidiary
+        # clause cannot otherwise tell "declared none" from "we didn't look".
+        clauses.append("no subsidiary list carried in the EITI data")
+
+    return clauses_to_sentence(clauses)

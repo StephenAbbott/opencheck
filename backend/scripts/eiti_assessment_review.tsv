@@ -1,0 +1,109 @@
+decision	eiti_name	hq_country	subsidiaries	method	lei	gleif_legal_name	gleif_country	flag	note
+accept	GLENCORE	JEY	34	gleif_name_exact	2138002658CPO9NBH955	GLENCORE PLC	JE	HAS GLEIF PARENT: GLENCORE PLC	
+reject	Hindustan Zinc		0	gleif_name_exact	335800LB39TLJ8YTWM98	HINDUSTAN ZINC LIMITED	IN	HAS GLEIF PARENT: VEDANTA LIMITED	
+accept	PT Pertamina (Persero)	IDN	158	gleif_name_exact	254900NDAKGNZ2IBBL45	Pt Pertamina (Persero)	ID	HAS GLEIF PARENT: Republic of Indonesia	
+accept	WOODSIDE ENERGY	AUS	36	gleif_name_exact	254900CDO2KAUEBXZV54	WOODSIDE ENERGY LTD.	AU	HAS GLEIF PARENT: Woodside Energy Group Ltd	2 exact name matches
+reject	AMG	NLD	11	candidates_only					no exact match — paste one LEI if right: 724500FGWICT2OY5SN45 AMG Consult B.V. (NL); 724500UER680UCN0T776 AMG Enschede Beheer B.V. (NL); 5493006MN6OH67U2YI74 AMG Critical Materials N.V. (NL)
+reject	Antofagasta Minerals	CHL	1	candidates_only					no GLEIF candidate
+reject	BARRICK		0	candidates_only	0O4KBQCJZX82UKGCBV73	Barrick Mining Corporation	CA		"no exact match — paste one LEI if right: 549300XJ1UJ5T8LAYU48 BARRICK ENTERPRISES, INC. (US); 5493002CWGHR03YL8X75 BARRICK GOLD INC. (CA); 0O4KBQCJZX82UKGCBV73 BARRICK MINING CORPORATION (CA)"
+reject	Base Resources now Energy Fuels inc		6	candidates_only					no GLEIF candidate
+reject	Base Titanium	KEN	0	candidates_only					no GLEIF candidate
+accept	BP	GBR	87	candidates_only	213800LH1BZH3DI6G760	BP P.L.C.	GB		no exact match — paste one LEI if right: 213800LH1BZH3DI6G760 BP P.L.C. (GB); 984500EY7ADCE6FB0C92 BP BUILDS LTD (GB); 213800V2BTQQWDTVEA57 BP TELECOMS LTD (GB)
+accept	CHEVRON CORPORATION	USA	18	candidates_only	VA8TZDWPEZYU430RZ444	Chevon U.S.A. Inc.	US		no exact match — paste one LEI if right: 5493000LYKE40G5GMJ46 CHEVRON MASTER PENSION TRUST (US); 5493003J64OKD7HGL688 Bridgehead Gas & Oil Corporation (US); 25490030VC077NQNOP03 99 BEDFORD OWNER LLC (US)
+reject	Codelco	CHL	3	candidates_only					no GLEIF candidate
+reject	Compania Poderosa Minera S.A.	PER	0	candidates_only					no GLEIF candidate
+reject	Council on Ethics of the Swedish National Pension Funds		0	candidates_only					no GLEIF candidate
+reject	Dundee Precious Metals	CAN	1	candidates_only	549300LATVTU0EIUMD45	DPM Metals Inc.	CA		no exact match — paste one LEI if right: 549300LATVTU0EIUMD45 DPM METALS INC. (CA)
+accept	ENI	ITA	94	candidates_only	BUCRF72VH5RBN7X3VL35	ENI S.P.A.	IT		no exact match — paste one LEI if right: 8156006AD45B0AB78474 MORASSUTTI ENI (IT); BUCRF72VH5RBN7X3VL35 ENI S.P.A. (IT); 984500B4D6BC73E9F591 ENI INSURANCE S.P.A. (IT)
+accept	EXXONMOBIL	USA	46	candidates_only	J3WHBG0MTS7O8ZVMDC91	EXXON MOBIL CORPORATION	US		no exact match — paste one LEI if right: 549300NCY2P2FLJT9D42 EXXONMOBIL OIL CORPORATION (US); 254900H02QJZ52OZGO18 ExxonMobil Master Pension Trust (US); 549300RMYREDP1J7XH77 EXXONMOBIL SALES AND SUPPLY LLC (US)
+reject	Far Limited		0	candidates_only					no exact match — paste one LEI if right: 549300X7E0P34SD61079 FAR Nova Limited (VG); 549300RUQ5N7GX1B7C24 FAR-REACHING LIMITED (VG); 5493008GCU8QRY7FMT07 Far East Limited (VG)
+accept	Gunvor Group	CHE	12	candidates_only	549300OEZB4GETCGFX34	GUNVOR GROUP LTD			no GLEIF candidate
+reject	Hydro		3	candidates_only					no exact match — paste one LEI if right: 969500C0AZ09CO3MMA28 HYDRO 71 (FR); 335800H54ZPXXOVRG667 HYDRO PIPES (IN); 9695001HLV3ZFK5PVK31 VILBERT HYDRO (FR)
+reject	Inpex Coporation	JPN	10	candidates_only	353800VHYYADPR6MXQ47	"株式会社INPEX
+"			no GLEIF candidate
+reject	JX Nippon		1	candidates_only					"no exact match — paste one LEI if right: 549300ZTDY1RITFW9806 ANCI, INC. (US); 353800DRTSU7UUB02L07 ENEOS Oil & Energy Asia Pte. Ltd. (SG); 254900I3DUKQ51AIYB46 ENEOS AMERICAS INC. (US) [under ENEOSホールディングス株式会社]"
+reject	JX Nippon Mining & Metals	JPN	0	candidates_only					no GLEIF candidate
+reject	KfW Group		0	candidates_only					no GLEIF candidate
+reject	Lundin Energy		0	candidates_only					no exact match — paste one LEI if right: 52990011UY1D5C5HUH40 Lundin Energy Marketing SA (CH); 549300WFK7QZ1YQ8DR72 Lundin Energy MergerCo AB (publ) (SE); 549300C0QI8NGGV3IS32 ABP NORWAY AS (NO)
+reject	Lundin Foundation		0	candidates_only	529900F37KHBWV2UWE61	"THE ADOLF H. LUNDIN CHARITABLE FOUNDATION
+"	LI		no exact match — paste one LEI if right: 529900F37KHBWV2UWE61 THE ADOLF H. LUNDIN CHARITABLE FOUNDATION (LI)
+accept	Maaden		0	candidates_only	254900OW5CGM4QZ2C828	"Maaden Gold and Base Metals Company (MGBM)
+"			no exact match — paste one LEI if right: 254900ZNAZ7F402M2E04 Maaden Invest Limited (KY); 254900OW5CGM4QZ2C828 Maaden Gold and Base Metals Company (MGBM) (SA)
+reject	Minera San Cristobal	BOL	0	candidates_only					no GLEIF candidate
+accept	Minsur	PER	7	candidates_only	254900C69MVC7SXO2G61	MINSUR S. A.	PE		no exact match — paste one LEI if right: 254900C69MVC7SXO2G61 MINSUR S. A. (PE)
+accept	Mitsubishi Materials	JPN	0	candidates_only	35380076QOBOSOUBRT89	三菱マテリアル株式会社	JP		no exact match — paste one LEI if right: 5493000VL2IJUFW1KL03 Mitsubishi Materials U.S.A. Corporation (US); 35380076QOBOSOUBRT89 三菱マテリアル株式会社 (JP); 959800YQB7RZU5G5X794 MITSUBISHI MATERIALS ESPAÑA SA (ES) [under 三菱マテリアル株式会社]
+accept	MMG	AUS	5	candidates_only	254900O793GLW134N398	"MMG Australia Limited
+"	AU		no exact match — paste one LEI if right: 254900O793GLW134N398 MMG Australia Limited (AU); 875500PF5X39TSD5SQ50 MMG Dugald River Pty Ltd (AU) [under 五礦資源有限公司]
+reject	NBIM		0	candidates_only					no exact match — paste one LEI if right: 9695005ITM7V45HOOQ08 NBIM XAVIER SPPPICAV (FR); 549300NK0BDP04RPEJ32 NBIM KENDALL LP (US); 969500UAERCN3F305Z42 NBIM CLEMENT OPCI (FR)
+reject	Neptune Energy	GBR	13	candidates_only					no exact match — paste one LEI if right: 549300CPMT8I2QBRYF88 ENI ENERGY BONDCO LIMITED (GB); 213800K5DFMGN4OKTP81 ENI ENERGY FINANCE LIMITED (GB); 213800NAB1BYAOHT3K37 ENI ENERGY GROUP HOLDINGS LIMITED (GB)
+accept	NNPC Limited	NGA	35	candidates_only	9845007375EBB04C6F49	"NIGERIAN NATIONAL PETROLEUM COMPANY LIMITED
+"	NG		no exact match — paste one LEI if right: 0292006506J2O5G9C721 NNPC GAS INFRASTRUCTURE COMPANY LIMITED (NG); 9845007375EBB04C6F49 NIGERIAN NATIONAL PETROLEUM COMPANY LIMITED (NG); 0292001724A0L2AE0A68 TOWER ASSETS MANAGEMENT LIMITED (NG)
+reject	Nordea Group		0	candidates_only					no exact match — paste one LEI if right: 743700VPAG4ID0O2DE37 Väinö ja Laina Kiven Säätiö sr (FI); 54930022SYIK1N0I6B07 Nordea Bank Sveriges Pensionsstiftelse (SE); 743700WV1Z7DF3O88Q78 Nordea Pankki Suomen Maataloussäätiö sr (FI)
+reject	OCP Group		1	candidates_only					no GLEIF candidate
+reject	Orano Mining	FRA	12	candidates_only					no GLEIF candidate
+reject	Pertamina	IDN	0	candidates_only	254900NDAKGNZ2IBBL45	"Pt Pertamina (Persero)
+"	ID		no exact match — paste one LEI if right: 254900X2NUD6BMNZKP36 PT Kilang Pertamina Balikpapan (ID); 2549009CVV6Y7H26NV14 PT. Pertamina Geothermal Energy (ID); 894500V7UOKGFVZTE574 PT Pertamina Patra Niaga (ID)
+reject	Poderosa		1	candidates_only					no exact match — paste one LEI if right: 815600B6B6601DC84C74 LA PODEROSA S.R.L. (IT); 98450041D7E0539X8F62 PODEROSA TRADING PTY LTD (AU); BRQ64VUVCP5MRGM53D87 CIA MINERA PODEROSA S.A. (PE)
+reject	Polyus		0	candidates_only					no exact match — paste one LEI if right: 894500RFKWAGJW0UB774 Polyus Plus OÜ (EE); 213800HCOQ58JPSI1W14 POLYUS CAPITAL PLC (GB); 213800HYXYT461CS2B79 POLYUS FINANCE PLC (GB)
+accept	QatarEnergy	QAT	0	candidates_only	254900QTESJKJ3P87J26	قطر للطاقة	QA		no exact match — paste one LEI if right: 276376SDRVXREI1OYG60 QatarEnergy LNG (QA); 9845006AC7F8090DDB79 قطر للطاقة للتجارة ذ.م.م (QA); 254900QTESJKJ3P87J26 قطر للطاقة (QA)
+reject	Quatar Energy	QAT	4	candidates_only		قطر للطاقة	QA		no GLEIF candidate
+reject	Santos (Previously Oil Search Limited)		0	candidates_only					no GLEIF candidate
+reject	Southern Copper - Peru		0	candidates_only					no exact match — paste one LEI if right: 2549005L971K2B31VO17 SOUTHERN PERU COPPER CORPORATION SUCURSA L DEL PERU (PE)
+reject	SQM		0	candidates_only					no exact match — paste one LEI if right: 724500B85JBKU79X4L49 SQM B.V. (NL); 9845007ND76EC7M4D581 SQM Systems Aktiebolag (SE); 529900RSA7L9JXXNT125 SQM VITAS FZCO (AE)
+reject	Staatsolie	SUR	0	candidates_only	254900R015RJG4RZ5G47	"Staatsolie Maatschappij Suriname N.V.
+"	SR		no exact match — paste one LEI if right: 254900R015RJG4RZ5G47 Staatsolie Maatschappij Suriname N.V. (SR)
+accept	Sumitomo Metal Mining	JPN	5	candidates_only	353800CF81IXL9974H84	"住友金属鉱山株式会社
+"	JP		no exact match — paste one LEI if right: 353800BG240PD3AFJ678 三井住友金属鉱山伸銅株式会社 (JP); 353800CF81IXL9974H84 住友金属鉱山株式会社 (JP)
+accept	Vale	BRA	12	candidates_only	254900SMTWBX7RU2SR20	VALE S.A.	BR		no exact match — paste one LEI if right: 254900SMTWBX7RU2SR20 VALE S.A. (BR); 926900F15E9809763E89 EXPRESSO VALE REAL LTDA (BR); 8945009SLFSBWN6NW496 Agropecuaria Vale das Uvas Ltda (BR)
+reject	Volkswagen Group		0	candidates_only					no exact match — paste one LEI if right: 391200INXHPWJTSG1Z16 Volkswagen Group Energy GmbH (DE) [under Volkswagen Group Charging GmbH]; 391200IK0OYQ5OEL2544 Volkswagen Group Charging GmbH (DE) [under VOLKSWAGEN AKTIENGESELLSCHAFT]; 529900JHYOVGR7RELD21 VOLKSWAGEN GROUP OF AFRICA (ZA) [under VOLKSWAGEN AKTIENGESELLSCHAFT]
+accept	Anglo American	GBR	37	gleif_name_exact	549300S9XF92D1X8ME43	ANGLO AMERICAN PLC	GB		
+accept	AngloGold Ashanti	GBR	16	gleif_name_exact	2138005YDSA7A82RNU96	"ANGLOGOLD ASHANTI PLC
+"	GB		
+accept	ArcelorMittal	LUX	12	gleif_name_exact	2EULGUTUI56JI9SAL165	ArcelorMittal	LU		
+accept	Auxico Resources Canada	CAN	0	gleif_name_exact	213800K3WDBLO2CF4I71	AUXICO RESOURCES CANADA INC.	CA		
+accept	Barrick Gold	CAN	17	gleif_name_exact	0O4KBQCJZX82UKGCBV73	Barrick Mining Corporation	CA		
+accept	BHP	AUS	0	gleif_name_exact	WZE1WSENV6JSZFK0JC28	BHP GROUP LIMITED	AU		
+accept	Boliden	SWE	5	gleif_name_exact	21380059QU7IM1ONDJ56	BOLIDEN AB	SE		
+accept	Capricorn Energy	GBR	9	gleif_name_exact	213800ZJEUQ8ZOC9AL24	CAPRICORN ENERGY PLC	GB		2 exact name matches
+accept	Centerra Gold	CAN	1	gleif_name_exact	549300K0HXTMP5JJ0E62	Centerra Gold Inc.	CA		
+accept	ConocoPhillips	USA	0	gleif_name_exact	WPTL2Z3FIYTHSP5V2253	CONOCOPHILLIPS	US		2 exact name matches
+accept	DPM Metals		0	gleif_name_exact	549300LATVTU0EIUMD45	DPM METALS INC.	CA		
+accept	Endeavour Mining	GBR	34	gleif_name_exact	529900NI5MXQ91GHXR07	ENDEAVOUR MINING PLC	GB		2 exact name matches
+accept	Equinor	NOR	20	gleif_name_exact	OW6OFBNCKXC4US5C7523	EQUINOR ASA	NO		
+accept	ERAMET	FRA	7	gleif_name_exact	549300LUH78PG2MP6N64	ERAMET	FR		
+accept	Freeport-McMoRan	USA	6	gleif_name_exact	549300IRDTHJQ1PVET45	FREEPORT-MCMORAN INC.	US		
+accept	Gold Fields	ZAF	17	gleif_name_exact	5299003KXIBJQYCBBD72	Gold Fields Limited	ZA		
+accept	Hess	USA	9	gleif_name_exact	UASVRYNXNK17ULIGK870	HESS CORPORATION	US		
+accept	Hudbay Minerals	CAN	0	gleif_name_exact	894500LX3TMESP27BE29	Hudbay Minerals Inc.	CA		3 exact name matches
+accept	Inpex	JPN	0	gleif_name_exact	353800VHYYADPR6MXQ47	株式会社INPEX	JP		
+accept	Ivanhoe Mines Ltd.	CAN	37	gleif_name_exact	5299006XZISURYIA4G32	IVANHOE MINES LTD.	CA		
+accept	Kaz Minerals	GBR	0	gleif_name_exact	2138001H9E453FQRFY56	KAZ MINERALS LIMITED	GB		
+accept	Kinross Gold	CAN	2	gleif_name_exact	254900O9KHF2A1ZXPT47	KINROSS GOLD CORPORATION	CA		2 exact name matches
+accept	Kosmos Energy	USA	10	gleif_name_exact	213800YDFJ3OT9B5P157	KOSMOS ENERGY LTD.	US		
+accept	Meren Energy Inc.	CAN	0	gleif_name_exact	549300071188HIDJEB11	MEREN ENERGY INC	CA		
+accept	Newcrest Mining	AUS	1	gleif_name_exact	5299006MN50OZJUJI655	NEWCREST MINING LIMITED	AU		
+accept	Newmont	USA	22	gleif_name_exact	549300VSP3RIX7FGDZ51	NEWMONT CORPORATION	US		
+accept	Noble Energy	USA	0	gleif_name_exact	02VFQXG2D1LR5ZH3K186	"NOBLE ENERGY, INC."	US		
+accept	Norsk Hydro ASA	NOR	0	gleif_name_exact	549300N1SDN71ZZ8BO45	Norsk Hydro ASA	NO		
+accept	OCP S.A.	MAR	0	gleif_name_exact	213800D26TAPVTCVWG40	OCP S.A.	MA		
+accept	Orano	FRA	0	gleif_name_exact	969500161UMNDC85C891	ORANO	FR		
+accept	PetroNor E&P ASA	NOR	8	gleif_name_exact	984500AEEH2D2AK42C11	PETRONOR E&P ASA	NO		
+accept	REPSOL	ESP	81	gleif_name_exact	BSYCX13Y0NOTV14V9N85	REPSOL SA	ES		
+accept	Rio Tinto	GBR	79	gleif_name_exact	213800YOEO5OQ72G2R82	RIO TINTO PLC	GB		
+accept	Savannah Energy PLC	GBR	10	gleif_name_exact	2138002YCJORSFH5YR43	SAVANNAH ENERGY PLC	GB		
+accept	Seplat Energy	NGA	7	gleif_name_exact	029200711C4S4CB2E982	SEPLAT ENERGY PLC	NG		
+accept	Shell Plc	GBR	156	gleif_name_exact	21380068P1DRHMJ8KU70	SHELL PLC	GB		
+accept	Sherritt International	CAN	0	gleif_name_exact	894500XS7ZIJPLHJEF11	Sherritt International Corporation	CA		2 exact name matches
+accept	Sibanye Stillwater	ZAF	3	gleif_name_exact	378900F238434B74D281	Sibanye Stillwater Limited	ZA		
+accept	South32	AUS	13	gleif_name_exact	213800LAZNPXSBKVHR17	SOUTH32 LIMITED	AU		
+accept	Southern Copper	USA	8	gleif_name_exact	2549007U6NAP46Q9TU15	Southern Copper Corporation	US		
+accept	St Barbara Limited	AUS	0	gleif_name_exact	2549001WR6XSXNOD1F93	St Barbara Limited	AU		
+accept	Staatsolie maatschappij Suriname N.V	SUR	7	gleif_name_exact	254900R015RJG4RZ5G47	Staatsolie Maatschappij Suriname N.V.	SR		
+reject	Teck	DEU	0	gleif_name_exact	529900LFQNGMLFK6VW11	TECK GmbH	DE		
+accept	Teck Resources	CAN	3	gleif_name_exact	T8KI5SQ2JRWHL7XY0E11	Teck Resources Limited	CA		
+accept	TotalEnergies SE	FRA	111	gleif_name_exact	529900S21EQ1BO4ESM68	TotalEnergies SE	FR		
+accept	Trafigura Group	SGP	12	gleif_name_exact	549300HJ8VS88NIO3006	TRAFIGURA GROUP PTE. LTD.	SG		
+accept	TULLOW OIL	GBR	33	gleif_name_exact	2138003EYHWO75RKS857	TULLOW OIL PLC	GB		
+reject	Africa Oil Corp	GBR	5	published_lei	549300071188HIDJEB11	MEREN ENERGY INC	CA		
+accept	African Rainbow Minerals	ZAF	0	published_lei	529900L3TPSCK8ZVZ589	AFRICAN RAINBOW MINERALS	ZA		
+accept	Alcoa	USA	2	published_lei	549300T12EZ1F6PWWU29	ALCOA CORPORATION	US		

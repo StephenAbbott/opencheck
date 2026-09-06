@@ -8559,3 +8559,162 @@ def _eiti_bo_map_nigeria(
             source_url=source_url,
             statement_date=statement_date,
         )
+
+
+# ==========================================================================
+# EITI Company Assessment (eiti_assessment) → BODS v0.4
+# ==========================================================================
+
+
+def map_eiti_assessment(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map an EITI Company Assessment bundle to BODS v0.4 statements.
+
+    Emits **one entity statement for the subject company and nothing else** —
+    following the Wikirate and TED precedent that a source describing something
+    other than ownership or control emits no person or relationship statements.
+    What EITI assesses here is a company's *disclosure posture*: whether it says
+    it discloses its beneficial owners, and whether it publishes a subsidiary
+    list. Neither is an ownership assertion, so neither becomes a relationship.
+
+    .. important::
+       **The declared subsidiaries are deliberately not mapped.** EITI publishes
+       1,230 parent→child rows as free-text names with no identifier, no
+       percentage and no share class. Emitting them as entity and relationship
+       statements would assert that OpenCheck has identified those companies,
+       which it has not — matching 1,230 free-text names is a different problem
+       from the ~99 parents, and one this adapter does not attempt. They are
+       rendered as evidence on the Climate & ESG card and stay out of the
+       graph. ``tests/test_eiti_assessment.py::test_subsidiaries_never_enter_bods``
+       pins this; widening it should require editing that test, deliberately.
+
+    Identifier corroboration: **no identifiers are asserted at all.** The LEI is
+    OpenCheck-derived (bars it under the corroboration rule); EITI's
+    ``legal_entity_id`` is populated for 3 companies of 10,116; and its
+    ``eiti_id_company`` is a UUIDv5 over a name-derived key that EITI
+    regenerated wholesale when this database launched, so it is a deduplication
+    key rather than a registry number. See ``sources/eiti_assessment.py``.
+
+    No ``jurisdiction`` either. EITI publishes a headquarters country, which is
+    not the jurisdiction of incorporation — asserting one as the other would be
+    a guess dressed as a fact, and several of these companies are incorporated
+    somewhere other than where they are headquartered.
+
+    The beneficial ownership assessment rides as a ``commenting`` annotation
+    rather than a field: BODS has no place to record "a third party assessed
+    this company's disclosure of its owners", and inventing one would misuse
+    the schema. The annotation states who assessed, in which year, and what
+    they concluded, in EITI's own words.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return
+
+    lei: str = (bundle.get("lei") or "").strip().upper()
+    name: str = (bundle.get("name") or "").strip()
+    if not lei or not name:
+        return
+
+    stmt = make_entity_statement(
+        source_id="eiti_assessment",
+        # Keyed on the LEI because it is the only stable handle this record
+        # has — but note this is the statement's *local id*, not an asserted
+        # identifier: nothing is added to `identifiers`.
+        local_id=lei,
+        name=name,
+        identifiers=[],
+        source_url="https://eiti-database.eiti.org/",
+    )
+
+    annotations: list[dict[str, Any]] = []
+
+    year = _eiti_assessment_latest_year(bundle)
+    if year:
+        exp6 = ((bundle.get("assessments") or {}).get(year) or {}).get("exp_6") or {}
+        result = (exp6.get("result") or "").strip()
+        if result:
+            # EITI's wording is passed through verbatim. "Not available" means
+            # EITI did not assess, which is not the same as a company failing,
+            # and paraphrasing the two into one phrase would state something
+            # untrue about whichever company got the other.
+            annotations.append(
+                commenting(
+                    "/",
+                    (
+                        f"EITI Company Assessment {year}, expectation 6 "
+                        f"(company discloses beneficial ownership): {result}. "
+                        "An assessment of the company's disclosure, not a "
+                        "statement of its beneficial ownership."
+                    ),
+                )
+            )
+
+        exp2 = ((bundle.get("assessments") or {}).get(year) or {}).get("exp_2") or {}
+        declared = bundle.get("subsidiaries") or []
+        if declared:
+            countries = sorted({
+                (s.get("country") or "").strip()
+                for s in declared
+                if (s.get("country") or "").strip()
+            })
+            where = (
+                f" across {len(countries)} EITI implementing countries"
+                if len(countries) > 1
+                else ""
+            )
+            annotations.append(
+                commenting(
+                    "/",
+                    (
+                        f"Declared {len(declared)} controlled subsidiaries to "
+                        f"EITI{where} ({year}). Names only — EITI publishes no "
+                        "identifier for them, so they are not mapped as "
+                        "statements and do not appear in this graph."
+                    ),
+                )
+            )
+        elif (exp2.get("result") or "").strip():
+            annotations.append(
+                commenting(
+                    "/",
+                    (
+                        f"EITI Company Assessment {year}, expectation 2 "
+                        f"(company publishes a list of controlled "
+                        f"subsidiaries): {exp2['result'].strip()}. No list is "
+                        "carried in the EITI data for this company."
+                    ),
+                )
+            )
+
+    # The matched GLEIF name, when it differs from the name EITI uses. Several
+    # supporting companies have no LEI of their own and are anchored on the only
+    # LEI-bearing entity in the group (Chevron Corporation → Chevron U.S.A.
+    # Inc.); a statement that showed one silently as the other would misstate
+    # which legal entity this record is about.
+    matched = ((bundle.get("match") or {}).get("gleif_legal_name") or "").strip()
+    if matched and _norm_for_compare(matched) != _norm_for_compare(name):
+        annotations.append(
+            commenting(
+                "/",
+                (
+                    f"EITI names this supporting company \u201c{name}\u201d. "
+                    f"OpenCheck resolved it to the LEI of \u201c{matched}\u201d, "
+                    "reviewed by hand. Where the two differ, the EITI record "
+                    "describes the corporate group and the LEI identifies one "
+                    "legal entity within it."
+                ),
+            )
+        )
+
+    if annotations:
+        annotate(stmt, *annotations)
+    yield stmt
+
+
+def _eiti_assessment_latest_year(bundle: dict[str, Any]) -> str | None:
+    """Most recent assessment year in the bundle, as a string, or None."""
+    years = [y for y in (bundle.get("assessments") or {}) if str(y).strip()]
+    return max(years, key=lambda y: (len(y), y)) if years else None
+
+
+def _norm_for_compare(value: str) -> str:
+    """Loose name comparison for 'did the matched name differ' only."""
+    return "".join(ch for ch in (value or "").lower() if ch.isalnum())

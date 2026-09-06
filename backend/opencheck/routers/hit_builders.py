@@ -761,3 +761,33 @@ def _bh_wikirate(r: dict, ctx: _LookupCtx) -> SourceHit:
         identifiers=identifiers,
         raw=r,
     )
+
+
+def _bh_eiti_assessment(r: dict, ctx: _LookupCtx) -> SourceHit:
+    """Hit row for the EITI Company Assessment.
+
+    Corroboration rule: **nothing is asserted.** The LEI is OpenCheck-derived,
+    EITI's ``legal_entity_id`` is populated for 3 companies of 10,116, and its
+    ``eiti_id_company`` is a name-derived deduplication key that EITI
+    regenerated wholesale in this release — so there is no identifier here that
+    OpenCheck could honestly claim the source published.
+    """
+    from ..findings import finding_eiti_assessment
+
+    country = (r.get("hq_country") or "").strip()
+    subs = r.get("subsidiaries") or []
+    parts: list[str] = []
+    if country:
+        parts.append(country)
+    parts.append("EITI supporting company")
+    if subs:
+        parts.append(f"{len(subs)} declared subsidiaries")
+
+    return _hit(
+        "eiti_assessment", ctx.lei,
+        name=r.get("name") or ctx.legal_name or ctx.lei,
+        summary=" · ".join(parts),
+        finding=finding_eiti_assessment(r),
+        identifiers={},
+        raw=r,
+    )

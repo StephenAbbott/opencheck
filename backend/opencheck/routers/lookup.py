@@ -75,6 +75,7 @@ from .hit_builders import (  # noqa: F401
     _bh_bolagsverket,
     _bh_brreg,
     _bh_cac_nigeria,
+    _bh_eiti_assessment,
     _bh_climatetrace,
     _bh_cnpj_brazil,
     _bh_companies_house,
@@ -783,6 +784,19 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
         and _offline_index_covers(eiti_bo_adapter, ctx.lei)
     ):
         tasks.append(("eiti_bo", eiti_bo_adapter.fetch_by_lei(ctx.lei)))
+    # EITI Company Assessment — LEI-keyed offline match against the committed
+    # snapshot of EITI's assessment of its supporting companies. A hit means
+    # the LEI is one of the ~99 companies EITI assesses; the bundle carries
+    # its beneficial-ownership DISCLOSURE assessment and its declared
+    # subsidiary list. Neither is ownership data and neither raises a signal.
+    eiti_assess_adapter = REGISTRY.get("eiti_assessment")
+    if (
+        eiti_assess_adapter is not None
+        and hasattr(eiti_assess_adapter, "fetch_by_lei")
+        and _want("eiti_assessment")
+        and _offline_index_covers(eiti_assess_adapter, ctx.lei)
+    ):
+        tasks.append(("eiti_assessment", eiti_assess_adapter.fetch_by_lei(ctx.lei)))
     # TED keys on the GLEIF anchor's identifiers (LEI + registeredAs + derived
     # national numbers) — eForms BT-501 values are national registration
     # numbers today (LEI fill rate is zero as of 2026-08), so this matches any
@@ -821,6 +835,10 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
         return _bh_eiti_soe(result, ctx) if result.get("is_state_owned") else None
     if source_id == "cac_nigeria":
         return _bh_cac_nigeria(result, ctx) if result.get("record") else None
+    if source_id == "eiti_assessment":
+        # A bundle with no assessment years is not a hit: the company is in
+        # the index but EITI recorded nothing about it.
+        return _bh_eiti_assessment(result, ctx) if result.get("assessments") else None
     if source_id == "eiti_bo":
         return _bh_eiti_bo(result, ctx) if result.get("record") else None
     if source_id == "wikirate":
