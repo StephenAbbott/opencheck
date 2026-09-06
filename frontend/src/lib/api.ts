@@ -1061,29 +1061,6 @@ export async function fetchNarrative(
 }
 
 /**
- * Look for a pre-baked narrative for a curated example, served as a static
- * file from the frontend's own origin (`/curated-narratives/<lei>.json`). These
- * are generated offline so curated examples show an instant, cited summary with
- * no model call. Returns null when there's no cached file (the normal case for
- * live lookups), so the panel falls back to the on-demand "Generate" button.
- */
-export async function fetchCuratedNarrative(
-  lei: string,
-): Promise<NarrativeResponse | null> {
-  try {
-    const r = await fetch(`/curated-narratives/${encodeURIComponent(lei)}.json`, {
-      headers: { Accept: "application/json" },
-    });
-    if (!r.ok) return null;
-    const ct = r.headers.get("Content-Type") ?? "";
-    if (!ct.includes("json")) return null; // a SPA 404 may return index.html
-    return (await r.json()) as NarrativeResponse;
-  } catch {
-    return null;
-  }
-}
-
-/**
  * POST a report-export request and trigger the browser download of the
  * response. Shared by the PDF and Markdown report downloads — same request
  * body, different route/extension. Throws with the backend detail on failure.
