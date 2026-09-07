@@ -328,15 +328,16 @@ class GleifAdapter(SourceAdapter):
         Phase 143's last line of degradation before a lookup fails outright:
         when live GLEIF is rate-limiting and no cache entry (fresh or stale)
         exists, serve the anchor from the same local snapshot the ``/entity``
-        pages are rendered from. It carries what the store holds — legal name,
-        statuses, jurisdiction, address, direct/ultimate parent LEIs (with
-        names when the store has those rows), and the first page of direct
-        children with GLEIF's exact total. What the store does NOT hold —
-        ``registeredAs``/``registeredAt``, parent reporting exceptions, the
-        cross-reference ids — is simply absent, so the registry bridges and
-        exception chips quietly skip for this lookup rather than being guessed
-        at. Provenance is recorded as ``snapshot`` with the Golden Copy publish
-        date, so every statement mapped from this bundle says what it is.
+        pages are rendered from. It carries what the store holds — since
+        Phase 178 that is the full Level 1 record (names, both addresses,
+        ``registeredAs``/``registeredAt``, category, legal form, dates),
+        direct/ultimate parent records, the reporting exceptions filed in
+        their place, and the first page of direct children with the store's
+        total. On a pre-178 file the detail, exceptions and cross-reference
+        ids are simply absent, so the registry bridges and exception chips
+        quietly skip for this lookup rather than being guessed at. Provenance
+        is recorded as ``snapshot`` with the Golden Copy publish date, so every
+        statement mapped from this bundle says what it is.
         """
         from ..entity_pages import get_store, gleif_record_from_row
 
@@ -365,6 +366,18 @@ class GleifAdapter(SourceAdapter):
 
         children_rows, children_total = store.children(lei, limit=100)
 
+        # Phase 178: the store now holds the REPEX file, so a subject with no
+        # parent of a kind can carry the reporting exception it filed — the
+        # bridge statements and the Phase 114 chip work exactly as they do
+        # live. On a v1 file `exceptions()` is empty and nothing is claimed.
+        exceptions = store.exceptions(lei)
+
+        def _exception(kind: str, parent: dict[str, Any] | None) -> dict[str, Any] | None:
+            if parent is not None:
+                return None
+            row_ = exceptions.get(kind)
+            return row_.record() if row_ is not None else None
+
         built_at: datetime | None = None
         publish = (store.meta().get("source_publish_date") or "")[:10]
         if publish:
@@ -378,14 +391,16 @@ class GleifAdapter(SourceAdapter):
             built_at, "GLEIF Golden Copy snapshot (live API rate-limited)"
         )
 
+        direct_parent = _parent(row.direct_parent_lei)
+        ultimate_parent = _parent(row.ultimate_parent_lei)
         return {
             "source_id": self.id,
             "lei": lei,
             "record": _record(row),
-            "direct_parent": _parent(row.direct_parent_lei),
-            "ultimate_parent": _parent(row.ultimate_parent_lei),
-            "direct_parent_exception": None,
-            "ultimate_parent_exception": None,
+            "direct_parent": direct_parent,
+            "ultimate_parent": ultimate_parent,
+            "direct_parent_exception": _exception("direct", direct_parent),
+            "ultimate_parent_exception": _exception("ultimate", ultimate_parent),
             "direct_children": [_record(r) for r in children_rows],
             "direct_children_total": children_total,
             # Not a schema field (extra="allow") — lets tests and logs tell a
