@@ -23,6 +23,7 @@ import pycountry
 from .. import names as _names_mod
 from .. import provenance as _provenance
 from ..elf import resolve_elf
+from ..identifiers import ch_identification_is_uk, normalise_ch_company_number
 from . import liveness as _liveness
 from .annotations import annotate, commenting, pointer, transformation
 from .ch_constants import describe_company_type, describe_officer_role
@@ -490,17 +491,17 @@ def _emit_company_statements(
         if "corporate-entity" in psc_kind or "legal-person" in psc_kind:
             # Detect UK CH registration numbers so the entity statementId
             # produced here aligns with the statementId the related-company
-            # pass emits for the same company (both use local_id = reg_no).
+            # pass emits for the same company (both use local_id = the
+            # canonical eight-character number). Phase 177: the filed number
+            # is normalised first — PSC filings drop leading zeros
+            # (``2999029``), and the adapter now keys ``related_companies`` on
+            # the normalised form, so the two sides must agree on it. The same
+            # predicate and normaliser the adapter uses; a second copy of the
+            # gate is how the old one survived.
             ident = psc.get("identification") or {}
-            reg_no = (ident.get("registration_number") or "").strip()
-            reg_country = (ident.get("country_registered") or "").lower().strip()
             uk_number = (
-                reg_no
-                if (
-                    len(reg_no) == 8
-                    and reg_no.isalnum()
-                    and reg_country in _CH_UK_COUNTRY_STRINGS
-                )
+                normalise_ch_company_number(ident.get("registration_number"))
+                if ch_identification_is_uk(ident)
                 else None
             )
             ip = _map_corporate_psc(number, psc, company_url, uk_number=uk_number)
@@ -851,7 +852,12 @@ def _map_corporate_psc(
     """
     identification = psc.get("identification") or {}
     identifiers: list[dict[str, str]] = []
-    reg_number = identification.get("registration_number")
+    # Publish the canonical Companies House number (``02999029``) rather than
+    # the filed spelling (``2999029``): GB-COH is defined as the eight-character
+    # form, GLEIF's ``registeredAs`` carries it that way, and the reconciler
+    # merges on it — a dropped leading zero would leave the same company as
+    # two nodes. The filed text is still on the raw PSC record.
+    reg_number = uk_number or identification.get("registration_number")
     reg_country = identification.get("country_registered")
     if reg_number:
         alpha2 = _country_code(reg_country)

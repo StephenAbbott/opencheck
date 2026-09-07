@@ -279,3 +279,98 @@ def national_id_checksum_warning(country: str, number: str) -> str | None:
         f"{num!r} fails the {label} check digit — the number may be "
         "mistyped, so an empty result is expected."
     )
+
+
+# --- UK Companies House numbers, as filed in PSC identification blocks ------
+#
+# Phase 177. A Companies House number is eight characters: either eight
+# digits (``00070274``) or a two-letter prefix plus six digits (``SC123456``,
+# ``OC403762``, ``NI012345``). The register itself always keys on that form,
+# but a PSC filing's ``identification.registration_number`` is free text the
+# filer typed, and leading zeros are routinely dropped: Vosper Thornycroft
+# (UK) Limited's two corporate PSCs are filed as ``2999029`` and ``1915771``
+# (live PSC API, 2026-09-07), and the chain above them keeps the habit
+# (``2669327``). Anything that gates on "exactly 8 alphanumerics" treats
+# every one of those as a foreign or unparseable registrant and silently
+# stops walking the chain — which is why a subject with six UK holding
+# layers above it rendered as two upward nodes.
+
+_CH_NUMBER_SHAPE = re.compile(r"^([A-Z]{0,2})([0-9]{1,8})$")
+_CH_NUMBER_LEN = 8
+
+# Strings Companies House PSC filings use in ``country_registered`` /
+# ``place_registered`` / ``legal_authority`` to mean the UK register. Free
+# text, so matched as substrings of a lower-cased value. "New South Wales"
+# (an Australian registrant) contains "wales" and is excluded explicitly.
+_CH_UK_HINTS: tuple[str, ...] = (
+    "united kingdom",
+    "great britain",
+    "england",
+    "scotland",
+    "wales",
+    "northern ireland",
+    "companies house",
+)
+_CH_UK_SHORT: frozenset[str] = frozenset({"gb", "uk", "u.k.", "u.k", "britain"})
+_CH_NOT_UK: tuple[str, ...] = ("new south wales",)
+
+
+def normalise_ch_company_number(value: object) -> str | None:
+    """The canonical eight-character Companies House number for a filed
+    registration number, or ``None`` when the value cannot be one.
+
+    Accepts the shapes filers actually produce: digits with dropped leading
+    zeros (``2999029`` → ``00070274``-style ``02999029``), a lower-case or
+    spaced prefix (``sc 12345`` → ``SC012345``), and the canonical form
+    unchanged. Rejects anything longer than eight characters once
+    normalised, a prefix without digits, non-alphanumerics, and bare words
+    (``Uk``) — those are the residue the adapter reports rather than guesses
+    about.
+    """
+    if value is None:
+        return None
+    raw = str(value).strip().upper().replace(" ", "")
+    if not raw:
+        return None
+    m = _CH_NUMBER_SHAPE.match(raw)
+    if m is None:
+        return None
+    prefix, digits = m.group(1), m.group(2)
+    width = _CH_NUMBER_LEN - len(prefix)
+    if len(digits) > width:
+        return None
+    return f"{prefix}{digits.zfill(width)}"
+
+
+def ch_identification_is_uk(identification: dict | None) -> bool:
+    """True when a PSC ``identification`` block says the registrant is on the
+    UK register — by ``country_registered`` first, then ``place_registered``
+    and ``legal_authority`` when the country is blank or uninformative.
+
+    The values are free text: ``England``, ``United Kingdom``, ``England And
+    Wales``, ``Great Britain``, ``Uk``, ``United Kingdom (England)`` all
+    occur, and so do ``Companies House`` in ``place_registered`` with an
+    empty country. Crown Dependencies (Jersey, Guernsey, Isle of Man) and
+    ``New South Wales`` are not the UK register and return ``False``.
+    """
+    if not identification:
+        return False
+
+    def _norm(key: str) -> str:
+        return str(identification.get(key) or "").strip().lower()
+
+    country = _norm("country_registered")
+    if country:
+        if country in _CH_UK_SHORT:
+            return True
+        if any(bad in country for bad in _CH_NOT_UK):
+            return False
+        return any(hint in country for hint in _CH_UK_HINTS)
+    # No country filed: fall back to where it says it is registered.
+    for key in ("place_registered", "legal_authority"):
+        text = _norm(key)
+        if not text or any(bad in text for bad in _CH_NOT_UK):
+            continue
+        if text in _CH_UK_SHORT or any(hint in text for hint in _CH_UK_HINTS):
+            return True
+    return False
