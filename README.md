@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 176** — FollowTheMoney aliases, former names and short forms now become BODS names — untyped `alternateNames` on entities, typed `names[]` entries on people — and the screening layer keeps reading the legal name.
+**Latest: Phase 177** — UK corporate-PSC chains are now followed as filed: registration numbers with dropped leading zeros are normalised before the walk, the walk goes six hops by default instead of a hard-coded three, and every parent it does not follow is listed with a reason instead of passing for the top of the structure.
 
 → [Full development history](docs/status.md)
 

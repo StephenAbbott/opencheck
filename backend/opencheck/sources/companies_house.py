@@ -20,14 +20,17 @@ free and deterministic.
 from __future__ import annotations
 
 import hashlib
+import logging
 from typing import Any
 from urllib.parse import quote
 
 import httpx
 
+from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
+from ..identifiers import ch_identification_is_uk, normalise_ch_company_number
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.companies_house import CHBundle, CHOfficerBundle
@@ -35,18 +38,59 @@ from .schemas.companies_house import CHBundle, CHOfficerBundle
 _API_BASE = "https://api.company-information.service.gov.uk"
 _CACHE_NS = "companies_house"
 
-# Country strings that Companies House uses in PSC identification blocks to
-# indicate a UK-registered entity.  Used to detect corporate PSCs that can
-# be followed up the chain with another CH API call.
-_UK_COUNTRY_STRINGS: frozenset[str] = frozenset({
-    "united kingdom", "england", "scotland", "wales", "northern ireland", "gb", "uk",
-})
+log = logging.getLogger(__name__)
+
+# Phase 177: an upper bound on how many related companies one lookup will
+# pull in, whatever the depth. A holding stack is a chain, so this is rarely
+# approached; it exists so a subject with several corporate PSCs per layer
+# cannot turn one lookup into an unbounded crawl of the register.
+_MAX_RELATED_COMPANIES = 25
+
+# Why a corporate PSC was not followed up the chain. Carried on the bundle
+# (``unfollowed_pscs``) so the report can say the chain is truncated by what
+# was filed, not by where the structure ends; the two register-side reasons
+# are also recorded as degradation so the coverage line reflects them.
+_SKIP_NOT_UK = "not_uk_registered"
+_SKIP_BAD_NUMBER = "registration_number_not_a_company_number"
+_SKIP_DEPTH = "max_depth_reached"
+_SKIP_CAP = "related_companies_cap_reached"
+_SKIP_FETCH_FAILED = "fetch_failed"
 
 
 def _slug(text: str) -> str:
     """Cache-safe slug for a free-text query."""
     digest = hashlib.sha256(text.lower().strip().encode("utf-8")).hexdigest()[:16]
     return digest
+
+
+def _note_unfollowed(
+    unfollowed: list[dict[str, Any]],
+    subject_number: str,
+    psc: dict[str, Any],
+    reason: str,
+) -> None:
+    """Record a corporate PSC the walk did not follow, with the filed
+    particulars and the reason, and log it so the residue is countable."""
+    ident = psc.get("identification") or {}
+    filed = (ident.get("registration_number") or "").strip()
+    unfollowed.append(
+        {
+            "subject_company_number": subject_number,
+            "name": psc.get("name"),
+            "registration_number": filed,
+            "country_registered": ident.get("country_registered"),
+            "place_registered": ident.get("place_registered"),
+            "reason": reason,
+        }
+    )
+    log.info(
+        "companies_house: corporate PSC of %s not followed (%s): "
+        "registration_number=%r country_registered=%r",
+        subject_number,
+        reason,
+        filed,
+        ident.get("country_registered"),
+    )
 
 
 def _looks_like_company_number(value: str) -> bool:
@@ -144,12 +188,63 @@ class CompaniesHouseAdapter(SourceAdapter):
     async def _fetch_company_bundle(self, number: str) -> dict[str, Any]:
         visited: set[str] = set()
         related: dict[str, dict[str, Any]] = {}
+        unfollowed: list[dict[str, Any]] = []
+        max_depth = max(0, int(get_settings().ch_psc_max_depth))
         root = await self._fetch_company_data(
-            number, visited=visited, related=related, depth=0
+            number,
+            visited=visited,
+            related=related,
+            unfollowed=unfollowed,
+            depth=0,
+            max_depth=max_depth,
         )
         root["related_companies"] = related
+        root["unfollowed_pscs"] = unfollowed
+        self._record_unfollowed(unfollowed, max_depth)
         validate_raw("companies_house", CHBundle, root)
         return root
+
+    @staticmethod
+    def _record_unfollowed(unfollowed: list[dict[str, Any]], max_depth: int) -> None:
+        """Turn the register-side reasons a chain was cut short into degradation
+        notes (count-free, name-free — the bundle carries the particulars).
+
+        A non-UK registrant is not a degradation: Companies House does not hold
+        it, and the report's jurisdiction chips already say so. A filed number
+        that is not a company number, the depth cap and the fan-out cap are
+        OpenCheck's limits, so they are reported as such.
+        """
+        reasons = {u["reason"] for u in unfollowed}
+        if _SKIP_BAD_NUMBER in reasons:
+            degradation.record(
+                "companies_house",
+                (
+                    "a corporate PSC filed as UK-registered carries a registration "
+                    "number that is not a Companies House number, so the chain "
+                    "above it was not followed"
+                ),
+            )
+        if _SKIP_DEPTH in reasons:
+            degradation.record(
+                "companies_house",
+                (
+                    f"the UK corporate-PSC chain was followed to the configured "
+                    f"depth of {max_depth} hops and further layers exist above it"
+                ),
+            )
+        if _SKIP_CAP in reasons:
+            degradation.record(
+                "companies_house",
+                (
+                    f"the UK corporate-PSC chain was capped at "
+                    f"{_MAX_RELATED_COMPANIES} related companies per lookup"
+                ),
+            )
+        if _SKIP_FETCH_FAILED in reasons:
+            degradation.record(
+                "companies_house",
+                "a UK corporate PSC's own register record could not be fetched",
+            )
 
     async def _fetch_company_data(
         self,
@@ -157,15 +252,25 @@ class CompaniesHouseAdapter(SourceAdapter):
         *,
         visited: set[str],
         related: dict[str, dict[str, Any]],
+        unfollowed: list[dict[str, Any]],
         depth: int,
-        max_depth: int = 3,
+        max_depth: int,
     ) -> dict[str, Any]:
         """Recursively fetch a company bundle, following UK corporate PSC chains.
 
-        Up to *max_depth* hops are followed. Already-visited company numbers
-        are skipped to break cycles. Only active (not ``ceased_on``) corporate
-        / legal-person PSCs with a UK Companies House registration number are
-        followed.
+        Up to *max_depth* hops are followed (``OPENCHECK_CH_PSC_MAX_DEPTH``,
+        default 6). Already-visited company numbers are skipped to break
+        cycles. Only active (not ``ceased_on``) corporate / legal-person PSCs
+        whose identification block says the UK register are followed, and
+        their filed ``registration_number`` is normalised to the canonical
+        eight-character Companies House number first — PSC filings routinely
+        drop leading zeros (``2999029`` for ``02999029``), and until Phase
+        177 that shape failed an "exactly 8 characters" gate, so the walk
+        silently stopped at the first hop.
+
+        Every corporate PSC that is *not* followed is appended to
+        ``unfollowed`` with a reason, so the truncation is visible rather than
+        indistinguishable from the top of the structure.
         """
         visited.add(number)
         profile = await self._get(
@@ -193,35 +298,56 @@ class CompaniesHouseAdapter(SourceAdapter):
             else:
                 raise
 
-        if depth < max_depth:
-            for psc in pscs.get("items") or []:
-                if psc.get("ceased_on"):
-                    continue
-                kind = (psc.get("kind") or "").lower()
-                if "corporate" not in kind and "legal-person" not in kind:
-                    continue
-                ident = psc.get("identification") or {}
-                reg_no = (ident.get("registration_number") or "").strip()
-                reg_country = (ident.get("country_registered") or "").lower().strip()
-                if (
-                    not _looks_like_company_number(reg_no)
-                    or reg_country not in _UK_COUNTRY_STRINGS
-                    or reg_no in visited
-                    or reg_no in related
-                ):
-                    continue
-                # Only recurse if we have cached data or live is available.
-                sub_key = f"{_CACHE_NS}/company/{reg_no}"
-                if not self.info.live_available and not self._cache.has(sub_key):
-                    continue
+        for psc in pscs.get("items") or []:
+            if psc.get("ceased_on"):
+                continue
+            kind = (psc.get("kind") or "").lower()
+            if "corporate" not in kind and "legal-person" not in kind:
+                continue
+            ident = psc.get("identification") or {}
+            filed = (ident.get("registration_number") or "").strip()
+
+            if not ch_identification_is_uk(ident):
+                _note_unfollowed(unfollowed, number, psc, _SKIP_NOT_UK)
+                continue
+            reg_no = normalise_ch_company_number(filed)
+            if reg_no is None:
+                _note_unfollowed(unfollowed, number, psc, _SKIP_BAD_NUMBER)
+                continue
+            if reg_no in visited or reg_no in related:
+                continue  # a cycle or a shared parent: already in the bundle
+            if depth >= max_depth:
+                _note_unfollowed(unfollowed, number, psc, _SKIP_DEPTH)
+                continue
+            if len(related) >= _MAX_RELATED_COMPANIES:
+                _note_unfollowed(unfollowed, number, psc, _SKIP_CAP)
+                continue
+            # Only recurse if we have cached data or live is available.
+            sub_key = f"{_CACHE_NS}/company/{reg_no}"
+            if not self.info.live_available and not self._cache.has(sub_key):
+                continue
+            try:
                 sub = await self._fetch_company_data(
                     reg_no,
                     visited=visited,
                     related=related,
+                    unfollowed=unfollowed,
                     depth=depth + 1,
                     max_depth=max_depth,
                 )
-                related[reg_no] = sub
+            except httpx.HTTPError as exc:
+                # A parent whose record 404s (a mis-filed number that still
+                # normalised) or a transient failure must not sink the
+                # subject's own bundle; the gap is recorded instead.
+                log.warning(
+                    "companies_house: could not fetch related company %s (PSC of %s): %s",
+                    reg_no,
+                    number,
+                    exc,
+                )
+                _note_unfollowed(unfollowed, number, psc, _SKIP_FETCH_FAILED)
+                continue
+            related[reg_no] = sub
 
         return {
             "source_id": self.id,

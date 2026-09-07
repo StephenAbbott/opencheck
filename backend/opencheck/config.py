@@ -230,6 +230,13 @@ class Settings(BaseSettings):
     companies_house_history_api_key: str | None = Field(
         default=None, alias="COMPANIES_HOUSE_HISTORY_API_KEY"
     )
+    # Phase 177: how many hops of UK corporate-PSC chain the Companies House
+    # adapter follows above the subject (each hop is four register calls:
+    # profile, officers, PSCs, PSC statements). The 2025 UK PSC bulk shows
+    # six-layer holding stacks are ordinary (Vosper Thornycroft → Babcock
+    # International is six), so the old hard-coded 3 truncated real chains.
+    # Well within Companies House's 600 requests / 5 min per key.
+    ch_psc_max_depth: int = Field(default=6, alias="OPENCHECK_CH_PSC_MAX_DEPTH")
     # New Zealand NZBN API (Companies Office / MBIE) subscription key.
     nzbn_api_key: str | None = Field(default=None, alias="NZBN_API_KEY")
     # New Zealand Companies Entity Role Search API — separate subscription key,

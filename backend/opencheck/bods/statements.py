@@ -671,8 +671,14 @@ class BODSBundle:
 
 # Country strings Companies House uses in PSC identification blocks to
 # indicate a UK-registered entity (mirrors the set in the CH source adapter).
+# Kept for re-export; the mapper and the adapter now gate on
+# ``identifiers.ch_identification_is_uk`` (Phase 177), which also accepts the
+# free-text variants filers actually use ("England And Wales", "Great
+# Britain", "United Kingdom (England)") and a blank country with
+# ``place_registered`` "Companies House".
 _CH_UK_COUNTRY_STRINGS: frozenset[str] = frozenset({
     "united kingdom", "england", "scotland", "wales", "northern ireland", "gb", "uk",
+    "great britain", "england and wales", "england & wales",
 })
 
 
