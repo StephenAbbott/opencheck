@@ -868,3 +868,69 @@ def test_libcovebods_prh_finland():
         "is_stub": False,
     }
     assert_valid(map_prh(bundle), "PRH Finland")
+
+
+def test_libcovebods_ftm_entity_with_alternate_names():
+    """Phase 176 — an FtM entity carrying a source's aliases still validates.
+
+    `alternateNames` is `array[string]` in the schema, so the risk is not the
+    field itself but what we put in it: empty strings, or the array present
+    but empty when a record has no aliases.
+    """
+    from opencheck.bods.mapper import map_ftm
+    bundle = map_ftm(
+        {
+            "id": "NK-ent",
+            "schema": "Company",
+            "caption": "Test Co",
+            "properties": {
+                "name": ["Test Co", "Test Company Limited"],
+                "alias": ["Testco"],
+                "previousName": ["Test Holdings"],
+                "abbreviation": ["TC"],
+                "jurisdiction": ["gb"],
+            },
+        },
+        source_id="opensanctions",
+        source_url_builder=lambda i: f"https://www.opensanctions.org/entities/{i}/",
+    )
+    assert_valid(bundle, "FtM entity with alternateNames")
+
+
+def test_libcovebods_ftm_person_with_typed_names():
+    """The typed half: every `names[].type` must be in the v0.4 nameType
+    codelist (`legal`, `translation`, `transliteration`, `former`,
+    `alternative`, `birth`). An invented code — `individual`, say, which is
+    not in the codelist however often it is quoted — would be caught here.
+
+    This one cannot use `assert_valid`, because an FtM-mapped *person* already
+    trips one additional check on `main`, with or without names:
+    `person_identifiers_invalid_composition`, raised for the OPENSANCTIONS
+    scheme on a person identifier. That is pre-existing and out of scope here
+    (verified by mapping the same payload with no aliases), so it is asserted
+    exactly rather than waved past — if it is ever fixed, this test fails and
+    asks to be updated."""
+    from opencheck.bods.mapper import map_ftm
+    bundle = map_ftm(
+        {
+            "id": "NK-per",
+            "schema": "Person",
+            "caption": "Jane Smith",
+            "properties": {
+                "name": ["Jane Smith"],
+                "alias": ["Janie"],
+                "previousName": ["Jane Doe"],
+                "nationality": ["gb"],
+            },
+        },
+        source_id="opensanctions",
+        source_url_builder=lambda i: f"https://www.opensanctions.org/entities/{i}/",
+    )
+    report = validate_bods_statements(_to_list(bundle))
+    assert report["json_errors"] == [], report["json_errors"]
+    assert [e["type"] for e in report["additional_errors"]] == [
+        "person_identifiers_invalid_composition"
+    ], report["additional_errors"]
+
+    names = _to_list(bundle)[0]["recordDetails"]["names"]
+    assert [n["type"] for n in names] == ["legal", "alternative", "former"]

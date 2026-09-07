@@ -385,6 +385,7 @@ def make_person_statement(
     birth_date: str | None = None,
     addresses: Iterable[dict[str, str]] = (),
     identifiers: Iterable[dict[str, str]] = (),
+    other_names: Iterable[tuple[str, str]] = (),
     source_url: str | None = None,
     publication_date: str | None = None,
     statement_date: str | None = None,
@@ -393,12 +394,30 @@ def make_person_statement(
     statement_id = _stable_id(source_id, "person", local_id)
     record_id = statement_id  # see make_entity_statement for reasoning
 
+    # The legal name stays at index 0. Readers that pick "the person's name"
+    # should ask for the type (they now do — see cross_check._person_full_name),
+    # but until every one of them does, order is what holds them up.
     person_names: list[dict[str, str]] = [{"type": "legal", "fullName": full_name}]
     # Phase E (rigour adoption): Cyrillic/Greek person names carry a typed
     # transliteration entry (BODS v0.4 nameType codelist: "transliteration").
     _translit = _names_mod.transliterate_display(full_name)
     if _translit and _translit != full_name:
         person_names.append({"type": "transliteration", "fullName": _translit})
+    # ``other_names``: (fullName, BODS nameType) pairs — a source's aliases,
+    # former names and short forms. Deduplicated on case and spacing only
+    # (``display_name_key``, never ``normalise_name`` — see its docstring)
+    # against everything already present, so a transliteration the source also
+    # publishes as an alias is stored once, while its Cyrillic original is
+    # kept as the distinct name it is.
+    _seen = {_names_mod.display_name_key(n["fullName"]) for n in person_names}
+    _seen.discard("")
+    for _full, _type in other_names:
+        _text = str(_full).strip()
+        _key = _names_mod.display_name_key(_text)
+        if not _text or not _key or _key in _seen:
+            continue
+        _seen.add(_key)
+        person_names.append({"type": _type, "fullName": _text})
     record_details: dict[str, Any] = {
         "isComponent": False,
         "personType": person_type,
