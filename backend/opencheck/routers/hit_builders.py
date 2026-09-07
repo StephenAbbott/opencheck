@@ -620,10 +620,13 @@ def _bh_eiti_soe(r: dict, ctx: _LookupCtx) -> SourceHit:
     # `ocid` was never asserted either — EITI publishes no OpenCorporates id for
     # a single one of the 194 state-owned enterprises, so there is nothing left
     # to weigh up.
+    from ..findings import finding_eiti_soe
+
     return _hit(
         "eiti_soe", ctx.lei,
         name=r.get("entity_name") or ctx.legal_name or ctx.lei,
         summary=" · ".join(parts),
+        finding=finding_eiti_soe(r),
         identifiers={},
         raw=r,
     )

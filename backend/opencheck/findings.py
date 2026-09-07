@@ -1061,3 +1061,67 @@ def finding_eiti_assessment(bundle: dict[str, Any]) -> str | None:
         clauses.append("no subsidiary list carried in the EITI data")
 
     return clauses_to_sentence(clauses)
+
+
+# --------------------------------------------------------------------------
+# eiti_soe (EITI's roster of state-owned enterprises)
+# --------------------------------------------------------------------------
+
+
+def finding_eiti_soe(bundle: dict[str, Any]) -> str | None:
+    """One sentence for the EITI state-owned enterprise roster.
+
+    The roster's assertion — this company is state-owned, in this country —
+    leads, because it is the only thing here that changes a decision and it is
+    what the ``STATE_CONTROLLED`` signal rests on. Reporting years come second
+    (a 2017 entry and a 2024 one are not the same claim about today), and
+    whether EITI carries a link to the company's audited financial statements
+    comes last.
+
+    **The country name is EITI's own ``country_name`` column, never a
+    conversion of the ISO code.** Rule 4 bars turning `ZM` into "Zambia"
+    ourselves; EITI publishes both, so the sentence uses the one EITI wrote.
+
+    **The audited-financials clause is stated in both directions** (rule 6).
+    For a state-owned enterprise, whether its accounts are reachable is exactly
+    the transparency fact this dataset uniquely carries, and a sentence that
+    silently omitted it when the link is missing would read as though the
+    question had not been asked. It describes EITI's roster, not the company:
+    "no audited financial statement link" says EITI holds none, and says
+    nothing about whether the company publishes accounts elsewhere.
+
+    Deliberately **not** said: which government body controls the enterprise.
+    EITI's roster asserts state ownership without naming the organ, and it does
+    so for every company in it — a clause identical on all 194 rows is noise in
+    a 140-character sentence. It is on the card and in the BODS annotation,
+    where there is room to explain it.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return None
+    if not bundle.get("is_state_owned"):
+        return None
+
+    clauses: list[str | None] = []
+
+    country = (bundle.get("country_name") or "").strip()
+    clauses.append(
+        f"listed as a state-owned enterprise in {country}"
+        if country
+        else "listed as a state-owned enterprise"
+    )
+
+    years = [str(y).strip() for y in (bundle.get("years") or []) if str(y).strip()]
+    if years:
+        first, last = min(years), max(years)
+        clauses.append(
+            f"reported {first}" if first == last else f"reported {first}\u2013{last}"
+        )
+
+    clauses.append(
+        "with a link to its audited financial statements"
+        if (bundle.get("audited_financial_statement") or "").strip()
+        else "no audited financial statement link"
+    )
+
+    return clauses_to_sentence(clauses)
+

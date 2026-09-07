@@ -15,17 +15,18 @@ import re
 import pytest
 
 from opencheck.findings import (
-    MAX_FINDING_CHARS,
-    clauses_to_sentence,
     finding_bods_gleif,
     finding_climatetrace,
     finding_companies_house,
+    finding_eiti_soe,
     finding_gleif,
     finding_openaleph,
     finding_opencorporates,
     finding_opensanctions,
     finding_ted_eu,
     finding_wikidata,
+    MAX_FINDING_CHARS,
+    clauses_to_sentence,
     holding_clause,
     human_date,
     percent,
@@ -1048,3 +1049,87 @@ def test_wikidata_prefers_the_class_that_reads_as_a_description() -> None:
 def test_wikidata_bare_qid_labels_and_empty_classes_say_nothing() -> None:
     assert finding_wikidata({"instance_of": [{"qid": "Q1", "label": "Q1"}]}) is None
     assert finding_wikidata({"instance_of": []}) is None
+
+
+# ---------------------------------------------------------------------------
+# eiti_soe — EITI's roster of state-owned enterprises
+# ---------------------------------------------------------------------------
+
+
+def soe_bundle(**over: object) -> dict:
+    """A bundle in the shape `EitiSoeAdapter._build_bundle` returns."""
+    bundle = {
+        "source_id": "eiti_soe",
+        "lei": "5493005OY00M9G3XSY51",
+        "entity_name": "ZCCM INVESTMENTS HOLDINGS PLC",
+        "is_state_owned": True,
+        "country": "ZM",
+        "country_name": "Zambia",
+        "sector": "Mining",
+        "company_type": "State-owned enterprise",
+        "government_entity": None,
+        "audited_financial_statement": None,
+        "public_listing_or_website": "www.zccm-ih.com.zm/",
+        "years": ["2017", "2018", "2019", "2020", "2021", "2022"],
+        "is_stub": False,
+    }
+    bundle.update(over)
+    return bundle
+
+
+def test_eiti_soe_finding_leads_with_the_state_ownership_claim() -> None:
+    assert finding_eiti_soe(soe_bundle()) == (
+        "Listed as a state-owned enterprise in Zambia, reported 2017\u20132022, "
+        "no audited financial statement link."
+    )
+
+
+def test_eiti_soe_finding_states_a_published_link_in_the_same_voice() -> None:
+    """Rule 6. The absence above and the presence here are the same clause
+    written both ways; neither is silence and neither is a warning."""
+    assert finding_eiti_soe(
+        soe_bundle(audited_financial_statement="https://example.org/accounts.pdf")
+    ) == (
+        "Listed as a state-owned enterprise in Zambia, reported 2017\u20132022, "
+        "with a link to its audited financial statements."
+    )
+
+
+def test_eiti_soe_finding_uses_eitis_own_country_name_never_the_code() -> None:
+    """Rule 4 bars converting `ZM` to "Zambia" ourselves. EITI publishes both,
+    so the clause drops rather than falling back to the ISO code."""
+    finding = finding_eiti_soe(soe_bundle(country_name=None))
+    assert finding == (
+        "Listed as a state-owned enterprise, reported 2017\u20132022, "
+        "no audited financial statement link."
+    )
+    assert "ZM" not in finding
+
+
+def test_eiti_soe_finding_reads_a_single_year_as_one_year() -> None:
+    assert finding_eiti_soe(soe_bundle(years=["2024"])).startswith(
+        "Listed as a state-owned enterprise in Zambia, reported 2024,"
+    )
+
+
+def test_eiti_soe_finding_drops_the_year_clause_when_none_are_recorded() -> None:
+    assert finding_eiti_soe(soe_bundle(years=[])) == (
+        "Listed as a state-owned enterprise in Zambia, "
+        "no audited financial statement link."
+    )
+
+
+def test_eiti_soe_finding_never_names_the_controlling_body() -> None:
+    """EITI's roster asserts state ownership without naming the organ, and the
+    mapper's fallback names the state itself. That inference must not leak into
+    a sentence presented as what the source said."""
+    finding = finding_eiti_soe(soe_bundle(government_entity="Government of Zambia"))
+    assert "Government of" not in finding
+    assert "Ministry" not in finding
+
+
+def test_eiti_soe_finding_is_none_for_a_stub_or_a_non_soe() -> None:
+    assert finding_eiti_soe({"is_stub": True}) is None
+    assert finding_eiti_soe({}) is None
+    assert finding_eiti_soe(soe_bundle(is_state_owned=False)) is None
+
