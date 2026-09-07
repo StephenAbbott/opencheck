@@ -46,6 +46,11 @@ export const ICON_PATHS = {
   ],
   external: ["M14 4h6v6", "M20 4 10 14", "M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"],
   history: ["M3 12a9 9 0 1 0 3-6.7L3 8", "M3 4v4h4", "M12 8v4l3 2"],
+  // Two /features glyphs (Phase 175). `batch` is a list with a tick — a list,
+  // screened; `network` is a four-node layered tree, deliberately NOT the
+  // logo's three-node triangle, which belongs to `fullcheck`.
+  batch: ["M3 6h12", "M3 11h12", "M3 16h7", "m14.5 16.5 2.2 2.2L21 14"],
+  network: ["M12 6.5v3", "M10.2 13.8 6.6 16.9", "M13.8 13.8 17.4 16.9"],
 } as const;
 
 /** Icons that need a circle or two the path list cannot express. */
@@ -57,6 +62,12 @@ const ICON_SHAPES: Partial<Record<IconName, { cx: number; cy: number; r: number 
   ],
   backgroundcheck: [{ cx: 12, cy: 8, r: 3.5 }],
   search: [{ cx: 11, cy: 11, r: 7 }],
+  network: [
+    { cx: 12, cy: 4, r: 2.5 },
+    { cx: 12, cy: 12, r: 2.5 },
+    { cx: 5, cy: 19, r: 2.5 },
+    { cx: 19, cy: 19, r: 2.5 },
+  ],
 };
 
 export type IconName = keyof typeof ICON_PATHS;

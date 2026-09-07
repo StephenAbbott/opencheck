@@ -57,6 +57,7 @@ import { SourcesPage } from "./components/SourcesPage";
 import BatchPage from "./components/BatchPage";
 import { ApiPage } from "./components/ApiPage";
 import { BehindTheScenesPage } from "./components/BehindTheScenesPage";
+import { FeaturesPage } from "./components/FeaturesPage";
 import {
   BatchInvite,
   EXAMPLE_LEIS,
@@ -236,7 +237,14 @@ export default function App() {
   // Path → view mapping. /sources and /about are real URLs; everything
   // else falls through to "main" (the SPA rewrite in render.yaml serves
   // index.html for all paths so deep links work).
-  type View = "main" | "sources" | "behind" | "api" | "changelog" | "batch";
+  type View =
+    | "main"
+    | "sources"
+    | "behind"
+    | "api"
+    | "changelog"
+    | "batch"
+    | "features";
 
   /**
    * The header nav, constant across every view (Phase 122). One label per
@@ -306,6 +314,7 @@ type SelfTitledView = "main" | "batch";
  *  it a title here or declaring that it titles itself. */
 const PAGE_TITLES: Record<Exclude<View, SelfTitledView>, string> = {
   sources: "The sources OpenCheck queries",
+  features: "What OpenCheck can do",
   behind: "About OpenCheck",
   api: "The OpenCheck API",
   changelog: "OpenCheck development history",
@@ -314,10 +323,14 @@ const PAGE_TITLES: Record<Exclude<View, SelfTitledView>, string> = {
 const NAV_ITEMS: { view: View; label: string }[] = [
     { view: "sources", label: "Sources" },
     { view: "api", label: "API" },
-    { view: "behind", label: "About" },
+    // Phase 175: "About" gave the top nav its slot to the page that explains
+    // the architecture; a first-time visitor wants to know what the thing
+    // DOES before how it is built. /about keeps its URL and its footer link.
+    { view: "features", label: "Features" },
   ];
   function pathToView(path: string): View {
     if (path === "/sources") return "sources";
+    if (path === "/features") return "features";
     if (path === "/about") return "behind";
     if (path === "/api") return "api";
     if (path === "/changelog") return "changelog";
@@ -326,6 +339,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
   }
   function viewToPath(v: View): string {
     if (v === "sources") return "/sources";
+    if (v === "features") return "/features";
     if (v === "behind") return "/about";
     if (v === "api") return "/api";
     if (v === "changelog") return "/changelog";
@@ -353,6 +367,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       document.title = documentTitleFor(mode, legalName);
     } else if (view === "sources") {
       document.title = "Data Sources — OpenCheck";
+    } else if (view === "features") {
+      document.title = "Features — OpenCheck";
     } else if (view === "behind") {
       document.title = "Behind the Scenes — OpenCheck";
     } else if (view === "api") {
@@ -2579,6 +2595,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           <SourcesPage sources={sourcesQuery.data?.sources} loading={sourcesQuery.isLoading} />
         )}
 
+        {view === "features" && <FeaturesPage />}
+
         {view === "behind" && <BehindTheScenesPage />}
 
         {view === "api" && <ApiPage />}
@@ -2663,14 +2681,14 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 <a
                   href="/api"
                   onClick={(e) => { e.preventDefault(); navigate("api"); }}
-                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst mb-2"
+                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
                 >
                   API
                 </a>
                 <a
                   href="/changelog"
                   onClick={(e) => { e.preventDefault(); navigate("changelog"); }}
-                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst mb-2"
+                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
                 >
                   Changelog
                 </a>
@@ -2678,23 +2696,30 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   href="https://github.com/StephenAbbott/opencheck"
                   target="_blank"
                   rel="noreferrer"
-                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst mb-2"
+                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
                 >
                   GitHub
                 </a>
                 <a
                   href="/sources"
                   onClick={(e) => { e.preventDefault(); navigate("sources"); }}
-                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst mb-2"
+                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
                 >
                   Sources
                 </a>
                 <a
+                  href="/features"
+                  onClick={(e) => { e.preventDefault(); navigate("features"); }}
+                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
+                >
+                  Features
+                </a>
+                <a
                   href="/about"
                   onClick={(e) => { e.preventDefault(); navigate("behind"); }}
-                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst"
+                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst"
                 >
-                  Behind the scenes
+                  About
                 </a>
               </div>
               <div>
@@ -2705,7 +2730,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   href="https://github.com/StephenAbbott/opencheck?tab=License-1-ov-file"
                   target="_blank"
                   rel="noreferrer"
-                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst mb-2"
+                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
                 >
                   MIT licence
                 </a>
@@ -2713,7 +2738,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   href="https://github.com/StephenAbbott/opencheck/blob/main/ATTRIBUTIONS.md"
                   target="_blank"
                   rel="noreferrer"
-                  className="block font-mono text-[12px] text-oo-blue hover:text-oo-burst"
+                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst"
                 >
                   ATTRIBUTIONS.md
                 </a>
