@@ -2,7 +2,8 @@ name: Drift checks
 
 # Fails the build when generated/vendored artefacts drift from their source:
 #  - the vendored Companies House enumerations vs upstream api-enumerations,
-#  - the vendored FtM edge-schema table vs the installed followthemoney model, and
+#  - the vendored FtM edge-schema table vs the installed followthemoney model,
+#  - the FtM name properties OpenCheck reads vs that same model, and
 #  - the OKF knowledge bundle's generated concepts vs the live source registry.
 # Runs on every push/PR, and weekly so upstream enum changes are caught even when
 # nobody has pushed. To fix a failure, run the named script locally (without
@@ -56,4 +57,10 @@ jobs:
         working-directory: backend
       - name: Vendored FtM edge table matches the followthemoney model
         run: uv run --no-dev python scripts/check_ftm_edges.py --check
+        working-directory: backend
+      # Same job on purpose: this check needs the same ftm extra, and the
+      # pyicu build is the expensive part. The job id stays `ftm-edges` so
+      # branch protection keeps resolving.
+      - name: FtM name properties we read match the followthemoney model
+        run: uv run --no-dev python scripts/check_ftm_names.py --check
         working-directory: backend

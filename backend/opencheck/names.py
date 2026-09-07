@@ -76,6 +76,33 @@ except ImportError:  # pragma: no cover - base install without the ftm extra
     _rigour_maybe_ascii = None  # type: ignore[assignment]
     _HAS_RIGOUR_NAMES = False
 
+# --- The FollowTheMoney "names" group ---------------------------------------
+# Which properties of an FtM record may legitimately carry *a name of this
+# party*. Read by ``sources/openaleph._bears_name`` (a precision gate: a hit
+# that does not bear the searched name is dropped) and by
+# ``openaleph_check._best_name_score`` (which name to score the similarity
+# against). It lives here, once, because the two of them disagreeing is a
+# silent recall bug in one and not the other — the same second-copy failure
+# that kept a wrong Companies House RA map alive in ``sources/gleif.py``.
+#
+# ``abbreviation`` is new (OpenSanctions changelog #39): FtM added it at the
+# ``LegalEntity`` level to hold acronyms and short forms — ANC, IKEA — apart
+# from full names, so they can be matched precisely rather than fuzzily.
+# Until 2026-09-15 every value was also copied into ``weakAlias`` for
+# backwards compatibility; after that it lives only here. Reading it is what
+# lets an acronym-only surface form clear the gate at all.
+FTM_NAME_PROPS: tuple[str, ...] = ("name", "alias", "previousName", "abbreviation")
+
+# Name-type FtM properties OpenCheck deliberately does NOT treat as bearing
+# the party's name. ``weakAlias`` is weak *by construction* — upstream files a
+# name there precisely when it should not be trusted on its own — and the
+# gate above exists to reject hits that merely rank well. Widening it to weak
+# aliases would defeat the thing it is for. Kept as an explicit set rather
+# than an omission so the drift check can tell "considered and declined"
+# apart from "never noticed": scripts/check_ftm_names.py fails the build when
+# the model grows a name property that appears in neither collection.
+FTM_NAME_PROPS_EXCLUDED: frozenset[str] = frozenset({"weakAlias"})
+
 # --- Layer 1: non-decomposable Latin letters --------------------------------
 # NFKD does not decompose these; both deleted _NON_DECOMPOSABLE_FOLDS tables
 # (cross_check, icij_check) are strict subsets. Lowercase only — callers fold

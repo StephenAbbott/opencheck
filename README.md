@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 173** — curated examples no longer ship a pre-baked AI summary: the stored narratives and their generator are gone, and every entity generates its summary live from the model and prompt running today.
+**Latest: Phase 174** — OpenCheck now reads FollowTheMoney's `abbreviation` property, so a hit that matches on an acronym is no longer dropped as unmatched, and cached OpenSanctions responses expire after seven days.
 
 → [Full development history](docs/status.md)
 
