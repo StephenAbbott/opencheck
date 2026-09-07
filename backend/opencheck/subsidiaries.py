@@ -29,6 +29,16 @@ notice anywhere. This module now:
 * **never caches a degraded result**, and refuses to read back cache entries
   written before this marker existed (they may be exactly the poisoned empties
   the 2026-08-29 wave wrote).
+
+Phase 179 adds the other order: with ``OPENCHECK_GLEIF_MIRROR_FIRST`` on and a
+Phase 178 mirror that holds the subject, the whole network — subject record,
+direct **and** ultimate children, up to the same cap the live path applies —
+is read from the mirror and GLEIF is not called. It is badged ``snapshot``
+with the mirror's watermark and ``snapshot_source: "mirror"`` so the notice
+says the snapshot was chosen, not forced. A subject the mirror lacks takes the
+live path above unchanged. Mirror-served networks are not written to the
+response cache: the mirror *is* the cache, and a 7-day copy would outlive the
+mirror's own refresh.
 """
 
 from __future__ import annotations
@@ -39,11 +49,12 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
-from . import provenance
+from . import mirrorstats, provenance
 from .bods import map_gleif_subsidiaries
 from .cache import Cache
 from .config import get_settings
 from .http import build_client
+from .sources.gleif import SNAPSHOT_DETAIL
 
 _LOG = logging.getLogger(__name__)
 
@@ -130,7 +141,7 @@ async def _subject_attrs(client, lei: str) -> tuple[dict[str, Any], bool]:
 
 
 def _snapshot_children(
-    lei: str, kind: str = "direct"
+    lei: str, kind: str = "direct", *, limit: int = _PAGE_SIZE
 ) -> tuple[list[dict], int, str | None] | None:
     """Children of one relation kind from the entity-pages Golden Copy, or ``None``.
 
@@ -145,7 +156,7 @@ def _snapshot_children(
     store = get_store()
     if store is None:
         return None
-    rows, total = store.children(lei, limit=_PAGE_SIZE, kind=kind)
+    rows, total = store.children(lei, limit=limit, kind=kind)
     if not rows:
         # No rows is not evidence of no children here: the LEI may simply be
         # absent from the store (a trimmed build, or issued after the last
@@ -162,6 +173,11 @@ async def _build(lei: str) -> dict[str, Any]:
     is returned to this one caller and then thrown away: caching it is how an
     empty network survives the outage that caused it.
     """
+    if get_settings().gleif_mirror_first:
+        mirrored = _mirror_network(lei)
+        if mirrored is not None:
+            return mirrored
+
     cache_key = f"{_CACHE_NS}/{lei}"
     cached = _cache.get_payload(cache_key, max_age_days=_CACHE_MAX_AGE_DAYS)
     if cached is not None and cached[0].get(_COMPLETE_KEY) is True:
@@ -198,26 +214,7 @@ async def _build(lei: str) -> dict[str, Any]:
             ultimate_from_snapshot = True
             snapshot_date = snapshot_date or ultimate_snapshot_date
 
-    merged: dict[str, dict[str, Any]] = {}
-
-    def add(records: list[dict], kind: str) -> None:
-        for r in records:
-            attrs = r.get("attributes") or r
-            clei = attrs.get("lei") or r.get("id")
-            if not clei:
-                continue
-            m = merged.get(clei)
-            if m is None:
-                merged[clei] = {"record": r, "relations": {kind}}
-            else:
-                m["relations"].add(kind)
-
-    add(direct_recs, "direct")
-    add(ultimate_recs, "ultimate")
-    children = [
-        {"record": m["record"], "relations": sorted(m["relations"])}
-        for m in merged.values()
-    ]
+    children = _merge_children(direct_recs, ultimate_recs)
     complete = subj_ok and direct_ok and ultimate_ok
     result = {
         "lei": lei,
@@ -232,11 +229,71 @@ async def _build(lei: str) -> dict[str, Any]:
         "ultimate_available": ultimate_ok or ultimate_from_snapshot,
         "subject_available": subj_ok,
         "snapshot_date": snapshot_date,
+        "snapshot_source": "fallback" if snapshot_date else None,
         _COMPLETE_KEY: complete,
     }
     if complete:
         _cache.put(cache_key, result)
     return result
+
+
+def _mirror_network(lei: str) -> dict[str, Any] | None:
+    """Phase 179: the whole network from the mirror, or ``None`` when the
+    configured file is not a mirror or does not hold the subject (both
+    counted, so the miss rate is a number on ``/mirror``)."""
+    from .entity_pages import get_store, gleif_record_from_row
+
+    store = get_store()
+    if store is None or not store.is_mirror:
+        mirrorstats.record("subsidiaries.no_mirror")
+        return None
+    row = store.get(lei)
+    if row is None:
+        mirrorstats.record("subsidiaries.miss_live")
+        return None
+    mirrorstats.record("subsidiaries.mirror")
+    cap = _PAGE_SIZE * _PAGE_CAP
+    direct_rows, direct_total = store.children(lei, limit=cap, kind="direct")
+    ultimate_rows, ultimate_total = store.children(lei, limit=cap, kind="ultimate")
+    watermark = store.watermark()
+    subject = gleif_record_from_row(row)
+    return {
+        "lei": lei,
+        "subject_attrs": subject.get("attributes") or {},
+        "direct_total": direct_total,
+        "ultimate_total": ultimate_total,
+        "children": _merge_children(
+            [gleif_record_from_row(r) for r in direct_rows],
+            [gleif_record_from_row(r) for r in ultimate_rows],
+        ),
+        "direct_available": True,
+        "ultimate_available": True,
+        "subject_available": True,
+        "snapshot_date": watermark.strftime("%Y-%m-%d") if watermark else None,
+        "snapshot_source": "mirror",
+        _COMPLETE_KEY: True,
+    }
+
+
+def _merge_children(direct_recs: list[dict], ultimate_recs: list[dict]) -> list[dict[str, Any]]:
+    """Merge the two relation lists by child LEI, tagging each child with the
+    relations it appears under — the same merge the live path does inline."""
+    merged: dict[str, dict[str, Any]] = {}
+    for records, kind in ((direct_recs, "direct"), (ultimate_recs, "ultimate")):
+        for r in records:
+            attrs = r.get("attributes") or r
+            clei = attrs.get("lei") or r.get("id")
+            if not clei:
+                continue
+            m = merged.get(clei)
+            if m is None:
+                merged[clei] = {"record": r, "relations": {kind}}
+            else:
+                m["relations"].add(kind)
+    return [
+        {"record": m["record"], "relations": sorted(m["relations"])}
+        for m in merged.values()
+    ]
 
 
 def _row(m: dict[str, Any]) -> dict[str, Any]:
@@ -265,7 +322,7 @@ _EMPTY = {
     # notice for the case it describes.
     "children_available": True, "direct_available": True,
     "ultimate_available": True, "snapshot_fallback": False,
-    "snapshot_date": None, "degraded_detail": None,
+    "snapshot_date": None, "snapshot_source": None, "degraded_detail": None,
 }
 
 
@@ -290,6 +347,7 @@ async def assemble_subsidiaries(lei: str, *, include_bods: bool = False) -> dict
     direct_available = bool(data.get("direct_available", True))
     ultimate_available = bool(data.get("ultimate_available", True))
     snapshot_date = data.get("snapshot_date")
+    snapshot_source = data.get("snapshot_source") or ("fallback" if snapshot_date else None)
     snapshot_fallback = snapshot_date is not None
 
     rows = [_row(m) for m in children]
@@ -310,8 +368,13 @@ async def assemble_subsidiaries(lei: str, *, include_bods: bool = False) -> dict
         "ultimate_available": ultimate_available,
         "snapshot_fallback": snapshot_fallback,
         "snapshot_date": snapshot_date,
+        # Phase 179: why the snapshot answered — "mirror" (chosen: the
+        # mirror-first order) or "fallback" (forced: GLEIF refused). None when
+        # the network came live.
+        "snapshot_source": snapshot_source,
         "degraded_detail": _degraded_detail(
-            direct_available, ultimate_available, snapshot_fallback, snapshot_date
+            direct_available, ultimate_available, snapshot_fallback, snapshot_date,
+            snapshot_source,
         ),
         "direct_total": direct_total,
         "ultimate_total": ultimate_total,
@@ -333,7 +396,7 @@ async def assemble_subsidiaries(lei: str, *, include_bods: bool = False) -> dict
                 provenance.Provenance(
                     liveness="snapshot",
                     retrieved_at=_snapshot_datetime(snapshot_date),
-                    detail="GLEIF Golden Copy snapshot (live API rate-limited)",
+                    detail=SNAPSHOT_DETAIL[snapshot_source or "fallback"],
                 )
             ):
                 result["bods"] = map_gleif_subsidiaries(
@@ -358,13 +421,19 @@ def _degraded_detail(
     ultimate_available: bool,
     snapshot_fallback: bool,
     snapshot_date: str | None,
+    snapshot_source: str | None = None,
 ) -> str | None:
-    """One sentence naming what GLEIF did not answer. ``None`` when it did.
+    """One sentence naming what GLEIF did not answer. ``None`` when it did —
+    and ``None`` for a mirror-served network too (Phase 179): nothing was
+    refused, the snapshot was the chosen source, and the badge and
+    ``snapshot_date`` already say so.
 
     Written here rather than in the frontend because the backend is the only
     layer that knows *which* of the two relation calls was refused, and
     "we could not check" has to be specific to be worth more than silence.
     """
+    if snapshot_source == "mirror":
+        return None
     if snapshot_fallback:
         dated = f" (extract of {snapshot_date})" if snapshot_date else ""
         if not ultimate_available:

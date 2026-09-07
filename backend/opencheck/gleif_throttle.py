@@ -88,6 +88,19 @@ class GleifThrottle:
         while self._sent and self._sent[0] <= cutoff:
             self._sent.popleft()
 
+    def has_headroom(self, reserve: int) -> bool:
+        """Whether a *discretionary* request can be sent without eating into
+        the last ``reserve`` slots of the window — the Phase 179 live-confirm
+        asks this before spending a call a real lookup might need. A disabled
+        throttle always has headroom; a penalty box in force never does."""
+        settings = get_settings()
+        limit = settings.gleif_rate_limit_per_minute
+        if limit <= 0:
+            return True
+        now = time.monotonic()
+        self._prune(now)
+        return now >= self._penalty_until and len(self._sent) + reserve < limit
+
     def penalise(self, seconds: float) -> None:
         """Push the shared resume time out after an observed 429.
 

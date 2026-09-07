@@ -169,6 +169,25 @@ class Settings(BaseSettings):
     gleif_snapshot_after_s: float = Field(
         default=5.0, alias="OPENCHECK_GLEIF_SNAPSHOT_AFTER_S"
     )
+    # Phase 179: serve the GLEIF anchor, its parents, reporting exceptions
+    # and children from the entity-pages mirror FIRST when the mirror holds
+    # the LEI (a Phase 178 v2 file), and go live only on a miss. Off, the
+    # order is Phase 143's: live, then stale cache, then the snapshot as the
+    # last line before a 503. The mirror is refreshed by the monthly rebuild
+    # today and by Phase 180's in-process deltas; search, national-ID
+    # resolution and /field-modifications stay live regardless. Default off
+    # until the measurement gate on the Golden Copy ticket is passed.
+    gleif_mirror_first: bool = Field(
+        default=False, alias="OPENCHECK_GLEIF_MIRROR_FIRST"
+    )
+    # Phase 179: after a mirror-served anchor, fetch the live Level 1 record
+    # in the background — only when the throttle has headroom, never blocking
+    # the lookup — and count whether it agrees with the mirror on the fields
+    # the mapper reads (/mirror). Measures the freshness story instead of
+    # asserting it. Off by default; costs one GLEIF call per mirror hit.
+    gleif_live_confirm: bool = Field(
+        default=False, alias="OPENCHECK_GLEIF_LIVE_CONFIRM"
+    )
     # Phase 144: refuse declared automated clients (memwatch.is_bot on the
     # User-Agent) on /lookup-stream, the interactive app's SSE endpoint.
     # robots.txt has always disallowed it; a crawler there is ignoring robots

@@ -49,9 +49,13 @@ class SubsidiariesResponse(BaseModel):
     children_available: bool = True
     direct_available: bool = True
     ultimate_available: bool = True
-    #: Direct children served from the entity-pages Golden Copy, not live.
+    #: Children served from the entity-pages Golden Copy, not live.
     snapshot_fallback: bool = False
     snapshot_date: str | None = None
+    #: Phase 179: why the snapshot answered — "mirror" (the mirror-first
+    #: order chose it; nothing was refused) or "fallback" (GLEIF refused and
+    #: the snapshot stood in); None when the network came live.
+    snapshot_source: str | None = None
     #: One sentence naming what GLEIF did not answer (None when it answered).
     degraded_detail: str | None = None
     direct_total: int = 0

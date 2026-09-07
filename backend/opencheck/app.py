@@ -6,6 +6,9 @@ Surface:
 * ``GET /memstats`` — aggregate memory + traffic counters (see ``memwatch``).
 * ``GET /signalstats`` — aggregate risk-signal counts per ``(code, source_id)``,
   degradation counts and the lookup denominator (see ``signalstats``).
+* ``GET /mirror`` — how the GLEIF mirror is being used: hits, misses, live
+  calls displaced, live-confirm agreement, the file's watermark (see
+  ``mirrorstats``; Phase 179).
 * ``GET /sources`` — inventory of registered source adapters with live/stub status.
 * ``GET /lookup?lei=<LEI>`` — **primary entry point**. Driven by the
   Legal Entity Identifier: GLEIF first, then dispatch to every other
