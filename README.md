@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 174** — OpenCheck now reads FollowTheMoney's `abbreviation` property, so a hit that matches on an acronym is no longer dropped as unmatched, and cached OpenSanctions responses expire after seven days.
+**Latest: Phase 175** — a new `/features` page names what OpenCheck does, six features with two sentences and one working link each, and takes over the top nav's "About" slot.
 
 → [Full development history](docs/status.md)
 

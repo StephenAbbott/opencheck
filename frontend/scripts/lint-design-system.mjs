@@ -55,6 +55,12 @@ const BASELINE = join(ROOT, "design-system-baseline.json");
 const ALLOWED_HEX_FILES = new Set([
   "src/lib/graphStyle.ts",
   "src/lib/bovsIcons.ts",
+  // The badge tier's token file (Phase 175), on the same grounds as
+  // graphStyle.ts: `FeatureMark` paints the ring with an inline style, so the
+  // value has to be a string and there is no class name to write instead. It
+  // also has to hold the exact hexes that `outputs/mode-badges/*.svg` carry,
+  // which is a correspondence a Tailwind class cannot express.
+  "src/lib/features.ts",
 ]);
 
 /** `#fff`, `#ffffff`, `#ffffffff` — but not a fragment of a longer token. */

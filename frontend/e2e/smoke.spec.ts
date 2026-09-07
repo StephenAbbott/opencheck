@@ -41,6 +41,7 @@ test.beforeEach(async ({ page }) => {
 const ROUTES = [
   { path: "/", name: "home" },
   { path: "/sources", name: "sources" },
+  { path: "/features", name: "features" },
   { path: "/about", name: "about" },
   { path: "/api", name: "api" },
   { path: "/changelog", name: "changelog" },
