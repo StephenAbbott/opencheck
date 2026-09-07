@@ -103,6 +103,25 @@ FTM_NAME_PROPS: tuple[str, ...] = ("name", "alias", "previousName", "abbreviatio
 # the model grows a name property that appears in neither collection.
 FTM_NAME_PROPS_EXCLUDED: frozenset[str] = frozenset({"weakAlias"})
 
+
+def display_name_key(text: str | None) -> str:
+    """Collapse a name to a key for deduplicating a *display* list.
+
+    Case and spacing only: "ROSNEFT OIL COMPANY", "Rosneft Oil Company" and
+    "Rosneft  Oil  Company" are one name, and the spelling that survives is
+    whichever the source wrote first.
+
+    **Not ``normalise_name``**, which folds Cyrillic and Greek into Latin —
+    that is what it is for, and it is exactly wrong here: it makes "Газпром"
+    and "Γκαζπρόμ" and "Gazprom" a single key, so deduplicating on it deletes
+    the cross-script forms a name list exists to carry. Using it cost three
+    test failures (a Wikidata multilingual entity, an Aeroflot transliteration
+    that vanished as a "duplicate" of its own Cyrillic original, and an ABR
+    trading name) before that was obvious. Matching keys and display keys are
+    different things.
+    """
+    return " ".join((text or "").casefold().split())
+
 # --- Layer 1: non-decomposable Latin letters --------------------------------
 # NFKD does not decompose these; both deleted _NON_DECOMPOSABLE_FOLDS tables
 # (cross_check, icij_check) are strict subsets. Lowercase only — callers fold

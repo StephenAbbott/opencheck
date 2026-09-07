@@ -546,6 +546,15 @@ def classify_sanction_topics(topics: Iterable[str]) -> SanctionTopics:
 # Debarment: excluded from public contracts / procurement (e.g. World Bank,
 # AfDB, EU debarment lists). A confirmed adverse listing of the entity, but a
 # distinct category from financial sanctions — its own signal.
+# BODS person name types the nominee text heuristic does NOT read. An
+# ``alternative`` name is what a source also calls the party — an aka list,
+# not a name the party is known by officially — and it is the class that
+# arrives in bulk from FtM aliases. Everything else (legal, transliteration,
+# former, birth, translation, or an untyped entry from third-party BODS) is
+# read, which keeps the surface this heuristic had before FtM aliases were
+# mapped.
+_NOMINEE_NAME_TYPES_EXCLUDED = frozenset({"alternative"})
+
 _DEBARMENT_TOPICS = {"debarment"}
 
 # Export-control topics. Verified against the published model
@@ -2180,6 +2189,18 @@ def _nominee_signal(
             rd = _record_details(stmt)
             for name in rd.get("names") or []:
                 if isinstance(name, dict):
+                    # Names the party is officially known by, not its aka list.
+                    # FtM-sourced statements now carry a source's aliases as
+                    # ``alternative`` entries — up to ~100 of them on a
+                    # sanctioned person (measured 2026-09-07) — and running a
+                    # substring heuristic over that many strings would raise
+                    # NOMINEE on subjects it has never raised it on, as a side
+                    # effect of a mapping change rather than a decision about
+                    # nominees. ``legal``/``transliteration`` are what this blob
+                    # has always seen; ``former`` joins them because a name the
+                    # party itself used is the same kind of evidence.
+                    if name.get("type") in _NOMINEE_NAME_TYPES_EXCLUDED:
+                        continue
                     blob_parts.extend(
                         str(v) for v in name.values() if isinstance(v, str)
                     )

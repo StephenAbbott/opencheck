@@ -417,6 +417,28 @@ by one and scored against nothing by the other.
   ICU build). A name property in neither collection is read by nobody, and it
   fails **closed**: the hit is dropped and reads as "not listed".
 
+**The group is also what reaches BODS (Phase 176).** `_ftm_other_names()` in
+`bods/mappers/ftm.py` turns every name after the primary into BODS names:
+entity → `recordDetails.alternateNames` (untyped `array[string]`, so `alias`
+and `previousName` flatten together — that asymmetry is the standard's, do not
+invent a "formerly: X" convention), person → typed `names[]` entries via
+`_FTM_NAME_TYPE`, which raises at import if a property in `FTM_NAME_PROPS` has
+no BODS type. The v0.4 `nameType` codelist is **`legal`, `translation`,
+`transliteration`, `former`, `alternative`, `birth`** — `individual` and
+`alias` are NOT in it, however often a summary says otherwise; that error put a
+dead `type == "individual"` preference into `cross_check._person_full_name`
+and `icij_check._person_name`, both now fixed to prefer `legal`.
+
+- **No cap.** Measured 2026-09-07: an ordinary company carries 0–3 extra names,
+  a sanctioned person ~100 (Kadyrov 103, Putin 93). Truncating a name list in a
+  screening tool hides matches; volume is a display problem.
+- **Deduplicate with `names.display_name_key`, never `names.normalise_name`.**
+  The latter folds Cyrillic/Greek into Latin — which is what it is for — so
+  deduplicating on it deletes "Gazprom" as a duplicate of "Газпром".
+- **`risk.py`'s NOMINEE textual path skips `alternative` names**
+  (`_NOMINEE_NAME_TYPES_EXCLUDED`). Reading ~100 aliases would raise the signal
+  on new subjects as a side effect of a mapping change.
+
 **OpenSanctions cached responses expire after 7 days** —
 `_MAX_CACHE_AGE_DAYS` in `sources/opensanctions.py`, passed to
 `Cache.get_payload(max_age_days=…)` on both the search and entity paths. The

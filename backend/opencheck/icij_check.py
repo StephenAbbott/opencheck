@@ -408,14 +408,29 @@ def _collect_targets(bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _person_name(rd: dict[str, Any]) -> str:
+    """The person's own name, by BODS name type.
+
+    Same rule and the same reasoning as ``cross_check._person_full_name``:
+    ``legal`` first, ``individual`` tolerated for third-party data, position
+    only as a last resort. A statement now carries a source's aliases as
+    ``alternative`` entries, and screening the alias instead of the name
+    would be a silent change of subject.
+    """
     names = rd.get("names") or []
     if not isinstance(names, list):
         return ""
-    individual = next(
-        (n for n in names if isinstance(n, dict) and n.get("type") == "individual"),
-        None,
-    )
-    pick = individual or next(
+
+    def _typed(wanted: str) -> dict[str, Any] | None:
+        return next(
+            (
+                n
+                for n in names
+                if isinstance(n, dict) and n.get("type") == wanted and n.get("fullName")
+            ),
+            None,
+        )
+
+    pick = _typed("legal") or _typed("individual") or next(
         (n for n in names if isinstance(n, dict) and n.get("fullName")),
         None,
     )

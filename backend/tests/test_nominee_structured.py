@@ -283,3 +283,65 @@ class TestMalformedInput:
             hit_id="X",
         )
         assert isinstance(signals, list)
+
+
+class TestAliasNamesDoNotWidenTheTextualPath:
+    """Phase 176 — FtM aliases now reach BODS, and this heuristic must not
+    inherit them.
+
+    ``_nominee_signal``'s textual path concatenates every string of every
+    ``names[]`` entry and looks for the word. Before FtM aliases were mapped,
+    the only entries a person statement carried were its ``legal`` name and a
+    ``transliteration`` of it. A sanctioned person's OpenSanctions record
+    carries ~100 aliases (measured 2026-09-07: Kadyrov 103, Putin 93), so
+    reading them here would raise NOMINEE on subjects it has never raised it
+    on — as a side effect of a mapping change rather than a decision about
+    nominees.
+
+    So the blob reads the names the party is officially known by and skips the
+    aka list. ``former`` is read: a name the party itself used is the same kind
+    of evidence as its current one.
+    """
+
+    @staticmethod
+    def _person(names):
+        return [
+            {
+                "statementId": "P1",
+                "recordType": "person",
+                "recordDetails": {"personType": "knownPerson", "names": names},
+            }
+        ]
+
+    def _signals(self, names):
+        return _nominee(
+            assess_bundle("opensanctions", {"x": 1}, self._person(names), hit_id="H")
+        )
+
+    def test_an_alternative_name_does_not_fire(self):
+        sig = self._signals(
+            [
+                {"type": "legal", "fullName": "Jane Smith"},
+                {"type": "alternative", "fullName": "Acme Nominee Services"},
+            ]
+        )
+        assert sig is None
+
+    def test_the_legal_name_still_fires(self):
+        sig = self._signals([{"type": "legal", "fullName": "Nominee Holdings Trustee"}])
+        assert sig is not None
+        assert sig.confidence == "medium"
+
+    def test_a_former_name_fires(self):
+        sig = self._signals(
+            [
+                {"type": "legal", "fullName": "Jane Smith"},
+                {"type": "former", "fullName": "Jane Nominee Services"},
+            ]
+        )
+        assert sig is not None
+
+    def test_an_untyped_entry_from_third_party_bods_still_fires(self):
+        """Absence of a type is not evidence that a name is an alias."""
+        sig = self._signals([{"fullName": "Nominee Trustee Ltd"}])
+        assert sig is not None

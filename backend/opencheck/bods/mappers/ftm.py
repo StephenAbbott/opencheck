@@ -12,6 +12,7 @@ from typing import Any
 
 import pycountry
 
+from ... import names as _names
 from .. import liveness as _liveness
 from ..statements import (
     SOURCE_NAMES,
@@ -46,6 +47,38 @@ _FTM_ENTITY_SCHEMAS = {
     "Vessel",
 }
 _FTM_PERSON_SCHEMAS = {"Person"}
+
+# Which BODS person name type each FtM name property becomes. The entity side
+# has no equivalent: BODS v0.4 gives entities an untyped `alternateNames`
+# array, so `alias` and `previousName` flatten into one list there and the
+# distinction survives only on persons. That asymmetry is the standard's, not
+# ours — do not invent a local convention ("formerly: X") to work around it.
+#
+# Codes are from the BODS v0.4 `nameType` codelist: legal, translation,
+# transliteration, former, alternative, birth. (`individual` and `alias` are
+# NOT in it, whatever secondary summaries say — see the note in
+# `cross_check._person_full_name`.)
+#
+# `name` beyond the first is an alternative rather than a second legal name:
+# FtM records a party's name variants under `name`, and asserting several
+# legal names for one person is a claim the source did not make.
+_FTM_NAME_TYPE: dict[str, str] = {
+    "name": "alternative",
+    "alias": "alternative",
+    "previousName": "former",
+    "abbreviation": "alternative",
+}
+
+# Every property OpenCheck reads as a name must have somewhere to land, or it
+# would be silently dropped on the way into BODS — the same failure class as
+# not reading it at all. Phase 174 made `names.FTM_NAME_PROPS` the one place
+# that list is declared; this fails at import if the two fall out of step.
+_unmapped = set(_names.FTM_NAME_PROPS) - set(_FTM_NAME_TYPE)
+if _unmapped:  # pragma: no cover - import-time guard
+    raise RuntimeError(
+        "FtM name properties with no BODS name type: %s — add them to "
+        "_FTM_NAME_TYPE in bods/mappers/ftm.py" % sorted(_unmapped)
+    )
 
 # FtM topics (sanction, role.pep, etc.) are intentionally NOT converted into
 # BODS interests here — they are risk signals handled by the risk engine, not
@@ -492,6 +525,50 @@ def _ftm_statement(
     return _ftm_entity_statement(payload, source_id, source_url)
 
 
+def _ftm_other_names(
+    props: dict[str, Any], primary: str
+) -> list[tuple[str, str]]:
+    """Every other name the record carries, as ``(fullName, bods_type)``.
+
+    Order is `FTM_NAME_PROPS` order, then source order within a property, so
+    the output is deterministic for a given payload. Deduplication is on case
+    and spacing (`names.display_name_key`) while the original string is what
+    gets stored — "ROSNEFT" and "Rosneft" are one name, and the one we keep is
+    the one the source wrote first. Deliberately **not** `normalise_name`,
+    which folds scripts and would erase the Cyrillic original of a name it
+    also publishes in Latin.
+
+    ``weakAlias`` never appears here. It is excluded by
+    `names.FTM_NAME_PROPS_EXCLUDED` for the reason Phase 174 recorded: upstream
+    files a name there precisely when it should not be trusted on its own, and
+    a BODS statement is a published assertion that this *is* a name of this
+    party. (Measured 2026-09-07: Putin's OpenSanctions record carries 32 of
+    them, against 93 names this function does return.)
+
+    No cap. A sanctioned person really does carry ~100 published names, and
+    truncating a name list in a screening tool hides matches while leaving
+    "which ones did we keep?" unanswerable. Volume is a display problem, to be
+    solved where it shows.
+    """
+    out: list[tuple[str, str]] = []
+    seen = {_names.display_name_key(primary)}
+    seen.discard("")
+    for prop in _names.FTM_NAME_PROPS:
+        values = props.get(prop) or []
+        if isinstance(values, str):
+            values = [values]
+        for value in values:
+            text = str(value).strip()
+            if not text:
+                continue
+            key = _names.display_name_key(text)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            out.append((text, _FTM_NAME_TYPE[prop]))
+    return out
+
+
 def _ftm_entity_statement(
     payload: dict[str, Any], source_id: str, source_url: str | None
 ) -> dict[str, Any]:
@@ -516,6 +593,10 @@ def _ftm_entity_statement(
         identifiers=identifiers,
         addresses=addresses,
         founding_date=founding_date,
+        # BODS entity names are untyped, so alias / previousName /
+        # abbreviation all land in the same list; the type only survives on
+        # the person side below.
+        alternate_names=[text for text, _type in _ftm_other_names(props, name)],
         source_url=source_url,
     )
     # FtM ``dissolutionDate`` / ``status`` (Phase 151). Only a dissolution date
@@ -557,6 +638,7 @@ def _ftm_person_statement(
         birth_date=birth_date,
         addresses=addresses,
         identifiers=identifiers,
+        other_names=_ftm_other_names(props, full_name),
         source_url=source_url,
     )
 

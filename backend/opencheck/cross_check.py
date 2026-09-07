@@ -383,18 +383,33 @@ def _collect_targets(bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def _person_full_name(rd: dict[str, Any]) -> str:
     """Pick a usable display name from the BODS person statement.
 
-    BODS stores ``names`` as a list of ``{type, fullName, ...}``; we
-    prefer the entry whose ``type == "individual"`` if present, else
-    the first one with a ``fullName``.
+    BODS stores ``names`` as a list of ``{type, fullName, ...}``. The v0.4
+    ``nameType`` codelist is ``legal``, ``translation``, ``transliteration``,
+    ``former``, ``alternative``, ``birth`` — **there is no ``individual``**,
+    whatever secondary summaries of the standard say, and OpenCheck has never
+    emitted one. The old preference for it was therefore dead code, and this
+    function survived on the accident that ``make_person_statement`` puts the
+    legal name first. Once a statement carries a source's aliases too, that
+    accident is load-bearing — so ask for the type.
+
+    ``individual`` is still honoured after ``legal`` because third-party BODS
+    data may carry it; the first entry with a ``fullName`` remains the last
+    resort.
     """
     names = rd.get("names") or []
     if not isinstance(names, list):
         return ""
-    individual = next(
-        (n for n in names if isinstance(n, dict) and n.get("type") == "individual"),
-        None,
-    )
-    pick = individual or next(
+    def _typed(wanted: str) -> dict[str, Any] | None:
+        return next(
+            (
+                n
+                for n in names
+                if isinstance(n, dict) and n.get("type") == wanted and n.get("fullName")
+            ),
+            None,
+        )
+
+    pick = _typed("legal") or _typed("individual") or next(
         (n for n in names if isinstance(n, dict) and n.get("fullName")),
         None,
     )
