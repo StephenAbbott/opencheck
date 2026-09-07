@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+import time
+
 import pytest
 from pytest_httpx import HTTPXMock
 
@@ -14,7 +17,14 @@ from opencheck.risk import (
     _PEP_TOPICS,
 )
 from opencheck.sources import SearchKind
-from opencheck.sources.opensanctions import _RISK_TOPICS, _TOPIC_PARAMS, OpenSanctionsAdapter
+from opencheck.sources.opensanctions import (
+    _MAX_CACHE_AGE_DAYS,
+    _RISK_TOPICS,
+    _TOPIC_FINGERPRINT,
+    _TOPIC_PARAMS,
+    OpenSanctionsAdapter,
+    _slug,
+)
 
 _API = "https://api.opensanctions.org"
 
@@ -220,3 +230,102 @@ async def test_stub_path_when_no_key(monkeypatch) -> None:
     hits = await adapter.search("anything", SearchKind.ENTITY)
     assert len(hits) == 1
     assert hits[0].is_stub is True
+
+
+# ---------------------------------------------------------------------------
+# Cache age (Phase 174)
+# ---------------------------------------------------------------------------
+#
+# The cache key is fingerprinted by *our* topic scope, which self-invalidates
+# when we change it and says nothing about the data moving. On 2026-09-15
+# `eu_journal_sanctions` grew from a few thousand entities to roughly 8,000
+# and entities already in `eu_fsf` gained a second source, with no key change
+# for either — so an entry written the day before would have been served
+# indefinitely. These pin that a live-tier entry expires, and that expiry only
+# applies where a re-fetch is actually possible.
+
+
+def _write_cache_entry(tmp_path, key: str, payload: dict, *, age_days: float) -> None:
+    """Write a live-tier entry aged ``age_days`` into the past."""
+    path = tmp_path / "cache" / "live" / f"{key}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps({"_cached_at": time.time() - age_days * 86_400, "payload": payload}),
+        encoding="utf-8",
+    )
+
+
+def _search_key(query: str, schema: str = "LegalEntity") -> str:
+    return f"opensanctions/search/{schema}/{_TOPIC_FINGERPRINT}/{_slug(query)}"
+
+
+async def test_stale_search_cache_is_refetched(httpx_mock: HTTPXMock, tmp_path) -> None:
+    """An entry older than the cap is a miss: the adapter goes back to the API
+    and the caller sees today's listings, not last month's."""
+    _write_cache_entry(
+        tmp_path,
+        _search_key("rosneft"),
+        {"results": [{"id": "NK-stale", "caption": "Stale Rosneft", "datasets": ["eu_fsf"]}]},
+        age_days=_MAX_CACHE_AGE_DAYS + 1,
+    )
+    httpx_mock.add_response(
+        url=f"{_API}/search/default?q=rosneft&schema=LegalEntity&limit=10&{_TOPIC_PARAMS}",
+        json={
+            "results": [
+                {
+                    "id": "NK-fresh",
+                    "caption": "Rosneft Oil Company",
+                    "datasets": ["eu_fsf", "eu_journal_sanctions"],
+                    "topics": ["sanction"],
+                }
+            ]
+        },
+    )
+
+    hits = await OpenSanctionsAdapter().search("rosneft", SearchKind.ENTITY)
+
+    assert [h.hit_id for h in hits] == ["NK-fresh"]
+    assert len(httpx_mock.get_requests()) == 1
+
+
+async def test_fresh_search_cache_is_served_without_a_request(
+    httpx_mock: HTTPXMock, tmp_path
+) -> None:
+    """The cap expires stale entries, not caching itself — a repeat lookup
+    inside the window must still cost nothing."""
+    _write_cache_entry(
+        tmp_path,
+        _search_key("rosneft"),
+        {"results": [{"id": "NK-cached", "caption": "Rosneft Oil Company", "datasets": ["eu_fsf"]}]},
+        age_days=1.0,
+    )
+
+    hits = await OpenSanctionsAdapter().search("rosneft", SearchKind.ENTITY)
+
+    assert [h.hit_id for h in hits] == ["NK-cached"]
+    assert httpx_mock.get_requests() == []
+
+
+async def test_stale_cache_is_still_served_when_no_refetch_is_possible(
+    monkeypatch, tmp_path
+) -> None:
+    """Only expire what can be replaced.
+
+    Without a key there is nothing to re-fetch with, and treating the entry as
+    a miss would walk into the adapter's ``live_available`` assertion. A stale
+    answer is the best available one there, and provenance still reports it as
+    cached.
+    """
+    _write_cache_entry(
+        tmp_path,
+        _search_key("rosneft"),
+        {"results": [{"id": "NK-stale", "caption": "Stale Rosneft", "datasets": ["eu_fsf"]}]},
+        age_days=_MAX_CACHE_AGE_DAYS + 30,
+    )
+    monkeypatch.delenv("OPENSANCTIONS_API_KEY", raising=False)
+    get_settings.cache_clear()
+
+    hits = await OpenSanctionsAdapter().search("rosneft", SearchKind.ENTITY)
+
+    assert [h.hit_id for h in hits] == ["NK-stale"]
+    assert hits[0].is_stub is False

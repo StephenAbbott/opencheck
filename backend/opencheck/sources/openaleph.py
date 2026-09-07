@@ -119,7 +119,11 @@ def _schema_for(kind: SearchKind) -> str:
 
 
 # FtM "names" group — the properties a legitimate name match may live in.
-_NAME_PROPS = ("name", "alias", "previousName")
+# Defined once in ``opencheck.names`` (with the reasoning, and with
+# ``weakAlias``'s deliberate exclusion recorded beside it) because
+# ``openaleph_check._best_name_score`` reads the same group: two copies would
+# drift into a gate and a score that disagree about what a name is.
+_NAME_PROPS = names.FTM_NAME_PROPS
 
 _NAME_PUNCT = re.compile(r"[^\w\s]", re.UNICODE)
 

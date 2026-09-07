@@ -496,13 +496,17 @@ def _best_name_score(
     """Best (name, similarity) over the hit's FtM names group + caption.
 
     ``cross_check`` scores against the display name only, but a percolator
-    match may have fired on an alias or previousName (``percolator_match:
-    ["other_name"]``) — the honest comparison is against whichever of the
-    hit's own names is closest to the target.
+    match may have fired on an alias, a previousName or an abbreviation
+    (``percolator_match: ["other_name"]``) — the honest comparison is against
+    whichever of the hit's own names is closest to the target.
+
+    The group comes from ``names.FTM_NAME_PROPS``, the same constant the
+    adapter's ``_bears_name`` gate reads: a name good enough to admit a hit
+    must be a name good enough to score it against.
     """
     props = item.get("properties") or {}
     candidates: list[str] = []
-    for prop in ("name", "alias", "previousName"):
+    for prop in names.FTM_NAME_PROPS:
         values = props.get(prop) or []
         if isinstance(values, str):
             values = [values]

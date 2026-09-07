@@ -344,6 +344,41 @@ source: the page shows the last sweep's verdict and says when it was reached.
   (issue #50) — never a silent clean screen. OS+OA duplicate signals for
   the same node are deliberately kept (dedupe keys include source_id).
 
+### The FtM names group is defined once — and expires (Phase 174)
+
+`opencheck/names.py` owns **`FTM_NAME_PROPS`** — the FollowTheMoney properties
+that may carry a party's name — and **`FTM_NAME_PROPS_EXCLUDED`**, the ones
+deliberately not read. `_bears_name()` in `sources/openaleph.py` and
+`_best_name_score()` in `openaleph_check.py` both read it; **do not re-declare
+the tuple at a call site** (a test parses both modules and fails if you do).
+The gate and the scorer disagreeing about what a name is means a hit admitted
+by one and scored against nothing by the other.
+
+- **`abbreviation` is read.** FtM holds acronyms and short forms there, at the
+  `LegalEntity` level. OpenSanctions copied every value into `weakAlias` for
+  backwards compatibility until **2026-09-15** (changelog #39); OpenCheck read
+  neither, so an acronym-only surface form could not clear the gate.
+- **`weakAlias` is not read, on purpose.** It is weak by construction —
+  upstream files a name there precisely when it should not be trusted alone —
+  and the gate exists to reject hits that merely rank well.
+- **`scripts/check_ftm_names.py`** compares both collections against the
+  *installed* followthemoney model over `LegalEntity` + `Person` and fails CI
+  (a second step in the existing `ftm-edges` job, which already pays for the
+  ICU build). A name property in neither collection is read by nobody, and it
+  fails **closed**: the hit is dropped and reads as "not listed".
+
+**OpenSanctions cached responses expire after 7 days** —
+`_MAX_CACHE_AGE_DAYS` in `sources/opensanctions.py`, passed to
+`Cache.get_payload(max_age_days=…)` on both the search and entity paths. The
+cache key fingerprints *our* topic scope, which self-invalidates when we widen
+`_RISK_TOPICS` and says nothing about upstream coverage moving:
+`eu_journal_sanctions` roughly doubled on 2026-09-15 (vessels, export-control
+listings, sectorally-restricted companies) with no key change, and entities
+already in `eu_fsf` gained a second `datasets` entry. Expiry applies **only
+when a re-fetch is possible** (API key + `allow_live`) — otherwise an aged-out
+entry would hit the adapter's `live_available` assertion, and a stale answer
+is the best available one offline. Demo fixtures are never expired.
+
 ### Replay cache, shareable URLs, per-source retry (Phase 47)
 
 - Completed pipeline runs are cached in memory for 15 min

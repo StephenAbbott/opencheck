@@ -99,6 +99,25 @@ _TOPIC_PARAMS = "&".join(f"topic={t}" for t in _RISK_TOPICS)
 # ``data/cache/live/opensanctions/search/`` at leisure.
 _TOPIC_FINGERPRINT = hashlib.sha256(_TOPIC_PARAMS.encode("utf-8")).hexdigest()[:8]
 
+# The fingerprint above self-invalidates when *we* change the topic scope. It
+# says nothing about the data moving under us, and OpenSanctions' coverage
+# expands on their schedule, not ours: on 2026-09-15 `eu_journal_sanctions`
+# went from a few thousand entities to roughly 8,000 — vessels, export-control
+# listings and sectorally-restricted companies that `eu_fsf` excludes by scope
+# — and entities already in `eu_fsf` gained a second source in `datasets`.
+# Nothing in the cache key changes for either, so an entry written the day
+# before would otherwise be served indefinitely: `get_payload` does not expire
+# anything unless asked. A screening answer that is silently a month old is
+# the failure mode this whole adapter exists to avoid, so both the search and
+# the entity paths cap the age of a live-tier entry.
+#
+# Seven days is chosen against how the upstream publishes: daily builds, so a
+# week bounds the staleness at roughly seven builds while still absorbing the
+# repeat lookups a single session makes. Demo fixtures are never expired
+# (`Cache.get_payload` only ages the live tier), so the offline demo path is
+# untouched.
+_MAX_CACHE_AGE_DAYS = 7.0
+
 
 def _slug(text: str) -> str:
     return hashlib.sha256(text.lower().strip().encode("utf-8")).hexdigest()[:16]
@@ -190,11 +209,19 @@ class OpenSanctionsAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     async def _get(self, path: str, *, cache_key: str) -> dict[str, Any]:
-        cached = self._cache.get_payload(cache_key)
+        settings = get_settings()
+        # Only expire what we can replace. Without a key (or with live calls
+        # off) an aged-out entry cannot be re-fetched, and treating it as a
+        # miss would walk straight into the assertion below — so in that
+        # configuration a stale entry is still the best answer available, and
+        # the provenance recorder reports it as cached either way.
+        can_refetch = bool(settings.opensanctions_api_key and settings.allow_live)
+        cached = self._cache.get_payload(
+            cache_key, max_age_days=_MAX_CACHE_AGE_DAYS if can_refetch else None
+        )
         if cached is not None:
             return cached[0]
 
-        settings = get_settings()
         assert settings.opensanctions_api_key, "live_available should have been false"
 
         async with build_client() as client:
