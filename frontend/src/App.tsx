@@ -2595,7 +2595,9 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           <SourcesPage sources={sourcesQuery.data?.sources} loading={sourcesQuery.isLoading} />
         )}
 
-        {view === "features" && <FeaturesPage />}
+        {view === "features" && (
+          <FeaturesPage sourceCount={sourcesQuery.data?.sources.length ?? null} />
+        )}
 
         {view === "behind" && <BehindTheScenesPage />}
 

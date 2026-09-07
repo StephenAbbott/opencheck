@@ -62,7 +62,7 @@ export const FEATURES: Feature[] = [
     accent: "#22c55e", // oo.node.green
     glyph: "#86efac",
     description:
-      "Screens a company on its own — sanctions, control and structure — with results streaming in from 40 open sources as each one answers. Every finding names the source it came from, and a source that could not be reached is reported as a gap rather than a clean screen.",
+      "Screens a company on its own — sanctions, control and structure — with every source that can answer streaming its result onto the page as it arrives. Every finding names the source it came from, and a source that could not be reached is reported as a gap rather than a clean screen.",
     image: {
       src: "/features/quickcheck.png",
       alt: "A QuickCheck report: the subject company with its LEI and register status, a verdict sentence, three risk chips, and source cards filling in one by one as each source answers.",
@@ -169,6 +169,31 @@ export const FEATURES: Feature[] = [
     },
   },
 ];
+
+/**
+ * The page's opening sentence, with the source count filled in from `/sources`.
+ *
+ * The count is **never** written into the copy. `lib/features.ts` shipped in
+ * Phase 175 saying "40 open sources" and was wrong two days later, when the
+ * `eiti_assessment` adapter took the registry to 41 — the exact drift
+ * `opencheck-source-count-refs` exists to prevent, reproduced in a brand new
+ * file. So there is one place the number can appear, it is a function of the
+ * live registry, and `features.test.ts` fails the build if a digit-and-sources
+ * pair reappears in any description.
+ *
+ * `null` is "the count has not arrived yet", not zero: the sentence loses the
+ * figure rather than rendering "0 open sources" or holding the page back.
+ */
+export function ledeSentence(sourceCount: number | null): string {
+  const scope =
+    sourceCount === null ? "every open source that can answer" : `${sourceCount} open sources`;
+  return (
+    `OpenCheck is one lookup over ${scope}, anchored on the Legal Entity ` +
+    "Identifier and mapped into the Beneficial Ownership Data Standard. These " +
+    "are the ways to ask it a question — each free, each naming the sources " +
+    "behind its answer."
+  );
+}
 
 /**
  * Sentence count, for the two-sentence rule.
