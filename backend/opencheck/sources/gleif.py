@@ -25,16 +25,15 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
 import httpx
 
-from .. import provenance
+from .. import mirrorstats, provenance
 from ..cache import Cache
 from ..config import get_settings
-from ..gleif_throttle import GleifRateLimitedError
+from ..gleif_throttle import GleifRateLimitedError, get_throttle
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
@@ -60,6 +59,13 @@ from .cvr_denmark import DK_CVR_RA_CODE as _DK_CVR_RA_CODE, normalise_cvr as _no
 
 _API_BASE = "https://api.gleif.org/api/v1"
 _CACHE_NS = "gleif"
+
+#: Provenance detail for a store-served anchor, by why the store answered.
+#: Shared with the subsidiary network so the two say the same thing.
+SNAPSHOT_DETAIL: dict[str, str] = {
+    "fallback": "GLEIF Golden Copy snapshot (live API rate-limited)",
+    "mirror": "GLEIF Golden Copy mirror",
+}
 
 # Relationship data (parent, ultimate-parent, direct-children) is re-fetched
 # when the cached entry is older than this many days.  Ownership structures
@@ -221,6 +227,24 @@ class GleifAdapter(SourceAdapter):
         """
         lei = hit_id.strip().upper()
         cache_key = f"{_CACHE_NS}/lei/{lei}"
+
+        # Phase 179: mirror first. When the flag is on and the entity-pages
+        # file is a Phase 178 mirror that holds this LEI, the anchor — record,
+        # both parents or the exceptions filed in their place, the children
+        # page — is served from it and GLEIF is not called at all. A miss
+        # (an LEI issued since the mirror's watermark, or a trimmed file)
+        # falls through to the live order below, exactly as before, and the
+        # adapter cache keeps that live answer for repeat lookups until the
+        # next refresh brings the mirror up to date. With the flag off, or a
+        # v1 file, nothing here runs and the order is Phase 143's.
+        settings = get_settings()
+        if settings.gleif_mirror_first:
+            bundle = self._mirror_bundle(lei)
+            if bundle is not None:
+                await self._crossref_topup(lei, bundle)
+                validate_raw("gleif", GLEIFBundle, bundle)
+                return bundle
+
         if not self.info.live_available and not self._cache.has(cache_key):
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
 
@@ -230,7 +254,7 @@ class GleifAdapter(SourceAdapter):
         # before the very same snapshot is served. No snapshot row (or the
         # early fallback disabled) keeps the unbounded live attempt, so
         # deployments without the entity-pages DB behave exactly as before.
-        snapshot_after = get_settings().gleif_snapshot_after_s
+        snapshot_after = settings.gleif_snapshot_after_s
         timeout: float | None = (
             snapshot_after
             if snapshot_after > 0 and self._snapshot_available(lei)
@@ -300,6 +324,14 @@ class GleifAdapter(SourceAdapter):
         disagree about an LEI.
         """
         lei = lei.strip().upper()
+        if get_settings().gleif_mirror_first:
+            row = self._mirror_row(lei)
+            if row is not None:
+                from ..entity_pages import gleif_record_from_row
+
+                mirrorstats.record("entity.mirror")
+                return (gleif_record_from_row(row).get("attributes") or {}).get("entity") or {}
+            mirrorstats.record("entity.miss_live")
         record = await self._get(
             f"/lei-records/{quote(lei)}",
             cache_key=f"{_CACHE_NS}/lei/{lei}",
@@ -308,6 +340,121 @@ class GleifAdapter(SourceAdapter):
         data = record.get("data") or record
         attrs = data.get("attributes") or {}
         return attrs.get("entity") or {}
+
+    # ------------------------------------------------------------------
+    # Phase 179 — the mirror as the first source, not the last resort
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _mirror_row(lei: str):
+        """The store row for ``lei`` when the configured file is a Phase 178
+        mirror, else ``None`` — a v1 file is never served first, because its
+        rows cannot carry ``registeredAs`` or a reporting exception and a
+        lookup served from one would silently lose the registry bridges."""
+        from ..entity_pages import get_store
+
+        store = get_store()
+        if store is None or not store.is_mirror:
+            return None
+        return store.get(lei)
+
+    def _mirror_bundle(self, lei: str) -> dict[str, Any] | None:
+        """The anchor bundle from the mirror, or ``None`` on a miss (counted)."""
+        from ..entity_pages import get_store
+
+        store = get_store()
+        if store is None or not store.is_mirror:
+            mirrorstats.record("anchor.no_mirror")
+            return None
+        bundle = self._snapshot_bundle(lei, reason="mirror")
+        if bundle is None:
+            mirrorstats.record("anchor.miss_live")
+            return None
+        mirrorstats.record("anchor.mirror")
+        # What the live path would have spent: the record, a call per parent
+        # kind, plus the exception probe for each kind with no parent, plus
+        # the children page. Counted from the bundle, not assumed.
+        saved = 2 + sum(
+            1 + (0 if bundle.get(f"{kind}_parent") is not None else 1)
+            for kind in ("direct", "ultimate")
+        )
+        mirrorstats.record("anchor.live_calls_saved", saved)
+        return bundle
+
+    #: The top-up never dips into the last third of the window: a real
+    #: lookup's own calls come first.
+    _TOPUP_RESERVE_FRACTION = 3
+
+    #: Level 1 attributes the live API carries that the Golden Copy does not:
+    #: the cross-reference ids from GLEIF's mapping programmes. The mapper
+    #: publishes them as identifiers and the pipeline dispatches
+    #: OpenCorporates on ``ocid`` and corroborates MEIP on ``spglobal``, so a
+    #: mirror-served anchor without them would silently lose a source.
+    _CROSSREF_ATTRS = ("ocid", "qcc", "bic", "mic", "spglobal")
+
+    async def _crossref_topup(self, lei: str, bundle: dict[str, Any]) -> None:
+        """One bounded live call on top of a mirror-served anchor, for what
+        bulk cannot provide (Phase 179).
+
+        The curated-subject export diff that gates this phase showed the
+        mirror alone dropping two to three identifiers per entity statement —
+        the OpenCorporates, QCC, S&P, BIC and MIC ids GLEIF inlines from its
+        mapping files, which are not in the Golden Copy. So a mirror hit still
+        spends **one** live call — the Level 1 record, cached seven days like
+        the live path's — and merges those attributes into the mirror record.
+        Everything else in the bundle stays the mirror's. The call is skipped
+        when live mode is off, when the throttle has no headroom (a real
+        lookup's calls come first) or when GLEIF does not answer within the
+        snapshot bound; the anchor is then served without the cross-reference
+        ids, and ``crossrefs_available`` says so. With
+        ``OPENCHECK_GLEIF_LIVE_CONFIRM`` on, the same record is compared with
+        the mirror on every path the mapper reads and the result counted — the
+        freshness measurement costs nothing extra. Phase 181's mapping files
+        would make this call unnecessary.
+        """
+        bundle["crossrefs_available"] = False
+        settings = get_settings()
+        if not settings.allow_live:
+            mirrorstats.record("anchor.topup_skipped")
+            return
+        limit = settings.gleif_rate_limit_per_minute
+        reserve = max(limit // self._TOPUP_RESERVE_FRACTION, 1) if limit > 0 else 0
+        cache_key = f"{_CACHE_NS}/lei/{lei}"
+        cached = self._cache.get_payload(cache_key, max_age_days=_LEI_RECORD_CACHE_MAX_AGE_DAYS)
+        if cached is None and not get_throttle().has_headroom(reserve):
+            mirrorstats.record("anchor.topup_skipped")
+            return
+        bound = settings.gleif_snapshot_after_s or None
+        try:
+            payload = await asyncio.wait_for(
+                self._get(
+                    f"/lei-records/{quote(lei)}",
+                    cache_key=cache_key,
+                    max_age_days=_LEI_RECORD_CACHE_MAX_AGE_DAYS,
+                ),
+                timeout=bound,
+            )
+        except Exception:  # noqa: BLE001 — never fail a mirror-served anchor
+            mirrorstats.record("anchor.topup_failed")
+            return
+        mirrorstats.record("anchor.topup_cached" if cached is not None else "anchor.topup_live")
+        live = payload.get("data") or payload
+        live_attrs = live.get("attributes") or {}
+        record_attrs = bundle["record"].setdefault("attributes", {})
+        for key in self._CROSSREF_ATTRS:
+            value = live_attrs.get(key)
+            if value not in (None, "", []):
+                record_attrs[key] = value
+        bundle["crossrefs_available"] = True
+        if settings.gleif_live_confirm:
+            from ..entity_pages import differing_paths
+
+            diffs = differing_paths(bundle["record"], live)
+            if diffs:
+                mirrorstats.record("confirm.differs")
+                mirrorstats.record_differing_paths(diffs)
+            else:
+                mirrorstats.record("confirm.same")
 
     @staticmethod
     def _snapshot_available(lei: str) -> bool:
@@ -322,8 +469,17 @@ class GleifAdapter(SourceAdapter):
         store = get_store()
         return store is not None and store.get(lei) is not None
 
-    def _snapshot_bundle(self, lei: str) -> dict[str, Any] | None:
+    def _snapshot_bundle(
+        self, lei: str, *, reason: str = "fallback"
+    ) -> dict[str, Any] | None:
         """Anchor bundle from the entity-pages Golden Copy SQLite, or ``None``.
+
+        ``reason`` names why the store is answering — ``"fallback"`` (Phase
+        143: live GLEIF is rate-limiting) or ``"mirror"`` (Phase 179: the
+        mirror is the first source) — and is what the provenance detail and
+        the bundle's ``snapshot_source`` say. The bundle is built the same way
+        either way; only the wording differs, because the reader deserves to
+        know whether the snapshot was chosen or forced.
 
         Phase 143's last line of degradation before a lookup fails outright:
         when live GLEIF is rate-limiting and no cache entry (fresh or stale)
@@ -378,18 +534,10 @@ class GleifAdapter(SourceAdapter):
             row_ = exceptions.get(kind)
             return row_.record() if row_ is not None else None
 
-        built_at: datetime | None = None
-        publish = (store.meta().get("source_publish_date") or "")[:10]
-        if publish:
-            try:
-                built_at = datetime.strptime(publish, "%Y-%m-%d").replace(
-                    tzinfo=timezone.utc
-                )
-            except ValueError:
-                built_at = None
-        provenance.record_snapshot(
-            built_at, "GLEIF Golden Copy snapshot (live API rate-limited)"
-        )
+        # Dated to the Golden Copy publish the file reflects — the full
+        # timestamp since Phase 178 (three publishes a day), the date on an
+        # older file — so the badge says how old the mirror actually is.
+        provenance.record_snapshot(store.watermark(), SNAPSHOT_DETAIL[reason])
 
         direct_parent = _parent(row.direct_parent_lei)
         ultimate_parent = _parent(row.ultimate_parent_lei)
@@ -403,10 +551,13 @@ class GleifAdapter(SourceAdapter):
             "ultimate_parent_exception": _exception("ultimate", ultimate_parent),
             "direct_children": [_record(r) for r in children_rows],
             "direct_children_total": children_total,
-            # Not a schema field (extra="allow") — lets tests and logs tell a
-            # snapshot-served anchor from a live one.
-            "snapshot_fallback": True,
+            # Not schema fields (extra="allow") — let tests and logs tell a
+            # snapshot-served anchor from a live one, and a chosen mirror read
+            # (Phase 179) from a forced fallback (Phase 143).
+            "snapshot_fallback": reason == "fallback",
+            "snapshot_source": reason,
         }
+
 
     async def _fetch_direct_children(
         self, lei: str

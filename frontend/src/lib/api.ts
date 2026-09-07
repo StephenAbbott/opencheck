@@ -736,9 +736,14 @@ export interface SubsidiariesResponse {
   children_available: boolean;
   direct_available: boolean;
   ultimate_available: boolean;
-  /** Direct children served from OpenCheck's Golden Copy snapshot, not live. */
+  /** Children served from OpenCheck's Golden Copy snapshot, not live. */
   snapshot_fallback: boolean;
   snapshot_date: string | null;
+  /** Phase 179: why the snapshot answered — "mirror" (chosen by the
+   *  mirror-first order; nothing was refused) or "fallback" (GLEIF refused
+   *  and the snapshot stood in); null when the network came live. Optional
+   *  so a backend without it still type-checks. */
+  snapshot_source?: "mirror" | "fallback" | null;
   /** One sentence naming what GLEIF did not answer; null when it answered. */
   degraded_detail: string | null;
   direct_total: number;

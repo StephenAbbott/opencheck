@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from .. import __version__, consistencystats, memwatch, signalstats, source_health
+from .. import __version__, consistencystats, memwatch, mirrorstats, signalstats, source_health
 from ..bo_access import notice_for
 from ..config import get_settings
 from ..sources import REGISTRY, SourceInfo, lineage
@@ -85,6 +85,27 @@ async def consistency_stats() -> JSONResponse:
     is the gate for showing that comparison (see opencheck/consistency.py).
     """
     return JSONResponse(consistencystats.stats(), headers={"Cache-Control": "no-store"})
+
+
+@router.get("/mirror")
+async def mirror_stats() -> JSONResponse:
+    """How the GLEIF mirror is being used, since the last deploy (Phase 179).
+
+    The numbers the Golden Copy ticket's measurement gate reads before
+    ``OPENCHECK_GLEIF_MIRROR_FIRST`` is flipped on by default: anchors and
+    subsidiary networks served from the mirror against misses that went
+    live, the live GLEIF calls those hits displaced, and — with the
+    live-confirm flag on — how often a mirror-served record disagreed with
+    the live one on a field the mapper reads, by field. Plus what the
+    configured file is: a Phase 178 mirror or a v1 snapshot, its Golden Copy
+    watermark and row counts.
+
+    Same contract as /signalstats: public, unauthenticated, undecorated,
+    aggregate only. Keys are a closed vocabulary (counter names and the
+    fixed list of record paths), so no LEI or entity name can appear.
+    In-process; resets on deploy.
+    """
+    return JSONResponse(mirrorstats.stats(), headers={"Cache-Control": "no-store"})
 
 
 @router.get("/sources", response_model=SourcesResponse)

@@ -70,6 +70,7 @@ import unicodedata
 import zlib
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -199,6 +200,63 @@ EXCEPTION_CATEGORIES: dict[str, str] = {
     "direct": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT",
     "ultimate": "ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT",
 }
+
+#: Every path ``map_gleif`` / ``_gleif_entity_statement`` reads off a Level 1
+#: record. The parity test pins that a store-rendered record equals the live
+#: one on each of these; the Phase 179 live-confirm compares the same paths
+#: and counts the ones that differ (``mirrorstats``), so the list is the
+#: closed vocabulary those counters may use.
+MAPPER_READ_PATHS: tuple[tuple[str, ...], ...] = (
+    ("attributes", "lei"),
+    ("attributes", "entity", "legalName", "name"),
+    ("attributes", "entity", "jurisdiction"),
+    ("attributes", "entity", "registeredAs"),
+    ("attributes", "entity", "registeredAt", "id"),
+    ("attributes", "entity", "otherNames"),
+    ("attributes", "entity", "transliteratedOtherNames"),
+    ("attributes", "entity", "creationDate"),
+    ("attributes", "entity", "status"),
+    ("attributes", "entity", "legalForm", "id"),
+    ("attributes", "entity", "legalAddress"),
+    ("attributes", "entity", "headquartersAddress"),
+    ("attributes", "registration", "lastUpdateDate"),
+    ("attributes", "registration", "status"),
+)
+
+
+def record_path(record: Any, path: tuple[str, ...]) -> Any:
+    """Read one of :data:`MAPPER_READ_PATHS` off a JSON:API record (``None``
+    when any step is missing)."""
+    node: Any = record
+    for key in path:
+        if not isinstance(node, dict):
+            return None
+        node = node.get(key)
+    return node
+
+
+def prune_empty(value: Any) -> Any:
+    """Drop the nulls and empties the live API pads records with, so a
+    store-rendered record (which omits what it does not hold) and a live one
+    compare on what they *assert*."""
+    if isinstance(value, dict):
+        out = {k: prune_empty(v) for k, v in value.items()}
+        return {k: v for k, v in out.items() if v not in (None, [], {})}
+    if isinstance(value, list):
+        return [prune_empty(v) for v in value]
+    return value
+
+
+def differing_paths(store_record: dict, live_record: dict) -> list[str]:
+    """The mapper-read paths on which two records disagree, as ``a/b/c``
+    strings — empty when the store could stand in for live on every field
+    the mapper reads."""
+    return [
+        "/".join(path)
+        for path in MAPPER_READ_PATHS
+        if prune_empty(record_path(store_record, path))
+        != prune_empty(record_path(live_record, path))
+    ]
 
 
 def slugify_name(name: str | None, fallback: str | None = None) -> str:
@@ -536,6 +594,35 @@ class EntityStore:
         """``meta.schema_version``, or ``"1"`` for a file built before it existed."""
         return self.meta().get("schema_version") or "1"
 
+    @property
+    def is_mirror(self) -> bool:
+        """Whether this file can stand in for the live API (Phase 179): a
+        Phase 178 build with the detail column and both Level 2 tables. A v1
+        file is a snapshot of page columns — enough for the rate-limit
+        fallback, not enough to serve ``registeredAs`` or an exception — and
+        the mirror-first order must never pick it."""
+        return (
+            self.has_detail
+            and self.has_relationships
+            and self.has_exceptions
+            and self.schema_version != "1"
+        )
+
+    def watermark(self) -> datetime | None:
+        """The Golden Copy publish this file reflects, as an aware UTC datetime
+        — ``meta.source_publish_datetime`` (Phase 178) or, on an older file,
+        the date alone. ``None`` when the file carries neither (local builds
+        from unnamed files)."""
+        meta = self.meta()
+        raw = meta.get("source_publish_datetime") or meta.get("source_publish_date") or ""
+        formats = (("%Y-%m-%d %H:%M:%S", 19), ("%Y-%m-%dT%H:%M:%S", 19), ("%Y-%m-%d", 10))
+        for fmt, width in formats:
+            try:
+                return datetime.strptime(raw[:width], fmt).replace(tzinfo=UTC)
+            except ValueError:
+                continue
+        return None
+
     def _row(self, cursor_row: sqlite3.Row) -> EntityRow:
         return _row(cursor_row, self._zdict)
 
@@ -724,11 +811,18 @@ def warm_entity_pages_db() -> dict[str, Any]:
     settings = get_settings()
     url = settings.entity_pages_db_url
     if not url or settings.entity_pages_db_file:
+        # A local file (a developer, or Phase 180's persistent disk): the
+        # download does not apply, but a file that survived a restart is cold
+        # on disk — read it through once so the first lookups are not paying
+        # a random read per row (see prewarm_page_cache).
+        path = _db_path()
+        if settings.entity_pages_db_file and path is not None and path.exists():
+            return {"entity_pages": f"present: {path}; {prewarm_page_cache(path)}"}
         return {"entity_pages": "not configured for download"}
     path = _db_path()
     assert path is not None
     if path.exists():
-        return {"entity_pages": f"already present: {path}"}
+        return {"entity_pages": f"already present: {path}; {prewarm_page_cache(path)}"}
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".download")
     import time
@@ -757,7 +851,53 @@ def warm_entity_pages_db() -> dict[str, Any]:
         "entity_pages DB downloaded to %s (%d bytes on disk from %d fetched) in %.1fs",
         path, path.stat().st_size, downloaded, elapsed,
     )
-    return {"entity_pages": f"downloaded: {path} ({downloaded} bytes in {elapsed:.1f}s)"}
+    return {
+        "entity_pages": (
+            f"downloaded: {path} ({downloaded} bytes in {elapsed:.1f}s); "
+            f"{prewarm_page_cache(path)}"
+        )
+    }
+
+
+#: Read the file in chunks this large when warming the page cache.
+_PREWARM_CHUNK = 8 << 20
+
+
+def prewarm_page_cache(path: Path, *, max_seconds: float = 120.0) -> str:
+    """Read the mirror through once, sequentially, so its pages are in the
+    OS page cache before the first lookup (Phase 179).
+
+    Every mirror read is a handful of random 4 KiB page reads — a row, its
+    parents, up to a hundred children — and warm they cost well under a
+    millisecond each. Cold they cost whatever the disk's random-read latency
+    is: measured 2026-09-07 on a network-backed container disk at ~100 ms a
+    read, which turned Shell's 152 ultimate children into a 1.8 s query the
+    live API answers in under a second. A sequential pass is the cheap way
+    to pay that once: the kernel's readahead makes it a streaming read
+    (~15 s at 120 MB/s for 1.8 GB), and on an instance whose RAM cannot hold
+    the whole file the tail stays warm and the head is re-read on demand —
+    no worse than not warming. Bounded by ``max_seconds`` so a slow disk
+    cannot hold the boot warm-up beyond the other warms. Runs in the
+    lifespan's background thread, never on the event loop.
+    """
+    import time
+
+    started = time.monotonic()
+    read = 0
+    try:
+        with open(path, "rb", buffering=0) as fh:
+            while True:
+                chunk = fh.read(_PREWARM_CHUNK)
+                if not chunk:
+                    break
+                read += len(chunk)
+                if time.monotonic() - started > max_seconds:
+                    break
+    except OSError as exc:
+        return f"page-cache warm failed: {exc}"
+    elapsed = time.monotonic() - started
+    log.info("entity_pages DB page cache warmed: %d bytes in %.1fs", read, elapsed)
+    return f"page cache warmed: {read} bytes in {elapsed:.1f}s"
 
 
 # ---------------------------------------------------------------------------
