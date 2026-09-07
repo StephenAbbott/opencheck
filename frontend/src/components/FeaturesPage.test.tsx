@@ -72,6 +72,13 @@ describe("FeaturesPage", () => {
     }
   });
 
+  it("renders the live source count in the lede, and omits it when unknown", () => {
+    const { container: withCount } = render(<FeaturesPage sourceCount={41} />);
+    expect(withCount.querySelector("p")?.textContent).toContain("41 open sources");
+    const { container: without } = render(<FeaturesPage />);
+    expect(without.querySelector("p")?.textContent).not.toMatch(/\d/);
+  });
+
   it("keeps the heading outline flat: one h2, one h3 per feature", () => {
     const { container } = render(<FeaturesPage />);
     expect(container.querySelectorAll("h1").length).toBe(0);

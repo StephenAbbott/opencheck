@@ -21,7 +21,7 @@ import { describe, expect, it } from "vitest";
 // whole app to make a single assertion.
 import TAILWIND from "../../tailwind.config.js?raw";
 
-import { FEATURES, featureById, sentenceCount } from "./features";
+import { FEATURES, featureById, ledeSentence, sentenceCount } from "./features";
 import { ICON_NAMES } from "../components/ui/Icon";
 
 /** Every colour literal the Tailwind theme defines. */
@@ -142,6 +142,17 @@ describe("FEATURES", () => {
     ]);
   });
 
+  it("never writes a source count into the copy", () => {
+    // Phase 175 shipped "40 open sources" in the QuickCheck description and was
+    // wrong two days later, when eiti_assessment took the registry to 41. The
+    // count now comes from `/sources` through `ledeSentence` and may not come
+    // back: a number beside the word "sources" in any description fails here.
+    for (const f of FEATURES) {
+      expect(f.description, f.id).not.toMatch(/\b\d[\d,]*\s+(open\s+)?(sources?|registers?|adapters?)\b/i);
+      expect(f.cta.label, f.id).not.toMatch(/\b\d[\d,]*\s+(open\s+)?(sources?|registers?|adapters?)\b/i);
+    }
+  });
+
   it("asserts no certainty the risk layer refuses to", () => {
     // The findings.py discipline, applied to marketing copy: nothing here may
     // read as a guarantee, and "clean" may only appear in a sentence that
@@ -151,6 +162,26 @@ describe("FEATURES", () => {
       expect(d, f.id).not.toMatch(/\bguarantee/);
       expect(d, f.id).not.toMatch(/\b(complete|comprehensive) (screen|check|coverage)\b/);
       if (d.includes("clean")) expect(d, f.id).toMatch(/never|rather than|not\b/);
+    }
+  });
+});
+
+describe("ledeSentence", () => {
+  it("names the live count when it has arrived", () => {
+    expect(ledeSentence(41)).toContain("one lookup over 41 open sources");
+  });
+
+  it("loses the figure rather than guessing while the count is unknown", () => {
+    const lede = ledeSentence(null);
+    expect(lede).toContain("every open source that can answer");
+    expect(lede).not.toMatch(/\d/);
+  });
+
+  it("says the same thing either way", () => {
+    for (const lede of [ledeSentence(41), ledeSentence(null)]) {
+      expect(lede).toContain("Legal Entity Identifier");
+      expect(lede).toContain("Beneficial Ownership Data Standard");
+      expect(sentenceCount(lede)).toBe(2);
     }
   });
 });

@@ -34,11 +34,16 @@
 
 import { useEffect, useState } from "react";
 
-import { FEATURES } from "../lib/features";
+import { FEATURES, ledeSentence } from "../lib/features";
 import { SectionLabel } from "./ui";
 import { FeatureMark } from "./ui/FeatureMark";
 
-export function FeaturesPage() {
+export function FeaturesPage({
+  /** From `/sources`; `null` until it arrives. See `ledeSentence`. */
+  sourceCount = null,
+}: {
+  sourceCount?: number | null;
+} = {}) {
   const [active, setActive] = useState<string | null>(FEATURES[0]?.id ?? null);
 
   useEffect(() => {
@@ -82,10 +87,7 @@ export function FeaturesPage() {
         What OpenCheck can do
       </h2>
       <p className="text-oo-body leading-[1.75] text-oo-muted mb-8 max-w-2xl">
-        OpenCheck is one lookup over 40 open sources, anchored on the Legal
-        Entity Identifier and mapped into the Beneficial Ownership Data
-        Standard. These are the ways to ask it a question — each free, each
-        naming the sources behind its answer.
+        {ledeSentence(sourceCount)}
       </p>
 
       <div className="lg:flex lg:gap-10 lg:items-start">
