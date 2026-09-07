@@ -129,24 +129,27 @@ async def _subject_attrs(client, lei: str) -> tuple[dict[str, Any], bool]:
         return {}, False
 
 
-def _snapshot_children(lei: str) -> tuple[list[dict], int, str | None] | None:
-    """Direct children from the entity-pages Golden Copy, or ``None``.
+def _snapshot_children(
+    lei: str, kind: str = "direct"
+) -> tuple[list[dict], int, str | None] | None:
+    """Children of one relation kind from the entity-pages Golden Copy, or ``None``.
 
     The same local snapshot the ``/entity`` pages render from and the anchor
-    falls back to (Phase 143). It holds **direct** parent/child edges only, so
-    this can stand in for the direct relation and never for the ultimate one —
-    and its ``total`` is the snapshot's own count, not GLEIF's live total.
+    falls back to (Phase 143). Phase 146 could only stand in for the direct
+    relation; Phase 178 indexed ``ultimate_parent_lei`` too, so either kind can
+    be served — its ``total`` is the snapshot's own count, not GLEIF's live
+    total, and the extract date says how old it is.
     """
     from .entity_pages import get_store, gleif_record_from_row
 
     store = get_store()
     if store is None:
         return None
-    rows, total = store.children(lei, limit=_PAGE_SIZE)
+    rows, total = store.children(lei, limit=_PAGE_SIZE, kind=kind)
     if not rows:
         # No rows is not evidence of no children here: the LEI may simply be
         # absent from the store (a trimmed build, or issued after the last
-        # refresh). Declining to answer keeps `direct_available` false.
+        # refresh). Declining to answer keeps `{kind}_available` false.
         return None
     publish = (store.meta().get("source_publish_date") or "")[:10] or None
     return [gleif_record_from_row(r) for r in rows], total, publish
@@ -179,10 +182,21 @@ async def _build(lei: str) -> dict[str, Any]:
     # before reporting none. Only when nothing at all arrived live: a partial
     # live page is closer to the truth than a month-old snapshot.
     snapshot_date: str | None = None
+    direct_from_snapshot = False
     if not direct_ok and not direct_recs:
-        snap = _snapshot_children(lei)
+        snap = _snapshot_children(lei, "direct")
         if snap is not None:
             direct_recs, direct_total, snapshot_date = snap
+            direct_from_snapshot = True
+    # Phase 178: the same stand-in for the ultimate relation, which Phase 146
+    # had to declare unavailable because the store had no ultimate index.
+    ultimate_from_snapshot = False
+    if not ultimate_ok and not ultimate_recs:
+        snap = _snapshot_children(lei, "ultimate")
+        if snap is not None:
+            ultimate_recs, ultimate_total, ultimate_snapshot_date = snap
+            ultimate_from_snapshot = True
+            snapshot_date = snapshot_date or ultimate_snapshot_date
 
     merged: dict[str, dict[str, Any]] = {}
 
@@ -214,8 +228,8 @@ async def _build(lei: str) -> dict[str, Any]:
         # Honesty flags — the whole point of Phase 146. `direct_available` is
         # true when the snapshot stood in, because the rows are real; what they
         # are not is live, which `snapshot_date` says.
-        "direct_available": direct_ok or snapshot_date is not None,
-        "ultimate_available": ultimate_ok,
+        "direct_available": direct_ok or direct_from_snapshot,
+        "ultimate_available": ultimate_ok or ultimate_from_snapshot,
         "subject_available": subj_ok,
         "snapshot_date": snapshot_date,
         _COMPLETE_KEY: complete,
@@ -359,8 +373,14 @@ def _degraded_detail(
                 f"shown from OpenCheck's Golden Copy snapshot{dated}; the "
                 "ultimate (indirect) children could not be checked at all."
             )
+        if not direct_available:
+            return (
+                "GLEIF is rate-limiting or unreachable. The ultimate (indirect) "
+                f"children are shown from OpenCheck's Golden Copy snapshot{dated}; "
+                "the direct children could not be checked at all."
+            )
         return (
-            "GLEIF did not return the direct children, so they are shown from "
+            "GLEIF did not answer for this network, so it is shown from "
             f"OpenCheck's Golden Copy snapshot{dated} rather than live."
         )
     if not direct_available and not ultimate_available:

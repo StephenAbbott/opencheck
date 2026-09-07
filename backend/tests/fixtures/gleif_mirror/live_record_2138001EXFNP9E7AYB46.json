@@ -1,0 +1,105 @@
+{
+  "type": "lei-records",
+  "id": "2138001EXFNP9E7AYB46",
+  "attributes": {
+    "lei": "2138001EXFNP9E7AYB46",
+    "entity": {
+      "legalName": {
+        "name": "EASY POWER ΑΝΩΝΥΜΗ ΕΤΑΙΡΙΑ ΠΑΡΟΧΗΣ ΥΠΗΡΕΣΙΩΝ ΔΗΜΙΟΥΡΓΙΑΣ ΚΑΙ ΔΙΑΧΕΙΡΙΣΗΣ ΜΟΝΑΔΩΝ ΠΑΡΑΓΩΓΗΣ ΗΛΕΚΤΡΙΚΗΣ ΕΝΕΡΓΕΙΑΣ ΑΠΟ ΑΝΑΝΕΩΣΙΜΕΣ ΠΗΓΕΣ ΕΝΕΡΓΕΙΑΣ",
+        "language": "el"
+      },
+      "otherNames": [
+        {
+          "name": "EASY POWER AE",
+          "language": "en-IE",
+          "type": "TRADING_OR_OPERATING_NAME"
+        }
+      ],
+      "transliteratedOtherNames": [
+        {
+          "name": "EASY POWER Anonymi Etairia Parochis Ypiresion Dimiourgias kai Diacheirisis Monadon Paragogis Ilektrikis Energeias apo Ananeosimes Piges Energeias",
+          "language": "el",
+          "type": "PREFERRED_ASCII_TRANSLITERATED_LEGAL_NAME"
+        }
+      ],
+      "legalAddress": {
+        "language": "en-IE",
+        "addressLines": [
+          "LEOFOROS DROSIAS, STAMATAS 47"
+        ],
+        "addressNumber": null,
+        "addressNumberWithinBuilding": null,
+        "mailRouting": null,
+        "city": "ATHENS",
+        "region": "GR-I",
+        "country": "GR",
+        "postalCode": "145 75"
+      },
+      "headquartersAddress": {
+        "language": "en-IE",
+        "addressLines": [
+          "LEOFOROS DROSIAS, STAMATAS 47"
+        ],
+        "addressNumber": null,
+        "addressNumberWithinBuilding": null,
+        "mailRouting": null,
+        "city": "ATHENS",
+        "region": "GR-I",
+        "country": "GR",
+        "postalCode": "145 75"
+      },
+      "registeredAt": {
+        "id": "RA000685",
+        "other": null
+      },
+      "registeredAs": "007132601000",
+      "jurisdiction": "GR",
+      "category": "GENERAL",
+      "legalForm": {
+        "id": "W2NK",
+        "other": null
+      },
+      "associatedEntity": {
+        "lei": null,
+        "name": null
+      },
+      "status": "ACTIVE",
+      "expiration": {
+        "date": null,
+        "reason": null
+      },
+      "successorEntity": {
+        "lei": null,
+        "name": null
+      },
+      "successorEntities": [],
+      "creationDate": "2006-09-07T23:00:00Z",
+      "subCategory": null,
+      "otherAddresses": [],
+      "eventGroups": []
+    },
+    "registration": {
+      "initialRegistrationDate": "2018-07-30T23:00:00Z",
+      "lastUpdateDate": "2026-09-05T23:00:00Z",
+      "status": "ISSUED",
+      "nextRenewalDate": "2027-06-25T23:00:00Z",
+      "managingLou": "635400DZBUIMTBCXGA12",
+      "corroborationLevel": "FULLY_CORROBORATED",
+      "validatedAt": {
+        "id": "RA000685",
+        "other": null
+      },
+      "validatedAs": "007132601000",
+      "otherValidationAuthorities": []
+    },
+    "bic": null,
+    "mic": null,
+    "ocid": "gr/007132601000",
+    "qcc": "QGR9FVGU7B",
+    "gem": null,
+    "spglobal": [
+      "248667266"
+    ],
+    "conformityFlag": "CONFORMING"
+  }
+}

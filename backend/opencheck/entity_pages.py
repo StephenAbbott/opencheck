@@ -28,18 +28,46 @@ Layout of this module:
   ``schema.org/Organization`` carrying ``leiCode``).
 
 The DB schema is defined here (`SCHEMA`) and created by the builder script.
+
+Phase 178 widened the store from "enough to render a page" into a **GLEIF
+mirror**: the ``entities`` row keeps its page columns and gains ``detail_json``
+(every Level 1 field the BODS mapper reads — other and transliterated names,
+both addresses in full, the registration authority and its entity id, category,
+legal-form detail, creation/expiration, successors, managing LOU, validation
+authority, renewal dates), and two new tables hold Level 2: ``relationships``
+(the RR file, with status and periods) and ``reporting_exceptions`` (the REPEX
+file). :func:`gleif_record_from_row`, :func:`gleif_exception_record` and
+:class:`EntityStore`'s relationship queries render all of it in the live API's
+JSON:API shapes, so ``map_gleif`` and the subsidiary network cannot tell a
+store-served record from a live one — except that they carry only what the
+store holds; nothing is guessed. A v1 database (no ``detail_json``, no Level 2
+tables) still opens: the reader treats the missing pieces as absent.
+
+Size, because it decides whether the file can boot on an ephemeral disk at all
+(measured on the 2026-09-07 16:00 full publish, 3,423,663 LEIs): the detail
+written as plain JSON text averaged 697 bytes a row — 2.37 GB of a 4.8 GB file,
+five times the v1 build. The same JSON compressed row-by-row with zlib against
+a **shared dictionary** sampled from the file (:func:`build_detail_zdict`,
+stored in ``meta.detail_zdict``) averages 158 bytes: the dictionary carries the
+key names and the common values every row repeats, which per-row compression
+without one cannot exploit (379 bytes). ``detail_json`` is therefore a zlib
+BLOB in a built file and plain TEXT only transiently (the builder compresses
+after the load) or in hand-made test rows — the reader accepts both. The
+exceptions table is ``WITHOUT ROWID`` with the relation *kind* as its key
+(6.3M rows: 364 MB against 1.05 GB with a rowid table plus its autoindex).
 """
 
 from __future__ import annotations
 
-import gzip
+import base64
 import html
+import json
 import logging
 import re
-import shutil
 import sqlite3
 import threading
 import unicodedata
+import zlib
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -53,6 +81,10 @@ TEMPLATE_VERSION = "1"
 
 #: Max slug length. Cut at a word boundary; URLs stay readable and stable.
 _SLUG_MAX = 60
+
+#: Bumped when the tables or the ``detail_json`` contract change. Written to
+#: ``meta.schema_version`` by the builder; v1 databases have no such key.
+SCHEMA_VERSION = "2"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS entities (
@@ -70,13 +102,103 @@ CREATE TABLE IF NOT EXISTS entities (
     last_updated TEXT,
     successor_lei TEXT,
     direct_parent_lei TEXT,
-    ultimate_parent_lei TEXT
+    ultimate_parent_lei TEXT,
+    detail_json TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_entities_country_name ON entities(country, name);
 CREATE INDEX IF NOT EXISTS idx_entities_direct_parent
     ON entities(direct_parent_lei) WHERE direct_parent_lei IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_entities_ultimate_parent
+    ON entities(ultimate_parent_lei) WHERE ultimate_parent_lei IS NOT NULL;
+CREATE TABLE IF NOT EXISTS relationships (
+    child_lei TEXT NOT NULL,
+    relationship_type TEXT NOT NULL,
+    parent_lei TEXT NOT NULL,
+    relationship_status TEXT,
+    registration_status TEXT,
+    period_start TEXT,
+    period_end TEXT,
+    last_updated TEXT,
+    PRIMARY KEY (child_lei, relationship_type)
+);
+CREATE INDEX IF NOT EXISTS idx_relationships_parent ON relationships(parent_lei);
+CREATE TABLE IF NOT EXISTS reporting_exceptions (
+    lei TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    reason TEXT,
+    reasons_json TEXT,
+    reference TEXT,
+    PRIMARY KEY (lei, kind)
+) WITHOUT ROWID;
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 """
+
+#: Columns a v1 database lacks. The reader tolerates their absence; the
+#: builder adds them in place when it upgrades a v1 file with a delta.
+SCHEMA_V2_ENTITY_COLUMNS = ("detail_json",)
+
+#: ``meta`` key holding the shared zlib dictionary (base64) that every
+#: compressed ``detail_json`` BLOB in the file was written against. A file
+#: without it holds no compressed rows.
+DETAIL_ZDICT_META_KEY = "detail_zdict"
+
+#: zlib's window is 32 KiB, so a longer dictionary is never consulted.
+_ZDICT_MAX = 32 * 1024
+
+
+def build_detail_zdict(samples: Iterable[str]) -> bytes:
+    """A zlib preset dictionary from sample ``detail_json`` texts: their
+    concatenation, cut to the last 32 KiB. Nothing cleverer is needed — the
+    rows share key names and a small vocabulary of values (languages,
+    country codes, statuses, LOU ids, authority codes), and a dictionary that
+    simply *contains* them lets the compressor reference each as a back
+    reference instead of spelling it out. The builder samples across the whole
+    file so no single issuer's vocabulary dominates."""
+    joined = "".join(samples).encode("utf-8")
+    return joined[-_ZDICT_MAX:]
+
+
+def compress_detail(text: str, zdict: bytes) -> bytes:
+    co = zlib.compressobj(6, zlib.DEFLATED, zlib.MAX_WBITS, 8, zlib.Z_DEFAULT_STRATEGY, zdict)
+    return co.compress(text.encode("utf-8")) + co.flush()
+
+
+def decompress_detail(blob: bytes, zdict: bytes | None) -> str:
+    do = zlib.decompressobj(zdict=zdict) if zdict else zlib.decompressobj()
+    return (do.decompress(blob) + do.flush()).decode("utf-8")
+
+
+def encode_zdict(zdict: bytes) -> str:
+    """The ``meta.detail_zdict`` text form (``meta.value`` is TEXT)."""
+    return base64.b64encode(zdict).decode("ascii")
+
+
+def decode_zdict(value: str | None) -> bytes | None:
+    if not value:
+        return None
+    try:
+        return base64.b64decode(value, validate=True)
+    except (ValueError, TypeError):
+        return None
+
+#: The RR registration statuses that mean "this relationship record stands".
+#: Phase 88 applied PUBLISHED only; Phase 178 widened it to LAPSED after
+#: checking the live API: ``/lei-records/{lei}/direct-parent`` returns a
+#: relationship whose registration lapsed (renewal overdue) as long as the
+#: relationship itself is ACTIVE (verified 2026-09-07 on 21380036M4Q8X2V2LU77,
+#: registration LAPSED, relationship ACTIVE, served live). RETIRED, ANNULLED
+#: and DUPLICATE records are not.
+RR_STANDING_REGISTRATION_STATUSES: frozenset[str] = frozenset({"PUBLISHED", "LAPSED"})
+
+RR_DIRECT = "IS_DIRECTLY_CONSOLIDATED_BY"
+RR_ULTIMATE = "IS_ULTIMATELY_CONSOLIDATED_BY"
+
+#: Reporting-exception categories as GLEIF publishes them, keyed by the
+#: relation kind the adapter asks for.
+EXCEPTION_CATEGORIES: dict[str, str] = {
+    "direct": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT",
+    "ultimate": "ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT",
+}
 
 
 def slugify_name(name: str | None, fallback: str | None = None) -> str:
@@ -122,6 +244,10 @@ class EntityRow:
     successor_lei: str | None
     direct_parent_lei: str | None
     ultimate_parent_lei: str | None
+    #: Phase 178: the Level 1 detail the page columns do not carry, parsed
+    #: from ``detail_json``. ``None`` on a v1 database or a row built without
+    #: it — every reader treats that as "not held", never as empty values.
+    detail: dict | None = None
 
     @property
     def path(self) -> str:
@@ -129,46 +255,238 @@ class EntityRow:
         return f"/entity/{self.lei}-{self.slug}" if self.slug else f"/entity/{self.lei}"
 
 
-_COLUMNS = [f.strip() for f in EntityRow.__dataclass_fields__]  # keep in schema order
+# The page columns, in schema order. ``detail`` is not a column — it is parsed
+# from ``detail_json`` — so it is excluded here.
+_COLUMNS = [f for f in EntityRow.__dataclass_fields__ if f != "detail"]
+
+
+def _address_block(block: dict | None, *, city: str | None = None,
+                   region: str | None = None, country: str | None = None) -> dict:
+    """A GLEIF ``legalAddress`` / ``headquartersAddress`` object from the detail
+    JSON (``language``, ``lines``, the number / number-within-building / mail
+    routing keys, ``city``, ``region``, ``country``, ``postalCode``), falling
+    back to the page columns for the legal address of a v1 row. Only keys the
+    store actually holds are emitted, in the live API's key order."""
+    block = block or {}
+    out: dict = {}
+    if block.get("language"):
+        out["language"] = block["language"]
+    lines = block.get("lines")
+    if lines:
+        out["addressLines"] = list(lines)
+    for key in ("addressNumber", "addressNumberWithinBuilding", "mailRouting"):
+        if block.get(key):
+            out[key] = block[key]
+    for key, fallback in (("city", city), ("region", region), ("country", country)):
+        value = block.get(key) or fallback
+        if value:
+            out[key] = value
+    if block.get("postalCode"):
+        out["postalCode"] = block["postalCode"]
+    return out
 
 
 def gleif_record_from_row(row: EntityRow) -> dict:
     """An :class:`EntityRow` shaped as a GLEIF Level-1 ``data`` object.
 
-    The snapshot store is the fallback for two GLEIF surfaces now — the anchor
-    bundle (``sources.gleif._snapshot_bundle``, Phase 143) and the subsidiary
-    network — and both need the row rendered in GLEIF's own shape so the
-    downstream mappers do not care where it came from. It carries only what the
-    store holds: name, statuses, jurisdiction, legal form and address. What the
-    store does NOT hold (``registeredAs``/``registeredAt``, reporting
-    exceptions, cross-reference ids) is simply absent rather than guessed at.
+    The one place that decides what a store row may claim. Phase 143 made it
+    the anchor's rate-limit fallback, Phase 146 the subsidiary network's, and
+    Phase 178 widened it into the mirror's record builder: with a v2 row it
+    renders every Level 1 field the BODS mapper reads — names, both addresses,
+    ``registeredAs``/``registeredAt``, category, legal form, creation and
+    expiration, successors, the registration block — in exactly the JSON:API
+    attribute shape ``api.gleif.org`` returns, so ``map_gleif`` cannot tell the
+    difference. What a row does not hold (a v1 row's detail, the cross-reference
+    ids ``bic``/``mic``/``ocid``/``spglobal`` that come from GLEIF's mapping
+    files, not the Golden Copy) is absent rather than guessed at.
     """
+    d = row.detail or {}
     entity: dict = {"legalName": {"name": row.name}}
+    legal_name_lang = (d.get("legalName") or {}).get("language")
+    if legal_name_lang:
+        entity["legalName"]["language"] = legal_name_lang
+    if d.get("otherNames"):
+        entity["otherNames"] = [dict(n) for n in d["otherNames"]]
+    if d.get("transliteratedOtherNames"):
+        entity["transliteratedOtherNames"] = [dict(n) for n in d["transliteratedOtherNames"]]
+    legal_address = _address_block(
+        d.get("legalAddress"), city=row.city, region=row.region, country=row.country
+    )
+    if legal_address:
+        entity["legalAddress"] = legal_address
+    hq_address = _address_block(d.get("headquartersAddress"))
+    if hq_address:
+        entity["headquartersAddress"] = hq_address
+    if d.get("registeredAt"):
+        entity["registeredAt"] = dict(d["registeredAt"])
+    if d.get("registeredAs"):
+        entity["registeredAs"] = d["registeredAs"]
     if row.jurisdiction:
         entity["jurisdiction"] = row.jurisdiction
+    if d.get("category"):
+        entity["category"] = d["category"]
+    if d.get("subCategory"):
+        entity["subCategory"] = d["subCategory"]
+    if row.legal_form or d.get("legalFormOther"):
+        legal_form: dict = {}
+        if row.legal_form:
+            legal_form["id"] = row.legal_form
+        if d.get("legalFormOther"):
+            legal_form["other"] = d["legalFormOther"]
+        entity["legalForm"] = legal_form
     if row.entity_status:
         entity["status"] = row.entity_status
-    if row.legal_form:
-        entity["legalForm"] = {"id": row.legal_form}
-    address = {
-        key: value
-        for key, value in (
-            ("city", row.city),
-            ("region", row.region),
-            ("country", row.country),
-        )
-        if value
-    }
-    if address:
-        entity["legalAddress"] = address
+    if d.get("creationDate"):
+        entity["creationDate"] = d["creationDate"]
+    expiration = d.get("expiration") or {}
+    if expiration.get("date") or expiration.get("reason"):
+        entity["expiration"] = {k: v for k, v in expiration.items() if v}
+    successors = d.get("successorEntities") or []
+    if row.successor_lei and not any(
+        (x.get("lei") or "") == row.successor_lei for x in successors
+    ):
+        successors = [{"lei": row.successor_lei}, *successors]
+    if successors:
+        entity["successorEntities"] = [dict(x) for x in successors]
+        # The live API also carries the first successor in the singular field.
+        entity["successorEntity"] = dict(successors[0])
+
     attributes: dict = {"lei": row.lei, "entity": entity}
+    registration: dict = {}
+    if row.first_registered:
+        registration["initialRegistrationDate"] = row.first_registered
+    if row.last_updated:
+        registration["lastUpdateDate"] = row.last_updated
     if row.registration_status:
-        attributes["registration"] = {"status": row.registration_status}
-    return {"id": row.lei, "attributes": attributes}
+        registration["status"] = row.registration_status
+    for src, dst in (
+        ("nextRenewalDate", "nextRenewalDate"),
+        ("managingLou", "managingLou"),
+        ("corroborationLevel", "corroborationLevel"),
+        ("validatedAt", "validatedAt"),
+        ("validatedAs", "validatedAs"),
+        ("otherValidationAuthorities", "otherValidationAuthorities"),
+    ):
+        if d.get(src):
+            registration[dst] = d[src]
+    if registration:
+        attributes["registration"] = registration
+    if d.get("conformityFlag"):
+        attributes["conformityFlag"] = d["conformityFlag"]
+    return {"type": "lei-records", "id": row.lei, "attributes": attributes}
 
 
-def _row(cursor_row: sqlite3.Row) -> EntityRow:
-    return EntityRow(**{k: cursor_row[k] for k in _COLUMNS})
+def gleif_exception_record(
+    lei: str, category: str, reason: str | None, reference: str | None,
+    reasons: list[str] | None = None,
+) -> dict:
+    """A store exception row shaped as the live
+    ``/lei-records/{lei}/{kind}-parent-reporting-exception`` ``data`` object —
+    the attribute names the mapper and the Phase 114 chip classifier read
+    (``category`` / ``reason`` / ``reference``). GLEIF's file allows up to five
+    reasons per category; the first is ``reason`` (what the live API shows) and
+    the full list rides on ``reasons`` for anyone who wants it."""
+    attributes: dict = {"lei": lei, "category": category}
+    if reason:
+        attributes["reason"] = reason
+    if reasons and len(reasons) > 1:
+        attributes["reasons"] = list(reasons)
+    if reference:
+        attributes["reference"] = reference
+    return {
+        "type": "reporting-exceptions",
+        "id": f"{lei}-{category}",
+        "attributes": attributes,
+    }
+
+
+def gleif_relationship_record(rel: RelationshipRow) -> dict:
+    """A ``relationships`` row shaped as the live ``relationship-records``
+    ``data`` object (start node = child, end node = parent). Periods are the
+    one the builder kept — the RELATIONSHIP_PERIOD — when the file had it."""
+    relationship: dict = {
+        "startNode": {"id": rel.child_lei, "type": "LEI"},
+        "endNode": {"id": rel.parent_lei, "type": "LEI"},
+        "type": rel.relationship_type,
+    }
+    if rel.relationship_status:
+        relationship["status"] = rel.relationship_status
+    if rel.period_start or rel.period_end:
+        period: dict = {"type": "RELATIONSHIP_PERIOD"}
+        if rel.period_start:
+            period["startDate"] = rel.period_start
+        if rel.period_end:
+            period["endDate"] = rel.period_end
+        relationship["periods"] = [period]
+    attributes: dict = {"relationship": relationship}
+    registration: dict = {}
+    if rel.registration_status:
+        registration["status"] = rel.registration_status
+    if rel.last_updated:
+        registration["lastUpdateDate"] = rel.last_updated
+    if registration:
+        attributes["registration"] = registration
+    return {
+        "type": "relationship-records",
+        "id": f"{rel.child_lei}|LEI|{rel.relationship_type}",
+        "attributes": attributes,
+    }
+
+
+@dataclass(frozen=True)
+class RelationshipRow:
+    child_lei: str
+    relationship_type: str
+    parent_lei: str
+    relationship_status: str | None
+    registration_status: str | None
+    period_start: str | None
+    period_end: str | None
+    last_updated: str | None
+
+    @property
+    def standing(self) -> bool:
+        """Whether the live API would still serve this relationship — see
+        :data:`RR_STANDING_REGISTRATION_STATUSES`."""
+        reg = (self.registration_status or "PUBLISHED").upper()
+        status = (self.relationship_status or "ACTIVE").upper()
+        return reg in RR_STANDING_REGISTRATION_STATUSES and status == "ACTIVE"
+
+
+@dataclass(frozen=True)
+class ExceptionRow:
+    lei: str
+    category: str
+    reason: str | None
+    reasons: list[str]
+    reference: str | None
+
+    def record(self) -> dict:
+        return gleif_exception_record(
+            self.lei, self.category, self.reason, self.reference, self.reasons
+        )
+
+
+def _relationship_row(cursor_row: sqlite3.Row) -> RelationshipRow:
+    return RelationshipRow(
+        **{f: cursor_row[f] for f in RelationshipRow.__dataclass_fields__}
+    )
+
+
+def _row(cursor_row: sqlite3.Row, zdict: bytes | None = None) -> EntityRow:
+    values = {k: cursor_row[k] for k in _COLUMNS}
+    detail: dict | None = None
+    if "detail_json" in cursor_row.keys():  # noqa: SIM118 — sqlite3.Row is not a dict
+        raw = cursor_row["detail_json"]
+        if raw:
+            try:
+                text = decompress_detail(raw, zdict) if isinstance(raw, bytes) else raw
+                parsed = json.loads(text)
+            except (ValueError, zlib.error):
+                parsed = None
+            if isinstance(parsed, dict):
+                detail = parsed
+    return EntityRow(**values, detail=detail)
 
 
 class EntityStore:
@@ -187,13 +505,46 @@ class EntityStore:
             f"file:{path}?mode=ro&immutable=1", uri=True, check_same_thread=False
         )
         self._conn.row_factory = sqlite3.Row
+        # Phase 178: which Level 2 tables this file actually has. A v1 file
+        # (built before the mirror) has neither; every Level 2 query then
+        # answers "not held" rather than raising — the anchor fallback keeps
+        # working on the old file until the next rebuild lands.
+        tables = {
+            r["name"]
+            for r in self._conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall()
+        }
+        self.has_relationships = "relationships" in tables
+        self.has_exceptions = "reporting_exceptions" in tables
+        columns = {
+            r["name"] for r in self._conn.execute("PRAGMA table_info(entities)").fetchall()
+        }
+        self.has_detail = "detail_json" in columns
+        self._has_ultimate_index = any(
+            r["name"] == "idx_entities_ultimate_parent"
+            for r in self._conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'index'"
+            ).fetchall()
+        )
+        # The shared dictionary the compressed detail BLOBs were written
+        # against. Read once: it is part of the file, fixed at build time.
+        self._zdict = decode_zdict(self.meta().get(DETAIL_ZDICT_META_KEY))
+
+    @property
+    def schema_version(self) -> str:
+        """``meta.schema_version``, or ``"1"`` for a file built before it existed."""
+        return self.meta().get("schema_version") or "1"
+
+    def _row(self, cursor_row: sqlite3.Row) -> EntityRow:
+        return _row(cursor_row, self._zdict)
 
     # -- single entity ------------------------------------------------------
     def get(self, lei: str) -> EntityRow | None:
         with self._lock:
             cur = self._conn.execute("SELECT * FROM entities WHERE lei = ?", (lei,))
             r = cur.fetchone()
-        return _row(r) if r else None
+        return self._row(r) if r else None
 
     def get_many(self, leis: Iterable[str | None]) -> dict[str, EntityRow]:
         wanted = [lei for lei in leis if lei]
@@ -204,18 +555,76 @@ class EntityStore:
             rows = self._conn.execute(
                 f"SELECT * FROM entities WHERE lei IN ({marks})", wanted
             ).fetchall()
-        return {r["lei"]: _row(r) for r in rows}
+        return {r["lei"]: self._row(r) for r in rows}
 
-    def children(self, lei: str, limit: int = 20) -> tuple[list[EntityRow], int]:
+    def children(
+        self, lei: str, limit: int = 20, *, kind: str = "direct"
+    ) -> tuple[list[EntityRow], int]:
+        """Entities whose ``{kind}_parent_lei`` is ``lei`` — the store's answer
+        to the live ``/{kind}-children`` endpoint. ``kind`` is ``"direct"``
+        (default, as Phase 88 built it) or ``"ultimate"`` (Phase 178: the
+        ultimate index that the Phase 146 fallback had to declare unavailable).
+        """
+        column = {"direct": "direct_parent_lei", "ultimate": "ultimate_parent_lei"}[kind]
         with self._lock:
             total = self._conn.execute(
-                "SELECT COUNT(*) FROM entities WHERE direct_parent_lei = ?", (lei,)
+                f"SELECT COUNT(*) FROM entities WHERE {column} = ?", (lei,)
             ).fetchone()[0]
             rows = self._conn.execute(
-                "SELECT * FROM entities WHERE direct_parent_lei = ? ORDER BY name LIMIT ?",
+                f"SELECT * FROM entities WHERE {column} = ? ORDER BY name LIMIT ?",
                 (lei, limit),
             ).fetchall()
-        return [_row(r) for r in rows], int(total)
+        return [self._row(r) for r in rows], int(total)
+
+    # -- Level 2 (Phase 178) --------------------------------------------------
+    def relationship(self, lei: str, kind: str) -> RelationshipRow | None:
+        """The RR record for ``lei``'s direct or ultimate parent, standing or
+        not (callers check :attr:`RelationshipRow.standing`), or ``None`` when
+        the file has no such record — or no ``relationships`` table at all."""
+        if not self.has_relationships:
+            return None
+        rtype = {"direct": RR_DIRECT, "ultimate": RR_ULTIMATE}[kind]
+        with self._lock:
+            r = self._conn.execute(
+                "SELECT * FROM relationships WHERE child_lei = ? AND relationship_type = ?",
+                (lei, rtype),
+            ).fetchone()
+        return _relationship_row(r) if r else None
+
+    def exceptions(self, lei: str) -> dict[str, ExceptionRow]:
+        """Reporting exceptions filed for ``lei``, keyed by relation kind
+        (``"direct"`` / ``"ultimate"``); empty when none are held — which on a
+        v1 file means "not held", not "none filed"."""
+        if not self.has_exceptions:
+            return {}
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM reporting_exceptions WHERE lei = ?", (lei,)
+            ).fetchall()
+        out: dict[str, ExceptionRow] = {}
+        for r in rows:
+            # The table keys on the relation kind (``direct`` / ``ultimate``)
+            # rather than GLEIF's 38-character category string — 6.3M rows
+            # make that 230 MB — and a category the builder did not
+            # recognise is stored verbatim, which the reader skips.
+            kind = r["kind"]
+            category = EXCEPTION_CATEGORIES.get(kind)
+            if category is None:
+                continue
+            reasons: list[str] = []
+            if r["reasons_json"]:
+                try:
+                    reasons = [str(x) for x in json.loads(r["reasons_json"])]
+                except ValueError:
+                    reasons = []
+            out[kind] = ExceptionRow(
+                lei=r["lei"],
+                category=category,
+                reason=r["reason"],
+                reasons=reasons or ([r["reason"]] if r["reason"] else []),
+                reference=r["reference"],
+            )
+        return out
 
     # -- sitemaps -----------------------------------------------------------
     def count(self) -> int:
@@ -250,7 +659,7 @@ class EntityStore:
                 "SELECT * FROM entities WHERE country = ? ORDER BY name, lei LIMIT ? OFFSET ?",
                 (country, limit, offset),
             ).fetchall()
-        return [_row(r) for r in rows], int(total)
+        return [self._row(r) for r in rows], int(total)
 
     def meta(self) -> dict[str, str]:
         with self._lock:
@@ -322,23 +731,33 @@ def warm_entity_pages_db() -> dict[str, Any]:
         return {"entity_pages": f"already present: {path}"}
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".download")
+    import time
+
     import httpx
 
+    # Phase 178: the mirror is 1.8 GB on disk from a ~0.9 GB asset, so the
+    # ``.gz`` is inflated *as it streams* — the disk never holds the archive
+    # and the plain file at once (2.7 GB on an ephemeral disk), and the
+    # inflate costs no second pass. The Phase 88 arrangement wrote the archive
+    # out and gunzipped it afterwards.
+    started = time.monotonic()
+    downloaded = 0
+    inflate = zlib.decompressobj(16 + zlib.MAX_WBITS) if url.endswith(".gz") else None
     with httpx.stream("GET", url, timeout=600.0, follow_redirects=True) as resp:
         resp.raise_for_status()
         with open(tmp, "wb") as fh:
             for chunk in resp.iter_bytes():
-                fh.write(chunk)
-    if url.endswith(".gz"):
-        plain = path.with_suffix(".plain")
-        with gzip.open(tmp, "rb") as src, open(plain, "wb") as dst:
-            shutil.copyfileobj(src, dst)
-        tmp.unlink()
-        plain.rename(path)
-    else:
-        tmp.rename(path)
-    log.info("entity_pages DB downloaded to %s (%d bytes)", path, path.stat().st_size)
-    return {"entity_pages": f"downloaded: {path}"}
+                downloaded += len(chunk)
+                fh.write(inflate.decompress(chunk) if inflate else chunk)
+            if inflate:
+                fh.write(inflate.flush())
+    tmp.rename(path)
+    elapsed = time.monotonic() - started
+    log.info(
+        "entity_pages DB downloaded to %s (%d bytes on disk from %d fetched) in %.1fs",
+        path, path.stat().st_size, downloaded, elapsed,
+    )
+    return {"entity_pages": f"downloaded: {path} ({downloaded} bytes in {elapsed:.1f}s)"}
 
 
 # ---------------------------------------------------------------------------

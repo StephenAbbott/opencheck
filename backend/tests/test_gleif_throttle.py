@@ -93,8 +93,14 @@ def _entity_store_db(tmp_path: Path) -> Path:
          "ISSUED", "NL", "B6ES", "DEN HAAG", "", "NL", "2015-05-05",
          "2026-08-01", None, _LEI, _LEI),
     ]
+    # Named columns: Phase 178 added ``detail_json`` (left NULL here — a row
+    # without detail is exactly what a pre-178 file holds).
     conn.executemany(
-        "INSERT INTO entities VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", rows
+        "INSERT INTO entities (lei, name, slug, entity_status, registration_status, "
+        "jurisdiction, legal_form, city, region, country, first_registered, "
+        "last_updated, successor_lei, direct_parent_lei, ultimate_parent_lei) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        rows,
     )
     conn.execute(
         "INSERT INTO meta (key, value) VALUES ('source_publish_date', '2026-08-03 08:00:00')"

@@ -2,6 +2,9 @@ name: Refresh entity-pages DB (GLEIF Golden Copy)
 
 # Phase E of the SEO entity-pages plan (Phase 90): keeps the ~3.4M-entity
 # SQLite behind opencheck.world/entity/* current with GLEIF's Golden Copy.
+# Since Phase 178 that file is also the GLEIF mirror (Level 1 detail, the RR
+# relationship records and the REPEX reporting exceptions) the anchor and the
+# subsidiary network fall back to, so the gate below checks all three tables.
 #
 # Monthly, this job rebuilds entity_pages.sqlite IN FULL from the latest
 # Golden Copy publish and replaces the `entity-pages-latest` release asset —
@@ -51,19 +54,54 @@ jobs:
       - name: Sanity-check the output (guard against a broken/partial build)
         run: |
           python3 - <<'PY'
-          import json, sqlite3, sys
+          import json, os, sqlite3, sys
           conn = sqlite3.connect("/tmp/entity_pages.sqlite")
           n = conn.execute("SELECT COUNT(*) FROM entities").fetchone()[0]
+          n_rel = conn.execute("SELECT COUNT(*) FROM relationships").fetchone()[0]
+          n_ex = conn.execute("SELECT COUNT(*) FROM reporting_exceptions").fetchone()[0]
+          n_detail = conn.execute(
+              "SELECT COUNT(*) FROM entities WHERE detail_json IS NOT NULL"
+          ).fetchone()[0]
           meta = dict(conn.execute("SELECT key, value FROM meta"))
-          print(f"{n:,} entities; publish: {meta.get('source_publish_date')}")
+          print(f"{n:,} entities ({n_detail:,} with detail); {n_rel:,} relationships; "
+                f"{n_ex:,} reporting exceptions; publish: {meta.get('source_publish_date')}; "
+                f"schema v{meta.get('schema_version')}")
           # The active LEI population passed 3M in Q1 2026 and only grows;
           # a shrunken build means a truncated download or a CDF change.
           if n < 3_300_000:
               sys.exit(f"Refusing to publish: only {n:,} entities — likely a partial build.")
+          # Phase 178: the mirror tables. ~260k consolidation records and ~6M
+          # exceptions in Sept 2026; a fraction of that means a truncated
+          # RR/REPEX download, and no detail means the LEI2 columns moved.
+          if n_rel < 200_000:
+              sys.exit(f"Refusing to publish: only {n_rel:,} relationship records.")
+          if n_ex < 4_000_000:
+              sys.exit(f"Refusing to publish: only {n_ex:,} reporting exceptions.")
+          if n_detail < n * 0.95:
+              sys.exit(f"Refusing to publish: detail_json missing on {n - n_detail:,} entities.")
+          if meta.get("schema_version") != "2":
+              sys.exit(f"Refusing to publish: schema_version is {meta.get('schema_version')!r}, expected '2'.")
           if not meta.get("source_publish_date"):
               sys.exit("Refusing to publish: no source_publish_date in meta.")
+          # The detail must have been compressed against the file's shared
+          # dictionary: as plain text it is 2.4 GB of a 4.8 GB file, which
+          # an ephemeral-disk host cannot hold beside the archive it came
+          # from. 1.8 GB measured 2026-09-07; the ceiling is a regression alarm.
+          n_text = conn.execute(
+              "SELECT COUNT(*) FROM entities WHERE typeof(detail_json) = 'text'"
+          ).fetchone()[0]
+          if n_text or not meta.get("detail_zdict"):
+              sys.exit(f"Refusing to publish: {n_text:,} detail rows left uncompressed / no dictionary.")
+          size_gb = os.path.getsize("/tmp/entity_pages.sqlite") / 1e9
+          print(f"{size_gb:.2f} GB on disk")
+          if size_gb > 2.5:
+              sys.exit(f"Refusing to publish: {size_gb:.2f} GB on disk — over the 2.5 GB ceiling.")
           with open("summary.txt", "w") as fh:
-              fh.write(f"{n:,} entities from GLEIF Golden Copy {meta.get('source_publish_date')}\n")
+              fh.write(
+                  f"{n:,} entities, {n_rel:,} relationship records and {n_ex:,} reporting "
+                  f"exceptions from GLEIF Golden Copy {meta.get('source_publish_date')} "
+                  f"(schema v{meta.get('schema_version')}, {size_gb:.2f} GB on disk)\n"
+              )
           PY
           {
             echo "### Entity-pages DB refresh"
@@ -71,7 +109,11 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Compress
-        run: gzip -9 -f /tmp/entity_pages.sqlite
+        # ~0.9 GB: the detail BLOBs are already deflated, so gzip mostly
+        # squeezes the page columns and indexes (the v1 asset was 355 MB).
+        run: |
+          gzip -9 -f /tmp/entity_pages.sqlite
+          ls -l /tmp/entity_pages.sqlite.gz
 
       - name: Replace the `entity-pages-latest` release asset
         env:

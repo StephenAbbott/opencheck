@@ -255,7 +255,7 @@ async def test_gleif_refusal_is_declared_not_reported_as_no_children(_live, fail
     """
     client = _FakeClient(children={"direct": failure, "ultimate": failure})
     with patch.object(subs, "build_client", lambda: _FakeCM(client)):
-        with patch.object(subs, "_snapshot_children", lambda lei: None):
+        with patch.object(subs, "_snapshot_children", lambda lei, kind="direct": None):
             res = await subs.assemble_subsidiaries(_SUBJECT)
 
     assert res["children_available"] is False
@@ -295,7 +295,7 @@ async def test_degraded_result_is_never_cached(_live):
     bound was served as truth long after GLEIF recovered."""
     client = _FakeClient(children={"direct": _FakeResponse(429), "ultimate": _FakeResponse(429)})
     with patch.object(subs, "build_client", lambda: _FakeCM(client)):
-        with patch.object(subs, "_snapshot_children", lambda lei: None):
+        with patch.object(subs, "_snapshot_children", lambda lei, kind="direct": None):
             await subs.assemble_subsidiaries(_SUBJECT)
     assert subs._cache.get_payload(f"{subs._CACHE_NS}/{_SUBJECT}") is None
 
@@ -328,7 +328,12 @@ async def test_snapshot_stands_in_for_the_direct_relation(_live):
     snap_child = _l1("254900AAAAAAAAAAAA40", "Snapshot Child Ltd")
     client = _FakeClient(children={"direct": _FakeResponse(429), "ultimate": _FakeResponse(429)})
     with patch.object(subs, "build_client", lambda: _FakeCM(client)):
-        with patch.object(subs, "_snapshot_children", lambda lei: ([snap_child], 7, "2026-08-01")):
+        # Phase 178: the store can answer for either relation; here it holds
+        # only the direct one, so the ultimate stays declared unavailable.
+        def _snap(lei, kind="direct"):
+            return ([snap_child], 7, "2026-08-01") if kind == "direct" else None
+
+        with patch.object(subs, "_snapshot_children", _snap):
             res = await subs.assemble_subsidiaries(_SUBJECT, include_bods=True)
 
     assert res["children_available"] is True
@@ -357,8 +362,8 @@ async def test_snapshot_children_reads_the_entity_store(_live, monkeypatch):
     )
 
     class _Store:
-        def children(self, lei, limit=20):
-            return ([row], 1)
+        def children(self, lei, limit=20, *, kind="direct"):
+            return ([row], 1) if kind == "direct" else ([], 0)
 
         def meta(self):
             return {"source_publish_date": "2026-08-01T00:00:00Z"}
@@ -377,7 +382,7 @@ async def test_endpoint_reports_degradation_as_200(_live):
     """Router-level: the response carries the flags, and it is still a 200."""
     client = _FakeClient(children={"direct": _FakeResponse(429), "ultimate": _FakeResponse(429)})
     with patch.object(subs, "build_client", lambda: _FakeCM(client)):
-        with patch.object(subs, "_snapshot_children", lambda lei: None):
+        with patch.object(subs, "_snapshot_children", lambda lei, kind="direct": None):
             resp = await subsidiaries_endpoint(
                 request=None, response=None, lei=_SUBJECT, format="summary"
             )
