@@ -133,6 +133,19 @@ export const EITI_DECLARED_CAPTION =
   "EITI publishes no identifier for these, so OpenCheck has not matched them " +
   "to companies.";
 
+/**
+ * Phase 180. A subsidiary network the backend chose to answer from its GLEIF
+ * mirror (`snapshot_source: "mirror"`) rather than the live API. Nothing was
+ * refused, so it is not a degradation and must not read as one — but the
+ * reader is owed the date of the Golden Copy it came from. `snapshotDate` is
+ * the mirror's `YYYY-MM-DD` watermark; without one the sentence still says
+ * where the rows came from.
+ */
+export function mirrorCaption(snapshotDate: string | null | undefined): string {
+  const dated = snapshotDate ? ` (GLEIF Golden Copy of ${snapshotDate})` : "";
+  return `Read from OpenCheck's GLEIF mirror${dated} rather than the live API. Counts and children are as GLEIF published them at that date.`;
+}
+
 /** Why a name-only comparison is a comparison and not an identification. */
 export const NAME_ONLY_COMPARISON =
   "Compared on name alone. A name that appears in both lists is not proof the " +

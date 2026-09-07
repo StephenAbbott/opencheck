@@ -5,6 +5,7 @@ import {
   bodsRecordCount,
   expandOnFirstUse,
   graphPartiesLabel,
+  mirrorCaption,
   OPENALEPH_TOPIC,
   resultCount,
   sourceLabel,
@@ -254,5 +255,20 @@ describe("published registry names", () => {
     setSourceNames({ opensanctions: "OpenSanctions" });
     expect(sourceLabel("some_new_source")).toBe("Some New Source");
     setSourceNames({});
+  });
+});
+
+describe("mirrorCaption", () => {
+  it("names the mirror and the Golden Copy date, and never reads as a failure", () => {
+    const text = mirrorCaption("2026-09-07");
+    expect(text).toContain("GLEIF mirror");
+    expect(text).toContain("Golden Copy of 2026-09-07");
+    expect(text).not.toMatch(/refus|unreachable|rate-limit|could not/i);
+  });
+
+  it("still says where the rows came from without a date", () => {
+    const text = mirrorCaption(null);
+    expect(text).toContain("GLEIF mirror");
+    expect(text).not.toContain("Golden Copy of");
   });
 });

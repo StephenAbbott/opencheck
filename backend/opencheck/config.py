@@ -188,6 +188,15 @@ class Settings(BaseSettings):
     gleif_live_confirm: bool = Field(
         default=False, alias="OPENCHECK_GLEIF_LIVE_CONFIRM"
     )
+    # Phase 180: how often the in-process refresh polls GLEIF's Golden Copy
+    # publish API and applies the smallest delta that covers the gap between
+    # the mirror's watermark and the latest publish (three publishes a day;
+    # a LastDay delta is under a megabyte). 0 disables it. Does nothing
+    # unless a Phase 178 mirror is configured; a gap the deltas cannot cover
+    # (over 31 days) is closed by re-downloading the release asset.
+    mirror_refresh_interval_s: float = Field(
+        default=3600.0, alias="OPENCHECK_MIRROR_REFRESH_INTERVAL_S"
+    )
     # Phase 144: refuse declared automated clients (memwatch.is_bot on the
     # User-Agent) on /lookup-stream, the interactive app's SSE endpoint.
     # robots.txt has always disallowed it; a crawler there is ignoring robots

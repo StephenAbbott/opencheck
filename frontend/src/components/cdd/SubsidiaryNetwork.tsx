@@ -10,6 +10,7 @@ import {
   type PanelError,
   type PanelId,
 } from "../../lib/panelErrors";
+import { mirrorCaption } from "../../lib/vocab";
 import InvitationStrip from "../ui/InvitationStrip";
 import { SectionHeading } from "../ui";
 
@@ -139,6 +140,14 @@ function SummaryStats({ data }: { data: SubsidiariesResponse }) {
         <p className="mt-1.5 text-[11px] text-oo-muted leading-[1.5]">
           Showing {data.distinct_fetched} of ~{data.node_estimate} entities — a sample of a large
           network (counts are exact from GLEIF; the child list is capped).
+        </p>
+      )}
+      {/* Phase 180: a network the backend chose to serve from its GLEIF mirror
+          says so, with the Golden Copy date. `degraded_detail` is rightly null
+          here — nothing was refused — so this is the only place it is said. */}
+      {data.snapshot_source === "mirror" && (
+        <p className="mt-1.5 text-oo-meta text-oo-muted leading-[1.5]" data-testid="mirror-caption">
+          {mirrorCaption(data.snapshot_date)}
         </p>
       )}
     </>

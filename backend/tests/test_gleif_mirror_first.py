@@ -600,5 +600,6 @@ def test_boot_warm_up_with_a_local_file_warms_it(
     _configure(monkeypatch, mirror_db, mirror_first=True)
     monkeypatch.setenv("OPENCHECK_ENTITY_PAGES_DB_URL", "https://example.test/unused.gz")
     get_settings.cache_clear()
+    # The asset check is not reachable here (no network) and keeps the file.
     note = ep.warm_entity_pages_db()["entity_pages"]
-    assert note.startswith(f"present: {mirror_db}; page cache warmed")
+    assert note.startswith(f"already present: {mirror_db}; page cache warmed")

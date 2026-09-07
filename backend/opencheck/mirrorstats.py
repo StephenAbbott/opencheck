@@ -120,6 +120,9 @@ def stats() -> dict[str, Any]:
             "differing_paths": dict(sorted(differing.items(), key=lambda kv: -kv[1])),
         }
         out.update(_store_summary())
+        from . import mirror_refresh
+
+        out["refresh"] = mirror_refresh.state()
         return out
     except Exception:  # noqa: BLE001
         log.debug("mirrorstats: stats failed", exc_info=True)
