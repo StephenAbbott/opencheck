@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 177** — UK corporate-PSC chains are now followed as filed: registration numbers with dropped leading zeros are normalised before the walk, the walk goes six hops by default instead of a hard-coded three, and every parent it does not follow is listed with a reason instead of passing for the top of the structure.
+**Latest: Phase 178** — the entity-pages Golden Copy file is now a GLEIF mirror: every Level 1 field the BODS mapper reads, the relationship records and the reporting exceptions, served in the shape the live API returns by the rate-limit fallbacks — 1.8 GB on disk with the detail deflated against a shared dictionary — with the lapsed-registration relationships the old filter dropped (29% of them) restored and no lookup behaviour changed yet.
 
 → [Full development history](docs/status.md)
 
