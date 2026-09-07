@@ -132,56 +132,6 @@ source-of-truth → BODS JSON-Lines → Neo4j Docker for demos only.
 
 ---
 
-## Current state (Phase 175)
-
-### The `/features` page
-
-`/features` is the answer to "what does OpenCheck do", which until now lived in
-`/changelog` — a record of how things were built, not an invitation to use
-them.
-
-| File | Purpose |
-|---|---|
-| `frontend/src/lib/features.ts` | The six features: name, kind, glyph, badge accent, two-sentence description, image, one call to action. **Adding a feature is an edit here plus a PNG in `public/features/` — `FeaturesPage.tsx` does not change.** Allowlisted for raw hex in the design-system lint (see below) |
-| `frontend/src/components/FeaturesPage.tsx` | The page: a sticky index rail and a stack of sections |
-| `frontend/src/components/ui/FeatureMark.tsx` | The mode badge at page size — the `outputs/mode-badges/` stamp minus the wordmark and shadow |
-| `frontend/public/features/*.png` | Six illustrations, 1,648px wide |
-
-Things that will bite:
-
-- **The rail is ONE `<nav>`.** It reflows from a scrolling chip strip on
-  phones to a sticky column from `lg`. Two navs behind `lg:hidden` /
-  `hidden lg:block` would read the same six links out twice, which is the
-  class of bug the Phase 124 sweep spent its time removing. `FeaturesPage.test.tsx`
-  fails on a second `<nav>`.
-- **Scroll-spy is never load-bearing.** `IntersectionObserver` over a band
-  across the middle of the viewport marks the current entry; where it is
-  unavailable the rail is a list of working anchors and nothing else is lost.
-- **Calls to action are plain `<a href>`**, to URLs the app already
-  understands (`/?lei=…&mode=…`, `/batch`). Not `onClick` into `lookupLei`:
-  real hrefs survive a right-click and a share, and cannot drift from App's
-  state machine. The cost is a full page load, which on a page whose purpose
-  is to send the reader elsewhere is the right trade.
-- **The copy rules are tests, not conventions.** `lib/features.test.ts` (node
-  tier) pins at most two sentences per description, exactly one CTA, unique
-  anchor-safe ids, and the `findings.py` discipline — no "guarantee", no
-  "complete screen", "clean" only inside a clause that denies it.
-  `FeaturesPage.test.tsx` (jsdom tier) pins the markup.
-- **The illustrations are built, not screenshotted.** Each is a cropped mock
-  of the real component rendered from the shipped tokens, so the page and its
-  pictures cannot end up in two colour systems. Regenerating one means
-  redrawing it from the tokens, not taking a screenshot of production.
-
-### Nav: "About" moved out of the top bar
-
-The header nav is now **Sources · API · Features**. `/about` keeps its URL and
-its `behind` view name; it is reached from the footer, where the link that used
-to say "Behind the scenes" now says **About** — the last of the four names v1
-had for that page (Phase 122 killed "Behind the scenes →", "How it works →"
-and "Behind the Scenes"). The footer gained a "Features" link above it.
-
----
-
 ## Current state (Phase 46)
 
 ### National ID search (frontend-only, Phase 46)
@@ -393,63 +343,6 @@ source: the page shows the last sweep's verdict and says when it was reached.
   corroboration. No key / HTTP failure → `DegradedSource` records
   (issue #50) — never a silent clean screen. OS+OA duplicate signals for
   the same node are deliberately kept (dedupe keys include source_id).
-
-### The FtM names group is defined once — and expires (Phase 174)
-
-`opencheck/names.py` owns **`FTM_NAME_PROPS`** — the FollowTheMoney properties
-that may carry a party's name — and **`FTM_NAME_PROPS_EXCLUDED`**, the ones
-deliberately not read. `_bears_name()` in `sources/openaleph.py` and
-`_best_name_score()` in `openaleph_check.py` both read it; **do not re-declare
-the tuple at a call site** (a test parses both modules and fails if you do).
-The gate and the scorer disagreeing about what a name is means a hit admitted
-by one and scored against nothing by the other.
-
-- **`abbreviation` is read.** FtM holds acronyms and short forms there, at the
-  `LegalEntity` level. OpenSanctions copied every value into `weakAlias` for
-  backwards compatibility until **2026-09-15** (changelog #39); OpenCheck read
-  neither, so an acronym-only surface form could not clear the gate.
-- **`weakAlias` is not read, on purpose.** It is weak by construction —
-  upstream files a name there precisely when it should not be trusted alone —
-  and the gate exists to reject hits that merely rank well.
-- **`scripts/check_ftm_names.py`** compares both collections against the
-  *installed* followthemoney model over `LegalEntity` + `Person` and fails CI
-  (a second step in the existing `ftm-edges` job, which already pays for the
-  ICU build). A name property in neither collection is read by nobody, and it
-  fails **closed**: the hit is dropped and reads as "not listed".
-
-**The group is also what reaches BODS (Phase 176).** `_ftm_other_names()` in
-`bods/mappers/ftm.py` turns every name after the primary into BODS names:
-entity → `recordDetails.alternateNames` (untyped `array[string]`, so `alias`
-and `previousName` flatten together — that asymmetry is the standard's, do not
-invent a "formerly: X" convention), person → typed `names[]` entries via
-`_FTM_NAME_TYPE`, which raises at import if a property in `FTM_NAME_PROPS` has
-no BODS type. The v0.4 `nameType` codelist is **`legal`, `translation`,
-`transliteration`, `former`, `alternative`, `birth`** — `individual` and
-`alias` are NOT in it, however often a summary says otherwise; that error put a
-dead `type == "individual"` preference into `cross_check._person_full_name`
-and `icij_check._person_name`, both now fixed to prefer `legal`.
-
-- **No cap.** Measured 2026-09-07: an ordinary company carries 0–3 extra names,
-  a sanctioned person ~100 (Kadyrov 103, Putin 93). Truncating a name list in a
-  screening tool hides matches; volume is a display problem.
-- **Deduplicate with `names.display_name_key`, never `names.normalise_name`.**
-  The latter folds Cyrillic/Greek into Latin — which is what it is for — so
-  deduplicating on it deletes "Gazprom" as a duplicate of "Газпром".
-- **`risk.py`'s NOMINEE textual path skips `alternative` names**
-  (`_NOMINEE_NAME_TYPES_EXCLUDED`). Reading ~100 aliases would raise the signal
-  on new subjects as a side effect of a mapping change.
-
-**OpenSanctions cached responses expire after 7 days** —
-`_MAX_CACHE_AGE_DAYS` in `sources/opensanctions.py`, passed to
-`Cache.get_payload(max_age_days=…)` on both the search and entity paths. The
-cache key fingerprints *our* topic scope, which self-invalidates when we widen
-`_RISK_TOPICS` and says nothing about upstream coverage moving:
-`eu_journal_sanctions` roughly doubled on 2026-09-15 (vessels, export-control
-listings, sectorally-restricted companies) with no key change, and entities
-already in `eu_fsf` gained a second `datasets` entry. Expiry applies **only
-when a re-fetch is possible** (API key + `allow_live`) — otherwise an aged-out
-entry would hit the adapter's `live_available` assertion, and a stale answer
-is the best available one offline. Demo fixtures are never expired.
 
 ### Replay cache, shareable URLs, per-source retry (Phase 47)
 
@@ -736,8 +629,12 @@ or corroboration** (that is the signals layer, with its own confidence
 model), and **state absence in the same voice as presence** — silence reads
 as "nothing to see".
 
-Eight adapters have templates (`gleif`, `bods_gleif`, `opensanctions`,
-`companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`). The
+**Thirteen** adapters have templates: `gleif`, `bods_gleif`, `opensanctions`,
+`companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`,
+`everypolitician`, `gemi_greece`, `climatetrace`, `eiti_assessment`,
+`eiti_soe`. Adding one means **two** edits — the template here *and*
+`finding=finding_<name>(r)` in that adapter's `_bh_<name>()`; a template
+nobody passes is dead code, and nothing fails to warn you. The
 frontend falls back `finding → summary → nothing`
 (`frontend/src/lib/sourceFinding.ts`), so an adapter without one renders
 exactly as it did before. **When you add a template, check what the adapter
@@ -825,24 +722,6 @@ self-hosted as base64-embedded `woff2` in the generation script rather
 than a live Google Fonts fetch, since headless-Chromium screenshot
 generation shouldn't depend on network access being available at render
 time.
-
-**Phase 175 added three feature badges and two vector redraws.** Batch
-screening (`#22d3ee`), Time Machine (`#b45309` = `oo.graph.same`, the system's
-one warm value) and Network visualisations (`#93c5fd` = `oo.mark.line`,
-literally the logo's own edge colour) use the identical template. Batch's cyan
-is the **second invented value** in the set, on the same grounds as
-`oo.node.teal`: `oo.blue` `#3d30d4` is too dark to read as a ring on the
-`#0d1b3e` circle at all, and the lighter indigos (`#818cf8`, `#6366f1`) sit
-close enough to BackgroundCheck's `#7c3aed` to be mistaken for it in a row of
-badges. `frontend/src/lib/features.test.ts` reads `tailwind.config.js` and
-proves the other five accents ARE shipped tokens and that this one is not —
-restating the hexes would only prove two files agree with each other.
-QuickCheck and BackgroundCheck also gain **SVG** badges: the shipped PNGs draw
-⚡ and 👤 with Noto Color Emoji (230 KB, unrecolourable, font-dependent), so
-both are redrawn with the stroke paths `components/ui/Icon.tsx` already
-carries — the rule that makes FullCheck's glyph the literal logo triangle.
-`Icon` gained `batch` (a list with a tick) and `network` (a four-node layered
-tree, deliberately NOT the logo triangle, which is FullCheck's).
 
 Files: `outputs/mode-badges/{quickcheck,fullcheck,backgroundcheck}-badge.png`
 + `fullcheck-badge.svg` and `esg-badge.svg` (fully vector, no emoji-font
