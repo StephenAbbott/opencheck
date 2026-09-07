@@ -526,14 +526,25 @@ PROBES: dict[str, SourceProbe] = {
     ),
     "climatetrace": _p(
         tier="live",
-        subject="BP P.L.C. asset-level emissions",
+        subject="Fingrid Oyj asset-level emissions and GEM ownership",
         allow_empty=True,
         method="fetch_by_lei",
-        args=("213800LH1BZH3DI6G760",),
+        args=("7437006ZZI1F7CUA5518",),
         requires_files=("gem/ownership.zip",),
-        anchor_lei="213800LH1BZH3DI6G760",
+        anchor_lei="7437006ZZI1F7CUA5518",
         bods_mapper="map_climatetrace",
-        notes="data/gem/ is gitignored, so this skips on a fresh CI checkout until the artifacts are fetched.",
+        notes=(
+            "data/gem/ is gitignored, so this skips on a fresh CI checkout until the artifacts are "
+            "fetched. Subject moved off BP P.L.C. after the first sweep to run against Phase 169: GEM "
+            "lists a group's top entity as its own parent (5,132 rows), BP is one of them, and Phase "
+            "169 rightly guards that self-loop — so BP can now produce no ownership edge at all. The "
+            "probe was covering the mapper's parent path with the one kind of subject that cannot "
+            "exercise it, and the statement count going 1 → 0 read to the sweep as a source collapse. "
+            "Fingrid's row names four distinct parents, two of them typed by GEM as `state` / `state "
+            "body` (Government of Finland, National Emergency Supply Agency), so the probe now also "
+            "covers the typed-parent path Phase 169 added — the structure that makes an SOE "
+            "recognisable as one in BODS."
+        ),
     ),
     # --- index-matched sources -------------------------------------------
     "eiti": _p(
