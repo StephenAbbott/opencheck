@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 175** — a new `/features` page names what OpenCheck does, six features with two sentences and one working link each, and takes over the top nav's "About" slot.
+**Latest: Phase 176** — FollowTheMoney aliases, former names and short forms now become BODS names — untyped `alternateNames` on entities, typed `names[]` entries on people — and the screening layer keeps reading the legal name.
 
 → [Full development history](docs/status.md)
 
