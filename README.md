@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 178** — the entity-pages Golden Copy file is now a GLEIF mirror: every Level 1 field the BODS mapper reads, the relationship records and the reporting exceptions, served in the shape the live API returns by the rate-limit fallbacks — 1.8 GB on disk with the detail deflated against a shared dictionary — with the lapsed-registration relationships the old filter dropped (29% of them) restored and no lookup behaviour changed yet.
+**Latest: Phase 179** — the GLEIF mirror can answer the anchor and the subsidiary network first, behind a flag, spending one live call per lookup instead of four to six for the mapping-file ids the Golden Copy lacks, with a /mirror endpoint counting hits, misses and live-vs-mirror agreement so the flip is decided on numbers.
 
 → [Full development history](docs/status.md)
 
