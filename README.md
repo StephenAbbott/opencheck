@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 183** — A UK ownership chain filed at Companies House now carries the BODS primary relationship from the ultimate individual to the subject, with the intermediaries and hops listed as its component records, so an export answers who the beneficial owners are by the standard BODS query; PSC interests no longer claim to be direct when the register does not say so.
+**Latest: Phase 184** — Every Companies House corporate-PSC walk is now measured on the public stats endpoint, by lookup and by FullCheck hop, so the question of whether a local UK PSC graph is worth building is answered by production numbers rather than a guess.
 
 → [Full development history](docs/status.md)
 

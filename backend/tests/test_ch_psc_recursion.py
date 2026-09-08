@@ -22,7 +22,7 @@ from typing import Any
 import pytest
 from pytest_httpx import HTTPXMock
 
-from opencheck import degradation
+from opencheck import degradation, signalstats
 from opencheck.bods import mapper
 from opencheck.config import get_settings
 from opencheck.identifiers import ch_identification_is_uk, normalise_ch_company_number
@@ -454,3 +454,132 @@ def test_mapper_keeps_non_uk_corporate_psc_identifier_as_filed() -> None:
     )
     assert holdco["recordDetails"]["identifiers"][0]["id"] == "123456"
     assert holdco["recordDetails"]["identifiers"][0]["scheme"] == "REG-JE"
+
+
+# ---------------------------------------------------------------------------
+# Phase 184 — every walk is measured (the PSC-graph ticket's "measure first")
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def _clean_walk_counters():
+    signalstats.reset()
+    yield
+    signalstats.reset()
+
+
+async def test_walk_records_its_shape_and_cost(
+    httpx_mock: HTTPXMock, _clean_walk_counters
+) -> None:
+    """The Babcock stack: four related companies, depth four, twenty live
+    register calls, nothing unfollowed — filed under the lookup origin."""
+    _mock_chain(httpx_mock, _CHAIN)
+    await CompaniesHouseAdapter().fetch("00070274")
+
+    w = signalstats.stats()["companies_house_walks"]
+    lookup = w["by_origin"]["lookup"]
+    assert lookup["walks"] == 1
+    assert lookup["calls_live"] == 20 and lookup["calls_cached"] == 0
+    assert lookup["max_related"] == 4 and lookup["max_depth"] == 4
+    assert lookup["seconds"] >= 0
+    assert w["related"] == {"lookup|4-6": 1}
+    assert w["depth"] == {"lookup|4": 1}
+    assert w["unfollowed"] == {}
+    assert "hop" not in w["by_origin"]
+
+
+async def test_walk_records_cache_hits_separately(
+    httpx_mock: HTTPXMock, _clean_walk_counters
+) -> None:
+    """A second walk over the same stack is answered from the cache: the
+    register was not called again, and the counters say so."""
+    _mock_chain(httpx_mock, _CHAIN)
+    adapter = CompaniesHouseAdapter()
+    await adapter.fetch("00070274")
+    # The PSC-statements 404 is not cached (it is an exception path), so the
+    # second walk asks the register for those five again and nothing else.
+    for number in _CHAIN:
+        httpx_mock.add_response(
+            url=f"{_API}/company/{number}/persons-with-significant-control-statements",
+            status_code=404,
+            json={"errors": [{"error": "not-found"}]},
+        )
+    await adapter.fetch("00070274")
+    lookup = signalstats.stats()["companies_house_walks"]["by_origin"]["lookup"]
+    assert lookup["walks"] == 2
+    assert lookup["calls_live"] == 25
+    assert lookup["calls_cached"] == 15
+
+
+async def test_walk_records_why_it_stopped(
+    httpx_mock: HTTPXMock, monkeypatch, _clean_walk_counters
+) -> None:
+    monkeypatch.setenv("OPENCHECK_CH_PSC_MAX_DEPTH", "2")
+    get_settings.cache_clear()
+    _mock_chain(httpx_mock, {k: _CHAIN[k] for k in ("00070274", "02999029", "01915771")})
+    await CompaniesHouseAdapter().fetch("00070274")
+    w = signalstats.stats()["companies_house_walks"]
+    assert w["unfollowed"] == {"lookup|max_depth_reached": 1}
+    assert w["depth"] == {"lookup|2": 1}
+    assert w["by_origin"]["lookup"]["calls_live"] == 12
+
+
+async def test_walk_under_the_hop_origin(
+    httpx_mock: HTTPXMock, _clean_walk_counters
+) -> None:
+    """``_register_one_layer`` sets the origin; the adapter reads it."""
+    _mock_chain(httpx_mock, _CHAIN)
+    token = signalstats.walk_origin.set("hop")
+    try:
+        await CompaniesHouseAdapter().fetch("00070274")
+    finally:
+        signalstats.walk_origin.reset(token)
+    w = signalstats.stats()["companies_house_walks"]
+    assert list(w["by_origin"]) == ["hop"]
+    assert w["related"] == {"hop|4-6": 1}
+
+
+async def test_a_walk_that_fails_is_still_counted(
+    httpx_mock: HTTPXMock, _clean_walk_counters
+) -> None:
+    """The subject's own profile 500s: the walk raises, and the one call it
+    spent is on the books — a walk that costs budget is never invisible."""
+    httpx_mock.add_response(url=f"{_API}/company/00000099", status_code=500, json={})
+    import httpx
+
+    with pytest.raises(httpx.HTTPStatusError):
+        await CompaniesHouseAdapter().fetch("00000099")
+    lookup = signalstats.stats()["companies_house_walks"]["by_origin"]["lookup"]
+    assert lookup == {
+        "walks": 1, "calls_live": 1, "calls_cached": 0, "seconds": lookup["seconds"],
+        "max_related": 0, "max_depth": 0,
+    }
+
+
+def test_walk_counters_carry_no_names_or_numbers(
+    httpx_mock: HTTPXMock, _clean_walk_counters
+) -> None:
+    """Names and filed numbers from an unfollowed PSC stay on the bundle; the
+    counters hold the reason code and nothing else."""
+    import asyncio
+    import json
+
+    subject = "00000003"
+    _mock_company(
+        httpx_mock,
+        subject,
+        [
+            {
+                "kind": "corporate-entity-person-with-significant-control",
+                "name": "Zaltan Quirrelmort Holdings SARL",
+                "etag": "z1",
+                "identification": {"country_registered": "Luxembourg", "registration_number": "B999999"},
+            }
+        ],
+    )
+    asyncio.run(CompaniesHouseAdapter().fetch(subject))
+    body = json.dumps(signalstats.stats())
+    assert "Quirrelmort" not in body and "B999999" not in body and subject not in body
+    assert signalstats.stats()["companies_house_walks"]["unfollowed"] == {
+        "lookup|not_uk_registered": 1
+    }

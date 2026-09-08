@@ -1920,6 +1920,9 @@ async def _register_one_layer(
 
     _degradation.begin()
     _outbound_rate.begin()
+    # Phase 184: the register's walk counters file this under "hop", not
+    # "lookup" — the two are different questions for the PSC-graph ticket.
+    origin_token = signalstats.walk_origin.set("hop")
     try:
         kwargs = {"legal_name": name} if hop.pass_legal_name and name else {}
         raw, prov = await _fetch_with_provenance(adapter, local_id, **kwargs)
@@ -1931,6 +1934,7 @@ async def _register_one_layer(
             s.to_dict() for s in assess_bundle(hop.source_id, raw, bods, hit_id=local_id)
         ]
     finally:
+        signalstats.walk_origin.reset(origin_token)
         degraded: list[DegradedSource] = _degradation.collect()
         _outbound_rate.end()
     # Sanctions screening of the new node and everything it brought with it —
