@@ -12,7 +12,9 @@ import PanelSection from "../ui/PanelSection";
 // proves the match, surfaces the identifiers + MNE context, and points the
 // user to the OECD site to download / reuse the full register. Rendered at
 // the very bottom of the results page, beneath the richer source cards and
-// the ESG box. Renders nothing when there is no match.
+// the ESG box, until Phase 185 moved it into the Subsidiaries tab, where it
+// heads the MEIP band and takes the register's own subsidiary list as its
+// `children`. Renders nothing when there is no match.
 // ---------------------------------------------------------------------
 
 /** External link for the identifier schemes we can deep-link. */
@@ -72,7 +74,18 @@ function IdentifierPill({
 const MEIP_URL =
   "https://www.oecd.org/en/data/dashboards/oecd-unsd-multinational-enterprise-information-platform.html";
 
-export function MeipSignpost({ match }: { match: MeipMatch | null }) {
+export function MeipSignpost({
+  match,
+  measures,
+  children,
+}: {
+  match: MeipMatch | null;
+  /** What the register measures — the tab's per-source sentence. */
+  measures?: string;
+  /** The register's subsidiary list, rendered between the identifiers and
+   *  the signpost box. */
+  children?: React.ReactNode;
+}) {
   if (!match) return null;
   const isHead = match.mode === "mne_head";
 
@@ -153,6 +166,13 @@ export function MeipSignpost({ match }: { match: MeipMatch | null }) {
           </div>
         )}
       </div>
+
+      {measures && (
+        <p className="mt-3 text-oo-small text-oo-muted leading-[1.6] max-w-[82ch]">
+          {measures[0].toUpperCase() + measures.slice(1)}.
+        </p>
+      )}
+      {children && <div className="mt-2">{children}</div>}
 
       <div className="mt-3 flex gap-3 items-start rounded-oo bg-oo-soft px-3.5 py-3">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"

@@ -39,11 +39,12 @@ function token(group: string, name: string): string {
 }
 
 describe("FEATURES", () => {
-  it("lists the six features the /features ticket names", () => {
+  it("lists the seven features: the six the /features ticket names plus Subsidiaries", () => {
     expect(FEATURES.map((f) => f.id)).toEqual([
       "quickcheck",
       "fullcheck",
       "backgroundcheck",
+      "subsidiaries",
       "batch-screening",
       "time-machine",
       "network-visualisations",
@@ -93,6 +94,8 @@ describe("FEATURES", () => {
     expect(featureById("quickcheck")?.accent).toBe(token("node", "green"));
     expect(featureById("fullcheck")?.accent).toBe(token("node", "blue"));
     expect(featureById("backgroundcheck")?.accent).toBe(token("node", "purple"));
+    // Subsidiaries lists what a company controls: the graph's control colour.
+    expect(featureById("subsidiaries")?.accent).toBe(token("graph", "control"));
   });
 
   it("takes the two capability accents from existing tokens", () => {
@@ -132,13 +135,14 @@ describe("FEATURES", () => {
     for (const f of FEATURES) {
       expect(["Check mode", "Workflow", "Capability"], f.id).toContain(f.kind);
     }
-    // The three check modes are the three with mode tabs; batch and the two
-    // capabilities are deliberately not called modes, because the mode
-    // strip's ceiling is four (Phase 157/166).
+    // The check modes are the ones with mode tabs (Subsidiaries joined in
+    // Phase 185); batch and the two capabilities are deliberately not called
+    // modes, because they have no tab.
     expect(FEATURES.filter((f) => f.kind === "Check mode").map((f) => f.id)).toEqual([
       "quickcheck",
       "fullcheck",
       "backgroundcheck",
+      "subsidiaries",
     ]);
   });
 

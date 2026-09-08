@@ -349,8 +349,65 @@ def network():
                        f'Every graph carries the same statements as a list underneath, so the picture is never '
                        f'the only way to get the information.</p>', 16) + '</div>')
 
+# ------------------------------------------------------------------ 7 Subsidiaries
+def subsidiaries():
+    """The Subsidiaries tab (Phase 185): the coverage sentence, the list pills
+    and two of the per-source lists, with the three row states the tab
+    distinguishes — linked to its own report, a name match, no LEI at all."""
+    GC_BG, GC_BD = "#fdf0e8", "#fdba74"
+    sentence = (f'<p style="font-family:{BODY};font-size:14px;line-height:1.6;color:{NAVY};margin:0;max-width:82ch">'
+                f'Four sources list what <b>Shell plc</b> owns — 2,160 distinct names across 2,331 rows, '
+                f'and only 121 names appear in more than one of them. '
+                f'<span style="color:{MUTED}">That is not because any list is wrong: each measures something '
+                f'different, and no public source publishes the whole picture.</span></p>')
+    def pill(name, n, o):
+        return (f'<span style="display:inline-flex;gap:6px;align-items:baseline;background:{BG};border:1px solid {RULE};'
+                f'border-radius:10px;padding:6px 10px;font-family:{BODY};font-size:12px;color:{NAVY}">'
+                f'<b>{name}</b><span style="color:{MUTED}">· {n} · {o} can be opened</span></span>')
+    pills = ('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'
+             + pill("GLEIF Level 2", "291", "291") + pill("OECD-UNSD MEIP", "294", "294")
+             + pill("EITI", "144", "31") + pill("Global Energy Monitor", "12", "9") + '</div>')
+    cover = card(label("What the sources say", 8) + sentence + pills, 18)
+
+    def row(name, country, extra, right, link=True):
+        nm = (f'<span style="font-family:{BODY};font-size:13px;color:{NAVY};white-space:nowrap;'
+              f'{"text-decoration:underline;text-decoration-color:" + SOFTB + ";text-underline-offset:3px" if link else ""}">{name}</span>')
+        return (f'<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid {RULE};'
+                f'flex-wrap:wrap;row-gap:5px">{nm}{chip(country, "#fff", RULE, MUTED)}{extra}'
+                f'<span style="margin-left:auto;font-family:{MONO};font-size:11px;color:{MUTED};white-space:nowrap">{right}</span></div>')
+    also = lambda t: chip("Also in " + t, OKBG, OKBD, OKTX)
+    match = chip("Low · name match", "#fff", RULE, MUTED, "○")
+    pct = lambda p: f'<span style="font-family:{MONO};font-size:11px;color:{MUTED}">{p}</span>'
+    # Real rows from the committed MEIP and EITI data for Shell plc.
+    eiti = (f'<div style="border:1px solid {RULE};border-radius:10px;background:#fff;overflow:hidden">'
+            + row("A/S Norske Shell", "NOR", also("GLEIF Level 2 · OECD-UNSD MEIP") + match, "213800F4ETX85XLF5K47")
+            + row("PT. Shell Indonesia", "IDN", also("OECD-UNSD MEIP") + match, "549300XSPZ26RK6HXZ74")
+            + row("Atlantic 1 Holdings LLC", "TTO", "", "no LEI published", link=False)
+            + row("Shell Kazakhstan Development", "KAZ", "", "no LEI published", link=False)
+            + '</div>')
+    gem = (f'<div style="border:1px solid {RULE};border-radius:10px;background:#fff;overflow:hidden">'
+           + row("Shell Energy North America", "USA", chip("Direct", INFOBG, INFOBD, INFOTX) + pct("100%"),
+                 "5493001KJTIIGC8Y1R12")
+           + row("Shell Nederland Raffinaderij", "NLD", chip("Direct", INFOBG, INFOBD, INFOTX)
+                 + also("GLEIF Level 2") + pct("100%"), "724500PMK2A2M1SQQ228")
+           + row("Pennsylvania Chemicals", "USA", chip("Direct", INFOBG, INFOBD, INFOTX) + pct("50%"),
+                 "no LEI published", link=False)
+           + '</div>')
+    def band(title, aside, body, note):
+        return card(f'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:8px">'
+                    f'<span style="font-family:{HEAD};font-weight:700;font-size:15px;color:{NAVY}">{title}</span>'
+                    f'<span style="font-family:{BODY};font-size:11px;color:{MUTED};white-space:nowrap">{aside}</span></div>'
+                    f'<p style="font-family:{BODY};font-size:11.5px;line-height:1.55;color:{MUTED};margin:0 0 10px">{note}</p>{body}', 16)
+    lists = (f'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start">'
+             + band("EITI · declared controlled subsidiaries", "144 listed · 31 can be opened", eiti,
+                    "Names and countries only, no identifiers. A name in another list is offered as a name match, not as proof.")
+             + band("Global Energy Monitor · directly owned entities", "12 listed · 9 can be opened", gem,
+                    "Asset ownership in the energy sector, with a percentage where GEM has one.") + '</div>')
+    return page(f'{cover}<div style="height:14px"></div>{lists}')
+
 VIGS = {"quickcheck": quickcheck, "fullcheck": fullcheck, "backgroundcheck": backgroundcheck,
-        "batch": batch, "time-machine": timemachine, "network": network}
+        "batch": batch, "time-machine": timemachine, "network": network,
+        "subsidiaries": subsidiaries}
 
 
 WIDTH = 1648
@@ -358,21 +415,22 @@ WIDTH = 1648
 which is enough for a 2x display without doubling the byte size."""
 
 
-def render(out_dir: pathlib.Path) -> None:
-    """Render every vignette to ``out_dir`` as an optimised PNG."""
+def render(out_dir: pathlib.Path, only: list[str] | None = None) -> None:
+    """Render every vignette (or just ``only``) to ``out_dir`` as an optimised PNG."""
     from PIL import Image
     from playwright.sync_api import sync_playwright
 
+    names = [n for n in VIGS if not only or n in only]
     out_dir.mkdir(parents=True, exist_ok=True)
     # Scratch HTML goes to a temp dir, never into the published directory:
     # `frontend/public/` is served verbatim, so a stray .html would ship.
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="feature-images-"))
-    for name, fn in VIGS.items():
-        (tmp / f"{name}.html").write_text(fn(), encoding="utf-8")
+    for name in names:
+        (tmp / f"{name}.html").write_text(VIGS[name](), encoding="utf-8")
 
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for name in VIGS:
+        for name in names:
             # A short viewport plus full_page crops each image to its own
             # content height, so the page gets six tight illustrations rather
             # than six letterboxed ones.
@@ -383,7 +441,7 @@ def render(out_dir: pathlib.Path) -> None:
             page.close()
         browser.close()
 
-    for name in VIGS:
+    for name in names:
         im = Image.open(tmp / f"{name}@2x.png").convert("RGB")
         height = round(im.height * WIDTH / im.width)
         im = im.resize((WIDTH, height), Image.LANCZOS)
@@ -396,4 +454,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=pathlib.Path, default=OUT,
                         help="directory to write the PNGs into")
-    render(parser.parse_args().out)
+    parser.add_argument("--only", nargs="*", choices=sorted(VIGS),
+                        help="render only these vignettes (default: all)")
+    args = parser.parse_args()
+    render(args.out, args.only)

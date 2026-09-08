@@ -61,6 +61,12 @@ const ALLOWED_HEX_FILES = new Set([
   // also has to hold the exact hexes that `outputs/mode-badges/*.svg` carry,
   // which is a correspondence a Tailwind class cannot express.
   "src/lib/features.ts",
+  // The mode accents (Phase 185), on the same grounds again: the tab strip
+  // paints the active bar with an inline style. They lived as literals in
+  // App.tsx until the fifth mode would have pushed that file over its
+  // ratchet; `MODE_ACCENT` is now the one place the five values are written,
+  // and `checkMode.test.ts` reads each back out of tailwind.config.js.
+  "src/lib/checkMode.ts",
 ]);
 
 /** `#fff`, `#ffffff`, `#ffffffff` — but not a fragment of a longer token. */

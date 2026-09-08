@@ -709,6 +709,8 @@ function ClimateTRACECard({
             Group reach: {(ownership.subsidiary_count ?? 0).toLocaleString()}{" "}
             subsidiaries · {(ownership.group_asset_count ?? 0).toLocaleString()}{" "}
             Climate TRACE assets group-wide
+            {(ownership.subsidiary_count ?? 0) > 0 &&
+              " · the directly owned entities are listed in the Subsidiaries tab"}
           </div>
         )}
 
@@ -927,16 +929,19 @@ export function EsgPanel({
   bodsBreakdownMap = {},
   onPanelError,
   onRecovered,
+  onOpenSubsidiaries,
 }: {
   buckets: SourceBucket[];
   pendingCount?: number;
   bodsCountMap?: Record<string, number>;
   bodsBreakdownMap?: Record<string, BodsBreakdown>;
-  /** `EitiAssessmentCard` cross-references the GLEIF children, which is a
-   *  fetch outside the lookup pipeline — so, like `SubsidiaryNetwork`, its
-   *  failures have to be routed to the report-level notice by hand. */
+  /** Kept for the call site; since Phase 185 no card on this tab fetches
+   *  outside the lookup pipeline (the EITI cross-reference moved to the
+   *  Subsidiaries tab), so nothing here reports a panel error today. */
   onPanelError?: (e: PanelError) => void;
   onRecovered?: (panel: PanelId) => void;
+  /** The EITI card's pointer to the Subsidiaries tab. */
+  onOpenSubsidiaries?: () => void;
 }) {
   // Per-hit expansion for the summary tiles. Unset entries fall back to the
   // default rule: a lone ESG hit shows its full card without an extra click;
@@ -1038,6 +1043,7 @@ export function EsgPanel({
                     hit={hit}
                     onPanelError={onPanelError}
                     onRecovered={onRecovered}
+                    onOpenSubsidiaries={onOpenSubsidiaries}
                   />
                 ) : hit.source_id === "wikirate" ? (
                   <WikirateCard key={`${hit.source_id}:${hit.hit_id}`} hit={hit} />

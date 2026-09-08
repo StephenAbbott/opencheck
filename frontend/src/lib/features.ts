@@ -112,6 +112,29 @@ export const FEATURES: Feature[] = [
     },
   },
   {
+    id: "subsidiaries",
+    name: "Subsidiaries",
+    kind: "Check mode",
+    icon: "subsidiaries",
+    // oo.graph.control — the colour the graph draws control edges in. The
+    // tab lists what a company controls, as FullCheck (ownership blue)
+    // follows who owns it. See MODE_ACCENT in lib/checkMode.ts.
+    accent: "#e65100",
+    glyph: "#fdba74",
+    description:
+      "Brings together what a company owns from every source that publishes a list — GLEIF's consolidation network, the OECD-UNSD register of the largest groups, what companies declare to EITI and Global Energy Monitor's asset ownership. The lists disagree because none of them measures the same thing, and the tab says so, then links every subsidiary that has an LEI to a report of its own.",
+    image: {
+      src: "/features/subsidiaries.png",
+      alt: "The Subsidiaries tab for one company: a sentence counting how many sources list what it owns and how few names they share, four list pills, and rows from three of those lists — some linked to their own report, one marked as a name match, one with no LEI published.",
+      width: 1648,
+      height: 960,
+    },
+    cta: {
+      label: "See what Shell plc owns",
+      href: "/?lei=21380068P1DRHMJ8KU70&mode=subsidiaries",
+    },
+  },
+  {
     id: "batch-screening",
     name: "Batch screening",
     kind: "Workflow",

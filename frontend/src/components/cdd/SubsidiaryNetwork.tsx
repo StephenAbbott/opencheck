@@ -11,6 +11,7 @@ import {
   type PanelId,
 } from "../../lib/panelErrors";
 import { mirrorCaption } from "../../lib/vocab";
+import { subsidiaryHref } from "../../lib/subsidiariesMode";
 import InvitationStrip from "../ui/InvitationStrip";
 import { SectionHeading } from "../ui";
 
@@ -82,19 +83,26 @@ function ChildrenTable({ children }: { children: SubsidiaryChild[] }) {
           className="flex items-start justify-between gap-3 px-3 py-2"
         >
           <div className="min-w-0">
+            {/* Phase 185: every child carries an LEI, so every child has its
+                own report — the name opens its Subsidiaries tab, so a reader
+                can walk down a group. GLEIF's record stays one click away. */}
             <div className="text-[12px] text-oo-ink leading-snug">
-              {c.link ? (
-                <a href={c.link} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                  {c.name || c.lei}
-                </a>
-              ) : (
-                c.name || c.lei
-              )}
+              <a href={subsidiaryHref(c.lei)} className="hover:underline">
+                {c.name || c.lei}
+              </a>
             </div>
             <div className="mt-0.5 font-mono text-[10px] text-oo-muted">
               {c.lei}
               {c.jurisdiction ? ` · ${c.jurisdiction}` : ""}
               {c.status ? ` · ${c.status}` : ""}
+              {c.link && (
+                <>
+                  {" · "}
+                  <a href={c.link} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                    GLEIF<span className="sr-only"> record (opens in new tab)</span>
+                  </a>
+                </>
+              )}
             </div>
           </div>
           <div className="shrink-0">
@@ -174,9 +182,20 @@ export function SubsidiaryNetwork({
   onError,
   onRecovered,
   bare = false,
+  autoRun = false,
+  onData,
 }: {
   lei: string;
   entityName?: string;
+  /** Fetch on mount instead of behind the invitation strip. Set by the
+   *  Subsidiaries tab (Phase 185): a reader who opened that tab has already
+   *  asked, so the strip would be a second click for the same question.
+   *  Elsewhere the strip stays — the network is a GLEIF call the report did
+   *  not need. */
+  autoRun?: boolean;
+  /** The summary once fetched, so the tab can cross-reference the other
+   *  lists against GLEIF's children. */
+  onData?: (data: SubsidiariesResponse) => void;
   /** Render as the contents of a band rather than as a standalone card:
    *  no chrome, no self-title. Set by FullCheck, where the panel card and
    *  its `PanelSection` already supply both. */
@@ -223,6 +242,7 @@ export function SubsidiaryNetwork({
     try {
       const res = await getSubsidiaries(lei, "summary");
       setData(res);
+      onData?.(res);
       // Phase 146: a degraded 200. `children_available: false` is the empty
       // network that used to render as "this entity has no subsidiaries";
       // `degraded_detail` with rows present means the list is partial (or
@@ -291,8 +311,19 @@ export function SubsidiaryNetwork({
     URL.revokeObjectURL(url);
   }
 
+  // Phase 185: the tab fetches on arrival. A `ref` rather than a dependency
+  // on `run`, which is recreated every render.
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (!autoRun || autoRan.current) return;
+    autoRan.current = true;
+    void run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRun, lei]);
+
   // Layer 1 — invitation (nothing fires until clicked).
   if (!data && !loading && !error) {
+    if (autoRun) return null;
     return (
       <InvitationStrip
         title="Reveal subsidiary network"
@@ -383,13 +414,15 @@ export function SubsidiaryNetwork({
           <p className="text-[12px] text-oo-muted leading-[1.6]">
             No subsidiary network published{data.reason ? ` (${data.reason})` : ""}.
           </p>
-          <button
-            type="button"
-            onClick={collapse}
-            className="shrink-0 text-[11px] font-mono text-oo-blue hover:underline"
-          >
-            Hide
-          </button>
+          {!autoRun && (
+            <button
+              type="button"
+              onClick={collapse}
+              className="shrink-0 text-[11px] font-mono text-oo-blue hover:underline"
+            >
+              Hide
+            </button>
+          )}
         </div>
       )}
 
@@ -404,13 +437,18 @@ export function SubsidiaryNetwork({
             ) : (
               <SectionHeading as="h4">Subsidiary network</SectionHeading>
             )}
-            <button
-              type="button"
-              onClick={collapse}
-              className="shrink-0 text-oo-meta font-medium text-oo-blue hover:underline"
-            >
-              Hide
-            </button>
+            {/* No "Hide" in the Subsidiaries tab: the band is the tab's
+                subject, and collapsing it to an invitation strip would only
+                offer the same fetch again. */}
+            {!autoRun && (
+              <button
+                type="button"
+                onClick={collapse}
+                className="shrink-0 text-oo-meta font-medium text-oo-blue hover:underline"
+              >
+                Hide
+              </button>
+            )}
           </div>
 
           <SummaryStats data={data} />
