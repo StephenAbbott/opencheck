@@ -444,8 +444,20 @@ class PscGraphStore:
     def schema_version(self) -> str | None:
         return self.meta().get("schema_version")
 
+    def _codes_for(self, packed: bytes) -> tuple[str, ...]:
+        """Decode packed nature bytes; a byte this reader has not seen (the
+        stream, Phase 187, may add a code after the reader opened) reloads
+        the table once before giving up on it."""
+        if any(b not in self._codes for b in packed):
+            with self._lock:
+                self._codes = {
+                    int(r["code_byte"]): r["code"]
+                    for r in self._conn.execute("SELECT code_byte, code FROM nature_codes")
+                }
+        return tuple(self._codes.get(b, f"unknown-code-{b}") for b in packed)
+
     def _row(self, r: sqlite3.Row) -> PscRow:
-        natures = tuple(self._codes.get(b, f"unknown-code-{b}") for b in (r["natures"] or b""))
+        natures = self._codes_for(r["natures"] or b"")
         return PscRow(
             psc_id=r["psc_id"],
             company_number=r["company_number"],
@@ -733,6 +745,10 @@ def summary() -> dict[str, Any]:
         "store": None,
         "refresh": state(),
     }
+    # Phase 187: the stream consumer's counters ride on the same payload.
+    from . import psc_stream
+
+    out["stream"] = psc_stream.state()
     if store is not None:
         meta = store.meta()
         out["store"] = {

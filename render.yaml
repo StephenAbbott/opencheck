@@ -113,6 +113,13 @@ services:
       # (Phase 188); until then the Companies House adapter walks live.
       - key: OPENCHECK_PSC_GRAPH_DB_FILE
         value: /var/data/psc_graph.sqlite
+      # Phase 187: the register's *streaming* key (a different credential
+      # from COMPANIES_HOUSE_API_KEY; one connection per key — bods-stream
+      # has its own). With the file above, the app holds one connection to
+      # the PSC stream and applies every change to the graph as it happens;
+      # unset, the graph stays as the daily seed left it.
+      - key: COMPANIES_HOUSE_STREAM_KEY
+        sync: false
       # --- Phase 91: IndexNow (SEO Phase D) ---
       # Shared key echoed back at /{key}.txt (root — IndexNow scopes a
       # submission to the key file's directory) so IndexNow-participating
