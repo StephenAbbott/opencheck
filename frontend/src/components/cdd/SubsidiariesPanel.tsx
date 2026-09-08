@@ -132,14 +132,17 @@ function RowsList({ list }: { list: ResolvedList }) {
         ))}
       </ul>
       {ordered.length > VISIBLE_ROWS && (
+        // Secondary, full-height: a ghost button under a long list read as a
+        // footnote, and readers missed that 282 more rows were behind it.
         <Button
-          variant="ghost"
-          size="sm"
-          className="mt-2"
+          variant="secondary"
+          className="mt-3"
           aria-expanded={showAll}
           onClick={() => setShowAll((v) => !v)}
         >
-          {showAll ? `Show the first ${VISIBLE_ROWS}` : `Show all ${ordered.length.toLocaleString()}`}
+          {showAll
+            ? `Show the first ${VISIBLE_ROWS}`
+            : `Show all ${ordered.length.toLocaleString()} rows`}
         </Button>
       )}
     </>
