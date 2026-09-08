@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 180** — the GLEIF mirror now lives on a Render persistent disk and a background task applies Golden Copy deltas in-process between the monthly rebuilds, the boot replacing the file only when the release asset is newer than its own build, with the refresh state reported on /mirror and the subsidiary network saying when it was read from the mirror.
+**Latest: Phase 181** — the GLEIF mirror on the persistent disk now records which release asset it came from and is replaced only when a different asset is published, closing the Phase 180 rule that re-downloaded the same asset on every deploy because the workflow uploads it minutes after the build.
 
 → [Full development history](docs/status.md)
 
