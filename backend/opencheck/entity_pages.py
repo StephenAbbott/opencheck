@@ -60,6 +60,7 @@ exceptions table is ``WITHOUT ROWID`` with the relation *kind* as its key
 from __future__ import annotations
 
 import base64
+import contextlib
 import html
 import json
 import logging
@@ -552,15 +553,24 @@ class EntityStore:
 
     A single connection guarded by a lock: every query here is a sub-ms
     indexed read, so contention is negligible and this avoids per-request
-    connection churn. The file is opened ``immutable=1`` — the monthly
-    refresh replaces the file wholesale, never writes in place.
+    connection churn. The file is opened read-only. It was ``immutable=1``
+    until Phase 180 — the monthly refresh replaced the file wholesale and
+    nothing wrote in place — but the in-process delta refresh now upserts
+    into the live file from a second connection, and an immutable reader
+    would keep serving pages it had already cached past the change. A plain
+    read-only connection re-reads the change counter on every transaction
+    and waits out a writer's commit (``timeout``), which for a delta of a
+    few thousand rows is a fraction of a second. A wholesale replacement of
+    the file (a fresh release asset) is a different matter: the old
+    connection still points at the old inode, so :func:`reload_store`
+    drops it.
     """
 
     def __init__(self, path: Path) -> None:
         self.path = path
         self._lock = threading.Lock()
         self._conn = sqlite3.connect(
-            f"file:{path}?mode=ro&immutable=1", uri=True, check_same_thread=False
+            f"file:{path}?mode=ro", uri=True, check_same_thread=False, timeout=10.0
         )
         self._conn.row_factory = sqlite3.Row
         # Phase 178: which Level 2 tables this file actually has. A v1 file
@@ -798,42 +808,84 @@ def reset_store_for_tests() -> None:
         _store = None
 
 
+def reload_store() -> None:
+    """Drop the process-wide store so the next :func:`get_store` reopens the
+    file — after the refresh task replaced it with a fresh release asset
+    (Phase 180). A delta applied in place needs no reload: the read-only
+    connection sees it. Requests holding the old object finish on the old
+    inode, which the rename left intact."""
+    global _store
+    with _store_lock:
+        old = _store
+        _store = None
+    if old is not None:
+        with old._lock, contextlib.suppress(sqlite3.Error):  # never mid-query
+            old._conn.close()
+
+
 def warm_entity_pages_db() -> dict[str, Any]:
-    """Download the DB at boot when configured by URL. Non-fatal.
+    """Make sure the mirror is on disk at boot, then warm it. Non-fatal.
 
     Called from the app lifespan's background warm-up (same pattern as the
-    climatetrace/securities warms). Supports plain ``.sqlite``
-    and ``.gz`` artifacts; downloads to a temp name then renames, so a
-    half-written file never becomes the live DB.
+    climatetrace/securities warms). Three arrangements, one rule each:
+
+    * **URL only** (Phase 88, ephemeral disk): the file lives in ``/tmp`` and
+      is downloaded when absent — every deploy, since the disk is new.
+    * **File only** (a developer, tests): the file is used as found.
+    * **File and URL** (Phase 180, the persistent disk): the file is
+      downloaded to the configured path when absent, and **replaced when the
+      release asset is newer than the file's own full build** — that is how
+      the monthly rebuild lands on a disk that survives deploys. "Newer" is
+      judged against ``meta.built_at``, which only a full build writes; the
+      delta refresh (``mirror_refresh``) touches the file hourly and would
+      otherwise always look newer than the asset. When the asset cannot be
+      checked the file on disk is kept: a mirror a month old beats none.
+
+    Whatever the route, the file is then read through once so its pages are in
+    the OS cache before the first lookup (:func:`prewarm_page_cache`).
     """
     from .config import get_settings
 
     settings = get_settings()
     url = settings.entity_pages_db_url
-    if not url or settings.entity_pages_db_file:
-        # A local file (a developer, or Phase 180's persistent disk): the
-        # download does not apply, but a file that survived a restart is cold
-        # on disk — read it through once so the first lookups are not paying
-        # a random read per row (see prewarm_page_cache).
-        path = _db_path()
-        if settings.entity_pages_db_file and path is not None and path.exists():
-            return {"entity_pages": f"present: {path}; {prewarm_page_cache(path)}"}
-        return {"entity_pages": "not configured for download"}
     path = _db_path()
-    assert path is not None
+    if path is None:
+        return {"entity_pages": "not configured"}
+    if not url:
+        if path.exists():
+            return {"entity_pages": f"present: {path}; {prewarm_page_cache(path)}"}
+        return {"entity_pages": f"absent: {path} (no URL to download from)"}
     if path.exists():
-        return {"entity_pages": f"already present: {path}; {prewarm_page_cache(path)}"}
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".download")
+        newer = asset_is_newer_than_build(url, path) if settings.entity_pages_db_file else False
+        if not newer:
+            return {"entity_pages": f"already present: {path}; {prewarm_page_cache(path)}"}
+        log.info("entity_pages DB: the release asset is newer than the file's build; replacing")
+    downloaded, elapsed = download_db(url, path)
+    reload_store()
+    return {
+        "entity_pages": (
+            f"downloaded: {path} ({downloaded} bytes in {elapsed:.1f}s); "
+            f"{prewarm_page_cache(path)}"
+        )
+    }
+
+
+def download_db(url: str, path: Path) -> tuple[int, float]:
+    """Stream the release asset to ``path`` — inflating a ``.gz`` as it
+    streams, writing beside the target and renaming at the end, so the disk
+    never holds archive and file together and a half-written file never
+    becomes the live one. Returns ``(bytes fetched, seconds)``.
+
+    Phase 178 made the inflate streaming: the mirror is 1.8 GB on disk from a
+    ~0.9 GB asset, and the Phase 88 arrangement (write the archive, then
+    gunzip) needed 2.7 GB of an ephemeral disk at once.
+    """
     import time
 
     import httpx
 
-    # Phase 178: the mirror is 1.8 GB on disk from a ~0.9 GB asset, so the
-    # ``.gz`` is inflated *as it streams* — the disk never holds the archive
-    # and the plain file at once (2.7 GB on an ephemeral disk), and the
-    # inflate costs no second pass. The Phase 88 arrangement wrote the archive
-    # out and gunzipped it afterwards.
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".download")
     started = time.monotonic()
     downloaded = 0
     inflate = zlib.decompressobj(16 + zlib.MAX_WBITS) if url.endswith(".gz") else None
@@ -845,18 +897,43 @@ def warm_entity_pages_db() -> dict[str, Any]:
                 fh.write(inflate.decompress(chunk) if inflate else chunk)
             if inflate:
                 fh.write(inflate.flush())
-    tmp.rename(path)
+    tmp.replace(path)
     elapsed = time.monotonic() - started
     log.info(
         "entity_pages DB downloaded to %s (%d bytes on disk from %d fetched) in %.1fs",
         path, path.stat().st_size, downloaded, elapsed,
     )
-    return {
-        "entity_pages": (
-            f"downloaded: {path} ({downloaded} bytes in {elapsed:.1f}s); "
-            f"{prewarm_page_cache(path)}"
-        )
-    }
+    return downloaded, elapsed
+
+
+def asset_is_newer_than_build(url: str, path: Path) -> bool:
+    """Whether the release asset at ``url`` was published after the full build
+    the file at ``path`` came from (``meta.built_at``). ``False`` whenever
+    either side cannot be read — keeping the file is the safe answer."""
+    from email.utils import parsedate_to_datetime
+
+    import httpx
+
+    try:
+        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+        try:
+            row = conn.execute("SELECT value FROM meta WHERE key = 'built_at'").fetchone()
+        finally:
+            conn.close()
+        built_at = datetime.fromisoformat(row[0]) if row and row[0] else None
+        if built_at is None:
+            return False
+        if built_at.tzinfo is None:
+            built_at = built_at.replace(tzinfo=UTC)
+        head = httpx.head(url, timeout=30.0, follow_redirects=True)
+        head.raise_for_status()
+        modified = head.headers.get("last-modified")
+        if not modified:
+            return False
+        return parsedate_to_datetime(modified) > built_at
+    except Exception as exc:  # noqa: BLE001 — keep the file we have
+        log.warning("entity_pages DB: could not compare the asset with the file: %s", exc)
+        return False
 
 
 #: Read the file in chunks this large when warming the page cache.

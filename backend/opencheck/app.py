@@ -8,7 +8,8 @@ Surface:
   degradation counts and the lookup denominator (see ``signalstats``).
 * ``GET /mirror`` — how the GLEIF mirror is being used: hits, misses, live
   calls displaced, live-confirm agreement, the file's watermark (see
-  ``mirrorstats``; Phase 179).
+  ``mirrorstats``; Phase 179) and the in-process delta refresh's state
+  (``mirror_refresh``; Phase 180).
 * ``GET /sources`` — inventory of registered source adapters with live/stub status.
 * ``GET /lookup?lei=<LEI>`` — **primary entry point**. Driven by the
   Legal Entity Identifier: GLEIF first, then dispatch to every other
@@ -126,6 +127,14 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     # every OPENCHECK_MEMWATCH_INTERVAL seconds so an OOM kill is diagnosable
     # from the Render log stream after the fact.
     memwatch_task = asyncio.create_task(memwatch.run())
+    # Phase 180: keep the GLEIF mirror within a day of GLEIF by applying the
+    # Golden Copy deltas in-process (opencheck/mirror_refresh.py). 0 disables.
+    refresh_task: asyncio.Task[None] | None = None
+    refresh_interval = get_settings().mirror_refresh_interval_s
+    if refresh_interval > 0:
+        from .mirror_refresh import refresh_loop
+
+        refresh_task = asyncio.create_task(refresh_loop(refresh_interval))
     async with AsyncExitStack() as stack:
         if _MCP is not None and not _mcp_session_started:
             await stack.enter_async_context(_MCP.session_manager.run())
@@ -137,6 +146,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 warmup.cancel()
             if not memwatch_task.done():
                 memwatch_task.cancel()
+            if refresh_task is not None and not refresh_task.done():
+                refresh_task.cancel()
 
 
 app = FastAPI(

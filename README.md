@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 179** — the GLEIF mirror can answer the anchor and the subsidiary network first, behind a flag, spending one live call per lookup instead of four to six for the mapping-file ids the Golden Copy lacks, with a /mirror endpoint counting hits, misses and live-vs-mirror agreement so the flip is decided on numbers.
+**Latest: Phase 180** — the GLEIF mirror now lives on a Render persistent disk and a background task applies Golden Copy deltas in-process between the monthly rebuilds, the boot replacing the file only when the release asset is newer than its own build, with the refresh state reported on /mirror and the subsidiary network saying when it was read from the mirror.
 
 → [Full development history](docs/status.md)
 

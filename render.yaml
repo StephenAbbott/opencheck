@@ -27,8 +27,28 @@ services:
     env: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: .
-    plan: free
+    # Phase 180: the GLEIF mirror lives on a persistent disk (below), which
+    # Render offers on paid instance types only — the service has run on a
+    # 2 GB instance since the Phase 98 OOM work (/memstats reports a 2048 MB
+    # limit), so the plan here matches what the dashboard already runs.
+    # Confirm in the dashboard before syncing this Blueprint: a plan change
+    # here is a billing change.
+    plan: standard
     healthCheckPath: /health
+    # --- Phase 180: persistent disk for the GLEIF mirror ---
+    # entity_pages.sqlite (~1.8 GB; the Phase 178 mirror) survives deploys and
+    # restarts here, so the backend stops re-downloading a ~0.9 GB asset on
+    # every boot and the in-process delta refresh (opencheck/mirror_refresh.py)
+    # has a file to keep current. Boot rule (opencheck/entity_pages.py):
+    # download the asset when the file is absent, replace it when the monthly
+    # rebuild published a newer one, otherwise use what is there. Trade-off
+    # per https://render.com/docs/disks: a service with a disk runs as a
+    # single instance and deploys are not zero-downtime (a few seconds).
+    # 10 GB leaves room for the download-and-rename (2 x 1.8 GB) and growth.
+    disk:
+      name: entity-pages
+      mountPath: /var/data
+      sizeGB: 10
     envVars:
       - key: OPENCHECK_ALLOW_LIVE
         value: "true"
@@ -72,6 +92,15 @@ services:
       # 503 until it lands. Leave unset to disable entity pages entirely.
       - key: OPENCHECK_ENTITY_PAGES_DB_URL
         sync: false
+      # Phase 180: with the disk mounted, the file lives here. Both set = the
+      # persistent-disk arrangement described above; unset this (keeping the
+      # URL) to fall back to the Phase 88 per-boot download into /tmp.
+      - key: OPENCHECK_ENTITY_PAGES_DB_FILE
+        value: /var/data/entity_pages.sqlite
+      # Phase 179/180: mirror-first stays OFF until the measurement gate on
+      # the Golden Copy ticket passes (read /mirror); flip it here when it does.
+      - key: OPENCHECK_GLEIF_MIRROR_FIRST
+        value: "false"
       # --- Phase 91: IndexNow (SEO Phase D) ---
       # Shared key echoed back at /{key}.txt (root — IndexNow scopes a
       # submission to the key file's directory) so IndexNow-participating
