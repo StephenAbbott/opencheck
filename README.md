@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 186** — OpenCheck now keeps a local copy of the UK PSC register, built every day from the Companies House snapshot and kept on the persistent disk, so a corporate ownership chain that costs dozens of register calls can be walked in a millisecond once the lookup is switched to it.
+**Latest: Phase 187** — the local copy of the UK PSC register is now fed from the Companies House streaming API, so every change the register publishes reaches the graph within seconds of being filed rather than with the next morning snapshot.
 
 → [Full development history](docs/status.md)
 
