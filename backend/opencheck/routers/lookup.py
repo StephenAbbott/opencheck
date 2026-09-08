@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Any, Literal, AsyncIterator, NamedTuple
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from sse_starlette.sse import EventSourceResponse
 
 from .. import __version__
@@ -21,7 +21,7 @@ from .. import identifiers
 from .. import degradation as _degradation
 from .. import outbound_rate as _outbound_rate
 from .. import provenance as _provenance
-from .. import consistency, consistencystats, signalstats
+from .. import consistency, consistencystats, register_hops, signalstats
 from ..provenance import Provenance
 from ..bods import BODSBundle, validate_shape
 from ..sources.base import LookupDeriver, raw_redaction_notice
@@ -1787,25 +1787,29 @@ def _entity_idents(stmt: dict[str, Any]) -> set[str]:
     return {(i.get("id") or "").strip().upper() for i in ids if (i.get("id") or "").strip()}
 
 
-def _anchor_replacements(bods: list[dict[str, Any]], lei: str, anchor: str) -> dict[str, str]:
+def _anchor_replacements(bods: list[dict[str, Any]], key: str, anchor: str) -> dict[str, str]:
     """The statementId → ``anchor`` rewrites that collapse every representation of
-    the LEI-identified entity onto the existing graph node.
+    the entity identified by ``key`` — an LEI, or since Phase 182 a register
+    number such as a Companies House company number — onto the existing graph
+    node.
 
     Fix for the spike's cross-source finding: a national register keys its entity
     statement on the company number, not the LEI, so matching on the LEI alone
     left a floating duplicate. We seed the identifier set from every statement
-    that asserts the LEI (GLEIF ties the LEI to the company number), then mark any
+    that asserts the key (GLEIF ties the LEI to the company number), then mark any
     entity statement sharing one of those identifier values for rewrite.
     """
     from ..bods.mapper import _stable_id
 
-    norm = lei.strip().upper()
+    norm = key.strip().upper()
     subj_idents: set[str] = {norm}
     for s in bods:
         if s.get("recordType") == "entity" and norm in _entity_idents(s):
             subj_idents |= _entity_idents(s)
 
-    subject_ids = {_stable_id("gleif", "entity", norm)}
+    # The GLEIF subject statement is keyed on the LEI itself; a register hop's
+    # subject is found through its identifiers like every other statement.
+    subject_ids = {_stable_id("gleif", "entity", norm)} if _LEI_SHAPE.match(norm) else set()
     for s in bods:
         if s.get("recordType") == "entity" and (_entity_idents(s) & subj_idents):
             subject_ids.add(s["statementId"])
@@ -1885,12 +1889,88 @@ async def expand(
     return {"lei": lei.strip().upper(), "anchor": anchor, "bods": bods}
 
 
+async def _register_one_layer(
+    scheme: str, ident: str, anchor: str, *, name: str | None = None
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Owner-ward hop on a register-scoped identifier (Phase 182): dispatch only
+    the register that owns the scheme — Companies House for ``GB-COH`` — map its
+    bundle to BODS, screen the parties it returns against OpenSanctions and
+    EveryPolitician, and stitch the lot onto ``anchor``.
+
+    This is the *cheap* hop: one register (four calls for Companies House —
+    profile, officers, PSCs, PSC statements — plus its own PSC walk) and the
+    name screen, not the forty-source fan-out ``_expand_one_layer`` pays for an
+    LEI. It runs inside its own degradation and outbound-budget scopes, as the
+    pipeline does, so a rate-capped register degrades instead of timing out.
+    An unknown scheme, a value that is not a number of that register, or a
+    register that is not live for this deployment yields nothing — never a
+    guess.
+    """
+    hop = register_hops.hop_for(scheme)
+    if hop is None:
+        return [], []
+    try:
+        local_id = hop.normalise(ident)
+    except ValueError:
+        return [], []
+    adapter = REGISTRY.get(hop.source_id)
+    mapper = _mapper_for(hop.source_id)
+    if adapter is None or mapper is None:
+        return [], []
+
+    _degradation.begin()
+    _outbound_rate.begin()
+    try:
+        kwargs = {"legal_name": name} if hop.pass_legal_name and name else {}
+        raw, prov = await _fetch_with_provenance(adapter, local_id, **kwargs)
+        if not isinstance(raw, dict) or raw.get("is_stub"):
+            return [], []
+        with _provenance.mapping_provenance(prov):
+            bods = list(mapper(raw))
+        bundle_signals = [
+            s.to_dict() for s in assess_bundle(hop.source_id, raw, bods, hit_id=local_id)
+        ]
+    finally:
+        degraded: list[DegradedSource] = _degradation.collect()
+        _outbound_rate.end()
+    # Sanctions screening of the new node and everything it brought with it —
+    # the subject entity is a target of the name screen like any other party.
+    cross = await assess_cross_source_names(bods, degraded=degraded)
+    signals = _merge_signals(bundle_signals, [s.to_dict() for s in cross])
+    repl = _anchor_replacements(bods, local_id, anchor)
+    return _apply_id_remap(bods, repl), _apply_id_remap(signals, repl)
+
+
+@router.get("/expand-schemes")
+@limiter.limit(default_tier)
+async def expand_schemes(request: Request, response: Response) -> dict[str, Any]:
+    """The identifier schemes ``/expand-layer`` can hop on without an LEI
+    (Phase 182): scheme → the register that answers it. The frontier reads this
+    so a node is offered for expansion only when a hop exists for it."""
+    return {"schemes": register_hops.describe()}
+
+
 _MAX_LAYER_ITEMS = 25  # cap concurrent hops per "add layer" so it can't fan out the register
 
 
 class _ExpandItem(BaseModel):
-    lei: str
+    """One frontier node. An LEI re-anchors a full lookup; a register-scoped
+    identifier (``scheme`` + ``id``, e.g. ``GB-COH`` + ``02999029``) takes the
+    cheap register hop (Phase 182). A node carrying both is expanded on its
+    LEI — the client prefers it, and so does the server."""
+
     anchor: str
+    lei: str | None = None
+    scheme: str | None = None
+    id: str | None = None
+    #: The node's name as shown, for registers whose fetch takes ``legal_name``.
+    name: str | None = None
+
+    @model_validator(mode="after")
+    def _keyed(self) -> _ExpandItem:
+        if not self.lei and not (self.scheme and self.id):
+            raise ValueError("an item needs an lei, or a scheme and an id")
+        return self
 
 
 class ExpandLayerRequest(BaseModel):
@@ -1908,21 +1988,35 @@ async def expand_layer(
     """Progressive discovery (batch): take the whole current frontier and go one
     layer deeper on every node at once, in the graph's existing direction.
 
-    Each item is a ``(lei, anchor)`` pair (the caller selects the frontier).
-    ``direction`` picks the hop: ``owners`` re-anchors a standard lookup (up the
-    ownership chain); ``subsidiaries`` fetches GLEIF Level-2 children (down the
-    subsidiary tree). Hops run concurrently (bounded), each stitched onto its
-    anchor, and the results are merged + de-duplicated by ``statementId``. Capped
-    at ``_MAX_LAYER_ITEMS`` so a click can't fan out the whole register.
+    Each item names a frontier node by LEI, or (Phase 182) by a register-scoped
+    identifier, plus its ``anchor`` (the caller selects the frontier).
+    ``direction`` picks the hop: ``owners`` re-anchors a standard lookup on an
+    LEI, or dispatches just the owning register for a register-scoped id (up
+    the ownership chain); ``subsidiaries`` fetches GLEIF Level-2 children (down
+    the subsidiary tree) and needs an LEI — a register-only node is skipped
+    there. Hops run concurrently (bounded), each stitched onto its anchor, and
+    the results are merged + de-duplicated by ``statementId``. Capped at
+    ``_MAX_LAYER_ITEMS`` so a click can't fan out the whole register.
     """
     items = req.items[:_MAX_LAYER_ITEMS]
     sem = asyncio.Semaphore(5)
-    hop = _subsidiaries_one_layer if req.direction == "subsidiaries" else _expand_one_layer
+    hops = {"lei": 0, "register": 0, "skipped": 0}
 
     async def _one(item: _ExpandItem) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         async with sem:
             try:
-                return await hop(item.lei, item.anchor)
+                if item.lei:
+                    hops["lei"] += 1
+                    if req.direction == "subsidiaries":
+                        return await _subsidiaries_one_layer(item.lei, item.anchor)
+                    return await _expand_one_layer(item.lei, item.anchor)
+                if req.direction == "subsidiaries" or not register_hops.hop_for(item.scheme):
+                    hops["skipped"] += 1
+                    return [], []
+                hops["register"] += 1
+                return await _register_one_layer(
+                    item.scheme or "", item.id or "", item.anchor, name=item.name
+                )
             except Exception:  # noqa: BLE001 — a bad node must not sink the batch
                 return [], []
 
@@ -1950,6 +2044,8 @@ async def expand_layer(
         "expanded": [i.anchor for i in items],
         "count": len(items),
         "truncated": len(req.items) > _MAX_LAYER_ITEMS,
+        # Phase 182: what the layer cost, by hop kind.
+        "hops": hops,
     }
 
 

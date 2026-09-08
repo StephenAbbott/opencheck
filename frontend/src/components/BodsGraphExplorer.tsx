@@ -32,6 +32,7 @@ import BodsTree from "./BodsTree";
 import { bodsToGraph, autoCollapse, buildTree, type GraphModel } from "../lib/bodsGraph";
 import {
   expandLayer,
+  fetchExpandSchemes,
   downloadNetwork,
   type RiskSignal,
   type NetworkExportFormat,
@@ -86,6 +87,19 @@ export default function BodsGraphExplorer({
   // Risk signals discovered while expanding (each hop's sub-lookup screens the
   // expanded entity) — the network-wide risk beyond the subject's own screening.
   const [discoveredSignals, setDiscoveredSignals] = useState<RiskSignal[]>([]);
+  // Phase 182: the identifier schemes the server can hop on without an LEI
+  // (a GB-COH company number → Companies House). Loaded once; until it
+  // arrives, or if it never does, the frontier is LEI-only as before.
+  const [hopSchemes, setHopSchemes] = useState<ReadonlySet<string>>(() => new Set());
+  useEffect(() => {
+    let live = true;
+    fetchExpandSchemes().then((schemes) => {
+      if (live) setHopSchemes(schemes);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
   // FullCheck eager-run controls (driven by runFullCheck below).
   const [depthBudget, setDepthBudget] = useState(2);
   const [running, setRunning] = useState(false);
@@ -190,14 +204,17 @@ export default function BodsGraphExplorer({
   // same company. Dedupe by canonical id (via the reconcile remap) so the count
   // matches what the user sees and each entity is expanded once.
   const frontier = useMemo(() => {
-    const raw = frontierAnchors(allStatements, rawEdges, expandedIds, direction);
+    const raw = frontierAnchors(allStatements, rawEdges, expandedIds, direction, hopSchemes);
     return recon ? dedupeFrontier(raw, recon.remap) : raw;
-  }, [allStatements, rawEdges, expandedIds, direction, recon]);
+  }, [allStatements, rawEdges, expandedIds, direction, recon, hopSchemes]);
   const noun = direction === "subsidiaries" ? "subsidiaries" : "owners/controllers";
+  const registerHops = hopSchemes.size > 0;
   const helperText =
     direction === "subsidiaries"
       ? "Resolves the next layer of subsidiaries for the companies at the edge of the network so far, where they have an LEI. Chains that end with people can't be explored further"
-      : "Resolves the next layer of ownership for the companies at the edge of the network so far, where they have an LEI. Chains that end with people can't be explored further";
+      : registerHops
+        ? "Resolves the next layer of ownership for the companies at the edge of the network so far, where they have an LEI or a company number on a register OpenCheck can read directly (UK Companies House). Chains that end with people can't be explored further"
+        : "Resolves the next layer of ownership for the companies at the edge of the network so far, where they have an LEI. Chains that end with people can't be explored further";
 
   // Subject signals (QuickCheck, from the prop) + everything discovered while
   // expanding = the network-wide risk; `additionalSignals` is the diff.
@@ -292,9 +309,13 @@ export default function BodsGraphExplorer({
       let stop = "";
       for (let d = 0; d < depthBudget; d++) {
         if (cancelRef.current) { stop = "cancelled"; break; }
-        const front = frontierAnchors(working, bodsToGraph(working).edges, expanded, direction);
+        const front = frontierAnchors(
+          working, bodsToGraph(working).edges, expanded, direction, hopSchemes
+        );
         if (front.length === 0) {
-          stop = "there was nothing further to expand (no more companies with an LEI)";
+          stop = registerHops && direction === "owners"
+            ? "there was nothing further to expand (no more companies with an LEI or a readable company number)"
+            : "there was nothing further to expand (no more companies with an LEI)";
           break;
         }
         const entities = working.filter((s) => (s as Stmt).recordType === "entity").length;
@@ -372,7 +393,11 @@ export default function BodsGraphExplorer({
             </label>
             <span className="text-[11px] text-oo-muted leading-[1.5] max-w-sm">
               Builds the wider {direction === "subsidiaries" ? "subsidiary" : "ownership"} network to
-              the chosen depth (LEI-bearing companies; capped at {FULLCHECK_NODE_CAP}).
+              the chosen depth (
+              {registerHops && direction === "owners"
+                ? "companies with an LEI or a UK company number"
+                : "LEI-bearing companies"}
+              ; capped at {FULLCHECK_NODE_CAP}).
             </span>
           </div>
           {runProgress && (

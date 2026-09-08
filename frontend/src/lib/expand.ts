@@ -3,8 +3,12 @@
  *
  * These back the "Add next layer" action in BodsGraphExplorer. They are
  * framework-agnostic and unit-tested without a DOM. Person nodes are terminal,
- * so only entity statements are ever expandable, and only when they carry an
- * LEI we can re-anchor a live lookup on.
+ * so only entity statements are ever expandable, and only when they carry a key
+ * a hop can follow: an LEI we can re-anchor a live lookup on, or (Phase 182) a
+ * register-scoped identifier — a `GB-COH` company number from a Companies
+ * House PSC filing, the common case in UK chains — whose register the server
+ * can dispatch on its own. Which schemes those are comes from `/expand-schemes`;
+ * the frontier never assumes.
  */
 
 import type { RiskSignal } from "./api";
@@ -65,6 +69,32 @@ export function subjectLei(stmt: Stmt | undefined): string | null {
   return null;
 }
 
+/** A register-scoped identifier on an entity statement (`GB-COH` + `02999029`). */
+export interface RegisterId {
+  scheme: string;
+  id: string;
+}
+
+/** The first identifier whose scheme the server can hop on, if any. The
+ * schemes come from `/expand-schemes`; an empty set means "LEI only", which is
+ * what the frontier was before Phase 182. Scheme matching is case-insensitive,
+ * the id is passed as filed — the server normalises (a dropped leading zero is
+ * its job, per Phase 177). */
+export function subjectRegisterId(
+  stmt: Stmt | undefined,
+  hopSchemes: ReadonlySet<string>
+): RegisterId | null {
+  if (hopSchemes.size === 0) return null;
+  const rd = (stmt?.recordDetails ?? {}) as Stmt;
+  const ids = (rd.identifiers ?? []) as Stmt[];
+  for (const i of ids) {
+    const scheme = String(i.scheme ?? "").toUpperCase();
+    const id = String(i.id ?? "").trim();
+    if (scheme && id && hopSchemes.has(scheme)) return { scheme, id };
+  }
+  return null;
+}
+
 /** A graph edge, minimally — enough to find the ownership frontier. */
 export interface EdgeLite {
   source: string;
@@ -72,10 +102,18 @@ export interface EdgeLite {
   category: string;
 }
 
+/** A frontier node and the key its hop uses. Exactly one of `lei` or
+ * (`scheme`, `id`) is set; a node carrying both is keyed on its LEI, which is
+ * the fuller hop. `name` rides along for registers that fetch by name. */
 export interface FrontierAnchor {
-  lei: string;
   anchor: string;
+  lei?: string;
+  scheme?: string;
+  id?: string;
+  name?: string;
 }
+
+const NO_SCHEMES: ReadonlySet<string> = new Set();
 
 export type ExpandDirection = "owners" | "subsidiaries";
 
@@ -90,14 +128,18 @@ export type ExpandDirection = "owners" | "subsidiaries";
  *   ownership/control edge (a leaf). Expanding reveals its children, one rank
  *   further down.
  *
- * People are terminal and no-LEI nodes can't be resolved live, so both are
- * excluded; already-expanded anchors are skipped so each click walks outward.
+ * People are terminal, so they are excluded; already-expanded anchors are
+ * skipped so each click walks outward. A node is keyed on its LEI when it has
+ * one; otherwise (Phase 182) on the first identifier whose scheme is in
+ * `hopSchemes`, but only when digging up — the subsidiary hop is GLEIF
+ * Level-2 children and needs an LEI. A node with neither is a dead end.
  */
 export function frontierAnchors(
   statements: Stmt[],
   edges: EdgeLite[],
   expandedIds: Set<string>,
-  direction: ExpandDirection = "owners"
+  direction: ExpandDirection = "owners",
+  hopSchemes: ReadonlySet<string> = NO_SCHEMES
 ): FrontierAnchor[] {
   const oc = edges.filter((e) => e.category === "ownership" || e.category === "control");
   // owners: exclude the owned (targets). subsidiaries: exclude nodes that
@@ -112,9 +154,17 @@ export function frontierAnchors(
     const id = s.statementId as string | undefined;
     if (!id || seen.has(id) || expandedIds.has(id) || exclude.has(id)) continue;
     const lei = subjectLei(s);
-    if (!lei) continue;
+    if (lei) {
+      seen.add(id);
+      out.push({ lei, anchor: id });
+      continue;
+    }
+    if (direction !== "owners") continue;
+    const reg = subjectRegisterId(s, hopSchemes);
+    if (!reg) continue;
     seen.add(id);
-    out.push({ lei, anchor: id });
+    const name = ((s.recordDetails as Stmt | undefined)?.name as string | undefined) || undefined;
+    out.push({ scheme: reg.scheme, id: reg.id, anchor: id, name });
   }
   return out;
 }
@@ -125,22 +175,29 @@ export function frontierAnchors(
  * valid, but the FullCheck display is reconciled — several per-source
  * duplicates of one entity can sit on the raw frontier. Deduping by
  * canonical id keeps the "Add next layer — N" count equal to what the user
- * sees and expands each real-world entity once. The first raw anchor per
- * canonical id survives (its statementId is what expansion bookkeeping
- * tracks). */
+ * sees and expands each real-world entity once. Per canonical id the
+ * LEI-keyed anchor wins over a register-keyed one — GLEIF's statement for a
+ * UK company carries both the LEI and the company number, Companies House's
+ * only the number, and the two reconcile to one node that should be expanded
+ * once, on its LEI (Phase 182); otherwise the first raw anchor survives (its
+ * statementId is what expansion bookkeeping tracks). */
 export function dedupeFrontier(
   anchors: FrontierAnchor[],
   remap: Record<string, string>
 ): FrontierAnchor[] {
-  const seen = new Set<string>();
-  const out: FrontierAnchor[] = [];
+  const byCanonical = new Map<string, FrontierAnchor>();
+  const order: string[] = [];
   for (const f of anchors) {
     const cid = remap[f.anchor] ?? f.anchor;
-    if (seen.has(cid)) continue;
-    seen.add(cid);
-    out.push(f);
+    const incumbent = byCanonical.get(cid);
+    if (!incumbent) {
+      byCanonical.set(cid, f);
+      order.push(cid);
+    } else if (!incumbent.lei && f.lei) {
+      byCanonical.set(cid, f);
+    }
   }
-  return out;
+  return order.map((cid) => byCanonical.get(cid)!);
 }
 
 /** Merge two BODS bundles, de-duplicating by statementId (base wins). */
