@@ -795,6 +795,65 @@ export async function getSubsidiaries(
   return (await r.json()) as SubsidiariesResponse;
 }
 
+// ---------------------------------------------------------------------
+// Declared subsidiaries — /subsidiaries/declared (Phase 185)
+//
+// The non-GLEIF lists (OECD-UNSD MEIP, EITI, Global Energy Monitor), kept
+// apart per source. Serves the Subsidiaries tab only; the documented API,
+// the export and MCP stay on the GLEIF network above.
+// ---------------------------------------------------------------------
+
+export type DeclaredSourceId = "meip" | "eiti_assessment" | "climatetrace";
+
+export interface DeclaredRow {
+  name: string;
+  /** Only where the source's own data carries one — never name-derived. */
+  lei: string | null;
+  /** ISO 3166-1 alpha-3, as all three sources publish it. */
+  country: string | null;
+  /** "direct" | "in group" (MEIP, via an intermediate) | "declared" (EITI). */
+  relation: string | null;
+  percent: number | null;
+  years: string[];
+  /** MEIP: the immediate parent's name. GEM: the GEM entity id. */
+  via: string | null;
+}
+
+export interface DeclaredSource {
+  id: DeclaredSourceId;
+  label: string;
+  /** What this list measures — why it differs from the others. */
+  measures: string;
+  homepage: string;
+  /** False = the data could not be read; not a finding about the company. */
+  available: boolean;
+  /** False = the subject is not in this source's universe at all. */
+  covered: boolean;
+  reason: string | null;
+  /** The source's own count where it is larger than `rows` (MEIP holds
+   *  only the LEI-carrying subset of an MNE's subsidiaries). */
+  total: number | null;
+  listed: number;
+  with_lei: number;
+  context: Record<string, unknown> | null;
+  rows: DeclaredRow[];
+}
+
+export interface DeclaredSubsidiariesResponse {
+  lei: string;
+  sources: DeclaredSource[];
+  covered: number;
+  listed: number;
+  with_lei: number;
+}
+
+export async function getDeclaredSubsidiaries(lei: string): Promise<DeclaredSubsidiariesResponse> {
+  const params = new URLSearchParams({ lei });
+  const r = await fetch(`${BASE_URL}/subsidiaries/declared?${params.toString()}`);
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return (await r.json()) as DeclaredSubsidiariesResponse;
+}
+
 // --- BackgroundCheck (person screening) — SPIKE feat/background-check -------
 
 /** One hit from /person-check, scored against the queried name. */

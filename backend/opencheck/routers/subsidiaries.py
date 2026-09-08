@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from .. import identifiers
 from ..ratelimit import default_tier, limiter
 from ..subsidiaries import assemble_subsidiaries
+from ..subsidiaries_declared import assemble_declared
 
 router = APIRouter()
 
@@ -89,3 +90,74 @@ async def subsidiaries(
     if check_digit_error:
         raise HTTPException(status_code=400, detail=check_digit_error)
     return await assemble_subsidiaries(norm, include_bods=(format == "bods"))
+
+
+# ---------------------------------------------------------------------------
+# Phase 185 — the non-GLEIF lists, for the Subsidiaries tab
+# ---------------------------------------------------------------------------
+
+
+class DeclaredRow(BaseModel):
+    name: str
+    #: Only where the source's own data carries one — never name-derived here.
+    lei: str | None = None
+    #: ISO 3166-1 alpha-3, as MEIP, EITI and GEM all publish it.
+    country: str | None = None
+    #: "direct" | "in group" (MEIP, via an intermediate) | "declared" (EITI).
+    relation: str | None = None
+    percent: float | None = None
+    years: list[str] = []
+    #: MEIP: the immediate parent's name. GEM: the GEM entity id.
+    via: str | None = None
+
+
+class DeclaredSource(BaseModel):
+    id: str
+    label: str
+    measures: str
+    homepage: str
+    #: False = the data could not be read (not a finding about the company).
+    available: bool = True
+    #: False = the subject is not in this source's universe at all.
+    covered: bool = False
+    reason: str | None = None
+    #: The source's own count where it publishes one larger than ``rows``
+    #: (MEIP holds only the LEI-carrying subset of an MNE's subsidiaries).
+    total: int | None = None
+    listed: int = 0
+    with_lei: int = 0
+    context: dict | None = None
+    rows: list[DeclaredRow] = []
+
+
+class DeclaredSubsidiariesResponse(BaseModel):
+    lei: str
+    sources: list[DeclaredSource]
+    covered: int
+    listed: int
+    with_lei: int
+
+
+@router.get("/subsidiaries/declared", response_model=DeclaredSubsidiariesResponse)
+@limiter.limit(default_tier)
+async def declared_subsidiaries(
+    request: Request,
+    response: Response,
+    lei: str = Query(..., description="ISO 17442 Legal Entity Identifier (20 chars)."),
+) -> Any:
+    """The subsidiary lists OpenCheck holds from sources other than GLEIF
+    (OECD-UNSD MEIP, EITI, Global Energy Monitor), kept apart per source.
+
+    Serves the Subsidiaries tab. Not part of the documented API: the
+    reusable subsidiary network is ``GET /subsidiaries`` (GLEIF Level 2).
+    """
+    norm = lei.strip().upper()
+    if not _LEI_SHAPE.match(norm):
+        raise HTTPException(
+            status_code=400,
+            detail=f"{norm!r} is not a valid LEI (20-character alphanumeric).",
+        )
+    check_digit_error = identifiers.lei_check_digit_error(norm)
+    if check_digit_error:
+        raise HTTPException(status_code=400, detail=check_digit_error)
+    return await assemble_declared(norm)

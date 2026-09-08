@@ -17,13 +17,18 @@
  * `MODE_TABS[1].blurb` says in one, and the tabpanel now renders that blurb as
  * the card's first band, the same way every mode does. A panel that
  * reintroduces its own title is a card inside a card again.
+ *
+ * Phase 185 took the "Subsidiary network" band to its own tab. FullCheck
+ * follows the chain upwards — who owns this company — and the band that
+ * followed it downwards sat behind a strip at the bottom where the tab could
+ * not claim it and no URL could reach it. One line here says where it went.
  */
 
 import { useEffect, useState } from "react";
 import { lookup, type RiskSignal } from "../../lib/api";
+import { subsidiaryHref } from "../../lib/subsidiariesMode";
 import BodsGraphExplorer from "../BodsGraphExplorer";
 import PanelSection from "../ui/PanelSection";
-import { SubsidiaryNetwork } from "./SubsidiaryNetwork";
 import type { PanelError, PanelId } from "../../lib/panelErrors";
 
 type Stmt = Record<string, unknown>;
@@ -32,15 +37,17 @@ export default function FullCheckPanel({
   lei,
   legalName,
   signals = [],
-  onPanelError,
-  onPanelRecovered,
+  onOpenSubsidiaries,
 }: {
   lei: string;
   legalName: string | null;
   signals?: RiskSignal[];
-  /** Forwarded to SubsidiaryNetwork so a /subsidiaries failure reaches the
-   *  report-level notice — this panel is mounted inside a tab, so nothing
-   *  above it would otherwise learn that the fetch failed. */
+  /** Switch to the Subsidiaries tab in place. The pointer is a real link to
+   *  `?mode=subsidiaries` so it survives a right-click; the handler makes a
+   *  plain click a tab switch rather than a reload. */
+  onOpenSubsidiaries?: () => void;
+  /** Kept on the signature so App's call site is unchanged; the band that
+   *  used them moved to the Subsidiaries tab in Phase 185. */
   onPanelError?: (e: PanelError) => void;
   onPanelRecovered?: (panel: PanelId) => void;
 }) {
@@ -107,15 +114,23 @@ export default function FullCheckPanel({
         )}
       </PanelSection>
 
-      <PanelSection title="Subsidiary network">
-        <SubsidiaryNetwork
-          lei={lei}
-          entityName={legalName ?? undefined}
-          signals={signals}
-          onError={onPanelError}
-          onRecovered={onPanelRecovered}
-          bare
-        />
+      <PanelSection title="Subsidiaries">
+        <p className="text-oo-small text-oo-muted leading-[1.6] max-w-[82ch]">
+          FullCheck follows the chain upwards. What this company owns — GLEIF&rsquo;s
+          Level 2 network and every other list OpenCheck holds — has its own tab:{" "}
+          <a
+            href={subsidiaryHref(lei)}
+            onClick={(e) => {
+              if (!onOpenSubsidiaries) return;
+              e.preventDefault();
+              onOpenSubsidiaries();
+            }}
+            className="text-oo-blue hover:underline"
+          >
+            open Subsidiaries
+          </a>
+          .
+        </p>
       </PanelSection>
     </>
   );

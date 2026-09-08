@@ -46,7 +46,7 @@ import ConfidenceLegend from "./components/ui/ConfidenceLegend";
 import PanelSection, { PanelCard } from "./components/ui/PanelSection";
 import { PERSON_VERB, resultCount, setSourceNames, sourceLabel } from "./lib/vocab";
 import { answeredCount, coverageCopy } from "./lib/lookupProgress";
-import { documentTitleFor, modeParam, parseMode } from "./lib/checkMode";
+import { MODE_ACCENT, TOPIC_MODES, documentTitleFor, modeParam, parseMode } from "./lib/checkMode";
 import type { CheckMode } from "./lib/checkMode";
 import type { IconName } from "./components/ui";
 import { NarrativePanel } from "./components/cdd/NarrativePanel";
@@ -72,7 +72,7 @@ import {
 } from "./components/cdd/SourceBucketCard";
 import { OpenAlephArchiveMatches } from "./components/cdd/OpenAlephArchiveMatches";
 import { EsgPanel } from "./components/cdd/EsgPanel";
-import { MeipSignpost } from "./components/cdd/MeipSignpost";
+import { subsidiaryHref } from "./lib/subsidiariesMode";
 import { SecuritiesSection } from "./components/cdd/SecuritiesSection";
 import { clearPanelError, mergePanelError, panelLabel, type PanelError } from "./lib/panelErrors";
 
@@ -82,6 +82,7 @@ const FullCheckPanel = lazy(() => import("./components/cdd/FullCheckPanel"));
 const BackgroundCheckPanel = lazy(
   () => import("./components/cdd/BackgroundCheckPanel")
 );
+const SubsidiariesPanel = lazy(() => import("./components/cdd/SubsidiariesPanel"));
 const PersonReportPage = lazy(
   () => import("./components/cdd/PersonReportPage")
 );
@@ -254,12 +255,14 @@ export default function App() {
    * /sources were unreachable from each other.
    */
     /**
-   * The four checks, in the order they escalate: the subject alone, its
-   * network, the people in it — then Climate & ESG, which is a different
-   * question rather than a fourth depth, and is separated in the strip to
-   * say so. Accents are the `oo.node.*` brand tier that already names each
-   * mode's badge, so the tab, the badge and (for ownership and role) the
-   * graph edge are one colour rather than three.
+   * The five checks, in the order they escalate: the subject alone, its
+   * network, the people in it — then the two topics, Subsidiaries (what it
+   * owns, Phase 185) and Climate & ESG, which are different questions rather
+   * than further depths, and are separated in the strip to say so. Accents
+   * come from `MODE_ACCENT` in lib/checkMode.ts — the `oo.node.*` brand tier
+   * that already names each mode's badge, plus the graph's control colour
+   * for subsidiaries — so the tab, the badge and the graph edge are one
+   * colour rather than three.
    */
   const MODE_TABS: {
     id: CheckMode;
@@ -273,30 +276,38 @@ export default function App() {
       id: "quick",
       label: "QuickCheck",
       icon: "quickcheck",
-      accent: "#22c55e",
+      accent: MODE_ACCENT.quick,
       blurb: "Screening this company on its own — sanctions, control, structure. The fastest answer.",
     },
     {
       id: "full",
       label: "FullCheck",
       icon: "fullcheck",
-      accent: "#3b82f6",
+      accent: MODE_ACCENT.full,
       blurb: "Following the ownership chain outwards, then screening everything it reaches.",
     },
     {
       id: "background",
       label: "BackgroundCheck",
       icon: "backgroundcheck",
-      accent: "#7c3aed",
+      accent: MODE_ACCENT.background,
       blurb: "Screening the officers, directors and beneficial owners named in the records.",
+    },
+    {
+      id: "subsidiaries",
+      label: "Subsidiaries",
+      icon: "subsidiaries",
+      accent: MODE_ACCENT.subsidiaries,
+      blurb: "What this company owns, from every source that publishes a list — they disagree, and the tab says why.",
+      topic: TOPIC_MODES.has("subsidiaries"),
     },
     {
       id: "esg",
       label: "Climate & ESG",
       icon: "esg",
-      accent: "#0d9488",
+      accent: MODE_ACCENT.esg,
       blurb: "Emissions and asset records published about this company — what it does, rather than who owns it.",
-      topic: true,
+      topic: TOPIC_MODES.has("esg"),
     },
   ];
 
@@ -689,6 +700,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       if (current === next) return current;
       if (next === "full") trackEvent("fullcheck_run");
       if (next === "background") trackEvent("backgroundcheck_run");
+      if (next === "subsidiaries") trackEvent("subsidiaries_run");
       const url = new URL(window.location.href);
       const param = modeParam(next);
       if (param === null) url.searchParams.delete("mode");
@@ -2048,12 +2060,18 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               // Grid lines for the phone layout: a left rule on the right-hand
               // column, a top rule on the second row. Reset at `sm`, where the
               // button's own tab border takes over.
-              const cellRules = `${i % 2 === 1 ? "border-l" : ""} ${i >= 2 ? "border-t" : ""}`.trim();
+              // Phase 185: five tabs. An odd count leaves the last cell alone
+              // on its row, so it spans both columns rather than sitting beside
+              // an empty one.
+              const lastAlone = MODE_TABS.length % 2 === 1 && i === MODE_TABS.length - 1;
+              const cellRules = `${i % 2 === 1 ? "border-l" : ""} ${i >= 2 ? "border-t" : ""} ${lastAlone ? "col-span-2 sm:col-span-1" : ""}`.trim();
               return (
                 <div
                   key={tab.id}
                   className={
-                    tab.topic
+                    // The divider marks where the depths end and the topics
+                    // begin: on the first topic tab only, not on every one.
+                    tab.topic && !MODE_TABS[i - 1]?.topic
                       ? "contents sm:flex sm:items-end sm:pl-2 sm:ml-1 md:pl-3 md:ml-2 sm:border-l sm:border-oo-rule"
                       : "contents sm:flex sm:items-end"
                   }
@@ -2161,6 +2179,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   lei={streamingLei}
                   legalName={legalName}
                   signals={riskSignals}
+                  onOpenSubsidiaries={() => selectMode("subsidiaries")}
                   onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
                   onPanelRecovered={(panel) =>
                     setPanelErrors((prev) => clearPanelError(prev, panel))
@@ -2190,6 +2209,30 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               </Suspense>
             </PanelCard>
           </div>
+        ) : mode === "subsidiaries" && streamingLei ? (
+          <div id="panel-subsidiaries" role="tabpanel" aria-labelledby="tab-subsidiaries" tabIndex={-1}>
+            <PanelCard>
+              <ModeBlurb mode="subsidiaries" tabs={MODE_TABS} />
+              <Suspense
+                fallback={
+                  <PanelSection>
+                    <p className="text-oo-small text-oo-muted italic">Loading Subsidiaries…</p>
+                  </PanelSection>
+                }
+              >
+                <SubsidiariesPanel
+                  lei={streamingLei}
+                  legalName={legalName}
+                  signals={riskSignals}
+                  meip={meip}
+                  onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
+                  onPanelRecovered={(panel) =>
+                    setPanelErrors((prev) => clearPanelError(prev, panel))
+                  }
+                />
+              </Suspense>
+            </PanelCard>
+          </div>
         ) : mode === "esg" && streamingLei ? (
           <div id="panel-esg" role="tabpanel" aria-labelledby="tab-esg" tabIndex={-1}>
             <PanelCard>
@@ -2204,6 +2247,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   onRecovered={(panel) =>
                     setPanelErrors((prev) => clearPanelError(prev, panel))
                   }
+                  onOpenSubsidiaries={() => selectMode("subsidiaries")}
                 />
               ) : (
                 <PanelSection>
@@ -2533,7 +2577,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     liveness={sourceLiveness[b.sourceId]}
                     footnote={
                       b.sourceId === "gleif" && gleifChildrenInfo && gleifChildrenInfo.total > 100
-                        ? `Showing the first ${gleifChildrenInfo.fetched} of ${gleifChildrenInfo.total.toLocaleString()} direct subsidiaries in BODS statements (GLEIF Level 2)`
+                        ? `Showing the first ${gleifChildrenInfo.fetched} of ${gleifChildrenInfo.total.toLocaleString()} direct subsidiaries in BODS statements (GLEIF Level 2) — the whole network is in the Subsidiaries tab`
                         : undefined
                     }
                     /* Informational percolation matches (Phase 97) sit with
@@ -2571,9 +2615,22 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         )}
 
 
-        {/* MEIP signpost — bottom of the results page, beneath the richer
-            data-source cards and the ESG box. Not a BODS source. */}
-        <MeipSignpost match={meip} />
+        {/* Phase 185: the MEIP signpost that used to sit here moved to the
+            Subsidiaries tab, where the register's list lives. What stays is
+            the fact of the match and where to find it — a link, not a tab
+            switch, so it survives a right-click. */}
+        {meip && streamingLei && (
+          <p className="mt-3 text-oo-small text-oo-muted">
+            {meip.mode === "mne_head"
+              ? "One of the 500 largest multinational enterprises in the OECD-UNSD MEIP register"
+              : `Listed in the OECD-UNSD MEIP register as part of the ${meip.parent_mne} group`}
+            {" — "}
+            <a href={subsidiaryHref(streamingLei)} onClick={(e) => { e.preventDefault(); selectMode("subsidiaries"); }} className="text-oo-blue hover:underline">
+              see the Subsidiaries tab
+            </a>
+            .
+          </p>
+        )}
 
         {streamingLei && !streaming && totalHits > 0 && (
           <ExportPanel

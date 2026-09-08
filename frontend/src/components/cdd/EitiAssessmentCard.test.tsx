@@ -4,17 +4,18 @@
  * Everything true of the *values* is in `lib/eitiAssessment.test.ts` next door
  * and stays there. What is here can only be seen by rendering:
  *
- * - the caption is on screen **whenever a declared name is**, because a list of
- *   company names with no caption is a list a reader will take for companies
- *   OpenCheck identified;
+ * - the caption is on screen **whenever the declared count is**, because a
+ *   count of company names with no caption reads as companies OpenCheck
+ *   identified;
  * - the disclosure link has an accessible name that says what it is and that it
  *   leaves the page;
- * - the row count is what the collapse control says it is;
- * - a failed `/subsidiaries` fetch does not print "Declared to EITI only" on
- *   every row.
+ * - the card never fetches `/subsidiaries` itself (Phase 185: the list and
+ *   its cross-reference live on the Subsidiaries tab, which the card points
+ *   at with a real link) — see `SubsidiariesPanel.test.tsx` for the
+ *   cross-reference claims that used to be here.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const getSubsidiaries = vi.fn();
@@ -100,28 +101,23 @@ beforeEach(() => {
   getSubsidiaries.mockResolvedValue(subsidiariesResponse([]));
 });
 
-describe("the declared-subsidiary list", () => {
-  it("shows twelve rows, then all twenty when asked", async () => {
-    render(<EitiAssessmentCard hit={hit()} />);
-    const list = screen.getByTestId("eiti-declared-list");
-    expect(within(list).getAllByRole("listitem")).toHaveLength(12);
-
-    await userEvent.click(
-      screen.getByRole("button", { name: /Show all 20 declared names/ }),
-    );
-    expect(within(list).getAllByRole("listitem")).toHaveLength(20);
+describe("the declared-subsidiary count and pointer", () => {
+  it("shows the count, the caption, and a real link to the Subsidiaries tab", async () => {
+    const onOpenSubsidiaries = vi.fn();
+    render(<EitiAssessmentCard hit={hit()} onOpenSubsidiaries={onOpenSubsidiaries} />);
+    expect(screen.getByText("20")).toBeVisible();
+    expect(screen.getByText(EITI_DECLARED_CAPTION)).toBeVisible();
+    // No list here any more — the names are a subsidiaries question.
+    expect(screen.queryByTestId("eiti-declared-list")).toBeNull();
+    const link = screen.getByTestId("eiti-subsidiaries-link");
+    expect(link).toHaveAttribute("href", "/?lei=2138002658CPO9NBH955&mode=subsidiaries");
+    await userEvent.click(link);
+    expect(onOpenSubsidiaries).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps the caption on screen for as long as a row is", async () => {
-    // Visible text, never a `title` attribute — Phase 124's rule, and the whole
-    // reason this list is safe to render at all.
+  it("never fetches the GLEIF network itself", () => {
     render(<EitiAssessmentCard hit={hit()} />);
-    expect(screen.getByText(EITI_DECLARED_CAPTION)).toBeVisible();
-
-    await userEvent.click(
-      screen.getByRole("button", { name: /Show all 20 declared names/ }),
-    );
-    expect(screen.getByText(EITI_DECLARED_CAPTION)).toBeVisible();
+    expect(getSubsidiaries).not.toHaveBeenCalled();
   });
 
   it("says the names are not in the graph", () => {
@@ -131,7 +127,7 @@ describe("the declared-subsidiary list", () => {
     ).toBeVisible();
   });
 
-  it("renders no list, and says why, when EITI filed none", () => {
+  it("renders no count, and says why, when EITI filed none", () => {
     render(
       <EitiAssessmentCard
         hit={hit({
@@ -145,10 +141,8 @@ describe("the declared-subsidiary list", () => {
         })}
       />,
     );
-    expect(screen.queryByTestId("eiti-declared-list")).toBeNull();
+    expect(screen.queryByTestId("eiti-subsidiaries-link")).toBeNull();
     expect(screen.getByText(/carries no list for this company/)).toBeVisible();
-    // No comparison to make, so no GLEIF call to spend.
-    expect(getSubsidiaries).not.toHaveBeenCalled();
   });
 });
 
@@ -185,72 +179,5 @@ describe("the beneficial ownership disclosure", () => {
     );
     expect(screen.getByText("Chevron U.S.A. Inc.")).toBeVisible();
     expect(screen.getAllByText("Chevron Corporation").length).toBeGreaterThan(0);
-  });
-});
-
-describe("the cross-reference", () => {
-  it("counts the overlap in both directions", async () => {
-    getSubsidiaries.mockResolvedValue(
-      subsidiariesResponse([
-        { lei: "5493001KJTIIGC8Y1R12", name: "Declared Subsidiary 1 Limited" },
-        { lei: "5493001KJTIIGC8Y1R13", name: "Something GLEIF Only Ltd" },
-      ]),
-    );
-    render(<EitiAssessmentCard hit={hit()} />);
-
-    expect(
-      await screen.findByText(
-        "20 declared to EITI · 1 also appear in GLEIF Level 2 · 19 declared to EITI only",
-      ),
-    ).toBeVisible();
-    // The direction of the difference, said out loud rather than hidden.
-    expect(
-      screen.getByText(/neither list contains the other/),
-    ).toBeVisible();
-  });
-
-  it("never borrows the corroboration glyphs for a name match", async () => {
-    getSubsidiaries.mockResolvedValue(
-      subsidiariesResponse([
-        { lei: "5493001KJTIIGC8Y1R12", name: "Declared Subsidiary 1 Limited" },
-      ]),
-    );
-    const { container } = render(<EitiAssessmentCard hit={hit()} />);
-    await screen.findByText(/also appear in GLEIF Level 2/);
-    // ●◐○ mean "corroborated by two or more sources". A name match is not that.
-    expect(container.textContent ?? "").not.toMatch(/[●◐○]/);
-    expect(screen.getAllByText(/Name only/).length).toBeGreaterThan(0);
-  });
-
-  it("reports a failed fetch rather than printing it as a discrepancy", async () => {
-    getSubsidiaries.mockRejectedValue(new Error("503 Service Unavailable"));
-    const onPanelError = vi.fn();
-    render(<EitiAssessmentCard hit={hit()} onPanelError={onPanelError} />);
-
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      /could not be fetched, so no comparison was run/,
-    );
-    expect(screen.queryByText("Declared to EITI only")).toBeNull();
-    expect(onPanelError).toHaveBeenCalledWith(
-      expect.objectContaining({ panel: "subsidiaries" }),
-    );
-  });
-
-  it("treats a degraded 200 the same way", async () => {
-    getSubsidiaries.mockResolvedValue({
-      ...subsidiariesResponse([]),
-      children_available: false,
-      degraded_detail: "GLEIF rate-limited the direct-children call",
-    });
-    const onPanelError = vi.fn();
-    render(<EitiAssessmentCard hit={hit()} onPanelError={onPanelError} />);
-
-    expect(await screen.findByRole("status")).toBeVisible();
-    expect(onPanelError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        panel: "subsidiaries",
-        detail: "GLEIF rate-limited the direct-children call",
-      }),
-    );
   });
 });

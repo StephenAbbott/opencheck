@@ -1136,3 +1136,60 @@ def _stub_bundle(
         "entity_status": _entity_status(entity_id, gem_row),
         "is_stub": True,
     }
+
+
+# ---------------------------------------------------------------------------
+# Phase 185 — GEM's directly owned entities, for the Subsidiaries tab
+# ---------------------------------------------------------------------------
+
+
+def _gem_to_lei(lei_idx: dict[str, str]) -> dict[str, str]:
+    """Invert the LEI → GEM index. GEM stores several LEIs in one cell for
+    some entities; the first in index order wins, which after the GLEIF
+    certified overlay is the certified one where there is one."""
+    out: dict[str, str] = {}
+    for lei, gem_id in lei_idx.items():
+        out.setdefault(gem_id, lei)
+    return out
+
+
+def gem_direct_subsidiaries(lei: str | None) -> dict[str, Any] | None:
+    """The entities GEM records the subject as directly owning, with an LEI on
+    every row the GEM↔LEI index can resolve.
+
+    Returns ``None`` when the LEI is not in the GEM ownership index (the
+    subject is not a GEM entity — not a finding that it owns nothing), and
+    ``{"available": False}`` when the GEM data is not on disk at all.
+    Synchronous and possibly slow on first call (it may download the CSVs);
+    callers run it in a thread.
+    """
+    key = (lei or "").strip().upper()
+    lei_idx, ent_idx = _get_indexes()
+    if not ent_idx:
+        return {"available": False, "rows": []}
+    entity_id = lei_idx.get(key)
+    if not entity_id:
+        return None
+    rel_children, _ = _get_relationship_indexes()
+    gem_to_lei = _gem_to_lei(lei_idx)
+    rows: list[dict[str, Any]] = []
+    for child in rel_children.get(entity_id, []):
+        cid = child.get("entity_id") or ""
+        child_row = ent_idx.get(cid) or {}
+        child_lei = gem_to_lei.get(cid) or _first_valid_lei(child_row.get(_LEI_COL))
+        rows.append(
+            {
+                "gem_id": cid,
+                "name": child.get("name") or (child_row.get(_ENTITY_NAME_COL) or "").strip() or cid,
+                "percent": child.get("percent"),
+                "lei": child_lei,
+                "country": (child_row.get(_COUNTRY_COL) or "").strip() or None,
+            }
+        )
+    rows.sort(key=lambda r: (-(r["percent"] or 0.0), r["name"].casefold()))
+    return {
+        "available": True,
+        "gem_id": entity_id,
+        "name": (ent_idx.get(entity_id, {}).get(_ENTITY_NAME_COL) or "").strip(),
+        "rows": rows,
+    }

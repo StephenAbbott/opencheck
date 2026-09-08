@@ -94,3 +94,39 @@ exposes this as a checkbox. Off by default, gated on `OPENCHECK_ALLOW_LIVE`.
 - **Roadmap** — a `COMPLEX_GROUP_STRUCTURE` style signal off the network shape;
   jurisdiction-risk overlays on the children (offshore concentration); and
   cross-referencing children LEIs back through the standard lookup.
+
+## The Subsidiaries tab (Phase 185)
+
+Everything above now lives on its own tab, `?mode=subsidiaries`, the fifth
+check mode. The GLEIF network moved there from the bottom of FullCheck (where
+it sat behind the invitation strip and had no URL), and the tab fetches the
+summary on arrival — a reader who opened it has already asked — while the
+Cytoscape graph stays behind a click. Every child links to its own
+Subsidiaries tab, so a reader can walk down a group; GLEIF's record is one
+click further.
+
+The tab also brings together the lists OpenCheck holds from other sources,
+served by **`GET /subsidiaries/declared?lei=`** (`opencheck/subsidiaries_declared.py`)
+and kept apart per source:
+
+| List | What it measures | Identifier |
+|---|---|---|
+| GLEIF Level 2 | accounting consolidation (direct + ultimate) | LEI on every row |
+| OECD-UNSD MEIP | the register of the 500 largest MNEs' subsidiaries; only the LEI-carrying subset is held | LEI on every row; `total` is the register's own count |
+| EITI Company Assessment | what a supporting company declared about its extractive operations | none, by design |
+| Global Energy Monitor | entities GEM records as directly owned, with a percentage where it has one | LEI where the GLEIF GEM↔LEI mapping or GEM's own column supplies one |
+
+They disagree, and are meant to: no two measure the same thing and no public
+source publishes the whole picture. The tab's first sentence is built from the
+numbers (`lib/subsidiariesMode.ts`, `coverageSentence`) rather than asserted.
+What the tab *does* settle is which rows can be opened: an LEI is attached
+only where a source's own data carries one, and a name that another list
+holds an LEI for is offered with a match chip — a name match, never an
+identity. Rows with neither say "no LEI published". No live GLEIF name search
+is run: the EITI ticket records how "Equinor" matched a company sports club.
+
+**The API surface is unchanged.** `GET /subsidiaries`, `/export?subsidiaries`,
+`/expand-layer direction=subsidiaries` and the MCP server all still serve the
+GLEIF network only; `/subsidiaries/declared` exists for the tab and is not on
+the API page. The OECD's BODS release of MEIP is the next step, on its own
+ticket.

@@ -151,3 +151,56 @@ def meip_lookup(lei: str | None, known_ids: dict[str, str] | None = None) -> Mei
         )
 
     return None
+
+
+# ---------------------------------------------------------------------------
+# Phase 185 — the register's own subsidiary list for the Subsidiaries tab
+# ---------------------------------------------------------------------------
+
+#: Names that reach MEIP's ``immediate_parent`` field are the register's own
+#: spelling of the parent, so a match on the normalised name is a match within
+#: one MNE group, never across the whole register.
+def meip_declared(lei: str | None) -> dict | None:
+    """The MEIP subsidiaries the subject is the parent of, or ``None`` when the
+    subject is in neither MEIP key set.
+
+    Only the ~30k LEI-carrying subsidiaries are in the committed data, so an
+    MNE head's list is a strict subset of what MEIP publishes: ``total`` is the
+    register's own count and ``rows`` the LEI-carrying part of it. For an MNE
+    head every subsidiary of the group is listed, with ``direct`` marking the
+    ones whose immediate parent is the head itself; for a subsidiary-mode
+    match only its own direct children (same group, immediate parent equal to
+    the subject's MEIP name) are listed.
+    """
+    match = meip_lookup(lei)
+    if match is None:
+        return None
+    group = _norm(match.parent_mne)
+    subject_name = _norm(match.name)
+    rows: list[dict] = []
+    for child_lei, sub in MEIP_SUBSIDIARIES.items():
+        if child_lei == match.lei or _norm(sub.get("parent_mne")) != group:
+            continue
+        direct = _norm(sub.get("immediate_parent")) == subject_name
+        if match.mode == "subsidiary" and not direct:
+            continue
+        rows.append(
+            {
+                "lei": child_lei,
+                "name": sub.get("name") or child_lei,
+                "country": sub.get("iso3") or None,
+                "immediate_parent": sub.get("immediate_parent") or None,
+                "direct": direct,
+            }
+        )
+    rows.sort(key=lambda r: (not r["direct"], r["name"].casefold()))
+    return {
+        "mode": match.mode,
+        "name": match.name,
+        "parent_mne": match.parent_mne,
+        "immediate_parent": match.immediate_parent,
+        "total": match.subsidiaries_total if match.mode == "mne_head" else None,
+        "with_lei": match.subsidiaries_with_lei if match.mode == "mne_head" else None,
+        "rows": rows,
+        "source_url": match.source_url,
+    }

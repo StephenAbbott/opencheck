@@ -589,12 +589,14 @@ component — new code uses the named steps.
 
 ---
 
-## The four check modes (Phase 122/123)
+## The five check modes (Phase 122/123, 185)
 
-`quick | full | background | esg`, owned by `frontend/src/lib/checkMode.ts`
-(pure, so it is testable — the frontend suite is logic-only). The mode is
-the report's top-level structure: a tablist under the subject and verdict,
-which stay put across a switch.
+`quick | full | background | subsidiaries | esg`, owned by
+`frontend/src/lib/checkMode.ts` (pure, so it is testable — the frontend suite
+is logic-only). The mode is the report's top-level structure: a tablist under
+the subject and verdict, which stay put across a switch. `MODE_ACCENT` there
+is the token file for the five accents (allowlisted for hex like
+`lib/features.ts`); `TOPIC_MODES` names the two that sit after the divider.
 
 - **The mode is in the URL** (`?mode=`), and QuickCheck deliberately writes
   no parameter — a shared QuickCheck link keeps the short form it has always
@@ -608,6 +610,19 @@ which stay put across a switch.
 - **Climate & ESG is a tab, not a section.** It used to render inside
   QuickCheck, reachable by scrolling and by nothing else. It sits after a
   divider because it is a different question, not a fourth depth of check.
+- **Subsidiaries (Phase 185) is the second topic tab**, before ESG: what the
+  company owns, from every list OpenCheck holds — GLEIF Level 2 (moved from
+  the bottom of FullCheck), OECD-UNSD MEIP (moved from the bottom of
+  QuickCheck), EITI's declared list (moved out of the ESG card) and GEM's
+  directly owned entities (never rendered before). The non-GLEIF lists come
+  from `GET /subsidiaries/declared` (`opencheck/subsidiaries_declared.py`),
+  which is **UI-only**: the documented API, `/export` and MCP stay on the
+  GLEIF network. Lists are kept apart per source and never merged — they
+  disagree because they measure different things, and the tab says so. An
+  LEI is attached only where a source's own data carries one; a name match to
+  another list is offered with a match chip, never asserted
+  (`lib/subsidiariesMode.ts`). The phone tab strip is a 2-column grid, so an
+  odd tab count spans the last cell.
 - Entity-scoped sections (risk signals, structural context, cross-source
   identifiers, possibly-same) are guarded `mode === "quick"`. They were
   `mode !== "background"`, which silently included the new ESG tab.
@@ -694,6 +709,7 @@ mirrored as `--oo-mark-*` / `--oo-node-*` in `index.css`):
 | `oo.node.blue` | `#3b82f6` | logo.svg / `OpenCheckIcon` network node | **FullCheck** accent |
 | `oo.node.purple` | `#7c3aed` | logo.svg / `OpenCheckIcon` network node | **BackgroundCheck** accent (near-matches the PEP/RELATED_PEP violet `#6d28d9` in the risk-signal system above — fitting for a people-screening mode) |
 | `oo.node.teal` | `#0d9488` | **invented, Phase 122** | **Climate & ESG** accent — the fourth mode. The one colour in the badge set not lifted from `logo.svg`: three modes had three logo nodes, a fourth has none. The alternative, reusing `oo.green` `#25cb55`, sits three hex values from QuickCheck's `#22c55e` and was indistinguishable from it in the mode tab strip |
+| `oo.graph.control` | `#e65100` | graph control-edge colour | **Subsidiaries** accent (Phase 185) — the fifth mode lists what a company *controls*, as FullCheck wears the ownership-edge blue. Nothing invented; glyph `#fdba74`. Tab glyph = `subsidiaries` in `ui/Icon.tsx` (one parent over three children on a bus) |
 
 **Note this is a brand-mark tier, deliberately distinct from the UI's
 `oo.navy` (`#191d23`) / `oo.blue` (`#3d30d4`)** — the logo has always

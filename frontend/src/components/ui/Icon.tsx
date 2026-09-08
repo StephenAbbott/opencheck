@@ -23,6 +23,11 @@ export const ICON_PATHS = {
     "M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z",
     "M2 21c0-3 1.9-5.4 5.1-6C9.5 14.5 12 13 13 12",
   ],
+  // Subsidiaries (Phase 185): one parent over three children on a bus — the
+  // conventional picture of a group. Deliberately not `network` (which has a
+  // middle node and belongs to /features) and not `fullcheck` flipped, which
+  // read as the same glyph at 17px.
+  subsidiaries: ["M12 7.3v4", "M5 11.3h14", "M5 11.3v4.4", "M12 11.3v4.4", "M19 11.3v4.4"],
   // Structure
   chevronDown: ["m6 9 6 6 6-6"],
   chevronRight: ["m9 6 6 6-6 6"],
@@ -61,6 +66,12 @@ const ICON_SHAPES: Partial<Record<IconName, { cx: number; cy: number; r: number 
     { cx: 12, cy: 18, r: 2.3 },
   ],
   backgroundcheck: [{ cx: 12, cy: 8, r: 3.5 }],
+  subsidiaries: [
+    { cx: 12, cy: 5, r: 2.3 },
+    { cx: 5, cy: 18, r: 2.3 },
+    { cx: 12, cy: 18, r: 2.3 },
+    { cx: 19, cy: 18, r: 2.3 },
+  ],
   search: [{ cx: 11, cy: 11, r: 7 }],
   network: [
     { cx: 12, cy: 4, r: 2.5 },

@@ -321,3 +321,38 @@ def bo_disclosure_url(bundle: dict[str, Any], year: str | None = None) -> str | 
             if value:
                 return value
     return None
+
+
+# --------------------------------------------------------------------------
+# Phase 185 — the declared list on its own, for the Subsidiaries tab
+# --------------------------------------------------------------------------
+
+
+def declared_subsidiaries(lei: str | None) -> dict[str, Any] | None:
+    """EITI's declared subsidiary list for a LEI, or ``None`` when the
+    committed snapshot does not cover it.
+
+    Reads the index without declaring provenance — nothing is fetched. The
+    rows are exactly ``EitiDeclaredSubsidiary`` (name, country, years): EITI
+    publishes no identifier, so none is invented here; the browser matches the
+    names against the LEI-keyed lists it holds and says so when it does.
+    """
+    key = (lei or "").strip().upper()
+    record = _get_index().get(key)
+    if record is None:
+        return None
+    years = sorted((record.get("assessments") or {}).keys())
+    return {
+        "name": record.get("name") or "",
+        "assessment_year": years[-1] if years else None,
+        "rows": [
+            {
+                "name": s.get("name") or "",
+                "country": s.get("country") or None,
+                "years": list(s.get("years") or []),
+            }
+            for s in (record.get("subsidiaries") or [])
+            if (s.get("name") or "").strip()
+        ],
+        "source_snapshot": _source_snapshot,
+    }

@@ -1,4 +1,5 @@
 import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
+import { CHECK_MODES } from "../src/lib/checkMode";
 
 /**
  * Six pages and a report (Phase 168).
@@ -172,19 +173,23 @@ test("a curated report answers once, and says so at the top", async ({ page }) =
 test.describe("the report at phone width", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("shows all four check modes without a sideways scroll", async ({ page }) => {
+  test("shows all five check modes without a sideways scroll", async ({ page }) => {
     await page.goto(`/?lei=${BP}`);
     await expect(page.getByRole("region", { name: "What this check found" })).toBeVisible({
       timeout: 150_000,
     });
 
     const tabs = page.getByRole("tablist", { name: "Check mode" }).getByRole("tab");
-    await expect(tabs).toHaveCount(4);
+    // Five since Phase 185 (Subsidiaries). Read the count from the strip's
+    // own source of truth rather than restating it: CHECK_MODES is what
+    // App.tsx renders, so a sixth mode moves this assertion by itself.
+    await expect(tabs).toHaveCount(CHECK_MODES.length);
 
     // The failure was not that the tabs were missing — it was that two of
     // them sat outside the viewport, so they did not exist unless you knew
-    // to swipe. Phase 157 stacked them into a 2×2 grid below `sm`; this
-    // measures the outcome rather than the class names.
+    // to swipe. Phase 157 stacked them into a 2-column grid below `sm` (an
+    // odd fifth cell spans the last row, Phase 185); this measures the
+    // outcome rather than the class names.
     for (const tab of await tabs.all()) {
       await expect(tab).toBeVisible();
       const box = (await tab.boundingBox())!;

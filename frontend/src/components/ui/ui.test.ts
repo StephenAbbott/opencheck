@@ -108,8 +108,8 @@ describe("Icon", () => {
     }
   });
 
-  it("carries a glyph for all four check modes", () => {
-    for (const mode of ["quickcheck", "fullcheck", "backgroundcheck", "esg"]) {
+  it("carries a glyph for all five check modes", () => {
+    for (const mode of ["quickcheck", "fullcheck", "backgroundcheck", "subsidiaries", "esg"]) {
       expect(ICON_NAMES).toContain(mode);
     }
   });
