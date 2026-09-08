@@ -139,6 +139,19 @@ describe("coverageSentence", () => {
     expect(s).toContain("not a finding that it owns nothing");
   });
 
+  it("says a covered-but-empty company is an absence of records, not zero across zero", () => {
+    // A/S Norske Shell on production: GLEIF, MEIP and GEM all know it and
+    // none lists a subsidiary. The sentence must not do arithmetic on nothing.
+    const cov = resolveLists([src("meip", []), src("climatetrace", [])], []);
+    const s = coverageSentence(cov, "A/S Norske Shell");
+    expect(s).toBe(
+      "Three sources cover A/S Norske Shell, and none of them lists anything it owns. That is an absence of records, not a finding that it owns nothing.",
+    );
+    expect(s).not.toMatch(/0 distinct|0 rows/);
+    const one = coverageSentence(resolveLists([src("meip", [])], null), "Acme");
+    expect(one).toMatch(/^One source covers Acme, and it lists nothing it owns/);
+  });
+
   it("does not compare a single list against nothing", () => {
     const s = coverageSentence(resolveLists([src("eiti_assessment", [{ name: "A" }])], null), "Acme");
     expect(s).toMatch(/^One source lists/);

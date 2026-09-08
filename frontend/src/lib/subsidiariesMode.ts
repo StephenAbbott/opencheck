@@ -190,6 +190,16 @@ export function coverageSentence(cov: Coverage, name: string): string {
   if (n === 0) {
     return `None of the sources checked publishes a subsidiary list for ${name}. That is an absence of records, not a finding that it owns nothing.`;
   }
+  // Covered but empty — a leaf company three registers know and none records
+  // as owning anything (A/S Norske Shell, found on production). "Three
+  // sources list what it owns — 0 names across 0 rows" is arithmetic, not a
+  // sentence, and the disagreement clause that follows has nothing to be
+  // about. Say the absence in the same voice as the presence.
+  if (cov.listed === 0) {
+    const covers = n === 1 ? "One source covers" : `${numberWord(n)} sources cover`;
+    const lists = n === 1 ? "it lists nothing" : "none of them lists anything";
+    return `${covers} ${name}, and ${lists} it owns. That is an absence of records, not a finding that it owns nothing.`;
+  }
   const sources = n === 1 ? "One source lists" : `${numberWord(n)} sources list`;
   const opening = `${sources} what ${name} owns — ${cov.distinctNames.toLocaleString()} distinct ${cov.distinctNames === 1 ? "name" : "names"} across ${cov.listed.toLocaleString()} ${cov.listed === 1 ? "row" : "rows"}`;
   if (n === 1) {
