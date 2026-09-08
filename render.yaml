@@ -101,6 +101,18 @@ services:
       # the Golden Copy ticket passes (read /mirror); flip it here when it does.
       - key: OPENCHECK_GLEIF_MIRROR_FIRST
         value: "false"
+      # --- Phase 186: the UK PSC graph ---
+      # psc_graph.sqlite (~2.2 GB) — every active Companies House PSC record,
+      # built daily from the register's own snapshot by refresh-psc-graph.yml
+      # and published as the psc-graph-latest release asset (the URL is the
+      # config default). Same boot rule as the mirror: download when absent,
+      # replace when the asset changed, keep otherwise; re-checked every six
+      # hours in-process so the daily seed lands without a deploy. Shares the
+      # disk above: mirror 1.8 GB + graph 2.2 GB + one replace in flight fits
+      # in 10 GB. Nothing walks it until OPENCHECK_CH_GRAPH_FIRST is flipped
+      # (Phase 188); until then the Companies House adapter walks live.
+      - key: OPENCHECK_PSC_GRAPH_DB_FILE
+        value: /var/data/psc_graph.sqlite
       # --- Phase 91: IndexNow (SEO Phase D) ---
       # Shared key echoed back at /{key}.txt (root — IndexNow scopes a
       # submission to the key file's directory) so IndexNow-participating

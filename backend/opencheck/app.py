@@ -104,6 +104,19 @@ async def _warm_caches_background() -> None:
     except Exception as exc:  # noqa: BLE001
         log.warning("Entity pages DB warm-up failed (503s until present): %s", exc)
 
+    # Phase 186: the UK PSC graph — download the daily seed when absent,
+    # replace it when the release asset changed, keep it otherwise. Nothing
+    # depends on it yet (Phase 188 puts the walk behind the lookup).
+    try:
+        from .psc_graph import warm_psc_graph_db
+
+        stats = await asyncio.to_thread(warm_psc_graph_db)
+        log.info("PSC graph warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning("PSC graph warm-up failed (the live walk remains): %s", exc)
+
 
 # The MCP streamable-HTTP session manager is single-use per instance (its
 # ``run()`` can be entered only once per process). Production starts the lifespan
@@ -135,6 +148,14 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         from .mirror_refresh import refresh_loop
 
         refresh_task = asyncio.create_task(refresh_loop(refresh_interval))
+    # Phase 186: re-check the PSC graph's release asset on a timer so the
+    # daily seed lands without a deploy. 0 disables; boot still checks once.
+    psc_task: asyncio.Task[None] | None = None
+    psc_interval = get_settings().psc_graph_refresh_interval_s
+    if psc_interval > 0 and get_settings().psc_graph_db_file:
+        from .psc_graph import refresh_loop as psc_refresh_loop
+
+        psc_task = asyncio.create_task(psc_refresh_loop(psc_interval))
     async with AsyncExitStack() as stack:
         if _MCP is not None and not _mcp_session_started:
             await stack.enter_async_context(_MCP.session_manager.run())
@@ -148,6 +169,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 memwatch_task.cancel()
             if refresh_task is not None and not refresh_task.done():
                 refresh_task.cancel()
+            if psc_task is not None and not psc_task.done():
+                psc_task.cancel()
 
 
 app = FastAPI(

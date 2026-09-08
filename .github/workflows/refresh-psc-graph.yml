@@ -1,0 +1,124 @@
+name: Refresh PSC graph (Companies House snapshot)
+
+# Phase 186 of the "Live-fed UK PSC graph" ticket: builds psc_graph.sqlite —
+# every active persons-with-significant-control record on the UK register,
+# keyed for a local corporate-PSC chain walk (opencheck/psc_graph.py) — from
+# Companies House's own daily snapshot, and replaces the `psc-graph-latest`
+# release asset the backend downloads at boot and re-checks every six hours
+# (OPENCHECK_PSC_GRAPH_DB_FILE / _URL). The same arrangement as the GLEIF
+# mirror's refresh-entity-pages-db workflow, daily rather than monthly
+# because the register publishes daily and the stream (Phase 187) resumes
+# from the seed's date.
+#
+# The snapshot is published before 10:00 GMT and compiled to the end of the
+# previous business day; none is published on weekends and bank holidays,
+# so the builder looks up to a week back for the newest one. ~2.2 GB
+# streamed through zlib into SQLite, seven minutes, 2.2 GB; ~1.1 GB gzipped.
+#
+# Prerequisites: a published Release tagged `psc-graph-latest` (created by
+# the first run if absent). No redeploy hook: the backend's periodic asset
+# check picks the new file up within the interval, without the few seconds
+# of downtime a redeploy of a single-instance disk service costs.
+#
+# Licence: Companies House data, Open Government Licence v3.0 — see
+# ATTRIBUTIONS.md.
+on:
+  schedule:
+    - cron: "45 10 * * *" # daily 10:45 UTC — after the register's ~10:00 GMT publish
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Snapshot date YYYY-MM-DD (default: the newest published)"
+        required: false
+
+permissions:
+  contents: write # required to upload the release asset
+
+concurrency:
+  group: refresh-psc-graph
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install the backend
+        working-directory: backend
+        run: uv sync
+
+      - name: Build psc_graph.sqlite from the snapshot
+        working-directory: backend
+        run: |
+          DATE_ARG=""
+          if [ -n "${{ github.event.inputs.date }}" ]; then DATE_ARG="--date ${{ github.event.inputs.date }}"; fi
+          uv run python scripts/build_psc_graph.py --out /tmp/psc_graph.sqlite $DATE_ARG | tee build.json
+
+      - name: Sanity-check the output (guard against a broken/partial build)
+        working-directory: backend
+        run: |
+          uv run python - <<'PY'
+          import json, os, sqlite3, sys
+          conn = sqlite3.connect("/tmp/psc_graph.sqlite")
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          rows = int(meta.get("row_count") or 0)
+          companies = int(meta.get("company_count") or 0)
+          edges = int(meta.get("edge_count") or 0)
+          print(f"{rows:,} active PSC records; {companies:,} companies; {edges:,} UK corporate-PSC edges; "
+                f"snapshot {meta.get('snapshot_date')}; schema v{meta.get('schema_version')}")
+          # 12.66M active records, 714k edges on the 2026-09-08 snapshot; the
+          # register only grows. A fraction of that is a truncated stream or
+          # a changed file shape.
+          if rows < 11_000_000:
+              sys.exit(f"Refusing to publish: only {rows:,} rows — likely a partial build.")
+          if edges < 600_000:
+              sys.exit(f"Refusing to publish: only {edges:,} UK corporate-PSC edges.")
+          if meta.get("schema_version") != "1":
+              sys.exit(f"Refusing to publish: schema_version is {meta.get('schema_version')!r}, expected '1'.")
+          if not meta.get("snapshot_date"):
+              sys.exit("Refusing to publish: no snapshot_date in meta.")
+          size_gb = os.path.getsize("/tmp/psc_graph.sqlite") / 1e9
+          print(f"{size_gb:.2f} GB on disk")
+          if size_gb > 3.0:
+              sys.exit(f"Refusing to publish: {size_gb:.2f} GB on disk — over the 3 GB ceiling.")
+          # The walk the store exists for, on a chain the ticket measured:
+          # ASDA Stores reaches TDR Capital LLP through nine companies.
+          from opencheck.psc_graph import PscGraphStore
+          from pathlib import Path
+          walk = PscGraphStore(Path("/tmp/psc_graph.sqlite")).walk("00464777")
+          print(f"ASDA walk: {len(walk.companies) - 1} related companies, depth {walk.depth_reached}")
+          if len(walk.companies) < 4:
+              sys.exit("Refusing to publish: the ASDA chain walk found fewer than 3 related companies.")
+          with open("../summary.txt", "w") as fh:
+              fh.write(
+                  f"{rows:,} active PSC records, {companies:,} companies and {edges:,} UK corporate-PSC "
+                  f"edges from the Companies House PSC snapshot of {meta.get('snapshot_date')} "
+                  f"(schema v{meta.get('schema_version')}, {size_gb:.2f} GB on disk)\n"
+              )
+          PY
+          {
+            echo "### PSC graph refresh"
+            cat ../summary.txt
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Compress
+        run: |
+          gzip -9 -f /tmp/psc_graph.sqlite
+          ls -l /tmp/psc_graph.sqlite.gz
+
+      - name: Replace the `psc-graph-latest` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view psc-graph-latest >/dev/null 2>&1; then
+            gh release create psc-graph-latest --title "PSC graph (latest)" \
+              --notes "Rolling release: the latest psc_graph.sqlite.gz built by refresh-psc-graph." \
+              --latest=false
+          fi
+          gh release upload psc-graph-latest /tmp/psc_graph.sqlite.gz --clobber
+          gh release edit psc-graph-latest \
+            --notes "$(cat summary.txt) Rebuilt automatically by refresh-psc-graph on $(date -u +%Y-%m-%d). Contains public sector information licensed under the Open Government Licence v3.0."

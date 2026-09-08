@@ -18,6 +18,7 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **License:** [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/)
 - **Attribution:** "Contains public sector information licensed under the Open Government Licence v3.0 (Companies House)."
 - **Entry point:** `gb_coh` derived from GLEIF `registeredAs` field
+- **Bulk:** the daily [PSC snapshot](https://download.companieshouse.gov.uk/en_pscdata.html) seeds OpenCheck's local PSC graph (`psc_graph.sqlite`, Phase 186), republished as the `psc-graph-latest` release asset under the same licence.
 
 ## Brønnøysundregistrene — Norwegian Register Centre (Brreg)
 

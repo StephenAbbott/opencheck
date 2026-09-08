@@ -108,6 +108,20 @@ async def mirror_stats() -> JSONResponse:
     return JSONResponse(mirrorstats.stats(), headers={"Cache-Control": "no-store"})
 
 
+@router.get("/pscgraph")
+async def psc_graph_stats() -> JSONResponse:
+    """The UK PSC graph's state (Phase 186): whether a store is configured
+    and open, what the file is — the snapshot date it was built from, when,
+    how many records, companies and UK corporate-PSC edges it holds, the
+    release asset it came from, and (from Phase 187) the stream watermark —
+    and the periodic asset check's outcomes. About the file, never about a
+    company or a person; the same contract as ``/mirror``, undecorated for
+    the same reason: one dict dump, no upstream call."""
+    from .. import psc_graph
+
+    return JSONResponse(psc_graph.summary(), headers={"Cache-Control": "no-store"})
+
+
 @router.get("/sources", response_model=SourcesResponse)
 async def sources() -> SourcesResponse:
     # Attach the computed EU/EEA beneficial-ownership access notice per register.
