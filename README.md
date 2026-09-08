@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 181** — the GLEIF mirror on the persistent disk now records which release asset it came from and is replaced only when a different asset is published, closing the Phase 180 rule that re-downloaded the same asset on every deploy because the workflow uploads it minutes after the build.
+**Latest: Phase 182** — FullCheck can now follow a company number as well as an LEI when it expands an ownership network, and a hop on a company number costs one register plus a sanctions screen rather than the full forty-source lookup, so UK chains filed at Companies House are walked to the chosen depth.
 
 → [Full development history](docs/status.md)
 
