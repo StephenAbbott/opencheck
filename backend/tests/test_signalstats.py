@@ -459,3 +459,111 @@ def test_signalstats_endpoint_reports_recorded_counts(client: TestClient) -> Non
     body = client.get("/signalstats").json()
     assert body["signals"]["OFFSHORE_LEAKS|icij"] == 1
     assert body["lookups"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Phase 184 — the Companies House walk, by origin
+# ---------------------------------------------------------------------------
+
+
+def test_ch_walk_counts_under_the_lookup_origin_by_default() -> None:
+    signalstats.record_ch_walk(
+        related=4, depth=4, calls_live=20, calls_cached=0, seconds=6.7,
+        unfollowed=["not_uk_registered"],
+    )
+    walks = signalstats.stats()["companies_house_walks"]
+    assert walks["by_origin"] == {
+        "lookup": {
+            "walks": 1, "calls_live": 20, "calls_cached": 0, "seconds": 6.7,
+            "max_related": 4, "max_depth": 4,
+        }
+    }
+    assert walks["related"] == {"lookup|4-6": 1}
+    assert walks["depth"] == {"lookup|4": 1}
+    assert walks["unfollowed"] == {"lookup|not_uk_registered": 1}
+
+
+def test_ch_walk_origin_is_a_context_variable() -> None:
+    """A register hop files its walk under 'hop' for the duration of the hop
+    and nothing else — the default afterwards is 'lookup' again."""
+    token = signalstats.walk_origin.set("hop")
+    try:
+        signalstats.record_ch_walk(
+            related=1, depth=1, calls_live=4, calls_cached=4, seconds=1.2, unfollowed=[]
+        )
+    finally:
+        signalstats.walk_origin.reset(token)
+    signalstats.record_ch_walk(
+        related=0, depth=0, calls_live=4, calls_cached=0, seconds=0.5, unfollowed=[]
+    )
+    walks = signalstats.stats()["companies_house_walks"]
+    assert set(walks["by_origin"]) == {"hop", "lookup"}
+    assert walks["by_origin"]["hop"]["calls_cached"] == 4
+    assert walks["related"] == {"hop|1": 1, "lookup|0": 1}
+    assert walks["depth"] == {"hop|1": 1, "lookup|0": 1}
+
+
+def test_ch_walk_unknown_origin_falls_back_to_lookup() -> None:
+    token = signalstats.walk_origin.set("something-else")
+    try:
+        signalstats.record_ch_walk(
+            related=0, depth=0, calls_live=1, calls_cached=0, seconds=0, unfollowed=[]
+        )
+    finally:
+        signalstats.walk_origin.reset(token)
+    assert list(signalstats.stats()["companies_house_walks"]["by_origin"]) == ["lookup"]
+
+
+@pytest.mark.parametrize(
+    ("related", "bucket"),
+    [(0, "0"), (1, "1"), (2, "2-3"), (3, "2-3"), (4, "4-6"), (6, "4-6"), (7, "7-12"),
+     (12, "7-12"), (13, "13-25"), (25, "13-25"), (26, "26+")],
+)
+def test_ch_walk_related_buckets(related: int, bucket: str) -> None:
+    signalstats.record_ch_walk(
+        related=related, depth=0, calls_live=0, calls_cached=0, seconds=0, unfollowed=[]
+    )
+    assert signalstats.stats()["companies_house_walks"]["related"] == {f"lookup|{bucket}": 1}
+
+
+def test_ch_walk_totals_accumulate_and_maxima_hold() -> None:
+    for related, depth, live in ((2, 2, 12), (9, 6, 40), (0, 0, 4)):
+        signalstats.record_ch_walk(
+            related=related, depth=depth, calls_live=live, calls_cached=0, seconds=1.0,
+            unfollowed=["max_depth_reached"] if depth == 6 else [],
+        )
+    w = signalstats.stats()["companies_house_walks"]
+    assert w["by_origin"]["lookup"] == {
+        "walks": 3, "calls_live": 56, "calls_cached": 0, "seconds": 3.0,
+        "max_related": 9, "max_depth": 6,
+    }
+    assert w["depth"] == {"lookup|0": 1, "lookup|2": 1, "lookup|6": 1}
+    assert w["unfollowed"] == {"lookup|max_depth_reached": 1}
+
+
+def test_ch_walk_reads_reasons_only() -> None:
+    """The recorder takes counts and reason codes; a caller cannot hand it a
+    name or a company number through ``unfollowed`` and have it counted
+    unbounded — non-strings are dropped and the key cap still applies."""
+    signalstats.record_ch_walk(
+        related=1, depth=1, calls_live=8, calls_cached=0, seconds=0.1,
+        unfollowed=["fetch_failed", {"name": _SECRET_ENTITY}, 42, None],
+    )
+    w = signalstats.stats()["companies_house_walks"]
+    assert w["unfollowed"] == {"lookup|fetch_failed": 1}
+    assert _SECRET_ENTITY not in json.dumps(signalstats.stats())
+
+
+def test_ch_walk_malformed_inputs_never_raise() -> None:
+    signalstats.record_ch_walk(  # type: ignore[arg-type]
+        related="x", depth=None, calls_live=-1, calls_cached=-1, seconds="soon", unfollowed=None
+    )
+    # The stats still serialise; the bad call simply did not count.
+    assert signalstats.stats()["companies_house_walks"]["by_origin"] == {}
+
+
+def test_signalstats_endpoint_carries_the_walk_section(client: TestClient) -> None:
+    body = client.get("/signalstats").json()
+    assert body["companies_house_walks"] == {
+        "by_origin": {}, "related": {}, "depth": {}, "unfollowed": {}
+    }

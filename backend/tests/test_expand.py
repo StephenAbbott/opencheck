@@ -289,6 +289,30 @@ def test_expand_schemes_endpoint_lists_the_hops(client):
     assert schemes["GB-COH"] == {"source_id": "companies_house", "name": "UK Companies House"}
 
 
+def test_a_register_hop_files_its_walk_under_the_hop_origin(client, monkeypatch):
+    """Phase 184: while the register is fetched, ``signalstats.walk_origin``
+    reads "hop", so the adapter's walk counters separate FullCheck hops from
+    subject lookups; afterwards it is back to the default."""
+    from opencheck import signalstats
+
+    seen: list[str] = []
+    fetched: list[str] = []
+    _patch_register_hop(monkeypatch, fetched=fetched, screened=[])
+    real_fetch = __import__("opencheck.routers.lookup", fromlist=["x"])._fetch_with_provenance
+
+    async def _observing_fetch(adapter, hit_id, **kwargs):
+        seen.append(signalstats.walk_origin.get())
+        return await real_fetch(adapter, hit_id, **kwargs)
+
+    monkeypatch.setattr("opencheck.routers.lookup._fetch_with_provenance", _observing_fetch)
+    r = client.post("/expand-layer", json={
+        "items": [{"scheme": "GB-COH", "id": "2999029", "anchor": "ANCHOR-CH"}],
+    })
+    assert r.status_code == 200
+    assert seen == ["hop"]
+    assert signalstats.walk_origin.get() == "lookup"
+
+
 def test_a_register_hop_dispatches_only_the_owning_register(client, monkeypatch):
     fetched: list[str] = []
     screened: list[list[dict]] = []

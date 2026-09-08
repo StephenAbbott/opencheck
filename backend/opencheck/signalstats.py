@@ -29,6 +29,16 @@ What is counted, and where:
   clean screen, and the same holds in aggregate.
 * **Lookups** — so counts can be read as "per lookup" rather than as
   absolutes.
+* **Companies House walks** (Phase 184) — recorded by the adapter at the
+  end of every corporate-PSC walk, split by *origin* (a subject lookup or
+  a FullCheck register hop, set through ``walk_origin`` by the caller):
+  how many related companies the walk pulled in, the depth it reached,
+  why it stopped (the closed ``unfollowed`` reason vocabulary), how many
+  register calls it made and how many were answered from the cache, and
+  the wall time. This is the measurement the "Live-fed UK PSC graph"
+  ticket asks for before a local graph is built: whether the live walk —
+  four serial register calls per company, a 600-per-five-minutes key —
+  is what limits UK chains in production, and how deep those chains go.
 
 **Privacy.** Counts are aggregate only. The recorders read *only* closed-
 vocabulary fields — a signal's ``code`` and ``source_id``, a degradation's
@@ -54,6 +64,7 @@ import logging
 import threading
 import time
 from collections import Counter
+from contextvars import ContextVar
 from typing import Any, Iterable, Mapping
 
 log = logging.getLogger("opencheck.signalstats")
@@ -72,6 +83,42 @@ _RELATED_PREFIX = "RELATED_"
 _MAX_KEYS = 2_000
 
 
+#: Where a Companies House walk was started from. ``"lookup"`` is the
+#: subject's own dispatch in ``_lookup_pipeline``; ``"hop"`` is a FullCheck
+#: register hop (``_register_one_layer`` sets it for the duration of the
+#: fetch). A ContextVar because the adapter is the one place that knows a
+#: walk's shape, and it has no other way to know who asked.
+walk_origin: ContextVar[str] = ContextVar("opencheck_ch_walk_origin", default="lookup")
+
+_WALK_ORIGINS = ("lookup", "hop")
+
+#: Related-company histogram buckets. The cap is 25 per walk, so the top
+#: bucket is closed.
+_RELATED_BUCKETS = ((0, "0"), (1, "1"), (3, "2-3"), (6, "4-6"), (12, "7-12"), (25, "13-25"))
+
+
+def _related_bucket(n: int) -> str:
+    for upper, label in _RELATED_BUCKETS:
+        if n <= upper:
+            return label
+    return "26+"
+
+
+class _Walks:
+    """Companies House walk counters, all aggregate."""
+
+    def __init__(self) -> None:
+        self.walks: Counter[str] = Counter()  # origin
+        self.related: Counter[tuple[str, str]] = Counter()  # origin, bucket
+        self.depth: Counter[tuple[str, str]] = Counter()  # origin, depth reached
+        self.unfollowed: Counter[tuple[str, str]] = Counter()  # origin, reason
+        self.calls_live: Counter[str] = Counter()
+        self.calls_cached: Counter[str] = Counter()
+        self.seconds: dict[str, float] = {}
+        self.max_related: Counter[str] = Counter()
+        self.max_depth: Counter[str] = Counter()
+
+
 class _Counters:
     """Mutable module state, guarded by a lock.
 
@@ -86,6 +133,7 @@ class _Counters:
         self.lookups = 0
         self.signals: Counter[tuple[str, str]] = Counter()
         self.degraded: Counter[tuple[str, str, str]] = Counter()
+        self.walks = _Walks()
         self.truncated = False
 
 
@@ -159,6 +207,82 @@ def record_lookup() -> None:
         log.debug("signalstats.record_lookup failed, ignoring: %s", exc)
 
 
+def record_ch_walk(
+    *,
+    related: int,
+    depth: int,
+    calls_live: int,
+    calls_cached: int,
+    seconds: float,
+    unfollowed: Iterable[str],
+) -> None:
+    """Count one Companies House corporate-PSC walk under its origin.
+
+    *related* is how many companies beyond the subject the walk pulled in
+    (0–25), *depth* the deepest hop it fetched (0 = the subject only),
+    *unfollowed* the reasons (closed vocabulary — the adapter's ``_SKIP_*``
+    strings) it stopped following corporate PSCs, one entry per PSC not
+    followed. Reads no names or numbers: the adapter passes counts and
+    reason codes only, and the ``unfollowed`` entries' particulars stay on
+    the bundle.
+    """
+    try:
+        origin = walk_origin.get()
+        if origin not in _WALK_ORIGINS:
+            origin = "lookup"
+        # Coerce everything before touching a counter, so a malformed call
+        # counts nothing rather than half a walk.
+        n_related = max(0, int(related))
+        n_depth = max(0, int(depth))
+        n_live = max(0, int(calls_live))
+        n_cached = max(0, int(calls_cached))
+        secs = max(0.0, float(seconds))
+        reasons = [r for r in (unfollowed or ()) if isinstance(r, str)]
+        with totals.lock:
+            w = totals.walks
+            w.walks[origin] += 1
+            w.related[(origin, _related_bucket(n_related))] += 1
+            w.depth[(origin, str(n_depth))] += 1
+            for reason in reasons:
+                _bounded_increment(w.unfollowed, (origin, reason))
+            w.calls_live[origin] += n_live
+            w.calls_cached[origin] += n_cached
+            w.seconds[origin] = w.seconds.get(origin, 0.0) + secs
+            w.max_related[origin] = max(w.max_related[origin], n_related)
+            w.max_depth[origin] = max(w.max_depth[origin], n_depth)
+    except Exception as exc:  # noqa: BLE001
+        log.debug("signalstats.record_ch_walk failed, ignoring: %s", exc)
+
+
+def _walk_stats(w: _Walks) -> dict[str, Any]:
+    """The ``companies_house_walks`` section: per origin, then histograms.
+
+    ``calls_live`` / ``calls_cached`` / ``seconds`` are totals; divide by
+    ``walks`` for the per-walk figure. ``depth`` and ``related`` are
+    histograms keyed ``origin|value`` so the shape of UK chains — not only
+    their average — can be read off.
+    """
+    per_origin: dict[str, dict[str, Any]] = {}
+    for origin in _WALK_ORIGINS:
+        n = w.walks[origin]
+        if not n:
+            continue
+        per_origin[origin] = {
+            "walks": n,
+            "calls_live": w.calls_live[origin],
+            "calls_cached": w.calls_cached[origin],
+            "seconds": round(w.seconds.get(origin, 0.0), 3),
+            "max_related": w.max_related[origin],
+            "max_depth": w.max_depth[origin],
+        }
+    return {
+        "by_origin": per_origin,
+        "related": {f"{o}|{b}": n for (o, b), n in sorted(w.related.items())},
+        "depth": {f"{o}|{d}": n for (o, d), n in sorted(w.depth.items())},
+        "unfollowed": {f"{o}|{r}": n for (o, r), n in sorted(w.unfollowed.items())},
+    }
+
+
 def _split_related(
     signals: Counter[tuple[str, str]],
 ) -> tuple[dict[str, int], dict[str, int]]:
@@ -185,6 +309,7 @@ def stats() -> dict[str, Any]:
         lookups = totals.lookups
         started = totals.started
         truncated = totals.truncated
+        walks = _walk_stats(totals.walks)
 
     subject, related = _split_related(signals)
     return {
@@ -199,6 +324,8 @@ def stats() -> dict[str, Any]:
         "signals_related": related,
         "degraded_total": sum(degraded.values()),
         "degraded": {"|".join(key): n for key, n in degraded.items()},
+        # Phase 184: the Companies House corporate-PSC walk, by origin.
+        "companies_house_walks": walks,
         # True only if the cardinality cap was hit — i.e. something is
         # generating keys it should not be, and these numbers are partial.
         "truncated": truncated,

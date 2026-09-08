@@ -21,12 +21,14 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import time
+from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import quote
 
 import httpx
 
-from .. import degradation
+from .. import degradation, signalstats
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -91,6 +93,22 @@ def _note_unfollowed(
         filed,
         ident.get("country_registered"),
     )
+
+
+@dataclass
+class _WalkStats:
+    """What one corporate-PSC walk cost and how far it went (Phase 184).
+
+    Counts only — the numbers ``signalstats.record_ch_walk`` aggregates by
+    origin. ``depth`` is the deepest hop actually fetched (0 = the subject
+    alone); ``calls_live`` / ``calls_cached`` count register calls and the
+    ones the cache answered instead.
+    """
+
+    started: float = field(default_factory=time.monotonic)
+    depth: int = 0
+    calls_live: int = 0
+    calls_cached: int = 0
 
 
 def _looks_like_company_number(value: str) -> bool:
@@ -190,14 +208,29 @@ class CompaniesHouseAdapter(SourceAdapter):
         related: dict[str, dict[str, Any]] = {}
         unfollowed: list[dict[str, Any]] = []
         max_depth = max(0, int(get_settings().ch_psc_max_depth))
-        root = await self._fetch_company_data(
-            number,
-            visited=visited,
-            related=related,
-            unfollowed=unfollowed,
-            depth=0,
-            max_depth=max_depth,
-        )
+        stats = _WalkStats()
+        try:
+            root = await self._fetch_company_data(
+                number,
+                visited=visited,
+                related=related,
+                unfollowed=unfollowed,
+                depth=0,
+                max_depth=max_depth,
+                stats=stats,
+            )
+        finally:
+            # Counted whether or not the subject's own record came back: a
+            # walk that failed still spent its calls. Reasons only — the
+            # names and numbers stay on the bundle.
+            signalstats.record_ch_walk(
+                related=len(related),
+                depth=stats.depth,
+                calls_live=stats.calls_live,
+                calls_cached=stats.calls_cached,
+                seconds=time.monotonic() - stats.started,
+                unfollowed=[u["reason"] for u in unfollowed],
+            )
         root["related_companies"] = related
         root["unfollowed_pscs"] = unfollowed
         self._record_unfollowed(unfollowed, max_depth)
@@ -255,6 +288,7 @@ class CompaniesHouseAdapter(SourceAdapter):
         unfollowed: list[dict[str, Any]],
         depth: int,
         max_depth: int,
+        stats: _WalkStats | None = None,
     ) -> dict[str, Any]:
         """Recursively fetch a company bundle, following UK corporate PSC chains.
 
@@ -273,17 +307,22 @@ class CompaniesHouseAdapter(SourceAdapter):
         indistinguishable from the top of the structure.
         """
         visited.add(number)
+        if stats is not None:
+            stats.depth = max(stats.depth, depth)
         profile = await self._get(
             f"/company/{number}",
             cache_key=f"{_CACHE_NS}/company/{number}",
+            stats=stats,
         )
         officers = await self._get(
             f"/company/{number}/officers",
             cache_key=f"{_CACHE_NS}/company/{number}/officers",
+            stats=stats,
         )
         pscs = await self._get(
             f"/company/{number}/persons-with-significant-control",
             cache_key=f"{_CACHE_NS}/company/{number}/pscs",
+            stats=stats,
         )
         # PSC *statements* ("no PSC exists", "PSC not yet identified", …) are on a
         # separate endpoint that 404s when the company has filed none.
@@ -291,6 +330,7 @@ class CompaniesHouseAdapter(SourceAdapter):
             psc_statements = await self._get(
                 f"/company/{number}/persons-with-significant-control-statements",
                 cache_key=f"{_CACHE_NS}/company/{number}/psc-statements",
+                stats=stats,
             )
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:
@@ -334,6 +374,7 @@ class CompaniesHouseAdapter(SourceAdapter):
                     unfollowed=unfollowed,
                     depth=depth + 1,
                     max_depth=max_depth,
+                    stats=stats,
                 )
             except httpx.HTTPError as exc:
                 # A parent whose record 404s (a mis-filed number that still
@@ -385,13 +426,19 @@ class CompaniesHouseAdapter(SourceAdapter):
     # HTTP with caching
     # ------------------------------------------------------------------
 
-    async def _get(self, path: str, *, cache_key: str) -> dict[str, Any]:
+    async def _get(
+        self, path: str, *, cache_key: str, stats: _WalkStats | None = None
+    ) -> dict[str, Any]:
         cached = self._cache.get_payload(cache_key)
         if cached is not None:
+            if stats is not None:
+                stats.calls_cached += 1
             return cached[0]  # unwrap (payload, tier)
 
         settings = get_settings()
         assert settings.companies_house_api_key, "live_available should have been false"
+        if stats is not None:
+            stats.calls_live += 1
 
         async with build_client() as client:
             response = await client.get(
