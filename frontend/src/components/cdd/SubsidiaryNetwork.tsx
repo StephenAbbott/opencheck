@@ -13,7 +13,7 @@ import {
 import { mirrorCaption } from "../../lib/vocab";
 import { subsidiaryHref } from "../../lib/subsidiariesMode";
 import InvitationStrip from "../ui/InvitationStrip";
-import { SectionHeading } from "../ui";
+import { Button, SectionHeading } from "../ui";
 
 // BodsGraphExplorer pulls in Cytoscape — load it only when a small network is
 // actually rendered as a graph (large networks degrade to a table + export).
@@ -66,7 +66,14 @@ function orderChildren(children: SubsidiaryChild[]): SubsidiaryChild[] {
   });
 }
 
+/** Rows shown before the list collapses behind a control — the same twelve
+ *  the Subsidiaries tab's other lists show, so the four bands read alike. */
+const VISIBLE_ROWS = 12;
+
 function ChildrenTable({ children }: { children: SubsidiaryChild[] }) {
+  const [showAll, setShowAll] = useState(false);
+  const ordered = orderChildren(children);
+  const rows = showAll ? ordered : ordered.slice(0, VISIBLE_ROWS);
   return (
     <>
       {/* Visible, not just sr-only: this is the sentence that stops "Direct"
@@ -77,7 +84,7 @@ function ChildrenTable({ children }: { children: SubsidiaryChild[] }) {
         into, and a consolidating parent need not hold any shares.
       </p>
     <ul className="mt-2 divide-y divide-oo-rule rounded-oo border border-oo-rule bg-white">
-      {orderChildren(children).map((c) => (
+      {rows.map((c) => (
         <li
           key={`${c.lei}-${c.relation}`}
           className="flex items-start justify-between gap-3 px-3 py-2"
@@ -111,6 +118,18 @@ function ChildrenTable({ children }: { children: SubsidiaryChild[] }) {
         </li>
       ))}
     </ul>
+    {ordered.length > VISIBLE_ROWS && (
+      <Button
+        variant="secondary"
+        className="mt-3"
+        aria-expanded={showAll}
+        onClick={() => setShowAll((v) => !v)}
+      >
+        {showAll
+          ? `Show the first ${VISIBLE_ROWS}`
+          : `Show all ${ordered.length.toLocaleString()} rows`}
+      </Button>
+    )}
     </>
   );
 }

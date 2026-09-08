@@ -182,8 +182,26 @@ describe("the rows", () => {
     render(<SubsidiariesPanel lei={LEI} legalName="Shell plc" />);
     const list = await screen.findByTestId("declared-list-eiti_assessment");
     expect(within(list).getAllByRole("listitem")).toHaveLength(12);
-    await userEvent.click(screen.getByRole("button", { name: "Show all 20" }));
+    await userEvent.click(screen.getByRole("button", { name: "Show all 20 rows" }));
     expect(within(list).getAllByRole("listitem")).toHaveLength(20);
+  });
+
+  it("collapses the GLEIF network to twelve rows like the declared lists", async () => {
+    // The GLEIF band used to print every child — 154 of them for Shell — while
+    // the three declared lists stopped at twelve. Same band, same behaviour.
+    // Names are zero-padded so the list's own A–Z ordering is the numbering.
+    const many = Array.from({ length: 20 }, (_, i) => ({
+      lei: `LEI${String(i).padStart(17, "0")}`,
+      name: `Child ${String(i + 1).padStart(2, "0")} Ltd`,
+    }));
+    getSubsidiaries.mockResolvedValue(gleif(many));
+    getDeclaredSubsidiaries.mockResolvedValue(declared([]));
+    render(<SubsidiariesPanel lei={LEI} legalName="Shell plc" />);
+    expect(await screen.findByText("Child 01 Ltd")).toBeVisible();
+    expect(screen.getByText("Child 12 Ltd")).toBeVisible();
+    expect(screen.queryByText("Child 13 Ltd")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Show all 20 rows" }));
+    expect(screen.getByText("Child 20 Ltd")).toBeVisible();
   });
 
   it("says out loud that MEIP holds only part of what the register publishes", async () => {
