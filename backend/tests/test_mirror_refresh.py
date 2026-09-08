@@ -8,8 +8,14 @@ change without reopening; idempotence (a delta re-applied changes nothing);
 the watermark advancing only on success and staying put on any failure; the
 release asset re-downloaded when the gap exceeds the widest delta; a v1 file
 left alone; the ``/mirror`` payload carrying the task's state; and the boot
-rules for a file on a persistent disk (absent → download; asset newer than
-the file's build → replace; otherwise keep).
+rules for a file on a persistent disk (absent → download; the asset is not
+the one the file came from → replace; otherwise keep).
+
+Phase 181 changed "not the one the file came from" from a plain ``built_at``
+comparison to the asset's ``Last-Modified`` stamped into the file: the
+workflow uploads minutes after the build finishes, so the asset was always
+"newer" and every deploy re-downloaded it. The boot tests carry the
+production numbers of 2026-09-07.
 """
 
 from __future__ import annotations
@@ -369,33 +375,70 @@ def test_boot_downloads_to_the_configured_file_when_absent(
     get_settings.cache_clear()
     ep.reset_store_for_tests()
     httpx_mock.add_response(
-        url="https://example.test/entity_pages.sqlite.gz", content=_gz_asset(src)
+        url="https://example.test/entity_pages.sqlite.gz",
+        content=_gz_asset(src),
+        headers={"Last-Modified": "Mon, 07 Sep 2026 19:55:14 GMT"},
     )
     try:
         note = ep.warm_entity_pages_db()["entity_pages"]
         assert note.startswith(f"downloaded: {target}")
-        assert target.read_bytes() == src.read_bytes()
         assert ep.get_store() is not None and ep.get_store().is_mirror
+        # Phase 181: the file remembers which asset it came from.
+        assert ep.read_meta(target)[ep.ASSET_STAMP_KEY] == "Mon, 07 Sep 2026 19:55:14 GMT"
+        assert ep.read_meta(src).get(ep.ASSET_STAMP_KEY) is None
     finally:
         get_settings.cache_clear()
         ep.reset_store_for_tests()
 
 
-def test_boot_replaces_the_file_only_when_the_asset_is_newer_than_its_build(
+def test_boot_keeps_a_file_whose_asset_was_uploaded_minutes_after_its_build(
+    mirror: Path, monkeypatch: pytest.MonkeyPatch, httpx_mock: HTTPXMock
+) -> None:
+    """The Phase 180 defect, with the production numbers: the workflow
+    uploads the asset *after* the build finishes, so the asset is always a
+    couple of minutes newer than ``built_at`` and a plain ``>`` re-downloaded
+    879 MB on every deploy. The file is kept — and stamped, so the next boot
+    compares exactly."""
+    monkeypatch.setenv("OPENCHECK_ENTITY_PAGES_DB_URL", "https://example.test/entity_pages.sqlite.gz")
+    get_settings.cache_clear()
+    ep.reset_store_for_tests()
+    url = "https://example.test/entity_pages.sqlite.gz"
+    conn = sqlite3.connect(mirror)
+    write_meta(conn, built_at="2026-09-07T19:53:15+00:00")
+    conn.close()
+    assert ep.read_meta(mirror).get(ep.ASSET_STAMP_KEY) is None
+
+    httpx_mock.add_response(
+        method="HEAD", url=url, headers={"Last-Modified": "Mon, 07 Sep 2026 19:55:14 GMT"}
+    )
+    assert ep.warm_entity_pages_db()["entity_pages"].startswith("already present")
+    assert ep.read_meta(mirror)[ep.ASSET_STAMP_KEY] == "Mon, 07 Sep 2026 19:55:14 GMT"
+    # Nothing was fetched: HEAD only.
+    assert [r.method for r in httpx_mock.get_requests()] == ["HEAD"]
+
+
+def test_boot_replaces_the_file_only_when_the_asset_differs_from_its_stamp(
     mirror: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, httpx_mock: HTTPXMock
 ) -> None:
     monkeypatch.setenv("OPENCHECK_ENTITY_PAGES_DB_URL", "https://example.test/entity_pages.sqlite.gz")
     get_settings.cache_clear()
     ep.reset_store_for_tests()
     url = "https://example.test/entity_pages.sqlite.gz"
+    ep.record_asset_stamp(mirror, "Mon, 07 Sep 2026 19:55:14 GMT")
 
-    # Older asset (published before the file's build): kept.
+    # The same asset, however the header is spelled: kept, no GET.
     httpx_mock.add_response(
-        method="HEAD", url=url, headers={"Last-Modified": "Tue, 01 Sep 2026 11:59:51 GMT"}
+        method="HEAD", url=url, headers={"Last-Modified": "Mon, 07 Sep 2026 19:55:14 GMT"}
     )
     assert ep.warm_entity_pages_db()["entity_pages"].startswith("already present")
+    httpx_mock.add_response(
+        method="HEAD", url=url, headers={"Last-Modified": "Mon, 07 Sep 2026 20:55:14 +0100"}
+    )
+    assert ep.warm_entity_pages_db()["entity_pages"].startswith("already present")
+    assert all(r.method == "HEAD" for r in httpx_mock.get_requests())
 
-    # Newer asset: replaced, and the store reopened on the new file.
+    # A different asset (the monthly rebuild): replaced, the store reopened on
+    # the new file, and the new file stamped from the GET's own header.
     fresh_dir = tmp_path / "fresh"
     fresh_dir.mkdir()
     fresh = _build_mirror(fresh_dir / "fresh.sqlite", fresh_dir)
@@ -407,23 +450,66 @@ def test_boot_replaces_the_file_only_when_the_asset_is_newer_than_its_build(
     httpx_mock.add_response(
         method="HEAD", url=url, headers={"Last-Modified": "Thu, 01 Oct 2026 06:50:00 GMT"}
     )
-    httpx_mock.add_response(method="GET", url=url, content=_gz_asset(fresh))
+    httpx_mock.add_response(
+        method="GET", url=url, content=_gz_asset(fresh),
+        headers={"Last-Modified": "Thu, 01 Oct 2026 06:50:00 GMT"},
+    )
     assert ep.warm_entity_pages_db()["entity_pages"].startswith("downloaded")
     assert ep.get_store() is not old_store
     assert ep.get_store().watermark() == datetime(2026, 10, 1, 2, tzinfo=UTC)
+    assert ep.read_meta(mirror)[ep.ASSET_STAMP_KEY] == "Thu, 01 Oct 2026 06:50:00 GMT"
 
-    # An asset that cannot be checked: the file on disk is kept.
-    httpx_mock.add_response(method="HEAD", url=url, status_code=503)
+    # The next boot sees the asset it has: kept.
+    httpx_mock.add_response(
+        method="HEAD", url=url, headers={"Last-Modified": "Thu, 01 Oct 2026 06:50:00 GMT"}
+    )
     assert ep.warm_entity_pages_db()["entity_pages"].startswith("already present")
 
+    # An asset that cannot be checked: the file on disk is kept, stamp intact.
+    httpx_mock.add_response(method="HEAD", url=url, status_code=503)
+    assert ep.warm_entity_pages_db()["entity_pages"].startswith("already present")
+    assert ep.read_meta(mirror)[ep.ASSET_STAMP_KEY] == "Thu, 01 Oct 2026 06:50:00 GMT"
 
-def test_the_asset_check_survives_a_file_without_a_build_date(tmp_path: Path) -> None:
+
+def test_an_unstamped_file_is_replaced_by_an_asset_well_after_its_build(
+    mirror: Path, httpx_mock: HTTPXMock
+) -> None:
+    """The fallback rule for a file downloaded before Phase 181 or built
+    locally: ``built_at`` plus an hour's slack."""
+    url = "https://example.test/entity_pages.sqlite.gz"
+    conn = sqlite3.connect(mirror)
+    write_meta(conn, built_at="2026-09-07T19:53:15+00:00")
+    conn.close()
+    for header, expected in (
+        ("Mon, 07 Sep 2026 19:55:14 GMT", "keep"),  # uploaded two minutes after the build
+        ("Mon, 07 Sep 2026 20:53:15 GMT", "keep"),  # exactly the slack: still the same build
+        ("Mon, 07 Sep 2026 20:53:16 GMT", "replace"),
+        ("Thu, 01 Oct 2026 06:50:00 GMT", "replace"),  # the monthly rebuild
+        ("Tue, 01 Sep 2026 11:59:51 GMT", "keep"),  # older than the file
+    ):
+        httpx_mock.add_response(method="HEAD", url=url, headers={"Last-Modified": header})
+        assert ep.asset_check(url, mirror) == (expected, header), header
+
+
+def test_the_asset_check_keeps_a_file_it_cannot_date(
+    tmp_path: Path, httpx_mock: HTTPXMock
+) -> None:
+    url = "https://example.test/x.gz"
     db = tmp_path / "nobuild.sqlite"
     conn = sqlite3.connect(db)
     conn.executescript(ep.SCHEMA)
     conn.commit()
     conn.close()
-    assert ep.asset_is_newer_than_build("https://example.test/x.gz", db) is False
+    httpx_mock.add_response(
+        method="HEAD", url=url, headers={"Last-Modified": "Thu, 01 Oct 2026 06:50:00 GMT"}
+    )
+    assert ep.asset_check(url, db) == ("keep", "Thu, 01 Oct 2026 06:50:00 GMT")
+    # No Last-Modified at all: nothing to compare, keep.
+    httpx_mock.add_response(method="HEAD", url=url)
+    assert ep.asset_check(url, db) == ("keep", None)
+    # Not even a file: keep, and no exception.
+    httpx_mock.add_response(method="HEAD", url=url)
+    assert ep.asset_check(url, tmp_path / "missing.sqlite") == ("keep", None)
 
 
 def test_a_local_only_file_is_used_as_found(mirror: Path) -> None:

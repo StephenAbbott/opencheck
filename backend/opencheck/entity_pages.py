@@ -71,7 +71,7 @@ import unicodedata
 import zlib
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -834,12 +834,19 @@ def warm_entity_pages_db() -> dict[str, Any]:
     * **File only** (a developer, tests): the file is used as found.
     * **File and URL** (Phase 180, the persistent disk): the file is
       downloaded to the configured path when absent, and **replaced when the
-      release asset is newer than the file's own full build** — that is how
-      the monthly rebuild lands on a disk that survives deploys. "Newer" is
-      judged against ``meta.built_at``, which only a full build writes; the
-      delta refresh (``mirror_refresh``) touches the file hourly and would
-      otherwise always look newer than the asset. When the asset cannot be
-      checked the file on disk is kept: a mirror a month old beats none.
+      release asset is not the one the file came from** — that is how the
+      monthly rebuild lands on a disk that survives deploys. Which asset the
+      file came from is the asset's ``Last-Modified`` header, recorded in
+      ``meta.asset_last_modified`` by the boot that downloaded it (Phase 181);
+      the check is a ``HEAD`` and a string comparison. A file without that
+      stamp — built locally, or downloaded before Phase 181 — falls back to
+      ``meta.built_at``, which only a full build writes, with an hour's slack:
+      the workflow uploads the asset *after* the build finishes, so the asset
+      is always a couple of minutes "newer" than the file it contains, and
+      Phase 180's plain ``>`` re-downloaded 879 MB on every deploy. A kept
+      file without a stamp is stamped, so the next boot compares exactly.
+      When the asset cannot be checked the file on disk is kept: a mirror a
+      month old beats none.
 
     Whatever the route, the file is then read through once so its pages are in
     the OS cache before the first lookup (:func:`prewarm_page_cache`).
@@ -855,12 +862,17 @@ def warm_entity_pages_db() -> dict[str, Any]:
         if path.exists():
             return {"entity_pages": f"present: {path}; {prewarm_page_cache(path)}"}
         return {"entity_pages": f"absent: {path} (no URL to download from)"}
+    last_modified: str | None = None
     if path.exists():
-        newer = asset_is_newer_than_build(url, path) if settings.entity_pages_db_file else False
-        if not newer:
+        decision = "keep"
+        if settings.entity_pages_db_file:
+            decision, last_modified = asset_check(url, path)
+        if decision == "keep":
+            if last_modified and read_meta(path).get(ASSET_STAMP_KEY) is None:
+                record_asset_stamp(path, last_modified)
             return {"entity_pages": f"already present: {path}; {prewarm_page_cache(path)}"}
-        log.info("entity_pages DB: the release asset is newer than the file's build; replacing")
-    downloaded, elapsed = download_db(url, path)
+        log.info("entity_pages DB: the release asset is not the one on disk; replacing")
+    downloaded, elapsed = download_db(url, path, last_modified=last_modified)
     reload_store()
     return {
         "entity_pages": (
@@ -870,7 +882,9 @@ def warm_entity_pages_db() -> dict[str, Any]:
     }
 
 
-def download_db(url: str, path: Path) -> tuple[int, float]:
+def download_db(
+    url: str, path: Path, *, last_modified: str | None = None
+) -> tuple[int, float]:
     """Stream the release asset to ``path`` — inflating a ``.gz`` as it
     streams, writing beside the target and renaming at the end, so the disk
     never holds archive and file together and a half-written file never
@@ -879,6 +893,11 @@ def download_db(url: str, path: Path) -> tuple[int, float]:
     Phase 178 made the inflate streaming: the mirror is 1.8 GB on disk from a
     ~0.9 GB asset, and the Phase 88 arrangement (write the archive, then
     gunzip) needed 2.7 GB of an ephemeral disk at once.
+
+    Phase 181: the asset's ``Last-Modified`` — the response's own, else the
+    ``last_modified`` the caller read off its ``HEAD`` — is recorded in the
+    downloaded file as ``meta.asset_last_modified``, so the next boot can tell
+    whether the asset is the one it already has.
     """
     import time
 
@@ -891,6 +910,7 @@ def download_db(url: str, path: Path) -> tuple[int, float]:
     inflate = zlib.decompressobj(16 + zlib.MAX_WBITS) if url.endswith(".gz") else None
     with httpx.stream("GET", url, timeout=600.0, follow_redirects=True) as resp:
         resp.raise_for_status()
+        last_modified = resp.headers.get("last-modified") or last_modified
         with open(tmp, "wb") as fh:
             for chunk in resp.iter_bytes():
                 downloaded += len(chunk)
@@ -903,37 +923,108 @@ def download_db(url: str, path: Path) -> tuple[int, float]:
         "entity_pages DB downloaded to %s (%d bytes on disk from %d fetched) in %.1fs",
         path, path.stat().st_size, downloaded, elapsed,
     )
+    if last_modified:
+        record_asset_stamp(path, last_modified)
     return downloaded, elapsed
 
 
-def asset_is_newer_than_build(url: str, path: Path) -> bool:
-    """Whether the release asset at ``url`` was published after the full build
-    the file at ``path`` came from (``meta.built_at``). ``False`` whenever
-    either side cannot be read — keeping the file is the safe answer."""
-    from email.utils import parsedate_to_datetime
+#: ``meta`` key holding the ``Last-Modified`` of the release asset the file
+#: was downloaded from (Phase 181). Absent on a locally built file and on one
+#: downloaded before Phase 181.
+ASSET_STAMP_KEY = "asset_last_modified"
 
-    import httpx
+#: How much later than ``meta.built_at`` a release asset may be published and
+#: still be taken for the file already on disk, when the file carries no
+#: stamp. The workflow gzips and uploads after the build finishes — measured
+#: two minutes on the 2026-09-07 asset — and no rebuild worth replacing the
+#: file for lands within an hour of the previous one.
+ASSET_UPLOAD_SLACK = timedelta(hours=1)
 
+
+def read_meta(path: Path) -> dict[str, str]:
+    """The file's ``meta`` table as a dict; empty when it cannot be read."""
     try:
         conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
         try:
-            row = conn.execute("SELECT value FROM meta WHERE key = 'built_at'").fetchone()
+            return dict(conn.execute("SELECT key, value FROM meta"))
         finally:
             conn.close()
-        built_at = datetime.fromisoformat(row[0]) if row and row[0] else None
-        if built_at is None:
-            return False
-        if built_at.tzinfo is None:
-            built_at = built_at.replace(tzinfo=UTC)
+    except sqlite3.Error as exc:
+        log.warning("entity_pages DB: could not read meta from %s: %s", path, exc)
+        return {}
+
+
+def record_asset_stamp(path: Path, last_modified: str) -> None:
+    """Write ``meta.asset_last_modified`` — best effort, never fatal: a file
+    that cannot take the stamp falls back to the ``built_at`` rule next boot."""
+    try:
+        conn = sqlite3.connect(path, timeout=10.0)
+        try:
+            conn.execute(
+                "INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)",
+                (ASSET_STAMP_KEY, last_modified),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    except sqlite3.Error as exc:
+        log.warning("entity_pages DB: could not record the asset stamp on %s: %s", path, exc)
+
+
+def _parse_http_date(value: str) -> datetime | None:
+    from email.utils import parsedate_to_datetime
+
+    try:
+        parsed = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+
+
+def asset_check(url: str, path: Path) -> tuple[str, str | None]:
+    """Decide whether the release asset at ``url`` should replace the file at
+    ``path``. Returns ``("replace" | "keep", last_modified)`` — the asset's
+    ``Last-Modified`` as served, or ``None`` when it could not be read.
+
+    Two rules, in order. A file stamped with the asset it came from
+    (``meta.asset_last_modified``) is replaced when the asset's header
+    **differs** from the stamp — the exact comparison. A file without a stamp
+    is replaced when the asset is more than :data:`ASSET_UPLOAD_SLACK` newer
+    than ``meta.built_at``, which only a full build writes (a delta refresh
+    touches the file hourly and would otherwise always look newer than the
+    asset). Neither readable, or the asset unreachable: ``keep`` — a mirror a
+    month old beats none.
+    """
+    import httpx
+
+    meta = read_meta(path)
+    try:
         head = httpx.head(url, timeout=30.0, follow_redirects=True)
         head.raise_for_status()
-        modified = head.headers.get("last-modified")
-        if not modified:
-            return False
-        return parsedate_to_datetime(modified) > built_at
     except Exception as exc:  # noqa: BLE001 — keep the file we have
-        log.warning("entity_pages DB: could not compare the asset with the file: %s", exc)
-        return False
+        log.warning("entity_pages DB: could not check the release asset: %s", exc)
+        return "keep", None
+    last_modified = head.headers.get("last-modified")
+    asset_at = _parse_http_date(last_modified) if last_modified else None
+    if asset_at is None:
+        return "keep", None
+
+    stamp = meta.get(ASSET_STAMP_KEY)
+    if stamp:
+        stamped_at = _parse_http_date(stamp)
+        differs = (asset_at != stamped_at) if stamped_at else (stamp != last_modified)
+        return ("replace" if differs else "keep"), last_modified
+
+    built_raw = meta.get("built_at")
+    if not built_raw:
+        return "keep", last_modified
+    try:
+        built_at = datetime.fromisoformat(built_raw)
+    except ValueError:
+        return "keep", last_modified
+    if built_at.tzinfo is None:
+        built_at = built_at.replace(tzinfo=UTC)
+    return ("replace" if asset_at > built_at + ASSET_UPLOAD_SLACK else "keep"), last_modified
 
 
 #: Read the file in chunks this large when warming the page cache.
