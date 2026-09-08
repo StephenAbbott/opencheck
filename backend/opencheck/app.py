@@ -156,6 +156,13 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         from .psc_graph import refresh_loop as psc_refresh_loop
 
         psc_task = asyncio.create_task(psc_refresh_loop(psc_interval))
+    # Phase 187: feed the PSC graph from the register's stream. Needs the
+    # graph file and the streaming key; returns at once otherwise.
+    stream_task: asyncio.Task[None] | None = None
+    if get_settings().psc_graph_db_file and get_settings().companies_house_stream_key:
+        from .psc_stream import run_loop as psc_stream_loop
+
+        stream_task = asyncio.create_task(psc_stream_loop())
     async with AsyncExitStack() as stack:
         if _MCP is not None and not _mcp_session_started:
             await stack.enter_async_context(_MCP.session_manager.run())
@@ -171,6 +178,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 refresh_task.cancel()
             if psc_task is not None and not psc_task.done():
                 psc_task.cancel()
+            if stream_task is not None and not stream_task.done():
+                stream_task.cancel()
 
 
 app = FastAPI(

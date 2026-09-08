@@ -226,6 +226,15 @@ class Settings(BaseSettings):
     # calling the register hop by hop. Default off until a live-versus-local
     # comparison on the curated UK examples.
     ch_graph_first: bool = Field(default=False, alias="OPENCHECK_CH_GRAPH_FIRST")
+    # Phase 187: run the PSC stream consumer when a graph file and a
+    # streaming key are configured (default on; ``false`` keeps the graph as
+    # seeded — a developer with the key who does not want a live connection).
+    psc_stream_enabled: bool = Field(default=True, alias="OPENCHECK_PSC_STREAM_ENABLED")
+    # The stream endpoint; only tests point it elsewhere.
+    psc_stream_url: str = Field(
+        default="https://stream.companieshouse.gov.uk/persons-with-significant-control",
+        alias="OPENCHECK_PSC_STREAM_URL",
+    )
     # Phase 144: refuse declared automated clients (memwatch.is_bot on the
     # User-Agent) on /lookup-stream, the interactive app's SSE endpoint.
     # robots.txt has always disallowed it; a crawler there is ignoring robots
@@ -281,6 +290,14 @@ class Settings(BaseSettings):
 
     # --- Source credentials ---
     companies_house_api_key: str | None = Field(default=None, alias="COMPANIES_HOUSE_API_KEY")
+    # Phase 187: the Companies House *streaming* API key — a different
+    # credential from the REST key, one connection per key. Feeds the local
+    # PSC graph (opencheck/psc_stream.py) with every change the register
+    # publishes; unset = no stream, the graph stays as seeded. bods-stream
+    # holds its own key: sharing one drops one of the two connections.
+    companies_house_stream_key: str | None = Field(
+        default=None, alias="COMPANIES_HOUSE_STREAM_KEY"
+    )
     # Dedicated key for the Time Machine /history filing-history fetch, kept
     # separate from the lookup adapter's key. Falls back to the lookup key if
     # unset (see timeline/service.py).
