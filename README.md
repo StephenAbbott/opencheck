@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 185** — Subsidiaries is a fifth check mode with its own URL: what a company owns, from GLEIF, the OECD-UNSD register, EITI declarations and Global Energy Monitor, kept apart per source because no two of them measure the same thing, with every subsidiary that has an LEI linked to a report of its own.
+**Latest: Phase 186** — OpenCheck now keeps a local copy of the UK PSC register, built every day from the Companies House snapshot and kept on the persistent disk, so a corporate ownership chain that costs dozens of register calls can be walked in a millisecond once the lookup is switched to it.
 
 → [Full development history](docs/status.md)
 
