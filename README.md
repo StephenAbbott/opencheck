@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 182** — FullCheck can now follow a company number as well as an LEI when it expands an ownership network, and a hop on a company number costs one register plus a sanctions screen rather than the full forty-source lookup, so UK chains filed at Companies House are walked to the chosen depth.
+**Latest: Phase 183** — A UK ownership chain filed at Companies House now carries the BODS primary relationship from the ultimate individual to the subject, with the intermediaries and hops listed as its component records, so an export answers who the beneficial owners are by the standard BODS query; PSC interests no longer claim to be direct when the register does not say so.
 
 → [Full development history](docs/status.md)
 
