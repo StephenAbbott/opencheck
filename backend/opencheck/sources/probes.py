@@ -37,11 +37,20 @@ a fixture does not rot because a company was struck off.
 
 For an adapter whose provenance or coverage is knowingly wrong and not yet
 fixed, ``known_gap`` lets the probe assert today's behaviour while the report
-prints the defect, so it stays visible instead of being asserted away. No probe
-currently needs it: the two gaps this table originally recorded — ``eiti_soe``
+prints the defect, so it stays visible instead of being asserted away. It is
+report-only — it never changes a status, so a source carrying one still goes
+amber every week. The two gaps this table originally recorded — ``eiti_soe``
 over-claiming ``live`` for an index-derived answer, and ``bce_belgium``
 recording nothing at all — were both closed in Phase 121. Closing a gap means
 fixing the adapter and tightening ``expect_liveness`` in the same commit.
+
+The two live gaps are ``eiti`` and ``eiti_soe``, and neither is a defect in
+our code: EITI's Cloudflare zone returns HTTP 403 to the GitHub Actions runner
+the sweep runs on. That is the same class as the wording the field was
+designed around — a limit on *where the check runs* rather than on the source
+— and it is written down here precisely because the alternative, widening the
+probe until it goes green, is the silent-green failure Phase 121 exists to
+prevent. Remove both the day EITI allowlists us, and not before.
 """
 
 from __future__ import annotations
@@ -556,6 +565,14 @@ PROBES: dict[str, SourceProbe] = {
         args=("GB", "01285743"),
         expect_liveness=LIVE_OR_CACHED,
         bods_mapper="map_eiti",
+        known_gap=(
+            "eiti.org sits behind Cloudflare, which returns HTTP 403 to the CI runner this "
+            "sweep runs on, so the live revenue calls are never exercised here. Verified "
+            "2026-09-07: the same calls answer 200 from a laptop and from OpenCheck's own "
+            "production host, so lookups are unaffected. The degradation is still reported "
+            "rather than suppressed — the sweep is saying it could not ask, not that EITI "
+            "reported nothing."
+        ),
         notes="Committed organisation index resolves the company; payment rows are then fetched live.",
     ),
     "eiti_soe": _p(
@@ -568,6 +585,13 @@ PROBES: dict[str, SourceProbe] = {
         expect_fields=("entity_name", "is_state_owned", "country"),
         snapshot_max_age_days=180,
         bods_mapper="map_eiti_soe",
+        known_gap=(
+            "eiti-database.eiti.org resolves to the same Cloudflare IPs as eiti.org and "
+            "returns the same HTTP 403 to the CI runner, so the payment query is never "
+            "exercised here (26 rows for this subject when the query is run from anywhere "
+            "else, verified 2026-09-07). The state-ownership classification comes from the "
+            "committed index and is unaffected."
+        ),
         notes=(
             "Snapshot, not live: the payment rows are fetched live but the "
             "bundle's central assertion — that this company is an SOE — comes "
