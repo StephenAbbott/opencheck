@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 184** — Every Companies House corporate-PSC walk is now measured on the public stats endpoint, by lookup and by FullCheck hop, so the question of whether a local UK PSC graph is worth building is answered by production numbers rather than a guess.
+**Latest: Phase 185** — Subsidiaries is a fifth check mode with its own URL: what a company owns, from GLEIF, the OECD-UNSD register, EITI declarations and Global Energy Monitor, kept apart per source because no two of them measure the same thing, with every subsidiary that has an LEI linked to a report of its own.
 
 → [Full development history](docs/status.md)
 
