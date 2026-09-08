@@ -135,9 +135,15 @@ def _parse_nature(nature: str) -> dict[str, Any]:
     # No beneficialOwnershipOrControl here: the flag depends on WHO holds the
     # interest (individual PSC vs corporate RLE), which only the caller knows —
     # _emit_company_statements routes it through the regimes registry.
+    # ``directOrIndirect`` is "unknown", not "direct" (Phase 183). Every PSC
+    # condition in Schedule 1A to the Companies Act 2006 is met by holding the
+    # interest "directly or indirectly", and the nature-of-control code does
+    # not say which: a registrable PSC may hold through a chain of entities
+    # that are not themselves registrable. The BODS modelling guidance says
+    # unknown directness MUST be "unknown"; "direct" was an over-assertion.
     entry: dict[str, Any] = {
         "type": interest_type,
-        "directOrIndirect": "direct",
+        "directOrIndirect": "unknown",
         "details": describe_nature(nature) or nature,
     }
 
@@ -154,6 +160,50 @@ def _parse_nature(nature: str) -> dict[str, Any]:
         entry["share"] = {"exclusiveMinimum": 75, "maximum": 100}
 
     return entry
+
+
+#: Nature-of-control prefixes that amount to a *majority stake* on their own
+#: (Companies Act 2006, Sch 1A para 18: the right to appoint or remove a
+#: majority of the board).
+_MAJORITY_STAKE_PREFIXES = (
+    "right-to-appoint-and-remove-directors",
+    "right-to-appoint-and-remove-members",
+    "right-to-appoint-and-remove-person",
+)
+
+
+def is_majority_stake(natures: Iterable[str]) -> bool:
+    """Whether a set of PSC nature-of-control codes amounts to a majority stake.
+
+    The PSC regime (Companies Act 2006, Sch 1A paras 18–19) lets a person hold
+    an interest *indirectly* only through a chain of legal entities in each of
+    which the holder has a **majority stake**: a majority of the voting rights,
+    the right to appoint or remove a majority of the board, or dominant
+    influence or control. Companies House records those as the ``50-to-75``
+    and ``75-to-100`` bands of ``voting-rights`` / ``ownership-of-shares`` (the
+    share band is read as carrying its votes — the register does not separate
+    them) and the ``right-to-appoint-and-remove-*`` codes. The ``-as-trust`` /
+    ``-as-firm`` variants of those count too: they are the fifth PSC condition
+    — the person controls a trust or firm whose trustees or members hold the
+    stake — and the register lists that person as the PSC on the trustees'
+    holding, which is how every UK family group reaches its individuals (a
+    live check of Timpson and JCB found no other route). The ``25-to-50``
+    band and ``significant-influence-or-control`` are not a majority stake:
+    ``significant`` influence is the fourth PSC condition, not the
+    ``dominant`` influence of para 18(d), and the two are deliberately not
+    conflated here.
+    """
+    for nature in natures:
+        lowered = (nature or "").lower()
+        if lowered.startswith(_MAJORITY_STAKE_PREFIXES):
+            return True
+        if lowered.startswith(("ownership-of-shares", "voting-rights")):
+            band = _SHARE_BAND_RE.search(lowered)
+            if band and int(band.group(1)) >= 50:
+                return True
+            if "75-to-100-percent" in lowered:
+                return True
+    return False
 
 
 # ----------------------------------------------------------------------
@@ -463,8 +513,18 @@ def make_relationship_statement(
     publication_date: str | None = None,
     statement_date: str | None = None,
     record_status: str = "new",
+    is_component: bool = False,
+    component_records: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Build a BODS v0.4 relationship statement.
+
+    *is_component* marks a secondary (component) record — a hop inside an
+    indirect chain whose primary relationship lists it in ``componentRecords``.
+    *component_records* is that list for the primary: the ``recordId`` of every
+    intermediary entity and every hop relationship it is assembled from, which
+    MUST all be published in the same file (BODS modelling guidance,
+    *Representing beneficial ownership*). Phase 183 uses both for UK
+    corporate-PSC chains; see ``mapper._rollup_ch_chains``.
 
     Lifecycle (BODS 0.4 *Information updates* + *Record identifiers* modelling
     requirements):
@@ -501,7 +561,7 @@ def make_relationship_statement(
         "statementDate": _statement_date(statement_date),
         "publicationDetails": _publication_details_block(publication_date),
         "recordDetails": {
-            "isComponent": False,
+            "isComponent": bool(is_component),
             "subject": subject_statement_id,
             "interestedParty": (
                 interested_party_unspecified
@@ -512,6 +572,8 @@ def make_relationship_statement(
         },
         "source": _source_block(source_id, source_url),
     }
+    if component_records is not None:
+        statement["recordDetails"]["componentRecords"] = list(component_records)
     return statement
 
 

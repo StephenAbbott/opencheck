@@ -51,6 +51,7 @@ from .statements import (  # noqa: F401  (re-exported: see the module docstring)
     _stable_id,
     _statement_date,
     _today,
+    is_majority_stake,
     make_entity_statement,
     make_person_statement,
     make_relationship_statement,
@@ -121,12 +122,205 @@ def map_companies_house(bundle: dict[str, Any]) -> BODSBundle:
     # corporate PSC appears both as a PSC reference and as a related company.
     seen_sids: set[str] = set()
 
-    _emit_company_statements(bundle, result, seen_sids)
+    # One ``_ChCompany`` per company mapped, keyed on the normalised number the
+    # adapter keys ``related_companies`` on, so the chain roll-up below can
+    # follow a corporate PSC to the company it names.
+    companies: dict[str, _ChCompany] = {}
+    root = _emit_company_statements(bundle, result, seen_sids)
+    companies[root.number] = root
 
     for sub_bundle in (bundle.get("related_companies") or {}).values():
-        _emit_company_statements(sub_bundle, result, seen_sids)
+        sub = _emit_company_statements(sub_bundle, result, seen_sids)
+        companies.setdefault(sub.number, sub)
+
+    _rollup_ch_chains(root, companies, result, seen_sids)
 
     return result
+
+
+@dataclass
+class _ChPscHop:
+    """One PSC relationship a company bundle produced, as the roll-up sees it."""
+
+    ip_sid: str
+    ip_type: str  # "entity" | "person"
+    uk_number: str | None  # the related company a corporate PSC names, if UK
+    natures: list[str]
+    ceased: bool
+    relationship: dict[str, Any]
+
+
+@dataclass
+class _ChCompany:
+    number: str
+    entity: dict[str, Any]
+    url: str
+    hops: list[_ChPscHop] = field(default_factory=list)
+
+
+def _rollup_ch_chains(
+    root: _ChCompany,
+    companies: dict[str, _ChCompany],
+    result: BODSBundle,
+    seen_sids: set[str],
+) -> None:
+    """Fix 2 (Phase 183): the primary-plus-components structure for UK chains.
+
+    Where the subject's corporate PSC is itself a UK company whose PSCs the
+    adapter fetched (``related_companies``), and an *individual* is reached
+    through that chain, the BODS modelling guidance (*Representing beneficial
+    ownership*) wants one **primary** relationship from the person to the
+    subject — ``directOrIndirect: "indirect"``, ``beneficialOwnershipOrControl:
+    true``, ``isComponent: false`` — whose ``componentRecords`` list the
+    ``recordId`` of every intermediary entity and every hop relationship, all
+    of which are marked ``isComponent: true`` and published before it.
+
+    This is only assembled where the register's own regime says the person is
+    a PSC of the subject: under the Companies Act 2006, Sch 1A paras 18–19, an
+    interest is held indirectly only through a chain of entities in each of
+    which the holder has a **majority stake** (``is_majority_stake``). The
+    first hop — the RLE's own interest in the subject — can be any PSC nature;
+    it is *that* interest the person holds indirectly, so the primary carries
+    the first hop's interest types. A chain with a sub-majority upper hop
+    (a person holding 30 % of the holding company) yields no primary: the hops
+    stay as the register filed them, ``isComponent`` untouched. Ceased hops,
+    super-secure PSCs and corporate PSCs registered outside the UK (or beyond
+    the adapter's depth) end a chain without a primary.
+
+    The primary is OpenCheck's assembly, not a Companies House filing:
+    ``source.type`` is ``thirdParty``, ``source.assertedBy`` names OpenCheck,
+    and a ``transformation`` annotation says which component records it was
+    derived from. The hops keep their register-sourced flags.
+    """
+    root_sid = root.entity["statementId"]
+    primaries: dict[str, dict[str, Any]] = {}  # person sid -> primary statement
+
+    def walk(
+        company: _ChCompany,
+        depth: int,
+        visited: frozenset[str],
+        first_hop: _ChPscHop | None,
+        entities: tuple[dict[str, Any], ...],
+        rels: tuple[dict[str, Any], ...],
+    ) -> None:
+        for hop in company.hops:
+            if hop.ceased:
+                continue
+            if depth > 0 and not is_majority_stake(hop.natures):
+                continue
+            head = first_hop or hop
+            if hop.ip_type == "person":
+                if depth == 0:
+                    continue  # a direct PSC of the subject: nothing to roll up
+                _add_primary(head, hop, entities, rels + (hop.relationship,))
+                continue
+            if hop.ip_type != "entity" or not hop.uk_number:
+                continue
+            nxt = companies.get(hop.uk_number)
+            if nxt is None or nxt.number in visited or nxt.number == root.number:
+                continue
+            walk(
+                nxt,
+                depth + 1,
+                visited | {nxt.number},
+                head,
+                entities + (nxt.entity,),
+                rels + (hop.relationship,),
+            )
+
+    def _add_primary(
+        first_hop: _ChPscHop,
+        person_hop: _ChPscHop,
+        entities: tuple[dict[str, Any], ...],
+        rels: tuple[dict[str, Any], ...],
+    ) -> None:
+        for stmt in entities + rels:
+            stmt["recordDetails"]["isComponent"] = True
+        components = [s["recordId"] for s in entities] + [r["recordId"] for r in rels]
+        person_sid = person_hop.ip_sid
+        existing = primaries.get(person_sid)
+        if existing is not None:
+            # A second chain to the same person: one primary, the union of
+            # the component records, in first-seen order.
+            have = existing["recordDetails"]["componentRecords"]
+            have.extend(c for c in components if c not in have)
+            return
+
+        first_interests = first_hop.relationship["recordDetails"].get("interests") or []
+        interests: list[dict[str, Any]] = []
+        seen_types: set[str] = set()
+        for interest in first_interests:
+            itype = interest.get("type") or "unknownInterest"
+            if itype in seen_types:
+                continue
+            seen_types.add(itype)
+            interests.append(
+                {
+                    "type": itype,
+                    "directOrIndirect": "indirect",
+                    "beneficialOwnershipOrControl": True,
+                    # Names one chain; a second chain to the same person only
+                    # extends componentRecords, which is the complete list.
+                    "details": (
+                        "Held indirectly along the chain "
+                        + " → ".join(e["recordDetails"].get("name", "?") for e in entities)
+                        + "; every intermediary entity and hop is listed in "
+                        "componentRecords. The share band is the intermediary's "
+                        "and is not restated here."
+                    ),
+                }
+            )
+        if not interests:
+            interests = [
+                {
+                    "type": "unknownInterest",
+                    "directOrIndirect": "indirect",
+                    "beneficialOwnershipOrControl": True,
+                }
+            ]
+
+        dates = [r.get("statementDate") for r in rels if r.get("statementDate")]
+        primary = make_relationship_statement(
+            source_id="companies_house",
+            local_id=f"{root.number}:{person_sid}:indirect",
+            subject_statement_id=root_sid,
+            interested_party_statement_id=person_sid,
+            interested_party_type="person",
+            interests=interests,
+            source_url=root.url,
+            statement_date=max(dates) if dates else None,
+            component_records=components,
+        )
+        # OpenCheck's assembly, not a Companies House filing.
+        primary["source"]["type"] = ["thirdParty"]
+        primary["source"]["assertedBy"] = [
+            {"name": "OpenCheck", "uri": "https://opencheck.world"}
+        ]
+        annotate(
+            primary,
+            transformation(
+                pointer("recordDetails", "componentRecords"),
+                (
+                    "Assembled by OpenCheck from the Companies House PSC filings "
+                    "listed in componentRecords: the person is a registered PSC "
+                    "of the last intermediary, and holds — or controls a trust "
+                    "or firm that holds — a majority stake (Companies Act 2006, "
+                    "Sch 1A para 18) in every entity above the subject, so under "
+                    "the PSC regime the intermediary's interest in the subject "
+                    "is held indirectly by the person. No single filing states "
+                    "this relationship."
+                ),
+                creation_date=_today(),
+            ),
+        )
+        primaries[person_sid] = primary
+
+    walk(root, 0, frozenset({root.number}), None, (), ())
+
+    for primary in primaries.values():
+        if primary["statementId"] not in seen_sids:
+            result.statements.append(primary)
+            seen_sids.add(primary["statementId"])
 
 
 def _ch_officer_local_id(company_number: str, officer: dict[str, Any]) -> str:
@@ -409,12 +603,13 @@ def _emit_company_statements(
     bundle: dict[str, Any],
     result: BODSBundle,
     seen_sids: set[str],
-) -> None:
+) -> _ChCompany:
     """Emit entity + PSC + director statements for one company bundle into *result*.
 
     *seen_sids* is updated in place; statements whose ``statementId`` is
     already present are silently skipped so the same entity/relationship is
-    never duplicated across the root + related-company passes.
+    never duplicated across the root + related-company passes. Returns the
+    company and its PSC hops for ``_rollup_ch_chains``.
     """
     number = str(bundle.get("company_number", ""))
     profile = bundle.get("profile") or {}
@@ -479,6 +674,11 @@ def _emit_company_statements(
     if entity_sid not in seen_sids:
         result.statements.append(entity)
         seen_sids.add(entity_sid)
+    else:
+        # The related-company pass re-emits an entity the PSC pass already
+        # produced; the roll-up must flag the statement that is in the bundle.
+        entity = next(s for s in result.statements if s["statementId"] == entity_sid)
+    company = _ChCompany(number=number, entity=entity, url=company_url)
 
     for psc in pscs:
         # Ceased PSCs are no longer dropped: per the BODS Information updates
@@ -611,6 +811,18 @@ def _emit_company_statements(
         if rel_sid not in seen_sids:
             result.statements.append(rel)
             seen_sids.add(rel_sid)
+        else:
+            rel = next(s for s in result.statements if s["statementId"] == rel_sid)
+        company.hops.append(
+            _ChPscHop(
+                ip_sid=ip_sid,
+                ip_type=ip_type,
+                uk_number=uk_number if ip_type == "entity" else None,
+                natures=list(natures),
+                ceased=bool(ceased_on),
+                relationship=rel,
+            )
+        )
 
     # PSC statements ("no PSC exists", "PSC not yet identified", …) → ownership-
     # or-control statements with an unspecified interestedParty (BODS missing-
@@ -626,6 +838,7 @@ def _emit_company_statements(
         number, officers_payload, entity_sid, company_url, seen_sids
     )
     result.statements.extend(director_stmts)
+    return company
 
 
 def _profile_addresses(profile: dict[str, Any]) -> list[dict[str, str]]:

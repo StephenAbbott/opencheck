@@ -128,9 +128,12 @@ class TestCompaniesHouseIndividualPsc:
         rel = _relationships(stmts)[0]
         assert _interests(rel)[0]["beneficialOwnershipOrControl"] is True
 
-    def test_direct_or_indirect_direct(self, stmts):
+    def test_direct_or_indirect_unknown(self, stmts):
+        """A PSC condition is met "directly or indirectly" and the nature-of-
+        control code does not say which — so "unknown", per the modelling
+        guidance, not the "direct" the mapper asserted before Phase 183."""
         rel = _relationships(stmts)[0]
-        assert _interests(rel)[0]["directOrIndirect"] == "direct"
+        assert _interests(rel)[0]["directOrIndirect"] == "unknown"
 
     def test_subject_is_entity(self, stmts):
         entity_id = _entities(stmts)[0]["statementId"]
@@ -155,143 +158,359 @@ class TestCompaniesHouseIndividualPsc:
 class TestCompaniesHouseCorporatePscChain:
     """Company A owned by Company B (which is owned by person C).
 
-    Documents the CURRENT state (bugs) and marks EXPECTED state as xfail
-    until Fix 2 (isComponent / componentRecords) is implemented.
+    Fix 2 (Phase 183): the primary-plus-components structure from the BODS
+    modelling guidance (*Representing beneficial ownership*) — one primary
+    relationship person→subject, ``indirect``, BO true, ``componentRecords``
+    naming the intermediary entity and both hop relationships, all of which
+    are ``isComponent: true`` and published before the primary.
     """
 
     @pytest.fixture
     def bundle(self) -> dict:
-        return {
-            "company_number": "00102498",
-            "profile": {
-                "company_name": "SUBSIDIARY LTD",
-                "company_number": "00102498",
-                "type": "private-limited-company",
-                "company_status": "active",
-                "jurisdiction": "england-wales",
-                "date_of_creation": "2005-01-01",
-                "registered_office_address": {"address_line_1": "1 Corp Rd", "locality": "London"},
-            },
-            "officers": {"items": [], "total_results": 0},
-            "pscs": {
-                "items": [
-                    {
-                        "name": "HOLDING COMPANY LTD",
-                        "kind": "corporate-entity-person-with-significant-control",
-                        "natures_of_control": ["ownership-of-shares-75-to-100-percent"],
-                        "notified_on": "2016-04-06",
-                        "identification": {
-                            "registration_number": "12345678",
-                            "country_registered": "England",
-                            "place_registered": "Companies House",
-                        },
-                        "address": {"address_line_1": "2 Corp Rd", "locality": "London"},
-                    }
-                ],
-                "total_results": 1,
-            },
-            "related_companies": {
-                "12345678": {
-                    "company_number": "12345678",
-                    "profile": {
-                        "company_name": "HOLDING COMPANY LTD",
-                        "company_number": "12345678",
-                        "type": "private-limited-company",
-                        "company_status": "active",
-                        "jurisdiction": "england-wales",
-                        "date_of_creation": "2000-01-01",
-                        "registered_office_address": {"address_line_1": "2 Corp Rd", "locality": "London"},
-                    },
-                    "officers": {"items": [], "total_results": 0},
-                    "pscs": {
-                        "items": [
-                            {
-                                "name": "ULTIMATE OWNER",
-                                "kind": "individual-person-with-significant-control",
-                                "natures_of_control": ["ownership-of-shares-75-to-100-percent"],
-                                "notified_on": "2016-04-06",
-                                "nationality": "British",
-                                "date_of_birth": {"year": 1970, "month": 1},
-                                "address": {"address_line_1": "3 Owner Lane", "locality": "London"},
-                            }
-                        ],
-                        "total_results": 1,
-                    },
-                    "related_companies": {},
-                }
-            },
-        }
+        return _chain_bundle()
 
     @pytest.fixture
     def stmts(self, bundle) -> list[dict]:
         from opencheck.bods.mapper import map_companies_house
         return _stmts(map_companies_house, bundle)
 
-    def test_CURRENT_two_entities_produced(self, stmts):
-        """CURRENT: entity for subsidiary + entity for holding company."""
+    def test_two_entities_produced(self, stmts):
         assert len(_entities(stmts)) == 2
 
-    def test_CURRENT_one_person_produced(self, stmts):
-        """CURRENT: person for the ultimate individual owner."""
+    def test_one_person_produced(self, stmts):
         assert len(_persons(stmts)) == 1
 
-    def test_CURRENT_two_relationships_produced(self, stmts):
-        """CURRENT: two direct component relationships emitted (person→holding,
-        holding→subsidiary); no primary indirect relationship from person→subsidiary."""
-        assert len(_relationships(stmts)) == 2
+    def test_three_relationships_produced(self, stmts):
+        """Two hop relationships (holding→subsidiary, person→holding) plus the
+        primary indirect relationship person→subsidiary."""
+        assert len(_relationships(stmts)) == 3
 
-    def test_CURRENT_all_interests_are_shareholding(self, stmts):
-        types = set(_interest_types(stmts))
-        assert types == {"shareholding"}
+    def test_all_interests_are_shareholding(self, stmts):
+        assert set(_interest_types(stmts)) == {"shareholding"}
 
-    def test_CURRENT_intermediary_is_not_component(self, stmts):
-        """KNOWN BUG (Fix 2): intermediary entity (Holding Co) has isComponent=False.
-        Should be True once Fix 2 is applied."""
-        entity_stmts = _entities(stmts)
-        is_component_values = {
-            (e.get("recordDetails") or {}).get("isComponent") for e in entity_stmts
-        }
-        assert is_component_values == {False}, (
-            "isComponent changed — update this test once Fix 2 is applied"
-        )
-
-    def test_CURRENT_no_component_records_in_relationships(self, stmts):
-        """KNOWN BUG (Fix 2): no relationship has componentRecords."""
-        rels_with_component = [
-            r for r in _relationships(stmts)
-            if "componentRecords" in (r.get("recordDetails") or {})
-        ]
-        assert rels_with_component == []
-
-    @pytest.mark.xfail(
-        reason="Fix 2 (isComponent + componentRecords for indirect chains) not yet implemented",
-        strict=True,
-    )
-    def test_EXPECTED_intermediary_entity_has_is_component_true(self, stmts):
-        """EXPECTED after Fix 2: the holding company entity should have isComponent=True."""
-        # Holding company is the one that appears as subject AND interestedParty
+    def test_intermediary_entity_has_is_component_true(self, stmts):
+        """The holding company — subject of one relationship and interested
+        party of another — is a component; the subject is not."""
         rel_subjects = {(r.get("recordDetails") or {}).get("subject") for r in _relationships(stmts)}
         rel_ips = {(r.get("recordDetails") or {}).get("interestedParty") for r in _relationships(stmts)}
-        intermediary_ids = rel_subjects & rel_ips  # appears in both roles
+        intermediary_ids = rel_subjects & rel_ips
         assert len(intermediary_ids) == 1
         intermediary_id = next(iter(intermediary_ids))
         intermediary_stmt = next(s for s in stmts if s.get("statementId") == intermediary_id)
         assert (intermediary_stmt.get("recordDetails") or {}).get("isComponent") is True
+        subject = next(e for e in _entities(stmts) if e["statementId"] != intermediary_id)
+        assert subject["recordDetails"]["isComponent"] is False
 
-    @pytest.mark.xfail(
-        reason="Fix 2 (isComponent + componentRecords for indirect chains) not yet implemented",
-        strict=True,
-    )
-    def test_EXPECTED_primary_indirect_relationship_exists(self, stmts):
-        """EXPECTED after Fix 2: a primary indirect relationship from person to subsidiary
-        with componentRecords should be emitted."""
+    def test_primary_indirect_relationship_exists(self, stmts):
         rels_with_component = [
             r for r in _relationships(stmts)
             if "componentRecords" in (r.get("recordDetails") or {})
         ]
         assert len(rels_with_component) == 1
-        comp_rel = rels_with_component[0]
-        assert _interests(comp_rel)[0]["directOrIndirect"] == "indirect"
+        primary = rels_with_component[0]
+        interest = _interests(primary)[0]
+        assert interest["directOrIndirect"] == "indirect"
+        assert interest["beneficialOwnershipOrControl"] is True
+        assert interest["type"] == "shareholding"
+        assert "share" not in interest  # the band is the intermediary's
+        assert primary["recordDetails"]["isComponent"] is False
+        subsidiary = next(e for e in _entities(stmts) if e["recordDetails"]["name"] == "SUBSIDIARY LTD")
+        assert primary["recordDetails"]["subject"] == subsidiary["statementId"]
+        assert primary["recordDetails"]["interestedParty"] == _persons(stmts)[0]["statementId"]
+
+    def test_component_records_name_the_intermediary_and_both_hops(self, stmts):
+        primary = next(r for r in _relationships(stmts) if "componentRecords" in r["recordDetails"])
+        holding = next(e for e in _entities(stmts) if e["recordDetails"]["name"] == "HOLDING COMPANY LTD")
+        hops = [r for r in _relationships(stmts) if r is not primary]
+        assert set(primary["recordDetails"]["componentRecords"]) == {holding["recordId"]} | {
+            r["recordId"] for r in hops
+        }
+        # Every hop is a component; every component record is in this bundle.
+        assert all(r["recordDetails"]["isComponent"] is True for r in hops)
+        record_ids = {s["recordId"] for s in stmts}
+        assert set(primary["recordDetails"]["componentRecords"]) <= record_ids
+
+    def test_components_are_published_before_the_primary(self, stmts):
+        ids = [s["statementId"] for s in stmts]
+        primary = next(r for r in _relationships(stmts) if "componentRecords" in r["recordDetails"])
+        primary_pos = ids.index(primary["statementId"])
+        by_record = {s["recordId"]: ids.index(s["statementId"]) for s in stmts}
+        assert all(by_record[c] < primary_pos for c in primary["recordDetails"]["componentRecords"])
+
+    def test_hops_keep_register_flags(self, stmts):
+        """The register-sourced hops are untouched apart from isComponent: the
+        person→holding hop stays BO true, the RLE hop BO false, both unknown
+        directness."""
+        person_id = _persons(stmts)[0]["statementId"]
+        hops = [r for r in _relationships(stmts) if "componentRecords" not in r["recordDetails"]]
+        person_hop = next(r for r in hops if r["recordDetails"]["interestedParty"] == person_id)
+        rle_hop = next(r for r in hops if r is not person_hop)
+        assert _interests(person_hop)[0]["beneficialOwnershipOrControl"] is True
+        assert _interests(rle_hop)[0]["beneficialOwnershipOrControl"] is False
+        assert {_interests(r)[0]["directOrIndirect"] for r in hops} == {"unknown"}
+
+    def test_primary_is_opencheck_assembly(self, stmts):
+        primary = next(r for r in _relationships(stmts) if "componentRecords" in r["recordDetails"])
+        assert primary["source"]["type"] == ["thirdParty"]
+        assert primary["source"]["assertedBy"] == [
+            {"name": "OpenCheck", "uri": "https://opencheck.world"}
+        ]
+        assert primary["source"]["description"] == "UK Companies House"
+        notes = [a for a in primary.get("annotations", []) if a.get("motivation") == "transformation"]
+        assert len(notes) == 1
+        assert notes[0]["statementPointerTarget"] == "/recordDetails/componentRecords"
+        assert "Sch 1A para 18" in notes[0]["description"]
+
+    def test_chain_bundle_validates_against_bods_schema(self, stmts):
+        """componentRecords, isComponent, assertedBy and the indirect interest
+        are all schema-valid BODS 0.4 (libcovebods, the Data Review Tool)."""
+        import json
+        import tempfile
+        from pathlib import Path
+
+        pytest.importorskip("libcovebods")
+        from libcovebods.data_reader import DataReader
+        from libcovebods.jsonschemavalidate import JSONSchemaValidator
+        from libcovebods.schema import SchemaBODS
+
+        path = Path(tempfile.mkdtemp()) / "chain.json"
+        path.write_text(json.dumps(stmts))
+        reader = DataReader(str(path))
+        errors = JSONSchemaValidator(SchemaBODS(reader)).validate(reader)
+        assert errors == [], [e.json()["message"] for e in errors]
+
+    def test_primary_ids_are_stable(self, bundle):
+        from opencheck.bods.mapper import map_companies_house
+        a = [r for r in _relationships(_stmts(map_companies_house, bundle)) if "componentRecords" in r["recordDetails"]]
+        b = [r for r in _relationships(_stmts(map_companies_house, bundle)) if "componentRecords" in r["recordDetails"]]
+        assert a[0]["statementId"] == b[0]["statementId"]
+        assert a[0]["recordId"] == b[0]["recordId"]
+        assert a[0]["statementId"] != a[0]["recordId"]
+
+
+class TestCompaniesHouseChainWithoutPrimary:
+    """Chains the PSC regime does not roll up: no primary, hops untouched."""
+
+    def _map(self, bundle):
+        from opencheck.bods.mapper import map_companies_house
+        return _stmts(map_companies_house, bundle)
+
+    def _primaries(self, stmts):
+        return [r for r in _relationships(stmts) if "componentRecords" in r["recordDetails"]]
+
+    def test_sub_majority_upper_hop_yields_no_primary(self):
+        """A person holding 25–50 % of the holding company has no majority
+        stake in it (Sch 1A para 18), so the register does not make them a
+        PSC of the subsidiary — and neither does OpenCheck."""
+        bundle = _chain_bundle(person_natures=["ownership-of-shares-25-to-50-percent"])
+        stmts = self._map(bundle)
+        assert self._primaries(stmts) == []
+        assert len(_relationships(stmts)) == 2
+        assert {s["recordDetails"]["isComponent"] for s in stmts} == {False}
+
+    def test_significant_influence_is_not_a_majority_stake(self):
+        bundle = _chain_bundle(person_natures=["significant-influence-or-control"])
+        assert self._primaries(self._map(bundle)) == []
+
+    def test_sub_majority_first_hop_still_rolls_up(self):
+        """The first hop is the RLE's own interest in the subject and can be
+        any PSC nature: it is that interest the person holds indirectly."""
+        bundle = _chain_bundle(rle_natures=["voting-rights-25-to-50-percent"])
+        primaries = self._primaries(self._map(bundle))
+        assert len(primaries) == 1
+        assert _interests(primaries[0])[0]["type"] == "votingRights"
+
+    def test_appoint_and_remove_directors_is_a_majority_stake(self):
+        bundle = _chain_bundle(person_natures=["right-to-appoint-and-remove-directors"])
+        assert len(self._primaries(self._map(bundle))) == 1
+
+    def test_trust_variant_of_a_majority_band_rolls_up(self):
+        """The fifth PSC condition: the person controls a trust whose trustees
+        hold the majority — how UK family groups (Timpson, JCB) reach their
+        individuals on the live register."""
+        bundle = _chain_bundle(
+            person_natures=[
+                "ownership-of-shares-75-to-100-percent-as-trust",
+                "voting-rights-75-to-100-percent-as-trust",
+                "right-to-appoint-and-remove-directors-as-trust",
+            ]
+        )
+        assert len(self._primaries(self._map(bundle))) == 1
+
+    def test_trust_variant_of_a_sub_majority_band_does_not(self):
+        bundle = _chain_bundle(person_natures=["voting-rights-25-to-50-percent-as-trust"])
+        assert self._primaries(self._map(bundle)) == []
+
+    def test_llp_member_band_is_read_the_same_way(self):
+        """ASDA's chain ends at TDR Capital LLP, whose members each hold
+        25–50 % of the voting rights: no majority stake, no primary — the
+        register itself lists only the RLE on ASDA."""
+        bundle = _chain_bundle(
+            person_natures=["voting-rights-25-to-50-percent-limited-liability-partnership"]
+        )
+        assert self._primaries(self._map(bundle)) == []
+
+    def test_ceased_upper_hop_yields_no_primary(self):
+        bundle = _chain_bundle(person_ceased_on="2020-01-01")
+        stmts = self._map(bundle)
+        assert self._primaries(stmts) == []
+        assert {s["recordDetails"]["isComponent"] for s in stmts} == {False}
+
+    def test_non_uk_corporate_psc_ends_the_chain(self):
+        bundle = _chain_bundle()
+        bundle["pscs"]["items"][0]["identification"] = {
+            "registration_number": "12345678",
+            "country_registered": "Jersey",
+            "place_registered": "Jersey Financial Services Commission",
+        }
+        stmts = self._map(bundle)
+        assert self._primaries(stmts) == []
+
+    def test_direct_individual_psc_of_subject_is_not_rolled_up(self):
+        bundle = _chain_bundle()
+        bundle["pscs"]["items"].append(
+            {
+                "name": "DIRECT OWNER",
+                "kind": "individual-person-with-significant-control",
+                "natures_of_control": ["ownership-of-shares-75-to-100-percent"],
+                "notified_on": "2016-04-06",
+            }
+        )
+        stmts = self._map(bundle)
+        primaries = self._primaries(stmts)
+        assert len(primaries) == 1
+        direct_owner = next(p for p in _persons(stmts) if p["recordDetails"]["names"][0]["fullName"] == "DIRECT OWNER")
+        assert primaries[0]["recordDetails"]["interestedParty"] != direct_owner["statementId"]
+
+    def test_two_level_chain_lists_every_intermediary_and_hop(self):
+        """Subsidiary ← Holding ← Top ← person: two intermediaries, three hops."""
+        bundle = _chain_bundle()
+        holding = bundle["related_companies"]["12345678"]
+        holding["pscs"]["items"] = [
+            {
+                "name": "TOP CO LTD",
+                "kind": "corporate-entity-person-with-significant-control",
+                "natures_of_control": ["voting-rights-75-to-100-percent"],
+                "notified_on": "2016-04-06",
+                "identification": {
+                    "registration_number": "87654321",
+                    "country_registered": "England",
+                    "place_registered": "Companies House",
+                },
+            }
+        ]
+        bundle["related_companies"]["87654321"] = {
+            "company_number": "87654321",
+            "profile": {"company_name": "TOP CO LTD", "company_number": "87654321", "company_status": "active"},
+            "officers": {"items": [], "total_results": 0},
+            "pscs": {
+                "items": [
+                    {
+                        "name": "ULTIMATE OWNER",
+                        "kind": "individual-person-with-significant-control",
+                        "natures_of_control": ["ownership-of-shares-50-to-75-percent"],
+                        "notified_on": "2016-04-06",
+                    }
+                ],
+                "total_results": 1,
+            },
+            "related_companies": {},
+        }
+        stmts = self._map(bundle)
+        primaries = self._primaries(stmts)
+        assert len(primaries) == 1
+        assert len(primaries[0]["recordDetails"]["componentRecords"]) == 5
+        assert len(_relationships(stmts)) == 4
+        components = {s["recordId"] for s in stmts if s["recordDetails"].get("isComponent")}
+        assert components == set(primaries[0]["recordDetails"]["componentRecords"])
+        assert "HOLDING COMPANY LTD → TOP CO LTD" in _interests(primaries[0])[0]["details"]
+
+    def test_cycle_terminates(self):
+        """Holding lists the subsidiary as its own corporate PSC: no primary,
+        no recursion."""
+        bundle = _chain_bundle()
+        bundle["related_companies"]["12345678"]["pscs"]["items"] = [
+            {
+                "name": "SUBSIDIARY LTD",
+                "kind": "corporate-entity-person-with-significant-control",
+                "natures_of_control": ["ownership-of-shares-75-to-100-percent"],
+                "notified_on": "2016-04-06",
+                "identification": {
+                    "registration_number": "00102498",
+                    "country_registered": "England",
+                    "place_registered": "Companies House",
+                },
+            }
+        ]
+        stmts = self._map(bundle)
+        assert self._primaries(stmts) == []
+
+
+def _chain_bundle(
+    *,
+    rle_natures: list[str] | None = None,
+    person_natures: list[str] | None = None,
+    person_ceased_on: str | None = None,
+) -> dict:
+    """SUBSIDIARY LTD ← HOLDING COMPANY LTD (UK corporate PSC) ← ULTIMATE OWNER."""
+    person: dict = {
+        "name": "ULTIMATE OWNER",
+        "kind": "individual-person-with-significant-control",
+        "natures_of_control": person_natures or ["ownership-of-shares-75-to-100-percent"],
+        "notified_on": "2016-04-06",
+        "nationality": "British",
+        "date_of_birth": {"year": 1970, "month": 1},
+        "address": {"address_line_1": "3 Owner Lane", "locality": "London"},
+    }
+    if person_ceased_on:
+        person["ceased_on"] = person_ceased_on
+    return {
+        "company_number": "00102498",
+        "profile": {
+            "company_name": "SUBSIDIARY LTD",
+            "company_number": "00102498",
+            "type": "private-limited-company",
+            "company_status": "active",
+            "jurisdiction": "england-wales",
+            "date_of_creation": "2005-01-01",
+            "registered_office_address": {"address_line_1": "1 Corp Rd", "locality": "London"},
+        },
+        "officers": {"items": [], "total_results": 0},
+        "pscs": {
+            "items": [
+                {
+                    "name": "HOLDING COMPANY LTD",
+                    "kind": "corporate-entity-person-with-significant-control",
+                    "natures_of_control": rle_natures or ["ownership-of-shares-75-to-100-percent"],
+                    "notified_on": "2016-04-06",
+                    "identification": {
+                        "registration_number": "12345678",
+                        "country_registered": "England",
+                        "place_registered": "Companies House",
+                    },
+                    "address": {"address_line_1": "2 Corp Rd", "locality": "London"},
+                }
+            ],
+            "total_results": 1,
+        },
+        "related_companies": {
+            "12345678": {
+                "company_number": "12345678",
+                "profile": {
+                    "company_name": "HOLDING COMPANY LTD",
+                    "company_number": "12345678",
+                    "type": "private-limited-company",
+                    "company_status": "active",
+                    "jurisdiction": "england-wales",
+                    "date_of_creation": "2000-01-01",
+                    "registered_office_address": {"address_line_1": "2 Corp Rd", "locality": "London"},
+                },
+                "officers": {"items": [], "total_results": 0},
+                "pscs": {"items": [person], "total_results": 1},
+                "related_companies": {},
+            }
+        },
+    }
 
 
 # ===========================================================================

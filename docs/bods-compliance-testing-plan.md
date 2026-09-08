@@ -12,9 +12,11 @@ This document is a methodical plan for verifying that every OpenCheck adapter pr
 
 The `make_relationship_statement` helper always sets `isComponent: False` on all entity and person statements, and never produces a `componentRecords` array on primary relationship statements. For indirect beneficial ownership chains — where A controls B through an intermediary C — BODS v0.4 requires:
 
-- The intermediary entity C to carry `isComponent: True` in its `recordDetails`
-- The primary relationship statement (A → B) to carry `componentRecords: [<C's recordId>, ...]`
-- Component statements to be ordered before the primary relationship in the output
+- The intermediary entity C **and each hop relationship** to carry `isComponent: True` in its `recordDetails` (the modelling guidance's example flags the secondary relationships; an earlier version of this plan named only the entity)
+- The primary relationship statement (A → B) to carry `componentRecords: [<C's recordId>, <each hop relationship's recordId>, ...]`, `directOrIndirect: "indirect"` and `beneficialOwnershipOrControl: true`
+- Component statements to be ordered before the primary relationship in the output, and published in the same file
+
+**Fixed in Phase 183** for Companies House corporate-PSC chains — `mapper._rollup_ch_chains`. The primary is assembled only where the PSC regime itself makes the person a PSC of the subject (a majority stake, Companies Act 2006 Sch 1A para 18, in every entity above the subject — `statements.is_majority_stake`), carries `source.type: thirdParty` and `assertedBy: OpenCheck`, and is annotated as derived from the named component records. A sub-majority upper hop, a ceased hop or a non-UK corporate PSC ends the chain with no primary and no `isComponent` changes.
 
 ### 2. Floating nodes in bods-dagre
 
@@ -292,13 +294,13 @@ This section specifies what each Tier 2 mapper *should* produce for a given inpu
 1. Entity statement for A (`isComponent: False`)
 2. Entity statement for B (`isComponent: True` — intermediary in indirect chain)
 3. Person statement for C (`isComponent: False`)
-4. Component relationship: B → A (direct shareholding)
-5. Component relationship: C → B (direct shareholding)
-6. Primary relationship: C → A (indirect shareholding, `componentRecords: [B's recordId]`)
+4. Component relationship: B → A (shareholding, `directOrIndirect: "unknown"`, `isComponent: True`)
+5. Component relationship: C → B (shareholding, `directOrIndirect: "unknown"`, `isComponent: True`)
+6. Primary relationship: C → A (indirect shareholding, `componentRecords: [B's recordId, (4)'s recordId, (5)'s recordId]`)
 
-**Current bug**: B is emitted with `isComponent: False`; `componentRecords` is absent. The primary relationship from C to A is also missing — only component relationships are emitted.
+**Status**: implemented in Phase 183 (`TestCompaniesHouseCorporatePscChain`, `TestCompaniesHouseChainWithoutPrimary`). Before it, B was emitted with `isComponent: False`, `componentRecords` was absent and the primary C → A was never produced. PSC hops are `directOrIndirect: "unknown"` (not `"direct"`) because every PSC condition is met "directly or indirectly" and the nature-of-control code does not say which.
 
-**Bods-dagre expectation**: Dotted purple ownership edge from C to A; solid edges for each component hop.
+**Graph expectation**: the canvas draws the two hops and hides the primary while both hops are drawn (`bodsToGraph` clean-up D, the same rule as GLEIF's skip-level ultimate-consolidation edges); the primary stays in the data and the export.
 
 ### gleif — entity with direct parent
 
@@ -407,12 +409,12 @@ Based on impact and complexity, fixes should be implemented in this order:
 ### Fix 2 — isComponent and componentRecords for indirect chains (medium impact, moderate complexity)
 
 **Target**: `companies_house` corporate PSC chains; potentially `gleif` parent chains
-**Action**: Modify `_emit_company_statements` to detect when a PSC is itself a company (rather than a natural person) and:
-- Set `isComponent: True` on the intermediate entity statement
-- Add `componentRecords` to the primary relationship
-- Ensure component statements appear before the primary relationship in output
+**Done (Phase 183)**: `map_companies_house` runs `_rollup_ch_chains` over the companies `_emit_company_statements` produced:
+- Sets `isComponent: True` on the intermediate entity statements and on each hop relationship
+- Synthesises the primary person → subject relationship with `componentRecords`, `indirect`, BO true, only where each upper hop is a majority stake
+- Appends the primary after every component, so ordering holds by construction
 
-This is a Companies House-specific concern because it is the only adapter that recursively fetches PSC chains via `related_companies`.
+GLEIF ultimate-parent relationships are left as they are: `indirect` with no components is conformant when the intermediaries are not known from that endpoint and the interest is not a BO declaration. This is a Companies House-specific concern because it is the only adapter that recursively fetches PSC chains via `related_companies`.
 
 ### Fix 3 — Cross-source entity ID normalisation (high impact, higher complexity)
 
@@ -491,7 +493,7 @@ The goal is **973 → ~1020+ tests** with the new connectivity and CoVE integrat
 - [ ] **Phase 4**: Write explicit fixture-based tests for each mapper pattern in the correctness matrix
 - [ ] **Phase 5**: Audit multi-source bundle ID mismatches for each curated LEI
 - [ ] **Fix 1**: Single-source connectivity failures (mapper bugs)
-- [ ] **Fix 2**: `isComponent` / `componentRecords` for CH corporate PSC chains
+- [x] **Fix 2**: `isComponent` / `componentRecords` for CH corporate PSC chains (Phase 183)
 - [ ] **Fix 3**: Cross-source canonical entity ID normalisation
 - [ ] **Fix 4**: v0.3 object format cleanup
 - [ ] **Phase 7**: Full visualisation smoke test for all curated LEIs

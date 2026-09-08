@@ -300,6 +300,10 @@ interface RawEdge {
   interests: Interest[];
   kind: ConsolidationKind;
   sources: string[];
+  /** BODS `recordDetails.componentRecords` on a primary indirect relationship:
+   *  the recordIds of the intermediary entities and hop relationships it is
+   *  assembled from (Phase 183, UK corporate-PSC chains). */
+  componentRecords?: string[];
 }
 
 export interface BuildGraphOptions {
@@ -309,6 +313,10 @@ export interface BuildGraphOptions {
   /** C — hide an ultimate-consolidation edge when a chain of direct-
    *  consolidation edges already connects the same pair. Default true. */
   suppressRedundantUltimateConsolidation?: boolean;
+  /** D — hide a primary indirect relationship (one carrying
+   *  `componentRecords`) when every hop relationship it lists is itself drawn:
+   *  the chain already shows it. Default true. */
+  suppressRedundantComponentPrimary?: boolean;
 }
 
 /**
@@ -322,10 +330,14 @@ export interface BuildGraphOptions {
  *   - B (`mergeParallelEdges`): one edge per entity pair, pooling interests.
  *   - C (`suppressRedundantUltimateConsolidation`): drop GLEIF ultimate-
  *     consolidation edges already implied by the direct-consolidation tree.
+ *   - D (`suppressRedundantComponentPrimary`): drop a primary indirect
+ *     relationship whose component hops are all drawn — the same shape as C
+ *     for the BODS primary-plus-components structure (Phase 183).
  */
 export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): GraphModel {
   const mergeParallelEdges = opts.mergeParallelEdges ?? true;
   const suppressRedundant = opts.suppressRedundantUltimateConsolidation ?? true;
+  const suppressComponentPrimary = opts.suppressRedundantComponentPrimary ?? true;
   const nodes: GraphNode[] = [];
   const nodeIds = new Set<string>();
   // v0.4 relationship endpoints reference declarationSubject (e.g. "XI-LEI-…")
@@ -372,8 +384,13 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
 
   // One raw edge per ownership-or-control statement.
   const raw: RawEdge[] = [];
+  // recordIds of the entity/person statements that became nodes, and of the
+  // relationship statements that became edges — what D reads.
+  const nodeRecordIds = new Set<string>();
+  const drawnRelationshipRecords = new Set<string>();
   for (const stmt of statements) {
     const rt = (stmt.recordType ?? stmt.statementType) as string;
+    if (NODE_TYPES.has(rt) && typeof stmt.recordId === "string") nodeRecordIds.add(stmt.recordId);
     if (!REL_TYPES.has(rt)) continue;
 
     const rd = (stmt.recordDetails ?? {}) as RD;
@@ -382,6 +399,9 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
     if (!sourceId || !targetId || !nodeIds.has(sourceId) || !nodeIds.has(targetId)) continue;
 
     const interests = (rd.interests ?? []) as Interest[];
+    const componentRecords = Array.isArray(rd.componentRecords)
+      ? (rd.componentRecords as unknown[]).filter((c): c is string => typeof c === "string")
+      : undefined;
     raw.push({
       id: ((stmt.statementId ?? stmt.statementID) as string) ?? `${sourceId}-${targetId}`,
       source: sourceId,
@@ -389,7 +409,9 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
       interests,
       kind: consolidationKind(interests),
       sources: stmtSources(stmt),
+      componentRecords: componentRecords?.length ? componentRecords : undefined,
     });
+    if (typeof stmt.recordId === "string") drawnRelationshipRecords.add(stmt.recordId);
   }
 
   // C — drop an ultimate-consolidation edge when a chain of direct-consolidation
@@ -421,6 +443,30 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
           e.kind === "ultimate" &&
           !directPair.has(`${e.source} ${e.target}`) &&
           reachableViaDirect(directAdj, e.source, e.target)
+        )
+    );
+  }
+
+  // D — drop a primary indirect relationship when the hops it is assembled
+  // from are all drawn. The BODS primary-plus-components structure publishes
+  // both the chain (person → holding → subject, isComponent true) and one
+  // primary person → subject edge listing the chain in componentRecords; on
+  // the canvas the primary is the same triangle-closing "star" C removes for
+  // GLEIF, so it is hidden on the same terms — the statement stays in the
+  // data and the export. A primary whose hops are NOT all here (a bundle
+  // trimmed elsewhere) keeps its edge, so the person stays connected.
+  // componentRecords also lists the intermediary *entity* records; those
+  // count as present when their node is, and a record that is in neither set
+  // is missing from this bundle, which keeps the primary.
+  if (suppressComponentPrimary) {
+    kept = kept.filter(
+      (e) =>
+        !(
+          e.componentRecords &&
+          e.componentRecords.some((c) => drawnRelationshipRecords.has(c)) &&
+          e.componentRecords.every(
+            (c) => drawnRelationshipRecords.has(c) || nodeRecordIds.has(c)
+          )
         )
     );
   }
