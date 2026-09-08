@@ -208,6 +208,113 @@ describe("consolidation edge clean-up (B + C)", () => {
   });
 });
 
+// A UK corporate-PSC chain after Fix 2 (Phase 183): the register's two hops
+// (holding → subject, person → holding; isComponent true) plus one primary
+// indirect relationship person → subject whose componentRecords list the
+// intermediary entity record and both hop records.
+function componentChainStatements(): Record<string, unknown>[] {
+  const ent = (id: string, isComponent = false) => ({
+    statementId: id,
+    recordId: `rec-${id}`,
+    recordType: "entity",
+    recordDetails: { name: id, isComponent },
+  });
+  return [
+    ent("SUB"),
+    ent("HOLD", true),
+    {
+      statementId: "OWNER",
+      recordId: "rec-OWNER",
+      recordType: "person",
+      recordDetails: { names: [{ fullName: "Ultimate Owner" }], personType: "knownPerson" },
+    },
+    {
+      statementId: "r-hold-sub",
+      recordId: "rec-r-hold-sub",
+      recordType: "relationship",
+      recordDetails: {
+        isComponent: true,
+        interestedParty: "HOLD",
+        subject: "SUB",
+        interests: [{ type: "shareholding", directOrIndirect: "unknown", beneficialOwnershipOrControl: false }],
+      },
+    },
+    {
+      statementId: "r-owner-hold",
+      recordId: "rec-r-owner-hold",
+      recordType: "relationship",
+      recordDetails: {
+        isComponent: true,
+        interestedParty: "OWNER",
+        subject: "HOLD",
+        interests: [{ type: "shareholding", directOrIndirect: "unknown", beneficialOwnershipOrControl: true }],
+      },
+    },
+    {
+      statementId: "r-primary",
+      recordId: "rec-r-primary",
+      recordType: "relationship",
+      recordDetails: {
+        isComponent: false,
+        interestedParty: "OWNER",
+        subject: "SUB",
+        interests: [{ type: "shareholding", directOrIndirect: "indirect", beneficialOwnershipOrControl: true }],
+        componentRecords: ["rec-HOLD", "rec-r-hold-sub", "rec-r-owner-hold"],
+      },
+    },
+  ];
+}
+
+describe("component-primary clean-up (D)", () => {
+  it("hides the primary indirect edge when every hop it lists is drawn (default on)", () => {
+    const { edges } = bodsToGraph(componentChainStatements());
+    const pairs = edges.map((e) => `${e.source}->${e.target}`).sort();
+    expect(pairs).toEqual(["HOLD->SUB", "OWNER->HOLD"]);
+  });
+
+  it("keeps every node — hiding the edge never drops the person", () => {
+    const { nodes } = bodsToGraph(componentChainStatements());
+    expect(nodes.map((n) => n.id).sort()).toEqual(["HOLD", "OWNER", "SUB"]);
+  });
+
+  it("draws the primary when D is off", () => {
+    const { edges } = bodsToGraph(componentChainStatements(), {
+      suppressRedundantComponentPrimary: false,
+    });
+    const pairs = edges.map((e) => `${e.source}->${e.target}`).sort();
+    expect(pairs).toEqual(["HOLD->SUB", "OWNER->HOLD", "OWNER->SUB"]);
+    const primary = edges.find((e) => e.source === "OWNER" && e.target === "SUB")!;
+    expect(primary.category).toBe("ownership");
+  });
+
+  it("keeps the primary when one of its hop relationships is not in the graph", () => {
+    // The person → holding hop is missing (a bundle trimmed elsewhere): the
+    // chain no longer shows the primary, so the primary stays.
+    const stmts = componentChainStatements().filter((s) => s.statementId !== "r-owner-hold");
+    const { edges } = bodsToGraph(stmts);
+    const pairs = edges.map((e) => `${e.source}->${e.target}`).sort();
+    expect(pairs).toEqual(["HOLD->SUB", "OWNER->SUB"]);
+  });
+
+  it("ignores entity records in componentRecords — only hops decide", () => {
+    // Drop the intermediary entity's recordId from the list: the two hops are
+    // still there, so the primary is still redundant.
+    const stmts = componentChainStatements();
+    const primary = stmts.find((s) => s.statementId === "r-primary")!;
+    (primary.recordDetails as Record<string, unknown>).componentRecords = [
+      "rec-r-hold-sub",
+      "rec-r-owner-hold",
+    ];
+    const { edges } = bodsToGraph(stmts);
+    expect(edges.map((e) => `${e.source}->${e.target}`).sort()).toEqual(["HOLD->SUB", "OWNER->HOLD"]);
+  });
+
+  it("leaves a relationship without componentRecords alone", () => {
+    const { edges } = bodsToGraph(STATEMENTS);
+    expect(edges).toHaveLength(1);
+  });
+});
+
 describe("searchNodes", () => {
   const { nodes } = bodsToGraph(STATEMENTS);
 

@@ -530,48 +530,41 @@ def test_interest_types_are_valid(label, mapper_path, bundle_factory):
 
 
 # ---------------------------------------------------------------------------
-# isComponent documentation tests
-# (These document the current state; they will need updating when
-#  isComponent/componentRecords fixes are applied in Phase 2.)
+# isComponent / componentRecords (Fix 2, Phase 183)
 # ---------------------------------------------------------------------------
 
 
-def test_ch_corporate_psc_intermediary_iscomponent_currently_false():
-    """Document: intermediate entity in a CH corporate PSC chain currently has
-    isComponent=False. This is a known BODS compliance gap — it should be True.
-    This test PASSES now (documenting the bug) and should be FLIPPED to assert
-    True once the fix is applied."""
+def test_ch_corporate_psc_intermediary_is_component():
+    """The intermediary entity in a CH corporate PSC chain is a component of
+    the person's primary indirect relationship; the subject is not."""
     from opencheck.bods.mapper import map_companies_house
     stmts = to_stmts(map_companies_house(_CH_CORPORATE_PSC))
 
-    # The holding company (12345678) is an intermediary; currently isComponent=False.
     entity_stmts = [s for s in stmts if s["recordType"] == "entity"]
     assert len(entity_stmts) == 2, f"Expected 2 entity stmts, got {len(entity_stmts)}"
-
-    is_component_values = {
-        s["recordDetails"].get("isComponent") for s in entity_stmts
-    }
-    # Currently all False — document this:
-    assert is_component_values == {False}, (
-        "isComponent values changed — update this test and the BODS compliance plan"
-    )
+    by_name = {s["recordDetails"]["name"]: s["recordDetails"]["isComponent"] for s in entity_stmts}
+    assert by_name == {"SUBSIDIARY LTD": False, "HOLDING COMPANY LTD": True}, by_name
 
 
-def test_ch_corporate_psc_no_component_records_currently():
-    """Document: primary relationship in a CH corporate PSC chain currently has
-    no componentRecords. This is a known BODS compliance gap."""
+def test_ch_corporate_psc_primary_has_component_records():
+    """Exactly one relationship — the person's primary — carries
+    componentRecords, and every record it names is in the same bundle, ahead
+    of it, and flagged isComponent."""
     from opencheck.bods.mapper import map_companies_house
     stmts = to_stmts(map_companies_house(_CH_CORPORATE_PSC))
 
     rel_stmts = [s for s in stmts if s["recordType"] == "relationship"]
-    # None should have componentRecords currently:
-    stmts_with_component_records = [
+    primaries = [
         s for s in rel_stmts
         if "componentRecords" in (s.get("recordDetails") or {})
     ]
-    assert stmts_with_component_records == [], (
-        "componentRecords appeared — update this test and remove the compliance gap note"
-    )
+    assert len(primaries) == 1
+    primary = primaries[0]
+    order = {s["recordId"]: i for i, s in enumerate(stmts)}
+    components = {s["recordId"] for s in stmts if s["recordDetails"].get("isComponent")}
+    assert set(primary["recordDetails"]["componentRecords"]) == components
+    assert all(order[c] < order[primary["recordId"]] for c in components)
+    assert primary["recordDetails"]["isComponent"] is False
 
 
 # ---------------------------------------------------------------------------
