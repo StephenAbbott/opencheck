@@ -387,6 +387,9 @@ export interface ExpandLayerResponse {
   expanded: string[];
   count: number;
   truncated: boolean;
+  /** Phase 182: what the layer cost, by hop kind — a full lookup per LEI, one
+   *  register per register-scoped id, and the nodes no hop exists for. */
+  hops?: { lei: number; register: number; skipped: number };
 }
 
 export type NetworkExportFormat =
@@ -429,8 +432,29 @@ export async function downloadNetwork(
   URL.revokeObjectURL(url);
 }
 
+/** The identifier schemes `/expand-layer` can hop on without an LEI (Phase
+ * 182): scheme → the register that answers it. Fetched once per page load;
+ * an unreachable endpoint leaves the frontier LEI-only rather than failing. */
+export interface ExpandSchemesResponse {
+  schemes: Record<string, { source_id: string; name: string }>;
+}
+
+let _expandSchemes: Promise<ReadonlySet<string>> | null = null;
+
+export function fetchExpandSchemes(): Promise<ReadonlySet<string>> {
+  if (!_expandSchemes) {
+    _expandSchemes = getJson<ExpandSchemesResponse>("/expand-schemes")
+      .then((r) => new Set(Object.keys(r.schemes).map((s) => s.toUpperCase())) as ReadonlySet<string>)
+      .catch(() => {
+        _expandSchemes = null;
+        return new Set<string>() as ReadonlySet<string>;
+      });
+  }
+  return _expandSchemes;
+}
+
 export async function expandLayer(
-  items: { lei: string; anchor: string }[],
+  items: { anchor: string; lei?: string; scheme?: string; id?: string; name?: string }[],
   direction: "owners" | "subsidiaries" = "owners"
 ): Promise<ExpandLayerResponse> {
   trackEvent("graph_expand"); // feature event; no subject identifiers recorded

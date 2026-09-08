@@ -8,6 +8,7 @@ import {
   frontierAnchors,
   mergeSignals,
   signalsBeyond,
+  subjectRegisterId,
   type EdgeLite,
   type FrontierAnchor,
 } from "./expand";
@@ -143,5 +144,90 @@ describe("dedupeFrontier", () => {
 
   it("handles an empty frontier", () => {
     expect(dedupeFrontier([], remap)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 182 — the frontier keyed on register-scoped identifiers
+// ---------------------------------------------------------------------------
+
+describe("subjectRegisterId", () => {
+  const HOPS: ReadonlySet<string> = new Set(["GB-COH"]);
+  const ch = entity("ch", [{ id: "2999029", scheme: "GB-COH", schemeName: "UK Companies House" }]);
+
+  it("reads the first identifier whose scheme the server can hop on, as filed", () => {
+    // The dropped leading zero is the server's to restore (Phase 177), not ours.
+    expect(subjectRegisterId(ch, HOPS)).toEqual({ scheme: "GB-COH", id: "2999029" });
+  });
+
+  it("matches the scheme case-insensitively and skips schemes with no hop", () => {
+    const lower = entity("x", [{ id: "12345678", scheme: "gb-coh" }]);
+    expect(subjectRegisterId(lower, HOPS)).toEqual({ scheme: "GB-COH", id: "12345678" });
+    const jersey = entity("j", [{ id: "12345", scheme: "REG-JE" }]);
+    expect(subjectRegisterId(jersey, HOPS)).toBeNull();
+  });
+
+  it("is null with no hop schemes at all — the LEI-only frontier of before", () => {
+    expect(subjectRegisterId(ch, new Set())).toBeNull();
+  });
+});
+
+describe("frontierAnchors with register hops", () => {
+  const HOPS: ReadonlySet<string> = new Set(["GB-COH"]);
+  const gleif = entity("G", [
+    { id: _LEI, scheme: "XI-LEI", schemeName: "LEI" },
+    { id: "00070274", scheme: "GB-COH" },
+  ]);
+  const psc = {
+    ...entity("PSC", [{ id: "2999029", scheme: "GB-COH", schemeName: "UK Companies House" }]),
+    recordDetails: {
+      entityType: { type: "registeredEntity" },
+      name: "BABCOCK DEFENCE SYSTEMS LIMITED",
+      identifiers: [{ id: "2999029", scheme: "GB-COH", schemeName: "UK Companies House" }],
+    },
+  };
+  const jersey = entity("JE", [{ id: "12345", scheme: "REG-JE" }]);
+  // The PSC owns the subject: G is owned, PSC is on the frontier.
+  const edges: EdgeLite[] = [{ source: "PSC", target: "G", category: "ownership" }];
+
+  it("offers a company-number node for expansion, keyed on its scheme and id", () => {
+    const f = frontierAnchors([gleif, psc, jersey], edges, new Set(), "owners", HOPS);
+    expect(f).toEqual([
+      { scheme: "GB-COH", id: "2999029", anchor: "PSC", name: "BABCOCK DEFENCE SYSTEMS LIMITED" },
+    ]);
+  });
+
+  it("keys a node on its LEI when it has one, even if it also has a company number", () => {
+    const f = frontierAnchors([gleif, psc], [], new Set(), "owners", HOPS);
+    expect(f[0]).toEqual({ lei: _LEI, anchor: "G" });
+    expect(f[0].scheme).toBeUndefined();
+  });
+
+  it("stays LEI-only without hop schemes — the company-number node is a dead end", () => {
+    const f = frontierAnchors([gleif, psc], edges, new Set(), "owners");
+    expect(f).toEqual([]);
+  });
+
+  it("never offers a company-number node when digging down (children need an LEI)", () => {
+    const f = frontierAnchors([gleif, psc], [], new Set(), "subsidiaries", HOPS);
+    expect(f.map((x) => x.anchor)).toEqual(["G"]);
+  });
+});
+
+describe("dedupeFrontier prefers the LEI-keyed anchor", () => {
+  it("expands a company reached by LEI and by company number once, on its LEI", () => {
+    // Companies House's statement (number only) comes first in the raw
+    // frontier; GLEIF's (LEI + number) reconciles to the same node.
+    const raw: FrontierAnchor[] = [
+      { scheme: "GB-COH", id: "00070274", anchor: "ch-vosper" },
+      { lei: "213800W5454D8XRJ8J78", anchor: "g-vosper" },
+      { scheme: "GB-COH", id: "2999029", anchor: "ch-babcock" },
+    ];
+    const remap = { "ch-vosper": "recon:LEI:213800W5454D8XRJ8J78", "g-vosper": "recon:LEI:213800W5454D8XRJ8J78" };
+    const out = dedupeFrontier(raw, remap);
+    expect(out).toEqual([
+      { lei: "213800W5454D8XRJ8J78", anchor: "g-vosper" },
+      { scheme: "GB-COH", id: "2999029", anchor: "ch-babcock" },
+    ]);
   });
 });

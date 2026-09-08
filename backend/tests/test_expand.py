@@ -195,3 +195,197 @@ def test_expand_layer_returns_remapped_risk_signals(client, monkeypatch):
 def test_expand_rejects_bad_deepen(client):
     r = client.get("/expand", params={"lei": _LEI_A, "anchor": "A", "deepen_top": 99})
     assert r.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Phase 182 — the frontier keyed on register-scoped identifiers, with cheap hops
+# ---------------------------------------------------------------------------
+
+from opencheck import register_hops  # noqa: E402
+
+_CH_SUBJECT = "02999029"  # Babcock Defence Systems Limited, filed as "2999029"
+_CH_PARENT = "01915771"
+
+
+def _ch_bundle(number: str) -> list[dict]:
+    """What the Companies House mapper emits for a company whose only PSC is
+    another UK company: the subject keyed on its number, the corporate PSC keyed
+    on its own, and the ownership relationship between them."""
+    subj = _stable_id("companies_house", "entity", number)
+    parent = _stable_id("companies_house", "entity", _CH_PARENT)
+
+    def _entity(sid: str, name: str, ident: str, scheme_name: str) -> dict:
+        return {"statementId": sid, "recordType": "entity",
+                "recordDetails": {"entityType": {"type": "registeredEntity"}, "name": name,
+                                  "identifiers": [{"id": ident, "scheme": "GB-COH",
+                                                   "schemeName": scheme_name}]}}
+
+    return [
+        _entity(subj, "BABCOCK DEFENCE SYSTEMS LIMITED", number, "Companies House"),
+        _entity(parent, "BABCOCK SOUTHERN HOLDINGS LIMITED", _CH_PARENT, "UK Companies House"),
+        {"statementId": "rel-ch", "recordType": "relationship",
+         "recordDetails": {"subject": subj, "interestedParty": parent,
+                           "interests": [{"type": "shareholding"}]}},
+    ]
+
+
+def _patch_register_hop(monkeypatch, *, fetched: list[str], screened: list[list[dict]]):
+    """Stand in for the Companies House fetch, its mapper and the name screen —
+    the three things a register hop spends — recording what was asked."""
+    async def _fake_fetch(adapter, hit_id, **kwargs):
+        assert adapter.id == "companies_house"
+        fetched.append(hit_id)
+        return {"source_id": "companies_house", "company_number": hit_id}, None
+
+    def _fake_mapper(source_id):
+        assert source_id == "companies_house"
+        return lambda raw: _ch_bundle(raw["company_number"])
+
+    async def _fake_screen(bods, *, degraded=None, **kwargs):
+        screened.append(bods)
+        from opencheck.risk import RiskSignal
+        subj = next(s["statementId"] for s in bods if s["recordType"] == "entity")
+        return [RiskSignal(
+            code="RELATED_SANCTIONED", confidence="medium", source_id="opensanctions",
+            hit_id="os-1", summary="name match",
+            evidence={"subject_statement_id": subj},
+        )]
+
+    async def _no_lookup(**kwargs):
+        raise AssertionError("a register hop must not run the full lookup")
+
+    monkeypatch.setattr("opencheck.routers.lookup._fetch_with_provenance", _fake_fetch)
+    monkeypatch.setattr("opencheck.routers.lookup._mapper_for", _fake_mapper)
+    monkeypatch.setattr("opencheck.routers.lookup.assess_cross_source_names", _fake_screen)
+    monkeypatch.setattr("opencheck.routers.lookup.assess_bundle", lambda *a, **k: [])
+    monkeypatch.setattr("opencheck.routers.lookup._lookup_impl", _no_lookup)
+
+
+def test_hop_schemes_are_derived_from_what_the_adapters_declare():
+    hops = register_hops.hop_schemes()
+    assert hops["GB-COH"].source_id == "companies_house"
+    # Any scheme the mapper knows an RA code for, whose adapter declares a
+    # deriver on that code, is a hop — per-scheme, not UK-only.
+    assert hops["NL-KVK"].source_id == "kvk"
+    assert hops["FR-INSEE"].source_id == "inpi"
+    assert register_hops.hop_for("gb-coh") is hops["GB-COH"]
+    # The mappers' fallback scheme for an unnamed register — "REG-GB" on a PSC
+    # filed as registered in "England And Wales", and on OpenAleph's UK
+    # records — is the same register.
+    assert register_hops.hop_for("REG-GB") is hops["GB-COH"]
+    assert register_hops.hop_for("REG-NL") is hops["NL-KVK"]
+    assert register_hops.hop_for("XI-LEI") is None and register_hops.hop_for(None) is None
+    # The Companies House normaliser is Phase 177's: the filed spelling
+    # becomes the canonical eight characters, and a bare word is refused.
+    assert hops["GB-COH"].normalise("2999029") == _CH_SUBJECT
+    with pytest.raises(ValueError):
+        hops["GB-COH"].normalise("Uk")
+
+
+def test_expand_schemes_endpoint_lists_the_hops(client):
+    r = client.get("/expand-schemes")
+    assert r.status_code == 200
+    schemes = r.json()["schemes"]
+    assert schemes["GB-COH"] == {"source_id": "companies_house", "name": "UK Companies House"}
+
+
+def test_a_register_hop_dispatches_only_the_owning_register(client, monkeypatch):
+    fetched: list[str] = []
+    screened: list[list[dict]] = []
+    _patch_register_hop(monkeypatch, fetched=fetched, screened=screened)
+
+    r = client.post("/expand-layer", json={
+        "items": [{"scheme": "GB-COH", "id": "2999029", "anchor": "ANCHOR-CH"}],
+    })
+    assert r.status_code == 200
+    data = r.json()
+    # One register call, on the canonical number — not the filed spelling.
+    assert fetched == [_CH_SUBJECT]
+    assert data["hops"] == {"lei": 0, "register": 1, "skipped": 0}
+    assert data["expanded"] == ["ANCHOR-CH"]
+
+    bods = data["bods"]
+    subj = _stable_id("companies_house", "entity", _CH_SUBJECT)
+    # The register's own statement for the node collapsed onto the anchor; its
+    # parent hangs off the anchor rather than a floating duplicate.
+    assert all(subj not in str(s) for s in bods)
+    rel = next(s for s in bods if s["statementId"] == "rel-ch")
+    assert rel["recordDetails"]["subject"] == "ANCHOR-CH"
+    parent = _stable_id("companies_house", "entity", _CH_PARENT)
+    assert rel["recordDetails"]["interestedParty"] == parent
+    assert any(s["statementId"] == parent for s in bods)
+
+    # The new node was screened, and the signal followed it onto the anchor.
+    assert len(screened) == 1
+    sigs = data["risk_signals"]
+    assert [s["code"] for s in sigs] == ["RELATED_SANCTIONED"]
+    assert sigs[0]["evidence"]["subject_statement_id"] == "ANCHOR-CH"
+
+
+def test_a_layer_mixes_lei_and_register_hops(client, monkeypatch):
+    fetched: list[str] = []
+    _patch_register_hop(monkeypatch, fetched=fetched, screened=[])
+    _patch_lookup(monkeypatch)  # re-enables the full lookup for the LEI item
+
+    r = client.post("/expand-layer", json={
+        "items": [
+            {"lei": _LEI_A, "anchor": "ANCHOR-A"},
+            {"scheme": "GB-COH", "id": _CH_SUBJECT, "anchor": "ANCHOR-CH"},
+            # A node carrying both is expanded on its LEI: no register call.
+            {"lei": _LEI_B, "scheme": "GB-COH", "id": "00000001", "anchor": "ANCHOR-B"},
+        ],
+    })
+    assert r.status_code == 200
+    data = r.json()
+    assert data["hops"] == {"lei": 2, "register": 1, "skipped": 0}
+    assert fetched == [_CH_SUBJECT]
+    rels = [s for s in data["bods"] if s["recordType"] == "relationship"]
+    assert {s["recordDetails"]["subject"] for s in rels} == {"ANCHOR-A", "ANCHOR-B", "ANCHOR-CH"}
+
+
+@pytest.mark.parametrize(
+    ("item", "direction"),
+    [
+        ({"scheme": "XI-LEI", "id": "5493001KJTIIGC8Y1R12", "anchor": "X"}, "owners"),
+        ({"scheme": "REG-JE", "id": "12345", "anchor": "X"}, "owners"),  # Jersey: no register
+        ({"scheme": "GB-COH", "id": _CH_SUBJECT, "anchor": "X"}, "subsidiaries"),  # needs an LEI
+    ],
+)
+def test_a_register_item_without_a_hop_is_skipped_not_guessed(client, monkeypatch, item, direction):
+    fetched: list[str] = []
+    _patch_register_hop(monkeypatch, fetched=fetched, screened=[])
+    r = client.post("/expand-layer", json={"items": [item], "direction": direction})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["hops"] == {"lei": 0, "register": 0, "skipped": 1}
+    assert data["bods"] == [] and data["risk_signals"] == []
+    assert fetched == []
+    # Still reported as expanded: the frontier must not offer it again.
+    assert data["expanded"] == ["X"]
+
+
+def test_a_value_that_is_not_a_number_of_that_register_yields_nothing(client, monkeypatch):
+    fetched: list[str] = []
+    _patch_register_hop(monkeypatch, fetched=fetched, screened=[])
+    r = client.post("/expand-layer", json={
+        "items": [{"scheme": "GB-COH", "id": "Uk", "anchor": "X"}],
+    })
+    assert r.status_code == 200
+    assert r.json()["bods"] == [] and fetched == []
+
+
+def test_an_item_needs_an_lei_or_a_scheme_and_an_id(client):
+    r = client.post("/expand-layer", json={"items": [{"anchor": "X"}]})
+    assert r.status_code == 422
+    r = client.post("/expand-layer", json={"items": [{"scheme": "GB-COH", "anchor": "X"}]})
+    assert r.status_code == 422
+
+
+def test_anchor_replacements_seed_the_gleif_subject_only_for_an_lei():
+    from opencheck.routers.lookup import _anchor_replacements
+
+    bods = _ch_bundle(_CH_SUBJECT)
+    repl = _anchor_replacements(bods, _CH_SUBJECT, "ANCHOR")
+    assert repl == {_stable_id("companies_house", "entity", _CH_SUBJECT): "ANCHOR"}
+    # The parent shares no identifier value with the subject: untouched.
+    assert _stable_id("companies_house", "entity", _CH_PARENT) not in repl
