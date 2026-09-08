@@ -197,6 +197,35 @@ class Settings(BaseSettings):
     mirror_refresh_interval_s: float = Field(
         default=3600.0, alias="OPENCHECK_MIRROR_REFRESH_INTERVAL_S"
     )
+    # --- Phase 186: the UK PSC graph (opencheck/psc_graph.py) ---
+    # A local ``psc_graph.sqlite`` — every active Companies House PSC record,
+    # built daily from the register's own snapshot by refresh-psc-graph.yml
+    # and published as the ``psc-graph-latest`` release asset. On Render it
+    # is ``/var/data/psc_graph.sqlite`` on the persistent disk. Unset = no
+    # graph: the Companies House adapter walks the register live, as before.
+    psc_graph_db_file: str | None = Field(default=None, alias="OPENCHECK_PSC_GRAPH_DB_FILE")
+    # Where the file is downloaded from when absent, and replaced from when
+    # the asset is not the one on disk (the Phase 181 boot rule). Only read
+    # when a file path is configured — a 2.2 GB file belongs on the disk,
+    # not in /tmp on every boot. Empty string disables the download.
+    psc_graph_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "psc-graph-latest/psc_graph.sqlite.gz"
+        ),
+        alias="OPENCHECK_PSC_GRAPH_DB_URL",
+    )
+    # How often the asset check re-runs in-process, so the daily seed lands
+    # without a deploy (default six hours; 0 disables the loop, boot still
+    # checks once).
+    psc_graph_refresh_interval_s: float = Field(
+        default=21600.0, alias="OPENCHECK_PSC_GRAPH_REFRESH_INTERVAL_S"
+    )
+    # Phase 188 (reserved here so /pscgraph can report it): walk the
+    # corporate-PSC chain above a UK subject on the local graph instead of
+    # calling the register hop by hop. Default off until a live-versus-local
+    # comparison on the curated UK examples.
+    ch_graph_first: bool = Field(default=False, alias="OPENCHECK_CH_GRAPH_FIRST")
     # Phase 144: refuse declared automated clients (memwatch.is_bot on the
     # User-Agent) on /lookup-stream, the interactive app's SSE endpoint.
     # robots.txt has always disallowed it; a crawler there is ignoring robots

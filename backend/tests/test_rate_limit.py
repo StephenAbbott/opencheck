@@ -184,6 +184,9 @@ _EXEMPT_PATHS = {
     "/consistencystats",
     # Phase 179: same contract again — the GLEIF mirror's aggregate counters.
     "/mirror",
+    # Phase 186: the UK PSC graph's state — the file's meta and the asset
+    # check's outcomes, one dict dump, no upstream call.
+    "/pscgraph",
     # Phase 161: the last weekly sweep's verdict, read from a release asset at
     # most hourly and otherwise served from memory — a cached dict dump that
     # never contacts a source, on the same footing as /sources.
