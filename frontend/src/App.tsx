@@ -72,7 +72,6 @@ import {
 } from "./components/cdd/SourceBucketCard";
 import { OpenAlephArchiveMatches } from "./components/cdd/OpenAlephArchiveMatches";
 import { EsgPanel } from "./components/cdd/EsgPanel";
-import { subsidiaryHref } from "./lib/subsidiariesMode";
 import { SecuritiesSection } from "./components/cdd/SecuritiesSection";
 import { clearPanelError, mergePanelError, panelLabel, type PanelError } from "./lib/panelErrors";
 
@@ -2615,22 +2614,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         )}
 
 
-        {/* Phase 185: the MEIP signpost that used to sit here moved to the
-            Subsidiaries tab, where the register's list lives. What stays is
-            the fact of the match and where to find it — a link, not a tab
-            switch, so it survives a right-click. */}
-        {meip && streamingLei && (
-          <p className="mt-3 text-oo-small text-oo-muted">
-            {meip.mode === "mne_head"
-              ? "One of the 500 largest multinational enterprises in the OECD-UNSD MEIP register"
-              : `Listed in the OECD-UNSD MEIP register as part of the ${meip.parent_mne} group`}
-            {" — "}
-            <a href={subsidiaryHref(streamingLei)} onClick={(e) => { e.preventDefault(); selectMode("subsidiaries"); }} className="text-oo-blue hover:underline">
-              see the Subsidiaries tab
-            </a>
-            .
-          </p>
-        )}
+        {/* Phase 185 moved the MEIP signpost to the Subsidiaries tab and left
+            a one-line pointer here. It sat outside every source card, under
+            no heading and beside no source name, so the one thing it could
+            not say was where it came from — a claim about the company with
+            no attribution is the failure mode this codebase is built to
+            avoid. MEIP now lives only on the Subsidiaries tab, labelled. */}
 
         {streamingLei && !streaming && totalHits > 0 && (
           <ExportPanel
