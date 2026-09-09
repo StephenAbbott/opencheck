@@ -3,7 +3,7 @@ import { deepen } from "../../lib/api";
 import { groupHitsForDisplay, siblingNote } from "../../lib/hitGroups";
 import { rowFinding } from "../../lib/sourceFinding";
 import { readRegisterStatus, registerStatusLabel } from "../../lib/liveness";
-import { graphPartiesLabel } from "../../lib/vocab";
+import { chainSourceCaption, graphPartiesLabel } from "../../lib/vocab";
 import { ActionChip, Chip, DataTile, RowList } from "../ui";
 import type { BodsBreakdown, BoAccessNotice, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
@@ -651,6 +651,13 @@ export function DeepenBlock({
         : detail.risk_signals,
     [detail.risk_signals, crossSourceSignals],
   );
+  // Phase 188: how the Companies House corporate-PSC chain was found. Null
+  // for every other source, and for a chain walked live — the hop-by-hop
+  // walk is the long-standing behaviour and needs no caption.
+  const chainCaption = useMemo(
+    () => chainSourceCaption(detail.raw.chain_source as Parameters<typeof chainSourceCaption>[0]),
+    [detail.raw.chain_source],
+  );
 
   if (!anyVisible) return null;
 
@@ -670,6 +677,16 @@ export function DeepenBlock({
         <div className="bg-sky-50 border border-sky-200 text-sky-900 rounded-oo p-3">
           <p className="text-[13px] leading-[1.6]">{detail.raw.coverage_note as string}</p>
         </div>
+      )}
+
+      {/* Phase 188: a UK chain the local PSC graph proposed says so, with the
+          graph's own dates and any company it did not know. Nothing was
+          refused and every record here is the register's own, so this is a
+          provenance line and must not read as a degradation. */}
+      {chainCaption && (
+        <p className="text-oo-meta text-oo-muted leading-[1.5]" data-testid="chain-source-caption">
+          {chainCaption}
+        </p>
       )}
 
       {showDiagram && detail.bods.length > 0 && (

@@ -5,6 +5,7 @@ import {
   bodsRecordCount,
   expandOnFirstUse,
   graphPartiesLabel,
+  chainSourceCaption,
   mirrorCaption,
   OPENALEPH_TOPIC,
   resultCount,
@@ -270,5 +271,56 @@ describe("mirrorCaption", () => {
     const text = mirrorCaption(null);
     expect(text).toContain("GLEIF mirror");
     expect(text).not.toContain("Golden Copy of");
+  });
+});
+
+describe("chainSourceCaption", () => {
+  it("says nothing at all for a chain walked live — that is the old behaviour", () => {
+    expect(chainSourceCaption({ source: "live", related: 4 })).toBeNull();
+    expect(chainSourceCaption({ source: "graph_unavailable" })).toBeNull();
+    expect(chainSourceCaption(null)).toBeNull();
+    expect(chainSourceCaption(undefined)).toBeNull();
+  });
+
+  it("names the local copy, its dates, and says the register was still read", () => {
+    const text = chainSourceCaption({
+      source: "graph",
+      related: 4,
+      missed: 0,
+      snapshot_date: "2026-09-08",
+      stream_published_at: "2026-09-08T14:03:21",
+    });
+    expect(text).toContain("UK PSC register");
+    expect(text).toContain("snapshot of 2026-09-08");
+    expect(text).toContain("stream to 2026-09-08 14:03");
+    expect(text).toContain("read from Companies House");
+    // Nothing was refused, so it must not read as a degradation.
+    expect(text).not.toMatch(/refus|unreachable|could not|failed|degrad/i);
+  });
+
+  it("owns up when the local copy did not know part of the chain", () => {
+    const one = chainSourceCaption({ source: "graph", related: 4, missed: 1 });
+    expect(one).toContain("1 company in the chain was not in the local copy yet");
+    expect(one).toContain("found live");
+    const two = chainSourceCaption({ source: "graph", related: 4, missed: 2 });
+    expect(two).toContain("2 companies in the chain were not in the local copy yet");
+  });
+
+  it("does not boast when the local copy knew the whole chain", () => {
+    // The absence of the caveat is the good case; a claim of completeness is
+    // a different, stronger thing than "here is where the chain came from",
+    // and OpenCheck cannot make it — the register is the only authority on
+    // what the chain is. "Every company on it read from Companies House" is
+    // a statement about what was fetched, not about the chain being whole.
+    const text = chainSourceCaption({ source: "graph", related: 4, missed: 0 });
+    expect(text).not.toMatch(/complete|the whole chain|nothing missing|up to date/i);
+    expect(text).not.toMatch(/not in the local copy/i);
+  });
+
+  it("still says where the chain came from without the graph's dates", () => {
+    const text = chainSourceCaption({ source: "graph", related: 2 });
+    expect(text).toContain("UK PSC register");
+    expect(text).not.toContain("snapshot of");
+    expect(text).not.toContain("stream to");
   });
 });

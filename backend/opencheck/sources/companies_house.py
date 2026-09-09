@@ -19,6 +19,7 @@ free and deterministic.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import time
@@ -28,7 +29,7 @@ from urllib.parse import quote
 
 import httpx
 
-from .. import degradation, signalstats
+from .. import degradation, psc_graph, signalstats
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -57,6 +58,19 @@ _SKIP_BAD_NUMBER = "registration_number_not_a_company_number"
 _SKIP_DEPTH = "max_depth_reached"
 _SKIP_CAP = "related_companies_cap_reached"
 _SKIP_FETCH_FAILED = "fetch_failed"
+
+# Phase 188: with OPENCHECK_CH_GRAPH_FIRST on, the chain above a subject is
+# found on the local PSC graph first (psc_graph.py, one index walk) and every
+# company it names is fetched from the register *concurrently* — this many
+# calls in flight at once — before the live walk runs, which then finds each
+# record in the cache. The register describes every company as it always
+# did; only the serial dependency between hops is gone.
+_PREFETCH_CONCURRENCY = 6
+
+# How the chain was found — the closed vocabulary ``signalstats`` counts.
+_CHAIN_LIVE = "live"  # the flag is off: hop by hop, as before
+_CHAIN_GRAPH = "graph"  # the graph proposed the chain; the register confirmed it
+_CHAIN_GRAPH_UNAVAILABLE = "graph_unavailable"  # the flag is on but no graph: live
 
 
 def _slug(text: str) -> str:
@@ -109,6 +123,13 @@ class _WalkStats:
     depth: int = 0
     calls_live: int = 0
     calls_cached: int = 0
+    # Phase 188: how the chain was found, how many companies the graph
+    # proposed, and the cache keys the prefetch filled — a hit on one of
+    # those is the prefetch's own call coming back, not a cached call.
+    chain: str = _CHAIN_LIVE
+    predicted: int = 0
+    prefetched: set[str] = field(default_factory=set)
+    prefetch_seconds: float = 0.0
 
 
 def _looks_like_company_number(value: str) -> bool:
@@ -209,7 +230,14 @@ class CompaniesHouseAdapter(SourceAdapter):
         unfollowed: list[dict[str, Any]] = []
         max_depth = max(0, int(get_settings().ch_psc_max_depth))
         stats = _WalkStats()
+        predicted: set[str] = set()
+        graph_meta: dict[str, Any] = {}
         try:
+            # Phase 188: the graph proposes the chain and the register is asked
+            # for every company on it at once; the walk below then confirms
+            # the chain hop by hop from the cache, going live only where the
+            # register disagrees with the graph.
+            predicted, graph_meta = await self._prefetch_chain(number, max_depth, stats)
             root = await self._fetch_company_data(
                 number,
                 visited=visited,
@@ -223,6 +251,7 @@ class CompaniesHouseAdapter(SourceAdapter):
             # Counted whether or not the subject's own record came back: a
             # walk that failed still spent its calls. Reasons only — the
             # names and numbers stay on the bundle.
+            reached = set(related)
             signalstats.record_ch_walk(
                 related=len(related),
                 depth=stats.depth,
@@ -230,9 +259,24 @@ class CompaniesHouseAdapter(SourceAdapter):
                 calls_cached=stats.calls_cached,
                 seconds=time.monotonic() - stats.started,
                 unfollowed=[u["reason"] for u in unfollowed],
+                chain=stats.chain,
+                predicted=len(predicted),
+                missed=len(reached - predicted),
+                extra=len(predicted - reached),
+                prefetch_seconds=stats.prefetch_seconds,
             )
         root["related_companies"] = related
         root["unfollowed_pscs"] = unfollowed
+        # How the chain was found, for the card's caption and the raw view.
+        # Counts and dates only — never a company number or a name.
+        root["chain_source"] = {
+            "source": stats.chain,
+            "related": len(related),
+            "predicted": len(predicted),
+            "missed": len(set(related) - predicted),
+            "extra": len(predicted - set(related)),
+            **graph_meta,
+        }
         self._record_unfollowed(unfollowed, max_depth)
         validate_raw("companies_house", CHBundle, root)
         return root
@@ -278,6 +322,93 @@ class CompaniesHouseAdapter(SourceAdapter):
                 "companies_house",
                 "a UK corporate PSC's own register record could not be fetched",
             )
+
+    async def _prefetch_chain(
+        self, number: str, max_depth: int, stats: _WalkStats
+    ) -> tuple[set[str], dict[str, Any]]:
+        """Phase 188. With ``OPENCHECK_CH_GRAPH_FIRST`` on and a PSC graph
+        open, walk the chain above *number* on the graph (an index lookup
+        per hop, no register call) and fetch the register's four records for
+        the subject and every company the graph named, all at once. Returns
+        the canonical numbers the graph proposed and what to say about the
+        graph; an empty set and ``{}`` when the flag is off or no graph is
+        available, in which case the live walk runs exactly as before.
+
+        The graph is a proposal, never the answer: the walk that follows
+        reads the register's own PSC lists (from the cache the prefetch
+        filled) and follows what *they* say. A company the graph did not
+        know is fetched live as it always was and counted as ``missed``; one
+        the graph named that the register's chain does not reach was a
+        wasted prefetch, counted as ``extra``. Both numbers are the
+        graph's accuracy, measured in production on ``/signalstats``.
+        """
+        if not get_settings().ch_graph_first:
+            return set(), {}
+        if not self.info.live_available:
+            return set(), {}
+        store = psc_graph.get_store()
+        if store is None:
+            stats.chain = _CHAIN_GRAPH_UNAVAILABLE
+            return set(), {}
+        started = time.monotonic()
+        try:
+            walk = await asyncio.to_thread(
+                store.walk, number, max_depth=max_depth, max_related=_MAX_RELATED_COMPANIES
+            )
+            meta = await asyncio.to_thread(store.meta)
+        except Exception as exc:  # noqa: BLE001 — a broken file must never sink a lookup
+            log.warning("companies_house: PSC graph walk failed for the subject: %s", exc)
+            stats.chain = _CHAIN_GRAPH_UNAVAILABLE
+            return set(), {}
+        stats.chain = _CHAIN_GRAPH
+        predicted = {c for c in walk.companies if c != walk.subject}
+        stats.predicted = len(predicted)
+        sem = asyncio.Semaphore(_PREFETCH_CONCURRENCY)
+        await asyncio.gather(
+            *(self._prefetch_company(n, stats, sem) for n in [number, *sorted(predicted)])
+        )
+        stats.prefetch_seconds = time.monotonic() - started
+        graph_meta = {
+            "snapshot_date": meta.get(psc_graph.META_SNAPSHOT_DATE),
+            "stream_published_at": meta.get(psc_graph.META_STREAM_AT),
+        }
+        return predicted, graph_meta
+
+    async def _prefetch_company(
+        self, number: str, stats: _WalkStats, sem: asyncio.Semaphore
+    ) -> None:
+        """Warm the cache with one company's four register records. A
+        failure here is not a failure of the lookup: the walk asks again,
+        live, and records the gap the way it always has."""
+        paths = (
+            (f"/company/{number}", f"{_CACHE_NS}/company/{number}"),
+            (f"/company/{number}/officers", f"{_CACHE_NS}/company/{number}/officers"),
+            (
+                f"/company/{number}/persons-with-significant-control",
+                f"{_CACHE_NS}/company/{number}/pscs",
+            ),
+            (
+                f"/company/{number}/persons-with-significant-control-statements",
+                f"{_CACHE_NS}/company/{number}/psc-statements",
+            ),
+        )
+
+        async def one(path: str, cache_key: str) -> None:
+            async with sem:
+                try:
+                    await self._get(path, cache_key=cache_key, stats=stats)
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code == 404 and path.endswith("-statements"):
+                        # No PSC statements filed: the walk treats the 404 as
+                        # an empty list, so cache that and spare the call.
+                        self._cache.put(cache_key, {"items": []})
+                    else:
+                        return
+                except httpx.HTTPError:
+                    return
+                stats.prefetched.add(cache_key)
+
+        await asyncio.gather(*(one(path, key) for path, key in paths))
 
     async def _fetch_company_data(
         self,
@@ -335,6 +466,9 @@ class CompaniesHouseAdapter(SourceAdapter):
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:
                 psc_statements = {"items": []}
+                # Phase 188: the other three records are cached for good;
+                # "none filed" now is too, so a re-walk spends nothing here.
+                self._cache.put(f"{_CACHE_NS}/company/{number}/psc-statements", psc_statements)
             else:
                 raise
 
@@ -432,7 +566,10 @@ class CompaniesHouseAdapter(SourceAdapter):
         cached = self._cache.get_payload(cache_key)
         if cached is not None:
             if stats is not None:
-                stats.calls_cached += 1
+                if cache_key in stats.prefetched:
+                    stats.prefetched.discard(cache_key)  # the prefetch's own call, counted live
+                else:
+                    stats.calls_cached += 1
             return cached[0]  # unwrap (payload, tier)
 
         settings = get_settings()

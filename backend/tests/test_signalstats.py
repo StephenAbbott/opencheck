@@ -562,8 +562,26 @@ def test_ch_walk_malformed_inputs_never_raise() -> None:
     assert signalstats.stats()["companies_house_walks"]["by_origin"] == {}
 
 
+def test_ch_walk_chain_source_outside_the_vocabulary_is_filed_as_live() -> None:
+    """Phase 188. ``chain`` is a closed vocabulary of three words; anything
+    else is a caller bug and must not open a counter key of its own — the
+    endpoint is public and its cardinality is bounded on purpose."""
+    signalstats.record_ch_walk(
+        related=1, depth=1, calls_live=4, calls_cached=0, seconds=0.1,
+        unfollowed=[], chain="something-else", predicted=99, missed=99,
+    )
+    walks = signalstats.stats()["companies_house_walks"]
+    assert walks["chain"] == {"lookup|live": 1}
+    # Only a walk the graph actually proposed contributes accuracy numbers.
+    assert walks["graph"] == {}
+
+
 def test_signalstats_endpoint_carries_the_walk_section(client: TestClient) -> None:
     body = client.get("/signalstats").json()
+    # ``chain`` and ``graph`` arrived with Phase 188: how each chain was found,
+    # and — for the ones the local PSC graph proposed — how good the proposal
+    # was against the register's own chain.
     assert body["companies_house_walks"] == {
-        "by_origin": {}, "related": {}, "depth": {}, "unfollowed": {}
+        "by_origin": {}, "related": {}, "depth": {}, "unfollowed": {},
+        "chain": {}, "graph": {},
     }

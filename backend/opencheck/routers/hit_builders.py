@@ -87,7 +87,15 @@ def _hit(
 
 
 def _bh_companies_house(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
-    p = r.get("profile") or {}
+    p = dict(r.get("profile") or {})
+    # Phase 188: how the corporate-PSC chain above this company was found —
+    # hop by hop from the register, or proposed by OpenCheck's local PSC graph
+    # and then confirmed against the register. Counts and the graph's dates
+    # only; the card turns it into a sentence. The bundle carries it, so it
+    # rides on ``raw`` the way KvK's coverage note does.
+    chain = r.get("chain_source")
+    if chain and "chain_source" not in p:
+        p["chain_source"] = chain
     # wikidata_qid is intentionally omitted: the QID is sourced exclusively
     # from Wikidata; Companies House does not publish Wikidata mappings, so
     # including it would falsely imply CH corroborates the identifier.

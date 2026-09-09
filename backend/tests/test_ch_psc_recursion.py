@@ -492,23 +492,22 @@ async def test_walk_records_cache_hits_separately(
     httpx_mock: HTTPXMock, _clean_walk_counters
 ) -> None:
     """A second walk over the same stack is answered from the cache: the
-    register was not called again, and the counters say so."""
+    register was not called again, and the counters say so.
+
+    Phase 188 also caches "no PSC statements filed". Before it, the 404 was
+    an exception path that cached nothing, so every re-walk spent one live
+    call per company on a question the register had already answered — five
+    of the twenty-five calls this test used to record. Twenty and twenty now:
+    the second walk costs the register nothing at all.
+    """
     _mock_chain(httpx_mock, _CHAIN)
     adapter = CompaniesHouseAdapter()
     await adapter.fetch("00070274")
-    # The PSC-statements 404 is not cached (it is an exception path), so the
-    # second walk asks the register for those five again and nothing else.
-    for number in _CHAIN:
-        httpx_mock.add_response(
-            url=f"{_API}/company/{number}/persons-with-significant-control-statements",
-            status_code=404,
-            json={"errors": [{"error": "not-found"}]},
-        )
     await adapter.fetch("00070274")
     lookup = signalstats.stats()["companies_house_walks"]["by_origin"]["lookup"]
     assert lookup["walks"] == 2
-    assert lookup["calls_live"] == 25
-    assert lookup["calls_cached"] == 15
+    assert lookup["calls_live"] == 20
+    assert lookup["calls_cached"] == 20
 
 
 async def test_walk_records_why_it_stopped(
