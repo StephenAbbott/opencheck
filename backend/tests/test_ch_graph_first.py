@@ -132,7 +132,11 @@ async def test_the_flag_is_off_by_default_and_nothing_reads_the_graph(
     bundle = await CompaniesHouseAdapter().fetch("00070274")
 
     assert set(bundle["related_companies"]) == {"02999029", "01915771", "02669327", "02342138"}
-    assert bundle["chain_source"]["source"] == "live"
+    # The WHOLE object, not just its source. Phase 188 asserted only the
+    # source here and shipped `predicted: 0, missed: 4` on a live walk —
+    # every company the register reached, reported as one the graph had
+    # failed to name, by a graph that was never asked (fixed in Phase 189).
+    assert bundle["chain_source"] == {"source": "live", "related": 4}
     assert _walks()["chain"] == {"lookup|live": 1}
     assert _walks()["graph"] == {}
 
@@ -313,7 +317,9 @@ async def test_the_flag_without_a_graph_falls_back_and_says_so(
     bundle = await CompaniesHouseAdapter().fetch("00070274")
 
     assert set(bundle["related_companies"]) == {"02999029", "01915771", "02669327", "02342138"}
-    assert bundle["chain_source"]["source"] == "graph_unavailable"
+    # No graph was read, so there is no proposal to score — same shape as a
+    # live walk, and a different `source` is the only difference.
+    assert bundle["chain_source"] == {"source": "graph_unavailable", "related": 4}
     assert _walks()["chain"] == {"lookup|graph_unavailable": 1}
     assert _walks()["graph"] == {}
 
@@ -335,7 +341,7 @@ async def test_a_broken_graph_never_sinks_a_lookup(
     bundle = await CompaniesHouseAdapter().fetch("00070274")
 
     assert set(bundle["related_companies"]) == {"02999029", "01915771", "02669327", "02342138"}
-    assert bundle["chain_source"]["source"] == "graph_unavailable"
+    assert bundle["chain_source"] == {"source": "graph_unavailable", "related": 4}
 
 
 async def test_a_company_the_prefetch_could_not_reach_is_left_to_the_walk(
@@ -389,6 +395,30 @@ def test_the_chain_counters_carry_no_company_number_or_name(
     for secret in ("Babcock", "00070274", "02999029", "2999029", "Defence"):
         assert secret not in blob
     assert set(_walks()["chain"]) == {"lookup|graph"}
+
+
+@pytest.mark.parametrize("configure", ["flag_off", "flag_on_no_graph"])
+def test_a_walk_the_graph_did_not_propose_scores_no_accuracy(
+    httpx_mock: HTTPXMock, graph: Path, monkeypatch: pytest.MonkeyPatch, configure: str
+) -> None:
+    """Phase 189. `predicted` / `missed` / `extra` measure a proposal against
+    the register's own chain. Where there was no proposal they are not zero,
+    they are *absent* — emitting `missed: N` for a graph nobody asked reads
+    as N companies it got wrong, which is a different and untrue claim.
+    """
+    if configure == "flag_off":
+        monkeypatch.setenv("OPENCHECK_PSC_GRAPH_DB_FILE", str(graph))
+        get_settings.cache_clear()
+    else:
+        _graph_first(monkeypatch, None)
+    _mock_chain(httpx_mock, _CHAIN)
+    bundle = asyncio.run(CompaniesHouseAdapter().fetch("00070274"))
+
+    chain = bundle["chain_source"]
+    assert set(chain) == {"source", "related"}
+    assert chain["related"] == 4  # the chain was still found, and its size is honest
+    for absent in ("predicted", "missed", "extra", "snapshot_date", "stream_published_at"):
+        assert absent not in chain
 
 
 def test_the_bundles_chain_source_is_counts_and_dates_only(
