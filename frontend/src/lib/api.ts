@@ -644,9 +644,16 @@ export interface HistoryRawChange {
   value_old: string | null;
   value_new: string | null;
   change_type: string | null;
+  /** Phase 194 — the codelist's own label for `change_type`, sent by the API
+   *  so no client keeps a second copy of the vocabulary. Null when untyped. */
+  label: string | null;
   tier: number;
   event_date: string | null;
   date_basis: string;
+  /** The other end of the change. On a Companies House officer filing this is
+   *  the officer's NAME: the filing publishes no officer id, so a board row
+   *  names a person without claiming to identify them. */
+  counterparty: string | null;
 }
 
 export interface HistoryResponse {
@@ -672,6 +679,9 @@ export interface HistoryResponse {
    *  record that published it. Present means that register knows the company,
    *  not that its history was fetched; `sources` says what answered. */
   registry_numbers: Record<string, string>;
+  /** Phase 194 — Companies House holds more filings than this fetch read.
+   *  The register answers newest-first, so the missing end is the oldest. */
+  filings_truncated?: boolean;
 }
 
 /** Fetch the merged change history for an LEI — every register OpenCheck

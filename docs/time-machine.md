@@ -94,7 +94,7 @@ everything, including the noise" without re-querying or re-deriving.
 
   // --- derived classification ---
   "change_type": "LEGAL_NAME_CHANGE",// controlled codelist (see below); null if unmapped/noise
-  "tier": 3,                         // 1 = ownership/control moved, 2 = identity/status, 3 = admin noise
+  "tier": 3,                         // 1 = ownership/control moved, 2 = identity/status, 3 = admin noise, 4 = board turnover
   "boosted": false,                  // true when a boost rule lifts an otherwise-Tier-3 event
   "boost_reason": null,              // e.g. "co-occurs with SANCTIONED within 30d"
 
@@ -152,7 +152,37 @@ Maps to **entity** `recordStatus: updated` + `statementDate`.
   `ManagingLOU`, `ValidationSources`, `EntityCreationDate` precision fixes,
   `EntityCategory` backfills, `RegistrationStatus → LAPSED` (see boost rule).
 - **Companies House:** CS01 confirmation statement with no delta, accounts
-  filings, PSC statement housekeeping, address re-formatting.
+  filings, PSC statement housekeeping, address re-formatting, and an officer's
+  own particulars changing (`CH01`–`CH04`, `288c`) — nobody joined or left the
+  board, so it belongs here rather than in Tier 4.
+
+### Tier 4 — who sits on the board (Phase 194, its own opt-in stream)
+
+Turnover, and only turnover: `OFFICER_APPOINTED` and `OFFICER_RESIGNED`.
+
+- **Companies House:** `AP01`–`AP04` and `TM01`/`TM02`; pre-2009, the bare
+  `288` form whose event is only in the description the register wrote
+  ("New director appointed", "Director resigned"), which is read rather than
+  discarded — without it, 42% of a long-lived company's board filings say
+  nothing. The officer's name comes from `description_values.officer_name`,
+  which the register publishes only from the electronic era; an older filing
+  records that a director left and never which one, and the tab says so.
+
+**Why a fourth tier and not a promotion to Tier 2.** An appointment is not a
+beneficial-ownership change — a director is appointed to run a company, not
+because they own it — and there are far more of them than there are notable
+rows: Lloyds Bank PLC has 246 appointments and resignations against 10 notable
+changes. In the notable stream they would bury what the tab leads on; in the
+administrative stream (where they sat until Phase 194, untyped and unnamed)
+they are unfindable. **The tier numbers are identifiers, not a rank** — `tier`
+is published on `/history` and a client filters `tier === 3` for the
+administrative stream, so board changes took the next free number rather than
+renumbering what that filter selects. `TIER_RANK` in `timeline/model.py` is
+the order to render in.
+
+A Companies House filing carries no officer id, so a board row names a person
+without being able to link to one. Linking rows to the person nodes the graph
+draws needs the officers list, which does carry the id — a later ticket.
 
 ## Boost rule (Fork 1 — start static, this is the next step)
 

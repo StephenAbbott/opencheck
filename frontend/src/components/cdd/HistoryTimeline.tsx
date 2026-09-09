@@ -176,6 +176,44 @@ function NoiseRow({ raw }: { raw: HistoryRawChange }) {
 }
 
 // ---------------------------------------------------------------------
+// Board-change row (Phase 194) — who joined, who left, and who it was
+//
+// Between the notable rows and the administrative ones in weight, because
+// that is where it sits in meaning: a board change is a real change to the
+// company that is not a change in who owns it. The dot is `oo.graph.role`,
+// the colour the network already draws a `seniorManagingOfficial` edge in,
+// so the same relationship wears the same colour on both surfaces. The name
+// is the row's subject and is set in the ink colour; where the register
+// published none, the row says so rather than showing an empty space.
+// ---------------------------------------------------------------------
+
+function BoardRow({ raw }: { raw: HistoryRawChange }) {
+  return (
+    <li className="relative pl-8 pb-3 last:pb-0">
+      <span
+        className="absolute left-[4px] top-1.5 h-2.5 w-2.5 rounded-full bg-oo-graph-role ring-2 ring-white"
+        aria-hidden
+      />
+      <div className="text-oo-meta">
+        <span className="font-mono text-oo-muted">{raw.event_date ?? "—"}</span>
+        <span className="mx-1.5 text-oo-muted">·</span>
+        <span className="font-mono text-oo-muted">{historySourceLabel(raw.source_id)}</span>
+        <span className="mx-1.5 text-oo-muted">·</span>
+        <span className="text-oo-ink font-semibold">
+          {raw.label ?? raw.raw_change_type}
+        </span>
+        <span className="mx-1.5 text-oo-muted">·</span>
+        {raw.counterparty ? (
+          <span className="text-oo-ink break-words">{raw.counterparty}</span>
+        ) : (
+          <span className="text-oo-muted italic">no name on the filing</span>
+        )}
+      </div>
+    </li>
+  );
+}
+
+// ---------------------------------------------------------------------
 // The rail
 // ---------------------------------------------------------------------
 
@@ -199,6 +237,8 @@ export function HistoryTimeline({
             lei={lei}
             registryNumbers={data.registry_numbers ?? {}}
           />
+        ) : row.kind === "board" ? (
+          <BoardRow key={`b-${i}`} raw={row.raw} />
         ) : (
           <NoiseRow key={`x-${i}`} raw={row.raw} />
         ),

@@ -9,15 +9,18 @@
  */
 import { describe, it, expect } from "vitest";
 
-import type { HistoryResponse } from "./api";
+import type { HistoryRawChange, HistoryResponse } from "./api";
 import {
   basisLabel,
+  boardChangesOf,
+  boardChangesSummary,
   buildTimelineRows,
   corroboratedCount,
   datedSpan,
   historyDegradedNotice,
   historySentence,
   historySourceLabel,
+  filingsTruncatedNotice,
   noiseEventsOf,
   recordUrl,
   silentRegisters,
@@ -69,18 +72,21 @@ const RESP: HistoryResponse = {
       source_id: "gleif", record_type: "entity", raw_change_type: "UPDATE",
       raw_field: "/lei:.../lei:Registration/lei:NextRenewalDate",
       value_old: "2026-01-11", value_new: "2027-01-11", change_type: null,
+      label: null, counterparty: null,
       tier: 3, event_date: "2025-11-20", date_basis: "recorded",
     },
     {
       source_id: "companies_house", record_type: "entity", raw_change_type: "CS01",
       raw_field: "confirmation-statement", value_old: null, value_new: null,
-      change_type: null, tier: 3, event_date: "2022-03-01", date_basis: "effective",
+      change_type: null, label: null, counterparty: null,
+      tier: 3, event_date: "2022-03-01", date_basis: "effective",
     },
     // A notable (tier-2) raw event — must NOT be treated as noise.
     {
       source_id: "gleif", record_type: "entity", raw_change_type: "UPDATE",
       raw_field: "/lei:.../lei:Entity/lei:LegalName", value_old: "x", value_new: "y",
-      change_type: "LEGAL_NAME_CHANGE", tier: 2, event_date: "2021-12-09",
+      change_type: "LEGAL_NAME_CHANGE", label: "Legal name changed",
+      counterparty: null, tier: 2, event_date: "2021-12-09",
       date_basis: "recorded",
     },
   ],
@@ -303,5 +309,119 @@ describe("historySentence", () => {
 describe("the row cap", () => {
   it("shows ten rows before collapsing, matching what the tab promises", () => {
     expect(VISIBLE_ROWS).toBe(10);
+  });
+});
+
+// --------------------------------------------------------------------------
+// Board changes — Phase 194
+//
+// Numbers are Lloyds Bank PLC's, measured over its full 2,404 filings: 246
+// appointments and resignations between 1986 and 2026, of which 75 name the
+// officer. The other 322 officer filings are particulars changes and belong
+// to the administrative stream, which is what makes this one readable.
+// --------------------------------------------------------------------------
+
+function board(over: Partial<HistoryRawChange> = {}): HistoryRawChange {
+  return {
+    source_id: "companies_house",
+    record_type: "relationship",
+    raw_change_type: "AP01",
+    raw_field: "officers/director",
+    value_old: null,
+    value_new: null,
+    change_type: "OFFICER_APPOINTED",
+    label: "Officer appointed",
+    counterparty: "Mr Kelly Brian Bennett",
+    tier: 4,
+    event_date: "2026-09-01",
+    date_basis: "effective",
+    ...over,
+  };
+}
+
+function withEvents(events: HistoryRawChange[]): HistoryResponse {
+  return { ...RESP, events };
+}
+
+describe("boardChangesOf", () => {
+  it("keeps only Tier-4 events", () => {
+    const rows = boardChangesOf(withEvents([board(), board({ tier: 3 }), board({ tier: 1 })]));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].tier).toBe(4);
+  });
+
+  it("is empty rather than undefined when the response carries no events", () => {
+    expect(boardChangesOf({ ...RESP, events: [] })).toEqual([]);
+  });
+});
+
+describe("boardChangesSummary", () => {
+  it("counts the rows, spans them, and says how many name anybody", () => {
+    const rows = [
+      board({ event_date: "2026-09-01" }),
+      board({ event_date: "1986-05-08", counterparty: null, change_type: "OFFICER_RESIGNED" }),
+      board({ event_date: "1996-07-11", counterparty: null, change_type: "OFFICER_RESIGNED" }),
+    ];
+    expect(boardChangesSummary(rows)).toBe(
+      "3 appointments and resignations between 1986 and 2026 — 1 of which names the officer.",
+    );
+  });
+
+  it("says none rather than 0 when the register named nobody", () => {
+    const rows = [board({ counterparty: null }), board({ counterparty: null })];
+    expect(boardChangesSummary(rows)).toBe(
+      "2 appointments and resignations in 2026 — none of which name the officer.",
+    );
+  });
+
+  it("says each when every row names somebody", () => {
+    expect(boardChangesSummary([board(), board()])).toBe(
+      "2 appointments and resignations in 2026 — each naming the officer.",
+    );
+  });
+
+  it("reads singular for one row", () => {
+    expect(boardChangesSummary([board()])).toBe(
+      "1 appointment or resignation in 2026 — naming the officer.",
+    );
+  });
+
+  it("is null when there is nothing to open", () => {
+    expect(boardChangesSummary([])).toBeNull();
+  });
+});
+
+describe("buildTimelineRows with the board stream", () => {
+  it("leaves board rows out until they are asked for", () => {
+    const data = withEvents([board()]);
+    expect(buildTimelineRows(data, false).some((r) => r.kind === "board")).toBe(false);
+    expect(buildTimelineRows(data, false, true).some((r) => r.kind === "board")).toBe(true);
+  });
+
+  it("interleaves them with the notable rows, newest first", () => {
+    const data = withEvents([board({ event_date: "1990-01-01" })]);
+    const rows = buildTimelineRows(data, false, true);
+    const dates = rows.map((r) => r.date);
+    expect([...dates].sort((a, b) => b.localeCompare(a))).toEqual(dates);
+  });
+
+  it("does not pull the administrative stream in with them", () => {
+    const data = withEvents([board(), board({ tier: 3, change_type: null, label: null })]);
+    const rows = buildTimelineRows(data, false, true);
+    expect(rows.filter((r) => r.kind === "board")).toHaveLength(1);
+    expect(rows.some((r) => r.kind === "noise")).toBe(false);
+  });
+});
+
+describe("filingsTruncatedNotice", () => {
+  it("says which end is missing, because the register answers newest first", () => {
+    const notice = filingsTruncatedNotice({ ...RESP, filings_truncated: true });
+    expect(notice).toContain("more filings than this view reads");
+    expect(notice).toContain("oldest");
+  });
+
+  it("is null when the whole history was read", () => {
+    expect(filingsTruncatedNotice({ ...RESP, filings_truncated: false })).toBeNull();
+    expect(filingsTruncatedNotice(RESP)).toBeNull();
   });
 });

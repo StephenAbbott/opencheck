@@ -56,7 +56,26 @@ function noise(date: string): HistoryRawChange {
     value_old: null,
     value_new: null,
     change_type: null,
+    label: null,
+    counterparty: null,
     tier: 3,
+    event_date: date,
+    date_basis: "effective",
+  };
+}
+
+function boardChange(date: string, name: string | null = "Mr Kelly Brian Bennett"): HistoryRawChange {
+  return {
+    source_id: "companies_house",
+    record_type: "relationship",
+    raw_change_type: "AP01",
+    raw_field: "officers/director",
+    value_old: null,
+    value_new: null,
+    change_type: "OFFICER_APPOINTED",
+    label: "Officer appointed",
+    counterparty: name,
+    tier: 4,
     event_date: date,
     date_basis: "effective",
   };
@@ -197,6 +216,59 @@ describe("the timeline", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Hide administrative changes" }));
     expect(within(rail).getAllByRole("listitem")).toHaveLength(1);
+  });
+
+  it("keeps board turnover in a stream of its own, additive like the noise", async () => {
+    getHistory.mockResolvedValue(
+      response({
+        notable: [entry({ date: "2022-01-11" })],
+        events: [
+          boardChange("2026-09-01"),
+          boardChange("1996-07-11", null),
+          noise("2019-01-01"),
+        ],
+      }),
+    );
+    render(<HistoryPanel lei={LEI} legalName="Morrisons" />);
+    const rail = await screen.findByTestId("history-rail");
+    expect(within(rail).getAllByRole("listitem")).toHaveLength(1);
+
+    // Two controls, two streams: adding one must not add the other.
+    await userEvent.click(screen.getByRole("button", { name: "Add the 2 board changes" }));
+    expect(within(rail).getAllByRole("listitem")).toHaveLength(3);
+    expect(within(rail).getByText("Mr Kelly Brian Bennett")).toBeVisible();
+    expect(screen.queryByText("CS01")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Hide board changes" }));
+    expect(within(rail).getAllByRole("listitem")).toHaveLength(1);
+  });
+
+  it("says a filing that names nobody names nobody", async () => {
+    getHistory.mockResolvedValue(
+      response({ notable: [entry()], events: [boardChange("1996-07-11", null)] }),
+    );
+    render(<HistoryPanel lei={LEI} legalName="Morrisons" />);
+    await screen.findByTestId("history-rail");
+    await userEvent.click(screen.getByRole("button", { name: "Add the 1 board changes" }));
+    expect(screen.getByText("no name on the filing")).toBeVisible();
+    // And the stream states the gap rather than leaving it to be noticed.
+    expect(screen.getByText(/none of which name the officer/)).toBeVisible();
+  });
+
+  it("says so when the register holds more filings than the view read", async () => {
+    getHistory.mockResolvedValue(response({ filings_truncated: true }));
+    render(<HistoryPanel lei={LEI} legalName="Morrisons" />);
+    expect(
+      await screen.findByText(/holds more filings than this view reads/),
+    ).toBeVisible();
+    expect(screen.getByText(/oldest/)).toBeVisible();
+  });
+
+  it("does not mention truncation when the whole history was read", async () => {
+    getHistory.mockResolvedValue(response());
+    render(<HistoryPanel lei={LEI} legalName="Morrisons" />);
+    await screen.findByTestId("history-rail");
+    expect(screen.queryByText(/more filings than this view reads/)).toBeNull();
   });
 
   it("draws no timeline band at all when nothing notable was recorded", async () => {
