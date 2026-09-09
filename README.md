@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 190** — a History tab brings the change-over-time timeline out from under five source cards that were each showing the same merged, all-source answer, and says how rarely a register keeps any history at all.
+**Latest: Phase 191** — the FullCheck header now has two states: one primary action before a run, and a line summarising what was built after one, with the single-layer control moved into the canvas toolbar.
 
 → [Full development history](docs/status.md)
 
