@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 188** — a UK ownership chain can now be found in the local copy of the PSC register in a single step and then read back from Companies House all at once, so a nine-company chain that took dozens of waiting-in-turn register calls arrives in one round-trip.
+**Latest: Phase 189** — when a UK ownership chain is walked live rather than proposed by the local register copy, the record of how it was found no longer reports companies as missed by a graph that was never asked.
 
 → [Full development history](docs/status.md)
 
