@@ -268,15 +268,23 @@ class CompaniesHouseAdapter(SourceAdapter):
         root["related_companies"] = related
         root["unfollowed_pscs"] = unfollowed
         # How the chain was found, for the card's caption and the raw view.
-        # Counts and dates only — never a company number or a name.
-        root["chain_source"] = {
-            "source": stats.chain,
-            "related": len(related),
-            "predicted": len(predicted),
-            "missed": len(set(related) - predicted),
-            "extra": len(predicted - set(related)),
-            **graph_meta,
-        }
+        # Counts and dates only — never a company number or a name. A chain
+        # the graph did not propose carries the source and the size and
+        # nothing else: there is no proposal to score.
+        chain_source: dict[str, Any] = {"source": stats.chain, "related": len(related)}
+        if stats.chain == _CHAIN_GRAPH:
+            # The graph's accuracy against the register's own chain — only
+            # meaningful when the graph was actually asked. Phase 188 emitted
+            # these unconditionally, so a live walk reported every company it
+            # reached as "missed" by a graph that had never been consulted.
+            reached = set(related)
+            chain_source.update(
+                predicted=len(predicted),
+                missed=len(reached - predicted),
+                extra=len(predicted - reached),
+                **graph_meta,
+            )
+        root["chain_source"] = chain_source
         self._record_unfollowed(unfollowed, max_depth)
         validate_raw("companies_house", CHBundle, root)
         return root

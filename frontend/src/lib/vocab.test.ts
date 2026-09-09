@@ -317,6 +317,14 @@ describe("chainSourceCaption", () => {
     expect(text).not.toMatch(/not in the local copy/i);
   });
 
+  it("reads a chain with no accuracy fields as a clean one, not a broken one", () => {
+    // Phase 189: `missed` / `extra` are absent unless the graph was asked.
+    // A graph chain that carries neither must not grow a caveat by default.
+    const text = chainSourceCaption({ source: "graph", related: 3, snapshot_date: "2026-09-09" });
+    expect(text).toContain("UK PSC register");
+    expect(text).not.toMatch(/not in the local copy/i);
+  });
+
   it("still says where the chain came from without the graph's dates", () => {
     const text = chainSourceCaption({ source: "graph", related: 2 });
     expect(text).toContain("UK PSC register");
