@@ -32,7 +32,7 @@
  * is not there.
  */
 
-export type PanelId = "securities" | "subsidiaries";
+export type PanelId = "securities" | "subsidiaries" | "history";
 
 export interface PanelError {
   panel: PanelId;
@@ -45,12 +45,19 @@ export interface PanelError {
 const PANEL_LABEL: Record<PanelId, string> = {
   securities: "Listed securities",
   subsidiaries: "Subsidiary network",
+  // Phase 190. `/history` is the third endpoint outside the pipeline, and
+  // until the History tab it was the only one of the three whose failure the
+  // reader was told about *inside* the panel and nowhere else — fine while it
+  // hid behind a button nobody had pressed, wrong now that a tab claims to
+  // answer "what changed".
+  history: "Change history",
 };
 
 const PANEL_MISSING: Record<PanelId, string> = {
   securities:
     "whether this entity has securities on a sanctions list — the check did not run",
   subsidiaries: "the GLEIF subsidiary network for this entity",
+  history: "what has changed in this entity's records over time",
 };
 
 export function panelLabel(panel: PanelId): string {

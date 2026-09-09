@@ -1,42 +1,42 @@
-import { useEffect, useMemo, useState } from "react";
-import { getHistory } from "../../lib/api";
+/**
+ * HistoryTimeline — the vertical rail of dated changes (Phase 190).
+ *
+ * Presentational only. It is handed a fetched `HistoryResponse` and draws it;
+ * the fetch, the coverage sentence and the bands belong to `HistoryPanel`, and
+ * the ordering, labels, links and notices belong to `lib/historyMode.ts`.
+ *
+ * Before Phase 190 this component fetched for itself and was mounted by
+ * `SourceBucketCard` behind a per-source "Changes over time" button — five
+ * copies of one entity-wide timeline, one under each source that emits
+ * history, none of them addressable. Splitting the fetch out is what lets the
+ * tab ask once and say something true about the answer above the rail.
+ */
+
 import type { HistoryEntry, HistoryRawChange, HistoryResponse } from "../../lib/api";
+import {
+  basisLabel,
+  historySourceLabel,
+  recordUrl,
+  type Row,
+} from "../../lib/historyMode";
 
 // ---------------------------------------------------------------------
-// Source presentation — chips + links back to GLEIF / Companies House
+// Source chip — names the register and links back to its record
 // ---------------------------------------------------------------------
-
-const SOURCE_LABEL: Record<string, string> = {
-  gleif: "GLEIF",
-  companies_house: "Companies House",
-  nz_companies: "Companies Office (NZ)",
-  ariregister: "e-Äriregister (EE)",
-};
-
-export function sourceUrl(
-  sourceId: string,
-  lei: string,
-  companyNumber: string | null,
-): string | null {
-  if (sourceId === "gleif") return `https://search.gleif.org/#/record/${lei}`;
-  if (sourceId === "companies_house" && companyNumber)
-    return `https://find-and-update.company-information.service.gov.uk/company/${companyNumber}/filing-history`;
-  return null;
-}
 
 function SourceChip({
   sourceId,
   lei,
-  companyNumber,
+  registryNumbers,
 }: {
   sourceId: string;
   lei: string;
-  companyNumber: string | null;
+  registryNumbers: Record<string, string>;
 }) {
-  const label = SOURCE_LABEL[sourceId] ?? sourceId;
-  const url = sourceUrl(sourceId, lei, companyNumber);
+  const label = historySourceLabel(sourceId);
+  const url = recordUrl(sourceId, lei, registryNumbers);
   const classes =
-    "inline-flex items-center gap-0.5 text-[10px] font-mono rounded px-1.5 py-0.5 border";
+    "inline-flex items-center gap-0.5 text-oo-meta font-mono rounded px-1.5 py-0.5 border";
   const palette =
     sourceId === "gleif"
       ? "bg-blue-50 text-blue-700 border-blue-200"
@@ -44,9 +44,10 @@ function SourceChip({
         ? "bg-emerald-50 text-emerald-700 border-emerald-200"
         : sourceId === "ariregister"
           ? "bg-violet-50 text-violet-700 border-violet-200"
-          : "bg-teal-50 text-teal-700 border-teal-200";
-  if (!url)
-    return <span className={`${classes} ${palette}`}>{label}</span>;
+          : sourceId === "cvr_denmark"
+            ? "bg-rose-50 text-rose-700 border-rose-200"
+            : "bg-teal-50 text-teal-700 border-teal-200";
+  if (!url) return <span className={`${classes} ${palette}`}>{label}</span>;
   return (
     <a
       href={url}
@@ -56,20 +57,9 @@ function SourceChip({
     >
       {label}
       <span aria-hidden>↗</span>
-      <span className="sr-only"> (opens in new tab)</span>
+      <span className="sr-only"> — open the record in this register (opens in new tab)</span>
     </a>
   );
-}
-
-// ---------------------------------------------------------------------
-// Date-basis honesty label
-// ---------------------------------------------------------------------
-
-export function basisLabel(basis: string): string {
-  if (basis === "effective") return "as filed";
-  if (basis === "recorded") return "as recorded by GLEIF";
-  if (basis === "snapshot_window") return "approximate";
-  return "";
 }
 
 // ---------------------------------------------------------------------
@@ -77,8 +67,7 @@ export function basisLabel(basis: string): string {
 // ---------------------------------------------------------------------
 
 function tierAccent(tier: number) {
-  if (tier === 1)
-    return { dot: "bg-teal-500", card: "border-teal-200 bg-teal-50/40" };
+  if (tier === 1) return { dot: "bg-teal-500", card: "border-teal-200 bg-teal-50/40" };
   return { dot: "bg-oo-blue", card: "border-blue-200 bg-blue-50/40" };
 }
 
@@ -89,11 +78,11 @@ function tierAccent(tier: number) {
 function NotableRow({
   entry,
   lei,
-  companyNumber,
+  registryNumbers,
 }: {
   entry: HistoryEntry;
   lei: string;
-  companyNumber: string | null;
+  registryNumbers: Record<string, string>;
 }) {
   const accent = tierAccent(entry.tier);
   const transition =
@@ -115,44 +104,38 @@ function NotableRow({
       />
       <div className={`rounded-oo border px-3 py-2 ${accent.card}`}>
         <div className="flex items-start justify-between gap-2">
-          <span className="text-[12px] font-mono text-oo-ink">
+          <span className="text-oo-small font-mono text-oo-ink">
             {entry.date ?? "date unknown"}
-            <span className="ml-1.5 text-[10px] text-oo-muted">
+            <span className="ml-1.5 text-oo-meta text-oo-muted">
               {basisLabel(entry.date_basis)}
             </span>
           </span>
-          <span className="flex flex-wrap items-center justify-end gap-1 shrink-0">
+          <span className="flex flex-wrap items-center gap-1 justify-end shrink-0">
             {entry.sources.map((s) => (
-              <SourceChip
-                key={s}
-                sourceId={s}
-                lei={lei}
-                companyNumber={companyNumber}
-              />
+              <SourceChip key={s} sourceId={s} lei={lei} registryNumbers={registryNumbers} />
             ))}
           </span>
         </div>
-        <div className="mt-1 font-head font-bold text-[13px] text-oo-ink leading-snug">
+        <p className="mt-1 font-head font-bold text-oo-small text-oo-ink">
           {entry.label}
           {entry.boosted && (
-            <span className="ml-2 text-[10px] font-mono bg-amber-50 text-amber-800 border border-amber-200 rounded px-1 py-0.5">
+            <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-oo-meta font-normal text-amber-800">
               flagged
             </span>
           )}
-        </div>
+        </p>
         {transition && (
-          <div className="mt-0.5 text-[12px] text-oo-ink break-words">
+          <p className="mt-0.5 font-mono text-oo-meta text-oo-muted break-words">
             {transition}
-          </div>
+          </p>
         )}
         {entry.counterparty && (
-          <div className="mt-0.5 text-[11px] font-mono text-oo-muted break-words">
+          <p className="mt-0.5 font-mono text-oo-meta text-oo-muted break-words">
             {entry.counterparty}
-            {interest && <span className="ml-1">· {interest}</span>}
-          </div>
+          </p>
         )}
-        {!entry.counterparty && interest && (
-          <div className="mt-0.5 text-[11px] font-mono text-oo-muted">{interest}</div>
+        {interest && (
+          <p className="mt-0.5 text-oo-meta text-oo-muted">{interest}</p>
         )}
       </div>
     </li>
@@ -179,8 +162,10 @@ function NoiseRow({ raw }: { raw: HistoryRawChange }) {
         className="absolute left-[5px] top-1.5 h-2 w-2 rounded-full bg-oo-rule ring-2 ring-white"
         aria-hidden
       />
-      <div className="text-[11px] text-oo-muted">
+      <div className="text-oo-meta text-oo-muted">
         <span className="font-mono">{raw.event_date ?? "—"}</span>
+        <span className="mx-1.5">·</span>
+        <span className="font-mono">{historySourceLabel(raw.source_id)}</span>
         <span className="mx-1.5">·</span>
         <span className="font-mono">{fieldLabel(raw)}</span>
         <span className="mx-1.5">·</span>
@@ -191,201 +176,35 @@ function NoiseRow({ raw }: { raw: HistoryRawChange }) {
 }
 
 // ---------------------------------------------------------------------
-// HistoryTimeline — vertical rail of notable changes (Time Machine)
+// The rail
 // ---------------------------------------------------------------------
-
-export type Row =
-  | { kind: "notable"; date: string; entry: HistoryEntry }
-  | { kind: "noise"; date: string; raw: HistoryRawChange };
-
-/** Tier-3 (administrative noise) raw changes, used by the "show admin" toggle. */
-export function noiseEventsOf(data: HistoryResponse): HistoryRawChange[] {
-  return (data.events ?? []).filter((e) => e.tier === 3);
-}
-
-// Sentinel date for undated rows so they always sort to the bottom.
-const _UNDATED = "9999-12-31";
-
-/** Build the rail rows: notable entries always; noise rows when toggled on.
- * Sorted newest-first (reverse chronological); undated rows pinned last. */
-export function buildTimelineRows(
-  data: HistoryResponse,
-  showNoise: boolean,
-): Row[] {
-  const out: Row[] = data.notable.map((entry) => ({
-    kind: "notable",
-    date: entry.date ?? _UNDATED,
-    entry,
-  }));
-  if (showNoise) {
-    for (const raw of noiseEventsOf(data))
-      out.push({ kind: "noise", date: raw.event_date ?? _UNDATED, raw });
-  }
-  out.sort((a, b) => {
-    const aMissing = a.date === _UNDATED;
-    const bMissing = b.date === _UNDATED;
-    if (aMissing !== bMissing) return aMissing ? 1 : -1; // undated last
-    return b.date.localeCompare(a.date); // newest first
-  });
-  return out;
-}
-
-// ---------------------------------------------------------------------
-// Degradation notice (Phase 146)
-// ---------------------------------------------------------------------
-
-/**
- * What to tell the reader when GLEIF would not answer, or `null`.
- *
- * The Time Machine's silent failure was the worst of the three GLEIF panels:
- * a 429 emptied the change log AND — because the Companies House / NZ /
- * Estonia / Denmark branches gate on a registry number that only the GLEIF
- * record carries — stopped every other source from being attempted, leaving a
- * near-empty timeline that read as "checked, nothing happened". These
- * sentences say which of those two things actually occurred.
- *
- * Exported so it can be tested as a pure function, like `basisLabel` and
- * `buildTimelineRows` above.
- */
-export function historyDegradedNotice(data: HistoryResponse): string | null {
-  const recordDown = data.gleif_record_available === false;
-  const eventsDown = data.gleif_events_available === false;
-  if (!recordDown && !eventsDown) return null;
-
-  const parts: string[] = [];
-  if (eventsDown && recordDown) {
-    parts.push(
-      "GLEIF is rate-limiting or unreachable, so this entity's change history could not be checked.",
-    );
-  } else if (eventsDown) {
-    parts.push(
-      "GLEIF did not return its change log, so any GLEIF-recorded changes are missing from this timeline.",
-    );
-  } else {
-    parts.push("GLEIF did not return this entity's record.");
-  }
-  if (data.registry_sources_blocked) {
-    parts.push(
-      "The company-registry histories (Companies House, NZ, Estonia, Denmark) could not be attempted either — the registry number they need comes from that record.",
-    );
-  } else if (recordDown && data.company_number_basis === "cached") {
-    parts.push(
-      "The company-registry histories were still attempted, using a registry number from OpenCheck's cached copy of the GLEIF record.",
-    );
-  }
-  parts.push("What is shown is not a finding that nothing changed.");
-  return parts.join(" ");
-}
 
 export function HistoryTimeline({
+  rows,
   lei,
-  entityName,
+  data,
 }: {
+  rows: Row[];
   lei: string;
-  entityName?: string;
+  data: HistoryResponse;
 }) {
-  const [data, setData] = useState<HistoryResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showNoise, setShowNoise] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    getHistory(lei, true)
-      .then((d) => {
-        if (!cancelled) setData(d);
-      })
-      .catch((e) => {
-        if (!cancelled) setError(String(e));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [lei]);
-
-  const degraded = useMemo(() => (data ? historyDegradedNotice(data) : null), [data]);
-  const noiseEvents = useMemo(() => (data ? noiseEventsOf(data) : []), [data]);
-  const rows = useMemo<Row[]>(
-    () => (data ? buildTimelineRows(data, showNoise) : []),
-    [data, showNoise],
-  );
-
   return (
-    <section className="mt-3 bg-white border border-oo-rule rounded-oo overflow-hidden">
-      <header className="px-5 py-3 border-b border-oo-rule flex items-baseline justify-between gap-3">
-        <h3 className="font-head font-bold text-[14px] text-oo-ink">
-          Timeline{entityName ? ` — ${entityName}` : ""}
-        </h3>
-        {data && (
-          <span className="text-[11px] font-mono text-oo-muted shrink-0">
-            {data.sources.map((s) => SOURCE_LABEL[s] ?? s).join(" · ") || "no sources"}
-          </span>
-        )}
-      </header>
-
-      <div className="px-5 py-4">
-        {loading && <p role="status" className="text-[13px] text-oo-muted">Loading change history…</p>}
-        {error && <p role="alert" className="text-[13px] text-red-700">{error}</p>}
-
-        {/* Phase 146 — the upstream refused. Amber, above the timeline
-            (which may still hold events from the sources that did answer). */}
-        {!loading && !error && degraded && (
-          <div
-            role="status"
-            className="mb-3 rounded-oo border border-amber-200 bg-amber-50 px-3 py-2 text-oo-meta text-amber-900"
-          >
-            {degraded}
-          </div>
-        )}
-
-        {!loading && !error && data && data.notable.length === 0 && !degraded && (
-          <p className="text-[13px] text-oo-muted leading-[1.6]">
-            No notable ownership or identity changes found in the available
-            history{data.available ? "" : " (live history not available)"}.
-          </p>
-        )}
-
-        {!loading && !error && data && data.notable.length > 0 && (
-          <>
-            <ol className="relative">
-              <span
-                className="absolute left-[8px] top-1 bottom-1 w-px bg-oo-rule"
-                aria-hidden
-              />
-              {rows.map((row, i) =>
-                row.kind === "notable" ? (
-                  <NotableRow
-                    key={`n-${i}`}
-                    entry={row.entry}
-                    lei={lei}
-                    companyNumber={data.company_number}
-                  />
-                ) : (
-                  <NoiseRow key={`x-${i}`} raw={row.raw} />
-                ),
-              )}
-            </ol>
-
-            {noiseEvents.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowNoise((v) => !v)}
-                aria-pressed={showNoise}
-                className="mt-3 text-[11px] font-mono text-oo-muted hover:text-oo-ink hover:underline"
-              >
-                {showNoise
-                  ? "Hide administrative changes"
-                  : `See full timeline (${noiseEvents.length})`}
-              </button>
-            )}
-          </>
-        )}
-      </div>
-    </section>
+    <ol className="relative" data-testid="history-rail">
+      <span className="absolute left-[8px] top-1 bottom-1 w-px bg-oo-rule" aria-hidden />
+      {rows.map((row, i) =>
+        row.kind === "notable" ? (
+          <NotableRow
+            key={`n-${i}`}
+            entry={row.entry}
+            lei={lei}
+            registryNumbers={data.registry_numbers ?? {}}
+          />
+        ) : (
+          <NoiseRow key={`x-${i}`} raw={row.raw} />
+        ),
+      )}
+    </ol>
   );
 }
+
+export default HistoryTimeline;

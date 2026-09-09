@@ -667,9 +667,15 @@ export interface HistoryResponse {
   registry_sources_blocked: boolean;
   /** "live" | "cached" | null — where `company_number` came from. */
   company_number_basis: string | null;
+  /** Phase 190 — `{source_id: registry number}`, how each register that keeps
+   *  a change log addresses this company, so a dated row can link back to the
+   *  record that published it. Present means that register knows the company,
+   *  not that its history was fetched; `sources` says what answered. */
+  registry_numbers: Record<string, string>;
 }
 
-/** Fetch the Time Machine timeline for an LEI (notable changes, GLEIF + CH). */
+/** Fetch the merged change history for an LEI — every register OpenCheck
+ *  holds a change log for (GLEIF, Companies House, NZ, Estonia, Denmark). */
 export async function getHistory(
   lei: string,
   includeNoise = false,

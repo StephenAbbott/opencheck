@@ -155,21 +155,28 @@ export const FEATURES: Feature[] = [
     cta: { label: "Screen a list", href: "/batch" },
   },
   {
+    // The anchor stays `time-machine` though the feature is now called
+    // History: `/features#time-machine` is in talks and links, and
+    // `docs/time-machine.md` still holds the design. Renaming the address to
+    // match the label would break the one thing an anchor exists for.
     id: "time-machine",
-    name: "Time Machine",
+    name: "History",
     kind: "Capability",
     icon: "history",
     accent: "#b45309", // oo.graph.same
     glyph: "#fcd34d", // oo.warn.border
     description:
-      "Rebuilds how a company's ownership, control and identity have changed over time, merging GLEIF, Companies House, Denmark's CVR and more onto one axis. Routine administrative filings are folded away, and every event says whether its date is the effective one or the recorded one.",
+      "Merges how a company's ownership, control and identity have changed onto one axis, drawn from every register that keeps a change log — GLEIF, Companies House, New Zealand, Estonia and Denmark — with the routine administrative filings folded away. Each dated row names the register that recorded it, links back to that record, and says whether the date is when the change took effect or when the register noticed.",
     image: {
-      src: "/features/time-machine.png",
-      alt: "A timeline of a company's changes: a new parent, a legal form change and a name change, each with its date, whether that date is effective or recorded, and the registers that reported it.",
+      src: "/features/history.png",
+      alt: "The History tab for a company: a sentence counting the registers that publish a change log, then a timeline of dated changes, newest first, each carrying the register that recorded it and whether its date is the effective one or the recorded one.",
       width: 1648,
-      height: 736,
+      height: 812,
     },
-    cta: { label: "See the timeline on BP p.l.c.", href: "/?lei=213800LH1BZH3DI6G760" },
+    cta: {
+      label: "Open the History tab for GSK",
+      href: "/?lei=5493000HZTVUYLO1D793&mode=history",
+    },
   },
   {
     id: "network-visualisations",

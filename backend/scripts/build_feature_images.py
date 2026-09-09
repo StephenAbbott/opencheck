@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the six illustrations on the /features page.
+"""Build the illustrations on the /features page.
 
 These are **not screenshots**. Each one is a cropped mock of the real
 component, drawn here from the shipped design tokens (the same values as
@@ -25,7 +25,8 @@ Fonts for Bitter / DM Sans / DM Mono)::
 
     python3 backend/scripts/build_feature_images.py --out frontend/public/features
 
-Output: 1,648px wide PNGs, quantised to 200 colours, 53-74 KB each.
+Output: 1,648px wide PNGs, quantised to 200 colours, 54-123 KB each
+(the range grew with the taller two-band vignettes: subsidiaries, history).
 """
 
 import argparse
@@ -271,39 +272,72 @@ def batch():
                 f'{paste}{table}</div>')
 
 # ------------------------------------------------------------------ 5 Time Machine
-def timemachine():
-    TEAL="#0d9488"
-    def ev(y, col, date, basis, title, detail, src):
+def history():
+    """The History tab (Phase 190): the coverage sentence over every register
+    that keeps a change log, then the merged timeline itself.
+
+    Every number and value here is GSK PLC's real answer from `/history` —
+    10 notable changes across two registers, 3 of them recorded by both, and
+    1,121 administrative filings underneath. The four rows are chosen to show
+    the three states the tab distinguishes: two changes both registers
+    recorded, one only GLEIF did (a case-only rename it noticed rather than a
+    filing, dated `as recorded` for exactly that reason), and one only
+    Companies House filed.
+    """
+    AMBER = "#b45309"  # oo.graph.same — the History accent
+    TEAL = "#0d9488"
+    def ev(col, date, basis, title, detail, src, last=False):
+        rail = ("" if last else
+                f'<div style="position:absolute;left:5.5px;top:17px;bottom:-18px;width:1.5px;background:{RULE}"></div>')
+        det = (f'<p style="font-family:{MONO};font-size:11.5px;line-height:1.5;color:{MUTED};margin:0 0 6px">{detail}</p>'
+               if detail else '<div style="height:4px"></div>')
         return (f'<div style="display:flex;gap:16px;padding-bottom:18px;position:relative">'
-                f'<div style="flex:0 0 88px;text-align:right;padding-top:1px">'
+                f'<div style="flex:0 0 92px;text-align:right;padding-top:1px">'
                 f'<div style="font-family:{MONO};font-size:12px;color:{NAVY};font-weight:500">{date}</div>'
                 f'<div style="font-family:{BODY};font-size:10px;color:{MUTED}">{basis}</div></div>'
                 f'<div style="flex:0 0 14px;position:relative">'
                 f'<div style="width:12px;height:12px;border-radius:50%;background:{col};margin-top:3px"></div>'
-                f'<div style="position:absolute;left:5.5px;top:17px;bottom:-18px;width:1.5px;background:{RULE}"></div></div>'
+                f'{rail}</div>'
                 f'<div style="flex:1 1 0;min-width:0">'
-                f'<div style="font-family:{BODY};font-size:13.5px;font-weight:700;color:{NAVY};margin-bottom:3px">{title}</div>'
-                f'<p style="font-family:{BODY};font-size:12px;line-height:1.55;color:{MUTED};margin:0 0 6px">{detail}</p>'
-                f'{src}</div></div>')
-    body = (ev(0, TEAL, "2021-11-19", "effective", "New parent — ownership",
-               'Market Bidco Limited began consolidating the company. The interest start date is the '
-               'relationship period’s, not the date GLEIF recorded it in 2023.',
-               chip("GLEIF", "#fff", RULE, MUTED))
-            + ev(0, GO, "2021-10-27", "effective", "Legal form changed",
-                 'Public limited company → private limited company. The 8888 → B6ES re-encoding earlier '
-                 'that year is suppressed: an encoding backfill is not a change.',
-                 chip("Companies House", "#fff", RULE, MUTED) + " " + chip("GLEIF", "#fff", RULE, MUTED))
-            + ev(0, GO, "2021-10-27", "effective", "Legal name changed",
-                 'Wm Morrison Supermarkets PLC → Wm Morrison Supermarkets Limited. Both sources report it; '
-                 'the effective date wins over the recorded one.',
-                 chip("Companies House", "#fff", RULE, MUTED)))
-    toggle = (f'<div style="border-top:1px dashed {SOFTB};margin-top:2px;padding-top:12px">'
-              f'<span style="display:inline-flex;align-items:center;gap:8px;font-family:{BODY};font-size:12.5px;'
-              f'color:{BLUE};font-weight:500">▸ Show 11 administrative changes'
-              f'<span style="font-family:{BODY};font-size:11px;color:{MUTED};font-weight:400">'
-              f'annual renewals, timezone backfills</span></span></div>')
-    return page(f'{label("Time Machine · WM MORRISON SUPERMARKETS LIMITED")}'
-                + card(body + toggle, 20))
+                f'<div style="font-family:{HEAD};font-size:13.5px;font-weight:700;color:{NAVY};margin-bottom:3px">{title}</div>'
+                f'{det}{src}</div></div>')
+
+    ch = chip("Companies House \u2197", "#fff", RULE, MUTED)
+    gl = chip("GLEIF \u2197", GOTINT, GOTB, GOT)
+
+    sentence = (f'<p style="font-family:{BODY};font-size:14px;line-height:1.6;color:{NAVY};margin:0;max-width:82ch">'
+                f'Two registers publish a change log for <b>GSK PLC</b> \u2014 10 notable changes between 2009 '
+                f'and 2024. 3 of them are recorded by more than one register, which is how a filing date and '
+                f'the day a register noticed can be told apart.</p>'
+                f'<p style="font-family:{BODY};font-size:12px;line-height:1.6;color:{MUTED};margin:6px 0 0;max-width:82ch">'
+                f'Most registers publish no history at all, and those that do keep changes of name, address and '
+                f'status far better than changes of ownership. What is missing here is usually a register that '
+                f'keeps no record, not a change that did not happen.</p>')
+    def pill(name, n):
+        return (f'<span style="display:inline-flex;gap:6px;align-items:baseline;background:{BG};border:1px solid {RULE};'
+                f'border-radius:10px;padding:6px 10px;font-family:{BODY};font-size:12px;color:{NAVY}">'
+                f'<b>{name}</b><span style="color:{MUTED}">\u00b7 {n} notable</span></span>')
+    pills = ('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'
+             + pill("GLEIF", "7") + pill("Companies House", "6") + '</div>')
+    cover = card(label("What the registers keep", 8) + sentence + pills, 18)
+
+    body = (ev(GO, "2024-07-18", "as filed", "Address changed", "", ch + " " + gl)
+            + ev(GO, "2022-05-16", "as filed", "Legal name changed", "", ch + " " + gl)
+            + ev(GO, "2019-08-02", "as recorded by GLEIF", "Legal name changed",
+                 "GlaxoSmithKline PLC \u2192 GLAXOSMITHKLINE PLC", gl)
+            + ev(GO, "2012-03-16", "as filed", "Legal name changed", "", ch, last=True))
+    controls = (f'<div style="display:flex;gap:10px;align-items:center;margin-top:2px">'
+                f'<span style="display:inline-flex;align-items:center;height:36px;padding:0 16px;'
+                f'border:1px solid {SOFTB};border-radius:8px;background:#fff;font-family:{BODY};'
+                f'font-size:12.5px;font-weight:500;color:{BLUE}">Show all 10 rows</span>'
+                f'<span style="font-family:{BODY};font-size:12px;color:{MUTED}">'
+                f'Add the 1,121 administrative changes</span></div>')
+    band = card(f'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px">'
+                f'<span style="font-family:{HEAD};font-weight:700;font-size:15px;color:{NAVY}">Changes over time</span>'
+                f'<span style="font-family:{BODY};font-size:11px;color:{MUTED};white-space:nowrap">'
+                f'most recent first \u00b7 one axis across every register</span></div>'
+                f'{body}{controls}', 18)
+    return page(f'{cover}<div style="height:14px"></div>{band}')
 
 # ------------------------------------------------------------------ 6 Network
 def network():
@@ -406,7 +440,7 @@ def subsidiaries():
     return page(f'{cover}<div style="height:14px"></div>{lists}')
 
 VIGS = {"quickcheck": quickcheck, "fullcheck": fullcheck, "backgroundcheck": backgroundcheck,
-        "batch": batch, "time-machine": timemachine, "network": network,
+        "batch": batch, "history": history, "network": network,
         "subsidiaries": subsidiaries}
 
 

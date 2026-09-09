@@ -1,11 +1,15 @@
 # Time Machine — change-over-time spec (draft)
 
-**Status:** draft for discussion · **Owner:** Stephen · **Last updated:** 2026-06-22
+**Status:** shipped as the History tab (Phase 190) · **Owner:** Stephen · **Last updated:** 2026-09-09
 
 A "Time Machine" / History view for OpenCheck that surfaces a simplified
 timeline of **notable** changes to an entity's ownership, control and identity,
 drawn from sources that publish historical data — starting with **GLEIF** and
 **Companies House (UK PSC)**, and designed to extend to any future source.
+
+Since Phase 190 it is a check mode of its own, `?mode=history`, rather than a
+panel under a source card. See "Where it renders" below for why that move was
+overdue.
 
 The point is not the timeline widget (Structuriser and Stephen's own
 [bods-timeline](https://github.com/StephenAbbott/bods-timeline) already do
@@ -235,6 +239,43 @@ To add a source to Time Machine:
 
 The renderer, the tier suppression, the boost engine and the BODS mapping are
 **unchanged**. The codelist is the contract.
+
+## Where it renders (Phase 190)
+
+The timeline is **the History tab** — `?mode=history`, the third topic tab,
+between Subsidiaries and Climate & ESG.
+
+Until Phase 190 it rendered behind a "Changes over time" button on each source
+card whose source emits history. That was wrong in a way worth recording,
+because the mistake is easy to repeat: the timeline is **entity-scoped and
+all-source**, so every one of those five buttons mounted the same component
+with the same LEI and rendered *the same merged timeline*. A report could show
+it five times, each copy captioned by a source that had contributed only part
+of it, and none of the five had a URL. `assemble.py` merges by design; a
+per-source affordance for a merged artifact was always going to say something
+untrue about what it opened.
+
+What the tab adds beyond a home:
+
+* **A coverage sentence built from the numbers** (`lib/historyMode.ts`), in the
+  Subsidiaries tab's voice: how many registers publish a change log, how many
+  changes that came to, over what span, and how many of them more than one
+  register recorded. Corroboration is the merge's own evidence and is worth
+  stating.
+* **The scarcity said out loud.** Five of the registers OpenCheck reads keep a
+  change log; the rest answer only about *now*. FATF R.24/R.25 ask registers to
+  hold beneficial-ownership records for at least five years, and in practice
+  most keep changes of name, address and status far better than changes of
+  ownership. A thin timeline is nearly always a record-keeping fact rather than
+  a fact about the company, and the tab says so above the rail rather than
+  leaving silence to be read as evidence.
+* **Ten rows, then a control.** Notable histories are short (GSK 10, Shell 5,
+  BP 3) but the administrative stream underneath is not — GSK's is 1,121 — and
+  it used to render in one press.
+* **A link per row.** `/history` grew `registry_numbers` in Phase 190 for this:
+  the four national registers each address the company by their own number, and
+  without it a New Zealand, Estonian or Danish row could be shown and not
+  sourced.
 
 ## Emitters (current)
 

@@ -1,0 +1,307 @@
+/**
+ * The History tab's values layer (Phase 190).
+ *
+ * These claims moved here from `components/cdd/HistoryTimeline.test.ts` when
+ * the pure helpers moved out of the component: the frontend's node tier is
+ * where a sentence, an order or a link is pinned, and every one of these is
+ * one of those. What the markup does with them belongs to
+ * `HistoryPanel.test.tsx`.
+ */
+import { describe, it, expect } from "vitest";
+
+import type { HistoryResponse } from "./api";
+import {
+  basisLabel,
+  buildTimelineRows,
+  corroboratedCount,
+  datedSpan,
+  historyDegradedNotice,
+  historySentence,
+  historySourceLabel,
+  noiseEventsOf,
+  recordUrl,
+  silentRegisters,
+  VISIBLE_ROWS,
+} from "./historyMode";
+
+const _LEI = "213800IN6LSRGTZSOS29";
+
+const RESP: HistoryResponse = {
+  lei: _LEI,
+  company_number: "00358949",
+  available: true,
+  gleif_record_available: true,
+  gleif_events_available: true,
+  registry_sources_blocked: false,
+  company_number_basis: "live",
+  registry_numbers: { companies_house: "00358949" },
+  sources: ["gleif", "companies_house"],
+  notable_count: 3,
+  notable: [
+    {
+      change_type: "LEGAL_FORM_CHANGE", label: "Legal form changed", tier: 2,
+      record_type: "entity", date: "2022-01-11", date_basis: "effective",
+      date_confidence: "high", value_old: "B6ES", value_new: "H0PO",
+      sources: ["companies_house", "gleif"], corroborating_sources: ["gleif"],
+      counterparty: null, interest_start_date: null, interest_end_date: null,
+      boosted: false,
+    },
+    {
+      change_type: "LEGAL_NAME_CHANGE", label: "Legal name changed", tier: 2,
+      record_type: "entity", date: "2021-12-01", date_basis: "effective",
+      date_confidence: "high", value_old: "WM MORRISON SUPERMARKETS P L C",
+      value_new: "WM MORRISON SUPERMARKETS LIMITED",
+      sources: ["companies_house", "gleif"], corroborating_sources: ["gleif"],
+      counterparty: null, interest_start_date: null, interest_end_date: null,
+      boosted: false,
+    },
+    {
+      change_type: "OWNER_ADDED", label: "Owner / parent added", tier: 1,
+      record_type: "relationship", date: "2023-11-25", date_basis: "recorded",
+      date_confidence: "medium", value_old: null,
+      value_new: "IS_DIRECTLY_CONSOLIDATED_BY", sources: ["gleif"],
+      corroborating_sources: [], counterparty: "549300RKU7UEPSC42U63",
+      interest_start_date: "2021-11-01", interest_end_date: null, boosted: false,
+    },
+  ],
+  events: [
+    {
+      source_id: "gleif", record_type: "entity", raw_change_type: "UPDATE",
+      raw_field: "/lei:.../lei:Registration/lei:NextRenewalDate",
+      value_old: "2026-01-11", value_new: "2027-01-11", change_type: null,
+      tier: 3, event_date: "2025-11-20", date_basis: "recorded",
+    },
+    {
+      source_id: "companies_house", record_type: "entity", raw_change_type: "CS01",
+      raw_field: "confirmation-statement", value_old: null, value_new: null,
+      change_type: null, tier: 3, event_date: "2022-03-01", date_basis: "effective",
+    },
+    // A notable (tier-2) raw event — must NOT be treated as noise.
+    {
+      source_id: "gleif", record_type: "entity", raw_change_type: "UPDATE",
+      raw_field: "/lei:.../lei:Entity/lei:LegalName", value_old: "x", value_new: "y",
+      change_type: "LEGAL_NAME_CHANGE", tier: 2, event_date: "2021-12-09",
+      date_basis: "recorded",
+    },
+  ],
+};
+
+describe("noiseEventsOf", () => {
+  it("keeps only Tier-3 events", () => {
+    const noise = noiseEventsOf(RESP);
+    expect(noise).toHaveLength(2);
+    expect(noise.every((e: { tier: number }) => e.tier === 3)).toBe(true);
+    // The tier-2 LegalName raw event is excluded.
+    expect(noise.some((e: { change_type: string | null }) => e.change_type === "LEGAL_NAME_CHANGE")).toBe(false);
+  });
+});
+
+describe("buildTimelineRows", () => {
+  it("shows only notable rows by default, newest first", () => {
+    const rows = buildTimelineRows(RESP, false);
+    expect(rows).toHaveLength(3);
+    expect(rows.every((r) => r.kind === "notable")).toBe(true);
+    expect(rows.map((r) => r.date)).toEqual([
+      "2023-11-25", "2022-01-11", "2021-12-01",
+    ]);
+  });
+
+  it("interleaves noise rows by date when toggled on (newest first)", () => {
+    const rows = buildTimelineRows(RESP, true);
+    expect(rows).toHaveLength(5); // 3 notable + 2 noise
+    expect(rows.map((r) => r.date)).toEqual([
+      "2025-11-20", "2023-11-25", "2022-03-01", "2022-01-11", "2021-12-01",
+    ]);
+    // The 2025-11-20 and 2022-03-01 rows are the noise ones.
+    const noiseRows = rows.filter((r) => r.kind === "noise");
+    expect(noiseRows.map((r) => r.date)).toEqual(["2025-11-20", "2022-03-01"]);
+  });
+});
+
+describe("recordUrl", () => {
+  it("links GLEIF to the LEI record, with no registry number needed", () => {
+    expect(recordUrl("gleif", _LEI)).toBe(`https://search.gleif.org/#/record/${_LEI}`);
+  });
+
+  it("links each national register by its own number", () => {
+    // Phase 190: before `registry_numbers` only these first two could be
+    // linked, and a New Zealand, Estonian or Danish row was shown with no way
+    // back to the record that published it.
+    const n = {
+      companies_house: "00358949",
+      nz_companies: "9429036731815",
+      ariregister: "10000598",
+      cvr_denmark: "12345678",
+    };
+    expect(recordUrl("companies_house", _LEI, n)).toBe(
+      "https://find-and-update.company-information.service.gov.uk/company/00358949/filing-history",
+    );
+    expect(recordUrl("nz_companies", _LEI, n)).toContain("9429036731815");
+    expect(recordUrl("ariregister", _LEI, n)).toBe(
+      "https://ariregister.rik.ee/eng/company/10000598",
+    );
+    expect(recordUrl("cvr_denmark", _LEI, n)).toBe(
+      "https://datacvr.virk.dk/enhed/virksomhed/12345678",
+    );
+  });
+
+  it("returns null rather than a broken link when the number is absent", () => {
+    for (const id of ["companies_house", "nz_companies", "ariregister", "cvr_denmark"]) {
+      expect(recordUrl(id, _LEI, {})).toBeNull();
+    }
+    expect(recordUrl("some_future_source", _LEI, { some_future_source: "1" })).toBeNull();
+  });
+});
+
+describe("historySourceLabel", () => {
+  it("names every register that emits history, Denmark included", () => {
+    // cvr_denmark was missing from the label map until Phase 190, so a Danish
+    // row chipped as the raw slug.
+    expect(historySourceLabel("cvr_denmark")).toBe("CVR (DK)");
+    expect(historySourceLabel("gleif")).toBe("GLEIF");
+    expect(historySourceLabel("companies_house")).toBe("Companies House");
+    expect(historySourceLabel("nz_companies")).toBe("Companies Office (NZ)");
+    expect(historySourceLabel("ariregister")).toBe("e-Äriregister (EE)");
+  });
+
+  it("falls back to the slug rather than rendering nothing", () => {
+    expect(historySourceLabel("brreg")).toBe("brreg");
+  });
+});
+
+describe("basisLabel", () => {
+  it("labels effective vs recorded honestly", () => {
+    expect(basisLabel("effective")).toBe("as filed");
+    expect(basisLabel("recorded")).toBe("as recorded by GLEIF");
+  });
+});
+
+describe("historyDegradedNotice (Phase 146)", () => {
+  it("says nothing when both GLEIF calls answered", () => {
+    expect(historyDegradedNotice(RESP)).toBeNull();
+  });
+
+  it("names the compounding failure: no record means no registry histories", () => {
+    const notice = historyDegradedNotice({
+      ...RESP,
+      notable: [],
+      events: [],
+      available: false,
+      gleif_record_available: false,
+      gleif_events_available: false,
+      registry_sources_blocked: true,
+      company_number_basis: null,
+      company_number: null,
+    });
+    expect(notice).toMatch(/could not be checked/);
+    expect(notice).toMatch(/Companies House/);
+    expect(notice).toMatch(/not a finding/);
+  });
+
+  it("distinguishes a missing change log from a missing record", () => {
+    const notice = historyDegradedNotice({
+      ...RESP,
+      gleif_events_available: false,
+    });
+    expect(notice).toMatch(/change log/);
+    // The registry sources ran, so it must not claim they were blocked.
+    expect(notice).not.toMatch(/could not be attempted/);
+  });
+
+  it("says the registry number came from cache when it did", () => {
+    const notice = historyDegradedNotice({
+      ...RESP,
+      gleif_record_available: false,
+      registry_sources_blocked: false,
+      company_number_basis: "cached",
+    });
+    expect(notice).toMatch(/cached copy/);
+    expect(notice).not.toMatch(/could not be attempted/);
+  });
+});
+
+describe("datedSpan and corroboratedCount", () => {
+  it("spans the earliest and latest dated entry by year", () => {
+    expect(datedSpan(RESP.notable)).toEqual({ from: "2021", to: "2023" });
+  });
+
+  it("has no span when nothing is dated, rather than inventing one", () => {
+    expect(datedSpan(RESP.notable.map((e) => ({ ...e, date: null })))).toBeNull();
+    expect(datedSpan([])).toBeNull();
+  });
+
+  it("counts only the entries a second register also recorded", () => {
+    // Two of the three carry both sources; the GLEIF-only ownership change
+    // does not, and must not be counted as agreed.
+    expect(corroboratedCount(RESP.notable)).toBe(2);
+  });
+});
+
+describe("silentRegisters", () => {
+  it("names a register that holds the company but published no history", () => {
+    const d: HistoryResponse = {
+      ...RESP,
+      sources: ["gleif"],
+      registry_numbers: { companies_house: "00358949", cvr_denmark: "12345678" },
+    };
+    expect(silentRegisters(d)).toEqual(["companies_house", "cvr_denmark"]);
+  });
+
+  it("says nothing about a register that did answer", () => {
+    expect(silentRegisters(RESP)).toEqual([]);
+  });
+});
+
+describe("historySentence", () => {
+  it("counts the registers, the changes and the span, and says what agreement means", () => {
+    const s = historySentence(RESP, "WM Morrison Supermarkets Limited");
+    expect(s).toMatch(
+      /^Two registers publish a change log for WM Morrison Supermarkets Limited — 3 notable changes between 2021 and 2023/,
+    );
+    expect(s).toContain("2 of them are recorded by more than one register");
+    // The tab never claims the history is complete.
+    expect(s).not.toMatch(/complete|comprehensive|full history|guarantee/i);
+  });
+
+  it("does not compare a single register against nothing", () => {
+    const s = historySentence({ ...RESP, sources: ["gleif"] }, "Acme");
+    expect(s).toMatch(/^One register publishes a change log for Acme/);
+    expect(s).toContain("No second register keeps a history");
+  });
+
+  it("says why two registers can disagree when none of them agrees", () => {
+    const lone = { ...RESP.notable[2], sources: ["gleif"] };
+    const s = historySentence({ ...RESP, notable: [lone] }, "Acme");
+    expect(s).toContain("No change is recorded by more than one of them");
+    expect(s).toContain("the day it noticed");
+  });
+
+  it("calls an empty timeline an absence of records, not a quiet company", () => {
+    const none = historySentence({ ...RESP, sources: [], notable: [] }, "Acme");
+    expect(none).toBe(
+      "No register OpenCheck can ask publishes a change log for Acme. That is an absence of records, not a finding that nothing changed.",
+    );
+    const covered = historySentence(
+      { ...RESP, sources: ["gleif", "companies_house"], notable: [] },
+      "Acme",
+    );
+    expect(covered).toMatch(/^Two registers hold a change log for Acme, and none of them records/);
+    expect(covered).toContain("not a finding that nothing changed");
+    // No arithmetic on nothing — the Phase 185 lesson, applied here.
+    expect(covered).not.toMatch(/0 notable|between .* and/);
+    const one = historySentence({ ...RESP, sources: ["gleif"], notable: [] }, "Acme");
+    expect(one).toMatch(/^One register holds a change log for Acme, and it records/);
+  });
+
+  it("keeps the singular readable for a one-change, one-year history", () => {
+    const s = historySentence({ ...RESP, notable: [RESP.notable[1]] }, "Acme");
+    expect(s).toContain("1 notable change in 2021");
+    expect(s).toContain("1 of them is recorded by more than one register");
+  });
+});
+
+describe("the row cap", () => {
+  it("shows ten rows before collapsing, matching what the tab promises", () => {
+    expect(VISIBLE_ROWS).toBe(10);
+  });
+});

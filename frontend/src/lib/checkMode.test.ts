@@ -87,12 +87,24 @@ describe("modeLabel", () => {
 });
 
 describe("mode order and topics", () => {
-  it("keeps the three depths first, then the two topics with subsidiaries before ESG", () => {
+  it("keeps the three depths first, then the three topics with ESG last", () => {
     // Phase 185: a different question, but still about ownership, so it sits
-    // next to the ownership tabs and ESG stays last.
-    expect(CHECK_MODES).toEqual(["quick", "full", "background", "subsidiaries", "esg"]);
-    expect([...TOPIC_MODES].sort()).toEqual(["esg", "subsidiaries"]);
-    expect(CHECK_MODES.filter((m) => TOPIC_MODES.has(m))).toEqual(["subsidiaries", "esg"]);
+    // next to the ownership tabs and ESG stays last. Phase 190 added history
+    // between them — no shipped tab moved position.
+    expect(CHECK_MODES).toEqual([
+      "quick",
+      "full",
+      "background",
+      "subsidiaries",
+      "history",
+      "esg",
+    ]);
+    expect([...TOPIC_MODES].sort()).toEqual(["esg", "history", "subsidiaries"]);
+    expect(CHECK_MODES.filter((m) => TOPIC_MODES.has(m))).toEqual([
+      "subsidiaries",
+      "history",
+      "esg",
+    ]);
   });
 });
 
@@ -123,5 +135,7 @@ describe("MODE_ACCENT", () => {
     // Subsidiaries lists what the company controls, so it takes the colour
     // the graph already draws control edges in.
     expect(MODE_ACCENT.subsidiaries).toBe(graph.control);
+    // History takes the amber the Time Machine feature card already wears.
+    expect(MODE_ACCENT.history).toBe(graph.same);
   });
 });
