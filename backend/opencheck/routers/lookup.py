@@ -1083,14 +1083,26 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
 
     _build_derived(ctx, registered_at_id)
 
-    # OpenCorporates ID from the GLEIF Level-1 record.
+    # OpenCorporates ID from the GLEIF Level-1 record. When the anchor came
+    # from a curated Open Ownership bundle (`_from_bundle`), this is also the
+    # only live GLEIF call the anchor makes — so when it succeeds, its
+    # provenance replaces the bundle's "Snapshot, published <date>" claim on
+    # the GLEIF source card: the card is now honestly describing the live
+    # fetch that actually produced ocid/spglobal, rather than the date Open
+    # Ownership harvested its bulk dataset. The curated bundle's own BODS
+    # ownership statements — the richer multi-layer chain GLEIF's live API
+    # can't produce (see bods_data.py) — are untouched; only this one badge
+    # changes. A failed or unavailable live call leaves the bundle's snapshot
+    # provenance in place, same as before.
     if gleif.info.live_available:
         try:
-            gleif_src = (
-                gleif_bundle
-                if not gleif_bundle.get("_from_bundle")
-                else await gleif.fetch(lei)
-            )
+            if gleif_bundle.get("_from_bundle"):
+                with _provenance.recording() as live_recorder:
+                    gleif_src = await gleif.fetch(lei)
+                if not gleif_src.get("is_stub"):
+                    ctx.provenance = live_recorder.resolve(is_stub=False)
+            else:
+                gleif_src = gleif_bundle
             if not gleif_src.get("is_stub"):
                 attrs = (gleif_src.get("record") or {}).get("attributes") or {}
                 ctx.ocid = attrs.get("ocid") or None

@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from pytest_httpx import HTTPXMock
 
 from opencheck.app import app
 from opencheck.config import get_settings
@@ -21,6 +22,7 @@ from opencheck.routers.lookup import (
     _REGISTRY_SOURCES,
     _LookupCtx,
     _build_derived,
+    _resolve_ctx,
 )
 from opencheck.sources import REGISTRY
 
@@ -602,6 +604,79 @@ def test_stored_bundle_sources_report_as_snapshot(
     assert "live" not in {v["liveness"] for v in liveness.values()}, (
         f"a source claimed to be live in an offline test run: {liveness}"
     )
+
+
+async def test_curated_gleif_anchor_prefers_live_provenance(
+    tmp_path: Path, monkeypatch, httpx_mock: HTTPXMock
+) -> None:
+    """A curated Open Ownership bundle supplies the richer ownership-chain
+    BODS statements, but the GLEIF source card should say what it actually
+    is: a live GLEIF record, not the date Open Ownership harvested its bulk
+    dataset. Before this, every curated subject (Rosneft, Biffa, ...) showed
+    "Snapshot, published <bundle date>" next to its GLEIF results even when
+    live GLEIF answered the anchor fetch just fine.
+
+    Calls ``_resolve_ctx`` directly (rather than ``/lookup``) so only GLEIF
+    needs mocking -- the other sources ``OPENCHECK_ALLOW_LIVE`` unlocks are
+    irrelevant to what this test is pinning.
+    """
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    get_settings.cache_clear()
+    lei = "213800LH1BZH3DI6G760"
+    api = "https://api.gleif.org/api/v1"
+
+    httpx_mock.add_response(
+        url=f"{api}/lei-records/{lei}",
+        json={
+            "data": {
+                "id": lei,
+                "type": "lei-records",
+                "attributes": {
+                    "lei": lei,
+                    "entity": {
+                        "legalName": {"name": "BP P.L.C."},
+                        "jurisdiction": "GB",
+                    },
+                    "registration": {"status": "ISSUED"},
+                },
+            }
+        },
+    )
+    for rel_path in (
+        "direct-parent",
+        "direct-parent-reporting-exception",
+        "ultimate-parent",
+        "ultimate-parent-reporting-exception",
+    ):
+        httpx_mock.add_response(
+            url=f"{api}/lei-records/{lei}/{rel_path}", status_code=404
+        )
+    httpx_mock.add_response(
+        url=f"{api}/lei-records/{lei}/direct-children?page[size]=100&page[number]=1",
+        json={"data": [], "meta": {"pagination": {"total": 0}}},
+    )
+    # _resolve_ctx also tries to resolve a Wikidata QID for the anchor —
+    # irrelevant to what this test pins, so just answer with no match.
+    httpx_mock.add_response(
+        url=(
+            "https://query.wikidata.org/sparql?query=SELECT+%3Fitem+WHERE+%7B"
+            f"+%3Fitem+wdt%3AP1278+%22{lei}%22+%7D+LIMIT+1"
+        ),
+        json={"results": {"bindings": []}},
+    )
+
+    _seed_bundle(tmp_path, lei)
+
+    ctx, gleif_bundle = await _resolve_ctx(lei)
+
+    assert gleif_bundle.get("_from_bundle") is True, "expected the curated override to be used"
+    assert ctx.provenance is not None
+    assert ctx.provenance.liveness == "live", ctx.provenance
+    # The ownership statements themselves still come from the curated
+    # bundle -- this only fixes the freshness badge, not which BODS
+    # statements are shown for the subject.
+    assert ctx.legal_name == "Bundle Co P.L.C."
 
 
 def test_gleif_anchor_carries_provenance(client, tmp_path, monkeypatch) -> None:
