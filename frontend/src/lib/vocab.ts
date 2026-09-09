@@ -146,6 +146,47 @@ export function mirrorCaption(snapshotDate: string | null | undefined): string {
   return `Read from OpenCheck's GLEIF mirror${dated} rather than the live API. Counts and children are as GLEIF published them at that date.`;
 }
 
+/**
+ * Phase 188. How the corporate-PSC chain above a UK subject was found. With
+ * `OPENCHECK_CH_GRAPH_FIRST` on, OpenCheck's local copy of the PSC register
+ * proposes the chain in one index walk and then asks Companies House for
+ * every company on it at once — so the records shown are the register's own,
+ * as they always were, and only the serial hop-by-hop dependency is gone.
+ *
+ * The sentence says that, and it says how the proposal did: a company the
+ * register's chain reached that the graph did not know is the graph running
+ * behind the register, and the reader is owed it rather than a claim of
+ * completeness. `missed` of zero is not a boast, so it goes unsaid — the
+ * absence of the caveat is the good case.
+ */
+export function chainSourceCaption(chain: {
+  source?: string;
+  related?: number;
+  missed?: number;
+  snapshot_date?: string | null;
+  stream_published_at?: string | null;
+} | null | undefined): string | null {
+  if (!chain || chain.source !== "graph") return null;
+  const dated = chain.snapshot_date ? ` (snapshot of ${chain.snapshot_date}` : "";
+  const streamed =
+    dated && chain.stream_published_at
+      ? `, stream to ${chain.stream_published_at.slice(0, 16).replace("T", " ")})`
+      : dated
+        ? ")"
+        : "";
+  const missed = chain.missed ?? 0;
+  const caveat =
+    missed > 0
+      ? ` ${missed} compan${missed === 1 ? "y" : "ies"} in the chain ${
+          missed === 1 ? "was" : "were"
+        } not in the local copy yet and ${missed === 1 ? "was" : "were"} found live.`
+      : "";
+  return (
+    `Chain found in OpenCheck's copy of the UK PSC register${dated}${streamed}, ` +
+    `then every company on it read from Companies House.${caveat}`
+  );
+}
+
 /** Why a name-only comparison is a comparison and not an identification. */
 export const NAME_ONLY_COMPARISON =
   "Compared on name alone. A name that appears in both lists is not proof the " +

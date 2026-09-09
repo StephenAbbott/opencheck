@@ -122,6 +122,9 @@ class CHBundle(_Base):
     psc_statements: CHPscStatementList | None = None
     officers: dict[str, Any] = Field(default_factory=dict)
     related_companies: dict[str, Any] = Field(default_factory=dict)
+    # Phase 188: how the chain in ``related_companies`` was found — counts and
+    # the graph's own dates, never a company number or a name.
+    chain_source: dict[str, Any] = Field(default_factory=dict)
 
 
 class CHOfficerBundle(_Base):

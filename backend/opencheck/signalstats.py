@@ -91,6 +91,8 @@ _MAX_KEYS = 2_000
 walk_origin: ContextVar[str] = ContextVar("opencheck_ch_walk_origin", default="lookup")
 
 _WALK_ORIGINS = ("lookup", "hop")
+#: Phase 188: how a chain was found — the adapter's closed vocabulary.
+_CHAIN_SOURCES = frozenset({"live", "graph", "graph_unavailable"})
 
 #: Related-company histogram buckets. The cap is 25 per walk, so the top
 #: bucket is closed.
@@ -117,6 +119,16 @@ class _Walks:
         self.seconds: dict[str, float] = {}
         self.max_related: Counter[str] = Counter()
         self.max_depth: Counter[str] = Counter()
+        # Phase 188: how each chain was found (origin, chain) and, for the
+        # walks the PSC graph proposed, how good the proposal was — companies
+        # proposed, companies the register's own chain reached that the
+        # graph did not name (missed), companies named but not reached
+        # (extra) — and what the concurrent prefetch took.
+        self.chain: Counter[tuple[str, str]] = Counter()
+        self.graph_predicted: Counter[str] = Counter()
+        self.graph_missed: Counter[str] = Counter()
+        self.graph_extra: Counter[str] = Counter()
+        self.prefetch_seconds: dict[str, float] = {}
 
 
 class _Counters:
@@ -215,6 +227,11 @@ def record_ch_walk(
     calls_cached: int,
     seconds: float,
     unfollowed: Iterable[str],
+    chain: str = "live",
+    predicted: int = 0,
+    missed: int = 0,
+    extra: int = 0,
+    prefetch_seconds: float = 0.0,
 ) -> None:
     """Count one Companies House corporate-PSC walk under its origin.
 
@@ -225,6 +242,11 @@ def record_ch_walk(
     followed. Reads no names or numbers: the adapter passes counts and
     reason codes only, and the ``unfollowed`` entries' particulars stay on
     the bundle.
+
+    Phase 188: *chain* says how the chain was found (``live``, ``graph``,
+    ``graph_unavailable`` — the adapter's closed vocabulary); when the graph
+    proposed it, *predicted* / *missed* / *extra* are the proposal's size
+    and its two kinds of error against the register's own chain.
     """
     try:
         origin = walk_origin.get()
@@ -238,6 +260,11 @@ def record_ch_walk(
         n_cached = max(0, int(calls_cached))
         secs = max(0.0, float(seconds))
         reasons = [r for r in (unfollowed or ()) if isinstance(r, str)]
+        how = chain if chain in _CHAIN_SOURCES else "live"
+        n_predicted = max(0, int(predicted))
+        n_missed = max(0, int(missed))
+        n_extra = max(0, int(extra))
+        prefetch_secs = max(0.0, float(prefetch_seconds))
         with totals.lock:
             w = totals.walks
             w.walks[origin] += 1
@@ -250,6 +277,12 @@ def record_ch_walk(
             w.seconds[origin] = w.seconds.get(origin, 0.0) + secs
             w.max_related[origin] = max(w.max_related[origin], n_related)
             w.max_depth[origin] = max(w.max_depth[origin], n_depth)
+            w.chain[(origin, how)] += 1
+            if how == "graph":
+                w.graph_predicted[origin] += n_predicted
+                w.graph_missed[origin] += n_missed
+                w.graph_extra[origin] += n_extra
+                w.prefetch_seconds[origin] = w.prefetch_seconds.get(origin, 0.0) + prefetch_secs
     except Exception as exc:  # noqa: BLE001
         log.debug("signalstats.record_ch_walk failed, ignoring: %s", exc)
 
@@ -275,11 +308,30 @@ def _walk_stats(w: _Walks) -> dict[str, Any]:
             "max_related": w.max_related[origin],
             "max_depth": w.max_depth[origin],
         }
+    # Phase 188: per origin, the walks the graph proposed and how the
+    # proposal did. ``missed`` is the number that matters — a company the
+    # register's chain reached that the graph did not know, i.e. the stream
+    # or the seed running behind the register; ``extra`` is a wasted
+    # prefetch. Divide ``prefetch_seconds`` by ``walks`` for the per-walk cost.
+    graph: dict[str, dict[str, Any]] = {}
+    for origin in _WALK_ORIGINS:
+        n = w.chain[(origin, "graph")]
+        if not n:
+            continue
+        graph[origin] = {
+            "walks": n,
+            "predicted": w.graph_predicted[origin],
+            "missed": w.graph_missed[origin],
+            "extra": w.graph_extra[origin],
+            "prefetch_seconds": round(w.prefetch_seconds.get(origin, 0.0), 3),
+        }
     return {
         "by_origin": per_origin,
         "related": {f"{o}|{b}": n for (o, b), n in sorted(w.related.items())},
         "depth": {f"{o}|{d}": n for (o, d), n in sorted(w.depth.items())},
         "unfollowed": {f"{o}|{r}": n for (o, r), n in sorted(w.unfollowed.items())},
+        "chain": {f"{o}|{c}": n for (o, c), n in sorted(w.chain.items())},
+        "graph": graph,
     }
 
 
