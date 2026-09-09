@@ -39,4 +39,10 @@ if (typeof document !== "undefined") {
   if (!window.scrollTo) {
     window.scrollTo = (() => {}) as typeof window.scrollTo;
   }
+  // Nor scrollIntoView, which BodsTree calls to keep the active row in view —
+  // so any test that renders the text equivalent of a graph dies in an effect,
+  // several frames away from the assertion that would explain why.
+  if (!Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = () => {};
+  }
 }

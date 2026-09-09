@@ -51,6 +51,13 @@ import { independentCount } from "../lib/lineage";
 import { riskFindingCount } from "../lib/signalKind";
 import { RiskChip } from "./risk/RiskChip";
 import { SourceLegend } from "./SourceLegend";
+import {
+  layerControl,
+  networkRiskSentence,
+  runHelper,
+  summaryParts,
+} from "../lib/fullCheckHeader";
+import { buttonClasses } from "./ui";
 
 type Stmt = Record<string, unknown>;
 
@@ -105,6 +112,20 @@ export default function BodsGraphExplorer({
   const [running, setRunning] = useState(false);
   const [runProgress, setRunProgress] = useState<string | null>(null);
   const cancelRef = useRef(false);
+  // How the network reached its current size — the two header states turn on
+  // this. `runDepth` accumulates the layers eager runs actually COMPLETED (not
+  // the budget they were given: a run that stops at the node cap has expanded
+  // one layer, not three, and the summary must not claim otherwise).
+  const [runDepth, setRunDepth] = useState<number | null>(null);
+  const [manualLayers, setManualLayers] = useState(0);
+  // "Go deeper" re-opens the run control over an expanded network.
+  const [showRunControls, setShowRunControls] = useState(false);
+  const runButtonRef = useRef<HTMLButtonElement>(null);
+  const goDeeperRef = useRef<HTMLButtonElement>(null);
+  // A run started from the button that is about to unmount: focus has to be
+  // put somewhere deliberate when the header collapses, or it falls to <body>
+  // — the same bug `selectMode` fixed for the mode tabs.
+  const returnFocusRef = useRef(false);
   // FullCheck network export.
   const [exportFormat, setExportFormat] = useState<NetworkExportFormat>("zip");
   const [exporting, setExporting] = useState(false);
@@ -159,6 +180,9 @@ export default function BodsGraphExplorer({
       setExpandNote(null);
       setDiscoveredSignals([]);
       setRunProgress(null);
+      setRunDepth(null);
+      setManualLayers(0);
+      setShowRunControls(false);
       setHighlightSource(null);
       setCollapsed(autoCollapse(baseModel));
       prevStatementsRef.current = statements;
@@ -207,14 +231,8 @@ export default function BodsGraphExplorer({
     const raw = frontierAnchors(allStatements, rawEdges, expandedIds, direction, hopSchemes);
     return recon ? dedupeFrontier(raw, recon.remap) : raw;
   }, [allStatements, rawEdges, expandedIds, direction, recon, hopSchemes]);
-  const noun = direction === "subsidiaries" ? "subsidiaries" : "owners/controllers";
+  const noun = direction === "subsidiaries" ? "subsidiaries" : "owners and controllers";
   const registerHops = hopSchemes.size > 0;
-  const helperText =
-    direction === "subsidiaries"
-      ? "Resolves the next layer of subsidiaries for the companies at the edge of the network so far, where they have an LEI. Chains that end with people can't be explored further"
-      : registerHops
-        ? "Resolves the next layer of ownership for the companies at the edge of the network so far, where they have an LEI or a company number on a register OpenCheck can read directly (UK Companies House). Chains that end with people can't be explored further"
-        : "Resolves the next layer of ownership for the companies at the edge of the network so far, where they have an LEI. Chains that end with people can't be explored further";
 
   // Subject signals (QuickCheck, from the prop) + everything discovered while
   // expanding = the network-wide risk; `additionalSignals` is the diff.
@@ -281,6 +299,7 @@ export default function BodsGraphExplorer({
         frontier.forEach((f) => next.add(f.anchor));
         return next;
       });
+      setManualLayers((n) => n + 1);
       const newRels = (res.bods as Stmt[]).filter((s) => s.recordType === "relationship").length;
       const parts: string[] = [];
       if (newRels === 0) parts.push(`No further ${noun} disclosed for the companies at the edge of the network.`);
@@ -299,7 +318,9 @@ export default function BodsGraphExplorer({
     setRunning(true);
     cancelRef.current = false;
     setExpandNote(null);
+    returnFocusRef.current = true;
     setRunProgress("Starting FullCheck…");
+    let completed = 0;
     try {
       // Accumulate locally: React state updates aren't visible within this loop,
       // so each layer recomputes the frontier from the local `working` set and
@@ -333,7 +354,10 @@ export default function BodsGraphExplorer({
         setExtra((prev) => mergeStatements(prev, res.bods as Stmt[]));
         setDiscoveredSignals((prev) => mergeSignals(prev, res.risk_signals));
         setExpandedIds(new Set(expanded));
+        completed += 1;
       }
+      if (completed > 0) setRunDepth((prev) => (prev ?? 0) + completed);
+      setShowRunControls(false);
       if (cancelRef.current) setRunProgress("FullCheck cancelled.");
       else setRunProgress(`FullCheck complete — ${stop || `reached the depth budget (${depthBudget})`}.`);
     } catch (e) {
@@ -342,6 +366,19 @@ export default function BodsGraphExplorer({
       setRunning(false);
       cancelRef.current = false;
     }
+  }
+
+  /** Back to the network the subject's own lookup produced. */
+  function resetNetwork() {
+    setExtra([]);
+    setExpandedIds(new Set());
+    setDiscoveredSignals([]);
+    setRunProgress(null);
+    setRunDepth(null);
+    setManualLayers(0);
+    setExpandNote(null);
+    setHighlightSource(null);
+    setShowRunControls(false);
   }
 
   async function exportNetwork() {
@@ -357,27 +394,76 @@ export default function BodsGraphExplorer({
     }
   }
 
+  // ── The header's two states ──────────────────────────────────────
+  // A network that has been expanded at all is a network with a result in it,
+  // so the control that produced it collapses to a summary of what it did.
+  const hasRun = expandedIds.size > 0;
+  const personCount = useMemo(
+    () =>
+      model.nodes.filter((n) => n.recordType === "person" || n.recordType === "personStatement")
+        .length,
+    [model]
+  );
+  const summary = useMemo(
+    () =>
+      summaryParts(
+        {
+          companies: model.nodes.length - personCount,
+          people: personCount,
+          sources: networkSources.length,
+          corroborated: corroboratedCount,
+        },
+        { runDepth, manualLayers }
+      ),
+    [model, personCount, networkSources, corroboratedCount, runDepth, manualLayers]
+  );
+  const layer = useMemo(
+    () => layerControl({ frontier: frontier.length, noun, busy: expanding }),
+    [frontier, noun, expanding]
+  );
+
+  // Focus follows the control that vanished. Collapsing the run box unmounts
+  // the button the user just pressed; without this, focus lands on <body> and a
+  // keyboard user restarts from the top of the document — the same failure
+  // `selectMode` fixed for the mode tabs.
+  useEffect(() => {
+    if (running || !hasRun || showRunControls || !returnFocusRef.current) return;
+    returnFocusRef.current = false;
+    goDeeperRef.current?.focus();
+  }, [running, hasRun, showRunControls]);
+  useEffect(() => {
+    if (showRunControls) runButtonRef.current?.focus();
+  }, [showRunControls]);
+
   if (model.nodes.length === 0) {
     return <p className="text-xs text-oo-muted italic">No BODS statements to visualise.</p>;
   }
 
-  const frontierLabel = frontier.length === 1 ? "company" : "companies";
 
   return (
     <div>
-      {/* FullCheck: eager "Run" to a depth budget */}
-      {fullCheck && (
+      {/* ── FullCheck header, state 1 of 2: the run control ────────────────
+          One primary action, one line of help. The full-width "Add next layer"
+          button that used to sit below this one is now in the canvas toolbar:
+          two blue buttons ran the same expansion at different budgets, with
+          nothing on screen saying which was the bigger one.
+
+          It stays mounted for the whole run, because the first layer landing is
+          what flips `hasRun` — collapsing on that would take Cancel and the
+          progress line away mid-traversal. */}
+      {fullCheck && (!hasRun || showRunControls || running) && (
         <div className="mb-2 rounded-oo border border-oo-blue bg-oo-soft px-3 py-2">
           <div className="flex items-center gap-3 flex-wrap">
             <button
               type="button"
+              ref={runButtonRef}
               onClick={running ? () => { cancelRef.current = true; } : runFullCheck}
               disabled={!running && frontier.length === 0}
-              className="bg-oo-blue text-white text-[13px] font-semibold rounded px-4 py-1.5 hover:bg-oo-burst transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className={buttonClasses("primary", "sm")}
             >
-              {running ? "Cancel" : "▸ Run FullCheck"}
+              {running ? "Cancel" : hasRun ? "▸ Go deeper" : "▸ Run FullCheck"}
             </button>
-            <label className="text-[12px] text-oo-ink flex items-center gap-1.5">
+            <label className="text-oo-meta text-oo-ink flex items-center gap-1.5">
               Depth
               <input
                 type="number"
@@ -388,81 +474,98 @@ export default function BodsGraphExplorer({
                 onChange={(e) =>
                   setDepthBudget(Math.max(1, Math.min(5, Number(e.target.value) || 1)))
                 }
-                className="w-12 border border-oo-rule rounded px-1.5 py-0.5 text-[12px]"
+                className="w-12 border border-oo-rule rounded px-1.5 py-0.5 text-oo-meta"
               />
             </label>
-            <span className="text-[11px] text-oo-muted leading-[1.5] max-w-sm">
-              Builds the wider {direction === "subsidiaries" ? "subsidiary" : "ownership"} network to
-              the chosen depth (
-              {registerHops && direction === "owners"
-                ? "companies with an LEI or a UK company number"
-                : "LEI-bearing companies"}
-              ; capped at {FULLCHECK_NODE_CAP}).
+            <span className="text-oo-meta text-oo-muted max-w-sm">
+              {runHelper({ direction, registerHops, cap: FULLCHECK_NODE_CAP })}
             </span>
+            {hasRun && !running && (
+              <button
+                type="button"
+                onClick={() => {
+                  returnFocusRef.current = true;
+                  setShowRunControls(false);
+                }}
+                className={buttonClasses("ghost", "sm", "ml-auto")}
+              >
+                Hide
+              </button>
+            )}
           </div>
           {runProgress && (
-            <p className="mt-1.5 text-[12px] text-oo-blue" aria-live="polite">
+            <p className="mt-1.5 text-oo-meta text-oo-blue" aria-live="polite">
               {runProgress}
             </p>
           )}
         </div>
       )}
 
-      {/* FullCheck: risk-first — network risk + QuickCheck-vs-FullCheck diff */}
+      {/* ── FullCheck header, state 2 of 2: what was built ──────────────
+          The control has answered its own question, so it collapses to a line
+          stating what was run and what it reached. The run's stop reason stays
+          on it: that sentence is how a reader learns the traversal hit the node
+          cap rather than running out of network to walk. */}
+      {fullCheck && hasRun && !running && !showRunControls && (
+        <div
+          role="status"
+          aria-label="FullCheck run summary"
+          className="mb-2 rounded-oo border border-oo-rule bg-white px-3 py-2"
+        >
+          <div className="flex items-center gap-2 flex-wrap text-oo-meta">
+            <span className="font-semibold text-oo-ink">FullCheck</span>
+            {summary.map((part) => (
+              <span key={part} className="flex items-center gap-2">
+                <span aria-hidden="true" className="text-oo-rule">·</span>
+                <span className="text-oo-muted">{part}</span>
+              </span>
+            ))}
+            <span className="ml-auto flex items-center gap-1">
+              <button
+                type="button"
+                ref={goDeeperRef}
+                onClick={() => setShowRunControls(true)}
+                className={buttonClasses("ghost", "sm")}
+              >
+                Go deeper
+              </button>
+              <button type="button" onClick={resetNetwork} className={buttonClasses("ghost", "sm")}>
+                Reset
+              </button>
+            </span>
+          </div>
+          {runProgress && <p className="mt-1 text-oo-meta text-oo-blue">{runProgress}</p>}
+        </div>
+      )}
+
+      {/* FullCheck: risk-first — network risk + QuickCheck-vs-FullCheck diff.
+          Both counts are distinct FINDINGS (`riskFindingCount`), not raw
+          signals: the related-party rules emit several signals per hit, so a raw
+          count overstates, and the verdict strip counts the same way — one
+          function, so the two lines cannot disagree. The wording, and its zero
+          branches, live in `lib/fullCheckHeader`. */}
       {fullCheck && (
         <div className="mb-2 rounded-oo border border-oo-rule bg-white px-3 py-2">
-          <div className="text-[11px] font-semibold uppercase tracking-oo-eyebrow text-oo-blue mb-1">
+          <div className="text-oo-meta font-semibold uppercase tracking-oo-eyebrow text-oo-blue mb-1">
             Network risk
           </div>
-          <p className="text-[13px] text-oo-ink leading-[1.5]">
-            {/* Distinct risk findings, not raw signals, and not "on the
-                subject": the list includes RELATED_* findings about related
-                parties and structural context, which the section above this
-                one is at pains to say is not a finding against the company.
-                Counted with `riskFindingCount` so this line and the verdict
-                strip cannot disagree. */}
-            QuickCheck flagged <strong>{subjectRiskCount}</strong> risk signal
-            {subjectRiskCount === 1 ? "" : "s"} in the records gathered so far.
-            {discoveredSignals.length > 0 ? (
-              <>
-                {" "}FullCheck surfaced <strong>{riskFindingCount(additionalSignals)}</strong> more
-                across the wider network.
-              </>
-            ) : (
-              <> Run FullCheck to screen the wider network for risk.</>
-            )}
+          <p className="text-oo-small text-oo-ink">
+            {networkRiskSentence({
+              subject: subjectRiskCount,
+              additional: riskFindingCount(additionalSignals),
+              hasRun,
+            })}
           </p>
           {additionalSignals.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {additionalSignals.map((s, i) => (
-                <RiskChip key={i} signal={s} compact />
+              {additionalSignals.map((sig, i) => (
+                <RiskChip key={i} signal={sig} compact />
               ))}
             </div>
           )}
         </div>
       )}
 
-      {/* Prominent "Add next layer" control — FullCheck only (QuickCheck graph
-          panels are view-only). */}
-      {fullCheck && (
-      <div className="mb-2 flex items-center gap-3 flex-wrap">
-        <button
-          type="button"
-          onClick={addNextLayer}
-          disabled={expanding || frontier.length === 0}
-          className="bg-oo-blue text-white text-[13px] font-medium rounded px-4 py-1.5 hover:bg-oo-burst transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {expanding
-            ? "Adding layer…"
-            : frontier.length === 0
-              ? `No further ${noun} to reveal`
-              : `▸ Add next layer — ${frontier.length} ${frontierLabel}`}
-        </button>
-        <span className="text-[11px] text-oo-muted leading-[1.5] max-w-md">
-          {helperText}
-        </span>
-      </div>
-      )}
       {expandNote && (
         <p role="status" className="mb-2 text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 leading-[1.5]">
           {expandNote}
@@ -471,14 +574,6 @@ export default function BodsGraphExplorer({
 
       <div className="flex flex-col gap-2">
         <div className="min-w-0">
-            {fullCheck && networkSources.length > 0 && (
-              <SourceLegend
-                sources={networkSources}
-                active={highlightSource}
-                corroboratedCount={corroboratedCount}
-                onToggle={(s) => setHighlightSource((cur) => (cur === s ? null : s))}
-              />
-            )}
             {fullCheck && sameAs.length > 0 && (
               <p className="mb-1.5 text-[11px] text-[#b45309] leading-[1.5]">
                 <span className="font-semibold">{sameAs.length}</span> dashed “likely same”{" "}
@@ -496,7 +591,23 @@ export default function BodsGraphExplorer({
               onSelect={setSelectedId}
               highlightSource={highlightSource}
               sameAs={sameAs}
+              layer={fullCheck ? layer : undefined}
+              onAddLayer={fullCheck ? addNextLayer : undefined}
             />
+            {/* Provenance sits UNDER the canvas it describes. Above it, on a
+                network nobody had asked to expand yet, it was four source chips
+                and a corroboration count standing between the reader and the
+                diagram — describing a graph they had not seen. */}
+            {fullCheck && networkSources.length > 0 && (
+              <div className="mt-2">
+                <SourceLegend
+                  sources={networkSources}
+                  active={highlightSource}
+                  corroboratedCount={corroboratedCount}
+                  onToggle={(src) => setHighlightSource((cur) => (cur === src ? null : src))}
+                />
+              </div>
+            )}
         </div>
 
         {/* Text equivalent of the canvas (WCAG 1.1.1 / 1.3.1 / 2.1.1). Open by
