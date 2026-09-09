@@ -36,11 +36,29 @@ class RecordType(str, Enum):
 
 
 class Tier(int, Enum):
-    """Notability tier. 1/2 render by default; 3 is kept but suppressed."""
+    """Notability tier. 1/2 render by default; 3 and 4 are kept but suppressed.
+
+    **The numbers are identifiers, not a rank.** ``BOARD_CHANGE`` is more
+    notable than ``ADMIN_NOISE`` and takes the higher number anyway, because
+    ``tier`` is published on ``/history`` and a reader — ours or anyone
+    else's — filters on ``tier === 3`` for the administrative stream.
+    Renumbering to make the integers sort would silently change what an
+    existing filter selects. :data:`TIER_RANK` is the order to render in.
+    """
 
     OWNERSHIP_CONTROL = 1  # ownership / control actually moved
     IDENTITY_STATUS = 2  # entity identity / status changed
     ADMIN_NOISE = 3  # administrative noise (kept, suppressed by default)
+    BOARD_CHANGE = 4  # who sits on the board (kept, its own opt-in stream)
+
+
+#: Render / sort order, which the tier numbers deliberately do not encode.
+TIER_RANK: dict[Tier, int] = {
+    Tier.OWNERSHIP_CONTROL: 1,
+    Tier.IDENTITY_STATUS: 2,
+    Tier.BOARD_CHANGE: 3,
+    Tier.ADMIN_NOISE: 4,
+}
 
 
 class DateBasis(str, Enum):
@@ -76,6 +94,14 @@ class ChangeType(str, Enum):
     JURISDICTION_CHANGE = "JURISDICTION_CHANGE"
     REGISTRATION_RETIRED = "REGISTRATION_RETIRED"
     ADDRESS_CHANGE = "ADDRESS_CHANGE"
+    # --- Tier 4: who sits on the board (details changes are Tier 3) ---
+    # Not beneficial ownership, which is why these are their own stream rather
+    # than notable: a director is appointed to run a company, not because they
+    # own it. But a board that turns over four times in three years is a fact
+    # about the company that an ownership-only timeline cannot show.
+    OFFICER_APPOINTED = "OFFICER_APPOINTED"
+    OFFICER_RESIGNED = "OFFICER_RESIGNED"
+    OFFICER_DETAILS_CHANGED = "OFFICER_DETAILS_CHANGED"
 
 
 # BODS v0.4 recordStatus a change maps onto when synthesising statements.
@@ -165,6 +191,25 @@ CHANGE_TYPES: dict[ChangeType, ChangeTypeSpec] = {
         "A registered or headquarters address line changed "
         "(region recodes are treated as noise).",
     ),
+    ChangeType.OFFICER_APPOINTED: ChangeTypeSpec(
+        ChangeType.OFFICER_APPOINTED, Tier.BOARD_CHANGE, RecordType.RELATIONSHIP,
+        "Officer appointed", _NEW,
+        "A director, secretary or other officer was appointed.",
+    ),
+    ChangeType.OFFICER_RESIGNED: ChangeTypeSpec(
+        ChangeType.OFFICER_RESIGNED, Tier.BOARD_CHANGE, RecordType.RELATIONSHIP,
+        "Officer resigned", _CLOSED,
+        "An officer's appointment ended.",
+    ),
+    ChangeType.OFFICER_DETAILS_CHANGED: ChangeTypeSpec(
+        ChangeType.OFFICER_DETAILS_CHANGED, Tier.ADMIN_NOISE, RecordType.RELATIONSHIP,
+        "Officer's details changed", _UPDATED,
+        "An officer's own particulars changed — name, address or occupation. "
+        "Nobody joined or left the board, which is why it is typed here and "
+        "filed with the administrative changes: on Lloyds Bank PLC it is 322 "
+        "of 568 officer filings, and in the board stream it would bury the "
+        "246 that are turnover.",
+    ),
 }
 
 
@@ -204,7 +249,11 @@ class ChangeEvent:
     interest_start_date: str | None = None
     interest_end_date: str | None = None
     # The other end of a relationship change (e.g. the parent LEI for a GLEIF
-    # ownership change). None for entity-record changes.
+    # ownership change). None for entity-record changes. For a Companies House
+    # officer filing it is the officer's NAME, because that is all the filing
+    # publishes — the register puts no officer id on a filing-history item, so
+    # a board row cannot be linked to a person node the way an ownership row
+    # can be linked to an LEI.
     counterparty: str | None = None
 
     @property
@@ -216,6 +265,7 @@ class ChangeEvent:
 __all__ = [
     "RecordType",
     "Tier",
+    "TIER_RANK",
     "DateBasis",
     "DateConfidence",
     "ChangeType",

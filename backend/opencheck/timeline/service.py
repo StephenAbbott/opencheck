@@ -79,8 +79,14 @@ _cache = Cache()
 
 _MODS_PAGE_SIZE = 200
 _MODS_PAGE_CAP = 5  # ≤ 1000 modifications — plenty for a per-entity timeline
-_CH_PAGE_SIZE = 100
-_CH_PAGE_CAP = 10  # ≤ 1000 filings
+_CH_PAGE_SIZE = 100  # the register's maximum
+# Phase 194: was 10, so a company with a long life had its history cut at
+# 1,000 filings — Lloyds Bank PLC has 2,404 — and Companies House returns
+# them newest first, so what went missing was the oldest, which is exactly
+# what a history tab is for. Unmarked, the way the officers list was cut
+# before Phase 192. 50 pages covers every company measured; a list cut by the
+# cap now says so (``filings_truncated``) rather than ending quietly.
+_CH_PAGE_CAP = 50  # ≤ 5,000 filings
 
 
 async def _gleif_registration(
@@ -158,9 +164,15 @@ async def _gleif_modifications(
 
 async def _ch_filings(
     client: httpx.AsyncClient, number: str, api_key: str
-) -> list[dict]:
-    """Fetch Companies House filing history for ``number`` (Basic auth: key, '')."""
+) -> tuple[list[dict], bool]:
+    """Fetch Companies House filing history for ``number`` (Basic auth: key, '').
+
+    Returns the filings and whether the register holds more than the page cap
+    allowed — a truncated history is a fact about the fetch, not about the
+    company, and the tab has to be able to say which it is showing.
+    """
     filings: list[dict] = []
+    truncated = False
     auth = httpx.BasicAuth(api_key, "")
     for page in range(_CH_PAGE_CAP):
         resp = await client.get(
@@ -177,7 +189,10 @@ async def _ch_filings(
         total = payload.get("total_count") or 0
         if not items or (page + 1) * _CH_PAGE_SIZE >= total:
             break
-    return filings
+    else:
+        # The loop ran out of pages rather than out of filings.
+        truncated = True
+    return filings, truncated
 
 
 async def fetch_timeline(lei: str) -> Timeline:
@@ -195,6 +210,7 @@ async def fetch_timeline(lei: str) -> Timeline:
     lei_mods: list[dict] = []
     rr_mods: list[dict] = []
     ch_filings: list[dict] = []
+    ch_filings_truncated = False
 
     gleif_record_available = True
     gleif_events_available = True
@@ -234,7 +250,9 @@ async def fetch_timeline(lei: str) -> Timeline:
         )
         if api_key and company_number:
             try:
-                ch_filings = await _ch_filings(client, company_number, api_key)
+                ch_filings, ch_filings_truncated = await _ch_filings(
+                    client, company_number, api_key
+                )
             except httpx.HTTPError:
                 ch_filings = []
 
@@ -300,6 +318,7 @@ async def fetch_timeline(lei: str) -> Timeline:
         )
         if number
     }
+    timeline.filings_truncated = ch_filings_truncated
     timeline.gleif_record_available = gleif_record_available
     timeline.gleif_events_available = gleif_events_available
     # "Blocked" only when the record failed AND nothing local stood in: with a

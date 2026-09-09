@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 193** — a Companies House director is now one person however many boards they sit on: the person is keyed on the register's own officer id, which takes Lloyds Bank PLC and its parent from 27 person statements to 15 without a single name being matched.
+**Latest: Phase 194** — the History tab has a board-turnover stream: every Companies House appointment and resignation, typed and named where the register named anyone, back past the electronic era and no longer cut off at a thousand filings.
 
 → [Full development history](docs/status.md)
 

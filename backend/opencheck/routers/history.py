@@ -29,6 +29,7 @@ from pydantic import BaseModel
 
 from .. import identifiers
 from ..ratelimit import default_tier, limiter
+from ..timeline.model import CHANGE_TYPES
 from ..timeline.service import fetch_timeline
 
 router = APIRouter()
@@ -62,9 +63,18 @@ class RawChange(BaseModel):
     value_old: str | None = None
     value_new: str | None = None
     change_type: str | None = None
+    #: The codelist's own label for ``change_type``. Sent so a client never
+    #: has to keep a second copy of the vocabulary — the failure mode
+    #: ``lib/historyMode.ts`` warns about, where a label map drifts from the
+    #: thing it labels. None where the change is untyped.
+    label: str | None = None
     tier: int
     event_date: str | None = None
     date_basis: str
+    #: The other end of the change. For a Companies House officer filing this
+    #: is the officer's name — the filing publishes no officer id, so a board
+    #: row names a person without claiming to identify them.
+    counterparty: str | None = None
 
 
 class HistoryResponse(BaseModel):
@@ -92,6 +102,9 @@ class HistoryResponse(BaseModel):
     #: register knows the company by that number, not that its history was
     #: fetched; `sources` says what actually answered.
     registry_numbers: dict[str, str] = {}
+    #: Phase 194 — Companies House holds more filings than this fetch read.
+    #: The register answers newest-first, so the missing end is the oldest.
+    filings_truncated: bool = False
 
 
 @router.get("/history", response_model=HistoryResponse)
@@ -152,9 +165,15 @@ async def history(
                 value_old=ev.value_old,
                 value_new=ev.value_new,
                 change_type=ev.change_type.value if ev.change_type else None,
+                label=(
+                    CHANGE_TYPES[ev.change_type].label
+                    if ev.change_type and ev.change_type in CHANGE_TYPES
+                    else None
+                ),
                 tier=ev.tier.value,
                 event_date=ev.event_date,
                 date_basis=ev.date_basis.value,
+                counterparty=ev.counterparty,
             )
             for ev in tl.events
         ]
@@ -172,4 +191,5 @@ async def history(
         registry_sources_blocked=tl.registry_sources_blocked,
         company_number_basis=tl.company_number_basis,
         registry_numbers=tl.registry_numbers,
+        filings_truncated=tl.filings_truncated,
     )

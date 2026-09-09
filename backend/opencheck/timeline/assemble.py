@@ -100,6 +100,11 @@ class Timeline:
     #: "live" | "cached" | None — where ``company_number`` and its siblings
     #: came from. "cached" means a stale on-disk GLEIF record stood in.
     company_number_basis: str | None = None
+    #: Phase 194. True when Companies House holds more filings than the fetch
+    #: cap allowed. The register answers newest-first, so a truncated history
+    #: is missing its oldest end — the deep board turnover a reader came for.
+    #: A fact about the fetch, never about the company.
+    filings_truncated: bool = False
     #: Phase 190. ``{source_id: registry number}`` for the registers whose own
     #: history this timeline carries — the identifier each one addresses the
     #: company by in its public record. Set by the fetch service, which already

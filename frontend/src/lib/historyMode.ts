@@ -213,7 +213,8 @@ export function basisLabel(basis: string): string {
 
 export type Row =
   | { kind: "notable"; date: string; entry: HistoryEntry }
-  | { kind: "noise"; date: string; raw: HistoryRawChange };
+  | { kind: "noise"; date: string; raw: HistoryRawChange }
+  | { kind: "board"; date: string; raw: HistoryRawChange };
 
 /** Tier-3 (administrative noise) raw changes, used by the full-timeline toggle. */
 export function noiseEventsOf(data: HistoryResponse): HistoryRawChange[] {
@@ -231,7 +232,11 @@ const _UNDATED = "9999-12-31";
  * audit trail and the wrong one for a reader, who arrives asking what changed
  * most recently.
  */
-export function buildTimelineRows(data: HistoryResponse, showNoise: boolean): Row[] {
+export function buildTimelineRows(
+  data: HistoryResponse,
+  showNoise: boolean,
+  showBoard = false,
+): Row[] {
   const out: Row[] = data.notable.map((entry) => ({
     kind: "notable",
     date: entry.date ?? _UNDATED,
@@ -240,6 +245,10 @@ export function buildTimelineRows(data: HistoryResponse, showNoise: boolean): Ro
   if (showNoise) {
     for (const raw of noiseEventsOf(data))
       out.push({ kind: "noise", date: raw.event_date ?? _UNDATED, raw });
+  }
+  if (showBoard) {
+    for (const raw of boardChangesOf(data))
+      out.push({ kind: "board", date: raw.event_date ?? _UNDATED, raw });
   }
   out.sort((a, b) => {
     const aMissing = a.date === _UNDATED;
@@ -288,4 +297,83 @@ export function historyDegradedNotice(data: HistoryResponse): string | null {
   }
   parts.push("What is shown is not a finding that nothing changed.");
   return parts.join(" ");
+}
+
+// --------------------------------------------------------------------------
+// Board changes — Phase 194
+//
+// Who joined and who left, as its own opt-in stream. Not `notable`: an
+// appointment is not a beneficial-ownership change, and on Lloyds Bank PLC
+// there are 246 of them against 10 notable rows, so promoting them would bury
+// the thing the tab leads on. Not the administrative stream either, where
+// they arrived untyped and unnamed until this phase.
+//
+// A director's own particulars changing IS administrative and stays in tier 3
+// — 322 of that company's 568 officer filings — so this stream is turnover
+// and only turnover.
+// --------------------------------------------------------------------------
+
+/** Tier-4 (board turnover) raw changes: appointments and resignations. */
+export function boardChangesOf(data: HistoryResponse): HistoryRawChange[] {
+  return (data.events ?? []).filter((e) => e.tier === 4);
+}
+
+/**
+ * What the board stream says about itself, or `null` when there is nothing to
+ * open. Built from the rows, never from a literal: the counts, the span, and
+ * how many of them name anybody.
+ *
+ * The naming gap is stated rather than hidden. Companies House puts an
+ * officer's name on a filing only from the electronic era; before that the
+ * form says a director resigned and never which one. A stream that quietly
+ * showed 171 nameless rows would read as broken instead of as a register that
+ * did not publish names.
+ */
+export function boardChangesSummary(rows: HistoryRawChange[]): string | null {
+  if (rows.length === 0) return null;
+
+  const dates = rows
+    .map((r) => r.event_date)
+    .filter((d): d is string => Boolean(d))
+    .sort();
+  const named = rows.filter((r) => Boolean(r.counterparty)).length;
+
+  const count =
+    rows.length === 1
+      ? "1 appointment or resignation"
+      : `${rows.length.toLocaleString()} appointments and resignations`;
+  const span =
+    dates.length === 0
+      ? null
+      : dates[0].slice(0, 4) === dates[dates.length - 1].slice(0, 4)
+        ? `in ${dates[0].slice(0, 4)}`
+        : `between ${dates[0].slice(0, 4)} and ${dates[dates.length - 1].slice(0, 4)}`;
+
+  let naming: string;
+  if (named === rows.length)
+    naming = rows.length === 1 ? "naming the officer" : "each naming the officer";
+  else if (named === 0) naming = "none of which name the officer";
+  else if (named === 1) naming = "1 of which names the officer";
+  else naming = `${named.toLocaleString()} of which name the officer`;
+
+  const head = [count, span].filter(Boolean).join(" ");
+  return `${head} — ${naming}.`;
+}
+
+/**
+ * What to tell the reader when the register holds more filings than the fetch
+ * read, or `null`.
+ *
+ * Companies House answers filing-history newest-first, so a truncated history
+ * is missing its oldest end — the deep board turnover a reader opened this
+ * stream for. Saying nothing would let a 1,000-filing view read as a complete
+ * one, which is the defect Phase 192 fixed on the officers list.
+ */
+export function filingsTruncatedNotice(data: HistoryResponse): string | null {
+  if (!data.filings_truncated) return null;
+  return (
+    "Companies House holds more filings than this view reads. Its history is " +
+    "returned newest first, so the filings not shown are the oldest — this " +
+    "timeline starts later than the company does."
+  );
 }

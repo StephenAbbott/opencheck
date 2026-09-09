@@ -33,8 +33,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { getHistory, type HistoryResponse } from "../../lib/api";
 import {
+  boardChangesOf,
+  boardChangesSummary,
   buildTimelineRows,
   corroboratedCount,
+  filingsTruncatedNotice,
   historyDegradedNotice,
   HISTORY_CAVEAT,
   historySentence,
@@ -78,6 +81,7 @@ export default function HistoryPanel({
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [showNoise, setShowNoise] = useState(false);
+  const [showBoard, setShowBoard] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -85,6 +89,7 @@ export default function HistoryPanel({
     setError(null);
     setShowAll(false);
     setShowNoise(false);
+    setShowBoard(false);
     // `true`: the raw tier-3 stream rides along on the first fetch, so the
     // full-timeline toggle is instant rather than a second round trip.
     getHistory(lei, true)
@@ -107,9 +112,12 @@ export default function HistoryPanel({
   const loading = !data && !error;
   const degraded = useMemo(() => (data ? historyDegradedNotice(data) : null), [data]);
   const noiseEvents = useMemo(() => (data ? noiseEventsOf(data) : []), [data]);
+  const boardEvents = useMemo(() => (data ? boardChangesOf(data) : []), [data]);
+  const boardSummary = useMemo(() => boardChangesSummary(boardEvents), [boardEvents]);
+  const truncated = useMemo(() => (data ? filingsTruncatedNotice(data) : null), [data]);
   const allRows = useMemo(
-    () => (data ? buildTimelineRows(data, showNoise) : []),
-    [data, showNoise],
+    () => (data ? buildTimelineRows(data, showNoise, showBoard) : []),
+    [data, showNoise, showBoard],
   );
   const rows = showAll ? allRows : allRows.slice(0, VISIBLE_ROWS);
   const silent = useMemo(() => (data ? silentRegisters(data) : []), [data]);
@@ -146,6 +154,18 @@ export default function HistoryPanel({
                 className="mt-3 rounded-oo border border-oo-warn-border bg-oo-warn-bg px-3 py-2 text-oo-meta text-oo-warn-text leading-[1.5]"
               >
                 {degraded}
+              </div>
+            )}
+            {/* Phase 194: the register holds more than this view read, and it
+                answers newest-first — so what is missing is the oldest end.
+                Stated where it qualifies every row below, not inside the one
+                stream that made it worth saying. */}
+            {truncated && (
+              <div
+                role="status"
+                className="mt-3 rounded-oo border border-oo-warn-border bg-oo-warn-bg px-3 py-2 text-oo-meta text-oo-warn-text leading-[1.5]"
+              >
+                {truncated}
               </div>
             )}
             {data.sources.length > 0 && (
@@ -198,6 +218,25 @@ export default function HistoryPanel({
                   : `Show all ${allRows.length.toLocaleString()} rows`}
               </Button>
             )}
+            {boardEvents.length > 0 && (
+              // Board turnover is its own stream: not notable, because an
+              // appointment is not a beneficial-ownership change, and not
+              // administrative either. A director's own particulars changing
+              // is, and stays with the noise.
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-pressed={showBoard}
+                onClick={() => {
+                  setShowBoard((v) => !v);
+                  setShowAll(false);
+                }}
+              >
+                {showBoard
+                  ? "Hide board changes"
+                  : `Add the ${boardEvents.length.toLocaleString()} board changes`}
+              </Button>
+            )}
             {noiseEvents.length > 0 && (
               // The administrative stream is the larger half by an order of
               // magnitude — a thousand Companies House confirmation statements
@@ -218,6 +257,13 @@ export default function HistoryPanel({
               </Button>
             )}
           </div>
+          {showBoard && boardSummary && (
+            <p className="mt-2 text-oo-meta text-oo-muted leading-[1.5] max-w-[82ch]">
+              {boardSummary} Companies House names an officer on a filing only from
+              the electronic era; an older form records that a director joined or left
+              and never which one.
+            </p>
+          )}
           {showNoise && (
             <p className="mt-2 text-oo-meta text-oo-muted leading-[1.5] max-w-[82ch]">
               Administrative filings are shown greyed: confirmation statements, renewal

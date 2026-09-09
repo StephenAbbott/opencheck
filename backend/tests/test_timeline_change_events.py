@@ -7,6 +7,7 @@ take-private — the worked example in docs/time-machine.md. No network calls.
 
 from __future__ import annotations
 
+from opencheck.timeline.model import TIER_RANK
 from opencheck.timeline import (
     CHANGE_TYPES,
     ChangeType,
@@ -54,7 +55,11 @@ def test_every_change_type_has_a_spec():
         assert ct in CHANGE_TYPES
         spec = CHANGE_TYPES[ct]
         assert spec.change_type is ct
-        assert spec.tier in (Tier.OWNERSHIP_CONTROL, Tier.IDENTITY_STATUS)
+        # Phase 194: a spec's tier is any declared tier, and every tier has a
+        # render order. The old assertion said "1 or 2", which was true only
+        # while every typed change was a notable one.
+        assert spec.tier in Tier
+        assert spec.tier in TIER_RANK
         assert spec.bods_record_status in ("new", "updated", "closed")
 
 

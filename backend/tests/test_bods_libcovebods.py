@@ -236,6 +236,45 @@ def test_libcovebods_companies_house():
     assert_valid(map_companies_house(_CH_BUNDLE), "Companies House")
 
 
+def test_libcovebods_companies_house_officer_appointments():
+    """The officer-appointments path was never validated here, which is how it
+    published an invalid person identifier from Phase 1 to Phase 193 — three
+    lib-cove person-identifier checks failed on ``scheme: GB-COH-OFFICER`` and
+    nobody was looking. It is validated now, so the next one cannot hide."""
+    from opencheck.bods.mapper import map_companies_house
+
+    bundle = map_companies_house(
+        {
+            "officer_id": "zS_RY9pRYlJ9XwGJEOFtkJgrf8s",
+            "appointments": {
+                "name": "Jane EXAMPLE",
+                "date_of_birth": {"year": 1980, "month": 6},
+                "nationality": "British",
+                "items": [
+                    {
+                        "appointed_to": {
+                            "company_name": "ACME LTD",
+                            "company_number": "00102498",
+                        },
+                        "officer_role": "director",
+                        "appointed_on": "2018-06-01",
+                    },
+                    {
+                        "appointed_to": {
+                            "company_name": "OLD CO LTD",
+                            "company_number": "00102499",
+                        },
+                        "officer_role": "director",
+                        "appointed_on": "2010-01-01",
+                        "resigned_on": "2014-12-31",
+                    },
+                ],
+            },
+        }
+    )
+    assert_valid(bundle, "Companies House (officer appointments)")
+
+
 def test_libcovebods_gleif():
     from opencheck.bods.mapper import map_gleif
     assert_valid(map_gleif(_GLEIF_BUNDLE), "GLEIF")
