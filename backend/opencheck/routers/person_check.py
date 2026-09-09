@@ -221,7 +221,7 @@ class PersonAppointmentsResponse(BaseModel):
     active_count: int
     appointments: list[AppointmentItem]
     #: BODS statements for the officer + appointments (personStatement
-    #: carries the GB-COH-OFFICER identifier) — traceable evidence.
+    #: carries the Companies House officer id) — traceable evidence.
     bods: list[dict[str, Any]]
     attribution: str
     caveat: str

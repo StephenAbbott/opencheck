@@ -93,6 +93,30 @@ def transformation(
     return annotation
 
 
+def identifying(
+    target: str, description: str, *, creation_date: str | None = None
+) -> dict[str, Any]:
+    """An annotation recording *which* real-world thing a statement is about.
+
+    BODS reserves ``personStatement.identifiers`` for identity documents — its
+    validator requires every person identifier scheme to be
+    ``<ISO 3166-1 alpha-3>-{PASSPORT|TAXID|IDCARD}`` — so a register's own
+    internal key for a person has no home there, however useful it is. The
+    ``identifying`` motivation is the construct that does fit: it says what
+    the statement was matched on without claiming the key is an identity
+    document, and without asserting more identity than the register does.
+    """
+    annotation: dict[str, Any] = {
+        "statementPointerTarget": target,
+        "motivation": "identifying",
+        "description": description,
+        "createdBy": dict(_PUBLISHER),
+    }
+    if creation_date:
+        annotation["creationDate"] = creation_date
+    return annotation
+
+
 def commenting(
     target: str, description: str, *, creation_date: str | None = None
 ) -> dict[str, Any]:

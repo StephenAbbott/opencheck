@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 192** — Companies House list endpoints are fetched whole rather than one default page deep, and the officer count on the card counts serving officers, so "35 officers listed" is no longer the API's page size wearing a company's name.
+**Latest: Phase 193** — a Companies House director is now one person however many boards they sit on: the person is keyed on the register's own officer id, which takes Lloyds Bank PLC and its parent from 27 person statements to 15 without a single name being matched.
 
 → [Full development history](docs/status.md)
 

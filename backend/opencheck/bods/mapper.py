@@ -25,7 +25,7 @@ from .. import provenance as _provenance
 from ..elf import resolve_elf
 from ..identifiers import ch_identification_is_uk, normalise_ch_company_number
 from . import liveness as _liveness
-from .annotations import annotate, commenting, pointer, transformation
+from .annotations import annotate, commenting, identifying, pointer, transformation
 from .ch_constants import describe_company_type, describe_officer_role
 from .psc_natures import describe_nature, describe_statement, describe_super_secure
 
@@ -323,26 +323,43 @@ def _rollup_ch_chains(
             seen_sids.add(primary["statementId"])
 
 
-def _ch_officer_local_id(company_number: str, officer: dict[str, Any]) -> str:
-    """Derive a stable local_id for a Companies House officer from the company bundle.
+def _ch_officer_id(officer: dict[str, Any]) -> str | None:
+    """Companies House's own officer id, from ``links.officer.appointments``.
 
-    Extracts the officer id from ``links.officer.appointments`` when present
-    (the path has the form ``/officers/{id}/appointments``), falling back to a
-    SHA-256 digest of ``{company_number}|{name}|{appointed_on}`` so IDs remain
-    stable even when the links block is absent.
+    The path has the form ``/officers/{id}/appointments``, and that id is the
+    register's **own grouping of one person's appointments** — its view of who
+    is the same human, based on the name, date of birth and address it holds.
+    It is the only source-provided key a natural person has here, and it is
+    not an identity guarantee: Companies House itself sometimes holds two ids
+    for one person. Everything downstream treats it as the register's grouping
+    rather than as an assertion of identity.
     """
     links_path: str = (
         (officer.get("links") or {})
         .get("officer", {})
         .get("appointments", "")
     )
-    # Extract id from "/officers/{id}/appointments"
     parts = [p for p in links_path.split("/") if p]
     if "officers" in parts:
         idx = parts.index("officers")
         if idx + 1 < len(parts):
-            officer_id = parts[idx + 1]
-            return f"{company_number}:director:{officer_id}"
+            return parts[idx + 1] or None
+    return None
+
+
+def _ch_officer_local_id(company_number: str, officer: dict[str, Any]) -> str:
+    """A stable local_id for one officer *appointment* — a person at a company.
+
+    This keys the relationship statement, which is company-scoped by nature:
+    the same director on two boards holds two appointments. The person's own
+    key is :func:`_ch_officer_person_local_id`, which is not company-scoped.
+
+    Falls back to a SHA-256 digest of ``{company_number}|{name}|{appointed_on}``
+    when the links block is absent, so ids stay stable either way.
+    """
+    officer_id = _ch_officer_id(officer)
+    if officer_id:
+        return f"{company_number}:director:{officer_id}"
     # Fallback: hash of stable fields
     name = officer.get("name") or ""
     appointed_on = officer.get("appointed_on") or ""
@@ -350,6 +367,75 @@ def _ch_officer_local_id(company_number: str, officer: dict[str, Any]) -> str:
         f"{company_number}|{name}|{appointed_on}".encode("utf-8")
     ).hexdigest()[:16]
     return f"{company_number}:director:{digest}"
+
+
+def _ch_officer_person_local_id(company_number: str, officer: dict[str, Any]) -> str:
+    """The key for the *person*: the register's officer id, with no company in it.
+
+    Phase 193. Before this, a person was keyed on ``{company}:director:{id}``,
+    so one director sitting on a subject's board and its parent's board became
+    two person statements — and the FullCheck canvas drew two nodes for one
+    human. Measured on Lloyds Bank PLC and Lloyds Banking Group plc: 13
+    directors serve both boards, and Companies House gives 12 of the 13 the
+    same officer id. Keying the person on that id alone collapses them without
+    any name matching.
+
+    It is deliberately the same key ``_map_companies_house_officer`` already
+    uses (``officer:{id}``), so a person reached through a company lookup and
+    the same person reached through an officer lookup are one statement.
+
+    Without a links block there is nothing to group on, so the fallback stays
+    company-scoped: two records of the same human stay two people rather than
+    being merged on a name, which is the merge ``reconcile.ts`` refuses to
+    make for the same reason.
+    """
+    officer_id = _ch_officer_id(officer)
+    if officer_id:
+        return f"officer:{officer_id}"
+    return _ch_officer_local_id(company_number, officer)
+
+
+def _ch_officer_grouping_note(officer_id: str | None) -> dict[str, Any] | None:
+    """Publish the officer id the person was grouped on, as an annotation.
+
+    Not as ``recordDetails.identifiers``: BODS reserves that array for
+    identity documents and lib-cove-bods enforces it — a person identifier's
+    scheme must read ``<ISO 3166-1 alpha-3>-{PASSPORT|TAXID|IDCARD}``. A
+    register's internal key for a person is none of those, so putting it there
+    produces a conformant-looking file that fails the standard's own checks.
+    (``GB-COH-OFFICER``, which the officer-appointments path published until
+    Phase 193, failed three of them; nothing validated that path, so it went
+    unseen.)
+
+    The ``identifying`` motivation is the construct that fits: it states what
+    the grouping was made on, in words that stop short of asserting identity —
+    which is exactly as far as the register itself goes. The id is also in the
+    statement's ``source.url``, so a consumer can regroup or reject it.
+    """
+    if not officer_id:
+        return None
+    return identifying(
+        pointer("recordDetails"),
+        (
+            f"Grouped on Companies House officer id {officer_id}: the register's "
+            "own grouping of one person's appointments, published so this "
+            "statement can be regrouped or rejected. Companies House derives it "
+            "from the name, date of birth and address it holds, and it is not "
+            "an assertion of identity — the register sometimes holds two ids "
+            "for one person."
+        ),
+    )
+
+
+def _ch_officer_url(officer_id: str | None, company_url: str) -> str:
+    """Where a reader verifies the person: their own appointments page when the
+    register gives one, the company otherwise."""
+    if not officer_id:
+        return company_url
+    return (
+        "https://find-and-update.company-information.service.gov.uk/officers/"
+        f"{officer_id}/appointments"
+    )
 
 
 # Officer roles that constitute a senior managing official, mapped from the
@@ -397,8 +483,11 @@ def _ch_director_statements(
     officers and non-managing roles (secretary, limited partner, …) are skipped.
     Each becomes:
 
-    * A ``personStatement`` (``knownPerson``) with name, DOB, nationality and
-      service address.
+    * A ``personStatement`` (``knownPerson``) with name, DOB, nationality,
+      service address and — where the register gives one — its own officer id
+      as a published identifier. The person is keyed on that id alone, so one
+      director on several boards is one statement with several relationships
+      (see :func:`_ch_officer_person_local_id`).
     * A ``relationship`` statement with:
       - ``type: seniorManagingOfficial``
       - ``beneficialOwnershipOrControl: false``
@@ -454,18 +543,29 @@ def _ch_director_statements(
                 )
 
         local_id = _ch_officer_local_id(company_number, officer)
+        officer_id = _ch_officer_id(officer)
         person = make_person_statement(
             source_id="companies_house",
-            local_id=local_id,
+            local_id=_ch_officer_person_local_id(company_number, officer),
             full_name=name,
             person_type="knownPerson",
             nationalities=nationalities,
             birth_date=birth_date,
             addresses=addresses,
-            source_url=company_url,
+            source_url=_ch_officer_url(officer_id, company_url),
         )
-        annotate(person, _birth_date_precision_note(birth_date))
+        annotate(
+            person,
+            _birth_date_precision_note(birth_date),
+            _ch_officer_grouping_note(officer_id),
+        )
         person_sid = person["statementId"]
+        # First writer wins, and the subject is always mapped first
+        # (``map_companies_house`` emits the root bundle before any related
+        # company), so where two boards file different details for one person
+        # — a different service address, a nationality spelt differently — the
+        # subject's own filing is the one published. A parent's copy fills in
+        # only for a director the subject does not name.
         if person_sid not in seen_sids:
             stmts.append(person)
             seen_sids.add(person_sid)
@@ -964,16 +1064,13 @@ def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
         person_type="knownPerson",
         nationalities=nationalities,
         birth_date=birth_date,
-        identifiers=[
-            {
-                "id": officer_id,
-                "scheme": "GB-COH-OFFICER",
-                "schemeName": "Companies House officer id",
-            }
-        ],
         source_url=person_url,
     )
-    annotate(person, _birth_date_precision_note(birth_date))
+    annotate(
+        person,
+        _birth_date_precision_note(birth_date),
+        _ch_officer_grouping_note(officer_id),
+    )
     result.statements.append(person)
     person_sid = person["statementId"]
 
