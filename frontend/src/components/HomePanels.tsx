@@ -36,11 +36,6 @@ export interface ExampleLei {
   name: string;
   hint?: string;
   signals?: ExampleSignal[];
-  /** True when the example's graph is served from the pre-extracted Open
-   *  Ownership bulk BODS datasets (UK PSC / GLEIF) — drives the blue
-   *  "Curated example — pre-extracted data" banner on the results page.
-   *  Examples without it run as ordinary live lookups. */
-  bulkBods?: boolean;
 }
 
 // Signals shown on the picker cards. These are CLAIMS ABOUT PRODUCTION
@@ -73,7 +68,6 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
     signals: [
       { code: "OFFSHORE_LEAKS", confidence: "high" },
     ],
-    bulkBods: true,
   },
   {
     lei: "253400JT3MQWNDKMJE44",
@@ -83,7 +77,6 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "SANCTIONED", confidence: "high" },
       { code: "EXPORT_CONTROLLED", confidence: "high" },
     ],
-    bulkBods: true,
   },
   {
     lei: "213800E11LI1SCETU492",
@@ -93,7 +86,6 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "RELATED_SANCTIONS_CONTROLLED", confidence: "high" },
       { code: "RELATED_EXPORT_CONTROL_LINKED", confidence: "high" },
     ],
-    bulkBods: true,
   },
   {
     lei: "5493005044RTLQ5RZU70",
