@@ -625,6 +625,45 @@ def test_companies_house_finding_names_who_is_on_the_filing() -> None:
     )
 
 
+def test_companies_house_finding_counts_serving_officers_only() -> None:
+    """Phase 192. The officer clause and the PSC clause now measure the same
+    kind of thing — who is there now — so a card cannot put a bank's whole
+    officer history beside its current people with significant control.
+    These are Lloyds Bank PLC's numbers: 116 on file, 16 of them serving."""
+    bundle = ch_sample_bundle()
+    bundle["officers"] = {
+        "total_results": 116,
+        "items": [
+            {"name": f"OFFICER, Number {i}", "officer_role": "director"}
+            if i < 16
+            else {
+                "name": f"OFFICER, Number {i}",
+                "officer_role": "director",
+                "resigned_on": "2010-01-01",
+            }
+            for i in range(116)
+        ],
+    }
+    assert finding_companies_house(bundle) == (
+        "2 people with significant control on file, including Jane SMITH with "
+        "50% to 75% of shares, 16 officers listed."
+    )
+
+
+def test_companies_house_finding_drops_the_officer_clause_when_none_are_serving() -> None:
+    """A dissolved company whose every officer resigned says nothing about
+    officers rather than counting the departed (rule 8)."""
+    bundle = ch_sample_bundle()
+    bundle["officers"] = {
+        "total_results": 2,
+        "items": [
+            {"name": "OFFICER, One", "officer_role": "director", "resigned_on": "2010-01-01"},
+            {"name": "OFFICER, Two", "officer_role": "secretary", "resigned_on": "2011-01-01"},
+        ],
+    }
+    assert "officer" not in finding_companies_house(bundle)
+
+
 def test_companies_house_finding_states_an_absent_psc_in_the_same_voice() -> None:
     assert finding_companies_house(_CH_STATEMENTS_ONLY) == (
         "No person with significant control named; the filing states that no "

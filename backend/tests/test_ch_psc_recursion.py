@@ -185,13 +185,15 @@ def _mock_company(httpx_mock: HTTPXMock, number: str, pscs: list[dict[str, Any]]
         url=f"{_API}/company/{number}",
         json={"company_number": number, "company_name": f"Company {number}"},
     )
-    httpx_mock.add_response(url=f"{_API}/company/{number}/officers", json={"items": []})
     httpx_mock.add_response(
-        url=f"{_API}/company/{number}/persons-with-significant-control",
+        url=f"{_API}/company/{number}/officers?items_per_page=100&start_index=0", json={"items": []}
+    )
+    httpx_mock.add_response(
+        url=f"{_API}/company/{number}/persons-with-significant-control?items_per_page=100&start_index=0",
         json={"items": pscs},
     )
     httpx_mock.add_response(
-        url=f"{_API}/company/{number}/persons-with-significant-control-statements",
+        url=f"{_API}/company/{number}/persons-with-significant-control-statements?items_per_page=100&start_index=0",
         status_code=404,
         json={"errors": [{"error": "not-found"}]},
     )

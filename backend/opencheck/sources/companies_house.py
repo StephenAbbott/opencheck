@@ -67,10 +67,49 @@ _SKIP_FETCH_FAILED = "fetch_failed"
 # did; only the serial dependency between hops is gone.
 _PREFETCH_CONCURRENCY = 6
 
+# Phase 192: Companies House serves its list endpoints in pages, and the page
+# size it picks when asked for none is small — /officers defaults to 35. That
+# default was read as a fact about the company: Lloyds Bank PLC (00002065)
+# has 116 officers on file and the report said "35 officers listed", which is
+# the page size and not a number about the bank. Every list endpoint is now
+# asked for a full page and followed to the end of the list. The page cap is
+# a bound on a pathological register, not a page size — a list longer than
+# _LIST_PAGE_SIZE * _MAX_LIST_PAGES is marked as cut rather than silently
+# ending, because an unmarked short list is exactly the defect being fixed.
+_LIST_PAGE_SIZE = 100
+_MAX_LIST_PAGES = 20
+
+#: Set on a merged list payload whose fetch stopped at the page cap. The key
+#: is also what stops a capped list being re-fetched on every walk: it is as
+#: whole as this adapter will make it.
+_LIST_CAPPED = "opencheck_page_cap_reached"
+
 # How the chain was found — the closed vocabulary ``signalstats`` counts.
 _CHAIN_LIVE = "live"  # the flag is off: hop by hop, as before
 _CHAIN_GRAPH = "graph"  # the graph proposed the chain; the register confirmed it
 _CHAIN_GRAPH_UNAVAILABLE = "graph_unavailable"  # the flag is on but no graph: live
+
+
+def _list_is_whole(payload: Any) -> bool:
+    """Whether a cached list payload holds the whole list.
+
+    A payload cached before Phase 192 holds Companies House's own default
+    page — 35 officers of 116 — and is indistinguishable from a complete
+    answer except by its own ``total_results``. Rather than expire the whole
+    namespace (and re-spend the register calls behind every other record), a
+    short list is simply not served from the cache: the next walk fetches it
+    whole and overwrites it. A list cut by the page cap counts as whole,
+    since fetching it again would cut it in the same place.
+    """
+    if not isinstance(payload, dict):
+        return True
+    if payload.get(_LIST_CAPPED):
+        return True
+    total = payload.get("total_results")
+    items = payload.get("items")
+    if not isinstance(total, int) or not isinstance(items, list):
+        return True  # an endpoint that does not count is taken at its word
+    return len(items) >= total
 
 
 def _slug(text: str) -> str:
@@ -388,23 +427,30 @@ class CompaniesHouseAdapter(SourceAdapter):
         """Warm the cache with one company's four register records. A
         failure here is not a failure of the lookup: the walk asks again,
         live, and records the gap the way it always has."""
+        # The last member of each row says whether the record is a *list*, and
+        # so must be warmed page by page: a prefetch that cached one page
+        # would be overwritten by the walk's own paginated fetch, spending the
+        # register call twice and saving nothing.
         paths = (
-            (f"/company/{number}", f"{_CACHE_NS}/company/{number}"),
-            (f"/company/{number}/officers", f"{_CACHE_NS}/company/{number}/officers"),
+            (f"/company/{number}", f"{_CACHE_NS}/company/{number}", False),
+            (f"/company/{number}/officers", f"{_CACHE_NS}/company/{number}/officers", True),
             (
                 f"/company/{number}/persons-with-significant-control",
                 f"{_CACHE_NS}/company/{number}/pscs",
+                True,
             ),
             (
                 f"/company/{number}/persons-with-significant-control-statements",
                 f"{_CACHE_NS}/company/{number}/psc-statements",
+                True,
             ),
         )
 
-        async def one(path: str, cache_key: str) -> None:
+        async def one(path: str, cache_key: str, paged: bool) -> None:
             async with sem:
                 try:
-                    await self._get(path, cache_key=cache_key, stats=stats)
+                    fetch = self._get_list if paged else self._get
+                    await fetch(path, cache_key=cache_key, stats=stats)
                 except httpx.HTTPStatusError as exc:
                     if exc.response.status_code == 404 and path.endswith("-statements"):
                         # No PSC statements filed: the walk treats the 404 as
@@ -416,7 +462,7 @@ class CompaniesHouseAdapter(SourceAdapter):
                     return
                 stats.prefetched.add(cache_key)
 
-        await asyncio.gather(*(one(path, key) for path, key in paths))
+        await asyncio.gather(*(one(path, key, paged) for path, key, paged in paths))
 
     async def _fetch_company_data(
         self,
@@ -453,12 +499,12 @@ class CompaniesHouseAdapter(SourceAdapter):
             cache_key=f"{_CACHE_NS}/company/{number}",
             stats=stats,
         )
-        officers = await self._get(
+        officers = await self._get_list(
             f"/company/{number}/officers",
             cache_key=f"{_CACHE_NS}/company/{number}/officers",
             stats=stats,
         )
-        pscs = await self._get(
+        pscs = await self._get_list(
             f"/company/{number}/persons-with-significant-control",
             cache_key=f"{_CACHE_NS}/company/{number}/pscs",
             stats=stats,
@@ -466,7 +512,7 @@ class CompaniesHouseAdapter(SourceAdapter):
         # PSC *statements* ("no PSC exists", "PSC not yet identified", …) are on a
         # separate endpoint that 404s when the company has filed none.
         try:
-            psc_statements = await self._get(
+            psc_statements = await self._get_list(
                 f"/company/{number}/persons-with-significant-control-statements",
                 cache_key=f"{_CACHE_NS}/company/{number}/psc-statements",
                 stats=stats,
@@ -552,7 +598,7 @@ class CompaniesHouseAdapter(SourceAdapter):
         We package that into a neutral bundle the BODS mapper can turn
         into a ``personStatement`` plus one relationship per appointment.
         """
-        appointments = await self._get(
+        appointments = await self._get_list(
             f"/officers/{quote(officer_id)}/appointments",
             cache_key=f"{_CACHE_NS}/officer/{officer_id}/appointments",
         )
@@ -580,21 +626,90 @@ class CompaniesHouseAdapter(SourceAdapter):
                     stats.calls_cached += 1
             return cached[0]  # unwrap (payload, tier)
 
-        settings = get_settings()
-        assert settings.companies_house_api_key, "live_available should have been false"
         if stats is not None:
             stats.calls_live += 1
+        payload = await self._fetch_json(path)
+        self._cache.put(cache_key, payload)
+        return payload
 
+    async def _fetch_json(self, path: str) -> dict[str, Any]:
+        """One live register call. No cache, no counters — both belong to the
+        caller, because a paginated fetch is several calls and one record."""
+        settings = get_settings()
+        assert settings.companies_house_api_key, "live_available should have been false"
         async with build_client() as client:
             response = await client.get(
                 f"{_API_BASE}{path}",
                 auth=httpx.BasicAuth(settings.companies_house_api_key, ""),
             )
             response.raise_for_status()
-            payload = response.json()
-
-        self._cache.put(cache_key, payload)
+            payload: dict[str, Any] = response.json()
         return payload
+
+    async def _get_list(
+        self, path: str, *, cache_key: str, stats: _WalkStats | None = None
+    ) -> dict[str, Any]:
+        """Fetch a paginated Companies House list endpoint *whole*.
+
+        Companies House answers a list endpoint with its own default page
+        size when asked for none — 35 for ``/officers`` — and reports the
+        real length in ``total_results``. Before Phase 192 that number was
+        fetched and never read, so a company with more officers than a page
+        returned a page and looked like a company with a page's worth of
+        officers.
+
+        Pages of :data:`_LIST_PAGE_SIZE` are followed on ``start_index``
+        until the register's own ``total_results`` is met. The merged payload
+        keeps the first page's envelope — ``etag``, ``kind``, ``links``,
+        ``active_count``, ``resigned_count`` — so a caller reads the same
+        shape it always did, with ``items`` now holding the whole list.
+        """
+        cached = self._cache.get_payload(cache_key)
+        if cached is not None and _list_is_whole(cached[0]):
+            if stats is not None:
+                if cache_key in stats.prefetched:
+                    stats.prefetched.discard(cache_key)  # the prefetch's own call, counted live
+                else:
+                    stats.calls_cached += 1
+            return cached[0]  # unwrap (payload, tier)
+
+        merged: dict[str, Any] | None = None
+        items: list[Any] = []
+        pages = 0
+        while pages < _MAX_LIST_PAGES:
+            sep = "&" if "?" in path else "?"
+            pages += 1
+            # Counted before the call, as ``_get`` counts it: a page the
+            # register refuses was still spent against the rate limit.
+            if stats is not None:
+                stats.calls_live += 1
+            payload = await self._fetch_json(
+                f"{path}{sep}items_per_page={_LIST_PAGE_SIZE}&start_index={len(items)}"
+            )
+            if merged is None:
+                merged = dict(payload)
+            page_items = payload.get("items") or []
+            items.extend(page_items)
+            total = payload.get("total_results")
+            if not page_items or not isinstance(total, int) or len(items) >= total:
+                break
+
+        assert merged is not None  # the loop runs at least once
+        merged["items"] = items
+        merged["start_index"] = 0
+        merged["items_per_page"] = len(items)
+        total = merged.get("total_results")
+        if isinstance(total, int) and len(items) < total:
+            merged[_LIST_CAPPED] = True
+            log.warning(
+                "companies_house: %s holds %d records; stopped at the %d-page cap with %d",
+                path,
+                total,
+                _MAX_LIST_PAGES,
+                len(items),
+            )
+        self._cache.put(cache_key, merged)
+        return merged
 
     # ------------------------------------------------------------------
     # Hit factories (live)

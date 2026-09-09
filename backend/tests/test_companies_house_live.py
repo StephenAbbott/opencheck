@@ -100,15 +100,15 @@ async def test_fetch_company_bundle_returns_profile_officers_pscs(
         json={"company_number": number, "company_name": "BP P.L.C."},
     )
     httpx_mock.add_response(
-        url=f"{_API}/company/{number}/officers",
+        url=f"{_API}/company/{number}/officers?items_per_page=100&start_index=0",
         json={"items": []},
     )
     httpx_mock.add_response(
-        url=f"{_API}/company/{number}/persons-with-significant-control",
+        url=f"{_API}/company/{number}/persons-with-significant-control?items_per_page=100&start_index=0",
         json={"items": []},
     )
     httpx_mock.add_response(
-        url=f"{_API}/company/{number}/persons-with-significant-control-statements",
+        url=f"{_API}/company/{number}/persons-with-significant-control-statements?items_per_page=100&start_index=0",
         json={"items": [{"statement": "no-individual-or-entity-with-signficant-control",
                          "notified_on": "2016-04-06", "etag": "s1"}]},
     )
@@ -131,7 +131,7 @@ async def test_fetch_officer_bundle_returns_appointments(
     """Officer ids dispatch to /officers/{id}/appointments."""
     officer_id = "zS_RY9pRYlJ9XwGJEOFtkJgrf8s"
     httpx_mock.add_response(
-        url=f"{_API}/officers/{officer_id}/appointments",
+        url=f"{_API}/officers/{officer_id}/appointments?items_per_page=100&start_index=0",
         json={
             "name": "Jane SMITH",
             "date_of_birth": {"year": 1975, "month": 8},
@@ -165,3 +165,124 @@ async def test_stub_path_when_allow_live_false(monkeypatch) -> None:
 
     assert len(hits) == 1
     assert hits[0].is_stub is True
+
+
+# ---------------------------------------------------------------------------
+# Phase 192: list endpoints are paginated
+#
+# Companies House answers /officers with 35 items when asked for no page
+# size. Lloyds Bank PLC (00002065) has 116 officers on file, of whom 16 are
+# serving, and the report said "35 officers listed" — the page size, read as
+# a fact about the bank. The numbers in these tests are that company's.
+# ---------------------------------------------------------------------------
+
+_PAGE = "?items_per_page=100&start_index=0"
+
+
+def _officer(i: int, *, resigned: bool) -> dict:
+    return {
+        "name": f"OFFICER, Number {i}",
+        "officer_role": "director",
+        "appointed_on": "2001-01-01",
+        **({"resigned_on": "2010-01-01"} if resigned else {}),
+    }
+
+
+def _company_pages(httpx_mock: HTTPXMock, number: str, officer_pages: list[dict]) -> None:
+    """Mock a whole company: profile, the given officer pages, empty PSCs."""
+    httpx_mock.add_response(
+        url=f"{_API}/company/{number}", json={"company_number": number, "company_name": "LLOYDS"}
+    )
+    for start, page in zip(range(0, len(officer_pages) * 100, 100), officer_pages):
+        httpx_mock.add_response(
+            url=f"{_API}/company/{number}/officers?items_per_page=100&start_index={start}",
+            json=page,
+        )
+    httpx_mock.add_response(
+        url=f"{_API}/company/{number}/persons-with-significant-control{_PAGE}",
+        json={"items": [], "total_results": 0},
+    )
+    httpx_mock.add_response(
+        url=f"{_API}/company/{number}/persons-with-significant-control-statements{_PAGE}",
+        status_code=404,
+        json={"errors": [{"error": "not-found"}]},
+    )
+
+
+async def test_officers_are_fetched_past_the_registers_default_page(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """116 officers on file come back as 116, not as one page of them."""
+    all_officers = [_officer(i, resigned=i >= 16) for i in range(116)]
+    _company_pages(
+        httpx_mock,
+        "00002065",
+        [
+            {"items": all_officers[:100], "total_results": 116, "active_count": 16},
+            {"items": all_officers[100:], "total_results": 116, "active_count": 16},
+        ],
+    )
+
+    bundle = await CompaniesHouseAdapter().fetch("00002065")
+
+    assert len(bundle["officers"]["items"]) == 116
+    # The merged payload keeps the register's own envelope and says it is whole.
+    assert bundle["officers"]["total_results"] == 116
+    assert bundle["officers"]["active_count"] == 16
+    assert bundle["officers"]["items_per_page"] == 116
+    assert bundle["officers"]["start_index"] == 0
+
+
+async def test_a_list_that_fits_one_page_costs_one_call(httpx_mock: HTTPXMock) -> None:
+    """Pagination is not a second call: a short list ends on its own page."""
+    _company_pages(
+        httpx_mock, "00102498", [{"items": [_officer(0, resigned=False)], "total_results": 1}]
+    )
+
+    await CompaniesHouseAdapter().fetch("00102498")
+
+    officer_calls = [r for r in httpx_mock.get_requests() if r.url.path.endswith("/officers")]
+    assert len(officer_calls) == 1
+
+
+async def test_a_truncated_cached_page_is_not_served(
+    httpx_mock: HTTPXMock, tmp_path
+) -> None:
+    """A record cached before this phase holds Companies House's own 35-item
+    page. It says so — ``total_results`` is larger than the list it carries —
+    so it is re-fetched whole rather than served, which is what spares the
+    namespace an expiry that would re-spend every other register call."""
+    from opencheck.cache import Cache
+
+    Cache().put(
+        "companies_house/company/00002065/officers",
+        {"items": [_officer(i, resigned=False) for i in range(35)], "total_results": 116},
+    )
+    all_officers = [_officer(i, resigned=i >= 16) for i in range(116)]
+    _company_pages(
+        httpx_mock,
+        "00002065",
+        [
+            {"items": all_officers[:100], "total_results": 116},
+            {"items": all_officers[100:], "total_results": 116},
+        ],
+    )
+
+    bundle = await CompaniesHouseAdapter().fetch("00002065")
+
+    assert len(bundle["officers"]["items"]) == 116
+
+
+async def test_a_list_longer_than_the_cap_says_it_was_cut(
+    httpx_mock: HTTPXMock, monkeypatch
+) -> None:
+    """The bound exists so one lookup cannot crawl an unbounded list. A list
+    cut by it is marked, because an unmarked short list is the defect."""
+    monkeypatch.setattr("opencheck.sources.companies_house._MAX_LIST_PAGES", 2)
+    page = {"items": [_officer(i, resigned=False) for i in range(100)], "total_results": 5000}
+    _company_pages(httpx_mock, "00002065", [page, page])
+
+    bundle = await CompaniesHouseAdapter().fetch("00002065")
+
+    assert len(bundle["officers"]["items"]) == 200
+    assert bundle["officers"]["opencheck_page_cap_reached"] is True

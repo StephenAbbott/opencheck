@@ -165,7 +165,7 @@ async def test_graph_first_returns_the_same_chain_from_the_registers_own_records
     requested = {str(r.url) for r in httpx_mock.get_requests()}
     for number in _CHAIN:
         assert f"{_API}/company/{number}" in requested
-        assert f"{_API}/company/{number}/persons-with-significant-control" in requested
+        assert f"{_API}/company/{number}/persons-with-significant-control?items_per_page=100&start_index=0" in requested
 
 
 async def test_graph_first_says_where_the_chain_came_from(
@@ -235,12 +235,12 @@ async def test_the_chain_is_fetched_concurrently_not_hop_by_hop(
         peak = max(peak, in_flight)
         await asyncio.sleep(0.01)
         in_flight -= 1
-        number = str(request.url).split("/company/")[1].split("/")[0]
-        if str(request.url).endswith("-statements"):
+        number = request.url.path.split("/company/")[1].split("/")[0]
+        if request.url.path.endswith("-statements"):
             return httpx.Response(404, json={"errors": [{"error": "not-found"}]})
-        if str(request.url).endswith("/officers"):
+        if request.url.path.endswith("/officers"):
             return httpx.Response(200, json={"items": []})
-        if str(request.url).endswith("persons-with-significant-control"):
+        if request.url.path.endswith("persons-with-significant-control"):
             return httpx.Response(200, json={"items": _CHAIN.get(number, [])})
         return httpx.Response(200, json={"company_number": number, "company_name": number})
 
@@ -355,13 +355,15 @@ async def test_a_company_the_prefetch_could_not_reach_is_left_to_the_walk(
     # asks again; its other three records answer normally.
     for _ in range(2):
         httpx_mock.add_response(url=f"{_API}/company/02669327", status_code=500, json={})
-    httpx_mock.add_response(url=f"{_API}/company/02669327/officers", json={"items": []})
     httpx_mock.add_response(
-        url=f"{_API}/company/02669327/persons-with-significant-control",
+        url=f"{_API}/company/02669327/officers?items_per_page=100&start_index=0", json={"items": []}
+    )
+    httpx_mock.add_response(
+        url=f"{_API}/company/02669327/persons-with-significant-control?items_per_page=100&start_index=0",
         json={"items": _CHAIN["02669327"]},
     )
     httpx_mock.add_response(
-        url=f"{_API}/company/02669327/persons-with-significant-control-statements",
+        url=f"{_API}/company/02669327/persons-with-significant-control-statements?items_per_page=100&start_index=0",
         status_code=404,
         json={"errors": [{"error": "not-found"}]},
     )
