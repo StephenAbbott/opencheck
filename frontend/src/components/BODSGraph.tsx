@@ -37,6 +37,8 @@ import { EDGE_STYLE, signalStyle } from "../lib/graphStyle";
 import GraphLegend from "./GraphLegend";
 import { RISK_PRESENTATION } from "./risk/RiskChip";
 import type { SameAsCandidate } from "../lib/reconcile";
+import type { LayerControl } from "../lib/fullCheckHeader";
+import { Button } from "./ui";
 
 cytoscape.use(dagre);
 
@@ -224,6 +226,8 @@ export default function BODSGraph({
   onSelect,
   highlightSource = null,
   sameAs = [],
+  layer,
+  onAddLayer,
 }: {
   model: GraphModel;
   signals?: RiskSignal[];
@@ -239,6 +243,14 @@ export default function BODSGraph({
   highlightSource?: string | null;
   /** FullCheck: name-only "likely same" candidates → dashed review edges. */
   sameAs?: SameAsCandidate[];
+  /** FullCheck progressive discovery: what the single-layer control says, from
+   *  `lib/fullCheckHeader`. Omitted (with `onAddLayer`) on a view-only graph —
+   *  QuickCheck's panels don't expand. */
+  layer?: LayerControl;
+  /** Resolve one more layer of the frontier. The control lives here, with the
+   *  other canvas controls, rather than above the graph competing with the
+   *  mode's primary action. */
+  onAddLayer?: () => void;
 }) {
   const containerRef  = useRef<HTMLDivElement | null>(null);
   const cyRef         = useRef<Core | null>(null);
@@ -543,6 +555,29 @@ export default function BODSGraph({
               onClick={() => onCollapsedChange(new Set())}>
               Expand all
             </button>
+          )}
+
+          {/* Progressive discovery, one hop at a time. This was a full-width
+              button above the graph, beside "Run FullCheck" — two blue buttons
+              driving the same expansion at different budgets, with nothing on
+              screen to say which was the bigger one. It manipulates the canvas,
+              so it belongs with the canvas controls; the frontier count comes
+              with it as the badge, because it is the one thing this control
+              says that "Run FullCheck" cannot. */}
+          {layer && onAddLayer && (
+            <Button
+              variant={layer.disabled ? "ghost" : "primary"}
+              size="sm"
+              className="ml-1"
+              onClick={onAddLayer}
+              disabled={layer.disabled}
+              aria-label={layer.ariaLabel}
+            >
+              <span>{layer.label}</span>
+              {layer.count !== null && (
+                <span className="font-mono opacity-80">{layer.count}</span>
+              )}
+            </Button>
           )}
 
           {/* Search-within-graph */}
