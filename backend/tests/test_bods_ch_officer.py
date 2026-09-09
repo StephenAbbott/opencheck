@@ -78,11 +78,17 @@ def test_map_ch_officer_sets_birth_date_and_nationality_on_person() -> None:
     assert person["recordDetails"]["nationalities"] == [{"name": "British"}]
 
 
-def test_map_ch_officer_carries_officer_id_as_identifier() -> None:
+def test_map_ch_officer_carries_officer_id_as_an_annotation() -> None:
+    """Phase 193: this path published the officer id as
+    `recordDetails.identifiers[scheme=GB-COH-OFFICER]`, which fails three of
+    lib-cove-bods' person-identifier checks — unseen, because nothing
+    validated this path's output. It is an `identifying` annotation now, the
+    same one the company path emits."""
     bundle = map_companies_house(_officer_bundle())
     person = next(s for s in bundle if s["recordType"] == "person")
-    schemes = {i["scheme"] for i in person["recordDetails"]["identifiers"]}
-    assert "GB-COH-OFFICER" in schemes
+    assert "identifiers" not in person["recordDetails"]
+    note = next(a for a in person["annotations"] if a["motivation"] == "identifying")
+    assert "Companies House officer id" in note["description"]
 
 
 def test_map_ch_officer_passes_validator() -> None:

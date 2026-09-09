@@ -302,15 +302,22 @@ def test_person_appointments_maps_officer_bundle(
     assert body["appointments"][0]["company_name"] == "ACME LTD"
     assert body["appointments"][1]["resigned_on"] == "2014-12-31"
     assert body["caveat"]
-    # BODS evidence: the personStatement must carry the officer id.
+    # BODS evidence: the personStatement must carry the officer id. Phase 193
+    # moved it out of recordDetails.identifiers — BODS reserves those for
+    # identity documents — into an `identifying` annotation and source.url.
     persons = [
         s
         for s in body["bods"]
         if s.get("recordType") in ("person", "personStatement")
     ]
     assert persons, "expected a personStatement in the BODS output"
-    ids = persons[0].get("recordDetails", {}).get("identifiers", [])
-    assert any(i.get("id") == "zS_RY9pRYlJ9XwGJEOFtkJgrf8s" for i in ids)
+    notes = [
+        a
+        for a in persons[0].get("annotations", [])
+        if a.get("motivation") == "identifying"
+    ]
+    assert any("zS_RY9pRYlJ9XwGJEOFtkJgrf8s" in a.get("description", "") for a in notes)
+    assert "zS_RY9pRYlJ9XwGJEOFtkJgrf8s" in persons[0]["source"]["url"]
 
 
 def test_person_appointments_stub_mode(client: TestClient) -> None:

@@ -339,3 +339,177 @@ def test_ch_directors_interest_types_valid() -> None:
     stmts = list(map_companies_house(bundle))
     invalid = check_interest_types(stmts)
     assert invalid == [], invalid
+
+
+# ---------------------------------------------------------------------------
+# Phase 193: one person, however many boards
+#
+# The numbers behind this are Lloyds Bank PLC (00002065) and Lloyds Banking
+# Group plc (SC095000): 13 directors serve both boards, and Companies House
+# gives 12 of the 13 the same officer id. Before this the canvas drew two
+# nodes for each of them.
+# ---------------------------------------------------------------------------
+
+
+def _officer(
+    name: str,
+    *,
+    officer_id: str | None = "abc123",
+    role: str = "director",
+    appointed_on: str = "2018-06-01",
+    nationality: str = "British",
+    locality: str = "London",
+) -> dict:
+    officer: dict = {
+        "name": name,
+        "officer_role": role,
+        "appointed_on": appointed_on,
+        "nationality": nationality,
+        "address": {"address_line_1": "High Street", "locality": locality},
+    }
+    if officer_id:
+        officer["links"] = {"officer": {"appointments": f"/officers/{officer_id}/appointments"}}
+    return officer
+
+
+def _two_company_bundle(subject_officer: dict, parent_officer: dict) -> dict:
+    """A subject with one director and a parent company with its own."""
+    return {
+        "company_number": "00002065",
+        "profile": {"company_name": "LLOYDS BANK PLC", "company_number": "00002065"},
+        "officers": {"items": [subject_officer]},
+        "pscs": {"items": []},
+        "related_companies": {
+            "SC095000": {
+                "company_number": "SC095000",
+                "profile": {
+                    "company_name": "LLOYDS BANKING GROUP PLC",
+                    "company_number": "SC095000",
+                },
+                "officers": {"items": [parent_officer]},
+                "pscs": {"items": []},
+            }
+        },
+    }
+
+
+def _persons(bundle) -> list[dict]:
+    return [s for s in bundle.statements if s["recordType"] == "person"]
+
+
+def _director_rels(bundle) -> list[dict]:
+    return [
+        s
+        for s in bundle.statements
+        if s["recordType"] == "relationship"
+        and any(
+            i.get("type") == "seniorManagingOfficial"
+            for i in s["recordDetails"].get("interests") or []
+        )
+    ]
+
+
+def test_one_officer_id_on_two_boards_is_one_person_with_two_relationships() -> None:
+    bundle = map_companies_house(
+        _two_company_bundle(_officer("SMITH, Jane"), _officer("SMITH, Jane"))
+    )
+
+    persons = _persons(bundle)
+    assert len(persons) == 1
+    # Two appointments, one for each company, both pointing at that person.
+    rels = _director_rels(bundle)
+    assert len(rels) == 2
+    assert {r["recordDetails"]["interestedParty"] for r in rels} == {persons[0]["statementId"]}
+    assert len({r["recordDetails"]["subject"] for r in rels}) == 2
+
+
+def test_the_subjects_own_filing_wins_where_two_boards_disagree() -> None:
+    """Same person, two filings, different details. The subject's is published
+    — it is the company the report is about, and it is mapped first."""
+    bundle = map_companies_house(
+        _two_company_bundle(
+            _officer("SMITH, Jane", locality="London"),
+            _officer("SMITH, Jane E", locality="Edinburgh", nationality="Scottish"),
+        )
+    )
+
+    person = _persons(bundle)[0]
+    assert person["recordDetails"]["names"][0]["fullName"] == "SMITH, Jane"
+    assert person["recordDetails"]["nationalities"] == [{"name": "British"}]
+    assert "London" in person["recordDetails"]["addresses"][0]["address"]
+
+
+def test_person_publishes_the_officer_id_it_was_grouped_on() -> None:
+    """The grouping is auditable: the id it was made on is in the output, so a
+    consumer can regroup or reject it.
+
+    It rides as an `identifying` annotation and in `source.url`, NOT in
+    `recordDetails.identifiers` — BODS reserves that array for identity
+    documents (`<ISO3>-PASSPORT|TAXID|IDCARD`), which lib-cove-bods enforces
+    and a register's internal person key can never satisfy."""
+    bundle = map_companies_house(_company_bundle_with_directors())
+    person = _persons(bundle)[0]
+
+    assert "identifiers" not in person["recordDetails"]
+    note = next(
+        a for a in person["annotations"] if a["motivation"] == "identifying"
+    )
+    assert "abc123" in note["description"]
+    assert note["statementPointerTarget"] == "/recordDetails"
+    # The register's own page for this person, which carries the id too.
+    assert person["source"]["url"].endswith("/officers/abc123/appointments")
+
+
+def test_the_grouping_note_stops_short_of_asserting_identity() -> None:
+    """Companies House derives the id from what it holds and sometimes gives
+    one person two ids. The annotation has to say so rather than let a reader
+    take the grouping for an identity match."""
+    bundle = map_companies_house(_company_bundle_with_directors())
+    note = next(
+        a
+        for a in _persons(bundle)[0]["annotations"]
+        if a["motivation"] == "identifying"
+    )
+    assert "not an assertion of identity" in note["description"]
+
+
+def test_person_key_matches_the_officer_appointments_path() -> None:
+    """A person reached through a company and the same person reached through
+    an officer lookup are one statement, not two."""
+    from opencheck.bods.mapper import _map_companies_house_officer
+
+    company = map_companies_house(_company_bundle_with_directors())
+    officer = _map_companies_house_officer(
+        {
+            "officer_id": "abc123",
+            "appointments": {"name": "Jane SMITH", "items": []},
+        }
+    )
+    company_sid = _persons(company)[0]["statementId"]
+    officer_sid = [s for s in officer.statements if s["recordType"] == "person"][0][
+        "statementId"
+    ]
+    assert company_sid == officer_sid
+
+
+def test_without_an_officer_id_two_boards_stay_two_people() -> None:
+    """No links block means nothing to group on. A name-only merge is the one
+    `reconcile.ts` refuses to make, and so does this."""
+    bundle = map_companies_house(
+        _two_company_bundle(
+            _officer("SMITH, Jane", officer_id=None),
+            _officer("SMITH, Jane", officer_id=None),
+        )
+    )
+
+    assert len(_persons(bundle)) == 2
+    assert len(_director_rels(bundle)) == 2
+
+
+def test_person_local_id_carries_no_company_but_the_appointment_does() -> None:
+    from opencheck.bods.mapper import _ch_officer_local_id, _ch_officer_person_local_id
+
+    officer = _officer("SMITH, Jane")
+    assert _ch_officer_person_local_id("00102498", officer) == "officer:abc123"
+    # The appointment is company-scoped, and its id is unchanged by this phase.
+    assert _ch_officer_local_id("00102498", officer) == "00102498:director:abc123"
