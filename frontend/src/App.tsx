@@ -82,6 +82,7 @@ const BackgroundCheckPanel = lazy(
   () => import("./components/cdd/BackgroundCheckPanel")
 );
 const SubsidiariesPanel = lazy(() => import("./components/cdd/SubsidiariesPanel"));
+const HistoryPanel = lazy(() => import("./components/cdd/HistoryPanel"));
 const PersonReportPage = lazy(
   () => import("./components/cdd/PersonReportPage")
 );
@@ -299,6 +300,14 @@ export default function App() {
       accent: MODE_ACCENT.subsidiaries,
       blurb: "What this company owns, from every source that publishes a list — they disagree, and the tab says why.",
       topic: TOPIC_MODES.has("subsidiaries"),
+    },
+    {
+      id: "history",
+      label: "History",
+      icon: "history",
+      accent: MODE_ACCENT.history,
+      blurb: "How this company's records changed, merged from every register that keeps a change log — most keep none.",
+      topic: TOPIC_MODES.has("history"),
     },
     {
       id: "esg",
@@ -2232,6 +2241,28 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               </Suspense>
             </PanelCard>
           </div>
+        ) : mode === "history" && streamingLei ? (
+          <div id="panel-history" role="tabpanel" aria-labelledby="tab-history" tabIndex={-1}>
+            <PanelCard>
+              <ModeBlurb mode="history" tabs={MODE_TABS} />
+              <Suspense
+                fallback={
+                  <PanelSection>
+                    <p className="text-oo-small text-oo-muted italic">Loading History…</p>
+                  </PanelSection>
+                }
+              >
+                <HistoryPanel
+                  lei={streamingLei}
+                  legalName={legalName}
+                  onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
+                  onPanelRecovered={(panel) =>
+                    setPanelErrors((prev) => clearPanelError(prev, panel))
+                  }
+                />
+              </Suspense>
+            </PanelCard>
+          </div>
         ) : mode === "esg" && streamingLei ? (
           <div id="panel-esg" role="tabpanel" aria-labelledby="tab-esg" tabIndex={-1}>
             <PanelCard>
@@ -2566,7 +2597,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 <div key={b.sourceId} id={`source-${b.sourceId}`} className="scroll-mt-4">
                   <SourceBucketCard
                     bucket={b}
-                    lei={streamingLei ?? undefined}
                     riskByHit={riskByHit}
                     subjectSignals={riskSignals}
                     bodsCountMap={bodsCountMap}

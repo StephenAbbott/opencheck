@@ -8,7 +8,6 @@ import { ActionChip, Chip, DataTile, RowList } from "../ui";
 import type { BodsBreakdown, BoAccessNotice, DeepenResponse, RiskSignal, SourceHit } from "../../lib/api";
 import { RiskChip } from "../risk/RiskChip";
 import { LivenessBadge, type SourceLiveness } from "./LivenessBadge";
-import { HistoryTimeline } from "./HistoryTimeline";
 import {
   annotatedFieldCount,
   annotationsAt,
@@ -1219,18 +1218,16 @@ export function SkeletonSourceCard() {
 // SourceBucketCard — per-source result card
 // ---------------------------------------------------------------------
 
-// Sources that can show the entity-level Time Machine timeline.
-const TIMELINE_SOURCES = new Set([
-  "gleif",
-  "companies_house",
-  "nz_companies",
-  "ariregister",
-  "cvr_denmark",
-]);
+// Phase 190 removed `TIMELINE_SOURCES` and the "Changes over time" button it
+// gated on gleif / companies_house / nz_companies / ariregister / cvr_denmark.
+// Every one of those five mounted the same `<HistoryTimeline lei=…>` — the
+// entity-wide, all-source timeline — so the button never showed that source's
+// history, it showed every source's, up to five identical copies per report,
+// under a heading that implied otherwise and with no URL to any of them. The
+// merged timeline is the History tab now, fetched once.
 
 export function SourceBucketCard({
   bucket,
-  lei,
   riskByHit,
   subjectSignals = [],
   bodsCountMap = {},
@@ -1242,8 +1239,6 @@ export function SourceBucketCard({
   extra,
 }: {
   bucket: SourceBucket;
-  /** Resolved LEI for the current lookup — keys the Time Machine timeline. */
-  lei?: string;
   riskByHit: Record<string, RiskSignal[]>;
   /** The lookup's full top-level signal list. `riskByHit` only carries the
    *  signals attributed to a hit in this bucket; cross-source (`RELATED_*`)
@@ -1266,47 +1261,12 @@ export function SourceBucketCard({
    *  anything other than a fresh live call. */
   liveness?: SourceLiveness;
 }) {
-  const [showTimeline, setShowTimeline] = useState(false);
-  // The Time Machine timeline is entity-level. Offer it on the sources that
-  // contribute history (GLEIF + Companies House), keyed by the resolved LEI.
-  // Fall back to the GLEIF hit_id (which is the LEI) if no lei prop is passed.
-  const timelineLei =
-    lei ??
-    (bucket.sourceId === "gleif"
-      ? (bucket.hits.find((h) => !h.is_stub) ?? bucket.hits[0])?.hit_id
-      : undefined);
-  const timelineName = bucket.hits[0]?.name;
-  const showTimelineButton =
-    TIMELINE_SOURCES.has(bucket.sourceId) && !bucket.error && !!timelineLei;
-
   // NZ-only enrichment: director/shareholder cross-company associations. The
   // nz_companies hit_id is the company number.
   const nzCompanyNumber =
     bucket.sourceId === "nz_companies" && !bucket.error
       ? (bucket.hits.find((h) => !h.is_stub) ?? bucket.hits[0])?.hit_id
       : undefined;
-
-  // Rendered inline with the entity title (right-aligned) on the first hit row.
-  // Sits in the row's action group beside the diagram chip, not floating at
-  // the top-right of the first hit. The mockup labels it with a change count;
-  // that count only exists once HistoryTimeline has fetched, so the chip says
-  // what it opens until then rather than inventing a number.
-  const timelineButton = showTimelineButton ? (
-    <ActionChip
-      onClick={() => setShowTimeline((v) => !v)}
-      expanded={showTimeline}
-      controls={`oc-timeline-${bucket.sourceId}`}
-      tone="timeline"
-      icon={
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 4v4h4" /><path d="M12 8v4l3 2" />
-        </svg>
-      }
-    >
-      {showTimeline ? "Hide changes" : "Changes over time"}
-    </ActionChip>
-  ) : null;
 
   return (
     <>
@@ -1362,7 +1322,7 @@ export function SourceBucketCard({
           four identical OpenAleph rows here — four real PSC records whose
           only difference is not on the record. See lib/hitGroups.ts. */}
       <ul className="divide-y divide-oo-rule">
-        {groupHitsForDisplay(bucket.hits).map((group, idx) => (
+        {groupHitsForDisplay(bucket.hits).map((group) => (
           <HitRow
             key={`${group.lead.source_id}:${group.lead.hit_id}`}
             hit={group.lead}
@@ -1371,7 +1331,6 @@ export function SourceBucketCard({
             subjectSignals={subjectSignals}
             preloadedStmtCount={bodsCountMap[`${group.lead.source_id}:${group.lead.hit_id}`]}
             preloadedBreakdown={bodsBreakdownMap[`${group.lead.source_id}:${group.lead.hit_id}`]}
-            titleAccessory={idx === 0 ? timelineButton : undefined}
           />
         ))}
       </ul>
@@ -1390,11 +1349,6 @@ export function SourceBucketCard({
         </p>
       )}
     </article>
-    {showTimeline && timelineLei && (
-      <div id={`oc-timeline-${bucket.sourceId}`}>
-        <HistoryTimeline lei={timelineLei} entityName={timelineName} />
-      </div>
-    )}
     </>
   );
 }

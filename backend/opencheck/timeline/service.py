@@ -1,12 +1,25 @@
 """Time Machine fetch service — pull raw change data and assemble a timeline.
 
-Lazy and never on the main lookup (same posture as ``/securities``). Fetches:
+Lazy and never on the main lookup (same posture as ``/securities``). Fetches
+from every register OpenCheck holds a change log for — five, not the two this
+docstring claimed until Phase 190:
 
-- **GLEIF** (key-free): the LEI record (to derive the Companies House number) and
-  the field-modification change log, partitioned into LEI vs RR records.
+- **GLEIF** (key-free): the LEI record (to derive the national registry numbers
+  below) and the field-modification change log, partitioned into LEI vs RR
+  records.
 - **Companies House** (needs ``COMPANIES_HOUSE_API_KEY``): filing history for the
   derived company number. Degrades to GLEIF-only when no key is set or the
   company is not GB / has no CH number.
+- **New Zealand Companies Office** (needs ``NZBN_API_KEY``): events
+  reconstructed from the NZBN dated records.
+- **Estonian e-Äriregister** (needs the RIK credentials): registry-card and
+  beneficial-owner history over the read-only SOAP API.
+- **Danish CVR** (needs ``CVR_DENMARK_API_KEY``): events reconstructed from the
+  bitemporal ``virkning`` records the ordinary adapter fetch already returns.
+
+Every one of them lands in the same ``ChangeEvent`` model and is merged onto one
+axis by :mod:`.assemble` — a national register that publishes history is not a
+separate timeline, it is more of this one.
 
 Failures of either source are swallowed so the endpoint always returns a
 (possibly empty) timeline rather than erroring — but **swallowed is not the
@@ -270,6 +283,23 @@ async def fetch_timeline(lei: str) -> Timeline:
         ch_filings=ch_filings,
         extra_events=nz_events + ee_events + dk_events,
     )
+    # Phase 190: the numbers above are how each register addresses this
+    # company, and until now they were derived, used to decide which history
+    # calls to make, and dropped. The History tab links every dated row back to
+    # the record it came from, and a link to the Danish or Estonian register
+    # cannot be built from an LEI. Present here means "this register knows the
+    # company by this number" — not that its history was fetched, which the
+    # events themselves say.
+    timeline.registry_numbers = {
+        source_id: number
+        for source_id, number in (
+            ("companies_house", company_number),
+            ("nz_companies", nz_number),
+            ("ariregister", ee_code),
+            ("cvr_denmark", dk_cvr),
+        )
+        if number
+    }
     timeline.gleif_record_available = gleif_record_available
     timeline.gleif_events_available = gleif_events_available
     # "Blocked" only when the record failed AND nothing local stood in: with a

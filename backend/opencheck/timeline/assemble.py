@@ -100,6 +100,15 @@ class Timeline:
     #: "live" | "cached" | None — where ``company_number`` and its siblings
     #: came from. "cached" means a stale on-disk GLEIF record stood in.
     company_number_basis: str | None = None
+    #: Phase 190. ``{source_id: registry number}`` for the registers whose own
+    #: history this timeline carries — the identifier each one addresses the
+    #: company by in its public record. Set by the fetch service, which already
+    #: derives every one of them to decide which history calls to make and then
+    #: threw them away. Without it a reader can follow a GLEIF or Companies
+    #: House row back to the register that published it and a New Zealand,
+    #: Estonian or Danish row nowhere, which is the opposite of what a
+    #: provenance-first timeline is for.
+    registry_numbers: dict[str, str] = field(default_factory=dict)
 
 
 # --------------------------------------------------------------------------- #

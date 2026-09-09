@@ -300,3 +300,75 @@ async def test_healthy_fetch_declares_everything_available(monkeypatch, tmp_path
     assert resp.gleif_events_available is True
     assert resp.registry_sources_blocked is False
     assert resp.company_number_basis == "live"
+
+
+# --------------------------------------------------------------------------- #
+# Phase 190 — registry_numbers: how each register addresses this company
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.asyncio
+async def test_registry_numbers_carry_the_number_each_register_uses(monkeypatch):
+    """The History tab links a dated row back to the record that published it.
+
+    A GLEIF row is addressed by the LEI the caller already has; every other
+    register needs its own number, and until Phase 190 the service derived
+    those, used them to decide which history calls to make, and dropped them —
+    so a Danish or Estonian row could be shown and not sourced.
+    """
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    monkeypatch.setenv("COMPANIES_HOUSE_HISTORY_API_KEY", "test-history-key")
+    get_settings.cache_clear()
+    with respx.mock:
+        _mock_live()
+        resp = await history(request=None, response=None, lei=_LEI, include_noise=False)
+    get_settings.cache_clear()
+
+    assert resp.registry_numbers == {"companies_house": "00358949"}
+    # GLEIF is deliberately absent: it addresses the company by the LEI, which
+    # every caller of this endpoint already holds. A key here would be a second
+    # copy of `lei` that could go stale against it.
+    assert "gleif" not in resp.registry_numbers
+    # It agrees with the field that has always been there.
+    assert resp.registry_numbers["companies_house"] == resp.company_number
+
+
+@pytest.mark.asyncio
+async def test_registry_numbers_are_read_per_registration_authority(monkeypatch):
+    """A Danish company yields the CVR number under `cvr_denmark`, not the CH key.
+
+    The four national numbers all come out of one GLEIF field, `registeredAs`,
+    and are told apart only by `registeredAt`. Keying on the wrong authority is
+    the failure that would put a Danish number behind a Companies House link.
+    """
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    monkeypatch.delenv("CVR_DENMARK_API_KEY", raising=False)
+    get_settings.cache_clear()
+    danish = {
+        "data": {
+            "attributes": {
+                "entity": {
+                    "legalName": {"name": "A/S DANSK EKSEMPEL"},
+                    "registeredAs": "12345678",
+                    "registeredAt": {"id": "RA000170"},
+                    "jurisdiction": "DK",
+                }
+            }
+        }
+    }
+    with respx.mock:
+        respx.get(f"https://api.gleif.org/api/v1/lei-records/{_LEI}").mock(
+            return_value=Response(200, json=danish)
+        )
+        respx.get(
+            url__regex=rf"https://api\.gleif\.org/api/v1/lei-records/{_LEI}/field-modifications"
+        ).mock(return_value=Response(200, json=_GLEIF_MODS))
+        resp = await history(request=None, response=None, lei=_LEI, include_noise=False)
+    get_settings.cache_clear()
+
+    assert resp.registry_numbers == {"cvr_denmark": "12345678"}
+    assert resp.company_number is None
+    # No CVR key is set, so Danish history was never fetched. The number says
+    # the register knows the company, and `sources` says who actually answered
+    # — two different statements, and conflating them is how an unchecked
+    # register would read as a checked one.
+    assert "cvr_denmark" not in resp.sources

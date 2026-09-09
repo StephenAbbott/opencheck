@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 189** — when a UK ownership chain is walked live rather than proposed by the local register copy, the record of how it was found no longer reports companies as missed by a graph that was never asked.
+**Latest: Phase 190** — a History tab brings the change-over-time timeline out from under five source cards that were each showing the same merged, all-source answer, and says how rarely a register keeps any history at all.
 
 → [Full development history](docs/status.md)
 

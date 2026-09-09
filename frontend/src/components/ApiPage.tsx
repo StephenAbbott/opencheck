@@ -347,9 +347,12 @@ export function ApiPage() {
             GLEIF’s blind spot for issuers with no listed ISINs).
           </ApiEndpoint>
           <ApiEndpoint path="/history?lei=<LEI>&include_noise=<bool>">
-            The <strong className="text-oo-ink font-semibold">Time Machine</strong>{" "}
-            change-over-time timeline (GLEIF + Companies House) on one shared model;{" "}
-            <code className={mono}>include_noise</code> folds in administrative changes.
+            The <strong className="text-oo-ink font-semibold">change history</strong>{" "}
+            behind the History tab: every register that keeps a change log — GLEIF,
+            Companies House, New Zealand, Estonia, Denmark — merged onto one shared
+            model, with <code className={mono}>registry_numbers</code> saying how each
+            addresses the company; <code className={mono}>include_noise</code> folds in
+            administrative changes.
           </ApiEndpoint>
           <ApiEndpoint path="/nz-associations?company_number=<n>">
             For a New Zealand company, the other companies its directors and shareholders

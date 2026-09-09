@@ -1,5 +1,5 @@
 /**
- * The five checks a report can show, and the pure functions that put one in
+ * The six checks a report can show, and the pure functions that put one in
  * the URL and the browser tab.
  *
  * Phase 122. `esg` joined the three depth modes here; it had previously
@@ -16,18 +16,36 @@
  * bottom of FullCheck, MEIP's at the bottom of QuickCheck, EITI's inside the
  * ESG card — and none of them had a URL.
  *
+ * Phase 190. `history` joined as a third topic, between subsidiaries and ESG.
+ * It is the same kind of move: the merged all-source timeline had existed
+ * since Phase 146 and was reachable only by pressing "Changes over time" on a
+ * source card — which mounted the *same* entity-wide timeline under each of
+ * the five sources that emit history, up to five identical copies of one
+ * panel, none of them addressable. The tab gives it one home and a URL.
+ *
  * These live in `lib/` rather than in App.tsx so they can be tested: the
  * frontend suite is logic-only (no jsdom), so anything worth pinning has to
  * be reachable without rendering a component.
  */
 
-export type CheckMode = "quick" | "full" | "background" | "subsidiaries" | "esg";
+export type CheckMode = "quick" | "full" | "background" | "subsidiaries" | "history" | "esg";
 
-export const CHECK_MODES: CheckMode[] = ["quick", "full", "background", "subsidiaries", "esg"];
+export const CHECK_MODES: CheckMode[] = [
+  "quick",
+  "full",
+  "background",
+  "subsidiaries",
+  "history",
+  "esg",
+];
 
 /** The modes that are a different question rather than a further depth —
  *  the tab strip draws a divider before the first of them. */
-export const TOPIC_MODES: ReadonlySet<CheckMode> = new Set<CheckMode>(["subsidiaries", "esg"]);
+export const TOPIC_MODES: ReadonlySet<CheckMode> = new Set<CheckMode>([
+  "subsidiaries",
+  "history",
+  "esg",
+]);
 
 /**
  * Each mode's accent — the tab's active bar, the glyph colour, the badge ring.
@@ -36,9 +54,12 @@ export const TOPIC_MODES: ReadonlySet<CheckMode> = new Set<CheckMode>(["subsidia
  * was invented in Phase 122 because the logo has three nodes and a fourth
  * mode had none. Subsidiaries takes `oo.graph.control`, the colour the graph
  * already draws control edges in: the tab lists what this company controls,
- * as FullCheck (ownership blue) follows who owns it. Nothing new invented.
+ * as FullCheck (ownership blue) follows who owns it. History takes
+ * `oo.graph.same`, the amber the /features Time Machine card already wears —
+ * so the tab arrives wearing the colour this feature has had all along rather
+ * than a sixth invention. Nothing new invented.
  *
- * This file is the token file for these five values — the design-system
+ * This file is the token file for these six values — the design-system
  * lint allows a literal here for the same reason it allows one in
  * `lib/features.ts`: the tab paints its bar with an inline style, so the
  * value has to be a string, and this is the one place it is written.
@@ -48,6 +69,7 @@ export const MODE_ACCENT: Record<CheckMode, string> = {
   full: "#3b82f6", // oo.node.blue
   background: "#7c3aed", // oo.node.purple
   subsidiaries: "#e65100", // oo.graph.control
+  history: "#b45309", // oo.graph.same
   esg: "#0d9488", // oo.node.teal
 };
 
@@ -78,6 +100,8 @@ export function modeLabel(mode: CheckMode): string {
       return "BackgroundCheck";
     case "subsidiaries":
       return "Subsidiaries";
+    case "history":
+      return "History";
     case "esg":
       return "Climate & ESG";
     default:

@@ -173,7 +173,7 @@ test("a curated report answers once, and says so at the top", async ({ page }) =
 test.describe("the report at phone width", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("shows all five check modes without a sideways scroll", async ({ page }) => {
+  test("shows every check mode without a sideways scroll", async ({ page }) => {
     await page.goto(`/?lei=${BP}`);
     await expect(page.getByRole("region", { name: "What this check found" })).toBeVisible({
       timeout: 150_000,

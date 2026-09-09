@@ -1,8 +1,16 @@
 """History (Time Machine) endpoint — a per-entity timeline of notable changes.
 
-``GET /history?lei=<LEI>`` returns the de-duplicated, notable-only timeline
-(GLEIF + Companies House where available). ``?include_noise=true`` additionally
-returns every raw classified change, including administrative noise.
+``GET /history?lei=<LEI>`` returns the de-duplicated, notable-only timeline,
+merged across **every register OpenCheck holds a change log for** — GLEIF,
+Companies House, the New Zealand Companies Office, the Estonian e-Äriregister
+and Danish CVR, whichever of them know the company and answered.
+``?include_noise=true`` additionally returns every raw classified change,
+including administrative noise.
+
+``registry_numbers`` says how each of those registers addresses the company, so
+a caller can follow any dated row back to the record that published it. Before
+Phase 190 only ``company_number`` came back, and a New Zealand, Estonian or
+Danish row could be shown but not sourced.
 
 Lazy by design — fetched by the frontend on demand, never on the main lookup.
 
@@ -79,6 +87,11 @@ class HistoryResponse(BaseModel):
     registry_sources_blocked: bool = False
     #: "live" | "cached" | None — where `company_number` came from.
     company_number_basis: str | None = None
+    #: Phase 190 — `{source_id: registry number}`, how each register that
+    #: publishes a change log addresses this company. Present means that
+    #: register knows the company by that number, not that its history was
+    #: fetched; `sources` says what actually answered.
+    registry_numbers: dict[str, str] = {}
 
 
 @router.get("/history", response_model=HistoryResponse)
@@ -158,4 +171,5 @@ async def history(
         gleif_events_available=tl.gleif_events_available,
         registry_sources_blocked=tl.registry_sources_blocked,
         company_number_basis=tl.company_number_basis,
+        registry_numbers=tl.registry_numbers,
     )

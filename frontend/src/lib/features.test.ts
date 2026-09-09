@@ -201,7 +201,11 @@ describe("sentenceCount", () => {
 
 describe("featureById", () => {
   it("finds a feature by its anchor", () => {
-    expect(featureById("time-machine")?.name).toBe("Time Machine");
+    // The anchor and the label deliberately differ: Phase 190 renamed the
+    // feature to History and kept `time-machine` as its address, because a
+    // published anchor that stops resolving is worse than one that no longer
+    // matches the heading.
+    expect(featureById("time-machine")?.name).toBe("History");
   });
 
   it("returns undefined for an anchor no feature owns", () => {

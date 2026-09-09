@@ -589,14 +589,14 @@ component — new code uses the named steps.
 
 ---
 
-## The five check modes (Phase 122/123, 185)
+## The six check modes (Phase 122/123, 185, 190)
 
-`quick | full | background | subsidiaries | esg`, owned by
+`quick | full | background | subsidiaries | history | esg`, owned by
 `frontend/src/lib/checkMode.ts` (pure, so it is testable — the frontend suite
 is logic-only). The mode is the report's top-level structure: a tablist under
 the subject and verdict, which stay put across a switch. `MODE_ACCENT` there
-is the token file for the five accents (allowlisted for hex like
-`lib/features.ts`); `TOPIC_MODES` names the two that sit after the divider.
+is the token file for the six accents (allowlisted for hex like
+`lib/features.ts`); `TOPIC_MODES` names the three that sit after the divider.
 
 - **The mode is in the URL** (`?mode=`), and QuickCheck deliberately writes
   no parameter — a shared QuickCheck link keeps the short form it has always
@@ -623,6 +623,25 @@ is the token file for the five accents (allowlisted for hex like
   another list is offered with a match chip, never asserted
   (`lib/subsidiariesMode.ts`). The phone tab strip is a 2-column grid, so an
   odd tab count spans the last cell.
+- **History (Phase 190) is the third topic tab**, between Subsidiaries and
+  ESG: how this company's records changed, merged across every register that
+  keeps a change log. The merge was not new — `timeline/assemble.py` has
+  clustered cross-source identity changes in a 400-day window and ranked their
+  dates (effective > recorded > snapshot) since Phase 146, across **five**
+  sources, not the two its docstrings claimed. What was new is that it has a
+  home. Before this it rendered behind a "Changes over time" button on each of
+  the five source cards whose source emits history, and **every one of them
+  mounted the same entity-wide, all-source timeline** — up to five identical
+  copies per report, each captioned by a source that contributed part of it,
+  none addressable. If you are tempted to put a merged artifact behind a
+  per-source affordance again, this is the phase that says don't.
+  `lib/historyMode.ts` is the values layer (labels incl. the `cvr_denmark` one
+  that was missing, `recordUrl` for all five registers, the coverage sentence,
+  the 10-row cap); `/history` gained `registry_numbers` so a New Zealand,
+  Estonian or Danish row can link back to its record — before it, only GLEIF
+  and Companies House could. The tab states the scarcity: five registers keep
+  a change log and the rest answer only about now, so a thin timeline is a
+  record-keeping fact, not a fact about the company.
 - Entity-scoped sections (risk signals, structural context, cross-source
   identifiers, possibly-same) are guarded `mode === "quick"`. They were
   `mode !== "background"`, which silently included the new ESG tab.
@@ -709,6 +728,7 @@ mirrored as `--oo-mark-*` / `--oo-node-*` in `index.css`):
 | `oo.node.blue` | `#3b82f6` | logo.svg / `OpenCheckIcon` network node | **FullCheck** accent |
 | `oo.node.purple` | `#7c3aed` | logo.svg / `OpenCheckIcon` network node | **BackgroundCheck** accent (near-matches the PEP/RELATED_PEP violet `#6d28d9` in the risk-signal system above — fitting for a people-screening mode) |
 | `oo.node.teal` | `#0d9488` | **invented, Phase 122** | **Climate & ESG** accent — the fourth mode. The one colour in the badge set not lifted from `logo.svg`: three modes had three logo nodes, a fourth has none. The alternative, reusing `oo.green` `#25cb55`, sits three hex values from QuickCheck's `#22c55e` and was indistinguishable from it in the mode tab strip |
+| `oo.graph.same` | `#b45309` | possibly-same edge colour | **History** accent (Phase 190) — the palette's one warm, archival value, and already what the /features card for this feature wore, so the tab arrived in the colour the feature had all along. Tab glyph = the existing `history` in `ui/Icon.tsx` (a clock rewound), the same glyph the removed "Changes over time" button drew inline |
 | `oo.graph.control` | `#e65100` | graph control-edge colour | **Subsidiaries** accent (Phase 185) — the fifth mode lists what a company *controls*, as FullCheck wears the ownership-edge blue. Nothing invented; glyph `#fdba74`. Tab glyph = `subsidiaries` in `ui/Icon.tsx` (one parent over three children on a bus) |
 
 **Note this is a brand-mark tier, deliberately distinct from the UI's

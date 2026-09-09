@@ -59,11 +59,6 @@
     "text": 50,
     "vocab": 0
   },
-  "src/components/cdd/HistoryTimeline.tsx": {
-    "hex": 0,
-    "text": 15,
-    "vocab": 0
-  },
   "src/components/cdd/LivenessBadge.tsx": {
     "hex": 0,
     "text": 1,
