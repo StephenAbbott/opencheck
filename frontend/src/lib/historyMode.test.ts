@@ -127,21 +127,31 @@ describe("recordUrl", () => {
     // Phase 190: before `registry_numbers` only these first two could be
     // linked, and a New Zealand, Estonian or Danish row was shown with no way
     // back to the record that published it.
+    // Real numbers from production, so a pattern that only works for a
+    // made-up identifier cannot pass here: Fonterra Commodities (NZ),
+    // Eesti Energia (EE), Novo Nordisk (DK). Every one of these URLs was
+    // opened against the live register.
     const n = {
       companies_house: "00358949",
-      nz_companies: "9429036731815",
-      ariregister: "10000598",
-      cvr_denmark: "12345678",
+      nz_companies: "2288120",
+      ariregister: "10421629",
+      cvr_denmark: "24256790",
     };
     expect(recordUrl("companies_house", _LEI, n)).toBe(
       "https://find-and-update.company-information.service.gov.uk/company/00358949/filing-history",
     );
-    expect(recordUrl("nz_companies", _LEI, n)).toContain("9429036731815");
+    // The company record itself, never the register's client-side search
+    // page: that returns HTTP 200 with an empty form, so a wrong link here
+    // fails open rather than visibly.
+    expect(recordUrl("nz_companies", _LEI, n)).toBe(
+      "https://app.companiesoffice.govt.nz/companies/app/ui/pages/companies/2288120",
+    );
+    expect(recordUrl("nz_companies", _LEI, n)).not.toContain("search");
     expect(recordUrl("ariregister", _LEI, n)).toBe(
-      "https://ariregister.rik.ee/eng/company/10000598",
+      "https://ariregister.rik.ee/eng/company/10421629",
     );
     expect(recordUrl("cvr_denmark", _LEI, n)).toBe(
-      "https://datacvr.virk.dk/enhed/virksomhed/12345678",
+      "https://datacvr.virk.dk/enhed/virksomhed/24256790",
     );
   });
 

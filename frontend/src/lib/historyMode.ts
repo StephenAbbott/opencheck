@@ -85,10 +85,15 @@ export function recordUrl(
         ? `https://find-and-update.company-information.service.gov.uk/company/${encodeURIComponent(n)}/filing-history`
         : null;
     case "nz_companies":
-      // The Companies Office addresses a company by its NZBN on the search
-      // path; the number GLEIF publishes for RA000466 is that identifier.
+      // The company number GLEIF publishes for RA000466 addresses the record
+      // directly. It must NOT be handed to the register's `/search?q=` path:
+      // that page runs its query in the browser, so the server returns an
+      // empty search form with HTTP 200 — a link that looks like it worked
+      // and shows the reader nothing about the company. Verified against
+      // Fonterra Commodities Limited (2288120), whose record this URL
+      // returns and whose search URL does not mention it at all.
       return n
-        ? `https://app.companiesoffice.govt.nz/companies/app/ui/pages/companies/search?q=${encodeURIComponent(n)}&entityTypes=ALL`
+        ? `https://app.companiesoffice.govt.nz/companies/app/ui/pages/companies/${encodeURIComponent(n)}`
         : null;
     case "ariregister":
       return n ? `https://ariregister.rik.ee/eng/company/${encodeURIComponent(n)}` : null;
