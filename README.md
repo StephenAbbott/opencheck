@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 187** — the local copy of the UK PSC register is now fed from the Companies House streaming API, so every change the register publishes reaches the graph within seconds of being filed rather than with the next morning snapshot.
+**Latest: Phase 188** — a UK ownership chain can now be found in the local copy of the PSC register in a single step and then read back from Companies House all at once, so a nine-company chain that took dozens of waiting-in-turn register calls arrives in one round-trip.
 
 → [Full development history](docs/status.md)
 
