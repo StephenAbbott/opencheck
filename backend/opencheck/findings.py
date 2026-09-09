@@ -563,7 +563,18 @@ def finding_companies_house(bundle: dict[str, Any]) -> str | None:
     pscs = [p for p in ((bundle.get("pscs") or {}).get("items") or []) if p]
     active = [p for p in pscs if not p.get("ceased_on")]
     statements = (bundle.get("psc_statements") or {}).get("items") or []
-    officers = (bundle.get("officers") or {}).get("items") or []
+    # Serving officers only, which is what the PSC clause above already
+    # counts (``ceased_on``) and what the network graph draws. Counting the
+    # whole officer list put a 160-year-old bank's every former director into
+    # a sentence beside its current people with significant control, so the
+    # two numbers on one card were measuring different things — and, until
+    # the fetch was paginated, the resigned ones were only the first page of
+    # them, making the count a page size rather than a fact (Phase 192).
+    officers = [
+        o
+        for o in ((bundle.get("officers") or {}).get("items") or [])
+        if o and not o.get("resigned_on")
+    ]
 
     if active:
         lead: str | None = plural(

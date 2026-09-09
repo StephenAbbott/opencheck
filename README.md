@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 191** — the FullCheck header now has two states: one primary action before a run, and a line summarising what was built after one, with the single-layer control moved into the canvas toolbar.
+**Latest: Phase 192** — Companies House list endpoints are fetched whole rather than one default page deep, and the officer count on the card counts serving officers, so "35 officers listed" is no longer the API's page size wearing a company's name.
 
 → [Full development history](docs/status.md)
 
