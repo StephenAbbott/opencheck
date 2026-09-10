@@ -35,6 +35,7 @@ import type { RiskSignal } from "../lib/api";
 import { buildSignalMap } from "../lib/signalScope";
 import { EDGE_STYLE, signalStyle } from "../lib/graphStyle";
 import GraphLegend from "./GraphLegend";
+import { IdentityTick } from "./ui/IdentityTick";
 import { RISK_PRESENTATION } from "./risk/RiskChip";
 import type { SameAsCandidate } from "../lib/reconcile";
 import type { LayerControl } from "../lib/fullCheckHeader";
@@ -58,6 +59,7 @@ interface NodeOverlay {
   hasChildren?: boolean;   // node has downstream subsidiaries (can collapse)
   collapsed?: boolean;     // node is currently collapsed
   hiddenCount?: number;    // descendants hidden because this node is collapsed
+  identityVerified?: boolean; // Companies House verified identity → tick at SE (Phase 203)
 }
 
 // The graph's visual vocabulary moved to lib/graphStyle.ts in Phase 124, so
@@ -76,7 +78,7 @@ function modelToElements(model: GraphModel, sameAs: SameAsCandidate[] = []): Ele
   for (const n of model.nodes) {
     elements.push({
       // Highlighting reads provenance, so a matched source lights its node too.
-      data: { id: n.id, label: n.label, recordType: n.recordType, icon: n.icon, flagUrl: n.flagUrl, sources: [...n.sources, ...(n.matchedSources ?? [])] },
+      data: { id: n.id, label: n.label, recordType: n.recordType, icon: n.icon, flagUrl: n.flagUrl, identityVerified: n.identityVerified === true, sources: [...n.sources, ...(n.matchedSources ?? [])] },
     });
   }
   for (const e of model.edges) {
@@ -212,6 +214,7 @@ const BADGE_W_FACTOR = 0.75;
 const BADGE_H_FACTOR = 0.50;
 const OVERLAY_ANGLE = Math.PI / 4;   // 45° diagonal compass point
 const ICON_FRACTION = 0.6;           // BOVS icon = 60% of node diameter
+const TICK_ANGLE = Math.PI / 6;       // identity tick: 30° below east (screen y grows downward)
 
 // ---------------------------------------------------------------------------
 // Component
@@ -339,6 +342,7 @@ export default function BODSGraph({
           hasChildren: hasChildren.has(id),
           collapsed: collapsedNow.has(id),
           hiddenCount: vis?.hiddenCount.get(id) ?? 0,
+          identityVerified: node.data("identityVerified") === true,
         });
       });
       setOverlays(next);
@@ -618,6 +622,7 @@ export default function BODSGraph({
           signalsByNode={signalMap}
           hasPeople={personCount > 0}
           hasCollapsed={collapsedCount > 0}
+          hasIdentityVerified={model.nodes.some((n) => n.identityVerified)}
         />
       </div>
 
@@ -644,6 +649,7 @@ export default function BODSGraph({
             const sigCx = item.cx - item.r * Math.cos(OVERLAY_ANGLE);
             const sigCy = item.cy - item.r * Math.sin(OVERLAY_ANGLE);
             const dim = matchSet != null && !matchSet.has(item.id);
+            const tickPx = Math.max(12, item.r * 0.45);
 
             let sigBadge: React.ReactNode = null;
             if (item.signals && item.signals.length > 0) {
@@ -755,6 +761,23 @@ export default function BODSGraph({
                   </div>
                 )}
                 {sigBadge}
+                {item.identityVerified && (
+                  // Phase 203 — flag NE, risk NW, collapse toggle due south,
+                  // so the tick sits in the lower right. Not at SE (135°): that
+                  // point overlaps the collapse toggle a person node carries, so
+                  // it sits 30° below east (TICK_ANGLE), clear of the toggle.
+                  // Decorative on a role="img" canvas; the legend names it and
+                  // the tree row says it in words.
+                  <div style={{
+                    position: "absolute",
+                    left: item.cx + item.r * Math.cos(TICK_ANGLE) - tickPx / 2,
+                    top:  item.cy + item.r * Math.sin(TICK_ANGLE) - tickPx / 2,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.2)", borderRadius: tickPx,
+                    border: "1.5px solid white", lineHeight: 0,
+                  }}>
+                    <IdentityTick size={tickPx} />
+                  </div>
+                )}
                 {toggle}
               </div>
             );

@@ -26,6 +26,7 @@ from ..elf import resolve_elf
 from ..identifiers import ch_identification_is_uk, normalise_ch_company_number
 from . import liveness as _liveness
 from .annotations import annotate, commenting, identifying, pointer, transformation
+from . import identity_verification as _idv
 from .ch_constants import describe_company_type, describe_officer_role
 from .psc_natures import describe_nature, describe_statement, describe_super_secure
 
@@ -134,8 +135,48 @@ def map_companies_house(bundle: dict[str, Any]) -> BODSBundle:
         companies.setdefault(sub.number, sub)
 
     _rollup_ch_chains(root, companies, result, seen_sids)
+    _annotate_verified_people(result)
 
     return result
+
+
+def _annotate_verified_people(result: BODSBundle) -> None:
+    """Phase 203: annotate each person whose identity Companies House verified.
+
+    Runs after every company in the bundle is mapped, and reads the
+    per-role annotations the relationships already carry — so a person is
+    marked verified from exactly the roles the output shows, and a director
+    whose verification statement is in place on a parent's board but not yet on
+    the subject's is still marked, although the subject's copy of the person
+    statement was written first (Phase 193's first-writer-wins).
+    """
+    roles: dict[str, list[_idv.Verification]] = {}
+    for stmt in result.statements:
+        if stmt.get("recordType") != "relationship":
+            continue
+        party = (stmt.get("recordDetails") or {}).get("interestedParty")
+        if not isinstance(party, str):
+            continue
+        for annotation in stmt.get("annotations") or []:
+            verification = _idv.role_verification_from_annotation(annotation)
+            if verification:
+                roles.setdefault(party, []).append(verification)
+    if not roles:
+        return
+    for stmt in result.statements:
+        if stmt.get("recordType") != "person":
+            continue
+        found = roles.get(stmt.get("statementId"))
+        if not found:
+            continue
+        annotate(
+            stmt,
+            _idv.person_annotation(
+                pointer("recordDetails"),
+                found,
+                url=(stmt.get("source") or {}).get("url"),
+            ),
+        )
 
 
 @dataclass
@@ -615,6 +656,20 @@ def _ch_director_statements(
             # statement OpenCheck "published" in 1998. statementDate falls back
             # to the retrieval date; publicationDate is today.
         )
+        # Phase 203: the register's "Verified" label is per role, so the
+        # verification statement is recorded on the appointment. The person is
+        # annotated from these in ``_annotate_verified_people``.
+        verification = _idv.read_verification(officer)
+        if verification:
+            annotate(
+                rel,
+                _idv.role_annotation(
+                    pointer("recordDetails", "interestedParty"),
+                    verification,
+                    url=_ch_officer_url(officer_id, company_url),
+                ),
+            )
+
         rel_sid = rel["statementId"]
         if rel_sid not in seen_sids:
             stmts.append(rel)
@@ -921,6 +976,22 @@ def _emit_company_statements(
                 ),
             )
 
+        # Phase 203: an individual PSC's identity verification statement, on
+        # the notification it was supplied for. Corporate PSCs (relevant legal
+        # entities) have no verification requirement yet and carry no block; a
+        # ceased notification is no longer a role, so it earns no mark.
+        if ip_type == "person" and "individual" in psc_kind and not ceased_on:
+            verification = _idv.read_verification(psc)
+            if verification:
+                annotate(
+                    rel,
+                    _idv.role_annotation(
+                        pointer("recordDetails", "interestedParty"),
+                        verification,
+                        url=f"{company_url}/persons-with-significant-control",
+                    ),
+                )
+
         rel_sid = rel["statementId"]
         if rel_sid not in seen_sids:
             result.statements.append(rel)
@@ -1154,8 +1225,20 @@ def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
             interests=[interest],
             source_url=person_url,
         )
+        if not appointment.get("resigned_on"):
+            verification = _idv.read_verification(appointment)
+            if verification:
+                annotate(
+                    rel,
+                    _idv.role_annotation(
+                        pointer("recordDetails", "interestedParty"),
+                        verification,
+                        url=person_url,
+                    ),
+                )
         result.statements.append(rel)
 
+    _annotate_verified_people(result)
     return result
 
 

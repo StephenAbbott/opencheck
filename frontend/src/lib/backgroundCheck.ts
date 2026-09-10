@@ -16,6 +16,12 @@
  * remain traceable to their statements.
  */
 
+import {
+  ROUTE_ACSP,
+  readIdentityVerification,
+  type IdentityVerification,
+} from "./identityVerification";
+
 export type Stmt = Record<string, unknown>;
 
 export interface ConnectedPersonRole {
@@ -42,6 +48,9 @@ export interface ConnectedPerson {
    * id) collected across the person's statements — feeds cluster matching. */
   identifiers: string[];
   roles: ConnectedPersonRole[];
+  /** Companies House identity verification carried by any of this person's
+   *  statements (Phase 203). Absent is "no such record", never "unverified". */
+  identityVerification?: IdentityVerification;
 }
 
 function str(v: unknown): string | undefined {
@@ -262,6 +271,17 @@ export function extractConnectedPeople(statements: Stmt[]): ConnectedPerson[] {
       }
     }
     if (!person.statementIds.includes(id)) person.statementIds.push(id);
+    // Merged rows can hold one person from two filings (a PSC notification and
+    // a directorship). Keep the record that says more: an ACSP verification
+    // names who verified and when; the direct route publishes neither.
+    const verification = readIdentityVerification(s);
+    if (
+      verification &&
+      (!person.identityVerification ||
+        (person.identityVerification.route !== ROUTE_ACSP && verification.route === ROUTE_ACSP))
+    ) {
+      person.identityVerification = verification;
+    }
     const source = str(rec(s.source).description);
     if (source && !person.sources.includes(source)) person.sources.push(source);
     keyByStatementId.set(id, key);

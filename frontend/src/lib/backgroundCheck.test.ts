@@ -189,3 +189,52 @@ describe("extractPersonSubgraph", () => {
     expect(sub.map((s) => s.statementId)).toEqual(["e1", "p1", "p2", "r1", "r2"]);
   });
 });
+
+describe("extractConnectedPeople — Companies House identity verification (Phase 203)", () => {
+  const verified = (route: string, extra: Record<string, unknown> = {}) => [
+    {
+      statementPointerTarget: "/recordDetails",
+      motivation: "commenting",
+      identityVerification: { status: "verified", route, ...extra },
+    },
+  ];
+
+  it("carries the verification onto the person row", () => {
+    const people = extractConnectedPeople([
+      { ...person("p1", "SMITH, Jane", { birthDate: "1975-03" }), annotations: verified("companiesHouse") },
+    ]);
+    expect(people[0].identityVerification?.route).toBe("companiesHouse");
+  });
+
+  it("leaves it absent for a person with no such annotation", () => {
+    const people = extractConnectedPeople([person("p1", "SMITH, Jane")]);
+    expect(people[0]).not.toHaveProperty("identityVerification");
+  });
+
+  it("keeps the record that says more when a merged row holds two", () => {
+    const people = extractConnectedPeople([
+      { ...person("p1", "SMITH, Jane", { birthDate: "1975-03" }), annotations: verified("companiesHouse") },
+      {
+        ...person("p2", "Jane Smith", { birthDate: "1975-03" }),
+        annotations: verified("authorisedCorporateServiceProvider", {
+          verifiedBy: { name: "X ACSP" },
+          identityVerifiedOn: "2025-07-28",
+        }),
+      },
+    ]);
+    expect(people).toHaveLength(1);
+    expect(people[0].identityVerification).toMatchObject({
+      route: "authorisedCorporateServiceProvider",
+      verifierName: "X ACSP",
+    });
+  });
+
+  it("marks a merged row verified when only one of its statements is", () => {
+    const people = extractConnectedPeople([
+      person("p1", "SMITH, Jane", { birthDate: "1975-03" }, "OpenCorporates"),
+      { ...person("p2", "Jane Smith", { birthDate: "1975-03" }), annotations: verified("companiesHouse") },
+    ]);
+    expect(people).toHaveLength(1);
+    expect(people[0].identityVerification?.route).toBe("companiesHouse");
+  });
+});
