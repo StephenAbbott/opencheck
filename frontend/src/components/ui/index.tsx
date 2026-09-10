@@ -23,6 +23,7 @@ export type { SectionLabelTone } from "./SectionLabel";
 export { Icon, ICON_NAMES, ICON_PATHS } from "./Icon";
 export type { IconName } from "./Icon";
 export { FeatureMark } from "./FeatureMark";
+export { IdentityTick } from "./IdentityTick";
 export { ActionChip, DataTile } from "./ActionChip";
 export { RowList } from "./RowList";
 export type { RowListItem } from "./RowList";

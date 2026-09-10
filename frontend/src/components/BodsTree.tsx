@@ -24,6 +24,8 @@ import { useEffect, useRef, useState } from "react";
 import type { TreeRow } from "../lib/bodsGraph";
 import type { RiskSignal } from "../lib/api";
 import { RISK_PRESENTATION } from "./risk/RiskChip";
+import { IdentityTick } from "./ui/IdentityTick";
+import { IDENTITY_VERIFIED_LABEL } from "../lib/identityVerification";
 
 function typeLabel(recordType: string): string {
   return recordType === "person" || recordType === "personStatement" ? "Person" : "Entity";
@@ -164,6 +166,14 @@ export default function BodsTree({
                 <span className="w-4 flex-shrink-0" />
               )}
               <span className="truncate">{row.label}</span>
+              {/* Phase 203 — the canvas tick, in words for a screen reader.
+                  Sighted readers get the same words from the legend chip. */}
+              {row.identityVerified && (
+                <span className="flex-shrink-0 inline-flex items-center">
+                  <IdentityTick />
+                  <span className="sr-only">{IDENTITY_VERIFIED_LABEL}</span>
+                </span>
+              )}
               {/* Identifiers (LEI etc.) — `title` alone is mouse-only; expose
                   the same text to screen readers (WCAG 1.1.1). */}
               {row.identifiers.length > 0 && (

@@ -40,6 +40,8 @@ import {
 import { clusterConnectedPeople } from "../../lib/clusterPeople";
 import { ClusterGroup } from "./ClusterGroup";
 import { RiskChip } from "../risk/RiskChip";
+import { IdentityTick } from "../ui/IdentityTick";
+import { identityVerificationSentence } from "../../lib/identityVerification";
 
 /** Cap for the "Check all" convenience action — keeps the fan-out to
  * upstream APIs (OpenSanctions free tier in particular) bounded. */
@@ -405,12 +407,23 @@ function PersonCard({
         <div>
           <p className="font-head font-bold text-[15px] text-oo-ink">
             {person.name}
+            {person.identityVerification && (
+              <span className="ml-1.5 inline-flex align-middle">
+                <IdentityTick size={14} />
+              </span>
+            )}
             {person.birthYear && (
               <span className="ml-2 font-sans font-normal text-[12px] text-oo-muted">
                 b. {person.birthDate}
               </span>
             )}
           </p>
+          {/* Phase 203 — the tick's meaning, visible, in the register's terms. */}
+          {person.identityVerification && (
+            <p className="text-oo-meta text-oo-ok-text mt-0.5">
+              {identityVerificationSentence(person.identityVerification)}
+            </p>
+          )}
           {person.nationalities.length > 0 && (
             <p className="text-[12px] text-oo-muted mt-0.5">
               {person.nationalities.join(", ")}

@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 202** — Hong Kong joins as a national register: the Companies Registry open data API, reached from the Business Registration Number GLEIF already holds, with names, company type, registered office and incorporation date, and a name check that drops a record GLEIF has pointed at the wrong company.
+**Latest: Phase 203** — Companies House identity verification shows as a green tick on the graph, the text tree and BackgroundCheck cards, and travels in the BODS output as a structured annotation naming the route, the verifier and the dates the register publishes.
 
 → [Full development history](docs/status.md)
 

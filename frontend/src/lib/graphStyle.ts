@@ -144,11 +144,17 @@ export const EDGE_STYLE: Record<EdgeLegendKind, EdgeStyle> = {
 // Node marks — the three distinctions the old legend never named
 // ---------------------------------------------------------------------------
 
-export type NodeMark = "person" | "collapsed";
+export type NodeMark = "person" | "collapsed" | "identityVerified";
 
 export const NODE_MARK: Record<NodeMark, { name: string; meaning: string }> = {
   person: { name: "Person", meaning: "drawn with a dashed outline; companies are solid" },
   collapsed: { name: "Collapsed branch", meaning: "blue ring — select it to open what is underneath" },
+  // Phase 203. The name is the whole claim, so the legend chip reads the same
+  // words a screen reader hears on the tree row.
+  identityVerified: {
+    name: "Identity verified with Companies House",
+    meaning: "green tick — the register records an identity verification statement for this person",
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -190,12 +196,15 @@ export function buildGraphLegend({
   signalsByNode,
   hasPeople,
   hasCollapsed,
+  hasIdentityVerified = false,
   signalName,
 }: {
   edgeCategories: Iterable<string>;
   signalsByNode: Map<string, RiskSignal[]>;
   hasPeople: boolean;
   hasCollapsed: boolean;
+  /** Any node carries the identity-verification tick (Phase 203). */
+  hasIdentityVerified?: boolean;
   signalName: (code: string) => string;
 }): GraphLegendModel {
   const present = new Set(edgeCategories);
@@ -206,6 +215,7 @@ export function buildGraphLegend({
   const nodes: LegendEntry[] = [];
   if (hasPeople) nodes.push({ key: "person", ...NODE_MARK.person });
   if (hasCollapsed) nodes.push({ key: "collapsed", ...NODE_MARK.collapsed });
+  if (hasIdentityVerified) nodes.push({ key: "identityVerified", ...NODE_MARK.identityVerified });
 
   // Distinct codes actually badged on a node in this graph, worst first, so the
   // legend reads in the same order as the eye ranks the badges.

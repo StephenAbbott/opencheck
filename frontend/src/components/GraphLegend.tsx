@@ -16,6 +16,7 @@ import { useMemo, useState } from "react";
 import type { RiskSignal } from "../lib/api";
 import { buildGraphLegend } from "../lib/graphStyle";
 import { RISK_PRESENTATION } from "./risk/RiskChip";
+import { IdentityTick } from "./ui/IdentityTick";
 
 function signalName(code: string): string {
   return RISK_PRESENTATION[code]?.label ?? code.replace(/_/g, " ");
@@ -41,15 +42,25 @@ export default function GraphLegend({
   signalsByNode,
   hasPeople,
   hasCollapsed,
+  hasIdentityVerified = false,
 }: {
   edgeCategories: Iterable<string>;
   signalsByNode: Map<string, RiskSignal[]>;
   hasPeople: boolean;
   hasCollapsed: boolean;
+  hasIdentityVerified?: boolean;
 }) {
   const legend = useMemo(
-    () => buildGraphLegend({ edgeCategories, signalsByNode, hasPeople, hasCollapsed, signalName }),
-    [edgeCategories, signalsByNode, hasPeople, hasCollapsed]
+    () =>
+      buildGraphLegend({
+        edgeCategories,
+        signalsByNode,
+        hasPeople,
+        hasCollapsed,
+        hasIdentityVerified,
+        signalName,
+      }),
+    [edgeCategories, signalsByNode, hasPeople, hasCollapsed, hasIdentityVerified]
   );
   // Signals can run to a dozen entries on a big FullCheck network. The edge and
   // node marks are the ones a reader needs to parse the shape at all, so they
@@ -84,6 +95,8 @@ export default function GraphLegend({
                 aria-hidden="true"
                 className="inline-block h-3 w-3 rounded-full border border-dashed border-oo-navy flex-shrink-0"
               />
+            ) : n.key === "identityVerified" ? (
+              <IdentityTick />
             ) : (
               <span
                 aria-hidden="true"

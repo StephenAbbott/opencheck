@@ -56,6 +56,15 @@ describe("buildGraphLegend", () => {
     for (const n of legend.nodes) expect(n.meaning.length).toBeGreaterThan(10);
   });
 
+  it("names the identity-verification tick only where the graph draws one (Phase 203)", () => {
+    const base = { edgeCategories: [], signalsByNode: new Map(), hasPeople: true, hasCollapsed: false, signalName: name };
+    expect(buildGraphLegend(base).nodes.map((n) => n.key)).toEqual(["person"]);
+    const legend = buildGraphLegend({ ...base, hasIdentityVerified: true });
+    expect(legend.nodes.map((n) => n.key)).toEqual(["person", "identityVerified"]);
+    // The legend chip reads the words the tree row gives a screen reader.
+    expect(legend.nodes[1].name).toBe("Identity verified with Companies House");
+  });
+
   it("orders signal marks worst first, matching how the badges stack", () => {
     // The canvas draws the worst-severity badge when a node carries several,
     // so the legend must not contradict that ranking.

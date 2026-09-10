@@ -414,3 +414,46 @@ describe("buildTree", () => {
     expect(rows.find((r) => r.id === "C" && !r.isRepeat)!.collapsed).toBe(true);
   });
 });
+
+describe("identity verification tick (Phase 203)", () => {
+  const verifiedAnnotation = {
+    statementPointerTarget: "/recordDetails",
+    motivation: "commenting",
+    identityVerification: { status: "verified", route: "companiesHouse" },
+  };
+  const withTick = [
+    STATEMENTS[0],
+    { ...STATEMENTS[1], annotations: [verifiedAnnotation] },
+    {
+      statementId: "n-eve",
+      recordType: "person",
+      recordDetails: { names: [{ fullName: "Eve Director" }], personType: "knownPerson" },
+    },
+    STATEMENTS[2],
+    {
+      statementId: "r-2",
+      recordType: "relationship",
+      recordDetails: {
+        interestedParty: "n-eve",
+        subject: "n-acme",
+        interests: [{ type: "seniorManagingOfficial" }],
+        // A role-level annotation alone does not tick the person node.
+      },
+      annotations: [{ ...verifiedAnnotation, statementPointerTarget: "/recordDetails/interestedParty" }],
+    },
+  ];
+
+  it("ticks only the person whose statement carries the annotation", () => {
+    const model = bodsToGraph(withTick);
+    const byId = new Map(model.nodes.map((n) => [n.id, n]));
+    expect(byId.get("n-bob")!.identityVerified).toBe(true);
+    expect(byId.get("n-eve")).not.toHaveProperty("identityVerified");
+    expect(byId.get("n-acme")).not.toHaveProperty("identityVerified");
+  });
+
+  it("carries the tick onto the tree row", () => {
+    const rows = buildTree(bodsToGraph(withTick), new Set());
+    expect(rows.find((r) => r.id === "n-bob")!.identityVerified).toBe(true);
+    expect(rows.find((r) => r.id === "n-eve")!.identityVerified).toBe(false);
+  });
+});

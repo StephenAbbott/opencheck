@@ -14,6 +14,7 @@
  */
 
 import { BOVS_ICONS } from "./bovsIcons";
+import { isIdentityVerified } from "./identityVerification";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -56,6 +57,10 @@ export interface GraphNode {
    *  identifier (the EITI Company Assessment's LEI match). Shown and
    *  highlightable as provenance; never counted as corroboration. */
   matchedSources?: string[];
+  /** Companies House has verified this person's identity (Phase 203), read
+   *  from the person statement's BODS annotation. Absent means no such
+   *  annotation — never "unverified". */
+  identityVerified?: true;
 }
 
 export interface GraphEdge {
@@ -379,6 +384,7 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
       identifiers: nodeIdentifiers(stmt),
       sources: stmtSources(stmt),
       ...(stmtMatchedSources(stmt).length ? { matchedSources: stmtMatchedSources(stmt) } : {}),
+      ...(isIdentityVerified(stmt) ? { identityVerified: true as const } : {}),
     });
   }
 
@@ -713,6 +719,8 @@ export interface TreeRow {
    *  to say which it is: the relationship table this replaced (Phase 124) named
    *  these explicitly under "Parties with no reported relationships". */
   isolated: boolean;
+  /** The graph node's Companies House identity verification tick (Phase 203). */
+  identityVerified: boolean;
 }
 
 /**
@@ -765,6 +773,7 @@ export function buildTree(model: GraphModel, collapsed: Set<string>): TreeRow[] 
       collapsed: isCollapsed,
       isRepeat,
       isolated: depth === 0 && children.length === 0,
+      identityVerified: node.identityVerified === true,
     });
 
     seen.add(id);
