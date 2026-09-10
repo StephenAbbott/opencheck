@@ -1,0 +1,2416 @@
+{
+  "_captured": "2026-09-10 from data.gov.sg (live, keyless). Rows are real responses, unmodified; the two collection metadata responses keep only each dataset's datasetId and name. `_rate_limited_http_429` is the 429 body datastore_search returned on 2026-09-10 (no Retry-After header).",
+  "responses": {
+    "collection_1_metadata": {
+      "code": 0,
+      "data": {
+        "collectionMetadata": {
+          "collectionId": "1",
+          "name": "Registered Entities with Unique Entity Number",
+          "lastUpdatedAt": "2026-08-14T14:01:45+08:00"
+        },
+        "datasetMetadata": [
+          {
+            "datasetId": "d_3f960c10fed6145404ca7b821f263b87",
+            "name": "Entities Registered with ACRA"
+          },
+          {
+            "datasetId": "d_b1d2b840ab9e993570c037b706b39bb8",
+            "name": "Entities Registered with Other UEN Issuance Agencies"
+          }
+        ]
+      },
+      "errorMsg": ""
+    },
+    "collection_2_metadata": {
+      "code": 0,
+      "data": {
+        "collectionMetadata": {
+          "collectionId": "2",
+          "name": "ACRA Information on Corporate Entities",
+          "lastUpdatedAt": "2026-08-14T14:07:42+08:00"
+        },
+        "datasetMetadata": [
+          {
+            "datasetId": "d_af2042c77ffaf0db5d75561ce9ef5688",
+            "name": "ACRA Information on Corporate Entities ('W')"
+          },
+          {
+            "datasetId": "d_0cc5f52a1f298b916f317800251057f3",
+            "name": "ACRA Information on Corporate Entities ('U')"
+          },
+          {
+            "datasetId": "d_4e3db8955fdcda6f9944097bef3d2724",
+            "name": "ACRA Information on Corporate Entities ('Z')"
+          },
+          {
+            "datasetId": "d_1cd970d8351b42be4a308d628a6dd9d3",
+            "name": "ACRA Information on Corporate Entities ('X')"
+          },
+          {
+            "datasetId": "d_e97e8e7fc55b85a38babf66b0fa46b73",
+            "name": "ACRA Information on Corporate Entities ('V')"
+          },
+          {
+            "datasetId": "d_df7d2d661c0c11a7c367c9ee4bf896c1",
+            "name": "ACRA Information on Corporate Entities ('S')"
+          },
+          {
+            "datasetId": "d_fa2ed456cf2b8597bb7e064b08fc3c7c",
+            "name": "ACRA Information on Corporate Entities ('H')"
+          },
+          {
+            "datasetId": "d_300ddc8da4e8f7bdc1bfc62d0d99e2e7",
+            "name": "ACRA Information on Corporate Entities ('Others')"
+          },
+          {
+            "datasetId": "d_31af23fdb79119ed185c256f03cb5773",
+            "name": "ACRA Information on Corporate Entities ('Y')"
+          },
+          {
+            "datasetId": "d_67e99e6eabc4aad9b5d48663b579746a",
+            "name": "ACRA Information on Corporate Entities ('N')"
+          },
+          {
+            "datasetId": "d_c0650f23e94c42e7a20921f4c5b75c24",
+            "name": "ACRA Information on Corporate Entities ('C')"
+          },
+          {
+            "datasetId": "d_3a3807c023c61ddfba947dc069eb53f2",
+            "name": "ACRA Information on Corporate Entities ('B')"
+          },
+          {
+            "datasetId": "d_478f45a9c541cbe679ca55d1cd2b970b",
+            "name": "ACRA Information on Corporate Entities ('J')"
+          },
+          {
+            "datasetId": "d_a2141adf93ec2a3c2ec2837b78d6d46e",
+            "name": "ACRA Information on Corporate Entities ('L')"
+          },
+          {
+            "datasetId": "d_181005ca270b45408b4cdfc954980ca2",
+            "name": "ACRA Information on Corporate Entities ('P')"
+          },
+          {
+            "datasetId": "d_8575e84912df3c28995b8e6e0e05205a",
+            "name": "ACRA Information on Corporate Entities ('A')"
+          },
+          {
+            "datasetId": "d_9af9317c646a1c881bb5591c91817cc6",
+            "name": "ACRA Information on Corporate Entities ('M')"
+          },
+          {
+            "datasetId": "d_5c4ef48b025fdfbc80056401f06e3df9",
+            "name": "ACRA Information on Corporate Entities ('O')"
+          },
+          {
+            "datasetId": "d_5573b0db0575db32190a2ad27919a7aa",
+            "name": "ACRA Information on Corporate Entities ('K')"
+          },
+          {
+            "datasetId": "d_2b8c54b2a490d2fa36b925289e5d9572",
+            "name": "ACRA Information on Corporate Entities ('R')"
+          },
+          {
+            "datasetId": "d_85518d970b8178975850457f60f1e738",
+            "name": "ACRA Information on Corporate Entities ('I')"
+          },
+          {
+            "datasetId": "d_72f37e5c5d192951ddc5513c2b134482",
+            "name": "ACRA Information on Corporate Entities ('T')"
+          },
+          {
+            "datasetId": "d_4526d47d6714d3b052eed4a30b8b1ed6",
+            "name": "ACRA Information on Corporate Entities ('F')"
+          },
+          {
+            "datasetId": "d_b58303c68e9cf0d2ae93b73ffdbfbfa1",
+            "name": "ACRA Information on Corporate Entities ('G')"
+          },
+          {
+            "datasetId": "d_acbc938ec77af18f94cecc4a7c9ec720",
+            "name": "ACRA Information on Corporate Entities ('D')"
+          },
+          {
+            "datasetId": "d_4130f1d9d365d9f1633536e959f62bb7",
+            "name": "ACRA Information on Corporate Entities ('Q')"
+          },
+          {
+            "datasetId": "d_124a9bd407c7a25f8335b93b86e50fdd",
+            "name": "ACRA Information on Corporate Entities ('E')"
+          }
+        ]
+      },
+      "errorMsg": ""
+    },
+    "dbs_entity": {
+      "success": true,
+      "result": {
+        "resource_id": "d_3f960c10fed6145404ca7b821f263b87",
+        "fields": [
+          {
+            "type": "text",
+            "id": "uen"
+          },
+          {
+            "type": "text",
+            "id": "issuance_agency_desc"
+          },
+          {
+            "type": "text",
+            "id": "uen_status_desc"
+          },
+          {
+            "type": "text",
+            "id": "entity_name"
+          },
+          {
+            "type": "text",
+            "id": "entity_type_desc"
+          },
+          {
+            "type": "text",
+            "id": "uen_issue_date"
+          },
+          {
+            "type": "text",
+            "id": "reg_street_name"
+          },
+          {
+            "type": "text",
+            "id": "reg_postal_code"
+          },
+          {
+            "type": "int4",
+            "id": "_id"
+          }
+        ],
+        "records": [
+          {
+            "_id": 1369353,
+            "uen": "196800306E",
+            "issuance_agency_desc": "ACRA",
+            "uen_status_desc": "Registered",
+            "entity_name": "DBS BANK LTD.",
+            "entity_type_desc": "Local Company",
+            "uen_issue_date": "1968-07-16",
+            "reg_street_name": "MARINA BOULEVARD",
+            "reg_postal_code": "018982"
+          }
+        ],
+        "_links": {
+          "start": "/api/action/datastore_search?resource_id=d_3f960c10fed6145404ca7b821f263b87&filters=%7B%22uen%22%3A%22196800306E%22%7D",
+          "next": "/api/action/datastore_search?resource_id=d_3f960c10fed6145404ca7b821f263b87&offset=100&filters=%7B%22uen%22%3A%22196800306E%22%7D"
+        },
+        "total": 1,
+        "filters": "{\"uen\":\"196800306E\"}"
+      }
+    },
+    "dbs_detail": {
+      "success": true,
+      "result": {
+        "resource_id": "d_acbc938ec77af18f94cecc4a7c9ec720",
+        "fields": [
+          {
+            "type": "text",
+            "id": "uen"
+          },
+          {
+            "type": "text",
+            "id": "issuance_agency_id"
+          },
+          {
+            "type": "text",
+            "id": "entity_name"
+          },
+          {
+            "type": "text",
+            "id": "entity_type_description"
+          },
+          {
+            "type": "text",
+            "id": "business_constitution_description"
+          },
+          {
+            "type": "text",
+            "id": "company_type_description"
+          },
+          {
+            "type": "text",
+            "id": "paf_constitution_description"
+          },
+          {
+            "type": "text",
+            "id": "entity_status_description"
+          },
+          {
+            "type": "text",
+            "id": "registration_incorporation_date"
+          },
+          {
+            "type": "text",
+            "id": "uen_issue_date"
+          },
+          {
+            "type": "text",
+            "id": "address_type"
+          },
+          {
+            "type": "text",
+            "id": "block"
+          },
+          {
+            "type": "text",
+            "id": "street_name"
+          },
+          {
+            "type": "text",
+            "id": "level_no"
+          },
+          {
+            "type": "text",
+            "id": "unit_no"
+          },
+          {
+            "type": "text",
+            "id": "building_name"
+          },
+          {
+            "type": "text",
+            "id": "postal_code"
+          },
+          {
+            "type": "text",
+            "id": "other_address_line1"
+          },
+          {
+            "type": "text",
+            "id": "other_address_line2"
+          },
+          {
+            "type": "text",
+            "id": "account_due_date"
+          },
+          {
+            "type": "text",
+            "id": "annual_return_date"
+          },
+          {
+            "type": "text",
+            "id": "primary_ssic_code"
+          },
+          {
+            "type": "text",
+            "id": "primary_ssic_description"
+          },
+          {
+            "type": "text",
+            "id": "primary_user_described_activity"
+          },
+          {
+            "type": "text",
+            "id": "secondary_ssic_code"
+          },
+          {
+            "type": "text",
+            "id": "secondary_ssic_description"
+          },
+          {
+            "type": "text",
+            "id": "secondary_user_described_activity"
+          },
+          {
+            "type": "text",
+            "id": "no_of_officers"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name1"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name2"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name3"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name4"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name5"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name6"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name7"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name8"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name9"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name10"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name11"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name12"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name13"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name14"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name15"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm1"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm1"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm2"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm2"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm3"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm3"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm4"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm4"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm5"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm5"
+          },
+          {
+            "type": "int4",
+            "id": "_id"
+          }
+        ],
+        "records": [
+          {
+            "_id": 290,
+            "uen": "196800306E",
+            "issuance_agency_id": "ACRA",
+            "entity_name": "DBS BANK LTD.",
+            "entity_type_description": "Local Company",
+            "business_constitution_description": "na",
+            "company_type_description": "Public Company Limited by Shares",
+            "paf_constitution_description": "na",
+            "entity_status_description": "Live Company",
+            "registration_incorporation_date": "1968-07-16",
+            "uen_issue_date": "1968-07-16",
+            "address_type": "LOCAL",
+            "block": "12",
+            "street_name": "MARINA BOULEVARD",
+            "level_no": "na",
+            "unit_no": "na",
+            "building_name": "MARINA BAY FINANCIAL CENTRE",
+            "postal_code": "018982",
+            "other_address_line1": "na",
+            "other_address_line2": "na",
+            "account_due_date": "2027-07-31",
+            "annual_return_date": "2026-06-03",
+            "primary_ssic_code": "64120",
+            "primary_ssic_description": "na",
+            "primary_user_described_activity": "na",
+            "secondary_ssic_code": "na",
+            "secondary_ssic_description": "na",
+            "secondary_user_described_activity": "na",
+            "no_of_officers": "102",
+            "former_entity_name1": "THE DEVELOPMENT BANK OF SINGAPORE",
+            "former_entity_name2": "na",
+            "former_entity_name3": "na",
+            "former_entity_name4": "na",
+            "former_entity_name5": "na",
+            "former_entity_name6": "na",
+            "former_entity_name7": "na",
+            "former_entity_name8": "na",
+            "former_entity_name9": "na",
+            "former_entity_name10": "na",
+            "former_entity_name11": "na",
+            "former_entity_name12": "na",
+            "former_entity_name13": "na",
+            "former_entity_name14": "na",
+            "former_entity_name15": "na",
+            "uen_of_audit_firm1": "na",
+            "name_of_audit_firm1": "na",
+            "uen_of_audit_firm2": "na",
+            "name_of_audit_firm2": "na",
+            "uen_of_audit_firm3": "na",
+            "name_of_audit_firm3": "na",
+            "uen_of_audit_firm4": "na",
+            "name_of_audit_firm4": "na",
+            "uen_of_audit_firm5": "na",
+            "name_of_audit_firm5": "na"
+          }
+        ],
+        "_links": {
+          "start": "/api/action/datastore_search?resource_id=d_acbc938ec77af18f94cecc4a7c9ec720&filters=%7B%22uen%22%3A%22196800306E%22%7D",
+          "next": "/api/action/datastore_search?resource_id=d_acbc938ec77af18f94cecc4a7c9ec720&offset=100&filters=%7B%22uen%22%3A%22196800306E%22%7D"
+        },
+        "total": 1,
+        "filters": "{\"uen\":\"196800306E\"}"
+      }
+    },
+    "kibu_entity": {
+      "success": true,
+      "result": {
+        "resource_id": "d_3f960c10fed6145404ca7b821f263b87",
+        "fields": [
+          {
+            "type": "text",
+            "id": "uen"
+          },
+          {
+            "type": "text",
+            "id": "issuance_agency_desc"
+          },
+          {
+            "type": "text",
+            "id": "uen_status_desc"
+          },
+          {
+            "type": "text",
+            "id": "entity_name"
+          },
+          {
+            "type": "text",
+            "id": "entity_type_desc"
+          },
+          {
+            "type": "text",
+            "id": "uen_issue_date"
+          },
+          {
+            "type": "text",
+            "id": "reg_street_name"
+          },
+          {
+            "type": "text",
+            "id": "reg_postal_code"
+          },
+          {
+            "type": "int4",
+            "id": "_id"
+          }
+        ],
+        "records": [
+          {
+            "_id": 369546,
+            "uen": "201532108K",
+            "issuance_agency_desc": "ACRA",
+            "uen_status_desc": "Registered",
+            "entity_name": "KIBU PTE. LTD.",
+            "entity_type_desc": "Local Company",
+            "uen_issue_date": "2015-08-18",
+            "reg_street_name": "ROBINSON ROAD",
+            "reg_postal_code": "068908"
+          }
+        ],
+        "_links": {
+          "start": "/api/action/datastore_search?resource_id=d_3f960c10fed6145404ca7b821f263b87&filters=%7B%22uen%22%3A%22201532108K%22%7D",
+          "next": "/api/action/datastore_search?resource_id=d_3f960c10fed6145404ca7b821f263b87&offset=100&filters=%7B%22uen%22%3A%22201532108K%22%7D"
+        },
+        "total": 1,
+        "filters": "{\"uen\":\"201532108K\"}"
+      }
+    },
+    "kibu_detail": {
+      "success": true,
+      "result": {
+        "resource_id": "d_5573b0db0575db32190a2ad27919a7aa",
+        "fields": [
+          {
+            "type": "text",
+            "id": "uen"
+          },
+          {
+            "type": "text",
+            "id": "issuance_agency_id"
+          },
+          {
+            "type": "text",
+            "id": "entity_name"
+          },
+          {
+            "type": "text",
+            "id": "entity_type_description"
+          },
+          {
+            "type": "text",
+            "id": "business_constitution_description"
+          },
+          {
+            "type": "text",
+            "id": "company_type_description"
+          },
+          {
+            "type": "text",
+            "id": "paf_constitution_description"
+          },
+          {
+            "type": "text",
+            "id": "entity_status_description"
+          },
+          {
+            "type": "text",
+            "id": "registration_incorporation_date"
+          },
+          {
+            "type": "text",
+            "id": "uen_issue_date"
+          },
+          {
+            "type": "text",
+            "id": "address_type"
+          },
+          {
+            "type": "text",
+            "id": "block"
+          },
+          {
+            "type": "text",
+            "id": "street_name"
+          },
+          {
+            "type": "text",
+            "id": "level_no"
+          },
+          {
+            "type": "text",
+            "id": "unit_no"
+          },
+          {
+            "type": "text",
+            "id": "building_name"
+          },
+          {
+            "type": "text",
+            "id": "postal_code"
+          },
+          {
+            "type": "text",
+            "id": "other_address_line1"
+          },
+          {
+            "type": "text",
+            "id": "other_address_line2"
+          },
+          {
+            "type": "text",
+            "id": "account_due_date"
+          },
+          {
+            "type": "text",
+            "id": "annual_return_date"
+          },
+          {
+            "type": "text",
+            "id": "primary_ssic_code"
+          },
+          {
+            "type": "text",
+            "id": "primary_ssic_description"
+          },
+          {
+            "type": "text",
+            "id": "primary_user_described_activity"
+          },
+          {
+            "type": "text",
+            "id": "secondary_ssic_code"
+          },
+          {
+            "type": "text",
+            "id": "secondary_ssic_description"
+          },
+          {
+            "type": "text",
+            "id": "secondary_user_described_activity"
+          },
+          {
+            "type": "text",
+            "id": "no_of_officers"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name1"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name2"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name3"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name4"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name5"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name6"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name7"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name8"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name9"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name10"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name11"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name12"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name13"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name14"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name15"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm1"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm1"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm2"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm2"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm3"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm3"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm4"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm4"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm5"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm5"
+          },
+          {
+            "type": "int4",
+            "id": "_id"
+          }
+        ],
+        "records": [
+          {
+            "_id": 19227,
+            "uen": "201532108K",
+            "issuance_agency_id": "ACRA",
+            "entity_name": "KIBU PTE. LTD.",
+            "entity_type_description": "Local Company",
+            "business_constitution_description": "na",
+            "company_type_description": "Private Company Limited by Shares",
+            "paf_constitution_description": "na",
+            "entity_status_description": "Live Company",
+            "registration_incorporation_date": "2015-08-18",
+            "uen_issue_date": "2015-08-18",
+            "address_type": "LOCAL",
+            "block": "144",
+            "street_name": "ROBINSON ROAD",
+            "level_no": "14",
+            "unit_no": "01",
+            "building_name": "ROBINSON SQUARE",
+            "postal_code": "068908",
+            "other_address_line1": "na",
+            "other_address_line2": "na",
+            "account_due_date": "2026-07-31",
+            "annual_return_date": "2025-07-18",
+            "primary_ssic_code": "70101",
+            "primary_ssic_description": "MARKET EXPLORATION AND DEVELOPMENT",
+            "primary_user_described_activity": "na",
+            "secondary_ssic_code": "46302",
+            "secondary_ssic_description": "MARKET EXPLORATION AND DEVELOPMENT",
+            "secondary_user_described_activity": "na",
+            "no_of_officers": "8",
+            "former_entity_name1": "FRINSA SINGAPORE",
+            "former_entity_name2": "na",
+            "former_entity_name3": "na",
+            "former_entity_name4": "na",
+            "former_entity_name5": "na",
+            "former_entity_name6": "na",
+            "former_entity_name7": "na",
+            "former_entity_name8": "na",
+            "former_entity_name9": "na",
+            "former_entity_name10": "na",
+            "former_entity_name11": "na",
+            "former_entity_name12": "na",
+            "former_entity_name13": "na",
+            "former_entity_name14": "na",
+            "former_entity_name15": "na",
+            "uen_of_audit_firm1": "na",
+            "name_of_audit_firm1": "na",
+            "uen_of_audit_firm2": "na",
+            "name_of_audit_firm2": "na",
+            "uen_of_audit_firm3": "na",
+            "name_of_audit_firm3": "na",
+            "uen_of_audit_firm4": "na",
+            "name_of_audit_firm4": "na",
+            "uen_of_audit_firm5": "na",
+            "name_of_audit_firm5": "na"
+          }
+        ],
+        "_links": {
+          "start": "/api/action/datastore_search?resource_id=d_5573b0db0575db32190a2ad27919a7aa&filters=%7B%22uen%22%3A%22201532108K%22%7D",
+          "next": "/api/action/datastore_search?resource_id=d_5573b0db0575db32190a2ad27919a7aa&offset=100&filters=%7B%22uen%22%3A%22201532108K%22%7D"
+        },
+        "total": 1,
+        "filters": "{\"uen\":\"201532108K\"}"
+      }
+    },
+    "vcc_acra_miss": {
+      "success": true,
+      "result": {
+        "resource_id": "d_3f960c10fed6145404ca7b821f263b87",
+        "fields": [
+          {
+            "type": "text",
+            "id": "uen"
+          },
+          {
+            "type": "text",
+            "id": "issuance_agency_desc"
+          },
+          {
+            "type": "text",
+            "id": "uen_status_desc"
+          },
+          {
+            "type": "text",
+            "id": "entity_name"
+          },
+          {
+            "type": "text",
+            "id": "entity_type_desc"
+          },
+          {
+            "type": "text",
+            "id": "uen_issue_date"
+          },
+          {
+            "type": "text",
+            "id": "reg_street_name"
+          },
+          {
+            "type": "text",
+            "id": "reg_postal_code"
+          },
+          {
+            "type": "int4",
+            "id": "_id"
+          }
+        ],
+        "records": [],
+        "_links": {
+          "start": "/api/action/datastore_search?resource_id=d_3f960c10fed6145404ca7b821f263b87&filters=%7B%22uen%22%3A%22T23VC0219C%22%7D",
+          "next": "/api/action/datastore_search?resource_id=d_3f960c10fed6145404ca7b821f263b87&offset=100&filters=%7B%22uen%22%3A%22T23VC0219C%22%7D"
+        },
+        "total": 0,
+        "filters": "{\"uen\":\"T23VC0219C\"}"
+      }
+    },
+    "vcc_other_agencies": {
+      "success": true,
+      "result": {
+        "resource_id": "d_b1d2b840ab9e993570c037b706b39bb8",
+        "fields": [
+          {
+            "type": "text",
+            "id": "uen"
+          },
+          {
+            "type": "text",
+            "id": "issuance_agency_desc"
+          },
+          {
+            "type": "text",
+            "id": "uen_status_desc"
+          },
+          {
+            "type": "text",
+            "id": "entity_name"
+          },
+          {
+            "type": "text",
+            "id": "entity_type_desc"
+          },
+          {
+            "type": "text",
+            "id": "uen_issue_date"
+          },
+          {
+            "type": "text",
+            "id": "reg_street_name"
+          },
+          {
+            "type": "text",
+            "id": "reg_postal_code"
+          },
+          {
+            "type": "int4",
+            "id": "_id"
+          }
+        ],
+        "records": [
+          {
+            "_id": 14878,
+            "uen": "T23VC0219C",
+            "issuance_agency_desc": "Accounting and Corporate Regulatory Authority",
+            "uen_status_desc": "Registered",
+            "entity_name": "K-WAVE FUND VCC",
+            "entity_type_desc": "Variable Capital Companies",
+            "uen_issue_date": "2023-11-23",
+            "reg_street_name": "BATTERY ROAD",
+            "reg_postal_code": "049907"
+          }
+        ],
+        "_links": {
+          "start": "/api/action/datastore_search?resource_id=d_b1d2b840ab9e993570c037b706b39bb8&filters=%7B%22uen%22%3A%22T23VC0219C%22%7D",
+          "next": "/api/action/datastore_search?resource_id=d_b1d2b840ab9e993570c037b706b39bb8&offset=100&filters=%7B%22uen%22%3A%22T23VC0219C%22%7D"
+        },
+        "total": 1,
+        "filters": "{\"uen\":\"T23VC0219C\"}"
+      }
+    },
+    "rhb_branch_detail": {
+      "success": true,
+      "result": {
+        "resource_id": "d_2b8c54b2a490d2fa36b925289e5d9572",
+        "fields": [
+          {
+            "type": "text",
+            "id": "uen"
+          },
+          {
+            "type": "text",
+            "id": "issuance_agency_id"
+          },
+          {
+            "type": "text",
+            "id": "entity_name"
+          },
+          {
+            "type": "text",
+            "id": "entity_type_description"
+          },
+          {
+            "type": "text",
+            "id": "business_constitution_description"
+          },
+          {
+            "type": "text",
+            "id": "company_type_description"
+          },
+          {
+            "type": "text",
+            "id": "paf_constitution_description"
+          },
+          {
+            "type": "text",
+            "id": "entity_status_description"
+          },
+          {
+            "type": "text",
+            "id": "registration_incorporation_date"
+          },
+          {
+            "type": "text",
+            "id": "uen_issue_date"
+          },
+          {
+            "type": "text",
+            "id": "address_type"
+          },
+          {
+            "type": "text",
+            "id": "block"
+          },
+          {
+            "type": "text",
+            "id": "street_name"
+          },
+          {
+            "type": "text",
+            "id": "level_no"
+          },
+          {
+            "type": "text",
+            "id": "unit_no"
+          },
+          {
+            "type": "text",
+            "id": "building_name"
+          },
+          {
+            "type": "text",
+            "id": "postal_code"
+          },
+          {
+            "type": "text",
+            "id": "other_address_line1"
+          },
+          {
+            "type": "text",
+            "id": "other_address_line2"
+          },
+          {
+            "type": "text",
+            "id": "account_due_date"
+          },
+          {
+            "type": "text",
+            "id": "annual_return_date"
+          },
+          {
+            "type": "text",
+            "id": "primary_ssic_code"
+          },
+          {
+            "type": "text",
+            "id": "primary_ssic_description"
+          },
+          {
+            "type": "text",
+            "id": "primary_user_described_activity"
+          },
+          {
+            "type": "text",
+            "id": "secondary_ssic_code"
+          },
+          {
+            "type": "text",
+            "id": "secondary_ssic_description"
+          },
+          {
+            "type": "text",
+            "id": "secondary_user_described_activity"
+          },
+          {
+            "type": "text",
+            "id": "no_of_officers"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name1"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name2"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name3"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name4"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name5"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name6"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name7"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name8"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name9"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name10"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name11"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name12"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name13"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name14"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name15"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm1"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm1"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm2"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm2"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm3"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm3"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm4"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm4"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm5"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm5"
+          },
+          {
+            "type": "int4",
+            "id": "_id"
+          }
+        ],
+        "records": [
+          {
+            "_id": 69154,
+            "uen": "S99FC5710J",
+            "issuance_agency_id": "ACRA",
+            "entity_name": "RHB BANK BERHAD",
+            "entity_type_description": "Foreign Company Branch",
+            "business_constitution_description": "na",
+            "company_type_description": "na",
+            "paf_constitution_description": "na",
+            "entity_status_description": "Live Company",
+            "registration_incorporation_date": "1999-05-05",
+            "uen_issue_date": "1999-05-05",
+            "address_type": "LOCAL",
+            "block": "90",
+            "street_name": "CECIL STREET",
+            "level_no": "03",
+            "unit_no": "00",
+            "building_name": "RHB BANK BUILDING",
+            "postal_code": "069531",
+            "other_address_line1": "na",
+            "other_address_line2": "na",
+            "account_due_date": "2027-07-31",
+            "annual_return_date": "2026-06-09",
+            "primary_ssic_code": "64120",
+            "primary_ssic_description": "na",
+            "primary_user_described_activity": "na",
+            "secondary_ssic_code": "64201",
+            "secondary_ssic_description": "na",
+            "secondary_user_described_activity": "na",
+            "no_of_officers": "54",
+            "former_entity_name1": "na",
+            "former_entity_name2": "na",
+            "former_entity_name3": "na",
+            "former_entity_name4": "na",
+            "former_entity_name5": "na",
+            "former_entity_name6": "na",
+            "former_entity_name7": "na",
+            "former_entity_name8": "na",
+            "former_entity_name9": "na",
+            "former_entity_name10": "na",
+            "former_entity_name11": "na",
+            "former_entity_name12": "na",
+            "former_entity_name13": "na",
+            "former_entity_name14": "na",
+            "former_entity_name15": "na",
+            "uen_of_audit_firm1": "na",
+            "name_of_audit_firm1": "na",
+            "uen_of_audit_firm2": "na",
+            "name_of_audit_firm2": "na",
+            "uen_of_audit_firm3": "na",
+            "name_of_audit_firm3": "na",
+            "uen_of_audit_firm4": "na",
+            "name_of_audit_firm4": "na",
+            "uen_of_audit_firm5": "na",
+            "name_of_audit_firm5": "na"
+          }
+        ],
+        "_links": {
+          "start": "/api/action/datastore_search?resource_id=d_2b8c54b2a490d2fa36b925289e5d9572&filters=%7B%22uen%22%3A%22S99FC5710J%22%7D",
+          "next": "/api/action/datastore_search?resource_id=d_2b8c54b2a490d2fa36b925289e5d9572&offset=100&filters=%7B%22uen%22%3A%22S99FC5710J%22%7D"
+        },
+        "total": 1,
+        "filters": "{\"uen\":\"S99FC5710J\"}"
+      }
+    },
+    "struck_off_detail": {
+      "success": true,
+      "result": {
+        "resource_id": "d_df7d2d661c0c11a7c367c9ee4bf896c1",
+        "fields": [
+          {
+            "type": "text",
+            "id": "uen"
+          },
+          {
+            "type": "text",
+            "id": "issuance_agency_id"
+          },
+          {
+            "type": "text",
+            "id": "entity_name"
+          },
+          {
+            "type": "text",
+            "id": "entity_type_description"
+          },
+          {
+            "type": "text",
+            "id": "business_constitution_description"
+          },
+          {
+            "type": "text",
+            "id": "company_type_description"
+          },
+          {
+            "type": "text",
+            "id": "paf_constitution_description"
+          },
+          {
+            "type": "text",
+            "id": "entity_status_description"
+          },
+          {
+            "type": "text",
+            "id": "registration_incorporation_date"
+          },
+          {
+            "type": "text",
+            "id": "uen_issue_date"
+          },
+          {
+            "type": "text",
+            "id": "address_type"
+          },
+          {
+            "type": "text",
+            "id": "block"
+          },
+          {
+            "type": "text",
+            "id": "street_name"
+          },
+          {
+            "type": "text",
+            "id": "level_no"
+          },
+          {
+            "type": "text",
+            "id": "unit_no"
+          },
+          {
+            "type": "text",
+            "id": "building_name"
+          },
+          {
+            "type": "text",
+            "id": "postal_code"
+          },
+          {
+            "type": "text",
+            "id": "other_address_line1"
+          },
+          {
+            "type": "text",
+            "id": "other_address_line2"
+          },
+          {
+            "type": "text",
+            "id": "account_due_date"
+          },
+          {
+            "type": "text",
+            "id": "annual_return_date"
+          },
+          {
+            "type": "text",
+            "id": "primary_ssic_code"
+          },
+          {
+            "type": "text",
+            "id": "primary_ssic_description"
+          },
+          {
+            "type": "text",
+            "id": "primary_user_described_activity"
+          },
+          {
+            "type": "text",
+            "id": "secondary_ssic_code"
+          },
+          {
+            "type": "text",
+            "id": "secondary_ssic_description"
+          },
+          {
+            "type": "text",
+            "id": "secondary_user_described_activity"
+          },
+          {
+            "type": "text",
+            "id": "no_of_officers"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name1"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name2"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name3"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name4"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name5"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name6"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name7"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name8"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name9"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name10"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name11"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name12"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name13"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name14"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name15"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm1"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm1"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm2"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm2"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm3"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm3"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm4"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm4"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm5"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm5"
+          },
+          {
+            "type": "int4",
+            "id": "_id"
+          }
+        ],
+        "records": [
+          {
+            "_id": 3860,
+            "uen": "189100001K",
+            "issuance_agency_id": "ACRA",
+            "entity_name": "SINGAPORE LAND COMPANY LIMITED",
+            "entity_type_description": "Local Company",
+            "business_constitution_description": "na",
+            "company_type_description": "Exempt Private Company Limited by Shares",
+            "paf_constitution_description": "na",
+            "entity_status_description": "Struck Off",
+            "registration_incorporation_date": "1891-03-17",
+            "uen_issue_date": "1891-03-17",
+            "address_type": "LOCAL",
+            "block": "2",
+            "street_name": "SHENTON WAY",
+            "level_no": "na",
+            "unit_no": "na",
+            "building_name": "na",
+            "postal_code": "0106",
+            "other_address_line1": "na",
+            "other_address_line2": "na",
+            "account_due_date": "na",
+            "annual_return_date": "na",
+            "primary_ssic_code": "96099",
+            "primary_ssic_description": "na",
+            "primary_user_described_activity": "na",
+            "secondary_ssic_code": "na",
+            "secondary_ssic_description": "na",
+            "secondary_user_described_activity": "na",
+            "no_of_officers": "0",
+            "former_entity_name1": "na",
+            "former_entity_name2": "na",
+            "former_entity_name3": "na",
+            "former_entity_name4": "na",
+            "former_entity_name5": "na",
+            "former_entity_name6": "na",
+            "former_entity_name7": "na",
+            "former_entity_name8": "na",
+            "former_entity_name9": "na",
+            "former_entity_name10": "na",
+            "former_entity_name11": "na",
+            "former_entity_name12": "na",
+            "former_entity_name13": "na",
+            "former_entity_name14": "na",
+            "former_entity_name15": "na",
+            "uen_of_audit_firm1": "na",
+            "name_of_audit_firm1": "na",
+            "uen_of_audit_firm2": "na",
+            "name_of_audit_firm2": "na",
+            "uen_of_audit_firm3": "na",
+            "name_of_audit_firm3": "na",
+            "uen_of_audit_firm4": "na",
+            "name_of_audit_firm4": "na",
+            "uen_of_audit_firm5": "na",
+            "name_of_audit_firm5": "na"
+          }
+        ],
+        "_links": {
+          "start": "/api/action/datastore_search?resource_id=d_df7d2d661c0c11a7c367c9ee4bf896c1&limit=1&filters=%7B%22entity_status_description%22%3A%20%22Struck%20Off%22%2C%20%22entity_type_description%22%3A%20%22Local%20Company%22%7D",
+          "next": "/api/action/datastore_search?resource_id=d_df7d2d661c0c11a7c367c9ee4bf896c1&offset=1&limit=1&filters=%7B%22entity_status_description%22%3A%20%22Struck%20Off%22%2C%20%22entity_type_description%22%3A%20%22Local%20Company%22%7D"
+        },
+        "total": 55102,
+        "limit": 1,
+        "filters": "{\"entity_status_description\": \"Struck Off\", \"entity_type_description\": \"Local Company\"}"
+      }
+    },
+    "gazetted_detail": {
+      "success": true,
+      "result": {
+        "resource_id": "d_df7d2d661c0c11a7c367c9ee4bf896c1",
+        "fields": [
+          {
+            "type": "text",
+            "id": "uen"
+          },
+          {
+            "type": "text",
+            "id": "issuance_agency_id"
+          },
+          {
+            "type": "text",
+            "id": "entity_name"
+          },
+          {
+            "type": "text",
+            "id": "entity_type_description"
+          },
+          {
+            "type": "text",
+            "id": "business_constitution_description"
+          },
+          {
+            "type": "text",
+            "id": "company_type_description"
+          },
+          {
+            "type": "text",
+            "id": "paf_constitution_description"
+          },
+          {
+            "type": "text",
+            "id": "entity_status_description"
+          },
+          {
+            "type": "text",
+            "id": "registration_incorporation_date"
+          },
+          {
+            "type": "text",
+            "id": "uen_issue_date"
+          },
+          {
+            "type": "text",
+            "id": "address_type"
+          },
+          {
+            "type": "text",
+            "id": "block"
+          },
+          {
+            "type": "text",
+            "id": "street_name"
+          },
+          {
+            "type": "text",
+            "id": "level_no"
+          },
+          {
+            "type": "text",
+            "id": "unit_no"
+          },
+          {
+            "type": "text",
+            "id": "building_name"
+          },
+          {
+            "type": "text",
+            "id": "postal_code"
+          },
+          {
+            "type": "text",
+            "id": "other_address_line1"
+          },
+          {
+            "type": "text",
+            "id": "other_address_line2"
+          },
+          {
+            "type": "text",
+            "id": "account_due_date"
+          },
+          {
+            "type": "text",
+            "id": "annual_return_date"
+          },
+          {
+            "type": "text",
+            "id": "primary_ssic_code"
+          },
+          {
+            "type": "text",
+            "id": "primary_ssic_description"
+          },
+          {
+            "type": "text",
+            "id": "primary_user_described_activity"
+          },
+          {
+            "type": "text",
+            "id": "secondary_ssic_code"
+          },
+          {
+            "type": "text",
+            "id": "secondary_ssic_description"
+          },
+          {
+            "type": "text",
+            "id": "secondary_user_described_activity"
+          },
+          {
+            "type": "text",
+            "id": "no_of_officers"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name1"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name2"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name3"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name4"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name5"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name6"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name7"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name8"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name9"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name10"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name11"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name12"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name13"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name14"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name15"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm1"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm1"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm2"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm2"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm3"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm3"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm4"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm4"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm5"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm5"
+          },
+          {
+            "type": "int4",
+            "id": "_id"
+          }
+        ],
+        "records": [
+          {
+            "_id": 4591,
+            "uen": "196600057H",
+            "issuance_agency_id": "ACRA",
+            "entity_name": "SINGA TRADING COMPANY (PTE) LIMITED",
+            "entity_type_description": "Local Company",
+            "business_constitution_description": "na",
+            "company_type_description": "Exempt Private Company Limited by Shares",
+            "paf_constitution_description": "na",
+            "entity_status_description": "Gazetted To Be Struck Off",
+            "registration_incorporation_date": "1966-02-22",
+            "uen_issue_date": "1966-02-22",
+            "address_type": "LOCAL",
+            "block": "6001",
+            "street_name": "BEACH ROAD",
+            "level_no": "01",
+            "unit_no": "05",
+            "building_name": "GOLDEN MILE TOWER",
+            "postal_code": "199589",
+            "other_address_line1": "na",
+            "other_address_line2": "na",
+            "account_due_date": "2021-07-31",
+            "annual_return_date": "2020-08-05",
+            "primary_ssic_code": "46473",
+            "primary_ssic_description": "RETAIL BOOKS, MAGAZINES & STATIONERY",
+            "primary_user_described_activity": "na",
+            "secondary_ssic_code": "47610",
+            "secondary_ssic_description": "RETAIL BOOKS, MAGAZINES & STATIONERY",
+            "secondary_user_described_activity": "na",
+            "no_of_officers": "7",
+            "former_entity_name1": "na",
+            "former_entity_name2": "na",
+            "former_entity_name3": "na",
+            "former_entity_name4": "na",
+            "former_entity_name5": "na",
+            "former_entity_name6": "na",
+            "former_entity_name7": "na",
+            "former_entity_name8": "na",
+            "former_entity_name9": "na",
+            "former_entity_name10": "na",
+            "former_entity_name11": "na",
+            "former_entity_name12": "na",
+            "former_entity_name13": "na",
+            "former_entity_name14": "na",
+            "former_entity_name15": "na",
+            "uen_of_audit_firm1": "na",
+            "name_of_audit_firm1": "na",
+            "uen_of_audit_firm2": "na",
+            "name_of_audit_firm2": "na",
+            "uen_of_audit_firm3": "na",
+            "name_of_audit_firm3": "na",
+            "uen_of_audit_firm4": "na",
+            "name_of_audit_firm4": "na",
+            "uen_of_audit_firm5": "na",
+            "name_of_audit_firm5": "na"
+          }
+        ],
+        "_links": {
+          "start": "/api/action/datastore_search?resource_id=d_df7d2d661c0c11a7c367c9ee4bf896c1&limit=1&filters=%7B%22entity_status_description%22%3A%20%22Gazetted%20To%20Be%20Struck%20Off%22%2C%20%22entity_type_description%22%3A%20%22Local%20Company%22%7D",
+          "next": "/api/action/datastore_search?resource_id=d_df7d2d661c0c11a7c367c9ee4bf896c1&offset=1&limit=1&filters=%7B%22entity_status_description%22%3A%20%22Gazetted%20To%20Be%20Struck%20Off%22%2C%20%22entity_type_description%22%3A%20%22Local%20Company%22%7D"
+        },
+        "total": 877,
+        "limit": 1,
+        "filters": "{\"entity_status_description\": \"Gazetted To Be Struck Off\", \"entity_type_description\": \"Local Company\"}"
+      }
+    },
+    "liquidation_detail": {
+      "success": true,
+      "result": {
+        "resource_id": "d_df7d2d661c0c11a7c367c9ee4bf896c1",
+        "fields": [
+          {
+            "type": "text",
+            "id": "uen"
+          },
+          {
+            "type": "text",
+            "id": "issuance_agency_id"
+          },
+          {
+            "type": "text",
+            "id": "entity_name"
+          },
+          {
+            "type": "text",
+            "id": "entity_type_description"
+          },
+          {
+            "type": "text",
+            "id": "business_constitution_description"
+          },
+          {
+            "type": "text",
+            "id": "company_type_description"
+          },
+          {
+            "type": "text",
+            "id": "paf_constitution_description"
+          },
+          {
+            "type": "text",
+            "id": "entity_status_description"
+          },
+          {
+            "type": "text",
+            "id": "registration_incorporation_date"
+          },
+          {
+            "type": "text",
+            "id": "uen_issue_date"
+          },
+          {
+            "type": "text",
+            "id": "address_type"
+          },
+          {
+            "type": "text",
+            "id": "block"
+          },
+          {
+            "type": "text",
+            "id": "street_name"
+          },
+          {
+            "type": "text",
+            "id": "level_no"
+          },
+          {
+            "type": "text",
+            "id": "unit_no"
+          },
+          {
+            "type": "text",
+            "id": "building_name"
+          },
+          {
+            "type": "text",
+            "id": "postal_code"
+          },
+          {
+            "type": "text",
+            "id": "other_address_line1"
+          },
+          {
+            "type": "text",
+            "id": "other_address_line2"
+          },
+          {
+            "type": "text",
+            "id": "account_due_date"
+          },
+          {
+            "type": "text",
+            "id": "annual_return_date"
+          },
+          {
+            "type": "text",
+            "id": "primary_ssic_code"
+          },
+          {
+            "type": "text",
+            "id": "primary_ssic_description"
+          },
+          {
+            "type": "text",
+            "id": "primary_user_described_activity"
+          },
+          {
+            "type": "text",
+            "id": "secondary_ssic_code"
+          },
+          {
+            "type": "text",
+            "id": "secondary_ssic_description"
+          },
+          {
+            "type": "text",
+            "id": "secondary_user_described_activity"
+          },
+          {
+            "type": "text",
+            "id": "no_of_officers"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name1"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name2"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name3"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name4"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name5"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name6"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name7"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name8"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name9"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name10"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name11"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name12"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name13"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name14"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name15"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm1"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm1"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm2"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm2"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm3"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm3"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm4"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm4"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm5"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm5"
+          },
+          {
+            "type": "int4",
+            "id": "_id"
+          }
+        ],
+        "records": [
+          {
+            "_id": 4205,
+            "uen": "195600060Z",
+            "issuance_agency_id": "ACRA",
+            "entity_name": "SHC INVESTMENTS LTD.",
+            "entity_type_description": "Local Company",
+            "business_constitution_description": "na",
+            "company_type_description": "Public Company Limited by Shares",
+            "paf_constitution_description": "na",
+            "entity_status_description": "In Liquidation - Members voluntary winding up",
+            "registration_incorporation_date": "1956-06-18",
+            "uen_issue_date": "1956-06-18",
+            "address_type": "LOCAL",
+            "block": "1",
+            "street_name": "NORTH BRIDGE ROAD",
+            "level_no": "18",
+            "unit_no": "01",
+            "building_name": "HIGH STREET CENTRE",
+            "postal_code": "179094",
+            "other_address_line1": "na",
+            "other_address_line2": "na",
+            "account_due_date": "2025-07-31",
+            "annual_return_date": "2024-07-08",
+            "primary_ssic_code": "64202",
+            "primary_ssic_description": "INVESTMENT HOLDING",
+            "primary_user_described_activity": "na",
+            "secondary_ssic_code": "na",
+            "secondary_ssic_description": "INVESTMENT HOLDING",
+            "secondary_user_described_activity": "na",
+            "no_of_officers": "139",
+            "former_entity_name1": "THE NANYANG INSURANCE",
+            "former_entity_name2": "na",
+            "former_entity_name3": "na",
+            "former_entity_name4": "na",
+            "former_entity_name5": "na",
+            "former_entity_name6": "na",
+            "former_entity_name7": "na",
+            "former_entity_name8": "na",
+            "former_entity_name9": "na",
+            "former_entity_name10": "na",
+            "former_entity_name11": "na",
+            "former_entity_name12": "na",
+            "former_entity_name13": "na",
+            "former_entity_name14": "na",
+            "former_entity_name15": "na",
+            "uen_of_audit_firm1": "na",
+            "name_of_audit_firm1": "na",
+            "uen_of_audit_firm2": "na",
+            "name_of_audit_firm2": "na",
+            "uen_of_audit_firm3": "na",
+            "name_of_audit_firm3": "na",
+            "uen_of_audit_firm4": "na",
+            "name_of_audit_firm4": "na",
+            "uen_of_audit_firm5": "na",
+            "name_of_audit_firm5": "na"
+          }
+        ],
+        "_links": {
+          "start": "/api/action/datastore_search?resource_id=d_df7d2d661c0c11a7c367c9ee4bf896c1&limit=1&filters=%7B%22entity_status_description%22%3A%20%22In%20Liquidation%20-%20Members%20voluntary%20winding%20up%22%2C%20%22entity_type_description%22%3A%20%22Local%20Company%22%7D",
+          "next": "/api/action/datastore_search?resource_id=d_df7d2d661c0c11a7c367c9ee4bf896c1&offset=1&limit=1&filters=%7B%22entity_status_description%22%3A%20%22In%20Liquidation%20-%20Members%20voluntary%20winding%20up%22%2C%20%22entity_type_description%22%3A%20%22Local%20Company%22%7D"
+        },
+        "total": 131,
+        "limit": 1,
+        "filters": "{\"entity_status_description\": \"In Liquidation - Members voluntary winding up\", \"entity_type_description\": \"Local Company\"}"
+      }
+    },
+    "digit_name_detail": {
+      "success": true,
+      "result": {
+        "resource_id": "d_300ddc8da4e8f7bdc1bfc62d0d99e2e7",
+        "fields": [
+          {
+            "type": "text",
+            "id": "uen"
+          },
+          {
+            "type": "text",
+            "id": "issuance_agency_id"
+          },
+          {
+            "type": "text",
+            "id": "entity_name"
+          },
+          {
+            "type": "text",
+            "id": "entity_type_description"
+          },
+          {
+            "type": "text",
+            "id": "business_constitution_description"
+          },
+          {
+            "type": "text",
+            "id": "company_type_description"
+          },
+          {
+            "type": "text",
+            "id": "paf_constitution_description"
+          },
+          {
+            "type": "text",
+            "id": "entity_status_description"
+          },
+          {
+            "type": "text",
+            "id": "registration_incorporation_date"
+          },
+          {
+            "type": "text",
+            "id": "uen_issue_date"
+          },
+          {
+            "type": "text",
+            "id": "address_type"
+          },
+          {
+            "type": "text",
+            "id": "block"
+          },
+          {
+            "type": "text",
+            "id": "street_name"
+          },
+          {
+            "type": "text",
+            "id": "level_no"
+          },
+          {
+            "type": "text",
+            "id": "unit_no"
+          },
+          {
+            "type": "text",
+            "id": "building_name"
+          },
+          {
+            "type": "text",
+            "id": "postal_code"
+          },
+          {
+            "type": "text",
+            "id": "other_address_line1"
+          },
+          {
+            "type": "text",
+            "id": "other_address_line2"
+          },
+          {
+            "type": "text",
+            "id": "account_due_date"
+          },
+          {
+            "type": "text",
+            "id": "annual_return_date"
+          },
+          {
+            "type": "text",
+            "id": "primary_ssic_code"
+          },
+          {
+            "type": "text",
+            "id": "primary_ssic_description"
+          },
+          {
+            "type": "text",
+            "id": "primary_user_described_activity"
+          },
+          {
+            "type": "text",
+            "id": "secondary_ssic_code"
+          },
+          {
+            "type": "text",
+            "id": "secondary_ssic_description"
+          },
+          {
+            "type": "text",
+            "id": "secondary_user_described_activity"
+          },
+          {
+            "type": "text",
+            "id": "no_of_officers"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name1"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name2"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name3"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name4"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name5"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name6"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name7"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name8"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name9"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name10"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name11"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name12"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name13"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name14"
+          },
+          {
+            "type": "text",
+            "id": "former_entity_name15"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm1"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm1"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm2"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm2"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm3"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm3"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm4"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm4"
+          },
+          {
+            "type": "text",
+            "id": "uen_of_audit_firm5"
+          },
+          {
+            "type": "text",
+            "id": "name_of_audit_firm5"
+          },
+          {
+            "type": "int4",
+            "id": "_id"
+          }
+        ],
+        "records": [
+          {
+            "_id": 16,
+            "uen": "196600239N",
+            "issuance_agency_id": "ACRA",
+            "entity_name": "3M SINGAPORE PTE. LTD.",
+            "entity_type_description": "Local Company",
+            "business_constitution_description": "na",
+            "company_type_description": "Private Company Limited by Shares",
+            "paf_constitution_description": "na",
+            "entity_status_description": "Live Company",
+            "registration_incorporation_date": "1966-07-27",
+            "uen_issue_date": "1966-07-27",
+            "address_type": "LOCAL",
+            "block": "10",
+            "street_name": "ANG MO KIO STREET 65",
+            "level_no": "03",
+            "unit_no": "01",
+            "building_name": "TECHPOINT",
+            "postal_code": "569059",
+            "other_address_line1": "na",
+            "other_address_line2": "na",
+            "account_due_date": "2027-07-31",
+            "annual_return_date": "2026-07-14",
+            "primary_ssic_code": "32909",
+            "primary_ssic_description": "na",
+            "primary_user_described_activity": "na",
+            "secondary_ssic_code": "64202",
+            "secondary_ssic_description": "na",
+            "secondary_user_described_activity": "na",
+            "no_of_officers": "46",
+            "former_entity_name1": "na",
+            "former_entity_name2": "na",
+            "former_entity_name3": "na",
+            "former_entity_name4": "na",
+            "former_entity_name5": "na",
+            "former_entity_name6": "na",
+            "former_entity_name7": "na",
+            "former_entity_name8": "na",
+            "former_entity_name9": "na",
+            "former_entity_name10": "na",
+            "former_entity_name11": "na",
+            "former_entity_name12": "na",
+            "former_entity_name13": "na",
+            "former_entity_name14": "na",
+            "former_entity_name15": "na",
+            "uen_of_audit_firm1": "na",
+            "name_of_audit_firm1": "na",
+            "uen_of_audit_firm2": "na",
+            "name_of_audit_firm2": "na",
+            "uen_of_audit_firm3": "na",
+            "name_of_audit_firm3": "na",
+            "uen_of_audit_firm4": "na",
+            "name_of_audit_firm4": "na",
+            "uen_of_audit_firm5": "na",
+            "name_of_audit_firm5": "na"
+          }
+        ],
+        "_links": {
+          "start": "/api/action/datastore_search?resource_id=d_300ddc8da4e8f7bdc1bfc62d0d99e2e7&limit=1&filters=%7B%22entity_type_description%22%3A%20%22Local%20Company%22%2C%20%22entity_status_description%22%3A%20%22Live%20Company%22%7D",
+          "next": "/api/action/datastore_search?resource_id=d_300ddc8da4e8f7bdc1bfc62d0d99e2e7&offset=1&limit=1&filters=%7B%22entity_type_description%22%3A%20%22Local%20Company%22%2C%20%22entity_status_description%22%3A%20%22Live%20Company%22%7D"
+        },
+        "total": 5404,
+        "limit": 1,
+        "filters": "{\"entity_type_description\": \"Local Company\", \"entity_status_description\": \"Live Company\"}"
+      }
+    },
+    "_rate_limited_http_429": {
+      "status_code": 429,
+      "body": {
+        "code": 24,
+        "name": "TOO_MANY_REQUESTS",
+        "data": null,
+        "errorMsg": "Rate limit exceeded. Please try again in 10 seconds and sign up for an API key for higher rate limits. View https://guide.data.gov.sg/developer-guide/api-overview/api-rate-limits for more details."
+      }
+    }
+  }
+}

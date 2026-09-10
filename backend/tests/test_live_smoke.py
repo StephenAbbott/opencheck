@@ -30,6 +30,7 @@ from __future__ import annotations
 import pytest
 
 from opencheck.bods.mapper import (
+    map_acra_singapore,
     map_cnpj_brazil,
     map_gleif,
     map_cr_hongkong,
@@ -146,6 +147,37 @@ async def test_malta_mbr_live_fetch_maps_to_valid_bods():
     assert bods, "Malta MBR bundle produced no BODS statements"
     assert validate_shape(bods) == []
     assert any(s["recordType"] == "entity" for s in bods), "no entity statement"
+
+
+# --- Singapore ACRA (data.gov.sg, key optional) -------------------------------
+
+
+def test_acra_singapore_is_key_free_and_live():
+    info = REGISTRY["acra_singapore"].info
+    assert info.requires_api_key is False
+    assert info.live_available is True
+
+
+async def test_acra_singapore_live_fetch_maps_to_valid_bods():
+    """Fetch DBS Bank from data.gov.sg with GLEIF's legal name and confirm both
+    rows arrive — the UEN row and the collection-2 detail from the 'D' file —
+    and map to valid BODS.
+
+    A stub here, with no degradation, means the collection metadata stopped
+    naming the datasets the way the adapter resolves them."""
+    adapter = REGISTRY["acra_singapore"]
+    bundle = await adapter.fetch("196800306E", legal_name="DBS BANK LTD.")
+    assert not bundle.get("is_stub"), (
+        "ACRA live fetch returned no record — the collection metadata, the "
+        "datastore_search shape or the rate limit may have changed"
+    )
+    assert bundle["entity"]["uen"] == "196800306E"
+    assert bundle["detail"] and bundle["detail"]["entity_name"] == "DBS BANK LTD."
+
+    bods = list(map_acra_singapore(bundle))
+    assert len(bods) == 1
+    assert validate_shape(bods) == []
+    assert bods[0]["recordDetails"]["identifiers"][0]["scheme"] == "SG-ACRA"
 
 
 # --- Hong Kong Companies Registry (DATA.GOV.HK, no key) -----------------------

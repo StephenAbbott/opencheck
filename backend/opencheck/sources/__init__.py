@@ -16,6 +16,7 @@ from .bolagsverket import BolagsverketAdapter
 from .brreg import BrregAdapter
 from .cac_nigeria import CacNigeriaAdapter
 from .cnpj_brazil import CnpjBrazilAdapter
+from .acra_singapore import AcraSingaporeAdapter
 from .cvr_denmark import CvrDenmarkAdapter
 from .climatetrace import ClimateTRACEAdapter
 from .companies_house import CompaniesHouseAdapter
@@ -53,6 +54,7 @@ from .zefix import ZefixAdapter
 
 REGISTRY: dict[str, SourceAdapter] = {
     "abr_australia": AbrAustraliaAdapter(),
+    "acra_singapore": AcraSingaporeAdapter(),
     "ares": AresAdapter(),
     "ariregister": AriregisterAdapter(),
     "bce_belgium": BceBelgiumAdapter(),

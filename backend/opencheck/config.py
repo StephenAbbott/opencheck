@@ -399,11 +399,14 @@ class Settings(BaseSettings):
     bolagsverket_api_key: str | None = Field(default=None, alias="BOLAGSVERKET_API_KEY")
     bolagsverket_client_secret: str | None = Field(default=None, alias="BOLAGSVERKET_CLIENT_SECRET")
 
-    # --- Singapore ACRA Business Registry ---
-    # Pre-built SQLite index. Build with: python scripts/extract_acra.py
-    # Source: https://data.gov.sg/datasets?query=acra&resultId=1
-    # License: Singapore Open Data Licence 1.0 — no API key required.
-    acra_singapore_db_file: str | None = Field(default=None, alias="ACRA_SINGAPORE_DB_FILE")
+    # --- Singapore ACRA (data.gov.sg datastore_search) ---
+    # Optional. The API answers without a key at 4 requests per 10 seconds; a
+    # free developer key (data.gov.sg → log in → Create API Key) raises that to
+    # 8 and is sent as the ``x-api-key`` header. A wrong key is NOT rejected —
+    # it silently gets the keyless limit — so verify a new key by bursting the
+    # download endpoint (see sources/acra_singapore.py).
+    # License: Singapore Open Data Licence 1.0.
+    data_gov_sg_api_key: str | None = Field(default=None, alias="DATA_GOV_SG_API_KEY")
 
     # --- Cyprus DRCOR (data.gov.cy open data, CC BY 4.0) ---
     # No API key. Pre-built SQLite index. Build with: python scripts/extract_cyprus.py

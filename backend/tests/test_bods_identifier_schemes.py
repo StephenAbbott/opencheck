@@ -172,10 +172,14 @@ _CORPORATIONS_CANADA_BUNDLE: dict[str, Any] = {
 _ACRA_SINGAPORE_BUNDLE: dict[str, Any] = {
     "source_id": "acra_singapore",
     "uen": "200312345E",
-    "entity_name": "Stark Enterprises Private Limited",
-    "entity_type_desc": "PRIVATE COMPANY LIMITED BY SHARES",
-    "uen_status_desc": "Live",
-    "uen_issue_date": "2003-04-01",
+    "entity": {
+        "uen": "200312345E",
+        "entity_name": "Stark Enterprises Private Limited",
+        "entity_type_desc": "Local Company",
+        "uen_status_desc": "Registered",
+        "uen_issue_date": "2003-04-01",
+    },
+    "detail": None,
     "is_stub": False,
 }
 

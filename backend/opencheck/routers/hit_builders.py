@@ -216,6 +216,36 @@ def _bh_nz_companies(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_acra_singapore(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Singapore's ACRA register (data.gov.sg).
+
+    Asserts only the UEN the register row itself carries — never the LEI the
+    lookup arrived by (the identifier corroboration rule in CLAUDE.md). The
+    summary carries the register's status label, verbatim.
+    """
+    from ..findings import finding_acra_singapore
+    from ..sources.acra_singapore import SG_UEN_SCHEME, clean_field
+
+    entity = r.get("entity") or {}
+    detail = r.get("detail") or {}
+    uen = clean_field(entity.get("uen")).upper() or local_id
+    status = clean_field(detail.get("entity_status_description")) or clean_field(
+        entity.get("uen_status_desc")
+    )
+    return _hit(
+        "acra_singapore", uen,
+        name=(
+            clean_field(detail.get("entity_name"))
+            or clean_field(entity.get("entity_name"))
+            or ctx.legal_name
+            or ""
+        ),
+        summary=f"{SG_UEN_SCHEME} {uen}" + (f" · {status}" if status else ""),
+        identifiers={"sg_uen": uen}, raw={"entity": entity, "detail": detail or None},
+        finding=finding_acra_singapore(r),
+    )
+
+
 def _bh_cr_hongkong(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for the Hong Kong Companies Registry.
 

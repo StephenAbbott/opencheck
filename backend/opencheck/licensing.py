@@ -127,7 +127,12 @@ _CANONICAL: dict[str, LicenseTerms] = {
     "singapore-ogl-1.0": _terms(
         "Singapore-OGL-1.0", "Singapore Open Data Licence v1.0",
         commercial="yes", attribution=True, share_alike=False, redistribution="yes",
-        summary="Commercial use permitted with attribution.",
+        url="https://data.gov.sg/open-data-licence",
+        summary=(
+            "Commercial use permitted with the prescribed attribution statement. "
+            "Grants no rights over personal data, and none to downstream "
+            "sub-licensees, who take their own licence from data.gov.sg."
+        ),
     ),
     "nlod-2.0": _terms(
         "NLOD-2.0", "Norwegian Licence for Open Government Data 2.0",

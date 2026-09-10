@@ -1197,3 +1197,93 @@ def finding_cr_hongkong(bundle: dict[str, Any]) -> str | None:
             f"re-domiciled into Hong Kong {redomiciled}" if redomiciled else None,
         ]
     )
+
+
+# --------------------------------------------------------------------------
+# Singapore ACRA
+# --------------------------------------------------------------------------
+
+#: ACRA's entity-type labels as they read inside a sentence. The register
+#: pluralises one ("Variable Capital Companies") and slashes another.
+_ACRA_TYPE_PHRASES: dict[str, str] = {
+    "variable capital companies": "variable capital company",
+    "sole proprietorship/ partnership": "sole proprietorship or partnership",
+}
+
+
+def _acra_type_phrase(label: str) -> str:
+    key = " ".join(label.split()).lower()
+    return _ACRA_TYPE_PHRASES.get(key, key)
+
+
+def finding_acra_singapore(bundle: dict[str, Any]) -> str | None:
+    """What ACRA's register says: status and kind of entity, since when, and
+    under what name before.
+
+    The status is the register's own label; only a label ACRA uses for a live
+    entity ("Live Company", "Live", "Registered") is folded into "Live …", so a
+    struck-off or liquidating company leads with its actual status, verbatim
+    apart from sentence case. The type is the company type where collection 2
+    gives one ("public company limited by shares"), else the entity type.
+
+    A single former name is quoted ("formerly …"); several are counted rather
+    than listed, because ACRA publishes them as numbered columns without dates
+    and the order is not documented — naming one as *the* previous name would
+    assert a sequence the data does not state.
+
+    Deliberately **not** said: that officers, shareholders or beneficial owners
+    are missing. The open data carries them for no entity, so the clause would
+    be identical on every row and read as a finding about this one.
+    ``no_of_officers`` is not used either: its meaning (current or all-time) is
+    not documented, and DBS Bank's 102 suggests it is not a count of the board.
+    """
+    from .bods.mapper import _acra_liveness  # local import avoids circular
+    from .sources.acra_singapore import clean_field, former_names
+
+    if not bundle or bundle.get("is_stub"):
+        return None
+    entity = bundle.get("entity")
+    if not isinstance(entity, dict):
+        return None
+    detail = bundle.get("detail") if isinstance(bundle.get("detail"), dict) else {}
+
+    status = clean_field(detail.get("entity_status_description")) or clean_field(
+        entity.get("uen_status_desc")
+    )
+    type_label = (
+        clean_field(detail.get("company_type_description"))
+        or clean_field(detail.get("entity_type_description"))
+        or clean_field(entity.get("entity_type_desc"))
+    )
+    type_phrase = _acra_type_phrase(type_label) if type_label else ""
+
+    if status and _acra_liveness(status) == "live":
+        lead: str | None = f"Live {type_phrase}" if type_phrase else "Live on the register"
+    elif status:
+        lead = status[0].upper() + status[1:].lower()
+        if type_phrase:
+            lead = f"{lead}, {type_phrase}"
+    else:
+        lead = type_phrase[:1].upper() + type_phrase[1:] if type_phrase else None
+
+    incorporated = human_date(clean_field(detail.get("registration_incorporation_date")))
+    registered = None if incorporated else human_date(clean_field(entity.get("uen_issue_date")))
+
+    formers = former_names(detail)
+    name = clean_field(detail.get("entity_name")) or clean_field(entity.get("entity_name"))
+    formers = [f for f in formers if f != name]
+    if len(formers) == 1:
+        former_clause: str | None = f"formerly {formers[0]}"
+    elif formers:
+        former_clause = f"{plural(len(formers), 'former name')} on file"
+    else:
+        former_clause = None
+
+    return clauses_to_sentence(
+        [
+            lead,
+            f"incorporated {incorporated}" if incorporated else None,
+            f"UEN issued {registered}" if registered else None,
+            former_clause,
+        ]
+    )

@@ -146,6 +146,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `mt_crn` (Maltese registration number, e.g. `C 113927`) derived from GLEIF RA code `RA000443`
 - **Note:** No API key or registration required (EU High-Value Dataset under the Open Data Directive). The list endpoint is cursor-paginated with no name filter, so the source is entered via the LEI lookup flow rather than free-text search.
 
+## Singapore ACRA — Accounting and Corporate Regulatory Authority
+
+- **Data:** entity name and former names, entity and company type, status, incorporation date and registered address, from the *Entities Registered with ACRA* / *Entities Registered with Other UEN Issuance Agencies* (collection 1) and *ACRA Information on Corporate Entities* (collection 2) datasets. Entity data only — no officers, shareholders or beneficial owners.
+- **API:** `datastore_search` on <https://data.gov.sg/collections/2/view> and <https://data.gov.sg/collections/1/view> — <https://guide.data.gov.sg/developer-guide/dataset-apis/search-and-filter-within-dataset>
+- **License:** Singapore Open Data Licence version 1.0 — <https://data.gov.sg/open-data-licence> (commercial and non-commercial use; the licence grants no rights over personal data and none to downstream sub-licensees — anyone republishing an OpenCheck export needs their own grant from data.gov.sg)
+- **Attribution:** "Contains information from ACRA Information on Corporate Entities and Entities Registered with ACRA accessed from data.gov.sg, which is made available under the terms of the Singapore Open Data Licence version 1.0 https://data.gov.sg/open-data-licence" — the date of access is each statement's `source.retrievedAt`.
+- **Entry point:** `sg_uen` (Unique Entity Number) derived from GLEIF RA code `RA000523`; no name search
+- **Note:** Works without an API key at 4 requests per 10 seconds; a free data.gov.sg developer key (`DATA_GOV_SG_API_KEY`, sent as `x-api-key`) raises that to 8. A wrong key is not rejected — it silently gets the keyless limit.
+
 ## Hong Kong Companies Registry (公司註冊處)
 
 - **Data:** core details of live local companies — English and Chinese names, Business Registration Number (the Unique Business Identifier), company type, registered office address, incorporation and re-domiciliation dates — from the *Registered Office Address of Live Local Companies* dataset. Entity data only — no officers, secretaries, shareholders or beneficial owners.
