@@ -434,12 +434,23 @@ _OC_POSITION_TO_INTEREST_TYPE: dict[str, str] = {
     "president": "boardChair",
     "vice chairman": "boardChair",
     "deputy chairman": "boardChair",
+    # Secretaries — Phase 197.
+    #
+    # These read ``seniorManagingOfficial`` until then, which is the code a
+    # regime reaches for when a company has no identifiable beneficial owner
+    # and its senior managers are named instead (FATF R.24, AMLD). A company
+    # secretary is an administrative officer, and Companies House says so by
+    # keeping ``secretary`` out of ``_MANAGING_OFFICIAL_ROLES`` — it emits no
+    # statement for one at all. ``otherInfluenceOrControl`` keeps the person
+    # visible, which OpenCorporates is sometimes the only source for, without
+    # the claim that they run the company.
+    "secretary": "otherInfluenceOrControl",
+    "company secretary": "otherInfluenceOrControl",
+    "corporate secretary": "otherInfluenceOrControl",
+    "assistant secretary": "otherInfluenceOrControl",
+    "joint secretary": "otherInfluenceOrControl",
     # Senior management / officers
-    "secretary": "seniorManagingOfficial",
-    "company secretary": "seniorManagingOfficial",
-    "corporate secretary": "seniorManagingOfficial",
-    "assistant secretary": "seniorManagingOfficial",
-    "joint secretary": "seniorManagingOfficial",
+
     "chief executive": "seniorManagingOfficial",
     "chief executive officer": "seniorManagingOfficial",
     "ceo": "seniorManagingOfficial",
@@ -454,7 +465,13 @@ _OC_POSITION_TO_INTEREST_TYPE: dict[str, str] = {
     "general manager": "seniorManagingOfficial",
     "partner": "seniorManagingOfficial",
     "general partner": "seniorManagingOfficial",
-    "limited partner": "seniorManagingOfficial",
+    # A limited partner is the one partner who by legal definition takes no
+    # part in management — taking part is what costs them their limited
+    # liability — so calling them a senior managing official said the opposite
+    # of what the role is. Companies House excludes them for the same reason.
+    # What they actually hold is a capital contribution entitling them to a
+    # share of profits, which is what this code is for (Phase 197).
+    "limited partner": "rightsToProfitOrIncome",
     "managing partner": "seniorManagingOfficial",
     "member": "seniorManagingOfficial",
     "managing member": "seniorManagingOfficial",
@@ -513,9 +530,15 @@ def _oc_match_position(position: str) -> str:
     norm = position.strip().lower()
     if norm in _OC_POSITION_TO_INTEREST_TYPE:
         return _OC_POSITION_TO_INTEREST_TYPE[norm]
-    for known, itype in _OC_POSITION_TO_INTEREST_TYPE.items():
-        if known in norm:
-            return itype
+    # Longest match wins. Insertion order used to decide this, which was
+    # harmless while every position in a family shared one type and became a
+    # defect the moment they stopped: "partner" precedes "limited partner" in
+    # the table, so "Limited Partner (Class A)" — a position string the exact
+    # match cannot catch — would have been read as the partner who runs the
+    # firm rather than the one who by definition does not (Phase 197).
+    matches = [k for k in _OC_POSITION_TO_INTEREST_TYPE if k in norm]
+    if matches:
+        return _OC_POSITION_TO_INTEREST_TYPE[max(matches, key=len)]
     # Regex fallbacks for multilingual variants
     import re as _re
     if _re.search(r"\bdirect(or|eur|ör)\b", norm):
