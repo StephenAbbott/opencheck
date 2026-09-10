@@ -64,10 +64,12 @@ def _officer(
 
 
 @pytest.mark.parametrize("position,expected", [
-    # Board appointments
-    ("director", "appointmentOfBoard"),
-    ("managing director", "appointmentOfBoard"),
-    ("non-executive director", "appointmentOfBoard"),
+    # Directors. Phase 196: these read `appointmentOfBoard` until then, which
+    # BODS defines as the POWER TO APPOINT OR REMOVE directors — a UK PSC
+    # statutory condition, not a job. Being on a board is not choosing who is.
+    ("director", "seniorManagingOfficial"),
+    ("managing director", "seniorManagingOfficial"),
+    ("non-executive director", "seniorManagingOfficial"),
     # Board chair
     ("chairman", "boardChair"),
     ("chair", "boardChair"),
@@ -91,11 +93,11 @@ def _officer(
     ("shareholder", "shareholding"),
     ("owner", "shareholding"),
     # Substring matches
-    ("Executive Director (Finance)", "appointmentOfBoard"),
+    ("Executive Director (Finance)", "seniorManagingOfficial"),
     ("Joint Company Secretary", "seniorManagingOfficial"),
-    ("Independent Non-Executive Director", "appointmentOfBoard"),
+    ("Independent Non-Executive Director", "seniorManagingOfficial"),
     # Regex fallbacks
-    ("Directeur Général", "appointmentOfBoard"),
+    ("Directeur Général", "seniorManagingOfficial"),
     ("Management Chair", "boardChair"),
     # Empty / unknown
     ("", "otherInfluenceOrControl"),
@@ -156,10 +158,12 @@ def test_map_opencorporates_empty_company_returns_empty() -> None:
 
 
 def test_map_opencorporates_director_interest_type() -> None:
+    """Phase 196: the same code Companies House emits for the same role from
+    the same register — see tests/test_interest_type_agreement.py."""
     bundle = _minimal_bundle(officers=[_officer("Jane Smith", "Director")])
     statements = list(map_opencorporates(bundle))
     rel = next(s for s in statements if s["recordType"] == "relationship")
-    assert rel["recordDetails"]["interests"][0]["type"] == "appointmentOfBoard"
+    assert rel["recordDetails"]["interests"][0]["type"] == "seniorManagingOfficial"
     assert rel["recordDetails"]["interests"][0]["beneficialOwnershipOrControl"] is False
 
 
