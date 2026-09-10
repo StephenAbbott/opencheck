@@ -24,6 +24,17 @@
  * a mirror, not a coincidence. The pair is the point: a name alone is the merge
  * this file has always refused, and a birth month alone is shared by thousands.
  * A person the register dates only to a year is not merged at all.
+ *
+ * **One entity merge rests on OpenCheck's word, not a shared identifier.** The
+ * EITI Company Assessment asserts no identifier and no jurisdiction — the LEI
+ * that ties an EITI record to a company is OpenCheck's name match, not
+ * something EITI publishes — so its statement floated as a second, unconnected
+ * node beside the subject (PT Pertamina (Persero), reported 2026-09-10). The
+ * mapper now publishes that match as an `identifying` annotation whose `url` is
+ * the GLEIF record. A statement with **no identifiers of its own** carrying
+ * such an annotation joins the node that *asserts* that LEI — and only if one
+ * does. Its source is recorded as `_matchedSources`, apart from `_sources`, so
+ * the merge is visible as a match and never counts toward corroboration.
  */
 
 import type { RiskSignal } from "./api";
@@ -94,6 +105,22 @@ function isRegisterLikeScheme(scheme: string): boolean {
     .split(/[-_]/)
     .slice(1)
     .every((seg) => !NON_REGISTER_SEGMENTS.has(seg));
+}
+
+const GLEIF_RECORD_URL = /^https:\/\/search\.gleif\.org\/#\/record\/([0-9A-Z]{18}[0-9]{2})$/;
+
+/** The LEI a statement is *matched* to, when it asserts no identifier of its
+ *  own but publishes an `identifying` annotation naming a GLEIF record — the
+ *  EITI Company Assessment's shape. `LEI:<lei>` or null. A statement that
+ *  carries any identifier is never matched this way: its identifiers decide. */
+export function matchedLeiKey(s: Stmt): string | null {
+  if (((rd(s).identifiers ?? []) as Stmt[]).length) return null;
+  for (const a of (s.annotations ?? []) as Stmt[]) {
+    if (a?.motivation !== "identifying") continue;
+    const m = String(a.url ?? "").match(GLEIF_RECORD_URL);
+    if (m) return `LEI:${m[1]}`;
+  }
+  return null;
 }
 
 /** Normalised identifier keys for an entity statement. LEIs are global (scheme
@@ -206,6 +233,18 @@ export function reconcileBods(statements: Stmt[]): ReconcileResult {
     }
   }
 
+  // Display-only match: join an identifier-less statement to the node that
+  // ASSERTS the LEI it is matched to. Never to another match, never on its own
+  // — a matched LEI no statement in this network asserts leaves it alone.
+  const matched = new Set<string>();
+  for (const s of entities) {
+    const key = matchedLeiKey(s);
+    const anchor = key ? keyTo.get(key) : undefined;
+    if (!anchor) continue;
+    union(anchor, s.statementId as string);
+    matched.add(s.statementId as string);
+  }
+
   const byId = new Map<string, Stmt>(entities.map((s) => [s.statementId as string, s]));
   const groups = new Map<string, string[]>();
   for (const s of entities) {
@@ -230,11 +269,18 @@ export function reconcileBods(statements: Stmt[]): ReconcileResult {
     const mergedIdents: Stmt[] = [];
     const seenIdent = new Set<string>();
     const sources = new Set<string>();
+    const matchedSources = new Set<string>();
     let name = "";
     let jurisdiction: unknown;
     let entityType: unknown;
     let foundingDate = "";
-    for (const m of members) {
+    // Asserting members first, so a matched statement never names or types the
+    // node while a statement that asserts the identifier can.
+    const ordered = [
+      ...members.filter((m) => !matched.has(m)),
+      ...members.filter((m) => matched.has(m)),
+    ];
+    for (const m of ordered) {
       remap[m] = canonicalId;
       const d = rd(byId.get(m)!);
       if (!name && d.name) name = d.name as string;
@@ -249,8 +295,9 @@ export function reconcileBods(statements: Stmt[]): ReconcileResult {
         }
       }
       const src = sourceOf(byId.get(m)!);
-      if (src) sources.add(src);
+      if (src) (matched.has(m) ? matchedSources : sources).add(src);
     }
+    for (const src of sources) matchedSources.delete(src);
     canonStmt.set(canonicalId, {
       statementId: canonicalId,
       recordId: canonicalId,
@@ -263,8 +310,9 @@ export function reconcileBods(statements: Stmt[]): ReconcileResult {
         ...(jurisdiction ? { jurisdiction } : {}),
         ...(foundingDate ? { foundingDate } : {}),
       },
-      source: byId.get(members[0])!.source ?? {},
+      source: byId.get(ordered[0])!.source ?? {},
       _sources: [...sources],
+      ...(matchedSources.size ? { _matchedSources: [...matchedSources] } : {}),
     });
   }
 

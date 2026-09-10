@@ -52,6 +52,10 @@ export interface GraphNode {
    *  After FullCheck reconciliation a merged node carries every contributing
    *  source; otherwise the single source that emitted it. */
   sources: string[];
+  /** Sources joined to this node by OpenCheck's match rather than a shared
+   *  identifier (the EITI Company Assessment's LEI match). Shown and
+   *  highlightable as provenance; never counted as corroboration. */
+  matchedSources?: string[];
 }
 
 export interface GraphEdge {
@@ -175,6 +179,12 @@ function nodeIdentifiers(stmt: Stmt): string[] {
   return ids
     .map((i) => (i?.id as string | undefined) ?? "")
     .filter((s): s is string => s.length > 0);
+}
+
+/** Sources the reconciler joined by match, not identifier (`_matchedSources`). */
+function stmtMatchedSources(stmt: Stmt): string[] {
+  const tagged = (stmt as RD)._matchedSources as string[] | undefined;
+  return Array.isArray(tagged) ? tagged : [];
 }
 
 /** Provenance for a statement: the reconciler stamps `_sources` (the distinct
@@ -368,6 +378,7 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
       flagUrl: flagUrl(stmt),
       identifiers: nodeIdentifiers(stmt),
       sources: stmtSources(stmt),
+      ...(stmtMatchedSources(stmt).length ? { matchedSources: stmtMatchedSources(stmt) } : {}),
     });
   }
 

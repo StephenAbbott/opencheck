@@ -604,3 +604,104 @@ describe("reconcileBods — people", () => {
     expect((out[0].evidence as Record<string, unknown>).statement_id).toBe(remap["oc-p"]);
   });
 });
+
+describe("reconcileBods — a match OpenCheck made, not an identifier (EITI)", () => {
+  // PT Pertamina (Persero), 2026-09-10: the EITI Company Assessment statement
+  // asserts no identifier and no jurisdiction, so it floated as a second node.
+  const PERTAMINA = "254900NDAKGNZ2IBBL45";
+  const eiti = (lei = PERTAMINA, identifiers: Stmt[] = []): Stmt => ({
+    statementId: "eiti-pertamina",
+    recordType: "entity",
+    recordDetails: { name: "PT Pertamina (Persero)", identifiers },
+    annotations: [
+      {
+        statementPointerTarget: "/recordDetails",
+        motivation: "identifying",
+        description: `OpenCheck links this EITI record to LEI ${lei}.`,
+        url: `https://search.gleif.org/#/record/${lei}`,
+      },
+    ],
+    source: { description: "EITI Company Assessment" },
+  });
+  const gleif: Stmt = {
+    statementId: "gleif-pertamina",
+    recordType: "entity",
+    recordDetails: {
+      name: "Pt Pertamina (Persero)",
+      entityType: { type: "registeredEntity" },
+      jurisdiction: { name: "Indonesia", code: "ID" },
+      identifiers: [{ scheme: "XI-LEI", id: PERTAMINA }],
+    },
+    source: { description: "GLEIF" },
+  };
+  const gem: Stmt = {
+    statementId: "gem-pertamina",
+    recordType: "entity",
+    recordDetails: {
+      name: "PT Pertamina (Persero) PT",
+      identifiers: [
+        { scheme: "GEM-ENTITY", id: "E100000000538" },
+        { scheme: "XI-LEI", id: PERTAMINA },
+      ],
+    },
+    source: { description: "Global Energy Monitor / Climate TRACE" },
+  };
+
+  it("joins the node that asserts the LEI — one Pertamina, not two", () => {
+    const { statements, remap } = reconcileBods([gleif, eiti(), gem]);
+    const entities = statements.filter((s) => s.recordType === "entity");
+    expect(entities).toHaveLength(1);
+    expect(remap["eiti-pertamina"]).toBe(`recon:LEI:${PERTAMINA}`);
+  });
+
+  it("records EITI as a matched source, apart from the sources that assert the LEI", () => {
+    const [node] = reconcileBods([eiti(), gleif, gem]).statements;
+    expect(node._sources).toEqual(["GLEIF", "Global Energy Monitor / Climate TRACE"]);
+    expect(node._matchedSources).toEqual(["EITI Company Assessment"]);
+  });
+
+  it("never lets the matched statement name, type or locate the node, even listed first", () => {
+    const [node] = reconcileBods([eiti(), gleif]).statements;
+    const d = node.recordDetails as Stmt;
+    expect(d.name).toBe("Pt Pertamina (Persero)");
+    expect(d.jurisdiction).toEqual({ name: "Indonesia", code: "ID" });
+    expect(node.source).toEqual({ description: "GLEIF" });
+  });
+
+  it("the graph shows the match as provenance but does not count it as corroboration", () => {
+    const model = bodsToGraph(reconcileBods([gleif, eiti()]).statements as never);
+    const [node] = model.nodes;
+    expect(model.nodes).toHaveLength(1);
+    expect(node.sources).toEqual(["GLEIF"]);
+    expect(node.matchedSources).toEqual(["EITI Company Assessment"]);
+  });
+
+  it("stays its own node when nothing in the network asserts that LEI", () => {
+    const other: Stmt = {
+      ...gleif,
+      statementId: "gleif-other",
+      recordDetails: { name: "Other", identifiers: [{ scheme: "XI-LEI", id: LEI }] },
+    };
+    const { statements, remap } = reconcileBods([other, eiti()]);
+    expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(2);
+    expect(remap["eiti-pertamina"]).not.toBe(`recon:LEI:${LEI}`);
+    expect(statements.some((s) => s._matchedSources)).toBe(false);
+  });
+
+  it("is ignored on a statement that carries identifiers of its own", () => {
+    // Its identifiers decide; an annotation never overrides them.
+    const withOwn = eiti(PERTAMINA, [{ scheme: "XX-REG", id: "123" }]);
+    const { statements } = reconcileBods([gleif, withOwn]);
+    expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(2);
+  });
+
+  it("reads only an identifying annotation with a GLEIF record URL", () => {
+    const commenting = eiti();
+    (commenting.annotations as Stmt[])[0].motivation = "commenting";
+    const otherUrl = eiti();
+    (otherUrl.annotations as Stmt[])[0].url = `https://example.org/record/${PERTAMINA}`;
+    for (const s of [commenting, otherUrl]) {
+      expect(reconcileBods([gleif, s]).statements.filter((x) => x.recordType === "entity")).toHaveLength(2);
+    }
+  });
+});
