@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 196** — an OpenCorporates director is a seniorManagingOfficial, not the power to appoint the board: the same role from the same register now carries the same code whichever source reached it, and a test compares the two tables so the next mismatch cannot hide.
+**Latest: Phase 197** — a company secretary is not a senior managing official and a limited partner is not management: the last two OpenCorporates positions that claimed a role the register never asserted now say what those people actually hold.
 
 → [Full development history](docs/status.md)
 

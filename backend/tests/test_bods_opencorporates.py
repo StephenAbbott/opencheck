@@ -77,8 +77,11 @@ def _officer(
     # Board members
     ("board member", "boardMember"),
     # Senior managing officials
-    ("secretary", "seniorManagingOfficial"),
-    ("company secretary", "seniorManagingOfficial"),
+    # Secretaries. Phase 197: an administrative officer, which is why
+    # Companies House keeps `secretary` out of its managing-official roles and
+    # emits nothing for one. Visible, without the claim that they run it.
+    ("secretary", "otherInfluenceOrControl"),
+    ("company secretary", "otherInfluenceOrControl"),
     ("chief executive officer", "seniorManagingOfficial"),
     ("ceo", "seniorManagingOfficial"),
     ("treasurer", "seniorManagingOfficial"),
@@ -94,7 +97,7 @@ def _officer(
     ("owner", "shareholding"),
     # Substring matches
     ("Executive Director (Finance)", "seniorManagingOfficial"),
-    ("Joint Company Secretary", "seniorManagingOfficial"),
+    ("Joint Company Secretary", "otherInfluenceOrControl"),
     ("Independent Non-Executive Director", "seniorManagingOfficial"),
     # Regex fallbacks
     ("Directeur Général", "seniorManagingOfficial"),
@@ -168,10 +171,12 @@ def test_map_opencorporates_director_interest_type() -> None:
 
 
 def test_map_opencorporates_secretary_interest_type() -> None:
+    """Phase 197 — see tests/test_interest_type_agreement.py for why a
+    secretary is not a senior managing official."""
     bundle = _minimal_bundle(officers=[_officer("Bob Jones", "Company Secretary")])
     statements = list(map_opencorporates(bundle))
     rel = next(s for s in statements if s["recordType"] == "relationship")
-    assert rel["recordDetails"]["interests"][0]["type"] == "seniorManagingOfficial"
+    assert rel["recordDetails"]["interests"][0]["type"] == "otherInfluenceOrControl"
 
 
 def test_map_opencorporates_resigned_officer_skipped() -> None:
