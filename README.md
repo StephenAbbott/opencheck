@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 194** — the History tab has a board-turnover stream: every Companies House appointment and resignation, typed and named where the register named anyone, back past the electronic era and no longer cut off at a thousand filings.
+**Latest: Phase 195** — OpenCorporates officers arrive for the first time: the adapter had been asking an endpoint that 404s while the company response it already fetched carried all 116 of them, 16 of whom are serving.
 
 → [Full development history](docs/status.md)
 

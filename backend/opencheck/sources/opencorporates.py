@@ -10,7 +10,12 @@ records (``attributes.ocid``), formatted as
 This maps directly to the OpenCorporates API path:
 
     GET /v0.4/companies/{jurisdiction}/{company_number}
-    GET /v0.4/companies/{jurisdiction}/{company_number}/officers
+
+That one call carries the officers too, inline at
+``results.company.officers``. There is no working officers child
+endpoint: ``/companies/{jurisdiction}/{number}/officers`` 404s (see
+``fetch``), which cost this adapter its entire officer list until
+Phase 195.
 
 Authentication: ``api_token`` query parameter. Gated on
 ``allow_live=true`` + key. All responses are cached.
@@ -128,13 +133,27 @@ class OpenCorporatesAdapter(SourceAdapter):
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
 
         company_data = await self._get(f"/companies{path}", cache_key=cache_key)
+        company = (company_data.get("results") or {}).get("company") or {}
 
-        # Officers are on a child endpoint; optional — 404 is fine.
-        officers_cache_key = f"{_CACHE_NS}/officers/{_slug(ocid)}"
-        officers_data = await self._get_optional(
-            f"/companies{path}/officers",
-            cache_key=officers_cache_key,
-        )
+        # Officers come from the company response, which inlines them under
+        # ``results.company.officers`` — nested in an ``officer`` object, the
+        # same shape the mapper already reads.
+        #
+        # Until Phase 195 they were fetched from ``/companies{path}/officers``
+        # instead. **That endpoint 404s** (checked live on 2026-09-09 against
+        # gb/00002065 and gb/00102498 with a working key), and it was fetched
+        # through ``_get_optional``, which treats 404 as "this source has
+        # nothing to say" — correct for an optional record, and exactly why
+        # nobody saw it. So this list was empty for every company OpenCheck
+        # ever looked up, from the adapter's first day: 27 cached officer
+        # payloads on disk, every one of them ``null``. For a UK company
+        # Companies House hid the loss by supplying the same people; for a
+        # jurisdiction where OpenCorporates is the only officer source, the
+        # report showed a company with no board and read as a finding.
+        #
+        # The data was in the response beside it the whole time — 116 officers
+        # for Lloyds Bank PLC, 100 of them ended.
+        officers = company.get("officers") or []
 
         # Network relationships — two possible sources, in priority order:
         #
@@ -165,15 +184,12 @@ class OpenCorporatesAdapter(SourceAdapter):
             "source_id": self.id,
             "hit_id": ocid,
             "ocid": ocid,
-            "company": (company_data.get("results") or {}).get("company") or {},
-            "officers": (
-                ((officers_data or {}).get("results") or {}).get("officers") or []
-            ),
+            "company": company,
+            "officers": officers,
             # Network payload — from bulk file or live API; None when neither
             # is available.
             "network": network_data if network_data else None,
             "raw_company": company_data,
-            "raw_officers": officers_data,
         }
         validate_raw("opencorporates", OCBundle, bundle)
         return bundle

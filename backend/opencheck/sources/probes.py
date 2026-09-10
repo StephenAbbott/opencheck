@@ -454,6 +454,12 @@ PROBES: dict[str, SourceProbe] = {
         subject="BP P.L.C. (gb/00102498)",
         args=("gb/00102498",),
         requires_env=("OPENCORPORATES_API_KEY",),
+        # `officers` is load-bearing: the adapter fetched them from a child
+        # endpoint that 404s, and `_get_optional` turned that into an empty
+        # list, so every lookup reported a company with no officers and the
+        # sweep saw a healthy source (Phase 195). An empty list here is now a
+        # red run rather than a quiet one.
+        expect_fields=("company", "officers"),
         bods_mapper="map_opencorporates",
         notes="Licence: derived output only — never echo the raw payload into a report.",
     ),
