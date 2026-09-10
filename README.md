@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 200** — a board row on the History tab now reaches the person it names: the officer id Phase 198 put on the row opens the FullCheck network with that person selected, and the citation bug that silently focused nothing for anyone merged across registers is fixed.
+**Latest: Phase 201** — the focused link actually lands: `?focus=` now travels inside the lookup rather than beside it, so a shared board-row link opens the network with that person selected instead of nothing at all.
 
 → [Full development history](docs/status.md)
 

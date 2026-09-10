@@ -83,6 +83,31 @@ export function parseMode(raw: string | null | undefined): CheckMode {
 }
 
 /**
+ * Everything a deep link says about where to open: which mode, and which node
+ * to select once the network has it.
+ *
+ * One function because there are two callers — first load and back/forward —
+ * and they must agree. Phase 200 read `?focus=` in both and shipped a bug in
+ * neither: the bug was that the value was applied *beside* the lookup rather
+ * than carried into it, so the lookup's own reset wiped it a moment later.
+ * The result of this function goes straight into `lookupLei`, which is what
+ * makes that ordering impossible rather than merely avoided.
+ *
+ * `focus` is null when absent, never "": an empty parameter is a hand-edited
+ * link, and selecting nothing is the right answer to it.
+ */
+export function deepLinkOptions(search: string): {
+  mode: CheckMode;
+  focus: string | null;
+} {
+  const params = new URLSearchParams(search);
+  return {
+    mode: parseMode(params.get("mode")),
+    focus: (params.get("focus") || "").trim() || null,
+  };
+}
+
+/**
  * The `?mode=` value to write for a mode — `null` means "remove the
  * parameter". QuickCheck is the default, so it stays out of the URL and a
  * shared QuickCheck link keeps the short form it has always had.

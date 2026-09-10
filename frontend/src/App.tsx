@@ -46,7 +46,13 @@ import ConfidenceLegend from "./components/ui/ConfidenceLegend";
 import PanelSection, { PanelCard } from "./components/ui/PanelSection";
 import { PERSON_VERB, resultCount, setSourceNames, sourceLabel } from "./lib/vocab";
 import { answeredCount, coverageCopy } from "./lib/lookupProgress";
-import { MODE_ACCENT, TOPIC_MODES, documentTitleFor, modeParam, parseMode } from "./lib/checkMode";
+import {
+  MODE_ACCENT,
+  TOPIC_MODES,
+  deepLinkOptions,
+  documentTitleFor,
+  modeParam,
+} from "./lib/checkMode";
 import type { CheckMode } from "./lib/checkMode";
 import type { IconName } from "./components/ui";
 import { NarrativePanel } from "./components/cdd/NarrativePanel";
@@ -213,13 +219,11 @@ export default function App() {
   /**
    * `?focus=<statementId>` — a node the FullCheck graph should select once it
    * has it (Phase 200). Set by a board row on the History tab linking to the
-   * person it names, and read from the URL so the same link works cold, from
-   * a share or a refresh. Cleared on a new lookup: a statement id belongs to
-   * one subject's network and means nothing in another's.
+   * person it names, and carried into `lookupLei` (never set beside it) so
+   * the same link works cold, from a share or a refresh. See the reset in
+   * the lookup mutation for why that distinction is the whole feature.
    */
-  const [focusStatementId, setFocusStatementId] = useState<string | null>(
-    () => new URLSearchParams(window.location.search).get("focus"),
-  );
+  const [focusStatementId, setFocusStatementId] = useState<string | null>(null);
   // Maps "source_id:hit_id" → BODS statement count; populated by the bods_counts SSE event.
   const [bodsCountMap, setBodsCountMap] = useState<Record<string, number>>({});
   // Same key → entity / relationship split, for the source-card graph CTA subtitle.
@@ -519,9 +523,9 @@ const NAV_ITEMS: { view: View; label: string }[] = [
   const lookupMutation = useMutation<
     { lei: string; legal_name: string | null },
     Error,
-    { lei: string; refresh?: boolean; mode?: CheckMode }
+    { lei: string; refresh?: boolean; mode?: CheckMode; focus?: string | null }
   >({
-    mutationFn: ({ lei, refresh, mode: startMode }) =>
+    mutationFn: ({ lei, refresh, mode: startMode, focus: startFocus }) =>
       new Promise((resolve, reject) => {
         if (!isValidLei(lei)) {
           reject(
@@ -535,7 +539,14 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         // Reset streaming state before starting a new stream.
         setStreamingLei(null);
         setLegalName(null);
-        setFocusStatementId(null);
+        // `?focus=` rides in with the lookup for the same reason `?mode=`
+        // does: this reset runs asynchronously, so a value set *beside* the
+        // lookup is set first and wiped here a moment later. Phase 200
+        // shipped with exactly that bug — a shared focused link opened the
+        // right network with nothing selected. Null unless the caller asked,
+        // so an ordinary lookup still clears a stale target: a statement id
+        // means something in one subject's network and nothing in another's.
+        setFocusStatementId(startFocus ?? null);
         // A new lookup opens on QuickCheck unless the caller asked for a
         // mode. It used to hardcode "quick", and because the mutationFn runs
         // asynchronously it landed *after* the deep-link handler's
@@ -683,7 +694,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
 
   function lookupLei(
     rawLei: string,
-    opts?: { refresh?: boolean; mode?: CheckMode }
+    opts?: { refresh?: boolean; mode?: CheckMode; focus?: string | null }
   ) {
     const lei = rawLei.trim().toUpperCase();
     setLeiInput(lei);
@@ -702,7 +713,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     // Cancel any in-flight stream before starting a new one.
     cleanupRef.current?.();
     cleanupRef.current = null;
-    lookupMutation.mutate({ lei, refresh: opts?.refresh, mode: opts?.mode });
+    lookupMutation.mutate({
+      lei,
+      refresh: opts?.refresh,
+      mode: opts?.mode,
+      focus: opts?.focus,
+    });
   }
 
   /**
@@ -783,12 +799,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     if (initial && isValidLei(initial)) {
       // The mode goes *into* the lookup rather than being set beside it: the
       // mutationFn's own reset runs later and would otherwise overwrite it.
-      lookupLei(initial, {
-        mode: parseMode(new URLSearchParams(window.location.search).get("mode")),
-      });
-      setFocusStatementId(
-        new URLSearchParams(window.location.search).get("focus"),
-      );
+      lookupLei(initial, deepLinkOptions(window.location.search));
     }
 
     const onPopState = () => {
@@ -807,14 +818,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       // Back on main — honour ?lei= if present, otherwise clear results.
       const lei = fromUrl(new URLSearchParams(window.location.search).get("lei"));
       if (lei && isValidLei(lei)) {
-        lookupLei(lei, {
-          mode: parseMode(new URLSearchParams(window.location.search).get("mode")),
-        });
-        // Set after the lookup, which clears it: back/forward to a focused
-        // link has to land on the same node it did the first time.
-        setFocusStatementId(
-          new URLSearchParams(window.location.search).get("focus"),
-        );
+        lookupLei(lei, deepLinkOptions(window.location.search));
       } else {
         // Navigated back to the landing page — clear the result view.
         cleanupRef.current?.();
