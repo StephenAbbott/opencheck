@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 200** — a board row on the History tab now reaches the person it names: the officer id Phase 198 put on the row opens the FullCheck network with that person selected, and the citation bug that silently focused nothing for anyone merged across registers is fixed.
+**Latest: Phase 202** — Hong Kong joins as a national register: the Companies Registry open data API, reached from the Business Registration Number GLEIF already holds, with names, company type, registered office and incorporation date, and a name check that drops a record GLEIF has pointed at the wrong company.
 
 → [Full development history](docs/status.md)
 
