@@ -146,6 +146,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `mt_crn` (Maltese registration number, e.g. `C 113927`) derived from GLEIF RA code `RA000443`
 - **Note:** No API key or registration required (EU High-Value Dataset under the Open Data Directive). The list endpoint is cursor-paginated with no name filter, so the source is entered via the LEI lookup flow rather than free-text search.
 
+## Hong Kong Companies Registry (公司註冊處)
+
+- **Data:** core details of live local companies — English and Chinese names, Business Registration Number (the Unique Business Identifier), company type, registered office address, incorporation and re-domiciliation dates — from the *Registered Office Address of Live Local Companies* dataset. Entity data only — no officers, secretaries, shareholders or beneficial owners.
+- **API:** <https://data.gov.hk/en-data/dataset/hk-cr-crdata-list-addr> — data dictionary at <https://www.cr.gov.hk/datagovhk/dict/data_dictionary_RO_PPB_en.docx>
+- **License:** DATA.GOV.HK Terms and Conditions of Use — <https://data.gov.hk/en/terms-and-conditions> (free re-use for commercial and non-commercial purposes, with attribution)
+- **Attribution:** "Contains data from the Companies Registry of the Government of the Hong Kong Special Administrative Region, made available via DATA.GOV.HK (data.cr.gov.hk)."
+- **Entry point:** `hk_brn` (8-digit BRN, or a letter-prefixed dummy BRN such as `C1572528`) derived from GLEIF RA codes `RA000388` (Companies Registry) and `RA000389` (Business Registration Office, Inland Revenue Department); also free-text name search (prefix match)
+- **Note:** No API key or registration required. The register answers a miss with HTTP 400 "No result found.", and refuses requests with an empty User-Agent. Chinese name comparison uses [OpenCC](https://github.com/yichen0831/opencc-python) (Apache-2.0).
+
 ## ΓΕΜΗ — Greek General Commercial Registry (Γενικό Εμπορικό Μητρώο)
 
 - **Data:** company details (name in Greek and Latin script, ΑΦΜ, legal form, status, registered office, incorporation date), filed publicity documents and board decisions, and `persons[]` — board members for an ΑΕ, and for ΙΚΕ / ΕΕ / ΟΕ / ΕΠΕ the partners with their percentage holdings.

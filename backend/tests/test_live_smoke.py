@@ -32,6 +32,7 @@ import pytest
 from opencheck.bods.mapper import (
     map_cnpj_brazil,
     map_gleif,
+    map_cr_hongkong,
     map_malta_mbr,
     map_nz_companies,
     map_wikidata,
@@ -145,6 +146,38 @@ async def test_malta_mbr_live_fetch_maps_to_valid_bods():
     assert bods, "Malta MBR bundle produced no BODS statements"
     assert validate_shape(bods) == []
     assert any(s["recordType"] == "entity" for s in bods), "no entity statement"
+
+
+# --- Hong Kong Companies Registry (DATA.GOV.HK, no key) -----------------------
+
+
+def test_cr_hongkong_is_key_free_and_live():
+    info = REGISTRY["cr_hongkong"].info
+    assert info.requires_api_key is False
+    assert info.live_available is True
+
+
+async def test_cr_hongkong_live_fetch_maps_to_valid_bods():
+    """Fetch HSBC from the live Companies Registry API, with GLEIF's legal name,
+    and confirm it parses, passes the name check and maps to valid BODS.
+
+    Also the access check: the API sits behind CloudFront, which refuses an
+    empty User-Agent with 403 — a tightening of that filter would surface here
+    as a stub rather than a record."""
+    adapter = REGISTRY["cr_hongkong"]
+    bundle = await adapter.fetch(
+        "00173611", legal_name="HONGKONG AND SHANGHAI BANKING CORPORATION LIMITED -THE-"
+    )
+    assert not bundle.get("is_stub"), (
+        "Companies Registry live fetch returned no record — the API shape, access "
+        "policy or the name check may have changed"
+    )
+    assert bundle["company"].get("Brn") == "00173611"
+
+    bods = list(map_cr_hongkong(bundle))
+    assert len(bods) == 1
+    assert validate_shape(bods) == []
+    assert bods[0]["recordDetails"]["identifiers"][0]["scheme"] == "HK-BRN"
 
 
 # --- Brazil CNPJ (public open data, key-free) --------------------------------

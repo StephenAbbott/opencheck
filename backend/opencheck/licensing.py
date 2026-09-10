@@ -168,6 +168,16 @@ _CANONICAL: dict[str, LicenseTerms] = {
         url="https://opencorporates.com/legal/terms_and_conditions/",
         summary="Bespoke terms; share-alike and bulk-redistribution restrictions — verify before re-use.",
     ),
+    "data.gov.hk-terms": _terms(
+        "DATA.GOV.HK-Terms", "DATA.GOV.HK Terms and Conditions of Use",
+        commercial="yes", attribution=True, share_alike=False, redistribution="yes",
+        url="https://data.gov.hk/en/terms-and-conditions",
+        summary=(
+            "Free re-use, distribution and reproduction for commercial and "
+            "non-commercial purposes, with attribution to the Hong Kong "
+            "Government, the data provider and DATA.GOV.HK."
+        ),
+    ),
     "custom-kbo-reuse": _terms(
         "Custom-KBO-Reuse", "Belgian KBO/BCE re-use conditions",
         commercial="conditional", attribution=True, share_alike=False, redistribution="conditional",

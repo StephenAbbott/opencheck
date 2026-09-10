@@ -260,6 +260,23 @@ PROBES: dict[str, SourceProbe] = {
         anchor_lei="3SU7BEP7TH9YEQOZCS77",
         bods_mapper="map_corporations_canada",
     ),
+    "cr_hongkong": _p(
+        tier="live",
+        subject="The Hongkong and Shanghai Banking Corporation Limited",
+        args=("00173611",),
+        kwargs={"legal_name": "HONGKONG AND SHANGHAI BANKING CORPORATION LIMITED -THE-"},
+        expect_fields=("company",),
+        anchor_lei="2HI3YI5320L3RW6NJ957",
+        bods_mapper="map_cr_hongkong",
+        notes=(
+            "BRN exactly as GLEIF files it under RA000388. The legal name is passed "
+            "because fetch() drops a record whose names contradict GLEIF's, so the "
+            "probe exercises the name check as the lookup pipeline does. The register "
+            "answers a miss with HTTP 400 'No result found.', and refuses an empty "
+            "User-Agent with 403 — if this probe starts failing with 403, check the UA "
+            "the shared client sends before suspecting the data."
+        ),
+    ),
     "cro": _p(
         tier="live",
         subject="Ryanair Finance DAC",

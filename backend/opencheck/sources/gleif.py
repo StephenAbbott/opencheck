@@ -43,6 +43,7 @@ from .brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_o
 from .corporations_canada import CA_CORP_RA_CODE as _CA_CORP_RA_CODE, normalise_corp_id as _normalise_corp_id
 from .cro import IE_RA_CODE as _CRO_RA_CODE, normalise_crn as _normalise_crn
 from .malta_mbr import MT_RA_CODE as _MT_RA_CODE, normalise_mt_crn as _normalise_mt_crn
+from .cr_hongkong import HK_RA_CODES as _HK_RA_CODES, normalise_hk_brn as _normalise_hk_brn
 from .cnpj_brazil import BR_RA_CODE as _BR_RA_CODE, normalise_cnpj as _normalise_cnpj
 from .inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
 from .kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
@@ -766,6 +767,14 @@ class GleifAdapter(SourceAdapter):
             # reconciler can bridge GLEIF ↔ Malta Business Registry.
             if registered_at_id == _MT_RA_CODE:
                 identifiers["mt_crn"] = _normalise_mt_crn(registered_as)
+            # Hong Kong Business Registration Number — expose as ``hk_brn``
+            # so the reconciler can bridge GLEIF ↔ Companies Registry. Both
+            # HK authorities (RA000388 / RA000389) file the BRN here.
+            if registered_at_id in _HK_RA_CODES:
+                try:
+                    identifiers["hk_brn"] = _normalise_hk_brn(registered_as)
+                except ValueError:
+                    pass
             # Brazilian CNPJ — expose as ``br_cnpj`` so the reconciler can
             # bridge GLEIF ↔ Receita Federal CNPJ register.
             if registered_at_id == _BR_RA_CODE:

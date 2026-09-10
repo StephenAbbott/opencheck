@@ -1148,3 +1148,52 @@ def finding_eiti_soe(bundle: dict[str, Any]) -> str | None:
 
     return clauses_to_sentence(clauses)
 
+
+
+# --------------------------------------------------------------------------
+# Hong Kong Companies Registry
+# --------------------------------------------------------------------------
+
+
+def finding_cr_hongkong(bundle: dict[str, Any]) -> str | None:
+    """What the Hong Kong Companies Registry's open data says: live, what kind
+    of company, since when.
+
+    **"Live" is the dataset's own claim, not an inference.** The Registry
+    publishes *Registered Office Address of Live Local Companies*: a company is
+    in it because the Registry treats it as live, and it carries no status
+    field to contradict that. So the lead clause is stated plainly.
+
+    The company type is the Registry's own wording, lower-cased to sit inside
+    the sentence ("Private company limited by shares" → "live private company
+    limited by shares"). Incorporation comes next, then a re-domiciliation
+    date where the Registry has one — the rare case of a company that moved
+    its place of incorporation into Hong Kong.
+
+    Deliberately **not** said: that officers, secretaries or shareholders are
+    missing. The open data never carries them for any company, so a clause
+    saying so would be identical on every row and read as a finding about
+    this company when it is a fact about the dataset.
+    """
+    from .sources.cr_hongkong import clean_field, parse_hk_date  # local import avoids circular
+
+    if not bundle or bundle.get("is_stub"):
+        return None
+    company = bundle.get("company")
+    if not isinstance(company, dict):
+        return None
+
+    company_type = clean_field(company.get("Company_Type"))
+    lead = f"Live {company_type[0].lower()}{company_type[1:]}" if company_type else (
+        "Live on the companies register"
+    )
+    incorporated = human_date(parse_hk_date(company.get("Date_of_Incorporation")))
+    redomiciled = human_date(parse_hk_date(company.get("Re-domiciliation_Date")))
+
+    return clauses_to_sentence(
+        [
+            lead,
+            f"incorporated {incorporated}" if incorporated else None,
+            f"re-domiciled into Hong Kong {redomiciled}" if redomiciled else None,
+        ]
+    )
