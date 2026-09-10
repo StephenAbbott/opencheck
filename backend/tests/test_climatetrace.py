@@ -45,6 +45,7 @@ def _make_gem_zip(
         "Full Name",
         "Global Legal Entity Identifier Index",
         "Headquarters Country",
+        "Entity Type",
         "Gem parents IDs",
         "Gem parents",
     ]
@@ -106,6 +107,7 @@ def _reset_indexes() -> None:
     _ct_mod._entity_index = None
     _ct_mod._rel_children = None
     _ct_mod._asset_index = None
+    _ct_mod._rel_owners = None
 
 
 # ---------------------------------------------------------------------------
@@ -1340,3 +1342,161 @@ def test_parent_gem_row_does_not_load_indexes(monkeypatch) -> None:
 
     monkeypatch.setattr(_ct_mod, "_get_indexes", _boom)
     assert _ct_mod._parent_gem_row("E100001000084") is None
+
+
+# ---------------------------------------------------------------------------
+# Phase 199 — direct owners from the relationships CSV
+# ---------------------------------------------------------------------------
+
+
+def _pertamina_zip(tmp_path: Path) -> None:
+    """GEM's real shape for PT Pertamina (Persero): its parent column names
+    itself, and only the relationships CSV says who holds it."""
+    _make_gem_zip(
+        tmp_path,
+        rows=[
+            {
+                "Entity ID": "E100000000538",
+                "Full Name": "PT Pertamina (Persero) PT",
+                "Global Legal Entity Identifier Index": "254900NDAKGNZ2IBBL45",
+                "Headquarters Country": "IDN",
+                "Entity Type": "legal entity",
+                "Gem parents IDs": "E100000000538 [100%]",
+                "Gem parents": "PT Pertamina (Persero) PT [100%]",
+            },
+            {
+                "Entity ID": "E100001000084",
+                "Full Name": "Government of Indonesia",
+                "Headquarters Country": "IDN",
+                "Entity Type": "state",
+            },
+            {
+                "Entity ID": "E100002000001",
+                "Full Name": "Mahanada Suppliers Pvt Ltd",
+                "Headquarters Country": "IND",
+                "Entity Type": "legal entity",
+            },
+        ],
+        rel_rows=[
+            {"subject_entity_id": "E100000000538",
+             "subject_name": "PT Pertamina (Persero)",
+             "owner_entity_id": "E100001000084",
+             "owner_name": "Government of Indonesia",
+             "percent_of_ownership": "100.0",
+             "data_source_url": "https://www.pertamina.com/en/Investor-relations"},
+            # The CSV abbreviates names; the owner's own row is the one to use.
+            {"subject_entity_id": "E100000000538",
+             "subject_name": "PT Pertamina (Persero)",
+             "owner_entity_id": "E100002000001",
+             "owner_name": "Mahanada Suppliers",
+             "percent_of_ownership": "",
+             "data_source_url": "https://a.example/x?q=1,2,https://b.example/y"},
+        ],
+        asset_rows=[],
+    )
+
+
+def test_relationship_index_is_read_owner_ward(tmp_path, monkeypatch) -> None:
+    """The same file that feeds the asset walk now also answers "who owns X"."""
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("OPENCHECK_DISABLE_DOTENV", "1")
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
+    _pertamina_zip(tmp_path)
+
+    import opencheck.sources.climatetrace as _ct_mod
+    from opencheck.config import get_settings
+
+    get_settings.cache_clear()
+    _reset_indexes()
+    try:
+        _ct_mod._get_indexes()
+        _ct_mod._get_relationship_indexes()
+        owners = _ct_mod._parse_owners("E100000000538")
+        assert [o["entity_id"] for o in owners] == ["E100001000084", "E100002000001"]
+
+        state = owners[0]
+        assert state["name"] == "Government of Indonesia"
+        assert state["entity_type"] == "state"
+        assert state["country"] == "IDN"
+        assert state["share"] == pytest.approx(100.0)
+        assert state["source_urls"] == ["https://www.pertamina.com/en/Investor-relations"]
+
+        company = owners[1]
+        assert company["name"] == "Mahanada Suppliers Pvt Ltd"
+        assert company["share"] is None
+        # A comma inside one URL's query string must not split it.
+        assert company["source_urls"] == [
+            "https://a.example/x?q=1,2",
+            "https://b.example/y",
+        ]
+
+        # The child-ward index the asset walk uses is unchanged.
+        children, _ = _ct_mod._get_relationship_indexes()
+        assert children["E100001000084"][0]["entity_id"] == "E100000000538"
+    finally:
+        get_settings.cache_clear()
+        _reset_indexes()
+
+
+def test_fetch_by_lei_bundle_carries_owners(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("OPENCHECK_DISABLE_DOTENV", "1")
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "false")
+    _pertamina_zip(tmp_path)
+
+    from opencheck.config import get_settings
+
+    get_settings.cache_clear()
+    _reset_indexes()
+    try:
+        import asyncio
+
+        result = asyncio.run(ClimateTRACEAdapter().fetch_by_lei("254900NDAKGNZ2IBBL45"))
+        assert result is not None
+        assert [o["name"] for o in result["owners"]] == [
+            "Government of Indonesia",
+            "Mahanada Suppliers Pvt Ltd",
+        ]
+    finally:
+        get_settings.cache_clear()
+        _reset_indexes()
+
+
+def test_parse_owners_does_not_load_indexes(monkeypatch) -> None:
+    """Like ``_parent_gem_row``: a parser must not trigger a data download."""
+    import opencheck.sources.climatetrace as _ct_mod
+
+    monkeypatch.setattr(_ct_mod, "_rel_owners", None)
+
+    def _boom() -> None:  # pragma: no cover - must not be called
+        raise AssertionError("_parse_owners must not build the GEM indexes")
+
+    monkeypatch.setattr(_ct_mod, "_get_indexes", _boom)
+    monkeypatch.setattr(_ct_mod, "_get_relationship_indexes", _boom)
+    monkeypatch.setattr(_ct_mod, "_load_relationship_indexes", _boom)
+    assert _ct_mod._parse_owners("E100000000538") == []
+
+
+def test_owner_without_its_own_row_has_no_type(monkeypatch) -> None:
+    import opencheck.sources.climatetrace as _ct_mod
+
+    monkeypatch.setattr(_ct_mod, "_entity_index", {})
+    monkeypatch.setattr(
+        _ct_mod,
+        "_rel_owners",
+        {"E1": [{"entity_id": "E9", "name": "Acme", "percent": 5.0, "source_urls": []}]},
+    )
+    [owner] = _ct_mod._parse_owners("E1")
+    assert owner["name"] == "Acme"
+    assert owner["entity_type"] is None
+    assert owner["country"] is None
+
+
+
+def test_repeated_owner_row_is_one_owner(monkeypatch) -> None:
+    import opencheck.sources.climatetrace as _ct_mod
+
+    monkeypatch.setattr(_ct_mod, "_entity_index", {})
+    edge = {"entity_id": "E9", "name": "Acme", "percent": 5.0, "source_urls": []}
+    monkeypatch.setattr(_ct_mod, "_rel_owners", {"E1": [edge, dict(edge, percent=6.0)]})
+    assert [o["share"] for o in _ct_mod._parse_owners("E1")] == [5.0]

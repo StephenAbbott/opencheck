@@ -11,6 +11,8 @@ import { ESG_SOURCE_META } from "./esgSources";
 import { assessmentTile } from "../../lib/eitiAssessment";
 import type { EitiAssessmentBundle } from "../../lib/eitiAssessment";
 import type { PanelError, PanelId } from "../../lib/panelErrors";
+import { gemChipHeading, gemOwnershipChips } from "../../lib/gemOwnership";
+import type { GemPartyChip } from "../../lib/gemOwnership";
 import {
   entityStatusBanner,
   FOLLOW_FORWARD_LABEL,
@@ -467,6 +469,25 @@ function SourceTag({ sourceId }: { sourceId: string }) {
 // ClimateTRACECard — card for a Climate TRACE / GEM hit
 // ---------------------------------------------------------------------
 
+function GemPartyChips({ heading, chips }: { heading: string; chips: GemPartyChip[] }) {
+  return (
+    <div className="mt-3 pt-3 border-t border-emerald-200/60">
+      <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mr-2">
+        {heading}
+      </span>
+      {chips.map((p) => (
+        <span
+          key={p.id}
+          className="inline-block text-[11px] font-mono text-emerald-900 bg-emerald-100 border border-emerald-200 rounded px-1.5 py-0.5 mr-1"
+        >
+          {p.name}
+          {p.share !== null && <span className="text-emerald-800"> · {p.share}%</span>}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function ClimateTRACECard({
   hit,
   preloadedStmtCount,
@@ -491,11 +512,9 @@ function ClimateTRACECard({
     year?: number;
     by_sector?: Record<string, number>;
   };
-  const parents = (raw.parents ?? []) as {
-    entity_id: string;
-    name: string;
-    share?: number | null;
-  }[];
+  // Direct owners (relationships CSV) and the parents not already among them,
+  // never the entity itself — the same rules the BODS mapper applies.
+  const { owners, parents } = gemOwnershipChips(raw);
   const projects = (raw.projects ?? null) as GeotProjects | null;
   const ownership = (raw.ownership ?? null) as {
     group_asset_count?: number;
@@ -718,24 +737,8 @@ function ClimateTRACECard({
           <SectorBars bySector={bySector} totalCo2e={totalCo2e} />
         )}
 
-        {parents.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-emerald-200/60">
-            <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mr-2">
-              GEM parent{parents.length === 1 ? "" : "s"}
-            </span>
-            {parents.map((p) => (
-              <span
-                key={p.entity_id}
-                className="inline-block text-[11px] font-mono text-emerald-900 bg-emerald-100 border border-emerald-200 rounded px-1.5 py-0.5 mr-1"
-              >
-                {p.name}
-                {typeof p.share === "number" && (
-                  <span className="text-emerald-800"> · {p.share}%</span>
-                )}
-              </span>
-            ))}
-          </div>
-        )}
+        {owners.length > 0 && <GemPartyChips heading={gemChipHeading("owners", owners.length)} chips={owners} />}
+        {parents.length > 0 && <GemPartyChips heading={gemChipHeading("parents", parents.length)} chips={parents} />}
 
         {/* Visualise — primary invitation strip (emerald, to match the ESG card),
             aligned with the "Explore the ownership graph" CTA on the other source

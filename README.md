@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 198** — the board history on the History tab is read from the register's officers list instead of its filing history: every row now names the officer and carries the id the graph keys a person on, so a board row can point at the person rather than only naming them.
+**Latest: Phase 199** — a state-owned energy company now shows the state above it: GEM direct owners are read from its relationships CSV as shareholdings, so PT Pertamina (Persero) is connected to the Government of Indonesia and raises STATE_CONTROLLED.
 
 → [Full development history](docs/status.md)
 
