@@ -1,0 +1,59 @@
+{
+  "_captured": "2026-09-10 from data.cr.gov.hk (live, keyless). Real responses, unmodified.",
+  "responses": {
+    "guarantee_dummy_brn": {
+      "Brn": "C1572528",
+      "Chinese_Company_Name": "中國文藝復興教育基金有限公司",
+      "English_Company_Name": "China Renaissance Education Foundation Limited",
+      "Address_of_Registered_Office": "UNIT 3302, 33/F., CABLE TV TOWER, NO.9 HOI SHING ROAD, TSUEN WAN, NT, HONG KONG",
+      "Company_Type": "Company limited by guarantee",
+      "Date_of_Incorporation": "14-03-2011",
+      "Re-domiciliation_Date": null
+    },
+    "hsbc": {
+      "Brn": "00173611",
+      "Chinese_Company_Name": "NULL",
+      "English_Company_Name": "HONGKONG AND SHANGHAI BANKING CORPORATION LIMITED -THE-",
+      "Address_of_Registered_Office": "1 QUEEN'S RD CENTRAL, HONG KONG",
+      "Company_Type": "Public company limited by shares",
+      "Date_of_Incorporation": "06-10-1989",
+      "Re-domiciliation_Date": null
+    },
+    "mtr": {
+      "Brn": "30958055",
+      "Chinese_Company_Name": "香港鐵路有限公司",
+      "English_Company_Name": "MTR CORPORATION LIMITED",
+      "Address_of_Registered_Office": "MTR HEADQUARTERS BUILDING, TELFORD PLAZA, KOWLOON BAY KLN, HONG KONG",
+      "Company_Type": "Public company limited by shares",
+      "Date_of_Incorporation": "26-04-2000",
+      "Re-domiciliation_Date": null
+    },
+    "tmf_secretaries_null_chinese": {
+      "Brn": "07341475",
+      "Chinese_Company_Name": "NULL",
+      "English_Company_Name": "TMF Secretaries (HK) Limited",
+      "Address_of_Registered_Office": "31/F., TOWER TWO, TIMES SQUARE, 1 MATHESON STREET, CAUSEWAY BAY, HONG KONG",
+      "Company_Type": "Private company limited by shares",
+      "Date_of_Incorporation": "19-06-1981",
+      "Re-domiciliation_Date": null
+    },
+    "_miss_http_400": {
+      "status_code": 400,
+      "body": {
+        "status": 400,
+        "message": "No result found."
+      }
+    },
+    "_search_mtr_corporation": [
+      {
+        "Brn": "30958055",
+        "Chinese_Company_Name": "香港鐵路有限公司",
+        "English_Company_Name": "MTR CORPORATION LIMITED",
+        "Address_of_Registered_Office": "MTR HEADQUARTERS BUILDING, TELFORD PLAZA, KOWLOON BAY KLN, HONG KONG",
+        "Company_Type": "Public company limited by shares",
+        "Date_of_Incorporation": "26-04-2000",
+        "Re-domiciliation_Date": null
+      }
+    ]
+  }
+}

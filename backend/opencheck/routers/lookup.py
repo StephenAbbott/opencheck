@@ -80,6 +80,7 @@ from .hit_builders import (  # noqa: F401
     _bh_cnpj_brazil,
     _bh_companies_house,
     _bh_corporations_canada,
+    _bh_cr_hongkong,
     _bh_cro,
     _bh_cvr_denmark,
     _bh_eiti,

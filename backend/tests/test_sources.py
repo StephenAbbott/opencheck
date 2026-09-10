@@ -102,10 +102,11 @@ def test_source_info_fields_are_populated() -> None:
 # ``gemi_greece`` is a partial case: it is entered via the LEI flow and DOES
 # support live name search, but its search has no stub tier — the Greek
 # register is key-gated and rate-limited to 20 requests/minute, so there is no
-# offline fixture path to return hits from.
+# offline fixture path to return hits from. ``cr_hongkong`` is the same partial
+# case: LEI-flow entry plus live name search, and no stub tier to search.
 _IDENTIFIER_KEYED = {
     "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "cac_nigeria", "ariregister", "bolagsverket",
-    "cnpj_brazil", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",
+    "cnpj_brazil", "cr_hongkong", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",
     "malta_mbr", "nz_companies", "opencorporates", "inpi", "kvk",
     "rpo_slovakia", "sudreg_croatia", "ted_eu", "wikirate", "zefix",
 }

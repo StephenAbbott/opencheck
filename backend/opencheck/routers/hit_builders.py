@@ -216,6 +216,32 @@ def _bh_nz_companies(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_cr_hongkong(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the Hong Kong Companies Registry.
+
+    Asserts only the BRN the register itself returns — never the LEI the
+    lookup arrived by (see the identifier corroboration rule in CLAUDE.md).
+    The dataset lists live companies only, so the summary says so.
+    """
+    from ..findings import finding_cr_hongkong
+    from ..sources.cr_hongkong import HK_BRN_SCHEME, clean_field
+
+    c = r.get("company") or {}
+    brn = clean_field(c.get("Brn")) or local_id
+    return _hit(
+        "cr_hongkong", brn,
+        name=(
+            clean_field(c.get("English_Company_Name"))
+            or clean_field(c.get("Chinese_Company_Name"))
+            or ctx.legal_name
+            or ""
+        ),
+        summary=f"{HK_BRN_SCHEME} {brn} · live",
+        identifiers={"hk_brn": brn}, raw=c,
+        finding=finding_cr_hongkong(r),
+    )
+
+
 def _bh_malta_mbr(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     c = r.get("company") or {}
     return _hit(

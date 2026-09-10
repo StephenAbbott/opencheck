@@ -4,7 +4,7 @@ title: "Licensing compatibility matrix"
 description: "Per-source licence terms (commercial use, attribution, share-alike) for combining OpenCheck data in exports. Most-restrictive licence wins."
 resource: "/license-matrix"
 tags: ["licensing", "export", "compliance"]
-timestamp: "2026-09-06"
+timestamp: "2026-09-10"
 ---
 
 # Source licence matrix
@@ -24,6 +24,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | Receita Federal — CNPJ register (Brazil) (`cnpj_brazil`) | `BR-Open-Data` | conditional | yes | no |
 | UK Companies House (`companies_house`) | `OGL-3.0` | yes | yes | no |
 | Corporations Canada — ISED federal register (`corporations_canada`) | `OGL-Canada-2.0` | yes | yes | no |
+| Hong Kong Companies Registry (`cr_hongkong`) | `DATA.GOV.HK-Terms` | yes | yes | no |
 | CRO — Companies Registration Office Ireland (`cro`) | `CC-BY-4.0` | yes | yes | no |
 | CVR — Det Centrale Virksomhedsregister (`cvr_denmark`) | `Danish Open Government Data (CVR brugervilkår)` | yes | yes | no |
 | EITI — Extractive Industries Transparency Initiative (`eiti`) | `EITI open data (free reuse with attribution)` | yes | yes | no |

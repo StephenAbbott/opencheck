@@ -58,6 +58,12 @@ dependencies = [
     # libraries, and imported lazily inside the builder so a deployment
     # without it loses one export format rather than the whole app.
     "openpyxl>=3.1",
+    # OpenCC (pure Python, Apache-2.0) — simplified/traditional Chinese
+    # conversion for the Hong Kong Companies Registry adapter's name check.
+    # GLEIF often files a Hong Kong company's legal name in simplified
+    # characters while the register holds traditional ones, so a plain
+    # comparison drops real matches (15 of 66 on a live sample, 2026-09-10).
+    "opencc-python-reimplemented>=0.1.7",
 ]
 
 [project.optional-dependencies]

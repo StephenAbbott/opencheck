@@ -663,10 +663,10 @@ or corroboration** (that is the signals layer, with its own confidence
 model), and **state absence in the same voice as presence** — silence reads
 as "nothing to see".
 
-**Thirteen** adapters have templates: `gleif`, `bods_gleif`, `opensanctions`,
+**Fourteen** adapters have templates: `gleif`, `bods_gleif`, `opensanctions`,
 `companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`,
 `everypolitician`, `gemi_greece`, `climatetrace`, `eiti_assessment`,
-`eiti_soe`. Adding one means **two** edits — the template here *and*
+`eiti_soe`, `cr_hongkong`. Adding one means **two** edits — the template here *and*
 `finding=finding_<name>(r)` in that adapter's `_bh_<name>()`; a template
 nobody passes is dead code, and nothing fails to warn you. The
 frontend falls back `finding → summary → nothing`
@@ -1048,6 +1048,7 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | India | mca_india | `RA000394` — Companies Register (MCA21) | 2026-08-28 |
 | Nigeria | cac_nigeria | `RA000469` — Company Registry (Corporate Affairs Commission) | 2026-08-28 (also verified 2026-08-12; Africa's first public BO register). Offline curated example set of 10 LEI-anchored companies (`data/cac_nigeria_psc.json`); a live adapter is deferred pending CAC / Oasis Management engagement. LEI-keyed dispatch (not an RA deriver); asserts only the CAC-published RC number (`ng_cac_rc`), not the derived LEI. |
 | Greece | gemi_greece | `RA000685` — General Commercial Registry (G.E.MI.), businessregistry.gr | 2026-08-28 — 20 of 25 sampled Greek LEI records use it |
+| Hong Kong | cr_hongkong | `RA000388` — Companies Registry · `RA000389` — Business Registration Office (Inland Revenue Department) | 2026-09-10 — 600 active HK records sampled: 63% RA000388, 20% RA000389, **both carry the 8-digit BRN in `registeredAs`** (a few RA000389 records hold the 16-digit BR certificate number or a hyphenated form; the BRN is the first eight digits). `RA000390` = SFC fund codes, not a company register. Scheme `HK-BRN`, not org-id's `HK-CR` (the old CR No.). **Not in `RA_BY_COUNTRY`**: one country code would have to pick one of the two authorities and `/resolve-national-id` would then miss the other's companies — the Phase 140 failure shape |
 
 ### ✅ FIXED 2026-08-28: Scotland/Northern Ireland, and two more RA maps
 
