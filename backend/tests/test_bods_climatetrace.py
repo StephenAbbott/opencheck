@@ -516,3 +516,275 @@ def test_self_declared_parent_emits_no_relationship() -> None:
     statements = list(map_climatetrace(bundle))
     assert not any(s.get("recordType") == "relationship" for s in statements)
     assert validate_shape(statements) == []
+
+
+# ---------------------------------------------------------------------------
+# Phase 199 — direct owners from GEM's relationships CSV
+# ---------------------------------------------------------------------------
+
+_GOV_ID = "E100001000084"
+
+
+def _owner(
+    entity_id: str = _GOV_ID,
+    name: str = "Government of Indonesia",
+    *,
+    share: float | None = 100.0,
+    entity_type: str | None = "state",
+    country: str | None = "IDN",
+    source_urls: list[str] | None = None,
+) -> dict:
+    return {
+        "entity_id": entity_id,
+        "name": name,
+        "share": share,
+        "entity_type": entity_type,
+        "country": country,
+        "source_urls": (
+            ["https://www.pertamina.com/en/Investor-relations"]
+            if source_urls is None
+            else source_urls
+        ),
+    }
+
+
+def _pertamina_as_gem_ships_it(owners: list[dict] | None = None) -> dict:
+    """PT Pertamina (Persero) exactly as GEM ships it: the parent column names
+    Pertamina itself, and only the relationships CSV names the state."""
+    bundle = _soe_bundle("state")
+    bundle["gem_row"]["Gem parents IDs"] = "E100000000538 [100%]"
+    bundle["gem_row"]["Gem parents"] = "PT Pertamina (Persero) PT [100%]"
+    bundle["parents"] = [
+        {
+            "entity_id": "E100000000538",
+            "name": "PT Pertamina (Persero) PT",
+            "share": 100.0,
+            "entity_type": "legal entity",
+            "country": "IDN",
+        }
+    ]
+    bundle["owners"] = [_owner()] if owners is None else owners
+    return bundle
+
+
+def _relationships(statements: list[dict]) -> list[dict]:
+    return [s for s in statements if s.get("recordType") == "relationship"]
+
+
+def test_direct_state_owner_is_a_state_shareholding() -> None:
+    """The ticket's acceptance at the mapper: the state that makes Pertamina a
+    state-owned enterprise, reached through the file the mapper never read."""
+    statements = list(map_climatetrace(_pertamina_as_gem_ships_it()))
+    assert validate_shape(statements) == []
+
+    state = _parent_statement(statements)
+    assert state["recordDetails"]["entityType"]["type"] == "state"
+    assert state["recordDetails"]["jurisdiction"]["code"] == "ID"
+
+    [rel] = _relationships(statements)
+    assert rel["recordDetails"]["interestedParty"] == state["statementId"]
+    assert rel["recordDetails"]["subject"] == statements[0]["statementId"]
+    [interest] = rel["recordDetails"]["interests"]
+    assert interest["type"] == "shareholding"
+    assert interest["directOrIndirect"] == "direct"
+    assert interest["beneficialOwnershipOrControl"] is False
+    assert interest["share"] == {"exact": 100.0}
+
+
+def test_direct_state_owner_raises_state_controlled_naming_gem() -> None:
+    from opencheck.risk import STATE_CONTROLLED, _state_controlled_signals
+
+    statements = list(map_climatetrace(_pertamina_as_gem_ships_it()))
+    signals = _state_controlled_signals("climatetrace", "E100000000538", statements)
+    assert [s.code for s in signals] == [STATE_CONTROLLED]
+    assert signals[0].evidence["state_owners"] == ["Government of Indonesia"]
+    assert "Global Energy Monitor" in signals[0].summary
+
+
+def test_owner_citation_is_a_valid_commenting_annotation() -> None:
+    from opencheck.bods.annotations import resolve_pointer, validate_all
+
+    statements = list(map_climatetrace(_pertamina_as_gem_ships_it()))
+    [rel] = _relationships(statements)
+    [annotation] = rel["annotations"]
+    assert annotation["motivation"] == "commenting"
+    assert "https://www.pertamina.com/en/Investor-relations" in annotation["description"]
+    assert resolve_pointer(rel, annotation["statementPointerTarget"])["type"] == "shareholding"
+    assert validate_all(statements) == []
+
+
+def test_owner_without_a_share_or_citation_is_still_a_shareholding() -> None:
+    bundle = _pertamina_as_gem_ships_it([_owner(share=None, source_urls=[])])
+    [rel] = _relationships(list(map_climatetrace(bundle)))
+    [interest] = rel["recordDetails"]["interests"]
+    assert interest["type"] == "shareholding"
+    assert "share" not in interest
+    assert "annotations" not in rel
+
+
+def test_self_owner_row_emits_no_relationship() -> None:
+    """64 rows in the relationships CSV name an entity as its own owner."""
+    bundle = _pertamina_as_gem_ships_it(
+        [_owner("E100000000538", "PT Pertamina (Persero) PT", entity_type="legal entity")]
+    )
+    statements = list(map_climatetrace(bundle))
+    assert _relationships(statements) == []
+    assert validate_shape(statements) == []
+
+
+def test_owner_and_parent_resolve_to_the_same_entity_statement_id() -> None:
+    """The ticket asked for this to be confirmed, not assumed: a party reached
+    through the parent column and through the relationships CSV is one
+    statement, because the ID is built from the GEM entity ID alone."""
+    via_parent = _parent_statement(list(map_climatetrace(_soe_bundle("state"))))
+    via_owner = _parent_statement(list(map_climatetrace(_pertamina_as_gem_ships_it())))
+    assert via_parent["statementId"] == via_owner["statementId"]
+
+
+def test_pair_in_both_columns_emits_only_the_csv_edge() -> None:
+    """One relationship per subject→party pair, and it is the CSV's: the
+    column rounds (28.8) where the CSV does not (28.85)."""
+    bundle = _soe_bundle("state")  # parent column: the state at 100 %
+    bundle["parents"][0]["share"] = 28.8
+    bundle["owners"] = [_owner(share=28.85)]
+    statements = list(map_climatetrace(bundle))
+
+    assert sum(1 for s in statements if s.get("recordType") == "entity") == 2
+    [rel] = _relationships(statements)
+    [interest] = rel["recordDetails"]["interests"]
+    assert interest["type"] == "shareholding"
+    assert interest["share"] == {"exact": 28.85}
+    assert len({s["statementId"] for s in statements}) == len(statements)
+
+
+def test_parent_the_csv_does_not_name_keeps_its_parent_edge() -> None:
+    """The column's other half — mostly ultimate parents — is left as it was."""
+    bundle = _soe_bundle("legal entity")
+    bundle["owners"] = [_owner("E100009999999", "Danantara", entity_type="state body")]
+    statements = list(map_climatetrace(bundle))
+    types = sorted(r["recordDetails"]["interests"][0]["type"] for r in _relationships(statements))
+    assert types == ["otherInfluenceOrControl", "shareholding"]
+    assert validate_shape(statements) == []
+
+
+def test_bundle_without_owners_maps_as_before() -> None:
+    """Stored bundles from before Phase 199 have no ``owners`` key."""
+    bundle = _soe_bundle("state")
+    bundle.pop("owners", None)
+    [rel] = _relationships(list(map_climatetrace(bundle)))
+    assert rel["recordDetails"]["interests"][0]["type"] == "otherInfluenceOrControl"
+
+
+def test_person_typed_owner_emits_neither_node_nor_edge() -> None:
+    bundle = _pertamina_as_gem_ships_it([_owner("E100000999999", "A Person", entity_type="person")])
+    statements = list(map_climatetrace(bundle))
+    assert _relationships(statements) == []
+    assert [s["recordType"] for s in statements] == ["entity"]
+
+
+def test_owner_without_its_own_row_is_unknown_entity() -> None:
+    bundle = _pertamina_as_gem_ships_it([_owner(entity_type=None, country=None)])
+    party = _parent_statement(list(map_climatetrace(bundle)))
+    assert party["recordDetails"]["entityType"]["type"] == "unknownEntity"
+    assert "jurisdiction" not in party["recordDetails"]
+
+
+def test_natural_persons_placeholder_is_an_unspecified_party_keeping_its_share() -> None:
+    """GEM's ``natural person(s)`` is one entity shared by 1,840 companies and
+    typed ``person``: neither a node joining them nor a silent drop of the
+    share, but an unspecified interested party."""
+    bundle = _pertamina_as_gem_ships_it(
+        [
+            _owner(
+                "E100000123261",
+                "natural person(s) ",
+                share=36.1,
+                entity_type="person",
+                country=None,
+                source_urls=[],
+            )
+        ]
+    )
+    statements = list(map_climatetrace(bundle))
+    assert validate_shape(statements) == []
+    assert [s["recordType"] for s in statements] == ["entity", "relationship"]
+    rd = _relationships(statements)[0]["recordDetails"]
+    assert rd["interestedParty"] == {
+        "reason": "informationUnknownToPublisher",
+        "description": "Natural person(s) not individually identified by Global Energy Monitor",
+    }
+    assert rd["interests"][0]["share"] == {"exact": 36.1}
+
+
+def test_small_shareholders_placeholder_in_the_parent_column_is_unspecified_too() -> None:
+    bundle = _soe_bundle("unknown entity")
+    bundle["parents"][0].update(
+        {"entity_id": "E100001015587", "name": "small shareholder(s)", "share": 28.8}
+    )
+    statements = list(map_climatetrace(bundle))
+    assert not any(
+        s.get("recordType") == "entity" and "shareholder" in s["recordDetails"]["name"]
+        for s in statements
+    )
+    [rel] = _relationships(statements)
+    party = rel["recordDetails"]["interestedParty"]
+    assert party["reason"] == "informationUnknownToPublisher"
+    assert party["description"].startswith("Small shareholders")
+    assert rel["recordDetails"]["interests"][0]["type"] == "otherInfluenceOrControl"
+
+
+def test_placeholder_matched_by_name_if_gem_rekeys_it() -> None:
+    bundle = _pertamina_as_gem_ships_it(
+        [_owner("E100009999998", "Unknown ", entity_type="unknown entity", country=None)]
+    )
+    party = _relationships(list(map_climatetrace(bundle)))[0]["recordDetails"]["interestedParty"]
+    assert isinstance(party, dict)
+    assert party["description"] == "An owner Global Energy Monitor has not identified"
+
+
+def test_real_company_is_not_mistaken_for_a_placeholder() -> None:
+    from opencheck.bods.mapper import _gem_unidentified_owner
+
+    assert _gem_unidentified_owner("E100000000001", "Unknown Energy Ltd") is None
+    assert _gem_unidentified_owner("E100000000001", "Small Shareholders Trust") is None
+
+
+def test_successor_that_is_also_an_owner_is_one_entity_statement() -> None:
+    """Simhapuri Energy Ltd is amalgamated into Jindal Power Ltd, which is also
+    its parent: before Phase 199 that emitted Jindal Power's entity statement
+    twice under one statementId."""
+    bundle = _soe_bundle("legal entity")
+    bundle["entity_status"] = {
+        "status": "amalgamated",
+        "merged_into": _GOV_ID,
+        "merged_into_name": "Government of Indonesia",
+    }
+    bundle["owners"] = [_owner(entity_type="state")]
+    statements = list(map_climatetrace(bundle))
+    ids = [s["statementId"] for s in statements]
+    assert len(ids) == len(set(ids))
+    assert len(_relationships(statements)) == 1
+
+    # The node keeps what its own row says — a state, located — and carries
+    # the successor note the stub would have had.
+    party = _parent_statement(statements)
+    assert party["recordDetails"]["entityType"]["type"] == "state"
+    assert party["recordDetails"]["jurisdiction"]["code"] == "ID"
+    assert any(
+        a["description"].startswith("Successor entity") for a in party.get("annotations", [])
+    )
+    assert validate_shape(statements) == []
+
+
+def test_direct_owners_alone_do_not_make_layers() -> None:
+    """Direct owners only — GEM on its own cannot reach the AMLA three-layer
+    threshold, which a walk up GEM's chains would fire on ~6,500 subjects."""
+    from opencheck.risk import COMPLEX_OWNERSHIP_LAYERS, assess_bundle
+
+    bundle = _pertamina_as_gem_ships_it(
+        [_owner(), _owner("E100002000001", "Holding A", entity_type="legal entity")]
+    )
+    statements = list(map_climatetrace(bundle))
+    signals = assess_bundle("climatetrace", bundle, statements, hit_id="E100000000538")
+    codes = {s.code for s in signals}
+    assert COMPLEX_OWNERSHIP_LAYERS not in codes

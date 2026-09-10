@@ -492,10 +492,53 @@ def diff_statement_counts(
     is the earliest machine-detectable signal of an access change — the shape
     of Estonia's postponed legitimate-interest switch, which has no announced
     date to schedule a check against, so the data has to be the alarm.
+
+    An interest type that falls because the *same* edges now carry a different
+    type is not a collapse — see ``_compare_statement_counts``.
+    """
+    return _compare_statement_counts(current, previous)[0]
+
+
+def reclassified_statement_counts(
+    current: dict[str, Any], previous: dict[str, Any] | None
+) -> dict[str, dict[str, Any]]:
+    """The interest-type drops ``diff_statement_counts`` deliberately does not
+    report, so the sweep still says out loud that they happened."""
+    return _compare_statement_counts(current, previous)[1]
+
+
+def _compare_statement_counts(
+    current: dict[str, Any], previous: dict[str, Any] | None
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    """``(collapses, reclassifications)`` against last week's counts.
+
+    Why reclassification is separated out: the report counts ``interest:<type>``
+    as well as record types, and the collapse diff compares against the last
+    *successful* run. So a deliberate mapping change that retypes a source's
+    edges — Phase 199 moved GEM's direct owners from
+    ``otherInfluenceOrControl`` to ``shareholding``, taking the Fingrid probe's
+    ``interest:otherInfluenceOrControl`` from 4 to 0 — would red the run, and
+    because a red run is never the comparison base, would red it every week
+    until someone changed the probe.
+
+    The test is narrow on purpose. Interest-type drops count as a
+    reclassification only when the other interest types *gained* at least as
+    many as the collapsed ones lost **and** neither the total across every
+    interest type nor the ``relationship`` count is lower than last run — the
+    same edges, differently typed. A source that simply stops carrying one kind
+    of interest — Estonia's beneficial owners, which arrive as
+    ``otherInfluenceOrControl``, vanishing behind a legitimate-interest wall —
+    gains nothing elsewhere and is still reported as a collapse. Record-type
+    counts (``entity``, ``person``, ``relationship``) are never excused.
+
+    The limit, stated so nobody relies on more: counts cannot tell a retyping
+    from one kind of interest vanishing in the same week another grows by
+    exactly as much. That coincidence is excused.
     """
     if not previous:
-        return {}
-    findings: dict[str, dict[str, Any]] = {}
+        return {}, {}
+    collapses: dict[str, dict[str, Any]] = {}
+    reclassified: dict[str, dict[str, Any]] = {}
     for source_id, now_row in current.items():
         now_counts = now_row.get("statement_counts")
         then_counts = (previous.get("sources") or {}).get(source_id, {}).get("statement_counts")
@@ -506,9 +549,31 @@ def diff_statement_counts(
             now_value = now_counts.get(kind, 0)
             if then_value > 0 and now_value < then_value * _COLLAPSE_RATIO:
                 collapsed[kind] = {"was": then_value, "now": now_value}
+
+        interest_drops = {k: v for k, v in collapsed.items() if k.startswith("interest:")}
+        if interest_drops:
+            lost = sum(v["was"] - v["now"] for v in interest_drops.values())
+            gains = {
+                kind: {"was": then_counts.get(kind, 0), "now": now_value}
+                for kind, now_value in now_counts.items()
+                if kind.startswith("interest:") and now_value > then_counts.get(kind, 0)
+            }
+            gained = sum(v["now"] - v["was"] for v in gains.values())
+
+            def _interest_total(counts: dict[str, int]) -> int:
+                return sum(v for k, v in counts.items() if k.startswith("interest:"))
+
+            same_edges = (
+                _interest_total(now_counts) >= _interest_total(then_counts)
+                and now_counts.get("relationship", 0) >= then_counts.get("relationship", 0)
+            )
+            if gained >= lost and same_edges:
+                reclassified[source_id] = {**interest_drops, **gains}
+                collapsed = {k: v for k, v in collapsed.items() if k not in interest_drops}
+
         if collapsed:
-            findings[source_id] = collapsed
-    return findings
+            collapses[source_id] = collapsed
+    return collapses, reclassified
 
 
 def load_previous_report(path: str) -> dict[str, Any] | None:
@@ -694,6 +759,9 @@ def build_report(
         "statement_collapses": diff_statement_counts(
             {r.source_id: asdict(r) for r in results}, previous
         ),
+        "statement_reclassifications": reclassified_statement_counts(
+            {r.source_id: asdict(r) for r in results}, previous
+        ),
         "compared_against": (previous or {}).get("generated_at"),
     }
 
@@ -780,6 +848,13 @@ def render_markdown(report: dict[str, Any]) -> str:
         ]
     else:
         lines.append(f"- ✅ no collapse against the run of {compared}.")
+    reclassified = report.get("statement_reclassifications") or {}
+    if compared and reclassified:
+        for sid, kinds in sorted(reclassified.items()):
+            detail = ", ".join(
+                f"{kind} {v['was']} → {v['now']}" for kind, v in sorted(kinds.items())
+            )
+            lines.append(f"- ↔️ `{sid}` — interest types reclassified, not a collapse: {detail}")
 
     gaps = {sid: row["known_gap"] for sid, row in report["sources"].items() if row["known_gap"]}
     if gaps:

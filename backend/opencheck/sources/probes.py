@@ -558,7 +558,11 @@ PROBES: dict[str, SourceProbe] = {
             "Fingrid's row names four distinct parents, two of them typed by GEM as `state` / `state "
             "body` (Government of Finland, National Emergency Supply Agency), so the probe now also "
             "covers the typed-parent path Phase 169 added — the structure that makes an SOE "
-            "recognisable as one in BODS."
+            "recognisable as one in BODS. Phase 199: the same four owners are Fingrid's rows "
+            "in GEM's relationships CSV, which now supplies them as direct `shareholding` edges "
+            "and replaces the parent-column edge for each pair — so this probe covers the owner "
+            "path too, and its `interest:otherInfluenceOrControl` 4 → `interest:shareholding` 4 "
+            "is reported as a reclassification, not a collapse."
         ),
     ),
     # --- index-matched sources -------------------------------------------

@@ -134,6 +134,7 @@ _COUNTRY_COL = "Headquarters Country"  # ISO 3166-1 alpha-3
 _lei_index: dict[str, str] | None = None          # LEI → GEM entity ID
 _entity_index: dict[str, dict[str, str]] | None = None  # GEM entity ID → row
 _rel_children: dict[str, list[dict[str, Any]]] | None = None  # owner → owned entities
+_rel_owners: dict[str, list[dict[str, Any]]] | None = None    # owned entity → direct owners
 _asset_index: dict[str, list[dict[str, str]]] | None = None   # entity → CT assets
 
 
@@ -428,6 +429,7 @@ def warm_caches() -> dict[str, int]:
         "lei_mappings": len(lei_idx),
         "entities": len(ent_idx),
         "owners_with_subsidiaries": len(rel_children),
+        "entities_with_owners": len(_rel_owners or {}),
         "entities_with_assets": len(asset_index),
         "geot_entities": len(geot.get("entities") or {}),
         "geot_entity_status": len(geot.get("entity_status") or {}),
@@ -435,14 +437,22 @@ def warm_caches() -> dict[str, int]:
 
 
 def _load_relationship_indexes() -> tuple[
-    dict[str, list[dict[str, Any]]], dict[str, list[dict[str, str]]]
+    dict[str, list[dict[str, Any]]],
+    dict[str, list[dict[str, str]]],
+    dict[str, list[dict[str, Any]]],
 ]:
-    """Build the entity→subsidiaries and entity→assets indexes.
+    """Build the entity→subsidiaries, entity→assets and entity→owners indexes.
 
     * ``rel_children`` maps an owner GEM entity ID → list of
       ``{"entity_id", "name", "percent"}`` for entities it directly owns
       (from ``ownership_all_entity_relationships``; ``percent`` is a float
       or None when GEM doesn't publish a share).
+    * ``rel_owners`` is the same file read the other way: an owned entity's
+      GEM ID → list of ``{"entity_id", "name", "percent", "source_urls"}`` for
+      its **direct** owners. Phase 199: this is where the owner that makes a
+      group's top entity what it is lives — PT Pertamina (Persero)'s parent
+      column names Pertamina itself, and only this file says the Government
+      of Indonesia holds it at 100 %.
     * ``asset_index`` maps a GEM entity ID → list of
       ``{"source_id", "name", "sector", "subsector"}`` Climate TRACE assets
       it immediately owns (from ``ownership_all_entity_asset_relationships``).
@@ -452,6 +462,7 @@ def _load_relationship_indexes() -> tuple[
     """
     rel_children: dict[str, list[dict[str, Any]]] = {}
     asset_index: dict[str, list[dict[str, str]]] = {}
+    rel_owners: dict[str, list[dict[str, Any]]] = {}
 
     text = _read_gem_csv_text("entity_relationships")
     if text:
@@ -471,6 +482,14 @@ def _load_relationship_indexes() -> tuple[
                         "entity_id": subject,
                         "name": (row.get("subject_name") or "").strip(),
                         "percent": pct,
+                    }
+                )
+                rel_owners.setdefault(subject, []).append(
+                    {
+                        "entity_id": owner,
+                        "name": (row.get("owner_name") or "").strip(),
+                        "percent": pct,
+                        "source_urls": _split_source_urls(row.get("data_source_url")),
                     }
                 )
         except Exception as exc:
@@ -497,20 +516,33 @@ def _load_relationship_indexes() -> tuple[
 
     log.info(
         "GEM relationship indexes built: %d owners with subsidiaries, "
-        "%d entities with assets",
+        "%d entities with owners, %d entities with assets",
         len(rel_children),
+        len(rel_owners),
         len(asset_index),
     )
-    return rel_children, asset_index
+    return rel_children, asset_index, rel_owners
 
 
 def _get_relationship_indexes() -> tuple[
     dict[str, list[dict[str, Any]]], dict[str, list[dict[str, str]]]
 ]:
-    global _rel_children, _asset_index
-    if _rel_children is None or _asset_index is None:
-        _rel_children, _asset_index = _load_relationship_indexes()
+    """``(rel_children, asset_index)``, building all three relationship
+    indexes on first use. The owner-ward index is read through
+    ``_parse_owners`` so this signature — which callers and tests rely on —
+    stays as it was."""
+    global _rel_children, _asset_index, _rel_owners
+    if _rel_children is None or _asset_index is None or _rel_owners is None:
+        _rel_children, _asset_index, _rel_owners = _load_relationship_indexes()
     return _rel_children, _asset_index
+
+
+def _split_source_urls(raw: str | None) -> list[str]:
+    """GEM's ``data_source_url`` holds one URL or several joined by commas."""
+    # Split only on a comma that starts another URL: a comma inside one URL's
+    # query string must not cut it in two.
+    parts = re.split(r",\s*(?=https?://)", (raw or "").strip())
+    return [u.strip() for u in parts if u.strip().startswith(("http://", "https://"))]
 
 
 # ---------------------------------------------------------------------------
@@ -892,6 +924,7 @@ class ClimateTRACEAdapter(SourceAdapter):
             "emissions": _parse_emissions(emissions_payload),
             "assets": assets_payload,
             "parents": _parse_parents(gem_row),
+            "owners": _parse_owners(entity_id),
             "ownership": _ownership_summary(entity_id),
             "projects": _geot_projects(entity_id),
             "entity_status": _entity_status(entity_id, gem_row),
@@ -1097,23 +1130,73 @@ def _parse_parents(gem_row: dict[str, str]) -> list[dict[str, Any]]:
                 share = name_share
         else:
             pname = pid
-        parent_row = _parent_gem_row(pid) or {}
+        entity_type, country = _owner_type_and_country(_parent_gem_row(pid) or {})
         parents.append(
             {
                 "entity_id": pid,
                 "name": pname or pid,
                 "share": share,
-                "entity_type": (parent_row.get("Entity Type") or "").strip().lower()
-                or None,
-                "country": (
-                    parent_row.get(_COUNTRY_COL)
-                    or parent_row.get("Registration Country")
-                    or ""
-                ).strip()
-                or None,
+                "entity_type": entity_type,
+                "country": country,
             }
         )
     return parents
+
+
+def _owner_type_and_country(owner_row: dict[str, str]) -> tuple[str | None, str | None]:
+    """The raw GEM ``Entity Type`` and country from an entity's own row."""
+    entity_type = (owner_row.get("Entity Type") or "").strip().lower() or None
+    country = (
+        owner_row.get(_COUNTRY_COL) or owner_row.get("Registration Country") or ""
+    ).strip() or None
+    return entity_type, country
+
+
+def _parse_owners(entity_id: str) -> list[dict[str, Any]]:
+    """The subject's **direct** owners, from GEM's relationships CSV.
+
+    Same shape as ``_parse_parents`` — ``entity_id``, ``name``, ``share``,
+    ``entity_type``, ``country`` — plus ``source_urls``, GEM's citation for
+    the holding. Type and country come from the *owner's own* entities-CSV
+    row, exactly as for a parent, so a government owner arrives as ``state``.
+
+    Reads the already-built module indexes and never loads them: like
+    ``_parent_gem_row``, this is a parser and must not trigger a data download
+    as a side effect. Every caller has built the indexes first; when they are
+    absent the answer is "no owners known", not a fetch.
+    """
+    if _rel_owners is None:
+        return []
+    owners: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for edge in _rel_owners.get(entity_id, []):
+        oid = edge.get("entity_id") or ""
+        if not oid or oid in seen:
+            # A repeated subject→owner row would map to two relationship
+            # statements under one statementId. None in the July 2026 release;
+            # the first row wins if one appears.
+            continue
+        seen.add(oid)
+        owner_row = _parent_gem_row(oid) or {}
+        entity_type, country = _owner_type_and_country(owner_row)
+        owners.append(
+            {
+                "entity_id": oid,
+                # The owner's own Full Name first: the relationships CSV
+                # abbreviates ("Mahanada Suppliers" for "Mahanada Suppliers Pvt
+                # Ltd"), and the statementId is shared with the statement the
+                # owner gets when it is looked up itself, so a merged graph
+                # should see one name for one node.
+                "name": (owner_row.get(_ENTITY_NAME_COL) or "").strip()
+                or edge.get("name")
+                or oid,
+                "share": edge.get("percent"),
+                "entity_type": entity_type,
+                "country": country,
+                "source_urls": list(edge.get("source_urls") or []),
+            }
+        )
+    return owners
 
 
 def _stub_bundle(
@@ -1131,6 +1214,7 @@ def _stub_bundle(
         "emissions": {},
         "assets": [],
         "parents": _parse_parents(gem_row),
+        "owners": _parse_owners(entity_id),
         "ownership": _ownership_summary(entity_id),
         "projects": _geot_projects(entity_id),
         "entity_status": _entity_status(entity_id, gem_row),
