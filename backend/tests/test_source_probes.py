@@ -125,6 +125,15 @@ _EXEMPT: dict[tuple[str, str], str] = {
 }
 
 
+def test_opencorporates_probe_asserts_it_got_officers():
+    """Phase 195. The adapter asked an endpoint that 404s and `_get_optional`
+    turned that into an empty officer list, so every lookup reported a company
+    with no board while the sweep saw a healthy source. `expect_fields` is the
+    machinery that makes an empty list a red run; without `officers` in it,
+    the same silence returns unnoticed."""
+    assert "officers" in PROBES["opencorporates"].expect_fields
+
+
 def test_exemptions_are_all_still_needed():
     """A stale exemption is a hole in the guard. If an exempt function no
     longer builds its own client, the entry must go."""

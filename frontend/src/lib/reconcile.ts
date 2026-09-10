@@ -10,10 +10,20 @@
  * `_sources` — the distinct sources that asserted it — so provenance becomes
  * corroboration (a node 3 sources agree on reads as confirmed).
  *
- * Safe by construction: it only merges on real identifiers (LEI / company
+ * Safe by construction: entities merge only on real identifiers (LEI / company
  * number), never on names — a name-only match is a `POSSIBLY_SAME_AS` confidence
  * edge, deferred. Pure and unit-tested; applied only to the *display* model, so
  * the live expansion bookkeeping is untouched.
+ *
+ * **People merge too, on name AND date of birth together — never either alone.**
+ * Added when OpenCorporates officers started arriving (Phase 195): it mirrors
+ * Companies House, so every UK board came through twice and one human was two
+ * nodes. Measured on Lloyds Bank PLC's 16 serving officers, matching each
+ * OpenCorporates person against the Companies House side: name tokens alone
+ * matched 16 of 16, date of birth alone 15 of 16, **both together 16 of 16** —
+ * a mirror, not a coincidence. The pair is the point: a name alone is the merge
+ * this file has always refused, and a birth month alone is shared by thousands.
+ * A person the register dates only to a year is not merged at all.
  */
 
 import type { RiskSignal } from "./api";
@@ -134,6 +144,38 @@ function identKeys(s: Stmt): string[] {
   return keys;
 }
 
+/** Titles a register prints in front of a name and which say nothing about who
+ *  the person is. Companies House files "BENNETT, Kelly Brian" and
+ *  OpenCorporates "KELLY BRIAN BENNETT"; order is handled by comparing token
+ *  sets rather than strings, so only the noise words need removing. */
+const NAME_TITLES = new Set([
+  "mr", "mrs", "ms", "miss", "dr", "prof", "professor", "sir", "dame", "lord",
+  "lady", "rev", "hon", "the", "baron", "baroness", "earl", "count", "countess",
+]);
+
+/**
+ * The merge key for a person: their name tokens and their date of birth, or
+ * `null` where either is missing.
+ *
+ * Tokens are sorted, so "BENNETT, Kelly Brian" and "KELLY BRIAN BENNETT" — the
+ * same person as Companies House and OpenCorporates each write them — produce
+ * one key. The birth date must carry a month: BODS legitimately publishes
+ * `YYYY` where a register only dates a person to a year, and a name plus a
+ * year is a weaker claim than this file is willing to merge on.
+ */
+export function personKey(s: Stmt): string | null {
+  const d = rd(s);
+  const names = (d.names ?? []) as Stmt[];
+  const legal = names.find((n) => n.type === "legal") ?? names[0];
+  const tokens = normName(String(legal?.fullName ?? ""))
+    .split(" ")
+    .filter((t) => t && !NAME_TITLES.has(t))
+    .sort();
+  const birth = String(d.birthDate ?? "").trim();
+  if (tokens.length < 2 || !/^\d{4}-\d{2}/.test(birth)) return null;
+  return `PERSON:${tokens.join("|")}|${birth.slice(0, 7)}`;
+}
+
 export function reconcileBods(statements: Stmt[]): ReconcileResult {
   const stmts = statements ?? [];
   const entities = stmts.filter((s) => s.recordType === "entity" && s.statementId);
@@ -226,6 +268,100 @@ export function reconcileBods(statements: Stmt[]): ReconcileResult {
     });
   }
 
+  // --- people ------------------------------------------------------------
+  // Same mechanism, stricter key, one difference: a person nobody else
+  // describes keeps their own statementId. Entities are always given a
+  // canonical id because an identifier is what names them; a person is named
+  // by a statement, and Phase 193 made that id mean something (the register's
+  // officer id). Renaming a solo person would churn ids for no merge.
+  const persons = stmts.filter((s) => s.recordType === "person" && s.statementId);
+  const personGroups = new Map<string, Stmt[]>();
+  for (const s of persons) {
+    const k = personKey(s);
+    if (!k) continue; // not enough to merge on — left as its own node
+    personGroups.set(k, [...(personGroups.get(k) ?? []), s]);
+  }
+
+  for (const [key, members] of personGroups) {
+    if (members.length < 2) continue;
+    const canonicalId = `recon:${key}`;
+
+    const sources = new Set<string>();
+    const names: Stmt[] = [];
+    const seenName = new Set<string>();
+    const nationalities: Stmt[] = [];
+    const seenNat = new Set<string>();
+    const addresses: Stmt[] = [];
+    const seenAddr = new Set<string>();
+    const identifiers: Stmt[] = [];
+    const seenIdent = new Set<string>();
+    const annotations: Stmt[] = [];
+    let birthDate = "";
+    let personType: unknown;
+    let politicalExposure: unknown;
+
+    for (const m of members) {
+      remap[m.statementId as string] = canonicalId;
+      const d = rd(m);
+      if (!birthDate && d.birthDate) birthDate = d.birthDate as string;
+      if (!personType && d.personType) personType = d.personType;
+      if (!politicalExposure && d.politicalExposure) politicalExposure = d.politicalExposure;
+      for (const n of (d.names ?? []) as Stmt[]) {
+        const k = `${n.type}|${normName(String(n.fullName ?? ""))}`;
+        if (!seenName.has(k)) {
+          seenName.add(k);
+          names.push(n);
+        }
+      }
+      for (const n of (d.nationalities ?? []) as Stmt[]) {
+        const k = String(n.code ?? n.name ?? "");
+        if (k && !seenNat.has(k)) {
+          seenNat.add(k);
+          nationalities.push(n);
+        }
+      }
+      for (const a of (d.addresses ?? []) as Stmt[]) {
+        const k = normName(String(a.address ?? ""));
+        if (k && !seenAddr.has(k)) {
+          seenAddr.add(k);
+          addresses.push(a);
+        }
+      }
+      for (const i of (d.identifiers ?? []) as Stmt[]) {
+        const k = `${i.scheme}|${i.id}`;
+        if (!seenIdent.has(k)) {
+          seenIdent.add(k);
+          identifiers.push(i);
+        }
+      }
+      // Each source's annotations are kept, not merged: they say what THAT
+      // register asserted — including the Companies House note recording
+      // which officer id the person was grouped on.
+      for (const a of (m.annotations ?? []) as Stmt[]) annotations.push(a);
+      const src = sourceOf(m);
+      if (src) sources.add(src);
+    }
+
+    canonStmt.set(canonicalId, {
+      statementId: canonicalId,
+      recordId: canonicalId,
+      declarationSubject: canonicalId,
+      recordType: "person",
+      recordDetails: {
+        personType: personType ?? "knownPerson",
+        names,
+        ...(birthDate ? { birthDate } : {}),
+        ...(nationalities.length ? { nationalities } : {}),
+        ...(addresses.length ? { addresses } : {}),
+        ...(identifiers.length ? { identifiers } : {}),
+        ...(politicalExposure ? { politicalExposure } : {}),
+      },
+      ...(annotations.length ? { annotations } : {}),
+      source: members[0].source ?? {},
+      _sources: [...sources],
+    });
+  }
+
   const ref = (id: unknown): unknown =>
     typeof id === "string" && remap[id] ? remap[id] : id;
 
@@ -264,6 +400,15 @@ export function reconcileBods(statements: Stmt[]): ReconcileResult {
         recordDetails: { ...d, subject, interestedParty: party },
         _sources: src ? [src] : [],
       });
+    } else if (s.recordType === "person") {
+      const cid = remap[s.statementId as string];
+      if (!cid) {
+        out.push({ ...s, _sources: sourceOf(s) ? [sourceOf(s)] : [] });
+        continue;
+      }
+      if (emittedCanon.has(cid)) continue;
+      emittedCanon.add(cid);
+      out.push(canonStmt.get(cid)!);
     } else {
       out.push({ ...s, _sources: sourceOf(s) ? [sourceOf(s)] : [] });
     }

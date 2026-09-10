@@ -627,7 +627,19 @@ def finding_opencorporates(bundle: dict[str, Any]) -> str | None:
     jurisdiction to ``summary`` and leads with trading status instead.
     """
     company = bundle.get("company") or {}
-    officers = bundle.get("officers") or []
+    # Serving officers only. OpenCorporates publishes an ``end_date`` on a
+    # departed officer exactly as Companies House publishes ``resigned_on``,
+    # and this clause counted both until Phase 195 — the same defect Phase 192
+    # fixed on the Companies House card, latent here only because the fetch
+    # was returning nothing to count. Each item nests the record under
+    # ``officer``; the mapper reads the same shape.
+    officers = [
+        inner
+        for item in (bundle.get("officers") or [])
+        if isinstance(item, dict)
+        for inner in [item.get("officer") if isinstance(item.get("officer"), dict) else item]
+        if not inner.get("end_date")
+    ]
 
     dissolved = human_date(company.get("dissolution_date"))
     incorporated = human_date(company.get("incorporation_date"))

@@ -678,6 +678,36 @@ def test_companies_house_finding_degrades_to_the_bare_absence() -> None:
     )
 
 
+def test_opencorporates_finding_counts_serving_officers_only() -> None:
+    """Phase 195, and the same rule Phase 192 set for Companies House: the
+    officer clause and the status beside it must measure the same kind of
+    thing. OpenCorporates publishes `end_date` where Companies House
+    publishes `resigned_on`. Lloyds Bank PLC's real shape: 116 officers,
+    100 of them ended."""
+    bundle = _oc_bundle()
+    bundle["officers"] = [
+        {"officer": {"name": f"OFFICER {i}", "position": "director"}}
+        if i < 16
+        else {
+            "officer": {
+                "name": f"OFFICER {i}",
+                "position": "director",
+                "end_date": "2012-08-01",
+            }
+        }
+        for i in range(116)
+    ]
+    assert "16 officers on file" in finding_opencorporates(bundle)
+
+
+def test_opencorporates_finding_drops_the_clause_when_none_are_serving() -> None:
+    bundle = _oc_bundle()
+    bundle["officers"] = [
+        {"officer": {"name": "GONE", "position": "director", "end_date": "2012-08-01"}}
+    ]
+    assert "officer" not in finding_opencorporates(bundle)
+
+
 def test_opencorporates_finding_leads_with_whether_it_is_still_trading() -> None:
     assert finding_opencorporates(_oc_bundle()) == (
         "Active since 1 January 2000, 2 officers on file, registered as a "

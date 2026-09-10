@@ -457,3 +457,150 @@ describe("possiblySameAs", () => {
     expect(possiblySameAs(statements)).toHaveLength(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// People — merged on name AND date of birth, never either alone (Phase 195)
+//
+// OpenCorporates mirrors Companies House, so when its officers started
+// arriving every UK board came through twice. Measured on Lloyds Bank PLC's 16
+// serving officers: name tokens alone matched 16 of 16, date of birth alone 15
+// of 16, both together 16 of 16. The two registers write the same person
+// differently — "BENNETT, Kelly Brian" and "KELLY BRIAN BENNETT" — which is
+// why the key compares token sets rather than strings.
+// ---------------------------------------------------------------------------
+
+function person(
+  id: string,
+  fullName: string,
+  birthDate: string | undefined,
+  source: string,
+  extra: Record<string, unknown> = {},
+): Stmt {
+  return {
+    statementId: id,
+    recordType: "person",
+    recordDetails: {
+      personType: "knownPerson",
+      names: [{ type: "legal", fullName }],
+      ...(birthDate ? { birthDate } : {}),
+      ...extra,
+    },
+    source: { description: source },
+  };
+}
+
+describe("reconcileBods — people", () => {
+  it("merges the same person written two ways by two registers", () => {
+    const { statements, remap } = reconcileBods([
+      person("ch-p", "BENNETT, Kelly Brian", "1968-04", "Companies House"),
+      person("oc-p", "KELLY BRIAN BENNETT", "1968-04", "OpenCorporates"),
+    ]);
+
+    const people = statements.filter((s) => s.recordType === "person");
+    expect(people).toHaveLength(1);
+    expect(remap["ch-p"]).toBe(remap["oc-p"]);
+    // Provenance becomes corroboration, exactly as it does for entities.
+    expect((people[0]._sources as string[]).sort()).toEqual([
+      "Companies House",
+      "OpenCorporates",
+    ]);
+  });
+
+  it("keeps both names, and every source's annotations", () => {
+    const { statements } = reconcileBods([
+      {
+        ...person("ch-p", "BENNETT, Kelly Brian", "1968-04", "Companies House"),
+        annotations: [{ motivation: "identifying", description: "Grouped on officer id abc123" }],
+      },
+      person("oc-p", "KELLY BRIAN BENNETT", "1968-04", "OpenCorporates"),
+    ]);
+
+    const p = statements.find((s) => s.recordType === "person")!;
+    const names = (p.recordDetails as Stmt).names as Stmt[];
+    expect(names.map((n) => n.fullName)).toEqual([
+      "BENNETT, Kelly Brian",
+      "KELLY BRIAN BENNETT",
+    ]);
+    expect((p.annotations as Stmt[])[0].description).toContain("abc123");
+  });
+
+  it("refuses a name-only match — the merge this file has always refused", () => {
+    const { statements } = reconcileBods([
+      person("a", "JOHN SMITH", undefined, "Companies House"),
+      person("b", "JOHN SMITH", undefined, "OpenCorporates"),
+    ]);
+    expect(statements.filter((s) => s.recordType === "person")).toHaveLength(2);
+  });
+
+  it("refuses a date-of-birth-only match", () => {
+    const { statements } = reconcileBods([
+      person("a", "JOHN SMITH", "1968-04", "Companies House"),
+      person("b", "JANE JONES", "1968-04", "OpenCorporates"),
+    ]);
+    expect(statements.filter((s) => s.recordType === "person")).toHaveLength(2);
+  });
+
+  it("refuses to merge on a year alone, which BODS legitimately publishes", () => {
+    const { statements } = reconcileBods([
+      person("a", "JOHN SMITH", "1968", "Companies House"),
+      person("b", "SMITH, John", "1968", "OpenCorporates"),
+    ]);
+    expect(statements.filter((s) => s.recordType === "person")).toHaveLength(2);
+  });
+
+  it("does not merge two people who share a name and differ by a month", () => {
+    const { statements } = reconcileBods([
+      person("a", "JOHN SMITH", "1968-04", "Companies House"),
+      person("b", "JOHN SMITH", "1968-05", "OpenCorporates"),
+    ]);
+    expect(statements.filter((s) => s.recordType === "person")).toHaveLength(2);
+  });
+
+  it("ignores a title the register printed in front of the name", () => {
+    const { statements } = reconcileBods([
+      person("a", "Mr Kelly Brian Bennett", "1968-04", "Companies House"),
+      person("b", "BENNETT, Kelly Brian", "1968-04", "OpenCorporates"),
+    ]);
+    expect(statements.filter((s) => s.recordType === "person")).toHaveLength(1);
+  });
+
+  it("leaves a person nobody else describes with their own statementId", () => {
+    const { statements, remap } = reconcileBods([
+      person("officer-abc123", "BENNETT, Kelly Brian", "1968-04", "Companies House"),
+    ]);
+    expect(statements[0].statementId).toBe("officer-abc123");
+    expect(remap["officer-abc123"]).toBeUndefined();
+  });
+
+  it("points both registers' appointments at the one person", () => {
+    const { statements } = reconcileBods([
+      { statementId: "co", recordType: "entity", recordDetails: { name: "Acme", identifiers: [{ scheme: "GB-COH", id: "00102498" }] }, source: { description: "Companies House" } },
+      person("ch-p", "BENNETT, Kelly Brian", "1968-04", "Companies House"),
+      person("oc-p", "KELLY BRIAN BENNETT", "1968-04", "OpenCorporates"),
+      { statementId: "r1", recordType: "relationship", recordDetails: { subject: "co", interestedParty: "ch-p", interests: [{ type: "seniorManagingOfficial" }] }, source: { description: "Companies House" } },
+      { statementId: "r2", recordType: "relationship", recordDetails: { subject: "co", interestedParty: "oc-p", interests: [{ type: "seniorManagingOfficial" }] }, source: { description: "OpenCorporates" } },
+    ]);
+
+    const people = statements.filter((s) => s.recordType === "person");
+    const rels = statements.filter((s) => s.recordType === "relationship");
+    expect(people).toHaveLength(1);
+    // Same subject, same party, same interest type: one edge, two sources.
+    expect(rels).toHaveLength(1);
+    expect((rels[0]._sources as string[]).sort()).toEqual([
+      "Companies House",
+      "OpenCorporates",
+    ]);
+  });
+
+  it("carries a risk signal on either source's person onto the merged node", () => {
+    const { remap } = reconcileBods([
+      person("ch-p", "BENNETT, Kelly Brian", "1968-04", "Companies House"),
+      person("oc-p", "KELLY BRIAN BENNETT", "1968-04", "OpenCorporates"),
+    ]);
+    const signals = [
+      { code: "PEP", evidence: { statement_id: "oc-p" } } as unknown as RiskSignal,
+    ];
+    const out = remapSignals(signals, remap);
+    expect((out[0].evidence as Record<string, unknown>).statement_id).toBe(remap["oc-p"]);
+  });
+});
