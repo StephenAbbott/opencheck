@@ -254,7 +254,8 @@ export default function BodsGraphExplorer({
     if (!fullCheck) return [];
     const counts = new Map<string, number>();
     for (const n of model.nodes)
-      for (const s of n.sources) counts.set(s, (counts.get(s) ?? 0) + 1);
+      for (const s of [...n.sources, ...(n.matchedSources ?? [])])
+        counts.set(s, (counts.get(s) ?? 0) + 1);
     return [...counts.entries()]
       .map(([source, count]) => ({ source, count }))
       .sort((a, b) => b.count - a.count || a.source.localeCompare(b.source));
@@ -262,7 +263,8 @@ export default function BodsGraphExplorer({
   // Nodes corroborated by ≥2 INDEPENDENT sources — the EDD confidence signal.
   // `n.sources` lists every source that asserted the node (provenance, kept
   // in full for the legend and the highlight toggles); corroboration is the
-  // lineage-collapsed count, so Companies House + OpenCorporates is one.
+  // lineage-collapsed count, so Companies House + OpenCorporates is one. A
+  // source joined only by OpenCheck's match (`matchedSources`) is not counted.
   const corroboratedCount = useMemo(
     () => (fullCheck ? model.nodes.filter((n) => independentCount(n.sources) > 1).length : 0),
     [fullCheck, model]

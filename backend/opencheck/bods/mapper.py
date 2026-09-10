@@ -9270,9 +9270,49 @@ def map_eiti_assessment(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             )
         )
 
-    if annotations:
-        annotate(stmt, *annotations)
+    # The LEI OpenCheck matched this record to, published as an `identifying`
+    # annotation rather than an identifier: `identifiers` stays empty under the
+    # corroboration rule in the docstring above. But a statement
+    # with no identifier and no jurisdiction can never be joined to the
+    # company it is about: in the FullCheck graph it floated as a second,
+    # unconnected node beside the subject (PT Pertamina (Persero), 2026-09-10).
+    # The annotation's `url` names the GLEIF record, so a consumer — the
+    # FullCheck display merge among them — can join the two on OpenCheck's
+    # word, visibly as a match, or reject it.
+    annotations.append(_eiti_assessment_lei_match(lei, bundle.get("match") or {}))
+
+    annotate(stmt, *annotations)
     yield stmt
+
+
+#: How the EITI→LEI link was made, in words (``match.method`` from the index).
+_EITI_MATCH_METHODS: dict[str, str] = {
+    "published_lei": "the LEI EITI publishes for it, confirmed in GLEIF",
+    "gleif_name_exact": "an exact legal-name match in GLEIF, reviewed by hand",
+    "candidates_only": "chosen by hand from GLEIF name candidates",
+}
+
+
+def _eiti_assessment_lei_match(lei: str, match: dict[str, Any]) -> dict[str, Any]:
+    """The `identifying` annotation linking an EITI assessment record to its LEI."""
+    method = str(match.get("method") or "")
+    how = _EITI_MATCH_METHODS.get(method, "a match made by OpenCheck")
+    why = (
+        ""
+        if method == "published_lei"
+        else ", because it is OpenCheck's match rather than an identifier EITI asserts"
+    )
+    annotation = identifying(
+        pointer("recordDetails"),
+        (
+            f"OpenCheck links this EITI record to LEI {lei} \u2014 {how}. The LEI "
+            f"is not carried in identifiers{why}; it is published here so a "
+            "consumer can join this statement to that legal entity or reject "
+            "the match."
+        ),
+    )
+    annotation["url"] = f"https://search.gleif.org/#/record/{lei}"
+    return annotation
 
 
 def _eiti_assessment_latest_year(bundle: dict[str, Any]) -> str | None:

@@ -75,7 +75,8 @@ function modelToElements(model: GraphModel, sameAs: SameAsCandidate[] = []): Ele
   const nodeIds = new Set(model.nodes.map((n) => n.id));
   for (const n of model.nodes) {
     elements.push({
-      data: { id: n.id, label: n.label, recordType: n.recordType, icon: n.icon, flagUrl: n.flagUrl, sources: n.sources },
+      // Highlighting reads provenance, so a matched source lights its node too.
+      data: { id: n.id, label: n.label, recordType: n.recordType, icon: n.icon, flagUrl: n.flagUrl, sources: [...n.sources, ...(n.matchedSources ?? [])] },
     });
   }
   for (const e of model.edges) {

@@ -208,6 +208,43 @@ def test_mapper_flags_a_differing_matched_name():
     assert "Chevron U.S.A. Inc." in notes
 
 
+def test_mapper_publishes_the_lei_match_as_an_identifying_annotation():
+    """The FullCheck graph floated this statement as a second, unconnected node
+    beside the subject (PT Pertamina (Persero), 2026-09-10): no identifier and
+    no jurisdiction left nothing to join it on. The link is published as an
+    `identifying` annotation naming the GLEIF record — never as an identifier,
+    because the LEI is OpenCheck's match, not EITI's assertion."""
+    from opencheck.bods.annotations import validate_all
+
+    stmts = list(map_eiti_assessment({"lei": LEI, "is_stub": False, **_RECORD}))
+    [link] = [a for a in stmts[0]["annotations"] if a["motivation"] == "identifying"]
+    assert link["url"] == f"https://search.gleif.org/#/record/{LEI}"
+    assert link["statementPointerTarget"] == "/recordDetails"
+    assert LEI in link["description"]
+    assert "exact legal-name match in GLEIF, reviewed by hand" in link["description"]
+    assert "OpenCheck's match rather than an identifier EITI asserts" in link["description"]
+    assert stmts[0]["recordDetails"].get("identifiers", []) == []
+    assert validate_all(stmts) == []
+
+
+@pytest.mark.parametrize(
+    ("method", "phrase"),
+    [
+        ("published_lei", "the LEI EITI publishes for it"),
+        ("candidates_only", "chosen by hand from GLEIF name candidates"),
+        ("", "a match made by OpenCheck"),
+    ],
+)
+def test_lei_match_annotation_says_how_the_match_was_made(method, phrase):
+    record = {**_RECORD, "match": {**_RECORD["match"], "method": method}}
+    stmts = list(map_eiti_assessment({"lei": LEI, "is_stub": False, **record}))
+    [link] = [a for a in stmts[0]["annotations"] if a["motivation"] == "identifying"]
+    assert phrase in link["description"]
+    # EITI did publish the LEI in that case, so the note must not say it didn't.
+    said_not_asserted = "rather than an identifier EITI asserts" in link["description"]
+    assert said_not_asserted is (method != "published_lei")
+
+
 def test_mapper_ignores_stub():
     assert list(map_eiti_assessment({"is_stub": True})) == []
 
