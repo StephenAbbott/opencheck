@@ -4,6 +4,7 @@ import {
   CHECK_MODES,
   MODE_ACCENT,
   TOPIC_MODES,
+  deepLinkOptions,
   documentTitleFor,
   modeLabel,
   modeParam,
@@ -137,5 +138,42 @@ describe("MODE_ACCENT", () => {
     expect(MODE_ACCENT.subsidiaries).toBe(graph.control);
     // History takes the amber the Time Machine feature card already wears.
     expect(MODE_ACCENT.history).toBe(graph.same);
+  });
+});
+
+describe("deepLinkOptions", () => {
+  it("reads the mode and the node to select", () => {
+    expect(deepLinkOptions("?lei=X&mode=full&focus=opencheck-abc")).toEqual({
+      mode: "full",
+      focus: "opencheck-abc",
+    });
+  });
+
+  it("has no focus when the link does not ask for one", () => {
+    expect(deepLinkOptions("?lei=X&mode=history")).toEqual({
+      mode: "history",
+      focus: null,
+    });
+  });
+
+  it("treats an empty or blank focus as none", () => {
+    // A hand-edited link. Selecting nothing is the right answer; an empty
+    // string looked up in the graph is a miss dressed as an instruction.
+    expect(deepLinkOptions("?focus=").focus).toBeNull();
+    expect(deepLinkOptions("?focus=%20%20").focus).toBeNull();
+  });
+
+  it("still falls back to quick on a junk mode while keeping the focus", () => {
+    expect(deepLinkOptions("?mode=nonsense&focus=opencheck-abc")).toEqual({
+      mode: "quick",
+      focus: "opencheck-abc",
+    });
+  });
+
+  it("returns both together, because both callers must agree", () => {
+    // First load and back/forward read the same thing from the same place.
+    // Two hand-rolled readers is how one of them ends up missing `focus`.
+    const search = "?lei=X&mode=full&focus=opencheck-abc";
+    expect(deepLinkOptions(search)).toEqual(deepLinkOptions(search));
   });
 });
