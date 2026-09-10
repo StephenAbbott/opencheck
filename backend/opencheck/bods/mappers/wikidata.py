@@ -381,24 +381,41 @@ def _wikidata_jurisdiction(country: dict[str, Any]) -> tuple[str, str] | None:
 
 
 _OC_POSITION_TO_INTEREST_TYPE: dict[str, str] = {
-    # Board-level appointments
-    "director": "appointmentOfBoard",
-    "managing director": "appointmentOfBoard",
-    "executive director": "appointmentOfBoard",
-    "non-executive director": "appointmentOfBoard",
-    "alternate director": "appointmentOfBoard",
-    "shadow director": "appointmentOfBoard",
-    "de facto director": "appointmentOfBoard",
-    "deputy director": "appointmentOfBoard",
-    "associate director": "appointmentOfBoard",
-    "joint director": "appointmentOfBoard",
-    "directeur": "appointmentOfBoard",
-    "directeur general": "appointmentOfBoard",
-    "geschaeftsfuehrer": "appointmentOfBoard",
-    "direktor": "appointmentOfBoard",
-    "bestuurder": "appointmentOfBoard",
-    "amministratore": "appointmentOfBoard",
-    "administrador": "appointmentOfBoard",
+    # Directors — Phase 196.
+    #
+    # These read ``appointmentOfBoard`` until then, which is not a milder
+    # spelling of "is a director": BODS defines ``appointmentOfBoard`` as the
+    # **power to appoint or remove directors**, and this codebase says so in
+    # three other places — ``statements.py`` maps the Companies House PSC
+    # nature ``right-to-appoint-and-remove-directors`` onto it, ``ftm.py``
+    # labels it "right to appoint or remove the board", ``senzing.py`` exports
+    # it as ``APPOINTS_BOARD_OF``. So every OpenCorporates director was
+    # published as holding a UK PSC statutory control condition the register
+    # never asserted, drawn on the canvas as a control edge reading "Controls
+    # (board)", and written into a curated narrative as "TUSHAR MORZARIA holds
+    # appointmentOfBoard … in BP P.L.C.".
+    #
+    # ``seniorManagingOfficial`` is what a director is, and what
+    # ``_ch_director_statements`` has always emitted for one — the same role
+    # from the same register now carries the same code whichever source
+    # reached it. Pinned by ``test_interest_types_agree_across_sources``.
+    "director": "seniorManagingOfficial",
+    "managing director": "seniorManagingOfficial",
+    "executive director": "seniorManagingOfficial",
+    "non-executive director": "seniorManagingOfficial",
+    "alternate director": "seniorManagingOfficial",
+    "shadow director": "seniorManagingOfficial",
+    "de facto director": "seniorManagingOfficial",
+    "deputy director": "seniorManagingOfficial",
+    "associate director": "seniorManagingOfficial",
+    "joint director": "seniorManagingOfficial",
+    "directeur": "seniorManagingOfficial",
+    "directeur general": "seniorManagingOfficial",
+    "geschaeftsfuehrer": "seniorManagingOfficial",
+    "direktor": "seniorManagingOfficial",
+    "bestuurder": "seniorManagingOfficial",
+    "amministratore": "seniorManagingOfficial",
+    "administrador": "seniorManagingOfficial",
     # Board membership (non-chair)
     "board member": "boardMember",
     "member of the board": "boardMember",
