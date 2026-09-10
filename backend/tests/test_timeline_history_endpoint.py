@@ -89,6 +89,30 @@ _CH_FILINGS = {
     "total_count": 3,
 }
 
+# Phase 198: the board stream's real source. Two officers — one still serving,
+# one who resigned — and the register's officer id on each, which is the whole
+# reason the stream moved here from the filing history.
+_CH_OFFICERS = {
+    "items": [
+        {
+            "name": "BENNETT, Kelly Brian",
+            "officer_role": "director",
+            "appointed_on": "2019-01-01",
+            "links": {"officer": {"appointments": "/officers/kb-1/appointments"}},
+        },
+        {
+            "name": "PRIOR, Jane",
+            "officer_role": "director",
+            "appointed_on": "1998-04-01",
+            "resigned_on": "2004-09-30",
+            "links": {"officer": {"appointments": "/officers/jp-2/appointments"}},
+        },
+    ],
+    "active_count": 1,
+    "resigned_count": 1,
+    "total_results": 2,
+}
+
 
 def _mock_live():
     respx.get(f"https://api.gleif.org/api/v1/lei-records/{_LEI}").mock(
@@ -99,6 +123,9 @@ def _mock_live():
     )
     respx.get(url__regex=r"https://api\.company-information\.service\.gov\.uk/company/00358949/filing-history").mock(
         return_value=Response(200, json=_CH_FILINGS)
+    )
+    respx.get(url__regex=r"https://api\.company-information\.service\.gov\.uk/company/00358949/officers").mock(
+        return_value=Response(200, json=_CH_OFFICERS)
     )
 
 
@@ -372,3 +399,114 @@ async def test_registry_numbers_are_read_per_registration_authority(monkeypatch)
     # — two different statements, and conflating them is how an unchecked
     # register would read as a checked one.
     assert "cvr_denmark" not in resp.sources
+
+
+# ---------------------------------------------------------------------------
+# Phase 198 — the board stream comes from the officers list, and its rows
+# carry an identity, not just a name
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_board_rows_come_from_the_officers_list_and_identify_the_person(
+    monkeypatch,
+):
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    monkeypatch.setenv("COMPANIES_HOUSE_HISTORY_API_KEY", "test-history-key")
+    get_settings.cache_clear()
+    with respx.mock:
+        _mock_live()
+        resp = await history(request=None, response=None, lei=_LEI, include_noise=True)
+    get_settings.cache_clear()
+
+    assert resp.officers_available is True
+    board = [ev for ev in resp.events if ev.tier == 4]
+    # One appointment each, and one resignation — three dated ends of two
+    # appointments, which is what the register actually records.
+    assert {(ev.change_type, ev.counterparty, ev.event_date) for ev in board} == {
+        ("OFFICER_APPOINTED", "BENNETT, Kelly Brian", "2019-01-01"),
+        ("OFFICER_APPOINTED", "PRIOR, Jane", "1998-04-01"),
+        ("OFFICER_RESIGNED", "PRIOR, Jane", "2004-09-30"),
+    }
+    # The part a filing-history row could never carry.
+    assert all(ev.party_id for ev in board)
+    assert all(ev.party_statement_id for ev in board)
+    # Both of Jane Prior's rows point at one person, not two.
+    prior = {ev.party_statement_id for ev in board if ev.counterparty == "PRIOR, Jane"}
+    assert len(prior) == 1
+
+
+@pytest.mark.asyncio
+async def test_officer_filings_no_longer_double_the_board(monkeypatch):
+    """The filing history still carries officer filings and they are still
+    typed — they just do not appear on the board stream, which now has a
+    better record of the same events."""
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    monkeypatch.setenv("COMPANIES_HOUSE_HISTORY_API_KEY", "test-history-key")
+    get_settings.cache_clear()
+    filings = dict(_CH_FILINGS)
+    filings["items"] = _CH_FILINGS["items"] + [
+        {
+            "category": "officers", "type": "AP01", "date": "2019-01-14",
+            "description_values": {"officer_name": "Mr Kelly Brian Bennett"},
+            "links": {"self": "/company/00358949/filing-history/d"},
+        }
+    ]
+    with respx.mock:
+        _mock_live()
+        respx.get(
+            url__regex=r"https://api\.company-information\.service\.gov\.uk/company/00358949/filing-history"
+        ).mock(return_value=Response(200, json=filings))
+        resp = await history(request=None, response=None, lei=_LEI, include_noise=True)
+    get_settings.cache_clear()
+
+    ap01 = [ev for ev in resp.events if ev.raw_change_type == "AP01"]
+    assert len(ap01) == 1
+    assert ap01[0].tier == 3
+    assert ap01[0].change_type == "OFFICER_APPOINTED"  # typed, just not Tier 4
+    assert ap01[0].party_statement_id is None  # a filing identifies nobody
+    # Kelly Bennett appears once on the board, from the officers list.
+    board_bennett = [
+        ev for ev in resp.events if ev.tier == 4 and ev.counterparty == "BENNETT, Kelly Brian"
+    ]
+    assert len(board_bennett) == 1
+
+
+@pytest.mark.asyncio
+async def test_an_unread_officers_list_says_so_rather_than_showing_an_empty_board(
+    monkeypatch,
+):
+    """No key means the officers list was never asked for. An empty board
+    stream then means "not checked", and the flag is how the tab knows."""
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    monkeypatch.delenv("COMPANIES_HOUSE_API_KEY", raising=False)
+    monkeypatch.delenv("COMPANIES_HOUSE_HISTORY_API_KEY", raising=False)
+    get_settings.cache_clear()
+    with respx.mock:
+        _mock_live()
+        resp = await history(request=None, response=None, lei=_LEI, include_noise=True)
+    get_settings.cache_clear()
+
+    assert resp.officers_available is False
+    assert not [ev for ev in resp.events if ev.tier == 4]
+
+
+@pytest.mark.asyncio
+async def test_the_officers_list_refusing_does_not_sink_the_filing_history(
+    monkeypatch,
+):
+    """Two independent reads of one register. Phase 194's history survives
+    Phase 198's officers call failing."""
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    monkeypatch.setenv("COMPANIES_HOUSE_HISTORY_API_KEY", "test-history-key")
+    get_settings.cache_clear()
+    with respx.mock:
+        _mock_live()
+        respx.get(
+            url__regex=r"https://api\.company-information\.service\.gov\.uk/company/00358949/officers"
+        ).mock(side_effect=ConnectTimeout("timed out"))
+        resp = await history(request=None, response=None, lei=_LEI, include_noise=True)
+    get_settings.cache_clear()
+
+    assert resp.officers_available is False
+    assert any(e.change_type == "LEGAL_NAME_CHANGE" for e in resp.notable)
+    assert "companies_house" in resp.sources

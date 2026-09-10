@@ -20,6 +20,7 @@ transaction codes (PSC01–PSC09).
 
 from __future__ import annotations
 
+from ..bods.mapper import _ch_officer_id, ch_person_statement_id
 from .model import (
     ChangeEvent,
     ChangeType,
@@ -199,11 +200,15 @@ def classify_companies_house_filing(
         change_type, role = _officer_classification(
             ftype, str(legacy_description) if legacy_description else item.get("description")
         )
-        # The board stream carries turnover and only turnover. A director's
-        # own address changing is administrative, and a filing whose kind
-        # neither the code nor the register's words explain cannot be called
-        # turnover without inventing the fact — both go to Tier 3.
-        tier = _T4 if change_type in _BOARD_TURNOVER else _T3
+        # Phase 198: every officer filing is Tier 3 now, including the
+        # appointments and resignations Phase 194 promoted. The board stream
+        # is built from the officers list instead (``officer_change_events``),
+        # which names every person and carries the register's officer id, so
+        # a row can address the person the graph draws. Leaving these at Tier
+        # 4 as well would count the same appointment twice, from two records
+        # of it. They keep their ``change_type`` — a typed row in the
+        # administrative stream still says what it was.
+        tier = _T3
         return ChangeEvent(
             source_id="companies_house",
             subject_id=company_id or item.get("company_number") or "",
@@ -255,4 +260,71 @@ def classify_companies_house_filing(
     )
 
 
-__all__ = ["classify_companies_house_filing"]
+def officer_change_events(
+    officers_payload: dict, *, company_id: str = ""
+) -> list[ChangeEvent]:
+    """Board turnover from the register's officers list, one event per date.
+
+    Phase 198. The board stream was built from filing history, which was free
+    — ``/history`` already fetched it — but a filing publishes only a name, so
+    a row could say who joined and never point at them. This reads the
+    officers list instead, where the register keys every officer with the id
+    Phase 193 keys a person statement on. Measured on Lloyds Bank PLC: 195
+    dated events against the filing history's 246, but **195 of 195 name the
+    person and carry the id** where only 75 of 246 named anyone at all.
+
+    What that trades away is the tail: Companies House holds officer records
+    from 1992 for this company while its filings go back to 1986, so 40 events
+    leave the board stream. They are not lost — every officer filing is still
+    in the administrative stream, typed.
+
+    One officer yields up to two events: appointed, and resigned. An officer
+    with neither date yields none — the register knows them, but not when.
+    """
+    events: list[ChangeEvent] = []
+    for officer in officers_payload.get("items") or []:
+        if not isinstance(officer, dict):
+            continue
+        name = str(officer.get("name") or "").strip() or None
+        role = (officer.get("officer_role") or "").strip().lower() or None
+        officer_id = _ch_officer_id(officer)
+        # The same id the mapper keys the person statement on, derived by the
+        # mapper's own function so the two cannot drift apart.
+        person_sid = (
+            ch_person_statement_id(company_id, officer) if officer_id else None
+        )
+        link = ((officer.get("links") or {}).get("officer") or {}).get("appointments")
+
+        for date_field, change_type in (
+            ("appointed_on", ChangeType.OFFICER_APPOINTED),
+            ("resigned_on", ChangeType.OFFICER_RESIGNED),
+        ):
+            date = _iso_date(officer.get(date_field))
+            if not date:
+                continue
+            events.append(
+                ChangeEvent(
+                    source_id="companies_house",
+                    subject_id=company_id,
+                    record_type=RecordType.RELATIONSHIP,
+                    raw_change_type=date_field,
+                    raw_field=f"{_OFFICERS_CATEGORY}/{role}" if role else _OFFICERS_CATEGORY,
+                    value_old=None,
+                    value_new=None,
+                    raw_payload_ref=link,
+                    change_type=change_type,
+                    tier=_T4,
+                    counterparty=name,
+                    party_id=officer_id,
+                    party_statement_id=person_sid,
+                    # appointed_on / resigned_on are the dates the appointment
+                    # began and ended, not when the register was told.
+                    event_date=date,
+                    date_basis=DateBasis.EFFECTIVE,
+                    date_confidence=DateConfidence.HIGH,
+                )
+            )
+    return events
+
+
+__all__ = ["classify_companies_house_filing", "officer_change_events"]

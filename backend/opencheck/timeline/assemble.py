@@ -100,6 +100,12 @@ class Timeline:
     #: "live" | "cached" | None — where ``company_number`` and its siblings
     #: came from. "cached" means a stale on-disk GLEIF record stood in.
     company_number_basis: str | None = None
+    #: Phase 198. True when the Companies House officers list was read. The
+    #: board stream is built from it, so an empty board stream with this false
+    #: means "not checked" and with this true means "the register lists no
+    #: dated appointment" — the same distinction ``gleif_record_available``
+    #: draws for the change log.
+    officers_available: bool = False
     #: Phase 194. True when Companies House holds more filings than the fetch
     #: cap allowed. The register answers newest-first, so a truncated history
     #: is missing its oldest end — the deep board turnover a reader came for.
