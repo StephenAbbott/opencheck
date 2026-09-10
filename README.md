@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 199** — a state-owned energy company now shows the state above it: GEM direct owners are read from its relationships CSV as shareholdings, so PT Pertamina (Persero) is connected to the Government of Indonesia and raises STATE_CONTROLLED.
+**Latest: Phase 200** — a board row on the History tab now reaches the person it names: the officer id Phase 198 put on the row opens the FullCheck network with that person selected, and the citation bug that silently focused nothing for anyone merged across registers is fixed.
 
 → [Full development history](docs/status.md)
 

@@ -31,10 +31,11 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { getHistory, type HistoryResponse } from "../../lib/api";
+import { getHistory, lookup, type HistoryResponse } from "../../lib/api";
 import {
   boardChangesOf,
   boardChangesSummary,
+  boardLinkSummary,
   boardUncheckedNotice,
   buildTimelineRows,
   corroboratedCount,
@@ -67,11 +68,16 @@ function coverageAside(data: HistoryResponse | null, loading: boolean): string {
 export default function HistoryPanel({
   lei,
   legalName,
+  onFocusPerson,
   onPanelError,
   onPanelRecovered,
 }: {
   lei: string;
   legalName: string | null;
+  /** Phase 200: open the FullCheck network focused on this statement. The
+   *  History tab and the graph are different modes, so reaching a person from
+   *  a board row is a mode switch the page above has to make. */
+  onFocusPerson?: (statementId: string) => void;
   /** `/history` sits outside `_lookup_pipeline`, so nothing else learns it
    *  failed — the same channel `/securities` and `/subsidiaries` report on. */
   onPanelError?: (e: PanelError) => void;
@@ -83,6 +89,44 @@ export default function HistoryPanel({
   const [showAll, setShowAll] = useState(false);
   const [showNoise, setShowNoise] = useState(false);
   const [showBoard, setShowBoard] = useState(false);
+  /**
+   * The person statements the FullCheck network draws (Phase 200).
+   *
+   * The same `/lookup` FullCheck fetches, which is replay-cached, so asking
+   * costs nothing on the wire — and asking is the only honest way to know: a
+   * board row must not offer a link to a node that is not there, and this tab
+   * cannot see the graph, which lives in another mode entirely.
+   *
+   * Empty until it answers, and empty for ever if it fails. A missing link is
+   * a smaller wrong than a broken one.
+   */
+  const [knownPeople, setKnownPeople] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+
+  useEffect(() => {
+    let live = true;
+    setKnownPeople(new Set());
+    lookup(lei)
+      .then((r) => {
+        if (!live) return;
+        const people = new Set<string>();
+        for (const stmt of (r.bods ?? []) as Array<Record<string, unknown>>) {
+          if (stmt?.recordType === "person" && typeof stmt.statementId === "string") {
+            people.add(stmt.statementId);
+          }
+        }
+        setKnownPeople(people);
+      })
+      .catch(() => {
+        // Silent: this only decides whether a link is offered, and the tab's
+        // own content does not depend on it. Reporting it as a panel error
+        // would claim the history failed when it did not.
+      });
+    return () => {
+      live = false;
+    };
+  }, [lei]);
 
   useEffect(() => {
     let live = true;
@@ -115,6 +159,10 @@ export default function HistoryPanel({
   const noiseEvents = useMemo(() => (data ? noiseEventsOf(data) : []), [data]);
   const boardEvents = useMemo(() => (data ? boardChangesOf(data) : []), [data]);
   const boardSummary = useMemo(() => boardChangesSummary(boardEvents), [boardEvents]);
+  const linkSummary = useMemo(
+    () => boardLinkSummary(boardEvents, knownPeople),
+    [boardEvents, knownPeople],
+  );
   const truncated = useMemo(() => (data ? filingsTruncatedNotice(data) : null), [data]);
   const boardUnchecked = useMemo(() => (data ? boardUncheckedNotice(data) : null), [data]);
   const allRows = useMemo(
@@ -217,7 +265,13 @@ export default function HistoryPanel({
           title="Changes over time"
           aside="most recent first · one axis across every register"
         >
-          <HistoryTimeline rows={rows} lei={lei} data={data} />
+          <HistoryTimeline
+            rows={rows}
+            lei={lei}
+            data={data}
+            knownPeople={knownPeople}
+            onFocusPerson={onFocusPerson}
+          />
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {allRows.length > VISIBLE_ROWS && (
@@ -283,6 +337,14 @@ export default function HistoryPanel({
               its filings, so each one names the officer — but the register keeps
               officer records for a shorter period than it keeps filings, and an
               appointment older than that shows in the administrative stream instead.
+            </p>
+          )}
+          {/* Phase 200: which rows link, and why the rest do not. Said in the
+              stream rather than on the row, because the answer is about the
+              graph — and 15 links in 195 rows read as arbitrary without it. */}
+          {showBoard && linkSummary && (
+            <p className="mt-1.5 text-oo-meta text-oo-muted leading-[1.5] max-w-[82ch]">
+              {linkSummary}
             </p>
           )}
           {showNoise && (

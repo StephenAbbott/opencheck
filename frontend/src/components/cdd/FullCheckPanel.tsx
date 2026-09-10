@@ -38,10 +38,16 @@ export default function FullCheckPanel({
   legalName,
   signals = [],
   onOpenSubsidiaries,
+  focusStatementId = null,
 }: {
   lei: string;
   legalName: string | null;
   signals?: RiskSignal[];
+  /** Phase 200: a person or entity statement to select once the network has
+   *  loaded, from `?focus=` — how a board row on the History tab arrives
+   *  here pointing at somebody. Passed straight through; the graph resolves
+   *  it through the reconcile remap. */
+  focusStatementId?: string | null;
   /** Switch to the Subsidiaries tab in place. The pointer is a real link to
    *  `?mode=subsidiaries` so it survives a right-click; the handler makes a
    *  plain click a tab switch rather than a reload. */
@@ -109,6 +115,7 @@ export default function FullCheckPanel({
               entityName={legalName ?? undefined}
               direction="owners"
               fullCheck
+              focusStatementId={focusStatementId}
             />
           </>
         )}

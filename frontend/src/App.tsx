@@ -210,6 +210,16 @@ export default function App() {
    * put the value in the URL so a shared link opens where you left it.
    */
   const [mode, setMode] = useState<CheckMode>("quick");
+  /**
+   * `?focus=<statementId>` — a node the FullCheck graph should select once it
+   * has it (Phase 200). Set by a board row on the History tab linking to the
+   * person it names, and read from the URL so the same link works cold, from
+   * a share or a refresh. Cleared on a new lookup: a statement id belongs to
+   * one subject's network and means nothing in another's.
+   */
+  const [focusStatementId, setFocusStatementId] = useState<string | null>(
+    () => new URLSearchParams(window.location.search).get("focus"),
+  );
   // Maps "source_id:hit_id" → BODS statement count; populated by the bods_counts SSE event.
   const [bodsCountMap, setBodsCountMap] = useState<Record<string, number>>({});
   // Same key → entity / relationship split, for the source-card graph CTA subtitle.
@@ -525,6 +535,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         // Reset streaming state before starting a new stream.
         setStreamingLei(null);
         setLegalName(null);
+        setFocusStatementId(null);
         // A new lookup opens on QuickCheck unless the caller asked for a
         // mode. It used to hardcode "quick", and because the mutationFn runs
         // asynchronously it landed *after* the deep-link handler's
@@ -722,6 +733,31 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     });
   }, []);
 
+  /**
+   * Open the FullCheck network with a statement selected (Phase 200).
+   *
+   * The History tab names people the graph draws, but the two are different
+   * modes and only one is mounted at a time, so "show me this person" is a
+   * mode switch — not an in-tab interaction. The id goes into `?focus=`
+   * before the switch so the address describes what is on screen, which is
+   * the same contract `?mode=` has: the view can be shared and refreshed.
+   *
+   * It stays in the URL afterwards. A statement id is only meaningful within
+   * one subject's network, and a new lookup clears it; within this one it
+   * keeps naming the same person, so re-opening FullCheck lands where the
+   * address says it will.
+   */
+  const focusPersonInNetwork = useCallback(
+    (statementId: string) => {
+      const url = new URL(window.location.href);
+      url.searchParams.set("focus", statementId);
+      window.history.replaceState({}, "", url);
+      setFocusStatementId(statementId);
+      selectMode("full");
+    },
+    [selectMode],
+  );
+
   // Move focus to #main-content when an action unmounts the focused element
   // (e.g. picking a search result resets the picker) — without this, focus
   // drops to <body> for keyboard and screen reader users. The [view] effect
@@ -750,6 +786,9 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       lookupLei(initial, {
         mode: parseMode(new URLSearchParams(window.location.search).get("mode")),
       });
+      setFocusStatementId(
+        new URLSearchParams(window.location.search).get("focus"),
+      );
     }
 
     const onPopState = () => {
@@ -771,6 +810,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         lookupLei(lei, {
           mode: parseMode(new URLSearchParams(window.location.search).get("mode")),
         });
+        // Set after the lookup, which clears it: back/forward to a focused
+        // link has to land on the same node it did the first time.
+        setFocusStatementId(
+          new URLSearchParams(window.location.search).get("focus"),
+        );
       } else {
         // Navigated back to the landing page — clear the result view.
         cleanupRef.current?.();
@@ -2186,6 +2230,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   lei={streamingLei}
                   legalName={legalName}
                   signals={riskSignals}
+                  focusStatementId={focusStatementId}
                   onOpenSubsidiaries={() => selectMode("subsidiaries")}
                   onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
                   onPanelRecovered={(panel) =>
@@ -2254,6 +2299,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 <HistoryPanel
                   lei={streamingLei}
                   legalName={legalName}
+                  onFocusPerson={focusPersonInNetwork}
                   onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
                   onPanelRecovered={(panel) =>
                     setPanelErrors((prev) => clearPanelError(prev, panel))

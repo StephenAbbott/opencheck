@@ -15,6 +15,8 @@
 import type { HistoryEntry, HistoryRawChange, HistoryResponse } from "../../lib/api";
 import {
   basisLabel,
+  boardRowPersonHref,
+  boardRowPersonId,
   historySourceLabel,
   recordUrl,
   type Row,
@@ -187,7 +189,20 @@ function NoiseRow({ raw }: { raw: HistoryRawChange }) {
 // published none, the row says so rather than showing an empty space.
 // ---------------------------------------------------------------------
 
-function BoardRow({ raw }: { raw: HistoryRawChange }) {
+function BoardRow({
+  raw,
+  lei,
+  known,
+  onFocusPerson,
+}: {
+  raw: HistoryRawChange;
+  lei: string;
+  /** Statement ids the FullCheck network actually draws. A row links only
+   *  when its person is in here — see `boardRowPersonId`. */
+  known: ReadonlySet<string>;
+  onFocusPerson?: (statementId: string) => void;
+}) {
+  const personId = boardRowPersonId(raw, known);
   return (
     <li className="relative pl-8 pb-3 last:pb-0">
       <span
@@ -208,6 +223,32 @@ function BoardRow({ raw }: { raw: HistoryRawChange }) {
         ) : (
           <span className="text-oo-muted italic">no name on the filing</span>
         )}
+        {/* Phase 200: a labelled control rather than a link on the name.
+            Only a minority of rows can link — the graph draws serving
+            officers and this stream is mostly people who have left — and an
+            underline appearing on 15 names in 195 would read as arbitrary.
+            Naming the destination says what the difference is. */}
+        {personId && (
+          <>
+            {" "}
+            <a
+              href={boardRowPersonHref(lei, personId)}
+              onClick={(e) => {
+                if (!onFocusPerson) return;
+                // Modified clicks are the browser's: open-in-new-tab has to
+                // keep working, which is why this is a real href at all.
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)
+                  return;
+                e.preventDefault();
+                onFocusPerson(personId);
+              }}
+              className="inline-flex items-center gap-1 rounded border border-oo-rule px-1.5 py-0.5 text-oo-meta text-oo-blue hover:bg-oo-bg hover:underline"
+            >
+              in the network
+              <span aria-hidden>→</span>
+            </a>
+          </>
+        )}
       </div>
     </li>
   );
@@ -217,14 +258,23 @@ function BoardRow({ raw }: { raw: HistoryRawChange }) {
 // The rail
 // ---------------------------------------------------------------------
 
+const EMPTY_PEOPLE: ReadonlySet<string> = new Set();
+
 export function HistoryTimeline({
   rows,
   lei,
   data,
+  knownPeople = EMPTY_PEOPLE,
+  onFocusPerson,
 }: {
   rows: Row[];
   lei: string;
   data: HistoryResponse;
+  /** Phase 200: the person statements the FullCheck network draws, so a board
+   *  row offers a link only where there is something to reach. Defaults to
+   *  empty, which renders exactly the pre-Phase-200 rail. */
+  knownPeople?: ReadonlySet<string>;
+  onFocusPerson?: (statementId: string) => void;
 }) {
   return (
     <ol className="relative" data-testid="history-rail">
@@ -238,7 +288,13 @@ export function HistoryTimeline({
             registryNumbers={data.registry_numbers ?? {}}
           />
         ) : row.kind === "board" ? (
-          <BoardRow key={`b-${i}`} raw={row.raw} />
+          <BoardRow
+            key={`b-${i}`}
+            raw={row.raw}
+            lei={lei}
+            known={knownPeople}
+            onFocusPerson={onFocusPerson}
+          />
         ) : (
           <NoiseRow key={`x-${i}`} raw={row.raw} />
         ),

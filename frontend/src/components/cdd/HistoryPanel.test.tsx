@@ -17,8 +17,14 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const getHistory = vi.fn();
+// Phase 200: the panel also asks `/lookup` — replay-cached, and only to learn
+// which people the FullCheck network draws, so a board row offers a link
+// exactly when there is a node to reach. Defaults to a graph with no people,
+// which is the pre-Phase-200 rail; the tests that care set their own.
+const lookup = vi.fn();
 vi.mock("../../lib/api", () => ({
   getHistory: (...args: unknown[]) => getHistory(...args),
+  lookup: (...args: unknown[]) => lookup(...args),
 }));
 
 import HistoryPanel from "./HistoryPanel";
@@ -64,11 +70,15 @@ function noise(date: string): HistoryRawChange {
   };
 }
 
-function boardChange(date: string, name: string | null = "Mr Kelly Brian Bennett"): HistoryRawChange {
+function boardChange(
+  date: string,
+  name: string | null = "Mr Kelly Brian Bennett",
+  personSid: string | null = null,
+): HistoryRawChange {
   return {
     source_id: "companies_house",
     record_type: "relationship",
-    raw_change_type: "AP01",
+    raw_change_type: "appointed_on",
     raw_field: "officers/director",
     value_old: null,
     value_new: null,
@@ -78,6 +88,8 @@ function boardChange(date: string, name: string | null = "Mr Kelly Brian Bennett
     tier: 4,
     event_date: date,
     date_basis: "effective",
+    party_id: personSid ? "ch-officer-key" : null,
+    party_statement_id: personSid,
   };
 }
 
@@ -104,6 +116,8 @@ function response(over: Partial<HistoryResponse> = {}): HistoryResponse {
 beforeEach(() => {
   getHistory.mockReset();
   getHistory.mockResolvedValue(response());
+  lookup.mockReset();
+  lookup.mockResolvedValue({ bods: [] });
 });
 
 describe("the coverage band", () => {
@@ -276,5 +290,137 @@ describe("the timeline", () => {
     render(<HistoryPanel lei={LEI} legalName="Morrisons" />);
     expect(await screen.findByText(/none of them records a notable change/)).toBeVisible();
     expect(screen.queryByTestId("history-rail")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------
+// Phase 200 — a board row reaching the person the graph draws
+// ---------------------------------------------------------------------
+
+describe("linking a board row to a person", () => {
+  const SERVING = "opencheck-serving-director";
+
+  function withGraphPeople(...ids: string[]) {
+    lookup.mockResolvedValue({
+      bods: ids.map((statementId) => ({ recordType: "person", statementId })),
+    });
+  }
+
+  async function openBoardStream() {
+    const rail = await screen.findByTestId("history-rail");
+    await userEvent.click(
+      screen.getByRole("button", { name: /Add the .* board changes?/ }),
+    );
+    return rail;
+  }
+
+  it("offers a labelled link on a row whose person the network draws", async () => {
+    withGraphPeople(SERVING);
+    getHistory.mockResolvedValue(
+      response({
+        notable: [entry()],
+        events: [boardChange("2019-01-01", "BENNETT, Kelly Brian", SERVING)],
+      }),
+    );
+    render(<HistoryPanel lei={LEI} legalName="Morrisons" />);
+    await openBoardStream();
+
+    // A named control, not an underline on the name: only a minority of rows
+    // can link, and a bare link would read as arbitrary.
+    const link = await screen.findByRole("link", { name: /in the network/ });
+    expect(link).toHaveAttribute(
+      "href",
+      `/?lei=${LEI}&mode=full&focus=${SERVING}`,
+    );
+    // The name itself stays plain text.
+    expect(
+      screen.getByText("BENNETT, Kelly Brian").closest("a"),
+    ).toBeNull();
+  });
+
+  it("offers nothing on a row whose person the network does not draw", async () => {
+    // A resigned director: keyed by the register, on this stream, and
+    // deliberately absent from a graph of serving managing officials.
+    // Linking to a node that is not there is worse than not linking.
+    withGraphPeople(SERVING);
+    getHistory.mockResolvedValue(
+      response({
+        notable: [entry()],
+        events: [boardChange("2004-09-30", "PRIOR, Jane", "opencheck-resigned")],
+      }),
+    );
+    render(<HistoryPanel lei={LEI} legalName="Morrisons" />);
+    await openBoardStream();
+
+    expect(screen.getByText("PRIOR, Jane")).toBeVisible();
+    expect(screen.queryByRole("link", { name: /in the network/ })).toBeNull();
+  });
+
+  it("offers nothing on a row the source identified nobody on", async () => {
+    withGraphPeople(SERVING);
+    getHistory.mockResolvedValue(
+      response({ notable: [entry()], events: [boardChange("1996-07-11", null)] }),
+    );
+    render(<HistoryPanel lei={LEI} legalName="Morrisons" />);
+    await openBoardStream();
+
+    expect(screen.queryByRole("link", { name: /in the network/ })).toBeNull();
+  });
+
+  it("says how many rows link and why the rest do not", async () => {
+    withGraphPeople(SERVING);
+    getHistory.mockResolvedValue(
+      response({
+        notable: [entry()],
+        events: [
+          boardChange("2019-01-01", "BENNETT, Kelly Brian", SERVING),
+          boardChange("2004-09-30", "PRIOR, Jane", "opencheck-resigned"),
+        ],
+      }),
+    );
+    render(<HistoryPanel lei={LEI} legalName="Morrisons" />);
+    await openBoardStream();
+
+    expect(
+      await screen.findByText(/One row reaches a person in the network/),
+    ).toBeVisible();
+    expect(screen.getByText(/currently serving/)).toBeVisible();
+  });
+
+  it("hands the click up rather than reloading, and still resolves the href", async () => {
+    // The mode switch belongs to the page above — the graph lives in another
+    // mode and this tab cannot mount it.
+    withGraphPeople(SERVING);
+    const onFocusPerson = vi.fn();
+    getHistory.mockResolvedValue(
+      response({
+        notable: [entry()],
+        events: [boardChange("2019-01-01", "BENNETT, Kelly Brian", SERVING)],
+      }),
+    );
+    render(
+      <HistoryPanel lei={LEI} legalName="Morrisons" onFocusPerson={onFocusPerson} />,
+    );
+    await openBoardStream();
+
+    await userEvent.click(await screen.findByRole("link", { name: /in the network/ }));
+    expect(onFocusPerson).toHaveBeenCalledWith(SERVING);
+  });
+
+  it("offers no link at all when the network could not be read", async () => {
+    // A missing link is a smaller wrong than a broken one, so a failed
+    // /lookup silently means "no links", never "link everything".
+    lookup.mockRejectedValue(new Error("network down"));
+    getHistory.mockResolvedValue(
+      response({
+        notable: [entry()],
+        events: [boardChange("2019-01-01", "BENNETT, Kelly Brian", SERVING)],
+      }),
+    );
+    render(<HistoryPanel lei={LEI} legalName="Morrisons" />);
+    await openBoardStream();
+
+    expect(screen.getByText("BENNETT, Kelly Brian")).toBeVisible();
+    expect(screen.queryByRole("link", { name: /in the network/ })).toBeNull();
   });
 });
