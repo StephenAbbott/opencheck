@@ -169,3 +169,117 @@ describe("the provenance legend", () => {
     expect(canvas.compareDocumentPosition(legend) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
+
+// ---------------------------------------------------------------------
+// Phase 200 — focusing a statement, including one that was merged away
+// ---------------------------------------------------------------------
+
+function person(id: string, fullName: string, source: string): Stmt {
+  return {
+    statementId: id,
+    recordType: "person",
+    recordDetails: {
+      personType: "knownPerson",
+      names: [{ type: "individual", fullName }],
+      birthDate: "1968-04",
+    },
+    source: { description: source },
+  };
+}
+
+function directorship(id: string, subject: string, personId: string): Stmt {
+  return {
+    statementId: id,
+    recordType: "relationship",
+    recordDetails: {
+      subject: { describedByEntityStatement: subject },
+      interestedParty: { describedByPersonStatement: personId },
+      interests: [{ type: "seniorManagingOfficial", directOrIndirect: "direct" }],
+    },
+    source: { description: "Companies House" },
+  };
+}
+
+/** Open the text equivalent — the tree is where selection is legible; the
+ *  canvas is stubbed because Cytoscape measures a canvas jsdom does not have. */
+async function openTree(_user: ReturnType<typeof userEvent.setup>) {
+  // jsdom does not implement <details> toggling, so open it directly rather
+  // than clicking the <summary> (which is not a button and has no role here).
+  const details = screen.getByText(/Read as text/).closest("details");
+  if (details) details.open = true;
+}
+
+describe("focusing a statement from outside the graph", () => {
+  const CH_PERSON = "opencheck-ch-kelly";
+  const OC_PERSON = "opencheck-oc-kelly";
+
+  it("selects the node a raw statement id resolves to after reconciliation", async () => {
+    // The Phase 200 bug in one test. Phase 195 merges these two records of one
+    // person into a canonical `recon:PERSON:...` node, so the Companies House
+    // id a History board row carries names no node any more. Before the remap
+    // was applied the click appeared to work and focused nothing at all —
+    // worse than an error, because nothing said so.
+    const user = userEvent.setup();
+    render(
+      <BodsGraphExplorer
+        statements={[
+          A,
+          person(CH_PERSON, "Kelly Brian Bennett", "Companies House"),
+          person(OC_PERSON, "BENNETT, Kelly Brian", "OpenCorporates"),
+          directorship("rel-1", "A", CH_PERSON),
+          directorship("rel-2", "A", OC_PERSON),
+        ]}
+        fullCheck
+        signals={[]}
+        focusStatementId={CH_PERSON}
+      />,
+    );
+    await openTree(user);
+
+    const selected = await screen.findAllByRole("treeitem", { selected: true });
+    expect(selected).toHaveLength(1);
+    // One node, under neither source's id.
+    expect(selected[0]).toHaveTextContent(/Bennett/i);
+  });
+
+  it("selects an unmerged statement under its own id", async () => {
+    const user = userEvent.setup();
+    render(
+      <BodsGraphExplorer
+        statements={[A, person(CH_PERSON, "Kelly Brian Bennett", "Companies House"),
+          directorship("rel-1", "A", CH_PERSON)]}
+        fullCheck
+        signals={[]}
+        focusStatementId={CH_PERSON}
+      />,
+    );
+    await openTree(user);
+
+    expect(await screen.findAllByRole("treeitem", { selected: true })).toHaveLength(1);
+  });
+
+  it("selects nothing, and does not throw, for a statement this graph lacks", async () => {
+    // A board row can only offer the link when the graph holds the person, but
+    // a hand-edited or stale `?focus=` must fail quietly rather than loudly.
+    const user = userEvent.setup();
+    render(
+      <BodsGraphExplorer
+        statements={[A, B]}
+        fullCheck
+        signals={[]}
+        focusStatementId="opencheck-not-here"
+      />,
+    );
+    await openTree(user);
+
+    expect(screen.queryAllByRole("treeitem", { selected: true })).toHaveLength(0);
+  });
+
+  it("selects nothing when no focus was asked for", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    await openTree(user);
+
+    expect(screen.queryAllByRole("treeitem", { selected: true })).toHaveLength(0);
+  });
+});

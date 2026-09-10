@@ -422,3 +422,51 @@ export function boardRowPersonId(
   if (!sid) return null;
   return known.has(sid) ? sid : null;
 }
+
+/**
+ * Where a linkable board row goes: the FullCheck network, focused on that
+ * person.
+ *
+ * A real href rather than a click handler alone, so the row survives a
+ * right-click, a middle-click and a copied link — the modes are URL-addressed
+ * (`?mode=`) precisely so a view can be shared, and a control that only works
+ * on a plain left-click would be the one part of the tab that is not.
+ */
+export function boardRowPersonHref(lei: string, statementId: string): string {
+  const params = new URLSearchParams({
+    lei,
+    mode: "full",
+    focus: statementId,
+  });
+  return `/?${params.toString()}`;
+}
+
+/**
+ * How many rows in this stream can reach a person, and the sentence that says
+ * why the rest cannot — or `null` when the question does not arise.
+ *
+ * This exists because the honest number is small. On Lloyds Bank PLC 15 of
+ * 195 board rows link: the graph draws the officers who are *serving*, and
+ * the board stream is mostly people who have left. Fifteen scattered links in
+ * a stream of otherwise identical rows read as broken unless the page says
+ * plainly what makes a row linkable — which is why the affordance is labelled
+ * and counted rather than left as a bare underline on a name.
+ */
+export function boardLinkSummary(
+  rows: HistoryRawChange[],
+  known: ReadonlySet<string>,
+): string | null {
+  if (rows.length === 0 || known.size === 0) return null;
+  const linked = rows.filter((r) => boardRowPersonId(r, known)).length;
+  if (linked === 0) return null;
+  const count =
+    linked === 1
+      ? "One row reaches a person in the network"
+      : `${linked.toLocaleString()} of these rows reach a person in the network`;
+  return (
+    `${count}: the graph draws the officers currently serving, so an ` +
+    "appointment links where that person is still on the board. The rest name " +
+    "an officer the register no longer lists as serving, and there is no node " +
+    "to point at."
+  );
+}

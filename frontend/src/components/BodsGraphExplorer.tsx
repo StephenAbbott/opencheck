@@ -26,7 +26,7 @@
  * FullCheck's network exploration will build on.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import BODSGraph from "./BODSGraph";
 import BodsTree from "./BodsTree";
 import { bodsToGraph, autoCollapse, buildTree, type GraphModel } from "../lib/bodsGraph";
@@ -45,7 +45,12 @@ import {
   signalsBeyond,
   type ExpandDirection,
 } from "../lib/expand";
-import { reconcileBods, remapSignals, possiblySameAs } from "../lib/reconcile";
+import {
+  canonicalStatementId,
+  reconcileBods,
+  remapSignals,
+  possiblySameAs,
+} from "../lib/reconcile";
 import { buildSignalMap } from "../lib/signalScope";
 import { independentCount } from "../lib/lineage";
 import { riskFindingCount } from "../lib/signalKind";
@@ -75,6 +80,7 @@ export default function BodsGraphExplorer({
   entityName,
   direction = "owners",
   fullCheck = false,
+  focusStatementId = null,
 }: {
   statements: unknown[];
   signals?: RiskSignal[];
@@ -85,6 +91,14 @@ export default function BodsGraphExplorer({
   /** FullCheck mode: also show a "Run FullCheck" control that eagerly expands the
    *  network to a chosen depth budget (Phase 1 eager traversal). */
   fullCheck?: boolean;
+  /** Phase 200: a statement to select once the graph has it — how a board row
+   *  on the History tab reaches the person it names. A prop rather than the
+   *  `oc:cite` event because the arrival order differs: a citation chip fires
+   *  while the graph is already mounted, whereas this target is known before
+   *  the panel has even fetched its statements, so an event would land in the
+   *  gap and be lost. Raw statement ids are fine — resolved through the
+   *  reconcile remap below, same as a citation. */
+  focusStatementId?: string | null;
 }) {
   // Layers revealed via progressive discovery, merged onto the base statement set.
   const [extra, setExtra] = useState<Stmt[]>([]);
@@ -191,14 +205,22 @@ export default function BodsGraphExplorer({
 
   const rows = useMemo(() => buildTree(model, collapsed), [model, collapsed]);
 
-  // Citation chips in the narrative panel dispatch `oc:cite` with the statement
-  // they reference; if it lives in this graph, focus it (expanding a collapsed
-  // node first so it becomes visible).
-  useEffect(() => {
-    function onCite(ev: Event) {
-      const sid = (ev as CustomEvent<{ statementId?: string | null }>).detail?.statementId;
-      if (!sid) return;
-      if (!model.nodes.some((n) => n.id === sid)) return;
+  /**
+   * Select a statement by id, expanding a collapsed ancestor first so it is
+   * actually visible. Returns whether the graph had it.
+   *
+   * The id is resolved through the reconcile remap before it is looked up.
+   * Phase 195 merges people across registers into one canonical node, so a
+   * caller holding the Companies House statement id for a director who is
+   * also in OpenCorporates is holding an id no node carries any more. Until
+   * Phase 200 this step was missing and such a citation silently focused
+   * nothing — worse than an error, because the click appeared to work.
+   */
+  const focusStatement = useCallback(
+    (rawId: string | null | undefined): boolean => {
+      if (!rawId) return false;
+      const sid = canonicalStatementId(rawId, recon?.remap);
+      if (!model.nodes.some((n) => n.id === sid)) return false;
       setCollapsed((prev) => {
         if (!prev.has(sid)) return prev;
         const next = new Set(prev);
@@ -206,10 +228,36 @@ export default function BodsGraphExplorer({
         return next;
       });
       setSelectedId(sid);
+      return true;
+    },
+    [model, recon],
+  );
+
+  // Citation chips in the narrative panel dispatch `oc:cite` with the statement
+  // they reference; if it lives in this graph, focus it.
+  useEffect(() => {
+    function onCite(ev: Event) {
+      focusStatement(
+        (ev as CustomEvent<{ statementId?: string | null }>).detail?.statementId,
+      );
     }
     window.addEventListener("oc:cite", onCite as EventListener);
     return () => window.removeEventListener("oc:cite", onCite as EventListener);
-  }, [model]);
+  }, [focusStatement]);
+
+  // Phase 200: a focus target that arrived with the page rather than from a
+  // click. Runs whenever the model changes as well as when the target does,
+  // because the statements are still being fetched when the prop first
+  // arrives — the node appears a beat later. Focusing an already-focused
+  // node is a no-op, so re-running is harmless; what it buys is that the
+  // link works on a cold load, which is the case that matters (someone
+  // opened a shared URL).
+  const focusedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusStatementId) return;
+    if (focusedRef.current === focusStatementId) return;
+    if (focusStatement(focusStatementId)) focusedRef.current = focusStatementId;
+  }, [focusStatementId, focusStatement]);
 
   function toggleCollapse(id: string) {
     setCollapsed((prev) => {

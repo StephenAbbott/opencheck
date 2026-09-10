@@ -14,6 +14,8 @@ import {
   basisLabel,
   boardChangesOf,
   boardChangesSummary,
+  boardLinkSummary,
+  boardRowPersonHref,
   boardRowPersonId,
   boardUncheckedNotice,
   buildTimelineRows,
@@ -510,5 +512,47 @@ describe("boardUncheckedNotice", () => {
 
   it("stays quiet for a response from before the flag existed", () => {
     expect(boardUncheckedNotice(RESP)).toBeNull();
+  });
+});
+
+describe("boardRowPersonHref", () => {
+  it("addresses the FullCheck network focused on that person", () => {
+    expect(boardRowPersonHref(_LEI, "opencheck-abc")).toBe(
+      `/?lei=${_LEI}&mode=full&focus=opencheck-abc`,
+    );
+  });
+
+  it("escapes an id rather than pasting it into a query string", () => {
+    expect(boardRowPersonHref(_LEI, "a b&c")).toContain("focus=a+b%26c");
+  });
+});
+
+describe("boardLinkSummary", () => {
+  const drawn = new Set(["opencheck-e7afdaf52cd1644858e47954"]);
+  const other: HistoryRawChange = {
+    ...BOARD_ROW,
+    party_statement_id: "opencheck-resigned",
+    counterparty: "PRIOR, Jane",
+  };
+
+  it("counts the rows that link and says what makes a row linkable", () => {
+    const s = boardLinkSummary([BOARD_ROW, other], drawn);
+    expect(s).toContain("One row reaches a person");
+    expect(s).toContain("currently serving");
+  });
+
+  it("pluralises against the count, not the stream", () => {
+    const s = boardLinkSummary([BOARD_ROW, { ...BOARD_ROW }, other], drawn);
+    expect(s).toContain("2 of these rows reach a person");
+  });
+
+  it("says nothing when no row links — there is no gap to explain", () => {
+    expect(boardLinkSummary([other], drawn)).toBeNull();
+  });
+
+  it("says nothing before the network is known", () => {
+    // An empty `known` is "not read yet", not "draws nobody": claiming the
+    // rows cannot link would be a statement about the graph we cannot make.
+    expect(boardLinkSummary([BOARD_ROW], new Set())).toBeNull();
   });
 });

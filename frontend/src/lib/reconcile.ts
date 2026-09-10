@@ -505,6 +505,27 @@ export function possiblySameAs(statements: Stmt[]): SameAsCandidate[] {
   return out;
 }
 
+/**
+ * The id a statement is drawn under after reconciliation.
+ *
+ * Phase 200. `reconcileBods` returns a `remap` and every consumer that wanted
+ * to *address* a node had to remember to apply it — `BodsGraphExplorer`'s
+ * `oc:cite` handler did not, so a citation to a person merged across
+ * registers by Phase 195 looked up an id no node carried any more and
+ * silently focused nothing. A caller holding a raw statement id should not
+ * have to know whether that statement survived reconciliation under its own
+ * id or someone else's; this answers that in one call.
+ *
+ * Identity when there is no remap (QuickCheck renders raw statements), so it
+ * is safe to call unconditionally.
+ */
+export function canonicalStatementId(
+  id: string,
+  remap: Record<string, string> | null | undefined,
+): string {
+  return (remap && remap[id]) || id;
+}
+
 /** Apply an id remap to risk signals so their evidence statement-ids follow the
  *  merged node. Blunt string rewrite — opencheck ids are unique tokens. */
 export function remapSignals(signals: RiskSignal[], remap: Record<string, string>): RiskSignal[] {
