@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 195** — OpenCorporates officers arrive for the first time: the adapter had been asking an endpoint that 404s while the company response it already fetched carried all 116 of them, 16 of whom are serving.
+**Latest: Phase 195** — OpenCorporates officers arrive for the first time (the adapter had been asking an endpoint that 404s), and because that source mirrors Companies House, people now merge across registers on name and date of birth together: 31 person nodes on a Lloyds canvas become 16.
 
 → [Full development history](docs/status.md)
 
