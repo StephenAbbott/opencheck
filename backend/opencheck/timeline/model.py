@@ -248,6 +248,14 @@ class ChangeEvent:
     # NOT from event_date. See the spec's "critical rule".
     interest_start_date: str | None = None
     interest_end_date: str | None = None
+    # Who the other end of the change IS, where the source publishes a key for
+    # them (Phase 198). ``party_id`` is the register's own — a Companies House
+    # officer id — and ``party_statement_id`` is the BODS person statement it
+    # produces, so a timeline row can address the same person the graph draws
+    # rather than only naming them. Both None where the source publishes no
+    # key, which is every filing-history row: see ``counterparty`` below.
+    party_id: str | None = None
+    party_statement_id: str | None = None
     # The other end of a relationship change (e.g. the parent LEI for a GLEIF
     # ownership change). None for entity-record changes. For a Companies House
     # officer filing it is the officer's NAME, because that is all the filing

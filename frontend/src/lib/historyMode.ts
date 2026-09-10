@@ -299,13 +299,18 @@ export function historyDegradedNotice(data: HistoryResponse): string | null {
 //
 // Who joined and who left, as its own opt-in stream. Not `notable`: an
 // appointment is not a beneficial-ownership change, and on Lloyds Bank PLC
-// there are 246 of them against 10 notable rows, so promoting them would bury
-// the thing the tab leads on. Not the administrative stream either, where
-// they arrived untyped and unnamed until this phase.
+// there are 195 of them against 10 notable rows, so promoting them would bury
+// the thing the tab leads on.
 //
-// A director's own particulars changing IS administrative and stays in tier 3
-// — 322 of that company's 568 officer filings — so this stream is turnover
-// and only turnover.
+// Phase 198 changed where these come from. They were read out of the filing
+// history, which cost nothing extra but published only a name — 75 of 246
+// rows named anyone at all, and none of them could be pointed at a person.
+// They are read from the register's officers list now: fewer rows (195, and
+// the pre-1992 tail is gone, because Companies House holds officer records
+// from 1992 for this company while its filings go back to 1986), but every
+// one names the officer and carries the id the graph keys a person on. The
+// officer filings did not disappear; they are typed rows in the
+// administrative stream, where the ones that are not turnover always were.
 // --------------------------------------------------------------------------
 
 /** Tier-4 (board turnover) raw changes: appointments and resignations. */
@@ -318,11 +323,10 @@ export function boardChangesOf(data: HistoryResponse): HistoryRawChange[] {
  * open. Built from the rows, never from a literal: the counts, the span, and
  * how many of them name anybody.
  *
- * The naming gap is stated rather than hidden. Companies House puts an
- * officer's name on a filing only from the electronic era; before that the
- * form says a director resigned and never which one. A stream that quietly
- * showed 171 nameless rows would read as broken instead of as a register that
- * did not publish names.
+ * The naming clause survives Phase 198 even though the officers list names
+ * everyone it lists, because the register does not key every officer it
+ * holds, and a stream that silently dropped the unnamed ones would be a
+ * quieter lie than one that counts them.
  */
 export function boardChangesSummary(rows: HistoryRawChange[]): string | null {
   if (rows.length === 0) return null;
@@ -360,9 +364,10 @@ export function boardChangesSummary(rows: HistoryRawChange[]): string | null {
  * read, or `null`.
  *
  * Companies House answers filing-history newest-first, so a truncated history
- * is missing its oldest end — the deep board turnover a reader opened this
- * stream for. Saying nothing would let a 1,000-filing view read as a complete
- * one, which is the defect Phase 192 fixed on the officers list.
+ * is missing its oldest end. Saying nothing would let a 1,000-filing view read
+ * as a complete one, which is the defect Phase 192 fixed on the officers list.
+ * Since Phase 198 this bounds the administrative stream only — the board
+ * stream is read from the officers list, which is fetched whole.
  */
 export function filingsTruncatedNotice(data: HistoryResponse): string | null {
   if (!data.filings_truncated) return null;
@@ -371,4 +376,44 @@ export function filingsTruncatedNotice(data: HistoryResponse): string | null {
     "returned newest first, so the filings not shown are the oldest — this " +
     "timeline starts later than the company does."
   );
+}
+
+/**
+ * What to tell the reader when the board stream is empty for a company the
+ * officers list was never read for, or `null`.
+ *
+ * Phase 198. Every other emptiness on this tab already says which kind it is
+ * — `gleif_record_available` for the change log, `registry_sources_blocked`
+ * for the registry sources. The board stream had no such flag because it fell
+ * out of a fetch that was happening anyway; now it has its own call, and a
+ * call that did not happen must not look like a company with no board.
+ */
+export function boardUncheckedNotice(data: HistoryResponse): string | null {
+  if (data.officers_available !== false) return null;
+  if ((data.events ?? []).some((e) => e.tier === 4)) return null;
+  return (
+    "The register's officers list was not read for this company, so there is " +
+    "no board history to show — which is not the same as a company with no " +
+    "board changes."
+  );
+}
+
+/**
+ * The BODS person statement a board row points at, or `null` when the row
+ * identifies nobody.
+ *
+ * Two separate conditions, and the second is the one that is easy to forget:
+ * the register may key an officer OpenCheck does not draw. The graph holds
+ * *serving managing officials* — a resigned director, or a secretary, is on
+ * this stream and not in that graph — so `known` is the caller's set of
+ * statement ids and a row outside it stays plain text. Linking to a node that
+ * is not there would be worse than not linking.
+ */
+export function boardRowPersonId(
+  row: HistoryRawChange,
+  known: ReadonlySet<string>,
+): string | null {
+  const sid = row.party_statement_id;
+  if (!sid) return null;
+  return known.has(sid) ? sid : null;
 }

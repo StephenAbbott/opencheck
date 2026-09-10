@@ -54,6 +54,7 @@ from ..config import get_settings
 from ..http import build_client
 from .ariregister import ariregister_change_events
 from .assemble import Timeline, assemble_timeline
+from .companies_house import officer_change_events
 from .cvr_denmark import cvr_change_events
 from .nz_companies import nz_change_events
 
@@ -87,6 +88,9 @@ _CH_PAGE_SIZE = 100  # the register's maximum
 # before Phase 192. 50 pages covers every company measured; a list cut by the
 # cap now says so (``filings_truncated``) rather than ending quietly.
 _CH_PAGE_CAP = 50  # ≤ 5,000 filings
+# Officers are far fewer than filings — Lloyds Bank PLC, the deepest board
+# measured, has 232 across its whole life. 20 pages is 2,000.
+_CH_OFFICERS_PAGE_CAP = 20
 
 
 async def _gleif_registration(
@@ -195,6 +199,59 @@ async def _ch_filings(
     return filings, truncated
 
 
+async def _ch_officers(
+    client: httpx.AsyncClient, number: str, api_key: str
+) -> dict | None:
+    """Fetch the Companies House officers list for ``number``, all pages.
+
+    Phase 198. The board stream used to be read out of filing history, which
+    was free — the fetch above already had it — but a filing publishes a
+    *name* and no officer id, so a board row could say who joined and never
+    point at them. The officers list publishes the id, which is the same key
+    the BODS mapper builds a person statement on, so a row assembled from it
+    can address the person the graph draws.
+
+    ``None`` (not ``{}``) when the register refused or was not asked, so the
+    caller can tell "no officers" from "did not read the officers": the
+    difference between an empty board stream and an unchecked one.
+
+    Paginated the way Phase 192 paginated the lookup adapter's copy of this
+    call: the register's default page is 35 officers and Lloyds Bank PLC has
+    more than 200 once the resigned ones are counted.
+    """
+    items: list[dict] = []
+    auth = httpx.BasicAuth(api_key, "")
+    resigned_count = active_count = 0
+    for page in range(_CH_OFFICERS_PAGE_CAP):
+        resp = await client.get(
+            f"{_CH_API_BASE}/company/{quote(number)}/officers",
+            params={
+                "items_per_page": _CH_PAGE_SIZE,
+                "start_index": page * _CH_PAGE_SIZE,
+                # The default omits resigned officers, and a board *history*
+                # is mostly resigned officers.
+                "register_view": "false",
+            },
+            auth=auth,
+        )
+        if resp.status_code in (401, 403, 404):
+            return None if page == 0 else {"items": items}
+        resp.raise_for_status()
+        payload = resp.json()
+        batch = payload.get("items") or []
+        items.extend(batch)
+        resigned_count = payload.get("resigned_count") or resigned_count
+        active_count = payload.get("active_count") or active_count
+        total = payload.get("total_results") or 0
+        if not batch or (page + 1) * _CH_PAGE_SIZE >= total:
+            break
+    return {
+        "items": items,
+        "active_count": active_count,
+        "resigned_count": resigned_count,
+    }
+
+
 async def fetch_timeline(lei: str) -> Timeline:
     """Fetch GLEIF (+ Companies House where possible) history and assemble it."""
     settings = get_settings()
@@ -211,6 +268,7 @@ async def fetch_timeline(lei: str) -> Timeline:
     rr_mods: list[dict] = []
     ch_filings: list[dict] = []
     ch_filings_truncated = False
+    ch_officers: dict | None = None
 
     gleif_record_available = True
     gleif_events_available = True
@@ -249,12 +307,31 @@ async def fetch_timeline(lei: str) -> Timeline:
             or settings.companies_house_api_key
         )
         if api_key and company_number:
-            try:
-                ch_filings, ch_filings_truncated = await _ch_filings(
-                    client, company_number, api_key
+            # Two reads of the same register, independent of each other: the
+            # filing history behind the administrative stream, and (Phase 198)
+            # the officers list behind the board stream. Concurrent, and each
+            # allowed to fail without taking the other with it.
+            filings_res, officers_res = await asyncio.gather(
+                _ch_filings(client, company_number, api_key),
+                _ch_officers(client, company_number, api_key),
+                return_exceptions=True,
+            )
+            if isinstance(filings_res, BaseException):
+                log.warning(
+                    "timeline: CH filing history unavailable for %s: %s",
+                    company_number,
+                    filings_res,
                 )
-            except httpx.HTTPError:
-                ch_filings = []
+            else:
+                ch_filings, ch_filings_truncated = filings_res
+            if isinstance(officers_res, BaseException):
+                log.warning(
+                    "timeline: CH officers unavailable for %s: %s",
+                    company_number,
+                    officers_res,
+                )
+            else:
+                ch_officers = officers_res
 
     # New Zealand — reconstruct events from the NZBN dated records (manages its
     # own client + key). Best-effort; never sinks the timeline.
@@ -293,13 +370,22 @@ async def fetch_timeline(lei: str) -> Timeline:
         if bundle:
             dk_events = cvr_change_events(bundle)
 
+    # The board stream. Emitted here rather than inside ``assemble_timeline``
+    # because it comes from a second Companies House call, not from the filing
+    # stream that function already classifies.
+    officer_events = (
+        officer_change_events(ch_officers, company_id=company_number or "")
+        if ch_officers
+        else []
+    )
+
     timeline = assemble_timeline(
         lei=lei,
         company_number=company_number,
         gleif_lei_mods=lei_mods,
         gleif_rr_mods=rr_mods,
         ch_filings=ch_filings,
-        extra_events=nz_events + ee_events + dk_events,
+        extra_events=nz_events + ee_events + dk_events + officer_events,
     )
     # Phase 190: the numbers above are how each register addresses this
     # company, and until now they were derived, used to decide which history
@@ -319,6 +405,10 @@ async def fetch_timeline(lei: str) -> Timeline:
         if number
     }
     timeline.filings_truncated = ch_filings_truncated
+    # Phase 198: whether the officers list was READ, not whether it had rows.
+    # An empty board stream means one of two very different things and the tab
+    # has to be able to say which.
+    timeline.officers_available = ch_officers is not None
     timeline.gleif_record_available = gleif_record_available
     timeline.gleif_events_available = gleif_events_available
     # "Blocked" only when the record failed AND nothing local stood in: with a

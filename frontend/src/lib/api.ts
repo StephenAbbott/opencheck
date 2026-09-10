@@ -654,6 +654,15 @@ export interface HistoryRawChange {
    *  the officer's NAME: the filing publishes no officer id, so a board row
    *  names a person without claiming to identify them. */
   counterparty: string | null;
+  /** Phase 198 — who that other end IS, where the source publishes a key.
+   *  `party_id` is the register's own officer id; `party_statement_id` is the
+   *  BODS person statement OpenCheck builds from it, which is the id the graph
+   *  draws the node under. Both null on filing-history rows, which publish a
+   *  name and nothing more — so a row is linkable only when this is set AND
+   *  the graph actually holds that statement (a resigned director or a
+   *  secretary is on the board stream but not in the graph). */
+  party_id?: string | null;
+  party_statement_id?: string | null;
 }
 
 export interface HistoryResponse {
@@ -682,6 +691,10 @@ export interface HistoryResponse {
   /** Phase 194 — Companies House holds more filings than this fetch read.
    *  The register answers newest-first, so the missing end is the oldest. */
   filings_truncated?: boolean;
+  /** Phase 198 — the officers list, which the board stream is built from, was
+   *  read. False means it was not (no key, not a GB company, or the register
+   *  refused), so an empty board stream is unchecked rather than empty. */
+  officers_available?: boolean;
 }
 
 /** Fetch the merged change history for an LEI — every register OpenCheck

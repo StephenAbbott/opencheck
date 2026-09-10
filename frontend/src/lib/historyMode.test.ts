@@ -14,6 +14,8 @@ import {
   basisLabel,
   boardChangesOf,
   boardChangesSummary,
+  boardRowPersonId,
+  boardUncheckedNotice,
   buildTimelineRows,
   corroboratedCount,
   datedSpan,
@@ -423,5 +425,80 @@ describe("filingsTruncatedNotice", () => {
   it("is null when the whole history was read", () => {
     expect(filingsTruncatedNotice({ ...RESP, filings_truncated: false })).toBeNull();
     expect(filingsTruncatedNotice(RESP)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 198 — a board row that can point at a person
+// ---------------------------------------------------------------------------
+
+const BOARD_ROW: HistoryRawChange = {
+  source_id: "companies_house",
+  record_type: "relationship",
+  raw_change_type: "appointed_on",
+  raw_field: "officers/director",
+  value_old: null,
+  value_new: null,
+  change_type: "OFFICER_APPOINTED",
+  label: "Officer appointed",
+  counterparty: "BENNETT, Kelly Brian",
+  tier: 4,
+  event_date: "2019-01-01",
+  date_basis: "effective",
+  party_id: "nW6qko0LQRsgBSdgwvD7NyscZwQ",
+  party_statement_id: "opencheck-e7afdaf52cd1644858e47954",
+};
+
+describe("boardRowPersonId", () => {
+  it("returns the statement id when the graph actually draws that person", () => {
+    const known = new Set(["opencheck-e7afdaf52cd1644858e47954"]);
+    expect(boardRowPersonId(BOARD_ROW, known)).toBe(
+      "opencheck-e7afdaf52cd1644858e47954",
+    );
+  });
+
+  it("returns null for a person the register keys but the graph does not draw", () => {
+    // A resigned director or a secretary: on the board stream, absent from a
+    // graph of serving managing officials. Linking to a node that is not
+    // there is worse than not linking.
+    expect(boardRowPersonId(BOARD_ROW, new Set())).toBeNull();
+  });
+
+  it("returns null for a row the source identified nobody on", () => {
+    // Every filing-history row, and any officer the register does not key.
+    const unkeyed = { ...BOARD_ROW, party_id: null, party_statement_id: null };
+    expect(boardRowPersonId(unkeyed, new Set(["anything"]))).toBeNull();
+  });
+
+  it("tolerates an API response from before the field existed", () => {
+    const { party_id: _p, party_statement_id: _s, ...older } = BOARD_ROW;
+    expect(boardRowPersonId(older as HistoryRawChange, new Set())).toBeNull();
+  });
+});
+
+describe("boardUncheckedNotice", () => {
+  it("says so when the officers list was never read", () => {
+    const notice = boardUncheckedNotice({ ...RESP, officers_available: false });
+    expect(notice).toContain("was not read");
+  });
+
+  it("stays quiet when the list was read and simply held nothing", () => {
+    expect(boardUncheckedNotice({ ...RESP, officers_available: true })).toBeNull();
+  });
+
+  it("stays quiet when board rows arrived regardless of the flag", () => {
+    // Belt and braces: a notice claiming nothing was read, above rows that
+    // plainly were, would be worse than no notice.
+    expect(
+      boardUncheckedNotice({
+        ...RESP,
+        officers_available: false,
+        events: [...RESP.events, BOARD_ROW],
+      }),
+    ).toBeNull();
+  });
+
+  it("stays quiet for a response from before the flag existed", () => {
+    expect(boardUncheckedNotice(RESP)).toBeNull();
   });
 });

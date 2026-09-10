@@ -75,6 +75,13 @@ class RawChange(BaseModel):
     #: is the officer's name — the filing publishes no officer id, so a board
     #: row names a person without claiming to identify them.
     counterparty: str | None = None
+    #: Phase 198 — who that other end IS, where the source publishes a key.
+    #: ``party_id`` is the register's own officer id; ``party_statement_id``
+    #: is the BODS person statement OpenCheck builds from it, which is what
+    #: lets a board row link to the person node the graph draws. Both null on
+    #: every filing-history row, which publishes a name and nothing more.
+    party_id: str | None = None
+    party_statement_id: str | None = None
 
 
 class HistoryResponse(BaseModel):
@@ -105,6 +112,10 @@ class HistoryResponse(BaseModel):
     #: Phase 194 — Companies House holds more filings than this fetch read.
     #: The register answers newest-first, so the missing end is the oldest.
     filings_truncated: bool = False
+    #: Phase 198 — the officers list, which the board stream is built from,
+    #: was read. False means it was not (no key, not a GB company, or the
+    #: register refused), so an empty board stream is unchecked, not empty.
+    officers_available: bool = False
 
 
 @router.get("/history", response_model=HistoryResponse)
@@ -174,6 +185,8 @@ async def history(
                 event_date=ev.event_date,
                 date_basis=ev.date_basis.value,
                 counterparty=ev.counterparty,
+                party_id=ev.party_id,
+                party_statement_id=ev.party_statement_id,
             )
             for ev in tl.events
         ]
@@ -192,4 +205,5 @@ async def history(
         company_number_basis=tl.company_number_basis,
         registry_numbers=tl.registry_numbers,
         filings_truncated=tl.filings_truncated,
+        officers_available=tl.officers_available,
     )

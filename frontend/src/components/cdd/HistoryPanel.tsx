@@ -35,6 +35,7 @@ import { getHistory, type HistoryResponse } from "../../lib/api";
 import {
   boardChangesOf,
   boardChangesSummary,
+  boardUncheckedNotice,
   buildTimelineRows,
   corroboratedCount,
   filingsTruncatedNotice,
@@ -115,6 +116,7 @@ export default function HistoryPanel({
   const boardEvents = useMemo(() => (data ? boardChangesOf(data) : []), [data]);
   const boardSummary = useMemo(() => boardChangesSummary(boardEvents), [boardEvents]);
   const truncated = useMemo(() => (data ? filingsTruncatedNotice(data) : null), [data]);
+  const boardUnchecked = useMemo(() => (data ? boardUncheckedNotice(data) : null), [data]);
   const allRows = useMemo(
     () => (data ? buildTimelineRows(data, showNoise, showBoard) : []),
     [data, showNoise, showBoard],
@@ -166,6 +168,17 @@ export default function HistoryPanel({
                 className="mt-3 rounded-oo border border-oo-warn-border bg-oo-warn-bg px-3 py-2 text-oo-meta text-oo-warn-text leading-[1.5]"
               >
                 {truncated}
+              </div>
+            )}
+            {/* Phase 198: the board stream has its own fetch now, so it has
+                its own way to be missing. An unread officers list is not a
+                company that never changed its board. */}
+            {boardUnchecked && (
+              <div
+                role="status"
+                className="mt-3 rounded-oo border border-oo-warn-border bg-oo-warn-bg px-3 py-2 text-oo-meta text-oo-warn-text leading-[1.5]"
+              >
+                {boardUnchecked}
               </div>
             )}
             {data.sources.length > 0 && (
@@ -258,10 +271,18 @@ export default function HistoryPanel({
             )}
           </div>
           {showBoard && boardSummary && (
+            // Phase 198 retired the sentence that used to sit here about
+            // Companies House naming an officer only from the electronic era.
+            // It was true of the filing history this stream used to be read
+            // from, and is not true of the officers list it is read from now,
+            // which names everyone it lists. What replaces it is the trade
+            // that change made: names and a link to the person, against a
+            // shorter reach back.
             <p className="mt-2 text-oo-meta text-oo-muted leading-[1.5] max-w-[82ch]">
-              {boardSummary} Companies House names an officer on a filing only from
-              the electronic era; an older form records that a director joined or left
-              and never which one.
+              {boardSummary} These come from the register's officers list rather than
+              its filings, so each one names the officer — but the register keeps
+              officer records for a shorter period than it keeps filings, and an
+              appointment older than that shows in the administrative stream instead.
             </p>
           )}
           {showNoise && (

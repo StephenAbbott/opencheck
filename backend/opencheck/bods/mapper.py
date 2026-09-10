@@ -395,6 +395,20 @@ def _ch_officer_person_local_id(company_number: str, officer: dict[str, Any]) ->
     return _ch_officer_local_id(company_number, officer)
 
 
+def ch_person_statement_id(company_number: str, officer: dict[str, Any]) -> str:
+    """The ``statementId`` :func:`_ch_director_statements` gives this officer.
+
+    Public because the Time Machine needs it: a board row on the History tab
+    addresses the same person the graph draws, and the only safe way to know
+    that id is to derive it the way the mapper does (Phase 198). Deriving it
+    anywhere else would be two spellings of one identity, which is the class
+    of bug Phase 193 spent a phase removing.
+    """
+    return _stable_id(
+        "companies_house", "person", _ch_officer_person_local_id(company_number, officer)
+    )
+
+
 def _ch_officer_grouping_note(officer_id: str | None) -> dict[str, Any] | None:
     """Publish the officer id the person was grouped on, as an annotation.
 

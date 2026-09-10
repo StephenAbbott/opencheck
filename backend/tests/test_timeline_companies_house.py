@@ -15,6 +15,7 @@ from opencheck.timeline import (
     Tier,
     classify_companies_house_filing,
 )
+from opencheck.timeline.companies_house import officer_change_events
 
 
 def _filing(category: str, ftype: str = "", *, date="2021-11-02",
@@ -132,10 +133,27 @@ def _officer_filing(ftype: str, name: str | None = "Mr Kelly Brian Bennett") -> 
 def test_officer_appointment_is_typed_and_named():
     ev = classify_companies_house_filing(_officer_filing("AP01"))
     assert ev.change_type is ChangeType.OFFICER_APPOINTED
-    assert ev.tier is Tier.BOARD_CHANGE
+    # Phase 198: Tier 3, not the Tier 4 Phase 194 gave it. The board stream is
+    # built from the officers list now (``officer_change_events``), which
+    # records the same appointment and can name the person it appointed. A
+    # filing that stayed at Tier 4 would put that appointment on the board
+    # twice, once anonymously.
+    assert ev.tier is Tier.ADMIN_NOISE
     assert ev.record_type is RecordType.RELATIONSHIP
+    # Still typed and still named — a reader who opens the administrative
+    # stream sees what the filing was, which is what Phase 194 won.
     assert ev.counterparty == "Mr Kelly Brian Bennett"
     assert ev.raw_field == "officers/director"
+
+
+def test_no_officer_filing_reaches_the_board_stream():
+    """The whole class, not just the appointment above: after Phase 198 the
+    filing history contributes nothing to Tier 4, so the two records of one
+    appointment cannot both be drawn."""
+    for ftype in ("AP01", "AP03", "TM01", "TM02", "CH01", "288a", "288b", "288c"):
+        assert classify_companies_house_filing(_officer_filing(ftype)).tier is not (
+            Tier.BOARD_CHANGE
+        ), ftype
 
 
 def test_officer_appointment_still_does_not_render_by_default():
@@ -261,3 +279,108 @@ def test_dates_are_effective_high_confidence_and_prefer_action_date():
     assert ev.date_basis is DateBasis.EFFECTIVE
     assert ev.date_confidence is DateConfidence.HIGH
     assert ev.raw_payload_ref == "/company/00358949/filing-history/MzEx"  # self link
+
+
+# ---------------------------------------------------------------------------
+# Board stream from the officers list — Tier 4 (Phase 198)
+# ---------------------------------------------------------------------------
+
+def _officer(
+    name="BENNETT, Kelly Brian",
+    *,
+    role="director",
+    appointed_on="2019-01-01",
+    resigned_on=None,
+    officer_id="nW6qko0LQRsgBSdgwvD7NyscZwQ",
+) -> dict:
+    officer: dict = {"name": name, "officer_role": role}
+    if appointed_on:
+        officer["appointed_on"] = appointed_on
+    if resigned_on:
+        officer["resigned_on"] = resigned_on
+    if officer_id:
+        officer["links"] = {
+            "officer": {"appointments": f"/officers/{officer_id}/appointments"}
+        }
+    return officer
+
+
+def test_an_officer_yields_one_event_per_dated_end_of_the_appointment():
+    events = officer_change_events(
+        {"items": [_officer(appointed_on="1998-04-01", resigned_on="2004-09-30")]},
+        company_id="00358949",
+    )
+    assert [e.change_type for e in events] == [
+        ChangeType.OFFICER_APPOINTED,
+        ChangeType.OFFICER_RESIGNED,
+    ]
+    assert [e.event_date for e in events] == ["1998-04-01", "2004-09-30"]
+    assert all(e.tier is Tier.BOARD_CHANGE for e in events)
+    assert all(e.record_type is RecordType.RELATIONSHIP for e in events)
+
+
+def test_a_serving_officer_has_no_resignation_event():
+    events = officer_change_events({"items": [_officer(resigned_on=None)]})
+    assert [e.change_type for e in events] == [ChangeType.OFFICER_APPOINTED]
+
+
+def test_an_officer_the_register_gives_no_dates_for_yields_nothing():
+    """The register knows them; it does not know when. A row on a dated axis
+    would have to invent the date, so there is no row."""
+    assert officer_change_events({"items": [_officer(appointed_on=None)]}) == []
+
+
+def test_a_board_event_carries_the_officer_id_and_the_person_statement_id():
+    """The point of Phase 198. A filing-history row publishes a name and
+    stops there; this row addresses the person the graph draws."""
+    from opencheck.bods.mapper import ch_person_statement_id
+
+    officer = _officer()
+    ev = officer_change_events({"items": [officer]}, company_id="00358949")[0]
+    assert ev.counterparty == "BENNETT, Kelly Brian"
+    assert ev.party_id == "nW6qko0LQRsgBSdgwvD7NyscZwQ"
+    assert ev.party_statement_id == ch_person_statement_id("00358949", officer)
+
+
+def test_an_officer_with_no_id_is_named_but_not_identified():
+    """The register does not key every officer. Naming them is still worth a
+    row; claiming to have identified them is not."""
+    ev = officer_change_events({"items": [_officer(officer_id=None)]})[0]
+    assert ev.counterparty == "BENNETT, Kelly Brian"
+    assert ev.party_id is None
+    assert ev.party_statement_id is None
+
+
+def test_the_officer_id_is_stable_across_the_companies_it_appears_on():
+    """One director on two boards is one person, so both companies' board
+    rows point at the same statement — the grouping Phase 193 shipped, now
+    reachable from the timeline."""
+    from opencheck.bods.mapper import ch_person_statement_id
+
+    officer = _officer()
+    assert ch_person_statement_id("00358949", officer) == ch_person_statement_id(
+        "00002065", officer
+    )
+
+
+def test_board_dates_are_effective_not_recorded():
+    """``appointed_on`` is when the appointment began, not when the register
+    was told about it — unlike a filing date, which is both at once."""
+    ev = officer_change_events({"items": [_officer()]})[0]
+    assert ev.date_basis is DateBasis.EFFECTIVE
+    assert ev.date_confidence is DateConfidence.HIGH
+
+
+def test_the_role_rides_along_so_a_secretary_row_says_secretary():
+    ev = officer_change_events({"items": [_officer(role="secretary")]})[0]
+    assert ev.raw_field == "officers/secretary"
+
+
+def test_board_events_do_not_render_as_notable():
+    """Tier 4 is its own stream, opened deliberately. A board change is not a
+    beneficial-ownership change and must not crowd one out."""
+    assert not any(e.is_notable for e in officer_change_events({"items": [_officer()]}))
+
+
+def test_a_junk_row_in_the_officers_list_is_skipped_not_crashed_on():
+    assert officer_change_events({"items": ["not a dict", None, _officer()]})

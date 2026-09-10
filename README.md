@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 197** — a company secretary is not a senior managing official and a limited partner is not management: the last two OpenCorporates positions that claimed a role the register never asserted now say what those people actually hold.
+**Latest: Phase 198** — the board history on the History tab is read from the register's officers list instead of its filing history: every row now names the officer and carries the id the graph keys a person on, so a board row can point at the person rather than only naming them.
 
 → [Full development history](docs/status.md)
 
