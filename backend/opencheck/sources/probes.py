@@ -260,6 +260,23 @@ PROBES: dict[str, SourceProbe] = {
         anchor_lei="3SU7BEP7TH9YEQOZCS77",
         bods_mapper="map_corporations_canada",
     ),
+    "acra_singapore": _p(
+        tier="live",
+        subject="DBS Bank Ltd.",
+        args=("196800306E",),
+        kwargs={"legal_name": "DBS BANK LTD."},
+        expect_fields=("entity", "detail"),
+        anchor_lei="ATUEL7OJR5057F2PV266",
+        bods_mapper="map_acra_singapore",
+        notes=(
+            "UEN exactly as GLEIF files it under RA000523. Expects BOTH rows: the "
+            "collection-1 'entity' and the collection-2 'detail' from the 'D' file, "
+            "so a change in how data.gov.sg names its per-letter datasets shows up "
+            "here rather than as quietly thinner records. Works without "
+            "DATA_GOV_SG_API_KEY (4 requests per 10 s); a 429 means the runner's IP "
+            "shares that keyless budget, not that the data moved."
+        ),
+    ),
     "cr_hongkong": _p(
         tier="live",
         subject="The Hongkong and Shanghai Banking Corporation Limited",

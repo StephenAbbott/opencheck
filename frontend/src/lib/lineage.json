@@ -16,6 +16,7 @@
     ],
     "opencorporates": [
       "abr_australia",
+      "acra_singapore",
       "ares",
       "ariregister",
       "bce_belgium",
@@ -68,6 +69,7 @@
     ],
     "opencorporates": [
       "abr_australia",
+      "acra_singapore",
       "ares",
       "ariregister",
       "bce_belgium",
@@ -103,6 +105,7 @@
   },
   "descriptions": {
     "abr_australia": "Australian Business Register — ABN Lookup (Australian Taxation Office)",
+    "acra_singapore": "ACRA — Accounting and Corporate Regulatory Authority (Singapore)",
     "ares": "ARES — Czech Administrativní registr ekonomických subjektů",
     "ariregister": "Estonian e-Business Register (e-Äriregister)",
     "bce_belgium": "BCE/KBO — Banque-Carrefour des Entreprises (Belgian Business Register)",

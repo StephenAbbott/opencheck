@@ -43,7 +43,7 @@ The 16 active national registry adapters fall into two tiers:
 | `bolagsverket` | Entity data only at current integration level |
 | `bce_belgium` | Entity data only |
 | `rpo_slovakia` | Entity data only |
-| `acra_singapore` | Company data from open CSV dataset |
+| `acra_singapore` | Entity data only — ACRA's open data carries no officers, shareholders or beneficial owners |
 | `cvr_denmark` | CVR Datafordeler does not expose personal BO data publicly |
 
 **Tier 2 — Full (entity + person + relationship)**:

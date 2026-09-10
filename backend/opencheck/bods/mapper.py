@@ -1379,6 +1379,9 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     # the old seven-character CR No.
     "RA000388": ("HK-BRN", "Hong Kong Business Registration Number (Unique Business Identifier)"),
     "RA000389": ("HK-BRN", "Hong Kong Business Registration Number (Unique Business Identifier)"),
+    # Singapore — ACRA Business Registry. ``registeredAs`` is the Unique Entity
+    # Number on 12,292 of 13,326 active SG LEI records (2026-09-10).
+    "RA000523": ("SG-ACRA", "Unique Entity Number (UEN) — Accounting and Corporate Regulatory Authority (Singapore)"),
 }
 
 # ---------------------------------------------------------------------------
@@ -8099,102 +8102,178 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
-# ACRA Singapore (data.gov.sg open data)
+# ACRA Singapore (data.gov.sg datastore_search)
 # ---------------------------------------------------------------------------
 #
-# ACRA publishes firmographic entity data only — no beneficial ownership
-# information is included in the open dataset.  This mapper therefore
-# produces a single entity statement.
+# ACRA's open data carries entity data only — no officers, shareholders or
+# beneficial owners — so this mapper produces a single entity statement.
 #
-# Fields mapped:
-#   uen              → identifiers (SG-ACRA scheme)
-#   entity_name      → name
-#   uen_status_desc  → register status → liveness annotation (+ dissolutionDate never: no date published)
-#   entity_type_desc → entity type label (stored in description)
-#   uen_issue_date   → foundingDate
-#   reg_street_name + reg_postal_code → registered address
-#   link             → publicationDetails.publicationDate / source URL
+# A bundle carries up to two rows for one UEN (see sources/acra_singapore.py):
+#   entity — collection 1 ("UEN"): name, status Registered/Deregistered, entity
+#            type, UEN issue date, street + postal code.
+#   detail — collection 2 ("ACRA Information on Corporate Entities"), when the
+#            entity is in it: company type, detailed status, incorporation
+#            date, full address, former names 1–15. Missing values are "na".
+# The detail row wins field by field; the entity row fills what it lacks.
+
+#: ACRA status labels → register liveness. Exact labels observed live across
+#: 90,000 collection-2 rows and both collection-1 datasets on 2026-09-10. The
+#: families with open-ended suffixes ("Dissolved - …", "In Liquidation - …",
+#: "Struck Off (…)") are matched by prefix in ``_acra_liveness``; anything else
+#: unlisted is ``unknown``, never guessed.
+_ACRA_LIVE_LABELS = frozenset({"live company", "live", "registered"})
+_ACRA_PENDING_LABELS = frozenset(
+    {
+        "gazetted to be struck off",
+        "cancellation in progress",
+        "live (receiver or receiver and manager appointed)",
+    }
+)
+_ACRA_TERMINAL_LABELS = frozenset(
+    {
+        "deregistered",
+        "struck off",
+        "terminated",
+        "cancelled",
+        "cancelled (non-renewal)",
+        "ceased registration",
+        "registration expired and has not been renewed",
+        "amalgamated",
+        "converted to llp",
+    }
+)
+
+
+def _acra_liveness(label: str | None) -> str:
+    """Classify an ACRA status label (collection 1 or 2)."""
+    text = " ".join(str(label or "").split()).lower()
+    if not text:
+        return _liveness.UNKNOWN
+    if text in _ACRA_PENDING_LABELS or text.startswith("in liquidation"):
+        return _liveness.PENDING
+    if (
+        text in _ACRA_TERMINAL_LABELS
+        or text.startswith("dissolved")
+        or text.startswith("struck off (")
+    ):
+        return _liveness.TERMINAL
+    if text in _ACRA_LIVE_LABELS:
+        return _liveness.LIVE
+    return _liveness.UNKNOWN
+
+
+def _acra_address(entity: dict[str, Any], detail: dict[str, Any] | None) -> dict[str, Any] | None:
+    """The registered address, from the detail row when it has one."""
+    from ..sources.acra_singapore import clean_field  # local import avoids a cycle
+
+    if detail:
+        if clean_field(detail.get("address_type")).upper() == "FOREIGN":
+            text = ", ".join(
+                p
+                for p in (
+                    clean_field(detail.get("other_address_line1")),
+                    clean_field(detail.get("other_address_line2")),
+                )
+                if p
+            )
+            return _addr("registered", text) if text else None
+        block = clean_field(detail.get("block"))
+        street = clean_field(detail.get("street_name"))
+        level = clean_field(detail.get("level_no"))
+        unit = clean_field(detail.get("unit_no"))
+        building = clean_field(detail.get("building_name"))
+        postal = clean_field(detail.get("postal_code"))
+        parts = [
+            " ".join(p for p in (block, street) if p),
+            f"#{level}-{unit}" if level and unit else "",
+            building,
+            f"SINGAPORE {postal}" if postal else "",
+        ]
+        text = ", ".join(p for p in parts if p)
+        if text:
+            return _addr("registered", text, "SG")
+
+    street = clean_field(entity.get("reg_street_name"))
+    postal = clean_field(entity.get("reg_postal_code"))
+    parts = [street, f"SINGAPORE {postal}" if postal else ""]
+    text = ", ".join(p for p in parts if p)
+    return _addr("registered", text, "SG") if text else None
 
 
 def map_acra_singapore(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
-    """Yield BODS v0.4 statements for a Singapore ACRA entity.
+    """Map an AcraSingaporeAdapter fetch bundle to one BODS v0.4 entity statement.
 
-    Only an entity statement is produced — the open dataset contains
-    firmographic data only (no ownership / control relationships).
+    The UEN is identified as ``SG-ACRA``. Former names go to ``alternateNames``
+    (the precedent NZ Companies and the FtM mapper set). The register's own
+    type wording — company type, else entity type — goes to
+    ``entityType.details``: ``entityType.subtype`` is a closed codelist in
+    BODS 0.4 and never takes free text. The status label is classified into a
+    register liveness annotation; ACRA publishes no status date, so
+    ``dissolutionDate`` is never set.
     """
-    uen = (bundle.get("uen") or "").strip().upper()
-    if not uen:
+    from ..sources.acra_singapore import (  # local import avoids a cycle
+        SG_UEN_SCHEME,
+        SG_UEN_SCHEME_NAME,
+        clean_field,
+        former_names,
+        record_url,
+    )
+
+    if not bundle or bundle.get("is_stub"):
         return
 
-    name = (bundle.get("entity_name") or "").strip()
-    status_raw = (bundle.get("uen_status_desc") or "").strip().lower()
-    entity_type = (bundle.get("entity_type_desc") or "").strip()
-    issue_date = (bundle.get("uen_issue_date") or "").strip()
-    street = (bundle.get("reg_street_name") or "").strip()
-    postal = (bundle.get("reg_postal_code") or "").strip()
-    source_url = bundle.get("link") or "https://data.gov.sg/datasets?query=acra"
+    entity: dict[str, Any] = bundle.get("entity") or {}
+    detail: dict[str, Any] | None = bundle.get("detail") or None
+    uen = (clean_field(entity.get("uen")) or clean_field(bundle.get("uen"))).upper()
+    name = (
+        clean_field((detail or {}).get("entity_name"))
+        or clean_field(entity.get("entity_name"))
+        or clean_field(bundle.get("legal_name"))
+    )
+    if not uen or not name:
+        return
 
-    # Identifier block.
-    identifiers: list[dict[str, str]] = [
-        {
-            "id": uen,
-            "scheme": "SG-ACRA",
-            "schemeName": "Singapore Unique Entity Number — Accounting and Corporate Regulatory Authority (ACRA)",
-        }
-    ]
+    alternate_names = [n for n in former_names(detail) if n != name]
 
-    # Address block.
-    addresses: list[dict[str, Any]] = []
-    addr_parts = [p for p in [street, postal, "Singapore"] if p]
-    if len(addr_parts) > 1:  # at least street or postal + country
-        addresses.append(_addr("registered", ", ".join(addr_parts), "SG"))
+    # Only collection 2's incorporation date is a founding date. Collection 1's
+    # ``uen_issue_date`` is when the UEN was issued; the finding says so in
+    # those words, and the statement does not promote it to ``foundingDate``.
+    founding = clean_field((detail or {}).get("registration_incorporation_date"))
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", founding):
+        founding = ""
 
-    # Founding date from uen_issue_date.
-    founding_date: str | None = None
-    if issue_date and re.match(r"\d{4}-\d{2}-\d{2}", issue_date):
-        founding_date = issue_date
+    details_label = (
+        clean_field((detail or {}).get("company_type_description"))
+        or clean_field((detail or {}).get("business_constitution_description"))
+        or clean_field((detail or {}).get("entity_type_description"))
+        or clean_field(entity.get("entity_type_desc"))
+    )
 
-    # The open dataset carries a status label but no date, so the status is
-    # recorded as a liveness annotation and ``dissolutionDate`` is never set
-    # (Phase 151 — it used to be written as JSON null, which the schema
-    # forbids). Labels seen in the dataset: "Live", "Live Company", "Struck
-    # Off", "Cancelled", "Ceased Registration", "Dissolved", "Amalgamated",
-    # "In Liquidation", "Receivership", "Converted To LLP".
-    if any(k in status_raw for k in ("struck off", "cancelled", "ceased", "dissolved", "amalgamated", "converted")):
-        acra_liveness = _liveness.TERMINAL
-    elif any(k in status_raw for k in ("liquidation", "receivership", "winding")):
-        acra_liveness = _liveness.PENDING
-    elif status_raw.startswith("live"):
-        acra_liveness = _liveness.LIVE
-    else:
-        acra_liveness = _liveness.UNKNOWN
+    address = _acra_address(entity, detail)
+    resource_id = clean_field(bundle.get("record_resource_id"))
 
-    # Entity statement.
     stmt = make_entity_statement(
         source_id="acra_singapore",
         local_id=uen,
-        name=name or f"SG Entity {uen}",
+        name=name,
         jurisdiction=("Singapore", "SG"),
-        identifiers=identifiers,
-        founding_date=founding_date,
-        addresses=addresses,
-        source_url=source_url,
+        identifiers=[{"id": uen, "scheme": SG_UEN_SCHEME, "schemeName": SG_UEN_SCHEME_NAME}],
+        founding_date=founding or None,
+        addresses=[address] if address else [],
+        alternate_names=alternate_names,
+        entity_type="registeredEntity",
+        entity_details=details_label or None,
+        source_url=record_url(resource_id, uen) if resource_id else None,
     )
 
-    # Annotate with entity type in the description field if available.
-    if entity_type:
-        record_details = stmt.get("recordDetails") or {}
-        record_details["entityType"] = {
-            "type": "registeredEntity",
-            "subtype": entity_type,
-        }
-        stmt["recordDetails"] = record_details
-
+    raw_status = clean_field((detail or {}).get("entity_status_description")) or clean_field(
+        entity.get("uen_status_desc")
+    )
     _liveness.apply_register_status(
         stmt,
         source_label=SOURCE_NAMES["acra_singapore"],
-        liveness=acra_liveness,
-        raw=(bundle.get("uen_status_desc") or "").strip() or None,
+        liveness=_acra_liveness(raw_status),
+        raw=raw_status or None,
     )
 
     yield stmt

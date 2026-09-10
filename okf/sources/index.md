@@ -1,6 +1,7 @@
 # National company / beneficial-ownership registers
 
 * [Australian Business Register (ABN Lookup)](/sources/abr_australia.md) - Australian company and business data — ABN, ACN, entity name and type, ABN/GST status, registered state and postcode, and business (trading) names — from the Australian Business Register's free ABN Lookup web services. Entity-level only; no officer or ownership data.
+* [Singapore ACRA — Accounting and Corporate Regulatory Authority](/sources/acra_singapore.md) - Singapore company data from ACRA's registers on data.gov.sg, looked up by Unique Entity Number: name and former names, entity and company type, status, incorporation date and registered address.
 * [ARES (Czechia)](/sources/ares.md) - Czech ARES business register (Administrativní registr ekonomických subjektů), aggregating data from the commercial register (Obchodní rejstřík), trade licence register, and other sub-registers.  Published by the Ministry of Finance under CC BY 4.0.
 * [Estonian e-Business Register (e-Äriregister)](/sources/ariregister.md) - Estonian company data including entity details, shareholders (with ownership percentages), board members, and beneficial owners, from the public e-Business Register portal (RIK).
 * [Belgian Crossroads Bank for Enterprises (BCE/KBO)](/sources/bce_belgium.md) - Belgian company data including entity name, status, juridical form, start date, and registered address, from the BCE/KBO open data publication by FPS Economy.

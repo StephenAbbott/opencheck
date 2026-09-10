@@ -555,29 +555,34 @@ def test_libcovebods_bce_belgium():
 
 
 def test_libcovebods_acra_singapore():
+    """Validated against real data.gov.sg rows, with the keys the mapper reads.
+
+    The previous fixture passed ``entity_type`` / ``uen_status`` / ``reg_date``,
+    none of which the mapper reads, so ``entityType`` was never populated and
+    the schema check passed vacuously over a mapper that wrote free text into
+    the closed ``subtype`` codelist. The assertions below fail if the fields
+    under test stop being emitted."""
+    from pathlib import Path
+
     from opencheck.bods.mapper import map_acra_singapore
-    bundle = {
-        "uen": "200000000N",
-        "entity_name": "TEST PTE. LTD.",
-        "entity_type": "BN",
-        "uen_status": "Live",
-        "reg_date": "2000-01-01",
-        "address": {
-            "block_house_number": "1",
-            "street_name": "TEST ROAD",
-            "postal_code": "123456",
-            "country_desc": "SINGAPORE",
-        },
-        "officers": [
-            {
-                "person_name": "JOHN TAN",
-                "position": "Director",
-                "appointment_date": "2010-01-01",
-            }
-        ],
-        "shareholders": [],
-    }
-    assert_valid(map_acra_singapore(bundle), "ACRA Singapore")
+
+    responses = json.loads(
+        (Path(__file__).parent / "data" / "acra_singapore_live.json").read_text(encoding="utf-8")
+    )["responses"]
+    row = lambda key: responses[key]["result"]["records"][0]  # noqa: E731
+    for entity_key, detail_key in (("dbs_entity", "dbs_detail"), ("vcc_other_agencies", None)):
+        bundle = {
+            "uen": row(entity_key)["uen"],
+            "entity": row(entity_key),
+            "detail": row(detail_key) if detail_key else None,
+            "is_stub": False,
+        }
+        statements = list(map_acra_singapore(bundle))
+        assert statements, entity_key
+        entity_type = statements[0]["recordDetails"]["entityType"]
+        assert entity_type.get("details"), "entityType.details not emitted — the check would be vacuous"
+        assert statements[0].get("annotations"), "no register status — the check would be vacuous"
+        assert_valid(statements, f"ACRA Singapore ({entity_key})")
 
 
 def test_libcovebods_ariregister():

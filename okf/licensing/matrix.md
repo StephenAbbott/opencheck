@@ -14,6 +14,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | Source | Licence | Commercial | Attribution | Share-alike |
 |---|---|---|---|---|
 | Australian Business Register (ABN Lookup) (`abr_australia`) | `CC-BY-3.0-AU` | yes | yes | no |
+| Singapore ACRA — Accounting and Corporate Regulatory Authority (`acra_singapore`) | `Singapore-OGL-1.0` | yes | yes | no |
 | ARES (Czechia) (`ares`) | `CC-BY-4.0` | yes | yes | no |
 | Estonian e-Business Register (e-Äriregister) (`ariregister`) | `CC-BY-4.0` | yes | yes | no |
 | Belgian Crossroads Bank for Enterprises (BCE/KBO) (`bce_belgium`) | `Custom-KBO-Reuse` | conditional | yes | no |

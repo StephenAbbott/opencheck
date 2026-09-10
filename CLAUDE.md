@@ -663,10 +663,10 @@ or corroboration** (that is the signals layer, with its own confidence
 model), and **state absence in the same voice as presence** — silence reads
 as "nothing to see".
 
-**Fourteen** adapters have templates: `gleif`, `bods_gleif`, `opensanctions`,
+**Fifteen** adapters have templates: `gleif`, `bods_gleif`, `opensanctions`,
 `companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`,
 `everypolitician`, `gemi_greece`, `climatetrace`, `eiti_assessment`,
-`eiti_soe`, `cr_hongkong`. Adding one means **two** edits — the template here *and*
+`eiti_soe`, `cr_hongkong`, `acra_singapore`. Adding one means **two** edits — the template here *and*
 `finding=finding_<name>(r)` in that adapter's `_bh_<name>()`; a template
 nobody passes is dead code, and nothing fails to warn you. The
 frontend falls back `finding → summary → nothing`
@@ -1033,7 +1033,7 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | Austria | firmenbuch | `RA000017` — Commercial Register (BM für Justiz) | 2026-08-28 — table previously said RA000128 (wrong) |
 | Poland | krs_poland | `RA000484` — National Court Register (KRS) | 2026-08-28 — table previously said RA000439 (wrong) |
 | Slovakia | rpo_slovakia / rpvs_slovakia | `RA000526` — Business Register (Ministerstvo spravodlivosti) | 2026-08-28 — table previously said RA000476 (wrong) |
-| Singapore | acra_singapore | `RA000523` — Business Registry (ACRA) | 2026-08-28 — table previously said RA000509 (wrong) |
+| Singapore | acra_singapore | `RA000523` — Business Registry (ACRA) | 2026-09-10 — 12,292 of 13,326 active SG LEIs register under it, **all with the UEN in `registeredAs`** (table previously said RA000509, wrong). VCC sub-funds (`T21VC0144D-SF001`) are filed here too but ACRA publishes no sub-fund rows, so `normalise_uen` rejects them. Other SG authorities: `RA000524` MAS, `RA000669` Registry of Societies, `RA000781` Charity Portal, `RA000996` OPERA |
 | Canada | corporations_canada | `RA000072` — Corporate Registry (federal; provinces are RA000073–RA000085) | 2026-08-28 |
 | Denmark | cvr_denmark | `RA000170` — Central Business Register (Erhvervsstyrelsen) | 2026-08-28 |
 | Croatia | sudreg_croatia | `RA000156` — Croatian Court Registry (Sudski registar) | 2026-08-28 |

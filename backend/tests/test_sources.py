@@ -22,7 +22,6 @@ def _isolated_data_root(monkeypatch, tmp_path):
 # offline, or auxiliary adapters that don't fit the live search/fetch flow.
 # Removing an entry here means the module must be registered (or deleted).
 _DELIBERATELY_UNREGISTERED = {
-    "acra_singapore",   # data.gov.sg bulk CSV — needs scripts/extract_acra.py
     "bods_gleif",       # Open Ownership bulk BODS — wired via lookup pipeline only
     "bods_uk_psc",      # Open Ownership bulk BODS (UK PSC)
     "brightquery",      # paid source, not enabled
@@ -104,8 +103,10 @@ def test_source_info_fields_are_populated() -> None:
 # register is key-gated and rate-limited to 20 requests/minute, so there is no
 # offline fixture path to return hits from. ``cr_hongkong`` is the same partial
 # case: LEI-flow entry plus live name search, and no stub tier to search.
+# ``acra_singapore`` is entered via the LEI flow only: its search returns [] by
+# design (see the adapter docstring).
 _IDENTIFIER_KEYED = {
-    "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "cac_nigeria", "ariregister", "bolagsverket",
+    "acra_singapore", "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "cac_nigeria", "ariregister", "bolagsverket",
     "cnpj_brazil", "cr_hongkong", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",
     "malta_mbr", "nz_companies", "opencorporates", "inpi", "kvk",
     "rpo_slovakia", "sudreg_croatia", "ted_eu", "wikirate", "zefix",

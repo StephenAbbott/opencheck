@@ -60,6 +60,7 @@ from ..sources.schemas import SourceSchemaError
 # `hit_builders.py`. Imported back by name — tests and the pipeline below
 # both reach for these directly, and moving code is not moving its address.
 from .hit_builders import (  # noqa: F401
+    _bh_acra_singapore,
     _EITI_IDENTIFIER_KEY_BY_COUNTRY,
     _LookupCtx,
     _PERSON_CAPABLE_SOURCES,
@@ -462,11 +463,6 @@ _RA_DERIVERS: list[LookupDeriver] = [
     for adapter in REGISTRY.values()
     for deriver in adapter.lookup_derivers
 ]
-# NOTE: ACRA Singapore (RA000523) adapter is implemented but not wired into
-# lookup dispatch. The data.gov.sg dataset is bulk CSV only (no live API),
-# which doesn't fit the fast-API pattern used by the other national registers.
-# To enable: declare lookup_derivers on AcraSingaporeAdapter, add a
-# _bh_acra_singapore() builder, and build the DB with scripts/extract_acra.py.
 
 
 def _build_derived(ctx: _LookupCtx, registered_at_id: str) -> None:
