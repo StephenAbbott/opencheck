@@ -333,10 +333,10 @@ export default function HistoryPanel({
             // that change made: names and a link to the person, against a
             // shorter reach back.
             <p className="mt-2 text-oo-meta text-oo-muted leading-[1.5] max-w-[82ch]">
-              {boardSummary} These come from the register's officers list rather than
-              its filings, so each one names the officer — but the register keeps
-              officer records for a shorter period than it keeps filings, and an
-              appointment older than that shows in the administrative stream instead.
+              {boardSummary} That is because they come from the register's officers
+              list rather than its filings. The officer records reach back less far,
+              so an appointment older than they go shows in the administrative
+              stream instead.
             </p>
           )}
           {/* Phase 200: which rows link, and why the rest do not. Said in the
