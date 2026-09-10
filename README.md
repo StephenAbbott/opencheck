@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 203** — Companies House identity verification shows as a green tick on the graph, the text tree and BackgroundCheck cards, and travels in the BODS output as a structured annotation naming the route, the verifier and the dates the register publishes.
+**Latest: Phase 204** — Singapore joins as a live national register: ACRA on data.gov.sg, looked up by the Unique Entity Number GLEIF already holds, with company type, status, incorporation date, registered address and former names, routed across two collections and paced to the published rate limits.
 
 → [Full development history](docs/status.md)
 
