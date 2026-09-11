@@ -27,6 +27,7 @@ from ..findings import (
     finding_bods_gleif,
     finding_climatetrace,
     finding_companies_house,
+    finding_inpi,
     finding_opencorporates,
     finding_ted_eu,
     finding_wikidata,
@@ -136,6 +137,19 @@ def _bh_kvk(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
 
 
 def _bh_inpi(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    if r.get("not_found"):
+        # Not in the RNE (an association or a foundation, usually). A card
+        # carrying only the coverage note, so the gap is explained rather than
+        # silent — and no ``siren`` identifier: INPI did not publish one, and
+        # the reconciler would read it as corroboration.
+        return _hit(
+            "inpi", local_id,
+            name=ctx.legal_name or "",
+            summary=f"FR-SIREN {local_id} · not in the RNE",
+            finding=finding_inpi(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
+        )
     c = r.get("company") or {}
     name = (
         (((c.get("identite") or {}).get("entreprise") or {}).get("denomination"))

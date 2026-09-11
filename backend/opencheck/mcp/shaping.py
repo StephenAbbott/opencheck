@@ -52,6 +52,13 @@ def _sources_summary(
     by_source: dict[str, dict[str, Any]] = {}
     for h in hits:
         row = by_source.setdefault(h.source_id, {"id": h.source_id, "found": False})
+        raw = h.raw if isinstance(h.raw, dict) else {}
+        if raw.get("not_found"):
+            # A coverage-note card (INPI with no RNE record): the source
+            # answered, and the answer is that it holds nothing.
+            if raw.get("coverage_note"):
+                row["note"] = raw["coverage_note"]
+            continue
         if not h.is_stub:
             row["found"] = True
     for sid, msg in (errors or {}).items():

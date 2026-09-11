@@ -663,7 +663,7 @@ or corroboration** (that is the signals layer, with its own confidence
 model), and **state absence in the same voice as presence** — silence reads
 as "nothing to see".
 
-**Fifteen** adapters have templates: `gleif`, `bods_gleif`, `opensanctions`,
+**Sixteen** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
 `companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`,
 `everypolitician`, `gemi_greece`, `climatetrace`, `eiti_assessment`,
 `eiti_soe`, `cr_hongkong`, `acra_singapore`. Adding one means **two** edits — the template here *and*
@@ -812,9 +812,16 @@ INPI entries where `beneficiaireEffectif == True` MUST be silently skipped and n
 - **The RNE does not hold associations or foundations** without a commercial
   registration (Transparency International France, `969500AEH12X8M5XEO53`,
   an *association déclarée*). `/api/companies/{siren}` answers 404 for them.
-  `fetch` returns `{"company": None, "is_stub": False, "not_found": True}`,
-  `_build_result_hit` turns that into **no hit** (`hit_count: 0`, no
-  `source_error`), and the miss is not cached. Every other status still raises.
+  `fetch` returns `{"company": None, "is_stub": False, "not_found": True,
+  "coverage_note": COVERAGE_404}` (not cached; every other status still raises).
+  `_bh_inpi` turns it into a **note card**, the KvK pattern (Stephen, 11 Sept):
+  row sentence `finding_inpi` ("No record in the Registre National des
+  Entreprises, which does not cover associations or foundations without a
+  business activity."), the fuller note in the drawer, **no `siren` identifier**
+  (INPI published none; the reconciler would read it as corroboration), and the
+  MCP `sources` row stays `found: false` with the note attached. The row
+  sentence matters: the drawer is not opened for a card with no statements, so
+  a coverage note alone — which is all KvK has — stays out of sight.
 - **`normalise_siren` removes all whitespace** and raises `ValueError` on
   anything that is not then 1–9 ASCII digits. GLEIF writes `542 051 180` for
   some issuers; stripping only the ends sent `/companies/941%20395%20501`.

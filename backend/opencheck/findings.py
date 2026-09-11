@@ -1287,3 +1287,28 @@ def finding_acra_singapore(bundle: dict[str, Any]) -> str | None:
             former_clause,
         ]
     )
+
+
+#: The INPI row's sentence when the RNE has no record (see ``finding_inpi``).
+INPI_NOT_IN_RNE: str = (
+    "No record in the Registre National des Entreprises, which does not cover "
+    "associations or foundations without a business activity."
+)
+
+
+def finding_inpi(bundle: dict[str, Any]) -> str | None:
+    """What INPI says when it has nothing: that the RNE holds no record.
+
+    Only the not-found case has a sentence. The source card's fuller
+    ``coverage_note`` sits in the data drawer, which a card with no BODS
+    statements gives the reader no reason to open — so without a row sentence
+    the explanation Stephen asked for (11 Sept 2026) would stay out of sight
+    and the row would read only "FR-SIREN 425138393".
+
+    The sentence states the register's coverage, not the entity's legal form:
+    a 404 alone does not prove the SIREN belongs to an association. A company
+    record gets no sentence yet; the row falls back to its summary as before.
+    """
+    if not bundle or bundle.get("is_stub") or not bundle.get("not_found"):
+        return None
+    return INPI_NOT_IN_RNE
