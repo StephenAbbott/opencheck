@@ -46,7 +46,11 @@ from .malta_mbr import MT_RA_CODE as _MT_RA_CODE, normalise_mt_crn as _normalise
 from .cr_hongkong import HK_RA_CODES as _HK_RA_CODES, normalise_hk_brn as _normalise_hk_brn
 from .acra_singapore import ACRA_RA_CODE as _ACRA_RA_CODE, normalise_uen as _normalise_uen
 from .cnpj_brazil import BR_RA_CODE as _BR_RA_CODE, normalise_cnpj as _normalise_cnpj
-from .inpi import INPI_RA_CODE as _INPI_RA_CODE, normalise_siren as _normalise_siren
+from .inpi import (
+    INPI_RA_CODES as _INPI_RA_CODES,
+    normalise_siren as _normalise_siren,
+    siren_spellings as _siren_spellings,
+)
 from .kvk import KVK_RA_CODE as _KVK_RA_CODE, normalise_kvk as _normalise_kvk
 from .prh import FI_RA_CODE as _PRH_RA_CODE, normalise_ytunnus as _normalise_ytunnus
 from .ares import CZ_RA_CODE as _CZ_RA_CODE, normalise_ico as _normalise_ico
@@ -746,9 +750,14 @@ class GleifAdapter(SourceAdapter):
             if registered_at_id == _KVK_RA_CODE:
                 identifiers["kvk_number"] = _normalise_kvk(registered_as)
             # French SIREN — expose as ``siren`` so the reconciler can bridge
-            # GLEIF ↔ INPI on the same registration number.
-            if registered_at_id == _INPI_RA_CODE:
-                identifiers["siren"] = _normalise_siren(registered_as)
+            # GLEIF ↔ INPI on the same registration number. Both French
+            # authorities file it (Sirene RA000189, Infogreffe RA000192), often
+            # grouped in threes ("542 051 180"); see ``sources/inpi.py``.
+            if registered_at_id in _INPI_RA_CODES:
+                try:
+                    identifiers["siren"] = _normalise_siren(registered_as)
+                except ValueError:
+                    pass
             # Swedish organisation number — expose as ``se_org_number`` so
             # the reconciler can bridge GLEIF ↔ Bolagsverket.
             if registered_at_id == _BV_RA_CODE:
@@ -868,6 +877,14 @@ class GleifAdapter(SourceAdapter):
         Wales).  Including it avoids false positives when multiple registries
         share the same local number format.  Pass ``""`` to skip the filter.
 
+        **France** (Phase 205): a SIREN scoped to either French authority is
+        searched under both (``RA000189`` Sirene and ``RA000192`` Infogreffe
+        file the same number) and in both spellings GLEIF stores it
+        (``542051180`` and ``542 051 180``) — the ``registeredAs`` filter is an
+        exact string match. GLEIF reads a comma in a filter value as OR, so
+        this is still one request per field: before it, ``country=FR`` could
+        not find TotalEnergies SE by its SIREN at all.
+
         Returns an empty list when live mode is disabled.
         """
         if not self.info.live_available:
@@ -876,10 +893,19 @@ class GleifAdapter(SourceAdapter):
         seen_leis: set[str] = set()
         hits: list[SourceHit] = []
 
+        values: tuple[str, ...] = (local_id,)
+        ra_codes: tuple[str, ...] = (ra_code,) if ra_code else ()
+        if ra_code in _INPI_RA_CODES:
+            values = _siren_spellings(local_id)
+            ra_codes = tuple(sorted(_INPI_RA_CODES))
+        value_param = ",".join(quote(v, safe="") for v in values)
+
         for field in _LOCAL_ID_FILTER_FIELDS:
-            params = f"page[size]=5&{field}={quote(local_id)}"
-            if ra_code:
-                params += f"&filter[entity.registeredAt]={quote(ra_code)}"
+            params = f"page[size]=5&{field}={value_param}"
+            if ra_codes:
+                params += "&filter[entity.registeredAt]=" + ",".join(
+                    quote(c, safe="") for c in ra_codes
+                )
             cache_key = f"{_CACHE_NS}/by-local-id/{_slug(params)}"
 
             try:

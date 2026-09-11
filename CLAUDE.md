@@ -807,6 +807,20 @@ These are non-obvious and cost significant debugging time. Do not deviate from t
 
 INPI entries where `beneficiaireEffectif == True` MUST be silently skipped and never included in any output, BODS statements, or API responses. This is required by French law (Loi Sapin II / décret 2017-1094), which prohibits republishing beneficial ownership data from the INPI register. Always check this flag before processing any INPI record.
 
+### A 404 is an answer; a SIREN can have spaces (Phase 205)
+
+- **The RNE does not hold associations or foundations** without a commercial
+  registration (Transparency International France, `969500AEH12X8M5XEO53`,
+  an *association déclarée*). `/api/companies/{siren}` answers 404 for them.
+  `fetch` returns `{"company": None, "is_stub": False, "not_found": True}`,
+  `_build_result_hit` turns that into **no hit** (`hit_count: 0`, no
+  `source_error`), and the miss is not cached. Every other status still raises.
+- **`normalise_siren` removes all whitespace** and raises `ValueError` on
+  anything that is not then 1–9 ASCII digits. GLEIF writes `542 051 180` for
+  some issuers; stripping only the ends sent `/companies/941%20395%20501`.
+- **The health probe asserts `expect_fields=("company",)`.** Without it a 404
+  on the probe SIREN — now a quiet miss — would go green.
+
 ---
 
 ## Estonian adapter (ariregister) — hard-won constraints
@@ -1026,7 +1040,7 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | Ireland | cro | `RA000402` — Companies Register (CRO) | 2026-08-28 — table previously said RA000215 (wrong) |
 | Latvia | ur_latvia | `RA000423` — Commerce Register (Uzņēmumu Reģistrs) | 2026-08-28 — table previously said RA000327 (wrong) |
 | Lithuania | jar_lithuania | `RA000430` — Register of Legal Entities (Registrų centras) | 2026-08-28 — table previously said RA000330 (wrong) |
-| France | inpi | `RA000189` — Register of Companies (Sirene, INSEE) | 2026-08-28 — table previously said RA000580 (wrong). Note `RA000192` is Infogreffe/RCS, a different register |
+| France | inpi | `RA000189` — Register of Companies (Sirene, INSEE) · `RA000192` — Registre du Commerce et des Sociétés (Infogreffe) | 2026-09-11 — 149,237 active FR LEIs under RA000189, 8,145 under RA000192, **both carry the SIREN in `registeredAs`**, plain (`552032534`) or grouped in threes (`542 051 180`) depending on the LEI issuer — 391 sampled, no other shape. Both dispatch INPI and both map to `FR-INSEE` since Phase 205 (only RA000189 did before). `RA_BY_COUNTRY["FR"]` stays RA000189; `search_by_local_id` widens a French scope to both codes and both spellings. `RA000190` = AMF fund codes, not a company register |
 | Sweden | bolagsverket | `RA000544` — Companies Register (Bolagsverket) | 2026-08-28 (also verified 2026-06-12; RA000523 in earlier notes was wrong) |
 | Estonia | ariregister | `RA000181` — Commercial Register | 2026-08-28 (ignore any reference to RA000198) |
 | Belgium | bce_belgium | `RA000025` — Crossroad Bank of Enterprises | 2026-08-28 — table previously said RA000143 (wrong) |

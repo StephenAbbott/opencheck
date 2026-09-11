@@ -62,7 +62,9 @@ RA_BY_COUNTRY: dict[str, str] = {
     "IE": "RA000402",  # CRO (Ireland)
     "LV": "RA000423",  # UR (Latvia)
     "LT": "RA000430",  # JAR (Lithuania)
-    "FR": "RA000189",  # Sirene / INSEE (France)
+    "FR": "RA000189",  # Sirene / INSEE (France) — RA000192 Infogreffe files the
+    # same SIREN; GleifAdapter.search_by_local_id widens a French scope to both
+    # (Phase 205), so this stays the one code the frontend mirrors.
     "SE": "RA000544",  # Bolagsverket (Sweden)
     "EE": "RA000181",  # ariregister (Estonia)
     "BE": "RA000025",  # BCE/KBO (Belgium)
