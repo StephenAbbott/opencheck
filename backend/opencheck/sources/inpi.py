@@ -4,8 +4,30 @@ INPI operates the Registre National des Entreprises (RNE) — France's
 national company register, incorporating data from SIRENE (INSEE) and the
 Greffe network.  This adapter fetches entity data for French companies
 whose SIREN number can be derived from a GLEIF record where
-``registeredAt.id == "RA000189"`` (INSEE/SIRENE RA code) and
-``registeredAs`` carries a 9-digit SIREN.
+``registeredAt.id`` is ``RA000189`` (Sirene, INSEE) or ``RA000192``
+(Infogreffe, RCS) and ``registeredAs`` carries a 9-digit SIREN.
+
+Three things about French LEI records the adapter depends on (measured on
+live GLEIF, 11 Sept 2026 — Phase 205):
+
+* **Two authorities, one number.** 149,237 active French LEIs file under
+  ``RA000189`` and 8,145 under ``RA000192``. Both carry the SIREN in
+  ``registeredAs`` — an RCS registration number *is* the SIREN plus the
+  court's name — so both dispatch here. Until Phase 205 only ``RA000189``
+  did, and an Infogreffe-registered company (TotalEnergies SE) silently got
+  no INPI result and no ``siren`` at all.
+* **Spaced SIRENs.** 391 sampled records were all nine digits, either plain
+  (``552032534``) or grouped in threes (``542 051 180``). The spacing follows
+  the LEI issuer, not the authority, so it appears under both codes.
+  :func:`normalise_siren` stripped only the ends until Phase 205, and the
+  request went to ``/companies/941%20395%20501`` and 404'd for a company the
+  RNE holds (COACH AND GO, 894500G1US92Y8BTL511).
+* **A 404 is an answer.** The RNE does not hold associations or foundations
+  without a commercial registration (Transparency International France,
+  an *association déclarée*, 969500AEH12X8M5XEO53). The API answers 404 for
+  them, which this adapter reports as *not in the register* — a bundle with
+  ``company: None`` and ``not_found: True`` — rather than raising, which read
+  as a failing source.
 
 Live endpoints used:
 
@@ -30,12 +52,13 @@ of beneficial-ownership data from the RNE.  This adapter therefore:
 
 Identifier scheme: ``FR-SIREN`` (follows GB-COH / CH-UID / NL-KVK pattern)
 API documentation: https://registre-national-entreprises.inpi.fr/
-GLEIF RA code: RA000189 (Register of Companies — Sirene)
+GLEIF RA codes: RA000189 (Sirene, INSEE) and RA000192 (RCS, Infogreffe)
 """
 
 from __future__ import annotations
 
 import asyncio
+import re
 from typing import Any
 
 from ..cache import Cache
@@ -47,16 +70,50 @@ _AUTH_URL = "https://registre-national-entreprises.inpi.fr/api/sso/login"
 _API_BASE = "https://registre-national-entreprises.inpi.fr/api"
 _CACHE_NS = "inpi"
 
-# GLEIF Registration Authority code for INSEE/SIRENE (France).
+# GLEIF Registration Authority codes that file a French SIREN in
+# ``registeredAs``: Sirene (INSEE) — the dominant one, and the code
+# ``ra_codes.RA_BY_COUNTRY["FR"]`` scopes a reverse lookup to — and the
+# Registre du Commerce et des Sociétés (Infogreffe).
 INPI_RA_CODE: str = "RA000189"
+INFOGREFFE_RA_CODE: str = "RA000192"
+INPI_RA_CODES: frozenset[str] = frozenset({INPI_RA_CODE, INFOGREFFE_RA_CODE})
 
 # In-process lock to prevent concurrent token-refresh races.
 _TOKEN_LOCK = asyncio.Lock()
 
 
+_SIREN_DIGITS = re.compile(r"[0-9]{1,9}")
+
+
 def normalise_siren(siren: str) -> str:
-    """Normalise a SIREN number: strip whitespace, zero-pad to 9 digits."""
-    return siren.strip().zfill(9)
+    """Normalise a SIREN number: remove all whitespace, zero-pad to 9 digits.
+
+    ``"542 051 180"`` → ``"542051180"``. Whitespace anywhere is removed —
+    including a no-break or narrow no-break space, which a French thousands
+    separator can be. Raises ``ValueError`` for anything that is not then one
+    to nine ASCII digits, so the lookup pipeline skips the adapter instead of
+    requesting a URL the register cannot answer. Returns a string: a SIREN can
+    start with zero (John Deere SAS, ``086 280 393``).
+    """
+    compact = re.sub(r"\s+", "", siren or "")
+    if not _SIREN_DIGITS.fullmatch(compact):
+        raise ValueError(f"not a SIREN: {siren!r}")
+    return compact.zfill(9)
+
+
+def siren_spellings(siren: str) -> tuple[str, ...]:
+    """Both ways GLEIF writes a SIREN: plain and grouped in threes.
+
+    GLEIF's ``registeredAs`` filter matches the stored string exactly, so a
+    reverse lookup for ``542051180`` finds nothing when the record holds
+    ``542 051 180``. Returns the input unchanged (one spelling) when it is not
+    a SIREN.
+    """
+    try:
+        plain = normalise_siren(siren)
+    except ValueError:
+        return (siren.strip(),)
+    return (plain, f"{plain[:3]} {plain[3:6]} {plain[6:]}")
 
 
 class InpiAdapter(SourceAdapter):
@@ -65,7 +122,7 @@ class InpiAdapter(SourceAdapter):
     id = "inpi"
 
     lookup_derivers = (
-        LookupDeriver(frozenset({INPI_RA_CODE}), "siren", normalise_siren),
+        LookupDeriver(INPI_RA_CODES, "siren", normalise_siren),
     )
 
 
@@ -121,9 +178,11 @@ class InpiAdapter(SourceAdapter):
     async def fetch(self, hit_id: str) -> dict[str, Any]:
         """Return the RNE company record for a SIREN number.
 
-        ``hit_id`` must be a 9-digit SIREN (string, with or without leading
-        zeros).  Returns a stub bundle when live mode is disabled or when
-        the company's ``diffusionINSEE`` field is ``"N"`` (non-diffusable).
+        ``hit_id`` must be a SIREN (string, with or without leading zeros or
+        spaces).  Returns a stub bundle when live mode is disabled or when
+        the company's ``diffusionINSEE`` field is ``"N"`` (non-diffusable),
+        and a not-found bundle (``company: None``, ``not_found: True``) when
+        the RNE holds no record for the SIREN.
         """
         siren = normalise_siren(hit_id)
         cache_key = f"{_CACHE_NS}/company/{siren}"
@@ -142,6 +201,16 @@ class InpiAdapter(SourceAdapter):
             }
 
         data = await self._get_company(siren)
+        if data is None:
+            # Not in the RNE. Deliberately not cached: an association is never
+            # going to appear, but a company registered yesterday will.
+            return {
+                "source_id": self.id,
+                "siren": siren,
+                "company": None,
+                "is_stub": False,
+                "not_found": True,
+            }
         self._cache.put(cache_key, data)
         return self._make_bundle(siren, data)
 
@@ -170,8 +239,13 @@ class InpiAdapter(SourceAdapter):
     # HTTP with token auth
     # ------------------------------------------------------------------
 
-    async def _get_company(self, siren: str) -> dict[str, Any]:
-        """GET /api/companies/{siren}, refreshing the Bearer token on 401."""
+    async def _get_company(self, siren: str) -> dict[str, Any] | None:
+        """GET /api/companies/{siren}, refreshing the Bearer token on 401.
+
+        Returns ``None`` on 404 — the RNE has no record for this SIREN, which
+        is the ordinary answer for an association or a foundation. Every other
+        failure still raises and surfaces as a source error.
+        """
         token = await self._ensure_token()
         async with build_client() as client:
             response = await client.get(
@@ -187,6 +261,8 @@ class InpiAdapter(SourceAdapter):
                     f"{_API_BASE}/companies/{siren}",
                     headers={"Authorization": f"Bearer {token}"},
                 )
+            if response.status_code == 404:
+                return None
             response.raise_for_status()
             return response.json()
 

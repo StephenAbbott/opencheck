@@ -1353,6 +1353,12 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     "RA000181": ("EE-RIK", "Centre of Registers and Information Systems (Estonia)"),
     # France — Sirene (INSEE)
     "RA000189": ("FR-INSEE", "Sirene — Institut National de la Statistique et des Études Économiques (France)"),
+    # France — Registre du Commerce et des Sociétés (Infogreffe). Its
+    # ``registeredAs`` is the same SIREN INSEE issues (8,145 active LEIs,
+    # plain or grouped in threes, 2026-09-11), so it takes the same scheme —
+    # the Hong Kong and Swiss precedent: the scheme follows the number, not
+    # the authority. One scheme also keeps one FullCheck hop for France.
+    "RA000192": ("FR-INSEE", "SIREN — Registre du Commerce et des Sociétés, Infogreffe (France)"),
     # Netherlands — Kamer van Koophandel (KvK)
     "RA000463": ("NL-KVK", "Netherlands Chamber of Commerce (KvK)"),
     # Sweden — Bolagsverket (Swedish Companies Registration Office)

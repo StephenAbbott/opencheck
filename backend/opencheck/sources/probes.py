@@ -349,7 +349,14 @@ PROBES: dict[str, SourceProbe] = {
         args=("352730394",),
         anchor_lei="9695009YHLBEVMOOCF13",
         requires_env=("INPI_USERNAME", "INPI_PASSWORD"),
+        expect_fields=("company",),
         bods_mapper="map_inpi",
+        notes=(
+            "expect_fields is load-bearing since Phase 205: a 404 now returns "
+            "a not-found bundle (company None) instead of raising, so without "
+            "it a register that stopped answering for this SIREN would go "
+            "green."
+        ),
     ),
     "jar_lithuania": _p(
         tier="live",
