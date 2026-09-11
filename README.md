@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 204** — Singapore joins as a live national register: ACRA on data.gov.sg, looked up by the Unique Entity Number GLEIF already holds, with company type, status, incorporation date, registered address and former names, routed across two collections and paced to the published rate limits.
+**Latest: Phase 205** — INPI now reaches French companies registered through Infogreffe or filed with a spaced SIREN, and reports an association or foundation the national register does not hold as a clean miss instead of a 404 error.
 
 → [Full development history](docs/status.md)
 
