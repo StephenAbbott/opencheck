@@ -845,11 +845,6 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
         return _bh_ted_eu(result, ctx) if result.get("total_notice_count") else None
     if result.get("is_stub"):
         return None
-    if source_id == "inpi" and not result.get("company"):
-        # Not in the RNE — the ordinary answer for an association or a
-        # foundation (Phase 205). A miss, not a hit: a hit would assert that
-        # INPI holds the SIREN, and it does not.
-        return None
     if source_id == "opencorporates":
         return _bh_opencorporates(result, ctx) if ctx.ocid else None
     if source_id == "wikidata":

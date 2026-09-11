@@ -39,7 +39,11 @@ from opencheck.bods.mapper import _GLEIF_RA_TO_ORG_ID, map_gleif
 from opencheck.register_hops import hop_for
 from opencheck.routers.lookup import _LookupCtx, _build_derived, _build_result_hit
 from opencheck.sources.gleif import GleifAdapter
+from opencheck.findings import INPI_NOT_IN_RNE, MAX_FINDING_CHARS
+from opencheck.mcp.shaping import _sources_summary
+from opencheck.routers.hit_builders import _bh_inpi
 from opencheck.sources.inpi import (
+    COVERAGE_404,
     INFOGREFFE_RA_CODE,
     INPI_RA_CODE,
     INPI_RA_CODES,
@@ -227,6 +231,7 @@ async def test_a_404_is_a_not_found_bundle() -> None:
         "company": None,
         "is_stub": False,
         "not_found": True,
+        "coverage_note": COVERAGE_404,
     }
     # Not cached: a company registered tomorrow must be found tomorrow.
     assert adapter._cache.get_payload("inpi/company/425138393") is None
@@ -279,14 +284,47 @@ def _ctx_with_siren(siren: str) -> _LookupCtx:
     return ctx
 
 
-def test_a_not_found_bundle_is_no_hit() -> None:
-    """A miss must not become a hit: a hit asserts INPI holds the SIREN, and the
-    reconciler would count it as corroboration."""
-    bundle = {
+def _not_found_bundle() -> dict[str, Any]:
+    return {
         "source_id": "inpi", "siren": "425138393", "company": None,
-        "is_stub": False, "not_found": True,
+        "is_stub": False, "not_found": True, "coverage_note": COVERAGE_404,
     }
-    assert _build_result_hit("inpi", bundle, _ctx_with_siren("425138393")) is None
+
+
+def test_a_not_found_bundle_is_a_note_card_that_asserts_nothing() -> None:
+    """Stephen, 11 Sept: explain the gap with a short note, as KvK does, rather
+    than showing no INPI card. The card must still assert nothing: no ``siren``
+    (the reconciler would count it as corroboration) and no company data."""
+    hit = _build_result_hit("inpi", _not_found_bundle(), _ctx_with_siren("425138393"))
+    assert hit is not None
+    assert hit.name == "TRANSPARENCY INTERNATIONAL FRANCE"  # the GLEIF name
+    assert hit.identifiers == {}
+    assert hit.raw == {"coverage_note": COVERAGE_404, "not_found": True}
+    assert hit.is_stub is False
+    # The row itself says it: the drawer holding the coverage note is not
+    # opened for a card with no statements.
+    assert hit.finding == INPI_NOT_IN_RNE
+    assert len(INPI_NOT_IN_RNE) <= MAX_FINDING_CHARS
+    assert "not in the RNE" in hit.summary
+
+
+def test_the_note_says_what_the_register_covers_without_overclaiming() -> None:
+    assert COVERAGE_404.startswith("Not in the Registre National des Entreprises.")
+    assert "associations and foundations" in COVERAGE_404
+    # A 404 alone does not prove the entity is an association.
+    assert "usually" in COVERAGE_404
+    assert "error" in COVERAGE_404  # says it is not one
+    assert len(COVERAGE_404) < 400
+
+
+def test_mcp_reports_the_note_card_as_not_found() -> None:
+    """A note card is not data: ``found`` stays false (so "N of M sources
+    returned data" does not count it) and the note travels with the row."""
+    note_hit = _bh_inpi(_not_found_bundle(), "425138393", _ctx_with_siren("425138393"))
+    rows = {r["id"]: r for r in _sources_summary([note_hit], {})}
+    assert rows["inpi"]["found"] is False
+    assert rows["inpi"]["note"] == COVERAGE_404
+    assert "error" not in rows["inpi"]
 
 
 def test_a_found_bundle_is_still_a_hit() -> None:
@@ -295,6 +333,8 @@ def test_a_found_bundle_is_still_a_hit() -> None:
     hit = _build_result_hit("inpi", bundle, _ctx_with_siren("552032534"))
     assert hit is not None
     assert hit.name == "DANONE"
+    assert hit.finding is None  # unchanged: a company row falls back to its summary
+    assert "coverage_note" not in hit.raw
     assert hit.identifiers == {"siren": "552032534"}
 
 

@@ -26,8 +26,9 @@ live GLEIF, 11 Sept 2026 — Phase 205):
   without a commercial registration (Transparency International France,
   an *association déclarée*, 969500AEH12X8M5XEO53). The API answers 404 for
   them, which this adapter reports as *not in the register* — a bundle with
-  ``company: None`` and ``not_found: True`` — rather than raising, which read
-  as a failing source.
+  ``company: None``, ``not_found: True`` and a ``coverage_note`` the source
+  card shows (the KvK pattern) — rather than raising, which read as a
+  failing source.
 
 Live endpoints used:
 
@@ -69,6 +70,17 @@ from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInf
 _AUTH_URL = "https://registre-national-entreprises.inpi.fr/api/sso/login"
 _API_BASE = "https://registre-national-entreprises.inpi.fr/api"
 _CACHE_NS = "inpi"
+
+#: Shown on the INPI source card when the RNE has no record for the SIREN
+#: (the KvK ``_COVERAGE_404`` pattern). Worded as "usually": the ordinary case
+#: is an association or a foundation, but a 404 alone does not prove which.
+COVERAGE_404: str = (
+    "Not in the Registre National des Entreprises. The RNE covers businesses "
+    "with a commercial, craft, agricultural or independent activity, so "
+    "associations and foundations without one are not registered there and "
+    "INPI has no record for this SIREN. This usually reflects the register's "
+    "coverage, not a lookup error."
+)
 
 # GLEIF Registration Authority codes that file a French SIREN in
 # ``registeredAs``: Sirene (INSEE) — the dominant one, and the code
@@ -210,6 +222,7 @@ class InpiAdapter(SourceAdapter):
                 "company": None,
                 "is_stub": False,
                 "not_found": True,
+                "coverage_note": COVERAGE_404,
             }
         self._cache.put(cache_key, data)
         return self._make_bundle(siren, data)
