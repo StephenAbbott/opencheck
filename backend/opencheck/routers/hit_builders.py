@@ -260,6 +260,62 @@ def _bh_acra_singapore(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_anaf_romania(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Romania's ANAF taxpayer register.
+
+    Three shapes, and they are deliberately different cards:
+
+    * **A record.** Asserts the CUI ANAF answered about and, where ANAF
+      repeated it, the ONRC registration number — both are numbers this
+      response actually carries, which is what the identifier-corroboration
+      rule in CLAUDE.md requires.
+    * **Not found.** ANAF was asked and had nothing. No identifier: a CUI
+      OpenCheck derived but ANAF did not confirm is not ANAF corroborating it.
+    * **A coverage note.** The company is keyed by its trade-register number
+      and no ONRC index was configured to turn that into a fiscal code, so
+      ANAF was never asked. The card says so rather than looking empty — the
+      KvK/INPI shape.
+    """
+    from ..findings import finding_anaf_romania
+
+    note = r.get("coverage_note")
+    if note:
+        return _hit(
+            "anaf_romania", local_id,
+            name=ctx.legal_name or "",
+            summary=f"RO {local_id} · not queried",
+            finding=finding_anaf_romania(r),
+            identifiers={},
+            raw={"coverage_note": note},
+        )
+    if r.get("not_found"):
+        return _hit(
+            "anaf_romania", local_id,
+            name=ctx.legal_name or "",
+            summary=f"RO-CUI {local_id} · no taxpayer record",
+            finding=finding_anaf_romania(r),
+            identifiers={},
+            raw={"not_found": True},
+        )
+
+    record = r.get("record") or {}
+    general = record.get("date_generale") or {}
+    cui = str(r.get("cui") or local_id)
+    reg_number = (r.get("registration_number") or "").strip().upper()
+    identifiers = {"ro_cui": cui}
+    if reg_number:
+        identifiers["ro_onrc"] = reg_number
+    status = (general.get("stare_inregistrare") or "").strip()
+    return _hit(
+        "anaf_romania", cui,
+        name=(general.get("denumire") or ctx.legal_name or ""),
+        summary=f"RO-CUI {cui}" + (f" · {status}" if status else ""),
+        identifiers=identifiers,
+        raw=record,
+        finding=finding_anaf_romania(r),
+    )
+
+
 def _bh_cr_hongkong(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for the Hong Kong Companies Registry.
 

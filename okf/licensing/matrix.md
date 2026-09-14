@@ -4,7 +4,7 @@ title: "Licensing compatibility matrix"
 description: "Per-source licence terms (commercial use, attribution, share-alike) for combining OpenCheck data in exports. Most-restrictive licence wins."
 resource: "/license-matrix"
 tags: ["licensing", "export", "compliance"]
-timestamp: "2026-09-10"
+timestamp: "2026-09-14"
 ---
 
 # Source licence matrix
@@ -15,6 +15,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 |---|---|---|---|---|
 | Australian Business Register (ABN Lookup) (`abr_australia`) | `CC-BY-3.0-AU` | yes | yes | no |
 | Singapore ACRA — Accounting and Corporate Regulatory Authority (`acra_singapore`) | `Singapore-OGL-1.0` | yes | yes | no |
+| ANAF — Agenția Națională de Administrare Fiscală (Romania) (`anaf_romania`) | `No stated licence — public register, attribution requested` | conditional | yes | no |
 | ARES (Czechia) (`ares`) | `CC-BY-4.0` | yes | yes | no |
 | Estonian e-Business Register (e-Äriregister) (`ariregister`) | `CC-BY-4.0` | yes | yes | no |
 | Belgian Crossroads Bank for Enterprises (BCE/KBO) (`bce_belgium`) | `Custom-KBO-Reuse` | conditional | yes | no |

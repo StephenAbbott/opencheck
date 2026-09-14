@@ -61,6 +61,7 @@ from ..sources.schemas import SourceSchemaError
 # both reach for these directly, and moving code is not moving its address.
 from .hit_builders import (  # noqa: F401
     _bh_acra_singapore,
+    _bh_anaf_romania,
     _EITI_IDENTIFIER_KEY_BY_COUNTRY,
     _LookupCtx,
     _PERSON_CAPABLE_SOURCES,

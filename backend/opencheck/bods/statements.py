@@ -584,6 +584,7 @@ def make_relationship_statement(
 SOURCE_NAMES: dict[str, str] = {
     "abr_australia": "Australian Business Register — ABN Lookup (Australian Taxation Office)",
     "acra_singapore": "ACRA — Accounting and Corporate Regulatory Authority (Singapore)",
+    "anaf_romania": "ANAF — Agenția Națională de Administrare Fiscală (Romania)",
     "ariregister": "Estonian e-Business Register (e-Äriregister)",
     "bce_belgium": "BCE/KBO — Banque-Carrefour des Entreprises (Belgian Business Register)",
     "bods_gleif": "GLEIF — Global LEI Foundation (BODS bulk dataset)",
@@ -613,6 +614,7 @@ SOURCE_NAMES: dict[str, str] = {
     "mca_india": "MCA — Ministry of Corporate Affairs Company Master Data (India)",
     "nz_companies": "New Zealand Companies Register (NZBN)",
     "openaleph": "OpenAleph",
+    "onrc_romania": "ONRC — Oficiul Național al Registrului Comerțului (Romania)",
     "opencorporates": "OpenCorporates",
     "opensanctions": "OpenSanctions",
     "prh": "PRH — Finnish Patent and Registration Office (Patentti- ja rekisterihallitus)",
@@ -638,6 +640,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
     _official_registers = {
         "abr_australia",
         "acra_singapore",
+        "anaf_romania",
         "ariregister",
         "bce_belgium",
         "bods_gleif",
@@ -656,6 +659,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "eiti_bo",
         "firmenbuch",
         "gemi_greece",
+        "onrc_romania",
         "inpi",
         "jar_lithuania",
         "krs_poland",
