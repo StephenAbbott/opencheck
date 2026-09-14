@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 206** — Ukraine joins as a bulk source: the restored EDR export carries beneficial owners for 533,958 companies, plus the registrar stated reason for their absence in 117,266 more.
+**Latest: Phase 207** — Romania joins with two registers: ANAF live by fiscal code, the ONRC bulk dump for legal representatives, and the identifier bridge that takes Romanian coverage from 48 percent to 98 percent.
 
 → [Full development history](docs/status.md)
 
