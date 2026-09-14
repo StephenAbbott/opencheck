@@ -79,7 +79,10 @@ class BORegime:
     * ``"assert_true"``     — the record IS a BO declaration under this regime
     * ``"assert_false"``    — the record can never constitute BO (definitional:
                               entity interested parties)
-    * ``"omit"``            — the register makes no BO claim; emit nothing
+    * ``"omit"``            — the register makes no BO claim; emit no FLAG.
+                              The statement itself is still emitted — ``omit``
+                              governs ``beneficialOwnershipOrControl`` only,
+                              which BODS then reads as "not stated".
     * ``"copy_verbatim"``   — upstream BODS data; the flag passes through
     * ``"per_statement_code"`` — PSC-statement style: depends on the code
     """
@@ -246,6 +249,92 @@ _add(BORegime(
         "https://abiinfo.rik.ee/en/node/367",
         "https://www.err.ee/1610074771/tegelike-kasusaajate-andmete-varjamine-lukkub-edasi",
     ),
+))
+
+
+# ----------------------------------------------------------------------
+# Ukraine — ЄДР (Unified State Register)
+# ----------------------------------------------------------------------
+_add(BORegime(
+    source_id="edr_ukraine",
+    jurisdiction="Ukraine",
+    jurisdiction_code="UA",
+    register_name=(
+        "ЄДР — Unified State Register of Legal Entities, Individual "
+        "Entrepreneurs and Public Organisations"
+    ),
+    regime_kind="bo_register",
+    legal_basis=(
+        "Law of Ukraine No. 361-IX, Art 1(1)(30) (definition of кінцевий "
+        "бенефіціарний власник)",
+        "Law of Ukraine No. 755-IV 'On state registration of legal entities, "
+        "individual entrepreneurs and public organisations', Art 9(2)(9) "
+        "(duty to record the beneficial owner or the reason for absence)",
+        "Law of Ukraine No. 4576-IX (open-data republication, in force 2025-08-21)",
+    ),
+    bo_definition=(
+        "The natural person who ultimately exercises decisive influence over "
+        "the legal entity, directly or indirectly: holding 25 % or more of the "
+        "authorised capital or voting rights, or exercising decisive influence "
+        "over management, activity or the composition of governing bodies. A "
+        "person holding a formal right who acts as a commercial agent, nominee "
+        "owner, nominee holder or intermediary is NOT a beneficial owner."
+    ),
+    threshold_wording="25 % or more (25 і більше відсотків)",
+    threshold_operator=">=",
+    threshold_value=25.0,
+    reporting_basis=(
+        "ULTIMATE beneficial owner, with the influence type declared per owner "
+        "(direct / indirect / both) and separate direct and indirect "
+        "percentages; entities must also file an ownership-structure diagram"
+    ),
+    natural_person_only=True,
+    # No senior-management fallback: where no qualifying person exists the
+    # register records a stated REASON, not the directors.
+    fallback=None,
+    record_kinds={
+        "beneficiary": "assert_true",       # 690,421 — the BO declaration
+        "beneficiary_absence": "omit",      # 117,266 — unspecified party + reason
+        "founder": "omit",                  # 2,924,268 — equity, filed in UAH
+        "corporate_founder": "omit",        # 346,140 — entity party, never BO
+        "signer": "omit",                   # 2,800,002 — seniorManagingOfficial
+        "member": "omit",                   # 6,390 — boardChair / boardMember
+        "executive_power": "omit",          # 19,575 — state control by statute
+    },
+    pending_changes=(
+        "Location fields (addresses, precise locations, KVED activity codes) "
+        "withheld during martial law and for one year after under Law 4576-IX "
+        "— expect them to RETURN, not to disappear",
+    ),
+    notes=(
+        "Open data suspended 24 Feb 2022 after the full-scale invasion; "
+        "restored 19 Jan 2026",
+        "Every one of the 117,266 absence records carries a stated reason, "
+        "mapped across four unspecifiedReason values: noBeneficialOwners for a "
+        "finding that no natural person qualifies, subjectExemptFromDisclosure "
+        "for the 13,726 (11.7 %) citing a statutory or legal-form exemption, "
+        "and unknown where the reason itself was left blank. The registrar's "
+        "own wording is kept verbatim in the description — see data-standard "
+        "issue #389 on representing missing information",
+        "The nominee exclusion is explicit in the definition: a declared owner "
+        "is a claim about ultimate influence, not about the registered holder",
+        "Founder holdings are hryvnia amounts, never percentages — a share is "
+        "derived only where the holdings reconcile to the declared authorised "
+        "capital, and is annotated as OpenCheck's arithmetic",
+        "Ukraine is outside the EU, so the AMLR 10 Jul 2027 threshold change "
+        "does not apply; the register is already at 25 % or more",
+    ),
+    sources=(
+        "https://data.gov.ua/dataset/a1799820-195b-4982-8141-6e84f58103e7",
+        "https://zakon.rada.gov.ua/laws/show/361-20",
+        "https://zakon.rada.gov.ua/laws/show/755-15",
+    ),
+    last_verified="2026-09-14",
+    # "draft", not "verified": assembled from the statute and secondary
+    # summaries and reviewed by Stephen on 2026-09-14, but not yet checked
+    # line-by-line against the primary legislation the way the 2026-08-30 pass
+    # checked the other nine entries.
+    review_status="draft",
 ))
 
 

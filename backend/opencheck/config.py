@@ -413,6 +413,20 @@ class Settings(BaseSettings):
     # Source (3 monthly CSVs): https://data.gov.cy/el/dataset/mitroo-eggegrammenon-etaireion-emporikon-eponymion-kai-synetairismon-stin-kypro
     cyprus_drcor_db_file: str | None = Field(default=None, alias="CYPRUS_DRCOR_DB_FILE")
 
+    # --- Ukraine ЄДР (data.gov.ua open data, CC BY 4.0) ---
+    # No API key, and no government API of any kind — the weekly XML bulk
+    # export is the only official channel. Pre-built SQLite index; build with:
+    #   python scripts/build_edr_ukraine_index.py --zip UO.zip --out edr_ukraine.sqlite
+    # Source: https://data.gov.ua/dataset/a1799820-195b-4982-8141-6e84f58103e7
+    edr_ukraine_db_file: str | None = Field(default=None, alias="EDR_UKRAINE_DB_FILE")
+    # Where a host with an ephemeral filesystem fetches the index from, on the
+    # ``securities_index_url`` pattern. Unset by default: the index is ~392 MB
+    # and downloading it on every cold start is not a trade worth making until
+    # something actually looks up Ukrainian entities in production.
+    edr_ukraine_index_url: str | None = Field(
+        default=None, alias="EDR_UKRAINE_INDEX_URL"
+    )
+
     # --- Australian Business Register (ABN Lookup, CC BY 3.0 AU) ---
     # Free GUID from https://abr.business.gov.au/Documentation/WebServiceRegistration
     abn_guid: str | None = Field(default=None, alias="ABN_GUID")

@@ -26,6 +26,7 @@ _DELIBERATELY_UNREGISTERED = {
     "bods_uk_psc",      # Open Ownership bulk BODS (UK PSC)
     "brightquery",      # paid source, not enabled
     "cyprus_drcor",     # bulk download only
+    "edr_ukraine",      # bulk download only — 3.16 GB weekly XML, no live API
 }
 
 

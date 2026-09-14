@@ -47,6 +47,16 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `au_acn` (9-digit ACN) from GLEIF RA code `RA000014` (ASIC), or `au_abn` (11-digit ABN) from `RA000013` (ABR/ATO)
 - **Note:** Entity-level firmographic data only — no officers or beneficial owners. Requires a free GUID (`ABN_GUID`) from the ABR web-service registration.
 
+## ЄДР — Unified State Register of Legal Entities, Individual Entrepreneurs and Public Organisations (Ukraine)
+
+- **Data:** legal entities with their founders (and each founder's hryvnia holding), heads and signatories, governing-body members, the executive authority above a state enterprise, and — unusually for a commercial register — **beneficial owners**: 533,958 entities carry a named ultimate beneficial owner, and a further 117,266 record the register's own stated reason for the absence of one.
+- **Portal:** <https://data.gov.ua/dataset/a1799820-195b-4982-8141-6e84f58103e7>. Public search UI: <https://usr.minjust.gov.ua/content/free-search>
+- **Access:** Bulk download only — there is no government API for the ЄДР. The weekly `UO.zip` (327 MB compressed, 3.16 GB of windows-1251 XML, 2,017,706 entities) is built into a local SQLite index via `scripts/build_edr_ukraine_index.py`.
+- **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **Attribution:** "Contains information from the Unified State Register of Legal Entities, Individual Entrepreneurs and Public Organisations, published by the Ministry of Justice of Ukraine on data.gov.ua under a Creative Commons Attribution 4.0 licence."
+- **Entry point:** `ua_edrpou` (8-digit EDRPOU code) derived from GLEIF RA codes `RA000567` (ЄДР), `RA001026` (National Securities and Stock Market Commission) and `RA001027` (National Bank of Ukraine) — all three carry the EDRPOU in `registeredAs`.
+- **Note:** Open data from the ЄДР was suspended after the full-scale invasion in February 2022 and restored on 19 January 2026 under Law 4576-IX, which also withholds precise locations, addresses and KVED activity codes for the duration of martial law and one year afterwards. Those fields are withheld by the publisher, and OpenCheck does not reconstruct them from older copies of this register or from any other source.
+
 ## DRCOR — Department of Registrar of Companies and Intellectual Property (Cyprus)
 
 - **Data:** organisations, registered office addresses, and officials (directors/secretaries) from the *Register of Registered Companies, Commercial Names and Cooperatives in Cyprus*. No shareholder/ownership data is published.

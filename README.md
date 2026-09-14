@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 205** — INPI now reaches French companies registered through Infogreffe or filed with a spaced SIREN, and reports an association or foundation the national register does not hold as a clean miss instead of a 404 error.
+**Latest: Phase 206** — Ukraine joins as a bulk source: the restored EDR export carries beneficial owners for 533,958 companies, plus the registrar stated reason for their absence in 117,266 more.
 
 → [Full development history](docs/status.md)
 

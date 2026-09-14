@@ -1,6 +1,6 @@
 # OpenCheck — Sources
 
-Forty-two active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`). Two further adapters are committed but inactive (bulk-data only) — see [Inactive / bulk-only adapters](#inactive--bulk-only-adapters) below.
+Forty-two active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`). Three further adapters are committed but inactive (bulk-data only) — see [Inactive / bulk-only adapters](#inactive--bulk-only-adapters) below.
 
 | ID | Name | License | Entry point | Description |
 |----|------|---------|-------------|-------------|
@@ -49,11 +49,12 @@ Forty-two active adapters, each implementing the same `SourceAdapter` protocol (
 
 ## Inactive / bulk-only adapters
 
-These adapters are committed and tested but **not exposed as live sources**. Each relies on bulk data files rather than a queryable API: the source is built into a local SQLite database and activated by an environment variable, so with no file configured (the production default) they return nothing. They will be turned on once OpenCheck adopts a bulk-data strategy, or once the source begins offering an API. ACRA and Cyprus go a step further than Belgium — they are **not registered in `REGISTRY` and not wired into the lookup dispatch at all**, so they never appear on `/sources`.
+These adapters are committed and tested but **not exposed as live sources**. Each relies on bulk data files rather than a queryable API: the source is built into a local SQLite database and activated by an environment variable, so with no file configured (the production default) they return nothing. They will be turned on once OpenCheck adopts a bulk-data strategy, or once the source begins offering an API. Cyprus and Ukraine go a step further than Belgium — they are **not registered in `REGISTRY` and not wired into the lookup dispatch at all**, so they never appear on `/sources`.
 
 | ID | Name | License | Entry point | Status & description |
 |----|------|---------|-------------|----------------------|
 | `bce_belgium` | Belgian Crossroads Bank for Enterprises (BCE/KBO) | Custom-KBO-Reuse | `be_enterprise_number` from GLEIF (`RA000025`) | Registered + wired, but env-gated. Entity name (NL/FR/DE), status, juridical form, start date, registered address from a local SQLite DB built from the monthly KBO open data ZIP; FTS5 name search. Activate via `BCE_BELGIUM_DB_FILE` |
+| `edr_ukraine` | ЄДР — Unified State Register of Legal Entities (Ukraine) | CC-BY-4.0 | `ua_edrpou` from GLEIF (`RA000567` ЄДР, `RA001026` NSSMC, `RA001027` NBU — all three carry the EDRPOU) | Not in `REGISTRY`, not wired. **Beneficial owners** (533,958 entities carry a named UBO; a further 117,266 record the register's stated reason for their absence), founders with their hryvnia holdings, heads and signatories, governing-body members, and the executive authority above a state enterprise. No government API exists — the only official channel is a weekly 327 MB ZIP of XML (3.16 GB uncompressed, 2,017,706 entities), built into a local SQLite index via `scripts/build_edr_ukraine_index.py`. Addresses and activity codes are withheld at source under martial law (Law 4576-IX) and are never reconstructed here. Activate via `EDR_UKRAINE_DB_FILE` |
 | `cyprus_drcor` | Cyprus DRCOR — Registrar of Companies | CC-BY-4.0 | `cy_he` from GLEIF (`RA000161`) | Not in `REGISTRY`, not wired. Organisations, registered office, and officials (directors/secretaries; no shareholders) from three monthly data.gov.cy CSVs, built into a local SQLite DB via `scripts/extract_cyprus.py`; entity + officer statements. data.gov.cy exposes no query API (`/api/1/datastore/query` returns 404). Activate via `CYPRUS_DRCOR_DB_FILE` |
 
 ## Signpost sources (not mapped to BODS)
