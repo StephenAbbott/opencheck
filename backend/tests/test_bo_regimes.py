@@ -48,7 +48,7 @@ def test_threshold_operator_matches_wording():
         wording = (regime.threshold_wording or "").lower()
         if "more than" in wording:
             assert regime.threshold_operator == ">", regime.source_id
-        if "at least" in wording or "najmenej" in wording:
+        if "at least" in wording or "najmenej" in wording or "or more" in wording:
             assert regime.threshold_operator == ">=", regime.source_id
 
 

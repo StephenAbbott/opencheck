@@ -28,6 +28,7 @@ Two levels of rule interact:
 | `companies_house` | United Kingdom | bo_register | more than 25 % | first qualifying link | no |
 | `bods_uk_psc` | United Kingdom | bo_register | more than 25 % | — | no |
 | `ariregister` | Estonia | bo_register | more than 25 % (üle 25 %) | ultimate BO | yes |
+| `edr_ukraine` | Ukraine | bo_register | 25 % or more (25 і більше відсотків) | ultimate BO | yes |
 | `ur_latvia` | Latvia | bo_register | vairāk nekā 25 % (more than 25 %) | ultimate BO | yes |
 | `rpvs_slovakia` | Slovakia | bo_register | najmenej 25 % (at least 25 %) | ultimate BO | yes |
 | `sec_edgar` | United States | securities_disclosure | more than 5 % of a class of registered voting equity securities | — | no |
@@ -134,6 +135,41 @@ operators below (currently `>`); Slovakia is already at `>=`. The UK is outside 
   - <https://abiinfo.rik.ee/en/node/367>
   - <https://www.err.ee/1610074771/tegelike-kasusaajate-andmete-varjamine-lukkub-edasi>
 - **Last verified:** 2026-08-30 — **review status: verified**
+
+## `edr_ukraine` — ЄДР — Unified State Register of Legal Entities, Individual Entrepreneurs and Public Organisations
+
+- **Jurisdiction:** Ukraine (UA)
+- **Regime kind:** bo_register
+- **Legal basis:**
+  - Law of Ukraine No. 361-IX, Art 1(1)(30) (definition of кінцевий бенефіціарний власник)
+  - Law of Ukraine No. 755-IV 'On state registration of legal entities, individual entrepreneurs and public organisations', Art 9(2)(9) (duty to record the beneficial owner or the reason for absence)
+  - Law of Ukraine No. 4576-IX (open-data republication, in force 2025-08-21)
+- **Definition:** The natural person who ultimately exercises decisive influence over the legal entity, directly or indirectly: holding 25 % or more of the authorised capital or voting rights, or exercising decisive influence over management, activity or the composition of governing bodies. A person holding a formal right who acts as a commercial agent, nominee owner, nominee holder or intermediary is NOT a beneficial owner.
+- **Threshold:** 25 % or more (25 і більше відсотків) (`>= 25 %`)
+- **Reporting basis:** ULTIMATE beneficial owner, with the influence type declared per owner (direct / indirect / both) and separate direct and indirect percentages; entities must also file an ownership-structure diagram
+- **Natural person only:** yes
+- **Fallback:** none — absence is recorded as a stated reason
+- **`beneficialOwnershipOrControl` policy per record kind:**
+  - `beneficiary` → `assert_true`
+  - `beneficiary_absence` → `omit`
+  - `founder` → `omit`
+  - `corporate_founder` → `omit`
+  - `signer` → `omit`
+  - `member` → `omit`
+  - `executive_power` → `omit`
+- **Pending changes:**
+  - Location fields (addresses, precise locations, KVED activity codes) withheld during martial law and for one year after under Law 4576-IX — expect them to RETURN, not to disappear
+- **Notes:**
+  - Open data suspended 24 Feb 2022 after the full-scale invasion; restored 19 Jan 2026
+  - Every one of the 117,266 absence records carries a stated reason, mapped across four unspecifiedReason values: noBeneficialOwners for a finding that no natural person qualifies, subjectExemptFromDisclosure for the 13,726 (11.7 %) citing a statutory or legal-form exemption, and unknown where the reason itself was left blank. The registrar's own wording is kept verbatim in the description — see data-standard issue #389 on representing missing information
+  - The nominee exclusion is explicit in the definition: a declared owner is a claim about ultimate influence, not about the registered holder
+  - Founder holdings are hryvnia amounts, never percentages — a share is derived only where the holdings reconcile to the declared authorised capital, and is annotated as OpenCheck's arithmetic
+  - Ukraine is outside the EU, so the AMLR 10 Jul 2027 threshold change does not apply; the register is already at 25 % or more
+- **Sources:**
+  - <https://data.gov.ua/dataset/a1799820-195b-4982-8141-6e84f58103e7>
+  - <https://zakon.rada.gov.ua/laws/show/361-20>
+  - <https://zakon.rada.gov.ua/laws/show/755-15>
+- **Last verified:** 2026-09-14 — **review status: draft**
 
 ## `ur_latvia` — Uzņēmumu reģistrs — patiesie labuma guvēji (PLG) register
 
