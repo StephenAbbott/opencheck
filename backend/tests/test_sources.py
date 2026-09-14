@@ -27,6 +27,7 @@ _DELIBERATELY_UNREGISTERED = {
     "brightquery",      # paid source, not enabled
     "cyprus_drcor",     # bulk download only
     "edr_ukraine",      # bulk download only — 3.16 GB weekly XML, no live API
+    "onrc_romania",     # bulk download only — monthly 1.6 GB CSV dump, no ONRC API
 }
 
 
@@ -107,7 +108,9 @@ def test_source_info_fields_are_populated() -> None:
 # ``acra_singapore`` is entered via the LEI flow only: its search returns [] by
 # design (see the adapter docstring).
 _IDENTIFIER_KEYED = {
-    "acra_singapore", "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "cac_nigeria", "ariregister", "bolagsverket",
+    # anaf_romania: ANAF's public service takes a list of fiscal codes and
+    # nothing else — it has no name search to stub.
+    "anaf_romania", "acra_singapore", "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "cac_nigeria", "ariregister", "bolagsverket",
     "cnpj_brazil", "cr_hongkong", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",
     "malta_mbr", "nz_companies", "opencorporates", "inpi", "kvk",
     "rpo_slovakia", "sudreg_croatia", "ted_eu", "wikirate", "zefix",

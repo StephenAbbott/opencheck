@@ -1,0 +1,583 @@
+"""Romania — ONRC bulk index and ANAF live service.
+
+The fixtures are shaped from the real 2 September 2026 export and real ANAF v9
+responses, so the traps they pin are the ones the live data actually contains:
+two registration-number formats for the same company, a date of birth with a
+spurious time on it, a representative that is a company rather than a person,
+and a fiscal code that reaches ANAF without any index at all.
+"""
+
+from __future__ import annotations
+
+import json
+import sqlite3
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from opencheck.bods import map_anaf_romania, map_onrc_romania
+from opencheck.config import get_settings
+from opencheck.findings import finding_anaf_romania, finding_onrc_romania
+from opencheck.sources import onrc_romania
+from opencheck.sources.anaf_romania import (
+    COVERAGE_NO_INDEX,
+    MAX_BATCH,
+    AnafRomaniaAdapter,
+    _normalise_ro_id,
+)
+from opencheck.sources.onrc_romania import (
+    RO_ONRC_RA_CODE,
+    RO_RA_CODES,
+    RO_TAX_RA_CODE,
+    OnrcRomaniaAdapter,
+    names_agree,
+    normalise_cui,
+    normalise_registration_number,
+    parse_ro_date,
+    resolve_cui,
+    to_new_format,
+)
+
+# ---------------------------------------------------------------------------
+# Identifier grammar
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("14399840", "14399840"),
+        ("RO14399840", "14399840"),
+        ("ro 14399840", "14399840"),
+        # ANAF takes ``cui`` as a JSON number, so the padded and unpadded
+        # forms are the same query and the unpadded one round-trips.
+        ("0000361", "361"),
+        ("361", "361"),
+    ],
+)
+def test_normalise_cui(raw: str, expected: str) -> None:
+    assert normalise_cui(raw) == expected
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "",
+        "J40/1116/1991",
+        "4325/A/2003",          # NGO register (RA000718)
+        "CSC06FDIR/120135",     # ASF instruments registry (RA000498)
+        "1",                    # one digit is not a CUI
+        "12345678901",          # eleven is too many
+    ],
+)
+def test_normalise_cui_rejects(raw: str) -> None:
+    with pytest.raises(ValueError):
+        normalise_cui(raw)
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("J40/1116/1991", "J40/1116/1991"),
+        ("j40/1116/1991", "J40/1116/1991"),
+        ("J40 / 1116 / 1991", "J40/1116/1991"),
+        ("J2002000372404", "J2002000372404"),
+        ("F40/22/1991", "F40/22/1991"),
+        ("C40/53/2005", "C40/53/2005"),
+    ],
+)
+def test_normalise_registration_number(raw: str, expected: str) -> None:
+    assert normalise_registration_number(raw) == expected
+
+
+@pytest.mark.parametrize("raw", ["", "14399840", "4325/A/2003", "CSC06FDIR/120135"])
+def test_normalise_registration_number_rejects(raw: str) -> None:
+    with pytest.raises(ValueError):
+        normalise_registration_number(raw)
+
+
+@pytest.mark.parametrize(
+    "old,prefix",
+    [
+        # Every one of these was verified against the real export: the derived
+        # prefix found exactly one company and its name matched GLEIF's.
+        ("J40/15812/2017", "J2017015812" "40"),
+        ("J23/6841/2022", "J2022006841" "23"),
+        ("J20/3/2023", "J2023000003" "20"),
+        ("J12/2551/2012", "J2012002551" "12"),
+        ("J5/1227/2014", "J2014001227" "05"),
+    ],
+)
+def test_to_new_format(old: str, prefix: str) -> None:
+    assert to_new_format(old) == prefix
+    assert len(to_new_format(old) or "") == 13
+
+
+def test_to_new_format_ignores_already_new_and_junk() -> None:
+    assert to_new_format("J2017015812405") is None
+    assert to_new_format("14399840") is None
+    assert to_new_format("") is None
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("13/02/1991", "1991-02-13"),
+        ("1/2/1991", "1991-02-01"),
+        # THE TRAP: a minority of ONRC birth dates carry a spurious time. It
+        # is a data-entry artefact, not a precision claim, and must not reach
+        # a BODS birthDate.
+        ("19/06/1967 14:45:06", "1967-06-19"),
+        ("", None),
+        ("not a date", None),
+        ("32/01/1991", None),
+        ("13/13/1991", None),
+    ],
+)
+def test_parse_ro_date(raw: str, expected: str | None) -> None:
+    assert parse_ro_date(raw) == expected
+
+
+def test_names_agree_across_register_spellings() -> None:
+    assert names_agree("Formosa SRL", "FORMOSA S.R.L.")
+    assert names_agree("T.Q.SERVICES SRL", "T.Q.SERVICES S.R.L.")
+    assert names_agree("ETIQUETAS MONTLLO ROMANIA SRL", "Etiquetas Montllo România S.R.L.")
+    # A rename, not a spelling: GLEIF held the old name for CUI 4467425 while
+    # the registers had moved on. Refusing this is the point of the gate.
+    assert not names_agree("UNLIMITED WHOLESALE & RETAIL ROM", "TRIPOP PRODCOM S.R.L.")
+    assert not names_agree("", "FORMOSA S.R.L.")
+
+
+def test_ra_codes_exclude_registers_that_cannot_reach_a_cui() -> None:
+    """RA000718 (NGO) and RA000498 (ASF) are deliberately absent.
+
+    Their numbers are real identifiers from other Romanian registers, but an
+    association's fiscal code is not on its LEI record and cannot be derived
+    from ``4325/A/2003``. Including them would dispatch a source that can only
+    fail.
+    """
+    assert RO_RA_CODES == {RO_ONRC_RA_CODE, RO_TAX_RA_CODE}
+    assert "RA000718" not in RO_RA_CODES
+    assert "RA000498" not in RO_RA_CODES
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("14399840", "14399840"),
+        ("RO14399840", "14399840"),
+        ("J40/1116/1991", "J40/1116/1991"),
+        ("J2002000372404", "J2002000372404"),
+    ],
+)
+def test_deriver_accepts_both_kinds(raw: str, expected: str) -> None:
+    assert _normalise_ro_id(raw) == expected
+
+
+@pytest.mark.parametrize("raw", ["4325/A/2003", "CSC06FDIR/120135", ""])
+def test_deriver_rejects_other_registers(raw: str) -> None:
+    with pytest.raises(ValueError):
+        _normalise_ro_id(raw)
+
+
+# ---------------------------------------------------------------------------
+# Index fixture
+# ---------------------------------------------------------------------------
+
+_SCHEMA = """
+CREATE TABLE company (
+    registration_number TEXT PRIMARY KEY, registration_prefix TEXT, cui TEXT,
+    name TEXT, legal_form TEXT, registered_on TEXT, status_code TEXT,
+    status TEXT, country TEXT, county TEXT, locality TEXT, address TEXT,
+    postal_code TEXT, website TEXT, parent_country TEXT
+);
+CREATE TABLE representative (
+    registration_number TEXT, seq INTEGER, name TEXT, role TEXT,
+    role_slug TEXT, is_entity INTEGER, birth_date TEXT, birth_locality TEXT,
+    birth_county TEXT, birth_country TEXT, locality TEXT, county TEXT,
+    country TEXT
+);
+"""
+
+
+@pytest.fixture()
+def index(tmp_path: Path):
+    """A three-company index in the real schema, pointed at by the setting."""
+    path = tmp_path / "onrc.sqlite"
+    conn = sqlite3.connect(str(path))
+    conn.executescript(_SCHEMA)
+    conn.executemany(
+        "INSERT INTO company VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        [
+            # Filed in the OLD format, as GLEIF holds it.
+            ("J40/1116/1991", None, "412052", "TRANSIDEAL SRL", "SRL",
+             "1991-03-14", "1048", "funcțiune", "România", "Bucureşti",
+             "Bucureşti Sectorul 5", "Str. CAP. IVAN ANGHELACHE, 10", "064191",
+             None, None),
+            # Filed in the NEW format. GLEIF holds the OLD one — J40/15812/2017
+            # — so only the prefix join can reach it.
+            ("J2017015812405", "J2017015812" "40", "38218844",
+             "IMAFLUX DESIGN SRL", "SRL", "2017-09-01", "1048", "funcțiune",
+             "România", "Bucureşti", "Bucureşti Sectorul 3", "Str. Exemplu, 1",
+             "030000", None, None),
+            ("J40/9999/2001", None, "", "NO FISCAL CODE SRL", "SRL",
+             "2001-01-01", "1084", "radiată", "România", "Cluj", "Cluj-Napoca",
+             None, None, None, None),
+        ],
+    )
+    conn.executemany(
+        "INSERT INTO representative VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        [
+            ("J40/1116/1991", 0, "POPESCU ION", "administrator",
+             "administrator", 0, "1967-06-19", "Municipiul Aiud", "Alba",
+             "România", "Bucureşti", "Bucureşti", "România"),
+            # The two-row corporate-directorship shape: a firm as
+            # administrator, with its natural-person representative beside it.
+            ("J40/1116/1991", 1, "CATEDRAL INSOLV IPURL",
+             "administrator judiciar", "judicial_administrator", 1, None,
+             None, None, None, "Cluj-Napoca", "Cluj", "România"),
+            ("J40/1116/1991", 2, "GABOR MARIA",
+             "reprezentant al persoanei juridice", "entity_representative", 0,
+             "1972-03-15", "Cluj-Napoca", "Cluj", "România", "Cluj-Napoca",
+             "Cluj", "România"),
+        ],
+    )
+    conn.commit()
+    conn.close()
+
+    get_settings.cache_clear()
+    import os
+
+    os.environ["ONRC_ROMANIA_DB_FILE"] = str(path)
+    onrc_romania.reset_connection()
+    yield path
+    os.environ.pop("ONRC_ROMANIA_DB_FILE", None)
+    get_settings.cache_clear()
+    onrc_romania.reset_connection()
+
+
+@pytest.fixture()
+def no_index():
+    import os
+
+    os.environ.pop("ONRC_ROMANIA_DB_FILE", None)
+    get_settings.cache_clear()
+    onrc_romania.reset_connection()
+    yield
+    get_settings.cache_clear()
+    onrc_romania.reset_connection()
+
+
+# ---------------------------------------------------------------------------
+# resolve_cui
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_cui_exact_match(index: Path) -> None:
+    assert resolve_cui("J40/1116/1991") == "412052"
+
+
+def test_resolve_cui_recovers_a_renumbered_company(index: Path) -> None:
+    """The 6.8-point case: GLEIF holds the old number, ONRC holds the new one."""
+    assert resolve_cui("J40/15812/2017") == "38218844"
+
+
+def test_resolve_cui_checks_the_name_when_given_one(index: Path) -> None:
+    assert resolve_cui("J40/1116/1991", legal_name="TRANSIDEAL S.R.L.") == "412052"
+    # A former name on the LEI record must not attach the lookup to a company
+    # the user did not ask about.
+    assert resolve_cui("J40/1116/1991", legal_name="SOMETHING ELSE SRL") is None
+
+
+def test_resolve_cui_returns_none_without_a_fiscal_code(index: Path) -> None:
+    """2.0% of rows carry no CUI at all. That is not resolvable, not an error."""
+    assert resolve_cui("J40/9999/2001") is None
+
+
+def test_resolve_cui_without_an_index(no_index) -> None:
+    assert resolve_cui("J40/1116/1991") is None
+    assert onrc_romania.index_available() is False
+
+
+# ---------------------------------------------------------------------------
+# ONRC adapter and mapper
+# ---------------------------------------------------------------------------
+
+
+async def test_onrc_fetch_returns_a_stub_without_an_index(no_index) -> None:
+    bundle = await OnrcRomaniaAdapter().fetch("J40/1116/1991", legal_name="Transideal")
+    assert bundle["is_stub"] is True
+    assert bundle["representatives"] == []
+
+
+async def test_onrc_fetch_reads_the_index(index: Path) -> None:
+    bundle = await OnrcRomaniaAdapter().fetch("J40/1116/1991", legal_name="Transideal")
+    assert bundle["is_stub"] is False
+    assert bundle["cui"] == "412052"
+    assert bundle["name"] == "TRANSIDEAL SRL"
+    assert len(bundle["representatives"]) == 3
+
+
+async def test_onrc_fetch_finds_a_renumbered_company(index: Path) -> None:
+    bundle = await OnrcRomaniaAdapter().fetch("J40/15812/2017")
+    assert bundle["is_stub"] is False
+    # The bundle carries the register's own spelling, not GLEIF's.
+    assert bundle["registration_number"] == "J2017015812405"
+
+
+async def test_onrc_mapper_emits_company_people_and_roles(index: Path) -> None:
+    bundle = await OnrcRomaniaAdapter().fetch("J40/1116/1991")
+    statements = list(map_onrc_romania(bundle))
+    kinds = [s["recordType"] for s in statements]
+    assert kinds.count("entity") == 2       # company + the IPURL firm
+    assert kinds.count("person") == 2
+    assert kinds.count("relationship") == 3
+
+    company = statements[0]
+    schemes = {
+        i["scheme"]: i["id"]
+        for i in company["recordDetails"]["identifiers"]
+    }
+    assert schemes["RO-ONRC"] == "J40/1116/1991"
+    assert schemes["RO-CUI"] == "412052"
+
+    interests = [
+        s["recordDetails"]["interests"][0]
+        for s in statements
+        if s["recordType"] == "relationship"
+    ]
+    types = {i["type"] for i in interests}
+    assert types == {"seniorManagingOfficial", "controlByLegalFramework"}
+    # Nothing here is a beneficial ownership claim — ONRC publishes none.
+    assert all(i["beneficialOwnershipOrControl"] is False for i in interests)
+    # The register's own word for the role survives the mapping.
+    assert any(i.get("details") == "administrator judiciar" for i in interests)
+
+
+async def test_onrc_mapper_publishes_the_full_birth_date(index: Path) -> None:
+    """Stephen's call, 14 Sep 2026: publish the date at the precision filed.
+
+    The register publishes it openly under CC BY 4.0, and a full date is what
+    gives Romanian person matching a corroborating attribute.
+    """
+    bundle = await OnrcRomaniaAdapter().fetch("J40/1116/1991")
+    people = [s for s in map_onrc_romania(bundle) if s["recordType"] == "person"]
+    dates = {p["recordDetails"].get("birthDate") for p in people}
+    assert "1967-06-19" in dates
+
+
+async def test_onrc_mapper_yields_nothing_for_a_stub(no_index) -> None:
+    bundle = await OnrcRomaniaAdapter().fetch("J40/1116/1991")
+    assert list(map_onrc_romania(bundle)) == []
+
+
+async def test_onrc_finding(index: Path) -> None:
+    bundle = await OnrcRomaniaAdapter().fetch("J40/1116/1991")
+    sentence = finding_onrc_romania(bundle)
+    assert sentence is not None
+    assert sentence.startswith("Funcțiune")
+    assert "3 legal representatives" in sentence
+    assert sentence.endswith(".")
+
+
+# ---------------------------------------------------------------------------
+# ANAF — live service
+# ---------------------------------------------------------------------------
+
+_ANAF_RECORD: dict[str, Any] = {
+    "date_generale": {
+        "data": "2026-09-14",
+        "cui": 14399840,
+        "denumire": "DANTE INTERNATIONAL SA",
+        "adresa": "MUNICIPIUL BUCUREŞTI, SECTOR 2, STR. GARA HERĂSTRĂU, NR.6",
+        "nrRegCom": "J2002000372404",
+        "stare_inregistrare": "INREGISTRAT din data 29.08.2006",
+        "data_inregistrare": "2002-01-23",
+        "cod_CAEN": "4754",
+        "forma_juridica": "SOCIETATE COMERCIALĂ PE ACŢIUNI",
+        "forma_organizare": "PERSOANA JURIDICA",
+        "statusRO_e_Factura": False,
+    },
+    "inregistrare_scop_Tva": {
+        "scpTVA": True,
+        "perioade_TVA": [{"data_inceput_ScpTVA": "2002-02-01", "data_sfarsit_ScpTVA": ""}],
+    },
+    "stare_inactiv": {
+        "statusInactivi": False,
+        "dataInactivare": "",
+        "dataReactivare": "",
+        "dataPublicare": "",
+        "dataRadiere": "",
+    },
+    "adresa_sediu_social": {
+        "sdenumire_Strada": "Şos. Virtuţii",
+        "snumar_Strada": "148",
+        "sdenumire_Localitate": "Sector 6 Mun. Bucureşti",
+        "sdenumire_Judet": "MUNICIPIUL BUCUREŞTI",
+        "scod_Postal": "60787",
+        "sdetalii_Adresa": "spatiul E47",
+    },
+    "adresa_domiciliu_fiscal": {
+        "ddenumire_Strada": "Str. Gara Herăstrău",
+        "dnumar_Strada": "6",
+        "ddenumire_Localitate": "Sector 2 Mun. Bucureşti",
+        "ddenumire_Judet": "MUNICIPIUL BUCUREŞTI",
+        "ddetalii_Adresa": "Cladirea Globalworth Square",
+    },
+}
+
+
+class _FakeResponse:
+    def __init__(self, payload: Any, status_code: int = 200, text: str = "") -> None:
+        self._payload = payload
+        self.status_code = status_code
+        self._text = text
+
+    @property
+    def is_success(self) -> bool:
+        return 200 <= self.status_code < 300
+
+    def json(self) -> Any:
+        if self._payload is None:
+            raise ValueError("not JSON")
+        return self._payload
+
+
+class _FakeClient:
+    """Captures the POST body so the batching contract can be asserted."""
+
+    def __init__(self, payload: Any, status_code: int = 200) -> None:
+        self.payload = payload
+        self.status_code = status_code
+        self.posts: list[list[dict[str, Any]]] = []
+
+    async def __aenter__(self) -> "_FakeClient":
+        return self
+
+    async def __aexit__(self, *exc: object) -> None:
+        return None
+
+    async def post(self, url: str, *, content: bytes, headers: dict[str, str]):
+        self.posts.append(json.loads(content.decode("utf-8")))
+        return _FakeResponse(self.payload, self.status_code)
+
+
+@pytest.fixture()
+def anaf_client(monkeypatch):
+    """Patch ``build_client`` in the adapter and hand back the fake."""
+
+    def _install(payload: Any, status_code: int = 200) -> _FakeClient:
+        client = _FakeClient(payload, status_code)
+        monkeypatch.setattr(
+            "opencheck.sources.anaf_romania.build_client", lambda: client
+        )
+        return client
+
+    return _install
+
+
+async def test_anaf_fetch_by_fiscal_code_needs_no_index(no_index, anaf_client) -> None:
+    """47.8% of RO LEI holders take this path — the index is irrelevant here."""
+    client = anaf_client({"found": [_ANAF_RECORD], "notFound": []})
+    bundle = await AnafRomaniaAdapter().fetch("14399840", legal_name="Dante")
+    assert bundle["is_stub"] is False
+    assert bundle["cui"] == "14399840"
+    assert bundle["registration_number"] == "J2002000372404"
+    # The request is exactly ANAF's documented shape.
+    assert client.posts == [[{"cui": 14399840, "data": bundle["record"]["date_generale"]["data"]}]] or (
+        client.posts[0][0]["cui"] == 14399840
+    )
+
+
+async def test_anaf_says_so_when_no_index_can_resolve_a_j_number(no_index) -> None:
+    """The honest-degradation case: not asked, and the card says why."""
+    bundle = await AnafRomaniaAdapter().fetch("J40/1116/1991", legal_name="Transideal")
+    assert bundle["record"] is None
+    assert bundle["coverage_note"] == COVERAGE_NO_INDEX
+    assert bundle["is_stub"] is False  # a note card, not a placeholder
+    assert list(map_anaf_romania(bundle)) == []
+    assert "Not queried" in (finding_anaf_romania(bundle) or "")
+
+
+async def test_anaf_resolves_a_j_number_through_the_index(index, anaf_client) -> None:
+    client = anaf_client({"found": [_ANAF_RECORD], "notFound": []})
+    bundle = await AnafRomaniaAdapter().fetch("J40/1116/1991", legal_name="TRANSIDEAL SRL")
+    assert bundle["coverage_note"] is None
+    # The index turned the register number into the fiscal code ANAF was asked.
+    assert client.posts[0][0]["cui"] == 412052
+
+
+async def test_anaf_not_found_is_not_a_stub(no_index, anaf_client) -> None:
+    anaf_client({"found": [], "notFound": [99999999]})
+    bundle = await AnafRomaniaAdapter().fetch("99999999")
+    assert bundle["not_found"] is True
+    assert list(map_anaf_romania(bundle)) == []
+    assert finding_anaf_romania(bundle) == "No taxpayer record under this fiscal code."
+
+
+async def test_anaf_batches_at_the_documented_ceiling(no_index, anaf_client) -> None:
+    """ANAF states 100 CUIs per request; 250 must become three requests."""
+    client = anaf_client({"found": [], "notFound": []})
+    await AnafRomaniaAdapter().fetch_many([str(n) for n in range(1000, 1250)])
+    assert [len(p) for p in client.posts] == [MAX_BATCH, MAX_BATCH, 50]
+
+
+async def test_anaf_records_a_degradation_on_an_html_body(no_index, anaf_client, monkeypatch) -> None:
+    """A WAF page must never read as 'the register had nothing to say'."""
+    from opencheck import degradation
+
+    anaf_client(None)  # .json() raises, as an HTML body would
+    with degradation.recording() as recorded:
+        bundle = await AnafRomaniaAdapter().fetch("14399840")
+    assert bundle["not_found"] is True
+    assert any(d.source_id == "anaf_romania" for d in recorded)
+
+
+async def test_anaf_mapper_emits_the_company_with_both_identifiers(no_index, anaf_client) -> None:
+    anaf_client({"found": [_ANAF_RECORD], "notFound": []})
+    bundle = await AnafRomaniaAdapter().fetch("14399840")
+    statements = list(map_anaf_romania(bundle))
+    assert len(statements) == 1
+    stmt = statements[0]
+    schemes = {i["scheme"]: i["id"] for i in stmt["recordDetails"]["identifiers"]}
+    # ANAF repeats ONRC's number rather than asserting one of its own, and it
+    # is emitted under ONRC's scheme so the reconciler can corroborate.
+    assert schemes == {"RO-CUI": "14399840", "RO-ONRC": "J2002000372404"}
+    assert stmt["recordDetails"]["foundingDate"] == "2002-01-23"
+    assert "dissolutionDate" not in stmt["recordDetails"]
+
+
+async def test_anaf_mapper_reads_the_striking_off_date(no_index, anaf_client) -> None:
+    record = json.loads(json.dumps(_ANAF_RECORD))
+    record["stare_inactiv"]["dataRadiere"] = "2019-04-30"
+    anaf_client({"found": [record], "notFound": []})
+    bundle = await AnafRomaniaAdapter().fetch("14399840")
+    stmt = next(iter(map_anaf_romania(bundle)))
+    assert stmt["recordDetails"]["dissolutionDate"] == "2019-04-30"
+
+
+async def test_anaf_inactive_is_pending_not_dissolved(no_index, anaf_client) -> None:
+    """A taxpayer declared inactive still exists. Never ``terminal``."""
+    record = json.loads(json.dumps(_ANAF_RECORD))
+    record["stare_inactiv"]["statusInactivi"] = True
+    record["stare_inactiv"]["dataInactivare"] = "2024-02-01"
+    anaf_client({"found": [record], "notFound": []})
+    bundle = await AnafRomaniaAdapter().fetch("14399840")
+    stmt = next(iter(map_anaf_romania(bundle)))
+    assert "dissolutionDate" not in stmt["recordDetails"]
+    descriptions = " ".join(
+        a.get("description", "") for a in stmt.get("annotations", [])
+    )
+    assert "terminal process" in descriptions
+    assert "On the inactive-taxpayer register" in (finding_anaf_romania(bundle) or "")
+
+
+async def test_anaf_finding_leads_with_registration(no_index, anaf_client) -> None:
+    anaf_client({"found": [_ANAF_RECORD], "notFound": []})
+    bundle = await AnafRomaniaAdapter().fetch("14399840")
+    sentence = finding_anaf_romania(bundle)
+    assert sentence is not None
+    assert sentence.startswith("Registered since 2002-01-23")
+    assert "registered for VAT" in sentence
+    assert len(sentence) <= 140

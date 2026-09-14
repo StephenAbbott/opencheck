@@ -419,6 +419,19 @@ class Settings(BaseSettings):
     #   python scripts/build_edr_ukraine_index.py --zip UO.zip --out edr_ukraine.sqlite
     # Source: https://data.gov.ua/dataset/a1799820-195b-4982-8141-6e84f58103e7
     edr_ukraine_db_file: str | None = Field(default=None, alias="EDR_UKRAINE_DB_FILE")
+
+    # --- Romania ONRC (data.gov.ro open data, CC BY 4.0) ---
+    # No API key and no free ONRC API at all. Pre-built SQLite index over the
+    # monthly bulk dump; build with:
+    #   python3 scripts/build_onrc_romania_index.py --out onrc_romania.sqlite
+    # Source: https://data.gov.ro/dataset?organization=onrc
+    #
+    # This is not only an enrichment. ANAF — the live Romanian channel — is
+    # keyed on the fiscal code (CUI), and about half of Romanian LEI records
+    # carry a trade-register number instead. Without this index those lookups
+    # cannot reach ANAF at all: 47.8% of RO LEI holders resolve without it,
+    # 98.1% with it (measured on 1,800 live records, 2026-09-14).
+    onrc_romania_db_file: str | None = Field(default=None, alias="ONRC_ROMANIA_DB_FILE")
     # Where a host with an ephemeral filesystem fetches the index from, on the
     # ``securities_index_url`` pattern. Unset by default: the index is ~392 MB
     # and downloading it on every cold start is not a trade worth making until

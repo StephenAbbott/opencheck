@@ -1312,3 +1312,107 @@ def finding_inpi(bundle: dict[str, Any]) -> str | None:
     if not bundle or bundle.get("is_stub") or not bundle.get("not_found"):
         return None
     return INPI_NOT_IN_RNE
+
+
+def finding_anaf_romania(bundle: dict[str, Any]) -> str | None:
+    """What ANAF's taxpayer register says: whether it still exists, and its
+    VAT and inactive-taxpayer standing.
+
+    Three cases, worded so that "we did not ask" never reads like "there is
+    nothing there" (rule 6):
+
+    * A **coverage note** — the company is keyed by its trade-register number
+      and no index was available to turn that into a fiscal code — says that
+      the register was not queried, and why.
+    * **Not found** says ANAF was asked and holds no taxpayer under that code.
+    * A record leads with the fact that changes a decision: struck off, then
+      declared inactive, then registered — not with the CAEN code.
+
+    VAT registration is stated plainly and never dressed up: being registered
+    for VAT is not a finding about a company's standing, and the clause sits
+    last so the 140-character cap drops it first.
+    """
+    if not bundle:
+        return None
+    if bundle.get("coverage_note"):
+        return (
+            "Not queried: this company is identified by its trade-register "
+            "number, and the register answers only to a fiscal code."
+        )
+    if bundle.get("not_found"):
+        return "No taxpayer record under this fiscal code."
+    if bundle.get("is_stub"):
+        return None
+
+    record = bundle.get("record")
+    if not isinstance(record, dict):
+        return None
+    general = record.get("date_generale") or {}
+    inactive = record.get("stare_inactiv") or {}
+    vat = record.get("inregistrare_scop_Tva") or {}
+
+    struck_off = str(inactive.get("dataRadiere") or "").strip()
+    inactivated = str(inactive.get("dataInactivare") or "").strip()
+    registered = str(general.get("data_inregistrare") or "").strip()
+
+    if struck_off:
+        lead = f"Struck off on {struck_off}"
+    elif inactive.get("statusInactivi"):
+        lead = "On the inactive-taxpayer register"
+        if inactivated:
+            lead += f" since {inactivated}"
+    elif registered:
+        lead = f"Registered since {registered}"
+    else:
+        lead = "On the taxpayer register"
+
+    form = str(general.get("forma_juridica") or "").strip().lower()
+    clauses: list[str | None] = [lead, form or None]
+    if vat.get("scpTVA") is True:
+        clauses.append("registered for VAT")
+    elif vat.get("scpTVA") is False:
+        clauses.append("not registered for VAT")
+    return clauses_to_sentence(clauses)
+
+
+def finding_onrc_romania(bundle: dict[str, Any]) -> str | None:
+    """What the Trade Register says: status, legal form, and who represents it.
+
+    The representative clause counts rather than lists once there is more than
+    one, and names a single one because a company with one administrator has
+    told you something specific. Roles are the register's own words.
+
+    Deliberately **not** said: that no shareholders or beneficial owners are
+    on file. ONRC publishes neither for any company in the open data, so the
+    clause would be identical on every row and read as a finding about this
+    one (the ACRA precedent).
+    """
+    if not bundle or bundle.get("is_stub"):
+        return None
+    company = bundle.get("company")
+    if not isinstance(company, dict):
+        return None
+
+    status = str(company.get("status") or "").strip()
+    registered = str(company.get("registered_on") or "").strip()
+    form = str(company.get("legal_form") or "").strip()
+
+    if status:
+        lead = status[0].upper() + status[1:]
+        if registered:
+            lead += f", registered {registered}"
+    elif registered:
+        lead = f"Registered {registered}"
+    else:
+        lead = "On the Trade Register"
+
+    reps = [r for r in (bundle.get("representatives") or []) if r.get("name")]
+    rep_clause: str | None = None
+    if len(reps) == 1:
+        role = str(reps[0].get("role") or "").strip()
+        name = str(reps[0].get("name") or "").strip()
+        rep_clause = f"{name} on file as {role}" if role else f"{name} on file"
+    elif reps:
+        rep_clause = f"{len(reps)} legal representatives on file"
+
+    return clauses_to_sentence([lead, form or None, rep_clause])

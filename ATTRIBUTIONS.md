@@ -165,6 +165,26 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `sg_uen` (Unique Entity Number) derived from GLEIF RA code `RA000523`; no name search
 - **Note:** Works without an API key at 4 requests per 10 seconds; a free data.gov.sg developer key (`DATA_GOV_SG_API_KEY`, sent as `x-api-key`) raises that to 8. A wrong key is not rejected — it silently gets the keyless limit.
 
+## Romania — ANAF (Agenția Națională de Administrare Fiscală)
+
+- **Data:** taxpayer record for a Romanian fiscal code (CUI) — registered name, registered office and fiscal domicile, trade-register number, legal form and form of organisation, CAEN activity code, registration date, VAT registration and its periods, the inactive-taxpayer register (inactivation, reactivation and striking-off dates), split-VAT and RO e-Factura status. Entity data only — ANAF publishes no officers, shareholders or beneficial owners.
+- **API:** `POST https://webservicesp.anaf.ro/api/PlatitorTvaRest/v9/tva` — keyless. Specification: <https://static.anaf.ro/static/10/Anaf/Informatii_R/Servicii_web/doc_WS_V9.txt>
+- **License:** **none stated.** ANAF publishes no licence for this service. Its API terms of use (<https://static.anaf.ro/static/10/Anaf/termeni_conditii_API.pdf>) are addressed to software vendors integrating with ANAF and are silent on reuse, redistribution, caching and commercial use; they do not state whether they cover the keyless public services at all. They do expressly prohibit marketing software as "accredited by MF or ANAF" and using the Ministry of Finance's or ANAF's logos.
+- **OpenCheck's position (recorded 14 September 2026):** this is treated as **public-register fact**, not as licensed data. OpenCheck cites ANAF as the source on every statement derived from it, caches only what a lookup needs, does **not** redistribute it in bulk, and does not describe itself as accredited by ANAF or by the Ministry of Finance. If ANAF publishes terms that say otherwise, this position changes.
+- **Attribution:** "Contains information from the taxpayer registers published by the Agenția Națională de Administrare Fiscală (ANAF) through its public web service at webservicesp.anaf.ro." — the date of access is each statement's `source.retrievedAt`.
+- **Entry point:** `ro_fiscal_or_reg_id` derived from GLEIF RA codes `RA000497` (ONRC Trade Register) and `RA000719` (Tax Payer Register, Ministry of Finance); no name search
+- **Limits:** ANAF's own specification states a maximum of **100 fiscal codes per request** and **1 request per second**, and warns that attempts to overload the server will be acted on under the regulations in force. Both limits are enforced in the adapter.
+
+## Romania — ONRC (Oficiul Național al Registrului Comerțului)
+
+- **Data:** companies on the Romanian Trade Register — name, registration number in both of the register's formats, EUID, legal form, registered office, registration date and status — and their **legal representatives**, with the register's own role wording, place of birth and date of birth. No shareholders (*asociați*) and no beneficial owners: both are available only in ONRC's paid *certificat constatator*.
+- **Source:** monthly bulk dump on <https://data.gov.ro/dataset?organization=onrc> (six `^`-delimited CSVs, about 1.6 GB). Resource identifiers change every month, so they are resolved through the CKAN `package_show` API rather than hardcoded.
+- **License:** Creative Commons Attribution 4.0 — <https://creativecommons.org/licenses/by/4.0/>
+- **Attribution:** "Contains information from the National Trade Register Office (Oficiul Național al Registrului Comerțului), published on data.gov.ro under a Creative Commons Attribution 4.0 licence."
+- **Entry point:** an ONRC registration number in either format, derived from GLEIF RA code `RA000497`
+- **Personal data:** the representatives file publishes a **full date of birth** for about 87% of the 3.7M rows, and a place of birth for a similar share. ONRC publishes these openly under CC BY 4.0 and OpenCheck republishes the date at the precision filed, which is also what gives Romanian person matching a corroborating attribute. Sole-trader forms (PFA, II, PF, AF, IF) are excluded from the index entirely: they are natural persons trading under a business name, not entities.
+- **Note:** bulk-only and **not registered** — it has no live API and appears on no `/sources` listing. Its index is nonetheless what lets the ANAF adapter reach the majority of Romanian LEI holders, whose GLEIF records carry a trade-register number rather than a fiscal code.
+
 ## Hong Kong Companies Registry (公司註冊處)
 
 - **Data:** core details of live local companies — English and Chinese names, Business Registration Number (the Unique Business Identifier), company type, registered office address, incorporation and re-domiciliation dates — from the *Registered Office Address of Live Local Companies* dataset. Entity data only — no officers, secretaries, shareholders or beneficial owners.

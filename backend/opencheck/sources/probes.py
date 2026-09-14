@@ -277,6 +277,27 @@ PROBES: dict[str, SourceProbe] = {
             "shares that keyless budget, not that the data moved."
         ),
     ),
+    "anaf_romania": _p(
+        tier="live",
+        subject="Dante International S.A. (eMAG)",
+        args=("14399840",),
+        kwargs={"legal_name": "DANTE INTERNATIONAL SA"},
+        expect_fields=("record",),
+        anchor_lei="254900FDFVYUDTRUS759",
+        bods_mapper="map_anaf_romania",
+        notes=(
+            "A bare fiscal code, the RA000719 shape and the half of RA000497 "
+            "that files a CUI — so this probe needs no ONRC index and tests "
+            "the path that works in production today. ``expect_fields`` "
+            "asserts ``record``: without it a coverage note or a notFound "
+            "would be a quiet miss rather than a degradation, which is the "
+            "INPI lesson. Keyless; ANAF's documented ceiling is 100 codes per "
+            "request and one request per second, so a 429 here means the "
+            "runner is sharing an IP, not that the service moved. A "
+            "'Request Rejected' HTML body means the request reached ANAF's "
+            "WAF as a GET — the POST path is not challenged."
+        ),
+    ),
     "cr_hongkong": _p(
         tier="live",
         subject="The Hongkong and Shanghai Banking Corporation Limited",
