@@ -142,3 +142,10 @@ data/meip.sqlite-journal
 data/meip_bods.jsonl
 data/globalregister*.xlsx
 data/meip_head_warnings.json
+
+# The ONRC Romania index: a release asset the app downloads at boot (the MEIP
+# rule above), and the raw monthly dump it is built from. Never committed.
+data/onrc_romania.sqlite
+data/onrc_romania.sqlite.gz
+data/onrc_romania.sqlite-journal
+data/onrc/

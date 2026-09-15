@@ -461,6 +461,25 @@ class Settings(BaseSettings):
     # cannot reach ANAF at all: 47.8% of RO LEI holders resolve without it,
     # 98.1% with it (measured on 1,800 live records, 2026-09-14).
     onrc_romania_db_file: str | None = Field(default=None, alias="ONRC_ROMANIA_DB_FILE")
+    # Release asset the index is downloaded from at boot when absent, and
+    # replaced from when the asset is not the one on disk — the MEIP / PSC
+    # graph rule. Empty string disables the download and leaves the file
+    # entirely to whatever ``ONRC_ROMANIA_DB_FILE`` points at.
+    #
+    # Shipping the artifact rather than building it on the host is not a
+    # preference: data.gov.ro silently drops connections from datacentre
+    # ranges (Render and GitHub Actions both time out at TCP connect, on both
+    # 443 and 80, after DNS resolves; a consumer connection is fine), so the
+    # index is built off-datacentre and uploaded. At 4.3 MB — 1.3 MB gzipped,
+    # because the index is scoped to the Romanian LEI population rather than
+    # the whole 2.86M-company register — that costs a second or two at boot.
+    onrc_romania_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "onrc-romania-index/onrc_romania_scoped.sqlite.gz"
+        ),
+        alias="ONRC_ROMANIA_DB_URL",
+    )
     # Where a host with an ephemeral filesystem fetches the index from, on the
     # ``securities_index_url`` pattern. Unset by default: the index is ~392 MB
     # and downloading it on every cold start is not a trade worth making until

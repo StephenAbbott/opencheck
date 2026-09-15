@@ -349,15 +349,33 @@ def names_agree(left: str, right: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def db_path() -> Path:
+    """Where the index lives: ``ONRC_ROMANIA_DB_FILE`` or the data root default.
+
+    One function, so the reader and the boot downloader cannot disagree about
+    the path — see ``_connect`` for what happened when they did.
+    """
+    from ..cache import data_root
+
+    configured = get_settings().onrc_romania_db_file
+    return Path(configured) if configured else data_root() / "onrc_romania.sqlite"
+
+
 def _connect() -> sqlite3.Connection | None:
-    """Open the ONRC index, or None when it is not configured or missing."""
-    settings = get_settings()
-    db_path = getattr(settings, "onrc_romania_db_file", None)
-    if not db_path:
-        return None
-    path = Path(db_path)
+    """Open the ONRC index, or None when it is missing.
+
+    Resolves through ``db_path`` rather than reading the setting directly, so
+    this and ``warm_index`` cannot disagree about where the file is. They did
+    at first: the boot download wrote to the data-root default while this read
+    ``ONRC_ROMANIA_DB_FILE`` and returned None when it was unset, so a
+    perfectly good downloaded index was ignored and the source stayed dark.
+    """
+    path = db_path()
     if not path.exists():
-        logger.warning("onrc_romania: index not found at %s", db_path)
+        # Only worth a warning when someone named a path that isn't there.
+        # Unset-and-absent is the ordinary no-index state, not a fault.
+        if get_settings().onrc_romania_db_file:
+            logger.warning("onrc_romania: index not found at %s", path)
         return None
     conn = sqlite3.connect(str(path), check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -387,6 +405,54 @@ def reset_connection() -> None:
 def index_available() -> bool:
     """True when an ONRC index is configured and present."""
     return _shared_conn() is not None
+
+
+def warm_index() -> dict[str, Any]:
+    """Download the index at boot when absent; replace it when the release
+    asset is not the one on disk; keep it otherwise.
+
+    The MEIP / PSC-graph rule, and for the same reason: Render's filesystem is
+    ephemeral, the index is a build artifact rather than a repo file, and a
+    4.3 MB gzipped asset is cheap enough to re-fetch on a cold start. Never
+    raises — no index is a state this module already models (``covers_lei``
+    returns False and the source is not announced), not a reason to fail boot.
+    """
+    from ..entity_pages import (
+        ASSET_STAMP_KEY,
+        asset_check,
+        download_db,
+        read_meta,
+        record_asset_stamp,
+    )
+
+    settings = get_settings()
+    path = db_path()
+    url = settings.onrc_romania_db_url
+    if not url:
+        state = "present" if path.exists() else "absent"
+        return {"onrc_romania": f"{state}: {path} (no URL)"}
+    try:
+        last_modified: str | None = None
+        if path.exists():
+            decision, last_modified = asset_check(url, path)
+            if decision == "keep":
+                if last_modified and read_meta(path).get(ASSET_STAMP_KEY) is None:
+                    record_asset_stamp(path, last_modified)
+                return {"onrc_romania": f"already present: {path}"}
+            logger.info(
+                "onrc_romania: the release asset is not the one on disk; replacing"
+            )
+            outcome = "replaced"
+        else:
+            outcome = "downloaded"
+        downloaded, elapsed = download_db(url, path, last_modified=last_modified)
+        reset_connection()
+        return {
+            "onrc_romania": f"{outcome}: {path} ({downloaded} bytes in {elapsed:.1f}s)"
+        }
+    except Exception as exc:  # noqa: BLE001 — no index is a state, not a crash
+        logger.warning("onrc_romania: asset check/download failed: %s", exc)
+        return {"onrc_romania": f"failed: {exc}"}
 
 
 def company_row(registration_number: str) -> dict[str, Any] | None:
