@@ -28,6 +28,7 @@ from ..findings import (
     finding_climatetrace,
     finding_companies_house,
     finding_inpi,
+    finding_meip,
     finding_opencorporates,
     finding_ted_eu,
     finding_wikidata,
@@ -788,6 +789,43 @@ def _bh_cac_nigeria(r: dict, ctx: _LookupCtx) -> SourceHit:
         "cac_nigeria", ctx.lei,
         name=record.get("company") or ctx.legal_name or ctx.lei,
         summary=" · ".join(parts),
+        identifiers=identifiers,
+        raw=r,
+    )
+
+
+def _bh_meip(r: dict, ctx: _LookupCtx) -> SourceHit:
+    """OECD-UNSD MEIP (Phase 208) — the subject's group membership.
+
+    ``identifiers`` carries the LEI: the OECD publishes it on the record
+    itself (``XI-LEI``), so the corroboration rule is satisfied — it is the
+    register's own assertion, not the lookup key handed back. The other
+    identifiers the OECD publishes (OpenCorporates, PermID, Capital IQ,
+    DUNL) ride on the entity statement and reconcile there.
+    """
+    records = r.get("records") or []
+    first = records[0] if records else {}
+    group = first.get("group") or {}
+    parts: list[str] = []
+    if first.get("mode") == "mne_head":
+        parts.append("MNE group head")
+        total = first.get("subsidiaries_total")
+        if isinstance(total, int):
+            parts.append(f"{total:,} subsidiaries in the register")
+    else:
+        parts.append("group member")
+        if group.get("name"):
+            parts.append(f"{group['name']} group")
+    if len(records) > 1:
+        parts.append(f"{len(records)} register records")
+    if r.get("edition"):
+        parts.append(f"register of {r['edition']}")
+    identifiers: dict[str, str] = {"lei": ctx.lei} if ctx.lei else {}
+    return _hit(
+        "meip", ctx.lei,
+        name=first.get("name") or ctx.legal_name or ctx.lei,
+        summary=" · ".join(parts),
+        finding=finding_meip(r),
         identifiers=identifiers,
         raw=r,
     )

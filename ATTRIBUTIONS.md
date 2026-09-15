@@ -452,12 +452,12 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 
 ## OECD-UNSD Multinational Enterprise Information Platform (MEIP)
 
-- **Data:** the annual "Global Register" of subsidiaries of the world's 500 largest multinational enterprises — subsidiary names, jurisdictions, alternative names, addresses, and cross-reference identifiers (LEI, OpenCorporates, Refinitiv PermID, S&P Capital IQ) for the ~30,000 subsidiaries that carry an LEI, plus the 500 MNE heads.
+- **Data:** the annual "Global Register" of the world's 500 largest multinational enterprise groups and their subsidiaries (126,658 entities in the 31 December 2024 edition), published by the OECD in **BODS v0.4** since September 2026 — an entity statement per company and an `unknownInterest` relationship from each subsidiary to its group head, with the OECD's hierarchy classification. The Global Register spreadsheet supplies each member's immediate parent, which the BODS file omits.
 - **Platform:** <https://www.oecd.org/en/data/dashboards/oecd-unsd-multinational-enterprise-information-platform.html>
-- **License:** [OECD Terms and Conditions](https://www.oecd.org/termsandconditions/) — reuse permitted with attribution.
-- **Attribution:** "Contains data from the OECD-UNSD Multinational Enterprise Information Platform (MEIP)."
-- **Entry point:** subject LEI matched against the vendored MEIP register (`backend/opencheck/data/meip_subsidiaries.json` / `meip_mne_heads.json`, built from the annual Global Register CSV by `backend/scripts/build_meip.py`).
-- **Category:** **Signpost — not mapped to BODS.** MEIP does not contribute BODS statements or graph nodes. When the subject LEI is in the register, OpenCheck shows a signpost card at the bottom of the results page (beneath the data-source cards and the ESG box) that surfaces the identifiers + MNE context and points users to the OECD site to download and reuse the full dataset. MEIP identifiers are cross-checked against GLEIF's own; the `DUNL` column is not used (it only routes to the S&P Capital IQ id already captured).
+- **License:** [OECD Terms and Conditions](https://www.oecd.org/termsandconditions/) — reuse and redistribution permitted with attribution.
+- **Attribution:** "OECD-UNSD Multinational Enterprise Information Platform (MEIP), Global Register — © OECD."
+- **Entry point:** subject LEI matched against the local `meip.sqlite` store, packed from the OECD's BODS JSONL and the Global Register XLSX by `backend/scripts/build_meip.py` and published as a GitHub release asset (`meip-bods-2024`) that the backend downloads at boot. The Phase 69 JSON tables remain as a fallback for the Subsidiaries tab only.
+- **Category:** **CDD** — a source since Phase 208 (it was a signpost card from Phase 69). The OECD's statements are passed through unmodified (`map_meip`), so what OpenCheck shows is what the OECD published: the finding sentence names the group a company is *listed in* and never says "owned by", because the register records group membership under a statistical methodology, not shareholding. Where a head record carries the LEI of a different legal entity in the group (about 4% of heads), or a company is listed in two groups, that is shown as published beside GLEIF Level 2 rather than corrected.
 
 ---
 

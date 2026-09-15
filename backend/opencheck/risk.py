@@ -1756,6 +1756,11 @@ def _state_controlled_signals(
 # ----------------------------------------------------------------------
 
 
+#: Sources whose relationship edges never count towards
+#: ``COMPLEX_OWNERSHIP_LAYERS`` (and so never seed ``COMPLEX_CORPORATE_STRUCTURE``).
+_LAYER_COUNT_EXCLUDED: frozenset[str] = frozenset({"meip"})
+
+
 def assess_amla(
     source_id: str, raw: dict[str, Any], bods: list[dict[str, Any]],
     hit_id: str = "",
@@ -1777,7 +1782,16 @@ def assess_amla(
     trust_signal = _trust_or_arrangement_signal(source_id, hit_id, bods)
     non_eu_signal = _non_eu_jurisdiction_signal(source_id, hit_id, bods)
     nominee_signal = _nominee_signal(source_id, hit_id, bods, raw)
-    layers_signal = _layers_signal(source_id, hit_id, bods)
+    # Phase 208: MEIP's edges are excluded from the layer count. The OECD
+    # register flattens every membership to one edge, subsidiary → group head,
+    # with directOrIndirect "unknown" — the depth of the real chain is exactly
+    # what the file does not say, so counting its edge as a layer would
+    # assert a structure the source never described. Its entities still feed
+    # the jurisdiction signals below (Stephen, 15 Sept 2026).
+    layers_signal = (
+        None if source_id in _LAYER_COUNT_EXCLUDED
+        else _layers_signal(source_id, hit_id, bods)
+    )
 
     out: list[RiskSignal] = []
     for sig in (trust_signal, non_eu_signal, nominee_signal, layers_signal):

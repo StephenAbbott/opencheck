@@ -47,7 +47,6 @@ from ..names import normalise_name
 from ..openaleph_check import assess_openaleph_names
 from ..subject_profile import build_subject_profile
 from ..verdict import build_verdict
-from ..meip import meip_lookup
 from ..ra_codes import RA_BY_COUNTRY, ra_code_for
 from ..reconcile import possibly_same_entities, reconcile
 from ..risk import DegradedSource, RiskSignal, assess_bundle, assess_hits
@@ -95,6 +94,7 @@ from .hit_builders import (  # noqa: F401
     _bh_krs_poland,
     _bh_kvk,
     _bh_malta_mbr,
+    _bh_meip,
     _bh_mca_india,
     _bh_nz_companies,
     _bh_opencorporates,
@@ -202,8 +202,6 @@ class ReportResponse(BaseModel):
     #: Name-only "likely same" entity candidates (same name + jurisdiction, no
     #: shared identifier) — human-review suggestions, never auto-merges.
     possibly_same_entities: list[dict[str, Any]] = []
-    #: OECD-UNSD MEIP signpost match for the subject LEI, or None. Not BODS.
-    meip: dict[str, Any] | None = None
     #: Derived risk checks that did not fully run for this result (issue
     #: #50) — empty when every screen completed. Each record carries
     #: source_id / check / affected_signals / detail / reason (closed
@@ -770,6 +768,18 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
         and _offline_index_covers(cac_adapter, ctx.lei)
     ):
         tasks.append(("cac_nigeria", cac_adapter.fetch_by_lei(ctx.lei)))
+    # OECD-UNSD MEIP — LEI-keyed offline match against the register's own
+    # BODS release (Phase 208). A hit means the LEI is one of the 500 group
+    # heads or a member of one of their groups; its statements are the
+    # OECD's, passed through unmodified.
+    meip_adapter = REGISTRY.get("meip")
+    if (
+        meip_adapter is not None
+        and hasattr(meip_adapter, "fetch_by_lei")
+        and _want("meip")
+        and _offline_index_covers(meip_adapter, ctx.lei)
+    ):
+        tasks.append(("meip", meip_adapter.fetch_by_lei(ctx.lei)))
     # Pooled EITI national BO registers — LEI-keyed offline match against the
     # committed pooled index (DRC ITIE-RDC / Armenia State Register / Nigeria
     # CAC∩NEITI). A hit means the LEI is an extractive company with register-
@@ -833,6 +843,8 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
         return _bh_eiti_soe(result, ctx) if result.get("is_state_owned") else None
     if source_id == "cac_nigeria":
         return _bh_cac_nigeria(result, ctx) if result.get("record") else None
+    if source_id == "meip":
+        return _bh_meip(result, ctx) if result.get("records") else None
     if source_id == "eiti_assessment":
         # A bundle with no assessment years is not a hit: the company is in
         # the index but EITI recorded nothing about it.
@@ -1108,13 +1120,11 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
                 ctx.spglobal = (sp[0] if isinstance(sp, list) and sp else sp) or None
         except Exception as exc:  # noqa: BLE001
             # Non-fatal, but not free: without ocid the OpenCorporates
-            # dispatch is skipped and without spglobal the MEIP CapIQ
-            # corroboration silently downgrades. Log so a GLEIF outage
-            # doesn't read as "this entity has no OpenCorporates record".
+            # dispatch is skipped. Log so a GLEIF outage doesn't read as
+            # "this entity has no OpenCorporates record".
             _LOG.warning(
                 "GLEIF identifier extraction failed for %s: %s: %s — "
-                "OpenCorporates dispatch and MEIP CapIQ corroboration "
-                "will be skipped for this lookup.",
+                "OpenCorporates dispatch will be skipped for this lookup.",
                 lei,
                 type(exc).__name__,
                 exc,
@@ -1184,14 +1194,6 @@ async def _lookup_pipeline(
         "jurisdiction": ctx.jurisdiction or None,
         "derived_identifiers": ctx.derived,
     })
-
-    # OECD-UNSD MEIP signpost — fires when the subject LEI is in the MEIP Global
-    # Register (a subsidiary of, or one of, the 500 largest MNEs). Not mapped to
-    # BODS; corroborated against GLEIF's own OpenCorporates / S&P Capital IQ ids.
-    meip_match = meip_lookup(
-        lei, {"opencorporates": ctx.ocid or "", "capiq": ctx.spglobal or ""}
-    )
-    yield ("meip", {"match": meip_match.model_dump() if meip_match else None})
 
     gleif_hit = _build_gleif_hit(ctx, gleif_bundle)
     _stamp(gleif_hit, ctx.provenance)
@@ -1693,7 +1695,6 @@ async def _lookup_impl(
     oa_screening: list[dict[str, Any]] = []
     bods_all: list[dict[str, Any]] = []
     same_pairs: list[dict[str, Any]] = []
-    meip_match: dict[str, Any] | None = None
     bods_issues: list[str] = []
     license_notices: list[dict[str, str]] = []
     legal_name: str | None = None
@@ -1733,8 +1734,6 @@ async def _lookup_impl(
             same_pairs = payload["pairs"]
         elif event == "subject_profile":
             subject_profile = payload.get("profile")
-        elif event == "meip":
-            meip_match = payload["match"]
         elif event == "risk_signals":
             signals = payload["signals"]
             degraded_sources = payload.get("degraded_sources") or []
@@ -1757,7 +1756,6 @@ async def _lookup_impl(
         bods_issues=bods_issues,
         license_notices=license_notices,
         possibly_same_entities=same_pairs,
-        meip=meip_match,
         degraded_sources=degraded_sources,
         openaleph_screening=oa_screening,
         source_liveness=source_liveness,

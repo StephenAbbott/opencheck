@@ -95,32 +95,6 @@ export interface PossiblySameEntity {
   b_source?: string;
 }
 
-/** One identifier surfaced by the MEIP signpost. `corroborated` = GLEIF also
- *  publishes this identifier for the LEI. */
-export interface MeipIdentifier {
-  scheme: string; // "lei" | "opencorporates" | "permid" | "capiq"
-  label: string;
-  value: string;
-  corroborated: boolean;
-}
-
-/** OECD-UNSD MEIP signpost match for the subject LEI. Not mapped to BODS — a
- *  pointer to the richer MEIP dataset on the OECD site. */
-export interface MeipMatch {
-  mode: "subsidiary" | "mne_head";
-  lei: string;
-  name: string;
-  iso3: string;
-  parent_mne: string;
-  immediate_parent: string | null;
-  alt_names: string[];
-  address: string;
-  identifiers: MeipIdentifier[];
-  subsidiaries_total: number | null;
-  subsidiaries_with_lei: number | null;
-  source_url: string;
-}
-
 /** A single risk signal — see backend opencheck/risk.py for the rule list. */
 export interface RiskSignal {
   code: string;
@@ -197,7 +171,6 @@ export interface LookupResponse {
   errors: Record<string, string>;
   cross_source_links: CrossSourceLink[];
   possibly_same_entities: PossiblySameEntity[];
-  meip: MeipMatch | null;
   risk_signals: RiskSignal[];
   degraded_sources: DegradedSource[];
   openaleph_screening?: OpenAlephScreeningMatch[];
@@ -840,11 +813,14 @@ export interface DeclaredRow {
   lei: string | null;
   /** ISO 3166-1 alpha-3, as all three sources publish it. */
   country: string | null;
-  /** "direct" | "in group" (MEIP, via an intermediate) | "declared" (EITI). */
+  /** "direct" | "in group" (MEIP: not directly under the group head) |
+   *  "declared" (EITI). */
   relation: string | null;
   percent: number | null;
   years: string[];
-  /** MEIP: the immediate parent's name. GEM: the GEM entity id. */
+  /** MEIP: the immediate parent's name, from the register spreadsheet's
+   *  "Parent of Subsidiary" column (the OECD's BODS file carries only the edge
+   *  to the group head). GEM: the GEM entity id. */
   via: string | null;
 }
 
@@ -859,8 +835,11 @@ export interface DeclaredSource {
   /** False = the subject is not in this source's universe at all. */
   covered: boolean;
   reason: string | null;
-  /** The source's own count where it is larger than `rows` (MEIP holds
-   *  only the LEI-carrying subset of an MNE's subsidiaries). */
+  /** The source's own count where it is larger than `rows`. Since Phase 208
+   *  MEIP's list is the register's whole group when served from the SQLite
+   *  store (`context.complete` true); the committed JSON fallback still holds
+   *  only the LEI-carrying subset, and `total` then says how many rows the
+   *  register really has. */
   total: number | null;
   listed: number;
   with_lei: number;
@@ -1305,10 +1284,6 @@ export interface PossiblySameEntitiesEvent {
   pairs: PossiblySameEntity[];
 }
 
-export interface MeipEvent {
-  match: MeipMatch | null;
-}
-
 export interface RiskSignalsEvent {
   signals: RiskSignal[];
   /** Derived checks that did not fully run — empty/absent when clean. */
@@ -1471,7 +1446,6 @@ export type LookupStreamHandlers = {
   onSourceError?: (e: SourceErrorEvent) => void;
   onCrossSourceLinks?: (e: CrossSourceLinksEvent) => void;
   onPossiblySame?: (e: PossiblySameEntitiesEvent) => void;
-  onMeip?: (e: MeipEvent) => void;
   onRiskSignals?: (e: RiskSignalsEvent) => void;
   onBodsCounts?: (e: BodsCountsEvent) => void;
   onSubjectProfile?: (e: SubjectProfileEvent) => void;
@@ -1548,10 +1522,6 @@ export function streamLookup(
   es.addEventListener("possibly_same_entities", (ev) => {
     const data = safeParse<PossiblySameEntitiesEvent>((ev as MessageEvent).data);
     if (data) handlers.onPossiblySame?.(data);
-  });
-  es.addEventListener("meip", (ev) => {
-    const data = safeParse<MeipEvent>((ev as MessageEvent).data);
-    if (data) handlers.onMeip?.(data);
   });
   es.addEventListener("risk_signals", (ev) => {
     const data = safeParse<RiskSignalsEvent>((ev as MessageEvent).data);

@@ -112,7 +112,7 @@ and kept apart per source:
 | List | What it measures | Identifier |
 |---|---|---|
 | GLEIF Level 2 | accounting consolidation (direct + ultimate) | LEI on every row |
-| OECD-UNSD MEIP | the register of the 500 largest MNEs' subsidiaries; only the LEI-carrying subset is held | LEI on every row; `total` is the register's own count |
+| OECD-UNSD MEIP | membership of one of the 500 largest MNE groups under the OECD's statistical methodology; the whole group from the `meip.sqlite` store (Phase 208), LEI or not, with the immediate parent from the register spreadsheet | LEI where the OECD publishes one; from the committed JSON fallback only the LEI-carrying subset, with `total` as the register's own count |
 | EITI Company Assessment | what a supporting company declared about its extractive operations | none, by design |
 | Global Energy Monitor | entities GEM records as directly owned, with a percentage where it has one | LEI where the GLEIF GEM↔LEI mapping or GEM's own column supplies one |
 
@@ -128,5 +128,7 @@ is run: the EITI ticket records how "Equinor" matched a company sports club.
 **The API surface is unchanged.** `GET /subsidiaries`, `/export?subsidiaries`,
 `/expand-layer direction=subsidiaries` and the MCP server all still serve the
 GLEIF network only; `/subsidiaries/declared` exists for the tab and is not on
-the API page. The OECD's BODS release of MEIP is the next step, on its own
-ticket.
+the API page. Since Phase 208 MEIP is also a source in its own right — the
+OECD's BODS v0.4 statements sit on the QuickCheck card and in the graph, one
+edge per group membership from the subject to its group head — while a head's
+members stay on this tab's list rather than becoming graph nodes.

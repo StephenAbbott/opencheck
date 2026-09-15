@@ -166,33 +166,55 @@ def test_sync_and_stream_agree_on_offline_bundle(
     assert by_name["subject_profile"][0]["profile"] == sync["subject_profile"]
 
 
-def test_meip_signpost_fires_for_a_register_lei(
-    client: TestClient, tmp_path: Path
+def test_meip_is_a_source_when_the_register_lists_the_lei(
+    client: TestClient, tmp_path: Path, monkeypatch
 ) -> None:
-    # Apple (UK) Limited is in the MEIP Global Register as an Apple Inc subsidiary.
-    lei = "549300QKDHYRRQH2MB86"
+    """Phase 208: MEIP rides the pipeline like any source — announced in
+    ``sources_applicable``, a hit with the OECD's own statements, no
+    ``meip`` side event. The store is a small register packed by the real
+    build script (see tests/test_meip.py)."""
+    from opencheck.meip import reload_store
+    from tests.meip_fixture import SUB_A1, build
+
+    _, stmts, _ = build(tmp_path)
+    reload_store()  # OPENCHECK_DATA_ROOT is tmp_path, so data_root()/meip.sqlite is it
+
+    lei = SUB_A1
     _seed_bundle(tmp_path, lei)
-
     sync = client.get("/lookup", params={"lei": lei}).json()
+    assert "meip" not in sync, "the Phase 69 signpost field is gone"
+    assert "meip" in sync["sources_applicable"]
+    hit = next(h for h in sync["hits"] if h["source_id"] == "meip")
+    assert hit["identifiers"] == {"lei": lei}, "the OECD publishes the LEI itself"
+    assert hit["finding"].startswith("Listed in 2 groups: ALPHA GROUP PLC and BETA SA")
+    assert hit["liveness"] == "snapshot"
+    # The OECD's statements are in the merged bundle with the OECD's ids.
+    ids = {s["statementId"] for s in sync["bods"]}
+    # Every statement about the subject's memberships — never the head's
+    # other children (entity-3 and its relationship).
+    expected = {s["statementId"] for s in stmts if s["recordId"] not in ("meip-entity-3", "meip-rel-3")}
+    assert expected <= ids
+    assert not any(s.get("recordId") in ("meip-entity-3", "meip-rel-3") for s in sync["bods"])
+    # And the stream says the same.
     events = _stream_events(_stream_body(client, lei))
-    by_name: dict[str, list[dict]] = {}
-    for name, payload in events:
-        by_name.setdefault(name, []).append(payload)
-
-    # Stream emits a `meip` event and the sync response carries the same match.
-    stream_meip = by_name["meip"][0]["match"]
-    assert stream_meip == sync["meip"]
-    assert sync["meip"]["mode"] == "subsidiary"
-    assert sync["meip"]["parent_mne"] == "Apple Inc"
+    names = [n for n, _ in events]
+    assert "meip" not in names
+    assert "meip" in next(p for n, p in events if n == "sources_applicable")["source_ids"]
+    reload_store()
 
 
 def test_meip_absent_for_non_register_lei(
     client: TestClient, tmp_path: Path
 ) -> None:
+    from opencheck.meip import reload_store
+
+    reload_store()
     lei = "984500ABCDEF00000042"  # synthetic, not in the MEIP register
     _seed_bundle(tmp_path, lei)
     sync = client.get("/lookup", params={"lei": lei}).json()
-    assert sync["meip"] is None
+    assert "meip" not in sync
+    assert "meip" not in sync["sources_applicable"]
+    assert not any(h["source_id"] == "meip" for h in sync["hits"])
 
 
 def test_stream_announces_applicable_sources(client: TestClient, tmp_path: Path) -> None:
@@ -483,7 +505,7 @@ def test_mapper_convention_covers_all_dispatch_sources() -> None:
         )
     # And the LEI-keyed specials used by the pipeline.
     for sid in ("gleif", "wikidata", "opencorporates", "opensanctions",
-                "openaleph", "climatetrace", "sec_edgar"):
+                "openaleph", "climatetrace", "sec_edgar", "meip"):
         assert callable(_mapper_for(sid)), sid
 
 

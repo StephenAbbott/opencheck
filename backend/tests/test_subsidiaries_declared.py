@@ -14,7 +14,8 @@ import pytest
 from fastapi import HTTPException
 
 import opencheck.sources.climatetrace as ct
-from opencheck.meip import MEIP_MNE_HEADS, MEIP_SUBSIDIARIES, meip_declared
+from opencheck.config import get_settings
+from opencheck.meip import _json_tables, meip_declared, reload_store
 from opencheck.routers.subsidiaries import (
     DeclaredSubsidiariesResponse,
 )
@@ -26,6 +27,21 @@ from opencheck.sources.eiti_assessment import declared_subsidiaries as eiti_decl
 from opencheck.subsidiaries_declared import DECLARED_SOURCES, assemble_declared
 
 SHELL = "21380068P1DRHMJ8KU70"  # MEIP head, EITI supporting company
+
+MEIP_SUBSIDIARIES, MEIP_MNE_HEADS = _json_tables()
+
+
+@pytest.fixture(autouse=True)
+def _meip_fallback(tmp_path, monkeypatch):
+    """Phase 208: pin MEIP to the committed LEI-keyed subset. The SQLite
+    store (a gitignored release asset) lists whole groups and is covered by
+    tests/test_meip.py; this module pins the fallback the tab uses without it."""
+    monkeypatch.setenv("OPENCHECK_MEIP_DB_FILE", str(tmp_path / "absent.sqlite"))
+    get_settings.cache_clear()
+    reload_store()
+    yield
+    reload_store()
+    get_settings.cache_clear()
 
 
 @pytest.fixture
@@ -163,7 +179,8 @@ def test_assemble_declared_keeps_sources_apart(gem_stub) -> None:
     assert res["covered"] == 3
     meip, eiti, gem = res["sources"]
     assert meip["covered"] and meip["available"] and meip["total"] > meip["listed"]
-    assert meip["with_lei"] == meip["listed"], "every MEIP row carries an LEI"
+    assert meip["with_lei"] == meip["listed"], "every fallback MEIP row carries an LEI"
+    assert meip["context"]["complete"] is False
     assert eiti["covered"] and eiti["with_lei"] == 0, "EITI never supplies an LEI"
     assert eiti["total"] == eiti["listed"] == len(eiti["rows"])
     assert gem["covered"] and gem["listed"] == 3 and gem["with_lei"] == 2
