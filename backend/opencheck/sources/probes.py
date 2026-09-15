@@ -675,19 +675,23 @@ PROBES: dict[str, SourceProbe] = {
         args=("J40/15812/2017",),
         kwargs={"legal_name": "IMAFLUX DESIGN SRL"},
         expect_fields=("company", "representatives"),
-        allow_empty=True,
+        # SKIP without an index, the ``meip`` shape — do not ``allow_empty``.
+        #
+        # This probe shipped with ``allow_empty=True`` and a ``known_gap``
+        # saying the runner has no index, which sounds like the same thing and
+        # is not. ``allow_empty`` makes the coverage-note path a PASS, so the
+        # probe went green every week having exercised nothing, and
+        # ``expect_liveness`` below — the one assertion that would have caught
+        # the provenance bug this module exists for — could never fire. A skip
+        # reports "not tested", which is what was true.
+        #
+        # Assert-something-weaker and skip are not interchangeable: a skip is
+        # visibly absent from the report, a tolerated empty is indistinguishable
+        # from a healthy source.
+        requires_files=("onrc_romania.sqlite",),
         expect_liveness=frozenset({"snapshot"}),
         anchor_lei="98450054847FA90C9U68",
         bods_mapper="map_onrc_romania",
-        known_gap=(
-            "The index is a file, and the CI runner has none: ONRC publishes only "
-            "a monthly bulk dump and data.gov.ro drops connections from datacentre "
-            "ranges (Render and this runner both time out at TCP connect; a "
-            "laptop is fine), so the sweep can neither ship nor build one. With "
-            "no index the adapter returns its coverage note, which is the correct "
-            "answer and is what allow_empty records here. Production reads the "
-            "index from ONRC_ROMANIA_DB_FILE and is unaffected."
-        ),
         notes=(
             "The subject is deliberately an OLD-format registration number whose "
             "ONRC row is filed under the NEW format. That is the pairing the "

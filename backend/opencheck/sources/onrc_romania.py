@@ -101,9 +101,11 @@ import logging
 import re
 import sqlite3
 import unicodedata
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from .. import provenance
 from ..config import get_settings
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
@@ -407,6 +409,77 @@ def index_available() -> bool:
     return _shared_conn() is not None
 
 
+def snapshot_meta() -> dict[str, str]:
+    """The index's ``meta`` table as a dict, or ``{}`` when there is no index."""
+    conn = _shared_conn()
+    if conn is None:
+        return {}
+    try:
+        return {
+            str(row["key"]): str(row["value"])
+            for row in conn.execute("SELECT key, value FROM meta")
+        }
+    except sqlite3.Error:  # pragma: no cover - a meta-less index is not a crash
+        return {}
+
+
+#: ``firme-02-09-2026`` — the CKAN dataset slug ends in the export date, DD-MM-YYYY.
+_DATASET_DATE_RE = re.compile(r"(\d{2})-(\d{2})-(\d{4})$")
+
+
+def export_date(meta: dict[str, str] | None = None) -> datetime | None:
+    """The date of the ONRC export this index was built from.
+
+    Read from the ``dataset`` slug first and ``built_at`` only as a fallback,
+    because ``record_snapshot`` asks for *the upstream extract date*, not when
+    the local artifact was packed — and it is the export date that decides
+    whether a row is stale. Rebuilding an old dump tomorrow does not make its
+    rows a day old.
+
+    Returns None rather than guessing when neither key is present. Some
+    indexes have no date at all: the shipped 4.3 MB asset was packed before
+    ``built_at`` was added, so a reader that required it would report nothing
+    for the very file production loads.
+    """
+    meta = snapshot_meta() if meta is None else meta
+    match = _DATASET_DATE_RE.search(meta.get("dataset") or "")
+    if match:
+        day, month, year = (int(p) for p in match.groups())
+        try:
+            return datetime(year, month, day, tzinfo=UTC)
+        except ValueError:  # pragma: no cover - a malformed slug is not a crash
+            return None
+    built = meta.get("built_at") or ""
+    try:
+        return datetime.fromisoformat(built).replace(tzinfo=UTC)
+    except ValueError:
+        return None
+
+
+def declare_snapshot() -> None:
+    """Declare an index read as a snapshot of the ONRC monthly export.
+
+    Every source that answers from a local bulk store records this — see
+    ``asp_moldova``, ``meip``, ``eiti_soe``, ``bce_belgium``, ``bods_uk_psc``.
+    Without it the recorder collects nothing and resolves to its ``stub``
+    default, so a card carrying real Trade Register rows renders as
+    "Placeholder data — no live source was contacted".
+
+    That is the ariregister liveness bug (Phase 45) in a second source, and it
+    is worth naming why it survives review: it fails in the direction that
+    *understates* what OpenCheck holds. An over-claim ("live" on stale data)
+    is the failure everyone looks for; this one looks like modesty.
+    """
+    meta = snapshot_meta()
+    dataset = meta.get("dataset") or ""
+    provenance.record_snapshot(
+        export_date(meta),
+        f"ONRC monthly open-data export {dataset}".strip()
+        if dataset
+        else "ONRC monthly open-data export",
+    )
+
+
 def warm_index() -> dict[str, Any]:
     """Download the index at boot when absent; replace it when the release
     asset is not the one on disk; keep it otherwise.
@@ -606,6 +679,10 @@ class OnrcRomaniaAdapter(SourceAdapter):
             )
         except sqlite3.OperationalError:
             return []
+        rows = cur.fetchall()
+        if not rows:
+            return []
+        declare_snapshot()
         return [
             SourceHit(
                 source_id=self.id,
@@ -620,7 +697,7 @@ class OnrcRomaniaAdapter(SourceAdapter):
                 is_stub=False,
                 liveness="snapshot",
             )
-            for row in cur.fetchall()
+            for row in rows
         ]
 
     def _stub(self, number: str, legal_name: str) -> dict[str, Any]:
@@ -653,6 +730,12 @@ class OnrcRomaniaAdapter(SourceAdapter):
         company = company_row(number)
         if company is None:
             return self._stub(number, legal_name)
+
+        # Declared only once a row is in hand. A stub short-circuits to
+        # STUB_PROVENANCE in ``Recorder.resolve`` anyway, but declaring a
+        # snapshot on the way to returning a placeholder would be claiming a
+        # read that produced nothing.
+        declare_snapshot()
 
         # Representatives are filed against the register's own spelling of the
         # number, which may not be the spelling GLEIF holds.
