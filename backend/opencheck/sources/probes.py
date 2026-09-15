@@ -283,7 +283,7 @@ PROBES: dict[str, SourceProbe] = {
         args=("14399840",),
         kwargs={"legal_name": "DANTE INTERNATIONAL SA"},
         expect_fields=("record",),
-        anchor_lei="254900FDFVYUDTRUS759",
+        anchor_lei="315700V12MDD9PTKU295",
         bods_mapper="map_anaf_romania",
         notes=(
             "A bare fiscal code, the RA000719 shape and the half of RA000497 "
