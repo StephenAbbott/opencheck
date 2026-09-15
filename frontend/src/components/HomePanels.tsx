@@ -256,7 +256,7 @@ const HOW_IT_WORKS_STEPS = [
     num: "3",
     accent: "#3d30d4" as const,
     icon: <StepNetworkIcon className="h-[15px] w-[15px]" />,
-    title: "45 open sources, in parallel",
+    title: "46 open sources, in parallel",
     body: (
       <>
         Each source is queried with the identifier it understands, and the
