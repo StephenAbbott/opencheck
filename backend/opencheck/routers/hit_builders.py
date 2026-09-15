@@ -317,6 +317,60 @@ def _bh_anaf_romania(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_onrc_romania(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Romania's Trade Register (ONRC), from the local index.
+
+    Two shapes:
+
+    * **A company.** Asserts the ONRC registration number — which is the index
+      key, published by ONRC — and the CUI **only where the register itself
+      carries one**. 2% of ONRC rows have no fiscal code, and inventing one
+      from the ANAF side would be exactly the borrowed-identifier false
+      corroboration CLAUDE.md forbids.
+    * **Not in the index.** A note card in the KvK/INPI shape: the row sentence
+      explains why, no identifier is asserted, and it is *not* recorded as a
+      degradation — nothing failed, the register simply does not hold this
+      company in the extract that was built.
+
+    Dispatch is gated on the index file existing at all (``covers_lei``), so
+    this builder never runs on a deployment with no index.
+    """
+    from ..findings import finding_onrc_romania
+
+    if r.get("is_stub"):
+        return _hit(
+            "onrc_romania", local_id,
+            name=ctx.legal_name or "",
+            summary=f"RO {local_id} · not in the index",
+            finding=finding_onrc_romania(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note")},
+        )
+
+    company = r.get("company") or {}
+    number = str(company.get("registration_number") or local_id).upper()
+    identifiers = {"ro_onrc": number}
+    cui = str(company.get("cui") or "").strip()
+    if cui:
+        identifiers["ro_cui"] = cui
+
+    reps = r.get("representatives") or []
+    status = str(company.get("status") or "").strip()
+    bits = [f"RO {number}"]
+    if status:
+        bits.append(status)
+    if reps:
+        bits.append(f"{len(reps)} representative{'s' if len(reps) != 1 else ''}")
+    return _hit(
+        "onrc_romania", number,
+        name=str(company.get("name") or ctx.legal_name or ""),
+        summary=" · ".join(bits),
+        identifiers=identifiers,
+        raw={"company": company, "representatives": reps},
+        finding=finding_onrc_romania(r),
+    )
+
+
 def _bh_asp_moldova(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for Moldova's State Register of Legal Entities.
 

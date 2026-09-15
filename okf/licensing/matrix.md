@@ -46,6 +46,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | Ministry of Corporate Affairs — Company Master Data (India) (`mca_india`) | `GODL-India` | conditional | yes | no |
 | OECD-UNSD Multinational Enterprise Information Platform (MEIP) (`meip`) | `OECD-Terms` | yes | yes | no |
 | New Zealand Companies Register (NZBN) (`nz_companies`) | `CC-BY-4.0` | yes | yes | no |
+| ONRC — Oficiul Național al Registrului Comerțului (Romania) (`onrc_romania`) | `CC-BY-4.0` | yes | yes | no |
 | OpenAleph (`openaleph`) | `per-collection` | conditional | yes | no |
 | OpenCorporates (`opencorporates`) | `OC-Terms` | conditional | yes | yes |
 | OpenSanctions (`opensanctions`) | `CC-BY-NC-4.0` | no | yes | no |

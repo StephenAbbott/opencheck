@@ -1460,8 +1460,18 @@ def finding_onrc_romania(bundle: dict[str, Any]) -> str | None:
     clause would be identical on every row and read as a finding about this
     one (the ACRA precedent).
     """
-    if not bundle or bundle.get("is_stub"):
+    if not bundle:
         return None
+    if bundle.get("is_stub"):
+        # Absence said in the same voice as presence (rule 4). A card that
+        # explains why the register has nothing beats an empty one — and the
+        # drawer is never opened for a card with no statements, so the row
+        # sentence is the only place this can be said.
+        return (
+            "Not in the indexed extract of the Trade Register, which is built "
+            "from ONRC's monthly dump and covers registered companies rather "
+            "than sole traders."
+        )
     company = bundle.get("company")
     if not isinstance(company, dict):
         return None

@@ -581,3 +581,183 @@ async def test_anaf_finding_leads_with_registration(no_index, anaf_client) -> No
     assert sentence.startswith("Registered since 2002-01-23")
     assert "registered for VAT" in sentence
     assert len(sentence) <= 140
+
+
+# ---------------------------------------------------------------------------
+# The builder and the adapter must derive the prefix the same way (Phase 211)
+# ---------------------------------------------------------------------------
+
+
+def _load_builder():
+    """Import ``scripts/build_onrc_romania_index.py`` by path."""
+    import importlib.util
+
+    path = (
+        Path(__file__).resolve().parent.parent
+        / "scripts"
+        / "build_onrc_romania_index.py"
+    )
+    spec = importlib.util.spec_from_file_location("_build_onrc_index", path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("J40/15812/2017", "J201701581240"),   # old → converted
+        ("J2017015812405", "J201701581240"),   # new → its own first thirteen
+        ("J 40 / 15812 / 2017", "J201701581240"),
+        ("14399840", None),                    # a fiscal code is not a number
+        ("", None),
+    ],
+)
+def test_prefix_for_derives_from_either_format(raw: str, expected: str | None) -> None:
+    """Both spellings of one company must land on the same key.
+
+    ``to_new_format`` answers only half the question — it returns None for a
+    number already in the new format — and using it on its own is what left
+    new-format rows unjoinable.
+    """
+    assert onrc_romania.prefix_for(raw) == expected
+
+
+def test_the_builder_stores_the_prefix_the_adapter_looks_up(tmp_path: Path) -> None:
+    """End-to-end through the real builder, then the real adapter.
+
+    This is the test the Phase 207 shape could not have: the fixture index in
+    this file hand-wrote ``registration_prefix`` the *correct* way while the
+    builder wrote it the *wrong* way, so every adapter test passed against an
+    index no builder would ever produce. Nothing compared the two sides.
+
+    The company here is filed under its NEW number and looked up by its OLD
+    one, which is the 38.6% of Romanian LEI lookups that silently missed.
+    """
+    builder = _load_builder()
+    csv_dir = tmp_path / "csv"
+    csv_dir.mkdir()
+    (csv_dir / "od_firme.csv").write_text(
+        "﻿DENUMIRE^CUI^COD_INMATRICULARE^DATA_INMATRICULARE^FORMA_JURIDICA"
+        "^ADR_TARA^ADR_JUDET^ADR_LOCALITATE^ADR_DEN_STRADA\r\n"
+        "IMAFLUX DESIGN SRL^38218844^J2017015812405^01/09/2017^SRL"
+        "^România^Bucureşti^Sector 3^Str. Exemplu\r\n",
+        encoding="utf-8",
+    )
+    (csv_dir / "od_reprezentanti_legali.csv").write_text(
+        "﻿COD_INMATRICULARE^PERSOANA_IMPUTERNICITA^CALITATE^DATA_NASTERE\r\n"
+        "J2017015812405^POPESCU ION^administrator^19/06/1967\r\n",
+        encoding="utf-8",
+    )
+
+    out = tmp_path / "onrc.sqlite"
+    builder.build(csv_dir, out, dataset="firme-02-09-2026", nomen_dataset="")
+
+    import os
+
+    get_settings.cache_clear()
+    os.environ["ONRC_ROMANIA_DB_FILE"] = str(out)
+    onrc_romania.reset_connection()
+    try:
+        # The old-format number GLEIF actually holds for this company.
+        assert onrc_romania.resolve_cui("J40/15812/2017") == "38218844"
+        row = onrc_romania.company_row("J40/15812/2017")
+        assert row is not None
+        assert row["name"] == "IMAFLUX DESIGN SRL"
+    finally:
+        os.environ.pop("ONRC_ROMANIA_DB_FILE", None)
+        get_settings.cache_clear()
+        onrc_romania.reset_connection()
+
+
+def test_the_builder_keeps_only_the_indexes_something_queries() -> None:
+    """131 MB of the 1,242 MB index served no query at all.
+
+    ``idx_company_cui`` was never filtered on, and ``idx_company_name`` backs
+    only a leading-wildcard LIKE, which SQLite cannot answer from an index.
+    """
+    builder = _load_builder()
+    assert "idx_company_prefix" in builder.INDEXES
+    assert "idx_rep_number" in builder.INDEXES
+    assert "idx_company_cui" not in builder.INDEXES
+    assert "idx_company_name" not in builder.INDEXES
+
+
+# ---------------------------------------------------------------------------
+# Dispatch is gated on the index file
+# ---------------------------------------------------------------------------
+
+
+def test_onrc_is_not_announced_without_an_index(no_index) -> None:
+    """No file, no source card — not an empty one.
+
+    A registered source that announces itself and then says it has nothing
+    counts itself in "N of N sources answered" while answering nothing.
+    """
+    adapter = onrc_romania.OnrcRomaniaAdapter()
+    assert adapter.covers_lei("315700V12MDD9PTKU295") is False
+
+
+def test_onrc_is_announced_once_an_index_exists(index: Path) -> None:
+    adapter = onrc_romania.OnrcRomaniaAdapter()
+    assert adapter.covers_lei("315700V12MDD9PTKU295") is True
+
+
+async def test_a_company_outside_the_index_gets_a_coverage_note(index: Path) -> None:
+    """Present index, absent company — say why rather than look empty.
+
+    With the index scoped to the LEI population this is a real case: 199 of
+    8,677 dispatchable Romanian LEIs land here, most of them sole traders.
+    """
+    from opencheck.findings import finding_onrc_romania
+
+    bundle = await onrc_romania.OnrcRomaniaAdapter().fetch("J40/55555/2019")
+    assert bundle["is_stub"] is True
+    assert bundle["coverage_note"]
+    sentence = finding_onrc_romania(bundle)
+    assert sentence and "not in the indexed extract" in sentence.lower()
+
+
+async def test_the_prefix_join_works_in_both_directions(tmp_path: Path) -> None:
+    """GLEIF's spelling and ONRC's can differ either way round.
+
+    The builder-side fix alone passes a test that only looks up an old-format
+    number, because converting old→new is what ``to_new_format`` already did.
+    The *adapter* side is what a company filed under its OLD number and held by
+    GLEIF under its NEW one needs — 2.19M of ONRC's 2.86M rows are old-format
+    and ~23% of Romanian LEI records carry the new spelling, so this pairing is
+    ordinary, not exotic.
+    """
+    builder = _load_builder()
+    csv_dir = tmp_path / "csv"
+    csv_dir.mkdir()
+    (csv_dir / "od_firme.csv").write_text(
+        "﻿DENUMIRE^CUI^COD_INMATRICULARE^DATA_INMATRICULARE^FORMA_JURIDICA\r\n"
+        # Filed OLD in the register…
+        "CALLINVEST SRL^30687535^J12/2551/2012^05/06/2012^SRL\r\n"
+        # …and NEW, for the other direction.
+        "IMAFLUX DESIGN SRL^38218844^J2017015812405^01/09/2017^SRL\r\n",
+        encoding="utf-8",
+    )
+    (csv_dir / "od_reprezentanti_legali.csv").write_text(
+        "﻿COD_INMATRICULARE^PERSOANA_IMPUTERNICITA^CALITATE^DATA_NASTERE\r\n",
+        encoding="utf-8",
+    )
+    out = tmp_path / "onrc.sqlite"
+    builder.build(csv_dir, out, dataset="firme-02-09-2026", nomen_dataset="")
+
+    import os
+
+    get_settings.cache_clear()
+    os.environ["ONRC_ROMANIA_DB_FILE"] = str(out)
+    onrc_romania.reset_connection()
+    try:
+        # old in GLEIF -> new in ONRC
+        assert onrc_romania.resolve_cui("J40/15812/2017") == "38218844"
+        # new in GLEIF -> old in ONRC  (the adapter-side half)
+        assert onrc_romania.resolve_cui("J2012002551125") == "30687535"
+    finally:
+        os.environ.pop("ONRC_ROMANIA_DB_FILE", None)
+        get_settings.cache_clear()
+        onrc_romania.reset_connection()

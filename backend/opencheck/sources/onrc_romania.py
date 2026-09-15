@@ -1,10 +1,15 @@
 """Romania — ONRC, the National Trade Register Office (data.gov.ro).
 
-Bulk/offline adapter over a pre-built SQLite index, in the ``cyprus_drcor`` /
-``edr_ukraine`` shape: not in ``REGISTRY``, not wired into the lookup dispatch,
-and returning a stub when no index is configured. Build the index with
+Registered source over a pre-built SQLite index. Build it with
 ``scripts/build_onrc_romania_index.py`` and point ``ONRC_ROMANIA_DB_FILE`` at
-it.
+it; **without that file the source is not announced at all** (``covers_lei``),
+because a card that says it has nothing still counts itself among the sources
+that answered.
+
+The index is **scoped to the GLEIF Romanian LEI population** by default: the
+register holds 2,855,557 companies, 9,033 Romanian LEI records exist, and every
+ONRC lookup is downstream of one of them, so the shipped index is 4.3 MB rather
+than 1.2 GB.
 
 This module also owns the **Romanian identifier grammar** — ``normalise_cui``,
 ``normalise_registration_number``, ``to_new_format`` and ``resolve_cui`` — used
@@ -133,6 +138,21 @@ RO_TAX_RA_CODE: str = "RA000719"
 RO_RA_CODES: frozenset[str] = frozenset({RO_ONRC_RA_CODE, RO_TAX_RA_CODE})
 
 _DATASET_SEARCH_URL = "https://data.gov.ro/dataset?organization=onrc"
+
+#: Said when the index is present but holds no row for this company.
+#:
+#: Three reasons it happens, all honest answers rather than failures: the
+#: company is a sole trader (an ``F``-prefixed number, excluded by design); it
+#: was registered after the monthly snapshot; or it was issued an LEI after the
+#: index was scoped to the LEI population. Measured over the 8,677 dispatchable
+#: Romanian LEI records on 15 September 2026, 199 land here — 105 sole traders,
+#: 92 absent from the September export, 2 unparseable.
+COVERAGE_NOT_INDEXED = (
+    "This company is not in the indexed extract of the Trade Register. The "
+    "index is built from ONRC's monthly open-data dump and covers registered "
+    "companies, not sole traders, so a very recent registration or a "
+    "natural-person business will not appear."
+)
 _PORTAL_URL = "https://portal.onrc.ro/"
 
 #: Legal forms kept in the index. Everything else in ``FORMA_JURIDICA`` is a
@@ -230,6 +250,36 @@ def to_new_format(raw: str) -> str | None:
         return None
     letter, county, seq, year = m.groups()
     return f"{letter}{year}{int(seq):06d}{int(county):02d}"
+
+
+def prefix_for(raw: str) -> str | None:
+    """The 13-character new-format prefix for a number in **either** format.
+
+    This is the join key, and it has to be derivable from both sides or the
+    old↔new bridge only half works — which is exactly how it shipped.
+
+    ``to_new_format`` answers "convert this old number", so it returns None for
+    a number already in the new format. Used on its own it therefore keyed the
+    index on old-format rows (where the prefix is redundant, since the exact
+    match on ``registration_number`` already finds them) and left new-format
+    rows with no prefix at all — and a new-format row is precisely what an
+    incoming old-format GLEIF number needs to reach.
+
+    Measured against the whole Romanian LEI population on 15 September 2026:
+    **1,474 of 3,823 J-number-keyed LEIs (38.6%) failed to resolve**, including
+    every worked example in the research — IMAFLUX DESIGN SRL
+    (``J40/15812/2017`` → ``J2017015812405``), CALLINVEST, SAFEGATE ADVISORS,
+    NEW TECH IMOB. Deriving the prefix from both formats recovers 1,356 of
+    them and takes coverage from 83.0% to 97.7% of dispatchable RO LEIs.
+
+    Both directions matter: GLEIF holds the old spelling for ~28% of Romanian
+    records and the new one for ~23%, while ONRC files 2.19M rows old and
+    0.66M new, so either side can be the one that needs converting.
+    """
+    number = re.sub(r"\s+", "", str(raw or "")).upper()
+    if _REG_NEW_RE.match(number):
+        return number[:13]
+    return to_new_format(number)
 
 
 def parse_ro_date(raw: str | None) -> str | None:
@@ -360,7 +410,7 @@ def company_row(registration_number: str) -> dict[str, Any] | None:
         row = cur.fetchone()
         if row is not None:
             return dict(row)
-        prefix = to_new_format(number)
+        prefix = prefix_for(number)
         if prefix is None:
             return None
         cur = conn.execute(
@@ -425,6 +475,13 @@ class OnrcRomaniaAdapter(SourceAdapter):
 
     id = "onrc_romania"
 
+    #: The deriver lives on ``anaf_romania`` — it owns the RA codes and the
+    #: shape-sniffing — and this adapter reuses its derived key, the
+    #: ``rpvs_slovakia`` → ``rpo_slovakia`` pattern. Declaring a second deriver
+    #: for the same key would make two adapters race to define it.
+    lookup_dispatch_keys = ("ro_fiscal_or_reg_id",)
+    lookup_pass_legal_name = True
+
     @property
     def info(self) -> SourceInfo:
         return SourceInfo(
@@ -451,6 +508,23 @@ class OnrcRomaniaAdapter(SourceAdapter):
             is_national_register=True,
             country="RO",
         )
+
+    def covers_lei(self, lei: str) -> bool:
+        """Gate dispatch on the index **file**, not on the LEI.
+
+        The pipeline calls this before announcing a source. Without it, a
+        deployment with no index would announce ONRC for every Romanian lookup
+        and then show a card saying it had nothing — counting itself in
+        "N of N sources answered" while answering nothing. That is the failure
+        the ``cac_nigeria`` / ``eiti_soe`` gate exists to prevent.
+
+        The argument is ignored on purpose: this adapter is keyed on the
+        registration number, and resolving an LEI to one would mean a GLEIF
+        call inside an applicability check. Whether the *company* is in the
+        index is answered honestly by ``fetch`` returning a stub, which the hit
+        builder renders as a coverage note — the KvK/INPI shape.
+        """
+        return index_available()
 
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
         if kind != SearchKind.ENTITY:
@@ -494,6 +568,7 @@ class OnrcRomaniaAdapter(SourceAdapter):
             "legal_name": legal_name,
             "link": _DATASET_SEARCH_URL,
             "is_stub": True,
+            "coverage_note": COVERAGE_NOT_INDEXED,
         }
 
     async def fetch(self, hit_id: str, *, legal_name: str = "") -> dict[str, Any]:

@@ -3,17 +3,29 @@
 
 Usage
 -----
-Resolve and download the latest dump, then build::
+Resolve and download the latest dump, then build the shippable index::
 
     python3 scripts/build_onrc_romania_index.py --out onrc_romania.sqlite
 
-Build from CSVs already on disk (no network)::
+Build from CSVs already on disk (still needs GLEIF for the scope)::
 
-    python3 scripts/build_onrc_romania_index.py --csv-dir ./onrc --out onrc_romania.sqlite
+    python3 scripts/build_onrc_romania_index.py --offline --csv-dir ./onrc --out …
 
 Pin a specific monthly dataset::
 
     python3 scripts/build_onrc_romania_index.py --dataset firme-02-09-2026 --out …
+
+The whole register, for research rather than for shipping::
+
+    python3 scripts/build_onrc_romania_index.py --scope full --out onrc_full.sqlite
+
+Scoped to the LEI population by default
+---------------------------------------
+The register holds **2,855,557** companies; the Romanian LEI population is
+**9,033**. Every ONRC lookup is downstream of a GLEIF LEI record, so the other
+2.85M rows cost 1.2 GB to serve no lookup that can occur. ``--scope leis``
+(the default) keeps 8,491 companies and 16,743 representatives in **4.3 MB**.
+``--scope full`` restores the old behaviour. See ``Scope``.
 
 Why it resolves through CKAN
 ----------------------------
@@ -69,7 +81,11 @@ import json
 import logging
 import sqlite3
 import sys
+import time
+import urllib.error
+import urllib.parse
 import urllib.request
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Iterator
 
@@ -77,8 +93,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from opencheck.sources.onrc_romania import (  # noqa: E402
     CORPORATE_FORMS,
+    RO_RA_CODES,
+    normalise_registration_number,
     parse_ro_date,
-    to_new_format,
+    prefix_for,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
@@ -132,10 +150,15 @@ CREATE TABLE representative (
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
 """
 
+#: Only the two indexes anything actually queries.
+#:
+#: ``idx_company_cui`` and ``idx_company_name`` were dropped on 15 September
+#: 2026 after measuring what they served: nothing. No query filters on ``cui``
+#: at all, and the only query touching ``name`` is the adapter's
+#: ``WHERE name LIKE '%…%'`` — a leading wildcard, which SQLite cannot answer
+#: from an index. Together they cost 131 MB of a 1,242 MB index.
 INDEXES = """
 CREATE INDEX idx_company_prefix ON company(registration_prefix);
-CREATE INDEX idx_company_cui    ON company(cui);
-CREATE INDEX idx_company_name   ON company(name);
 CREATE INDEX idx_rep_number     ON representative(registration_number);
 """
 
@@ -283,6 +306,127 @@ def download(url: str, dest: Path, *, expected_size: int | None = None) -> Path:
 # ---------------------------------------------------------------------------
 
 
+GLEIF_LEI_RECORDS = "https://api.gleif.org/api/v1/lei-records"
+
+
+class Scope:
+    """The set of ONRC companies worth keeping, derived from GLEIF.
+
+    Why scope at all: the register holds **2,855,557** companies and the
+    Romanian LEI population is **9,033**. Every ONRC lookup is downstream of a
+    GLEIF LEI record — the pipeline is LEI-anchored, ``/resolve-national-id``
+    resolves to an LEI first, and ONRC publishes no ownership edges, so nothing
+    expands into a Romanian company that has no LEI. Keeping the other 2.85M
+    rows costs 1.2 GB to serve no lookup that can occur.
+
+    Scoped, the index is **4.3 MB** (1.3 MB gzipped) and covers 8,491
+    companies with 16,743 representatives — small enough to ship as an ordinary
+    release asset with no boot-time download.
+
+    The cost is one new staleness mode, and it is worth stating plainly: a
+    company issued an LEI *after* the build is not in the index and falls back
+    to the coverage note, where a full index would have found it. A company
+    newly *registered* is missed either way. Rebuild monthly, with the dump.
+    """
+
+    def __init__(self, numbers: set[str], prefixes: set[str], cuis: set[str]) -> None:
+        self.numbers, self.prefixes, self.cuis = numbers, prefixes, cuis
+
+    def wants(self, number: str, cui: str) -> bool:
+        if number in self.numbers:
+            return True
+        if cui and cui in self.cuis:
+            return True
+        prefix = prefix_for(number)
+        return bool(prefix and prefix in self.prefixes)
+
+    def __len__(self) -> int:
+        return len(self.numbers) + len(self.cuis)
+
+
+def lei_scope() -> Scope:
+    """Page the whole Romanian LEI population out of GLEIF.
+
+    Filters on ``entity.legalAddress.country``, never ``entity.jurisdiction``:
+    a jurisdiction filter of ``MD`` also matches ``US-MD``, and the same class
+    of collision is not worth risking on ``RO``.
+
+    Raises rather than returning a partial set. A half-fetched scope would
+    build an index that is quietly missing companies — the same silent-wrong
+    failure this script has already shipped twice.
+    """
+    numbers: set[str] = set()
+    prefixes: set[str] = set()
+    cuis: set[str] = set()
+    seen = kept = 0
+    page, last = 1, None
+    while last is None or page <= last:
+        query = urllib.parse.urlencode(
+            {
+                "filter[entity.legalAddress.country]": "RO",
+                "page[size]": 200,
+                "page[number]": page,
+            }
+        )
+        payload = None
+        for attempt in range(6):
+            try:
+                req = urllib.request.Request(
+                    f"{GLEIF_LEI_RECORDS}?{query}",
+                    headers={
+                        "Accept": "application/vnd.api+json",
+                        "User-Agent": "OpenCheck/1.0",
+                    },
+                )
+                with urllib.request.urlopen(req, timeout=60) as fh:
+                    payload = json.load(fh)
+                break
+            except (urllib.error.URLError, OSError, ValueError) as exc:
+                log.warning("  GLEIF page %d attempt %d: %s", page, attempt + 1, exc)
+                time.sleep(3 * (attempt + 1))
+        if payload is None:
+            raise SystemExit(
+                f"GLEIF page {page} failed six times — refusing to build from a "
+                "partial LEI scope. Re-run, or pass --scope full."
+            )
+        last = payload["meta"]["pagination"]["lastPage"]
+        for record in payload["data"]:
+            seen += 1
+            entity = record["attributes"]["entity"]
+            if (entity.get("registeredAt") or {}).get("id") not in RO_RA_CODES:
+                continue
+            raw = (entity.get("registeredAs") or "").strip()
+            if not raw:
+                continue
+            kept += 1
+            try:
+                number = normalise_registration_number(raw)
+            except ValueError:
+                number = ""
+            if number:
+                numbers.add(number)
+                prefix = prefix_for(number)
+                if prefix:
+                    prefixes.add(prefix)
+                continue
+            digits = raw.replace("RO", "").strip().lstrip("0")
+            if digits.isdigit():
+                cuis.add(digits)
+        # 60 requests a minute per IP, no key and no higher tier.
+        time.sleep(1.1)
+        page += 1
+    log.info(
+        "GLEIF: %d RO records, %d dispatchable (%d numbers, %d fiscal codes)",
+        seen,
+        kept,
+        len(numbers),
+        len(cuis),
+    )
+    if not kept:
+        raise SystemExit("GLEIF returned no dispatchable Romanian records")
+    return Scope(numbers, prefixes, cuis)
+
+
 def rows(path: Path) -> Iterator[dict[str, str]]:
     """Stream one ONRC CSV. ``utf-8-sig`` strips the BOM every file carries.
 
@@ -332,7 +476,14 @@ def _address(row: dict[str, str]) -> str:
     return ", ".join(p.strip() for p in parts if p and p.strip())
 
 
-def build(csv_dir: Path, out: Path, *, dataset: str, nomen_dataset: str) -> None:
+def build(
+    csv_dir: Path,
+    out: Path,
+    *,
+    dataset: str,
+    nomen_dataset: str,
+    scope: Scope | None = None,
+) -> None:
     if out.exists():
         out.unlink()
     conn = sqlite3.connect(str(out))
@@ -363,7 +514,7 @@ def build(csv_dir: Path, out: Path, *, dataset: str, nomen_dataset: str) -> None
 
     # --- pass one: companies ------------------------------------------
     kept: set[str] = set()
-    seen = skipped_form = skipped_dupe = 0
+    seen = skipped_form = skipped_dupe = skipped_scope = 0
     batch: list[tuple] = []
     for row in rows(csv_dir / FIRME_FILE):
         seen += 1
@@ -377,15 +528,22 @@ def build(csv_dir: Path, out: Path, *, dataset: str, nomen_dataset: str) -> None
         if number in kept:
             skipped_dupe += 1
             continue
-        kept.add(number)
         cui = (row.get("CUI") or "").strip()
         if cui in {"0", ""}:
             cui = ""
+        if scope is not None and not scope.wants(number, cui):
+            skipped_scope += 1
+            continue
+        kept.add(number)
         code = status_by_number.get(number, "")
         batch.append(
             (
                 number,
-                to_new_format(number),
+                # Derived from EITHER format — see ``prefix_for``. Using
+                # ``to_new_format`` here left every new-format row with a NULL
+                # prefix, which is the one row an incoming old-format GLEIF
+                # number has to reach, and cost 38.6% of J-number lookups.
+                prefix_for(number),
                 cui or None,
                 (row.get("DENUMIRE") or "").strip(),
                 form,
@@ -413,8 +571,9 @@ def build(csv_dir: Path, out: Path, *, dataset: str, nomen_dataset: str) -> None
         )
     conn.commit()
     log.info(
-        "companies: %d kept, %d sole traders skipped, %d duplicate numbers, %d read",
-        len(kept), skipped_form, skipped_dupe, seen,
+        "companies: %d kept, %d sole traders skipped, %d outside the LEI scope, "
+        "%d duplicate numbers, %d read",
+        len(kept), skipped_form, skipped_scope, skipped_dupe, seen,
     )
 
     # --- pass two: representatives ------------------------------------
@@ -484,6 +643,15 @@ def build(csv_dir: Path, out: Path, *, dataset: str, nomen_dataset: str) -> None
             ("representatives", str(reps)),
             ("source", "https://data.gov.ro/dataset?organization=onrc"),
             ("licence", "CC-BY-4.0"),
+            # Recorded so a reader can tell a scoped index from a full one
+            # without counting rows, and knows which staleness applies.
+            (
+                "scope",
+                "the GLEIF Romanian LEI population"
+                if scope is not None
+                else "the whole register",
+            ),
+            ("built_at", datetime.now(UTC).strftime("%Y-%m-%d")),
         ],
     )
     conn.commit()
@@ -508,6 +676,16 @@ def main() -> None:
         action="store_true",
         help="build from --csv-dir without touching data.gov.ro",
     )
+    ap.add_argument(
+        "--scope",
+        choices=("leis", "full"),
+        default="leis",
+        help=(
+            "leis (default): keep only companies in the GLEIF Romanian LEI "
+            "population — 4 MB, and the only rows a lookup can ever reach. "
+            "full: the whole register, 1.2 GB, for research"
+        ),
+    )
     args = ap.parse_args()
 
     dataset = args.dataset or ""
@@ -528,7 +706,18 @@ def main() -> None:
                 if filename == NOMEN_STARE_FILE:
                     download(url, args.csv_dir / filename, expected_size=size)
 
-    build(args.csv_dir, args.out, dataset=dataset, nomen_dataset=nomen)
+    scope = None
+    if args.scope == "leis":
+        log.info("resolving the Romanian LEI population from GLEIF")
+        scope = lei_scope()
+
+    build(
+        args.csv_dir,
+        args.out,
+        dataset=dataset,
+        nomen_dataset=nomen,
+        scope=scope,
+    )
 
 
 if __name__ == "__main__":

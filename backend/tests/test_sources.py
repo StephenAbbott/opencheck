@@ -27,7 +27,6 @@ _DELIBERATELY_UNREGISTERED = {
     "brightquery",      # paid source, not enabled
     "cyprus_drcor",     # bulk download only
     "edr_ukraine",      # bulk download only — 3.16 GB weekly XML, no live API
-    "onrc_romania",     # bulk download only — monthly 1.6 GB CSV dump, no ONRC API
 }
 
 
@@ -112,7 +111,9 @@ _IDENTIFIER_KEYED = {
     # nothing else — it has no name search to stub.
     # asp_moldova: name search reads the local index, which a fresh test
     # process does not have — the cr_hongkong partial case, with no stub tier.
-    "asp_moldova",
+    # onrc_romania: the same. Its name search is a LIKE over the SQLite index,
+    # so with no index file there is nothing to return and nothing to stub.
+    "asp_moldova", "onrc_romania",
     "anaf_romania", "acra_singapore", "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "cac_nigeria", "ariregister", "bolagsverket",
     "cnpj_brazil", "cr_hongkong", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",
     "malta_mbr", "meip", "nz_companies", "opencorporates", "inpi", "kvk",
