@@ -16,7 +16,6 @@ import {
   type DegradedSource,
   type SourceLiveness,
   type GraphShape,
-  type MeipMatch,
   type OpenAlephScreeningMatch,
   type PossiblySameEntity,
   type RiskSignal,
@@ -148,7 +147,6 @@ export default function App() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [crossSourceLinks, setCrossSourceLinks] = useState<CrossSourceLink[]>([]);
   const [possiblySame, setPossiblySame] = useState<PossiblySameEntity[]>([]);
-  const [meip, setMeip] = useState<MeipMatch | null>(null);
   // What the registers say the subject *is* (Phase 154) — its own event,
   // arriving once the deepened bundles are in. Identity, not the answer.
   const [subjectProfile, setSubjectProfile] = useState<SubjectProfile | null>(null);
@@ -557,7 +555,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         setErrors({});
         setCrossSourceLinks([]);
         setPossiblySame([]);
-        setMeip(null);
         setSubjectProfile(null);
         setRiskSignals([]);
         setDegradedSources([]);
@@ -629,7 +626,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           },
           onCrossSourceLinks: (e) => setCrossSourceLinks(e.links),
           onPossiblySame: (e) => setPossiblySame(e.pairs),
-          onMeip: (e) => setMeip(e.match),
           onSubjectProfile: (e) => setSubjectProfile(e.profile),
           onRiskSignals: (e) => {
             setRiskSignals(e.signals);
@@ -1294,7 +1290,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setErrors({});
     setCrossSourceLinks([]);
     setPossiblySame([]);
-    setMeip(null);
     setSubjectProfile(null);
     setRiskSignals([]);
     setDegradedSources([]);
@@ -1500,7 +1495,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             Conduct due diligence on <span className="text-oo-blue">3 million</span> companies, starting from a single ID
           </HeroHeading>
           <p className="text-[13px] sm:text-sm text-oo-muted leading-snug mt-2">
-            With a Legal Entity Identifier, OpenCheck pulls open corporate data from 44 sources into one graph using the Beneficial Ownership Data Standard
+            With a Legal Entity Identifier, OpenCheck pulls open corporate data from 45 sources into one graph using the Beneficial Ownership Data Standard
           </p>
         </div>
         )}
@@ -2280,7 +2275,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   lei={streamingLei}
                   legalName={legalName}
                   signals={riskSignals}
-                  meip={meip}
                   onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
                   onPanelRecovered={(panel) =>
                     setPanelErrors((prev) => clearPanelError(prev, panel))
@@ -2670,12 +2664,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         )}
 
 
-        {/* Phase 185 moved the MEIP signpost to the Subsidiaries tab and left
-            a one-line pointer here. It sat outside every source card, under
-            no heading and beside no source name, so the one thing it could
-            not say was where it came from — a claim about the company with
-            no attribution is the failure mode this codebase is built to
-            avoid. MEIP now lives only on the Subsidiaries tab, labelled. */}
+        {/* Phase 208: MEIP is a source. Its statements arrive on the source
+            cards above like any other register's, and a group head's list
+            lives on the Subsidiaries tab — nothing about MEIP renders here
+            outside a card. */}
 
         {streamingLei && !streaming && totalHits > 0 && (
           <ExportPanel

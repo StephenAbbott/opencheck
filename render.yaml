@@ -113,6 +113,14 @@ services:
       # (Phase 188); until then the Companies House adapter walks live.
       - key: OPENCHECK_PSC_GRAPH_DB_FILE
         value: /var/data/psc_graph.sqlite
+      # --- Phase 208: OECD-UNSD MEIP as BODS ---
+      # meip.sqlite (66 MB) — the OECD's BODS v0.4 Global Register packed by
+      # backend/scripts/build_meip.py and published as the meip-bods-2024
+      # release asset (the URL is the config default, OPENCHECK_MEIP_DB_URL).
+      # Downloaded at boot when absent, kept otherwise; annual, so no
+      # re-check. Without it the meip source covers nothing.
+      - key: OPENCHECK_MEIP_DB_FILE
+        value: /var/data/meip.sqlite
       # Phase 187: the register's *streaming* key (a different credential
       # from COMPANIES_HOUSE_API_KEY; one connection per key — bods-stream
       # has its own). With the file above, the app holds one connection to

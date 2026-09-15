@@ -1091,6 +1091,79 @@ def finding_eiti_assessment(bundle: dict[str, Any]) -> str | None:
 # --------------------------------------------------------------------------
 
 
+def finding_meip(bundle: dict[str, Any]) -> str | None:
+    """One sentence for the OECD-UNSD MEIP register (Phase 208).
+
+    The register's assertion is *membership*: this company is one of the 500
+    group heads, or belongs to one of their groups. That leads, with the
+    group's name for a member — the fact that changes a decision — and the
+    number of subsidiaries listed for a head, because the head-mode card is
+    the doorway to the Subsidiaries tab and the count is the register's own
+    row count (rule 4: reporting, not arithmetic). The OECD's hierarchy
+    classification of the membership (Known / Partial / Unknown) comes next:
+    it is the only signal the file gives of how much of the chain the
+    register actually resolved. The edition date closes the sentence, since
+    the register is annual and a 2024 membership is a claim about 2024.
+
+    **Never "owned by".** MEIP records group membership under a statistical
+    methodology, as ``unknownInterest`` with no share and no dates, and the
+    Phase 208 review found the head row's LEI belongs to another entity in
+    the group for roughly 4% of groups. So the sentence says "in the X group"
+    and lets the group head's own card, and GLEIF's Level 2 beside it, say
+    who consolidates whom.
+
+    **A LEI on two records is said** (rule 6): 113 companies are listed in two
+    groups — AXA Banque Financement under AXA and under BNP Paribas — and a
+    sentence naming one group would assert a certainty the register does not
+    have.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return None
+    records = bundle.get("records") or []
+    if not records:
+        return None
+
+    clauses: list[str | None] = []
+    edition = human_date(bundle.get("edition"))
+    heads = [r for r in records if r.get("mode") == "mne_head"]
+    members = [r for r in records if r.get("mode") != "mne_head"]
+
+    if heads:
+        head = heads[0]
+        total = head.get("subsidiaries_total")
+        clauses.append(
+            f"one of the {GROUP_COUNT_WORDS} largest multinational enterprise groups"
+        )
+        if isinstance(total, int):
+            noun = "subsidiary" if total == 1 else "subsidiaries"
+            clauses.append(f"with {total:,} {noun} listed")
+    elif members:
+        groups: list[str] = []
+        for r in members:
+            name = ((r.get("group") or {}).get("name") or "").strip()
+            if name and name not in groups:
+                groups.append(name)
+        if len(groups) == 1:
+            clauses.append(f"listed in the {groups[0]} group")
+        elif len(groups) > 1:
+            clauses.append(f"listed in {len(groups)} groups: {' and '.join(groups)}")
+        else:
+            clauses.append("listed as a group member")
+        hierarchy = (members[0].get("hierarchy") or "").strip()
+        if hierarchy and hierarchy.lower() != "mne head":
+            clauses.append(f"hierarchy {hierarchy.lower()}")
+
+    if edition:
+        clauses.append(f"register of {edition}")
+
+    return clauses_to_sentence(clauses)
+
+
+#: Rule 4 forbids arithmetic; the OECD's own framing is "the 500 largest
+#: MNEs", and the spelled-out figure is that framing, not a count of rows.
+GROUP_COUNT_WORDS = "500"
+
+
 def finding_eiti_soe(bundle: dict[str, Any]) -> str | None:
     """One sentence for the EITI state-owned enterprise roster.
 

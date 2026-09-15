@@ -204,8 +204,25 @@ describe("the rows", () => {
     expect(screen.getByText("Child 20 Ltd")).toBeVisible();
   });
 
-  it("says out loud that MEIP holds only part of what the register publishes", async () => {
+  it("says out loud when MEIP's list is the fallback's LEI-carrying part of the register", async () => {
     render(<SubsidiariesPanel lei={LEI} legalName="Shell plc" />);
     expect(await screen.findByText(/1 of 1,865 listed here/)).toBeVisible();
+  });
+
+  it("heads the MEIP band with the subject's place in the group, from the store (Phase 208)", async () => {
+    getDeclaredSubsidiaries.mockResolvedValue(
+      declared([
+        source("meip", [{ name: "A/S NORSKE SHELL", lei: NORSKE, country: "NOR" }], {
+          context: { mode: "mne_head", name: "SHELL PLC", parent_mne: "SHELL PLC", edition: "2024-12-31", complete: true, memberships: 1 },
+        }),
+      ]),
+    );
+    render(<SubsidiariesPanel lei={LEI} legalName="Shell plc" />);
+    expect(
+      await screen.findByText(/One of the 500 largest multinational enterprise groups, register of 31 December 2024\./),
+    ).toBeVisible();
+    // Complete list: no "N of M listed here" — the register's whole group is on the page.
+    expect(screen.queryByText(/listed here/)).toBeNull();
+    expect(screen.getByText("1 listed · 1 can be opened")).toBeVisible();
   });
 });

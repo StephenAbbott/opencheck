@@ -113,6 +113,15 @@ _CANONICAL: dict[str, LicenseTerms] = {
         url="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
         summary="Commercial use permitted with attribution.",
     ),
+    # Phase 208: the OECD's own terms for its data (MEIP). Extraction,
+    # copying, adaptation, distribution and embedding "for any purpose, even
+    # for commercial use", with attribution to the OECD as the source.
+    "oecd-terms": _terms(
+        "OECD-Terms", "OECD Terms and Conditions",
+        commercial="yes", attribution=True, share_alike=False, redistribution="yes",
+        url="https://www.oecd.org/en/about/terms-conditions.html",
+        summary="OECD data may be reused and redistributed for any purpose with attribution.",
+    ),
     "ogl-uk-3.0": _terms(
         "OGL-UK-3.0", "UK Open Government Licence v3.0",
         commercial="yes", attribution=True, share_alike=False, redistribution="yes",

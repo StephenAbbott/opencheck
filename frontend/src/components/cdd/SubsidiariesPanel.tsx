@@ -4,7 +4,8 @@
  * What this company owns, from every source OpenCheck holds, kept apart per
  * source. Before this the same lists were scattered across three tabs: the
  * GLEIF network behind a strip at the bottom of FullCheck, the MEIP signpost
- * at the bottom of QuickCheck, EITI's declared list inside an ESG card that
+ * at the bottom of QuickCheck (a source of its own since Phase 208, so the
+ * signpost is gone), EITI's declared list inside an ESG card that
  * fetched the GLEIF network a second time to compare against. None had a
  * URL. Now `?mode=subsidiaries` has all of them and each is fetched once.
  *
@@ -29,7 +30,6 @@ import {
   getDeclaredSubsidiaries,
   type DeclaredSource,
   type DeclaredSubsidiariesResponse,
-  type MeipMatch,
   type RiskSignal,
   type SubsidiariesResponse,
 } from "../../lib/api";
@@ -37,6 +37,7 @@ import { describeFetchFailure, type PanelError, type PanelId } from "../../lib/p
 import {
   coverageSentence,
   LIST_LABEL,
+  meipContextLine,
   openableSentence,
   orderRows,
   resolveLists,
@@ -50,7 +51,6 @@ import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import MatchConfidenceChip from "../ui/MatchConfidenceChip";
 import PanelSection from "../ui/PanelSection";
-import { MeipSignpost } from "./MeipSignpost";
 import { SubsidiaryNetwork } from "./SubsidiaryNetwork";
 
 /** Rows shown before a list collapses behind a control. */
@@ -227,16 +227,12 @@ export default function SubsidiariesPanel({
   lei,
   legalName,
   signals = [],
-  meip = null,
   onPanelError,
   onPanelRecovered,
 }: {
   lei: string;
   legalName: string | null;
   signals?: RiskSignal[];
-  /** The lookup's MEIP match, when the stream has delivered one: its
-   *  identifiers and group context head the MEIP band. */
-  meip?: MeipMatch | null;
   /** Forwarded to SubsidiaryNetwork — a /subsidiaries failure reaches the
    *  report-level notice; this panel is mounted inside a tab, so nothing
    *  above it would otherwise learn the fetch failed. */
@@ -331,22 +327,22 @@ export default function SubsidiariesPanel({
         />
       </PanelSection>
 
-      {/* MEIP: the register's own list, headed by the signpost's context and
-          identifiers when the lookup matched. The signpost used to be the
-          last thing on the QuickCheck page. */}
+      {/* MEIP: the register's own list. Since Phase 208 MEIP is a source in
+          its own right — the OECD's BODS statements sit on the QuickCheck
+          card and in the graph — so this band carries only what the source
+          card does not: the group's members, from the same store. The
+          signpost that used to head it is gone with the meip SSE event. */}
       {meipList && meipSource && (
-        meip ? (
-          <MeipSignpost match={meip} measures={meipSource.measures}>
-            <RowsList list={meipList} />
-          </MeipSignpost>
-        ) : (
-          <PanelSection title={LIST_LABEL.meip} aside={listAside(meipList, meipSource)}>
-            <p className="mb-2 text-oo-small text-oo-muted leading-[1.6] max-w-[82ch]">
-              {capitalise(meipSource.measures)}. <span className="italic">{NOT_IN_GRAPH}</span>.
-            </p>
-            <RowsList list={meipList} />
-          </PanelSection>
-        )
+        <PanelSection
+          title={`${LIST_LABEL.meip} · group members`}
+          aside={listAside(meipList, meipSource)}
+        >
+          <p className="mb-2 text-oo-small text-oo-muted leading-[1.6] max-w-[82ch]">
+            {meipContextLine(meipSource.context)}
+            {capitalise(meipSource.measures)}.
+          </p>
+          <RowsList list={meipList} />
+        </PanelSection>
       )}
 
       {eitiList && eitiSource && (

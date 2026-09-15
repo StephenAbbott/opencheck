@@ -6,9 +6,11 @@ company owns. GLEIF Level 2 stays where it is (``subsidiaries.py``,
 every child carries an LEI, the relation is typed, and it maps to BODS. The
 lists here are weaker in different ways and are gathered for *display*:
 
-* **OECD-UNSD MEIP** — the register of the 500 largest MNEs' subsidiaries.
-  LEI-keyed, so every row links to its own OpenCheck page, but the committed
-  data holds only the LEI-carrying subset of what MEIP publishes.
+* **OECD-UNSD MEIP** — the register of the 500 largest MNEs' subsidiaries,
+  read from the OECD's own BODS release (Phase 208): every row of the group,
+  with an LEI where the register carries one and "no LEI published" where it
+  does not. (Until the SQLite asset is on disk the committed LEI-keyed subset
+  stands in, and ``total`` says how much it is not showing.)
 * **EITI Company Assessment** — names a supporting company declared to EITI,
   with a country and the report years. No identifier of any kind.
 * **GEM (Climate TRACE ownership)** — the entities GEM records the subject as
@@ -47,8 +49,9 @@ DECLARED_SOURCES: dict[str, dict[str, str]] = {
         "measures": (
             "the OECD-UNSD Multinational Enterprise Information Platform's "
             "annual register of the subsidiaries of the world's 500 largest "
-            "multinational enterprises; only the subsidiaries that carry an "
-            "LEI are held here"
+            "multinational enterprises, as the OECD publishes it in BODS; "
+            "an immediate parent is shown where the register spreadsheet "
+            "names one"
         ),
         "homepage": MEIP_URL,
     },
@@ -131,6 +134,10 @@ def _meip_block(lei: str) -> dict[str, Any]:
         )
         for r in decl["rows"]
     ]
+    # Phase 208: from the SQLite store the list is the register's whole
+    # group, LEI or not (``complete``); from the committed JSON fallback it is
+    # the LEI-carrying subset and ``total`` says how many rows the register
+    # really has, so the tab can say "N of M listed here".
     return _block(
         "meip",
         covered=True,
@@ -141,6 +148,9 @@ def _meip_block(lei: str) -> dict[str, Any]:
             "parent_mne": decl["parent_mne"],
             "immediate_parent": decl["immediate_parent"],
             "with_lei": decl["with_lei"],
+            "edition": decl.get("edition"),
+            "complete": decl.get("complete", False),
+            "memberships": decl.get("memberships", 1),
         },
         rows=rows,
     )

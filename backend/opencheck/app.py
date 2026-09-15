@@ -104,6 +104,20 @@ async def _warm_caches_background() -> None:
     except Exception as exc:  # noqa: BLE001
         log.warning("Entity pages DB warm-up failed (503s until present): %s", exc)
 
+    # Phase 208: the OECD-UNSD MEIP register (BODS) — download the SQLite
+    # release asset when absent, replace it when the asset changed, keep it
+    # otherwise. Until it lands the ``meip`` source covers nothing and the
+    # Subsidiaries tab uses the committed LEI-keyed subset.
+    try:
+        from .meip import warm_meip_db
+
+        stats = await asyncio.to_thread(warm_meip_db)
+        log.info("MEIP register warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning("MEIP register warm-up failed (the source covers nothing until present): %s", exc)
+
     # Phase 186: the UK PSC graph — download the daily seed when absent,
     # replace it when the release asset changed, keep it otherwise. Nothing
     # depends on it yet (Phase 188 puts the walk behind the lookup).

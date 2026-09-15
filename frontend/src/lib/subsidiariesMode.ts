@@ -228,3 +228,55 @@ export function openableSentence(cov: Coverage): string {
 function numberWord(n: number): string {
   return ["Zero", "One", "Two", "Three", "Four", "Five"][n] ?? String(n);
 }
+
+// ---------------------------------------------------------------------
+// The MEIP band's first sentence (Phase 208)
+// ---------------------------------------------------------------------
+
+/** The first day of a register edition, written out — "31 December 2024". */
+function editionDate(iso: unknown): string | null {
+  if (typeof iso !== "string" || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return null;
+  const d = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+/**
+ * What the register says about the *subject* — its place in the group — as
+ * the sentence that opens the MEIP band. The rows below it are the group's
+ * members; this says which group, and from which edition.
+ *
+ * Mirrors the backend's `finding_meip` sentence on the source card and keeps
+ * its vocabulary: a group is named, a company is *listed in* it, and nothing
+ * here says "owned by" — MEIP records group membership under a statistical
+ * methodology, not shareholding. When the list came from the committed JSON
+ * fallback rather than the store (`complete` false), the sentence says the
+ * list is the LEI-carrying part; the aside beside it gives the numbers.
+ * Returns "" for an unknown context so the band degrades to its measures
+ * sentence.
+ */
+export function meipContextLine(context: Record<string, unknown> | null): string {
+  if (!context) return "";
+  const edition = editionDate(context.edition);
+  const editionClause = edition ? `, register of ${edition}` : "";
+  const clauses: string[] = [];
+  if (context.mode === "mne_head") {
+    clauses.push("One of the 500 largest multinational enterprise groups");
+  } else {
+    const memberships = typeof context.memberships === "number" ? context.memberships : 1;
+    const group = typeof context.parent_mne === "string" && context.parent_mne ? context.parent_mne : null;
+    if (memberships > 1) {
+      clauses.push(`Listed in ${memberships} groups${group ? `, including ${group}` : ""}`);
+    } else if (group) {
+      clauses.push(`Listed in the ${group} group`);
+    }
+    const via = typeof context.immediate_parent === "string" ? context.immediate_parent : "";
+    if (via && via !== group) clauses.push(`immediate parent ${via}`);
+  }
+  if (clauses.length === 0) return "";
+  let s = `${clauses.join(", ")}${editionClause}.`;
+  if (context.complete === false) {
+    s += " Only the members that carry an LEI are listed here.";
+  }
+  return `${s} `;
+}

@@ -64,11 +64,6 @@
     "text": 1,
     "vocab": 0
   },
-  "src/components/cdd/MeipSignpost.tsx": {
-    "hex": 0,
-    "text": 5,
-    "vocab": 0
-  },
   "src/components/cdd/NarrativePanel.tsx": {
     "hex": 7,
     "text": 19,

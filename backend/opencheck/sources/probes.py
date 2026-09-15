@@ -672,6 +672,32 @@ PROBES: dict[str, SourceProbe] = {
             "'live' on the strength of the payments alone."
         ),
     ),
+    "meip": _p(
+        tier="snapshot",
+        subject="A/S Norske Shell — a member of the Shell PLC group",
+        method="fetch_by_lei",
+        args=("213800F4ETX85XLF5K47",),
+        requires_files=("meip.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        expect_fields=("lei", "records", "bods_statements"),
+        anchor_lei="213800F4ETX85XLF5K47",
+        snapshot_max_age_days=480,
+        freshness_url=(
+            "https://www.oecd.org/content/dam/oecd/en/data/dashboards/"
+            "oecd-unsd-multinational-enterprise-information-platform/oecd-unsd-meip-bods.zip"
+        ),
+        bods_mapper="map_meip",
+        notes=(
+            "Phase 208. The OECD's own BODS v0.4 release of the Global Register, packed into "
+            "data/meip.sqlite (the meip-bods-2024 release asset, gitignored — this skips on a "
+            "fresh checkout until warm-up downloads it). Snapshot dated by the register's "
+            "reference date (31 Dec 2024), so the age check fires when the next annual edition "
+            "is due; the freshness URL is the OECD's zip, which sits behind a Cloudflare "
+            "bot check and may answer 403 to a runner — a HEAD failure is not a source failure. "
+            "Expect two statements for the subject entity and its Shell PLC head plus one "
+            "relationship: the register flattens every membership to one edge."
+        ),
+    ),
     # --- curated fixtures -------------------------------------------------
     "eiti_assessment": _p(
         tier="curated",
