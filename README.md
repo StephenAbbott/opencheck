@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 208** — OECD-UNSD MEIP becomes a source in its own right, serving the OECD's own BODS v0.4 statements for the 500 largest multinational groups and their 126,658 subsidiaries, passed through unmodified beside GLEIF Level 2.
+**Latest: Phase 210** — Relationship parties are resolved by recordId as BODS v0.4 specifies, so the OECD's MEIP statements draw as one linked edge in the graph, the risk layer walk and every export rather than as two unlinked nodes.
 
 → [Full development history](docs/status.md)
 
