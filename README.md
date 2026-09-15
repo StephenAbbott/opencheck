@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 210** — Relationship parties are resolved by recordId as BODS v0.4 specifies, so the OECD's MEIP statements draw as one linked edge in the graph, the risk layer walk and every export rather than as two unlinked nodes.
+**Latest: Phase 211** — Romania's Trade Register is a live source, its index scoped to the companies that hold an LEI so it ships at 4.3 MB rather than 1.2 GB, with a prefix-join defect fixed that had been losing 38.6% of Romanian registration-number lookups.
 
 → [Full development history](docs/status.md)
 
