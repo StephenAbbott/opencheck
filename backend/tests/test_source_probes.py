@@ -26,6 +26,7 @@ from pathlib import Path
 import pytest
 
 from opencheck.config import Settings
+from opencheck.identifiers import is_valid_lei
 from opencheck.sources import REGISTRY
 from opencheck.sources.probes import PROBES, SourceProbe
 
@@ -85,6 +86,36 @@ def test_probe_subject_and_args_are_populated():
         assert probe.subject, f"{source_id}: probe has no subject label"
         assert probe.args, f"{source_id}: probe has no arguments to call {probe.method} with"
         assert probe.expect_liveness, f"{source_id}: probe expects no liveness value"
+
+
+def test_probe_anchor_leis_are_real_leis():
+    """Every ``anchor_lei`` must pass ISO 17442, not merely look like an LEI.
+
+    ``source_health.py`` hands this value straight to GLEIF, so a fabricated or
+    mistyped one fails the **weekly sweep** — days after the change that caused
+    it, and reported as a source problem rather than a typo.
+
+    That is exactly what happened: the ``anaf_romania`` probe shipped with
+    ``254900FDFVYUDTRUS759``, written from memory rather than looked up, whose
+    check digits are ``59`` where ISO 17442 requires ``33``. Every other test
+    passed — ``test_probe_subject_and_args_are_populated`` asserts an anchor is
+    *present*, and the drift tests that would really call GLEIF are opt-in
+    live — so nothing on any offline path could see it.
+
+    Shape alone would not have caught it either: the bad value is twenty
+    characters and matches the LEI regex. Only the checksum distinguishes a
+    real LEI from a plausible-looking one, which is the whole reason
+    ``is_valid_lei`` enforces it.
+    """
+    for source_id, probe in sorted(PROBES.items()):
+        if probe.anchor_lei is None:
+            continue
+        assert is_valid_lei(probe.anchor_lei, checksum=True), (
+            f"{source_id}: anchor_lei {probe.anchor_lei!r} is not a valid LEI "
+            f"(ISO 17442 check digits). source_health.py resolves this against "
+            f"GLEIF, so an invalid one reds the weekly sweep. Look the LEI up "
+            f"rather than writing it from memory."
+        )
 
 
 # --- 2. no network call without a provenance observation ---------------------
