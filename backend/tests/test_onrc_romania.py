@@ -258,13 +258,26 @@ def index(tmp_path: Path):
 
 
 @pytest.fixture()
-def no_index():
+def no_index(tmp_path):
+    """No index **anywhere** — neither named nor at the data-root default.
+
+    Unsetting ``ONRC_ROMANIA_DB_FILE`` alone stopped meaning this once
+    ``db_path`` gained its data-root fallback: a developer (or a boot
+    download) who leaves an index in ``data/`` makes every "no index" test
+    fail, on a real file rather than a bug. So the data root moves too.
+    """
     import os
 
     os.environ.pop("ONRC_ROMANIA_DB_FILE", None)
+    previous_root = os.environ.get("OPENCHECK_DATA_ROOT")
+    os.environ["OPENCHECK_DATA_ROOT"] = str(tmp_path / "empty-data-root")
     get_settings.cache_clear()
     onrc_romania.reset_connection()
     yield
+    if previous_root is None:
+        os.environ.pop("OPENCHECK_DATA_ROOT", None)
+    else:
+        os.environ["OPENCHECK_DATA_ROOT"] = previous_root
     get_settings.cache_clear()
     onrc_romania.reset_connection()
 
@@ -761,3 +774,87 @@ async def test_the_prefix_join_works_in_both_directions(tmp_path: Path) -> None:
         os.environ.pop("ONRC_ROMANIA_DB_FILE", None)
         get_settings.cache_clear()
         onrc_romania.reset_connection()
+
+
+# ---------------------------------------------------------------------------
+# The boot download (Phase 211 follow-up)
+# ---------------------------------------------------------------------------
+
+
+def test_the_reader_and_the_downloader_agree_on_the_path(tmp_path: Path, monkeypatch) -> None:
+    """`_connect` and `warm_index` must resolve to the same file.
+
+    They did not at first: the download wrote to the data-root default while
+    the reader required `ONRC_ROMANIA_DB_FILE` and returned None without it,
+    so a perfectly good downloaded index was ignored and the source stayed
+    dark — failing closed, and silently, which is the worst shape.
+    """
+    monkeypatch.setattr("opencheck.cache.data_root", lambda: tmp_path)
+    get_settings.cache_clear()
+    import os
+
+    os.environ.pop("ONRC_ROMANIA_DB_FILE", None)
+    try:
+        assert onrc_romania.db_path() == tmp_path / "onrc_romania.sqlite"
+    finally:
+        get_settings.cache_clear()
+        onrc_romania.reset_connection()
+
+
+def test_an_index_at_the_default_path_is_read_without_the_env_var(
+    tmp_path: Path, monkeypatch, index: Path
+) -> None:
+    """A downloaded index works with no `ONRC_ROMANIA_DB_FILE` set at all."""
+    import os
+    import shutil
+
+    default_dir = tmp_path / "data"
+    default_dir.mkdir()
+    shutil.copy(index, default_dir / "onrc_romania.sqlite")
+
+    monkeypatch.setattr("opencheck.cache.data_root", lambda: default_dir)
+    os.environ.pop("ONRC_ROMANIA_DB_FILE", None)
+    get_settings.cache_clear()
+    onrc_romania.reset_connection()
+    try:
+        assert onrc_romania.index_available() is True
+        assert onrc_romania.resolve_cui("J40/1116/1991") == "412052"
+    finally:
+        get_settings.cache_clear()
+        onrc_romania.reset_connection()
+
+
+def test_warm_index_without_a_url_is_a_state_not_a_failure(monkeypatch) -> None:
+    """An empty URL disables the download rather than erroring."""
+    import os
+
+    os.environ["ONRC_ROMANIA_DB_URL"] = ""
+    get_settings.cache_clear()
+    try:
+        result = onrc_romania.warm_index()
+        assert "no URL" in result["onrc_romania"]
+    finally:
+        os.environ.pop("ONRC_ROMANIA_DB_URL", None)
+        get_settings.cache_clear()
+        onrc_romania.reset_connection()
+
+
+def test_warm_index_never_raises_when_the_asset_is_unreachable(monkeypatch) -> None:
+    """No index is a state the pipeline handles; a boot crash is not.
+
+    `covers_lei` returns False and the source is simply not announced.
+    """
+    def _boom(*args, **kwargs):
+        raise RuntimeError("release asset unreachable")
+
+    monkeypatch.setattr("opencheck.entity_pages.asset_check", _boom)
+    monkeypatch.setattr("opencheck.entity_pages.download_db", _boom)
+    result = onrc_romania.warm_index()
+    assert result["onrc_romania"].startswith("failed:")
+
+
+def test_the_configured_asset_url_points_at_a_gzipped_sqlite() -> None:
+    """A URL typo fails closed and silently — pin the shape, not the bytes."""
+    url = get_settings().onrc_romania_db_url
+    assert url.startswith("https://github.com/StephenAbbott/opencheck/releases/download/")
+    assert url.endswith(".sqlite.gz"), "download_db only inflates a .gz"

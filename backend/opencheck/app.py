@@ -116,6 +116,25 @@ async def _warm_caches_background() -> None:
         raise
     except Exception as exc:  # noqa: BLE001
         log.warning("ASP Moldova index warm-up failed (lookups degrade): %s", exc)
+    # Phase 211: the Romanian Trade Register index — download the release
+    # asset when absent, replace it when the asset changed, keep it otherwise.
+    # It cannot be built here: data.gov.ro drops connections from datacentre
+    # ranges. Until it lands ``onrc_romania`` is never announced, and the ANAF
+    # adapter reaches only the ~48% of Romanian LEI holders whose GLEIF record
+    # already carries a fiscal code.
+    try:
+        from .sources.onrc_romania import warm_index as warm_onrc_romania_index
+
+        stats = await asyncio.to_thread(warm_onrc_romania_index)
+        log.info("ONRC Romania index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "ONRC Romania index warm-up failed (the source is not announced "
+            "until present): %s",
+            exc,
+        )
     # Phase 208: the OECD-UNSD MEIP register (BODS) — download the SQLite
     # release asset when absent, replace it when the asset changed, keep it
     # otherwise. Until it lands the ``meip`` source covers nothing and the
