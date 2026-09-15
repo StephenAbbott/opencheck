@@ -13,6 +13,7 @@
  * It is also unit-testable without a DOM (see bodsGraph.test.ts).
  */
 
+import { refIndex, resolveRef as resolveRefById } from "./bodsRefs";
 import { BOVS_ICONS } from "./bovsIcons";
 import { isIdentityVerified } from "./identityVerification";
 
@@ -355,9 +356,11 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
   const suppressComponentPrimary = opts.suppressRedundantComponentPrimary ?? true;
   const nodes: GraphNode[] = [];
   const nodeIds = new Set<string>();
-  // v0.4 relationship endpoints reference declarationSubject (e.g. "XI-LEI-…")
-  // rather than the statementId UUID. Build a lookup so edges resolve either.
-  const declSubjToNodeId = new Map<string, string>();
+  // v0.4 relationship endpoints reference the party's *recordId* (or a
+  // declarationSubject alias such as "XI-LEI-…"), not its statementId, and a
+  // publisher's own statements (MEIP, Phase 208) do not share the two. Resolve
+  // every spelling to the node id (Phase 210).
+  const refs = refIndex(statements);
 
   for (const stmt of statements) {
     const rt = (stmt.recordType ?? stmt.statementType) as string;
@@ -365,9 +368,6 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
     const id = (stmt.statementId ?? stmt.statementID) as string;
     if (!id || nodeIds.has(id)) continue;
     nodeIds.add(id);
-
-    const declSubj = stmt.declarationSubject as string | undefined;
-    if (declSubj && declSubj !== id) declSubjToNodeId.set(declSubj, id);
 
     const rd = (stmt.recordDetails ?? {}) as RD;
     const name =
@@ -388,16 +388,7 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
     });
   }
 
-  const resolveRef = (raw: unknown): string | undefined => {
-    if (typeof raw === "string") {
-      return nodeIds.has(raw) ? raw : declSubjToNodeId.get(raw);
-    }
-    const obj = raw as RD | undefined;
-    return (
-      (obj?.describedByEntityStatement as string | undefined) ??
-      (obj?.describedByPersonStatement as string | undefined)
-    );
-  };
+  const resolveRef = (raw: unknown): string | undefined => resolveRefById(raw, refs);
 
   // One raw edge per ownership-or-control statement.
   const raw: RawEdge[] = [];

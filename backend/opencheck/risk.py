@@ -127,12 +127,15 @@ Confidence ladder
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any
 
 from .bods.mapper import GLEIF_UNDISCLOSED_REASONS
 from .bods.mapper import _stable_id as _bods_stable_id
 from .bods.nominees import NOMINEE_NATURE_CODES, is_nominee_nature
+from .bods.refs import Iterable
+from .bods.refs import resolver as _refs_resolver
 from .config import get_settings
 from .sources import SearchKind, SourceHit
 from .topics import topic_phrase
@@ -1626,14 +1629,34 @@ def _statement_id(stmt: dict[str, Any]) -> str:
     return stmt.get("statementId") or stmt.get("statement_id") or ""
 
 
-def _relationship_endpoints(stmt: dict[str, Any]) -> tuple[str, str, str]:
+def _relationship_endpoints(
+    stmt: dict[str, Any], resolve: Callable[[Any], str] | None = None
+) -> tuple[str, str, str]:
     """Return (subject_id, ip_id, ip_kind) for a relationship statement.
 
     Handles both the BODS v0.4 bare-string format (``subject: "id"``) and the
     older wrapped format (``subject: {"describedByEntityStatement": "id"}``).
     ``ip_kind`` is ``"entity"``, ``"person"`` or ``""`` (unknown).
+
+    Pass ``resolve`` (``bods.refs.resolver(bods)``) to get **statementIds**
+    back whatever the relationship referenced: v0.4 references are recordIds,
+    and a publisher's own statements (MEIP, Phase 208) carry a recordId that
+    differs from the statementId every set in this module is keyed on. Without
+    it the raw references are returned, which is only correct for OpenCheck's
+    own mappers (statementId == recordId).
     """
     rd = _record_details(stmt)
+    if resolve is not None:
+        subj = resolve(rd.get("subject"))
+        raw_ip = rd.get("interestedParty") or {}
+        ip = resolve(raw_ip)
+        if isinstance(raw_ip, dict):
+            if "describedByPersonStatement" in raw_ip:
+                return subj, ip, "person"
+            if "describedByEntityStatement" in raw_ip or "describedByAnonymousEntityStatement" in raw_ip:
+                return subj, ip, "entity"
+            return subj, "", ""
+        return subj, ip, ""
 
     # BODS v0.4: subject is a bare string record-id.
     raw_subj = rd.get("subject") or {}
@@ -1718,10 +1741,11 @@ def _state_controlled_signals(
     owners: list[str] = []
     state_node: str = ""
     subject_node: str = ""
+    _resolve = _refs_resolver(bods)
     for stmt in bods:
         if _stmt_kind(stmt) != "relationship":
             continue
-        subj, ip, _ = _relationship_endpoints(stmt)
+        subj, ip, _ = _relationship_endpoints(stmt, _resolve)
         if ip in state_ids:
             name = _record_details(ents.get(ip, {})).get("name") or ip
             owners.append(name)
@@ -1937,10 +1961,11 @@ def _subject_entity_id(hit_id: str, bods: list[dict[str, Any]]) -> str | None:
                     return _statement_id(stmt)
     subjects: set[str] = set()
     parties: set[str] = set()
+    _resolve = _refs_resolver(bods)
     for stmt in bods:
         if _stmt_kind(stmt) != "relationship":
             continue
-        subj, ip, _ = _relationship_endpoints(stmt)
+        subj, ip, _ = _relationship_endpoints(stmt, _resolve)
         if subj:
             subjects.add(subj)
         if ip:
@@ -1958,10 +1983,11 @@ def _upstream_entity_ids(subject_id: str, bods: list[dict[str, Any]]) -> set[str
     owners, and so on. Subsidiaries (which the subject owns) are never in
     this set: they are below it."""
     owners: dict[str, set[str]] = {}
+    _resolve = _refs_resolver(bods)
     for stmt in bods:
         if _stmt_kind(stmt) != "relationship":
             continue
-        subj, ip, _ = _relationship_endpoints(stmt)
+        subj, ip, _ = _relationship_endpoints(stmt, _resolve)
         if subj and ip:
             owners.setdefault(subj, set()).add(ip)
     seen: set[str] = set()
@@ -2343,10 +2369,11 @@ def _layers_signal(
     # Adjacency runs UP the chain: subject -> the parties that own it.
     owners: dict[str, set[str]] = {}
     person_capped: set[str] = set()
+    _resolve = _refs_resolver(bods)
     for stmt in bods:
         if _stmt_kind(stmt) != "relationship":
             continue
-        subj, ip, ip_kind = _relationship_endpoints(stmt)
+        subj, ip, ip_kind = _relationship_endpoints(stmt, _resolve)
         if not subj or not ip:
             continue
         # BODS v0.4 bare-string format: ip_kind is "" — resolve from the maps.

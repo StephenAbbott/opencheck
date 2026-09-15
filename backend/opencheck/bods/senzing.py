@@ -44,10 +44,12 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from functools import lru_cache
 from typing import Any
 
 from .. import identifiers
+from .refs import resolver
 
 DATA_SOURCE = "OPENCHECK"
 DOMAIN = "OPENCHECK"
@@ -250,7 +252,9 @@ def _person_record(stmt: dict[str, Any]) -> dict[str, Any]:
     return {"DATA_SOURCE": DATA_SOURCE, "RECORD_ID": sid, "FEATURES": features}
 
 
-def _pointer_features(stmt: dict[str, Any]) -> list[dict[str, Any]]:
+def _pointer_features(
+    stmt: dict[str, Any], resolve: Callable[[Any], str] = lambda ref: ref
+) -> list[dict[str, Any]]:
     """REL_POINTER feature(s) for one BODS relationship statement.
 
     One pointer per interest entry (each disclosed interest is its own Senzing
@@ -262,7 +266,7 @@ def _pointer_features(stmt: dict[str, Any]) -> list[dict[str, Any]]:
     if not subject:
         return []
 
-    base = {"REL_POINTER_DOMAIN": DOMAIN, "REL_POINTER_KEY": subject}
+    base = {"REL_POINTER_DOMAIN": DOMAIN, "REL_POINTER_KEY": resolve(subject)}
     pointers: list[dict[str, Any]] = []
     for interest in rd.get("interests") or []:
         pointer = dict(base)
@@ -355,17 +359,19 @@ def map_to_senzing(bods_statements: list[dict[str, Any]]) -> list[dict[str, Any]
         elif rtype == "relationship":
             relationships.append(stmt)
 
+    resolve = resolver(bods_statements or [])
     for stmt in relationships:
         rd = stmt.get("recordDetails") or {}
-        party = rd.get("interestedParty")
-        # Only a plain statementId reference resolves to a record we can anchor
-        # the pointer on; an "unspecified" (unknown owner) party object cannot.
-        if not isinstance(party, str):
+        # Only a reference resolves to a record we can anchor the pointer on;
+        # an "unspecified" (unknown owner) party object cannot. A v0.4
+        # reference is a recordId — resolved to the record's statementId.
+        if not isinstance(rd.get("interestedParty"), str):
             continue
+        party = resolve(rd.get("interestedParty"))
         target = records.get(party)
         if target is None:
             continue
-        target["FEATURES"].extend(_pointer_features(stmt))
+        target["FEATURES"].extend(_pointer_features(stmt, resolve))
         # The folded relationship's source also contributed to this record.
         contributors.setdefault(party, set()).update(_source_ids_of(stmt))
 

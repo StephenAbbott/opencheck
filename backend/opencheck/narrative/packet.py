@@ -16,6 +16,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from ..bods.refs import statement_index
+
 # Confidence is a small, ordered vocabulary used for both facts and risks.
 Confidence = str  # "high" | "medium" | "low"
 
@@ -216,7 +218,10 @@ def build_evidence_packet(
     from ..sources import REGISTRY  # lazy import to avoid cycles
 
     bods: list[dict[str, Any]] = report.get("bods") or []
-    by_id = {s.get("statementId"): s for s in bods if s.get("statementId")}
+    by_id = {
+        **{s.get("statementId"): s for s in bods if s.get("statementId")},
+        **statement_index(bods),
+    }
     # Relationship statements reference their parties by *statementId* in
     # OpenCheck's own mapper output, but Open Ownership's published bulk
     # bundles (served verbatim via ``bods_data``) reference the party's
