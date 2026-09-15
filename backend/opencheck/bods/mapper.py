@@ -6898,6 +6898,18 @@ def map_bods_uk_psc(bundle: dict[str, Any]) -> BODSBundle:
     return iter(bundle.get("bods_statements", []))
 
 
+def map_meip(bundle: dict[str, Any]) -> BODSBundle:
+    """Passthrough mapper for the OECD-UNSD MEIP register (Phase 208).
+
+    The OECD publishes the register in BODS v0.4 itself, so the adapter
+    returns its statements verbatim under ``bods_statements`` — the OECD's
+    ``statementId`` / ``recordId`` / ``source`` / ``publicationDetails`` and
+    the one annotation the file carries. Nothing is re-mapped: the first
+    source whose statements reach the graph as the publisher wrote them.
+    """
+    return iter(bundle.get("bods_statements", []))
+
+
 # ----------------------------------------------------------------------
 # Nigeria CAC — Persons with Significant Control → BODS v0.4
 # ----------------------------------------------------------------------

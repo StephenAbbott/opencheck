@@ -134,3 +134,11 @@ tmp_opencheck_audit.tgz
 # .gitignore never untracks what git already tracks (Phase 168).
 unilever.json
 *.lookup.json
+
+# Phase 208: the OECD-UNSD MEIP BODS release and its build inputs (release asset, never committed)
+data/meip.sqlite
+data/meip.sqlite.gz
+data/meip.sqlite-journal
+data/meip_bods.jsonl
+data/globalregister*.xlsx
+data/meip_head_warnings.json

@@ -197,6 +197,23 @@ class Settings(BaseSettings):
     mirror_refresh_interval_s: float = Field(
         default=3600.0, alias="OPENCHECK_MIRROR_REFRESH_INTERVAL_S"
     )
+    # --- Phase 208: the OECD-UNSD MEIP register as BODS (opencheck/meip.py) ---
+    # Local path of ``meip.sqlite`` (built by scripts/build_meip.py from the
+    # OECD's BODS release + the Global Register spreadsheet). Unset = the data
+    # root's ``meip.sqlite``; on Render, a path on the persistent disk. When
+    # absent it is downloaded from the URL below at boot; without either the
+    # ``meip`` source covers nothing and the Subsidiaries tab falls back to
+    # the committed LEI-keyed subset.
+    meip_db_file: str | None = Field(default=None, alias="OPENCHECK_MEIP_DB_FILE")
+    # Release asset the file is downloaded from when absent, and replaced
+    # from when the asset is not the one on disk. Empty string disables it.
+    meip_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "meip-bods-2024/meip.sqlite.gz"
+        ),
+        alias="OPENCHECK_MEIP_DB_URL",
+    )
     # --- Phase 186: the UK PSC graph (opencheck/psc_graph.py) ---
     # A local ``psc_graph.sqlite`` — every active Companies House PSC record,
     # built daily from the register's own snapshot by refresh-psc-graph.yml

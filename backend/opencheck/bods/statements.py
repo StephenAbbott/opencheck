@@ -628,6 +628,7 @@ SOURCE_NAMES: dict[str, str] = {
     "eiti_bo": "EITI countries — national beneficial ownership registers (pooled: ITIE-RDC, Armenia State Register, Nigeria CAC/NEITI subset)",
     "eiti_assessment": "EITI Company Assessment",
     "eiti_soe": "EITI State-Owned Enterprises Database",
+    "meip": "OECD-UNSD Multinational Enterprise Information Platform (MEIP)",
     "ur_latvia": "UR — Latvian Register of Enterprises (data.gov.lv)",
     "ares": "ARES — Czech Administrativní registr ekonomických subjektů",
     "wikidata": "Wikidata",

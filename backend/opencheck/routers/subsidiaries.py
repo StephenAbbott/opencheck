@@ -122,7 +122,8 @@ class DeclaredSource(BaseModel):
     covered: bool = False
     reason: str | None = None
     #: The source's own count where it publishes one larger than ``rows``
-    #: (MEIP holds only the LEI-carrying subset of an MNE's subsidiaries).
+    #: (MEIP's committed fallback holds only the LEI-carrying subset; the
+    #: SQLite store lists the whole group and ``total`` equals ``listed``).
     total: int | None = None
     listed: int = 0
     with_lei: int = 0

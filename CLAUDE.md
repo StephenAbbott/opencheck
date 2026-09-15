@@ -663,10 +663,10 @@ or corroboration** (that is the signals layer, with its own confidence
 model), and **state absence in the same voice as presence** — silence reads
 as "nothing to see".
 
-**Sixteen** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
+**Seventeen** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
 `companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`,
 `everypolitician`, `gemi_greece`, `climatetrace`, `eiti_assessment`,
-`eiti_soe`, `cr_hongkong`, `acra_singapore`. Adding one means **two** edits — the template here *and*
+`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`. Adding one means **two** edits — the template here *and*
 `finding=finding_<name>(r)` in that adapter's `_bh_<name>()`; a template
 nobody passes is dead code, and nothing fails to warn you. The
 frontend falls back `finding → summary → nothing`
@@ -773,6 +773,46 @@ the literal logo triangle. Dated per-post share cards (e.g.
 into a 1200×630 layout following the existing `opencheck-social-*.html`
 convention — OpenCheck logo top-left, Bitter headline, accent-coloured
 top/bottom bars, `opencheck.world` in `oo.blue`.
+
+---
+
+## OECD-UNSD MEIP is a source, as the OECD's own BODS (Phase 208)
+
+From Phase 69 to 207 MEIP was a *signpost*: a card at the bottom of QuickCheck
+(later the head of the Subsidiaries band) fed by its own `meip` SSE event, with
+no statements and no graph nodes. In September 2026 the OECD published the
+Global Register in **BODS v0.4** and Phase 208 reversed the July 2026 decision:
+`sources/meip.py` is a registered, LEI-keyed adapter; `map_meip` is a
+**passthrough** (`bods_statements` are the OECD's statements, verbatim — do not
+"improve" them, the point is to show what the OECD published beside GLEIF); the
+`meip` SSE event, `ReportResponse.meip`, `MeipSignpost.tsx` and the `MeipMatch`
+types are gone. One code path.
+
+- **The store is `data/meip.sqlite`** (66 MB; 29 MB gzipped), packed by
+  `backend/scripts/build_meip.py` from the OECD's JSONL **and** the Global
+  Register XLSX (`data/globalregister2024.xlsx`) — the spreadsheet supplies each
+  member's immediate parent, which the BODS file omits (every edge runs straight
+  to the group head). Published as the `meip-bods-2024` release asset
+  (`OPENCHECK_MEIP_DB_URL` default) and downloaded at boot by `warm_meip_db()`,
+  the PSC-graph boot rule; on Render it lives at `/var/data/meip.sqlite`
+  (`OPENCHECK_MEIP_DB_FILE`). Without the file `covers_lei` is False for every
+  LEI and the source is never announced. The Phase 69 JSON tables stay only as
+  the Subsidiaries tab's fallback (`context.complete: false`).
+- **Say "listed in the X group", never "owned by".** MEIP records group
+  membership under a statistical methodology; every relationship is
+  `unknownInterest` / `directOrIndirect: unknown`. `finding_meip` and the tab's
+  `meipContextLine` both keep that vocabulary and `test_meip` fails on an
+  ownership verb. `risk.py` excludes `meip` from the `COMPLEX_OWNERSHIP_LAYERS`
+  count (`_LAYER_COUNT_EXCLUDED`) — one hop to the head is not a layer count.
+- **Carried through as published, by decision (Stephen, 15 Sept 2026):** ~4% of
+  head rows carry the LEI of a different entity in the group (Munich Re's head
+  is a UK pension trustee); 113 LEIs sit in two groups and **both** memberships
+  are shown; the `lei` on the hit is asserted because the OECD publishes it.
+  A head's subsidiaries are the Subsidiaries tab's list, never graph nodes.
+- **Build on a Mac, not on the mount:** SQLite cannot write on the connected
+  folder ("disk I/O error") — `build_meip.py` writes to `/tmp` and copies.
+  Inputs (`meip_bods.jsonl`, the XLSX, the sqlite and its gz) are gitignored.
+- A scheduled check of the OECD page for the next edition fires in March 2027.
 
 ---
 

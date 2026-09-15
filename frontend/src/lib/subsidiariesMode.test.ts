@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { DeclaredSource, SubsidiaryChild } from "./api";
 import {
   coverageSentence,
+  meipContextLine,
   openableSentence,
   orderRows,
   resolveLists,
@@ -173,5 +174,40 @@ describe("openableSentence", () => {
   it("is honest when nothing can be opened", () => {
     const cov = resolveLists([src("eiti_assessment", [{ name: "A" }])], null);
     expect(openableSentence(cov)).toContain("none can be opened");
+  });
+});
+
+describe("meipContextLine — the MEIP band's opening sentence (Phase 208)", () => {
+  const edition = "2024-12-31";
+
+  it("names the group a member is listed in, and the edition, without an ownership verb", () => {
+    const s = meipContextLine({ mode: "subsidiary", parent_mne: "SHELL PLC", immediate_parent: "SHELL PLC", edition, complete: true, memberships: 1 });
+    expect(s).toBe("Listed in the SHELL PLC group, register of 31 December 2024. ");
+    expect(s).not.toMatch(/\bown(s|ed|ership)?\b/i);
+  });
+
+  it("adds the immediate parent when the spreadsheet names one below the head", () => {
+    const s = meipContextLine({ mode: "subsidiary", parent_mne: "SHELL PLC", immediate_parent: "Shell Petroleum N.V.", edition, complete: true });
+    expect(s).toBe("Listed in the SHELL PLC group, immediate parent Shell Petroleum N.V., register of 31 December 2024. ");
+  });
+
+  it("says a company is in two groups rather than picking one (decision 6)", () => {
+    const s = meipContextLine({ mode: "subsidiary", parent_mne: "AXA", memberships: 2, edition, complete: true });
+    expect(s).toBe("Listed in 2 groups, including AXA, register of 31 December 2024. ");
+  });
+
+  it("describes a group head as one of the 500", () => {
+    const s = meipContextLine({ mode: "mne_head", parent_mne: "SHELL PLC", edition, complete: true });
+    expect(s).toBe("One of the 500 largest multinational enterprise groups, register of 31 December 2024. ");
+  });
+
+  it("says out loud when the list is the JSON fallback's LEI-carrying subset", () => {
+    const s = meipContextLine({ mode: "mne_head", complete: false });
+    expect(s).toBe("One of the 500 largest multinational enterprise groups. Only the members that carry an LEI are listed here. ");
+  });
+
+  it("degrades to nothing on an unknown context", () => {
+    expect(meipContextLine(null)).toBe("");
+    expect(meipContextLine({ mode: "subsidiary" })).toBe("");
   });
 });
