@@ -19,6 +19,7 @@ UTC = timezone.utc
 from html import escape
 from typing import Any
 
+from ..bods.refs import statement_index
 from .diagram import source_diagram
 
 LIVE_BASE = "opencheck.world"
@@ -540,7 +541,12 @@ def _sources_found(report: dict[str, Any]) -> str:
 
 def _diagrams(report: dict[str, Any]) -> str:
     bods = report.get("bods") or []
-    by_id = {s.get("statementId"): s for s in bods if s.get("statementId")}
+    # Keyed by statementId *and* recordId — a v0.4 relationship references the
+    # latter, and a publisher's own statements (MEIP) do not share the two.
+    by_id = {
+        **{s.get("statementId"): s for s in bods if s.get("statementId")},
+        **statement_index(bods),
+    }
     # Ordered unique source names that produced statements.
     order: list[str] = []
     for s in bods:

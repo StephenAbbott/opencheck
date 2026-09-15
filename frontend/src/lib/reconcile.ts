@@ -37,6 +37,7 @@
  * the merge is visible as a match and never counts toward corroboration.
  */
 
+import { refIndex } from "./bodsRefs";
 import type { RiskSignal } from "./api";
 
 type Stmt = Record<string, unknown>;
@@ -410,8 +411,13 @@ export function reconcileBods(statements: Stmt[]): ReconcileResult {
     });
   }
 
-  const ref = (id: unknown): unknown =>
-    typeof id === "string" && remap[id] ? remap[id] : id;
+  // A v0.4 reference is a recordId; `remap` is keyed by statementId, so
+  // canonicalise first (Phase 210 — MEIP's recordIds differ from its ids).
+  const refs = refIndex(stmts);
+  const ref = (id: unknown): unknown => {
+    const sid = typeof id === "string" ? (refs.get(id) ?? id) : id;
+    return typeof sid === "string" && remap[sid] ? remap[sid] : sid;
+  };
 
   const out: Stmt[] = [];
   const emittedCanon = new Set<string>();

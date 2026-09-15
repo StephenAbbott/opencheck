@@ -776,6 +776,38 @@ top/bottom bars, `opencheck.world` in `oo.blue`.
 
 ---
 
+## A relationship names its parties by recordId — resolve, never compare (Phase 210)
+
+BODS v0.4: `subject` / `interestedParty` hold the party's **recordId**. Every
+OpenCheck mapper sets `statementId == recordId` for entities and people, so for
+207 phases every consumer keyed its lookups on `statementId` and happened to
+work. The OECD's MEIP statements (Phase 208) are the first with a hash
+`statementId`, a `meip-entity-N` `recordId` and — on **every** statement — a
+`declarationSubject` naming the group *head*. First production lookup: A/S
+Norske Shell and SHELL PLC drew as two unlinked nodes.
+
+- **One resolver each side:** `backend/opencheck/bods/refs.py`
+  (`party_ref`, `statement_index`, `resolver`) and `frontend/src/lib/bodsRefs.ts`
+  (`partyRef`, `refIndex`, `resolveRef`). They map any spelling — statementId,
+  recordId, `declarationSubject` alias, bare string or legacy `describedBy*`
+  wrapper — to the **statementId** every index in the codebase is keyed on.
+  Unknown references come back unchanged so a dangling edge still reads as
+  dangling. **Never compare a relationship reference against a statementId set
+  directly** — resolve it first.
+- **Tier order is strict and matters:** statementId > recordId >
+  declarationSubject. As a peer of recordId, the OECD's head-on-every-statement
+  alias pointed the head's id at the first subsidiary in the file.
+- Wired into: `risk.py` (`_relationship_endpoints(stmt, resolve)` — all four
+  loops build `_resolve = _refs_resolver(bods)`), the PDF/Markdown report
+  `by_id`, `narrative/packet.py`, the Senzing / Neo4j / FtM exports, and on the
+  frontend `bodsGraph.ts` (graph + tree), `reconcile.ts`, `backgroundCheck.ts`
+  and `SourceBucketCard`'s statement lookup. `bods/rdf.py` was already right
+  (it links on recordId, as the standard does) and `bods/validator.py` already
+  accepted both. Regression: `tests/test_bods_refs.py` and
+  `src/lib/bodsRefs.test.ts`, both on a bundle in the OECD's exact shape.
+
+---
+
 ## OECD-UNSD MEIP is a source, as the OECD's own BODS (Phase 208)
 
 From Phase 69 to 207 MEIP was a *signpost*: a card at the bottom of QuickCheck

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..bods.refs import statement_index
 from .diagram import source_diagram
 from .html_report import (
     _CHECKS_CLEAR,
@@ -27,11 +28,11 @@ from .html_report import (
     _ID_LABELS,
     LIVE_BASE,
     _cite_labels,
-    _signal_label,
-    _split_signals_by_kind,
     _generated_line,
     _name,
     _registry,
+    _signal_label,
+    _split_signals_by_kind,
     _subject_entity,
     _summary_sources,
 )
@@ -334,7 +335,12 @@ def _sources_found(report: dict[str, Any]) -> list[str]:
 def _relationships(report: dict[str, Any]) -> list[str]:
     """Per-source relationship tables — the text equivalent of the PDF diagrams."""
     bods = report.get("bods") or []
-    by_id = {s.get("statementId"): s for s in bods if s.get("statementId")}
+    # Keyed by statementId *and* recordId — a v0.4 relationship references the
+    # latter, and a publisher's own statements (MEIP) do not share the two.
+    by_id = {
+        **{s.get("statementId"): s for s in bods if s.get("statementId")},
+        **statement_index(bods),
+    }
     order: list[str] = []
     for s in bods:
         name = (s.get("source") or {}).get("description") or "OpenCheck source"

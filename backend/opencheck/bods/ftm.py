@@ -47,9 +47,11 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from typing import Any
 
 from .. import identifiers
+from .refs import resolver
 
 # BODS entityType.type → FtM schema.
 _ENTITY_SCHEMA = {
@@ -254,7 +256,7 @@ def _interest_to_ftm(
 
 
 def _relationship_to_ftm(
-    stmt: dict[str, Any], known_ids: set[str]
+    stmt: dict[str, Any], known_ids: set[str], resolve: Callable[[Any], str] = lambda ref: ref
 ) -> list[dict[str, Any]]:
     """FtM link entities for one BODS relationship statement.
 
@@ -265,11 +267,12 @@ def _relationship_to_ftm(
     missing from the bundle.
     """
     rd = stmt.get("recordDetails") or {}
-    subject = rd.get("subject")
-    party = rd.get("interestedParty")
     sid = stmt.get("statementId")
-    if not sid or not isinstance(subject, str) or not isinstance(party, str):
+    if not sid or not isinstance(rd.get("subject"), str) or not isinstance(rd.get("interestedParty"), str):
         return []
+    # A v0.4 reference is a recordId; the FtM ids are statementIds.
+    subject = resolve(rd.get("subject"))
+    party = resolve(rd.get("interestedParty"))
     if subject not in known_ids or party not in known_ids:
         return []
 
@@ -313,8 +316,9 @@ def map_to_ftm(bods_statements: list[dict[str, Any]]) -> list[dict[str, Any]]:
             relationships.append(stmt)
 
     links: list[dict[str, Any]] = []
+    resolve = resolver(bods_statements or [])
     for stmt in relationships:
-        links.extend(_relationship_to_ftm(stmt, known_ids))
+        links.extend(_relationship_to_ftm(stmt, known_ids, resolve))
     return nodes + links
 
 

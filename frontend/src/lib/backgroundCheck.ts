@@ -16,6 +16,7 @@
  * remain traceable to their statements.
  */
 
+import { refIndex, resolveRef } from "./bodsRefs";
 import {
   ROUTE_ACSP,
   readIdentityVerification,
@@ -162,6 +163,7 @@ export function extractPersonSubgraph(
   const persons: Stmt[] = [];
   const relationships: Stmt[] = [];
 
+  const refs = refIndex(statements);
   for (const s of statements) {
     const id = str(s.statementId);
     const recordType = str(s.recordType) ?? str(s.statementType);
@@ -171,10 +173,10 @@ export function extractPersonSubgraph(
     }
     if (recordType === "relationship" || recordType === "ownershipOrControlStatement") {
       const rd = rec(s.recordDetails);
-      const party = str(rd.interestedParty);
+      const party = resolveRef(rd.interestedParty, refs);
       if (party && wanted.has(party)) {
         relationships.push(s);
-        const subject = str(rd.subject);
+        const subject = resolveRef(rd.subject, refs);
         if (subject) subjectIds.add(subject);
       }
     }
@@ -208,6 +210,7 @@ export function isCurrentConnection(person: ConnectedPerson): boolean {
  */
 export function extractConnectedPeople(statements: Stmt[]): ConnectedPerson[] {
   const byStatementId = new Map<string, Stmt>();
+  const refs = refIndex(statements);
   const entityNames = new Map<string, string>();
 
   for (const s of statements) {
@@ -301,14 +304,13 @@ export function extractConnectedPeople(statements: Stmt[]): ConnectedPerson[] {
       continue;
     }
     const rd = rec(s.recordDetails);
-    const party = rd.interestedParty;
-    const partyId = str(party);
+    const partyId = resolveRef(rd.interestedParty, refs);
     if (!partyId) continue; // unspecified / unknown party
     const key = keyByStatementId.get(partyId);
     if (!key) continue; // party is an entity, not a person
     const person = people.get(key);
     if (!person) continue;
-    const subjectName = entityNames.get(str(rd.subject) ?? "");
+    const subjectName = entityNames.get(resolveRef(rd.subject, refs) ?? "");
     const source = str(rec(s.source).description);
     const interests = arr(rd.interests).map(rec);
     const roleInterests = interests.length > 0 ? interests : [{}];

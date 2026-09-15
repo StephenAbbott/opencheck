@@ -554,10 +554,16 @@ function RelationshipStatementCard({
 }
 
 function BODSStatementCards({ statements }: { statements: BODSStmt[] }) {
+  // Keyed by statementId and recordId: a v0.4 relationship names its parties
+  // by recordId, and a publisher's own statements (MEIP) do not share the two.
   const lookup = new Map<string, BODSStmt>();
   for (const s of statements) {
     const sid = stmtStr(s, "statementId");
     if (sid) lookup.set(sid, s);
+  }
+  for (const s of statements) {
+    const rid = stmtStr(s, "recordId");
+    if (rid && !lookup.has(rid)) lookup.set(rid, s);
   }
   const asFiled = useAsFiled();
   // Only offer the toggle where there is something to toggle. Most sources

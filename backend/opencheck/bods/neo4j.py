@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .refs import resolver
+
 
 def _esc(value: str | None) -> str:
     """Escape a value for a single-quoted Cypher string literal."""
@@ -64,16 +66,18 @@ def to_cypher(bods: list[dict[str, Any]]) -> str:
         )
 
     lines.append("")
+    resolve = resolver(bods or [])
     for s in bods or []:
         if s.get("recordType") != "relationship":
             continue
         rd = s.get("recordDetails") or {}
-        subject = rd.get("subject")
-        party = rd.get("interestedParty")
-        # Only a plain statementId reference resolves to a node; an "unspecified"
-        # (unknown) party object cannot be linked.
-        if not isinstance(subject, str) or not isinstance(party, str):
+        # Only a reference resolves to a node; an "unspecified" (unknown) party
+        # object cannot be linked. Nodes are MERGEd on statementId, and a v0.4
+        # reference is a recordId, so resolve it.
+        if not isinstance(rd.get("subject"), str) or not isinstance(rd.get("interestedParty"), str):
             continue
+        subject = resolve(rd.get("subject"))
+        party = resolve(rd.get("interestedParty"))
         interests = rd.get("interests") or []
         kinds = "; ".join(i.get("type", "") for i in interests if i.get("type")) or "interest"
         lines.append(
