@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 207** — Romania joins with two registers: ANAF live by fiscal code, the ONRC bulk dump for legal representatives, and the identifier bridge that takes Romanian coverage from 48 percent to 98 percent.
+**Latest: Phase 209** — Moldova joins: the State Register of Legal Entities, indexed by the adapter itself from its weekly open-data export, with directors, founders and their shares of the capital.
 
 → [Full development history](docs/status.md)
 
