@@ -181,9 +181,10 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Source:** monthly bulk dump on <https://data.gov.ro/dataset?organization=onrc> (six `^`-delimited CSVs, about 1.6 GB). Resource identifiers change every month, so they are resolved through the CKAN `package_show` API rather than hardcoded.
 - **License:** Creative Commons Attribution 4.0 — <https://creativecommons.org/licenses/by/4.0/>
 - **Attribution:** "Contains information from the National Trade Register Office (Oficiul Național al Registrului Comerțului), published on data.gov.ro under a Creative Commons Attribution 4.0 licence."
-- **Entry point:** an ONRC registration number in either format, derived from GLEIF RA code `RA000497`
+- **Entry point:** `ro_fiscal_or_reg_id` derived from GLEIF RA codes `RA000497` (ONRC Trade Register) and `RA000719` (Tax Payer Register), shared with the ANAF adapter; a fiscal code or a registration number in either format
 - **Personal data:** the representatives file publishes a **full date of birth** for about 87% of the 3.7M rows, and a place of birth for a similar share. ONRC publishes these openly under CC BY 4.0 and OpenCheck republishes the date at the precision filed, which is also what gives Romanian person matching a corroborating attribute. Sole-trader forms (PFA, II, PF, AF, IF) are excluded from the index entirely: they are natural persons trading under a business name, not entities.
-- **Note:** bulk-only and **not registered** — it has no live API and appears on no `/sources` listing. Its index is nonetheless what lets the ANAF adapter reach the majority of Romanian LEI holders, whose GLEIF records carry a trade-register number rather than a fiscal code.
+- **Scope:** the shipped index is restricted to the companies in the **GLEIF Romanian LEI population** — 8,491 of the register's 2,855,557, because every OpenCheck lookup is anchored on an LEI and no other row can be reached. That is 4.3 MB rather than 1.2 GB. A company issued an LEI after the index was built falls back to a coverage note until the next monthly rebuild.
+- **Note:** the register has no live API, so the source answers from a pre-built index and is announced only where one is configured. That same index is what lets the ANAF adapter reach most Romanian LEI holders, whose GLEIF records carry a trade-register number rather than a fiscal code.
 
 ## Moldova — ASP (Agenția Servicii Publice), State Register of Legal Entities
 

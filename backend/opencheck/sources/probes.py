@@ -669,6 +669,34 @@ PROBES: dict[str, SourceProbe] = {
         ),
         notes="Committed organisation index resolves the company; payment rows are then fetched live.",
     ),
+    "onrc_romania": _p(
+        tier="index",
+        subject="IMAFLUX DESIGN SRL (RO J40/15812/2017)",
+        args=("J40/15812/2017",),
+        kwargs={"legal_name": "IMAFLUX DESIGN SRL"},
+        expect_fields=("company", "representatives"),
+        allow_empty=True,
+        expect_liveness=frozenset({"snapshot"}),
+        anchor_lei="98450054847FA90C9U68",
+        bods_mapper="map_onrc_romania",
+        known_gap=(
+            "The index is a file, and the CI runner has none: ONRC publishes only "
+            "a monthly bulk dump and data.gov.ro drops connections from datacentre "
+            "ranges (Render and this runner both time out at TCP connect; a "
+            "laptop is fine), so the sweep can neither ship nor build one. With "
+            "no index the adapter returns its coverage note, which is the correct "
+            "answer and is what allow_empty records here. Production reads the "
+            "index from ONRC_ROMANIA_DB_FILE and is unaffected."
+        ),
+        notes=(
+            "The subject is deliberately an OLD-format registration number whose "
+            "ONRC row is filed under the NEW format. That is the pairing the "
+            "13-character prefix join exists for, and the one that silently "
+            "failed for 38.6% of J-number-keyed Romanian LEIs until the prefix "
+            "was stored on the new-format side (Phase 211). A probe on a number "
+            "that matches exactly would pass either way and prove nothing."
+        ),
+    ),
     "eiti_soe": _p(
         tier="index",
         subject="Equinor Energy AS",
