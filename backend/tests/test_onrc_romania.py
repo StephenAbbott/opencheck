@@ -198,6 +198,11 @@ CREATE TABLE representative (
     birth_county TEXT, birth_country TEXT, locality TEXT, county TEXT,
     country TEXT
 );
+-- The builder writes this on every index; the fixture omitted it for three
+-- phases, which is why nothing noticed that no index read declared its
+-- provenance. A fixture missing a table the builder always creates cannot
+-- fail a test about that table.
+CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
 """
 
 
@@ -241,6 +246,18 @@ def index(tmp_path: Path):
              "reprezentant al persoanei juridice", "entity_representative", 0,
              "1972-03-15", "Cluj-Napoca", "Cluj", "România", "Cluj-Napoca",
              "Cluj", "România"),
+        ],
+    )
+    conn.executemany(
+        "INSERT INTO meta VALUES (?,?)",
+        [
+            ("dataset", "firme-02-09-2026"),
+            # Deliberately LATER than the export date, so a test can tell which
+            # of the two a snapshot is dated from. They are the same day in a
+            # same-day build, which would make the two keys indistinguishable.
+            ("built_at", "2026-09-15"),
+            ("companies", "3"),
+            ("licence", "CC-BY-4.0"),
         ],
     )
     conn.commit()
@@ -858,3 +875,126 @@ def test_the_configured_asset_url_points_at_a_gzipped_sqlite() -> None:
     url = get_settings().onrc_romania_db_url
     assert url.startswith("https://github.com/StephenAbbott/opencheck/releases/download/")
     assert url.endswith(".sqlite.gz"), "download_db only inflates a .gz"
+
+
+# ---------------------------------------------------------------------------
+# Provenance: a card full of register rows must not read as a placeholder
+# ---------------------------------------------------------------------------
+#
+# ``SourceHit.liveness`` and the provenance recorder are two different
+# declarations, and ONRC set only the first — on ``search`` at that, never on
+# the ``fetch`` the lookup actually calls. The recorder defaults to ``stub``,
+# whose frontend label is "Placeholder data — no live source was contacted",
+# so every ONRC card in production badged real Trade Register data as a
+# placeholder. Found by reading a live lookup response, not by the suite:
+# nothing here had ever asserted what a Romanian card claims about itself.
+
+
+async def test_a_real_index_read_declares_a_snapshot_not_a_stub(index: Path) -> None:
+    """The bug itself. Fails on the unfixed adapter with liveness 'stub'."""
+    from opencheck import provenance
+
+    with provenance.recording() as recorder:
+        bundle = await onrc_romania.OnrcRomaniaAdapter().fetch("J40/1116/1991")
+        resolved = recorder.resolve(is_stub=bundle["is_stub"])
+
+    assert bundle["is_stub"] is False
+    assert resolved.liveness == "snapshot"
+    assert resolved.label == "Snapshot"
+    assert "ONRC" in (resolved.detail or "")
+
+
+async def test_the_snapshot_is_dated_from_the_export_not_the_build(index: Path) -> None:
+    """``record_snapshot`` asks for the upstream extract date.
+
+    The fixture's ``built_at`` (15 Sep) is deliberately later than its
+    ``dataset`` slug (02-09-2026), so reading the wrong key fails here. Which
+    one is right is not a style question: it is the export date that decides
+    whether a row is stale, and rebuilding an old dump tomorrow does not make
+    its rows a day old.
+    """
+    from opencheck import provenance
+
+    with provenance.recording() as recorder:
+        await onrc_romania.OnrcRomaniaAdapter().fetch("J40/1116/1991")
+        resolved = recorder.resolve()
+
+    assert resolved.retrieved_at is not None
+    assert resolved.retrieved_at.date().isoformat() == "2026-09-02"
+    assert "firme-02-09-2026" in (resolved.detail or "")
+
+
+def test_the_export_date_falls_back_when_the_slug_is_absent(tmp_path: Path) -> None:
+    """The shipped 4.3 MB asset predates ``built_at``; others may lack ``dataset``.
+
+    A reader that insisted on either key would report nothing for a real file,
+    so both are tried and neither is required.
+    """
+    assert onrc_romania.export_date({"dataset": "firme-02-09-2026"}) is not None
+    assert onrc_romania.export_date({"built_at": "2026-09-15"}) is not None
+    assert onrc_romania.export_date({}) is None
+    # A malformed slug is data, not a crash.
+    assert onrc_romania.export_date({"dataset": "firme-99-99-2026"}) is None
+
+
+async def test_an_index_with_no_meta_still_declares_a_snapshot(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """An undated index is still a bulk read, not a placeholder.
+
+    Losing the date must not cost the liveness claim — that trade would put
+    the card back on "Placeholder data" for the sake of a missing row.
+    """
+    import os
+
+    from opencheck import provenance
+
+    path = tmp_path / "no-meta.sqlite"
+    conn = sqlite3.connect(str(path))
+    conn.executescript(_SCHEMA)
+    conn.execute("DROP TABLE meta")
+    conn.execute(
+        "INSERT INTO company VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        ("J40/1116/1991", None, "412052", "TRANSIDEAL SRL", "SRL",
+         "1991-03-14", "1048", "funcțiune", "România", "Bucureşti",
+         "Bucureşti Sectorul 5", "Str. Exemplu, 1", "064191", None, None),
+    )
+    conn.commit()
+    conn.close()
+
+    os.environ["ONRC_ROMANIA_DB_FILE"] = str(path)
+    get_settings.cache_clear()
+    onrc_romania.reset_connection()
+    try:
+        with provenance.recording() as recorder:
+            await onrc_romania.OnrcRomaniaAdapter().fetch("J40/1116/1991")
+            resolved = recorder.resolve()
+        assert resolved.liveness == "snapshot"
+        assert resolved.retrieved_at is None, "no date is better than a made-up one"
+    finally:
+        os.environ.pop("ONRC_ROMANIA_DB_FILE", None)
+        get_settings.cache_clear()
+        onrc_romania.reset_connection()
+
+
+async def test_a_company_absent_from_the_index_claims_no_read(index: Path) -> None:
+    """A coverage-note card stays a stub — nothing was read to report."""
+    from opencheck import provenance
+
+    with provenance.recording() as recorder:
+        bundle = await onrc_romania.OnrcRomaniaAdapter().fetch("J40/55555/2024")
+        resolved = recorder.resolve(is_stub=bundle["is_stub"])
+
+    assert bundle["is_stub"] is True
+    assert resolved.liveness == "stub"
+
+
+async def test_no_index_claims_no_read(no_index) -> None:
+    """No file, nothing declared."""
+    from opencheck import provenance
+
+    with provenance.recording() as recorder:
+        bundle = await onrc_romania.OnrcRomaniaAdapter().fetch("J40/1116/1991")
+        resolved = recorder.resolve(is_stub=bundle["is_stub"])
+
+    assert resolved.liveness == "stub"
