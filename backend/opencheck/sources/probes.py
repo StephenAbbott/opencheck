@@ -298,6 +298,28 @@ PROBES: dict[str, SourceProbe] = {
             "WAF as a GET — the POST path is not challenged."
         ),
     ),
+    "asp_moldova": _p(
+        tier="snapshot",
+        subject="Kaufland S.R.L. (Moldova)",
+        args=("1016600004811",),
+        kwargs={"legal_name": "\"Kaufland\" S.R.L."},
+        expect_fields=("company", "officers", "founders"),
+        expect_liveness=frozenset({"snapshot"}),
+        snapshot_max_age_days=21,
+        anchor_lei="529900IQDQ6X3VTMWN63",
+        bods_mapper="map_asp_moldova",
+        notes=(
+            "An SRL, so the probe covers the founders path as well as the "
+            "directors: its single founder (KAUFLAND ROMANIA SCS, 100%) and "
+            "three administrators. A bank would not — joint-stock companies file "
+            "no founders. The index builds itself from dataset.gov.md: on a cold "
+            "runner fetch() waits up to 45 s for the download and build (about "
+            "5 s and 45 s measured), so a timeout on the first run of a fresh "
+            "process means the build outran the sweep's per-source budget, not "
+            "that the register moved. The snapshot is weekly; 21 days means two "
+            "missed Mondays."
+        ),
+    ),
     "cr_hongkong": _p(
         tier="live",
         subject="The Hongkong and Shanghai Banking Corporation Limited",

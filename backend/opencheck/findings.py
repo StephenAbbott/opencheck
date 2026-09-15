@@ -1489,3 +1489,68 @@ def finding_onrc_romania(bundle: dict[str, Any]) -> str | None:
         rep_clause = f"{len(reps)} legal representatives on file"
 
     return clauses_to_sentence([lead, form or None, rep_clause])
+
+
+def finding_asp_moldova(bundle: dict[str, Any]) -> str | None:
+    """What Moldova's State Register says: whether a liquidator is on file,
+    the legal form, and who runs and founded the company.
+
+    * **Not found** says the company is not in the export as indexed, and why
+      that can happen, rather than that it does not exist (rule 6): the index
+      leaves out liquidated companies, sole traders and peasant farms.
+    * A **liquidator or insolvency administrator** on file leads, in the
+      register's own word for the role, because it changes a decision.
+    * Directors and founders are named when there is one, and counted when
+      there are several. Roles are the register's words.
+
+    Deliberately **not** said: that no beneficial owners are on file, or that
+    a joint-stock company lists no founders. The register publishes neither
+    for any company of that kind, so the clause would read as a finding about
+    this one (the ACRA precedent).
+    """
+    if not bundle:
+        return None
+    if bundle.get("not_found"):
+        return (
+            "Not in the register's weekly export as indexed, which leaves out "
+            "liquidated companies and sole traders."
+        )
+    if bundle.get("is_stub"):
+        return None
+    company = bundle.get("company")
+    if not isinstance(company, dict):
+        return None
+
+    officers = [o for o in (bundle.get("officers") or []) if o.get("name")]
+    founders = [f for f in (bundle.get("founders") or []) if f.get("name")]
+    winding_up = [
+        o for o in officers if o.get("interest_type") == "controlByLegalFramework"
+    ]
+    registered = str(company.get("registered_on") or "").strip()
+    form = str(company.get("legal_form") or "").strip().lower()
+
+    if winding_up:
+        role = str(winding_up[0].get("role") or "").strip()
+        lead = f"{role} on file" if role else "Liquidator on file"
+    elif registered:
+        lead = f"Registered {registered}"
+    else:
+        lead = "On the State Register of Legal Entities"
+
+    officer_clause: str | None = None
+    if len(officers) == 1:
+        role = str(officers[0].get("role") or "").strip()
+        officer_clause = f"{officers[0]['name']}" + (f" ({role})" if role else "")
+    elif officers:
+        officer_clause = f"{len(officers)} directors on file"
+
+    founder_clause: str | None = None
+    if len(founders) == 1:
+        pct = founders[0].get("share_pct")
+        founder_clause = f"founded by {founders[0]['name']}" + (
+            f" ({pct:g}%)" if isinstance(pct, (int, float)) else ""
+        )
+    elif founders:
+        founder_clause = f"{len(founders)} founders on file"
+
+    return clauses_to_sentence([lead, form or None, officer_clause, founder_clause])

@@ -61,6 +61,7 @@ from ..sources.schemas import SourceSchemaError
 from .hit_builders import (  # noqa: F401
     _bh_acra_singapore,
     _bh_anaf_romania,
+    _bh_asp_moldova,
     _EITI_IDENTIFIER_KEY_BY_COUNTRY,
     _LookupCtx,
     _PERSON_CAPABLE_SOURCES,

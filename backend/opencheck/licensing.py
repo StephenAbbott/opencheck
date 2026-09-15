@@ -192,6 +192,17 @@ _CANONICAL: dict[str, LicenseTerms] = {
             "Government, the data provider and DATA.GOV.HK."
         ),
     ),
+    "dataset.gov.md-reuse": _terms(
+        "DATASET.GOV.MD-Reuse", "dataset.gov.md conditions for the reuse of public-sector information",
+        commercial="yes", attribution=True, share_alike=False, redistribution="yes",
+        url="https://dataset.gov.md/ro/about",
+        summary=(
+            "No licence on the dataset itself. The Moldovan open data portal's "
+            "reuse conditions let anyone reproduce, redistribute, adapt and "
+            "exploit its published data commercially; attribution to the "
+            "publishing authority is given."
+        ),
+    ),
     "custom-kbo-reuse": _terms(
         "Custom-KBO-Reuse", "Belgian KBO/BCE re-use conditions",
         commercial="conditional", attribution=True, share_alike=False, redistribution="conditional",
