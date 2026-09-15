@@ -420,6 +420,18 @@ class Settings(BaseSettings):
     # Source: https://data.gov.ua/dataset/a1799820-195b-4982-8141-6e84f58103e7
     edr_ukraine_db_file: str | None = Field(default=None, alias="EDR_UKRAINE_DB_FILE")
 
+    # --- Moldova ASP State Register of Legal Entities (dataset.gov.md) ---
+    # No API and no key. A weekly full XLSX snapshot, indexed into SQLite by
+    # the adapter itself: on a live deployment it downloads the newest export
+    # at startup and whenever the snapshot it holds is more than a week old
+    # (dataset.gov.md does not block datacentre networks). Unset = a file in
+    # the system temp directory. Build one by hand with:
+    #   python3 scripts/build_asp_moldova_index.py --out asp_moldova.sqlite
+    asp_moldova_db_file: str | None = Field(default=None, alias="ASP_MOLDOVA_DB_FILE")
+    # ``false`` never downloads: the file at ASP_MOLDOVA_DB_FILE is used as
+    # found. Downloads also need OPENCHECK_ALLOW_LIVE.
+    asp_moldova_sync: bool = Field(default=True, alias="ASP_MOLDOVA_SYNC")
+
     # --- Romania ONRC (data.gov.ro open data, CC BY 4.0) ---
     # No API key and no free ONRC API at all. Pre-built SQLite index over the
     # monthly bulk dump; build with:

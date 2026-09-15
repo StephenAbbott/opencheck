@@ -10,6 +10,7 @@ from __future__ import annotations
 from .abr_australia import AbrAustraliaAdapter
 from .anaf_romania import AnafRomaniaAdapter
 from .ariregister import AriregisterAdapter
+from .asp_moldova import AspMoldovaAdapter
 from .ares import AresAdapter
 from .bce_belgium import BceBelgiumAdapter
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
@@ -59,6 +60,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "anaf_romania": AnafRomaniaAdapter(),
     "ares": AresAdapter(),
     "ariregister": AriregisterAdapter(),
+    "asp_moldova": AspMoldovaAdapter(),
     "bce_belgium": BceBelgiumAdapter(),
     "bolagsverket": BolagsverketAdapter(),
     "brreg": BrregAdapter(),
