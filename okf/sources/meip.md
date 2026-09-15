@@ -1,7 +1,7 @@
 ---
 type: "Data Source"
 title: "OECD-UNSD Multinational Enterprise Information Platform (MEIP)"
-description: "Group membership from the OECD-UNSD Global Register of the 500 largest multinational enterprise groups and their subsidiaries, as the OECD publishes it in BODS v0.4 (register of 2024-12-31). One edge per membership, from a subsidiary to its group head, with the OECD's hierarchy classification; no shares, no dates, no natural persons. A group head's subsidiaries are listed on the Subsidiaries tab. Annual release; served from a local copy."
+description: "Group membership from the OECD-UNSD Global Register of the 500 largest multinational enterprise groups and their subsidiaries, as the OECD publishes it in BODS v0.4 (register of 31 December 2024). One edge per membership, from a subsidiary to its group head, with the OECD's hierarchy classification; no shares, no dates, no natural persons. A group head's subsidiaries are listed on the Subsidiaries tab. Annual release; served from a local copy."
 resource: "https://www.oecd.org/en/data/dashboards/oecd-unsd-multinational-enterprise-information-platform.html"
 tags: ["cdd", "aggregator", "OECD-Terms", "commercial-yes"]
 timestamp: "2026-09-15"
@@ -14,7 +14,7 @@ national_register: false
 
 # Overview
 
-Group membership from the OECD-UNSD Global Register of the 500 largest multinational enterprise groups and their subsidiaries, as the OECD publishes it in BODS v0.4 (register of 2024-12-31). One edge per membership, from a subsidiary to its group head, with the OECD's hierarchy classification; no shares, no dates, no natural persons. A group head's subsidiaries are listed on the Subsidiaries tab. Annual release; served from a local copy. Aggregator, cross-border database or ESG source.
+Group membership from the OECD-UNSD Global Register of the 500 largest multinational enterprise groups and their subsidiaries, as the OECD publishes it in BODS v0.4 (register of 31 December 2024). One edge per membership, from a subsidiary to its group head, with the OECD's hierarchy classification; no shares, no dates, no natural persons. A group head's subsidiaries are listed on the Subsidiaries tab. Annual release; served from a local copy. Aggregator, cross-border database or ESG source.
 
 - **Source id:** `meip`
 - **Category:** cdd (customer due diligence / compliance)

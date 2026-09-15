@@ -137,7 +137,8 @@ def test_adapter_info_reads_the_store(fixture_db) -> None:
     assert info.license == "OECD-Terms"
     assert info.live_available is True
     assert not info.is_national_register
-    assert "2024-12-31" in info.description
+    # Fixed text, never the store's edition — see the next test.
+    assert "31 December 2024" in info.description
 
 
 def test_without_the_file_the_source_covers_nothing(no_db) -> None:
@@ -145,6 +146,23 @@ def test_without_the_file_the_source_covers_nothing(no_db) -> None:
     assert not store().available
     assert not adapter.covers_lei("21380068P1DRHMJ8KU70")
     assert adapter.info.live_available is False
+
+
+def test_description_is_the_same_with_and_without_the_file(fixture_db, monkeypatch) -> None:
+    """The OKF drift check compares ``info.description`` with the committed
+    concept in CI, where no store is on disk — the first Phase 208 push
+    failed that job because the description read the edition from the file.
+    Only ``live_available`` may depend on the file."""
+    adapter = REGISTRY["meip"]
+    with_file = adapter.info
+    assert with_file.live_available is True
+    monkeypatch.setenv("OPENCHECK_MEIP_DB_FILE", str(fixture_db.parent / "absent.sqlite"))
+    get_settings.cache_clear()
+    reload_store()
+    without = adapter.info
+    assert without.live_available is False
+    assert without.description == with_file.description
+    assert "31 December 2024" in without.description
 
 
 # ---------------------------------------------------------------------------

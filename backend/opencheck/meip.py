@@ -74,6 +74,10 @@ SCHEMA_VERSION = "1"
 #: Number of MNE groups the register covers — the OECD's framing, and the
 #: figure the head-mode finding sentence uses.
 GROUP_COUNT = 500
+#: The register edition this build serves, as shown in fixed text (the source
+#: description). Bump with the release asset; the store's own ``edition`` meta
+#: is what the finding and provenance use.
+EDITION_LABEL = "31 December 2024"
 
 
 # ---------------------------------------------------------------------------

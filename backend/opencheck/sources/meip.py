@@ -45,7 +45,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from .. import provenance
-from ..meip import GROUP_COUNT, MEIP_URL, store
+from ..meip import EDITION_LABEL, GROUP_COUNT, MEIP_URL, store
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.meip import MeipBundle
@@ -81,8 +81,12 @@ class MeipAdapter(SourceAdapter):
 
     @property
     def info(self) -> SourceInfo:
+        # The description is fixed text: the OKF drift check compares it with
+        # the committed concept in CI, where no store is on disk, so nothing
+        # here may read the file. The edition the file actually carries goes
+        # on the hit (finding) and the provenance snapshot instead.
         st = store()
-        edition = st.edition or "31 Dec 2024"
+        edition = EDITION_LABEL
         return SourceInfo(
             id=self.id,
             name="OECD-UNSD Multinational Enterprise Information Platform (MEIP)",
