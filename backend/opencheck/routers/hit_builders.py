@@ -317,6 +317,40 @@ def _bh_anaf_romania(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_asp_moldova(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Moldova's State Register of Legal Entities.
+
+    Two shapes:
+
+    * **A record.** Asserts the IDNO — the register's own key for the row it
+      returned, which is what the identifier-corroboration rule requires.
+    * **Not in the export.** The index was read and holds no company under
+      this IDNO — liquidated, a sole trader, or not a company. A card with the
+      coverage note and **no** identifier: the register did not confirm it.
+    """
+    from ..findings import finding_asp_moldova
+
+    if r.get("not_found"):
+        return _hit(
+            "asp_moldova", local_id,
+            name=ctx.legal_name or "",
+            summary=f"MD-IDNO {local_id} · not in the weekly export",
+            finding=finding_asp_moldova(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
+        )
+    company = r.get("company") or {}
+    idno = str(company.get("idno") or local_id)
+    return _hit(
+        "asp_moldova", idno,
+        name=company.get("name") or ctx.legal_name or "",
+        summary=f"MD-IDNO {idno}",
+        identifiers={"md_idno": idno},
+        raw=company,
+        finding=finding_asp_moldova(r),
+    )
+
+
 def _bh_cr_hongkong(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for the Hong Kong Companies Registry.
 

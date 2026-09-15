@@ -110,6 +110,9 @@ def test_source_info_fields_are_populated() -> None:
 _IDENTIFIER_KEYED = {
     # anaf_romania: ANAF's public service takes a list of fiscal codes and
     # nothing else — it has no name search to stub.
+    # asp_moldova: name search reads the local index, which a fresh test
+    # process does not have — the cr_hongkong partial case, with no stub tier.
+    "asp_moldova",
     "anaf_romania", "acra_singapore", "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "cac_nigeria", "ariregister", "bolagsverket",
     "cnpj_brazil", "cr_hongkong", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",
     "malta_mbr", "meip", "nz_companies", "opencorporates", "inpi", "kvk",

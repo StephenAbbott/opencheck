@@ -104,6 +104,18 @@ async def _warm_caches_background() -> None:
     except Exception as exc:  # noqa: BLE001
         log.warning("Entity pages DB warm-up failed (503s until present): %s", exc)
 
+    # Phase 209: Moldova's State Register index — download and index the
+    # newest weekly export when absent or more than a week old. Until it
+    # lands, a Moldovan lookup waits briefly for it and then degrades.
+    try:
+        from .sources.asp_moldova import warm_index as warm_asp_moldova_index
+
+        stats = await asyncio.to_thread(warm_asp_moldova_index)
+        log.info("ASP Moldova index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning("ASP Moldova index warm-up failed (lookups degrade): %s", exc)
     # Phase 208: the OECD-UNSD MEIP register (BODS) — download the SQLite
     # release asset when absent, replace it when the asset changed, keep it
     # otherwise. Until it lands the ``meip`` source covers nothing and the

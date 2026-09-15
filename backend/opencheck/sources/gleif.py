@@ -43,6 +43,7 @@ from .brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_o
 from .corporations_canada import CA_CORP_RA_CODE as _CA_CORP_RA_CODE, normalise_corp_id as _normalise_corp_id
 from .cro import IE_RA_CODE as _CRO_RA_CODE, normalise_crn as _normalise_crn
 from .malta_mbr import MT_RA_CODE as _MT_RA_CODE, normalise_mt_crn as _normalise_mt_crn
+from .asp_moldova import MD_RA_CODES as _MD_RA_CODES, normalise_idno as _normalise_md_idno
 from .cr_hongkong import HK_RA_CODES as _HK_RA_CODES, normalise_hk_brn as _normalise_hk_brn
 from .acra_singapore import ACRA_RA_CODE as _ACRA_RA_CODE, normalise_uen as _normalise_uen
 from .cnpj_brazil import BR_RA_CODE as _BR_RA_CODE, normalise_cnpj as _normalise_cnpj
@@ -783,6 +784,15 @@ class GleifAdapter(SourceAdapter):
             if registered_at_id in _HK_RA_CODES:
                 try:
                     identifiers["hk_brn"] = _normalise_hk_brn(registered_as)
+                except ValueError:
+                    pass
+            # Moldovan IDNO — expose as ``md_idno`` so the reconciler can bridge
+            # GLEIF ↔ the State Register. All three Moldovan authorities
+            # (RA000451 / RA000950 / RA000951) file the IDNO here; one that
+            # fails the check digit is not an IDNO and offers no bridge.
+            if registered_at_id in _MD_RA_CODES:
+                try:
+                    identifiers["md_idno"] = _normalise_md_idno(registered_as)
                 except ValueError:
                     pass
             # Singapore UEN — expose as ``sg_uen`` so the reconciler can bridge
