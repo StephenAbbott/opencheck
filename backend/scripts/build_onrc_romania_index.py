@@ -48,7 +48,10 @@ Measured on the 2 September 2026 export
   registration number and ``cui`` is merely indexed.
 * ``OD_REPREZENTANTI_LEGALI.CSV`` 337 MB, 3,689,931 rows over 2,758,033
   companies, 20 distinct roles.
-* Every file is UTF-8 **with a BOM**, delimited by ``^``, not a comma.
+* Every file is UTF-8 **with a BOM**, delimited by ``^``, not a comma, and
+  **not quoted at all** — 1,116 rows open ``DENUMIRE`` with a ``"`` because
+  ONRC registers the trade name in quotes, and a further 209 open some later
+  field with one. Those quotes are data. See ``rows``.
 
 Network note
 ------------
@@ -209,28 +212,69 @@ def latest_datasets() -> tuple[str, str]:
     return firme[0][1], (nomen[0][1] if nomen else "")
 
 
-def resource_urls(dataset: str) -> dict[str, str]:
-    """``{lowercased filename: download url}`` for one dataset."""
+def resources(dataset: str) -> dict[str, tuple[str, int | None]]:
+    """``{lowercased filename: (download url, published byte size)}``.
+
+    CKAN's ``size`` is the only integrity figure data.gov.ro publishes — the
+    ``hash`` field is empty on every ONRC resource — so it is what ``download``
+    checks a transfer against.
+    """
     pkg = _ckan("package_show", id=dataset)
-    urls = {}
+    out: dict[str, tuple[str, int | None]] = {}
     for res in pkg.get("resources", []):
         url = res.get("url") or ""
-        if url:
-            urls[url.rsplit("/", 1)[-1].lower()] = url
-    return urls
+        if not url:
+            continue
+        try:
+            size = int(res["size"])
+        except (KeyError, TypeError, ValueError):
+            size = None
+        out[url.rsplit("/", 1)[-1].lower()] = (url, size)
+    return out
 
 
-def download(url: str, dest: Path) -> Path:
+def resource_urls(dataset: str) -> dict[str, str]:
+    """``{lowercased filename: download url}`` for one dataset."""
+    return {name: url for name, (url, _) in resources(dataset).items()}
+
+
+def download(url: str, dest: Path, *, expected_size: int | None = None) -> Path:
+    """Fetch ``url`` to ``dest``, refusing to accept a short transfer.
+
+    The size check is the point. data.gov.ro drops long transfers routinely —
+    ``OD_FIRME.CSV`` is 694 MB and has cut out anywhere between 110 MB and
+    340 MB — and it answers a ``Range`` request with ``HTTP 200`` and the whole
+    file from byte 0 despite advertising ``Accept-Ranges: bytes``, so ordinary
+    resume tooling cannot help. Without this check the *next* run sees a
+    non-empty file, skips it, and builds an index from a fraction of the
+    register while reporting success. A truncated CSV parses perfectly.
+    """
     if dest.exists() and dest.stat().st_size > 0:
-        log.info("have %s (%.0f MB)", dest.name, dest.stat().st_size / 1e6)
-        return dest
+        have = dest.stat().st_size
+        if expected_size is None or have == expected_size:
+            log.info("have %s (%.0f MB)", dest.name, have / 1e6)
+            return dest
+        log.warning(
+            "%s is %d bytes, expected %d — discarding the partial and refetching",
+            dest.name,
+            have,
+            expected_size,
+        )
+        dest.unlink()
     log.info("downloading %s", dest.name)
     req = urllib.request.Request(url, headers={"User-Agent": "OpenCheck/1.0"})
     dest.parent.mkdir(parents=True, exist_ok=True)
     with urllib.request.urlopen(req, timeout=900) as fh, dest.open("wb") as out:
         while chunk := fh.read(1 << 20):
             out.write(chunk)
-    log.info("  %.0f MB", dest.stat().st_size / 1e6)
+    got = dest.stat().st_size
+    if expected_size is not None and got != expected_size:
+        raise SystemExit(
+            f"{dest.name}: got {got} bytes, expected {expected_size}. The "
+            "transfer was cut short; data.gov.ro ignores Range headers so this "
+            "cannot be resumed — refetch the whole file."
+        )
+    log.info("  %.0f MB", got / 1e6)
     return dest
 
 
@@ -240,9 +284,38 @@ def download(url: str, dest: Path) -> Path:
 
 
 def rows(path: Path) -> Iterator[dict[str, str]]:
-    """Stream one ONRC CSV. ``utf-8-sig`` strips the BOM every file carries."""
+    """Stream one ONRC CSV. ``utf-8-sig`` strips the BOM every file carries.
+
+    ``QUOTE_NONE`` is load-bearing, not tidiness. ONRC's export is not a quoted
+    CSV: it is ``^``-delimited (a character chosen because it cannot occur in
+    the data) with no quoting of any kind, so a ``"`` in a company name or
+    address is a literal character. Python's default reader treats it as an
+    opening quote and swallows every line up to the next one, merging hundreds
+    of records into a single row whose first field is a multi-kilobyte blob.
+
+    Measured on the 2 September 2026 export of ``OD_FIRME.CSV``, both harms
+    confirmed by rebuilding the index with and without this argument:
+
+    * **667 companies lost.** Two rows open a field with a quote that has no
+      closing partner, so the reader stayed in quoted mode and swallowed every
+      following line until the next quote. Their columns having shifted, the
+      two resulting blobs failed the corporate-form filter and were skipped as
+      sole traders. The builder logged 4,218,414 rows against 4,219,081
+      physical lines — a 0.016% shortfall that reads like a rounding
+      difference. Fixing it moved the kept-company count from 2,855,135 to
+      2,855,557 and representatives from 3,680,795 to 3,681,319.
+    * **1,116 names altered.** That many rows open ``DENUMIRE`` with a quote,
+      and the reader consumed it, storing ``LEMNLIND SRL`` where ONRC
+      published ``"LEMNLIND" SRL``. 918 of those names now carry a quote that
+      they did not before; the remaining 198 already held one elsewhere in the
+      name, because a quote that does *not* start a field was passed through —
+      the same character treated two ways in one column.
+
+    With ``QUOTE_NONE`` the parsed record count equals the physical line count
+    for every file in both datasets, which it did not before.
+    """
     with path.open(encoding="utf-8-sig", errors="replace", newline="") as fh:
-        for row in csv.DictReader(fh, delimiter=DELIM):
+        for row in csv.DictReader(fh, delimiter=DELIM, quoting=csv.QUOTE_NONE):
             yield row
 
 
@@ -444,16 +517,16 @@ def main() -> None:
             dataset, auto_nomen = latest_datasets()
             nomen = nomen or auto_nomen
             log.info("latest dataset: %s (nomenclature %s)", dataset, nomen)
-        urls = resource_urls(dataset)
+        found = resources(dataset)
         for filename in (FIRME_FILE, REPS_FILE, STARE_FILE):
-            url = urls.get(filename)
-            if not url:
+            if filename not in found:
                 raise SystemExit(f"{dataset} has no {filename}")
-            download(url, args.csv_dir / filename)
+            url, size = found[filename]
+            download(url, args.csv_dir / filename, expected_size=size)
         if nomen:
-            for filename, url in resource_urls(nomen).items():
+            for filename, (url, size) in resources(nomen).items():
                 if filename == NOMEN_STARE_FILE:
-                    download(url, args.csv_dir / filename)
+                    download(url, args.csv_dir / filename, expected_size=size)
 
     build(args.csv_dir, args.out, dataset=dataset, nomen_dataset=nomen)
 
