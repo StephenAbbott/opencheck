@@ -16,8 +16,9 @@ returns the validated narrative in one response; a future "stream the paragraph
 from __future__ import annotations
 
 import asyncio
+import time
 from datetime import datetime
-from typing import Any
+from typing import Any, NamedTuple
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
@@ -35,9 +36,55 @@ from ..dispositions import (
 from ..narrative import build_evidence_packet
 from ..narrative.summarise import NarrativeUnavailable, summarise
 from ..ratelimit import default_tier, heavy_tier, limiter
+from . import lookup as _lookup_router
 from .lookup import _lookup_impl
 
 router = APIRouter()
+
+
+# --- held narratives (Phase 216) ----------------------------------------------
+#
+# A saved report may carry the summary the reader generated — but only one this
+# server wrote, never text a client posts (``/export/pdf`` still embeds the
+# posted narrative; a saved report makes a stronger claim). So each generated
+# narrative is held here for the same window as the lookup replay cache, with
+# the run it was written from: saving checks that the summary describes the
+# very run being saved.
+
+
+class HeldNarrative(NamedTuple):
+    stored: float  # monotonic clock, for the TTL check
+    lei: str
+    deepen_top: int
+    run_completed_at: str | None  # the lookup run the packet was built from
+    narrative: dict[str, Any]  # NarrativeResponse, JSON-shaped
+
+
+_NARRATIVE_MAX_ENTRIES = 64
+_NARRATIVE_CACHE: dict[str, HeldNarrative] = {}
+
+
+def _hold_narrative(resp: "NarrativeResponse", *, deepen_top: int, run_completed_at: str | None) -> None:
+    if not resp.run_id or not resp.lei:
+        return
+    while len(_NARRATIVE_CACHE) >= _NARRATIVE_MAX_ENTRIES:
+        _NARRATIVE_CACHE.pop(next(iter(_NARRATIVE_CACHE)), None)
+    _NARRATIVE_CACHE[resp.run_id] = HeldNarrative(
+        stored=time.monotonic(),
+        lei=resp.lei,
+        deepen_top=deepen_top,
+        run_completed_at=run_completed_at,
+        narrative=resp.model_dump(mode="json"),
+    )
+
+
+def held_narrative(run_id: str) -> HeldNarrative | None:
+    """The narrative this server generated under ``run_id`` within the replay
+    window, or ``None``."""
+    entry = _NARRATIVE_CACHE.get((run_id or "").strip())
+    if entry is None or time.monotonic() - entry.stored >= _lookup_router._REPLAY_TTL_SECONDS:
+        return None
+    return entry
 
 
 class NarrativeResponse(BaseModel):
@@ -97,7 +144,7 @@ async def narrative(
     except NarrativeUnavailable as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    return NarrativeResponse(
+    out = NarrativeResponse(
         lei=packet.lei,
         subject_name=packet.subject_name,
         summary=result.summary,
@@ -120,6 +167,8 @@ async def narrative(
         validation_issues=result.validation.issues,
         uncited_gaps=result.validation.uncited_gaps,
     )
+    _hold_narrative(out, deepen_top=deepen_top, run_completed_at=resp.run_completed_at)
+    return out
 
 
 # ---------------------------------------------------------------------------

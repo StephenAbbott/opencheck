@@ -147,6 +147,31 @@ class Settings(BaseSettings):
         default=10800.0, alias="OPENCHECK_WATCHLIST_OPENSANCTIONS_INTERVAL_S"
     )
 
+    # --- Phase 216: saved reports ---
+    # SQLite file holding saved reports — a completed lookup's event stream,
+    # frozen with its narrative, dispositions and licence assessment — and the
+    # live analyst disposition sheets (opencheck/saved_reports.py). On Render
+    # it sits on the persistent disk beside the mirror and the watchlist.
+    # Unset = saved reports are off (/saved-reports answers 503) and
+    # dispositions fall back to JSON files under the data root.
+    saved_reports_db_file: str | None = Field(
+        default=None, alias="OPENCHECK_SAVED_REPORTS_DB_FILE"
+    )
+    # How long a saved report is kept from its save (or its last extension).
+    saved_reports_retention_days: int = Field(
+        default=90, alias="OPENCHECK_SAVED_REPORTS_RETENTION_DAYS"
+    )
+    # Cap on stored reports per instance — insurance for the disk; a report
+    # is ~5–20 KB gzipped (measured 16 Sept 2026).
+    saved_reports_max_total: int = Field(
+        default=5000, alias="OPENCHECK_SAVED_REPORTS_MAX_TOTAL"
+    )
+    # How often expired reports are deleted. 0 disables the pruning task
+    # (reads of an expired report still answer 410 and delete it).
+    saved_reports_prune_interval_s: float = Field(
+        default=21600.0, alias="OPENCHECK_SAVED_REPORTS_PRUNE_INTERVAL_S"
+    )
+
     # --- Rate limiting / abuse protection (see opencheck/ratelimit.py) ---
     # Master switch. The test suite turns it off in conftest.py so unrelated
     # tests never trip budgets; dedicated tests re-enable it per-fixture.

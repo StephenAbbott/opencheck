@@ -40,7 +40,7 @@ from slowapi.errors import RateLimitExceeded
 from . import __version__, memwatch
 from .config import get_settings
 from .ratelimit import limiter, rate_limit_exceeded_handler
-from .routers import health, search, lookup, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries, entity_pages, batch, watch
+from .routers import health, search, lookup, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries, entity_pages, batch, watch, saved_reports
 from .routers.search import _ch_ra_code as _ch_ra_code  # re-exported for backward compat
 
 log = logging.getLogger(__name__)
@@ -217,6 +217,14 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         from .watchlist import watch_loop
 
         watch_task = asyncio.create_task(watch_loop(watch_interval))
+    # Phase 216: delete saved reports past their retention date. Needs the
+    # store file; 0 disables (an expired report is still refused on read).
+    prune_task: asyncio.Task[None] | None = None
+    prune_interval = get_settings().saved_reports_prune_interval_s
+    if prune_interval > 0 and get_settings().saved_reports_db_file:
+        from .saved_reports import prune_loop
+
+        prune_task = asyncio.create_task(prune_loop(prune_interval))
     async with AsyncExitStack() as stack:
         if _MCP is not None and not _mcp_session_started:
             await stack.enter_async_context(_MCP.session_manager.run())
@@ -236,6 +244,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 stream_task.cancel()
             if watch_task is not None and not watch_task.done():
                 watch_task.cancel()
+            if prune_task is not None and not prune_task.done():
+                prune_task.cancel()
 
 
 app = FastAPI(
@@ -265,7 +275,14 @@ app.add_middleware(
     allow_headers=["*"],
     # Browser-based MCP clients must be able to read the session/protocol headers
     # off streamable-HTTP responses (otherwise the handshake can't continue).
-    expose_headers=["Mcp-Session-Id", "Mcp-Protocol-Version"],
+    # Phase 216: the saved-report page reads the content hash off the JSON
+    # download and the refusal code off a 409 ("run the check again").
+    expose_headers=[
+        "Mcp-Session-Id",
+        "Mcp-Protocol-Version",
+        "X-OpenCheck-Content-SHA256",
+        "X-OpenCheck-Refusal",
+    ],
 )
 
 
@@ -297,6 +314,7 @@ app.include_router(share.router)
 app.include_router(entity_pages.router)
 app.include_router(batch.router)
 app.include_router(watch.router)
+app.include_router(saved_reports.router)
 
 
 # ---------------------------------------------------------------------------

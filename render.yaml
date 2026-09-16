@@ -129,6 +129,14 @@ services:
       # tier reads their public entity deltas; nothing polls a register.
       - key: OPENCHECK_WATCHLIST_DB_FILE
         value: /var/data/watchlist.sqlite
+      # --- Phase 216: saved reports ---
+      # saved_reports.sqlite — reports a reader chose to save (the frozen
+      # lookup events, narrative, dispositions, licence assessment; ~5–20 KB
+      # each) and the live analyst disposition sheets, which used to be JSON
+      # files wiped on every deploy (opencheck/saved_reports.py,
+      # docs/saved-reports.md). Unset = /saved-reports answers 503.
+      - key: OPENCHECK_SAVED_REPORTS_DB_FILE
+        value: /var/data/saved_reports.sqlite
       # Phase 187: the register's *streaming* key (a different credential
       # from COMPANIES_HOUSE_API_KEY; one connection per key — bods-stream
       # has its own). With the file above, the app holds one connection to

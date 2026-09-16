@@ -9,7 +9,7 @@ import re
 import time
 from dataclasses import dataclass, field as dc_field
 from datetime import datetime, timezone
-from typing import Any, Literal, AsyncIterator, NamedTuple
+from typing import Any, Literal, AsyncIterator, Iterable, NamedTuple
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel, model_validator
@@ -261,6 +261,13 @@ class LookupResponse(ReportResponse):
     # never in it — Phase 126/156). Lets a JSON consumer build the Phase 156
     # coverage sentence without the stream.
     sources_applicable: list[str] = []
+    # Phase 216: the wall-clock UTC completion time of the run this response
+    # was folded from — set for live and replayed runs alike (``fetched_at``
+    # stays replay-only, so a live run is never badged as cached). It names
+    # the run: a saved report is taken from the replay cache only when the
+    # caller's ``run_completed_at`` matches the held run's, and the narrative
+    # cache records which run a summary was written from.
+    run_completed_at: str | None = None
 
 
 @router.get("/deepen", response_model=DeepenResponse)
@@ -1658,21 +1665,40 @@ async def _lookup_pipeline_cached(
             return
 
     buffer: list[LookupEvent] = []
-    completed = False
+    completed_at: str | None = None
     async for event in _lookup_pipeline(lei, deepen_top=deepen_top):
-        buffer.append(event)
         if event[0] == "done":
-            completed = True
+            # Phase 216: the run names itself on its last event, so a client
+            # holding a live (not replayed) run can still say which run it is
+            # looking at when it asks to save it. Stamped here, once, and
+            # buffered with the stamp — a replay repeats the same value.
+            completed_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            event = ("done", {**event[1], "run_completed_at": completed_at})
+        buffer.append(event)
         yield event
 
-    if completed:
+    if completed_at is not None:
         while len(_REPLAY_CACHE) >= _REPLAY_MAX_ENTRIES:
             _REPLAY_CACHE.pop(next(iter(_REPLAY_CACHE)), None)
         _REPLAY_CACHE[key] = _ReplayEntry(
             stored=now,
-            fetched_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            fetched_at=completed_at,
             events=buffer,
         )
+
+
+def replay_entry(lei: str, deepen_top: int = 5) -> _ReplayEntry | None:
+    """The held completed run for ``(lei, deepen_top)``, or ``None`` when
+    there is none or it has aged out of the replay window.
+
+    Phase 216: a saved report is copied from here and nowhere else — the
+    server's own record of what it streamed, never a payload a client posts.
+    """
+    key = f"{lei.strip().upper()}:{deepen_top}"
+    entry = _REPLAY_CACHE.get(key)
+    if entry is None or time.monotonic() - entry.stored >= _REPLAY_TTL_SECONDS:
+        return None
+    return entry
 
 
 # --- endpoints ---------------------------------------------------------------
@@ -1684,7 +1710,30 @@ async def _lookup_impl(
     """Body of ``/lookup``, callable in-process (MCP tools, /narrative,
     /export, layer expansion) without going through the rate-limited route."""
     norm_lei = lei.strip().upper()
-    hits: list[SourceHit] = []
+    events: list[LookupEvent] = []
+    async for event in _lookup_pipeline_cached(
+        norm_lei, deepen_top=deepen_top, refresh=refresh
+    ):
+        if event[0] == "error":
+            # Raise at once, exactly as before the fold was factored out.
+            raise HTTPException(
+                status_code=event[1]["status"], detail=event[1]["detail"]
+            )
+        events.append(event)
+    return fold_lookup_events(norm_lei, events)
+
+
+def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupResponse:
+    """Collect a lookup's event stream into one ``LookupResponse``.
+
+    Factored out of ``_lookup_impl`` in Phase 216 so a saved report — whose
+    payload *is* the stored event list — folds into the same response the
+    live pipeline produces: the PDF, Markdown and MCP views of a saved report
+    cannot drift from the live ones. A ``hit`` payload may be a ``SourceHit``
+    (live, in-process) or its JSON dict (read back from a saved report).
+    """
+    norm_lei = lei.strip().upper()
+    hits: list[Any] = []
     errors: dict[str, str] = {}
     links: list[dict[str, Any]] = []
     signals: list[dict[str, Any]] = []
@@ -1704,10 +1753,9 @@ async def _lookup_impl(
     replayed = False
     fetched_at: str | None = None
     sources_applicable: list[str] = []
+    run_completed_at: str | None = None
 
-    async for event, payload in _lookup_pipeline_cached(
-        norm_lei, deepen_top=deepen_top, refresh=refresh
-    ):
+    for event, payload in events:
         if event == "replayed":
             replayed = True
             fetched_at = payload["fetched_at"]
@@ -1745,6 +1793,7 @@ async def _lookup_impl(
         elif event == "done":
             bods_issues = payload["bods_issues"]
             license_notices = payload["license_notices"]
+            run_completed_at = payload.get("run_completed_at")
 
     return LookupResponse(
         query=norm_lei,
@@ -1770,6 +1819,7 @@ async def _lookup_impl(
         replayed=replayed,
         fetched_at=fetched_at,
         sources_applicable=sources_applicable,
+        run_completed_at=run_completed_at,
     )
 
 
