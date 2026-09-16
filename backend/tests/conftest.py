@@ -47,6 +47,14 @@ os.environ.setdefault("OPENCHECK_IDENTIFIER_CHECKSUMS_ENFORCED", "0")
 # get_settings.cache_clear() + reset_throttle_for_tests()).
 os.environ.setdefault("OPENCHECK_GLEIF_RATE_LIMIT_PER_MINUTE", "0")
 
+# Registry-wide entityType.subtype guard (Phase 214). Installed here, at
+# conftest import time and after the env flags above, so every test module's
+# ``from opencheck.bods.mapper import map_x`` binds the guarded mapper. See
+# tests/_entity_subtype_guard.py for why it records instead of raising.
+from tests import _entity_subtype_guard  # noqa: E402
+
+_entity_subtype_guard.install()
+
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -81,3 +89,20 @@ def _clear_lookup_replay_cache():
     _lookup_mod._REPLAY_CACHE.clear()
     yield
     _lookup_mod._REPLAY_CACHE.clear()
+
+
+@pytest.fixture(autouse=True)
+def _entity_subtype_guard_check():
+    """Fail any test during which a mapper emitted an entity statement whose
+    ``entityType.subtype`` is outside the closed BODS v0.4 codelist, or does
+    not align with ``entityType.type`` (Phase 214)."""
+    _entity_subtype_guard.drain()
+    yield
+    violations = _entity_subtype_guard.drain()
+    if violations:
+        lines = "\n".join(f"  {m} → {sid}: {issue}" for m, sid, issue in violations)
+        pytest.fail(
+            "A mapper emitted an invalid BODS v0.4 entityType.subtype — local "
+            "entity-type wording belongs in entityType.details:\n" + lines,
+            pytrace=False,
+        )

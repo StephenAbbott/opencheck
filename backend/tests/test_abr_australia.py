@@ -207,7 +207,19 @@ def test_mapper_emits_single_entity_statement():
     schemes = {i["scheme"]: i["id"] for i in rd["identifiers"]}
     assert schemes == {"AU-ABN": "74172177893", "AU-ACN": "172177893"}
     assert rd["alternateNames"] == ["Digital Transformation Agency"]
-    assert rd["entityType"]["subtype"] == "Commonwealth Government Entity"
+    # The register's wording is a local name → details; subtype is a closed
+    # BODS 0.4 codelist and is not inferred (e.g. as stateAgency). Phase 214.
+    assert rd["entityType"] == {
+        "type": "registeredEntity",
+        "details": "Commonwealth Government Entity",
+    }
+
+
+def test_mapper_without_entity_type_name_writes_no_details():
+    b = _bundle()
+    b["entity_type_name"] = None
+    stmt = next(iter(map_abr_australia(b)))
+    assert stmt["recordDetails"]["entityType"] == {"type": "registeredEntity"}
 
 
 def test_mapper_marks_cancelled_status():
