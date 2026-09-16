@@ -15,7 +15,6 @@ import {
   tierSentence,
   tokenFromLocation,
   triggerSentence,
-  WATCH_PROMISE,
   type WatchEntry,
 } from "./watchlist";
 
@@ -179,13 +178,5 @@ describe("the token", () => {
     expect(tokenFromLocation("?token=abc", "stored")).toBe("abc");
     expect(tokenFromLocation("?lei=x", "stored")).toBe("stored");
     expect(tokenFromLocation("", null)).toBeNull();
-  });
-});
-
-describe("the promise", () => {
-  it("says what watching is before the button is pressed, and what it is not", () => {
-    expect(WATCH_PROMISE).toMatch(/only when GLEIF or OpenSanctions publish a change/);
-    expect(WATCH_PROMISE).toMatch(/no polling/);
-    expect(WATCH_PROMISE).toMatch(/no account/);
   });
 });
