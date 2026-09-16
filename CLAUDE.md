@@ -1335,6 +1335,28 @@ new path.
 `model.edges` — anything deriving "what does this graph draw" has to add them
 explicitly.
 
+**An ended relationship is drawn faint, never dropped (Phase 219).** The rule
+lives in `lib/relationshipStatus.ts` and, for the PDF/HTML/Markdown diagram,
+`backend/opencheck/bods/lifecycle.py` — parallel tests, no shared file, move
+them together. Ended = the record is `recordStatus: "closed"` **or** every
+interest has an `endDate` on or before today; read both, because Open
+Ownership's PSC extract has closed records with no `endDate` and CH officer
+resignations have `endDate` on records never closed. A closed record with no
+date says "ended", never an invented date. `GraphEdge.ended` / `endedOn` drive
+`edge[?ended]` in the stylesheet: `line-opacity` `ENDED_EDGE.lineOpacity`
+(0.5 — 0.35 made a dotted control edge vanish) and **no label background**,
+because a two- or three-line autorotated label on a short edge otherwise hides
+the faded line entirely. The label's "ended <date>" line is the non-colour cue;
+the legend gets an "Ended relationship" modifier (not a sixth edge kind — an
+ended shareholding is still ownership); the tree row says it in words. When B
+pools a current and an ended record for one pair, the edge is current and
+labelled from its current interests; the ended ones move into `details`. C
+hides a *current* ultimate-consolidation edge only behind *current* direct
+edges. Why a fade: BOVS has no historical-relationship rule, but completeness
+forbids omitting a party and relevance allows "tinting or transparency"; every
+dash pattern was already taken. `risk.py` still ignores `recordStatus` — a
+separate, signal-level question.
+
 ---
 
 ## Saying it where it can be read (Phase 124)

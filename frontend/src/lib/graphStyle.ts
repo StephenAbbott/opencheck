@@ -140,6 +140,28 @@ export const EDGE_STYLE: Record<EdgeLegendKind, EdgeStyle> = {
   },
 };
 
+/**
+ * An ended relationship (Phase 219) is not a sixth edge kind: an ended
+ * shareholding is still ownership. It is a modifier on whichever kind it is —
+ * the same colour and dash, drawn faint, with "ended <date>" as a second label
+ * line.
+ *
+ * Why a fade and not a line style: BOVS has no rule for historical
+ * relationships, but its relevance rule lets less relevant parts be drawn "with
+ * reduced prominence through tinting or transparency", and its completeness
+ * rule forbids leaving them out. Every dash pattern is already spoken for
+ * (dotted control, dashed role, dashed amber "likely same").
+ *
+ * `lineOpacity` fades the line and its arrowhead (Cytoscape draws both with
+ * `line-opacity`) but never the label, whose text has to keep 4.5:1 (WCAG
+ * 1.4.3). The label's date line is the non-colour cue (WCAG 1.4.1).
+ */
+export const ENDED_EDGE = {
+  lineOpacity: 0.5,
+  name: "Ended relationship",
+  meaning: "drawn faint, with the date it ended — the source records that it has ceased",
+} as const;
+
 // ---------------------------------------------------------------------------
 // Node marks — the three distinctions the old legend never named
 // ---------------------------------------------------------------------------
@@ -179,6 +201,9 @@ export interface EdgeLegendEntry extends LegendEntry {
 
 export interface GraphLegendModel {
   edges: EdgeLegendEntry[];
+  /** Modifiers that apply across edge kinds — today only "Ended relationship"
+   *  (Phase 219), listed only when the graph draws one. */
+  edgeModifiers: LegendEntry[];
   nodes: LegendEntry[];
   signals: SignalLegendEntry[];
 }
@@ -197,6 +222,7 @@ export function buildGraphLegend({
   hasPeople,
   hasCollapsed,
   hasIdentityVerified = false,
+  hasEnded = false,
   signalName,
 }: {
   edgeCategories: Iterable<string>;
@@ -205,12 +231,18 @@ export function buildGraphLegend({
   hasCollapsed: boolean;
   /** Any node carries the identity-verification tick (Phase 203). */
   hasIdentityVerified?: boolean;
+  /** Any edge has ended (Phase 219). */
+  hasEnded?: boolean;
   signalName: (code: string) => string;
 }): GraphLegendModel {
   const present = new Set(edgeCategories);
   const edges = (Object.keys(EDGE_STYLE) as EdgeLegendKind[])
     .filter((k) => present.has(k))
     .map((k) => ({ key: k, name: EDGE_STYLE[k].name, meaning: EDGE_STYLE[k].meaning, style: EDGE_STYLE[k] }));
+
+  const edgeModifiers: LegendEntry[] = hasEnded
+    ? [{ key: "ended", name: ENDED_EDGE.name, meaning: ENDED_EDGE.meaning }]
+    : [];
 
   const nodes: LegendEntry[] = [];
   if (hasPeople) nodes.push({ key: "person", ...NODE_MARK.person });
@@ -231,5 +263,5 @@ export function buildGraphLegend({
       style: signalStyle(code),
     }));
 
-  return { edges, nodes, signals };
+  return { edges, edgeModifiers, nodes, signals };
 }

@@ -14,7 +14,7 @@
 
 import { useMemo, useState } from "react";
 import type { RiskSignal } from "../lib/api";
-import { buildGraphLegend } from "../lib/graphStyle";
+import { ENDED_EDGE, buildGraphLegend } from "../lib/graphStyle";
 import { RISK_PRESENTATION } from "./risk/RiskChip";
 import { IdentityTick } from "./ui/IdentityTick";
 
@@ -43,12 +43,14 @@ export default function GraphLegend({
   hasPeople,
   hasCollapsed,
   hasIdentityVerified = false,
+  hasEnded = false,
 }: {
   edgeCategories: Iterable<string>;
   signalsByNode: Map<string, RiskSignal[]>;
   hasPeople: boolean;
   hasCollapsed: boolean;
   hasIdentityVerified?: boolean;
+  hasEnded?: boolean;
 }) {
   const legend = useMemo(
     () =>
@@ -58,16 +60,18 @@ export default function GraphLegend({
         hasPeople,
         hasCollapsed,
         hasIdentityVerified,
+        hasEnded,
         signalName,
       }),
-    [edgeCategories, signalsByNode, hasPeople, hasCollapsed, hasIdentityVerified]
+    [edgeCategories, signalsByNode, hasPeople, hasCollapsed, hasIdentityVerified, hasEnded]
   );
   // Signals can run to a dozen entries on a big FullCheck network. The edge and
   // node marks are the ones a reader needs to parse the shape at all, so they
   // are always visible; the signal marks sit behind a count they can open.
   const [showSignals, setShowSignals] = useState(false);
 
-  const total = legend.edges.length + legend.nodes.length + legend.signals.length;
+  const total =
+    legend.edges.length + legend.edgeModifiers.length + legend.nodes.length + legend.signals.length;
   if (total === 0) return null;
 
   return (
@@ -82,6 +86,24 @@ export default function GraphLegend({
             <EdgeRule color={e.style.color} dash={e.style.dash} />
             {e.name}
             <span className="sr-only"> — {e.meaning}</span>
+          </span>
+        ))}
+
+        {/* Phase 219 — the modifier chip shows the fade itself: a neutral rule
+            at the same line opacity the canvas uses, beside words that say
+            what the fade means. */}
+        {legend.edgeModifiers.map((m) => (
+          <span
+            key={m.key}
+            className="flex items-center gap-1.5 text-oo-meta font-medium px-2 py-0.5 rounded-full border border-oo-rule bg-white text-oo-muted"
+          >
+            <span
+              aria-hidden="true"
+              className="inline-block w-3.5 flex-shrink-0 border-t-2 border-oo-navy"
+              style={{ opacity: ENDED_EDGE.lineOpacity }}
+            />
+            {m.name}
+            <span className="sr-only"> — {m.meaning}</span>
           </span>
         ))}
 

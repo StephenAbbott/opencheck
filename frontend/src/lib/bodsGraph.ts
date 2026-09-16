@@ -16,6 +16,13 @@
 import { refIndex, resolveRef as resolveRefById } from "./bodsRefs";
 import { BOVS_ICONS } from "./bovsIcons";
 import { isIdentityVerified } from "./identityVerification";
+import {
+  endedPhrase,
+  interestEnded,
+  recordClosed,
+  relationshipLifecycle,
+  todayIso,
+} from "./relationshipStatus";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,6 +43,8 @@ export interface Interest {
   directOrIndirect?: string;
   beneficialOwnershipOrControl?: boolean;
   details?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export type EdgeCategory = "ownership" | "control" | "role" | "unknown" | "possiblySame";
@@ -73,6 +82,13 @@ export interface GraphEdge {
   details?: string;
   /** Distinct sources that asserted this relationship (provenance). */
   sources: string[];
+  /** Phase 219 — the relationship has ended: its record is closed, or every
+   *  interest on it has an `endDate` on or before today. Drawn less prominently
+   *  (BOVS relevance), never omitted (BOVS completeness). Absent = current. */
+  ended?: true;
+  /** The latest published `endDate` of an ended edge. Absent on an ended edge
+   *  means the source closed the record without publishing a date. */
+  endedOn?: string;
 }
 
 export interface GraphModel {
@@ -316,6 +332,9 @@ interface RawEdge {
   interests: Interest[];
   kind: ConsolidationKind;
   sources: string[];
+  /** The statement's record is closed (`recordStatus: "closed"`). A merged edge
+   *  is closed only when every record pooled into it is. */
+  closed: boolean;
   /** BODS `recordDetails.componentRecords` on a primary indirect relationship:
    *  the recordIds of the intermediary entities and hop relationships it is
    *  assembled from (Phase 183, UK corporate-PSC chains). */
@@ -333,6 +352,9 @@ export interface BuildGraphOptions {
    *  `componentRecords`) when every hop relationship it lists is itself drawn:
    *  the chain already shows it. Default true. */
   suppressRedundantComponentPrimary?: boolean;
+  /** The day "ended" is judged against, as `YYYY-MM-DD` (Phase 219). Defaults
+   *  to today; tests pin it so a fixture's `endDate` cannot drift into the past. */
+  asOf?: string;
 }
 
 /**
@@ -354,6 +376,7 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
   const mergeParallelEdges = opts.mergeParallelEdges ?? true;
   const suppressRedundant = opts.suppressRedundantUltimateConsolidation ?? true;
   const suppressComponentPrimary = opts.suppressRedundantComponentPrimary ?? true;
+  const asOf = opts.asOf ?? todayIso();
   const nodes: GraphNode[] = [];
   const nodeIds = new Set<string>();
   // v0.4 relationship endpoints reference the party's *recordId* (or a
@@ -417,6 +440,7 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
       interests,
       kind: consolidationKind(interests),
       sources: stmtSources(stmt),
+      closed: recordClosed(stmt),
       componentRecords: componentRecords?.length ? componentRecords : undefined,
     });
     if (typeof stmt.recordId === "string") drawnRelationshipRecords.add(stmt.recordId);
@@ -431,15 +455,26 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
   // subgraph keeps its ultimate link and stays connected.
   let kept = raw;
   if (suppressRedundant) {
-    const directAdj = new Map<string, string[]>();
+    // Phase 219: a *current* ultimate edge is redundant only through a chain of
+    // *current* direct edges. A GLEIF direct parent that has since lapsed does
+    // not imply today's ultimate parent, so hiding the ultimate edge behind it
+    // would draw a company's only current link as history. An ended ultimate
+    // edge may still be hidden by any direct chain, as before.
+    const endedRaw = (e: RawEdge) => relationshipLifecycle(e.interests, e.closed, asOf).ended;
+    const buildAdj = (includeEnded: boolean) => {
+      const adj = new Map<string, string[]>();
+      for (const e of raw) {
+        if (e.kind !== "direct" || (!includeEnded && endedRaw(e))) continue;
+        const arr = adj.get(e.source) ?? [];
+        if (!arr.includes(e.target)) arr.push(e.target);
+        adj.set(e.source, arr);
+      }
+      return adj;
+    };
+    const directAdj = buildAdj(true);
+    const currentDirectAdj = buildAdj(false);
     const directPair = new Set<string>();
-    for (const e of raw) {
-      if (e.kind !== "direct") continue;
-      directPair.add(`${e.source} ${e.target}`);
-      const arr = directAdj.get(e.source) ?? [];
-      if (!arr.includes(e.target)) arr.push(e.target);
-      directAdj.set(e.source, arr);
-    }
+    for (const e of raw) if (e.kind === "direct") directPair.add(`${e.source} ${e.target}`);
     // Keep an ultimate edge whose pair ALSO has a direct edge — that is the same
     // entity being both a direct and ultimate child, which B merges into one
     // edge annotated "direct + ultimate" (decision: merge visually, keep both
@@ -450,7 +485,7 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
         !(
           e.kind === "ultimate" &&
           !directPair.has(`${e.source} ${e.target}`) &&
-          reachableViaDirect(directAdj, e.source, e.target)
+          reachableViaDirect(endedRaw(e) ? directAdj : currentDirectAdj, e.source, e.target)
         )
     );
   }
@@ -499,24 +534,106 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
             id: `${g[0].source}~${g[0].target}`,
             source: g[0].source,
             target: g[0].target,
-            interests: g.flatMap((x) => x.interests),
             kind: null,
             sources: [...new Set(g.flatMap((x) => x.sources))],
+            // Pooled interests lose track of which record they came from, so a
+            // closed record's interests are stamped ended here (an interest
+            // on a closed record has ended whatever its own endDate says).
+            interests: g.flatMap((x) =>
+              x.closed ? x.interests.map((i) => ({ ...i, [CLOSED_RECORD]: true })) : x.interests
+            ),
+            closed: g.every((x) => x.closed),
           }
     );
   }
 
-  const edges: GraphEdge[] = finalEdges.map((e) => ({
+  const edges: GraphEdge[] = finalEdges.map((e) => toGraphEdge(e, asOf));
+
+  return { nodes, edges };
+}
+
+// ---------------------------------------------------------------------------
+// Ended relationships (Phase 219)
+// ---------------------------------------------------------------------------
+
+/** Internal marker: this interest came from a closed record (set when parallel
+ *  edges are pooled, so the record's status survives the merge). */
+const CLOSED_RECORD = "__closedRecord";
+
+type MarkedInterest = Interest & { [CLOSED_RECORD]?: true };
+
+/** "ended 30 November 2024" → "Ended 30 November 2024". */
+function capitalise(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * A raw (possibly pooled) edge → the GraphEdge the canvas and tree draw.
+ *
+ * - **Current edge** (some interest is still current): labelled, categorised
+ *   and described from its *current* interests. Any ended interests pooled
+ *   onto the same pair move out of the label into the details, each with its
+ *   end — so a PSC whose holding moved from 25–50% to 75–100% reads as the
+ *   holding it has now, not as both.
+ * - **Ended edge** (the record is closed, or every interest has ended): the
+ *   usual label with an "ended <date>" line under it, and `ended: true` for
+ *   the stylesheet. The date line is the non-colour cue; the fade is not
+ *   enough on its own (WCAG 1.4.1).
+ */
+function toGraphEdge(e: RawEdge, asOf: string): GraphEdge {
+  const marked = e.interests as MarkedInterest[];
+  const isEnded = (i: MarkedInterest) =>
+    interestEnded(i, e.closed || i[CLOSED_RECORD] === true, asOf);
+  // Strip the internal marker before anything is labelled or exposed.
+  const strip = (i: MarkedInterest): Interest => {
+    if (!(CLOSED_RECORD in i)) return i;
+    const copy: MarkedInterest = { ...i };
+    delete copy[CLOSED_RECORD];
+    return copy;
+  };
+  const current = marked.filter((i) => !isEnded(i)).map(strip);
+  const endedInterests = marked.filter(isEnded).map(strip);
+  const all = marked.map(strip);
+
+  // The same rule relationshipLifecycle states, applied to a pooled edge: a
+  // relationship with no interests has ended only if its record is closed.
+  const { ended, endedOn } = relationshipLifecycle(
+    endedInterests.length === all.length ? all : [],
+    e.closed || (all.length > 0 && current.length === 0),
+    asOf
+  );
+
+  if (!ended) {
+    const endedLines = endedInterests.map((i) => {
+      const end = i.endDate && i.endDate.slice(0, 10) <= asOf ? i.endDate.slice(0, 10) : undefined;
+      return `${capitalise(endedPhrase(end))}: ${interestLabel(i)}`;
+    });
+    const details = [combineDetails(current), ...new Set(endedLines)].filter(Boolean).join(" · ");
+    return {
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      label: consolidationFlavour(current) ?? buildEdgeLabel(current),
+      category: current.length ? categorise(current) : categorise(all),
+      details: details || undefined,
+      sources: e.sources,
+    };
+  }
+
+  const phrase = endedPhrase(endedOn);
+  const base = consolidationFlavour(all) ?? buildEdgeLabel(all);
+  const details = [`${capitalise(phrase)}.`, combineDetails(all)].filter(Boolean).join(" ");
+  return {
     id: e.id,
     source: e.source,
     target: e.target,
-    label: consolidationFlavour(e.interests) ?? buildEdgeLabel(e.interests),
-    category: categorise(e.interests),
-    details: combineDetails(e.interests),
+    label: base ? `${base}\n${phrase}` : phrase,
+    category: categorise(all),
+    details,
     sources: e.sources,
-  }));
-
-  return { nodes, edges };
+    ended: true,
+    ...(endedOn ? { endedOn } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -698,6 +815,12 @@ export interface TreeRow {
   /** Interest label on the edge from this row's parent (undefined for roots). */
   interestLabel?: string;
   interestCategory?: EdgeCategory;
+  /** Phase 219 — the edge from this row's parent has ended. The tree says so in
+   *  words ("ended 30 November 2024"): the canvas fade has no text equivalent
+   *  otherwise, and the interest cell shows only the label's first line. */
+  interestEnded: boolean;
+  /** The published end date of that edge, when there is one. */
+  interestEndedOn?: string;
   /** Has downstream children in the full graph (so it can expand/collapse). */
   hasChildren: boolean;
   /** Number of direct children. */
@@ -722,10 +845,11 @@ export interface TreeRow {
  */
 export function buildTree(model: GraphModel, collapsed: Set<string>): TreeRow[] {
   const byId = new Map(model.nodes.map((n) => [n.id, n] as const));
-  const outEdges = new Map<string, { target: string; label: string; category: EdgeCategory }[]>();
+  type ParentEdge = { label: string; category: EdgeCategory; ended?: true; endedOn?: string };
+  const outEdges = new Map<string, (ParentEdge & { target: string })[]>();
   for (const e of model.edges) {
     const arr = outEdges.get(e.source) ?? [];
-    arr.push({ target: e.target, label: e.label, category: e.category });
+    arr.push({ target: e.target, label: e.label, category: e.category, ended: e.ended, endedOn: e.endedOn });
     outEdges.set(e.source, arr);
   }
 
@@ -741,7 +865,7 @@ export function buildTree(model: GraphModel, collapsed: Set<string>): TreeRow[] 
   const visit = (
     id: string,
     depth: number,
-    parentEdge?: { label: string; category: EdgeCategory }
+    parentEdge?: ParentEdge
   ) => {
     const node = byId.get(id);
     if (!node) return;
@@ -759,6 +883,8 @@ export function buildTree(model: GraphModel, collapsed: Set<string>): TreeRow[] 
       identifiers: node.identifiers,
       interestLabel: parentEdge?.label || undefined,
       interestCategory: parentEdge?.category,
+      interestEnded: parentEdge?.ended === true,
+      ...(parentEdge?.endedOn ? { interestEndedOn: parentEdge.endedOn } : {}),
       hasChildren: children.length > 0,
       childCount: children.length,
       collapsed: isCollapsed,
@@ -769,7 +895,7 @@ export function buildTree(model: GraphModel, collapsed: Set<string>): TreeRow[] 
 
     seen.add(id);
     if (isRepeat || isCollapsed) return; // shown in full elsewhere, or collapsed
-    for (const c of children) visit(c.target, depth + 1, { label: c.label, category: c.category });
+    for (const c of children) visit(c.target, depth + 1, c);
   };
 
   for (const r of roots) visit(r, 0);
