@@ -8591,6 +8591,10 @@ def map_cyprus_drcor(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         founding_date=founding_date,
         addresses=addresses,
         source_url=source_url,
+        # The register's own organisation-type wording ("Limited Company")
+        # is a local name, so it goes to entityType.details. entityType.subtype
+        # is a closed codelist in BODS 0.4 and never takes free text (Phase 214).
+        entity_details=_cy_field(organisation, "org_type") or None,
     )
     # DRCOR organisation status (Phase 151).
     cy_status = (_cy_field(organisation, "org_status") or "").strip()
@@ -8605,11 +8609,6 @@ def map_cyprus_drcor(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         ),
         raw=cy_status or None,
     )
-    org_type_label = _cy_field(organisation, "org_type")
-    if org_type_label:
-        rd = company_stmt.get("recordDetails") or {}
-        rd["entityType"] = {"type": "registeredEntity", "subtype": org_type_label}
-        company_stmt["recordDetails"] = rd
     yield company_stmt
     company_stmt_id = company_stmt["statementId"]
 
@@ -8727,15 +8726,16 @@ def map_abr_australia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         addresses=addresses,
         alternate_names=alternate_names,
         source_url=source_url,
+        # ABR's entity type name ("Commonwealth Government Entity") is the
+        # register's local wording, so it goes to entityType.details — never
+        # entityType.subtype, a closed BODS 0.4 codelist. It is not mapped to
+        # an enum value such as stateAgency either: that would be a
+        # classification the register did not publish (Phase 214).
+        entity_details=(bundle.get("entity_type_name") or "").strip() or None,
     )
 
-    # Entity type subtype + cancelled-status annotation.
-    entity_type_name = (bundle.get("entity_type_name") or "").strip()
+    # Cancelled-status annotation.
     abn_status = (bundle.get("abn_status") or "").strip().lower()
-    record_details = stmt.get("recordDetails") or {}
-    if entity_type_name:
-        record_details["entityType"] = {"type": "registeredEntity", "subtype": entity_type_name}
-    stmt["recordDetails"] = record_details
     # ABN Lookup publishes the ABN's status ("Active" / "Cancelled") and the
     # date it took effect. A cancelled ABN is the register's terminal state
     # for the registration OpenCheck resolved (Phase 151 — previously written
@@ -8812,6 +8812,20 @@ def map_mca_india(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     if address:
         addresses.append(_addr("registered", address, "IN"))
 
+    # The register's class ("Public" / "Private" / "One Person Company"),
+    # category and sub-category are all local wording, so all three go to
+    # entityType.details, class first: "Public — Company limited by shares —
+    # Non-government company". The class used to be written to
+    # entityType.subtype, a closed BODS 0.4 codelist that never takes free
+    # text (Phase 214).
+    detail_bits = [
+        b for b in (
+            (bundle.get("company_class") or "").strip(),
+            (bundle.get("category") or "").strip(),
+            (bundle.get("sub_category") or "").strip(),
+        ) if b
+    ]
+
     stmt = make_entity_statement(
         source_id="mca_india",
         local_id=cin,
@@ -8821,28 +8835,8 @@ def map_mca_india(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         founding_date=(bundle.get("registration_date") or None),
         addresses=addresses,
         source_url=source_url,
+        entity_details=" — ".join(detail_bits) or None,
     )
-
-    record_details = stmt.get("recordDetails") or {}
-
-    # Entity type subtype from the register's class ("Public" / "Private" /
-    # "One Person Company"); category + sub-category as details.
-    company_class = (bundle.get("company_class") or "").strip()
-    detail_bits = [
-        b for b in (
-            (bundle.get("category") or "").strip(),
-            (bundle.get("sub_category") or "").strip(),
-        ) if b
-    ]
-    if company_class or detail_bits:
-        entity_type: dict[str, Any] = {"type": "registeredEntity"}
-        if company_class:
-            entity_type["subtype"] = company_class
-        if detail_bits:
-            entity_type["details"] = " — ".join(detail_bits)
-        record_details["entityType"] = entity_type
-
-    stmt["recordDetails"] = record_details
 
     # Register status → liveness annotation (Phase 151). MCA publishes no
     # date, so ``dissolutionDate`` is never set — it used to be the literal

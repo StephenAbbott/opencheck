@@ -192,6 +192,12 @@ def test_mapper_emits_entity_person_and_relationships():
     assert ident["scheme"] == "CY-DRCOR"
     assert ident["id"] == "HE489243"
     assert company["recordDetails"]["jurisdiction"]["code"] == "CY"
+    # The organisation type is the register's wording → details, never the
+    # closed subtype codelist (Phase 214).
+    assert company["recordDetails"]["entityType"] == {
+        "type": "registeredEntity",
+        "details": "Limited Company",
+    }
 
     interests = by_type["relationship"][0]["recordDetails"]["interests"]
     assert interests[0]["type"] == "seniorManagingOfficial"
