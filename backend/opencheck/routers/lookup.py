@@ -1467,8 +1467,17 @@ async def _lookup_pipeline(
             "persons": sum(1 for s in stmts if s.get("recordType") == "person"),
             "relationships": sum(1 for s in stmts if s.get("recordType") == "relationship"),
         }
+        # Phase 217: the rest of what /deepen would answer for this pair,
+        # minus the raw record. The stream skips this event; it rides in the
+        # replay cache and so in a saved report, whose source drawers render
+        # from it instead of calling /deepen for today's record.
+        _dinfo = REGISTRY[dsrc].info if dsrc in REGISTRY else None
         yield ("deepen_result", {
             "source_id": dsrc, "hit_id": dhit, "bods": deep["bods"],
+            "bods_issues": deep["bods_issues"],
+            "risk_signals": deep["risk_signals"],
+            "license": _dinfo.license if _dinfo is not None else "",
+            "license_notice": deep.get("license_notice"),
         })
 
     # Lightweight counts for the remaining (non-deepened) sources, so every

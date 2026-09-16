@@ -7,8 +7,15 @@ import {
   downloadReportPdf,
   fetchSources,
   isValidLei,
+  getSavedReport,
+  replayLookupEvents,
   retryLookupSource,
+  saveReport,
   streamLookup,
+  SavedReportError,
+  type LookupStreamHandlers,
+  type SavedReport,
+  type SavedReportMeta,
   type BoAccessNotice,
   type BodsBreakdown,
   type BodsCountsEvent,
@@ -50,8 +57,27 @@ import {
   TOPIC_MODES,
   deepLinkOptions,
   documentTitleFor,
+  modeLabel,
   modeParam,
 } from "./lib/checkMode";
+import {
+  SAVED_WITHOUT_SUMMARY,
+  modeInSavedReport,
+  notInSavedReport,
+  openErrorMessage,
+  rememberManageToken,
+  reportIdFromPath,
+  runCompletedAtFrom,
+  saveEligibility,
+  savedConfirmation,
+  savedDeepen,
+  savedReportLink,
+  savedStatements as savedStatementsFrom,
+  utcDate,
+  utcDateTime,
+} from "./lib/savedReport";
+import { SavedReportBanner, SavedReportExcluded } from "./components/cdd/SavedReportBanner";
+import { SavedReportContext, type SavedReportContextValue } from "./components/cdd/savedReportContext";
 import type { CheckMode } from "./lib/checkMode";
 import type { IconName } from "./components/ui";
 import { NarrativePanel } from "./components/cdd/NarrativePanel";
@@ -236,6 +262,22 @@ export default function App() {
   // they came from the backend replay cache rather than a fresh run. Null for
   // live runs. Drives the "Results from a check N min ago" badge.
   const [replayedAt, setReplayedAt] = useState<string | null>(null);
+  // ── Saved reports (Phase 217) ──────────────────────────────────────
+  // `runCompletedAt` names the run on screen (its `done` event carries it);
+  // a save names that run and the server copies its own held copy. A
+  // per-source retry changes the page without changing the run, so it
+  // blocks saving until the check is run again.
+  const [runCompletedAt, setRunCompletedAt] = useState<string | null>(null);
+  const [retriedSinceRun, setRetriedSinceRun] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [savedFromRun, setSavedFromRun] = useState<SavedReportMeta | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  // The saved report on screen at /report/{id}. Non-null means this page is
+  // a record, not a live check: everything that would reach for today's data
+  // is off, and the banner above the subject says so.
+  const [savedReport, setSavedReport] = useState<SavedReport | null>(null);
+  const [savedOpening, setSavedOpening] = useState(false);
+  const [savedOpenError, setSavedOpenError] = useState<string | null>(null);
   // Source IDs with an in-flight per-source retry (/lookup-source).
   const [retryingSources, setRetryingSources] = useState<Set<string>>(new Set());
   // Screen-reader announcement for per-source failures and retry outcomes,
@@ -398,7 +440,9 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       // /entity pages' exact "NAME OF SUBJECT - OpenCheck" template from the
       // SEO ticket. Other modes append a segment (Phase 122) so restored
       // tabs are distinguishable.
-      document.title = documentTitleFor(mode, legalName);
+      document.title = savedReport
+        ? `Saved report: ${documentTitleFor(mode, legalName)}`
+        : documentTitleFor(mode, legalName);
     } else if (view === "sources") {
       document.title = "Data Sources — OpenCheck";
     } else if (view === "features") {
@@ -416,7 +460,19 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     } else {
       document.title = "OpenCheck";
     }
-  }, [legalName, view, mode]);
+  }, [legalName, view, mode, savedReport]);
+
+  // Phase 217: a saved report is shared by link and never indexed. robots.txt
+  // already disallows /report on this host; the meta tag covers a crawler that
+  // renders the page anyway, and comes off again when the reader leaves.
+  useEffect(() => {
+    if (!savedReport) return;
+    const meta = document.createElement("meta");
+    meta.name = "robots";
+    meta.content = "noindex, nofollow";
+    document.head.appendChild(meta);
+    return () => meta.remove();
+  }, [savedReport]);
 
   // Focus management — move focus to #main-content on view changes so keyboard
   // and screen reader users are oriented to the new page content (WCAG 2.4.3).
@@ -519,6 +575,228 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     mutationFn: ({ raCode, id }) => searchByNationalId(raCode, id),
   });
 
+  /**
+   * Clear everything that belongs to the report on screen, before a new one —
+   * a live lookup or a saved report — takes its place. One function for both
+   * so a saved report can never inherit a live check's state or the reverse.
+   */
+  function resetReportState() {
+    setStreamingLei(null);
+    setLegalName(null);
+    setHits([]);
+    setErrors({});
+    setCrossSourceLinks([]);
+    setPossiblySame([]);
+    setSubjectProfile(null);
+    setRiskSignals([]);
+    setDegradedSources([]);
+    setVerdict(null);
+    setSourceLiveness({});
+    setOaScreening([]);
+    setGraphShape(null);
+    setApplicableSources([]);
+    setCompletedSources(new Set());
+    setStartedSources(new Set());
+    setPanelErrors([]);
+    setIdentityOpen(false);
+    // A chip selection belongs to the entity it was made on. Carried into
+    // the next lookup it either explains a signal the new subject does not
+    // have, or — worse — silently lands on a code it does, so the box
+    // opens on something nobody chose.
+    setSelectedSignalCode(null);
+    // The exports belong to the entity that was on screen. A failed PDF
+    // left its alert sitting on the *next* subject, describing a download
+    // that was never attempted for it — and the payload the report embeds
+    // is the previous entity's summary and its analyst's signed decisions.
+    setExportError(null);
+    setExportPayload({ narrative: null, dispositions: null });
+    setStreaming(false);
+    setBodsCountMap({});
+    setBodsBreakdownMap({});
+    setStreamDropped(false);
+    setRetryingSources(new Set());
+    setReplayedAt(null);
+    // Phase 217: the run's name, and anything saved from it.
+    setRunCompletedAt(null);
+    setRetriedSinceRun(false);
+    setSavedFromRun(null);
+    setSaveNotice(null);
+  }
+
+  /**
+   * The handlers that turn lookup events into page state. One builder, used
+   * by the live stream and by a saved report's replay (Phase 217), so the two
+   * cannot set state differently — which is what makes a saved report render
+   * as the same report.
+   */
+  function buildLookupHandlers(cb: {
+    onAnchor: (e: { lei: string; legal_name: string | null }) => void;
+    onFailure: (detail: string) => void;
+  }): LookupStreamHandlers {
+    // Tracks whether the GLEIF anchor resolved: a connection drop before
+    // it is a hard error; after it, we keep partial results and offer a
+    // "Resume lookup" instead.
+    let anchored = false;
+    return {
+      // Served from the backend replay cache — badge the result with the
+      // original completion time so a cached run never looks live.
+      onReplayed: (e) => setReplayedAt(e.fetched_at),
+      onGleifDone: (e) => {
+        anchored = true;
+        setStreamingLei(e.lei);
+        setLegalName(e.legal_name);
+        setSubjectJurisdiction(e.jurisdiction);
+        setMobileSearchOpen(false); // re-collapse the mobile search inputs
+        setStreaming(true);
+        cb.onAnchor({ lei: e.lei, legal_name: e.legal_name });
+      },
+      onSourcesApplicable: (e) => setApplicableSources(e.source_ids),
+      onSourceStarted: (e) =>
+        setStartedSources((prev) => new Set([...prev, e.source_id])),
+      // Dedup by source_id:hit_id — in dev, React StrictMode runs the lookup
+      // effect twice, so two streams can each deliver the same hit. The guard
+      // makes hit accumulation idempotent (no-op in production, where
+      // StrictMode doesn't double-invoke).
+      onHit: (e) =>
+        setHits((prev) =>
+          prev.some((h) => h.source_id === e.source_id && h.hit_id === e.hit_id)
+            ? prev
+            : [...prev, e]
+        ),
+      onSourceCompleted: (e) =>
+        setCompletedSources((prev) => new Set([...prev, e.source_id])),
+      onSourceError: (e) => {
+        setErrors((prev) => ({ ...prev, [e.source_id]: e.error }));
+        setCompletedSources((prev) => new Set([...prev, e.source_id]));
+      },
+      onCrossSourceLinks: (e) => setCrossSourceLinks(e.links),
+      onPossiblySame: (e) => setPossiblySame(e.pairs),
+      onSubjectProfile: (e) => setSubjectProfile(e.profile),
+      onRiskSignals: (e) => {
+        setRiskSignals(e.signals);
+        setDegradedSources(e.degraded_sources ?? []);
+        setVerdict(e.verdict ?? null);
+        setSourceLiveness(e.source_liveness ?? {});
+        setOaScreening(e.openaleph_screening ?? []);
+        setGraphShape(e.graph_shape ?? null);
+      },
+      onBodsCounts: (e: BodsCountsEvent) => {
+        setBodsCountMap(e.counts);
+        if (e.breakdown) setBodsBreakdownMap(e.breakdown);
+      },
+      onDone: (e) => {
+        setStreaming(false);
+        setStreamDropped(false);
+        setRunCompletedAt(runCompletedAtFrom(e));
+        cleanupRef.current = null;
+      },
+      onError: (detail) => {
+        setStreaming(false);
+        cleanupRef.current = null;
+        if (anchored) {
+          // Mid-lookup drop (e.g. Render cold start, flaky network):
+          // keep the partial results and surface the resume banner.
+          setStreamDropped(true);
+        } else {
+          cb.onFailure(detail);
+        }
+      },
+    };
+  }
+
+  /**
+   * Open the saved report at `/report/{id}` (Phase 217): fetch the record and
+   * replay its stored events through the same handlers a live check drives.
+   * Nothing is looked up — the page is exactly what was saved.
+   */
+  async function openSavedReport(reportId: string, opts?: { mode?: CheckMode }) {
+    cleanupRef.current?.();
+    cleanupRef.current = null;
+    setView("main");
+    setSavedOpenError(null);
+    setSavedOpening(true);
+    resetReportState();
+    setSavedReport(null);
+    lookupMutation.reset();
+    try {
+      const report = await getSavedReport(reportId);
+      resetReportState();
+      setFocusStatementId(null);
+      // A tab a saved report does not hold still opens, and says so.
+      setMode(opts?.mode ?? "quick");
+      setLeiInput(report.lei);
+      setSavedReport(report);
+      setExportPayload({
+        narrative: report.payload.narrative,
+        dispositions: report.payload.dispositions,
+      });
+      replayLookupEvents(
+        report.payload.events,
+        buildLookupHandlers({
+          onAnchor: () => {},
+          onFailure: (detail) => setSavedOpenError(detail),
+        }),
+      );
+    } catch (e) {
+      const status = e instanceof SavedReportError ? e.status : 0;
+      setSavedOpenError(
+        openErrorMessage(status, e instanceof Error ? e.message : "Could not open this saved report."),
+      );
+    } finally {
+      setSavedOpening(false);
+    }
+  }
+
+  /** Copy a link, reporting whether the clipboard took it. */
+  async function copyLink(url: string): Promise<boolean> {
+    try {
+      await navigator.clipboard?.writeText(url);
+      return Boolean(navigator.clipboard);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Save the live check on screen (Phase 217). The server copies its own held
+   * run; the summary goes with it only if the server wrote it from this run —
+   * otherwise the report is saved without it and the reader is told, rather
+   * than the save failing over the part they did not ask about.
+   */
+  async function saveThisReport() {
+    if (!streamingLei || !runCompletedAt || saveBusy) return;
+    setSaveBusy(true);
+    setExportError(null);
+    setSaveNotice(null);
+    const narrativeRunId = exportPayload.narrative?.run_id || null;
+    try {
+      let meta: SavedReportMeta & { manage_token: string };
+      let withSummary = Boolean(narrativeRunId);
+      let droppedSummary = false;
+      try {
+        meta = await saveReport({ lei: streamingLei, run_completed_at: runCompletedAt, narrative_run_id: narrativeRunId });
+      } catch (e) {
+        if (!(e instanceof SavedReportError) || e.code !== "narrative_not_held" || !narrativeRunId) throw e;
+        meta = await saveReport({ lei: streamingLei, run_completed_at: runCompletedAt });
+        withSummary = false;
+        droppedSummary = true;
+      }
+      rememberManageToken(meta.report_id, meta.manage_token);
+      setSavedFromRun(meta);
+      const copied = await copyLink(savedReportLink(meta.report_id, window.location.origin));
+      setSaveNotice(
+        droppedSummary
+          ? `${SAVED_WITHOUT_SUMMARY} ${copied ? "The link is copied. " : ""}Kept until ${utcDate(meta.expires_at)}.`
+          : savedConfirmation(meta, withSummary, copied),
+      );
+      trackEvent("report_saved");
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : "Could not save this report.");
+    } finally {
+      setSaveBusy(false);
+    }
+  }
+
   // ── LEI lookup mutation ───────────────────────────────────────────────────
   // Opens the SSE stream for /lookup-stream. The mutation is considered
   // "pending" (i.e. showing the loading grid) until the backend emits the
@@ -541,8 +819,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           return;
         }
         // Reset streaming state before starting a new stream.
-        setStreamingLei(null);
-        setLegalName(null);
+        resetReportState();
+        setSavedReport(null);
         // `?focus=` rides in with the lookup for the same reason `?mode=`
         // does: this reset runs asynchronously, so a value set *beside* the
         // lookup is set first and wiped here a moment later. Phase 200
@@ -557,111 +835,13 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         // setMode(parseMode(...)) — so ?mode=full opened on QuickCheck, which
         // is exactly what that handler's comment says must not happen.
         setMode(startMode ?? "quick");
-        setHits([]);
-        setErrors({});
-        setCrossSourceLinks([]);
-        setPossiblySame([]);
-        setSubjectProfile(null);
-        setRiskSignals([]);
-        setDegradedSources([]);
-        setVerdict(null);
-        setSourceLiveness({});
-        setOaScreening([]);
-        setGraphShape(null);
-        setApplicableSources([]);
-        setCompletedSources(new Set());
-        setStartedSources(new Set());
-        setPanelErrors([]);
-        setIdentityOpen(false);
-        // A chip selection belongs to the entity it was made on. Carried into
-        // the next lookup it either explains a signal the new subject does not
-        // have, or — worse — silently lands on a code it does, so the box
-        // opens on something nobody chose.
-        setSelectedSignalCode(null);
-        // The exports belong to the entity that was on screen. A failed PDF
-        // left its alert sitting on the *next* subject, describing a download
-        // that was never attempted for it — and the payload the report embeds
-        // is the previous entity's summary and its analyst's signed decisions.
-        setExportError(null);
-        setExportPayload({ narrative: null, dispositions: null });
-        setStreaming(false);
-        setBodsCountMap({});
-        setBodsBreakdownMap({});
-        setStreamDropped(false);
-        setRetryingSources(new Set());
-        setReplayedAt(null);
-
-        // Tracks whether the GLEIF anchor resolved: a connection drop before
-        // it is a hard error; after it, we keep partial results and offer a
-        // "Resume lookup" instead.
-        let anchored = false;
 
         const cleanup = streamLookup(
           lei,
-          {
-          // Served from the backend replay cache — badge the result with the
-          // original completion time so a cached run never looks live.
-          onReplayed: (e) => setReplayedAt(e.fetched_at),
-          onGleifDone: (e) => {
-            anchored = true;
-            setStreamingLei(e.lei);
-            setLegalName(e.legal_name);
-            setSubjectJurisdiction(e.jurisdiction);
-            setMobileSearchOpen(false); // re-collapse the mobile search inputs
-            setStreaming(true);
-            resolve({ lei: e.lei, legal_name: e.legal_name });
-          },
-          onSourcesApplicable: (e) => setApplicableSources(e.source_ids),
-          onSourceStarted: (e) =>
-            setStartedSources((prev) => new Set([...prev, e.source_id])),
-          // Dedup by source_id:hit_id — in dev, React StrictMode runs the lookup
-          // effect twice, so two streams can each deliver the same hit. The guard
-          // makes hit accumulation idempotent (no-op in production, where
-          // StrictMode doesn't double-invoke).
-          onHit: (e) =>
-            setHits((prev) =>
-              prev.some((h) => h.source_id === e.source_id && h.hit_id === e.hit_id)
-                ? prev
-                : [...prev, e]
-            ),
-          onSourceCompleted: (e) =>
-            setCompletedSources((prev) => new Set([...prev, e.source_id])),
-          onSourceError: (e) => {
-            setErrors((prev) => ({ ...prev, [e.source_id]: e.error }));
-            setCompletedSources((prev) => new Set([...prev, e.source_id]));
-          },
-          onCrossSourceLinks: (e) => setCrossSourceLinks(e.links),
-          onPossiblySame: (e) => setPossiblySame(e.pairs),
-          onSubjectProfile: (e) => setSubjectProfile(e.profile),
-          onRiskSignals: (e) => {
-            setRiskSignals(e.signals);
-            setDegradedSources(e.degraded_sources ?? []);
-            setVerdict(e.verdict ?? null);
-            setSourceLiveness(e.source_liveness ?? {});
-            setOaScreening(e.openaleph_screening ?? []);
-            setGraphShape(e.graph_shape ?? null);
-          },
-          onBodsCounts: (e: BodsCountsEvent) => {
-            setBodsCountMap(e.counts);
-            if (e.breakdown) setBodsBreakdownMap(e.breakdown);
-          },
-          onDone: () => {
-            setStreaming(false);
-            setStreamDropped(false);
-            cleanupRef.current = null;
-          },
-          onError: (detail) => {
-            setStreaming(false);
-            cleanupRef.current = null;
-            if (anchored) {
-              // Mid-lookup drop (e.g. Render cold start, flaky network):
-              // keep the partial results and surface the resume banner.
-              setStreamDropped(true);
-            } else {
-              reject(new Error(detail));
-            }
-          },
-          },
+          buildLookupHandlers({
+            onAnchor: resolve,
+            onFailure: (detail) => reject(new Error(detail)),
+          }),
           5,
           refresh === true,
         );
@@ -701,11 +881,19 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     const lei = rawLei.trim().toUpperCase();
     setLeiInput(lei);
     setView("main");
+    // Leaving a saved report for a live check: the address must stop saying
+    // /report/{id}, or a refresh would reopen the record, not the check.
+    setSavedReport(null);
+    setSavedOpenError(null);
     trackEvent("lookup_run"); // feature event only — the LEI is never recorded
     // Shareable URLs: reflect the lookup in ?lei= so refresh and copy/paste
     // re-run it (the backend replay cache makes repeats near-instant).
     const url = new URL(window.location.href);
-    if (url.searchParams.get("lei") !== lei) {
+    if (reportIdFromPath(url.pathname)) {
+      url.pathname = "/";
+      url.search = "";
+    }
+    if (url.pathname !== window.location.pathname || url.searchParams.get("lei") !== lei) {
       url.searchParams.set("lei", lei);
       window.history.pushState({}, "", url);
     }
@@ -797,7 +985,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     if (entityMatch && isValidLei(entityMatch[1].toUpperCase())) {
       window.history.replaceState({}, "", `/?lei=${entityMatch[1].toUpperCase()}`);
     }
-    const initial = fromUrl(new URLSearchParams(window.location.search).get("lei"));
+    // Phase 217: /report/{id} is a saved report — a record, not a lookup.
+    const savedId = reportIdFromPath(window.location.pathname);
+    if (savedId) {
+      void openSavedReport(savedId, deepLinkOptions(window.location.search));
+    }
+    const initial = savedId ? "" : fromUrl(new URLSearchParams(window.location.search).get("lei"));
     if (initial && isValidLei(initial)) {
       // The mode goes *into* the lookup rather than being set beside it: the
       // mutationFn's own reset runs later and would otherwise overwrite it.
@@ -805,6 +998,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     }
 
     const onPopState = () => {
+      const poppedReport = reportIdFromPath(window.location.pathname);
+      if (poppedReport) {
+        void openSavedReport(poppedReport, deepLinkOptions(window.location.search));
+        return;
+      }
       // Handle non-main path views first (back/forward to /sources, /about etc.)
       const v = pathToView(window.location.pathname);
       if (v !== "main") {
@@ -825,6 +1023,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         // Navigated back to the landing page — clear the result view.
         cleanupRef.current?.();
         cleanupRef.current = null;
+        setSavedReport(null);
+        setSavedOpenError(null);
         setStreamingLei(null);
         setLegalName(null);
         setHits([]);
@@ -857,6 +1057,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
   async function retrySource(sourceId: string) {
     if (!streamingLei) return;
     setRetryingSources((prev) => new Set([...prev, sourceId]));
+    // The page no longer shows one run once a source is re-run on its own,
+    // so it can no longer be saved as one (the server has dropped the run
+    // from its replay cache too).
+    setRetriedSinceRun(true);
     const sourceName = sourceNameIndex[sourceId] ?? sourceId;
     try {
       const res = await retryLookupSource(streamingLei, sourceId);
@@ -1290,6 +1494,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     cleanupRef.current?.();
     cleanupRef.current = null;
     navigate("main");
+    setSavedReport(null);
+    setSavedOpenError(null);
+    setSavedOpening(false);
+    setRunCompletedAt(null);
+    setSavedFromRun(null);
+    setSaveNotice(null);
     setStreamingLei(null);
     setLegalName(null);
     setHits([]);
@@ -1324,7 +1534,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setNationalIdTouched(false);
     setSearchMode("name");
     // Clear ?lei= so the address bar returns to a clean homepage URL.
-    if (window.location.search) {
+    if (window.location.search || window.location.pathname !== "/") {
       const url = new URL(window.location.href);
       url.search = "";
       window.history.pushState({}, "", url);
@@ -1334,9 +1544,62 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Saved report wiring (Phase 217) ───────────────────────────────────
+  const savedEvents = savedReport?.payload.events ?? null;
+  const savedCtx = useMemo<SavedReportContextValue | null>(
+    () =>
+      savedEvents
+        ? { deepen: (sourceId: string, hitId: string) => savedDeepen(savedEvents, sourceId, hitId) }
+        : null,
+    [savedEvents],
+  );
+  const savedNetwork = useMemo(
+    () => (savedEvents ? savedStatementsFrom(savedEvents) : null),
+    [savedEvents],
+  );
+  const savedNarrative = useMemo<ReportExportPayload | null>(
+    () =>
+      savedReport
+        ? { narrative: savedReport.payload.narrative, dispositions: savedReport.payload.dispositions }
+        : null,
+    [savedReport],
+  );
+  const runLiveFromSaved = useCallback(() => {
+    if (savedReport) lookupLei(savedReport.lei);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedReport]);
+  const saveItem = useMemo(() => {
+    if (savedReport || !streamingLei) return undefined;
+    if (savedFromRun) {
+      const link = savedReportLink(savedFromRun.report_id, window.location.origin);
+      return {
+        label: "Copy saved-report link",
+        description: `Saved ${utcDateTime(savedFromRun.saved_at)} · kept until ${utcDate(savedFromRun.expires_at)}`,
+        onSelect: (): void => {
+          void copyLink(link).then((ok) =>
+            setSaveNotice(ok ? "The saved-report link is copied." : link),
+          );
+        },
+      };
+    }
+    const eligibility = saveEligibility({ streaming, runCompletedAt, retried: retriedSinceRun });
+    return {
+      label: saveBusy ? "Saving…" : "Save this report",
+      description: eligibility.reason ?? "A fixed record of these findings, with a link, kept for 90 days",
+      disabled: !eligibility.canSave || saveBusy,
+      onSelect: (): void => {
+        void saveThisReport();
+      },
+    };
+    // saveThisReport and copyLink read state through their own closures on
+    // each render; the memo only has to follow what decides the item.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedReport, streamingLei, savedFromRun, streaming, runCompletedAt, retriedSinceRun, saveBusy, exportPayload]);
+
   const HeroHeading = streamingLei ? "h2" : "h1";
 
   return (
+    <SavedReportContext.Provider value={savedCtx}>
     <div className="min-h-screen flex flex-col bg-oo-bg">
       {/* Skip-to-content link — visually hidden until focused (WCAG 2.4.1) */}
       <a
@@ -2001,7 +2264,26 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           />
         )}
 
-        {!streamingLei && !lookupMutation.isPending && !streaming && !lookupMutation.isError && !nameSearchMutation.data && !nameSearchMutation.isPending && !nationalIdSearchMutation.data && !nationalIdSearchMutation.isPending && (
+        {savedOpening && (
+          <p role="status" className="mb-6 text-oo-small text-oo-muted">
+            Opening the saved report…
+          </p>
+        )}
+
+        {savedOpenError && !savedOpening && (
+          <div role="alert" className="mb-6 rounded-oo border border-oo-warn-border bg-oo-warn-bg px-4 py-3">
+            <p className="text-oo-small text-oo-warn-text">{savedOpenError}</p>
+            <button
+              type="button"
+              onClick={resetToHome}
+              className="mt-2 text-oo-small font-semibold text-oo-blue underline underline-offset-2"
+            >
+              Go to the homepage
+            </button>
+          </div>
+        )}
+
+        {!streamingLei && !savedOpening && !savedOpenError && !lookupMutation.isPending && !streaming && !lookupMutation.isError && !nameSearchMutation.data && !nameSearchMutation.isPending && !nationalIdSearchMutation.data && !nationalIdSearchMutation.isPending && (
           <>
             <ExampleLeiPicker onPick={lookupLei} disabled={lookupMutation.isPending || streaming} />
             <BatchInvite onOpen={() => navigate("batch")} />
@@ -2030,8 +2312,18 @@ const NAV_ITEMS: { view: View; label: string }[] = [
 
         {streamingLei && (
           <h1 className="sr-only">
-            Due diligence report: {legalName ?? streamingLei}
+            {savedReport ? "Saved due diligence report" : "Due diligence report"}:{" "}
+            {legalName ?? streamingLei}
           </h1>
+        )}
+
+        {savedReport && streamingLei && (
+          <SavedReportBanner
+            meta={savedReport}
+            runCompletedAt={savedReport.payload.run_completed_at}
+            onRunLive={runLiveFromSaved}
+            onExtended={(next) => setSavedReport((cur) => (cur ? { ...cur, ...next } : cur))}
+          />
         )}
 
         {streamingLei && (
@@ -2040,8 +2332,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             lei={streamingLei}
             legalName={legalName}
             jurisdiction={subjectJurisdiction}
-            replayedAt={replayedAt}
-            onRefresh={() => lookupLei(streamingLei, { refresh: true })}
+            replayedAt={savedReport ? null : replayedAt}
+            onRefresh={savedReport ? undefined : () => lookupLei(streamingLei, { refresh: true })}
             identifierSources={leiConfirmedSourceCount}
             onShowIdentifiers={showCrossSourceIdentifiers}
             status={statusChip(subjectProfile, sourceNameIndex)}
@@ -2051,6 +2343,18 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             onMarkdown={downloadMarkdown}
             exportError={exportError}
             onOpenWatchlist={() => navigate("watchlist")}
+            savedShare={
+              savedReport
+                ? { url: savedReportLink(savedReport.report_id, window.location.origin) }
+                : undefined
+            }
+            save={saveItem}
+            reportUnavailable={
+              savedReport
+                ? "The PDF and Markdown reports run the check again today, so they are not offered on a saved report yet."
+                : undefined
+            }
+            notice={saveNotice}
           />
         {/* ── The answer-first layer (Phase 122) ─────────────────────────
             Subject, then what the check found and how much of it ran, then
@@ -2072,10 +2376,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             onOpenNetwork={() => selectMode("full")}
             screening={streaming}
             onRerun={
-              streamingLei && !streaming
+              streamingLei && !streaming && !savedReport
                 ? () => lookupLei(streamingLei, { refresh: true })
                 : undefined
             }
+            saved={Boolean(savedReport)}
           />
           </div>
         )}
@@ -2207,7 +2512,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             degraded={degradedSources}
             sourceNames={sourceNameIndex}
             onRetry={
-              streamingLei && !streaming
+              streamingLei && !streaming && !savedReport
                 ? () => lookupLei(streamingLei, { refresh: true })
                 : undefined
             }
@@ -2221,7 +2526,17 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             so selectMode can move focus into it after the switch. Without
             that, switching tab unmounts most of the page and focus falls to
             <body> — v1's mode cards did exactly that. */}
-        {mode === "full" && streamingLei ? (
+        {savedReport && streamingLei && !modeInSavedReport(mode) ? (
+          <div id={`panel-${mode}`} role="tabpanel" aria-labelledby={`tab-${mode}`} tabIndex={-1}>
+            <PanelCard>
+              <ModeBlurb mode={mode} tabs={MODE_TABS} />
+              <SavedReportExcluded
+                sentence={notInSavedReport(modeLabel(mode))}
+                onRunLive={runLiveFromSaved}
+              />
+            </PanelCard>
+          </div>
+        ) : mode === "full" && streamingLei ? (
           <div id="panel-full" role="tabpanel" aria-labelledby="tab-full" tabIndex={-1}>
             <PanelCard>
               <ModeBlurb mode="full" tabs={MODE_TABS} />
@@ -2237,6 +2552,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   legalName={legalName}
                   signals={riskSignals}
                   focusStatementId={focusStatementId}
+                  savedStatements={savedNetwork}
                   onOpenSubsidiaries={() => selectMode("subsidiaries")}
                   onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
                   onPanelRecovered={(panel) =>
@@ -2351,7 +2667,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             which of the four they are looking at. */}
         <ModeBlurb mode="quick" tabs={MODE_TABS} />
         {streamingLei && mode === "quick" && (
-          <NarrativePanel lei={streamingLei} onExportPayload={setExportPayload} />
+          <NarrativePanel
+            lei={streamingLei}
+            onExportPayload={setExportPayload}
+            saved={savedNarrative}
+          />
         )}
 
 
@@ -2628,7 +2948,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     subjectSignals={riskSignals}
                     bodsCountMap={bodsCountMap}
                     bodsBreakdownMap={bodsBreakdownMap}
-                    onRetry={b.error ? () => retrySource(b.sourceId) : undefined}
+                    onRetry={b.error && !savedReport ? () => retrySource(b.sourceId) : undefined}
                     retrying={retryingSources.has(b.sourceId)}
                     liveness={sourceLiveness[b.sourceId]}
                     footnote={
@@ -2661,7 +2981,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           </PanelSection>
         )}
 
-        {streamingLei && (
+        {streamingLei && !savedReport && (
           <SecuritiesSection
             lei={streamingLei}
             onError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
@@ -2683,6 +3003,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             contributingSourceIds={[...cddBuckets, ...esgBuckets]
               .filter((b) => b.hits.some((h) => !h.is_stub))
               .map((b) => b.sourceId)}
+            saved={
+              savedReport
+                ? { reportId: savedReport.report_id, licensing: savedReport.payload.licensing }
+                : null
+            }
           />
         )}
           </PanelCard>
@@ -2875,6 +3200,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         </div>
       </footer>
     </div>
+    </SavedReportContext.Provider>
   );
 }
 

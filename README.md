@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 216** — Save a lookup as a record of exactly what OpenCheck showed: the server copies its own run, never a posted payload, hashes the exact bytes it serves, keeps it ninety days behind an unguessable link, and moves analyst dispositions onto the persistent disk.
+**Latest: Phase 217** — A saved report opens as a page at /report/{id}: the same report replayed from what was saved, under a banner naming when it was kept, with everything that would fetch today's data switched off or reading the saved copy, and a Save action on every live check.
 
 → [Full development history](docs/status.md)
 

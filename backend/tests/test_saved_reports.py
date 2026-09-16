@@ -477,3 +477,26 @@ def test_every_saved_report_route_answers_with_the_limiter_on(limited_client: Te
     assert c.delete(f"/saved-reports/{rid}", headers={sr_header(): token}).status_code == 200
     assert c.post("/saved-reports", json={"lei": LEI, "run_completed_at": RUN_AT}).status_code == 201
     assert c.post("/saved-reports", json={"lei": LEI, "run_completed_at": RUN_AT}).status_code == 429
+
+
+# ---- Phase 217: what a saved source drawer reads ------------------------------------
+
+
+def test_deepen_result_carries_what_a_source_drawer_renders(client: TestClient, tmp_path: Path) -> None:
+    """A saved report's source drawers render from the stored ``deepen_result``
+    rather than calling /deepen for today's record, so the event carries the
+    rest of the /deepen answer — everything but the raw record."""
+    _seed_bundle(tmp_path)
+    live = client.get("/lookup", params={"lei": LEI}).json()
+    saved = _save(client, run_completed_at=live["run_completed_at"])
+    events = client.get(f"/saved-reports/{saved['report_id']}").json()["payload"]["events"]
+    deepened = [e["data"] for e in events if e["event"] == "deepen_result"]
+    assert deepened, "the offline GLEIF bundle is deepened"
+    for d in deepened:
+        assert {"source_id", "hit_id", "bods", "bods_issues", "risk_signals", "license", "license_notice"} <= set(d)
+        assert "raw" not in d
+    gleif = next(d for d in deepened if d["source_id"] == "gleif")
+    assert gleif["license"] == "CC0-1.0"
+    # The stream still never sends it.
+    with client.stream("GET", "/lookup-stream", params={"lei": LEI}) as r:
+        assert "event: deepen_result" not in "".join(r.iter_text())

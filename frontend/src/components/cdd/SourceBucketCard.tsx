@@ -20,6 +20,8 @@ import {
 import { mergeSignals } from "../../lib/expand";
 import { scopeCrossSourceSignals } from "../../lib/signalScope";
 import { NzAssociations } from "./NzAssociations";
+import { useSavedReport } from "./savedReportContext";
+import { NOT_DEEPENED_IN_SAVED, RAW_NOT_SAVED } from "../../lib/savedReport";
 
 // BodsGraphExplorer pulls in Cytoscape + cytoscape-dagre (~the bulk of the
 // bundle) but only renders when a user clicks "Visualise". Code-split it so
@@ -640,6 +642,8 @@ export function DeepenBlock({
   subjectSignals?: RiskSignal[];
 }) {
   const anyVisible = showDiagram || showStatements || showJson;
+  // Phase 217: a saved report keeps the mapped records, not the raw response.
+  const savedReport = useSavedReport();
 
   // Cross-source signals are computed against the MERGED bundle and ride on
   // the top-level risk_signals event, so they never reach a /deepen response.
@@ -754,9 +758,13 @@ export function DeepenBlock({
             <h4 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-1.5">
               The source's original response
             </h4>
-            <pre className="max-h-80 overflow-auto bg-white border border-oo-rule rounded-oo p-3 text-[10px]">
-              {JSON.stringify(detail.raw, null, 2)}
-            </pre>
+            {savedReport ? (
+              <p className="text-oo-muted">{RAW_NOT_SAVED}</p>
+            ) : (
+              <pre className="max-h-80 overflow-auto bg-white border border-oo-rule rounded-oo p-3 text-[10px]">
+                {JSON.stringify(detail.raw, null, 2)}
+              </pre>
+            )}
           </div>
         </section>
       )}
@@ -972,11 +980,20 @@ function HitRow({
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
   const panelId = useId();
+  const saved = useSavedReport();
 
   const anyOpen = showDiagram || showStatements || showJson;
 
   async function ensureFetched() {
     if (detail || loading) return;
+    // Phase 217: on a saved report the drawer shows the mapping made when the
+    // check ran — never a /deepen call for today's record.
+    if (saved) {
+      const kept = saved.deepen(hit.source_id, hit.hit_id);
+      if (kept) setDetail(kept);
+      else setError(NOT_DEEPENED_IN_SAVED);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -1166,7 +1183,7 @@ function HitRow({
             />
             <DataTile
               title="Original response"
-              meta="JSON, as the source sent it"
+              meta={saved ? "Mapped records as JSON; the raw response is not kept" : "JSON, as the source sent it"}
               action="Open response →"
               open={showJson}
               onClick={toggleJson}
@@ -1180,7 +1197,12 @@ function HitRow({
       {anyOpen && (
         <div id={panelId} className="mt-4 bg-oo-bg rounded-oo p-4 text-[12px]">
           {loading && <p className="text-oo-muted" role="status">Fetching…</p>}
-          {error   && <p className="text-red-700" role="alert">{error}</p>}
+          {error && error === NOT_DEEPENED_IN_SAVED && (
+            <p className="text-oo-muted" role="status">{error}</p>
+          )}
+          {error && error !== NOT_DEEPENED_IN_SAVED && (
+            <p className="text-red-700" role="alert">{error}</p>
+          )}
           {detail  && (
             <DeepenBlock
               detail={detail}
@@ -1267,6 +1289,9 @@ export function SourceBucketCard({
    *  anything other than a fresh live call. */
   liveness?: SourceLiveness;
 }) {
+  // Phase 217: New Zealand associations are looked up when the card renders,
+  // so a saved report does not show them (they were not saved).
+  const savedReport = useSavedReport();
   // NZ-only enrichment: director/shareholder cross-company associations. The
   // nz_companies hit_id is the company number.
   const nzCompanyNumber =
@@ -1340,7 +1365,7 @@ export function SourceBucketCard({
           />
         ))}
       </ul>
-      {nzCompanyNumber && (
+      {nzCompanyNumber && !savedReport && (
         <div className="px-5 pb-4">
           <NzAssociations companyNumber={nzCompanyNumber} />
         </div>

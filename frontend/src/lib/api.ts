@@ -1394,6 +1394,10 @@ export interface LookupStreamDoneEvent {
   lei: string;
   bods_issues: string[];
   license_notices: { source_id: string; hit_id: string; notice: string }[];
+  /** Phase 216: the run's name — its UTC completion time. What a save names
+   *  so the server copies this run and no other. Absent on runs cached before
+   *  the field existed. */
+  run_completed_at?: string;
 }
 
 /** Fatal error before streaming could start (e.g. invalid / unknown LEI). */
@@ -1456,6 +1460,72 @@ export type LookupStreamHandlers = {
 };
 
 /**
+ * Which handler each lookup event feeds (Phase 217).
+ *
+ * One table for both consumers of the event stream: `streamLookup`, which
+ * listens to the live SSE connection, and `replayLookupEvents`, which feeds a
+ * saved report's stored events through the very same handlers. A second,
+ * hand-kept mapping is how the two would drift — and a saved report that
+ * silently dropped an event would render a different report from the one
+ * that was saved. `error` and `done` are wired separately in `streamLookup`
+ * because they also close the connection; the replay handles them itself.
+ *
+ * Events not in the table (`deepen_result`, `deepen_error` — internal to the
+ * sync collector, never streamed) are ignored by both.
+ */
+export const LOOKUP_EVENT_HANDLERS = {
+  replayed: "onReplayed",
+  gleif_done: "onGleifDone",
+  sources_applicable: "onSourcesApplicable",
+  source_started: "onSourceStarted",
+  hit: "onHit",
+  source_completed: "onSourceCompleted",
+  source_error: "onSourceError",
+  cross_source_links: "onCrossSourceLinks",
+  possibly_same_entities: "onPossiblySame",
+  risk_signals: "onRiskSignals",
+  bods_counts: "onBodsCounts",
+  subject_profile: "onSubjectProfile",
+} as const satisfies Record<string, keyof LookupStreamHandlers>;
+
+type LookupDataHandlerKey = (typeof LOOKUP_EVENT_HANDLERS)[keyof typeof LOOKUP_EVENT_HANDLERS];
+
+function callLookupHandler(
+  handlers: LookupStreamHandlers,
+  key: LookupDataHandlerKey,
+  data: unknown,
+): void {
+  const fn = handlers[key] as ((e: unknown) => void) | undefined;
+  fn?.(data);
+}
+
+/**
+ * Feed a saved report's stored events through the lookup handlers, in order —
+ * the same handlers a live `/lookup-stream` drives, so the page a saved report
+ * renders is the page that was saved. Synchronous: every event is already in
+ * hand. A stored `error` event (never saved in practice — only completed runs
+ * are) reaches `onError`; `done` reaches `onDone`.
+ */
+export function replayLookupEvents(
+  events: { event: string; data: unknown }[],
+  handlers: LookupStreamHandlers,
+): void {
+  for (const { event, data } of events) {
+    if (data === null || data === undefined) continue;
+    if (event === "error") {
+      handlers.onError?.((data as LookupStreamErrorEvent).detail ?? "Unknown error");
+      continue;
+    }
+    if (event === "done") {
+      handlers.onDone?.(data as LookupStreamDoneEvent);
+      continue;
+    }
+    const key = (LOOKUP_EVENT_HANDLERS as Record<string, LookupDataHandlerKey>)[event];
+    if (key) callLookupHandler(handlers, key, data);
+  }
+}
+
+/**
  * Subscribe to the /lookup-stream SSE endpoint.
  * Returns a cleanup function that closes the connection.
  *
@@ -1488,54 +1558,12 @@ export function streamLookup(
     handlers.onError?.(data?.detail ?? "Unknown error");
     es.close();
   });
-  es.addEventListener("replayed", (ev) => {
-    const data = safeParse<ReplayedEvent>((ev as MessageEvent).data);
-    if (data) handlers.onReplayed?.(data);
-  });
-  es.addEventListener("gleif_done", (ev) => {
-    const data = safeParse<LookupGleifDoneEvent>((ev as MessageEvent).data);
-    if (data) handlers.onGleifDone?.(data);
-  });
-  es.addEventListener("sources_applicable", (ev) => {
-    const data = safeParse<LookupSourcesApplicableEvent>((ev as MessageEvent).data);
-    if (data) handlers.onSourcesApplicable?.(data);
-  });
-  es.addEventListener("source_started", (ev) => {
-    const data = safeParse<SourceStartedEvent>((ev as MessageEvent).data);
-    if (data) handlers.onSourceStarted?.(data);
-  });
-  es.addEventListener("hit", (ev) => {
-    const data = safeParse<SourceHit>((ev as MessageEvent).data);
-    if (data) handlers.onHit?.(data);
-  });
-  es.addEventListener("source_completed", (ev) => {
-    const data = safeParse<SourceCompletedEvent>((ev as MessageEvent).data);
-    if (data) handlers.onSourceCompleted?.(data);
-  });
-  es.addEventListener("source_error", (ev) => {
-    const data = safeParse<SourceErrorEvent>((ev as MessageEvent).data);
-    if (data) handlers.onSourceError?.(data);
-  });
-  es.addEventListener("cross_source_links", (ev) => {
-    const data = safeParse<CrossSourceLinksEvent>((ev as MessageEvent).data);
-    if (data) handlers.onCrossSourceLinks?.(data);
-  });
-  es.addEventListener("possibly_same_entities", (ev) => {
-    const data = safeParse<PossiblySameEntitiesEvent>((ev as MessageEvent).data);
-    if (data) handlers.onPossiblySame?.(data);
-  });
-  es.addEventListener("risk_signals", (ev) => {
-    const data = safeParse<RiskSignalsEvent>((ev as MessageEvent).data);
-    if (data) handlers.onRiskSignals?.(data);
-  });
-  es.addEventListener("bods_counts", (ev) => {
-    const data = safeParse<BodsCountsEvent>((ev as MessageEvent).data);
-    if (data) handlers.onBodsCounts?.(data);
-  });
-  es.addEventListener("subject_profile", (ev) => {
-    const data = safeParse<SubjectProfileEvent>((ev as MessageEvent).data);
-    if (data) handlers.onSubjectProfile?.(data);
-  });
+  for (const [name, key] of Object.entries(LOOKUP_EVENT_HANDLERS)) {
+    es.addEventListener(name, (ev) => {
+      const data = safeParse<unknown>((ev as MessageEvent).data);
+      if (data) callLookupHandler(handlers, key, data);
+    });
+  }
   es.addEventListener("done", (ev) => {
     const data = safeParse<LookupStreamDoneEvent>((ev as MessageEvent).data);
     if (data) handlers.onDone?.(data);
@@ -1844,4 +1872,113 @@ export async function retryLookupSource(
     throw new Error(detail);
   }
   return (await resp.json()) as LookupSourceResponse;
+}
+
+// ---------------------------------------------------------------------
+// Saved reports — /saved-reports (Phase 216 backend, Phase 217 page)
+// ---------------------------------------------------------------------
+
+/** One stored event, verbatim as the lookup pipeline emitted it. */
+export interface SavedReportEvent {
+  event: string;
+  data: unknown;
+}
+
+/** The frozen record. Everything in it is covered by `content_hash`. */
+export interface SavedReportPayload {
+  schema: string;
+  report_id: string;
+  lei: string;
+  legal_name: string | null;
+  jurisdiction: string | null;
+  deepen_top: number;
+  run_completed_at: string;
+  saved_at: string;
+  events: SavedReportEvent[];
+  narrative: NarrativeResponse | null;
+  dispositions: DispositionRecord | null;
+  licensing: LicenseAssessment;
+  scope: { included: string[]; excluded: string[] };
+  generator: { name: string; version: string; commit: string | null };
+}
+
+export interface SavedReportMeta {
+  report_id: string;
+  lei: string;
+  legal_name: string | null;
+  content_hash: string;
+  saved_at: string;
+  expires_at: string;
+  extended_at: string | null;
+  size_bytes: number | null;
+  report_path: string;
+  url: string;
+}
+
+export interface SavedReport extends SavedReportMeta {
+  json_path: string;
+  payload: SavedReportPayload;
+}
+
+/** A refusal the backend named (`X-OpenCheck-Refusal`), with its words. */
+export class SavedReportError extends Error {
+  readonly status: number;
+  readonly code: string | null;
+  constructor(message: string, status: number, code: string | null) {
+    super(message);
+    this.name = "SavedReportError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+async function savedReportError(res: Response, fallback: string): Promise<SavedReportError> {
+  let detail = fallback;
+  try {
+    const body = await res.json();
+    if (typeof body?.detail === "string") detail = body.detail;
+  } catch {
+    /* keep the fallback */
+  }
+  if (res.status === 429) detail = "Saving is limited to a few reports a minute — try again shortly.";
+  return new SavedReportError(detail, res.status, res.headers.get("X-OpenCheck-Refusal"));
+}
+
+/** Save the run this page is showing. The server copies its own held run;
+ *  nothing about the findings is sent from here. */
+export async function saveReport(req: {
+  lei: string;
+  run_completed_at: string;
+  narrative_run_id?: string | null;
+}): Promise<SavedReportMeta & { manage_token: string }> {
+  const body: Record<string, string> = { lei: req.lei, run_completed_at: req.run_completed_at };
+  if (req.narrative_run_id) body.narrative_run_id = req.narrative_run_id;
+  const res = await fetch(`${BASE_URL}/saved-reports`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw await savedReportError(res, `Could not save this report (HTTP ${res.status}).`);
+  return (await res.json()) as SavedReportMeta & { manage_token: string };
+}
+
+export async function getSavedReport(reportId: string): Promise<SavedReport> {
+  const res = await fetch(`${BASE_URL}/saved-reports/${encodeURIComponent(reportId)}`);
+  if (!res.ok) throw await savedReportError(res, `Could not open this saved report (HTTP ${res.status}).`);
+  return (await res.json()) as SavedReport;
+}
+
+export async function extendSavedReport(reportId: string, manageToken: string): Promise<SavedReportMeta> {
+  const res = await fetch(`${BASE_URL}/saved-reports/${encodeURIComponent(reportId)}/extend`, {
+    method: "POST",
+    headers: { "X-OpenCheck-Manage-Token": manageToken },
+  });
+  if (!res.ok) throw await savedReportError(res, `Could not extend this saved report (HTTP ${res.status}).`);
+  return (await res.json()) as SavedReportMeta;
+}
+
+/** The exact bytes `content_hash` covers — `shasum -a 256` on the download
+ *  reproduces it. */
+export function savedReportJsonUrl(reportId: string): string {
+  return `${BASE_URL}/saved-reports/${encodeURIComponent(reportId)}.json`;
 }

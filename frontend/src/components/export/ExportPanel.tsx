@@ -1,6 +1,13 @@
 import { useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { EXPORT_FORMATS, exportUrl, getLicenseMatrix, type ExportFormat } from "../../lib/api";
+import {
+  EXPORT_FORMATS,
+  exportUrl,
+  getLicenseMatrix,
+  savedReportJsonUrl,
+  type ExportFormat,
+  type LicenseAssessment,
+} from "../../lib/api";
 import { SectionHeading } from "../ui";
 import { DATA_SECTION_ID } from "./ExportMenu";
 
@@ -237,10 +244,15 @@ export function ExportPanel({
   lei,
   legalName,
   contributingSourceIds,
+  saved = null,
 }: {
   lei: string;
   legalName: string | null;
   contributingSourceIds: string[];
+  /** Phase 217: on a saved report the licence position is the one assessed
+   *  when it was saved (a source's terms can change), and the format
+   *  downloads — which re-run the check today — give way to the saved JSON. */
+  saved?: { reportId: string; licensing: LicenseAssessment } | null;
 }) {
   const [format, setFormat] = useState<Format>("json");
   const chipRefs = useRef<Partial<Record<Format, HTMLButtonElement | null>>>({});
@@ -250,10 +262,10 @@ export function ExportPanel({
   const licensing = useQuery({
     queryKey: ["license-matrix", sorted],
     queryFn: () => getLicenseMatrix(sorted),
-    enabled: sorted.length > 0,
+    enabled: sorted.length > 0 && !saved,
     staleTime: 60_000,
   });
-  const a = licensing.data?.assessment;
+  const a = saved ? saved.licensing : licensing.data?.assessment;
 
   const href = exportUrl(lei, format, { subsidiaries });
 
@@ -297,6 +309,21 @@ export function ExportPanel({
       </div>
 
       <div className="flex flex-col gap-5">
+        {saved ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-oo-small text-oo-muted leading-[1.6] max-w-[70ch]">
+              The downloads in each format run the check again today, so they are not offered
+              on a saved report. The saved JSON is exactly what was kept — the event stream
+              the page is drawn from, with every record each source returned.
+            </p>
+            <a
+              href={savedReportJsonUrl(saved.reportId)}
+              className="self-start shrink-0 whitespace-nowrap bg-oo-blue text-white text-oo-small font-bold rounded-oo px-4 py-2.5 hover:bg-oo-burst transition-colors inline-block"
+            >
+              Download the saved JSON
+            </a>
+          </div>
+        ) : (
         <div className="flex flex-col gap-3">
           {/* A radiogroup rather than eleven buttons: they are one choice.
               That role is a promise about keyboard behaviour, and a first pass
@@ -366,6 +393,7 @@ export function ExportPanel({
             by default — a large corporate group can add hundreds of statements.
           </p>
         </div>
+        )}
 
         {a && (
           // Under the formats at every width, not beside them.

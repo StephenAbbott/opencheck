@@ -42,6 +42,7 @@ export function VerdictStrip({
   graphShape,
   onOpenNetwork,
   onRerun,
+  saved = false,
   screening = false,
   registryTotal = null,
   jurisdiction = null,
@@ -71,6 +72,8 @@ export function VerdictStrip({
   onOpenNetwork?: () => void;
   /** Re-runs the lookup bypassing the replay cache. */
   onRerun?: () => void;
+  /** Phase 217: a saved report — its network is drawn as saved, not expanded. */
+  saved?: boolean;
   /** Sources are still streaming: counts are partial, so say nothing yet. */
   screening?: boolean;
 }) {
@@ -235,8 +238,9 @@ export function VerdictStrip({
               Explore the full ownership network
             </button>
             <span className="text-oo-small text-oo-muted">
-              Expand owners and controllers layer by layer, then explore the whole network in
-              one graph.
+              {saved
+                ? "Every record the saved check mapped, in one graph."
+                : "Expand owners and controllers layer by layer, then explore the whole network in one graph."}
             </span>
           </div>
         )}

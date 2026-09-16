@@ -105,15 +105,26 @@ export function networkRiskSentence({
   subject,
   additional,
   hasRun,
+  saved = false,
 }: {
   subject: number;
   additional: number;
   hasRun: boolean;
+  /** Phase 217: a saved report's network cannot be expanded (expansion looks
+   *  up today's records), so it never invites a run. */
+  saved?: boolean;
 }): string {
   const quick =
     subject === 0
       ? "QuickCheck flagged no risk signals in the records gathered so far."
       : `QuickCheck flagged ${plural(subject, "risk signal")} in the records gathered so far.`;
+  if (saved) {
+    const kept =
+      subject === 0
+        ? "QuickCheck flagged no risk signals on the subject in the saved check."
+        : `QuickCheck flagged ${plural(subject, "risk signal")} on the subject in the saved check.`;
+    return `${kept} The wider network is not expanded in a saved report.`;
+  }
   if (!hasRun) return `${quick} Run FullCheck to screen the wider network for risk.`;
   if (additional === 0) {
     return subject === 0

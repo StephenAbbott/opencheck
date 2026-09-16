@@ -81,6 +81,7 @@ export default function BodsGraphExplorer({
   direction = "owners",
   fullCheck = false,
   focusStatementId = null,
+  readOnly = false,
 }: {
   statements: unknown[];
   signals?: RiskSignal[];
@@ -99,6 +100,10 @@ export default function BodsGraphExplorer({
    *  gap and be lost. Raw statement ids are fine — resolved through the
    *  reconcile remap below, same as a citation. */
   focusStatementId?: string | null;
+  /** Phase 217: a saved report's network. The expansion controls — Run
+   *  FullCheck, Go deeper, Add next layer — call `/expand` for today's
+   *  records, so they are not offered; the graph draws what was saved. */
+  readOnly?: boolean;
 }) {
   // Layers revealed via progressive discovery, merged onto the base statement set.
   const [extra, setExtra] = useState<Stmt[]>([]);
@@ -501,7 +506,7 @@ export default function BodsGraphExplorer({
           It stays mounted for the whole run, because the first layer landing is
           what flips `hasRun` — collapsing on that would take Cancel and the
           progress line away mid-traversal. */}
-      {fullCheck && (!hasRun || showRunControls || running) && (
+      {fullCheck && !readOnly && (!hasRun || showRunControls || running) && (
         <div className="mb-2 rounded-oo border border-oo-blue bg-oo-soft px-3 py-2">
           <div className="flex items-center gap-3 flex-wrap">
             <button
@@ -556,7 +561,7 @@ export default function BodsGraphExplorer({
           stating what was run and what it reached. The run's stop reason stays
           on it: that sentence is how a reader learns the traversal hit the node
           cap rather than running out of network to walk. */}
-      {fullCheck && hasRun && !running && !showRunControls && (
+      {fullCheck && !readOnly && hasRun && !running && !showRunControls && (
         <div
           role="status"
           aria-label="FullCheck run summary"
@@ -604,6 +609,7 @@ export default function BodsGraphExplorer({
               subject: subjectRiskCount,
               additional: riskFindingCount(additionalSignals),
               hasRun,
+              saved: readOnly,
             })}
           </p>
           {additionalSignals.length > 0 && (
@@ -641,8 +647,8 @@ export default function BodsGraphExplorer({
               onSelect={setSelectedId}
               highlightSource={highlightSource}
               sameAs={sameAs}
-              layer={fullCheck ? layer : undefined}
-              onAddLayer={fullCheck ? addNextLayer : undefined}
+              layer={fullCheck && !readOnly ? layer : undefined}
+              onAddLayer={fullCheck && !readOnly ? addNextLayer : undefined}
             />
             {/* Provenance sits UNDER the canvas it describes. Above it, on a
                 network nobody had asked to expand yet, it was four source chips

@@ -5,8 +5,8 @@ the pipeline, so two people opening it a day apart can see different
 findings. A saved report is the record of exactly what OpenCheck showed for
 one company on one date — opt-in, addressable, and verifiable.
 
-The page that renders one (`/report/{id}`) is Phase 217; exports, the share
-card and the MCP tool are Phase 218.
+The page that renders one (`/report/{id}`) is Phase 217 (below); exports, the
+share card and the MCP tool are Phase 218.
 
 ## What is saved
 
@@ -133,6 +133,61 @@ With `OPENCHECK_SAVED_REPORTS_DB_FILE` set, the live sheets live in a
 before); a store-backed read still falls back to a legacy file. Unset, the
 filesystem path is used as before. A saved report carries a frozen copy; later
 edits to the live sheet never change it — save again for a new report.
+
+## The page — `/report/{id}` (Phase 217)
+
+The saved report renders through **the same React report** as a live check.
+`lib/api.ts` has one table, `LOOKUP_EVENT_HANDLERS`, mapping each lookup event
+to its handler; `streamLookup` wires it to the live SSE connection and
+`replayLookupEvents` feeds a saved report's stored events through it, and
+`App.tsx` builds the handlers once (`buildLookupHandlers`) for both. A saved
+report therefore cannot set page state differently from the check it keeps. A
+fixture with a retired signal code (`lib/savedReport.test.ts`) pins that such a
+code is carried, not dropped.
+
+**The banner** (`components/cdd/SavedReportBanner.tsx`) never collapses. It
+names the fifth clock beside the check's own ("Saved 16 Sept 2026, 15:18 UTC,
+from a check that finished at 15:12 UTC"), says nothing on the page has been
+re-checked since, gives the expiry, prints the full SHA-256 with a link to the
+saved JSON, and offers *Run a live check*. *Keep for another 90 days* appears
+only in the browser that holds the manage token. Wording lives in
+`lib/savedReport.ts`; dates are always UTC and use Sept/June/July.
+
+**What reaches for today's data is off, and says so.** Found while building it:
+FullCheck is not a fold over the events (`FullCheckPanel` calls `/lookup`, and
+its run controls call `/expand`), and every source card's Data drawer calls
+`/deepen`. So on a saved report:
+
+| Surface | Live | Saved report |
+|---|---|---|
+| QuickCheck, verdict, signals, source cards | stream | replayed events |
+| Source Data drawer | `/deepen` | the saved `deepen_result` for that result (via `SavedReportContext`); the raw response is not kept, and a result not deepened in the check says so |
+| FullCheck | `/lookup` + `/expand` | every saved `deepen_result` statement; Run FullCheck / Go deeper / Add next layer hidden |
+| Summary | Generate, sign off | the saved narrative and its frozen dispositions, read-only; "No summary was saved" otherwise |
+| Background check, Subsidiaries, History, Climate & ESG | live | a sentence in the tab: not part of a saved report |
+| Securities, NZ associations | live | not shown |
+| Licence panel | `/license-matrix` | the saved assessment |
+| Format downloads, PDF, Markdown | re-run the check | off, with the reason; the saved JSON instead (Phase 218 renders reports from the saved copy) |
+| Re-run, Retry source, Resume | live | not offered |
+
+For this, `deepen_result` (internal, never streamed) now also carries
+`bods_issues`, `risk_signals`, `license` and `license_notice` — reports saved
+before Phase 217 lack them and the drawer fills the gaps.
+
+**Saving a live check.** *Share and export* gains a *Keep* item. It is
+`aria-disabled` — never `disabled`, so its reason stays reachable by keyboard —
+while the check is streaming, after a per-source retry, or once the run is 15
+minutes old, each with its reason (`saveEligibility`). A save posts the LEI and
+`run_completed_at` only; if the summary was not written from this run the
+report is saved without it and the reader is told. On success the saved link is
+copied, the manage token is kept in `localStorage`
+(`opencheck.savedReports.manage`, per report id), a one-line confirmation
+appears under the subject, and the item becomes *Copy saved-report link*.
+
+**Never indexed, never counted.** `<meta name="robots" content="noindex,
+nofollow">` is added while a saved report is on screen (robots.txt already
+disallows `/report` on this host), and analytics rolls `/report/{id}` up to
+`/report` — the id is a capability.
 
 ## Deferred (potential follow-ups)
 

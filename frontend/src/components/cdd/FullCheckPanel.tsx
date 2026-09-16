@@ -39,6 +39,7 @@ export default function FullCheckPanel({
   signals = [],
   onOpenSubsidiaries,
   focusStatementId = null,
+  savedStatements = null,
 }: {
   lei: string;
   legalName: string | null;
@@ -56,14 +57,21 @@ export default function FullCheckPanel({
    *  used them moved to the Subsidiaries tab in Phase 185. */
   onPanelError?: (e: PanelError) => void;
   onPanelRecovered?: (panel: PanelId) => void;
+  /** Phase 217: a saved report's statements. When given, nothing is fetched —
+   *  the network is drawn from what was saved and cannot be expanded. */
+  savedStatements?: Stmt[] | null;
 }) {
   const [statements, setStatements] = useState<Stmt[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    setStatements(null);
     setError(null);
+    if (savedStatements) {
+      setStatements(savedStatements);
+      return;
+    }
+    setStatements(null);
     lookup(lei)
       .then((r) => {
         if (!cancelled) setStatements(r.bods as Stmt[]);
@@ -74,7 +82,7 @@ export default function FullCheckPanel({
     return () => {
       cancelled = true;
     };
-  }, [lei]);
+  }, [lei, savedStatements]);
 
   return (
     <>
@@ -107,7 +115,9 @@ export default function FullCheckPanel({
             <p className="mb-3 text-oo-small text-oo-muted leading-[1.6] max-w-[82ch]">
               The wider corporate network connected to{" "}
               <span className="font-medium text-oo-ink">{legalName ?? lei}</span>.
-              Run FullCheck to expand owners and controllers layer by layer.
+              {savedStatements
+                ? " As saved: every record the check mapped. Expanding the network looks up today's records, so it is not offered here."
+                : " Run FullCheck to expand owners and controllers layer by layer."}
             </p>
             <BodsGraphExplorer
               statements={statements}
@@ -115,6 +125,7 @@ export default function FullCheckPanel({
               entityName={legalName ?? undefined}
               direction="owners"
               fullCheck
+              readOnly={Boolean(savedStatements)}
               focusStatementId={focusStatementId}
             />
           </>
