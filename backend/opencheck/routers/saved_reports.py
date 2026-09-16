@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from dataclasses import dataclass
 from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Request, Response
@@ -93,6 +94,63 @@ def _frontend() -> str:
 
 def _with_url(meta: dict[str, Any]) -> dict[str, Any]:
     return {**meta, "url": f"{_frontend()}{meta['report_path']}"}
+
+
+def _api_base() -> str:
+    return (get_settings().public_api_base or "https://api.opencheck.world").rstrip("/")
+
+
+@dataclass(frozen=True)
+class SavedForExport:
+    """A saved report opened for rendering (Phase 218): the folded response the
+    PDF/Markdown/format exports read, and the ``saved`` block that marks them."""
+
+    meta: dict[str, Any]
+    payload: dict[str, Any]
+    response: Any  # LookupResponse
+    saved: dict[str, Any]
+
+    @property
+    def narrative(self) -> dict[str, Any] | None:
+        return self.payload.get("narrative")
+
+    @property
+    def dispositions(self) -> dict[str, Any] | None:
+        return self.payload.get("dispositions")
+
+    @property
+    def stamp(self) -> str:
+        """YYYYMMDD of the save — a download's name never reads today's clock."""
+        return str(self.meta["saved_at"])[:10].replace("-", "")
+
+
+async def open_for_export(report_id: str, lei: str | None = None) -> SavedForExport:
+    """Load, verify and fold a saved report. HTTP errors carry the saved-report
+    refusal codes; a ``lei`` that names another company is a 400."""
+    from .lookup import fold_lookup_events
+
+    store = _store()
+    try:
+        meta, data = await asyncio.to_thread(sr.load_report, store, report_id)
+    except sr.SavedReportError as exc:
+        raise _refuse(exc) from exc
+    if lei is not None and lei.strip().upper() != meta["lei"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Saved report {report_id} is for {meta['lei']}, not {lei.strip().upper()}.",
+        )
+    payload = json.loads(data)
+    response = fold_lookup_events(meta["lei"], sr.deserialise_events(payload.get("events") or []))
+    saved = {
+        "report_id": meta["report_id"],
+        "content_hash": meta["content_hash"],
+        "saved_at": payload.get("saved_at") or meta["saved_at"],
+        "run_completed_at": payload.get("run_completed_at") or "",
+        "report_url": f"{_frontend()}{meta['report_path']}",
+        "json_url": f"{_api_base()}/saved-reports/{meta['report_id']}.json",
+        "licensing": payload.get("licensing"),
+    }
+    return SavedForExport(meta=meta, payload=payload, response=response, saved=saved)
 
 
 # Every handler under @limiter.limit that returns a dict takes

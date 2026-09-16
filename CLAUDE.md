@@ -1513,3 +1513,19 @@ Things that will be re-derived otherwise:
 - Wording, dates (UTC, "16 Sept 2026") and save eligibility live in
   `lib/savedReport.ts`; `/report/{id}` rolls up to `/report` in `canonicalPath`.
 
+### Rendering a saved report (Phase 218)
+
+- **`open_for_export` (routers/saved_reports.py) is the one way in** for the
+  PDF, Markdown, `/export`, the share page and card: load → verify → fold →
+  `saved` block. Never call `_lookup_impl` on a `saved_report_id` path —
+  `test_saved_report_exports.py` monkeypatches it to raise.
+- **Pass `saved=` to the report builders only when there is one.** Existing
+  tests mock `build_report_pdf(report, *, narrative=None, dispositions=None)`.
+- **A saved render reads no clock and no current table**: dates from
+  `saved_at` / `run_completed_at`, licence from `saved["licensing"]`,
+  `sources_consulted` from the run. Adding a `datetime.now()` or a live
+  `assess()` to a report section breaks the "same record on any day" claim;
+  route it through `saved` like `_generated_line` does.
+- The saved share link is `/share/saved/{id}` (API host), not `/report/{id}`
+  — the preview must be the record's card and date.
+

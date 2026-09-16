@@ -198,6 +198,7 @@ export function ApiPage() {
               ["opencheck_lookup", "Due diligence by LEI: identity, identifiers, risk signals, source coverage."],
               ["opencheck_batch_lookup", "Up to 20 LEIs at once: one compact row each, with failed rows kept apart."],
               ["opencheck_export_bods", "The full ownership-and-control graph as BODS v0.4 statements."],
+              ["opencheck_save_report", "Keep a check as a saved report: a link and a SHA-256 of exactly what was found, not re-checked."],
               ["opencheck_list_sources", "Inventory of the data sources, with licence and live status."],
             ] as [string, string][]).map(([name, desc]) => (
               <div key={name} className="flex gap-2 text-[12.5px] leading-[1.6]">
@@ -315,7 +316,9 @@ export function ApiPage() {
             body embeds the <code className={mono}>narrative</code> the client already
             generated (no fresh model call) and, when present, the analyst’s{" "}
             <code className={mono}>dispositions</code>, so the accept / dispute / needs-review
-            decisions and notes are rendered into the report’s audit trail.
+            decisions and notes are rendered into the report’s audit trail. With{" "}
+            <code className={mono}>saved_report_id</code> it renders a saved report instead —
+            its own summary and sign-off, its SHA-256 in every page’s footer, no new check.
           </ApiEndpoint>
         </BtsCard>
 

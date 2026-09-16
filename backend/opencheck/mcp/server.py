@@ -34,6 +34,8 @@ _INSTRUCTIONS = (
     "signals; call opencheck_export_bods for the full machine-readable ownership "
     "graph in BODS v0.4. For a list of companies call opencheck_batch_lookup "
     "with up to 20 LEIs and read each row's verdict, counts and degraded flag. "
+    "To keep a check as a record the reader can share and verify, call "
+    "opencheck_save_report with the LEI; it returns a link and a SHA-256. "
     "Data is open; some sources are CC-BY-NC — respect the license_notices in "
     "responses."
 )
@@ -111,7 +113,8 @@ async def opencheck_lookup(lei: str, deepen_top: int = 5) -> dict[str, Any]:
 
     Returns the entity's identity, cross-reference identifiers, risk signals
     (sanctions / PEP / debarment / FATF / complex structure), and which sources
-    returned data. Call opencheck_export_bods for the full ownership graph.
+    returned data. Call opencheck_export_bods for the full ownership graph, and
+    opencheck_save_report to keep this check as a shareable, verifiable record.
 
     Args:
         lei: ISO 17442 Legal Entity Identifier (20 chars).
@@ -271,6 +274,73 @@ async def opencheck_person_check(
 
 
 @mcp.tool()
+async def opencheck_save_report(lei: str, deepen_top: int = 5) -> dict[str, Any]:
+    """Keep a check of an LEI as a saved report: a link to exactly what
+    OpenCheck found, on this date, that does not change afterwards.
+
+    Runs (or reuses, if it finished in the last 15 minutes) the same check as
+    opencheck_lookup, then saves the server's own copy of that run. Returns the
+    report ``url``, the ``content_hash`` (SHA-256 of the saved JSON at
+    ``json_url``), ``saved_at`` / ``expires_at`` and a ``manage_token`` — the
+    only way to extend or delete the report; keep it private, it is not shown
+    again. The saved report holds QuickCheck and FullCheck findings only
+    (no summary, Background check, Subsidiaries, History or ESG).
+
+    Args:
+        lei: ISO 17442 Legal Entity Identifier (20 chars).
+        deepen_top: How many top sources to deepen (0-10, default 5).
+
+    Tell the reader the report is a record from ``saved_at`` and is not
+    re-checked. Some sources are CC-BY-NC: see ``licensing``.
+    """
+    import asyncio
+
+    from .. import saved_reports as _sr
+    from ..licensing import assess as _assess
+    from ..routers.lookup import _lookup_impl as _lookup
+    from ..routers.saved_reports import _api_base, _with_url
+
+    store = _sr.get_store()
+    if store is None:
+        return {"error": "Saved reports are not enabled on this instance.", "status": 503}
+    try:
+        resp = await _lookup(lei=lei, deepen_top=deepen_top)
+    except HTTPException as exc:
+        return _err(exc)
+    if not resp.run_completed_at:
+        return {"error": "The check did not finish, so there is nothing to save. Run it again.", "status": 409}
+    try:
+        out = await asyncio.to_thread(
+            _sr.save_from_replay,
+            store,
+            lei=resp.lei or lei,
+            run_completed_at=resp.run_completed_at,
+            deepen_top=deepen_top,
+        )
+    except _sr.SavedReportError as exc:
+        return {"error": str(exc), "status": exc.status, "code": exc.code}
+    meta = _with_url(out)
+    return {
+        "report_id": meta["report_id"],
+        "url": meta["url"],
+        "json_url": f"{_api_base()}/saved-reports/{meta['report_id']}.json",
+        "content_hash": meta["content_hash"],
+        "lei": meta["lei"],
+        "legal_name": meta.get("legal_name"),
+        "run_completed_at": resp.run_completed_at,
+        "saved_at": meta["saved_at"],
+        "expires_at": meta["expires_at"],
+        "manage_token": meta["manage_token"],
+        "verdict": resp.verdict,
+        "licensing": _assess(_sr._contributing_ids(resp)).headline,
+        "note": (
+            "A record of this check as it stood when saved; nothing in it is re-checked. "
+            "Verify with: curl -s <json_url> | shasum -a 256"
+        ),
+    }
+
+
+@mcp.tool()
 async def opencheck_list_sources() -> dict[str, Any]:
     """List the data sources OpenCheck consults, with licence and live status."""
     from ..routers.health import sources as _sources
@@ -287,5 +357,6 @@ TOOL_NAMES = [
     "opencheck_batch_lookup",
     "opencheck_export_bods",
     "opencheck_person_check",
+    "opencheck_save_report",
     "opencheck_list_sources",
 ]

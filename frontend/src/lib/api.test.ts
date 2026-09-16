@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { EXPORT_FORMATS, exportUrl } from "./api";
+import { EXPORT_FORMATS, exportUrl, reportRequestBody, savedReportShareUrl } from "./api";
 
 /**
  * Wiring tests for the export URL builder. These pin the request the Export
@@ -60,5 +60,26 @@ describe("EXPORT_FORMATS", () => {
 
   it("leads with the format the page itself is made of", () => {
     expect(EXPORT_FORMATS[0]).toBe("json");
+  });
+});
+
+describe("downloads from a saved report (Phase 218)", () => {
+  const ID = "SU82_KMkQo2QbEv3Kcfm8A";
+
+  it("names the saved report and never adds the subsidiary network", () => {
+    const url = new URL(exportUrl(_LEI, "zip", { subsidiaries: true, savedReportId: ID }), "https://x.test");
+    expect(url.searchParams.get("saved_report_id")).toBe(ID);
+    expect(url.searchParams.get("lei")).toBe(_LEI);
+    expect(url.searchParams.has("subsidiaries")).toBe(false);
+  });
+
+  it("posts only the LEI and the saved report id for a report, never a narrative", () => {
+    const narrative = { summary: "x" } as never;
+    expect(reportRequestBody(_LEI, narrative, null, ID)).toEqual({ lei: _LEI, saved_report_id: ID });
+    expect(reportRequestBody(_LEI, narrative, null, null)).toEqual({ lei: _LEI, narrative, dispositions: null });
+  });
+
+  it("shares a saved report through its own share page", () => {
+    expect(savedReportShareUrl(ID)).toMatch(new RegExp(`/share/saved/${ID}$`));
   });
 });

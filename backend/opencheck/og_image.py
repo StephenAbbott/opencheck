@@ -182,6 +182,7 @@ def card_alt_text(
     signals: list[dict[str, Any]] | None,
     *,
     latin_name: str | None = None,
+    saved_at: str | None = None,
 ) -> str:
     """Alt text describing the rendered card, for ``og:image:alt``.
 
@@ -191,6 +192,9 @@ def card_alt_text(
     """
     display, romanised = card_display_name(name, lei, latin_name=latin_name)
     subject = f"{display} (romanised)" if romanised else display
+    if saved_at is not None:
+        # A saved report's card (Phase 218) describes the record, on its date.
+        return _saved_alt(subject, lei, signals or [], saved_at)
 
     if signals is None:
         return (
@@ -225,6 +229,33 @@ def card_alt_text(
         f"OpenCheck shareable card for {subject}, LEI {lei}, showing "
         f"{len(codes)} risk signal{plural} found: {named}{tail}. "
         f"Prompts the viewer to visit opencheck.world for details."
+    )
+
+
+_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"]
+
+
+def ui_date(iso: str) -> str:
+    """"16 Sept 2026", in UTC — the saved-report page's own date format."""
+    from datetime import datetime, timezone
+
+    try:
+        d = datetime.fromisoformat(str(iso).replace("Z", "+00:00")).astimezone(timezone.utc)
+    except ValueError:
+        return str(iso)[:10]
+    return f"{d.day} {_MONTHS[d.month - 1]} {d.year}"
+
+
+def _saved_alt(subject: str, lei: str, signals: list[dict[str, Any]], saved_at: str) -> str:
+    codes: list[str] = []
+    for sig in signals:
+        code = str(sig.get("code") or "")
+        if sig.get("kind", "risk") == "risk" and code and code not in codes:
+            codes.append(code)
+    plural = "s" if len(codes) != 1 else ""
+    return (
+        f"OpenCheck card for a saved report on {subject}, LEI {lei}, saved {ui_date(saved_at)}, "
+        f"showing {len(codes)} risk signal{plural} found in that check."
     )
 
 
@@ -302,10 +333,14 @@ def render_share_card(
     name: str | None,
     lei: str,
     signals: list[dict[str, Any]] | None,
+    *,
+    saved_at: str | None = None,
 ) -> bytes:
     """Render the share card PNG. ``signals=None`` renders the teaser
     variant (no completed lookup available); ``[]`` means a completed
-    lookup with zero signals."""
+    lookup with zero signals. ``saved_at`` (Phase 218) renders a saved
+    report's card: the call to action becomes the date it was saved, so a
+    preview of a saved link never reads as today's check."""
     s = 2  # supersample factor
     img = Image.new("RGB", (W * s, H * s), "#ffffff")
     draw = ImageDraw.Draw(img)
@@ -354,11 +389,20 @@ def render_share_card(
 
     cta_y = (H - 44 - 32) * s
     cx = 70 * s
-    for text, font, colour in [
-        ("Visit ", f_cta, _INK),
-        ("opencheck.world", f_cta_b, _INDIGO),
-        (" for more details", f_cta, _INK),
-    ]:
+    cta = (
+        [
+            ("Saved report · ", f_cta_b, _INK),
+            (f"{ui_date(saved_at)} · ", f_cta, _INK),
+            ("opencheck.world", f_cta_b, _INDIGO),
+        ]
+        if saved_at is not None
+        else [
+            ("Visit ", f_cta, _INK),
+            ("opencheck.world", f_cta_b, _INDIGO),
+            (" for more details", f_cta, _INK),
+        ]
+    )
+    for text, font, colour in cta:
         draw.text((cx, cta_y), text, font=font, fill=colour)
         cx += draw.textlength(text, font=font)
 
@@ -445,7 +489,11 @@ def render_share_card(
         elif total == 0:
             draw.text((px, 250 * s), "No risk signals surfaced",
                       font=_font("dmsans-500", 30 * s), fill="#ffffff")
-            draw.text((px, 296 * s), f"across {_source_count()} open sources",
+            # A saved card must not quote today's registry size beside a
+            # check that ran on another day.
+            draw.text((px, 296 * s),
+                      "in the check that was saved" if saved_at is not None
+                      else f"across {_source_count()} open sources",
                       font=f_more, fill=_LAVENDER)
 
     img = img.resize((W, H), Image.LANCZOS)

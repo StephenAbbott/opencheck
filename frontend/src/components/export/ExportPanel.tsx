@@ -8,6 +8,7 @@ import {
   type ExportFormat,
   type LicenseAssessment,
 } from "../../lib/api";
+import { LIVE_DOWNLOADS, SAVED_DOWNLOADS } from "../../lib/savedReport";
 import { SectionHeading } from "../ui";
 import { DATA_SECTION_ID } from "./ExportMenu";
 
@@ -249,9 +250,10 @@ export function ExportPanel({
   lei: string;
   legalName: string | null;
   contributingSourceIds: string[];
-  /** Phase 217: on a saved report the licence position is the one assessed
-   *  when it was saved (a source's terms can change), and the format
-   *  downloads — which re-run the check today — give way to the saved JSON. */
+  /** Phase 217/218: on a saved report the licence position is the one
+   *  assessed when it was saved (a source's terms can change), and every
+   *  format is built from the saved report (`saved_report_id`) rather than a
+   *  new check. The subsidiary network was not saved, so it is not offered. */
   saved?: { reportId: string; licensing: LicenseAssessment } | null;
 }) {
   const [format, setFormat] = useState<Format>("json");
@@ -267,7 +269,7 @@ export function ExportPanel({
   });
   const a = saved ? saved.licensing : licensing.data?.assessment;
 
-  const href = exportUrl(lei, format, { subsidiaries });
+  const href = exportUrl(lei, format, { subsidiaries, savedReportId: saved?.reportId ?? null });
 
   // Arrow keys move the selection and the focus together, which is what the
   // radiogroup pattern specifies and what makes the chips usable in a screen
@@ -309,21 +311,6 @@ export function ExportPanel({
       </div>
 
       <div className="flex flex-col gap-5">
-        {saved ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-oo-small text-oo-muted leading-[1.6] max-w-[70ch]">
-              The downloads in each format run the check again today, so they are not offered
-              on a saved report. The saved JSON is exactly what was kept — the event stream
-              the page is drawn from, with every record each source returned.
-            </p>
-            <a
-              href={savedReportJsonUrl(saved.reportId)}
-              className="self-start shrink-0 whitespace-nowrap bg-oo-blue text-white text-oo-small font-bold rounded-oo px-4 py-2.5 hover:bg-oo-burst transition-colors inline-block"
-            >
-              Download the saved JSON
-            </a>
-          </div>
-        ) : (
         <div className="flex flex-col gap-3">
           {/* A radiogroup rather than eleven buttons: they are one choice.
               That role is a promise about keyboard behaviour, and a first pass
@@ -375,25 +362,37 @@ export function ExportPanel({
             >
               Download
             </a>
-            <label className="flex items-center gap-2 text-oo-small text-oo-muted cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={subsidiaries}
-                onChange={(e) => setSubsidiaries(e.target.checked)}
-                className="accent-oo-blue"
-              />
-              Include the GLEIF subsidiary network
-            </label>
+            {saved ? (
+              <a
+                href={savedReportJsonUrl(saved.reportId)}
+                className="text-oo-small text-oo-blue underline underline-offset-2 hover:text-oo-burst"
+              >
+                Download the saved JSON
+              </a>
+            ) : (
+              <label className="flex items-center gap-2 text-oo-small text-oo-muted cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={subsidiaries}
+                  onChange={(e) => setSubsidiaries(e.target.checked)}
+                  className="accent-oo-blue"
+                />
+                Include the GLEIF subsidiary network
+              </label>
+            )}
           </div>
-          <p className="text-oo-meta text-oo-muted leading-[1.6] max-w-[70ch]">
-            Reproducible export for{" "}
-            {legalName ? <span>{legalName} (</span> : null}
-            <span className="font-mono">{lei}</span>
-            {legalName ? <span>)</span> : null}. The subsidiary network is off
-            by default — a large corporate group can add hundreds of statements.
-          </p>
+          {saved ? (
+            <p className="text-oo-meta text-oo-muted leading-[1.6] max-w-[70ch]">{SAVED_DOWNLOADS}</p>
+          ) : (
+            <p className="text-oo-meta text-oo-muted leading-[1.6] max-w-[70ch]">
+              Exports for{" "}
+              {legalName ? <span>{legalName} (</span> : null}
+              <span className="font-mono">{lei}</span>
+              {legalName ? <span>)</span> : null}. {LIVE_DOWNLOADS} The subsidiary network is
+              off by default — a large corporate group can add hundreds of statements.
+            </p>
+          )}
         </div>
-        )}
 
         {a && (
           // Under the formats at every width, not beside them.
