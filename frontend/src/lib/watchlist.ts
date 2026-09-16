@@ -21,11 +21,6 @@
 
 export const TOKEN_KEY = "opencheck.watchlist.token";
 
-/** What pressing Watch commits to — said beside the button, before it is
- *  pressed, not in the alert afterwards. */
-export const WATCH_PROMISE =
-  "Watching re-checks this company only when GLEIF or OpenSanctions publish a change to its record — no polling, no account, no email.";
-
 export const WATCH_LABEL = "Watch for changes";
 export const WATCHING_LABEL = "On your watchlist";
 

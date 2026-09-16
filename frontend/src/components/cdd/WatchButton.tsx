@@ -2,12 +2,11 @@
  * WatchButton — "Watch for changes" on the SubjectCard (Phase 215).
  *
  * Three states, decided from the list this browser holds: not watching
- * (the button, with the promise beside it — what watching *means*, said
- * before it is pressed), watching (a link to the watchlist), and the two
- * transitions. The promise is rendered by the parent, outside the header
- * row, because the row is `justify-between` with no wrap and a sentence in
- * it crushes the company name on phones (the card's own comments record
- * that failure twice).
+ * (the button), watching (a link to the watchlist), and the two
+ * transitions. What watching *means* — re-checked only when GLEIF or
+ * OpenSanctions publish a change, nothing polled — is explained on
+ * /watchlist, not here: a sentence in the subject card was tried on the
+ * day Phase 215 shipped and removed as too much text for the card.
  *
  * No token yet? The first Watch mints one, and the browser keeps it. There
  * is nothing to sign up for.
@@ -104,7 +103,6 @@ export function WatchButton({
         size="sm"
         onClick={watch}
         disabled={state === "saving"}
-        aria-describedby="watch-promise"
         data-testid="watch-add"
       >
         {state === "saving" ? "Adding…" : WATCH_LABEL}
