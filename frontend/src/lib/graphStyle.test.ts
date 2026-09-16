@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   EDGE_STYLE,
+  ENDED_EDGE,
   NODE_MARK,
   SIGNAL_STYLE,
   buildGraphLegend,
@@ -115,6 +116,25 @@ describe("buildGraphLegend", () => {
     expect(legend.signals[0].badge).toBe("!");
   });
 
+  it("names the ended-relationship fade only where the graph draws one (Phase 219)", () => {
+    const base = { edgeCategories: ["ownership"], signalsByNode: new Map(), hasPeople: false, hasCollapsed: false, signalName: name };
+    expect(buildGraphLegend(base).edgeModifiers).toEqual([]);
+    const legend = buildGraphLegend({ ...base, hasEnded: true });
+    expect(legend.edgeModifiers.map((m) => m.key)).toEqual(["ended"]);
+    expect(legend.edgeModifiers[0].name).toBe("Ended relationship");
+    // An ended shareholding is still ownership: the modifier never replaces
+    // the kind in the edge list.
+    expect(legend.edges.map((e) => e.key)).toEqual(["ownership"]);
+  });
+
+  it("fades an ended edge visibly but does not make it vanish", () => {
+    // BOVS completeness: no party may be omitted. A line too faint to see
+    // omits it in all but name.
+    expect(ENDED_EDGE.lineOpacity).toBeGreaterThanOrEqual(0.25);
+    expect(ENDED_EDGE.lineOpacity).toBeLessThanOrEqual(0.5);
+    expect(ENDED_EDGE.meaning.length).toBeGreaterThan(10);
+  });
+
   it("renders nothing at all for an empty graph", () => {
     const legend = buildGraphLegend({
       edgeCategories: [],
@@ -123,7 +143,9 @@ describe("buildGraphLegend", () => {
       hasCollapsed: false,
       signalName: name,
     });
-    expect(legend.edges.length + legend.nodes.length + legend.signals.length).toBe(0);
+    expect(
+      legend.edges.length + legend.edgeModifiers.length + legend.nodes.length + legend.signals.length
+    ).toBe(0);
   });
 });
 

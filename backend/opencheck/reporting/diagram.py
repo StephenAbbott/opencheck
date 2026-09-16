@@ -14,6 +14,8 @@ Visual language (matches the on-screen BOVS styling):
 - ownership interest      → blue edge
 - control / management role → purple edge
 - each edge is labelled with the interest (type, share band, dates)
+- an ended relationship (closed record, or every interest past its endDate)
+  keeps its colour, is drawn faint and says "ended <date>" (Phase 219)
 """
 
 # This module builds long inline-SVG strings; wrapping them to 100 cols would
@@ -25,6 +27,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 from xml.sax.saxutils import escape
+
+from ..bods.lifecycle import ended_phrase, statement_lifecycle
 
 # Palette — mirrors frontend BODSGraph edge categories + BOVS node colours.
 # Phase 122: ownership and role moved onto the brand node tier
@@ -38,6 +42,11 @@ _ENTITY = "#0d1b3e"  # entity node (navy)
 _UNSPEC = "#888888"  # unspecified party (grey)
 _INK = "#1a1a1a"
 _MUTE = "#595959"
+
+# Phase 219 — the line opacity of an ended relationship. Mirrors
+# ENDED_EDGE.lineOpacity in frontend/src/lib/graphStyle.ts; nothing pins the two
+# together, so move them as a pair. Labels stay fully opaque (WCAG 1.4.3).
+_ENDED_OPACITY = 0.5
 
 _R = 26              # node radius
 _VIEW_W = 760
@@ -197,7 +206,7 @@ def source_diagram(
     rows: list[tuple[str, str, str]] = [
         (
             _party_label((s.get("recordDetails") or {}).get("interestedParty"), by_id),
-            _row_interest((s.get("recordDetails") or {}).get("interests") or []),
+            _row_interest_for(s),
             _party_label((s.get("recordDetails") or {}).get("subject"), by_id),
         )
         for s in rel_statements
@@ -236,11 +245,16 @@ def source_diagram(
         pid = node_for(rd.get("interestedParty"))
         sid = node_for(rd.get("subject"))
         interests = rd.get("interests") or []
+        life = statement_lifecycle(s)
+        label = _interest_label(interests)
+        if life.ended:
+            label = f"{label} · {ended_phrase(life.ended_on)}"
         edges.append({
             "from": pid,
             "to": sid,
-            "label": _interest_label(interests),
+            "label": label,
             "cat": _classify(interests),
+            "ended": life.ended,
         })
 
     if not edges:
@@ -253,6 +267,18 @@ def source_diagram(
     return SourceDiagram(
         source_name=source_name, svg=svg, rows=rows, summary=summary, omitted=omitted
     )
+
+
+def _row_interest_for(stmt: dict[str, Any]) -> str:
+    """The table row for one relationship statement. The interest text already
+    carries each ``endDate`` ("to 2024-11-30"); a closed record that published
+    none would otherwise read as current, so it says "ended" (Phase 219)."""
+    interests = (stmt.get("recordDetails") or {}).get("interests") or []
+    text = _row_interest(interests)
+    life = statement_lifecycle(stmt)
+    if life.ended and not life.ended_on:
+        text = f"{text} (ended)"
+    return text
 
 
 def _row_interest(interests: list[dict[str, Any]]) -> str:
@@ -342,6 +368,12 @@ def _render(nodes: dict, edges: list, source_name: str) -> tuple[str, str]:
         f'orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{_OWN}"/></marker>'
         f'<marker id="arc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
         f'orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{_CTRL}"/></marker>'
+        # Ended relationships (Phase 219): the same heads at the same fade as
+        # the line — a marker does not inherit the line's stroke-opacity.
+        f'<marker id="aroe" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
+        f'orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{_OWN}" fill-opacity="{_ENDED_OPACITY}"/></marker>'
+        f'<marker id="arce" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
+        f'orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{_CTRL}" fill-opacity="{_ENDED_OPACITY}"/></marker>'
         '</defs>'
     )
     # Edges first (under nodes).
@@ -349,10 +381,14 @@ def _render(nodes: dict, edges: list, source_name: str) -> tuple[str, str]:
         (px, py), (sx, sy) = pos[e["from"]], pos[e["to"]]
         colour = _OWN if e["cat"] == "ownership" else _CTRL
         marker = "aro" if e["cat"] == "ownership" else "arc"
+        fade = ""
+        if e.get("ended"):
+            marker += "e"
+            fade = f' stroke-opacity="{_ENDED_OPACITY}"'
         x1, x2 = px + _R, sx - _R
         parts.append(
             f'<line x1="{x1:.0f}" y1="{py:.0f}" x2="{x2:.0f}" y2="{sy:.0f}" '
-            f'stroke="{colour}" stroke-width="3" marker-end="url(#{marker})"/>'
+            f'stroke="{colour}" stroke-width="3"{fade} marker-end="url(#{marker})"/>'
         )
         mx, my = (x1 + x2) / 2, (py + sy) / 2
         # Nudge the label off the line: above when the edge rises, below when it falls.
@@ -373,8 +409,11 @@ def _render(nodes: dict, edges: list, source_name: str) -> tuple[str, str]:
         leg.append((_OWN, "ownership interest", 40))
     if "control" in cats:
         leg.append((_CTRL, "control / management role", 220))
+    if any(e.get("ended") for e in edges):
+        leg.append((_MUTE, "ended relationship (drawn faint)", 420))
     for colour, text, lx in leg:
-        parts.append(f'<line x1="{lx}" y1="{ly}" x2="{lx + 24}" y2="{ly}" stroke="{colour}" stroke-width="3"/>')
+        faint = f' stroke-opacity="{_ENDED_OPACITY}"' if text.startswith("ended") else ""
+        parts.append(f'<line x1="{lx}" y1="{ly}" x2="{lx + 24}" y2="{ly}" stroke="{colour}" stroke-width="3"{faint}/>')
         parts.append(f'<text x="{lx + 30}" y="{ly + 4}" font-size="9" fill="{_MUTE}">{escape(text)}</text>')
     parts.append("</svg>")
     return "".join(parts), summary

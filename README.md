@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 218** — A saved report's PDF, Markdown, downloads, link preview and MCP tool are all built from what was saved, never a new check, with its SHA-256 on every PDF page.
+**Latest: Phase 219** — Ended relationships are drawn faint and dated on the ownership graph, its legend, the text view and the exported diagram, instead of looking like current ones.
 
 → [Full development history](docs/status.md)
 

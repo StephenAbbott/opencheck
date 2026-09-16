@@ -137,3 +137,60 @@ def test_entity_only_when_no_relationships():
     assert not d.has_relationships
     assert "Lone Co" in d.svg
     assert "no ownership or control relationships" in d.svg.lower()
+
+
+# ---------------------------------------------------------------------------
+# Phase 219 — ended relationships
+# ---------------------------------------------------------------------------
+
+
+def _ceased_bundle(*, closed: bool = True, end_date: str | None = "2019-06-18"):
+    rels, by_id = _bundle()
+    own = rels[0]
+    own["recordStatus"] = "closed" if closed else "new"
+    if end_date:
+        own["recordDetails"]["interests"][0]["endDate"] = end_date
+    return rels, by_id
+
+
+def _line_for(svg: str, colour: str) -> str:
+    return next(m for m in re.findall(r"<line [^>]*/>", svg) if f'stroke="{colour}"' in m and "marker-end" in m)
+
+
+def test_ended_relationship_is_drawn_faint_with_its_colour_and_dated():
+    rels, by_id = _ceased_bundle()
+    d = source_diagram(rels, by_id, source_name="UK Companies House")
+    own_line = _line_for(d.svg, "#3b82f6")
+    assert 'stroke-opacity="0.5"' in own_line
+    assert 'url(#aroe)' in own_line
+    assert "ended 18 June 2019" in d.svg
+    # The current director edge is untouched.
+    ctrl_line = _line_for(d.svg, "#7c3aed")
+    assert "stroke-opacity" not in ctrl_line and "url(#arc)" in ctrl_line
+    # Nobody is dropped (BOVS completeness) and the legend names the fade.
+    assert "Jane Eleanor Smith" in d.svg
+    assert "ended relationship" in d.svg
+
+
+def test_closed_record_without_a_date_says_ended_in_the_table():
+    rels, by_id = _ceased_bundle(end_date=None)
+    d = source_diagram(rels, by_id, source_name="UK Companies House")
+    assert d.rows[0][1].endswith("(ended)")
+    assert "· from 2016 · ended</text>" in d.svg
+    # A dated end already reads "to <date>", so it is not said twice.
+    rels, by_id = _ceased_bundle()
+    d = source_diagram(rels, by_id, source_name="UK Companies House")
+    assert "to 2019-06-18" in d.rows[0][1] and "(ended)" not in d.rows[0][1]
+
+
+def test_open_record_with_a_past_end_date_is_ended_too():
+    rels, by_id = _ceased_bundle(closed=False)
+    d = source_diagram(rels, by_id, source_name="UK Companies House")
+    assert 'stroke-opacity="0.5"' in _line_for(d.svg, "#3b82f6")
+
+
+def test_no_ended_legend_entry_when_nothing_has_ended():
+    rels, by_id = _bundle()
+    d = source_diagram(rels, by_id, source_name="UK Companies House")
+    assert "ended relationship" not in d.svg
+    assert "stroke-opacity" not in d.svg

@@ -33,7 +33,7 @@ import type { RiskSignal } from "../lib/api";
 // here and the per-source scoping filter must read `evidence` identically, so
 // they share one implementation rather than two that can drift.
 import { buildSignalMap } from "../lib/signalScope";
-import { EDGE_STYLE, signalStyle } from "../lib/graphStyle";
+import { EDGE_STYLE, ENDED_EDGE, signalStyle } from "../lib/graphStyle";
 import GraphLegend from "./GraphLegend";
 import { IdentityTick } from "./ui/IdentityTick";
 import { RISK_PRESENTATION } from "./risk/RiskChip";
@@ -86,6 +86,7 @@ function modelToElements(model: GraphModel, sameAs: SameAsCandidate[] = []): Ele
       data: {
         id: e.id, source: e.source, target: e.target,
         label: e.label, category: e.category, details: e.details, sources: e.sources,
+        ended: e.ended === true,
       },
     });
   }
@@ -204,6 +205,22 @@ const STYLESHEET: StylesheetStyle[] = [
       "line-style": "dashed", "curve-style": "bezier",
       "target-arrow-shape": "none", "source-arrow-shape": "none",
       width: 1.5, "font-style": "italic",
+    } as cytoscape.Css.Edge,
+  },
+  // Phase 219 — an ended relationship keeps its kind's colour and dash and is
+  // drawn faint. `line-opacity` fades the line and arrowhead only; the label
+  // (whose second line reads "ended <date>") stays at full contrast. Placed
+  // after the category rules so it composes with them rather than replacing
+  // their colour.
+  {
+    selector: "edge[?ended]",
+    // The label's white background is dropped too: an autorotated two- or
+    // three-line label on a short edge covers most of its length, and over a
+    // faded line that hid the line altogether (seen on the Bank Saderat PLC
+    // demo graph). Text over a half-opacity line stays readable.
+    style: {
+      "line-opacity": ENDED_EDGE.lineOpacity,
+      "text-background-opacity": 0,
     } as cytoscape.Css.Edge,
   },
   { selector: "edge.hovered",                style: { width: 3, "z-index": 999 } as cytoscape.Css.Edge },
@@ -524,11 +541,15 @@ export default function BODSGraph({
     (n) => n.recordType === "person" || n.recordType === "personStatement"
   ).length;
   const entityCount = model.nodes.length - personCount;
+  const endedCount = model.edges.filter((e) => e.ended).length;
   const graphAriaLabel =
     `Ownership structure graph${entityName ? ` for ${entityName}` : ""} — ` +
     `${entityCount} ${entityCount === 1 ? "entity" : "entities"}, ` +
     `${personCount} ${personCount === 1 ? "person" : "people"}, ` +
-    `${model.edges.length} ${model.edges.length === 1 ? "relationship" : "relationships"}. ` +
+    `${model.edges.length} ${model.edges.length === 1 ? "relationship" : "relationships"}` +
+    // Phase 219 — the fade is invisible to a screen reader; say how many.
+    (endedCount > 0 ? `, ${endedCount} of them ended` : "") +
+    ". " +
     "Open \u201cRead as text\u201d below the diagram for a text equivalent.";
 
   if (model.nodes.length === 0) {
@@ -623,6 +644,7 @@ export default function BODSGraph({
           hasPeople={personCount > 0}
           hasCollapsed={collapsedCount > 0}
           hasIdentityVerified={model.nodes.some((n) => n.identityVerified)}
+          hasEnded={endedCount > 0}
         />
       </div>
 

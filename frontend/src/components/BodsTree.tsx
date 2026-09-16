@@ -26,6 +26,7 @@ import type { RiskSignal } from "../lib/api";
 import { RISK_PRESENTATION } from "./risk/RiskChip";
 import { IdentityTick } from "./ui/IdentityTick";
 import { IDENTITY_VERIFIED_LABEL } from "../lib/identityVerification";
+import { interestCellText } from "../lib/relationshipStatus";
 
 function typeLabel(recordType: string): string {
   return recordType === "person" || recordType === "personStatement" ? "Person" : "Entity";
@@ -216,10 +217,12 @@ export default function BodsTree({
               </span>
             )}
 
-            {/* Interest cell */}
+            {/* Interest cell. An ended edge (Phase 219) says so in words: the
+                canvas draws it faint, which has no text equivalent, and only
+                the label's first line is shown here. */}
             {row.interestLabel && (
               <span className="flex-shrink-0 text-oo-meta text-oo-muted truncate max-w-[40%]">
-                {row.interestLabel.split("\n")[0]}
+                {interestCellText(row.interestLabel, row.interestEnded, row.interestEndedOn)}
               </span>
             )}
 

@@ -457,3 +457,168 @@ describe("identity verification tick (Phase 203)", () => {
     expect(rows.find((r) => r.id === "n-eve")!.identityVerified).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 219 — ended relationships
+// ---------------------------------------------------------------------------
+
+describe("ended relationships (Phase 219)", () => {
+  const AS_OF = "2026-09-16";
+  const party = (id: string, kind: "entity" | "person" = "person") =>
+    kind === "person"
+      ? { statementId: id, recordType: "person", recordDetails: { names: [{ fullName: id }], personType: "knownPerson" } }
+      : { statementId: id, recordType: "entity", recordDetails: { name: id } };
+  const rel = (
+    id: string,
+    from: string,
+    to: string,
+    interests: Record<string, unknown>[],
+    recordStatus = "new"
+  ) => ({
+    statementId: id,
+    recordId: `rec-${id}`,
+    recordType: "relationship",
+    recordStatus,
+    recordDetails: { interestedParty: from, subject: to, interests },
+  });
+  const psc75 = { type: "shareholding", share: { exclusiveMinimum: 75, maximum: 100 } };
+  const psc25 = { type: "shareholding", share: { minimum: 25, maximum: 50 } };
+
+  it("marks a closed PSC record ended, dated from its interest, and says so on the label", () => {
+    // The Open Ownership UK PSC shape: recordStatus closed + endDate = ceased_on.
+    const m = bodsToGraph(
+      [party("co", "entity"), party("ann"), rel("r", "ann", "co", [{ ...psc75, endDate: "2024-11-30" }], "closed")],
+      { asOf: AS_OF }
+    );
+    expect(m.edges[0]).toMatchObject({ ended: true, endedOn: "2024-11-30", category: "ownership" });
+    expect(m.edges[0].label).toBe("Owns 75–100%\nended 30 November 2024");
+    expect(m.edges[0].details).toMatch(/^Ended 30 November 2024\./);
+  });
+
+  it("marks a closed record with no endDate ended without inventing a date", () => {
+    const m = bodsToGraph(
+      [party("co", "entity"), party("ann"), rel("r", "ann", "co", [psc75], "closed")],
+      { asOf: AS_OF }
+    );
+    expect(m.edges[0].ended).toBe(true);
+    expect(m.edges[0].endedOn).toBeUndefined();
+    expect(m.edges[0].label).toBe("Owns 75–100%\nended");
+  });
+
+  it("marks a relationship ended when every interest has a past endDate, even if the record is open", () => {
+    // Companies House officer resignations carry endDate on a record never closed.
+    const m = bodsToGraph(
+      [party("co", "entity"), party("dir"), rel("r", "dir", "co", [{ type: "seniorManagingOfficial", endDate: "2021-03-01" }])],
+      { asOf: AS_OF }
+    );
+    expect(m.edges[0]).toMatchObject({ ended: true, endedOn: "2021-03-01", category: "role" });
+  });
+
+  it("keeps a future endDate current", () => {
+    const m = bodsToGraph(
+      [party("co", "entity"), party("ann"), rel("r", "ann", "co", [{ ...psc75, endDate: "2030-01-01" }])],
+      { asOf: AS_OF }
+    );
+    expect(m.edges[0].ended).toBeUndefined();
+    expect(m.edges[0].label).toBe("Owns 75–100%");
+  });
+
+  it("never drops an ended edge or its party — BOVS completeness", () => {
+    const m = bodsToGraph(
+      [party("co", "entity"), party("ann"), rel("r", "ann", "co", [psc75], "closed")],
+      { asOf: AS_OF }
+    );
+    expect(m.nodes.map((n) => n.id).sort()).toEqual(["ann", "co"]);
+    expect(m.edges).toHaveLength(1);
+  });
+
+  it("draws a pair with a current and an ended record as one current edge labelled by what is current", () => {
+    // A PSC whose holding moved from 25–50% to 75–100%: Companies House closes
+    // one PSC record and opens another for the same pair.
+    const m = bodsToGraph(
+      [
+        party("co", "entity"),
+        party("ann"),
+        rel("old", "ann", "co", [{ ...psc25, endDate: "2019-06-18" }], "closed"),
+        rel("new", "ann", "co", [psc75]),
+      ],
+      { asOf: AS_OF }
+    );
+    expect(m.edges).toHaveLength(1);
+    expect(m.edges[0].ended).toBeUndefined();
+    expect(m.edges[0].label).toBe("Owns 75–100%");
+    expect(m.edges[0].details).toContain("Ended 18 June 2019: Owns 25–50%");
+  });
+
+  it("keeps a closed record's undated interests ended once pooled with a current one", () => {
+    const m = bodsToGraph(
+      [
+        party("co", "entity"),
+        party("ann"),
+        rel("old", "ann", "co", [{ type: "votingRights" }], "closed"),
+        rel("new", "ann", "co", [psc75]),
+      ],
+      { asOf: AS_OF }
+    );
+    expect(m.edges[0].label).toBe("Owns 75–100%");
+    expect(m.edges[0].details).toContain("Ended: Controls (votes)");
+  });
+
+  it("draws a pair whose pooled records have all ended as ended, dated with the latest end", () => {
+    const m = bodsToGraph(
+      [
+        party("co", "entity"),
+        party("ann"),
+        rel("a", "ann", "co", [{ ...psc25, endDate: "2019-06-18" }], "closed"),
+        rel("b", "ann", "co", [{ ...psc75, endDate: "2024-11-30" }], "closed"),
+      ],
+      { asOf: AS_OF }
+    );
+    expect(m.edges).toHaveLength(1);
+    expect(m.edges[0]).toMatchObject({ ended: true, endedOn: "2024-11-30" });
+  });
+
+  it("leaves internal markers off the exposed edge", () => {
+    const m = bodsToGraph(
+      [
+        party("co", "entity"),
+        party("ann"),
+        rel("old", "ann", "co", [psc25], "closed"),
+        rel("new", "ann", "co", [psc75]),
+      ],
+      { asOf: AS_OF }
+    );
+    expect(JSON.stringify(m)).not.toContain("__closedRecord");
+  });
+
+  it("carries the end onto the tree row", () => {
+    const m = bodsToGraph(
+      [party("co", "entity"), party("ann"), rel("r", "co", "ann", [{ ...psc75, endDate: "2024-11-30" }], "closed")],
+      { asOf: AS_OF }
+    );
+    const rows = buildTree(m, new Set());
+    const child = rows.find((r) => r.depth === 1)!;
+    expect(child).toMatchObject({ interestEnded: true, interestEndedOn: "2024-11-30" });
+    expect(rows.find((r) => r.depth === 0)!.interestEnded).toBe(false);
+  });
+});
+
+describe("consolidation clean-up (C) with ended relationships (Phase 219)", () => {
+  const closeOne = (id: string) =>
+    consolidationStatements().map((s) => (s.statementId === id ? { ...s, recordStatus: "closed" } : s));
+
+  it("keeps a current ultimate edge when the direct chain that implied it has ended", () => {
+    // C→G direct has lapsed, so P→C→G no longer says today who consolidates G.
+    // Hiding P→G would leave G linked only by history.
+    const { edges } = bodsToGraph(closeOne("r-cg-d"), { asOf: "2026-09-16" });
+    const pairs = edges.map((e) => `${e.source}->${e.target}`).sort();
+    expect(pairs).toEqual(["C->G", "P->C", "P->G"]);
+    expect(edges.find((e) => e.source === "P" && e.target === "G")!.ended).toBeUndefined();
+    expect(edges.find((e) => e.source === "C" && e.target === "G")!.ended).toBe(true);
+  });
+
+  it("still hides an ended ultimate edge the direct chain covers", () => {
+    const { edges } = bodsToGraph(closeOne("r-pg-u"), { asOf: "2026-09-16" });
+    expect(edges.map((e) => `${e.source}->${e.target}`).sort()).toEqual(["C->G", "P->C"]);
+  });
+});
