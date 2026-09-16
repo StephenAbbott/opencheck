@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 211** — Romania's Trade Register is a live source, its index scoped to the companies that hold an LEI so it ships at 4.3 MB rather than 1.2 GB, with a prefix-join defect fixed that had been losing 38.6% of Romanian registration-number lookups.
+**Latest: Phase 212** — Romania's Trade Register now answers for companies identified by their fiscal code as well as their registration number, taking its reach from 41.8% to 90.7% of Romanian LEI holders, and a company it cannot find gets a card explaining why instead of vanishing.
 
 → [Full development history](docs/status.md)
 
