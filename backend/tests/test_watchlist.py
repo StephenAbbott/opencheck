@@ -645,3 +645,50 @@ def test_every_change_kind_is_worded_by_the_feed() -> None:
                               "new": {"answered": 2, "applicable": 2, "liveness": "live"},
                               "code": "X", "scheme": "S", "field": "f", "sources": ["a"], "degraded": ["a"]})
         assert sentence and sentence != f"{kind}."
+
+
+# ---- with the limiter ON -------------------------------------------------------
+
+
+@pytest.fixture
+def limited_client(env: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
+    """The suite runs with the limiter off (conftest). slowapi injects its
+    headers through a ``response: Response`` parameter and 500s on a
+    dict-returning handler that lacks one — which only shows with the
+    limiter on. Production found /recheck and DELETE this way on the day
+    Phase 215 deployed; this fixture is what would have caught it."""
+    from opencheck.ratelimit import limiter
+
+    async def _fake(lei: str, deepen_top: int = 5, refresh: bool = False) -> LookupResponse:
+        return _resp(lei)
+
+    monkeypatch.setattr("opencheck.routers.lookup._lookup_impl", _fake)
+    monkeypatch.setenv("OPENCHECK_RATE_LIMIT_DEFAULT", "50/minute")
+    monkeypatch.setenv("OPENCHECK_RATE_LIMIT_HEAVY", "2/minute")
+    get_settings.cache_clear()
+    limiter.reset()
+    limiter.enabled = True
+    try:
+        yield TestClient(app)
+    finally:
+        limiter.enabled = False
+        limiter.reset()
+        get_settings.cache_clear()
+
+
+def test_every_watch_route_answers_with_the_limiter_on(limited_client: TestClient) -> None:
+    c = limited_client
+    r = c.post("/watch/items", json={"lei": EASY})
+    assert r.status_code == 201 and "x-ratelimit-limit" in r.headers
+    token = r.json()["token"]
+    assert c.get(f"/watch/{token}").status_code == 200
+    assert c.get(f"/watch/{token}.atom").status_code == 200
+    r = c.post(f"/watch/{token}/recheck", json={"lei": EASY})
+    assert r.status_code == 200, r.text
+    assert r.headers["x-ratelimit-limit"] == "2"
+    r = c.delete(f"/watch/{token}/items/{EASY}")
+    assert r.status_code == 200, r.text
+    # The heavy tier bounds the re-check: the third press in a minute is refused.
+    _watch(c, EASY, token)
+    assert c.post(f"/watch/{token}/recheck", json={"lei": EASY}).status_code == 200
+    assert c.post(f"/watch/{token}/recheck", json={"lei": EASY}).status_code == 429
