@@ -60,6 +60,7 @@ const proxyRoutes: Record<string, { target: string; changeOrigin: boolean }> = {
   "/person-":         { target: backendTarget, changeOrigin: true },  // /person-check + /person-appointments
   "/narrative":       { target: backendTarget, changeOrigin: true },
   "/license-matrix":  { target: backendTarget, changeOrigin: true },
+  "/saved-reports":   { target: backendTarget, changeOrigin: true },
 };
 
 export default defineConfig({

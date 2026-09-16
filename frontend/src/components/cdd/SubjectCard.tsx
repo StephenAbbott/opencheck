@@ -41,6 +41,10 @@ export function SubjectCard({
   onMarkdown,
   exportError,
   onOpenWatchlist,
+  savedShare,
+  save,
+  reportUnavailable,
+  notice,
 }: {
   lei: string;
   legalName: string | null;
@@ -84,9 +88,18 @@ export function SubjectCard({
   /** Phase 215: renders the Watch control when given — the report's second
    *  affordance, under Share and export. Opens the /watchlist view. */
   onOpenWatchlist?: () => void;
+  /** Phase 217: on a saved report the share item copies the saved page's own
+   *  link — which opens the record — instead of the live share page. */
+  savedShare?: { url: string };
+  /** Phase 217: the Keep item of Share and export (see `ExportMenu`). */
+  save?: { label: string; description: string; disabled?: boolean; onSelect: () => void };
+  /** Phase 217: why the report downloads are off, on a saved report. */
+  reportUnavailable?: string;
+  /** Phase 217: a one-line outcome of a save, under the header row. */
+  notice?: string | null;
 }) {
   const [copied, setCopied] = useState(false);
-  const shareUrl = `${BASE_URL || "https://api.opencheck.world"}/share/${lei}`;
+  const shareUrl = savedShare?.url ?? `${BASE_URL || "https://api.opencheck.world"}/share/${lei}`;
   const cc = (jurisdiction || "").trim().toLowerCase().split("-")[0];
 
   return (
@@ -167,6 +180,12 @@ export function SubjectCard({
             mdBusy={mdBusy}
             onPdf={onPdf}
             onMarkdown={onMarkdown}
+            shareLabel={savedShare ? "Copy saved-report link" : undefined}
+            shareDescription={
+              savedShare ? "Opens this saved report — not a new check" : undefined
+            }
+            save={save}
+            reportUnavailable={reportUnavailable}
           />
           {onOpenWatchlist && (
             <WatchButton lei={lei} onOpenWatchlist={onOpenWatchlist} />
@@ -184,6 +203,14 @@ export function SubjectCard({
           at 375px the company name went to zero width. The card's own
           comments record that this column has crushed the name once
           before. */}
+      {notice && (
+        <p
+          role="status"
+          className="mt-3 text-oo-small text-oo-ok-text bg-oo-ok-bg border border-oo-ok-border rounded-oo px-3 py-2"
+        >
+          {notice}
+        </p>
+      )}
       {exportError && (
         <p
           role="alert"

@@ -15,6 +15,11 @@ describe("canonicalPath", () => {
     expect(canonicalPath("/", "?lei=549300PPXHEU2JF0AM85&refresh=1")).toBe("/lookup");
   });
 
+  it("rolls a saved report up to /report — its id is a capability", () => {
+    expect(canonicalPath("/report/SU82_KMkQo2QbEv3Kcfm8A", "")).toBe("/report");
+    expect(canonicalPath("/report/SU82_KMkQo2QbEv3Kcfm8A", "?mode=full")).toBe("/report");
+  });
+
   it("rolls ?person= reports up to /person-check (wins over ?lei=)", () => {
     expect(canonicalPath("/", "?person=Jane%20Doe")).toBe("/person-check");
     expect(canonicalPath("/", "?lei=549300PPXHEU2JF0AM85&person=Jane")).toBe(

@@ -85,6 +85,10 @@ export function ExportMenu({
   shareCopied = false,
   label = "Export",
   variant = "secondary",
+  shareLabel = "Copy share link",
+  shareDescription = "Its preview shows a live summary card for this entity",
+  save,
+  reportUnavailable,
 }: {
   pdfBusy: boolean;
   mdBusy: boolean;
@@ -98,6 +102,17 @@ export function ExportMenu({
   /** `primary` is the subject card's filled button; `secondary` the outline
    *  one this control wore when it lived in a section header. */
   variant?: "primary" | "secondary";
+  /** Phase 217: the share item's words. A saved report copies its own link,
+   *  which opens the saved page rather than a new check. */
+  shareLabel?: string;
+  shareDescription?: string;
+  /** Phase 217: "Save this report" (or, once saved, "Copy saved-report
+   *  link"). Disabled items carry their reason as the description — a
+   *  greyed-out control that does not say why is a dead end. */
+  save?: { label: string; description: string; disabled?: boolean; onSelect: () => void };
+  /** Phase 217: the report downloads re-run the check, so a saved report
+   *  disables them and says why (Phase 218 renders them from the saved copy). */
+  reportUnavailable?: string;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -149,7 +164,8 @@ export function ExportMenu({
   // The share item, when present, is index 0 and pushes the rest down. Roving
   // focus indexes the items that exist, never a fixed count — the menu is
   // rendered without a share item on surfaces that have no link to copy.
-  const reportIndex = onShare ? 1 : 0;
+  const saveIndex = onShare ? 1 : 0;
+  const reportIndex = saveIndex + (save ? 1 : 0);
 
   function item(index: number) {
     return (el: HTMLButtonElement | null) => {
@@ -233,21 +249,55 @@ export function ExportMenu({
                     🔗
                   </span>
                   <span>
-                    {shareCopied ? "Link copied" : "Copy share link"}
+                    {shareCopied ? "Link copied" : shareLabel}
                     <span className="block text-oo-meta text-oo-muted">
-                      Its preview shows a live summary card for this entity
+                      {shareDescription}
                     </span>
                   </span>
                 </button>
                 <div className="my-1.5 border-t border-oo-rule" role="presentation" />
               </>
             )}
+            {save && (
+              <>
+                <GroupHeading>Keep</GroupHeading>
+                <button
+                  ref={item(saveIndex)}
+                  type="button"
+                  role="menuitem"
+                  aria-disabled={save.disabled || undefined}
+                  onClick={() => {
+                    // aria-disabled rather than disabled, so the reason stays
+                    // reachable by keyboard: a disabled button drops out of the
+                    // roving focus and its explanation with it.
+                    if (save.disabled) return;
+                    close(false);
+                    save.onSelect();
+                  }}
+                  className={`${ITEM_CLASSES} ${save.disabled ? "cursor-default" : ""}`}
+                >
+                  <span aria-hidden="true" className="text-oo-blue mt-px">
+                    ⧉
+                  </span>
+                  <span className={save.disabled ? "text-oo-muted" : undefined}>
+                    {save.label}
+                    <span className="block text-oo-meta text-oo-muted">{save.description}</span>
+                  </span>
+                </button>
+                <div className="my-1.5 border-t border-oo-rule" role="presentation" />
+              </>
+            )}
             <GroupHeading>Report</GroupHeading>
+            {reportUnavailable && (
+              <p role="presentation" className="px-3 pb-1 text-oo-meta text-oo-muted leading-[1.5]">
+                {reportUnavailable}
+              </p>
+            )}
             <button
               ref={item(reportIndex)}
               type="button"
               role="menuitem"
-              disabled={pdfBusy}
+              disabled={pdfBusy || Boolean(reportUnavailable)}
               onClick={() => {
                 close(false);
                 onPdf();
@@ -266,7 +316,7 @@ export function ExportMenu({
               ref={item(reportIndex + 1)}
               type="button"
               role="menuitem"
-              disabled={mdBusy}
+              disabled={mdBusy || Boolean(reportUnavailable)}
               onClick={() => {
                 close(false);
                 onMarkdown();

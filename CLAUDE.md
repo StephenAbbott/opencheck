@@ -1498,3 +1498,18 @@ Things that will be re-derived otherwise:
 - Every route under `@limiter.limit` returning a dict takes
   `response: Response` — `test_every_saved_report_route_answers_with_the_limiter_on`.
 
+### The saved-report page (Phase 217)
+
+- **One event→handler table** (`LOOKUP_EVENT_HANDLERS` in `lib/api.ts`) and one
+  handler builder (`buildLookupHandlers` in `App.tsx`) serve the live stream and
+  `replayLookupEvents`. Add a new lookup event to the table, never to one side.
+- **Anything that fetches when opened must consult `SavedReportContext`**
+  (`components/cdd/savedReportContext.ts`) or be hidden on a saved report —
+  the source Data drawer (`/deepen`), FullCheck (`/lookup`, `/expand`),
+  NZ associations, securities, the licence matrix. A saved page that quietly
+  shows today's record next to the saved one is the failure this avoids.
+- **`deepen_result` carries the drawer's fields** (`bods_issues`,
+  `risk_signals`, `license`, `license_notice`) but never `raw`; keep it that way.
+- Wording, dates (UTC, "16 Sept 2026") and save eligibility live in
+  `lib/savedReport.ts`; `/report/{id}` rolls up to `/report` in `canonicalPath`.
+

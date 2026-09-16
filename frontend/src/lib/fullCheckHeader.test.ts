@@ -82,6 +82,14 @@ describe("networkRiskSentence", () => {
     );
   });
 
+  it("on a saved report, never invites a run it cannot offer", () => {
+    expect(networkRiskSentence({ subject: 2, additional: 0, hasRun: false, saved: true })).toBe(
+      "QuickCheck flagged 2 risk signals on the subject in the saved check. " +
+        "The wider network is not expanded in a saved report.",
+    );
+    expect(networkRiskSentence({ subject: 0, additional: 0, hasRun: false, saved: true })).not.toMatch(/Run FullCheck/);
+  });
+
   it("says 'no risk signals', never '0 risk signals'", () => {
     expect(networkRiskSentence({ subject: 0, additional: 0, hasRun: false })).toContain(
       "flagged no risk signals",

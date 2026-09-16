@@ -54,6 +54,9 @@ export function canonicalPath(pathname: string, search: string): string {
   if (params.has("lei")) return "/lookup";
   if (pathname.startsWith("/entity")) return "/entity";
   if (pathname.startsWith("/browse")) return "/browse";
+  // Phase 217: a saved report's id is a capability — whoever holds it can
+  // read the report. It must never reach an analytics path.
+  if (pathname.startsWith("/report/")) return "/report";
   // Known SPA views are already subject-free ("/", "/sources", "/about",
   // "/api", "/changelog"); anything unrecognised rolls up to "/" rather than
   // risk recording a path we did not anticipate.
