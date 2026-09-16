@@ -848,6 +848,44 @@ types are gone. One code path.
 
 ---
 
+## Nigeria CAC BOR (cac_nigeria) — the v1 API (Phase 213)
+
+The register's site was redesigned in September 2026 (Angular, `/api/v1`). The
+August harvest's `POST /api/bor-search/get_psc` endpoints now answer **404**.
+`scripts/build_cac_nigeria_index.py harvest` uses the new ones; every item here
+cost debugging time.
+
+- **Not BODS.** The homepage advertises "BODS-JSON" exports and shows a sample
+  that is not valid BODS in any version (`statementID`, `shareValue`). The API
+  returns CAC's own JSON; `report.json` is the printable report as JSON. Do not
+  look for a BODS endpoint without re-reading the front-end bundle first.
+- **Search is a substring match.** `searchTerm=771` returns 2,553 companies,
+  `size` caps at 100, and `rcNumber` is `"RC 2457"` for some companies and bare
+  digits for others. Search `"RC <n>"`, then the name; accept only an exact
+  digits-only RC.
+- **`/companies/{id}/psc` returns email, phone, full date of birth and ID
+  number to anonymous callers.** The harvester copies `_PSC_FIELDS` — an
+  **allowlist**. Never switch it to a denylist; `test_raw_harvest_holds_no_personal_contact_or_identity_fields` pins it.
+- **Flag → CAMA condition** (confirmed row-by-row against `report.json`):
+  `pscHoldsSharesOrInterest` 1, `pscVotingRights` 2, `pscRightToAppoint` 3,
+  `pscSignificantInfluence` 4 (company), `pscExerciseSignificantInfluence` 5
+  (trust or firm). `null` reads as NO.
+- **Row `status` is history.** ACTIVE is current; INACTIVE rows are earlier
+  filings (Dangote Cement: 8 INACTIVE + 1 ACTIVE). `map_cac_nigeria` builds a
+  current owner's relationship from ACTIVE rows only and closes an owner with
+  none — `recordStatus: closed`, **no `endDate`** (none is published).
+- **Corporate owners' names are not in v1.** Only `surname`/`firstname`/
+  `otherName` exist; a corporate PSC whose name CAC stores elsewhere is blank
+  (NNPC's MOPI/MOFI rows — named by the August API — read "N/A (Not Provided)"
+  even in CAC's PDF). Blank rows carry `governingLaw`/`register` and no
+  nationality. They map to `unknownEntity` "Unnamed corporate owner", one party
+  per row — **never `anonymousEntity`**, which would fire the opaque-ownership
+  signal against a company that withheld nothing.
+- Some filings now name an executive holding the parent's stake (MTN Nigeria:
+  Ralph Mupita 73.39%). Carried as filed.
+
+---
+
 ## Datafordeler CVR API (Denmark) — hard-won constraints
 
 These are non-obvious and cost significant debugging time. Do not deviate from them.
@@ -1139,7 +1177,7 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | New Zealand | nz_companies | `RA000466` — Companies Register (Companies Office) | 2026-08-28 (near-miss neighbour: `RA000749` NZ Business Number Register) |
 | Brazil | cnpj_brazil | `RA000681` — National Registry for Legal Entity (Receita Federal / CNPJ) | 2026-08-28 (state Juntas Comerciais are RA000036–RA000062) |
 | India | mca_india | `RA000394` — Companies Register (MCA21) | 2026-08-28 |
-| Nigeria | cac_nigeria | `RA000469` — Company Registry (Corporate Affairs Commission) | 2026-08-28 (also verified 2026-08-12; Africa's first public BO register). Offline curated example set of 10 LEI-anchored companies (`data/cac_nigeria_psc.json`); a live adapter is deferred pending CAC / Oasis Management engagement. LEI-keyed dispatch (not an RA deriver); asserts only the CAC-published RC number (`ng_cac_rc`), not the derived LEI. |
+| Nigeria | cac_nigeria | `RA000469` — Company Registry (Corporate Affairs Commission) | 2026-09-16 — all 30 set LEIs re-checked, `registeredAs` = RC (also verified 2026-08-12, 2026-08-28; Africa's first public BO register). Offline curated example set of 30 LEI-anchored companies (`data/cac_nigeria_psc.json`, Phase 213); a live adapter is deferred pending CAC / Oasis Management engagement. LEI-keyed dispatch (not an RA deriver); asserts only the CAC-published RC number (`ng_cac_rc`), not the derived LEI. |
 | Greece | gemi_greece | `RA000685` — General Commercial Registry (G.E.MI.), businessregistry.gr | 2026-08-28 — 20 of 25 sampled Greek LEI records use it |
 | Hong Kong | cr_hongkong | `RA000388` — Companies Registry · `RA000389` — Business Registration Office (Inland Revenue Department) | 2026-09-10 — 600 active HK records sampled: 63% RA000388, 20% RA000389, **both carry the 8-digit BRN in `registeredAs`** (a few RA000389 records hold the 16-digit BR certificate number or a hyphenated form; the BRN is the first eight digits). `RA000390` = SFC fund codes, not a company register. Scheme `HK-BRN`, not org-id's `HK-CR` (the old CR No.). **Not in `RA_BY_COUNTRY`**: one country code would have to pick one of the two authorities and `/resolve-national-id` would then miss the other's companies — the Phase 140 failure shape |
 | Moldova | asp_moldova | `RA000451` — State Register of Legal Entities (ASP) · `RA000950` — National Commission for Financial Markets · `RA000951` — National Bank of Moldova | 2026-09-15 — all 55 legal-address MD records: 50 RA000451, 2 each RA000950/RA000951, 1 RA999999 (the National Bank, no number); **all three real codes carry the 13-digit IDNO** in `registeredAs`, check digit weights 7-3-1. One record (`16479`, Mogo Loans SRL) is not an IDNO. `filter[entity.jurisdiction]=MD` also matches `US-MD` (Maryland) — filter on `entity.legalAddress.country`. Scheme `MD-IDNO`. **Not in `RA_BY_COUNTRY`**, for the same reason as Hong Kong |

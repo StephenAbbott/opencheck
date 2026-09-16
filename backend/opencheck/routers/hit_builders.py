@@ -870,6 +870,14 @@ def _bh_cac_nigeria(r: dict, ctx: _LookupCtx) -> SourceHit:
     # (matches the CAC's own `numberOfPsc` field). The BODS diagram may show
     # fewer nodes because map_cac_nigeria dedupes owners by canonical name.
     parts = [f"{n} PSC filing{'s' if n != 1 else ''}"]
+    # Phase 213: the register keeps superseded and ceased filings. Say how many
+    # are current, or a company with one owner reads as having nine. Rows
+    # without a status (the earlier index shape) count as current.
+    current = sum(
+        1 for p in pscs if (p.get("psc_status") or "ACTIVE").upper() == "ACTIVE"
+    )
+    if current != n:
+        parts[0] += f" · {current} current"
     parts.append("Nigeria CAC public register")
     # Corroboration rule: the CAC BOR publishes the RC number, NOT the LEI
     # (OpenCheck derives the LEI via GLEIF at build time). Assert only the RC —

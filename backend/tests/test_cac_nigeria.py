@@ -223,7 +223,7 @@ async def test_committed_index_maps_and_validates():
     cac_nigeria._reset_index_for_tests()  # ignore the fixture; load the real file
     adapter = cac_nigeria.CacNigeriaAdapter()
     index = cac_nigeria._get_index()
-    assert len(index) == 10, "expected 10 curated Nigerian entities"
+    assert len(index) == 30, "expected 30 curated Nigerian entities"
     total_rel = 0
     for lei in index:
         bundle = await adapter.fetch_by_lei(lei)
@@ -234,7 +234,7 @@ async def test_committed_index_maps_and_validates():
         # Hit builder must never assert the LEI (corroboration rule).
         hit = _bh_cac_nigeria(bundle, _ctx(lei, index[lei]["company"]))
         assert "lei" not in hit.identifiers
-    assert total_rel >= 10
+    assert total_rel >= 30
     cac_nigeria._reset_index_for_tests()
 
 
@@ -290,3 +290,183 @@ def test_index_membership_check_fails_open():
     assert _offline_index_covers(_Broken(), "X" * 20) is True
     # An adapter that does not declare the check is always applicable.
     assert _offline_index_covers(object(), "X" * 20) is True
+
+
+# ---------------------------------------------------------------------------
+# Phase 213 — the v1 API: filing history, unnamed owners, no personal data
+# ---------------------------------------------------------------------------
+
+_LEI_H = "5493000IBP32UQZ0KL24"
+
+_BASE_ROW = {
+    "owner_rc": None, "owner_jurisdiction": None, "nationality": None,
+    "notified": "2022-01-25", "shares": True, "share_pct_direct": None,
+    "share_pct_indirect": None, "voting": False, "voting_pct_direct": None,
+    "voting_pct_indirect": None, "appoint_board": False,
+    "sig_influence_company": False, "sig_influence_trust_firm": False,
+}
+
+
+def _row(**kw):
+    return {**_BASE_ROW, **kw}
+
+
+# Dangote Cement's shape: an owner filed three times and still current, two
+# owners whose every filing is INACTIVE, plus NNPC's two blank-name 50% rows.
+_HISTORY = {
+    _LEI_H: {
+        "company": "GAMMA PLC", "rc": "333333", "lei": _LEI_H,
+        "lei_status": "ISSUED", "status": "ACTIVE",
+        "pscs": [
+            _row(psc_id=1, psc_status="INACTIVE", owner_name="Holdco Ltd",
+                 owner_named=True, owner_kind="entity", share_pct_direct=90),
+            _row(psc_id=2, psc_status="ACTIVE", owner_name="Holdco Ltd",
+                 owner_named=True, owner_kind="entity", share_pct_direct=96.55,
+                 notified="2023-05-07"),
+            _row(psc_id=3, psc_status="INACTIVE", owner_name="Nominees Ltd",
+                 owner_named=True, owner_kind="entity"),
+            _row(psc_id=4, psc_status="CEASED", owner_name="Former Chair",
+                 owner_named=True, owner_kind="person"),
+            _row(psc_id=5, psc_status="ACTIVE", owner_name=None, owner_named=False,
+                 owner_kind="entity", share_pct_direct=50),
+            _row(psc_id=6, psc_status="ACTIVE", owner_name=None, owner_named=False,
+                 owner_kind="entity", share_pct_indirect=50, shares=True),
+            _row(psc_id=7, psc_status="ACTIVE", owner_name="Overfiled Ltd",
+                 owner_named=True, owner_kind="entity", share_pct_direct=120),
+        ],
+    },
+}
+
+
+@pytest.fixture
+def history_adapter(monkeypatch):
+    monkeypatch.setattr(cac_nigeria, "_index", dict(_HISTORY))
+    return cac_nigeria.CacNigeriaAdapter()
+
+
+def _rels(stmts):
+    by_id = {s["statementId"]: s for s in stmts}
+    out = {}
+    for s in stmts:
+        if s["recordType"] != "relationship":
+            continue
+        party = by_id[s["recordDetails"]["interestedParty"]]
+        name = party["recordDetails"].get("name") or party["recordDetails"]["names"][0]["fullName"]
+        out.setdefault(name, []).append(s)
+    return out, by_id
+
+
+async def test_superseded_filings_of_a_current_owner_are_not_a_second_relationship(history_adapter):
+    stmts = list(map_cac_nigeria(await history_adapter.fetch_by_lei(_LEI_H)))
+    assert validate_shape(stmts) == []
+    rels, _ = _rels(stmts)
+    holdco = rels["Holdco Ltd"]
+    assert len(holdco) == 1
+    assert holdco[0]["recordStatus"] == "new"
+    share = holdco[0]["recordDetails"]["interests"][0]
+    # Built from the ACTIVE row only — the INACTIVE 90% is not merged in.
+    assert share["share"]["exact"] == 96.55
+    assert share["startDate"] == "2023-05-07"
+
+
+async def test_an_owner_with_no_current_filing_is_closed_without_an_invented_date(history_adapter):
+    stmts = list(map_cac_nigeria(await history_adapter.fetch_by_lei(_LEI_H)))
+    rels, _ = _rels(stmts)
+    for name in ("Nominees Ltd", "Former Chair"):
+        (rel,) = rels[name]
+        assert rel["recordStatus"] == "closed"
+        assert all("endDate" not in i for i in rel["recordDetails"]["interests"])
+
+
+async def test_blank_name_rows_are_kept_as_separate_unknown_entities(history_adapter):
+    stmts = list(map_cac_nigeria(await history_adapter.fetch_by_lei(_LEI_H)))
+    rels, by_id = _rels(stmts)
+    unnamed = rels["Unnamed corporate owner"]
+    # Two blank rows are two parties: nothing says they are one owner.
+    assert len(unnamed) == 2
+    parties = {by_id[r["recordDetails"]["interestedParty"]]["statementId"] for r in unnamed}
+    assert len(parties) == 2
+    for r in unnamed:
+        party = by_id[r["recordDetails"]["interestedParty"]]
+        # unknownEntity, never anonymousEntity — the register's API dropped the
+        # name; the company withheld nothing, so no opaque-ownership signal.
+        assert party["recordDetails"]["entityType"]["type"] == "unknownEntity"
+        assert all(i["beneficialOwnershipOrControl"] is False
+                   for i in r["recordDetails"]["interests"])
+    shares = sorted(
+        (i["directOrIndirect"], i["share"]["exact"])
+        for r in unnamed for i in r["recordDetails"]["interests"]
+    )
+    assert shares == [("direct", 50), ("indirect", 50)]
+
+
+async def test_direction_is_unknown_without_a_usable_percentage(history_adapter):
+    stmts = list(map_cac_nigeria(await history_adapter.fetch_by_lei(_LEI_H)))
+    rels, _ = _rels(stmts)
+    (rel,) = rels["Overfiled Ltd"]
+    (interest,) = rel["recordDetails"]["interests"]
+    # 120% is not a share; the flag alone does not say direct or indirect.
+    assert "share" not in interest
+    assert interest["directOrIndirect"] == "unknown"
+
+
+async def test_unnamed_owners_raise_no_opaque_ownership_signal(history_adapter):
+    from opencheck.risk import assess_bundle
+
+    bundle = await history_adapter.fetch_by_lei(_LEI_H)
+    stmts = list(map_cac_nigeria(bundle))
+    codes = {sig.code for sig in assess_bundle("cac_nigeria", bundle, stmts, hit_id=_LEI_H)}
+    assert not any("OPAQUE" in c for c in codes)
+
+
+async def test_hit_summary_counts_current_filings(history_adapter):
+    b = await history_adapter.fetch_by_lei(_LEI_H)
+    hit = _bh_cac_nigeria(b, _ctx(_LEI_H, "GAMMA PLC"))
+    assert hit.summary.startswith("7 PSC filings · 4 current")
+
+
+def test_raw_harvest_holds_no_personal_contact_or_identity_fields():
+    """The register's /psc endpoint returns emails, phone numbers, full dates
+    of birth and ID numbers. The harvester copies an allowlist; this pins that
+    nothing outside it is committed."""
+    import importlib.util
+    import json
+    from pathlib import Path
+
+    backend = Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location(
+        "build_cac_nigeria_index", backend / "scripts" / "build_cac_nigeria_index.py"
+    )
+    build = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(build)
+    _PSC_FIELDS = build._PSC_FIELDS
+
+    raw = json.loads(
+        (backend / "opencheck" / "data" / "cac_nigeria_raw.json").read_text(encoding="utf-8")
+    )
+    banned = {"email", "phoneNumber", "dateOfBirth", "identityNumber", "address",
+              "city", "state", "lga", "occupation", "gender"}
+    assert not banned & set(_PSC_FIELDS)
+    for e in raw["entities"]:
+        for p in e["pscs"]:
+            assert set(p) <= set(_PSC_FIELDS), e["rc"]
+
+
+async def test_committed_nnpc_is_wholly_held_by_two_unnamed_owners():
+    """NNPC Ltd's register filing names neither of its two 50% holders.
+
+    The August 2026 API named them (MOPI and MOFI); the v1 API does not. The
+    stakes stay on the graph as unnamed owners rather than disappearing."""
+    cac_nigeria._reset_index_for_tests()
+    adapter = cac_nigeria.CacNigeriaAdapter()
+    stmts = list(map_cac_nigeria(await adapter.fetch_by_lei("9845007375EBB04C6F49")))
+    rels, _ = _rels(stmts)
+    assert set(rels) == {"Unnamed corporate owner"}
+    shares = sorted(
+        i["share"]["exact"]
+        for r in rels["Unnamed corporate owner"]
+        for i in r["recordDetails"]["interests"]
+        if i["type"] == "shareholding"
+    )
+    assert shares == [50, 50]
+    cac_nigeria._reset_index_for_tests()

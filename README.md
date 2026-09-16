@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 212** — Romania's Trade Register now answers for companies identified by their fiscal code as well as their registration number, taking its reach from 41.8% to 90.7% of Romanian LEI holders, and a company it cannot find gets a card explaining why instead of vanishing.
+**Latest: Phase 213** — Nigeria's beneficial ownership register grows from 10 to 30 example companies, re-harvested from the register's redesigned API with each filing's history, and owners the register no longer names stay on the graph as unnamed owners.
 
 → [Full development history](docs/status.md)
 

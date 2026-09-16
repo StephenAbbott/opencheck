@@ -6925,20 +6925,34 @@ def _cac_interests(psc: dict[str, Any], record_kind: str) -> list[dict[str, Any]
     """
     out: list[dict[str, Any]] = []
 
-    def _share(v: Any) -> dict[str, Any] | None:
-        return {"exact": v} if isinstance(v, (int, float)) and 0 < v <= 100 else None
+    def _valid(v: Any) -> bool:
+        return isinstance(v, (int, float)) and not isinstance(v, bool) and 0 < v <= 100
 
     start = psc.get("notified") or None
 
-    def _mk(itype: str, share_val: Any = None, details: str | None = None) -> dict[str, Any]:
+    def _mk(
+        itype: str,
+        pct_direct: Any = None,
+        pct_indirect: Any = None,
+        details: str | None = None,
+    ) -> dict[str, Any]:
+        # CAMA's conditions read "directly or indirectly", so the flag alone
+        # says neither. Only a usable percentage in one column says which;
+        # without one the interest is "unknown", never assumed direct.
+        # A percentage over 100 (NIPCO files 120%) is carried as no share.
+        if _valid(pct_direct):
+            how, share_val = "direct", pct_direct
+        elif _valid(pct_indirect):
+            how, share_val = "indirect", pct_indirect
+        else:
+            how, share_val = "unknown", None
         i: dict[str, Any] = set_beneficial_ownership(
-            {"type": itype, "directOrIndirect": "direct"},
+            {"type": itype, "directOrIndirect": how},
             "cac_nigeria",
             record_kind=record_kind,
         )
-        s = _share(share_val)
-        if s:
-            i["share"] = s
+        if share_val is not None:
+            i["share"] = {"exact": share_val}
         if details:
             i["details"] = details
         if start:
@@ -6946,9 +6960,13 @@ def _cac_interests(psc: dict[str, Any], record_kind: str) -> list[dict[str, Any]
         return i
 
     if psc.get("shares"):
-        out.append(_mk("shareholding", psc.get("share_pct_direct")))
+        out.append(_mk(
+            "shareholding", psc.get("share_pct_direct"), psc.get("share_pct_indirect"),
+        ))
     if psc.get("voting"):
-        out.append(_mk("votingRights", psc.get("voting_pct_direct")))
+        out.append(_mk(
+            "votingRights", psc.get("voting_pct_direct"), psc.get("voting_pct_indirect"),
+        ))
     if psc.get("appoint_board"):
         out.append(_mk("appointmentOfBoard"))
     if psc.get("sig_influence_company"):
@@ -6998,6 +7016,10 @@ def map_cac_nigeria(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     are deduped by canonical name so a shared owner (e.g. Dangote Industries)
     reuses one statement. The five CAMA PSC conditions map to BODS interest
     types (see ``_cac_interests``).
+
+    Phase 213: an owner whose every filing is INACTIVE or CEASED gets a
+    ``closed`` relationship, and a filing with no name at all gets its own
+    ``unknownEntity`` party rather than being dropped.
     """
     if not bundle or bundle.get("is_stub"):
         return
@@ -7039,29 +7061,63 @@ def map_cac_nigeria(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     yield subject_stmt
     subject_id: str = subject_stmt["statementId"]
 
-    # ── 2. Group PSC rows by canonical owner, emit owners + relationships ──
+    # ── 2. Group PSC rows by owner, emit owners + relationships ───────────
+    # The register keeps every filing with a status. A row is current when it
+    # is ACTIVE (or carries no status — the pre-Phase-213 index shape). An
+    # owner with any current row gets one relationship built from its current
+    # rows only; its earlier INACTIVE filings are superseded declarations of
+    # the same holding, not a second one. An owner with no current row left
+    # the register: one ``closed`` relationship from all its rows. The CAC
+    # publishes no cessation date, so none is invented (no ``endDate``).
+    def _is_current(psc: dict[str, Any]) -> bool:
+        return (psc.get("psc_status") or "ACTIVE").upper() == "ACTIVE"
+
     groups: dict[str, dict[str, Any]] = {}
     for psc in record.get("pscs") or []:
         owner = (psc.get("owner_name") or "").strip()
-        if not owner:
+        if owner:
+            key = f"named:{owner}"
+        elif psc.get("owner_named") is False:
+            # A corporate PSC whose name the register does not publish: its
+            # own party per row — two blank rows are not known to be one owner.
+            key = f"unnamed:{psc.get('psc_id')}"
+        else:
             continue
         kind = psc.get("owner_kind") or "entity"
-        g = groups.setdefault(owner, {"kind": kind, "psc": psc, "ilists": []})
-        g["ilists"].append(_cac_interests(
-            psc,
-            record_kind=(
-                "psc_natural_person" if kind == "person" else "psc_corporate"
-            ),
-        ))
+        g = groups.setdefault(key, {
+            "owner": owner, "kind": kind, "psc": psc, "rows": [],
+        })
+        g["rows"].append(psc)
 
     emitted: set[str] = set()
-    for owner, g in groups.items():
+    for key, g in groups.items():
+        owner = g["owner"]
         kind = g["kind"]
         psc = g["psc"]
         owner_rc = psc.get("owner_rc") or None
         juris = psc.get("owner_jurisdiction") or None
+        current_rows = [r for r in g["rows"] if _is_current(r)]
+        closed = not current_rows
+        rows = g["rows"] if closed else current_rows
+        record_kind = "psc_natural_person" if kind == "person" else "psc_corporate"
+        interests = _cac_merge_interests([
+            _cac_interests(r, record_kind=record_kind) for r in rows
+        ])
 
-        if kind == "person":
+        if not owner:
+            local_id = f"entity:{key}:{rc}"
+            if local_id not in emitted:
+                yield make_entity_statement(
+                    source_id="cac_nigeria",
+                    local_id=local_id,
+                    name=_CAC_UNNAMED_OWNER,
+                    entity_type="unknownEntity",
+                    entity_details=_CAC_UNNAMED_DETAILS,
+                    source_url=source_url,
+                )
+                emitted.add(local_id)
+            ip_id = _stable_id("cac_nigeria", "entity", local_id)
+        elif kind == "person":
             local_id = f"person:{owner}"
             nationalities = []
             nat = psc.get("nationality") or ""
@@ -7104,15 +7160,32 @@ def map_cac_nigeria(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 emitted.add(local_id)
             ip_id = _stable_id("cac_nigeria", "entity", local_id)
 
+        # The pre-Phase-213 local id (``rc:owner``) is kept for a named current
+        # owner, so its relationship statementId is unchanged by the rebuild.
+        rel_local = f"{rc}:{owner}" if owner else f"{rc}:{key}"
+        if closed:
+            rel_local += ":closed"
         yield make_relationship_statement(
             source_id="cac_nigeria",
-            local_id=f"{rc}:{owner}",
+            local_id=rel_local,
             subject_statement_id=subject_id,
             interested_party_statement_id=ip_id,
             interested_party_type="person" if kind == "person" else "entity",
-            interests=_cac_merge_interests(g["ilists"]),
+            interests=interests,
             source_url=source_url,
+            record_status="closed" if closed else "new",
         )
+
+
+#: Display name and entityType details for a PSC row with every name field
+#: blank. ``unknownEntity``, not ``anonymousEntity``: the gap is in what the
+#: register's public API returns, not a withholding by the company, so it must
+#: not reach the opaque-ownership risk signal (risk.py fires on anonymous* only).
+_CAC_UNNAMED_OWNER = "Unnamed corporate owner"
+_CAC_UNNAMED_DETAILS = (
+    "The CAC register publishes this PSC filing with every name field blank; "
+    "the filing's governing-law and register fields are those of a corporate PSC."
+)
 
 
 # ----------------------------------------------------------------------
