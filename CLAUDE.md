@@ -1463,3 +1463,38 @@ Things that will be re-derived otherwise:
   a "re-run found no difference" entry, never an invented finding against a
   real company. Regenerating in a different Chromium/Pillow changes the
   bytes of every image; ship only the one you changed.
+
+---
+
+## A saved report is the server's own copy of a run (Phase 216)
+
+`opencheck/saved_reports.py` + `routers/saved_reports.py`; design in
+`docs/saved-reports.md`. Things that will be re-derived otherwise:
+
+- **The payload is the lookup's event stream, not `LookupResponse`.** The
+  React report is a fold over the stream, so replaying stored events is what
+  renders the same report. `routers.lookup.fold_lookup_events` is the one fold
+  — `_lookup_impl` calls it too — so a saved report's PDF/MCP view cannot drift
+  from the live one. Keep `deepen_result` in the stored events: the stream
+  skips it, the exports need its BODS.
+- **Never accept a payload from a client.** A save names a run (`lei` +
+  `run_completed_at`, which the `done` event now carries) and copies the held
+  run out of `replay_entry()`. `SaveRequest` is `extra="forbid"`. A run that
+  has aged out, or that a per-source retry cleared, answers 409 "run the check
+  again" — never a silent re-run (Stephen, 16 Sept 2026).
+- **`run_completed_at` ≠ `fetched_at`.** `fetched_at` stays replay-only so a
+  live run is never badged as cached; `run_completed_at` names every run.
+- **Narratives only if this server wrote them from the same run** —
+  `routers.narrative.held_narrative`, held for the replay window.
+- **The hash covers the exact bytes served.** `canonical_bytes` (sorted keys,
+  compact, UTF-8) is serialised once, stored gzipped and served by
+  `/saved-reports/{id}.json`; the hash is re-checked on read. Do not
+  re-serialise a payload before hashing or serving it.
+- **Two capabilities:** `report_id` (read, shared) and `manage_token`
+  (extend/delete, stored as SHA-256). Extending never touches the hashed bytes.
+- **Live disposition sheets live in the same SQLite file** when it is set;
+  `dispositions.py` falls back to the old JSON files otherwise. A saved report
+  carries a frozen copy of the sheet.
+- Every route under `@limiter.limit` returning a dict takes
+  `response: Response` — `test_every_saved_report_route_answers_with_the_limiter_on`.
+

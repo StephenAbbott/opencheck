@@ -7,9 +7,14 @@ deterministic ``run_id`` — regenerating the narrative produces a new run and a
 fresh, empty disposition sheet, so a sign-off can never silently apply to text
 the analyst didn't read.
 
-Persistence is filesystem JSON under ``data/dispositions/<LEI>/<run_id>.json``
-(same ``data_root()`` convention as the adapter cache): durable across
-restarts, trivially inspectable in an audit, and no new dependencies.
+Persistence (Phase 216): a ``dispositions`` table in the saved-reports SQLite
+file (``OPENCHECK_SAVED_REPORTS_DB_FILE``) when it is configured — on Render
+that is the persistent disk, so a sign-off survives a deploy, which the old
+files under the data root did not. A saved report carries a frozen copy of
+the sheet as it stood at save time. When the file is unset (local dev, the
+test suite) the sheet is filesystem JSON under
+``data/dispositions/<LEI>/<run_id>.json`` as before, and a store-backed read
+still falls back to that file for sheets written before the store existed.
 Writes are whole-record overwrites (last-write-wins; single-analyst v1 —
 ``reviewer`` is reserved for when identity lands).
 """
@@ -105,9 +110,20 @@ def _record_path(lei: str, run_id: str) -> Path:
     return data_root() / "dispositions" / lei / f"{run_id}.json"
 
 
+def _store():  # noqa: ANN202 - SavedReportsStore | None; imported lazily
+    from .saved_reports import get_store
+
+    return get_store()
+
+
 def load_dispositions(lei: str, run_id: str) -> DispositionRecord | None:
     """Return the stored record for ``(lei, run_id)``, or ``None``."""
     validate_keys(lei, run_id)
+    store = _store()
+    if store is not None:
+        raw = store.get_disposition(lei, run_id)
+        if raw is not None:
+            return DispositionRecord.model_validate_json(raw)
     path = _record_path(lei, run_id)
     if not path.is_file():
         return None
@@ -150,6 +166,10 @@ def save_dispositions(record: DispositionRecord) -> DispositionRecord:
     out = record.model_copy(
         update={"dispositions": stamped, "reviewed_at": reviewed_at, "updated_at": now}
     )
+    store = _store()
+    if store is not None:
+        store.put_disposition(out.lei, out.run_id, out.model_dump_json(), now.isoformat())
+        return out
     path = _record_path(out.lei, out.run_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as fh:

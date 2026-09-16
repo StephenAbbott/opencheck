@@ -345,6 +345,7 @@ _DISALLOWED_API_PREFIXES = [
     "/batch-stream",
     "/batch-export",
     "/watch",
+    "/saved-reports",
     "/search",
     "/stream",
     "/deepen",

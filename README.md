@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 215** — Watch a company and be told through an Atom feed when GLEIF or OpenSanctions publish a change to it: nothing is polled, a watched LEI is re-run only when a delta names it with a material field changed, and a signal whose source could not be reached is reported as unchecked, never as gone.
+**Latest: Phase 216** — Save a lookup as a record of exactly what OpenCheck showed: the server copies its own run, never a posted payload, hashes the exact bytes it serves, keeps it ninety days behind an unguessable link, and moves analyst dispositions onto the persistent disk.
 
 → [Full development history](docs/status.md)
 
