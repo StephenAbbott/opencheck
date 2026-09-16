@@ -132,6 +132,12 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
     }
 
 
+# Every handler under a @limiter.limit that returns a dict MUST take
+# ``response: Response``: slowapi writes the X-RateLimit-* headers into it and
+# raises ("parameter `response` must be an instance of Response") without
+# it. The test suite runs with the limiter off, so only a limiter-on test
+# (test_watchlist.py) or production sees the 500 — which is how the first
+# deploy found it on /recheck and DELETE.
 @router.post("/watch/items", status_code=201)
 @limiter.limit(default_tier)
 async def add_item(request: Request, response: Response, body: AddItem) -> dict[str, Any]:
@@ -203,7 +209,7 @@ async def get_list(request: Request, token: str) -> JSONResponse:
 
 @router.delete("/watch/{token}/items/{lei}")
 @limiter.limit(default_tier)
-async def remove_item(request: Request, token: str, lei: str) -> dict[str, Any]:
+async def remove_item(request: Request, response: Response, token: str, lei: str) -> dict[str, Any]:
     store = _store()
     th = _list_or_404(store, token)
     norm = _lei_or_400(lei)
@@ -214,7 +220,7 @@ async def remove_item(request: Request, token: str, lei: str) -> dict[str, Any]:
 
 @router.post("/watch/{token}/recheck")
 @limiter.limit(heavy_tier)
-async def recheck(request: Request, token: str, body: RecheckItem) -> dict[str, Any]:
+async def recheck(request: Request, response: Response, token: str, body: RecheckItem) -> dict[str, Any]:
     """Re-check one watched entity now. A deliberate human action, so it
     bypasses the replay cache; the heavy tier bounds it."""
     store = _store()
