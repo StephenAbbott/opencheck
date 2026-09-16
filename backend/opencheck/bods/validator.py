@@ -26,6 +26,51 @@ _VALID_ENTITY_TYPES = {
     "state",
     "stateBody",
 }
+#: BODS v0.4 ``entityType.subtype`` — a CLOSED codelist (``openCodelist:
+#: false``), keyed by the ``entityType.type`` values each subtype may appear
+#: with (the ``allOf`` if/then blocks in ``entity-record.json``). A register's
+#: own wording for its entity types belongs in ``entityType.details``, never
+#: here. Phase 214 moved free text out of four mappers that wrote it into
+#: ``subtype``; ``tests/test_entity_subtype_guard.py`` pins this table to the
+#: schema vendored in ``libcovebods``.
+VALID_ENTITY_SUBTYPES_BY_TYPE: dict[str, frozenset[str]] = {
+    "arrangement": frozenset({"trust", "nomination", "other"}),
+    "legalEntity": frozenset({"trust", "other"}),
+    "stateBody": frozenset({"governmentDepartment", "stateAgency", "other"}),
+    "registeredEntity": frozenset({"other"}),
+    "state": frozenset({"other"}),
+    "anonymousEntity": frozenset({"other"}),
+    "unknownEntity": frozenset({"other"}),
+}
+VALID_ENTITY_SUBTYPES: frozenset[str] = frozenset(
+    {"governmentDepartment", "stateAgency", "other", "trust", "nomination"}
+)
+
+
+def entity_subtype_issue(record_details: dict[str, Any]) -> str | None:
+    """Return why an entity's ``entityType.subtype`` is invalid, else ``None``.
+
+    Absent is valid. A value outside the codelist, or one the codelist does
+    not allow alongside the entity's ``entityType.type``, is not.
+    """
+    et = record_details.get("entityType")
+    if not isinstance(et, dict) or "subtype" not in et:
+        return None
+    subtype = et.get("subtype")
+    if subtype not in VALID_ENTITY_SUBTYPES:
+        return (
+            f"entityType.subtype {subtype!r} not in the closed v0.4 codelist "
+            f"{sorted(VALID_ENTITY_SUBTYPES)} (local wording belongs in entityType.details)"
+        )
+    allowed = VALID_ENTITY_SUBTYPES_BY_TYPE.get(et.get("type"), frozenset())
+    if subtype not in allowed:
+        return (
+            f"entityType.subtype {subtype!r} does not align with entityType.type "
+            f"{et.get('type')!r} (allowed: {sorted(allowed)})"
+        )
+    return None
+
+
 _VALID_PERSON_TYPES = {"knownPerson", "anonymousPerson", "unknownPerson"}
 # Complete BODS v0.4 interestType codelist.
 # Source: https://raw.githubusercontent.com/openownership/data-standard/main/schema/codelists/interestType.csv
@@ -80,6 +125,8 @@ def validate_shape(statements: Iterable[dict[str, Any]]) -> list[str]:
     * recordDetails shape matches recordType
     * Relationship statements reference existing statement IDs
     * Interest type codes are in the v0.4 codelist
+    * ``entityType.subtype``, when present, is in the closed v0.4 codelist
+      and aligns with ``entityType.type``
 
     Relationship cross-reference resolution
     ---------------------------------------
@@ -124,6 +171,9 @@ def validate_shape(statements: Iterable[dict[str, Any]]) -> list[str]:
                 issues.append(f"{prefix}: entityType.type {et!r} not in {_VALID_ENTITY_TYPES}")
             if not rd.get("name"):
                 issues.append(f"{prefix}: entity missing name")
+            subtype_issue = entity_subtype_issue(rd)
+            if subtype_issue:
+                issues.append(f"{prefix}: {subtype_issue}")
 
         elif rt == "person":
             pt = rd.get("personType")

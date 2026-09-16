@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 213** — Nigeria's beneficial ownership register grows from 10 to 30 example companies, re-harvested from the register's redesigned API with each filing's history, and owners the register no longer names stay on the graph as unnamed owners.
+**Latest: Phase 214** — Entity types are now written to BODS `entityType.details` rather than the closed `subtype` codelist in the Cyprus, Australia and India mappers, and a test-suite guard fails any mapper that emits an invalid subtype.
 
 → [Full development history](docs/status.md)
 

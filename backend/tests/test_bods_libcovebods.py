@@ -585,6 +585,83 @@ def test_libcovebods_acra_singapore():
         assert_valid(statements, f"ACRA Singapore ({entity_key})")
 
 
+def _assert_details_not_subtype(statements: list[dict[str, Any]], label: str) -> None:
+    """Phase 214: the entity-type wording must reach ``entityType.details``.
+
+    Asserting it is *present* is what stops the schema check passing
+    vacuously, which is how the free text in ``subtype`` went unnoticed."""
+    entity_type = statements[0]["recordDetails"]["entityType"]
+    assert entity_type.get("details"), f"{label}: entityType.details not emitted — the check would be vacuous"
+    assert "subtype" not in entity_type, f"{label}: {entity_type}"
+
+
+async def test_libcovebods_cyprus_drcor():
+    """The bundle comes from the adapter's own ``fetch`` over the in-memory
+    register DB, so the mapper reads the keys the adapter actually emits."""
+    from opencheck.bods.mapper import map_cyprus_drcor
+    from opencheck.sources.cyprus_drcor import CyprusDrcorAdapter
+    from tests.test_cyprus_drcor import _make_db
+
+    adapter = CyprusDrcorAdapter()
+    adapter._db = _make_db()
+    bundle = await adapter.fetch("ΗΕ 489243", legal_name="VELRY GROUP LTD")
+    statements = list(map_cyprus_drcor(bundle))
+    _assert_details_not_subtype(statements, "Cyprus DRCOR")
+    assert_valid(statements, "Cyprus DRCOR")
+
+
+async def test_libcovebods_abr_australia(monkeypatch):
+    """Bundle from the adapter's ``fetch`` over the recorded-shape AbnDetails
+    JSONP body, not a hand-built dict."""
+    import respx
+    from httpx import Response
+
+    from opencheck.bods.mapper import map_abr_australia
+    from opencheck.sources.abr_australia import AbrAustraliaAdapter
+    from tests.test_abr_australia import ABN_DETAILS_JSONP, _live_settings
+
+    monkeypatch.setattr("opencheck.sources.abr_australia.get_settings", _live_settings)
+    with respx.mock:
+        respx.get(url__startswith="https://abr.business.gov.au/json/AbnDetails.aspx").mock(
+            return_value=Response(200, text=ABN_DETAILS_JSONP, headers={"content-type": "text/javascript"})
+        )
+        bundle = await AbrAustraliaAdapter().fetch("74172177893")
+    statements = list(map_abr_australia(bundle))
+    _assert_details_not_subtype(statements, "ABR Australia")
+    assert statements[0]["recordDetails"]["entityType"]["details"] == "Commonwealth Government Entity"
+    assert_valid(statements, "ABR Australia")
+
+
+async def test_libcovebods_mca_india(monkeypatch):
+    """Bundle from the adapter's ``fetch`` over the api.data.gov.in response
+    captured 2026-08-08, not a hand-built dict."""
+    import respx
+    from httpx import Response
+
+    from opencheck.bods.mapper import map_mca_india
+    from opencheck.sources.mca_india import McaIndiaAdapter
+    from tests.test_mca_india import _API_PREFIX, CIN_HIT_RESPONSE, _live_settings
+
+    monkeypatch.setattr("opencheck.sources.mca_india.get_settings", _live_settings)
+    with respx.mock:
+        respx.get(url__startswith=_API_PREFIX).mock(return_value=Response(200, json=CIN_HIT_RESPONSE))
+        bundle = await McaIndiaAdapter().fetch("L85110KA1981PLC013115")
+    statements = list(map_mca_india(bundle))
+    _assert_details_not_subtype(statements, "MCA India")
+    assert_valid(statements, "MCA India")
+
+
+def test_libcovebods_rejects_free_text_subtype():
+    """Negative control: the shape the four mappers used to emit fails the
+    v0.4 schema, so the three cases above would catch a regression."""
+    from opencheck.bods import make_entity_statement
+
+    stmt = make_entity_statement(source_id="mca_india", local_id="L1", name="ACME LIMITED")
+    stmt["recordDetails"]["entityType"] = {"type": "registeredEntity", "subtype": "Public"}
+    report = validate_bods_statements([stmt])
+    assert report["json_errors"], "a free-text subtype must fail JSON Schema validation"
+
+
 def test_libcovebods_ariregister():
     from opencheck.bods.mapper import map_ariregister
     bundle = {

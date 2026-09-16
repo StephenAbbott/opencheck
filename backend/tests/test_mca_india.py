@@ -323,11 +323,28 @@ def test_map_entity_statement():
     (addr,) = details["addresses"]
     assert addr["country"] == {"code": "IN", "name": "India"}
     assert "BANGALORE" in addr["address"]
-    assert details["entityType"]["subtype"] == "Public"
-    assert details["entityType"]["details"] == (
-        "Company limited by shares — Non-government company"
-    )
+    # Class, category and sub-category are all local wording → details, class
+    # first; subtype is a closed BODS 0.4 codelist (Phase 214).
+    assert details["entityType"] == {
+        "type": "registeredEntity",
+        "details": "Public — Company limited by shares — Non-government company",
+    }
     assert "dissolutionDate" not in details
+
+
+@pytest.mark.parametrize(
+    "overrides,expected",
+    [
+        ({"category": "", "sub_category": ""}, "Public"),
+        ({"company_class": ""}, "Company limited by shares — Non-government company"),
+        ({"company_class": "", "category": "", "sub_category": ""}, None),
+    ],
+)
+def test_map_entity_type_details_join(overrides, expected):
+    (stmt,) = list(map_mca_india(_bundle(**overrides)))
+    entity_type = stmt["recordDetails"]["entityType"]
+    assert "subtype" not in entity_type
+    assert entity_type.get("details") == expected
 
 
 def test_map_terminal_status_sets_dissolution():

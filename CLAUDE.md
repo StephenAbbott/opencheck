@@ -369,7 +369,12 @@ source: the page shows the last sweep's verdict and says when it was reached.
 - [ ] `bods/mapper.py` — `map_<name>()` function (+ `bods/__init__.py` export).
       Phase 168 moved the shared statement factories to `bods/statements.py`
       and the two largest sections to `bods/mappers/{ftm,wikidata}.py`;
-      `mapper.py` re-exports all of it, so imports are unchanged either way
+      `mapper.py` re-exports all of it, so imports are unchanged either way.
+      The register's own entity-type wording ("Local Company", "Public")
+      goes to `entityType.details` via `make_entity_statement(entity_details=…)`,
+      **never** `entityType.subtype` — a closed v0.4 codelist. A registry-wide
+      guard in `tests/conftest.py` fails any test whose mapper emits an
+      invalid subtype (Phase 214)
 - [ ] `routers/hit_builders.py` — `_bh_<name>()` hit builder (only this).
       Moved out of `routers/lookup.py` in Phase 168 and re-exported from it
 - [ ] `tests/test_<name>.py` — adapter + mapper tests
