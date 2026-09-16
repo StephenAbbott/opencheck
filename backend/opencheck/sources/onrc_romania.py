@@ -48,6 +48,29 @@ lookup resolves for 47.8% of LEI holders, and which half you land in depends on
 nothing more principled than which identifier the entity's LEI issuer chose to
 file.
 
+Both identifier shapes reach the register
+-----------------------------------------
+The dispatch key ``ro_fiscal_or_reg_id`` carries **either** a J-number or a
+CUI, because a deriver is a pure function of ``registeredAs`` and cannot
+consult the index to tell them apart. ``fetch`` sniffs the shape and takes
+``company_row`` or ``company_by_cui`` accordingly.
+
+Until Phase 212 only the first existed, so a CUI-keyed company — 4,854 of the
+8,677 dispatchable records, the *majority* — got a coverage note at best, and
+in the lookup path not even that: the note was built with ``is_stub`` True and
+``routers/lookup.py`` drops every stub above the registry branch, so ONRC was
+announced in ``sources_applicable`` and then produced no card and no error at
+all. Measured over the whole population:
+
+=====================================  =====  =====  ======
+identifier shape                       recs    row    share
+=====================================  =====  =====  ======
+J-number                               3,821  3,624   94.8%
+CUI                                    4,854  4,250   87.6%
+=====================================  =====  =====  ======
+
+ONRC reach: **41.8% → 90.7%**, 4,250 companies that previously saw nothing.
+
 The two registration-number formats
 -----------------------------------
 ONRC renumbered the register. The old ``X{county}/{seq}/{year}`` and the new
@@ -141,19 +164,34 @@ RO_RA_CODES: frozenset[str] = frozenset({RO_ONRC_RA_CODE, RO_TAX_RA_CODE})
 
 _DATASET_SEARCH_URL = "https://data.gov.ro/dataset?organization=onrc"
 
-#: Said when the index is present but holds no row for this company.
+#: Said when a **registration number** is present but the index holds no row.
 #:
 #: Three reasons it happens, all honest answers rather than failures: the
 #: company is a sole trader (an ``F``-prefixed number, excluded by design); it
 #: was registered after the monthly snapshot; or it was issued an LEI after the
 #: index was scoped to the LEI population. Measured over the 8,677 dispatchable
-#: Romanian LEI records on 15 September 2026, 199 land here — 105 sole traders,
-#: 92 absent from the September export, 2 unparseable.
+#: Romanian LEI records on 15 September 2026, 197 of the 3,821 J-number-keyed
+#: records land here.
 COVERAGE_NOT_INDEXED = (
     "This company is not in the indexed extract of the Trade Register. The "
     "index is built from ONRC's monthly open-data dump and covers registered "
     "companies, not sole traders, so a very recent registration or a "
     "natural-person business will not appear."
+)
+
+#: Said when the identifier is a **fiscal code** the index cannot pin to one row.
+#:
+#: A different answer from ``COVERAGE_NOT_INDEXED``, because a different thing
+#: happened: not "the register does not hold this company" but "the fiscal code
+#: does not pick out one registration". Both are honest; saying the first when
+#: the second is true would tell the user the company is absent when it may be
+#: sitting there under several historical registration numbers. 604 of the
+#: 4,854 CUI-keyed records land here.
+COVERAGE_CUI_UNRESOLVED = (
+    "This company is identified in GLEIF by its fiscal code, and that code "
+    "does not resolve to a single registration in the indexed extract of the "
+    "Trade Register — either the register has no row for it, or it carries "
+    "several registrations with none currently in normal standing."
 )
 _PORTAL_URL = "https://portal.onrc.ro/"
 
@@ -565,6 +603,67 @@ def company_row(registration_number: str) -> dict[str, Any] | None:
     return dict(rows[0])
 
 
+#: The register's word for a company in normal standing. The other statuses in
+#: the shipped index are ``radiată`` (struck off, 1,105), insolvency under Law
+#: 85/2014, expired seat, expired mandate and dissolution.
+ACTIVE_STATUS = "funcțiune"
+
+
+def company_by_cui(cui: str) -> dict[str, Any] | None:
+    """Return the ``company`` row for a fiscal code, or None.
+
+    The inverse of ``resolve_cui``, and the reason ONRC can answer at all for
+    roughly half of Romania's LEI holders: their GLEIF ``registeredAs`` is a
+    CUI, not a J-number, and a CUI is not the index key.
+
+    **A CUI is not unique in the register**, so this cannot be a plain lookup.
+    In the shipped index 469 fiscal codes sit on more than one row (1,021 rows,
+    12%) — always the same company under successive registration numbers, from
+    relocations and re-registrations: CONVERSION MEDIA SRL holds five, across
+    two counties and ten years.
+
+    **Status disambiguates it exactly.** Restricted to ``funcțiune``, the index
+    holds 6,764 rows and 6,764 distinct fiscal codes — zero collisions. The
+    duplicates are all historical registrations. So: one row wins outright
+    whatever its status; several rows are decided by which one is active; and
+    anything still ambiguous is refused rather than guessed, the rule
+    ``company_row`` already applies to a shared prefix.
+
+    **No name gate, deliberately** — unlike ``resolve_cui``. There the name
+    check guards a *prefix* join that can land on a different company; here the
+    CUI is an exact identifier off GLEIF's own record, which is stronger
+    evidence than a name. Gating on the name would lose exactly the companies
+    GLEIF still holds under a former name (CUI 4467425: GLEIF "UNLIMITED
+    WHOLESALE & RETAIL ROM", registrar "TRIPOP PRODCOM S.R.L."), which is a
+    live match, not a false one.
+    """
+    conn = _shared_conn()
+    if conn is None:
+        return None
+    try:
+        code = normalise_cui(cui)
+    except ValueError:
+        return None
+    try:
+        rows = conn.execute("SELECT * FROM company WHERE cui = ?", (code,)).fetchall()
+    except sqlite3.OperationalError as exc:
+        logger.warning("onrc_romania: cui query failed: %s", exc)
+        return None
+    if not rows:
+        return None
+    if len(rows) == 1:
+        return dict(rows[0])
+    active = [r for r in rows if (r["status"] or "") == ACTIVE_STATUS]
+    if len(active) == 1:
+        return dict(active[0])
+    # Several live registrations, or none. Refuse rather than pick.
+    logger.info(
+        "onrc_romania: CUI %s matches %d rows (%d active); refusing to choose",
+        code, len(rows), len(active),
+    )
+    return None
+
+
 def resolve_cui(registration_number: str, *, legal_name: str = "") -> str | None:
     """Resolve an ONRC registration number to a CUI, or None.
 
@@ -700,7 +799,23 @@ class OnrcRomaniaAdapter(SourceAdapter):
             for row in rows
         ]
 
-    def _stub(self, number: str, legal_name: str) -> dict[str, Any]:
+    def _stub(
+        self, number: str, legal_name: str, *, note: str = COVERAGE_NOT_INDEXED
+    ) -> dict[str, Any]:
+        """A miss, shaped so it survives to the card.
+
+        ``is_stub`` is **False** and ``not_found`` True — the INPI shape, and
+        not a cosmetic choice. ``routers/lookup.py`` drops every ``is_stub``
+        result in one blanket check placed *above* the registry-source branch,
+        so a ``True`` here meant ``_bh_onrc_romania``'s note-card branch could
+        never run: the source was announced in ``sources_applicable`` and then
+        produced no card and no error, which is the silence this whole ticket
+        keeps rediscovering.
+
+        No index is still a genuine stub — nothing was consulted — so that one
+        keeps ``is_stub: True`` and is dropped, which is right: without an
+        index ``covers_lei`` means the source is never dispatched at all.
+        """
         return {
             "source_id": self.id,
             "registration_number": number,
@@ -710,36 +825,64 @@ class OnrcRomaniaAdapter(SourceAdapter):
             "representatives": [],
             "legal_name": legal_name,
             "link": _DATASET_SEARCH_URL,
-            "is_stub": True,
-            "coverage_note": COVERAGE_NOT_INDEXED,
+            "is_stub": False,
+            "not_found": True,
+            "coverage_note": note,
         }
 
-    async def fetch(self, hit_id: str, *, legal_name: str = "") -> dict[str, Any]:
-        """Return the ONRC bundle for one registration number.
+    def _no_index(self, number: str, legal_name: str) -> dict[str, Any]:
+        """Nothing was read. A real stub, and dropped by the pipeline."""
+        bundle = self._stub(number, legal_name)
+        bundle["is_stub"] = True
+        bundle.pop("not_found", None)
+        return bundle
 
-        ``hit_id`` is an ONRC registration number in either format.
+    async def fetch(self, hit_id: str, *, legal_name: str = "") -> dict[str, Any]:
+        """Return the ONRC bundle for one company.
+
+        ``hit_id`` is whatever GLEIF filed under ``registeredAs`` for a
+        Romanian entity: an ONRC registration number in **either** format, or
+        a **CUI**. The dispatch key ``ro_fiscal_or_reg_id`` carries both
+        because a deriver is a pure function and cannot consult the index to
+        tell them apart, so the shape is sniffed here.
         """
         conn = _shared_conn()
+        number = ""
         try:
             number = normalise_registration_number(hit_id)
         except ValueError:
-            return self._stub(str(hit_id or ""), legal_name)
+            # Not a registration number. A CUI is the other thing GLEIF files
+            # for a Romanian entity, and about half of them are: see
+            # ``company_by_cui``. Until Phase 212 this returned a coverage
+            # note, so ONRC reached none of them.
+            if conn is None:
+                return self._no_index(str(hit_id or ""), legal_name)
+            company = company_by_cui(str(hit_id or ""))
+            if company is None:
+                return self._stub(
+                    str(hit_id or ""), legal_name, note=COVERAGE_CUI_UNRESOLVED
+                )
+            return self._bundle(conn, company, legal_name)
         if conn is None:
-            return self._stub(number, legal_name)
+            return self._no_index(number, legal_name)
 
         company = company_row(number)
         if company is None:
             return self._stub(number, legal_name)
+        return self._bundle(conn, company, legal_name)
 
-        # Declared only once a row is in hand. A stub short-circuits to
-        # STUB_PROVENANCE in ``Recorder.resolve`` anyway, but declaring a
-        # snapshot on the way to returning a placeholder would be claiming a
-        # read that produced nothing.
+    def _bundle(
+        self, conn: sqlite3.Connection, company: dict[str, Any], legal_name: str
+    ) -> dict[str, Any]:
+        """Assemble the bundle for a company row, from either entry path."""
+        # Declared only once a row is in hand. A miss short-circuits in
+        # ``Recorder.resolve`` anyway, but declaring a snapshot on the way to
+        # returning one would be claiming a read that produced nothing.
         declare_snapshot()
 
         # Representatives are filed against the register's own spelling of the
         # number, which may not be the spelling GLEIF holds.
-        filed = company.get("registration_number") or number
+        filed = str(company.get("registration_number") or "")
         bundle: dict[str, Any] = {
             "source_id": self.id,
             "registration_number": filed,
