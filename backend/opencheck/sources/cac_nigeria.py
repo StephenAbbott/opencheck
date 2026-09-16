@@ -10,10 +10,15 @@ Offline / vendored (why)
 ------------------------
 The CAC register is fully public, but its **official** API is restricted to
 Nigerian government / law-enforcement agencies — there is no sanctioned
-third-party API. So rather than scrape the site's private JSON API on the hot
-path, a small curated example set (10 LEI-anchored Nigerian companies) is
-harvested **once, offline** by ``scripts/build_cac_nigeria_index.py`` and
-committed as an LEI-keyed index at ``opencheck/data/cac_nigeria_psc.json``.
+third-party API. So rather than call the site's own JSON API on the hot path,
+a curated example set (30 LEI-anchored Nigerian companies) is harvested
+**offline** by ``scripts/build_cac_nigeria_index.py harvest`` and committed as
+an LEI-keyed index at ``opencheck/data/cac_nigeria_psc.json``.
+
+Since Phase 213 the index keeps every PSC filing with its register status
+(ACTIVE / INACTIVE / CEASED) and keeps filings whose owner name the register
+does not publish, as unnamed owners. It holds no contact details, dates of
+birth or identity numbers, although the register's API returns them.
 
 At runtime this adapter loads that committed index and answers ``fetch_by_lei``
 as a dict lookup — no network. ``bods.map_cac_nigeria`` maps each record to
@@ -140,8 +145,9 @@ class CacNigeriaAdapter(SourceAdapter):
                 "Beneficial ownership (Persons with Significant Control) from "
                 "Nigeria's Corporate Affairs Commission public register — "
                 "Africa's first public beneficial ownership register. Curated "
-                "example set: 10 LEI-anchored Nigerian companies harvested from "
-                "the CAC's public search register and mapped to BODS v0.4. Not a "
+                "example set: 30 LEI-anchored Nigerian companies harvested from "
+                "the CAC's public register, with each filing's status, and mapped "
+                "to BODS v0.4. Not a "
                 "live feed — the CAC's official API is restricted to Nigerian "
                 "government agencies."
             ),
@@ -167,7 +173,7 @@ class CacNigeriaAdapter(SourceAdapter):
 
         The lookup pipeline asks before dispatching, so a company this file
         cannot possibly describe is never announced as a source being queried
-        and never counted in "N of N sources answered". The set is ten LEI-anchored companies, not the whole Nigerian register — this
+        and never counted in "N of N sources answered". The set is thirty LEI-anchored companies, not the whole Nigerian register — this
         governs whether the source is *applicable*, and says nothing about the
         company.
 
