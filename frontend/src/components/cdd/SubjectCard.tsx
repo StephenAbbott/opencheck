@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { ExportMenu } from "../export/ExportMenu";
+import { WatchButton } from "./WatchButton";
+import { WATCH_PROMISE } from "../../lib/watchlist";
 import { trackEvent } from "../../lib/analytics";
 import { BASE_URL } from "../../lib/api";
 import type { StatusChip } from "../../lib/subjectProfile";
@@ -39,6 +41,7 @@ export function SubjectCard({
   onPdf,
   onMarkdown,
   exportError,
+  onOpenWatchlist,
 }: {
   lei: string;
   legalName: string | null;
@@ -79,8 +82,12 @@ export function SubjectCard({
   onMarkdown: () => void;
   /** A failed export, reported beside the control that started it. */
   exportError?: string | null;
+  /** Phase 215: renders the Watch control when given — the report's second
+   *  affordance, under Share and export. Opens the /watchlist view. */
+  onOpenWatchlist?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [watching, setWatching] = useState<boolean | null>(null);
   const shareUrl = `${BASE_URL || "https://api.opencheck.world"}/share/${lei}`;
   const cc = (jurisdiction || "").trim().toLowerCase().split("-")[0];
 
@@ -163,8 +170,20 @@ export function SubjectCard({
             onPdf={onPdf}
             onMarkdown={onMarkdown}
           />
+          {onOpenWatchlist && (
+            <WatchButton lei={lei} onOpenWatchlist={onOpenWatchlist} onStateChange={setWatching} />
+          )}
         </div>
       </div>
+
+      {/* What Watch commits to, said before it is pressed (Phase 215). Out
+          of the header row for the reason exportError is, below. Gone once
+          the company is on the list — the button then reads as a link. */}
+      {onOpenWatchlist && watching === false && (
+        <p id="watch-promise" className="mt-3 text-oo-meta text-oo-muted sm:text-right">
+          {WATCH_PROMISE}
+        </p>
+      )}
 
       {/* Outside the header row, not a third item inside it. The row is
           `justify-between` with no `flex-wrap`, so a sentence placed in it

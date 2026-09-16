@@ -121,6 +121,14 @@ services:
       # re-check. Without it the meip source covers nothing.
       - key: OPENCHECK_MEIP_DB_FILE
         value: /var/data/meip.sqlite
+      # --- Phase 215: the watchlist ---
+      # watchlist.sqlite — watched LEIs, baselines and the change log
+      # (opencheck/watchlist.py, docs/watchlist.md). Shares the disk above;
+      # kilobytes, not gigabytes. Unset = the feature is off (/watch answers
+      # 503). The GLEIF tier rides on the mirror refresh; the OpenSanctions
+      # tier reads their public entity deltas; nothing polls a register.
+      - key: OPENCHECK_WATCHLIST_DB_FILE
+        value: /var/data/watchlist.sqlite
       # Phase 187: the register's *streaming* key (a different credential
       # from COMPANIES_HOUSE_API_KEY; one connection per key — bods-stream
       # has its own). With the file above, the app holds one connection to

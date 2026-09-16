@@ -7,6 +7,7 @@
 
 import { trackEvent } from "./analytics";
 import type { Liveness, SourceLiveness } from "../components/cdd/LivenessBadge";
+import type { WatchlistPayload } from "./watchlist";
 
 export type { Liveness, SourceLiveness };
 
@@ -1746,6 +1747,72 @@ export async function fetchBatchExport(
     filename: m?.[1] ?? "opencheck-batch.zip",
     failed: Number(res.headers.get("x-opencheck-batch-failed") ?? "0") || 0,
   };
+}
+
+// ---------------------------------------------------------------------
+// Watchlist — /watch (Phase 215)
+// ---------------------------------------------------------------------
+
+async function watchError(res: Response, fallback: string): Promise<Error> {
+  let detail = fallback;
+  try {
+    const body = (await res.json()) as { detail?: unknown };
+    if (typeof body?.detail === "string") detail = body.detail;
+  } catch {
+    /* keep the fallback */
+  }
+  if (res.status === 429) detail = `${detail} Re-checks are limited to a few a minute — try again shortly.`;
+  return new Error(detail);
+}
+
+/** Watch an LEI. Without a token the backend mints a list and returns its
+ *  token — the only time it is shown. */
+export async function addWatch(
+  lei: string,
+  token: string | null,
+): Promise<WatchlistPayload & { token: string }> {
+  const res = await fetch(`${BASE_URL}/watch/items`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(token ? { lei, token } : { lei }),
+  });
+  if (!res.ok) throw await watchError(res, `Could not watch this company (HTTP ${res.status}).`);
+  return (await res.json()) as WatchlistPayload & { token: string };
+}
+
+export async function getWatchlist(token: string): Promise<WatchlistPayload> {
+  const res = await fetch(`${BASE_URL}/watch/${encodeURIComponent(token)}`);
+  if (!res.ok) throw await watchError(res, `Could not open the watchlist (HTTP ${res.status}).`);
+  return (await res.json()) as WatchlistPayload;
+}
+
+export async function removeWatch(token: string, lei: string): Promise<WatchlistPayload> {
+  const res = await fetch(
+    `${BASE_URL}/watch/${encodeURIComponent(token)}/items/${encodeURIComponent(lei)}`,
+    { method: "DELETE" },
+  );
+  if (!res.ok) throw await watchError(res, `Could not remove this company (HTTP ${res.status}).`);
+  return (await res.json()) as WatchlistPayload;
+}
+
+export interface RecheckResult {
+  lei: string;
+  legal_name?: string | null;
+  entries: number;
+  changes: { kind: string }[];
+}
+
+export async function recheckWatch(
+  token: string,
+  lei: string,
+): Promise<WatchlistPayload & { result: RecheckResult }> {
+  const res = await fetch(`${BASE_URL}/watch/${encodeURIComponent(token)}/recheck`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lei }),
+  });
+  if (!res.ok) throw await watchError(res, `The re-check could not run (HTTP ${res.status}).`);
+  return (await res.json()) as WatchlistPayload & { result: RecheckResult };
 }
 
 // ---------------------------------------------------------------------

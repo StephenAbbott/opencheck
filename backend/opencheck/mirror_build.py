@@ -222,6 +222,19 @@ def _iso_utc(value: str | None) -> str | None:
     return parsed.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def leis_in_csv(path: Path, column: str) -> set[str]:
+    """The distinct, upper-cased values of ``column`` in a (possibly zipped)
+    GLEIF CSV — how the watchlist learns which LEIs a delta named (Phase
+    215). Reads the file a second time rather than threading a collector
+    through the loaders; a LastDay delta is sixteen thousand rows."""
+    out: set[str] = set()
+    for row in _open_csv(path):
+        value = _v(row, column)
+        if value:
+            out.add(value.upper())
+    return out
+
+
 def _v(row: dict[str, str], col: str) -> str | None:
     """A trimmed CSV value, or ``None`` when the column is absent or blank."""
     value = row.get(col)

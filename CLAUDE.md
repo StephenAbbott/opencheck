@@ -1426,3 +1426,40 @@ fails on a *stale* baseline, so a commit that improves a count must run
 raise a count without `--allow-increase`. Allowlisted for hex:
 `lib/graphStyle.ts` (Cytoscape takes colour strings, not class names — this is
 the graph's token file) and `lib/bovsIcons.ts` (base64 data URIs).
+
+---
+
+## The watchlist re-runs on deltas, never on a clock (Phase 215)
+
+`opencheck/watchlist.py` + `routers/watch.py`; design in `docs/watchlist.md`.
+A watched LEI is re-run only when GLEIF's Golden Copy delta names it with a
+**material** field changed, or when OpenSanctions' entity delta names it.
+Things that will be re-derived otherwise:
+
+- **Tier 1 rides on `mirror_refresh.apply_delta`**, which hands the LEIs its
+  three delta files named to `watchlist.on_gleif_delta` after the watermark
+  is written. The hook never raises (a watcher failure must not fail the
+  refresh — a test pins it) and must not add keys to `rows_applied`.
+- **`GLEIF_MATERIAL_FIELDS` deliberately omits `NextRenewalDate` and
+  `LastUpdateDate`.** Most of a day's 16,000 delta rows are renewal churn;
+  the digest of the material fields is what filters it. Adding either
+  column re-runs every watched LEI once a year for nothing.
+- **Absence is a finding only when the producer answered.** `diff_snapshots`
+  emits `signal_unchecked` (not `signal_retired`) when the source that
+  produced a code is in `degraded_sources`, and `coverage_unchecked` when
+  coverage fell because of degraded sources. The feed and the page word
+  these as "could not re-check". Do not collapse the pair.
+- **The token is a capability**: minted server-side, kept in the browser's
+  `localStorage`, stored only as SHA-256. `rows_for_lei(with_hash=True)` is
+  the one path that reads a hash back, for the re-run; never serialise it.
+- **No mirror, no Tier 1.** `entity_pages.get_store()` is where the facts
+  come from; on an instance without the file the page says the GLEIF tier
+  cannot fire. Local dev without `OPENCHECK_WATCHLIST_DB_FILE` = 503.
+- **Tier 2 is organisations only** (`_OS_ORG_SCHEMATA`) and the watched
+  entity's own names. Person schemata are never read — that would put UBO
+  names into the store, which is the v2/GDPR line.
+- **The illustration is built** by `scripts/build_feature_images.py
+  watchlist` from a real GLEIF fact (an LEI that lapsed on 15 Sept 2026) and
+  a "re-run found no difference" entry, never an invented finding against a
+  real company. Regenerating in a different Chromium/Pillow changes the
+  bytes of every image; ship only the one you changed.

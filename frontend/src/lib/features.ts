@@ -155,6 +155,27 @@ export const FEATURES: Feature[] = [
     cta: { label: "Screen a list", href: "/batch" },
   },
   {
+    id: "watchlist",
+    name: "Watchlist",
+    kind: "Workflow",
+    icon: "watchlist",
+    // The second invented value, on batch screening's grounds: the shipped
+    // palette had nothing left that was unclaimed, legible as a ring on the
+    // badge navy, and unlike the History amber it sits beside. A fuchsia
+    // reads as a notification without reading as a finding.
+    accent: "#e879f9",
+    glyph: "#fae8ff",
+    description:
+      "Watch a company and be told when something about it changes, through an Atom feed with no account behind it. Nothing is polled: a watched company is re-checked only when GLEIF's daily delta or OpenSanctions' entity delta names it, and each entry says which fired, what the re-run found, and which sources were actually reached.",
+    image: {
+      src: "/features/watchlist.png",
+      alt: "The watchlist page: two watched companies with their register status and signals, a copyable feed address, and a change log whose top entry says GLEIF published a change to the record, names the field that changed, and counts the sources checked as a result.",
+      width: 1648,
+      height: 882,
+    },
+    cta: { label: "Open your watchlist", href: "/watchlist" },
+  },
+  {
     // The anchor stays `time-machine` though the feature is now called
     // History: `/features#time-machine` is in talks and links, and
     // `docs/time-machine.md` still holds the design. Renaming the address to

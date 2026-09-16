@@ -56,6 +56,11 @@ export const ICON_PATHS = {
   // logo's three-node triangle, which belongs to `fullcheck`.
   batch: ["M3 6h12", "M3 11h12", "M3 16h7", "m14.5 16.5 2.2 2.2L21 14"],
   network: ["M12 6.5v3", "M10.2 13.8 6.6 16.9", "M13.8 13.8 17.4 16.9"],
+  // Phase 215: the watchlist is a bell — told when something changes —
+  // deliberately not a clock, which is `history` (what already changed) and
+  // not an eye, which would promise the continuous monitoring the feature
+  // does not do.
+  watchlist: ["M6 17v-6a6 6 0 0 1 12 0v6l1.5 1.5h-15z", "M10 20.5a2 2 0 0 0 4 0"],
 } as const;
 
 /** Icons that need a circle or two the path list cannot express. */

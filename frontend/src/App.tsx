@@ -60,6 +60,7 @@ import { evidenceForCode } from "./lib/signalEvidence";
 import { Explain } from "./components/ui/Explain";
 import { SourcesPage } from "./components/SourcesPage";
 import BatchPage from "./components/BatchPage";
+import WatchlistPage from "./components/WatchlistPage";
 import { ApiPage } from "./components/ApiPage";
 import { BehindTheScenesPage } from "./components/BehindTheScenesPage";
 import { FeaturesPage } from "./components/FeaturesPage";
@@ -256,6 +257,7 @@ export default function App() {
     | "api"
     | "changelog"
     | "batch"
+    | "watchlist"
     | "features";
 
   /**
@@ -337,7 +339,7 @@ export default function App() {
 /** Views that already render a heading of their own: `main` has the hero, or
  *  the report's sr-only heading once a lookup is on screen, and `batch` has
  *  BatchPage's "Screen a list". */
-type SelfTitledView = "main" | "batch";
+type SelfTitledView = "main" | "batch" | "watchlist";
 
 /** The page title every other view puts in the document outline. The
  *  `Exclude` is the point: a new view cannot be added without either giving
@@ -365,6 +367,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     if (path === "/api") return "api";
     if (path === "/changelog") return "changelog";
     if (path === "/batch") return "batch";
+    if (path === "/watchlist") return "watchlist";
     return "main";
   }
   function viewToPath(v: View): string {
@@ -374,6 +377,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     if (v === "api") return "/api";
     if (v === "changelog") return "/changelog";
     if (v === "batch") return "/batch";
+    if (v === "watchlist") return "/watchlist";
     return "/";
   }
   const [view, setView] = useState<View>(() => pathToView(window.location.pathname));
@@ -407,6 +411,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       document.title = "Changelog — OpenCheck";
     } else if (view === "batch") {
       document.title = "Screen a list — OpenCheck";
+    } else if (view === "watchlist") {
+      document.title = "Watchlist — OpenCheck";
     } else {
       document.title = "OpenCheck";
     }
@@ -1451,7 +1457,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             because the design gives those pages an eyebrow rather than a
             visible title: that is a design decision, and "no page title in
             the outline" was not one. */}
-        {view !== "main" && view !== "batch" && (
+        {view !== "main" && view !== "batch" && view !== "watchlist" && (
           <h1 className="sr-only">{PAGE_TITLES[view]}</h1>
         )}
 
@@ -2044,6 +2050,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             onPdf={downloadPdf}
             onMarkdown={downloadMarkdown}
             exportError={exportError}
+            onOpenWatchlist={() => navigate("watchlist")}
           />
         {/* ── The answer-first layer (Phase 122) ─────────────────────────
             Subject, then what the check found and how much of it ran, then
@@ -2706,6 +2713,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             onOpen={(lei) => lookupLei(lei)}
           />
         )}
+
+        {view === "watchlist" && (
+          <WatchlistPage sourceNames={sourceNameIndex} onOpen={(lei) => lookupLei(lei)} />
+        )}
       </main>
 
       {/* GODIN ribbon — permanent attribution banner. */}
@@ -2802,6 +2813,13 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
                 >
                   Sources
+                </a>
+                <a
+                  href="/watchlist"
+                  onClick={(e) => { e.preventDefault(); navigate("watchlist"); }}
+                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
+                >
+                  Watchlist
                 </a>
                 <a
                   href="/features"

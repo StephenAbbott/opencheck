@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 214** — Entity types are now written to BODS `entityType.details` rather than the closed `subtype` codelist in the Cyprus, Australia and India mappers, and a test-suite guard fails any mapper that emits an invalid subtype.
+**Latest: Phase 215** — Watch a company and be told through an Atom feed when GLEIF or OpenSanctions publish a change to it: nothing is polled, a watched LEI is re-run only when a delta names it with a material field changed, and a signal whose source could not be reached is reported as unchecked, never as gone.
 
 → [Full development history](docs/status.md)
 

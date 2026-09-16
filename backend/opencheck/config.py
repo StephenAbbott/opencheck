@@ -128,6 +128,25 @@ class Settings(BaseSettings):
     # secret INDEXNOW_KEY. Unset = key route 404s and submission is skipped.
     indexnow_key: str | None = Field(default=None, alias="OPENCHECK_INDEXNOW_KEY")
 
+    # --- Phase 215: the watchlist ---
+    # SQLite file holding watched LEIs, their baselines and the change log
+    # (opencheck/watchlist.py). On Render it sits on the persistent disk
+    # beside the GLEIF mirror. Unset = the feature is off: the /watch routes
+    # answer 503 and no background work runs.
+    watchlist_db_file: str | None = Field(default=None, alias="OPENCHECK_WATCHLIST_DB_FILE")
+    # Caps. Cheap insurance: the re-run cost is proportional to how much of
+    # GLEIF changes (0.47 %/day measured), not to how many LEIs are watched.
+    watchlist_max_total: int = Field(default=200, alias="OPENCHECK_WATCHLIST_MAX_TOTAL")
+    watchlist_max_per_list: int = Field(default=10, alias="OPENCHECK_WATCHLIST_MAX_PER_LIST")
+    # The worker: drains queued re-runs (at most this many per tick) and,
+    # when due, catches up on OpenSanctions' entity deltas. 0 disables the
+    # worker; 0 on the OpenSanctions interval disables Tier 2 only.
+    watchlist_interval_s: float = Field(default=300.0, alias="OPENCHECK_WATCHLIST_INTERVAL_S")
+    watchlist_reruns_per_tick: int = Field(default=5, alias="OPENCHECK_WATCHLIST_RERUNS_PER_TICK")
+    watchlist_opensanctions_interval_s: float = Field(
+        default=10800.0, alias="OPENCHECK_WATCHLIST_OPENSANCTIONS_INTERVAL_S"
+    )
+
     # --- Rate limiting / abuse protection (see opencheck/ratelimit.py) ---
     # Master switch. The test suite turns it off in conftest.py so unrelated
     # tests never trip budgets; dedicated tests re-enable it per-fixture.

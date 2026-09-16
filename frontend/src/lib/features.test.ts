@@ -39,13 +39,14 @@ function token(group: string, name: string): string {
 }
 
 describe("FEATURES", () => {
-  it("lists the seven features: the six the /features ticket names plus Subsidiaries", () => {
+  it("lists the eight features: the six the /features ticket names, Subsidiaries and the Watchlist", () => {
     expect(FEATURES.map((f) => f.id)).toEqual([
       "quickcheck",
       "fullcheck",
       "backgroundcheck",
       "subsidiaries",
       "batch-screening",
+      "watchlist",
       "time-machine",
       "network-visualisations",
     ]);
@@ -78,7 +79,7 @@ describe("FEATURES", () => {
   it("gives every feature exactly one call to action, as a real path", () => {
     for (const f of FEATURES) {
       expect(f.cta.label.length, f.id).toBeGreaterThan(0);
-      expect(f.cta.href, f.id).toMatch(/^\/(\?|batch|features|sources|about|api)/);
+      expect(f.cta.href, f.id).toMatch(/^\/(\?|batch|watchlist|features|sources|about|api)/);
     }
   });
 
@@ -104,13 +105,15 @@ describe("FEATURES", () => {
     expect(featureById("network-visualisations")?.accent).toBe(token("mark", "line"));
   });
 
-  it("knows batch screening's accent is the one invented value", () => {
+  it("knows the two invented accents: batch screening and the watchlist", () => {
     // Deliberate, and recorded rather than hidden: nothing in the shipped
     // palette was both unclaimed and legible as a ring on the badge navy.
-    // If a future token pass adds a cyan, this test is where it gets adopted.
-    const batch = featureById("batch-screening")?.accent;
-    expect(batch).toBeDefined();
-    expect(TOKEN_VALUES.has(batch as string)).toBe(false);
+    // If a future token pass adds a cyan or a fuchsia, this test is where
+    // they get adopted. Every other accent is a shipped token.
+    const invented = new Set(["batch-screening", "watchlist"]);
+    for (const f of FEATURES) {
+      expect(TOKEN_VALUES.has(f.accent), f.id).toBe(!invented.has(f.id));
+    }
   });
 
   it("gives every accent a distinct value, so a row of marks is readable", () => {
