@@ -28,6 +28,7 @@ from .html_report import (
     _ID_LABELS,
     LIVE_BASE,
     _cite_labels,
+    _assessment,
     _generated_line,
     _name,
     _registry,
@@ -35,6 +36,7 @@ from .html_report import (
     _split_signals_by_kind,
     _subject_entity,
     _summary_sources,
+    saved_report_lines,
 )
 
 # ---- helpers ----------------------------------------------------------------
@@ -60,13 +62,13 @@ def _table(headers: list[str], rows: list[list[str]]) -> list[str]:
 # ---- section builders -------------------------------------------------------
 
 
-def _cover(report: dict[str, Any], subject: dict[str, Any] | None) -> list[str]:
+def _cover(report: dict[str, Any], subject: dict[str, Any] | None, saved: bool = False) -> list[str]:
     name = report.get("legal_name") or (subject and _name(subject)) or "Unknown entity"
     jur = report.get("jurisdiction") or ""
     identity = "Identity confirmed by LEI" if report.get("lei") else "Name match — unconfirmed"
     meta = " · ".join(b for b in [jur, identity] if b)
     return [
-        f"# OpenCheck due-diligence report — {name}",
+        f"# OpenCheck {'saved report' if saved else 'due-diligence report'} — {name}",
         "",
         "*Entity due-diligence report*" + (f" — {meta}" if meta else ""),
         "",
@@ -97,16 +99,48 @@ def _identifiers(report: dict[str, Any], subject: dict[str, Any] | None) -> list
     ]
 
 
-def _live_check(lei: str | None) -> list[str]:
+def _live_check(lei: str | None, saved: dict[str, Any] | None = None) -> list[str]:
     if not lei:
         return []
     url = f"https://{LIVE_BASE}/?lei={lei}"
+    if saved:
+        return [
+            "## Run a live check",
+            "",
+            "This is a saved report, not a live one: nothing in it has been re-checked since "
+            f"it was saved. Open the live profile to re-run every source as it stands today: <{url}>",
+            "",
+        ]
     return [
         "## Run a live check",
         "",
         "This is a point-in-time snapshot. Open the live, always-current profile — re-run "
         "every source, explore the interactive ownership graph and download the underlying "
         f"BODS data: <{url}>",
+        "",
+    ]
+
+
+def _saved_block(saved: dict[str, Any] | None) -> list[str]:
+    """Phase 218: a report rendered from a saved report says so first."""
+    if not saved:
+        return []
+    t = saved_report_lines(saved)
+    return [
+        "## Saved report",
+        "",
+        t["clocks"],
+        "",
+        *_table(
+            ["", ""],
+            [
+                ["Saved report", f"`{t['report_id']}`"],
+                ["SHA-256", f"`{t['content_hash']}`"],
+                ["Open it", f"<{t['report_url']}>"],
+                ["Saved JSON", f"<{t['json_url']}>"],
+            ],
+        ),
+        t["verify"],
         "",
     ]
 
@@ -382,13 +416,9 @@ def _relationships(report: dict[str, Any]) -> list[str]:
     return lines if rendered else []
 
 
-def _licensing(report: dict[str, Any]) -> list[str]:
-    from ..licensing import assess as assess_licensing
-
+def _licensing(report: dict[str, Any], saved: dict[str, Any] | None = None) -> list[str]:
     reg = _registry()
-    contributing = sorted({h.get("source_id") for h in (report.get("hits") or []) if not h.get("is_stub")})
-    contributing = [c for c in contributing if c]
-    assessment = assess_licensing(contributing)
+    contributing, headline, _color = _assessment(report, saved)
     rows = []
     for sid in contributing:
         adapter = reg.get(sid)
@@ -400,7 +430,7 @@ def _licensing(report: dict[str, Any]) -> list[str]:
         "## Licensing & attribution",
         "",
         "This report is assembled from open data. Combined commercial-use assessment: "
-        f"**{assessment.headline}**",
+        f"**{headline}**" + (" (as assessed when the report was saved)" if saved else ""),
         "",
     ]
     notices = [n.get("notice", "") for n in (report.get("license_notices") or []) if n.get("notice")]
@@ -412,7 +442,7 @@ def _licensing(report: dict[str, Any]) -> list[str]:
         "Ownership data structured to the "
         "[Beneficial Ownership Data Standard (BODS) v0.4]"
         "(https://standard.openownership.org/en/0.4.0/). "
-        + _generated_line(),
+        + _generated_line(saved),
         "",
     ]
     return lines
@@ -426,19 +456,22 @@ def build_report_markdown(
     *,
     narrative: dict[str, Any] | None = None,
     dispositions: dict[str, Any] | None = None,
+    saved: dict[str, Any] | None = None,
 ) -> str:
-    """Assemble the full report as portable Markdown for a lookup result."""
+    """Assemble the full report as portable Markdown for a lookup result.
+    ``saved`` as in ``build_report_html`` (Phase 218)."""
     bods = report.get("bods") or []
     subject = _subject_entity(bods, report.get("lei"))
     sections: list[str] = []
-    sections += _cover(report, subject)
+    sections += _cover(report, subject, saved=bool(saved))
+    sections += _saved_block(saved)
     sections += _identifiers(report, subject)
-    sections += _live_check(report.get("lei"))
+    sections += _live_check(report.get("lei"), saved)
     sections += _summary(narrative, dispositions)
     sections += _risk(report)
     sections += _sources_found(report)
     sections += _relationships(report)
-    sections += _licensing(report)
+    sections += _licensing(report, saved)
     sections += [
         "---",
         "",

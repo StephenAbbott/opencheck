@@ -265,6 +265,19 @@ export function savedDeepen(events: SavedReportEvent[], sourceId: string, hitId:
   };
 }
 
+// ---------------------------------------------------------------------------
+// Downloads (Phase 218)
+// ---------------------------------------------------------------------------
+
+/** Under the format picker on a saved report. */
+export const SAVED_DOWNLOADS =
+  "Every download here is built from the saved report — the same records, not a new check — and carries the licence position assessed when it was saved.";
+
+/** Under the format picker on a live check. It used to call the export
+ *  "reproducible", which a download that re-runs the check is not. */
+export const LIVE_DOWNLOADS =
+  "A download runs the check as it stands now, so one made later can differ. Save the report to keep a copy that does not change.";
+
 /** Said in a source drawer for a result that was not mapped in the saved check. */
 export const NOT_DEEPENED_IN_SAVED =
   "This source's records were not mapped when the check was saved, so there is nothing to show for it here.";

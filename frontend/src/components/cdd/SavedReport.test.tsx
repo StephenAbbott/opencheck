@@ -84,7 +84,7 @@ const LICENSING: LicenseAssessment = {
 };
 
 describe("ExportPanel on a saved report", () => {
-  it("shows the saved licence assessment and the saved JSON, not today's downloads", () => {
+  it("builds every format from the saved report, with the saved licence and no subsidiary option", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     render(
       <QueryClientProvider client={new QueryClient()}>
@@ -97,11 +97,28 @@ describe("ExportPanel on a saved report", () => {
       </QueryClientProvider>,
     );
     expect(screen.getByText(LICENSING.headline)).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "Export format" })).toBeInTheDocument();
+    const download = screen.getByRole("link", { name: "Download" });
+    expect(download.getAttribute("href")).toContain(`saved_report_id=${META.report_id}`);
     expect(screen.getByRole("link", { name: "Download the saved JSON" })).toBeInTheDocument();
-    expect(screen.queryByRole("radiogroup", { name: "Export format" })).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: /subsidiary network/ })).toBeNull();
+    expect(screen.getByText(/built from the saved report — the same records, not a new check/)).toBeInTheDocument();
     // The licence matrix is not asked again: the saved assessment is the one that applied.
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
+  });
+
+  it("on a live check, says a download can differ later instead of calling it reproducible", () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 503 }));
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ExportPanel lei={META.lei} legalName={META.legal_name} contributingSourceIds={[]} />
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText(/Reproducible/)).toBeNull();
+    expect(screen.getByText(/so one made later can differ/)).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /subsidiary network/ })).toBeInTheDocument();
+    vi.restoreAllMocks();
   });
 });
 
@@ -179,20 +196,5 @@ describe("the Save item in Share and export", () => {
     expect(item).not.toBeDisabled();
     await userEvent.click(item);
     expect(onSelect).not.toHaveBeenCalled();
-  });
-
-  it("disables the report downloads on a saved report and says why", async () => {
-    render(
-      <ExportMenu
-        pdfBusy={false}
-        mdBusy={false}
-        onPdf={() => {}}
-        onMarkdown={() => {}}
-        reportUnavailable="The PDF and Markdown reports run the check again today, so they are not offered on a saved report yet."
-      />,
-    );
-    await userEvent.click(screen.getByRole("button", { name: /Export/ }));
-    expect(screen.getByRole("menuitem", { name: /Report as PDF/ })).toBeDisabled();
-    expect(screen.getByText(/not offered on a saved report yet/)).toBeInTheDocument();
   });
 });

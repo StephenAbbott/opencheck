@@ -88,7 +88,6 @@ export function ExportMenu({
   shareLabel = "Copy share link",
   shareDescription = "Its preview shows a live summary card for this entity",
   save,
-  reportUnavailable,
 }: {
   pdfBusy: boolean;
   mdBusy: boolean;
@@ -110,9 +109,6 @@ export function ExportMenu({
    *  link"). Disabled items carry their reason as the description — a
    *  greyed-out control that does not say why is a dead end. */
   save?: { label: string; description: string; disabled?: boolean; onSelect: () => void };
-  /** Phase 217: the report downloads re-run the check, so a saved report
-   *  disables them and says why (Phase 218 renders them from the saved copy). */
-  reportUnavailable?: string;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -288,16 +284,11 @@ export function ExportMenu({
               </>
             )}
             <GroupHeading>Report</GroupHeading>
-            {reportUnavailable && (
-              <p role="presentation" className="px-3 pb-1 text-oo-meta text-oo-muted leading-[1.5]">
-                {reportUnavailable}
-              </p>
-            )}
             <button
               ref={item(reportIndex)}
               type="button"
               role="menuitem"
-              disabled={pdfBusy || Boolean(reportUnavailable)}
+              disabled={pdfBusy}
               onClick={() => {
                 close(false);
                 onPdf();
@@ -316,7 +307,7 @@ export function ExportMenu({
               ref={item(reportIndex + 1)}
               type="button"
               role="menuitem"
-              disabled={mdBusy || Boolean(reportUnavailable)}
+              disabled={mdBusy}
               onClick={() => {
                 close(false);
                 onMarkdown();

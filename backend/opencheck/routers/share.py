@@ -26,7 +26,7 @@ from fastapi.responses import HTMLResponse
 
 from .. import identifiers
 from ..config import get_settings
-from ..og_image import card_alt_text, render_share_card
+from ..og_image import card_alt_text, render_share_card, ui_date
 from ..ratelimit import default_tier, limiter
 from . import lookup as lookup_router
 
@@ -258,3 +258,105 @@ async def share_page(request: Request, lei: str) -> HTMLResponse:
 </body>
 </html>"""
     return HTMLResponse(content=page, headers={"Cache-Control": "public, max-age=300"})
+
+
+# ---- saved reports (Phase 218) ------------------------------------------------
+#
+# A saved report's link preview is the record's, not today's: the card and the
+# share page read the saved events, say "Saved report" and its date, and
+# redirect to /report/{id}. Nothing here is indexed, and an expired or deleted
+# report answers as the saved-report routes do.
+
+_SAVED_NOINDEX = {"X-Robots-Tag": "noindex, nofollow"}
+
+
+async def _saved_summary(report_id: str) -> tuple[str, str | None, list[dict[str, Any]], str, str]:
+    """(lei, legal_name, risk_signals, saved_at, report_path) for a saved report."""
+    from .saved_reports import open_for_export
+
+    opened = await open_for_export(report_id)
+    resp = opened.response
+    return (
+        resp.lei or opened.meta["lei"],
+        resp.legal_name,
+        list(resp.risk_signals or []),
+        opened.saved["saved_at"],
+        opened.meta["report_path"],
+    )
+
+
+@router.get("/og/saved/{report_id}.png")
+@limiter.limit(default_tier)
+async def og_saved_image(request: Request, report_id: str) -> Response:
+    """The share card for a saved report. Read on every request (so a deleted
+    or expired report stops rendering); the PNG is cached by report id — the
+    record cannot change."""
+    lei, name, signals, saved_at, _ = await _saved_summary(report_id)
+    key = f"saved:{report_id}"
+    now = time.monotonic()
+    cached = _OG_CACHE.get(key)
+    if cached is not None and now - cached[0] < _OG_TTL_FULL:
+        png = cached[1]
+    else:
+        async with _render_gate:
+            png = await asyncio.to_thread(render_share_card, name, lei, signals, saved_at=saved_at)
+        while len(_OG_CACHE) >= _OG_MAX_ENTRIES:
+            _OG_CACHE.pop(next(iter(_OG_CACHE)), None)
+        _OG_CACHE[key] = (now, png, True)
+    return Response(
+        content=png,
+        media_type="image/png",
+        headers={**_SAVED_NOINDEX, "Cache-Control": "public, max-age=300"},
+    )
+
+
+@router.get("/share/saved/{report_id}", response_class=HTMLResponse)
+@limiter.limit(default_tier)
+async def share_saved_page(request: Request, report_id: str) -> HTMLResponse:
+    """Crawler-readable share page for a saved report: its OG tags, then an
+    instant redirect to ``/report/{id}``."""
+    lei, name, signals, saved_at, report_path = await _saved_summary(report_id)
+    settings = get_settings()
+    frontend = (settings.frontend_origin or "").rstrip("/")
+    if not frontend.startswith("http"):
+        frontend = "https://opencheck.world"
+    api_base = (settings.public_api_base or "https://api.opencheck.world").rstrip("/")
+
+    risk_count = len(
+        {str(s.get("code") or "") for s in signals if s.get("code") and s.get("kind", "risk") == "risk"}
+    )
+    description = (
+        f"Saved report · {ui_date(saved_at)} · {risk_count} risk signal{'s' if risk_count != 1 else ''} "
+        "found in that check · not re-checked since"
+    )
+    image_alt = card_alt_text(name, lei, signals, saved_at=saved_at)
+    title = html.escape(f"{name or f'LEI {lei}'} — saved report — OpenCheck")
+    target = f"{frontend}{report_path}"
+    image = f"{api_base}/og/saved/{report_id}.png"
+    page = f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{title}</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OpenCheck">
+<meta property="og:title" content="{title}">
+<meta property="og:description" content="{html.escape(description)}">
+<meta property="og:url" content="{html.escape(target)}">
+<meta property="og:image" content="{html.escape(image)}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{html.escape(image_alt)}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{html.escape(description)}">
+<meta name="twitter:image" content="{html.escape(image)}">
+<meta name="twitter:image:alt" content="{html.escape(image_alt)}">
+<meta http-equiv="refresh" content="0;url={html.escape(target)}">
+<meta name="robots" content="noindex, nofollow">
+</head>
+<body>
+<p>Redirecting to <a href="{html.escape(target)}">the saved report on OpenCheck</a>…</p>
+</body>
+</html>"""
+    return HTMLResponse(content=page, headers={**_SAVED_NOINDEX, "Cache-Control": "public, max-age=300"})

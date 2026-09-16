@@ -5,8 +5,8 @@ the pipeline, so two people opening it a day apart can see different
 findings. A saved report is the record of exactly what OpenCheck showed for
 one company on one date — opt-in, addressable, and verifiable.
 
-The page that renders one (`/report/{id}`) is Phase 217 (below); exports, the
-share card and the MCP tool are Phase 218.
+The page that renders one (`/report/{id}`) is Phase 217; exports, the share
+card and the MCP tool are Phase 218 (both below).
 
 ## What is saved
 
@@ -167,7 +167,7 @@ its run controls call `/expand`), and every source card's Data drawer calls
 | Background check, Subsidiaries, History, Climate & ESG | live | a sentence in the tab: not part of a saved report |
 | Securities, NZ associations | live | not shown |
 | Licence panel | `/license-matrix` | the saved assessment |
-| Format downloads, PDF, Markdown | re-run the check | off, with the reason; the saved JSON instead (Phase 218 renders reports from the saved copy) |
+| Format downloads, PDF, Markdown | re-run the check | built from the saved report (Phase 218, below) |
 | Re-run, Retry source, Resume | live | not offered |
 
 For this, `deepen_result` (internal, never streamed) now also carries
@@ -188,6 +188,73 @@ appears under the subject, and the item becomes *Copy saved-report link*.
 nofollow">` is added while a saved report is on screen (robots.txt already
 disallows `/report` on this host), and analytics rolls `/report/{id}` up to
 `/report` — the id is a capability.
+
+## Reports, downloads, the share card and MCP (Phase 218)
+
+**Nothing rendered from a saved report runs the check again.**
+`routers.saved_reports.open_for_export(report_id, lei=None)` loads the report
+(expiry and integrity checked, as every read), folds its events with
+`fold_lookup_events` — the same fold `/lookup` uses — and returns that
+response with a `saved` block: `report_id`, `content_hash`, `saved_at`,
+`run_completed_at`, `report_url`, `json_url` and the frozen `licensing`. A
+`lei` naming a different company is a 400.
+
+| Route | With `saved_report_id` |
+|---|---|
+| `POST /export/pdf`, `POST /export/markdown` | Rendered from the saved events, with the saved narrative and frozen disposition sheet. Posting `narrative` or `dispositions` beside it is a 400 — the report can only say what was saved. |
+| `GET /export?saved_report_id=…&format=…` | Every format from the saved events; `lei` optional (must match); `subsidiaries` is a 400 (the network was not saved). |
+
+What changes on the document:
+
+- **The first page says it is a saved report**: a *Saved report* band under
+  the cover with both clocks ("Saved 16 September 2026, 15:18 UTC, from a check
+  that finished at 15:18 UTC. Nothing in this report has been re-checked since
+  it was saved."), the report id, the full SHA-256, the page and JSON links and
+  how to verify. The title becomes "OpenCheck saved report — {name}", and *Run
+  a live check* says the report is not live.
+- **Every PDF page's footer** carries "Saved report {id}" and "SHA-256
+  {hash}" (`@page` margin boxes). The id and hash are regex-checked before they
+  reach CSS.
+- **The licence position is the one assessed at save time**, marked "(as
+  assessed when the report was saved)"; LICENSES.md and the xlsx/csv/gql/amlai
+  licence sheets use it too.
+- **Nothing reads today's clock.** The closing line is "Rendered from saved
+  report {id}, saved {date}."; download names are
+  `opencheck-{slug}-saved-{YYYYMMDD of the save}`; RDF's `run_date` is the
+  run's date; the ZIP manifest's `generated_at` is the save,
+  `sources_consulted` is the run's own `sources_applicable` (not today's
+  registry), `saved_report` names the record, and zip entries are dated to the
+  save — the ZIP is byte-identical across downloads (pinned). The Markdown is
+  identical however the engine or the licence table changes afterwards
+  (pinned). The PDF's *content* is identical; WeasyPrint's file metadata
+  differs between renders, so compare text, not file hashes.
+
+**The share link** of a saved report is `/share/saved/{id}` (API host): Open
+Graph tags from the saved events — "Saved report · 16 Sept 2026 · N risk
+signals found in that check · not re-checked since" — and a redirect to
+`/report/{id}`. Its card, `/og/saved/{id}.png`, replaces *Visit
+opencheck.world for more details* with *Saved report · {date} ·
+opencheck.world*, and a zero-signal card says "in the check that was saved"
+instead of quoting today's source count. Both read the report on every request
+(so a deleted or expired report stops previewing), carry `X-Robots-Tag:
+noindex`, and the PNG is cached by report id. The page's *Copy saved-report
+link* and the confirmation after a save copy this URL.
+
+**On the page**, *Share and export*'s PDF and Markdown items post
+`{lei, saved_report_id}` (`reportRequestBody` in `lib/api.ts`), and *Download
+data* keeps its format picker — every format with `saved_report_id` — beside
+*Download the saved JSON*, without the subsidiary option. On a live check that
+panel no longer calls its download "reproducible": a download runs the check
+as it stands, and the sentence says so and points to saving
+(`LIVE_DOWNLOADS` / `SAVED_DOWNLOADS` in `lib/savedReport.ts`).
+
+**MCP.** `opencheck_save_report(lei, deepen_top=5)` runs `opencheck_lookup`'s
+check (reusing a held run) and saves it with `save_from_replay` — the same path
+as the page, so the same refusals. It returns `url`, `json_url`,
+`content_hash`, `saved_at`, `expires_at`, `manage_token`, `verdict` and the
+licence headline, and tells the agent the report is not re-checked. No
+summary is saved through MCP (none is generated there). `TOOL_NAMES` is eight;
+the server instructions and `opencheck_lookup`'s docstring name the tool.
 
 ## Deferred (potential follow-ups)
 

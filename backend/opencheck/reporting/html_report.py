@@ -12,6 +12,7 @@ the AI summary is only included when an already-generated narrative is passed in
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 
 # 3.10-compatible alias for datetime.UTC (identical object on 3.11+).
@@ -197,20 +198,113 @@ def _identifiers(report: dict[str, Any], subject: dict[str, Any] | None) -> str:
     )
 
 
-def _live_check(lei: str | None) -> str:
+def _live_check(lei: str | None, saved: dict[str, Any] | None = None) -> str:
     if not lei:
         return ""
     url = f"{LIVE_BASE}/?lei={lei}"
     qr = _qr_svg(f"https://{url}")
     qr_block = f'<div class="qr" aria-hidden="true">{qr}</div>' if qr else ""
+    heading, body = _LIVE_CHECK_SAVED if saved else _LIVE_CHECK_LIVE
     return (
         '<section aria-labelledby="live"><h2 id="live">Run a live check</h2>'
         f'<div class="live">{qr_block}<div>'
-        "<h3>This is a point-in-time snapshot</h3>"
-        "<p>Open the live, always-current profile — re-run every source, explore the interactive "
-        "ownership graph and download the underlying BODS data:</p>"
+        f"<h3>{escape(heading)}</h3>"
+        f"<p>{escape(body)}</p>"
         f'<p class="url">{escape(url)}</p>'
         "</div></div></section>"
+    )
+
+
+_LIVE_CHECK_LIVE = (
+    "This is a point-in-time snapshot",
+    "Open the live, always-current profile — re-run every source, explore the interactive "
+    "ownership graph and download the underlying BODS data:",
+)
+_LIVE_CHECK_SAVED = (
+    "This is a saved report, not a live one",
+    "Nothing in it has been re-checked since it was saved. Open the live profile to re-run "
+    "every source as it stands today:",
+)
+
+
+# ---- saved reports (Phase 218) ------------------------------------------------
+#
+# A report rendered from a saved report (Phase 216) is a record, so it says so
+# on its first page and on every page's footer, and prints the SHA-256 that
+# lets a reader check it against the saved JSON. Nothing in it reads the clock:
+# the dates are the saved report's own, so the same saved report renders the
+# same report on any day, whatever the engine has done since.
+
+
+def _saved_when(iso: str) -> tuple[str, str]:
+    """("16 September 2026", "15:18 UTC") from an ISO timestamp."""
+    try:
+        d = datetime.fromisoformat(str(iso).replace("Z", "+00:00")).astimezone(UTC)
+    except ValueError:
+        return str(iso), ""
+    return d.strftime("%d %B %Y").lstrip("0"), d.strftime("%H:%M UTC")
+
+
+def saved_report_lines(saved: dict[str, Any]) -> dict[str, str]:
+    """The saved-report sentences, shared by the HTML/PDF and Markdown reports."""
+    saved_day, saved_time = _saved_when(saved.get("saved_at", ""))
+    run_day, run_time = _saved_when(saved.get("run_completed_at", ""))
+    ran = run_time if run_day == saved_day else f"{run_day}, {run_time}"
+    return {
+        "clocks": (
+            f"Saved {saved_day}, {saved_time}, from a check that finished at {ran}. "
+            "Nothing in this report has been re-checked since it was saved."
+        ),
+        "report_id": str(saved.get("report_id", "")),
+        "content_hash": str(saved.get("content_hash", "")),
+        "report_url": str(saved.get("report_url", "")),
+        "json_url": str(saved.get("json_url", "")),
+        "verify": (
+            "To check this report against the record: download the saved JSON and run "
+            "shasum -a 256 on it. The result must equal the SHA-256 above."
+        ),
+        "generated": (
+            f"Rendered from saved report {saved.get('report_id', '')}, saved {saved_day}."
+        ),
+    }
+
+
+def _saved_band(saved: dict[str, Any] | None) -> str:
+    if not saved:
+        return ""
+    t = saved_report_lines(saved)
+    return (
+        '<section class="saved" aria-labelledby="saved"><h2 id="saved">Saved report</h2>'
+        f"<p>{escape(t['clocks'])}</p>"
+        "<table><caption>How to identify and verify this saved report.</caption><tbody>"
+        f'<tr><th scope="row">Saved report</th><td class="mono">{escape(t["report_id"])}</td></tr>'
+        f'<tr><th scope="row">SHA-256</th><td class="mono">{escape(t["content_hash"])}</td></tr>'
+        f'<tr><th scope="row">Open it</th><td class="mono">{escape(t["report_url"])}</td></tr>'
+        f'<tr><th scope="row">Saved JSON</th><td class="mono">{escape(t["json_url"])}</td></tr>'
+        "</tbody></table>"
+        f'<p class="cites">{escape(t["verify"])}</p>'
+        "</section>"
+    )
+
+
+def _saved_page_css(saved: dict[str, Any] | None) -> str:
+    """Every page's footer names the saved report and its hash. The id and hash
+    are URL-safe base64 and hex, so they need no CSS-string escaping — checked
+    here rather than trusted."""
+    if not saved:
+        return ""
+    rid = str(saved.get("report_id", ""))
+    digest = str(saved.get("content_hash", ""))
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", rid) or not re.fullmatch(r"[0-9a-f]+", digest):
+        return ""
+    return (
+        "@page { "
+        f'@bottom-left {{ content: "Saved report {rid}"; font: 7.5pt sans-serif; color:#595959; }} '
+        f'@bottom-center {{ content: "SHA-256 {digest}"; font: 6pt "DejaVu Sans Mono", monospace; color:#767676; }} '
+        "}"
+        ".saved { background:#eef1fb; border:0.5px solid #cfd6f5; border-radius:6px; padding:3mm 5mm; margin:0 0 6mm; }"
+        ".saved h2 { margin-top:0; }"
+        ".saved .mono { font-family:\"DejaVu Sans Mono\", monospace; font-size:8pt; word-break:break-all; }"
     )
 
 
@@ -610,14 +704,25 @@ def _diagram_table(rows: list[tuple[str, str, str]], fig_no: int) -> str:
     )
 
 
-def _licensing(report: dict[str, Any]) -> str:
+def _assessment(report: dict[str, Any], saved: dict[str, Any] | None) -> tuple[list[str], str, str]:
+    """(contributing source ids, headline, colour). A saved report carries the
+    assessment made when it was saved — a source's terms can change later, and
+    the record is what applied then."""
     from ..licensing import assess as assess_licensing
 
-    reg = _registry()
     contributing = sorted({h.get("source_id") for h in (report.get("hits") or []) if not h.get("is_stub")})
     contributing = [c for c in contributing if c]
+    frozen = (saved or {}).get("licensing")
+    if isinstance(frozen, dict) and frozen.get("headline"):
+        return contributing, str(frozen["headline"]), str(frozen.get("color", "amber"))
     assessment = assess_licensing(contributing)
-    colour = {"green": "b-green", "amber": "b-amber", "red": "b-amber"}.get(assessment.color, "b-amber")
+    return contributing, assessment.headline, assessment.color
+
+
+def _licensing(report: dict[str, Any], saved: dict[str, Any] | None = None) -> str:
+    reg = _registry()
+    contributing, headline, color = _assessment(report, saved)
+    colour = {"green": "b-green", "amber": "b-amber", "red": "b-amber"}.get(color, "b-amber")
     rows = []
     for sid in contributing:
         adapter = reg.get(sid)
@@ -635,7 +740,9 @@ def _licensing(report: dict[str, Any]) -> str:
     return (
         '<section aria-labelledby="lic"><h2 id="lic">Licensing &amp; attribution</h2>'
         f'<p>This report is assembled from open data. Combined commercial-use assessment: '
-        f'<span class="badge {colour}">{escape(assessment.headline)}</span></p>'
+        f'<span class="badge {colour}">{escape(headline)}</span>'
+        + (" (as assessed when the report was saved)" if saved else "")
+        + "</p>"
         + notice_block
         + "<table><caption>Licence and required attribution for each contributing source.</caption>"
         '<thead><tr><th scope="col">Source</th><th scope="col">Licence</th>'
@@ -643,11 +750,13 @@ def _licensing(report: dict[str, Any]) -> str:
         f"<tbody>{''.join(rows)}</tbody></table>"
         '<p class="cites">Ownership data structured to the '
         '<a href="https://standard.openownership.org/en/0.4.0/">Beneficial Ownership Data Standard '
-        "(BODS) v0.4</a>. " + escape(_generated_line()) + "</p></section>"
+        "(BODS) v0.4</a>. " + escape(_generated_line(saved)) + "</p></section>"
     )
 
 
-def _generated_line() -> str:
+def _generated_line(saved: dict[str, Any] | None = None) -> str:
+    if saved:
+        return saved_report_lines(saved)["generated"]
     from .. import __version__
 
     stamp = datetime.now(UTC).strftime("%d %B %Y")
@@ -659,23 +768,32 @@ def build_report_html(
     *,
     narrative: dict[str, Any] | None = None,
     dispositions: dict[str, Any] | None = None,
+    saved: dict[str, Any] | None = None,
 ) -> str:
-    """Assemble the full, accessible report HTML for a lookup result."""
+    """Assemble the full, accessible report HTML for a lookup result.
+
+    ``saved`` (Phase 218) marks a report rendered from a saved report:
+    ``{report_id, content_hash, saved_at, run_completed_at, report_url,
+    json_url, licensing}``.
+    """
     bods = report.get("bods") or []
     subject = _subject_entity(bods, report.get("lei"))
     name = report.get("legal_name") or (subject and _name(subject)) or "Unknown entity"
     title = f"OpenCheck due-diligence report — {name}"
+    if saved:
+        title = f"OpenCheck saved report — {name}"
     return (
         "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"/>"
-        f"<title>{escape(title)}</title><style>{_CSS}</style></head><body>"
+        f"<title>{escape(title)}</title><style>{_CSS}{_saved_page_css(saved)}</style></head><body>"
         + _cover(report, subject)
+        + _saved_band(saved)
         + _identifiers(report, subject)
-        + _live_check(report.get("lei"))
+        + _live_check(report.get("lei"), saved)
         + _summary(narrative, dispositions)
         + _risk(report)
         + _sources_found(report)
         + _diagrams(report)
-        + _licensing(report)
+        + _licensing(report, saved)
         + "<footer><p style=\"font-size:8pt;color:#595959\">OpenCheck aggregates open corporate and "
         "beneficial-ownership data and maps it to BODS v0.4. It is an information tool, not a substitute "
         "for regulated due diligence. Always confirm findings against the primary registers before "

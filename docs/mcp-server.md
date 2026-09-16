@@ -39,6 +39,7 @@ would `421` in production.
 | `opencheck_batch_lookup(leis, deepen_top=5)` | Up to 20 LEIs → one compact row each (name, jurisdiction, register status, verdict sentence, risk/context counts, coverage, `degraded`), plus `failed` rows and `rejected` tokens — see below |
 | `opencheck_export_bods(lei, format="json", deepen_top=3)` | Full ownership graph — BODS v0.4 (`json`/`jsonl`), Senzing JSON entity records (`senzing`), or FollowTheMoney entities (`ftm`) |
 | `opencheck_person_check(name, birth_year=None)` | Screen one person (PEP / sanctions / offshore-leaks) — evidence-shaped: signals from strong matches only, per-source outcomes, caveats |
+| `opencheck_save_report(lei, deepen_top=5)` | Runs (or reuses a held) check and keeps it as a saved report — `url`, `json_url`, `content_hash`, `saved_at` / `expires_at`, `manage_token`, `verdict`, licence headline (Phase 218; see [saved reports](saved-reports.md)) |
 | `opencheck_list_sources()` | Adapter inventory with licence + live status |
 
 `narrative` is deliberately **not** exposed (it spends model tokens per call).

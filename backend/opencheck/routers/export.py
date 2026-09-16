@@ -36,12 +36,14 @@ from ..bods import (
 )
 from ..bods.senzing import _desc_to_source_id
 from ..dispositions import load_dispositions
+from ..licensing import LicenseAssessment
 from ..licensing import assess as assess_licensing
 from ..licensing import full_matrix
 from ..ratelimit import default_tier, heavy_tier, limiter, lookup_tier
 from ..reporting import PdfUnavailable, build_report_markdown, build_report_pdf
 from ..sources import REGISTRY, SearchKind
 from .lookup import ReportResponse, _build_report, _lookup_impl
+from .saved_reports import SavedForExport, open_for_export
 
 router = APIRouter()
 
@@ -142,6 +144,17 @@ async def export(
             "one sheet each, plus a licence sheet)"
         ),
     ),
+    saved_report_id: str | None = Query(
+        None,
+        pattern=r"^[A-Za-z0-9_-]{22}$",
+        description=(
+            "Phase 218: export a saved report instead of running the check. The "
+            "bundle is built from the saved events, carries the licence "
+            "assessment made when it was saved, and names the saved report and "
+            "its SHA-256 in the manifest. ``lei``, when also given, must match; "
+            "``subsidiaries`` is refused (the network was not saved)."
+        ),
+    ),
     subsidiaries: bool = Query(
         False,
         description=(
@@ -154,14 +167,26 @@ async def export(
     """Download a BODS v0.4 bundle for a subject."""
     if format not in _EXPORT_FORMATS:
         raise HTTPException(status_code=400, detail=f"Unknown format {format!r}")
-    if lei is None and (q is None or not q.strip()):
+    if saved_report_id is None and lei is None and (q is None or not q.strip()):
         raise HTTPException(
             status_code=400,
             detail="Provide either ?lei=<LEI> or ?q=<free-text query>.",
         )
 
     sub_count = 0
-    if lei is not None:
+    saved: SavedForExport | None = None
+    if saved_report_id is not None:
+        if subsidiaries:
+            raise HTTPException(
+                status_code=400,
+                detail="A saved report does not hold the subsidiary network, so it cannot be added to its export.",
+            )
+        saved = await open_for_export(saved_report_id, lei)
+        payload = saved.response
+        slug = _filename_slug(payload.lei or "export")
+        export_query = payload.lei
+        kind = SearchKind.ENTITY
+    elif lei is not None:
         payload = await _lookup_impl(lei=lei, deepen_top=deepen_top)
         slug = _filename_slug(payload.lei)
         export_query = payload.lei
@@ -172,7 +197,15 @@ async def export(
         payload = await _build_report(q, kind, deepen_top)
         slug = _filename_slug(q)
         export_query = q
-    stamp = datetime.now(UTC).strftime("%Y%m%d")
+    stamp = saved.stamp if saved else datetime.now(UTC).strftime("%Y%m%d")
+    if saved:
+        slug = f"{slug}-saved"
+
+    def _licensing_for(ids: list[str]) -> LicenseAssessment:
+        # A saved report carries the assessment made when it was saved.
+        if saved and isinstance(saved.saved.get("licensing"), dict):
+            return LicenseAssessment.model_validate(saved.saved["licensing"])
+        return assess_licensing(ids)
 
     if format == "json":
         body = json.dumps(payload.bods, indent=2).encode("utf-8")
@@ -240,7 +273,11 @@ async def export(
             payload.bods,
             fmt="trig",
             anchor_lei=getattr(payload, "lei", None),
-            run_date=datetime.now(UTC).strftime("%Y-%m-%d"),
+            run_date=(
+                saved.saved["run_completed_at"][:10]
+                if saved and saved.saved.get("run_completed_at")
+                else datetime.now(UTC).strftime("%Y-%m-%d")
+            ),
             risk_signals=payload.risk_signals,
             possibly_same_entities=payload.possibly_same_entities,
             degraded_sources=payload.degraded_sources,
@@ -271,7 +308,7 @@ async def export(
         licenses_md = _build_licenses_md(
             contributing_ids=contributing_ids,
             license_notices=payload.license_notices,
-            licensing=assess_licensing(contributing_ids),
+            licensing=_licensing_for(contributing_ids),
             query=export_query,
             kind=kind,
         )
@@ -291,7 +328,7 @@ async def export(
         licenses_md = _build_licenses_md(
             contributing_ids=contributing_ids,
             license_notices=payload.license_notices,
-            licensing=assess_licensing(contributing_ids),
+            licensing=_licensing_for(contributing_ids),
             query=export_query,
             kind=kind,
         )
@@ -319,7 +356,7 @@ async def export(
         licenses_md = _build_licenses_md(
             contributing_ids=contributing_ids,
             license_notices=payload.license_notices,
-            licensing=assess_licensing(contributing_ids),
+            licensing=_licensing_for(contributing_ids),
             query=export_query,
             kind=kind,
         )
@@ -339,7 +376,7 @@ async def export(
         licenses_md = _build_licenses_md(
             contributing_ids=contributing_ids,
             license_notices=payload.license_notices,
-            licensing=assess_licensing(contributing_ids),
+            licensing=_licensing_for(contributing_ids),
             query=export_query,
             kind=kind,
         )
@@ -358,6 +395,7 @@ async def export(
     body = _build_export_zip(
         payload, q=export_query, kind=kind, slug=slug, stamp=stamp,
         subsidiary_statement_count=sub_count,
+        saved=saved,
     )
     return Response(
         content=body,
@@ -675,6 +713,10 @@ class PdfExportRequest(BaseModel):
 
     lei: str = Field(..., description="ISO 17442 Legal Entity Identifier.")
     deepen_top: int = Field(5, ge=0, le=10)
+    # Phase 218: render a saved report instead of running the check. Its own
+    # narrative and frozen disposition sheet are used; posting either with it
+    # is refused, so a saved report's PDF can only say what was saved.
+    saved_report_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{22}$")
     narrative: dict[str, Any] | None = None
     # Analyst claim dispositions (a DispositionRecord dict) rendered next to
     # each claim so the PDF is the analyst's defensible record. When omitted,
@@ -700,6 +742,20 @@ async def _resolve_dispositions(
     return stored.model_dump(mode="json") if stored is not None else None
 
 
+async def _saved_for_report(req: PdfExportRequest, norm_lei: str) -> SavedForExport | None:
+    if req.saved_report_id is None:
+        return None
+    if req.narrative is not None or req.dispositions is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "A saved report carries its own summary and sign-off; do not post a "
+                "narrative or dispositions with saved_report_id."
+            ),
+        )
+    return await open_for_export(req.saved_report_id, norm_lei)
+
+
 @router.post("/export/pdf")
 @limiter.limit(heavy_tier)
 async def export_pdf(request: Request, req: PdfExportRequest) -> Response:
@@ -710,19 +766,23 @@ async def export_pdf(request: Request, req: PdfExportRequest) -> Response:
     it back. Returns 503 when the PDF toolchain (WeasyPrint) is unavailable.
     """
     norm_lei = req.lei.strip().upper()
-    payload = await _lookup_impl(lei=norm_lei, deepen_top=req.deepen_top)  # raises 400/404 on bad LEI
+    saved = await _saved_for_report(req, norm_lei)
+    kwargs: dict[str, Any]
+    if saved is not None:
+        payload = saved.response
+        kwargs = {"narrative": saved.narrative, "dispositions": saved.dispositions, "saved": saved.saved}
+    else:
+        payload = await _lookup_impl(lei=norm_lei, deepen_top=req.deepen_top)  # raises 400/404 on bad LEI
+        kwargs = {"narrative": req.narrative, "dispositions": await _resolve_dispositions(req, norm_lei)}
     report = payload.model_dump()
-    dispositions = await _resolve_dispositions(req, norm_lei)
 
     try:
-        pdf_bytes = await asyncio.to_thread(
-            build_report_pdf, report, narrative=req.narrative, dispositions=dispositions
-        )
+        pdf_bytes = await asyncio.to_thread(build_report_pdf, report, **kwargs)
     except PdfUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-    slug = _filename_slug(payload.legal_name or payload.lei or norm_lei)
-    stamp = datetime.now(UTC).strftime("%Y%m%d")
+    slug = _filename_slug(payload.legal_name or payload.lei or norm_lei) + ("-saved" if saved else "")
+    stamp = saved.stamp if saved else datetime.now(UTC).strftime("%Y%m%d")
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -743,16 +803,20 @@ async def export_markdown(request: Request, req: PdfExportRequest) -> Response:
     (including on deployments where ``/export/pdf`` returns 503).
     """
     norm_lei = req.lei.strip().upper()
-    payload = await _lookup_impl(lei=norm_lei, deepen_top=req.deepen_top)  # raises 400/404 on bad LEI
+    saved = await _saved_for_report(req, norm_lei)
+    kwargs: dict[str, Any]
+    if saved is not None:
+        payload = saved.response
+        kwargs = {"narrative": saved.narrative, "dispositions": saved.dispositions, "saved": saved.saved}
+    else:
+        payload = await _lookup_impl(lei=norm_lei, deepen_top=req.deepen_top)  # raises 400/404 on bad LEI
+        kwargs = {"narrative": req.narrative, "dispositions": await _resolve_dispositions(req, norm_lei)}
     report = payload.model_dump()
-    dispositions = await _resolve_dispositions(req, norm_lei)
 
-    markdown = await asyncio.to_thread(
-        build_report_markdown, report, narrative=req.narrative, dispositions=dispositions
-    )
+    markdown = await asyncio.to_thread(build_report_markdown, report, **kwargs)
 
-    slug = _filename_slug(payload.legal_name or payload.lei or norm_lei)
-    stamp = datetime.now(UTC).strftime("%Y%m%d")
+    slug = _filename_slug(payload.legal_name or payload.lei or norm_lei) + ("-saved" if saved else "")
+    stamp = saved.stamp if saved else datetime.now(UTC).strftime("%Y%m%d")
     return Response(
         content=markdown.encode("utf-8"),
         media_type="text/markdown; charset=utf-8",
@@ -810,18 +874,33 @@ def _build_export_zip(
     slug: str,
     stamp: str,
     subsidiary_statement_count: int = 0,
+    saved: SavedForExport | None = None,
 ) -> bytes:
-    """Assemble the canonical export bundle: BODS + manifest + licenses."""
-    sources_consulted = [
-        adapter.info.model_dump()
-        for adapter in REGISTRY.values()
-    ]
+    """Assemble the canonical export bundle: BODS + manifest + licenses.
+
+    From a saved report (Phase 218) nothing reads today's clock or registry:
+    the licence assessment is the saved one, ``generated_at`` is the save,
+    ``sources_consulted`` is the run's own ``sources_applicable``, the zip
+    entries are dated to the save, and ``saved_report`` names the record and
+    its SHA-256."""
     contributing_ids = sorted({h.source_id for h in payload.hits if not h.is_stub})
-    licensing = assess_licensing(contributing_ids)
+    if saved is not None:
+        sources_consulted: list[Any] = list(payload.sources_applicable)
+        frozen = saved.saved.get("licensing")
+        licensing = (
+            LicenseAssessment.model_validate(frozen)
+            if isinstance(frozen, dict)
+            else assess_licensing(contributing_ids)
+        )
+        generated_at = saved.saved["saved_at"]
+    else:
+        sources_consulted = [adapter.info.model_dump() for adapter in REGISTRY.values()]
+        licensing = assess_licensing(contributing_ids)
+        generated_at = datetime.now(UTC).isoformat(timespec="seconds")
 
     manifest = {
         "opencheck_version": __version__,
-        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "generated_at": generated_at,
         "query": q,
         "kind": kind.value,
         "deepen_top": len(payload.license_notices) + len(
@@ -844,6 +923,16 @@ def _build_export_zip(
         "licensing": licensing.model_dump(),
         "errors": payload.errors,
     }
+    if saved is not None:
+        manifest["saved_report"] = {
+            "report_id": saved.saved["report_id"],
+            "content_hash": saved.saved["content_hash"],
+            "saved_at": saved.saved["saved_at"],
+            "run_completed_at": saved.saved["run_completed_at"],
+            "report_url": saved.saved["report_url"],
+            "json_url": saved.saved["json_url"],
+            "opencheck_version_at_save": (saved.payload.get("generator") or {}).get("version"),
+        }
 
     licenses_md = _build_licenses_md(
         contributing_ids=contributing_ids,
@@ -859,18 +948,33 @@ def _build_export_zip(
     senzing_jsonl = to_senzing_jsonl(payload.bods)
     ftm_jsonl = to_ftm_jsonl(payload.bods)
 
+    entry_date: tuple[int, int, int, int, int, int] | None = None
+    if saved is not None:
+        try:
+            d = datetime.fromisoformat(str(saved.saved["saved_at"]).replace("Z", "+00:00")).astimezone(UTC)
+            entry_date = (d.year, d.month, d.day, d.hour, d.minute, d.second)
+        except ValueError:
+            entry_date = None
+
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr(f"opencheck-{slug}-{stamp}/bods.json", bods_json)
-        zf.writestr(f"opencheck-{slug}-{stamp}/bods.jsonl", bods_jsonl)
-        zf.writestr(f"opencheck-{slug}-{stamp}/bods.xml", bods_xml)
-        zf.writestr(f"opencheck-{slug}-{stamp}/senzing.jsonl", senzing_jsonl)
-        zf.writestr(f"opencheck-{slug}-{stamp}/ftm.jsonl", ftm_jsonl)
-        zf.writestr(
-            f"opencheck-{slug}-{stamp}/manifest.json",
-            json.dumps(manifest, indent=2, default=str),
-        )
-        zf.writestr(f"opencheck-{slug}-{stamp}/LICENSES.md", licenses_md)
+        def _put(name: str, data: str) -> None:
+            path = f"opencheck-{slug}-{stamp}/{name}"
+            if entry_date is None:
+                zf.writestr(path, data)
+            else:
+                info = zipfile.ZipInfo(path, date_time=entry_date)
+                info.compress_type = zipfile.ZIP_DEFLATED
+                info.external_attr = 0o644 << 16
+                zf.writestr(info, data)
+
+        _put("bods.json", bods_json)
+        _put("bods.jsonl", bods_jsonl)
+        _put("bods.xml", bods_xml)
+        _put("senzing.jsonl", senzing_jsonl)
+        _put("ftm.jsonl", ftm_jsonl)
+        _put("manifest.json", json.dumps(manifest, indent=2, default=str))
+        _put("LICENSES.md", licenses_md)
     return buf.getvalue()
 
 

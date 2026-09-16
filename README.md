@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 217** — A saved report opens as a page at /report/{id}: the same report replayed from what was saved, under a banner naming when it was kept, with everything that would fetch today's data switched off or reading the saved copy, and a Save action on every live check.
+**Latest: Phase 218** — A saved report's PDF, Markdown, downloads, link preview and MCP tool are all built from what was saved, never a new check, with its SHA-256 on every PDF page.
 
 → [Full development history](docs/status.md)
 

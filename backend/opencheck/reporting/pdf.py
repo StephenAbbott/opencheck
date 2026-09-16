@@ -30,7 +30,9 @@ def build_report_pdf(
     *,
     narrative: dict[str, Any] | None = None,
     dispositions: dict[str, Any] | None = None,
+    saved: dict[str, Any] | None = None,
 ) -> bytes:
-    """Build the report HTML for a lookup result and render it to a tagged PDF."""
-    html = build_report_html(report, narrative=narrative, dispositions=dispositions)
+    """Build the report HTML for a lookup result and render it to a tagged PDF.
+    ``saved`` renders it as a saved report (Phase 218)."""
+    html = build_report_html(report, narrative=narrative, dispositions=dispositions, saved=saved)
     return render_html_to_pdf(html)

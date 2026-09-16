@@ -43,7 +43,6 @@ export function SubjectCard({
   onOpenWatchlist,
   savedShare,
   save,
-  reportUnavailable,
   notice,
 }: {
   lei: string;
@@ -88,13 +87,12 @@ export function SubjectCard({
   /** Phase 215: renders the Watch control when given — the report's second
    *  affordance, under Share and export. Opens the /watchlist view. */
   onOpenWatchlist?: () => void;
-  /** Phase 217: on a saved report the share item copies the saved page's own
-   *  link — which opens the record — instead of the live share page. */
+  /** Phase 217/218: on a saved report the share item copies the saved
+   *  report's share link (`/share/saved/{id}`), whose preview is the record's
+   *  card and which opens the saved page — instead of the live share page. */
   savedShare?: { url: string };
   /** Phase 217: the Keep item of Share and export (see `ExportMenu`). */
   save?: { label: string; description: string; disabled?: boolean; onSelect: () => void };
-  /** Phase 217: why the report downloads are off, on a saved report. */
-  reportUnavailable?: string;
   /** Phase 217: a one-line outcome of a save, under the header row. */
   notice?: string | null;
 }) {
@@ -185,7 +183,6 @@ export function SubjectCard({
               savedShare ? "Opens this saved report — not a new check" : undefined
             }
             save={save}
-            reportUnavailable={reportUnavailable}
           />
           {onOpenWatchlist && (
             <WatchButton lei={lei} onOpenWatchlist={onOpenWatchlist} />

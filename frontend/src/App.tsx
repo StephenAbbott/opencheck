@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import SearchLoadingGrid from "./components/SearchLoadingGrid";
 import {
   downloadReportMarkdown,
+  savedReportShareUrl,
   downloadReportPdf,
   fetchSources,
   isValidLei,
@@ -71,7 +72,6 @@ import {
   saveEligibility,
   savedConfirmation,
   savedDeepen,
-  savedReportLink,
   savedStatements as savedStatementsFrom,
   utcDate,
   utcDateTime,
@@ -783,7 +783,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       }
       rememberManageToken(meta.report_id, meta.manage_token);
       setSavedFromRun(meta);
-      const copied = await copyLink(savedReportLink(meta.report_id, window.location.origin));
+      const copied = await copyLink(savedReportShareUrl(meta.report_id));
       setSaveNotice(
         droppedSummary
           ? `${SAVED_WITHOUT_SUMMARY} ${copied ? "The link is copied. " : ""}Kept until ${utcDate(meta.expires_at)}.`
@@ -1323,7 +1323,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       await downloadReportPdf(
         streamingLei,
         exportPayload.narrative,
-        exportPayload.dispositions
+        exportPayload.dispositions,
+        savedReport?.report_id ?? null
       );
       trackEvent("pdf_export");
     } catch (e) {
@@ -1331,7 +1332,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     } finally {
       setPdfBusy(false);
     }
-  }, [streamingLei, exportPayload]);
+  }, [streamingLei, exportPayload, savedReport]);
 
   const downloadMarkdown = useCallback(async () => {
     if (!streamingLei) return;
@@ -1343,7 +1344,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       await downloadReportMarkdown(
         streamingLei,
         exportPayload.narrative,
-        exportPayload.dispositions
+        exportPayload.dispositions,
+        savedReport?.report_id ?? null
       );
     } catch (e) {
       setExportError(
@@ -1352,7 +1354,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     } finally {
       setMdBusy(false);
     }
-  }, [streamingLei, exportPayload]);
+  }, [streamingLei, exportPayload, savedReport]);
 
   // The worst signal, with the corroboration behind it. Derived from the
   // signals the backend already sent — see lib/signalEvidence.ts for the
@@ -1571,7 +1573,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
   const saveItem = useMemo(() => {
     if (savedReport || !streamingLei) return undefined;
     if (savedFromRun) {
-      const link = savedReportLink(savedFromRun.report_id, window.location.origin);
+      const link = savedReportShareUrl(savedFromRun.report_id);
       return {
         label: "Copy saved-report link",
         description: `Saved ${utcDateTime(savedFromRun.saved_at)} · kept until ${utcDate(savedFromRun.expires_at)}`,
@@ -2345,15 +2347,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             onOpenWatchlist={() => navigate("watchlist")}
             savedShare={
               savedReport
-                ? { url: savedReportLink(savedReport.report_id, window.location.origin) }
+                ? { url: savedReportShareUrl(savedReport.report_id) }
                 : undefined
             }
             save={saveItem}
-            reportUnavailable={
-              savedReport
-                ? "The PDF and Markdown reports run the check again today, so they are not offered on a saved report yet."
-                : undefined
-            }
             notice={saveNotice}
           />
         {/* ── The answer-first layer (Phase 122) ─────────────────────────

@@ -324,10 +324,13 @@ export const EXPORT_FORMATS: readonly ExportFormat[] = (
 export function exportUrl(
   lei: string,
   format: ExportFormat,
-  opts?: { subsidiaries?: boolean }
+  opts?: { subsidiaries?: boolean; savedReportId?: string | null }
 ): string {
   const params = new URLSearchParams({ lei, format });
-  if (opts?.subsidiaries) params.set("subsidiaries", "true");
+  // Phase 218: a saved report's download is built from the saved events, not
+  // a new check — and it holds no subsidiary network to add.
+  if (opts?.savedReportId) params.set("saved_report_id", opts.savedReportId);
+  else if (opts?.subsidiaries) params.set("subsidiaries", "true");
   return `${BASE_URL}/export?${params.toString()}`;
 }
 
@@ -1157,6 +1160,17 @@ export async function fetchNarrative(
   return (await r.json()) as NarrativeResponse;
 }
 
+/** The body of a PDF/Markdown report request. Pure, so the logic suite pins it. */
+export function reportRequestBody(
+  lei: string,
+  narrative: NarrativeResponse | null,
+  dispositions: DispositionRecord | null,
+  savedReportId: string | null,
+): Record<string, unknown> {
+  if (savedReportId) return { lei, saved_report_id: savedReportId };
+  return { lei, narrative, dispositions };
+}
+
 /**
  * POST a report-export request and trigger the browser download of the
  * response. Shared by the PDF and Markdown report downloads — same request
@@ -1168,15 +1182,16 @@ async function downloadReport(
   lei: string,
   narrative?: NarrativeResponse | null,
   dispositions?: DispositionRecord | null,
+  savedReportId?: string | null,
 ): Promise<void> {
   const r = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      lei,
-      narrative: narrative ?? null,
-      dispositions: dispositions ?? null,
-    }),
+    // A saved report is rendered from its own summary and frozen sign-off;
+    // the server refuses a posted one beside it (Phase 218).
+    body: JSON.stringify(
+      reportRequestBody(lei, narrative ?? null, dispositions ?? null, savedReportId ?? null),
+    ),
   });
   if (!r.ok) {
     let detail = `${r.status} ${r.statusText}`;
@@ -1212,8 +1227,9 @@ export async function downloadReportPdf(
   lei: string,
   narrative?: NarrativeResponse | null,
   dispositions?: DispositionRecord | null,
+  savedReportId?: string | null,
 ): Promise<void> {
-  return downloadReport("/export/pdf", "pdf", lei, narrative, dispositions);
+  return downloadReport("/export/pdf", "pdf", lei, narrative, dispositions, savedReportId);
 }
 
 /**
@@ -1225,8 +1241,9 @@ export async function downloadReportMarkdown(
   lei: string,
   narrative?: NarrativeResponse | null,
   dispositions?: DispositionRecord | null,
+  savedReportId?: string | null,
 ): Promise<void> {
-  return downloadReport("/export/markdown", "md", lei, narrative, dispositions);
+  return downloadReport("/export/markdown", "md", lei, narrative, dispositions, savedReportId);
 }
 
 /** ISO 17442 LEI: 20-char alphanumeric. */
@@ -1981,4 +1998,11 @@ export async function extendSavedReport(reportId: string, manageToken: string): 
  *  reproduces it. */
 export function savedReportJsonUrl(reportId: string): string {
   return `${BASE_URL}/saved-reports/${encodeURIComponent(reportId)}.json`;
+}
+
+/** The link a saved report is shared by (Phase 218): the API's share page,
+ *  whose preview is the saved report's card and date, redirecting to
+ *  `/report/{id}`. */
+export function savedReportShareUrl(reportId: string): string {
+  return `${BASE_URL || "https://api.opencheck.world"}/share/saved/${encodeURIComponent(reportId)}`;
 }

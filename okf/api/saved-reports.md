@@ -34,4 +34,15 @@ a report. `POST …/extend` and `DELETE …` need the manage token in
 * One CC-BY-NC source in the run makes the saved report non-commercial
   ([licensing](/licensing/matrix.md)).
 
+# Rendering a saved report
+
+`/report/{id}` on the site replays the saved events through the same page as
+a live check. [Exports](/api/export.md) take `saved_report_id`: `POST
+/export/pdf` and `/export/markdown` render the saved report with its own
+summary and sign-off, its SHA-256 on every PDF page; `GET /export` builds
+every format from the saved events, with the saved licence assessment and a
+`saved_report` block in the ZIP manifest. None of them runs the check again.
+`/share/saved/{id}` and `/og/saved/{id}.png` are the link preview. The MCP tool
+`opencheck_save_report(lei)` runs a check and saves it in one call.
+
 Design: `docs/saved-reports.md`.
