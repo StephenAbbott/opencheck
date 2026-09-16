@@ -344,6 +344,7 @@ _DISALLOWED_API_PREFIXES = [
     "/lookup-source",
     "/batch-stream",
     "/batch-export",
+    "/watch",
     "/search",
     "/stream",
     "/deepen",

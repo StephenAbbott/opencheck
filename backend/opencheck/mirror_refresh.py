@@ -305,6 +305,14 @@ def apply_delta(db_path: Path, publish: dict, delta: str) -> dict[str, int]:
             # Rows written as text (a file without a dictionary yet) are
             # compressed here; with a dictionary this finds nothing to do.
             counts["compressed"] = mb.compress_detail_column(conn)
+            # Phase 215: which LEIs this delta named, for the watchlist. Read
+            # before the watermark is written and handed over after it, so
+            # the watcher reads a mirror that already carries the delta.
+            named = (
+                mb.leis_in_csv(paths["lei2"], mb.COL_LEI)
+                | mb.leis_in_csv(paths["rr"], mb.RR_START)
+                | mb.leis_in_csv(paths["repex"], mb.REPEX_LEI)
+            )
             mb.write_meta(
                 conn,
                 source_publish_date=publish["publish_date"],
@@ -321,6 +329,13 @@ def apply_delta(db_path: Path, publish: dict, delta: str) -> dict[str, int]:
             )
         finally:
             conn.close()
+    # The watchlist's Tier 1 (Phase 215): intersect the delta with the
+    # watched LEIs and queue re-runs where a material field changed. It
+    # never raises, and it runs after the watermark so a hit is read from
+    # the refreshed file.
+    from . import watchlist
+
+    watchlist.on_gleif_delta(named, publish["publish_date"])
     return counts
 
 

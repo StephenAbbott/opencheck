@@ -40,7 +40,7 @@ from slowapi.errors import RateLimitExceeded
 from . import __version__, memwatch
 from .config import get_settings
 from .ratelimit import limiter, rate_limit_exceeded_handler
-from .routers import health, search, lookup, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries, entity_pages, batch
+from .routers import health, search, lookup, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries, entity_pages, batch, watch
 from .routers.search import _ch_ra_code as _ch_ra_code  # re-exported for backward compat
 
 log = logging.getLogger(__name__)
@@ -208,6 +208,15 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         from .psc_stream import run_loop as psc_stream_loop
 
         stream_task = asyncio.create_task(psc_stream_loop())
+    # Phase 215: the watchlist worker — drains the re-runs the GLEIF delta
+    # hook and the OpenSanctions delta queued (opencheck/watchlist.py).
+    # Needs the store file; 0 disables the worker.
+    watch_task: asyncio.Task[None] | None = None
+    watch_interval = get_settings().watchlist_interval_s
+    if watch_interval > 0 and get_settings().watchlist_db_file:
+        from .watchlist import watch_loop
+
+        watch_task = asyncio.create_task(watch_loop(watch_interval))
     async with AsyncExitStack() as stack:
         if _MCP is not None and not _mcp_session_started:
             await stack.enter_async_context(_MCP.session_manager.run())
@@ -225,6 +234,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 psc_task.cancel()
             if stream_task is not None and not stream_task.done():
                 stream_task.cancel()
+            if watch_task is not None and not watch_task.done():
+                watch_task.cancel()
 
 
 app = FastAPI(
@@ -285,6 +296,7 @@ app.include_router(subsidiaries.router)
 app.include_router(share.router)
 app.include_router(entity_pages.router)
 app.include_router(batch.router)
+app.include_router(watch.router)
 
 
 # ---------------------------------------------------------------------------

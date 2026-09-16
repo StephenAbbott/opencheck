@@ -439,9 +439,67 @@ def subsidiaries():
                     "Asset ownership in the energy sector, with a percentage where GEM has one.") + '</div>')
     return page(f'{cover}<div style="height:14px"></div>{lists}')
 
+# ------------------------------------------------------------------ 8 Watchlist
+def watchlist():
+    """The /watchlist page (Phase 215): the watched companies with the feed
+    address, and the change log. The log's top entry is a real GLEIF fact —
+    BIRTLEY INVESTMENT LIMITED's LEI lapsed in the 15 September 2026 delta —
+    and the second is what a hand re-check of an unchanged company looks
+    like, because an illustration must not invent a finding against a real
+    company. No source-count denominator anywhere (the /features rule).
+    """
+    FUCHSIA = "#e879f9"; FTINT = "#fdf4ff"; FBD = "#f0abfc"; FTX = "#86198f"
+    def watched(nm, lei, status, sbg, sbd, stx, signal, since, checked):
+        sig = chip(signal, "#fef3c7", "#fde68a", "#92400e") if signal else chip("No risk findings", "#f3f3f5", RULE, MUTED)
+        return (f'<div style="display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid {RULE}">'
+                f'<div style="min-width:0"><div style="font-family:{HEAD};font-size:14px;font-weight:700;color:{NAVY}">{nm}</div>'
+                f'<div style="font-family:{MONO};font-size:10.5px;color:{MUTED};margin:2px 0 7px">GB \u00b7 LEI {lei}</div>'
+                f'<div style="display:flex;gap:6px;flex-wrap:wrap">{chip(status, sbg, sbd, stx)}{sig}</div>'
+                f'<div style="font-family:{BODY};font-size:11px;color:{MUTED};margin-top:7px">Watching since {since} \u00b7 last checked {checked}</div></div>'
+                f'<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex:0 0 auto">'
+                f'<span style="display:inline-flex;align-items:center;background:#fff;border:1px solid {WARNBD};color:{WARNTX};'
+                f'border-radius:10px;padding:0 12px;height:32px;font-family:{BODY};font-size:12px;font-weight:500">Re-check now</span>'
+                f'<span style="font-family:{BODY};font-size:11.5px;color:{MUTED}">Stop watching</span></div></div>')
+    left = card(
+        f'{label("Watchlist", 6)}'
+        f'<p style="font-family:{BODY};font-size:12px;line-height:1.55;color:{MUTED};margin:0 0 10px">Re-checked only when '
+        f'GLEIF or OpenSanctions publish a change to the record. No account, no email.</p>'
+        f'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">'
+        f'<span style="font-family:{MONO};font-size:10.5px;color:{NAVY};background:{BG};border:1px solid {RULE};'
+        f'border-radius:6px;padding:5px 8px">api.opencheck.world/watch/\u2026a9Qk.atom</span>'
+        f'<span style="display:inline-flex;align-items:center;background:#fff;border:1px solid {SOFTB};color:{BLUE};'
+        f'border-radius:10px;padding:0 12px;height:32px;font-family:{BODY};font-size:12px;font-weight:500">Copy feed address</span></div>'
+        f'{label("Watched companies", 0)}'
+        + watched("BIRTLEY INVESTMENT LIMITED", "254900RT9QQBQZVH8O89", "LEI lapsed", WARNBG, WARNBD, WARNTX, "", "2026-09-10", "2026-09-16")
+        + watched("BP P.L.C.", "213800LH1BZH3DI6G760", "Active", OKBG, OKBD, OKTX, "Offshore leaks \u25d0", "2026-09-10", "2026-09-16")
+        + f'<p style="font-family:{BODY};font-size:11px;line-height:1.55;color:{MUTED};margin:12px 0 0">'
+        f'GLEIF: OpenCheck holds 3,424,074 LEI records as of 2026-09-16 00:00 UTC; the last delta changed 3,903 of them, '
+        f'and only a watched LEI in that delta is re-run. National registers are never polled.</p>', 18)
+    def entry(head, tier, tbg, tbd, ttx, when, trigger, lines, checked, warn=None):
+        li = "".join(f'<div style="display:flex;gap:8px;font-family:{BODY};font-size:12.5px;line-height:1.5;color:{NAVY}">'
+                     f'<span style="color:{MUTED}">\u2013</span><span>{l}</span></div>' for l in lines)
+        w = (f'<div style="font-family:{BODY};font-size:11px;color:{WARNTX};margin-top:2px">{warn}</div>' if warn else "")
+        return (f'<div style="border:1px solid {RULE};border-radius:10px;padding:14px 16px;margin-bottom:10px">'
+                f'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">'
+                f'<span style="font-family:{HEAD};font-size:14px;font-weight:700;color:{NAVY}">{head}</span>'
+                f'<span style="font-family:{BODY};font-size:11px;color:{MUTED};white-space:nowrap">{chip(tier, tbg, tbd, ttx)} {when}</span></div>'
+                f'<p style="font-family:{BODY};font-size:12.5px;line-height:1.5;color:{NAVY};margin:8px 0 6px">{trigger}</p>'
+                f'{li}<div style="font-family:{BODY};font-size:11px;color:{MUTED};margin-top:8px">{checked}</div>{w}</div>')
+    right = card(
+        f'{label("What changed", 12)}'
+        + entry("BIRTLEY INVESTMENT LIMITED: GLEIF record changed", "GLEIF delta", FTINT, FBD, FTX, "2026-09-16 01:05 UTC",
+                "GLEIF published a change to this record in its 2026-09-15 16:00:00 delta (LEI registration status).",
+                ["GLEIF LEI registration status: ISSUED \u2192 LAPSED."],
+                "9 sources checked as a result on 2026-09-16.")
+        + entry("BP P.L.C.: re-run found no difference", "By hand", "#f3f3f5", RULE, MUTED, "2026-09-16 09:40 UTC",
+                "Re-checked by hand.", [],
+                "38 sources checked as a result on 2026-09-16.",
+                warn="Could not check: KvK \u2014 the absence of a finding there is not a clean result."), 18)
+    return page(f'<div style="display:grid;grid-template-columns:400px 1fr;gap:16px;align-items:start">{left}{right}</div>')
+
 VIGS = {"quickcheck": quickcheck, "fullcheck": fullcheck, "backgroundcheck": backgroundcheck,
         "batch": batch, "history": history, "network": network,
-        "subsidiaries": subsidiaries}
+        "subsidiaries": subsidiaries, "watchlist": watchlist}
 
 
 WIDTH = 1648

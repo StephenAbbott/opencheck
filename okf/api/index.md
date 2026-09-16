@@ -5,5 +5,6 @@
 * [Person check](/api/person-check.md) - `/person-check`: on-demand screening of one named person (BackgroundCheck).
 * [Deepen](/api/deepen.md) - `/deepen` and `/lookup-source`: fetch + map a single source's record.
 * [Export](/api/export.md) - `/export`: download a reproducible BODS bundle.
+* [Watchlist](/api/watch.md) - `/watch`: watch an LEI; an Atom feed of changes, re-run only on GLEIF's or OpenSanctions' delta.
 * [Licensing](/api/license-matrix.md) - `/license-matrix`: per-source licence terms and the combined commercial-use verdict.
 * [Sources & health](/api/sources.md) - `/sources` and `/health`: source catalogue and liveness.
