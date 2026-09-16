@@ -10180,7 +10180,10 @@ def map_onrc_romania(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     Dates of birth are published at the precision ONRC publishes them, which
     is a full date on 87.2% of rows.
     """
-    if not bundle or bundle.get("is_stub"):
+    # ``not_found`` as well as ``is_stub``: a miss carries is_stub False so its
+    # note card survives the pipeline's blanket stub drop, and it has no
+    # company row to map.
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
         return
 
     company: dict[str, Any] = bundle.get("company") or {}

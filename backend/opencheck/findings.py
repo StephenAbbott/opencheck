@@ -1462,11 +1462,24 @@ def finding_onrc_romania(bundle: dict[str, Any]) -> str | None:
     """
     if not bundle:
         return None
-    if bundle.get("is_stub"):
+    if bundle.get("is_stub") or bundle.get("not_found"):
         # Absence said in the same voice as presence (rule 4). A card that
         # explains why the register has nothing beats an empty one — and the
         # drawer is never opened for a card with no statements, so the row
         # sentence is the only place this can be said.
+        #
+        # Two different misses, two different sentences. Saying "not in the
+        # extract" when the truth is "the fiscal code did not pick out one
+        # registration" would report a company as absent that may well be
+        # sitting there under several historical numbers.
+        from .sources.onrc_romania import COVERAGE_CUI_UNRESOLVED
+
+        if bundle.get("coverage_note") == COVERAGE_CUI_UNRESOLVED:
+            return (
+                "Identified in GLEIF by its fiscal code, which does not "
+                "resolve to a single registration in the indexed extract of "
+                "the Trade Register."
+            )
         return (
             "Not in the indexed extract of the Trade Register, which is built "
             "from ONRC's monthly dump and covers registered companies rather "

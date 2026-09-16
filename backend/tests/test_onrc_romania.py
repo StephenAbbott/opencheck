@@ -743,7 +743,11 @@ async def test_a_company_outside_the_index_gets_a_coverage_note(index: Path) -> 
     from opencheck.findings import finding_onrc_romania
 
     bundle = await onrc_romania.OnrcRomaniaAdapter().fetch("J40/55555/2019")
-    assert bundle["is_stub"] is True
+    # The INPI shape, and load-bearing: ``_lookup_pipeline`` drops every
+    # is_stub result above the registry branch, so a True here meant this
+    # card never rendered at all. Phase 212.
+    assert bundle["is_stub"] is False
+    assert bundle["not_found"] is True
     assert bundle["coverage_note"]
     sentence = finding_onrc_romania(bundle)
     assert sentence and "not in the indexed extract" in sentence.lower()
@@ -978,14 +982,21 @@ async def test_an_index_with_no_meta_still_declares_a_snapshot(
 
 
 async def test_a_company_absent_from_the_index_claims_no_read(index: Path) -> None:
-    """A coverage-note card stays a stub — nothing was read to report."""
+    """A coverage-note card claims no read, even though it is not a stub.
+
+    Phase 212 flipped ``is_stub`` to False so the card survives the pipeline's
+    blanket stub drop. The provenance claim must not ride along with it: the
+    recorder is told nothing on a miss, so it still resolves to ``stub``. The
+    card is real; the read it would describe never happened.
+    """
     from opencheck import provenance
 
     with provenance.recording() as recorder:
         bundle = await onrc_romania.OnrcRomaniaAdapter().fetch("J40/55555/2024")
         resolved = recorder.resolve(is_stub=bundle["is_stub"])
 
-    assert bundle["is_stub"] is True
+    assert bundle["is_stub"] is False
+    assert bundle["not_found"] is True
     assert resolved.liveness == "stub"
 
 
@@ -998,3 +1009,147 @@ async def test_no_index_claims_no_read(no_index) -> None:
         resolved = recorder.resolve(is_stub=bundle["is_stub"])
 
     assert resolved.liveness == "stub"
+
+
+# ---------------------------------------------------------------------------
+# A fiscal code is the other half of the population (Phase 212)
+# ---------------------------------------------------------------------------
+#
+# GLEIF files a CUI for 4,854 of the 8,677 dispatchable Romanian LEI records
+# and a J-number for 3,821. Until this phase ONRC only understood the second
+# kind, so it reached 41.8% of the population and was announced-and-silent for
+# the rest: `sources_applicable` named it, and no card and no error followed.
+
+
+async def test_a_fiscal_code_reaches_the_company(index: Path) -> None:
+    """The case that produced nothing at all before.
+
+    ALMO SRL in production: GLEIF holds `1468817`, the register files it under
+    `J1991000698388`, and no ONRC card was rendered.
+    """
+    bundle = await onrc_romania.OnrcRomaniaAdapter().fetch(
+        "412052", legal_name="TRANSIDEAL SRL"
+    )
+    assert bundle["is_stub"] is False
+    assert bundle.get("not_found") is None
+    assert bundle["registration_number"] == "J40/1116/1991"
+    assert bundle["cui"] == "412052"
+    assert bundle["representatives"], "the representatives are the point of ONRC"
+
+
+async def test_both_identifier_shapes_reach_the_same_company(index: Path) -> None:
+    """A CUI and a J-number for one company must not disagree."""
+    adapter = onrc_romania.OnrcRomaniaAdapter()
+    by_cui = await adapter.fetch("38218844")
+    by_number = await adapter.fetch("J40/15812/2017")
+    assert by_cui["registration_number"] == by_number["registration_number"]
+    assert by_cui["cui"] == by_number["cui"] == "38218844"
+
+
+def test_a_fiscal_code_on_several_rows_is_decided_by_status(tmp_path: Path) -> None:
+    """A CUI is NOT unique in the register — 469 of them sit on >1 row.
+
+    Always the same company under successive registration numbers. Restricted
+    to `funcțiune` the shipped index holds 6,764 rows and 6,764 distinct
+    fiscal codes, so status decides it exactly. Pinned here on the real shape:
+    one struck-off registration, one live one.
+    """
+    import os
+
+    path = tmp_path / "dupes.sqlite"
+    conn = sqlite3.connect(str(path))
+    conn.executescript(_SCHEMA)
+    conn.executemany(
+        "INSERT INTO company VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        [
+            ("J40/11171/2011", None, "29114704", "CONVERSION MEDIA SRL", "SRL",
+             "2011-01-01", "1084", "radiată", "România", "Bucureşti",
+             "Bucureşti", None, None, None, None),
+            ("J23/4771/2016", None, "29114704", "CONVERSION MEDIA SRL", "SRL",
+             "2016-01-01", "1048", "funcțiune", "România", "Ilfov",
+             "Voluntari", None, None, None, None),
+        ],
+    )
+    conn.commit()
+    conn.close()
+
+    os.environ["ONRC_ROMANIA_DB_FILE"] = str(path)
+    get_settings.cache_clear()
+    onrc_romania.reset_connection()
+    try:
+        row = onrc_romania.company_by_cui("29114704")
+        assert row is not None
+        assert row["registration_number"] == "J23/4771/2016"
+        assert row["status"] == onrc_romania.ACTIVE_STATUS
+    finally:
+        os.environ.pop("ONRC_ROMANIA_DB_FILE", None)
+        get_settings.cache_clear()
+        onrc_romania.reset_connection()
+
+
+def test_an_undecidable_fiscal_code_is_refused_not_guessed(tmp_path: Path) -> None:
+    """Two live registrations for one CUI — refuse, as the prefix join does."""
+    import os
+
+    path = tmp_path / "ambiguous.sqlite"
+    conn = sqlite3.connect(str(path))
+    conn.executescript(_SCHEMA)
+    conn.executemany(
+        "INSERT INTO company VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        [
+            ("J40/1/2011", None, "555", "TWO LIVE SRL", "SRL", "2011-01-01",
+             "1048", "funcțiune", "România", "B", "B", None, None, None, None),
+            ("J40/2/2012", None, "555", "TWO LIVE SRL", "SRL", "2012-01-01",
+             "1048", "funcțiune", "România", "B", "B", None, None, None, None),
+        ],
+    )
+    conn.commit()
+    conn.close()
+
+    os.environ["ONRC_ROMANIA_DB_FILE"] = str(path)
+    get_settings.cache_clear()
+    onrc_romania.reset_connection()
+    try:
+        assert onrc_romania.company_by_cui("555") is None
+    finally:
+        os.environ.pop("ONRC_ROMANIA_DB_FILE", None)
+        get_settings.cache_clear()
+        onrc_romania.reset_connection()
+
+
+async def test_an_unresolvable_fiscal_code_says_which_miss_it_was(index: Path) -> None:
+    """Two misses, two sentences.
+
+    Saying "not in the indexed extract" for a fiscal code that merely failed to
+    pick out one registration would report a company as absent when it may be
+    sitting there under several historical numbers.
+    """
+    from opencheck.findings import finding_onrc_romania
+
+    bundle = await onrc_romania.OnrcRomaniaAdapter().fetch("99999999")
+    assert bundle["is_stub"] is False
+    assert bundle["not_found"] is True
+    assert bundle["coverage_note"] == onrc_romania.COVERAGE_CUI_UNRESOLVED
+    sentence = finding_onrc_romania(bundle) or ""
+    assert "fiscal code" in sentence.lower()
+    assert "not in the indexed extract" not in sentence.lower()
+
+
+async def test_a_miss_maps_to_no_bods_statements(index: Path) -> None:
+    """The mapper reads the same flag the card does, or a miss becomes a node."""
+    from opencheck.bods import map_onrc_romania
+
+    bundle = await onrc_romania.OnrcRomaniaAdapter().fetch("99999999")
+    assert list(map_onrc_romania(bundle)) == []
+
+
+async def test_no_index_is_still_a_stub_and_is_dropped(no_index) -> None:
+    """Nothing consulted, nothing to show. Distinct from a miss.
+
+    Without an index `covers_lei` is False and the source is never dispatched,
+    so this bundle should never reach a card — `is_stub` True is what makes
+    the pipeline drop it if it somehow does.
+    """
+    bundle = await onrc_romania.OnrcRomaniaAdapter().fetch("J40/1116/1991")
+    assert bundle["is_stub"] is True
+    assert "not_found" not in bundle

@@ -337,7 +337,12 @@ def _bh_onrc_romania(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """
     from ..findings import finding_onrc_romania
 
-    if r.get("is_stub"):
+    # ``not_found`` as well as ``is_stub``. The adapter returns a miss with
+    # is_stub False on purpose: ``_lookup_pipeline`` drops every is_stub result
+    # in one blanket check placed above the registry-source branch, so a True
+    # here meant this branch could never run and the source went out in
+    # sources_applicable while producing no card and no error.
+    if r.get("is_stub") or r.get("not_found"):
         return _hit(
             "onrc_romania", local_id,
             name=ctx.legal_name or "",
