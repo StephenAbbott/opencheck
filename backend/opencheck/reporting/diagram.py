@@ -11,9 +11,12 @@ Visual language (matches the on-screen BOVS styling):
 - person node  → green disc with a person glyph
 - entity node  → navy disc with a building glyph
 - unspecified  → grey disc with "?"
-- ownership interest      → blue edge
-- control / management role → purple edge
-- each edge is labelled with the interest (type, share band, dates)
+- edges use the canvas's four kinds, colours and dash patterns (Phase 221):
+  ownership blue solid, control orange dotted, role purple dashed,
+  unclassified grey — ``EDGE_STYLE`` below, pinned to graphStyle.ts
+- each edge is labelled in the canvas's words ("Owns 75–100%", "Controls"),
+  wrapped to the room the edge has, with its start year; the register's own
+  wording and full dates are in the text-equivalent table
 - an ended relationship (closed record, or every interest past its endDate)
   keeps its colour, is drawn faint and says "ended <date>" (Phase 219)
 """
@@ -28,24 +31,92 @@ from dataclasses import dataclass, field
 from typing import Any
 from xml.sax.saxutils import escape
 
-from ..bods.lifecycle import ended_phrase, statement_lifecycle
+from ..bods.lifecycle import ended_phrase, interest_ended, statement_lifecycle
 
-# Palette — mirrors frontend BODSGraph edge categories + BOVS node colours.
-# Phase 122: ownership and role moved onto the brand node tier
-# (oo.node.blue / oo.node.purple) so the exported PDF, the on-screen graph
-# and the mode badges cannot disagree. If BODSGraph's edge palette changes
-# again, this must move with it — there is no test pinning them together.
-_OWN = "#3b82f6"     # ownership interest  (oo.node.blue, FullCheck accent)
-_CTRL = "#7c3aed"    # control / management role (oo.node.purple)
+# Node palette — BOVS node colours.
 _PERSON = "#1d9e75"  # person node (green)
 _ENTITY = "#0d1b3e"  # entity node (navy)
 _UNSPEC = "#888888"  # unspecified party (grey)
 _INK = "#1a1a1a"
 _MUTE = "#595959"
 
+
+# --- the on-screen graph's edge vocabulary, mirrored (Phase 221) -------------
+#
+# The PDF diagram draws the same four edge kinds as the canvas, in the same
+# colours and dash patterns, labelled with the same words. Until Phase 221 this
+# module knew only "ownership" and "everything else", and drew everything else
+# purple and solid — so a PSC's significant influence or control was purple in
+# the PDF and orange and dotted on screen.
+#
+# The values below are copies, not imports: the frontend is TypeScript. They
+# are pinned to their originals by ``tests/test_reporting_diagram_parity.py``,
+# which parses ``frontend/src/lib/graphStyle.ts`` (``EDGE_STYLE``,
+# ``ENDED_EDGE``) and ``frontend/src/lib/bodsGraph.ts`` (``INTEREST_LABELS``,
+# ``categorise``, ``buildEdgeLabel``) and fails when either side moves alone.
+
+
+@dataclass(frozen=True)
+class EdgeStyle:
+    color: str       # line colour, as drawn
+    text_color: str  # label colour, darkened to reach 4.5:1 (WCAG 1.4.3)
+    dash: str        # "solid" | "dotted" | "dashed" — the non-colour cue (WCAG 1.4.1)
+    name: str        # legend name
+
+
+#: Mirrors ``EDGE_STYLE`` in ``frontend/src/lib/graphStyle.ts`` (the four kinds a
+#: relationship can be; ``possiblySame`` is a canvas-only suggestion edge).
+EDGE_STYLE: dict[str, EdgeStyle] = {
+    "ownership": EdgeStyle("#3b82f6", "#1d4ed8", "solid", "Ownership"),
+    "control": EdgeStyle("#e65100", "#9a3412", "dotted", "Control"),
+    "role": EdgeStyle("#7c3aed", "#6d28d9", "dashed", "Role"),
+    "unknown": EdgeStyle("#888888", "#595959", "solid", "Unclassified"),
+}
+
+#: The SVG for each dash pattern. A 3-unit round-capped stroke with a near-zero
+#: dash reads as dots, as Cytoscape's ``line-style: dotted`` does.
+_DASH_ATTRS: dict[str, str] = {
+    "solid": "",
+    "dotted": ' stroke-dasharray="0.5 6" stroke-linecap="round"',
+    "dashed": ' stroke-dasharray="9 6"',
+}
+
+#: Mirrors ``categorise()`` in ``frontend/src/lib/bodsGraph.ts``. Precedence is
+#: the tuple order: ownership → control → role → unknown.
+EDGE_CATEGORY_TYPES: tuple[tuple[str, frozenset[str]], ...] = (
+    ("ownership", frozenset({"shareholding", "votingRights"})),
+    ("control", frozenset({
+        "appointmentOfBoard",
+        "otherInfluenceOrControl",
+        "controlViaCompanyRulesOrArticles",
+        "controlByLegalFramework",
+    })),
+    ("role", frozenset({"seniorManagingOfficial", "boardMember", "boardChair"})),
+)
+
+#: Mirrors ``INTEREST_LABELS`` in ``frontend/src/lib/bodsGraph.ts``.
+INTEREST_LABELS: dict[str, str] = {
+    "shareholding": "Owns",
+    "votingRights": "Controls (votes)",
+    "appointmentOfBoard": "Controls (board)",
+    "otherInfluenceOrControl": "Controls",
+    "controlViaCompanyRulesOrArticles": "Controls (articles)",
+    "controlByLegalFramework": "Controls (law)",
+    "seniorManagingOfficial": "Director",
+    "boardMember": "Board member",
+    "boardChair": "Chair",
+    "unknownInterest": "Interest (unknown)",
+    "unpublishedInterest": "Interest (unpublished)",
+    "enjoymentAndUseOfAssets": "Enjoys assets",
+    "rightToProfitOrIncomeFromAssets": "Profits from assets",
+}
+
+#: Mirrors ``buildEdgeLabel``'s ``labels.slice(0, 2)``.
+MAX_INTEREST_LINES = 2
+
 # Phase 219 — the line opacity of an ended relationship. Mirrors
-# ENDED_EDGE.lineOpacity in frontend/src/lib/graphStyle.ts; nothing pins the two
-# together, so move them as a pair. Labels stay fully opaque (WCAG 1.4.3).
+# ``ENDED_EDGE.lineOpacity`` in graphStyle.ts (pinned since Phase 221). Labels
+# stay fully opaque (WCAG 1.4.3).
 _ENDED_OPACITY = 0.5
 
 _R = 26              # node radius
@@ -111,40 +182,137 @@ def _party_label(party: Any, by_id: dict[str, dict[str, Any]]) -> str:
     return _node_label(by_id.get(party))
 
 
-_OWNERSHIP_TYPES = {"shareholding", "ownership", "ownership-of-shares", "ownershipOfShares"}
+def categorise(interests: list[dict[str, Any]]) -> str:
+    """The edge kind for a set of interests — ``categorise()`` in bodsGraph.ts.
+
+    Read from each interest's BODS ``type`` only, never from its free-text
+    ``details``: the canvas does not read details, and a PDF that did would
+    colour the same edge differently from the screen again."""
+    types = {i.get("type") for i in interests}
+    for category, members in EDGE_CATEGORY_TYPES:
+        if types & members:
+            return category
+    return "unknown"
 
 
-def _classify(interests: list[dict[str, Any]]) -> str:
-    """Ownership (blue) if any interest is a shareholding/ownership; else control."""
-    for i in interests:
-        t = (i.get("type") or "").lower()
-        d = (i.get("details") or "").lower()
-        if any(o.lower() in t for o in _OWNERSHIP_TYPES) or "ownership" in d or "share" in d:
-            return "ownership"
-    return "control"
+def _num(value: Any) -> str:
+    """A share bound as JavaScript prints it: ``75.0`` → ``75``."""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)
 
 
-def _interest_label(interests: list[dict[str, Any]]) -> str:
-    """Compact edge label: detail + share band + start year."""
-    if not interests:
-        return "interest"
-    i = interests[0]
-    detail = i.get("details") or i.get("type") or "interest"
-    share = i.get("share") or {}
-    band = ""
-    smin = share.get("exclusiveMinimum", share.get("minimum"))
-    smax = share.get("maximum")
-    if smin is not None and smax is not None and smin == smax:
-        band = f" — {smin}%"
-    elif smin is not None and smax == 100:
-        band = f" — {smin}%+"
-    elif smin is not None or smax is not None:
-        band = f" — {smin or 0}–{smax or 100}%"
-    year = ""
-    start = i.get("startDate")
-    if start:
-        year = f" · from {str(start)[:4]}"
-    return f"{detail}{band}{year}"
+def _first_set(share: dict[str, Any], *keys: str) -> Any:
+    """``a ?? b`` — the first key whose value is not None."""
+    for k in keys:
+        if share.get(k) is not None:
+            return share[k]
+    return None
+
+
+def interest_label(interest: dict[str, Any]) -> str:
+    """One interest in the canvas's words — ``interestLabel()`` in bodsGraph.ts
+    ("Owns 75–100%", "Controls", "Director"). The register's own wording
+    (``details``) stays in the text-equivalent table."""
+    base = INTEREST_LABELS.get(interest.get("type") or "") or interest.get("type") or "Interest"
+    share = interest.get("share")
+    if not share or not isinstance(share, dict):
+        return base
+    owns = base.startswith("Owns")
+    verb = "Owns" if owns else "Controls"
+    if share.get("exact") is not None:
+        rest = (base[4:] if owns else base[8:]).strip()
+        return f"{verb} {_num(share['exact'])}%{' ' + rest if rest else ''}".strip()
+    lo = _first_set(share, "minimum", "exclusiveMinimum")
+    hi = _first_set(share, "maximum", "exclusiveMaximum")
+    if lo is not None and hi is not None:
+        return f"{verb} {_num(lo)}–{_num(hi)}%"
+    return base
+
+
+def edge_label_lines(interests: list[dict[str, Any]]) -> list[str]:
+    """``buildEdgeLabel()``: beneficial interests first, identical labels once,
+    at most :data:`MAX_INTEREST_LINES` lines."""
+    ordered = sorted(interests, key=lambda i: 0 if i.get("beneficialOwnershipOrControl") else 1)
+    lines: list[str] = []
+    for i in ordered:
+        label = interest_label(i)
+        if label not in lines:
+            lines.append(label)
+    return lines[:MAX_INTEREST_LINES]
+
+
+def _edge_label(stmt: dict[str, Any]) -> tuple[list[list[str]], str]:
+    """The label for one relationship statement, as logical lines of clauses,
+    plus its edge kind.
+
+    As on the canvas (``toGraphEdge``), a current relationship is labelled and
+    classified from its *current* interests — an ended one pooled onto the same
+    record is history, and the table carries it — and an ended relationship
+    from all of them, with "ended <date>" as a line of its own. The start year
+    stays, as a clause the wrapper can move to its own line; the full dates
+    are in the table."""
+    interests = list((stmt.get("recordDetails") or {}).get("interests") or [])
+    life = statement_lifecycle(stmt)
+    shown = interests
+    if not life.ended:
+        current = [i for i in interests if not interest_ended(i, False)]
+        shown = current or interests
+    lines: list[list[str]] = [[text] for text in edge_label_lines(shown)] or [["Relationship"]]
+    starts = sorted(str(i["startDate"])[:4] for i in shown if i.get("startDate"))
+    dates: list[str] = []
+    if starts:
+        dates.append(f"from {starts[0]}")
+    if life.ended:
+        dates.append(ended_phrase(life.ended_on))
+    if dates:
+        lines.append(dates)
+    return lines, categorise(shown)
+
+
+# --- label wrapping ------------------------------------------------------------
+
+#: Average advance of the diagram's 11-unit sans label face, in viewBox units.
+#: Deliberately generous so an estimate never undershoots the drawn text.
+_LABEL_CHAR_W = 6.3
+_LABEL_FONT = 11
+_LABEL_LINE_H = 13
+#: The narrowest and widest a label may wrap to, in characters.
+_LABEL_MIN_CHARS = 14
+_LABEL_MAX_CHARS = 30
+
+
+def wrap_label(lines: list[list[str]], max_chars: int) -> list[str]:
+    """Lay out a label's logical lines within ``max_chars`` characters.
+
+    Each logical line is a list of clauses ("from 2022", "ended 4 October
+    2024"). Clauses share a line, joined by " · ", while they fit; a clause
+    that does not fit starts a new line; a clause longer than the width on its
+    own is word-wrapped. A word longer than the width is never cut."""
+    out: list[str] = []
+    for clauses in lines:
+        current = ""
+        for clause in clauses:
+            joined = f"{current} · {clause}" if current else clause
+            if len(joined) <= max_chars:
+                current = joined
+                continue
+            if current:
+                out.append(current)
+                current = ""
+            if len(clause) <= max_chars:
+                current = clause
+                continue
+            for word in clause.split():
+                candidate = f"{current} {word}" if current else word
+                if len(candidate) <= max_chars or not current:
+                    current = candidate
+                else:
+                    out.append(current)
+                    current = word
+        if current:
+            out.append(current)
+    return out
 
 
 # --- SVG primitives ----------------------------------------------------------
@@ -244,16 +412,14 @@ def source_diagram(
         rd = s.get("recordDetails") or {}
         pid = node_for(rd.get("interestedParty"))
         sid = node_for(rd.get("subject"))
-        interests = rd.get("interests") or []
         life = statement_lifecycle(s)
-        label = _interest_label(interests)
-        if life.ended:
-            label = f"{label} · {ended_phrase(life.ended_on)}"
+        lines, category = _edge_label(s)
         edges.append({
             "from": pid,
             "to": sid,
-            "label": label,
-            "cat": _classify(interests),
+            "lines": lines,
+            "label": " · ".join(c for line in lines for c in line),
+            "cat": category,
             "ended": life.ended,
         })
 
@@ -327,6 +493,96 @@ def _layer_nodes(nodes: dict, edges: list) -> dict[str, int]:
     return layer
 
 
+def _marker_id(category: str, ended: bool) -> str:
+    return f"ar-{category}{'-ended' if ended else ''}"
+
+
+Box = tuple[float, float, float, float]  # x0, y0, x1, y1
+
+
+def _overlaps(a: Box, b: Box, pad: float = 2) -> bool:
+    return a[0] < b[2] + pad and b[0] < a[2] + pad and a[1] < b[3] + pad and b[1] < a[3] + pad
+
+
+def _node_boxes(pos: dict[str, tuple[float, float]], nodes: dict) -> list[Box]:
+    """The area each node occupies: its disc plus the name (and sublabel) under it."""
+    boxes: list[Box] = []
+    for n, (cx, cy) in pos.items():
+        nd = nodes[n]
+        text_w = max(len(nd["label"]) * 6.2, len(nd.get("sublabel") or "") * 5.0, 2 * _R)
+        bottom = cy + _R + (34 if nd.get("sublabel") else 20)
+        boxes.append((cx - text_w / 2, cy - _R, cx + text_w / 2, bottom))
+    return boxes
+
+
+#: Where along an edge a label may sit, as a fraction of the way from its
+#: *fanned* end (the end with fewer edges): tried in order, first clear wins.
+_LABEL_POSITIONS = (0.35, 0.5, 0.25, 0.65, 0.2, 0.75)
+
+
+def _place_label(
+    lines: list[list[str]],
+    x1: float, y1: float, x2: float, y2: float,
+    *,
+    from_fanned_start: bool | None,
+    avoid: list[Box],
+    view: Box,
+) -> tuple[list[str], float, float, Box]:
+    """Choose where an edge's label goes, and wrap it to the room it has there.
+
+    Phase 221. The label used to be one unwrapped line at the edge's midpoint,
+    nudged above or below. Every edge into a subject converges on it, so the
+    midpoints of neighbouring edges sit close together, and a long label ran
+    under the subject node (BANK SADERAT PLC, Companies House) or over its
+    neighbour's label. Now the label is centred *on* the edge, on a white
+    backing, nearer the end where edges fan apart; it wraps to the horizontal
+    room it has at that point, so it cannot reach either node; and it moves
+    along the edge until it clears the nodes and every label already placed.
+    If nothing is clear it takes the first position — overlap is then the
+    graph's density, and the table under the figure still says everything.
+    """
+    if from_fanned_start is None:
+        order = (0.5, 0.35, 0.65, 0.25, 0.75)
+    else:
+        order = _LABEL_POSITIONS
+    first_choice: tuple[list[str], float, float, Box] | None = None
+    for f in order:
+        t = f if from_fanned_start in (True, None) else 1 - f
+        cx, cy = x1 + t * (x2 - x1), y1 + t * (y2 - y1)
+        room = 2 * min(t, 1 - t) * abs(x2 - x1) - 24
+        max_chars = max(_LABEL_MIN_CHARS, min(_LABEL_MAX_CHARS, int(room / _LABEL_CHAR_W)))
+        wrapped = wrap_label(lines, max_chars)
+        w = max(len(line) for line in wrapped) * _LABEL_CHAR_W + 8
+        h = (len(wrapped) - 1) * _LABEL_LINE_H + _LABEL_FONT + 5
+        box = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+        placed = (wrapped, cx, cy, box)
+        if first_choice is None:
+            first_choice = placed
+        inside = box[0] >= view[0] and box[1] >= view[1] and box[2] <= view[2] and box[3] <= view[3]
+        if inside and not any(_overlaps(box, other) for other in avoid):
+            return placed
+    assert first_choice is not None
+    return first_choice
+
+
+def _label_svg(wrapped: list[str], style: EdgeStyle, box: Box) -> str:
+    """A placed label: a white backing and one ``<tspan>`` per line, each with
+    its own ``y`` (WeasyPrint lays those out without relying on ``dy``)."""
+    x0, y0, x1, y1 = box
+    cx = (x0 + x1) / 2
+    first = y0 + _LABEL_FONT + 1
+    spans = "".join(
+        f'<tspan x="{cx:.0f}" y="{first + k * _LABEL_LINE_H:.0f}">{escape(t)}</tspan>'
+        for k, t in enumerate(wrapped)
+    )
+    return (
+        f'<rect x="{x0:.0f}" y="{y0:.0f}" width="{x1 - x0:.0f}" height="{y1 - y0:.0f}" rx="3" '
+        f'fill="#fff" fill-opacity="0.85"/>'
+        f'<text x="{cx:.0f}" y="{first:.0f}" text-anchor="middle" font-size="{_LABEL_FONT}" '
+        f'fill="{style.text_color}">{spans}</text>'
+    )
+
+
 def _render(nodes: dict, edges: list, source_name: str) -> tuple[str, str]:
     layer = _layer_nodes(nodes, edges)
     max_layer = max(layer.values())
@@ -362,59 +618,65 @@ def _render(nodes: dict, edges: list, source_name: str) -> tuple[str, str]:
     # Build accessible description.
     summary = _summary(nodes, edges)
     parts.append(f'<desc id="ds">{escape(summary)}</desc>')
-    parts.append(
-        '<defs>'
-        f'<marker id="aro" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
-        f'orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{_OWN}"/></marker>'
-        f'<marker id="arc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
-        f'orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{_CTRL}"/></marker>'
-        # Ended relationships (Phase 219): the same heads at the same fade as
-        # the line — a marker does not inherit the line's stroke-opacity.
-        f'<marker id="aroe" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
-        f'orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{_OWN}" fill-opacity="{_ENDED_OPACITY}"/></marker>'
-        f'<marker id="arce" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
-        f'orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{_CTRL}" fill-opacity="{_ENDED_OPACITY}"/></marker>'
-        '</defs>'
-    )
+    # Arrowheads: one per edge kind drawn, and a faded twin for an ended edge
+    # (Phase 219) — a marker does not inherit the line's stroke-opacity.
+    cats = [c for c in EDGE_STYLE if any(e["cat"] == c for e in edges)]
+    defs = ["<defs>"]
+    for c in cats:
+        for ended in (False, True):
+            fade = f' fill-opacity="{_ENDED_OPACITY}"' if ended else ""
+            defs.append(
+                f'<marker id="{_marker_id(c, ended)}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
+                f'orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{EDGE_STYLE[c].color}"{fade}/></marker>'
+            )
+    defs.append("</defs>")
+    parts.append("".join(defs))
     # Edges first (under nodes).
+    degree: dict[str, int] = {}
+    for e in edges:
+        degree[e["from"]] = degree.get(e["from"], 0) + 1
+        degree[e["to"]] = degree.get(e["to"], 0) + 1
+    avoid = _node_boxes(pos, nodes)
+    view: Box = (0, 0, _VIEW_W, height - 16)  # clear of the legend row
+    labels: list[str] = []
     for e in edges:
         (px, py), (sx, sy) = pos[e["from"]], pos[e["to"]]
-        colour = _OWN if e["cat"] == "ownership" else _CTRL
-        marker = "aro" if e["cat"] == "ownership" else "arc"
-        fade = ""
-        if e.get("ended"):
-            marker += "e"
-            fade = f' stroke-opacity="{_ENDED_OPACITY}"'
+        style = EDGE_STYLE[e["cat"]]
+        fade = f' stroke-opacity="{_ENDED_OPACITY}"' if e.get("ended") else ""
         x1, x2 = px + _R, sx - _R
         parts.append(
             f'<line x1="{x1:.0f}" y1="{py:.0f}" x2="{x2:.0f}" y2="{sy:.0f}" '
-            f'stroke="{colour}" stroke-width="3"{fade} marker-end="url(#{marker})"/>'
+            f'stroke="{style.color}" stroke-width="3"{_DASH_ATTRS[style.dash]}{fade} '
+            f'marker-end="url(#{_marker_id(e["cat"], bool(e.get("ended")))})"/>'
         )
-        mx, my = (x1 + x2) / 2, (py + sy) / 2
-        # Nudge the label off the line: above when the edge rises, below when it falls.
-        dy = -8 if sy <= py else 18
-        parts.append(
-            f'<text x="{mx:.0f}" y="{my + dy:.0f}" text-anchor="middle" font-size="11" '
-            f'fill="{colour}">{escape(e["label"])}</text>'
+        dp, ds = degree[e["from"]], degree[e["to"]]
+        fanned_start = None if dp == ds else dp < ds
+        wrapped, _cx, _cy, box = _place_label(
+            e["lines"], x1, py, x2, sy, from_fanned_start=fanned_start, avoid=avoid, view=view
         )
-    # Nodes.
+        avoid.append(box)
+        labels.append(_label_svg(wrapped, style, box))
+    # Nodes, then labels on top: a label is never painted over by a node name,
+    # and its backing keeps it legible where it crosses another edge.
     for n, (cx, cy) in pos.items():
         nd = nodes[n]
         parts.append(_node_svg(cx, cy, nd["kind"], nd["label"], nd.get("sublabel", "")))
-    # Legend.
-    cats = {e["cat"] for e in edges}
+    parts.extend(labels)
+    # Legend — only the kinds this diagram draws, in the canvas legend's names
+    # and line styles, laid out left to right.
     ly = height - 6
-    leg = []
-    if "ownership" in cats:
-        leg.append((_OWN, "ownership interest", 40))
-    if "control" in cats:
-        leg.append((_CTRL, "control / management role", 220))
+    lx = 40.0
+    entries = [(EDGE_STYLE[c], EDGE_STYLE[c].name, False) for c in cats]
     if any(e.get("ended") for e in edges):
-        leg.append((_MUTE, "ended relationship (drawn faint)", 420))
-    for colour, text, lx in leg:
-        faint = f' stroke-opacity="{_ENDED_OPACITY}"' if text.startswith("ended") else ""
-        parts.append(f'<line x1="{lx}" y1="{ly}" x2="{lx + 24}" y2="{ly}" stroke="{colour}" stroke-width="3"{faint}/>')
-        parts.append(f'<text x="{lx + 30}" y="{ly + 4}" font-size="9" fill="{_MUTE}">{escape(text)}</text>')
+        entries.append((EdgeStyle(_MUTE, _MUTE, "solid", ""), "Ended relationship (drawn faint)", True))
+    for style, text, faint in entries:
+        fade = f' stroke-opacity="{_ENDED_OPACITY}"' if faint else ""
+        parts.append(
+            f'<line x1="{lx:.0f}" y1="{ly}" x2="{lx + 24:.0f}" y2="{ly}" stroke="{style.color}" '
+            f'stroke-width="3"{_DASH_ATTRS[style.dash]}{fade}/>'
+        )
+        parts.append(f'<text x="{lx + 30:.0f}" y="{ly + 4}" font-size="9" fill="{_MUTE}">{escape(text)}</text>')
+        lx += 30 + len(text) * 5.2 + 24
     parts.append("</svg>")
     return "".join(parts), summary
 
