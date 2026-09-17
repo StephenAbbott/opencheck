@@ -97,6 +97,7 @@ from .risk import (
     DegradedSource,
     RiskSignal,
     classify_degradation_reason,
+    former_party_ids,
     pick_degradation_reason,
 )
 
@@ -376,7 +377,12 @@ def _collect_targets(bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
     Mirrors ``cross_check._collect_targets`` but shared here to keep the
     ICIJ module self-contained.  Skips placeholder types
     (``unknownPerson`` / ``anonymousEntity``) and records with empty names.
+
+    ``former`` (Phase 220) marks a party whose every link in the bundle has
+    ended (``risk.former_party_ids``). It is still screened; the signal says
+    "former".
     """
+    former = former_party_ids(bods)
     out: list[dict[str, Any]] = []
     for stmt in bods:
         record_type = stmt.get("recordType") or ""
@@ -391,7 +397,10 @@ def _collect_targets(bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
             name = _person_name(rd)
             if not name:
                 continue
-            out.append({"kind": _KIND_PERSON, "statement_id": sid, "name": name})
+            out.append(
+                {"kind": _KIND_PERSON, "statement_id": sid, "name": name,
+                 "former": sid in former}
+            )
         elif record_type == "entity":
             entity_type = (
                 (rd.get("entityType") or {}).get("type")
@@ -403,7 +412,10 @@ def _collect_targets(bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
             name = (rd.get("name") or "").strip()
             if not name:
                 continue
-            out.append({"kind": _KIND_ENTITY, "statement_id": sid, "name": name})
+            out.append(
+                {"kind": _KIND_ENTITY, "statement_id": sid, "name": name,
+                 "former": sid in former}
+            )
     return out
 
 
@@ -580,6 +592,10 @@ def _signal_from_match(
     node_type = _node_type(match)
 
     relation = "Related party" if target["kind"] == _KIND_PERSON else "Related entity"
+    # Phase 220: a party whose every link has ended is still screened, and
+    # the sentence says so — same wording as cross_check.related_party_label.
+    if target.get("former"):
+        relation = f"Former {relation.lower()}"
     dataset_label = f"the {dataset}" if dataset else "the ICIJ Offshore Leaks database"
     # Legacy descriptions carried a jurisdiction; current ones carry a leak
     # sub-collection. Either narrows the record usefully in the same slot.
@@ -632,6 +648,7 @@ def _signal_from_match(
             "node_type": node_type,
             "node_url": node_url,
             "kind": target["kind"],
+            **({"former": True} if target.get("former") else {}),
         },
     )
 

@@ -91,6 +91,7 @@ from .cross_check import (
     _birth_year_compatible,
     _collect_targets,
     corroborating_attributes,
+    former_evidence,
     match_confidence,
     match_summary,
     _dedupe,
@@ -605,6 +606,7 @@ def _signals_from_percolate(
                     "name_match_only": bool(
                         target["kind"] == _KIND_PERSON and not corroboration
                     ),
+                    **former_evidence(target),
                 },
             )
         )
@@ -668,4 +670,5 @@ def _screening_entry(
         "surface_form": surface_form,
         "percolator_match": list(item.get("percolator_match") or []),
         "score": round(score, 3),
+        **former_evidence(target),
     }
