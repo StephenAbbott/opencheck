@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 221** — The exported PDF diagram now draws control, role and ownership edges in the same colours and line styles as the on-screen graph, with short wrapped labels that no longer run under nodes.
+**Latest: Phase 222** — Serbia joins: the Business Registers Agency's company register, downloaded and indexed from its monthly open data, with every Serbian LEI holder's status, legal form and founding date.
 
 → [Full development history](docs/status.md)
 
