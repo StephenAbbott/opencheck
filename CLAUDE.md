@@ -1354,8 +1354,56 @@ labelled from its current interests; the ended ones move into `details`. C
 hides a *current* ultimate-consolidation edge only behind *current* direct
 edges. Why a fade: BOVS has no historical-relationship rule, but completeness
 forbids omitting a party and relevance allows "tinting or transparency"; every
-dash pattern was already taken. `risk.py` still ignores `recordStatus` — a
-separate, signal-level question.
+dash pattern was already taken. The risk engine reads the same rule since
+Phase 220 — see "Ended relationships in the risk engine" below.
+
+---
+
+## Ended relationships in the risk engine (Phase 220)
+
+`risk.py` reads `bods/lifecycle.py` (`statement_lifecycle`) through two
+helpers: `_ended_relationship_ids(bods)` and `former_party_ids(bods)`.
+Stephen's decisions (17 Sept 2026), which are what the code implements:
+
+- **Structural signals keep ended relationships, and say so.** No signal is
+  dropped or re-graded; where an ended link is part of what a signal counted,
+  its summary gains "including ended relationships" (`risk.INCLUDING_ENDED`)
+  and its evidence gains `includes_ended_relationships: true` +
+  `ended_relationship_statement_ids`. **The keys are absent — not `false` —
+  when nothing ended contributed**, so a current-only signal is unchanged.
+  Covered: `COMPLEX_OWNERSHIP_LAYERS` (the DFS prefers, between equally long
+  paths, the one with fewer ended links; a current record for the same pair
+  makes the link current), `COMPLEX_CORPORATE_STRUCTURE` (carries the layers'
+  and the nominee condition's ended ids), `STATE_CONTROLLED` (qualified only
+  when a state owner has no current holding; the overlay anchors on a current
+  holding first), `NON_EU_JURISDICTION` (qualified when a non-EU party is
+  reachable *only* through an ended link — `_upstream_entity_ids(...,
+  current_only=True)`), textual `NOMINEE`, and `OPAQUE_OWNERSHIP` (an
+  unspecified-reason relationship that ended, or a withheld party that is
+  former). `_subject_entity_id` asks the whole graph for a unique sink first
+  and the current graph only when that is ambiguous — current-first made a
+  subject's ended owner the sink.
+- **Related-party screens keep former parties and call them "former".**
+  `cross_check._collect_targets` and `icij_check._collect_targets` set
+  `target["former"]`; the summary reads "Former related party / entity"
+  (`cross_check.related_party_label`), evidence carries `former: true` (absent
+  otherwise), and so does OpenAleph's screening entry and EveryPolitician's
+  row finding (`finding_everypolitician(..., former=)`).
+- **"Former" is anchor-free and conservative**: the interested party of at
+  least one relationship, every such relationship ended, and not the subject
+  of any current relationship. It never invents a former party; it can miss
+  one (a former owner that still has current owners of its own in the bundle).
+  The looked-up company is never former — it is never an interested party.
+- **Left alone on purpose:** the structured `NOMINEE` path still skips a
+  ceased Companies House PSC (`ceased_on`), an older decision;
+  `TRUST_OR_ARRANGEMENT` and the FATF / EU high-risk lists read entity
+  statements, not relationships.
+- **Nothing to change in `/signalstats` or the picker cards**: no code, no
+  confidence and no source changed, and both read codes only. The narrative
+  model does see the new wording, through each signal's summary.
+
+Tests: `tests/test_risk_ended_relationships.py` (both ended shapes, the
+BANK SADERAT PLC shape — one closed PSC record).
 
 ---
 

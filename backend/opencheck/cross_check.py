@@ -58,6 +58,7 @@ from .risk import (
     classify_degradation_reason,
     classify_export_topics,
     classify_sanction_topics,
+    former_party_ids,
     pick_degradation_reason,
 )
 from .sources import REGISTRY, SearchKind, SourceHit, source_display_name
@@ -120,6 +121,8 @@ class NameMatch:
     hit: SourceHit
     target_name: str
     subject_statement_id: str
+    #: Phase 220 — every link the related party has in the bundle has ended.
+    former: bool = False
 
 
 @dataclass
@@ -256,6 +259,7 @@ async def assess_cross_source_names(
                         hit=hit,
                         target_name=str(target.get("name") or ""),
                         subject_statement_id=str(target.get("statement_id") or ""),
+                        former=bool(target.get("former")),
                     )
                 )
         for source_id, reason in failures.items():
@@ -326,12 +330,19 @@ _KIND_ENTITY = "entity"
 
 
 def _collect_targets(bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Pull ``{kind, statement_id, name, birth_year}`` records out of
-    every person and entity statement in the bundle.
+    """Pull ``{kind, statement_id, name, birth_year, former}`` records out
+    of every person and entity statement in the bundle.
 
     Skips placeholder shapes (``unknownPerson`` / ``anonymousEntity``)
     — they have no checkable name. Skips records with empty names.
+
+    ``former`` (Phase 220) is ``True`` for a party whose every link in the
+    bundle has ended — a ceased PSC, a resigned director
+    (``risk.former_party_ids``). Former parties are still screened: a former
+    PSC of a sanctioned company is still relevant to due diligence (Stephen,
+    17 Sept 2026). The signal says "former" instead.
     """
+    former = former_party_ids(bods)
     out: list[dict[str, Any]] = []
     for stmt in bods:
         record_type = stmt.get("recordType") or stmt.get("statementType", "").replace(
@@ -355,6 +366,7 @@ def _collect_targets(bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "name": name,
                     "birth_year": _person_birth_year(rd),
                     "nationalities": _person_nationalities(rd),
+                    "former": sid in former,
                 }
             )
         elif record_type == "entity":
@@ -375,6 +387,7 @@ def _collect_targets(bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "name": name.strip(),
                     "birth_year": None,
                     "nationalities": (),
+                    "former": sid in former,
                 }
             )
     return out
@@ -670,6 +683,23 @@ def match_confidence(
     return "high" if score >= 0.95 else "medium"
 
 
+def related_party_label(target: dict[str, Any]) -> str:
+    """"Related party" / "Related entity", with "Former " in front when every
+    link the party has in the bundle has ended (Phase 220). The qualifier sits
+    on the party, not on the finding: the listing is current, the
+    relationship is not."""
+    noun = "related party" if target["kind"] == _KIND_PERSON else "related entity"
+    if target.get("former"):
+        return f"Former {noun}"
+    return noun[0].upper() + noun[1:]
+
+
+def former_evidence(target: dict[str, Any]) -> dict[str, Any]:
+    """``{"former": True}`` for a former party, nothing otherwise — so a
+    current party's evidence is exactly what it was before Phase 220."""
+    return {"former": True} if target.get("former") else {}
+
+
 def match_summary(
     *,
     target: dict[str, Any],
@@ -679,7 +709,7 @@ def match_summary(
 ) -> str:
     """Signal prose. An uncorroborated person match must not read as an
     assertion that the related party *is* the listed record."""
-    relation = "Related party" if target["kind"] == _KIND_PERSON else "Related entity"
+    relation = related_party_label(target)
     # The source's own name, not its adapter id. This sentence is read on the
     # report — "shares a name with a record on openaleph" put a snake_case
     # slug in the middle of prose, the defect `sourceLabel` exists to prevent
@@ -756,6 +786,7 @@ def _make_signal(
                 target["kind"] == _KIND_PERSON and not corroboration
             ),
             **({"topics": list(topics)} if topics else {}),
+            **former_evidence(target),
         },
     )
 

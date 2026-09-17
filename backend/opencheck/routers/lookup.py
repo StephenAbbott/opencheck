@@ -1550,7 +1550,7 @@ async def _lookup_pipeline(
             ep_count += 1
             yield ("hit", match.hit.model_copy(update={
                 "finding": finding_everypolitician(
-                    match.hit.summary, match.target_name
+                    match.hit.summary, match.target_name, former=match.former
                 ),
             }))
         yield ("source_completed", {

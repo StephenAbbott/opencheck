@@ -131,6 +131,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from .bods.lifecycle import statement_lifecycle
 from .bods.mapper import GLEIF_UNDISCLOSED_REASONS
 from .bods.mapper import _stable_id as _bods_stable_id
 from .bods.nominees import NOMINEE_NATURE_CODES, is_nominee_nature
@@ -1501,6 +1502,21 @@ def _opaque_ownership_signals(
 
     findings: list[str] = []
     matches: list[dict[str, str]] = []
+    # Phase 220: an opacity disclosure on an ENDED relationship still counts —
+    # kept, and said.
+    ended = _ended_relationship_ids(bods)
+    ended_matches: list[str] = []
+    # A withheld party whose every link has ended (a ceased super-secure PSC)
+    # is a former party: it still counts, and the ended links are named.
+    former = former_party_ids(bods)
+    ended_naming: dict[str, list[str]] = {}
+    if former:
+        _resolve = _refs_resolver(bods)
+        for rel in bods:
+            if _stmt_kind(rel) == "relationship" and _statement_id(rel) in ended:
+                _, ip, _ = _relationship_endpoints(rel, _resolve)
+                if ip in former:
+                    ended_naming.setdefault(ip, []).append(_statement_id(rel))
     for stmt in bods:
         kind = _stmt_kind(stmt)
         if kind == "person" and _person_type(stmt) == "anonymousPerson":
@@ -1510,12 +1526,14 @@ def _opaque_ownership_signals(
                 " court order)"
             )
             matches.append({"statement_id": _statement_id(stmt)})
+            ended_matches.extend(ended_naming.get(_statement_id(stmt), []))
         elif kind == "entity" and _entity_type(stmt) == "anonymousEntity":
             findings.append(
                 "an entity whose identifying details are withheld"
                 " (anonymousEntity)"
             )
             matches.append({"statement_id": _statement_id(stmt)})
+            ended_matches.extend(ended_naming.get(_statement_id(stmt), []))
         elif kind == "relationship":
             reason, description = _unspecified_party_reason(stmt)
             if reason in _OPAQUE_UNSPECIFIED_REASONS:
@@ -1524,6 +1542,8 @@ def _opaque_ownership_signals(
                     or "an owner exists but has not been identified"
                 )
                 matches.append({"statement_id": _statement_id(stmt)})
+                if _statement_id(stmt) in ended:
+                    ended_matches.append(_statement_id(stmt))
     if not findings:
         return []
     # Dedupe but keep order.
@@ -1537,13 +1557,19 @@ def _opaque_ownership_signals(
             confidence="high",
             summary=(
                 "The register discloses that ownership information is"
-                " withheld or could not be obtained: "
+                " withheld or could not be obtained"
+                + (f" ({INCLUDING_ENDED})" if ended_matches else "")
+                + ": "
                 + "; ".join(deduped)
                 + "."
             ),
             source_id=source_id,
             hit_id=hit,
-            evidence={"findings": deduped, "matches": matches},
+            evidence={
+                "findings": deduped,
+                "matches": matches,
+                **_ended_evidence(ended_matches),
+            },
         )
     ]
 
@@ -1682,6 +1708,87 @@ def _relationship_endpoints(
     return subj, "", ""
 
 
+# ----------------------------------------------------------------------
+# Ended relationships (Phase 220)
+# ----------------------------------------------------------------------
+
+#: The words every structural signal adds when an ended relationship is part of
+#: what it counted. Stephen's decision (17 Sept 2026): ended relationships are
+#: KEPT in structural signals — a ceased link is still part of the structure's
+#: history, and dropping it would silently change what a signal counted — but
+#: the signal must say so, in its summary and in its evidence.
+INCLUDING_ENDED = "including ended relationships"
+
+
+def _ended_relationship_ids(
+    bods: list[dict[str, Any]], as_of: str | None = None
+) -> set[str]:
+    """statementIds of the relationship statements that have ended.
+
+    The rule is ``bods.lifecycle.statement_lifecycle`` — the one the diagrams
+    use (Phase 219): the record is closed, or every interest has an
+    ``endDate`` on or before ``as_of`` (today by default).
+    """
+    return {
+        _statement_id(stmt)
+        for stmt in bods
+        if _stmt_kind(stmt) == "relationship"
+        and statement_lifecycle(stmt, as_of).ended
+    }
+
+
+def _ended_evidence(ended_ids: Iterable[str]) -> dict[str, Any]:
+    """The evidence keys a structural signal carries when an ended relationship
+    contributed. Empty — no keys at all — when none did, so a signal built only
+    from current relationships is byte-for-byte what it was before Phase 220."""
+    ids = sorted({i for i in ended_ids if i})
+    if not ids:
+        return {}
+    return {
+        "includes_ended_relationships": True,
+        "ended_relationship_statement_ids": ids,
+    }
+
+
+def former_party_ids(
+    bods: list[dict[str, Any]], as_of: str | None = None
+) -> set[str]:
+    """statementIds of the parties that are **former** related parties.
+
+    A party is former when it is the interested party of at least one
+    relationship, **every** relationship naming it as interested party has
+    ended, and it is not the subject of any current relationship. So a ceased
+    PSC or a resigned director who holds nothing else in the bundle is former;
+    a person who ceased as PSC but is still a director is not.
+
+    Deliberately conservative — it can miss a former party, never invent one:
+
+    * a former corporate owner that still has current owners of its own in
+      the bundle stays current (it is the subject of a current relationship);
+    * a party that is never an interested party — the looked-up company on a
+      bundle of its own owners — is never former, even when every one of its
+      relationships has ended (BANK SADERAT PLC's closed PSC record).
+
+    The screens are handed the merged bundle, not the subject, so the rule
+    cannot anchor on the subject; this is the anchor-free form.
+    """
+    ended = _ended_relationship_ids(bods, as_of)
+    _resolve = _refs_resolver(bods)
+    as_party_current: set[str] = set()
+    as_party_ended: set[str] = set()
+    subject_current: set[str] = set()
+    for stmt in bods:
+        if _stmt_kind(stmt) != "relationship":
+            continue
+        subj, ip, _ = _relationship_endpoints(stmt, _resolve)
+        is_ended = _statement_id(stmt) in ended
+        if ip:
+            (as_party_ended if is_ended else as_party_current).add(ip)
+        if subj and not is_ended:
+            subject_current.add(subj)
+    return as_party_ended - as_party_current - subject_current
+
+
 def _interests(stmt: dict[str, Any]) -> list[dict[str, Any]]:
     rd = _record_details(stmt)
     interests = rd.get("interests")
@@ -1741,6 +1848,13 @@ def _state_controlled_signals(
     owners: list[str] = []
     state_node: str = ""
     subject_node: str = ""
+    # Phase 220: a state holding that has ENDED still counts (Stephen's
+    # decision — keep, and say so), but the state/subject nodes the overlay
+    # anchors on prefer a current holding, and the ended ones are named.
+    current_state_nodes: set[str] = set()
+    first_current: tuple[str, str] | None = None
+    ended_rels: dict[str, list[str]] = {}
+    ended = _ended_relationship_ids(bods)
     _resolve = _refs_resolver(bods)
     for stmt in bods:
         if _stmt_kind(stmt) != "relationship":
@@ -1749,18 +1863,36 @@ def _state_controlled_signals(
         if ip in state_ids:
             name = _record_details(ents.get(ip, {})).get("name") or ip
             owners.append(name)
+            rel_id = _statement_id(stmt)
+            if rel_id in ended:
+                ended_rels.setdefault(ip, []).append(rel_id)
+            else:
+                current_state_nodes.add(ip)
+                first_current = first_current or (ip, subj)
             state_node = state_node or ip
             subject_node = subject_node or subj
     if not owners:
         return []
+    if first_current is not None:
+        state_node, subject_node = first_current
 
+    # Only a state owner with NO current holding makes the signal rest on an
+    # ended relationship; an ended record beside a current one for the same
+    # state is history, not the basis of the claim.
+    ended_only = [
+        rid
+        for ip, rids in ended_rels.items()
+        if ip not in current_state_nodes
+        for rid in rids
+    ]
+    qualifier = f" ({INCLUDING_ENDED})" if ended_only else ""
     return [
         RiskSignal(
             code=STATE_CONTROLLED,
             confidence="medium",
             summary=(
-                "A controlling owner is a state or state body — a possible "
-                "state-owned enterprise. Corroborating indicator "
+                f"A controlling owner is a state or state body{qualifier} — a "
+                "possible state-owned enterprise. Corroborating indicator "
                 f"({_state_source_caveat(source_id)}); not a determination, and "
                 "its absence is not evidence the entity is privately owned."
             ),
@@ -1770,6 +1902,7 @@ def _state_controlled_signals(
                 "state_owners": sorted(set(owners)),
                 "statement_id": state_node,            # the state/stateBody node
                 "subject_statement_id": subject_node,  # the controlled entity
+                **_ended_evidence(ended_only),
             },
         )
     ]
@@ -1868,6 +2001,17 @@ def assess_amla(
             triggers.append("nominee")
 
         if len(triggers) >= 2:
+            # Phase 220: an ended link on the layered path, or behind the
+            # nominee condition, is carried through — and said — here too.
+            layer_ended = list(
+                layers_signal.evidence.get("ended_relationship_statement_ids") or []
+            )
+            if nominee_signal is not None:
+                layer_ended += (
+                    nominee_signal.evidence.get("ended_relationship_statement_ids")
+                    or []
+                )
+            qualifier = f" ({INCLUDING_ENDED})" if layer_ended else ""
             out.append(
                 RiskSignal(
                     code=COMPLEX_CORPORATE_STRUCTURE,
@@ -1875,13 +2019,15 @@ def assess_amla(
                     summary=(
                         "Meets AMLA CDD RTS threshold for a complex corporate "
                         f"structure: {layers_signal.evidence['layers']} layers "
-                        "of ownership combined with " + ", ".join(triggers) + "."
+                        f"of ownership{qualifier} combined with "
+                        + ", ".join(triggers) + "."
                     ),
                     source_id=source_id,
                     hit_id=hit_id,
                     evidence={
                         "layers": layers_signal.evidence["layers"],
                         "triggers": triggers,
+                        **_ended_evidence(layer_ended),
                     },
                 )
             )
@@ -1959,33 +2105,51 @@ def _subject_entity_id(hit_id: str, bods: list[dict[str, Any]]) -> str | None:
             for ident in _record_details(stmt).get("identifiers") or []:
                 if isinstance(ident, dict) and ident.get("id") == hit_id:
                     return _statement_id(stmt)
-    subjects: set[str] = set()
-    parties: set[str] = set()
+    entity_ids = {_statement_id(s) for s in entities}
+    ended = _ended_relationship_ids(bods)
     _resolve = _refs_resolver(bods)
+    edges: list[tuple[str, str, bool]] = []
     for stmt in bods:
         if _stmt_kind(stmt) != "relationship":
             continue
         subj, ip, _ = _relationship_endpoints(stmt, _resolve)
-        if subj:
-            subjects.add(subj)
-        if ip:
-            parties.add(ip)
-    entity_ids = {_statement_id(s) for s in entities}
-    sinks = (subjects - parties) & entity_ids
-    if len(sinks) == 1:
-        return next(iter(sinks))
+        edges.append((subj, ip, _statement_id(stmt) in ended))
+
+    def unique_sink(include_ended: bool) -> str | None:
+        subjects = {s for s, _, e in edges if s and (include_ended or not e)}
+        parties = {p for _, p, e in edges if p and (include_ended or not e)}
+        sinks = (subjects - parties) & entity_ids
+        return next(iter(sinks)) if len(sinks) == 1 else None
+
+    # Phase 220: the whole graph first, as before — an ended link to the
+    # subject's own owner must not make that owner the sink. Only when the
+    # whole graph is ambiguous (an ended link to a former subsidiary makes a
+    # second sink) is the current graph asked on its own, before the
+    # first-statement fallback.
+    sink = unique_sink(True) or unique_sink(False)
+    if sink is not None:
+        return sink
     return _statement_id(entities[0])
 
 
-def _upstream_entity_ids(subject_id: str, bods: list[dict[str, Any]]) -> set[str]:
+def _upstream_entity_ids(
+    subject_id: str, bods: list[dict[str, Any]], *, current_only: bool = False
+) -> set[str]:
     """Every statementId reachable from ``subject_id`` by walking *up* the
     ownership graph — the parties that own or control the subject, their
     owners, and so on. Subsidiaries (which the subject owns) are never in
-    this set: they are below it."""
+    this set: they are below it.
+
+    Ended relationships are walked by default (Phase 220: kept, and said).
+    ``current_only=True`` walks current relationships only, so a caller can
+    tell which parties are reachable *only* through an ended link."""
     owners: dict[str, set[str]] = {}
+    ended = _ended_relationship_ids(bods) if current_only else set()
     _resolve = _refs_resolver(bods)
     for stmt in bods:
         if _stmt_kind(stmt) != "relationship":
+            continue
+        if current_only and _statement_id(stmt) in ended:
             continue
         subj, ip, _ = _relationship_endpoints(stmt, _resolve)
         if subj and ip:
@@ -2054,6 +2218,22 @@ def _non_eu_jurisdiction_signal(
         return None
     # Pull a short, deduped list of country codes for the summary.
     codes = sorted({m["code"] for m in non_eu})
+    # Phase 220: a jurisdiction reached only through an ended link still
+    # counts — and the signal says so, naming the ended links that reach it.
+    via_ended_only = upstream - _upstream_entity_ids(
+        subject_id, bods, current_only=True
+    )
+    ended_ids: list[str] = []
+    if any(m["statement_id"] in via_ended_only for m in non_eu):
+        ended = _ended_relationship_ids(bods)
+        _resolve = _refs_resolver(bods)
+        for stmt in bods:
+            if _stmt_kind(stmt) != "relationship" or _statement_id(stmt) not in ended:
+                continue
+            subj, ip, _ = _relationship_endpoints(stmt, _resolve)
+            if ip in via_ended_only and (subj == subject_id or subj in upstream):
+                ended_ids.append(_statement_id(stmt))
+    qualifier = f" ({INCLUDING_ENDED})" if ended_ids else ""
     # NB: this is the standalone signal and stays bundle-wide — it reports
     # "the chain touches these jurisdictions", which is a different
     # question from AMLA Article 12(1)(b). The *condition* used by the
@@ -2064,7 +2244,8 @@ def _non_eu_jurisdiction_signal(
         confidence="low",
         kind="context",
         summary=(
-            "Ownership chain reaches jurisdictions outside the EU/EEA: "
+            f"Ownership chain{qualifier} reaches jurisdictions outside the "
+            "EU/EEA: "
             + ", ".join(codes)
             + ". Structural context, not a risk finding — neither the AMLA "
             "CDD RTS nor AMLR Annex III treats non-EU status as a risk "
@@ -2073,7 +2254,7 @@ def _non_eu_jurisdiction_signal(
         ),
         source_id=source_id,
         hit_id=hit_id,
-        evidence={"jurisdictions": non_eu},
+        evidence={"jurisdictions": non_eu, **_ended_evidence(ended_ids)},
     )
 
 
@@ -2207,6 +2388,11 @@ def _nominee_signal(
     """
     structured = _structured_nominee_matches(source_id, raw or {})
     matches: list[dict[str, str]] = []
+    # Phase 220: a nominee arrangement on an ENDED relationship still counts
+    # on the textual path — kept, and said. (The structured path above keeps
+    # its own older rule and skips a ceased PSC outright.)
+    ended = _ended_relationship_ids(bods)
+    ended_matches: list[str] = []
     for stmt in bods:
         kind = _stmt_kind(stmt)
         if kind == "relationship":
@@ -2223,6 +2409,8 @@ def _nominee_signal(
                             "match": f"interest mentions nominee ({interest.get('type', '')})",
                         }
                     )
+                    if _statement_id(stmt) in ended:
+                        ended_matches.append(_statement_id(stmt))
                     break
         elif kind == "person":
             blob_parts: list[str] = []
@@ -2281,6 +2469,9 @@ def _nominee_signal(
 
     if not matches:
         return None
+    # Qualified only when an ended relationship is among what matched; a
+    # person-statement match carries no lifecycle of its own.
+    qualifier = f", {INCLUDING_ENDED}" if ended_matches else ""
     return RiskSignal(
         code=NOMINEE,
         # Textual evidence is weaker than a filed code and should not claim
@@ -2289,13 +2480,17 @@ def _nominee_signal(
         confidence="medium",
         summary=(
             f"Ownership chain mentions nominee shareholders/directors "
-            f"({len(matches)} statement(s)) — matched on descriptive text, "
-            "not a filed nominee code. "
+            f"({len(matches)} statement(s){qualifier}) — matched on "
+            "descriptive text, not a filed nominee code. "
             "AMLA CDD RTS condition (c)."
         ),
         source_id=source_id,
         hit_id=hit_id,
-        evidence={"matches": matches, "basis": "textual"},
+        evidence={
+            "matches": matches,
+            "basis": "textual",
+            **_ended_evidence(ended_matches),
+        },
     )
 
 
@@ -2369,6 +2564,13 @@ def _layers_signal(
     # Adjacency runs UP the chain: subject -> the parties that own it.
     owners: dict[str, set[str]] = {}
     person_capped: set[str] = set()
+    # Phase 220: ended links stay in the walk (Stephen's decision — keep, and
+    # say so). For each (subject, owner) pair, the ended relationship ids
+    # behind it — empty when any relationship for the pair is current, since
+    # a current record makes the link current whatever else was filed.
+    ended = _ended_relationship_ids(bods)
+    pair_ended: dict[tuple[str, str], list[str]] = {}
+    pair_current: set[tuple[str, str]] = set()
     _resolve = _refs_resolver(bods)
     for stmt in bods:
         if _stmt_kind(stmt) != "relationship":
@@ -2387,34 +2589,52 @@ def _layers_signal(
         if subj not in entity_ids:
             continue
         owners.setdefault(subj, set()).add(ip)
+        rel_id = _statement_id(stmt)
+        if rel_id in ended:
+            pair_ended.setdefault((subj, ip), []).append(rel_id)
+        else:
+            pair_current.add((subj, ip))
+
+    def ended_on(pair: tuple[str, str]) -> list[str]:
+        return [] if pair in pair_current else pair_ended.get(pair, [])
 
     longest = 0
     longest_path: list[str] = []
     longest_reaches_bo = False
+    longest_ended: list[str] = []
 
-    def dfs(node: str, visited: list[str], reaches_bo: bool) -> None:
-        nonlocal longest, longest_path, longest_reaches_bo
-        if len(visited) > longest:
+    def dfs(
+        node: str, visited: list[str], reaches_bo: bool, ended_ids: list[str]
+    ) -> None:
+        nonlocal longest, longest_path, longest_reaches_bo, longest_ended
+        # Longest first; between equally long paths, the one resting on fewer
+        # ended links — so a chain that is just as deep today is never
+        # reported as "including ended relationships".
+        if len(visited) > longest or (
+            len(visited) == longest and len(ended_ids) < len(longest_ended)
+        ):
             longest = len(visited)
             longest_path = list(visited)
             longest_reaches_bo = reaches_bo
-        for nxt in owners.get(node, ()):
+            longest_ended = list(ended_ids)
+        for nxt in sorted(owners.get(node, ())):
             if nxt in visited:
                 continue  # cycle guard
             visited.append(nxt)
-            dfs(nxt, visited, nxt in person_capped)
+            dfs(nxt, visited, nxt in person_capped, ended_ids + ended_on((node, nxt)))
             visited.pop()
 
-    dfs(subject_id, [subject_id], subject_id in person_capped)
+    dfs(subject_id, [subject_id], subject_id in person_capped, [])
 
     if longest < 3:
         return None
+    qualifier = f", {INCLUDING_ENDED}" if longest_ended else ""
     return RiskSignal(
         code=COMPLEX_OWNERSHIP_LAYERS,
         confidence="medium",
         summary=(
-            f"Ownership chain above the subject has {longest} corporate layers "
-            "(AMLA threshold: ≥3)."
+            f"Ownership chain above the subject has {longest} corporate "
+            f"layers{qualifier} (AMLA threshold: ≥3)."
         ),
         source_id=source_id,
         hit_id=hit_id,
@@ -2423,6 +2643,7 @@ def _layers_signal(
             "longest_path": longest_path,
             "subject_statement_id": subject_id,
             "reaches_beneficial_owner": longest_reaches_bo,
+            **_ended_evidence(longest_ended),
         },
     )
 
