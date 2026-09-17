@@ -78,6 +78,7 @@ RA_BY_COUNTRY: dict[str, str] = {
     "MT": "RA000443",  # Malta Business Registry
     "BR": "RA000681",  # Receita Federal CNPJ (Brazil)
     "GR": "RA000685",  # ΓΕΜΗ — General Commercial Registry (Greece)
+    "RS": "RA000517",  # APR — Business Registers Agency (Serbia)
 }
 
 

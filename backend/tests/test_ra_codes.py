@@ -65,6 +65,7 @@ VERIFIED: dict[str, str] = {
     "NO": "RA000472",  # Foretaksregisteret
     "NZ": "RA000466",  # Companies Office
     "PL": "RA000484",  # KRS
+    "RS": "RA000517",  # APR — verified 2026-09-17, 295 of 304 RS records
     "SE": "RA000544",  # Bolagsverket
     "SG": "RA000523",  # ACRA
     "SK": "RA000526",  # Business Register

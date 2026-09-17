@@ -192,6 +192,17 @@ _CANONICAL: dict[str, LicenseTerms] = {
             "Government, the data provider and DATA.GOV.HK."
         ),
     ),
+    "sodl-1.0": _terms(
+        "SODL-1.0", "Data License — Serbian Open Data Portal (SODL 1.0)",
+        commercial="yes", attribution=True, share_alike=False, redistribution="yes",
+        url="https://data.gov.rs/sr/terms",
+        summary=(
+            "Reuse by anyone for commercial and non-commercial purposes, "
+            "including copying, distribution and merging with other data, free "
+            "of charge. Attribution names the publishing public body, the "
+            "download date and address, and any changes made."
+        ),
+    ),
     "dataset.gov.md-reuse": _terms(
         "DATASET.GOV.MD-Reuse", "dataset.gov.md conditions for the reuse of public-sector information",
         commercial="yes", attribution=True, share_alike=False, redistribution="yes",

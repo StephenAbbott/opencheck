@@ -1406,6 +1406,11 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     "RA000451": ("MD-IDNO", "IDNO — State Register of Legal Entities (Moldova)"),
     "RA000950": ("MD-IDNO", "IDNO — State Register of Legal Entities (Moldova)"),
     "RA000951": ("MD-IDNO", "IDNO — State Register of Legal Entities (Moldova)"),
+    # Serbia — RA000517 is the Business Registers Agency (APR) and files the
+    # 8-digit matični broj: 295 of the 304 RS records, 2026-09-17. RA000518
+    # (entrepreneurs) and RA000684 (securities regulator fund numbers) do not
+    # file a number APR's company register holds.
+    "RA000517": ("RS-APR", "Matični broj — Business Registers Agency (Serbia)"),
     "RA000567": ("UA-EDR", "EDRPOU — Unified State Register (Ukraine)"),
     "RA001026": ("UA-EDR", "EDRPOU — Unified State Register (Ukraine)"),
     "RA001027": ("UA-EDR", "EDRPOU — Unified State Register (Ukraine)"),
@@ -10693,3 +10698,72 @@ def map_asp_moldova(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interests=[interest],
             source_url=link,
         )
+
+
+# ---------------------------------------------------------------------------
+# Serbia — APR company register (Phase 222)
+# ---------------------------------------------------------------------------
+# One entity statement per company: the register publishes no people.
+
+_RS_JURISDICTION = ("Serbia", "RS")
+
+
+def map_apr_serbia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map an AprSerbiaAdapter bundle to a single BODS v0.4 entity statement.
+
+    * The business name is primary **as registered**, in whichever script the
+      company filed it. A Cyrillic name adds its Serbian Latin form to
+      ``alternateNames`` — the official one-to-one letter table, not a guess.
+    * The matični broj is identified as ``RS-APR`` (org-id.guide).
+    * The register's legal form goes to ``entityType.details``.
+    * APR publishes the **municipality** and no street address, so the
+      registered address is the municipality as filed and nothing finer.
+    * Status: *Активан* is ``live``; liquidation, bankruptcy and forced
+      liquidation are ``pending`` — the company still exists. APR publishes
+      no date for the status, so none is written. Deleted companies are not in
+      the feed, so ``terminal`` never arises.
+    """
+    from ..sources.apr_serbia import (  # local import avoids a cycle
+        RS_APR_SCHEME,
+        RS_APR_SCHEME_NAME,
+        STATUSES,
+        has_cyrillic,
+        to_latin,
+    )
+
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
+        return
+    company: dict[str, Any] = bundle.get("company") or {}
+    mb = str(company.get("mb") or bundle.get("mb") or "").strip()
+    name = str(company.get("name") or "").strip()
+    if not mb or not name:
+        return
+
+    latin = (company.get("name_latin") or (to_latin(name) if has_cyrillic(name) else "")).strip()
+    municipality = str(company.get("municipality") or "").strip()
+    entity = make_entity_statement(
+        source_id="apr_serbia",
+        local_id=mb,
+        name=name,
+        jurisdiction=_RS_JURISDICTION,
+        identifiers=[{"id": mb, "scheme": RS_APR_SCHEME, "schemeName": RS_APR_SCHEME_NAME}],
+        founding_date=(company.get("founded_on") or None),
+        addresses=(
+            [{"type": "registered", "address": municipality, "country": {"name": "Serbia", "code": "RS"}}]
+            if municipality
+            else []
+        ),
+        alternate_names=[latin] if latin and latin != name else [],
+        entity_type="registeredEntity",
+        entity_details=(company.get("legal_form") or None),
+        source_url=bundle.get("link"),
+    )
+    status = str(company.get("status") or "").strip()
+    klass = STATUSES.get(status, ("unknown", ""))[0]
+    _liveness.apply_register_status(
+        entity,
+        source_label=SOURCE_NAMES["apr_serbia"],
+        liveness={"live": _liveness.LIVE, "pending": _liveness.PENDING}.get(klass, _liveness.UNKNOWN),
+        raw=status or None,
+    )
+    yield entity

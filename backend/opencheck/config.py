@@ -493,6 +493,19 @@ class Settings(BaseSettings):
     # found. Downloads also need OPENCHECK_ALLOW_LIVE.
     asp_moldova_sync: bool = Field(default=True, alias="ASP_MOLDOVA_SYNC")
 
+    # --- Serbia APR company register (openapi.apr.gov.rs, SODL 1.0) ---
+    # No key and no per-company API: one monthly JSON of the whole register
+    # (~58 MB), indexed into SQLite by the adapter itself. On a live
+    # deployment it downloads the register at startup and checks for a newer
+    # cut once the one it holds is a month old (APR does not block datacentre
+    # networks). Unset = a file in the system temp directory. Build one by
+    # hand with:
+    #   python3 scripts/build_apr_serbia_index.py --out apr_serbia.sqlite
+    apr_serbia_db_file: str | None = Field(default=None, alias="APR_SERBIA_DB_FILE")
+    # ``false`` never downloads: the file at APR_SERBIA_DB_FILE is used as
+    # found. Downloads also need OPENCHECK_ALLOW_LIVE.
+    apr_serbia_sync: bool = Field(default=True, alias="APR_SERBIA_SYNC")
+
     # --- Romania ONRC (data.gov.ro open data, CC BY 4.0) ---
     # No API key and no free ONRC API at all. Pre-built SQLite index over the
     # monthly bulk dump; build with:

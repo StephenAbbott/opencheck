@@ -113,6 +113,8 @@ _IDENTIFIER_KEYED = {
     # process does not have — the cr_hongkong partial case, with no stub tier.
     # onrc_romania: the same. Its name search is a LIKE over the SQLite index,
     # so with no index file there is nothing to return and nothing to stub.
+    # apr_serbia: the same — name search reads the local register index.
+    "apr_serbia",
     "asp_moldova", "onrc_romania",
     "anaf_romania", "acra_singapore", "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "cac_nigeria", "ariregister", "bolagsverket",
     "cnpj_brazil", "cr_hongkong", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",

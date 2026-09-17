@@ -376,6 +376,40 @@ def _bh_onrc_romania(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_apr_serbia(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Serbia's APR company register.
+
+    Two shapes:
+
+    * **A record.** Asserts the matični broj — the register's own key for the
+      row it returned, which is what the identifier-corroboration rule requires.
+    * **Not in the register.** The index was read and holds no company under
+      this number — deleted, an entrepreneur, or not a company. A card with the
+      coverage note and **no** identifier: the register did not confirm it.
+    """
+    from ..findings import finding_apr_serbia
+
+    if r.get("not_found"):
+        return _hit(
+            "apr_serbia", local_id,
+            name=ctx.legal_name or "",
+            summary=f"RS-APR {local_id} · not in the open register",
+            finding=finding_apr_serbia(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
+        )
+    company = r.get("company") or {}
+    mb = str(company.get("mb") or local_id)
+    return _hit(
+        "apr_serbia", mb,
+        name=company.get("name") or ctx.legal_name or "",
+        summary=f"RS-APR {mb}",
+        identifiers={"rs_mb": mb},
+        raw=company,
+        finding=finding_apr_serbia(r),
+    )
+
+
 def _bh_asp_moldova(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for Moldova's State Register of Legal Entities.
 
