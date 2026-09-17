@@ -1,5 +1,5 @@
 /**
- * GLEIF Registration Authority codes for the 21 countries that have
+ * GLEIF Registration Authority codes for the 22 countries that have
  * OpenCheck adapters. Used to scope the national-ID reverse lookup to
  * a single registry and avoid false matches from coincidental ID
  * collisions across registries.
@@ -241,6 +241,16 @@ export const RA_CODES: Record<string, RaEntry> = {
     // some not, and the ΓΕΜΗ API accepts either, so do not normalise here.
     formatHint: "9–12 digits",
     formatPattern: /^\d{9,12}$/,
+  },
+  RS: {
+    raCode: "RA000517",
+    countryName: "Serbia",
+    idLabel: "Matični broj (APR registration number)",
+    placeholder: "17162543",
+    // 295 of the 304 Serbian GLEIF records sit under RA000517 (APR), every one
+    // an 8-digit matični broj, 2026-09-17.
+    formatHint: "8 digits",
+    formatPattern: /^\d{8}$/,
   },
 };
 

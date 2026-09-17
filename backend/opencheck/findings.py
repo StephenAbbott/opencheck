@@ -1582,3 +1582,47 @@ def finding_asp_moldova(bundle: dict[str, Any]) -> str | None:
         founder_clause = f"{len(founders)} founders on file"
 
     return clauses_to_sentence([lead, form or None, officer_clause, founder_clause])
+
+
+def finding_apr_serbia(bundle: dict[str, Any]) -> str | None:
+    """What Serbia's APR company register says: status, legal form, founding.
+
+    * **Not found** says the company is not in the register as published, and
+      why that can happen, rather than that it does not exist (rule 6): APR's
+      feed leaves out deleted companies and entrepreneurs.
+    * **Liquidation or bankruptcy** leads, in English with the register's
+      word after it, because it changes a decision. An active company leads
+      with its founding date instead — "Active" alone says nothing.
+    * The legal form is the register's own wording.
+
+    Deliberately **not** said: that no directors or owners are on file. The
+    feed publishes none for any company, so the clause would read as a finding
+    about this one (the ACRA precedent).
+    """
+    from .sources.apr_serbia import STATUSES
+
+    if not bundle:
+        return None
+    if bundle.get("not_found"):
+        return "Not in APR's open company register, which leaves out deleted companies and entrepreneurs."
+    if bundle.get("is_stub"):
+        return None
+    company = bundle.get("company")
+    if not isinstance(company, dict):
+        return None
+
+    status = str(company.get("status") or "").strip()
+    klass, english = STATUSES.get(status, ("unknown", ""))
+    founded = str(company.get("founded_on") or "").strip()
+    form = str(company.get("legal_form") or "").strip().lower()
+
+    if klass == "pending":
+        lead = f"{english} ({status})"
+    elif founded:
+        lead = f"Founded {founded}"
+    else:
+        lead = "On the APR company register"
+    sentence = clauses_to_sentence([lead, form or None])
+    if sentence and len(sentence) > MAX_FINDING_CHARS:
+        sentence = clauses_to_sentence([lead])
+    return sentence

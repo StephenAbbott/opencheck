@@ -186,6 +186,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Scope:** the shipped index is restricted to the companies in the **GLEIF Romanian LEI population** — 8,491 of the register's 2,855,557, because every OpenCheck lookup is anchored on an LEI and no other row can be reached. That is 4.3 MB rather than 1.2 GB. A company issued an LEI after the index was built falls back to a coverage note until the next monthly rebuild.
 - **Note:** the register has no live API, so the source answers from a pre-built index and is announced only where one is configured. That same index is what lets the ANAF adapter reach most Romanian LEI holders, whose GLEIF records carry a trade-register number rather than a fiscal code.
 
+## Serbia — APR (Agencija za privredne registre), Register of Business Entities
+
+- **Data:** companies on the register of business entities (*Регистар привредних друштава*) that are active, in liquidation, in bankruptcy or in forced liquidation — business name, registration number (*matični broj*), municipality, status, founding date, legal form and activity code. Entity data only: no addresses finer than the municipality, no directors, members, shareholders or beneficial owners.
+- **Source:** APR open-data API, <https://openapi.apr.gov.rs/api/opendata/companies> (monthly; catalogued on data.gov.rs and data.europa.eu as *АПИ за Регистар привредних друштава*, <https://data.europa.eu/data/datasets/68000c424d29e8a004f93e04>).
+- **License:** Data License — Serbian Open Data Portal, **SODL 1.0** (<https://data.gov.rs/sr/terms>): reuse by any legal or natural person for commercial and non-commercial purposes, including copying, distribution, making available to third parties, adaptation and merging with other data, free of charge.
+- **Attribution:** "Contains data from the Register of Business Entities published by the Agencija za privredne registre (Serbian Business Registers Agency) at https://openapi.apr.gov.rs/api/opendata/companies, under the Serbian Open Data Portal licence (SODL 1.0)." SODL asks for the download date as well: each record carries the register's cut date, and the index records when it was built.
+- **Changes made:** OpenCheck adds a Serbian Latin transliteration of names filed in Cyrillic, and maps the register's status to a liveness class (active → live; liquidation, bankruptcy, forced liquidation → pending).
+- **Entry point:** `rs_mb` derived from GLEIF RA code `RA000517` (Business Registers Agency); name search over the local index
+
 ## Moldova — ASP (Agenția Servicii Publice), State Register of Legal Entities
 
 - **Data:** companies on the State Register of Legal Entities (*Registrul de stat al unităților de drept*) — name, IDNO, legal form, registration date, registered address and activity codes — with their **directors** and the register's word for each role, and their **founders** with each founder's percentage of the share capital. Names only: no dates of birth, nationalities or identifiers for people or for corporate founders. No beneficial owners.

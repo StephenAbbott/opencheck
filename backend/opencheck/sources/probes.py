@@ -298,6 +298,28 @@ PROBES: dict[str, SourceProbe] = {
             "WAF as a GET — the POST path is not challenged."
         ),
     ),
+    "apr_serbia": _p(
+        tier="snapshot",
+        subject="Telekom Srbija a.d. (Serbia)",
+        args=("17162543",),
+        kwargs={"legal_name": "Preduzeće za telekomunikacije Telekom Srbija akcionarsko društvo, Beograd"},
+        expect_fields=("company",),
+        expect_liveness=frozenset({"snapshot"}),
+        snapshot_max_age_days=70,
+        anchor_lei="254900OVY0XI1DFYC092",
+        bods_mapper="map_apr_serbia",
+        notes=(
+            "The index builds itself from openapi.apr.gov.rs: on a cold runner "
+            "fetch() waits up to 45 s for the 58 MB download and build (about "
+            "15 s and 5 s measured). The download goes through APR's missing "
+            "intermediate certificate, pinned in the adapter — a TLS failure "
+            "here after 13 November 2026 means APR's renewed certificate chains "
+            "through a different intermediate, not that the register moved. "
+            "APR cuts on the last day of the month and publishes a couple of "
+            "weeks later, so a cut is routinely 45 days old; 70 means a missed "
+            "month."
+        ),
+    ),
     "asp_moldova": _p(
         tier="snapshot",
         subject="Kaufland S.R.L. (Moldova)",

@@ -44,6 +44,7 @@ from .corporations_canada import CA_CORP_RA_CODE as _CA_CORP_RA_CODE, normalise_
 from .cro import IE_RA_CODE as _CRO_RA_CODE, normalise_crn as _normalise_crn
 from .malta_mbr import MT_RA_CODE as _MT_RA_CODE, normalise_mt_crn as _normalise_mt_crn
 from .asp_moldova import MD_RA_CODES as _MD_RA_CODES, normalise_idno as _normalise_md_idno
+from .apr_serbia import RS_RA_CODES as _RS_RA_CODES, normalise_mb as _normalise_rs_mb
 from .cr_hongkong import HK_RA_CODES as _HK_RA_CODES, normalise_hk_brn as _normalise_hk_brn
 from .acra_singapore import ACRA_RA_CODE as _ACRA_RA_CODE, normalise_uen as _normalise_uen
 from .cnpj_brazil import BR_RA_CODE as _BR_RA_CODE, normalise_cnpj as _normalise_cnpj
@@ -793,6 +794,13 @@ class GleifAdapter(SourceAdapter):
             if registered_at_id in _MD_RA_CODES:
                 try:
                     identifiers["md_idno"] = _normalise_md_idno(registered_as)
+                except ValueError:
+                    pass
+            # Serbian matični broj — expose as ``rs_mb`` so the reconciler can
+            # bridge GLEIF ↔ APR. RA000517 files the 8-digit number.
+            if registered_at_id in _RS_RA_CODES:
+                try:
+                    identifiers["rs_mb"] = _normalise_rs_mb(registered_as)
                 except ValueError:
                     pass
             # Singapore UEN — expose as ``sg_uen`` so the reconciler can bridge

@@ -585,6 +585,7 @@ SOURCE_NAMES: dict[str, str] = {
     "abr_australia": "Australian Business Register — ABN Lookup (Australian Taxation Office)",
     "acra_singapore": "ACRA — Accounting and Corporate Regulatory Authority (Singapore)",
     "anaf_romania": "ANAF — Agenția Națională de Administrare Fiscală (Romania)",
+    "apr_serbia": "APR — Business Registers Agency company register (Serbia)",
     "ariregister": "Estonian e-Business Register (e-Äriregister)",
     "asp_moldova": "ASP — State Register of Legal Entities (Moldova)",
     "bce_belgium": "BCE/KBO — Banque-Carrefour des Entreprises (Belgian Business Register)",
@@ -642,6 +643,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
     _official_registers = {
         "abr_australia",
         "acra_singapore",
+        "apr_serbia",
         "anaf_romania",
         "ariregister",
         "asp_moldova",

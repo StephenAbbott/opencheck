@@ -104,6 +104,20 @@ async def _warm_caches_background() -> None:
     except Exception as exc:  # noqa: BLE001
         log.warning("Entity pages DB warm-up failed (503s until present): %s", exc)
 
+    # Phase 222: Serbia's APR company register index — download and index the
+    # register when absent, and check for a newer monthly cut once the one
+    # held is a month old. Until it lands, a Serbian lookup waits briefly for
+    # it and then degrades.
+    try:
+        from .sources.apr_serbia import warm_index as warm_apr_serbia_index
+
+        stats = await asyncio.to_thread(warm_apr_serbia_index)
+        log.info("APR Serbia index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning("APR Serbia index warm-up failed (lookups degrade): %s", exc)
+
     # Phase 209: Moldova's State Register index — download and index the
     # newest weekly export when absent or more than a week old. Until it
     # lands, a Moldovan lookup waits briefly for it and then degrades.
