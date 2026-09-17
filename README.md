@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 220** — Risk signals now read ended relationships: structural signals keep them and say "including ended relationships", and related-party screens name a ceased party as a former one.
+**Latest: Phase 221** — The exported PDF diagram now draws control, role and ownership edges in the same colours and line styles as the on-screen graph, with short wrapped labels that no longer run under nodes.
 
 → [Full development history](docs/status.md)
 
