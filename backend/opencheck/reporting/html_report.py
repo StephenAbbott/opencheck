@@ -681,7 +681,7 @@ def _diagrams(report: dict[str, Any]) -> str:
     return (
         '<section aria-labelledby="viz"><h2 id="viz">Ownership &amp; control structure</h2>'
         "<p>Each source’s findings are shown as a separate ownership-and-control diagram in the "
-        "OpenCheck (BOVS) visual style — person and entity icons, interest type by edge colour, "
+        "OpenCheck (BOVS) visual style — person and entity icons, interest kind by edge colour and line style (as on screen), "
         "and the interest described on each edge. A text-equivalent table follows every diagram.</p>"
         + "".join(blocks)
         + "</section>"

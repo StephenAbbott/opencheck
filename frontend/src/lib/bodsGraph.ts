@@ -100,6 +100,9 @@ export interface GraphModel {
 // BOVS interest-type → annotation label
 // ---------------------------------------------------------------------------
 
+// Mirrored by the PDF diagram (backend/opencheck/reporting/diagram.py) along
+// with categorise() and buildEdgeLabel's two-line cap; pinned by
+// backend/tests/test_reporting_diagram_parity.py (Phase 221).
 const INTEREST_LABELS: Record<string, string> = {
   shareholding: "Owns",
   votingRights: "Controls (votes)",

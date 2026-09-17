@@ -94,6 +94,11 @@ export function signalStyle(code: string): SignalStyle {
 
 // ---------------------------------------------------------------------------
 // Edge kinds — the same values the Cytoscape stylesheet applies
+//
+// The exported PDF/HTML diagram (backend/opencheck/reporting/diagram.py) draws
+// with copies of EDGE_STYLE and ENDED_EDGE.lineOpacity.
+// backend/tests/test_reporting_diagram_parity.py parses this file and fails
+// when the two differ, so change both together (Phase 221).
 // ---------------------------------------------------------------------------
 
 export type EdgeLegendKind = "ownership" | "control" | "role" | "unknown" | "possiblySame";

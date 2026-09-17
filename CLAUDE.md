@@ -520,9 +520,19 @@ table is broken**. A clean changelog is not evidence. Look at the rendered
 **Edge categories** (Phase 122 palette): `ownership` (**#3b82f6** = `oo.node.blue`, the FullCheck accent), `control` (orange #e65100, dotted), `role` (**#7c3aed** = `oo.node.purple`, the BackgroundCheck accent, dashed), `unknown` (grey #888). Ownership and role deliberately share the mode-badge node colours: the network mode's accent *is* the ownership edge, and roles are held by people, which is what the people mode screens. Control keeps its orange — the node tier has none, and control must stay distinguishable from both. Edge **label** text is darkened for WCAG 4.5:1 (#1d4ed8 ownership, #9a3412 control, #6d28d9 role, #595959 unknown); the line colours themselves do not reach it at text sizes. These values live in **`frontend/src/lib/graphStyle.ts`** (Phase 124), not in
 `BODSGraph.tsx`: the Cytoscape stylesheet and the generated legend both read
 `EDGE_STYLE` from there, so a colour change moves the diagram and its key
-together. `backend/opencheck/reporting/diagram.py` carries the same two values
-for the exported PDF and **must move with any future change — nothing pins them
-together**.
+together. `backend/opencheck/reporting/diagram.py` draws the exported PDF/HTML
+diagram with **copies** of `EDGE_STYLE` (all four relationship kinds: colour,
+label colour, dash, legend name), `ENDED_EDGE.lineOpacity`, and `bodsGraph.ts`'s
+`INTEREST_LABELS`, `categorise()` type sets and `buildEdgeLabel`'s two-line cap.
+Since Phase 221 **`backend/tests/test_reporting_diagram_parity.py` parses the
+TypeScript and fails when either side moves alone** — change both in one
+commit. Before that nothing pinned them and the PDF drew every non-ownership
+edge purple and solid while the canvas drew control orange and dotted.
+PDF edge labels use the canvas's words ("Owns 75–100%", "Controls"), never the
+register's raw `details` (that stays in the table under each figure), and are
+placed by `_place_label`: centred on the edge nearer its fanned end, wrapped
+to the horizontal room there, slid along the edge until clear of nodes and
+other labels.
 
 ---
 
