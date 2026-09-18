@@ -1613,7 +1613,7 @@ Things that will be re-derived otherwise:
 
 ---
 
-## What is knowable, per jurisdiction — the data is Stephen's Notion table (Phases 223–226)
+## What is knowable, per jurisdiction — the data is Stephen's Notion table (Phases 223–227)
 
 `opencheck/knowability.py` + `data/jurisdictions.json`; the review page is
 `docs/knowability.md`. One statement per jurisdiction of what its registers
@@ -1699,6 +1699,14 @@ otherwise:
   chainCodes`), fetches statements for new codes through `GET /knowability`
   only; a frozen sentence is never replaced by a fetched one (`mergeChain`),
   and a saved report fetches nothing.
+- **Entity pages (Phase 227)** carry the statement too, as
+  `entity_pages.knowability_section(row.jurisdiction, today)` between the
+  reference-data `<dl>` and the children — a local table read keyed on the
+  jurisdiction, never a fetch (the module's no-adapter rule holds). Because
+  the sentence is dated and the table is synced, the page ETag includes
+  `knowability.GENERATED_AT` and today's date alongside `TEMPLATE_VERSION`
+  (bumped to "2"), so a re-sync or a passed "change announced" date re-fetches
+  every page.
 - Running the scripts locally: `cd backend && uv run python
   scripts/sync_jurisdictions.py --notion` — the system `python3` has neither
   pydantic nor pytest. The script reads `NOTION_API_KEY` from `backend/.env`

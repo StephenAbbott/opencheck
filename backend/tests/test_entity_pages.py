@@ -10,6 +10,7 @@ suite-wide (see conftest.py), matching the long-standing fixture convention.
 from __future__ import annotations
 
 import csv
+import html
 import sqlite3
 import sys
 from pathlib import Path
@@ -541,3 +542,45 @@ def test_indexnow_check_key_location_survives_a_network_error(
     monkeypatch.setattr(httpx, "get", boom)
     problem = submit_indexnow.check_key_location("rightkey")
     assert problem is not None and "could not fetch" in problem
+
+
+# ----------------------------------------------------------------------
+# Phase 227 — the per-jurisdiction "What can be known" section
+# ----------------------------------------------------------------------
+def test_entity_page_carries_the_jurisdiction_statement(client: TestClient) -> None:
+    """The GB row gets the GB statement — the same sentence GET /knowability
+    gives — as a section between the reference data and the children; it is
+    framed as a fact about the register, and no adapter is called."""
+    r = client.get(f"/entity/{ACME_LEI}-acme-widgets-sons-ltd")
+    body = r.text
+    assert '<section id="knowability"><h2>What can be known</h2>' in body
+    pure = client.get("/knowability", params={"jurisdictions": "GB"}).json()["statements"][0]
+    assert html.escape(pure["sentence"]) in body
+    assert "<strong>United Kingdom</strong>" in body
+    assert "A statement about the register, not about this company" in body
+    assert "Rendered as of" in body
+    assert body.index("</dl>") < body.index('id="knowability"') < body.index("<h2>Explore</h2>")
+
+
+def test_entity_page_statement_is_a_stated_absence_for_an_unknown_jurisdiction() -> None:
+    from datetime import date
+
+    from opencheck.entity_pages import knowability_section
+
+    html_ = knowability_section("AR", date(2026, 9, 18))
+    assert "holds no register notes for Argentina" in html_
+    assert "(no register notes held)" in html_
+    assert knowability_section(None) == ""
+    assert knowability_section("") == ""
+
+
+def test_entity_page_etag_moves_with_the_day_and_the_table(client: TestClient, monkeypatch) -> None:
+    """The sentence is dated, so the tag carries the day and the table stamp:
+    a re-synced table re-fetches every page even though no GLEIF row changed."""
+    from opencheck import knowability as know
+
+    first = client.get(f"/entity/{ACME_LEI}-acme-widgets-sons-ltd").headers["etag"]
+    monkeypatch.setattr(know, "GENERATED_AT", "2099-01-01T00:00:00+00:00")
+    second = client.get(f"/entity/{ACME_LEI}-acme-widgets-sons-ltd").headers["etag"]
+    assert first != second
+
