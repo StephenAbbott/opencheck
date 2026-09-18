@@ -27,10 +27,10 @@ CI), the ``bo_access`` pattern.
 
 Three rules the sentence keeps, and the tests pin:
 
-1. **It describes and dates; it never judges.** "Accessible on legitimate
-   interest only, since 1 Sept 2025" is a fact; "opaque" is the reader's
-   conclusion. ``BANNED_VOCABULARY`` lists the words that would turn a
-   register fact into a risk claim, and ``test_knowability.py`` fails the
+1. **It describes and dates; it never judges.** "Accessible to authorities
+   and obliged entities, and to others on legitimate interest, since 1 Sept
+   2025" is a fact; "opaque" is the reader's conclusion. ``BANNED_VOCABULARY``
+   lists the words that would turn a register fact into a risk claim, and ``test_knowability.py`` fails the
    build on any of them. Nothing here feeds ``risk.py``: a jurisdiction-level
    "no register" *signal* was rejected in the AMLA geographic-risk work
    (Aug 2026) because "we found nothing" conflates *no register* / *closed
@@ -65,6 +65,29 @@ _DATA_PATH = Path(__file__).parent / "data" / "jurisdictions.json"
 #: replacing ``bo_access``'s date-only model which could not say "public",
 #: "public with a justification step" or "restricted, no legitimate-interest
 #: route yet".
+#:
+#: It is a **ladder, one value per row**: the widest tier of access that
+#: works today, beyond the AMLD floor every EU/EEA register has (competent
+#: authorities and obliged entities). The Notion column's description and the
+#: database description carry the same definitions, agreed 18 Sept 2026:
+#:
+#: * ``public`` — anyone, no registration or reason.
+#: * ``public_with_registration_or_justification`` — anyone, after an
+#:   account, fee or stated purpose; no legitimate-interest test.
+#: * ``legitimate_interest`` — authorities and obliged entities, plus others
+#:   on legitimate interest through a route that works today
+#:   (``access_since`` = when it opened).
+#: * ``restricted_no_lia_route_yet`` — legitimate-interest access is in force
+#:   in law but no operational application route exists yet (Sweden).
+#: * ``authorities_and_obliged_entities_only`` — the floor only; LIA not in
+#:   force: not legislated, or legislated but not commenced (a known
+#:   commencement date goes in ``next_change_expected`` — Ireland; a draft
+#:   with no date is described in ``pending_changes`` — Italy).
+#: * ``no_register`` / ``in_progress`` — nothing to consult, yet or at all.
+#:
+#: ``amld6_lia`` records the *legal* position; ``access`` records *practice*.
+#: Transitions are never a second value — they are ``access_since``,
+#: ``next_change_expected`` and ``pending_changes``.
 AccessStatus = Literal[
     "public",
     "public_with_registration_or_justification",
@@ -322,8 +345,11 @@ def _register_name(j: Jurisdiction) -> str:
     return j.bo_register.name or f"{j.name}'s beneficial ownership register"
 
 
-def _access_sentence(j: Jurisdiction, today: date) -> str | None:
-    """Sentence 1: who can see beneficial owners, dated."""
+def _access_sentences(j: Jurisdiction, today: date) -> list[str]:
+    """Sentence 1 (and, for one rung, 2): who can see beneficial owners, dated.
+
+    A list so a rung that needs two facts can spend two sentences instead of
+    losing the second clause to the 140-character cap."""
     r = j.bo_register
     reg = _register_name(j)
     since = _fmt_date(r.access_since)
@@ -334,47 +360,65 @@ def _access_sentence(j: Jurisdiction, today: date) -> str | None:
         else None
     )
     if r.access is None:
-        return clauses_to_sentence(
-            [f"who may look up the beneficial owners of companies in {j.name} is not yet recorded here"],
-            sep="; ",
-        )
+        return [
+            clauses_to_sentence(
+                [f"who may look up the beneficial owners of companies in {j.name} is not yet recorded here"],
+                sep="; ",
+            )
+        ]
     if r.access == "public":
         head = f"{reg} is open to the public"
         if since:
             head += f" (current arrangement since {since})"
-        return clauses_to_sentence([head, upcoming], sep="; ")
+        return [clauses_to_sentence([head, upcoming], sep="; ")]
     if r.access == "public_with_registration_or_justification":
         head = f"{reg} is open to the public after registration or a stated reason"
         if since:
             head += f", since {since}"
-        return clauses_to_sentence([head, upcoming], sep="; ")
+        return [clauses_to_sentence([head, upcoming], sep="; ")]
     if r.access == "legitimate_interest":
-        head = f"{reg} is accessible on legitimate interest only"
+        # The ladder (agreed with Stephen, 18 Sept 2026): every tier below
+        # "public" includes the AMLD floor — authorities and obliged entities —
+        # and the sentence says so, so a reader does not take "legitimate
+        # interest" to mean banks are locked out too.
+        head = (
+            f"{reg} is accessible to authorities and obliged entities, "
+            "and to others on legitimate interest"
+        )
         if since:
             head += f", since {since}"
-        return clauses_to_sentence([head, upcoming], sep="; ")
+        return [clauses_to_sentence([head, upcoming], sep="; ")]
     if r.access == "restricted_no_lia_route_yet":
-        head = f"{reg} closed to the general public"
+        # Sweden's shape. Two sentences: the second fact is too long to
+        # survive the cap behind a register name and a date.
+        head = f"{reg} is accessible to authorities and obliged entities"
         if since:
-            head += f" on {since}"
-        return clauses_to_sentence(
-            [head, "no legitimate-interest route is open yet", upcoming], sep="; "
-        )
+            head += f", since {since}"
+        return [
+            clauses_to_sentence([head, upcoming], sep="; "),
+            clauses_to_sentence(
+                ["a legitimate-interest route is provided for in law but is not yet open"], sep="; "
+            ),
+        ]
     if r.access == "authorities_and_obliged_entities_only":
         head = f"{reg} is open to authorities and obliged entities only"
         if since:
             head += f", since {since}"
-        return clauses_to_sentence([head, upcoming], sep="; ")
+        return [clauses_to_sentence([head, upcoming], sep="; ")]
     if r.access == "no_register":
-        return clauses_to_sentence(
-            [f"{j.name} keeps no central register of beneficial owners", upcoming], sep="; "
-        )
+        return [
+            clauses_to_sentence(
+                [f"{j.name} keeps no central register of beneficial owners", upcoming], sep="; "
+            )
+        ]
     if r.access == "in_progress":
-        return clauses_to_sentence(
-            [f"{j.name}'s register of beneficial owners is being set up and is not yet open", upcoming],
-            sep="; ",
-        )
-    return None
+        return [
+            clauses_to_sentence(
+                [f"{j.name}'s register of beneficial owners is being set up and is not yet open", upcoming],
+                sep="; ",
+            )
+        ]
+    return []
 
 
 def _recorded_sentences(j: Jurisdiction) -> list[str]:
@@ -466,7 +510,7 @@ def statement_for(code: str | None, today: date | None = None) -> KnowabilitySta
     sentences = [
         s
         for s in (
-            _access_sentence(j, today),
+            *_access_sentences(j, today),
             *_recorded_sentences(j),
             _reads_sentence(j, reads),
         )

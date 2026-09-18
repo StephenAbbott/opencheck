@@ -63,7 +63,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Austria (AT) — verified 2026-09-18
 
-> Austria Register of Beneficial Owners closed to the general public on 1 Oct 2025; no legitimate-interest route is open yet. OpenCheck reads Firmenbuch — Austrian Commercial Register for officers and registered holdings, not beneficial owners.
+> Austria Register of Beneficial Owners is accessible to authorities and obliged entities, since 1 Oct 2025. A legitimate-interest route is provided for in law but is not yet open. OpenCheck reads Firmenbuch — Austrian Commercial Register for officers and registered holdings, not beneficial owners.
 
 | Field | Value |
 |---|---|
@@ -105,7 +105,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Bermuda (BM) — **unverified draft**
 
-> Bermuda beneficial ownership register is accessible on legitimate interest only. OpenCheck reads no Bermuda register, so an owner absent from this report says nothing about what Bermuda holds.
+> Bermuda beneficial ownership register is accessible to authorities and obliged entities, and to others on legitimate interest. OpenCheck reads no Bermuda register, so an owner absent from this report says nothing about what Bermuda holds.
 
 | Field | Value |
 |---|---|
@@ -147,7 +147,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### British Virgin Islands (VG) — **unverified draft**
 
-> Beneficial Ownership Secure Search System (BOSSS) is accessible on legitimate interest only, since 1 Apr 2026. OpenCheck reads no British Virgin Islands register.
+> Beneficial Ownership Secure Search System (BOSSS) is accessible to authorities and obliged entities, and to others on legitimate interest, since 1 Apr 2026. OpenCheck reads no British Virgin Islands register.
 
 | Field | Value |
 |---|---|
@@ -208,7 +208,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Cayman Islands (KY) — **unverified draft**
 
-> Cayman Islands General Registry is accessible on legitimate interest only, since 1 Feb 2025. OpenCheck reads no Cayman Islands register, so an owner absent from this report says nothing about what Cayman Islands holds.
+> Cayman Islands General Registry is accessible to authorities and obliged entities, and to others on legitimate interest, since 1 Feb 2025. OpenCheck reads no Cayman Islands register, so an owner absent from this report says nothing about what Cayman Islands holds.
 
 | Field | Value |
 |---|---|
@@ -272,7 +272,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Czechia (CZ) — **unverified draft**
 
-> Information System of Real Owners closed to the general public; no legitimate-interest route is open yet. OpenCheck reads ARES (Czechia) for officers and registered holdings, not beneficial owners.
+> Information System of Real Owners is accessible to authorities and obliged entities; a change is announced for 1 Jan 2027. A legitimate-interest route is provided for in law but is not yet open. OpenCheck reads ARES (Czechia) for officers and registered holdings, not beneficial owners.
 
 | Field | Value |
 |---|---|
@@ -295,7 +295,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Denmark (DK) — **unverified draft**
 
-> Central Business Register (Centrale Virksomhedsregister, CVR) is accessible on legitimate interest only, since 1 Sep 2025. OpenCheck reads CVR — Det Centrale Virksomhedsregister for officers and registered holdings, not beneficial owners.
+> Central Business Register (Centrale Virksomhedsregister, CVR) is accessible to authorities and obliged entities, and to others on legitimate interest, since 1 Sep 2025. OpenCheck reads CVR — Det Centrale Virksomhedsregister for officers and registered holdings, not beneficial owners.
 
 | Field | Value |
 |---|---|
@@ -363,7 +363,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### France (FR) — **unverified draft**
 
-> Registre National des Entreprises (RNE) [accessible from Data INPI] is accessible on legitimate interest only, since 3 May 2025. OpenCheck reads INPI — Registre National des Entreprises for officers and registered holdings, not beneficial owners.
+> Registre National des Entreprises (RNE) [accessible from Data INPI] is accessible to authorities and obliged entities, and to others on legitimate interest, since 3 May 2025. OpenCheck reads INPI — Registre National des Entreprises for officers and registered holdings, not beneficial owners.
 
 | Field | Value |
 |---|---|
@@ -386,7 +386,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Germany (DE) — **unverified draft**
 
-> Transparency Register (Transparenzregister) is accessible on legitimate interest only; a change is announced for 1 Jan 2027. OpenCheck reads no Germany register, so an owner absent from this report says nothing about what Germany holds.
+> Transparency Register (Transparenzregister) is accessible to authorities and obliged entities, and to others on legitimate interest. OpenCheck reads no Germany register, so an owner absent from this report says nothing about what Germany holds.
 
 | Field | Value |
 |---|---|
@@ -676,7 +676,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Lithuania (LT) — **unverified draft**
 
-> Information System of Legal Entities Participants (JADIS) closed to the general public; no legitimate-interest route is open yet. OpenCheck reads JAR — Lithuanian Register of Legal Entities for officers and registered holdings, not beneficial owners.
+> Information System of Legal Entities Participants (JADIS) is accessible to authorities and obliged entities. A legitimate-interest route is provided for in law but is not yet open. OpenCheck reads JAR — Lithuanian Register of Legal Entities for officers and registered holdings, not beneficial owners.
 
 | Field | Value |
 |---|---|
@@ -721,7 +721,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Malta (MT) — **unverified draft**
 
-> Malta Business Registry is accessible on legitimate interest only, since 10 Jul 2025. OpenCheck reads Malta Business Registry (MBR) for officers and registered holdings, not beneficial owners.
+> Malta Business Registry is accessible to authorities and obliged entities, and to others on legitimate interest, since 10 Jul 2025. OpenCheck reads Malta Business Registry (MBR) for officers and registered holdings, not beneficial owners.
 
 | Field | Value |
 |---|---|
@@ -763,7 +763,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Netherlands (NL) — **unverified draft**
 
-> UBO register closed to the general public on 16 Jul 2025; no legitimate-interest route is open yet. OpenCheck reads KvK — Netherlands Chamber of Commerce for officers and registered holdings, not beneficial owners.
+> UBO register is accessible to authorities and obliged entities, since 16 Jul 2025. A legitimate-interest route is provided for in law but is not yet open. OpenCheck reads KvK — Netherlands Chamber of Commerce for officers and registered holdings, not beneficial owners.
 
 | Field | Value |
 |---|---|
@@ -830,7 +830,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Norway (NO) — **unverified draft**
 
-> Register of Beneficial Owners (Registeret over reelle rettighetshavere) is accessible on legitimate interest only, since 1 Oct 2024. OpenCheck reads Brønnøysundregistrene — Norwegian Register Centre for officers and registered holdings, not beneficial owners.
+> Register of Beneficial Owners (Registeret over reelle rettighetshavere) is accessible to authorities and obliged entities, and to others on legitimate interest, since 1 Oct 2024. OpenCheck reads Brønnøysundregistrene — Norwegian Register Centre for officers and registered holdings, not beneficial owners.
 
 | Field | Value |
 |---|---|
@@ -852,7 +852,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Poland (PL) — **unverified draft**
 
-> Central Register of Beneficial Owners (Centralny Rejestr Beneficjentów Rzeczywistych, CRBR) closed to the general public on 1 Jul 2026. OpenCheck reads KRS — Polish National Court Register for officers and registered holdings, not beneficial owners.
+> Central Register of Beneficial Owners (Centralny Rejestr Beneficjentów Rzeczywistych, CRBR) is accessible to authorities and obliged entities, since 1 Jul 2026. A legitimate-interest route is provided for in law but is not yet open. OpenCheck reads KRS — Polish National Court Register for officers and registered holdings, not beneficial owners.
 
 | Field | Value |
 |---|---|
@@ -875,7 +875,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Portugal (PT) — **unverified draft**
 
-> Central Register of Effective Beneficiaries (RCBE) closed to the general public; no legitimate-interest route is open yet. OpenCheck reads no Portugal register, so an owner absent from this report says nothing about what Portugal holds.
+> Central Register of Effective Beneficiaries (RCBE) is accessible to authorities and obliged entities. A legitimate-interest route is provided for in law but is not yet open. OpenCheck reads no Portugal register, so an owner absent from this report says nothing about what Portugal holds.
 
 | Field | Value |
 |---|---|
@@ -958,7 +958,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Slovakia (SK) — **unverified draft**
 
-> Register of legal entities, entrepreneurs and public authorities (RPO) closed to the general public on 10 Jul 2025. OpenCheck reads beneficial owners from RPVS Slovakia.
+> Register of legal entities, entrepreneurs and public authorities (RPO) is accessible to authorities and obliged entities, since 10 Jul 2025. A legitimate-interest route is provided for in law but is not yet open. OpenCheck reads beneficial owners from RPVS Slovakia.
 
 | Field | Value |
 |---|---|
@@ -980,7 +980,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Slovenia (SI) — **unverified draft**
 
-> Register of Beneficial Owners (RDL) is accessible on legitimate interest only. OpenCheck reads no Slovenia register, so an owner absent from this report says nothing about what Slovenia holds.
+> Register of Beneficial Owners (RDL) is accessible to authorities and obliged entities, and to others on legitimate interest. OpenCheck reads no Slovenia register, so an owner absent from this report says nothing about what Slovenia holds.
 
 | Field | Value |
 |---|---|
@@ -1043,7 +1043,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Sweden (SE) — **unverified draft**
 
-> Register of Real Principals closed to the general public on 1 Jul 2026; no legitimate-interest route is open yet. OpenCheck reads Bolagsverket — Swedish Companies Registration Office for officers and registered holdings, not beneficial owners.
+> Register of Real Principals is accessible to authorities and obliged entities, since 1 Jul 2026. A legitimate-interest route is provided for in law but is not yet open. OpenCheck reads Bolagsverket — Swedish Companies Registration Office for officers and registered holdings, not beneficial owners.
 
 | Field | Value |
 |---|---|
@@ -1087,7 +1087,7 @@ Data generated 2026-09-18T10:06:12+00:00; sentences rendered as of 2026-09-18. *
 
 ### Turks and Caicos Islands (TC) — **unverified draft**
 
-> Turks and Caicos Islands beneficial ownership register is accessible on legitimate interest only, since 1 Jul 2025. OpenCheck reads no Turks and Caicos Islands register.
+> Turks and Caicos Islands beneficial ownership register is accessible to authorities and obliged entities, and to others on legitimate interest, since 1 Jul 2025. OpenCheck reads no Turks and Caicos Islands register.
 
 | Field | Value |
 |---|---|

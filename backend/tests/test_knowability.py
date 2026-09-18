@@ -197,7 +197,32 @@ def test_estonia_shape_public_then_restricted_flips_on_the_date(monkeypatch) -> 
     )
     monkeypatch.setitem(JURISDICTIONS, "EE", restricted)
     after = statement_for("EE", date(2030, 8, 1))
-    assert "accessible on legitimate interest only, since 10 Jul 2030" in after.sentence
+    assert (
+        "accessible to authorities and obliged entities, and to others on legitimate interest, "
+        "since 10 Jul 2030"
+    ) in after.sentence
+
+
+def test_lower_rungs_name_the_amld_floor(monkeypatch) -> None:
+    """Every tier below public says that authorities and obliged entities can
+    see the register — the ladder agreed 18 Sept 2026 — so "legitimate
+    interest" is never read as "banks are locked out too". Sweden's shape
+    (LIA in law, no route yet) is said in those words, not as "closed"."""
+    monkeypatch.setitem(
+        JURISDICTIONS, "SE", _fixture(name="BO register", access="restricted_no_lia_route_yet")
+    )
+    se = statement_for("SE", _TODAY).sentence
+    assert "accessible to authorities and obliged entities" in se
+    assert "legitimate-interest route is provided for in law but is not yet open" in se
+    assert "closed" not in se
+
+    ie_fixture = _fixture(
+        access="authorities_and_obliged_entities_only", next_change_expected=date(2026, 11, 10)
+    )
+    monkeypatch.setitem(JURISDICTIONS, "IE", ie_fixture)
+    ie = statement_for("IE", date(2026, 9, 18)).sentence
+    assert "open to authorities and obliged entities only" in ie
+    assert "a change is announced for 10 Nov 2026" in ie
 
 
 @pytest.mark.parametrize("access", ACCESS_STATUSES)
