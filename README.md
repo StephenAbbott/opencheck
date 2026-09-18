@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 226** — What can be known along the ownership path: the per-jurisdiction statements now follow the chain in FullCheck, appear in the PDF and Markdown exports, and ride the MCP lookup result, all frozen with the run for saved reports.
+**Latest: Phase 227** — "What can be known" on the entity pages: every /entity page now states what its jurisdiction's register publishes about beneficial owners, who may see it and what OpenCheck reads of it, completing the knowability ticket.
 
 → [Full development history](docs/status.md)
 
