@@ -47,6 +47,10 @@ from .asp_moldova import MD_RA_CODES as _MD_RA_CODES, normalise_idno as _normali
 from .apr_serbia import RS_RA_CODES as _RS_RA_CODES, normalise_mb as _normalise_rs_mb
 from .cr_hongkong import HK_RA_CODES as _HK_RA_CODES, normalise_hk_brn as _normalise_hk_brn
 from .acra_singapore import ACRA_RA_CODE as _ACRA_RA_CODE, normalise_uen as _normalise_uen
+from .dlcp_dc import (
+    DLCP_RA_CODE as _DLCP_RA_CODE,
+    normalise_file_number as _normalise_dc_file_number,
+)
 from .cnpj_brazil import BR_RA_CODE as _BR_RA_CODE, normalise_cnpj as _normalise_cnpj
 from .inpi import (
     INPI_RA_CODES as _INPI_RA_CODES,
@@ -809,6 +813,17 @@ class GleifAdapter(SourceAdapter):
             if registered_at_id == _ACRA_RA_CODE:
                 try:
                     identifiers["sg_uen"] = _normalise_uen(registered_as)
+                except ValueError:
+                    pass
+            # Washington DC Corporations Division file number — expose as
+            # ``us_dc_file_number`` so the reconciler can bridge GLEIF ↔ DLCP.
+            # RA000601 files it verbatim, in any of the register's shapes; the
+            # normaliser only rejects a string that cannot be a file number.
+            if registered_at_id == _DLCP_RA_CODE:
+                try:
+                    identifiers["us_dc_file_number"] = _normalise_dc_file_number(
+                        registered_as
+                    )
                 except ValueError:
                     pass
             # Brazilian CNPJ — expose as ``br_cnpj`` so the reconciler can

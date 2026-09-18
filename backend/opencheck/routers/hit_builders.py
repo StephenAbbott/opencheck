@@ -261,6 +261,36 @@ def _bh_acra_singapore(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_dlcp_dc(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Washington DC's DLCP Corporations Division register.
+
+    Asserts only the file number the register row itself carries — never the
+    one GLEIF filed (the identifier corroboration rule in CLAUDE.md). That
+    distinction is load-bearing here: the adapter can reach a company by name
+    when the filed identifier resolves elsewhere, and in that case the LEI
+    record's file number is exactly the thing this source disagrees with.
+    """
+    from ..findings import finding_dlcp_dc
+    from ..sources.dlcp_dc import DC_FILE_NUMBER_SCHEME, clean_field
+
+    company = r.get("company") or {}
+    file_number = clean_field(company.get("FILE_NUMBER")) or local_id
+    status = clean_field(company.get("ENTITY_STATUS"))
+    return _hit(
+        "dlcp_dc", file_number,
+        name=clean_field(company.get("BUSINESS_NAME")) or ctx.legal_name or "",
+        summary=f"{DC_FILE_NUMBER_SCHEME} {file_number}" + (f" · {status}" if status else ""),
+        identifiers={"us_dc_file_number": file_number},
+        raw={
+            "company": company,
+            "owners": r.get("owners") or [],
+            "trade_names": r.get("trade_names") or [],
+            "matched_by": r.get("matched_by"),
+        },
+        finding=finding_dlcp_dc(r),
+    )
+
+
 def _bh_anaf_romania(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for Romania's ANAF taxpayer register.
 

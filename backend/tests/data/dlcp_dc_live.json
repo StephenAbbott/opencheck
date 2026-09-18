@@ -1,0 +1,1253 @@
+{
+ "_captured": "Real ArcGIS FeatureServer responses from maps2.dcgis.dc.gov, captured 2026-09-18.",
+ "responses": {
+  "acs_company": {
+   "objectIdFieldName": "OBJECTID",
+   "globalIdFieldName": "GLOBALID",
+   "fields": [
+    {
+     "name": "FILE_NUMBER",
+     "alias": "File Number",
+     "type": "esriFieldTypeString",
+     "length": 20
+    },
+    {
+     "name": "ENTITY_STATUS",
+     "alias": "Entity Status",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "LOCALE",
+     "alias": "Locale",
+     "type": "esriFieldTypeString",
+     "length": 30
+    },
+    {
+     "name": "MODELTYPE",
+     "alias": "Model Type",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "BUSINESS_NAME",
+     "alias": "Business Name",
+     "type": "esriFieldTypeString",
+     "length": 300
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE1",
+     "alias": "Business Address LIne 1",
+     "type": "esriFieldTypeString",
+     "length": 200
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE2",
+     "alias": "Business Address LIne 2",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE3",
+     "alias": "Business Address LIne 3",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE4",
+     "alias": "Business Address LIne 4",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSINESS_CITY",
+     "alias": "Business City",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSINESS_STATE",
+     "alias": "Business State",
+     "type": "esriFieldTypeString",
+     "length": 10
+    },
+    {
+     "name": "ZIPCODE",
+     "alias": "Zip Code",
+     "type": "esriFieldTypeString",
+     "length": 20
+    },
+    {
+     "name": "BUSINESS_COUNTRY",
+     "alias": "Business Country",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "SUFFIX",
+     "alias": "Suffix",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "RA_NAME",
+     "alias": "RA Name",
+     "type": "esriFieldTypeString",
+     "length": 200
+    },
+    {
+     "name": "RA_ADDRESS1",
+     "alias": "RA Address 1",
+     "type": "esriFieldTypeString",
+     "length": 200
+    },
+    {
+     "name": "RA_ADDRESS2",
+     "alias": "RA Address 2",
+     "type": "esriFieldTypeString",
+     "length": 200
+    },
+    {
+     "name": "RA_ADDRESS3",
+     "alias": "RA Address 3",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "RA_ADDRESS4",
+     "alias": "RA Address 4",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "RA_CITY",
+     "alias": "RA CIty",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "RA_STATE",
+     "alias": "RA State",
+     "type": "esriFieldTypeString",
+     "length": 10
+    },
+    {
+     "name": "RA_ZIPCODE",
+     "alias": "RA Zip Code",
+     "type": "esriFieldTypeString",
+     "length": 20
+    },
+    {
+     "name": "EFFECTIVE_DATE",
+     "alias": "Effective Date",
+     "type": "esriFieldTypeDate",
+     "length": 8
+    },
+    {
+     "name": "FOREIGN_DATEOF_ORGANIZATION",
+     "alias": "Foreign Date Of Organization",
+     "type": "esriFieldTypeDate",
+     "length": 8
+    },
+    {
+     "name": "NEXT_REPORTYEAR_DUE",
+     "alias": "Next Report Year Due",
+     "type": "esriFieldTypeString",
+     "length": 10
+    },
+    {
+     "name": "DCS_LAST_MOD_DTTM",
+     "alias": "Last Modified Date",
+     "type": "esriFieldTypeDate",
+     "length": 8
+    },
+    {
+     "name": "DATE_LAST_REPORT_FILED",
+     "alias": "Date Last Report Filed",
+     "type": "esriFieldTypeDate",
+     "length": 8
+    },
+    {
+     "name": "NEXT_REPORTYEAR",
+     "alias": "Next Report Year",
+     "type": "esriFieldTypeString",
+     "length": 1
+    },
+    {
+     "name": "LATESTFILED_REPORTDATE",
+     "alias": "Latest Filed Report Date",
+     "type": "esriFieldTypeString",
+     "length": 1
+    },
+    {
+     "name": "LATESTREPORT_YEARFILED",
+     "alias": "Latest Report Year Filed",
+     "type": "esriFieldTypeString",
+     "length": 1
+    },
+    {
+     "name": "OBJECTID",
+     "alias": "OBJECTID",
+     "type": "esriFieldTypeOID"
+    },
+    {
+     "name": "GLOBALID",
+     "alias": "GLOBALID",
+     "type": "esriFieldTypeGlobalID",
+     "length": 38
+    }
+   ],
+   "features": [
+    {
+     "attributes": {
+      "FILE_NUMBER": "000347",
+      "ENTITY_STATUS": "Active - In Good Standing",
+      "LOCALE": "Domestic",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "BUSINESS_NAME": "AMERICAN CHEMICAL SOCIETY",
+      "BUSNIESS_ADDRESS_LINE1": "1155 16th Street, NW",
+      "BUSNIESS_ADDRESS_LINE2": null,
+      "BUSNIESS_ADDRESS_LINE3": null,
+      "BUSNIESS_ADDRESS_LINE4": null,
+      "BUSINESS_CITY": "Washington",
+      "BUSINESS_STATE": "DC",
+      "ZIPCODE": "20036",
+      "BUSINESS_COUNTRY": "USA",
+      "SUFFIX": null,
+      "RA_NAME": "ResAgent, Inc.",
+      "RA_ADDRESS1": "1800 M Street, NW",
+      "RA_ADDRESS2": "Suite 450N",
+      "RA_ADDRESS3": null,
+      "RA_ADDRESS4": null,
+      "RA_CITY": "Washington",
+      "RA_STATE": "DC",
+      "RA_ZIPCODE": "20036",
+      "EFFECTIVE_DATE": -1020974400000,
+      "FOREIGN_DATEOF_ORGANIZATION": -1020974400000,
+      "NEXT_REPORTYEAR_DUE": "04/01/2028",
+      "DCS_LAST_MOD_DTTM": 1789732580000,
+      "DATE_LAST_REPORT_FILED": 1775102319000,
+      "NEXT_REPORTYEAR": null,
+      "LATESTFILED_REPORTDATE": null,
+      "LATESTREPORT_YEARFILED": null,
+      "OBJECTID": 195922807,
+      "GLOBALID": "{5BC19304-997F-6B01-E063-782F520A4590}"
+     }
+    }
+   ]
+  },
+  "acs_trade_names": {
+   "objectIdFieldName": "OBJECTID",
+   "globalIdFieldName": "GLOBALID",
+   "fields": [
+    {
+     "name": "TRADE_NAME",
+     "alias": "Trade Name",
+     "type": "esriFieldTypeString",
+     "length": 300
+    },
+    {
+     "name": "TRADENAME_STATUS",
+     "alias": "Tradename Status",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "FILE_NUMBER",
+     "alias": "File Number",
+     "type": "esriFieldTypeString",
+     "length": 30
+    },
+    {
+     "name": "INITIAL_FILENUMBER",
+     "alias": "Initial File Number",
+     "type": "esriFieldTypeString",
+     "length": 30
+    }
+   ],
+   "features": [
+    {
+     "attributes": {
+      "TRADE_NAME": "ACS",
+      "TRADENAME_STATUS": "Active Trade Name",
+      "FILE_NUMBER": "TN0007730957",
+      "INITIAL_FILENUMBER": "000347"
+     }
+    }
+   ]
+  },
+  "acs_owners": {
+   "objectIdFieldName": "OBJECTID",
+   "globalIdFieldName": "GLOBALID",
+   "fields": [
+    {
+     "name": "NAME",
+     "alias": "Name",
+     "type": "esriFieldTypeString",
+     "length": 250
+    },
+    {
+     "name": "ADDRESS",
+     "alias": "Address",
+     "type": "esriFieldTypeString",
+     "length": 400
+    },
+    {
+     "name": "BUSINESSNAME",
+     "alias": "Business Name",
+     "type": "esriFieldTypeString",
+     "length": 300
+    },
+    {
+     "name": "MODELTYPE",
+     "alias": "Model Type",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "LOCALE",
+     "alias": "Locale",
+     "type": "esriFieldTypeString",
+     "length": 30
+    },
+    {
+     "name": "INITIALFILENUMBER",
+     "alias": "Initial File Number",
+     "type": "esriFieldTypeString",
+     "length": 30
+    },
+    {
+     "name": "STATUS",
+     "alias": "Status",
+     "type": "esriFieldTypeString",
+     "length": 50
+    }
+   ],
+   "features": [
+    {
+     "attributes": {
+      "NAME": "Albert M. Horvath",
+      "ADDRESS": "1155 16th Street, NW, Washington, DC, 20036, USA",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    },
+    {
+     "attributes": {
+      "NAME": "Bonnie Lawlor",
+      "ADDRESS": "276 Upper Gulph Road, Radnor, PA, 19087, USA",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    },
+    {
+     "attributes": {
+      "NAME": "Dr. Carolyn Ribes",
+      "ADDRESS": "19 Ooievaar, 4231 EK Meerkerk, Terneuzen, Utrecht, 4231 EK, NLD",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    },
+    {
+     "attributes": {
+      "NAME": "Dr. David Wu",
+      "ADDRESS": "No. 128, Section 2, Academia Rd, Nangang District, Taipei City, 115, TWN",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    },
+    {
+     "attributes": {
+      "NAME": "Dr. Dorothy A Phillips",
+      "ADDRESS": "604 Water Street, Framingham, MA, 01701, USA",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    },
+    {
+     "attributes": {
+      "NAME": "Dr. Jeanette M. Van Emon",
+      "ADDRESS": "2456 Ping Drive, Henderson, NV, 89074, USA",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    },
+    {
+     "attributes": {
+      "NAME": "Dr. Katherine A Lee",
+      "ADDRESS": "167 Adams Avenue, W Newton, MA, 02465, USA",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    },
+    {
+     "attributes": {
+      "NAME": "Dr. Kimberly Agnew-Heard",
+      "ADDRESS": "2453 Crescent Park Court, Atlanta, GA, 30339, USA",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    },
+    {
+     "attributes": {
+      "NAME": "Dr. Malika H. Jeffries-El",
+      "ADDRESS": "590 Commonwealth Avenue, Boston, MA, 02215, USA",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    },
+    {
+     "attributes": {
+      "NAME": "Dr. Mary K. Carroll",
+      "ADDRESS": "807 Union Street, Schenectady, NY, 12308, USA",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    },
+    {
+     "attributes": {
+      "NAME": "Dr. Natalie A. LaFranzo",
+      "ADDRESS": "42 Sanderson Road, Lexington, MA, 02420, USA",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    },
+    {
+     "attributes": {
+      "NAME": "Dr. Rigoberto Hernandez",
+      "ADDRESS": "Dept of Chem John Hopkins University, 3400 N Charles St, Remsen Hall, Baltimore, MD, 21218, USA",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    },
+    {
+     "attributes": {
+      "NAME": "Dr. Silvia S. Jurisson",
+      "ADDRESS": "601 S College Ave, Columbia, MO, 65211, USA",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    },
+    {
+     "attributes": {
+      "NAME": "Dr. Wayne E. Jones, Jr.",
+      "ADDRESS": "105 Main Street, 207 Thompson Hall, Durham, NH, 03824, USA",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    },
+    {
+     "attributes": {
+      "NAME": "Dr. Will E Lynch",
+      "ADDRESS": "11935 Abercorn Street, Savannah, GA, 31419, USA",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    },
+    {
+     "attributes": {
+      "NAME": "Lisa Houston",
+      "ADDRESS": "8824 Fallbrook Drive, Houston, TX, 77064, USA",
+      "BUSINESSNAME": "AMERICAN CHEMICAL SOCIETY",
+      "MODELTYPE": "Domestic Act of Congress Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "000347",
+      "STATUS": "Active - In Good Standing"
+     }
+    }
+   ]
+  },
+  "collision_company": {
+   "objectIdFieldName": "OBJECTID",
+   "globalIdFieldName": "GLOBALID",
+   "fields": [
+    {
+     "name": "FILE_NUMBER",
+     "alias": "File Number",
+     "type": "esriFieldTypeString",
+     "length": 20
+    },
+    {
+     "name": "ENTITY_STATUS",
+     "alias": "Entity Status",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "LOCALE",
+     "alias": "Locale",
+     "type": "esriFieldTypeString",
+     "length": 30
+    },
+    {
+     "name": "MODELTYPE",
+     "alias": "Model Type",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "BUSINESS_NAME",
+     "alias": "Business Name",
+     "type": "esriFieldTypeString",
+     "length": 300
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE1",
+     "alias": "Business Address LIne 1",
+     "type": "esriFieldTypeString",
+     "length": 200
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE2",
+     "alias": "Business Address LIne 2",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE3",
+     "alias": "Business Address LIne 3",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE4",
+     "alias": "Business Address LIne 4",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSINESS_CITY",
+     "alias": "Business City",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSINESS_STATE",
+     "alias": "Business State",
+     "type": "esriFieldTypeString",
+     "length": 10
+    },
+    {
+     "name": "ZIPCODE",
+     "alias": "Zip Code",
+     "type": "esriFieldTypeString",
+     "length": 20
+    },
+    {
+     "name": "BUSINESS_COUNTRY",
+     "alias": "Business Country",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "SUFFIX",
+     "alias": "Suffix",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "RA_NAME",
+     "alias": "RA Name",
+     "type": "esriFieldTypeString",
+     "length": 200
+    },
+    {
+     "name": "RA_ADDRESS1",
+     "alias": "RA Address 1",
+     "type": "esriFieldTypeString",
+     "length": 200
+    },
+    {
+     "name": "RA_ADDRESS2",
+     "alias": "RA Address 2",
+     "type": "esriFieldTypeString",
+     "length": 200
+    },
+    {
+     "name": "RA_ADDRESS3",
+     "alias": "RA Address 3",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "RA_ADDRESS4",
+     "alias": "RA Address 4",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "RA_CITY",
+     "alias": "RA CIty",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "RA_STATE",
+     "alias": "RA State",
+     "type": "esriFieldTypeString",
+     "length": 10
+    },
+    {
+     "name": "RA_ZIPCODE",
+     "alias": "RA Zip Code",
+     "type": "esriFieldTypeString",
+     "length": 20
+    },
+    {
+     "name": "EFFECTIVE_DATE",
+     "alias": "Effective Date",
+     "type": "esriFieldTypeDate",
+     "length": 8
+    },
+    {
+     "name": "FOREIGN_DATEOF_ORGANIZATION",
+     "alias": "Foreign Date Of Organization",
+     "type": "esriFieldTypeDate",
+     "length": 8
+    },
+    {
+     "name": "NEXT_REPORTYEAR_DUE",
+     "alias": "Next Report Year Due",
+     "type": "esriFieldTypeString",
+     "length": 10
+    },
+    {
+     "name": "DCS_LAST_MOD_DTTM",
+     "alias": "Last Modified Date",
+     "type": "esriFieldTypeDate",
+     "length": 8
+    },
+    {
+     "name": "DATE_LAST_REPORT_FILED",
+     "alias": "Date Last Report Filed",
+     "type": "esriFieldTypeDate",
+     "length": 8
+    },
+    {
+     "name": "NEXT_REPORTYEAR",
+     "alias": "Next Report Year",
+     "type": "esriFieldTypeString",
+     "length": 1
+    },
+    {
+     "name": "LATESTFILED_REPORTDATE",
+     "alias": "Latest Filed Report Date",
+     "type": "esriFieldTypeString",
+     "length": 1
+    },
+    {
+     "name": "LATESTREPORT_YEARFILED",
+     "alias": "Latest Report Year Filed",
+     "type": "esriFieldTypeString",
+     "length": 1
+    },
+    {
+     "name": "OBJECTID",
+     "alias": "OBJECTID",
+     "type": "esriFieldTypeOID"
+    },
+    {
+     "name": "GLOBALID",
+     "alias": "GLOBALID",
+     "type": "esriFieldTypeGlobalID",
+     "length": 38
+    }
+   ],
+   "features": [
+    {
+     "attributes": {
+      "FILE_NUMBER": "L21249",
+      "ENTITY_STATUS": "Active - In Good Standing",
+      "LOCALE": "Domestic",
+      "MODELTYPE": "Domestic Limited Liability Company",
+      "BUSINESS_NAME": "CONNIE-19 STREET LLC",
+      "BUSNIESS_ADDRESS_LINE1": "C/O Jennifer Jette, Freidlander Misler, 5335 Wisconsin Avenue,NW",
+      "BUSNIESS_ADDRESS_LINE2": "Suite #600",
+      "BUSNIESS_ADDRESS_LINE3": null,
+      "BUSNIESS_ADDRESS_LINE4": null,
+      "BUSINESS_CITY": "Washington",
+      "BUSINESS_STATE": "DC",
+      "ZIPCODE": "20015",
+      "BUSINESS_COUNTRY": "USA",
+      "SUFFIX": null,
+      "RA_NAME": "C T CORPORATION SYSTEM",
+      "RA_ADDRESS1": "1015 15TH STREET NW",
+      "RA_ADDRESS2": "Suite 1000",
+      "RA_ADDRESS3": null,
+      "RA_ADDRESS4": null,
+      "RA_CITY": "Washington",
+      "RA_STATE": "DC",
+      "RA_ZIPCODE": "20005",
+      "EFFECTIVE_DATE": 1101272400000,
+      "FOREIGN_DATEOF_ORGANIZATION": 1101272400000,
+      "NEXT_REPORTYEAR_DUE": "04/01/2028",
+      "DCS_LAST_MOD_DTTM": 1789732580000,
+      "DATE_LAST_REPORT_FILED": 1773864870000,
+      "NEXT_REPORTYEAR": null,
+      "LATESTFILED_REPORTDATE": null,
+      "LATESTREPORT_YEARFILED": null,
+      "OBJECTID": 196337793,
+      "GLOBALID": "{5BC1930A-EE89-6B01-E063-782F520A4590}"
+     }
+    }
+   ]
+  },
+  "afpc_by_name": {
+   "objectIdFieldName": "OBJECTID",
+   "globalIdFieldName": "GLOBALID",
+   "fields": [
+    {
+     "name": "FILE_NUMBER",
+     "alias": "File Number",
+     "type": "esriFieldTypeString",
+     "length": 20
+    },
+    {
+     "name": "ENTITY_STATUS",
+     "alias": "Entity Status",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "LOCALE",
+     "alias": "Locale",
+     "type": "esriFieldTypeString",
+     "length": 30
+    },
+    {
+     "name": "MODELTYPE",
+     "alias": "Model Type",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "BUSINESS_NAME",
+     "alias": "Business Name",
+     "type": "esriFieldTypeString",
+     "length": 300
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE1",
+     "alias": "Business Address LIne 1",
+     "type": "esriFieldTypeString",
+     "length": 200
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE2",
+     "alias": "Business Address LIne 2",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE3",
+     "alias": "Business Address LIne 3",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE4",
+     "alias": "Business Address LIne 4",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSINESS_CITY",
+     "alias": "Business City",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSINESS_STATE",
+     "alias": "Business State",
+     "type": "esriFieldTypeString",
+     "length": 10
+    },
+    {
+     "name": "ZIPCODE",
+     "alias": "Zip Code",
+     "type": "esriFieldTypeString",
+     "length": 20
+    },
+    {
+     "name": "BUSINESS_COUNTRY",
+     "alias": "Business Country",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "RA_NAME",
+     "alias": "RA Name",
+     "type": "esriFieldTypeString",
+     "length": 200
+    },
+    {
+     "name": "RA_CITY",
+     "alias": "RA CIty",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "RA_STATE",
+     "alias": "RA State",
+     "type": "esriFieldTypeString",
+     "length": 10
+    },
+    {
+     "name": "EFFECTIVE_DATE",
+     "alias": "Effective Date",
+     "type": "esriFieldTypeDate",
+     "length": 8
+    }
+   ],
+   "features": [
+    {
+     "attributes": {
+      "FILE_NUMBER": "825027",
+      "ENTITY_STATUS": "Active - In Good Standing",
+      "LOCALE": "Domestic",
+      "MODELTYPE": "Domestic Nonprofit Corporation",
+      "BUSINESS_NAME": "AMERICAN FOREIGN POLICY COUNCIL",
+      "BUSNIESS_ADDRESS_LINE1": "509 C Street NE",
+      "BUSNIESS_ADDRESS_LINE2": null,
+      "BUSNIESS_ADDRESS_LINE3": null,
+      "BUSNIESS_ADDRESS_LINE4": null,
+      "BUSINESS_CITY": "Washington",
+      "BUSINESS_STATE": "DC",
+      "ZIPCODE": "20002",
+      "BUSINESS_COUNTRY": "USA",
+      "RA_NAME": "ALAN P. DYE",
+      "RA_CITY": "Washington",
+      "RA_STATE": "DC",
+      "EFFECTIVE_DATE": 406184400000
+     }
+    }
+   ]
+  },
+  "afpc_owners": {
+   "objectIdFieldName": "OBJECTID",
+   "globalIdFieldName": "GLOBALID",
+   "fields": [
+    {
+     "name": "NAME",
+     "alias": "Name",
+     "type": "esriFieldTypeString",
+     "length": 250
+    },
+    {
+     "name": "ADDRESS",
+     "alias": "Address",
+     "type": "esriFieldTypeString",
+     "length": 400
+    },
+    {
+     "name": "BUSINESSNAME",
+     "alias": "Business Name",
+     "type": "esriFieldTypeString",
+     "length": 300
+    },
+    {
+     "name": "MODELTYPE",
+     "alias": "Model Type",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "LOCALE",
+     "alias": "Locale",
+     "type": "esriFieldTypeString",
+     "length": 30
+    },
+    {
+     "name": "INITIALFILENUMBER",
+     "alias": "Initial File Number",
+     "type": "esriFieldTypeString",
+     "length": 30
+    },
+    {
+     "name": "STATUS",
+     "alias": "Status",
+     "type": "esriFieldTypeString",
+     "length": 50
+    }
+   ],
+   "features": [
+    {
+     "attributes": {
+      "NAME": "Herman Pirchner",
+      "ADDRESS": "AFPC, 509 C Street NE, Washington, DC, 20002, USA",
+      "BUSINESSNAME": "AMERICAN FOREIGN POLICY COUNCIL",
+      "MODELTYPE": "Domestic Nonprofit Corporation",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "825027",
+      "STATUS": "Active - In Good Standing"
+     }
+    }
+   ]
+  },
+  "afpc_trade_names": {
+   "objectIdFieldName": "OBJECTID",
+   "globalIdFieldName": "GLOBALID",
+   "features": []
+  },
+  "empty_result": {
+   "objectIdFieldName": "OBJECTID",
+   "globalIdFieldName": "GLOBALID",
+   "features": []
+  },
+  "revoked_company": {
+   "objectIdFieldName": "OBJECTID",
+   "globalIdFieldName": "GLOBALID",
+   "fields": [
+    {
+     "name": "FILE_NUMBER",
+     "alias": "File Number",
+     "type": "esriFieldTypeString",
+     "length": 20
+    },
+    {
+     "name": "ENTITY_STATUS",
+     "alias": "Entity Status",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "LOCALE",
+     "alias": "Locale",
+     "type": "esriFieldTypeString",
+     "length": 30
+    },
+    {
+     "name": "MODELTYPE",
+     "alias": "Model Type",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "BUSINESS_NAME",
+     "alias": "Business Name",
+     "type": "esriFieldTypeString",
+     "length": 300
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE1",
+     "alias": "Business Address LIne 1",
+     "type": "esriFieldTypeString",
+     "length": 200
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE2",
+     "alias": "Business Address LIne 2",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE3",
+     "alias": "Business Address LIne 3",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSNIESS_ADDRESS_LINE4",
+     "alias": "Business Address LIne 4",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSINESS_CITY",
+     "alias": "Business City",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "BUSINESS_STATE",
+     "alias": "Business State",
+     "type": "esriFieldTypeString",
+     "length": 10
+    },
+    {
+     "name": "ZIPCODE",
+     "alias": "Zip Code",
+     "type": "esriFieldTypeString",
+     "length": 20
+    },
+    {
+     "name": "BUSINESS_COUNTRY",
+     "alias": "Business Country",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "SUFFIX",
+     "alias": "Suffix",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "RA_NAME",
+     "alias": "RA Name",
+     "type": "esriFieldTypeString",
+     "length": 200
+    },
+    {
+     "name": "RA_ADDRESS1",
+     "alias": "RA Address 1",
+     "type": "esriFieldTypeString",
+     "length": 200
+    },
+    {
+     "name": "RA_ADDRESS2",
+     "alias": "RA Address 2",
+     "type": "esriFieldTypeString",
+     "length": 200
+    },
+    {
+     "name": "RA_ADDRESS3",
+     "alias": "RA Address 3",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "RA_ADDRESS4",
+     "alias": "RA Address 4",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "RA_CITY",
+     "alias": "RA CIty",
+     "type": "esriFieldTypeString",
+     "length": 100
+    },
+    {
+     "name": "RA_STATE",
+     "alias": "RA State",
+     "type": "esriFieldTypeString",
+     "length": 10
+    },
+    {
+     "name": "RA_ZIPCODE",
+     "alias": "RA Zip Code",
+     "type": "esriFieldTypeString",
+     "length": 20
+    },
+    {
+     "name": "EFFECTIVE_DATE",
+     "alias": "Effective Date",
+     "type": "esriFieldTypeDate",
+     "length": 8
+    },
+    {
+     "name": "FOREIGN_DATEOF_ORGANIZATION",
+     "alias": "Foreign Date Of Organization",
+     "type": "esriFieldTypeDate",
+     "length": 8
+    },
+    {
+     "name": "NEXT_REPORTYEAR_DUE",
+     "alias": "Next Report Year Due",
+     "type": "esriFieldTypeString",
+     "length": 10
+    },
+    {
+     "name": "DCS_LAST_MOD_DTTM",
+     "alias": "Last Modified Date",
+     "type": "esriFieldTypeDate",
+     "length": 8
+    },
+    {
+     "name": "DATE_LAST_REPORT_FILED",
+     "alias": "Date Last Report Filed",
+     "type": "esriFieldTypeDate",
+     "length": 8
+    },
+    {
+     "name": "NEXT_REPORTYEAR",
+     "alias": "Next Report Year",
+     "type": "esriFieldTypeString",
+     "length": 1
+    },
+    {
+     "name": "LATESTFILED_REPORTDATE",
+     "alias": "Latest Filed Report Date",
+     "type": "esriFieldTypeString",
+     "length": 1
+    },
+    {
+     "name": "LATESTREPORT_YEARFILED",
+     "alias": "Latest Report Year Filed",
+     "type": "esriFieldTypeString",
+     "length": 1
+    },
+    {
+     "name": "OBJECTID",
+     "alias": "OBJECTID",
+     "type": "esriFieldTypeOID"
+    },
+    {
+     "name": "GLOBALID",
+     "alias": "GLOBALID",
+     "type": "esriFieldTypeGlobalID",
+     "length": 38
+    }
+   ],
+   "features": [
+    {
+     "attributes": {
+      "FILE_NUMBER": "L00005434982",
+      "ENTITY_STATUS": "Revoked",
+      "LOCALE": "Domestic",
+      "MODELTYPE": "Domestic Limited Liability Company",
+      "BUSINESS_NAME": "Picturebook Media, LLC",
+      "BUSNIESS_ADDRESS_LINE1": "4414 Reservoir Rd. NW",
+      "BUSNIESS_ADDRESS_LINE2": null,
+      "BUSNIESS_ADDRESS_LINE3": null,
+      "BUSNIESS_ADDRESS_LINE4": null,
+      "BUSINESS_CITY": "Washington",
+      "BUSINESS_STATE": "DC",
+      "ZIPCODE": "20007",
+      "BUSINESS_COUNTRY": "USA",
+      "SUFFIX": null,
+      "RA_NAME": "UNITED STATES CORPORATION AGENTS INC.",
+      "RA_ADDRESS1": "700 12th STREET NW",
+      "RA_ADDRESS2": "Suite 700",
+      "RA_ADDRESS3": null,
+      "RA_ADDRESS4": null,
+      "RA_CITY": "Washington",
+      "RA_STATE": "DC",
+      "RA_ZIPCODE": "20005",
+      "EFFECTIVE_DATE": 1462507200000,
+      "FOREIGN_DATEOF_ORGANIZATION": null,
+      "NEXT_REPORTYEAR_DUE": "04/01/2020",
+      "DCS_LAST_MOD_DTTM": 1789732580000,
+      "DATE_LAST_REPORT_FILED": 1522555200000,
+      "NEXT_REPORTYEAR": null,
+      "LATESTFILED_REPORTDATE": null,
+      "LATESTREPORT_YEARFILED": null,
+      "OBJECTID": 195895690,
+      "GLOBALID": "{5BC19304-2F92-6B01-E063-782F520A4590}"
+     }
+    }
+   ]
+  },
+  "revoked_owners": {
+   "objectIdFieldName": "OBJECTID",
+   "globalIdFieldName": "GLOBALID",
+   "fields": [
+    {
+     "name": "NAME",
+     "alias": "Name",
+     "type": "esriFieldTypeString",
+     "length": 250
+    },
+    {
+     "name": "ADDRESS",
+     "alias": "Address",
+     "type": "esriFieldTypeString",
+     "length": 400
+    },
+    {
+     "name": "BUSINESSNAME",
+     "alias": "Business Name",
+     "type": "esriFieldTypeString",
+     "length": 300
+    },
+    {
+     "name": "MODELTYPE",
+     "alias": "Model Type",
+     "type": "esriFieldTypeString",
+     "length": 50
+    },
+    {
+     "name": "LOCALE",
+     "alias": "Locale",
+     "type": "esriFieldTypeString",
+     "length": 30
+    },
+    {
+     "name": "INITIALFILENUMBER",
+     "alias": "Initial File Number",
+     "type": "esriFieldTypeString",
+     "length": 30
+    },
+    {
+     "name": "STATUS",
+     "alias": "Status",
+     "type": "esriFieldTypeString",
+     "length": 50
+    }
+   ],
+   "features": [
+    {
+     "attributes": {
+      "NAME": "Cheyenne Moseley, Assistant Secretary, LegalZoom.com, Inc.",
+      "ADDRESS": "101 N. Brand Blvd., 10th Floor, Glendale, CA, 91203, USA",
+      "BUSINESSNAME": "Picturebook Media, LLC",
+      "MODELTYPE": "Domestic Limited Liability Company",
+      "LOCALE": "Domestic",
+      "INITIALFILENUMBER": "L00005434982",
+      "STATUS": "Revoked"
+     }
+    }
+   ]
+  },
+  "revoked_trade_names": {
+   "objectIdFieldName": "OBJECTID",
+   "globalIdFieldName": "GLOBALID",
+   "features": []
+  },
+  "_arcgis_error_http_200": {
+   "error": {
+    "code": 400,
+    "message": "Unable to complete operation.",
+    "details": [
+     "Unable to perform query operation."
+    ]
+   }
+  }
+ }
+}
