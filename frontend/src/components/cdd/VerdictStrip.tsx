@@ -1,8 +1,10 @@
-import type { DegradedSource, GraphShape, RiskSignal } from "../../lib/api";
+import type { DegradedSource, GraphShape, KnowabilityStatement, RiskSignal } from "../../lib/api";
 import { networkSummary } from "../../lib/graphShape";
+import { knowabilityView } from "../../lib/knowability";
 import { coverageCopy } from "../../lib/lookupProgress";
 import { RiskChip } from "../risk/RiskChip";
-import { SectionLabel } from "../ui";
+import { Chip, SectionLabel } from "../ui";
+import { Explain } from "../ui/Explain";
 
 /** How many chips sit beside the sentence before the rest are left to the strip below. */
 const CHIP_PREVIEW = 3;
@@ -31,6 +33,20 @@ const CHIP_PREVIEW = 3;
  * shipped as two columns for four phases, which left the mode tabs as the
  * sole invitation into the deeper check — a tab strip does not say what is
  * behind it, and the numbers do.
+ *
+ * **A fourth band, under the columns (Phase 224): what can be known.**
+ * Coverage says how much of the check ran; it cannot say what the sources
+ * *could* have told us. "10 of 10 answered" for a Cayman company reads as a
+ * clean screen when no Cayman register publishes beneficial owners and
+ * OpenCheck reads none. The band carries the backend's dated, per-jurisdiction
+ * statement (`opencheck/knowability.py`, the `knowability` event — Stephen's
+ * Notion table, never typed here) verbatim, with the per-field list behind a
+ * ⓘ. It describes and dates; it is rendered in context/neutral tones only and
+ * never becomes a chip in the "What we found" column — the AMLA geographic-
+ * risk work (Aug 2026) rejected a jurisdiction-level "no register" signal
+ * because a coverage gap is not an accusation. Full width rather than inside
+ * the Coverage column because the sentence is two to four clauses long and
+ * the column is a third of the strip.
  */
 export function VerdictStrip({
   verdict,
@@ -46,6 +62,7 @@ export function VerdictStrip({
   screening = false,
   registryTotal = null,
   jurisdiction = null,
+  knowability = null,
 }: {
   /** The deterministic sentence from the backend. */
   verdict?: string | null;
@@ -63,6 +80,10 @@ export function VerdictStrip({
   registryTotal?: number | null;
   /** The subject's jurisdiction, for "apply to a GB company". */
   jurisdiction?: string | null;
+  /** The `knowability` event for the subject's jurisdiction (Phase 224), or
+   *  null before it lands / when the jurisdiction is unknown / on a payload
+   *  saved before the event existed — the band is simply absent then. */
+  knowability?: KnowabilityStatement | null;
   /** How big the mapped graph is — `graph_shape` on the `risk_signals`
    *  event. Counts the statements this check produced, never what FullCheck
    *  might go on to find. Absent until the event lands. */
@@ -93,6 +114,7 @@ export function VerdictStrip({
   });
   const network = networkSummary(graphShape);
   const showNetwork = Boolean(network && onOpenNetwork);
+  const knowable = knowability ? knowabilityView(knowability) : null;
 
   return (
     <section
@@ -245,6 +267,69 @@ export function VerdictStrip({
           </div>
         )}
       </div>
+
+      {knowable && (
+        <div
+          className="mt-5 flex flex-wrap items-start gap-x-8 gap-y-2 border-t border-oo-rule pt-4"
+          data-testid="knowability-band"
+        >
+          {/* Label on the left, statement on the right when the strip is wide
+              enough for both (the shape of a definition), stacked when it is
+              not — the sentence keeps its 76ch measure either way. */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <SectionLabel as="h2">{knowable.heading}</SectionLabel>
+            <span className="text-oo-meta text-oo-muted">{knowable.subheading}</span>
+            <Chip tone={knowable.badge.tone} size="sm">
+              {knowable.badge.label}
+            </Chip>
+          </div>
+          {/* A div, not a <p>: the ⓘ disclosure expands a <dl> in flow, and a
+              <dl> inside a <p> closes the paragraph in the HTML parser. */}
+          <div className="flex-1 basis-[38ch] text-oo-small text-oo-ink max-w-[76ch]">
+            {knowable.sentence}
+            {(knowable.rows.length > 0 || knowable.sources.length > 0) && (
+              <>
+                {" "}
+                <Explain
+                  className="align-text-bottom" label={`Show the register facts behind this statement for ${knowable.subheading}`}>
+                  <dl className="grid grid-cols-1 gap-y-1 sm:grid-cols-[max-content_1fr] sm:gap-x-4">
+                    {knowable.rows.map((row) => (
+                      <div key={row.label} className="contents">
+                        <dt className="font-semibold text-oo-muted">{row.label}</dt>
+                        <dd>{row.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  {knowable.sources.length > 0 && (
+                    <p className="mt-1.5">
+                      <span className="font-semibold text-oo-muted">Sources</span>{" "}
+                      {knowable.sources.map((src, i) => (
+                        <span key={src.url}>
+                          {i > 0 && " · "}
+                          <a
+                            href={src.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline underline-offset-2 hover:no-underline break-all"
+                          >
+                            {src.title}
+                          </a>
+                        </span>
+                      ))}
+                    </p>
+                  )}
+                  {knowable.asOfLine && (
+                    <p className="mt-1.5 text-oo-muted">
+                      {knowable.asOfLine}. The facts are maintained by hand in OpenCheck&apos;s
+                      jurisdiction table and describe the register, not this company.
+                    </p>
+                  )}
+                </Explain>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

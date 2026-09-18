@@ -149,6 +149,8 @@ describe("opening a saved report that is not there", () => {
 const RETIRED = "RETIRED_SIGNAL_CODE_FROM_2026";
 const EVENTS: SavedReportEvent[] = [
   { event: "gleif_done", data: { lei: "213800LH1BZH3DI6G760", legal_name: "BP P.L.C.", jurisdiction: "GB", derived_identifiers: {} } },
+  // Phase 224: the dated statement, frozen on the day of the run.
+  { event: "knowability", data: { code: "GB", name: "United Kingdom", sentence: "Frozen on 16 Sept 2026.", sentences: ["Frozen on 16 Sept 2026."], stated_absence: false, review_status: "verified", last_verified: "2026-09-16", access: "public", fields: {}, opencheck_reads: [], sources: [], as_of: "2026-09-16" } },
   { event: "sources_applicable", data: { source_ids: ["companies_house"] } },
   { event: "hit", data: { source_id: "gleif", hit_id: "213800LH1BZH3DI6G760", kind: "entity", name: "BP P.L.C.", summary: "GB", is_stub: false } },
   { event: "deepen_result", data: { source_id: "gleif", hit_id: "213800LH1BZH3DI6G760", bods: [{ statementId: "a" }], bods_issues: [], risk_signals: [], license: "CC0-1.0", license_notice: null } },
@@ -161,8 +163,13 @@ describe("replaying stored events", () => {
   it("feeds every stored event to the handler a live stream would, in order, and carries a retired code", () => {
     const calls: string[] = [];
     let signals: { code: string }[] = [];
+    let knowabilitySentence: string | null = null;
     const handlers: LookupStreamHandlers = {
       onGleifDone: () => calls.push("gleif_done"),
+      onKnowability: (e) => {
+        calls.push("knowability");
+        knowabilitySentence = e.sentence;
+      },
       onSourcesApplicable: () => calls.push("sources_applicable"),
       onHit: () => calls.push("hit"),
       onRiskSignals: (e) => {
@@ -172,14 +179,16 @@ describe("replaying stored events", () => {
       onDone: (e) => calls.push(`done:${e.run_completed_at}`),
     };
     replayLookupEvents(EVENTS, handlers);
-    expect(calls).toEqual(["gleif_done", "sources_applicable", "hit", "risk_signals", "done:2026-09-16T15:18:42+00:00"]);
+    expect(calls).toEqual(["gleif_done", "knowability", "sources_applicable", "hit", "risk_signals", "done:2026-09-16T15:18:42+00:00"]);
     expect(signals.map((s) => s.code)).toEqual([RETIRED]);
+    // The saved sentence is what replays — never one rebuilt from today's table.
+    expect(knowabilitySentence).toBe("Frozen on 16 Sept 2026.");
   });
 
   it("maps every streamed event to a handler, and never the internal deepen events", () => {
     expect(Object.keys(LOOKUP_EVENT_HANDLERS)).not.toContain("deepen_result");
     expect(Object.keys(LOOKUP_EVENT_HANDLERS)).toEqual(
-      expect.arrayContaining(["gleif_done", "hit", "risk_signals", "subject_profile", "bods_counts", "source_error"]),
+      expect.arrayContaining(["gleif_done", "hit", "risk_signals", "subject_profile", "bods_counts", "source_error", "knowability"]),
     );
   });
 

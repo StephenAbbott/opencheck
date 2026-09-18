@@ -1613,7 +1613,7 @@ Things that will be re-derived otherwise:
 
 ---
 
-## What is knowable, per jurisdiction — the data is Stephen's Notion table (Phase 223)
+## What is knowable, per jurisdiction — the data is Stephen's Notion table (Phases 223–224)
 
 `opencheck/knowability.py` + `data/jurisdictions.json`; the review page is
 `docs/knowability.md`. One statement per jurisdiction of what its registers
@@ -1666,3 +1666,24 @@ otherwise:
   included** (Stephen, 18 Sept 2026) — Phase C wires it into FullCheck.
 - The quarterly BO-regimes legal review (first run 1 Oct 2026) now covers
   this table too: re-verify rows, re-sync, regenerate.
+- **The `knowability` lookup event (Phase 224) is the statement's one way
+  onto the page.** `_lookup_pipeline` yields it right after `gleif_done`
+  (the first moment the jurisdiction is known, before the fan-out) with the
+  statement's JSON plus `as_of`; `fold_lookup_events` copies it into
+  `LookupResponse.knowability` **as recorded** — never re-rendered — so a
+  saved report replays the sentence that was true on the day of the run
+  (the sentence is dated; Phase 218's no-clock rule). No jurisdiction → no
+  event, and the strip says nothing rather than guessing. On the frontend
+  it is one entry in `LOOKUP_EVENT_HANDLERS` (`knowability: "onKnowability"`)
+  so live and replay cannot drift; `lib/knowability.ts` is the pure values
+  layer (badge tones `context`/`neutral` only — never `risk`/`warn`) and the
+  "What can be known" band in `VerdictStrip` renders the server sentence
+  verbatim with the per-field list behind `ui/Explain`. It is a fourth band
+  under the three columns, not a chip in "What we found": the statement is
+  never a signal and never counts.
+- Running the scripts locally: `cd backend && uv run python
+  scripts/sync_jurisdictions.py --notion` — the system `python3` has neither
+  pydantic nor pytest. The script reads `NOTION_API_KEY` from `backend/.env`
+  or the repo-root `.env` itself (the app's pydantic-settings does not run
+  for scripts); the integration is *internal*, read-only, shared with that
+  one database, and a Notion 404 means "not shared", not "wrong id".

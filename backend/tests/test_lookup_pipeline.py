@@ -8,7 +8,7 @@ pin the single-pipeline contract: both endpoints draw from
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 import pytest
@@ -164,6 +164,19 @@ def test_sync_and_stream_agree_on_offline_bundle(
     # The subject profile (Phase 154) rides its own event and the sync field.
     assert "subject_profile" in sync
     assert by_name["subject_profile"][0]["profile"] == sync["subject_profile"]
+
+    # The knowability statement (Phase 224) rides its own event and the sync
+    # field, is emitted as soon as the jurisdiction is known (right after
+    # gleif_done, before the fan-out), and is the same sentence the pure
+    # /knowability endpoint gives for that jurisdiction today.
+    names = [name for name, _ in events]
+    assert names.index("knowability") == names.index("gleif_done") + 1
+    assert names.index("knowability") < names.index("sources_applicable")
+    know = by_name["knowability"][0]
+    assert know == sync["knowability"]
+    assert know["code"] == "GB" and know["as_of"] == date.today().isoformat()
+    pure = client.get("/knowability", params={"jurisdictions": "GB"}).json()["statements"][0]
+    assert know["sentence"] == pure["sentence"]
 
 
 def test_meip_is_a_source_when_the_register_lists_the_lei(
