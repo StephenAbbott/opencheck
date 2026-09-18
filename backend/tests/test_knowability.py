@@ -466,3 +466,60 @@ def test_fold_without_the_event_leaves_the_field_none() -> None:
         ],
     )
     assert folded.knowability is None
+
+
+# ----------------------------------------------------------------------
+# Phase 226 — the chain in path order, keyed on the LEI, read back frozen
+# ----------------------------------------------------------------------
+def test_chain_jurisdictions_is_in_path_order_not_statement_id_order() -> None:
+    from opencheck.knowability import chain_jurisdictions
+
+    # Statement ids chosen so alphabetical order would put the top first.
+    bods = [
+        _entity("subj", "GB"),
+        _entity("z-mid", "KY"),
+        _entity("a-top", "BM"),
+        _rel("r1", "subj", "z-mid"),
+        _rel("r2", "z-mid", "a-top"),
+    ]
+    assert chain_jurisdictions(bods, "subj") == ["GB", "KY", "BM"]
+
+
+def test_chain_for_lei_starts_from_every_statement_carrying_the_lei() -> None:
+    from opencheck.knowability import chain_for_lei
+
+    lei = "213800LH1BZH3DI6G760"
+    gleif = _entity("g", "GB")
+    gleif["recordDetails"]["identifiers"] = [{"scheme": "XI-LEI", "id": lei}]
+    coh = _entity("c", "GB")
+    coh["recordDetails"]["identifiers"] = [{"scheme": "XI-LEI", "id": lei}, {"scheme": "GB-COH", "id": "1"}]
+    bods = [gleif, coh, _entity("hold", "KY"), _rel("r1", "c", "hold")]  # only the CH statement has the owner edge
+    payload = chain_for_lei(lei, bods, date(2026, 9, 18))
+    assert payload["subject"] == "GB"
+    assert payload["codes"] == ["GB", "KY"]
+    assert [st["code"] for st in payload["statements"]] == ["GB", "KY"]
+    assert payload["as_of"] == "2026-09-18"
+    json.dumps(payload)  # JSON-shaped, as a saved report needs
+
+
+def test_chain_for_lei_without_a_subject_statement_is_empty_not_an_error() -> None:
+    from opencheck.knowability import chain_for_lei
+
+    payload = chain_for_lei("529900T8BM49AURSDO55", [], date(2026, 9, 18))
+    assert payload == {"subject": None, "codes": [], "statements": [], "as_of": "2026-09-18"}
+
+
+def test_report_statements_reads_only_the_frozen_fields(monkeypatch) -> None:
+    import opencheck.knowability as know
+
+    monkeypatch.setattr(know, "statement_for", lambda *a, **k: (_ for _ in ()).throw(AssertionError("re-rendered")))
+    subj = {"code": "GB", "name": "United Kingdom", "sentence": "S", "as_of": "2026-01-01"}
+    ky = {"code": "KY", "name": "Cayman Islands", "sentence": "K"}
+    out = know.report_statements({
+        "knowability": subj,
+        "knowability_chain": {"subject": "GB", "codes": ["GB", "KY", "KY"], "statements": [dict(subj), ky, ky]},
+    })
+    assert out["subject"] == subj
+    assert out["chain"] == [ky]  # subject not repeated, duplicates dropped
+    assert out["as_of"] == "2026-01-01"
+    assert know.report_statements({}) == {"subject": None, "chain": [], "as_of": None}

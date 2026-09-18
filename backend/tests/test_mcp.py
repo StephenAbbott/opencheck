@@ -360,3 +360,34 @@ def test_shape_lookup_with_no_context_signals_has_no_context_clause() -> None:
     shaped = shaping.shape_lookup(p)
     assert "Structural context" not in shaped["summary"]
     assert shaped["counts"]["context_signals"] == 0
+
+
+def test_shape_lookup_carries_knowability_from_the_frozen_fields() -> None:
+    """Phase 226: ``knowability`` is read from the payload's fields, never
+    re-rendered, and the subject sentence closes the summary line."""
+    payload = _fake_lookup_payload()
+    subject = {"code": "KY", "name": "Cayman Islands", "sentence": "Cayman frozen.", "sentences": ["Cayman frozen."],
+               "stated_absence": False, "review_status": "unverified", "last_verified": None,
+               "access": "legitimate_interest", "fields": {}, "sources": [],
+               "opencheck_reads": [], "as_of": "2026-09-16"}
+    top = {**subject, "code": "BM", "name": "Bermuda", "sentence": "Bermuda frozen.",
+           "opencheck_reads": [{"source_id": "x", "name": "X", "requires_api_key": False, "reads_beneficial_owners": True}]}
+    payload.knowability = subject
+    payload.knowability_chain = {"subject": "KY", "codes": ["KY", "BM"], "as_of": "2026-09-16",
+                                 "statements": [subject, top]}
+    shaped = shaping.shape_lookup(payload)
+    k = shaped["knowability"]
+    assert k["subject"]["code"] == "KY" and k["subject"]["sentence"] == "Cayman frozen."
+    assert [c["code"] for c in k["chain"]] == ["BM"]
+    assert k["chain"][0]["opencheck_reads"] == ["x"]
+    assert k["as_of"] == "2026-09-16"
+    assert shaped["summary"].endswith("What can be known (KY): Cayman frozen.")
+    assert "hint" in k
+
+
+def test_shape_lookup_knowability_is_null_for_an_older_payload() -> None:
+    payload = _fake_lookup_payload()
+    shaped = shaping.shape_lookup(payload)
+    assert shaped["knowability"] is None
+    assert "What can be known" not in shaped["summary"]
+
