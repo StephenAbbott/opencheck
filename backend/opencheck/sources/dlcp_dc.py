@@ -161,9 +161,22 @@ _US_DC_PREFIX = "US-DC-"
 #: it — the largest seen is 27 rows — so one page is always enough.
 _MAX_RECORD_COUNT = 2000
 
-#: Most calls one lookup may spend: Table 0 (plus one prefixed retry), Table 1,
-#: Table 2, and one name-fallback query.
-_LOOKUP_CALL_BUDGET = 5
+#: Most calls one lookup may spend across every DC entity it touches.
+#:
+#: One entity's worst case is **seven**: two Table 0 probes (bare, then
+#: ``US-DC-`` prefixed), Table 1 and Table 2 for whatever that found, one
+#: name-fallback query, then Table 1 and Table 2 again for the entity the name
+#: found. That is the AFPC/CONNIE-19 recovery path, and it is the reason this
+#: number is not five: Phase 225 shipped a budget of 5, one short, so the last
+#: call — the owner rows for the *right* company — was refused and
+#: the fetch returned nothing at all. A collision recovery that
+#: silently drops the record is worse than no recovery, because the card simply
+#: disappears with a rate-limit note attached.
+#:
+#: Twelve leaves room for a second DC entity reached through the deepen path
+#: (a DC parent or subsidiary in the same lookup) without ever letting one
+#: ownership chain monopolise the register.
+_LOOKUP_CALL_BUDGET = 12
 
 #: No documented limit and none observed (20 calls in 8.1 s, 2026-09-18).
 #: Paced anyway so an unannounced limit degrades this source, not the lookup.
@@ -540,65 +553,46 @@ class DlcpDcAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     async def fetch(self, hit_id: str, *, legal_name: str = "") -> dict[str, Any]:
+        """The register's record for one file number, name-gated.
+
+        Split deliberately into two cached reads — the file number's record,
+        and (only when that one is wrong) the name's. Both caches are keyed on
+        register facts alone, never on the caller's ``legal_name``, and the
+        name gate runs *here*, over whatever came back. That is what makes a
+        second ``fetch`` for the same entity free.
+
+        Phase 225 folded ``legal_name`` into one cache key, which looked
+        harmless: the lookup pipeline dispatches with the GLEIF legal name and
+        so always hit its own entry. But its second pass — ``_count_only`` and
+        ``_safe_deepen`` in ``routers/lookup.py`` — calls ``fetch(hit_id)``
+        with *no* legal name, on the stated assumption that dispatch has
+        already warmed the cache. With the name in the key that assumption was
+        false for this source alone, so every DC entity was fetched from DLCP
+        twice per lookup: six ArcGIS calls where three were needed, the last of
+        them refused by the call budget.
+        """
         try:
             file_number = normalise_file_number(hit_id)
         except ValueError:
             return self._bundle(file_number=str(hit_id or ""), legal_name=legal_name)
 
-        cache_key = f"{_CACHE_NS}/entity/{file_number}/{names.display_name_key(legal_name)}"
-        if not self.info.live_available and not self._cache.has(cache_key):
+        by_number = await self._record_for_file_number(file_number)
+        if by_number is None:
+            # The register could not be asked — never mistaken for an answer.
             return self._bundle(file_number=file_number, legal_name=legal_name)
 
-        cached = self._cache.get_payload(cache_key, max_age_days=_CACHE_MAX_AGE_DAYS)
-        if cached is not None:
-            stored = cached[0] or {}
+        company = by_number.get("company") or None
+        trade_names = by_number.get("trade_names") or []
+        if company is not None and names_agree(legal_name, company, trade_names):
             return self._bundle(
                 file_number=file_number,
                 legal_name=legal_name,
-                company=stored.get("company") or None,
-                owners=stored.get("owners") or [],
-                trade_names=stored.get("trade_names") or [],
-                matched_by=stored.get("matched_by") or None,
-                not_in_register=bool(stored.get("not_in_register")),
-                name_mismatch=bool(stored.get("name_mismatch")),
+                company=company,
+                owners=by_number.get("owners") or [],
+                trade_names=trade_names,
+                matched_by=by_number.get("matched_by") or None,
             )
-
-        fetched = await self._fetch_live(file_number, legal_name)
-        if fetched is None:
-            return self._bundle(file_number=file_number, legal_name=legal_name)
-        self._cache.put(cache_key, fetched)
-        return self._bundle(
-            file_number=file_number,
-            legal_name=legal_name,
-            company=fetched.get("company") or None,
-            owners=fetched.get("owners") or [],
-            trade_names=fetched.get("trade_names") or [],
-            matched_by=fetched.get("matched_by") or None,
-            not_in_register=bool(fetched.get("not_in_register")),
-            name_mismatch=bool(fetched.get("name_mismatch")),
-        )
-
-    async def _fetch_live(
-        self, file_number: str, legal_name: str
-    ) -> dict[str, Any] | None:
-        """What the register holds, or None when it could not be asked."""
-        company, matched_by = await self._company_by_file_number(file_number)
-        if company is None and matched_by is None:
-            return None
-
         if company is not None:
-            trade_names, owners = await self._related(
-                clean_field(company.get("FILE_NUMBER")) or file_number
-            )
-            if trade_names is None or owners is None:
-                return None
-            if names_agree(legal_name, company, trade_names):
-                return {
-                    "company": company,
-                    "trade_names": trade_names,
-                    "owners": owners,
-                    "matched_by": matched_by,
-                }
             _LOG.info(
                 "DLCP: %s names a different entity — trying the name instead", file_number
             )
@@ -606,24 +600,107 @@ class DlcpDcAdapter(SourceAdapter):
         # Either the file number is not in the register, or it reached a
         # different company. Both are recoverable from the name, but only
         # against a single unambiguous ACTIVE match — see _company_by_name.
-        by_name = await self._company_by_name(legal_name)
+        by_name = await self._record_for_name(legal_name)
         if by_name is None:
-            return None
-        if by_name:
-            trade_names, owners = await self._related(
-                clean_field(by_name.get("FILE_NUMBER"))
+            return self._bundle(file_number=file_number, legal_name=legal_name)
+        if by_name.get("company"):
+            return self._bundle(
+                file_number=file_number,
+                legal_name=legal_name,
+                company=by_name["company"],
+                owners=by_name.get("owners") or [],
+                trade_names=by_name.get("trade_names") or [],
+                matched_by="name",
             )
-            if trade_names is None or owners is None:
-                return None
-            return {
-                "company": by_name,
+        if company is not None:
+            return self._bundle(
+                file_number=file_number, legal_name=legal_name, name_mismatch=True
+            )
+        return self._bundle(
+            file_number=file_number, legal_name=legal_name, not_in_register=True
+        )
+
+    async def _record_for_file_number(self, file_number: str) -> dict[str, Any] | None:
+        """The register's rows for a file number, cached; None if unaskable.
+
+        An empty ``company`` means the register answered and holds no such file
+        number — a fact worth caching, so a miss is not re-asked all day.
+        """
+        cache_key = f"{_CACHE_NS}/entity/{file_number}"
+        cached = self._cached(cache_key)
+        if cached is not None:
+            return cached
+        if not self.info.live_available:
+            return None
+
+        company, matched_by = await self._company_by_file_number(file_number)
+        if company is None and matched_by is None:
+            return None
+        if company is None:
+            return self._store(cache_key, {})
+
+        trade_names, owners = await self._related(
+            clean_field(company.get("FILE_NUMBER")) or file_number
+        )
+        if trade_names is None or owners is None:
+            return None
+        return self._store(
+            cache_key,
+            {
+                "company": company,
                 "trade_names": trade_names,
                 "owners": owners,
-                "matched_by": "name",
-            }
-        if company is not None:
-            return {"name_mismatch": True}
-        return {"not_in_register": True}
+                "matched_by": matched_by,
+            },
+        )
+
+    async def _record_for_name(self, legal_name: str) -> dict[str, Any] | None:
+        """The register's rows for a name, cached; None if unaskable.
+
+        Cached under the name rather than the file number because that is what
+        was asked: the whole point of this path is that the file number we hold
+        is wrong, so it cannot key the answer. An empty ``company`` means the
+        register answered and offered no single unambiguous active match.
+        """
+        name_key = names.display_name_key(legal_name)
+        if not name_key:
+            return {}
+        cache_key = f"{_CACHE_NS}/by-name/{name_key}"
+        cached = self._cached(cache_key)
+        if cached is not None:
+            return cached
+        if not self.info.live_available:
+            return None
+
+        company = await self._company_by_name(legal_name)
+        if company is None:
+            return None
+        if not company:
+            return self._store(cache_key, {})
+
+        found_number = clean_field(company.get("FILE_NUMBER"))
+        trade_names, owners = await self._related(found_number)
+        if trade_names is None or owners is None:
+            return None
+        record = {"company": company, "trade_names": trade_names, "owners": owners}
+        if found_number:
+            # The same register rows, under the register's own key. A recovery
+            # asserts the file number it found, and the pipeline hops on it —
+            # so without this the next fetch asks DLCP for rows already held.
+            self._store(f"{_CACHE_NS}/entity/{found_number}", dict(record, matched_by="file_number"))
+        return self._store(cache_key, record)
+
+    def _cached(self, cache_key: str) -> dict[str, Any] | None:
+        """A stored register answer, or None when there is none to serve."""
+        cached = self._cache.get_payload(cache_key, max_age_days=_CACHE_MAX_AGE_DAYS)
+        if cached is None:
+            return None
+        stored = cached[0]
+        return stored if isinstance(stored, dict) else {}
+
+    def _store(self, cache_key: str, payload: dict[str, Any]) -> dict[str, Any]:
+        self._cache.put(cache_key, payload)
+        return payload
 
     async def _company_by_file_number(
         self, file_number: str

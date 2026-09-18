@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 227** — "What can be known" on the entity pages: every /entity page now states what its jurisdiction's register publishes about beneficial owners, who may see it and what OpenCheck reads of it, completing the knowability ticket.
+**Latest: Phase 228** — Washington DC entities are now fetched from DLCP once per lookup rather than twice, and the per-lookup call budget is large enough for the name-collision recovery to finish, so a company reached by name keeps its record.
 
 → [Full development history](docs/status.md)
 
